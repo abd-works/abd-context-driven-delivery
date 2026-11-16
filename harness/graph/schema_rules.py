@@ -67,6 +67,12 @@ class PracticeSchema:
         part = practice.reading.in_graph
         return part.rule_run.schema_with(overlays) if part is not None else PracticeSchema(practice, overlays)
 
+    def for_node(self, node) -> PracticeSchema:
+        """This schema with only the overlays that add their rules to node, as its practice's part of the graph keeps it:
+        a Python class carries none of the rules of LERN, which is constrained to TypeScript."""
+        kept = tuple(overlay for overlay in self.overlays if overlay.adds_rules_to(node))
+        return self if kept == self.overlays else self._schema_of(self.practice, kept)
+
     def slugs_for(self, node_type: str) -> tuple[str, ...]:
         """The rule slugs a node of this type carries, with those of each type its practice says it also carries."""
         table = self._rules

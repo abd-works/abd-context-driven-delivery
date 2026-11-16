@@ -108,20 +108,11 @@ class McpDaemon:
         return f"running (pid {running.pid}, {self.home.mode} {running.source})"
 
     def spawn(self) -> None:
+        """Start the server in the background, past the chat that asked for it, with its output in the home's log."""
         self.home.folder.mkdir(parents=True, exist_ok=True)
-        with open(self.home.log_path, "a", encoding="utf-8") as log:
-            try:
-                self._start_process(BackgroundStart(log))
-            except PermissionError:
-                # Some Windows jobs refuse to let a child break away; the server then lives in its starter's job, and
-                # the next connect starts it again if that job ends.
-                log.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S')} breakaway refused; starting inside the caller's job\n")
-                log.flush()
-                self._start_process(BackgroundStart(log).inside_starters_job())
-
-    def _start_process(self, start: BackgroundStart) -> None:
         command = [self.home.interpreter.windowless, "-m", "harness.mcp", "--port", str(self.port)]
-        start.run(command, self.home.source, {**os.environ, **self.home.server_environment})
+        with open(self.home.log_path, "a", encoding="utf-8") as log:
+            BackgroundStart(log).run(command, self.home.source, {**os.environ, **self.home.server_environment})
 
     def _wait_for_ping(self) -> RunningServer:
         deadline = time.time() + _START_SECONDS

@@ -65,6 +65,8 @@ Intended (requested 2026-11-16; `harness/mcp/.context/cdr/0003-two-lanes-main-st
 ### (S) Person --> [Serve A Feature Branch On The Dev Lane](../story_tests/register-and-install-toolsets/serve-cdd-code-in-lanes/serve-a-feature-branch-on-the-dev-lane/serve_a_feature_branch_on_the_dev_lane_story.test.py)
 ### (S:system) CDD Server --> [Send A Dev-Lane Chat's Calls To The Dev Lane](../story_tests/register-and-install-toolsets/serve-cdd-code-in-lanes/send-a-dev-lane-chats-calls-to-the-dev-lane/send_a_dev_lane_chats_calls_to_the_dev_lane_story.test.py)
 ### (S) Person --> Switch The Served Feature After Other Chats Agree
+### (S:system) CDD Server --> [Serve Dev Lane Apps On Their Own Ports](../story_tests/register-and-install-toolsets/serve-cdd-code-in-lanes/serve-dev-lane-apps-on-their-own-ports/serve_dev_lane_apps_on_their_own_ports_story.test.py)
+### (S:system) CDD Server --> [Keep A Lane's Server Running After Its Chat Ends](../story_tests/register-and-install-toolsets/serve-cdd-code-in-lanes/keep-a-lanes-server-running-after-its-chat-ends/keep_a_lanes_server_running_after_its_chat_ends_story.test.py)
 
 # (E) Deliver Work With Context Guidance
 
@@ -1014,6 +1016,16 @@ Observed (2026-11-14): the open file shows in the graph explorer's Monaco source
 
 Built: the session's graph places each class and operation, and the source view folds each one as a block (`session.file` folds). Was the graph's Unfold Calls And Classes In Source.
 
+Changed (2026-11-16, "native expand collapse for class functions, heading levels in markdown etc like a real IDE"): the source view folds with Monaco's own folding, classes, functions and blocks as Monaco reads the language, and markdown by its headings (`source/source-folding.ts` `foldMarkdownHeadings`), with or without Rules; the session's folds stay for the board's files panel.
+
+### (S) Person --> [Fold With Keyboard Shortcuts](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-fold-with-keyboard-shortcuts)
+
+Requested (2026-11-16, "Cursor-equivalent keyboard shortcuts (or VS Code, configurable in a context config json), e.g. Ctrl+K Ctrl+0, Ctrl+M etc."). Built: VS Code's fold chords, which `.context/files-app-keybindings.json`, written as VS Code's keybindings.json, overrides command by command; a wrong file keeps VS Code's and a toast says why (`FoldKeys`, `FilesFoldKeys`).
+
+### (S) Person --> [Open Calls And Classes In Place](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-open-calls-and-classes-in-place)
+
+Requested (2026-11-16, "too aggressive on the shading and double shading ... on expand, hide the callout label and show the content; on collapse, bring it back; only shade once"). Built: a call or class the code reaches is a callout like a markdown link's: a label after its line while closed; open, its lines alone in a view zone under the line, shaded once, a call inside it one shade deeper; never from a comment, a docstring or a string, and without the graph's `/* call: */` marks (`source/call-expansion.ts` *CallCatalog*, `source/source-callouts.ts`).
+
 ### (S) Person --> [Mark Lines A Broken Rule Names](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-mark-lines-a-broken-rule-names)
 
 Built: the rules the session's saved graph found broken in the file mark their lines with a rule chip (`session.file` violations). Was the graph's Open Violation In Source.
@@ -1084,11 +1096,25 @@ Requested (2026-11-15, "except for you're now selecting file(s), eg more than on
 
 Built (2026-11-15), not walked: selecting a node opens its file at its lines (`Session.graph_node_ranges`); a node no file's lines hold, such as a package that is a folder or a practice's root, opens each listed file below it, spanning the lines its nodes cover there ("module would show multiple files"); Ctrl, Cmd or Shift with the press selects it beside the others, and each other file opens below the first (`FilesPage.showNodes`).
 
+Changed (2026-11-16): each open file collapses to its name and expands on its own, with Collapse all and Expand all above several (`OpenFiles`).
+
 ### (S) Files App --> [Fold Open Files To Selected Nodes](../story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md#story-fold-open-files-to-selected-nodes)
 
 Requested (2026-11-15, "expand and collapse in file viewer based on the nodes in the graph"): each open file unfolds the blocks of the nodes selected in the graph and folds its other classes and operations, from the folds the session's graph places (`session.file` folds); selecting another node unfolds it and leaves the rest folded. Builds on the Files app's Fold Classes And Operations and the Graph app's Unfold Calls And Classes In Source.
 
-Built (2026-11-15), not walked: an open file reads its folds and opens only those holding a selected node, its class too (`SourceView` `openAround`, `foldsAround`), and the page scrolls the first a third of the way down the window: the editor is as tall as its file, so the page scrolls, not the editor ("we should scroll to line of member if it's below the fold").
+Built (2026-11-15), not walked: an open file opens only the folds holding a selected node, its class too, and closes the rest (`SourceView` `openAround`, Monaco's Fold All then Unfold up from the node since 2026-11-16), and the page scrolls the first a third of the way down the window: the editor is as tall as its file, so the page scrolls, not the editor ("we should scroll to line of member if it's below the fold"). Changed (2026-11-16, "make that line be near the top of the screen so it's obvious we are there; select the lines of the clicked node in a file if it's not the whole file"): the first selected line scrolls near the top and the selected lines are marked.
+
+### (S) Person --> [Open Story Scenarios Across Files](../story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md#story-open-story-scenarios-across-files)
+
+Requested (2026-11-16, "story map md story has scenario file"): selecting a story the markdown story map holds opens its scenarios, which live in another file, beside the story map's line; a markdown scenario spans its heading through its last step.
+
+### (S) Person --> [Open Linked Sections In Place](../story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md#story-open-linked-sections-in-place)
+
+Requested (2026-11-16, "should have callout to expand and see story scenarios; scenario has domain references in its terms, callout to markdown class model if it exists"): a markdown line that links to a heading in another file carries a callout that opens that heading's section in place, as a call opens in place in code: a story map story opens its scenarios, and a scenario's domain term opens its class in the markdown model (`SessionFile.callouts`).
+
+### (S) Person --> [Follow Story Steps To Code](../story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md#story-follow-story-steps-to-code)
+
+Requested (2026-11-16, "observes and invokes do not reach the Python code; tested for TypeScript but not Python"; "class callouts in tests should be placed next to steps if they are step relationships"): a Python story test's step invokes the functions it calls by name as well as the operations it calls on an object (`StoryLinks._functions_called`), and in the source view a story test's callouts sit on the step whose invokes and observes they are, never on a line that only names a class in prose.
 
 ## (E) Explore Graph In Files App
 

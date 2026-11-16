@@ -11,6 +11,8 @@ if TYPE_CHECKING:
     from harness.graph.rule_context import RuleCheckContext
 
 _VERB_OPENINGS = {"verb", "unlisted"}
+# A generic verb is listed for the judgment to decide from its context, not failed on its own (stories.md).
+_GENERIC_VERB = "generic-verb"
 _MOST_SCENARIOS = 7
 
 
@@ -24,6 +26,8 @@ class VerbNounFormat(PracticeGraphRule):
         kind = node.get_fact("opening_class") or ""
         if kind in _VERB_OPENINGS:
             return []
+        if kind == _GENERIC_VERB:
+            return [f"{node.type} {node.name!r}: opens with a generic verb; judge from its context whether the action is plain."]
         return [f"{node.type} {node.name!r}: name should start with a verb (got {kind})."]
 
 

@@ -29,6 +29,7 @@ from space.kanban.session_board_examples import (
     ORDER_RULE,
     CHECKOUT_CHAT,
     CHECKOUT_FLOW_IN_SRC_CHECKOUT,
+    CHECKOUT_FLOW_WITHOUT_DDD,
     EDITED_LINE_14,
     EMPTY_CART_COMMENT,
     EMPTY_CART_FILL,
@@ -63,6 +64,72 @@ def queued_fills(world) -> list[str]:
     """The fills sent to checkout-chat, oldest first."""
     newest_first = world.data_of(world.Chat.load(CHECKOUT_CHAT).messages())
     return [message["text"] for message in reversed(newest_first) if message["kind"] == "fill"]
+
+
+# --- Toggle Practice In Files App ---------------------------------------------------------------------------------
+
+
+@shared_stories.scenario("Toggle Practice In Files App", "Turn a practice on to show its files")
+def _(s):
+    @s.given("the Files app shows the DDD toggle as an outline")
+    def _(world):
+        world.project.seed_session(CHECKOUT_FLOW_WITHOUT_DDD)
+        world.selection = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.guidance_selection())
+
+    @s.when("the Person turns DDD on")
+    def _(world):
+        turned_on = [practice["key"] for practice in world.selection["practices"] if practice["is_selected"] or practice["key"] == "ddd"]
+        world.Ticket.load(CHECKOUT_FLOW.name).session.update_guidance_selection(practices=turned_on)
+
+    @s.then("checkout-flow's session works on DDD, saved in its session.json")
+    def _(world):
+        saved = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.guidance_selection())
+        expect([practice["key"] for practice in saved["practices"] if practice["is_selected"]]).to(contain("stories", "ddd"))
+
+
+@shared_stories.scenario("Toggle Practice In Files App", "Turn a practice off to hide its files")
+def _(s):
+    @s.given("the Files app shows the Stories toggle filled")
+    def _(world):
+        world.project.seed_session(CHECKOUT_FLOW_WITHOUT_DDD)
+        world.selection = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.guidance_selection())
+
+    @s.when("the Person turns Stories off")
+    def _(world):
+        turned_on = [practice["key"] for practice in world.selection["practices"] if practice["is_selected"] and practice["key"] != "stories"]
+        world.Ticket.load(CHECKOUT_FLOW.name).session.update_guidance_selection(practices=turned_on)
+
+    @s.then("checkout-flow's session no longer works on Stories")
+    def _(world):
+        saved = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.guidance_selection())
+        expect([practice["key"] for practice in saved["practices"] if practice["is_selected"]]).not_to(contain("stories"))
+
+
+# --- Keep Chat Bar Practices In Sync ------------------------------------------------------------------------------
+
+
+@shared_stories.scenario("Keep Chat Bar Practices In Sync", "Show a practice turned on in the Files app on the chat bar")
+def _(s):
+    @s.given("the Files app was opened from checkout-chat, which has checked in")
+    def _(world):
+        world.project.seed_session(CHECKOUT_FLOW_WITHOUT_DDD)
+        seed_connected_chat(world)
+        world.drawn = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.guidance_selection())
+
+    @s.when("the Person turns DDD on in the Files app")
+    def _(world):
+        turned_on = [practice["key"] for practice in world.drawn["practices"] if practice["is_selected"] or practice["key"] == "ddd"]
+        world.Ticket.load(CHECKOUT_FLOW.name).session.update_guidance_selection(practices=turned_on)
+
+    @s.then("checkout-chat's chat bar, waiting on session.guidance_selection_after, shows ddd-bounded-context's dot")
+    def _(world):
+        heard = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.guidance_selection_after(version=world.drawn["version"]))
+        expect(("ddd-bounded-context" in world.drawn["fidelities"], "ddd-bounded-context" in heard["fidelities"])).to(equal((False, True)))
+
+    @s.then("no refresh message is sent to checkout-chat")
+    def _(world):
+        sent = world.data_of(world.Chat.load(CHECKOUT_CHAT).messages())
+        expect([message["kind"] for message in sent]).not_to(contain("refresh"))
 
 
 # --- View Files In Rich Viewer ------------------------------------------------------------------------------------

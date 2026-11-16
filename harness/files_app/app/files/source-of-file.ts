@@ -1,7 +1,8 @@
 import type { NodeSourceData } from '@cdd/harness/graph/graph'
 import type { FileViolationData, SessionFileData } from '@cdd/space/session/session'
-import type { SourceFold, SourceRule } from '@source-view/SourceView'
-import type { ViolationFocus } from '@source-view/violation-prompt'
+import type { SourceRule } from '@source-view/SourceView'
+import type { SourceCallout } from '@source-view/source-callouts'
+import type { ViolationFocus } from '@graph-app/graph/graph-selection'
 
 // The node type the source view is handed for a whole file, which it opens with every fold open.
 const FILE_NODE = 'File'
@@ -17,9 +18,22 @@ export function sourceOf(file: SessionFileData, members: NodeSourceData[] = []):
   return { node_id: file.path, name: fileNameOf(file.path), type: FILE_NODE, owner: '', file: file.path, text: file.text, start_line: 1, end_line: lines, members }
 }
 
-// The folds the session's graph places in the file: a class whole, each operation and property as a block.
-export function foldsOf(file: SessionFileData): SourceFold[] {
-  return file.folds.map(fold => ({ start: fold.range.start_line, end: fold.range.end_line, kind: fold.kind }))
+// What the file opens in place itself: each link to a heading in another file, that heading's section under its line;
+// and in a story test, what each step invokes and observes, under the step's first line.
+export function calloutsOf(file: SessionFileData): SourceCallout[] {
+  const sections = file.callouts.map((callout): SourceCallout => ({ id: `${callout.section.path}:${callout.section.start_line}`, kind: 'section', line: callout.line, title: callout.title, path: callout.section.path, startLine: callout.section.start_line, endLine: callout.section.end_line, text: callout.section.content }))
+  const steps = file.steps.flatMap(step => [...step.invokes.map(target => stepCallout(step.line, target, 'call')), ...step.observes.map(target => stepCallout(step.line, target, 'example'))])
+  return [...sections, ...steps]
+}
+
+function stepCallout(line: number, target: NodeSourceData, kind: SourceCallout['kind']): SourceCallout {
+  return { id: target.node_id, kind, line, title: target.owner ? `${target.owner}.${target.name}` : target.name, path: target.file, startLine: target.start_line, endLine: target.end_line, text: target.text }
+}
+
+// Whether the file is a story test whose steps reach code: its callouts are its steps' own, so a class it names, in a
+// docstring or a step's code, opens nothing of its own.
+export function isStoryTest(file: SessionFileData): boolean {
+  return file.steps.length > 0
 }
 
 // Each rule broken in the file once, with every message it gives there.

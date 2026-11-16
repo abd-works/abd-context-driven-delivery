@@ -1,21 +1,12 @@
 import { useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
 import type { ExplorerEntryData, FilterData } from '@cdd/harness/graph/graph';
-import { nodeFilter, type FilterSelection } from '../filter/filter-selection';
+import { NO_CHOICES, NO_FILTER, chosen, nodeFilter, type FilterSelection } from '../filter/filter-selection';
 import { reasonOf } from '../graph/graph-failures';
 import { failures, graphs } from '../graph/graph-page';
 import { withBranch } from '../graph/graph-selection';
 import type { LoadStatus } from './load-status';
 import type { PageFolder } from './page-folder';
 
-export const EMPTY: FilterSelection = {
-  practices: [],
-  overlays: [],
-  node_types: [],
-  relationships: [],
-  rules: [],
-  violations: false,
-};
-const NO_CHOICES: FilterData = { node_types: [], offered_node_types: [], relationships: [], rules: [] };
 
 type Held<T> = [T, Dispatch<SetStateAction<T>>];
 
@@ -105,10 +96,10 @@ export class ExplorerFilter {
 
 export function useExplorerFilter(folder: PageFolder, status: LoadStatus): ExplorerFilter {
   return new ExplorerFilter({
-    selection: useState<FilterSelection>(EMPTY),
+    selection: useState<FilterSelection>(NO_FILTER),
     trees: useState<ExplorerEntryData[]>([]),
     choices: useState<FilterData>(NO_CHOICES),
-    shown: useRef<FilterSelection>(EMPTY),
+    shown: useRef<FilterSelection>(NO_FILTER),
     folder,
     status,
   });
@@ -116,9 +107,4 @@ export function useExplorerFilter(folder: PageFolder, status: LoadStatus): Explo
 
 function joined(values: string[]): string {
   return values.join('\n');
-}
-
-// The selection with the node types, relationships, and rules Python's Filter chose for it.
-export function chosen(next: FilterSelection, choices: FilterData): FilterSelection {
-  return { ...next, node_types: choices.node_types, relationships: choices.relationships, rules: choices.rules };
 }

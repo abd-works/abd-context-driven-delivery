@@ -55,6 +55,11 @@ class GraphOverlay:
     def read(self, graph: Graph) -> None:
         """Add this pattern's nodes and edges to the practices ``graph`` holds."""
 
+    def adds_rules_to(self, node: Any) -> bool:
+        """Whether node carries the rules this overlay adds: every node does, unless the pattern is constrained to a
+        language, as LERN is to TypeScript."""
+        return True
+
     def practice_file(self, practice_key: str, name: str) -> Path:
         """The file called name the pattern keeps beside its rules for the practice of practice_key, such as its
         ``schema.yaml``; it may not exist."""

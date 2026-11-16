@@ -301,17 +301,12 @@ def _write_runtime_adapters(installer: Installer, server: McpInstallation) -> No
     copies the adapters this checkout's install wrote, in place of any an earlier pin left. Every install from the
     checkout the runtime serves copies them, not only the one that pins it, so a pin whose copy failed is repaired by the
     next install."""
-    import shutil
-
-    home = server.daemon.home
+    # The lane this checkout is installed into: the stable lane's for a main checkout, the dev lane's for a ticket's
+    # worktree, whose pin serves a feature there.
+    home = server.served.home
     if home.mode != home.PINNED or not home.is_pinned_to(_REPO):
         return
-    source = Path(installer.path) / "language-adapters"
-    target = home.pinned_checkout / installer.layout.folder_name / "language-adapters"
-    # A server started from the runtime, such as the board's, keeps its folders open on Windows, so they outlive the
-    # removal empty; the copy writes into them. A file still held makes the copy fail and names it.
-    shutil.rmtree(target, ignore_errors=True)
-    shutil.copytree(source, target, dirs_exist_ok=True)
+    target = home.take_language_adapters(Path(installer.path) / "language-adapters", installer.layout.folder_name)
     print(f"runtime language adapters: copied to {target}")
 
 

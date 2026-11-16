@@ -4,7 +4,8 @@ import type { LoadStatus } from './load-status';
 import type { PageFolder } from './page-folder';
 import { normalizeInventoryBundle } from './inventory-bundle';
 import { overlayPathLabel } from '../labels/overlay-labels';
-import { chosen, type ExplorerFilter } from './explorer-filter';
+import type { ExplorerFilter } from './explorer-filter';
+import { chosen } from '../filter/filter-selection';
 import type { FilterSelection } from '../filter/filter-selection';
 
 const LAST_OVERLAYS = 'cdd-graph-overlays';

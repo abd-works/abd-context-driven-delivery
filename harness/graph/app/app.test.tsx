@@ -4,14 +4,33 @@ import { useLayoutEffect, useRef } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { App } from './App';
 import { GraphView } from './graph/GraphView';
-import type { ExplorerEntryData } from '@cdd/harness/graph/graph';
+import type { ExplorerEntryData, NodeSourceData } from '@cdd/harness/graph/graph';
 import { SourceView } from './source/SourceView';
+import type { Monaco } from '@monaco-editor/react';
+import { CallCatalog } from './source/call-expansion';
+import type { SourceCallout } from './source/source-callouts';
+import { FoldKeys, VS_CODE_FOLD_KEYS } from './source/source-folding';
 import { buildViolationCorrectPrompt } from './source/violation-prompt';
 import filterChoices from './filter-choices.json';
 
 const foldMarks = vi.hoisted(() => ({
   names: [] as string[],
   scrollbar: undefined as { handleMouseWheel?: boolean; alwaysConsumeMouseWheel?: boolean } | undefined,
+  wordWrap: undefined as string | undefined,
+  scrollLeft: 0,
+  // The fold actions run and commands triggered on the editor, in order.
+  folding: [] as { command: string; args?: unknown }[],
+  // The folding range providers and keybinding rules given to Monaco.
+  providers: [] as { language: string; provider: { provideFoldingRanges: (model: { getLinesContent: () => string[] }) => unknown } }[],
+  keybindings: [] as { keybinding: number; command: string }[],
+}));
+
+// Monaco's own keys, as a chord of two parts and modifiers: the fake keeps each code as a plain number.
+const fakeMonaco = vi.hoisted(() => ({
+  KeyMod: { CtrlCmd: 2048, Shift: 1024, Alt: 512, WinCtrl: 256, chord: (first: number, second: number) => first * 65536 + second },
+  KeyCode: { KeyK: 41, KeyJ: 40, KeyL: 42, KeyM: 43, Digit0: 21, Digit1: 22, Digit2: 23, Digit3: 24, Digit4: 25, Digit5: 26, Digit6: 27, Digit7: 28, BracketLeft: 92, BracketRight: 94, F9: 66, Slash: 90, Backslash: 93, Minus: 88, Equal: 86, Period: 89, Comma: 87, Semicolon: 85 },
+  languages: { registerFoldingRangeProvider: (_language: string, _provider: unknown) => undefined as unknown },
+  editor: { addKeybindingRules: (_rules: unknown[]) => undefined as unknown },
 }));
 
 vi.mock('@monaco-editor/react', () => ({
@@ -25,6 +44,7 @@ vi.mock('@monaco-editor/react', () => ({
     defaultValue?: string;
     options?: {
       scrollbar?: { handleMouseWheel?: boolean; alwaysConsumeMouseWheel?: boolean };
+      wordWrap?: string;
       lineNumbers?: (line: number) => string;
     };
     onMount?: (editor: {
@@ -33,18 +53,31 @@ vi.mock('@monaco-editor/react', () => ({
       getModel: () => { getLineCount: () => number };
       getDomNode: () => HTMLElement;
       getTargetAtClientPoint: () => null;
-      createDecorationsCollection: (next: { range: { startLineNumber: number }; options: { glyphMarginClassName?: string; className?: string; isWholeLine?: boolean } }[]) => {
-        set: (items: { range: { startLineNumber: number }; options: { glyphMarginClassName?: string; className?: string; isWholeLine?: boolean } }[]) => void;
+      createDecorationsCollection: (next: FakeMark[]) => {
+        set: (items: FakeMark[]) => void;
         clear: () => void;
       };
-      setHiddenAreas: (ranges: { startLineNumber: number; endLineNumber: number }[]) => void;
-    }) => void;
+      getAction: (id: string) => { run: () => Promise<void> };
+      trigger: (source: string, handler: string, payload: unknown) => void;
+      onDidContentSizeChange: (listener: (size: { contentHeight: number }) => void) => { dispose: () => void };
+      getScrollLeft: () => number;
+      setScrollLeft: (left: number) => void;
+      onMouseDown: (listener: (event: { target: { element: Element | null; position: { lineNumber: number } | null } }) => void) => { dispose: () => void };
+      changeViewZones: (
+        change: (accessor: { addZone: (zone: { afterLineNumber: number; domNode: HTMLElement }) => string; removeZone: (id: string) => void }) => void,
+      ) => void;
+    }, monaco: typeof fakeMonaco) => void;
   }) => {
     const text = value ?? defaultValue ?? '';
     const host = useRef<HTMLDivElement>(null);
-    const marks = useRef<{ range: { startLineNumber: number }; options: { glyphMarginClassName?: string; className?: string; isWholeLine?: boolean } }[]>([]);
-    const hidden = useRef<{ startLineNumber: number; endLineNumber: number }[]>([]);
+    type Mark = FakeMark;
+    // Each decorations collection the editor made keeps its own marks, as Monaco's do; every one paints.
+    const collections = useRef<Mark[][]>([]);
+    const marks = { get current(): Mark[] { return collections.current.flat(); } };
+    const zones = useRef<Map<string, { afterLineNumber: number; domNode: HTMLElement }>>(new Map());
+    const presses = useRef<((event: { target: { element: Element | null; position: { lineNumber: number } | null } }) => void)[]>([]);
     foldMarks.scrollbar = options?.scrollbar;
+    foldMarks.wordWrap = options?.wordWrap;
     const paint = () => {
       const editor = host.current;
       if (!editor) {
@@ -55,10 +88,6 @@ vi.mock('@monaco-editor/react', () => ({
       text.split('\n').forEach((line, index) => {
         const lineNumber = index + 1;
         const shown = options?.lineNumbers?.(lineNumber) || String(lineNumber);
-        const covered = hidden.current.some((range) => lineNumber >= range.startLineNumber && lineNumber <= range.endLineNumber);
-        if (covered) {
-          return;
-        }
         const row = document.createElement('div');
         row.dataset.line = shown;
         for (const item of marks.current) {
@@ -74,40 +103,87 @@ vi.mock('@monaco-editor/react', () => ({
             row.appendChild(mark);
           }
         }
+        row.dataset.editorLine = String(lineNumber);
         row.append(line);
+        for (const item of marks.current) {
+          if (item.range.startLineNumber === lineNumber && item.options.after) {
+            const label = document.createElement('span');
+            label.className = item.options.after.inlineClassName ?? '';
+            label.textContent = item.options.after.content;
+            row.appendChild(label);
+          }
+        }
         editor.appendChild(row);
+        for (const zone of zones.current.values()) {
+          if (zone.afterLineNumber === lineNumber) {
+            editor.appendChild(zone.domNode);
+          }
+        }
       });
     };
+    const pressed = (event: MouseEvent) => {
+      const element = event.target instanceof Element ? event.target : null;
+      const row = element?.closest<HTMLElement>('[data-editor-line]');
+      const position = row ? { lineNumber: Number(row.dataset.editorLine) } : null;
+      presses.current.forEach((listener) => listener({ target: { element, position } }));
+    };
+    // Monaco calls onMount once, with one editor; the fake calls it again only when its text changes.
+    const mounting = useRef(onMount);
+    mounting.current = onMount;
     useLayoutEffect(() => {
-      onMount?.({
+      mounting.current?.({
         getValue: () => text,
         setValue: () => undefined,
         getModel: () => ({ getLineCount: () => text.split('\n').length }),
         getDomNode: () => host.current ?? document.body,
         getTargetAtClientPoint: () => null,
         createDecorationsCollection: (next) => {
-          marks.current = next;
+          const index = collections.current.push(next) - 1;
           paint();
           return {
             set: (items) => {
-              marks.current = items;
+              collections.current[index] = items;
               paint();
             },
             clear: () => {
-              marks.current = [];
+              collections.current[index] = [];
               paint();
             },
           };
         },
-        setHiddenAreas: (ranges) => {
-          hidden.current = ranges;
+        onMouseDown: (listener) => {
+          presses.current.push(listener);
+          return { dispose: () => (presses.current = presses.current.filter((held) => held !== listener)) };
+        },
+        changeViewZones: (change) => {
+          change({
+            addZone: (zone) => {
+              const id = `zone-${zones.current.size + 1}-${zone.afterLineNumber}`;
+              zones.current.set(id, zone);
+              return id;
+            },
+            removeZone: (id) => zones.current.delete(id),
+          });
           paint();
         },
-      });
-    }, [onMount, text]);
-    return <div ref={host} data-testid="source-editor" />;
+        getAction: (id) => ({ run: async () => void foldMarks.folding.push({ command: id }) }),
+        trigger: (_source, handler, payload) => void foldMarks.folding.push({ command: handler, args: payload }),
+        onDidContentSizeChange: () => ({ dispose: () => undefined }),
+        // A line as wide as any scroll asks, so the editor scrolls as far as it is told, never left of its start.
+        getScrollLeft: () => foldMarks.scrollLeft,
+        setScrollLeft: (left) => {
+          foldMarks.scrollLeft = Math.max(0, left);
+        },
+      }, fakeMonaco);
+    }, [text]);
+    return <div ref={host} data-testid="source-editor" onMouseDown={(event) => pressed(event.nativeEvent)} />;
   },
 }));
+
+type FakeMark = {
+  range: { startLineNumber: number };
+  options: { glyphMarginClassName?: string; className?: string; isWholeLine?: boolean; after?: { content: string; inlineClassName?: string } };
+};
 
 const folder = 'C:\\dev\\example';
 const overlayFolder = 'C:\\dev\\patterns\\lern_domain_driven';
@@ -321,6 +397,9 @@ beforeEach(() => {
   reported = currentStaleness();
   foldMarks.names = [];
   foldMarks.scrollbar = undefined;
+  foldMarks.folding = [];
+  fakeMonaco.languages.registerFoldingRangeProvider = (language, provider) => foldMarks.providers.push({ language, provider: provider as (typeof foldMarks.providers)[number]['provider'] });
+  fakeMonaco.editor.addKeybindingRules = (rules) => foldMarks.keybindings.push(...(rules as { keybinding: number; command: string }[]));
   window.localStorage.clear();
   vi.stubGlobal(
     'fetch',
@@ -389,23 +468,69 @@ it('should list every invoke under an operation', async () => {
   expect(within(invokes as HTMLElement).getByText('notify')).toBeTruthy();
 });
 
-it('should fold calls, classes, and blocks in the source', async () => {
-  const user = userEvent.setup();
+const rowOf = (editor: HTMLElement, text: string) =>
+  Array.from(editor.querySelectorAll<HTMLElement>('[data-line]')).find((row) => row.textContent?.includes(text));
+
+function press(target: Element | null | undefined): void {
+  if (!target) throw new Error('nothing to press');
+  act(() => void target.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })));
+}
+
+async function openRegister(user: UserEvent): Promise<HTMLElement> {
   await openFolder(user);
   await expand(user, 'clean_engineering');
   await expand(user, 'account');
   await expand(user, 'AccountCredentials');
   await user.click(screen.getByText('register'));
-  const editor = await screen.findByTestId('source-editor');
-  await waitFor(() => expect(editor.querySelector('.call-fold')).toBeTruthy());
-  const line = (text: string) =>
-    Array.from(editor.querySelectorAll<HTMLElement>('[data-line]')).find((row) => row.textContent?.includes(text));
-  expect(line('credentials.save()')?.querySelector('.call-fold')).toBeTruthy();
-  expect(line('credentials.notify()')?.querySelector('.call-fold')).toBeTruthy();
-  expect(line('const account: AccountToken = input;')?.querySelector('.class-fold')).toBeTruthy();
-  expect(line('if (input)')?.querySelector('.block-fold')).toBeTruthy();
+  return screen.findByTestId('source-editor');
+}
+
+it('should label each call and class the code reaches, their lines closed', async () => {
+  const user = userEvent.setup();
+  const editor = await openRegister(user);
+  await waitFor(() => expect(rowOf(editor, 'credentials.save()')?.querySelector('.callout-label')?.textContent).toBe(' ▸ Credentials.save'));
+  expect(rowOf(editor, 'const account: AccountToken')?.querySelector('.callout-label')?.textContent).toBe(' ▸ AccountToken');
+  expect(editor.querySelector('.callout-section')).toBeNull();
   expect(editor.textContent).not.toContain('only-in-class-body');
-  expect(foldMarks.scrollbar).toEqual({ handleMouseWheel: false, alwaysConsumeMouseWheel: false });
+  expect(foldMarks.scrollbar).toMatchObject({ handleMouseWheel: false, alwaysConsumeMouseWheel: false });
+});
+
+it('should open a call in place with its label hidden, shaded once, and bring the label back when closed', async () => {
+  const user = userEvent.setup();
+  const editor = await openRegister(user);
+  await waitFor(() => expect(rowOf(editor, 'credentials.save()')?.querySelector('.callout-mark')).toBeTruthy());
+  press(rowOf(editor, 'credentials.save()')?.querySelector('.callout-mark'));
+  await waitFor(() => expect(editor.querySelectorAll('.callout-section')).toHaveLength(1));
+  const lines = Array.from(editor.querySelectorAll('.callout-section .callout-text')).map((row) => row.textContent);
+  expect([lines, rowOf(editor, 'credentials.save()')?.querySelector('.callout-label')]).toEqual([['save() {', '  this.notify();', '}'], null]);
+  press(rowOf(editor, 'credentials.save()')?.querySelector('.callout-mark'));
+  await waitFor(() => expect(editor.querySelector('.callout-section')).toBeNull());
+  expect(rowOf(editor, 'credentials.save()')?.querySelector('.callout-label')).toBeTruthy();
+});
+
+it('should open a call inside an open call, one shade deeper', async () => {
+  const user = userEvent.setup();
+  const editor = await openRegister(user);
+  await waitFor(() => expect(rowOf(editor, 'credentials.save()')?.querySelector('.callout-mark')).toBeTruthy());
+  press(rowOf(editor, 'credentials.save()')?.querySelector('.callout-mark'));
+  await waitFor(() => expect(editor.querySelector('.callout-inner-mark')).toBeTruthy());
+  press(editor.querySelector('.callout-inner-mark'));
+  await waitFor(() => expect(editor.querySelector('.callout-section .callout-section')?.textContent).toBe('notify() {  sent();}'));
+});
+
+it('should never open a class a comment or a docstring names', async () => {
+  const app = { node_id: 'class-app', name: 'App', type: 'OoadClass', owner: '', text: 'class App:\n    pass', file: 'app.py', start_line: 1, end_line: 2, members: [] };
+  const story = { ...longLine, node_id: 'story', file: 'explore.story.shared.py', text: '"""Explore Graph In Files App."""\n# App opens here\napp = App()', members: [app] };
+  render(<SourceView source={story} violation={null} rules={[]} activeRule="" />);
+  const editor = await screen.findByTestId('source-editor');
+  await waitFor(() => expect(rowOf(editor, 'app = App()')?.querySelector('.callout-label')).toBeTruthy());
+  expect([rowOf(editor, 'Explore Graph')?.querySelector('.callout-label'), rowOf(editor, '# App opens')?.querySelector('.callout-label')]).toEqual([null, null]);
+});
+
+it('should show the source code without the marks the graph puts after its calls', () => {
+  const marked = { node_id: 'save', name: 'save', type: 'Operation', owner: 'Credentials', text: 'save() {\n  stored(); /* call:stored */\n}', file: 'credentials.ts', start_line: 1, end_line: 3 };
+  const [callout] = new CallCatalog([marked]).calloutsIn('credentials.save();', 1, 'typescript');
+  expect(callout.text).toBe('save() {\n  stored();\n}');
 });
 
 it('should number a step from its line in the file', async () => {
@@ -428,34 +553,209 @@ it('should number a step from its line in the file', async () => {
     />,
   );
   const editor = await screen.findByTestId('source-editor');
-  const when = Array.from(editor.querySelectorAll<HTMLElement>('[data-line]')).find((row) =>
-    row.textContent?.includes('loads the customer'),
-  );
-  expect(when?.dataset.line).toBe('93');
+  expect(rowOf(editor, 'loads the customer')?.dataset.line).toBe('93');
   expect(editor.textContent).not.toContain("then('the result");
 });
 
-it('should fold a story, a scenario, and a step the way a class folds', async () => {
+const longLine = {
+  node_id: 'order',
+  name: 'Order',
+  type: 'OoadClass',
+  file: 'order.py',
+  text: `class Order:
+    def place(self, cart: Cart) -> Order:
+        raise EmptyCartError(cart.id, "${'a cart needs one item to be placed '.repeat(6)}")`,
+  start_line: 1,
+  end_line: 3,
+  owner: '',
+  members: [] as NodeSourceData[],
+};
+
+function turnWheel(editor: HTMLElement, wheel: WheelEventInit): WheelEvent {
+  const event = new WheelEvent('wheel', { bubbles: true, cancelable: true, ...wheel });
+  editor.dispatchEvent(event);
+  return event;
+}
+
+it('should scroll a long line sideways when the wheel turns with shift held', async () => {
+  foldMarks.scrollLeft = 0;
+  render(<SourceView source={longLine} violation={null} rules={[]} activeRule="" />);
+  const editor = await screen.findByTestId('source-editor');
+  const wheel = turnWheel(editor, { deltaY: 120, shiftKey: true });
+  expect([foldMarks.scrollLeft, wheel.defaultPrevented]).toEqual([120, true]);
+});
+
+it('should scroll a long line sideways when the Person swipes sideways', async () => {
+  foldMarks.scrollLeft = 0;
+  render(<SourceView source={longLine} violation={null} rules={[]} activeRule="" />);
+  const editor = await screen.findByTestId('source-editor');
+  turnWheel(editor, { deltaX: 80, deltaY: 4 });
+  expect(foldMarks.scrollLeft).toBe(80);
+});
+
+it('should leave the wheel without shift to the page', async () => {
+  foldMarks.scrollLeft = 0;
+  render(<SourceView source={longLine} violation={null} rules={[]} activeRule="" />);
+  const editor = await screen.findByTestId('source-editor');
+  const wheel = turnWheel(editor, { deltaY: 120 });
+  expect([foldMarks.scrollLeft, wheel.defaultPrevented]).toEqual([0, false]);
+});
+
+it('should leave long lines unwrapped until the page asks to wrap them', async () => {
+  render(<SourceView source={longLine} violation={null} rules={[]} activeRule="" />);
+  await screen.findByTestId('source-editor');
+  expect(foldMarks.wordWrap).toBe('off');
+});
+
+it('should wrap long lines when the page asks', async () => {
+  render(<SourceView source={longLine} violation={null} rules={[]} activeRule="" wordWrap />);
+  await screen.findByTestId('source-editor');
+  expect(foldMarks.wordWrap).toBe('on');
+});
+
+const storyMap = {
+  node_id: '.context/story-map.md',
+  name: 'story-map.md',
+  type: 'File',
+  file: '.context/story-map.md',
+  text: '# Story Map\n\n(E) Manage Tickets\n    (S) Person --> [Delete Ticket](../story_tests/remove_tickets_story.test.md#story-delete-ticket)',
+  start_line: 1,
+  end_line: 4,
+  owner: '',
+  members: [],
+};
+const deleteTicketScenarios: SourceCallout = {
+  id: 'story_tests/remove_tickets_story.test.md:3',
+  kind: 'section',
+  line: 4,
+  title: 'Delete Ticket',
+  path: 'story_tests/remove_tickets_story.test.md',
+  startLine: 3,
+  endLine: 9,
+  text: '## Story: Delete Ticket\n\n#### Scenario: a ticket is deleted\n\n*Given* a ticket on the board\n*When* the Person deletes it\n*Then* the board no longer shows it',
+};
+
+it('should mark and label a line whose link opens another file, its section closed', async () => {
+  render(<SourceView source={storyMap} violation={null} rules={[]} activeRule="" language="markdown" keepGlyphMargin callouts={[deleteTicketScenarios]} />);
+  const editor = await screen.findByTestId('source-editor');
+  await waitFor(() => expect(editor.querySelector('[data-line="4"] .callout-mark')).toBeTruthy());
+  expect([editor.querySelector('[data-line="4"] .callout-label')?.textContent, editor.querySelector('.callout-section')]).toEqual([' ▸ Delete Ticket', null]);
+});
+
+it('should open the linked section under its line in place of its label, naming its file only in its tooltip', async () => {
+  render(<SourceView source={storyMap} violation={null} rules={[]} activeRule="" language="markdown" keepGlyphMargin callouts={[deleteTicketScenarios]} />);
+  const editor = await screen.findByTestId('source-editor');
+  await waitFor(() => expect(editor.querySelector('.callout-mark')).toBeTruthy());
+  press(editor.querySelector('[data-line="4"] .callout-label'));
+  await waitFor(() => expect(editor.querySelector('.callout-section')).toBeTruthy());
+  const section = editor.querySelector<HTMLElement>('.callout-section');
+  const lines = Array.from(section?.querySelectorAll('.callout-text') ?? []).map((row) => row.textContent);
+  expect([lines, section?.title, editor.querySelector('.callout-label')]).toEqual([deleteTicketScenarios.text.split('\n'), 'Delete Ticket: story_tests/remove_tickets_story.test.md lines 3 to 9', null]);
+});
+
+it('should close the linked section and bring its label back when its mark is pressed again', async () => {
+  render(<SourceView source={storyMap} violation={null} rules={[]} activeRule="" language="markdown" keepGlyphMargin callouts={[deleteTicketScenarios]} />);
+  const editor = await screen.findByTestId('source-editor');
+  await waitFor(() => expect(editor.querySelector('.callout-mark')).toBeTruthy());
+  press(editor.querySelector('[data-line="4"] .callout-mark'));
+  await waitFor(() => expect(editor.querySelector('.callout-section')).toBeTruthy());
+  press(editor.querySelector('[data-line="4"] .callout-mark'));
+  await waitFor(() => expect(editor.querySelector('.callout-section')).toBeNull());
+  expect(editor.querySelector('[data-line="4"] .callout-label')).toBeTruthy();
+});
+
+function markedLines(editor: HTMLElement): string[] {
+  return Array.from(editor.querySelectorAll<HTMLElement>('[data-line].selected-lines')).map((row) => row.dataset.line ?? '');
+}
+
+it('should mark the lines of the node the page asks to show', async () => {
+  render(<SourceView source={longLine} violation={null} rules={[]} activeRule="" openAround={[{ start: 2, end: 3 }]} />);
+  const editor = await screen.findByTestId('source-editor');
+  await waitFor(() => expect(markedLines(editor)).toEqual(['2', '3']));
+});
+
+it('should mark no lines for a node that covers the whole file', async () => {
+  render(<SourceView source={longLine} violation={null} rules={[]} activeRule="" openAround={[{ start: 1, end: 3 }]} />);
+  const editor = await screen.findByTestId('source-editor');
+  await screen.findAllByText(/class Order/);
+  expect(markedLines(editor)).toEqual([]);
+});
+
+it("should fold everything with Monaco's Fold All, then unfold every fold around the lines asked to show", async () => {
+  render(<SourceView source={longLine} violation={null} rules={[]} activeRule="" openAround={[{ start: 2, end: 3 }]} />);
+  await screen.findByTestId('source-editor');
+  await waitFor(() =>
+    expect(foldMarks.folding).toEqual([{ command: 'editor.foldAll' }, { command: 'editor.unfold', args: { selectionLines: [1], direction: 'up', levels: 100 } }]),
+  );
+});
+
+it('should leave the folds as the person left them when no lines are asked to show', async () => {
+  render(<SourceView source={longLine} violation={null} rules={[]} activeRule="" />);
+  await screen.findByTestId('source-editor');
+  expect(foldMarks.folding).toEqual([]);
+});
+
+it('should fold markdown by its headings, a heading in a code block being none', async () => {
+  render(<SourceView source={storyMap} violation={null} rules={[]} activeRule="" language="markdown" />);
+  await screen.findByTestId('source-editor');
+  const markdown = foldMarks.providers.find((each) => each.language === 'markdown');
+  const lines = ['# A', '', '## B', 'text', '', '## C', '```', '# not', '```', 'x'];
+  expect(markdown?.provider.provideFoldingRanges({ getLinesContent: () => lines })).toEqual([
+    { start: 1, end: 10 },
+    { start: 3, end: 4 },
+    { start: 6, end: 10 },
+  ]);
+});
+
+const monacoApi = fakeMonaco as unknown as Monaco;
+const chordOf = (first: number, second: number) => fakeMonaco.KeyMod.chord(fakeMonaco.KeyMod.CtrlCmd | first, fakeMonaco.KeyMod.CtrlCmd | second);
+
+it("should bind VS Code's fold chords when no keybindings file says otherwise", () => {
+  foldMarks.keybindings = [];
+  FoldKeys.VS_CODE.bindIn(monacoApi);
+  expect(foldMarks.keybindings).toContainEqual({ keybinding: chordOf(fakeMonaco.KeyCode.KeyK, fakeMonaco.KeyCode.Digit0), command: 'editor.foldAll' });
+});
+
+it('should bind the key a keybindings file gives a fold command in place of VS Code', () => {
+  foldMarks.keybindings = [];
+  const keys = FoldKeys.from('[{ "key": "ctrl+m ctrl+m", "command": "editor.toggleFold" }]').bindIn(monacoApi);
+  const toggles = foldMarks.keybindings.filter((rule) => rule.command === 'editor.toggleFold');
+  expect([keys.problem, toggles]).toEqual(['', [{ keybinding: chordOf(fakeMonaco.KeyCode.KeyM, fakeMonaco.KeyCode.KeyM), command: 'editor.toggleFold' }]]);
+});
+
+it("should keep VS Code's keys and say why when a keybindings file is no list of fold commands", () => {
+  const keys = [FoldKeys.from('{ "editor.foldAll": "ctrl+m" }'), FoldKeys.from('[{ "key": "ctrl+m", "command": "workbench.action.quit" }]'), FoldKeys.from('[{')];
+  expect(keys.map((each) => [each.keys === VS_CODE_FOLD_KEYS, each.problem.length > 0])).toEqual([
+    [true, true],
+    [true, true],
+    [true, true],
+  ]);
+});
+
+it('should bind a key with shift, and a function key, as a keybindings file writes them', () => {
+  foldMarks.keybindings = [];
+  FoldKeys.from('[{ "key": "f9", "command": "editor.toggleFold" }]').bindIn(monacoApi);
+  expect(foldMarks.keybindings).toEqual(expect.arrayContaining([
+    { keybinding: fakeMonaco.KeyMod.CtrlCmd | fakeMonaco.KeyMod.Shift | fakeMonaco.KeyCode.BracketLeft, command: 'editor.fold' },
+    { keybinding: fakeMonaco.KeyCode.F9, command: 'editor.toggleFold' },
+  ]));
+});
+
+it("should keep VS Code's keys and say why when a keybindings file names a key Monaco has none for", () => {
+  const keys = FoldKeys.from('[{ "key": "hyper+q", "command": "editor.foldAll" }]').bindIn(monacoApi);
+  expect([keys.keys, keys.problem]).toEqual([VS_CODE_FOLD_KEYS, 'no key Monaco knows in {"key":"hyper+q","command":"editor.foldAll"}']);
+});
+
+it("should open the calls of a step in place", async () => {
   const user = userEvent.setup();
   await openFolder(user);
   await expand(user, 'stories');
   await expand(user, 'Onboard');
   await expand(user, 'Create Account');
-  await user.click(screen.getByText('Create Account'));
-  const editor = await screen.findByTestId('source-editor');
-  const line = (text: string) =>
-    Array.from(editor.querySelectorAll<HTMLElement>('[data-line]')).find((row) => row.textContent?.includes(text));
-  await waitFor(() => expect(line("scenario('Create account'")?.querySelector('.block-fold')).toBeTruthy());
-
-  await expand(user, 'Create Account');
-  await user.click(screen.getByText('Create account'));
-  await waitFor(() => expect(editor.textContent).toContain('accountCredentials.register'));
-  await waitFor(() => expect(editor.textContent).toContain("then('the account is unconfirmed'"));
-
   await expand(user, 'Create account');
   await user.click(screen.getByText('when the User creates their account'));
-  await waitFor(() => expect(line('accountCredentials.register()')?.querySelector('.call-fold')).toBeTruthy());
-  expect(line('if (input)')?.querySelector('.block-fold')).toBeTruthy();
+  const editor = await screen.findByTestId('source-editor');
+  await waitFor(() => expect(rowOf(editor, 'accountCredentials.register()')?.querySelector('.callout-label')?.textContent).toBe(' ▸ AccountCredentials.register'));
 });
 
 it('should select every node, connector, and rule for the practice', async () => {
@@ -960,7 +1260,7 @@ function answer(operation: string, body: Record<string, unknown>): unknown {
       end_line: storySource.text.split('\n').length,
       members: [
         { node_id: 'op-1', name: 'register', type: 'Operation', owner: 'AccountCredentials', text: registerText, file: 'register.ts', start_line: 1, end_line: 4 },
-        { node_id: 'save', name: 'save', type: 'Operation', owner: 'Credentials', text: 'save() {\n  stored();\n}', file: 'credentials.ts', start_line: 1, end_line: 3 },
+        { node_id: 'save', name: 'save', type: 'Operation', owner: 'Credentials', text: 'save() {\n  this.notify();\n}', file: 'credentials.ts', start_line: 1, end_line: 3 },
         { node_id: 'notify', name: 'notify', type: 'Operation', owner: 'Credentials', text: 'notify() {\n  sent();\n}', file: 'credentials.ts', start_line: 5, end_line: 7 },
         { node_id: 'class-c', name: 'Credentials', type: 'OoadClass', owner: '', text: 'class Credentials {\n  token: string;\n}', file: 'credentials.ts', start_line: 1, end_line: 3 },
         { node_id: 'class-token', name: 'AccountToken', type: 'OoadClass', owner: '', text: 'class AccountToken {\n  value: string;\n}', file: 'token.ts', start_line: 1, end_line: 3 },

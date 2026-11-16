@@ -14,10 +14,13 @@ from harness.graph.pattern_overlays import GraphOverlay
 from harness.graph.skipped_folders import scanned_files
 
 from cdd_guidance.patterns.lern_domain_driven.tier_facts import AggregateFolder, TierFile
+from cdd_guidance.practices.clean_engineering.model.code_body import CODE_LANGUAGES, TYPESCRIPT
 
 _VIEW_EXPORT = re.compile(r"export\s+function\s+(\w+View)\s*\(")
 _VIEW_SKIP_SUFFIXES = ("-form", "-fields", "-banner", "-messages", "-footer", "-loaded", "-client")
 _TIER_FILES = (("{slug}-node.ts", "NodeRoot"), ("{slug}-client.tsx", "ClientRoot"), ("{slug}-routes.ts", "Route"), ("{slug}.json", "JsonStore"))
+# LERN is TypeScript everywhere: code in any other language, such as a Python class, carries none of its rules.
+_OTHER_CODE_LANGUAGES = frozenset(language.name for language in CODE_LANGUAGES if language is not TYPESCRIPT)
 _BEHAVIOR_TIERS = {
     "spec.shared.ts": "BehaviorShared",
     "behavior.domain.spec.ts": "BehaviorDomain",
@@ -36,6 +39,10 @@ class LernOverlay(GraphOverlay):
             "writtenBy", "belongsTo",
         }
     )
+
+    def adds_rules_to(self, node: Node) -> bool:
+        """LERN is constrained to TypeScript: a node read from code in another language carries none of its rules."""
+        return node.file_language not in _OTHER_CODE_LANGUAGES
 
     def read(self, graph: Graph) -> None:
         if not graph.folder:

@@ -49,11 +49,21 @@ class LaneCall:
 
 
 class ServerLane:
-    """One cdd server: the home whose runtime record names the code it runs, and the port it answers on."""
+    """One cdd server: the home whose runtime record names the code it runs, the port it answers on, and how far the
+    app servers its chats start sit from the ports their ports files give them, so the two lanes' apps never meet."""
 
-    def __init__(self, name: str, home: CddHome, address: McpAddress) -> None:
+    def __init__(self, name: str, home: CddHome, address: McpAddress, app_port_offset: int = 0) -> None:
         self.name = name
         self.daemon = McpDaemon(home, address)
+        self._app_port_offset = app_port_offset
+
+    @classmethod
+    def from_home(cls, home: CddHome | None = None) -> ServerLane:
+        """The lane the server running from home serves, by default the home this process runs from: the dev lane when
+        home is the dev lane's, else the stable lane."""
+        running_from = home or CddHome()
+        lanes = ServerLanes.from_serving(running_from)
+        return lanes.dev if lanes.dev.home.folder == running_from.folder else lanes.stable
 
     @property
     def home(self) -> CddHome:
@@ -62,6 +72,10 @@ class ServerLane:
     @property
     def port(self) -> int:
         return self.daemon.port
+
+    def app_ports(self, ports: tuple[int, ...]) -> tuple[int, ...]:
+        """The ports an app server whose ports file gives it ports answers on in this lane."""
+        return tuple(port + self._app_port_offset for port in ports)
 
     def served_checkout(self, checkout: Path) -> ServedCheckout:
         """``checkout`` as this lane installs and serves it."""
@@ -87,6 +101,9 @@ class ServerLanes:
     DEV_FOLDER = "dev"
     # The dev lane answers on the port after the stable lane's, so a throwaway pair from a spec stays a pair.
     DEV_PORT_AFTER_STABLE = 1
+    # The dev lane's app servers answer this far above the stable lane's, on ports no app's ports file names, so a
+    # feature's Files, board, and Graph servers run beside main's.
+    DEV_APP_PORT_OFFSET = 1000
 
     def __init__(self, home: CddHome | None = None, address: McpAddress | None = None, dev_address: McpAddress | None = None) -> None:
         stable_home = home or CddHome()
@@ -96,14 +113,17 @@ class ServerLanes:
             self.DEV,
             CddHome(stable_home.folder / self.DEV_FOLDER),
             dev_address or McpAddress(stable_address.port + self.DEV_PORT_AFTER_STABLE),
+            self.DEV_APP_PORT_OFFSET,
         )
 
     @classmethod
-    def from_serving(cls, home: CddHome, address: McpAddress) -> ServerLanes:
-        """The lanes as the server running from home on address sees them, whichever of the two it is."""
+    def from_serving(cls, home: CddHome, address: McpAddress | None = None) -> ServerLanes:
+        """The lanes as the server running from home on address sees them, whichever of the two it is; with no address,
+        on the lanes' own ports."""
         if home.folder.name != cls.DEV_FOLDER:
             return cls(home, address)
-        return cls(CddHome(home.folder.parent), McpAddress(address.port - cls.DEV_PORT_AFTER_STABLE))
+        stable_address = McpAddress(address.port - cls.DEV_PORT_AFTER_STABLE) if address is not None else None
+        return cls(CddHome(home.folder.parent), stable_address)
 
     def for_project(self, project: Path) -> ServerLane:
         if self._is_in_main_checkout(Path(project).resolve()):

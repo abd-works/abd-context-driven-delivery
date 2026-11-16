@@ -1,12 +1,17 @@
 // The Files app's acceptance tests for its graph view, story by story as
 // story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md
 // writes them; what the session's graph answers is proved by the sub-epic's story tests in story_tests/review-generated-work-in-file-viewer/.
+import { render } from '@testing-library/react'
+import { createElement } from 'react'
 import { describe, expect, it } from 'vitest'
 
 import type { CddApi } from '@cdd/cdd-shared'
 import type { ExplorerEntryData, GuidanceSelectionData } from '@cdd/space/session/session'
-import { foldsAround } from '@source-view/SourceView'
 
+import { NodeFilterLists } from '@graph-app/filter/FilterView'
+import { NO_CHOICES, NO_FILTER } from '@graph-app/filter/filter-selection'
+
+import { FilesGraphView } from './files-graph-view'
 import { FilesLink } from './files-link'
 import { FilesPage } from './files-page'
 
@@ -54,10 +59,12 @@ class FakeFilesServer implements CddApi {
   stages = ['discovery', 'implementation']
   practices = ['stories', 'clean_engineering']
   progress: string[] = []
-  // What graph_trees and graph_members answer in place of the seed's nodes, as a server lane that cannot run the call
-  // answers: a failure's text rather than a list.
+  // What graph_trees, graph_members and graph_filter_choices answer in place of the seed's, as a server lane that cannot
+  // run the call answers: a failure's text, an error, or nothing, rather than what the tool returns.
   treesAnswer: unknown = undefined
   membersAnswer: unknown = undefined
+  choicesAnswer: unknown = undefined
+  isChoicesAnswered = false
   private readonly waiting: (() => void)[] = []
   private held: Promise<void> | null = null
   private release: () => void = () => {}
@@ -74,15 +81,18 @@ class FakeFilesServer implements CddApi {
 
   async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
     this.posts.push({ path, body })
+    if (path.endsWith('/graph-trees') && this.treesAnswer !== undefined) return this.treesAnswer as Result
     if (path.endsWith('/guidance-selection')) return this.selection() as Result
     if (path.endsWith('/update-guidance-selection')) return this.update(body) as Result
     if (path.endsWith('/guidance-selection-after')) return (await this.after(Number(body.version))) as Result
     if (path.endsWith('/fidelity-files')) return {} as Result
     if (path.endsWith('/root-files')) return CHECKOUT_FLOW_FILES as Result
-    if (path.endsWith('/graph-trees')) return (this.treesAnswer !== undefined ? this.treesAnswer : await this.heldTrees(body.paths as string[])) as Result
+    if (path.endsWith('/graph-trees')) return (await this.heldTrees(body.paths as string[])) as Result
+    if (path.endsWith('/graph-filter-choices') && this.isChoicesAnswered) return this.choicesAnswer as Result
+    if (path.endsWith('/graph-members') && this.membersAnswer !== undefined) return this.membersAnswer as Result
+    if (path.endsWith('/graph-filter-choices')) return this.choices(body.node_types as string[]) as Result
     if (path.endsWith('/graph-branch')) return this.entry(this.node(String(body.node_id)), body.paths as string[], true) as Result
     if (path.endsWith('/graph-node-ranges')) return this.ranges(this.node(String(body.node_id)), body.paths as string[]) as Result
-    if (path.endsWith('/graph-members') && this.membersAnswer !== undefined) return this.membersAnswer as Result
     if (path.endsWith('/graph-members')) return CHECKOUT_FLOW_NODES.filter(node => node.file).map(node => ({ node_id: node.id, name: node.name, type: node.type, file: node.file })) as Result
     if (path.endsWith('/cdd/progress')) return this.progress.map(message => ({ tool: 'session.graph_trees', message })) as Result
     if (path.endsWith('/file')) return { path: body.path, text: 'line\n'.repeat(700), language: 'python', comments: [], folds: [], violations: [], changes: [] } as Result
@@ -153,6 +163,17 @@ class FakeFilesServer implements CddApi {
     }
     widen(node)
     return [...spans].map(([path, [start, end]]) => ({ path, start_line: start, end_line: end, content: '', anchor: `${path}:${start}-${end}` }))
+  }
+
+  // The choices Python's Filter offers for the node types chosen: operations sit on owns and invokes, and carry their rules.
+  private choices(nodeTypes: string[]) {
+    const operations = nodeTypes.includes('Operation')
+    return {
+      node_types: nodeTypes,
+      offered_node_types: ['OoadClass', 'Operation'],
+      relationships: operations ? ['owns', 'invokes'] : ['owns'],
+      rules: operations ? ['clean_engineering.Operation.keep-operations-small-focused'] : [],
+    }
   }
 
   posted(ending: string): { path: string; body: Record<string, unknown> }[] {
@@ -269,6 +290,80 @@ describe('Filter Graph Like The File List', () => {
   })
 })
 
+describe('Filter Graph By Node Type And Connector', () => {
+  describe("with checkout-flow's graph shown", () => {
+    async function filteredToOperations() {
+      const shown = await showingGraph()
+      await shown.page.graph.filterTo({ ...shown.page.state.graph.filter, node_types: ['Operation'] })
+      await settled()
+      return shown
+    }
+
+    it('should offer the node types the graph holds once it is read', async () => {
+      const { page, stop } = await showingGraph()
+      stop()
+      expect(page.state.graph.choices.offered_node_types).toEqual(['OoadClass', 'Operation'])
+    })
+
+    it('should read the graph again for the files listed, narrowed to operations, when the Person filters to operations', async () => {
+      const { server, stop } = await filteredToOperations()
+      stop()
+      expect(server.posted('/graph-trees').at(-1)?.body).toEqual({ paths: [STORY_MAP, TICKET_CODE, BOARD_CODE], node_filter: { types: ['Operation'], relationships: ['owns', 'invokes'] } })
+    })
+
+    it('should offer the connectors and rules operations carry', async () => {
+      const { page, stop } = await filteredToOperations()
+      stop()
+      expect([page.state.graph.choices.relationships, page.state.graph.choices.rules]).toEqual([['owns', 'invokes'], ['clean_engineering.Operation.keep-operations-small-focused']])
+    })
+
+    it('should keep only the nodes on the invokes connector when the Person chooses it', async () => {
+      const { page, server, stop } = await filteredToOperations()
+      await page.graph.filterTo({ ...page.state.graph.filter, relationships: ['invokes'] })
+      await settled()
+      stop()
+      expect(server.posted('/graph-trees').at(-1)?.body.node_filter).toEqual({ types: ['Operation'], relationships: ['invokes'] })
+    })
+
+    it('should open a node with the same node filter', async () => {
+      const { page, server, stop } = await filteredToOperations()
+      await page.graph.toggle(entryNamed(page, 'Clean Engineering'))
+      await page.graph.toggle(entryNamed(page, 'Ticket'))
+      stop()
+      expect(server.posted('/graph-branch').at(-1)?.body.node_filter).toEqual({ types: ['Operation'], relationships: ['owns', 'invokes'] })
+    })
+
+    it('should keep the node filter when the file list changes to the changed files', async () => {
+      const { page, server, stop } = await filteredToOperations()
+      page.showScope('session')
+      await settled()
+      stop()
+      expect(server.posted('/graph-trees').at(-1)?.body).toEqual({ paths: [STORY_MAP, TICKET_CODE], node_filter: { types: ['Operation'], relationships: ['owns', 'invokes'] } })
+    })
+
+    it('should send no node type once the Person clears the node types with None', async () => {
+      const { page, server, stop } = await filteredToOperations()
+      await page.graph.filterTo({ ...page.state.graph.filter, node_types: [] })
+      await settled()
+      stop()
+      expect(server.posted('/graph-trees').at(-1)?.body.node_filter).toEqual({ relationships: ['owns'] })
+    })
+
+    it('should keep only violating nodes, of the rules chosen, once the Person turns on Violations', async () => {
+      const { page, server, stop } = await filteredToOperations()
+      await page.graph.filterTo({ ...page.state.graph.filter, violations: true })
+      await settled()
+      stop()
+      expect(server.posted('/graph-trees').at(-1)?.body.node_filter).toEqual({
+        types: ['Operation'],
+        relationships: ['owns', 'invokes'],
+        violations: true,
+        rules: ['clean_engineering.Operation.keep-operations-small-focused'],
+      })
+    })
+  })
+})
+
 describe('Open Several Files From Graph Nodes', () => {
   describe('with checkout-flow\'s graph shown', () => {
     async function selectedActivate() {
@@ -305,19 +400,10 @@ describe('Open Several Files From Graph Nodes', () => {
 })
 
 describe('Fold Open Files To Selected Nodes', () => {
-  // ticket.py's folds as the source view lays them: Ticket whole, and each of its operations as a block.
-  const TICKET_FOLDS = [
-    { glyph: 106, start: 107, end: 670, kind: 'class' as const },
-    { glyph: 460, start: 461, end: 465, kind: 'block' as const },
-    { glyph: 538, start: 539, end: 555, kind: 'block' as const },
-  ]
-
+  // Opening the lines asked for, with every other fold closed, is the source view's own (harness/graph/app/app.test.tsx,
+  // "should fold everything with Monaco's Fold All"); the page asks it for the lines of every node selected in the file.
   describe('with Ticket.activate selected and ticket.py open', () => {
-    it('should unfold the lines of Ticket.activate and Ticket, and leave Ticket.close folded', () => {
-      expect(foldsAround(TICKET_FOLDS, [{ start: 460, end: 465 }])).toEqual(['class:107:670', 'block:461:465'])
-    })
-
-    it('should unfold Ticket.close too once the Person also selects it, and keep every other operation folded', async () => {
+    it('should ask the source view to open Ticket.close too once the Person also selects it', async () => {
       const { page, stop } = await showingGraph()
       await page.graph.toggle(entryNamed(page, 'Clean Engineering'))
       await page.graph.toggle(entryNamed(page, 'Ticket'))
@@ -325,13 +411,9 @@ describe('Fold Open Files To Selected Nodes', () => {
       await page.graph.select(entryNamed(page, 'close'), true)
       await settled()
       stop()
-      const around = page.selectedLinesIn(TICKET_CODE)
-      expect([around, foldsAround(TICKET_FOLDS, around)]).toEqual([
-        [
-          { start: 460, end: 465 },
-          { start: 538, end: 555 },
-        ],
-        ['class:107:670', 'block:461:465', 'block:539:555'],
+      expect(page.selectedLinesIn(TICKET_CODE)).toEqual([
+        { start: 460, end: 465 },
+        { start: 538, end: 555 },
       ])
     })
   })
@@ -377,8 +459,9 @@ describe('Open Calls Across Files', () => {
 })
 
 describe('Show A Graph Read That Failed', () => {
-  // The text a server lane answers when it cannot run session.graph_trees, as an older lane does for a newer page's call.
+  // The text a server lane answers when it cannot run a graph call, as an older lane does for a newer page's call.
   const LANE_FAILURE = "TypeError: Session.graph_trees() got an unexpected keyword argument 'node_filter'"
+  const drawn = (page: FilesPage) => () => render(createElement(FilesGraphView, { page })).unmount()
 
   describe("with session.graph_trees answering a failure's text instead of the trees", () => {
     it('should hold no tree and show the failure in place of the graph', async () => {
@@ -389,7 +472,7 @@ describe('Show A Graph Read That Failed', () => {
       expect([page.state.graph.trees, page.state.graph.isReading, page.state.graph.problem]).toEqual([[], false, expect.stringContaining(LANE_FAILURE)])
     })
 
-    it('should tell the failure as the page tells every failure', async () => {
+    it('should name session.graph_trees in the failure when it answers an error', async () => {
       const server = new FakeFilesServer()
       server.treesAnswer = { error: LANE_FAILURE }
       const { page, stop } = await showingGraph(server)
@@ -405,6 +488,50 @@ describe('Show A Graph Read That Failed', () => {
       const { page, stop } = await showingGraph(server)
       stop()
       expect([treeNames(page), page.state.graph.members]).toEqual([['Stories', 'Clean Engineering'], []])
+    })
+  })
+
+  for (const [said, answer] of [
+    ["a failure's text", "ToolNotEnrolled: session.graph_filter_choices"],
+    ['an error', { error: 'ToolNotEnrolled: session.graph_filter_choices' }],
+    ['nothing', undefined],
+    ['choices without offered_node_types', { node_types: [], relationships: [], rules: [] }],
+  ] as const) {
+    describe(`with session.graph_filter_choices answering ${said}`, () => {
+      async function shownWithChoices() {
+        const server = new FakeFilesServer()
+        server.isChoicesAnswered = true
+        server.choicesAnswer = answer
+        return showingGraph(server)
+      }
+
+      it('should draw the graph view with its node filter offering nothing', async () => {
+        const { page, stop } = await shownWithChoices()
+        stop()
+        expect(drawn(page)).not.toThrow()
+        expect(page.state.graph.choices).toEqual(NO_CHOICES)
+      })
+
+      it('should keep the trees it read', async () => {
+        const { page, stop } = await shownWithChoices()
+        stop()
+        expect(treeNames(page)).toEqual(['Stories', 'Clean Engineering'])
+      })
+
+      if (answer !== undefined) {
+        it('should tell the failure, naming session.graph_filter_choices', async () => {
+          const { page, stop } = await shownWithChoices()
+          stop()
+          expect(page.state.toasts.some(toast => toast.includes('session.graph_filter_choices'))).toBe(true)
+        })
+      }
+    })
+  }
+
+  describe('with a node filter given no lists to offer', () => {
+    it('should draw its lists empty rather than throw', () => {
+      const lists = { selection: NO_FILTER, nodeTypes: undefined, relationships: undefined, rules: undefined, onChange: () => {} }
+      expect(() => render(createElement(NodeFilterLists, lists)).unmount()).not.toThrow()
     })
   })
 })

@@ -99,6 +99,9 @@ function FolderContentsView({ page, folder, openPath }: { page: FilesPage; folde
 }
 
 // A right-click on a file or folder: its menu instead of the browser's.
+// Where the source view tells a Wrap lines choice the browser would not read or keep.
+const wrapFailed = (page: FilesPage) => (failure: string) => page.notices.fail(failure, 'Wrapping long lines in the source view')
+
 const menuOn = (page: FilesPage, path: string) => (event: React.MouseEvent) => {
   event.preventDefault()
   page.menu.open(path, event.clientX, event.clientY)
@@ -252,14 +255,43 @@ function OpenFileView({ page }: { page: FilesPage }) {
   if (!state.openPath) return <p className="files-note">Choose a file.</p>
   if (isDrawio(state.openPath)) return <DrawioFileView page={page} path={state.openPath} />
   if (!state.file) return <p className="files-note">Opening {state.openPath}…</p>
+  const isOneOfSeveral = state.moreFiles.length > 0
   return (
     <section className="open-file" aria-label={state.file.path}>
       <CommentToolbarView page={page} file={state.file} />
-      <FileSourceView key={state.file.path} file={state.file} actions={page.comments} onAddToContext={addLines} openAround={page.selectedLinesIn(state.file.path)} members={state.graph.members} />
+      {isOneOfSeveral ? <OpenFilesBarView page={page} /> : null}
+      {isOneOfSeveral ? <OpenFileHeadView page={page} path={state.file.path} /> : null}
+      {page.openFiles.isCollapsed(state.file.path) ? null : (
+        <FileSourceView key={state.file.path} file={state.file} actions={page.comments} onAddToContext={addLines} openAround={page.selectedLinesIn(state.file.path)} members={state.graph.members} keys={page.foldKeys} fail={wrapFailed(page)} />
+      )}
       {state.moreFiles.map(file => (
         <MoreFileView key={file.path} page={page} file={file} />
       ))}
     </section>
+  )
+}
+
+// Above several open files: collapse every one to its name, or expand every one.
+function OpenFilesBarView({ page }: { page: FilesPage }) {
+  return (
+    <div className="open-files-bar" role="toolbar" aria-label="Open files">
+      <button type="button" title="Collapse every open file to its name" onClick={() => page.openFiles.collapseAll()}>
+        Collapse all
+      </button>
+      <button type="button" title="Show every open file whole" onClick={() => page.openFiles.expandAll()}>
+        Expand all
+      </button>
+    </div>
+  )
+}
+
+// An open file's name, which collapses the file to it and expands it again.
+function OpenFileHeadView({ page, path }: { page: FilesPage; path: string }) {
+  const isCollapsed = page.openFiles.isCollapsed(path)
+  return (
+    <button type="button" className="open-file-head" aria-expanded={!isCollapsed} title={isCollapsed ? `Show ${path}` : `Collapse ${path} to its name`} onClick={() => page.openFiles.toggle(path)}>
+      <span className="open-file-mark">{isCollapsed ? '▸' : '▾'}</span> {path}
+    </button>
   )
 }
 
@@ -268,8 +300,10 @@ function MoreFileView({ page, file }: { page: FilesPage; file: SessionFileData }
   const addLines = useCallback((lines: { start: number; end: number }) => void page.chatContext.add(file.path, lines), [page, file.path])
   return (
     <section className="open-file more-file" aria-label={file.path}>
-      <p className="more-file-path">{file.path}</p>
-      <FileSourceView file={file} actions={page.comments} onAddToContext={addLines} openAround={page.selectedLinesIn(file.path)} members={page.state.graph.members} />
+      <OpenFileHeadView page={page} path={file.path} />
+      {page.openFiles.isCollapsed(file.path) ? null : (
+        <FileSourceView file={file} actions={page.comments} onAddToContext={addLines} openAround={page.selectedLinesIn(file.path)} members={page.state.graph.members} keys={page.foldKeys} fail={wrapFailed(page)} />
+      )}
     </section>
   )
 }

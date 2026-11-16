@@ -103,21 +103,28 @@ The base of an annotation that says where install publishes a member, by its `ch
 *BackgroundStart* and *PythonInterpreter* start a server without a console window, *RunningProcess* asks about and ends one by its id, and *ExclusivePort* is the one port a server may hold.
 
 - **Purpose:** Start, name, and stop the processes the framework keeps, the same way on Windows and elsewhere.
-- **Seam (terms):** BackgroundStart, PythonInterpreter, ExclusivePort, RunningProcess, ProcessNotStopped
+- **Seam (terms):** BackgroundStart, Wmi, OutsideJobStartFailed, PythonInterpreter, ExclusivePort, RunningProcess, ProcessNotStopped
 - **Dependencies (one-way):** *(none)*
 
 ## BackgroundStart
 
-How a background server is started so it keeps running without a console window.
+How a background server is started so it keeps running without a console window, past the chat that started it: it breaks away from the starter's job, or, where the job refuses, WMI creates it outside every job.
 
-+ BackgroundStart(breaks_away: bool = True)
++ BackgroundStart(log: IO[str] | None = None, wmi: Wmi | None = None)
 ------
-+ breaks_away: bool
++ log: IO[str] | None
 + creationflags: int
 + startupinfo: subprocess.STARTUPINFO | None
 ----
-+ inside_starters_job(): BackgroundStart
-+ run(command: list[str], cwd: str | Path, env: dict[str, str], log: IO[str]): subprocess.Popen
++ run(command: list[str], cwd: str | Path, env: dict[str, str]): RunningProcess
+
+## Wmi
+
+Windows Management Instrumentation through PowerShell: Win32_Process.Create makes a process outside every job of the caller's.
+
++ Wmi()
+----
++ create(command_line: str, folder: str, env: dict[str, str]): int
 
 ## RunningProcess
 

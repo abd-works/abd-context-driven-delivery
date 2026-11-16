@@ -5,7 +5,7 @@ from expects import be_above, be_true, contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
 from harness.whiteboard.whiteboard import Arrow, Label, Section, Shape, UnreadableBoard, Whiteboard
-from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass
+from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass, UnreadableSource
 from cdd_guidance.practices.clean_engineering.model.diagram.class_view import CLASSES_ON_ONE_PAGE
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
@@ -160,5 +160,9 @@ with description("a modules view drawn on a Claude whiteboard") as self:
         ]))
 
     with context("that is read from a board with no modules or classes"):
-        with it("should refuse the board as an unreadable source"):
-            expect(lambda: WhiteboardCleanEngineeringModel().parse(Whiteboard("Empty").save())).to(raise_error(UnreadableBoard))
+        with it("should refuse the board as another practice's drawing, which a read of code skips"):
+            expect(lambda: WhiteboardCleanEngineeringModel().parse(Whiteboard("Empty").save())).to(raise_error(UnreadableBoard, "The board holds no module and no class"))
+
+    with context("that is read from text that is no saved board"):
+        with it("should refuse the text as an unreadable source"):
+            expect(lambda: WhiteboardCleanEngineeringModel().parse("not a board")).to(raise_error(UnreadableSource))

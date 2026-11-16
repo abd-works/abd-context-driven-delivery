@@ -43,7 +43,7 @@ section: body
 
 | overlay | adds |
 | --- | --- |
-| ++LERN++ | its tier rules on each node root, such as the Domain tier on Ticket |
+| ++LERN++ | its tier rules on each TypeScript node root, such as the Domain tier on Ticket in ticket.ts; LERN is constrained to TypeScript, so it adds nothing to a Python class such as Ticket in ticket.py (decided 2026-11-16 by the person) |
 
 ## Story: Expand Practice Tree In Files App
 
@@ -103,6 +103,7 @@ section: body
 |--------|------|
 | user request, 2026-11-15 | "graph filtered like file filter is" |
 | Graph app, Filter By Node Type, Filter By Connector, Select All Or No Filter Choices (Observed) | `Graph.filter_choices`, `Filter._on_relationship`, `FilterView.tsx` |
+| person's decision, 2026-11-16 | The file list stays the one file filter. A node filter is a different filter, on the graph's nodes, and it extends the file filter rather than replacing it: both apply, the node filter only narrows the nodes of the files listed and never brings back a file the list leaves out. |
 
 #### Scenario: Choosing a node type keeps only those nodes
 
@@ -117,6 +118,20 @@ section: body
 *When* the Person filters the graph to the invokes connector  
 *Then* the tree holds Ticket.delete and Board.reread  
   *But* not Ticket.activate or Ticket.close, which invoke none of the operations listed
+
+#### Scenario: A node filter narrows only the files listed
+
+*Given* the Files app lists ticket.py but not board.py  
+*When* the Person filters the graph to operations  
+*Then* the Clean Engineering tree holds Ticket.activate, Ticket.close and Ticket.delete  
+  *But* not Board.reread, whose file the list leaves out
+
+#### Scenario: Changing the file list keeps the node filter
+
+*Given* the graph is filtered to operations and the Files app lists ticket.py alone  
+*When* the Person lists board.py too  
+*Then* Board.reread joins the Clean Engineering tree  
+  *And* the graph stays filtered to operations
 
 #### Scenario: None clears a filter list
 
@@ -137,13 +152,14 @@ section: body
 
 *Given* checkout-flow's session has the LERN overlay chosen on the chat bar  
 *When* the Person switches the file bar to the graph view  
-*Then* Ticket carries LERN's Domain tier rules among its rules
+*Then* Ticket in ticket.ts carries LERN's Domain tier rules among its rules  
+  *But* Ticket in ticket.py carries none, since LERN applies only to TypeScript
 
 #### Scenario: An overlay taken off leaves the graph view
 
 *Given* the Files app shows checkout-flow's graph with LERN applied  
 *When* the Person takes LERN off the session  
-*Then* Ticket's LERN rules leave the graph view  
+*Then* the LERN rules on Ticket in ticket.ts leave the graph view  
   *And* the chat bar's LERN chip shows off
 
 ## Story: Show Graph Load Steps In Files App

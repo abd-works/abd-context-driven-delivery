@@ -4,14 +4,21 @@ between them."""
 
 from __future__ import annotations
 
+import posixpath
+import re
 from difflib import SequenceMatcher
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Literal
 
+from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER
+from cdd_guidance.practices.stories.stories import Stories
+from harness.graph.explorer import NodeSource
+from harness.graph.graph import Graph, Node, Source
 from harness.graph.saved_graph import GRAPH_FILE_NAME, SavedGraph, SavedGraphOutdated
 from harness.graph.violation import Violation
 from harness.installation.data_class import SourceFile, data_field
+from harness.markdown.markdown import MarkdownText
 
 from space.session.file_comments import PROCESSED, FileComment
 from space.session.file_range import LineSpan, Range
@@ -27,6 +34,8 @@ _CHANGE_KINDS: dict[str, FileChangeKind] = {"replace": "changed", "insert": "add
 # a block (harness/graph/app/source/call-expansion.ts). The classes are Clean Engineering's and DDD's class types.
 CLASS_TYPES = frozenset({"OoadClass", "Aggregate", "DomainEvent", "EntityRoot", "Entity", "ValueObject", "Repository", "DomainService", "Factory", "Specification"})
 MEMBER_TYPES = frozenset({"Operation", "Property"})
+# A markdown link to a heading in another markdown file: its words, the file named from the linking one, and the anchor.
+_LINKED_HEADING = re.compile(r"\[([^\]]+)\]\(([^)\s#]+\.md)#([^)\s]+)\)")
 
 
 class Fold:
@@ -53,6 +62,63 @@ class Fold:
     def name(self) -> str:
         """The class, operation, or property the fold holds."""
         return self._name
+
+
+class FileCallout:
+    """A line of a markdown file whose link names a heading in another file, which the viewer opens in place under the
+    line, as a call opens in place in code: a story map's story opens its scenarios, and a scenario's domain term its
+    class in the markdown model."""
+
+    def __init__(self, line: int, title: str, section: Range) -> None:
+        self._line = line
+        self._title = title
+        self._section = section
+
+    @property
+    @data_field
+    def line(self) -> int:
+        """The line, counted from 1, the link sits on."""
+        return self._line
+
+    @property
+    @data_field
+    def title(self) -> str:
+        """The link's own words, such as the story's name or the domain term."""
+        return self._title
+
+    @property
+    @data_field
+    def section(self) -> Range:
+        """The linked heading's section, in the file it sits in, with its text."""
+        return self._section
+
+
+class FileStep:
+    """A step of a story test in the file that reaches code or examples: the line it starts on, where the viewer opens in
+    place what it invokes and observes, so a story test's callouts sit on the step whose relationships they are."""
+
+    def __init__(self, line: int, invokes: list[NodeSource], observes: list[NodeSource]) -> None:
+        self._line = line
+        self._invokes = invokes
+        self._observes = observes
+
+    @property
+    @data_field
+    def line(self) -> int:
+        """The line, counted from 1, the step starts on: its decorator or its call."""
+        return self._line
+
+    @property
+    @data_field
+    def invokes(self) -> list[NodeSource]:
+        """The functions and operations the step calls, each with its text and file."""
+        return list(self._invokes)
+
+    @property
+    @data_field
+    def observes(self) -> list[NodeSource]:
+        """The examples whose state the step observes, each with its text and file."""
+        return list(self._observes)
 
 
 class FileChange:
@@ -170,6 +236,52 @@ class SessionFile:
         nodes = [node for node in self._nodes() if node.type in CLASS_TYPES | MEMBER_TYPES]
         folds = [Fold(self.range(node.line, node.end_line), "class" if node.type in CLASS_TYPES else "block", node.name) for node in nodes if node.end_line > node.line]
         return sorted(folds, key=lambda fold: (fold.range.start_line, -fold.range.end_line))
+
+    @property
+    @data_field
+    def steps(self) -> list[FileStep]:
+        """Each step of a story test in this file that invokes or observes something, in line order, as the session's
+        graph links it; none while the viewer reads no rules, which never reads a graph, or while the graph holds no
+        Stories."""
+        if not (self._reads_rules or self._cross_file):
+            return []
+        graph = self._session.graph
+        stories = graph.practices.loaded(Stories)
+        nodes = [node for node in (stories.reading.in_graph.nodes() if stories is not None else []) if node.source is not None and self._holds(node.source)]
+        found = [FileStep(node.source.start_line, self._sources(graph, "invokes", node), self._sources(graph, "observes", node)) for node in nodes]
+        return sorted((step for step in found if step.invokes or step.observes), key=lambda step: step.line)
+
+    def _sources(self, graph: Graph, kind: str, node: Node) -> list[NodeSource]:
+        """What node reaches by kind, each with its source and the class it belongs to; a module's function belongs to none."""
+        owners = ((edge.child, str(edge.child.get_fact("owner", "") or "")) for edge in graph.edges.from_parent(kind, node) if edge.child.source is not None)
+        return [NodeSource(child, owner="" if owner == MODULE_FUNCTION_HOLDER else owner) for child, owner in owners]
+
+    def _holds(self, source: Source) -> bool:
+        """Whether source, named from its own root, sits in this file."""
+        return bool(source.file) and Path(source.root or self._session.work_root, source.file).resolve() == self._session.paths.path_named(self._path)
+
+    @property
+    @data_field
+    def callouts(self) -> list[FileCallout]:
+        """A callout for each link in this markdown file to a heading another file has, in line order; a link to a file
+        or heading not there, and every line of a file in another language, carry none."""
+        if self.language != "markdown":
+            return []
+        lines = enumerate(self.text.splitlines(), start=1)
+        return [callout for number, line in lines for callout in self._callouts_on(number, line)]
+
+    def _callouts_on(self, number: int, line: str) -> list[FileCallout]:
+        linked = ((title, self._section_linked(link, anchor)) for title, link, anchor in _LINKED_HEADING.findall(line))
+        return [FileCallout(number, title, section) for title, section in linked if section is not None]
+
+    def _section_linked(self, link: str, anchor: str) -> Range | None:
+        """The section of the heading anchor names in link, a markdown file named from this one; none when either is not there."""
+        target = posixpath.normpath(posixpath.join(posixpath.dirname(self._path), link))
+        if target.startswith(".."):
+            return None
+        linked = self._session.session_files.read(target)
+        lines = MarkdownText(linked.text).anchored_lines(anchor) if linked.text else None
+        return Range.of_text(linked.path, linked.text, LineSpan(*lines)) if lines is not None else None
 
     @property
     @data_field

@@ -129,9 +129,9 @@ Starting, watching, and stopping other processes. Every class here is a leaf: it
 
 ## BackgroundStart
 
-- `BackgroundStart.run` `-> subprocess.Popen` starts a detached process with no console window · harness/process/process.py:70
+- `BackgroundStart.run` `-> RunningProcess` starts a process with no console window that breaks away from the starter's job, or `-> Wmi.create` outside every job where the job refuses breakaway · harness/process/process.py
 - **Used by**
-  - `McpDaemon` `-> BackgroundStart().run` / `.inside_starters_job()` starts the cdd server · harness/mcp/mcp_daemon.py:97, :103
+  - `McpDaemon` `-> BackgroundStart().run` starts the cdd server · harness/mcp/mcp_daemon.py
   - `HookDaemon` `-> BackgroundStart().run` starts the hook server · harness/hooks/hook_daemon.py:229
   - `scripts/start.py` `-> BackgroundStart().creationflags / .startupinfo` · scripts/start.py:184
 

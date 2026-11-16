@@ -53,11 +53,11 @@ button:disabled { cursor: default; opacity: 0.5; }
 .practice-toggle.is-off { background: transparent; color: var(--practice-colour); opacity: 0.7; }
 .practice-toggle:hover { opacity: 1; filter: brightness(1.1); }
 .files-problem { margin: var(--space-xs) var(--space-md); padding: var(--space-xs); border: 1px solid var(--error); color: var(--error); white-space: pre-wrap; }
-.files-body { display: grid; grid-template-columns: minmax(12rem, 18rem) 1fr; gap: var(--space-md); padding: var(--space-md); align-items: start; }
+.files-body { display: grid; grid-template-columns: minmax(12rem, 18rem) minmax(0, 1fr); gap: var(--space-md); padding: var(--space-md); align-items: start; }
 .files-side { position: sticky; top: var(--space-md); max-height: calc(100vh - 6rem); overflow: auto; }
 .files-note { color: var(--muted); }
 
-.files-body.is-bar-collapsed { grid-template-columns: auto 1fr; }
+.files-body.is-bar-collapsed { grid-template-columns: auto minmax(0, 1fr); }
 .file-bar-divider { position: sticky; top: var(--space-md); height: calc(100vh - 6rem); width: 6px; margin: 0 calc(-1 * var(--space-md) / 2); cursor: col-resize; border-radius: 3px; touch-action: none; }
 .file-bar-divider:hover, .file-bar-divider:active { background: var(--select); opacity: 0.6; }
 .file-bar-buttons { display: flex; flex-wrap: wrap; gap: var(--space-2xs); margin-bottom: var(--space-xs); }
@@ -73,8 +73,18 @@ button:disabled { cursor: default; opacity: 0.5; }
 
 .open-file { min-width: 0; }
 .more-file { margin-top: var(--space-md); }
-.more-file-path { font-family: var(--font-mono); font-size: var(--text-sm); color: var(--muted); margin-bottom: var(--space-2xs); }
+.open-file-head { display: flex; align-items: center; gap: var(--space-2xs); width: 100%; border: none; background: transparent; cursor: pointer; text-align: left; font-family: var(--font-mono); font-size: var(--text-sm); color: var(--muted); margin-bottom: var(--space-2xs); padding: 0; }
+.open-file-head:hover { color: var(--text); }
+.open-files-bar { display: flex; gap: var(--space-2xs); margin-bottom: var(--space-2xs); }
 
+/* The graph view's node filter: the Graph app's lists of node types, connectors and rules, and its Violations switch. */
+.graph-node-filter { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.5rem; border-bottom: 1px solid var(--border); }
+.graph-node-filter .filter-heading { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 0.75rem; }
+.graph-node-filter .filter-actions { display: flex; gap: 0.25rem; }
+.graph-node-filter .filter-actions button { background: var(--raised); color: var(--text); border: 1px solid var(--border); border-radius: 4px; font-size: 0.7rem; padding: 0 0.4rem; }
+.graph-node-filter select { width: 100%; min-height: 3.5rem; background: var(--surface); color: var(--text); border: 1px solid var(--border); font-size: 0.75rem; }
+.graph-node-filter .filter-switch { background: var(--raised); color: var(--text); border: 1px solid var(--border); border-radius: 4px; font-size: 0.75rem; }
+.graph-node-filter .filter-switch.is-on { border-color: var(--error); color: var(--error); }
 .graph-tree, .graph-tree ul { list-style: none; }
 .graph-tree ul { padding-left: 1.25rem; }
 .tree-row { display: flex; flex-wrap: nowrap; align-items: center; gap: var(--space-2xs); min-width: 0; }
@@ -107,7 +117,10 @@ button:disabled { cursor: default; opacity: 0.5; }
 .empty-state { color: var(--muted); }
 .copy-prompt { align-self: center; }
 
-.file-source { position: relative; }
+.file-source { position: relative; min-width: 0; }
+.file-source-bar { display: flex; justify-content: flex-end; margin-bottom: var(--space-2xs); }
+.file-wrap { font-size: var(--text-xs); }
+.file-wrap.is-on { border-color: var(--accent); color: var(--accent); }
 .comment-box { position: absolute; z-index: 20; width: min(32rem, 80%); display: grid; gap: var(--space-2xs); padding: var(--space-xs); background: var(--surface); border: 1px solid var(--select); border-radius: var(--radius-sm); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15); }
 .comment-box-head { display: flex; justify-content: space-between; gap: var(--space-xs); font-family: var(--font-mono); font-size: var(--text-xs); color: var(--muted); }
 .comment-box textarea { min-height: 4rem; font: inherit; padding: var(--space-2xs); border: 1px solid var(--border); border-radius: var(--radius-sm); resize: vertical; }

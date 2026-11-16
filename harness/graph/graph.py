@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 import re
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Callable, Iterable, Iterator, TypedDict
 
 
@@ -17,6 +17,7 @@ from harness.mcp.mcp_annotations import long_call, mcp
 from harness.graph.edge import Display, Edge, EdgeIndex, EdgeType
 from harness.graph.explorer import ExplorerEntry, FilteredNode, GraphLoaded, GraphSaved, NodeSource, Overlay, PracticeInventory
 from harness.graph.file_lines import FileLines, PathKind
+from harness.markdown.markdown import MarkdownText
 from harness.graph.graph_build import GraphBuild
 from harness.graph.graph_practices import GraphPractices
 from harness.graph.graph_reads import FilesRead, GraphReads, WorkingCopyRead
@@ -47,6 +48,27 @@ class Call:
         self.line = line
         self.order = order
         self.operation = operation
+
+
+# The files a slice reads as markdown sections rather than code: a story map's and a scenario file's text.
+MARKDOWN_SUFFIXES = frozenset({".md", ".markdown"})
+
+
+def _decorated_end(lines: list[str], after: int) -> int:
+    """The last line of the function or class a Python decorator ending on line after (counted from 1) decorates: the
+    last line indented under its def. After decorators stacked below, or no def at all, the decorator's own line."""
+    found = next((index for index in range(after, len(lines)) if not lines[index].lstrip().startswith("@")), None)
+    if found is None or not re.match(r"\s*(async\s+)?(def|class)\b", lines[found]):
+        return after
+    indent = len(lines[found]) - len(lines[found].lstrip())
+    end = found
+    for index in range(found + 1, len(lines)):
+        if not lines[index].strip():
+            continue
+        if len(lines[index]) - len(lines[index].lstrip()) <= indent:
+            break
+        end = index
+    return end + 1
 
 
 class _BracketDepth:
@@ -221,13 +243,25 @@ class Source:
         return Path(self.root, self.file)
 
     def _call_end(self, lines: list[str], start: int) -> int:
+        if PurePosixPath(self.file or "").suffix.lower() in MARKDOWN_SUFFIXES:
+            return self._section_end(lines, start)
+        return self._code_call_end(lines, start)
+
+    def _section_end(self, lines: list[str], start: int) -> int:
+        """In markdown, where prose's apostrophes and links are no code: the last line of the section a heading on start
+        opens, or start's own line for a step or any other line."""
+        section = MarkdownText("\n".join(lines)).section_lines(start + 1)
+        return section[1] if section is not None else start + 1
+
+    def _code_call_end(self, lines: list[str], start: int) -> int:
         """The line the call or block that opens at start closes on: the first where its parentheses and braces are
-        all closed again after one has opened."""
+        all closed again after one has opened. A Python decorator, such as a shared story's scenario or step, closes
+        its call on its own line, so it runs on through the function it decorates."""
         depth = _BracketDepth()
         for index in range(start, len(lines)):
             depth.read(lines[index])
             if depth.opened_call and depth.closed:
-                return index + 1
+                return _decorated_end(lines, index + 1) if lines[start].lstrip().startswith("@") else index + 1
         return max(self.end_line, start + 1)
 
     def _read(self) -> str:
@@ -727,6 +761,7 @@ class NodeTree:
             holder = Node(node.practice, NodeIdentity(type=kind, node_id=f"{node.practice.key}:{kind}:{node.node_id}", name=kind), node.source)
             holder.parent = node
             node.children.append(holder)
+            node.practice.reading.in_graph.hold_group(holder)
         return holder
 
     def _edges_in_source_order(self, kind: str) -> list[Edge]:
@@ -895,6 +930,9 @@ class _HeldNodes:
         # The nodes by type. A type offered before any node of it is read holds none yet; the types keep the order
         # each was first offered or held, so the explorer lists them the same way in every process.
         self._by_type: dict[str, list[Node]] = {}
+        # The relationship groups the explorer tree puts edges under, such as an operation's invokes; no node of the
+        # practice, so the practice's nodes and rules leave them out, but an explorer opens them by id.
+        self._groups: dict[str, Node] = {}
 
     @property
     def root(self) -> Node | None:
@@ -913,6 +951,14 @@ class _HeldNodes:
 
     def get(self, node_id: str) -> Node | None:
         return self._by_id.get(node_id)
+
+    def group(self, node_id: str) -> Node | None:
+        """The relationship group called node_id one of the held nodes made; none when there is none."""
+        return self._groups.get(node_id)
+
+    def hold_group(self, group: Node) -> None:
+        """Keep group, a relationship group one of the held nodes made, so an explorer opens it by its id."""
+        self._groups[group.node_id] = group
 
     def of_type(self, type: str | None) -> list[Node]:
         """Every node held by its type, or only those of type."""
@@ -957,6 +1003,7 @@ class _HeldNodes:
         self._root = None
         self._by_id.clear()
         self._by_type.clear()
+        self._groups.clear()
 
     def unused_id(self, base: str) -> str:
         """base, numbered from 2 when a node of that id is held already."""
@@ -1017,8 +1064,13 @@ class PracticeNodes:
         return self._held.of_type(type)
 
     def node(self, node_id: str) -> Node | None:
-        """The practice's node called node_id; none when it holds none."""
-        return self._held.get(node_id)
+        """The practice's node called node_id, or the relationship group called node_id one of its nodes holds; none
+        when it holds neither."""
+        return self._held.get(node_id) or self._held.group(node_id)
+
+    def hold_group(self, group: Node) -> None:
+        """Hold group, a relationship group one of the practice's nodes made, so an explorer opens it by its id."""
+        self._held.hold_group(group)
 
     def holds(self, node_id: str) -> bool:
         """Whether the practice already holds a node called node_id."""

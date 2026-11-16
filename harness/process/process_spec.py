@@ -27,10 +27,6 @@ with description("a background start"):
         with it("should break away on Windows"):
             expect(bool(BackgroundStart().creationflags & _BREAKAWAY)).to(equal(sys.platform == "win32"))
 
-    with context("that starts inside the starter's job"):
-        with it("should not break away"):
-            expect(bool(BackgroundStart().inside_starters_job().creationflags & _BREAKAWAY)).to(equal(False))
-
 
 with description("a Python interpreter"):
     with context("that is pythonw.exe"):

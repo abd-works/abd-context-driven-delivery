@@ -8,6 +8,7 @@ export type FilesTheme = 'engineering' | 'light'
 export type ThemeFailure = (failure: string) => void
 
 const STORED_THEME = 'files-theme'
+const STORED_WRAP = 'files-wrap-lines'
 
 const reasonOf = (failure: unknown): string => (failure instanceof Error ? failure.message : String(failure))
 
@@ -36,4 +37,24 @@ export function applyTheme(theme: FilesTheme, fail: ThemeFailure): void {
     .init()
     .then(monaco => monaco.editor.setTheme(theme === 'engineering' ? 'vs-dark' : 'vs'))
     .catch(failure => fail(`The source view did not change its look: ${reasonOf(failure)}`))
+}
+
+// Whether the source view wraps long lines, kept in this browser like the look, so the next file opens the same way.
+// Unwrapped, the one a person who never chose sees, when the browser's storage refuses to be read.
+export function storedWrap(fail: ThemeFailure): boolean {
+  try {
+    return window.localStorage.getItem(STORED_WRAP) === 'on'
+  } catch (failure) {
+    fail(`The Files app could not read from this browser's storage whether to wrap long lines: ${reasonOf(failure)}`)
+    return false
+  }
+}
+
+// Keeps whether to wrap long lines; a choice the browser does not keep still holds for the file open now.
+export function keepWrap(wrap: boolean, fail: ThemeFailure): void {
+  try {
+    window.localStorage.setItem(STORED_WRAP, wrap ? 'on' : 'off')
+  } catch (failure) {
+    fail(`Wrap lines was not kept in this browser, so the next file opens unwrapped: ${reasonOf(failure)}`)
+  }
 }

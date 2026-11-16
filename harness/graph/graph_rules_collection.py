@@ -105,11 +105,11 @@ class GraphRulesCollection(RulesCollection):
 
     @classmethod
     def from_node(cls, node: Node) -> GraphRulesCollection:
-        """The rules node's schema gives its type, each with its prose, the check that runs it when one exists, and
-        whether that check applies to node: the checks of node's practice, of the practice it extends, and of each
-        pattern overlay its graph applies."""
+        """The rules node's schema gives its type, with the overlays that add their rules to node, each with its prose,
+        the check that runs it when one exists, and whether that check applies to node: the checks of node's practice,
+        of the practice it extends, and of each pattern overlay its graph applies."""
         checks = dict(node.practice.reading.checks())
-        return cls(node, {slug: GraphRule(node, slug, checks.get(slug)) for slug in node.schema.slugs_for(node.type)})
+        return cls(node, {slug: GraphRule(node, slug, checks.get(slug)) for slug in node.schema.for_node(node).slugs_for(node.type)})
 
     @property
     @data_field

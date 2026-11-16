@@ -21,7 +21,7 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
 )
 from harness.markdown import HTML, Markdown, MarkdownScope, MarkdownText, MarkdownTypeUnresolved, markdown
 from harness.markdown.front_matter import FrontMatter
-from harness.markdown.markdown import AssetLocator
+from harness.markdown.markdown import AssetLocator, heading_anchor  # noqa: F401
 
 _CLEAN_ENGINEERING_DIR = _REPO_ROOT / "cdd_guidance" / "practices" / "clean_engineering"
 _STORIES_DIR = _REPO_ROOT / "cdd_guidance" / "practices" / "stories"
@@ -245,3 +245,20 @@ with description("an owner's markdown section"):
         with it("should be read from the one Markdown the owner keeps"):
             instance = SampleTool()
             expect(Markdown.held_by(instance, "guidance")).to(be(Markdown.held_by(instance, "guidance")))
+
+
+with description("a heading a link names by its anchor"):
+    with before.each:
+        self.text = MarkdownText(
+            "# Kanban Model\n\n### Board\n\n- The board shows every ticket.\n\n### FilesPage (`files/files-page.ts`)\n\n- The page.\n"
+        )
+
+    with it("should be found by the anchor GitHub writes for it"):
+        expect(self.text.anchored_lines("filespage-filesfiles-pagets")).to(equal((7, 9)))
+
+    with it("should run through its last line with text before the next heading as high"):
+        expect(self.text.anchored_lines("board")).to(equal((3, 5)))
+
+    with context("that no heading has"):
+        with it("should name no lines"):
+            expect(self.text.anchored_lines("no-such-heading")).to(be_none)

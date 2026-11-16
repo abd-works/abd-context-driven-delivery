@@ -3,6 +3,7 @@ no console window on Windows or with a Python whose console output a caller read
 its process id still runs, or stop it."""
 from __future__ import annotations
 
+import base64
 import ctypes
 import os
 import re
@@ -16,6 +17,22 @@ from typing import IO
 
 # Windows' CREATE_BREAKAWAY_FROM_JOB: the child leaves the starter's job, so it outlives the chat that started it.
 _CREATE_BREAKAWAY_FROM_JOB = 0x01000000
+# What a start outside the caller's job runs once WMI has created it: the command, its output appended to the log.
+OUTSIDE_JOB_LAUNCHER = Path(__file__).resolve().parent / "outside_job_launcher.py"
+# The environment variables that carry WMI's command line and folder to PowerShell; the process WMI creates gets every
+# other variable PowerShell has, which is the started command's environment.
+_WMI_COMMAND_LINE_ENV = "CDD_WMI_COMMAND_LINE"
+_WMI_FOLDER_ENV = "CDD_WMI_FOLDER"
+# Win32_Process.Create, with no window (ShowWindow 0) and the environment PowerShell runs with; it prints WMI's return
+# value and the id of the process it created.
+_WMI_CREATE = """
+$vars = [string[]]@(Get-ChildItem env: | Where-Object { $_.Name -notlike 'CDD_WMI_*' } | ForEach-Object { "$($_.Name)=$($_.Value)" })
+$startup = New-CimInstance -CimClass (Get-CimClass -ClassName Win32_ProcessStartup) -ClientOnly -Property @{ ShowWindow = [uint16]0; EnvironmentVariables = $vars }
+$created = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = $env:CDD_WMI_COMMAND_LINE; CurrentDirectory = $env:CDD_WMI_FOLDER; ProcessStartupInformation = $startup }
+Write-Output "$($created.ReturnValue) $($created.ProcessId)"
+"""
+# How long PowerShell may take to ask WMI for the process; it answers in well under a second.
+_WMI_SECONDS = 60
 # The access right that lets Windows open a process only to ask about it.
 _PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 # The exit code Windows reports for a process that has not exited.
@@ -165,26 +182,49 @@ class PythonInterpreter:
         return str(self.executable)
 
 
+class OutsideJobStartFailed(Exception):
+    """WMI did not create the process a background start asked it for."""
+
+    def __init__(self, command_line: str, answer: str) -> None:
+        super().__init__(f"WMI did not start {command_line}: {answer.strip() or 'no answer'}")
+        self.command_line = command_line
+
+
+class Wmi:
+    """Windows Management Instrumentation, reached through PowerShell. A process ``Win32_Process.Create`` makes is
+    created by the WMI service, so no job of the caller's holds it, and it outlives the chat that asked for it."""
+
+    def create(self, command_line: str, folder: str, env: dict[str, str]) -> int:
+        """Create command_line in folder with env as its environment and no window; answer the new process's id."""
+        script = base64.b64encode(_WMI_CREATE.encode("utf-16-le")).decode("ascii")
+        completed = subprocess.run(
+            ["powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", script],
+            env={**env, _WMI_COMMAND_LINE_ENV: command_line, _WMI_FOLDER_ENV: folder},
+            capture_output=True, text=True, timeout=_WMI_SECONDS, check=False,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+        answer = completed.stdout.split()
+        if len(answer) != 2 or answer[0] != "0":
+            raise OutsideJobStartFailed(command_line, completed.stdout + completed.stderr)
+        return int(answer[1])
+
+
 class BackgroundStart:
-    """How a background server is started so it keeps running without a console window. On Windows it gets a process
-    group of its own and no window, and it breaks away from the starter's job unless it is started inside that job.
-    ``DETACHED_PROCESS`` is never used: Windows then ignores ``CREATE_NO_WINDOW`` and opens a console. The process
-    writes its output and errors to the start's log, or nowhere when it has none."""
+    """How a background server is started so it keeps running without a console window, past the chat that started it.
+    On Windows it gets a process group of its own and no window, and it breaks away from the starter's job; where that
+    job refuses breakaway, as a chat's does, WMI creates it outside every job instead (*Wmi*), through a launcher that
+    appends its output to the log. ``DETACHED_PROCESS`` is never used: Windows then ignores ``CREATE_NO_WINDOW`` and
+    opens a console. The process writes its output and errors to the start's log, or nowhere when it has none."""
 
-    def __init__(self, log: IO[str] | None = None, breaks_away: bool = True) -> None:
+    def __init__(self, log: IO[str] | None = None, wmi: Wmi | None = None) -> None:
         self.log = log
-        self.breaks_away = breaks_away
-
-    def inside_starters_job(self) -> BackgroundStart:
-        """The same start without breaking away, for a Windows job that refuses to let its children leave."""
-        return BackgroundStart(self.log, breaks_away=False)
+        self._wmi = wmi or Wmi()
 
     @property
     def creationflags(self) -> int:
         if sys.platform != "win32":
             return 0
-        flags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) | getattr(subprocess, "CREATE_NO_WINDOW", 0)
-        return flags | _CREATE_BREAKAWAY_FROM_JOB if self.breaks_away else flags
+        return getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) | getattr(subprocess, "CREATE_NO_WINDOW", 0) | _CREATE_BREAKAWAY_FROM_JOB
 
     @property
     def startupinfo(self) -> subprocess.STARTUPINFO | None:
@@ -196,8 +236,17 @@ class BackgroundStart:
         startup.wShowWindow = subprocess.SW_HIDE
         return startup
 
-    def run(self, command: list[str], cwd: str | Path, env: dict[str, str]) -> subprocess.Popen:
-        """Start command in the background in cwd, with env as its environment."""
+    def run(self, command: list[str], cwd: str | Path, env: dict[str, str]) -> RunningProcess:
+        """Start command in the background in cwd, with env as its environment, and answer the process started. A
+        start through WMI answers the launcher, which runs exactly as long as command does."""
+        try:
+            return RunningProcess(self._start_breaking_away(command, cwd, env).pid)
+        except PermissionError:
+            if sys.platform != "win32":
+                raise
+            return self._start_outside_job(command, cwd, env)
+
+    def _start_breaking_away(self, command: list[str], cwd: str | Path, env: dict[str, str]) -> subprocess.Popen:
         return subprocess.Popen(
             command,
             cwd=str(cwd),
@@ -209,6 +258,14 @@ class BackgroundStart:
             startupinfo=self.startupinfo,
             close_fds=True,
         )
+
+    def _start_outside_job(self, command: list[str], cwd: str | Path, env: dict[str, str]) -> RunningProcess:
+        log_path = os.devnull if self.log is None else self.log.name
+        if self.log is not None:
+            self.log.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S')} breakaway refused; starting outside the caller's job through WMI\n")
+            self.log.flush()
+        launcher = [PythonInterpreter().windowless, str(OUTSIDE_JOB_LAUNCHER), log_path, *command]
+        return RunningProcess(self._wmi.create(subprocess.list2cmdline(launcher), str(cwd), env))
 
 
 class RunningProcess:

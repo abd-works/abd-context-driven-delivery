@@ -1,6 +1,7 @@
 import type { CddApi, CddProgress } from '@cdd/cdd-shared'
-import type { NodeSourceData } from '@cdd/harness/graph/graph'
+import type { FilterData, NodeSourceData } from '@cdd/harness/graph/graph'
 import type { ExplorerEntryData, RangeData, SessionClientGenerated } from '@cdd/space/session/session'
+import { NO_CHOICES, chosen, nodeFilter, type FilterSelection } from '@graph-app/filter/filter-selection'
 
 import type { FileBar } from './file-bar'
 import type { FilesNotices } from './files-notices'
@@ -14,11 +15,25 @@ const pause = (milliseconds: number) => new Promise(resolve => setTimeout(resolv
 
 // The list a tool answered: none is an empty list, and anything else, such as the text or error a server lane answers
 // for a call it cannot run, is that tool's failure, so the page shows it rather than drawing it as a list.
-export function listAnswered<Item>(tool: string, answer: Item[] | null | undefined | unknown): Item[] {
+export function listAnswered<Item>(tool: string, answer: unknown): Item[] {
   if (answer === null || answer === undefined) return []
   if (Array.isArray(answer)) return answer as Item[]
-  const said = typeof answer === 'string' ? answer : ((answer as { error?: unknown }).error ?? JSON.stringify(answer))
-  throw new Error(`${tool} answered no list: ${String(said)}`)
+  throw new Error(`${tool} answered no list: ${saidBy(answer)}`)
+}
+
+// The choices graph_filter_choices answered: none offers nothing, and anything without its lists of node types, those
+// offered, connectors and rules is that tool's failure, so the node filter never draws a list it was not given.
+export function choicesAnswered(answer: unknown): FilterData {
+  if (answer === null || answer === undefined) return NO_CHOICES
+  const lists = ['node_types', 'offered_node_types', 'relationships', 'rules'] as const
+  if (typeof answer === 'object' && lists.every(list => Array.isArray((answer as Record<string, unknown>)[list]))) return answer as FilterData
+  throw new Error(`session.graph_filter_choices answered no choices: ${saidBy(answer)}`)
+}
+
+const saidBy = (answer: unknown): string => {
+  if (typeof answer === 'string') return answer
+  const error = (answer as { error?: unknown } | null)?.error
+  return error !== undefined ? String(error) : JSON.stringify(answer)
 }
 
 // An entry below another is a node's entry; the rules a node lists sit beside them and show with the violations.
@@ -26,7 +41,9 @@ export const isEntry = (child: unknown): child is ExplorerEntryData => typeof ch
 
 // The graph view of the Files app's file bar: the session's graph holding only the nodes of the files the bar lists, so
 // it is filtered as the file list is, read again whenever the bar lists other files, showing the cdd server's progress
-// while it reads. Selecting a node opens its file at its lines, or each file below it when it is a folder; selecting more
+// while it reads. Its node filter, the Graph app's, is a filter other than the file list that applies with it: it
+// narrows the nodes of the files listed and never widens the list, and a change of either reads the graph again with
+// both. Selecting a node opens its file at its lines, or each file below it when it is a folder; selecting more
 // opens each of their files. Everything it shows is the session's answer, held in the store.
 export class FilesGraph {
   constructor(
@@ -43,26 +60,36 @@ export class FilesGraph {
     return this.fileBar.entries.filter(entry => entry.exists).map(entry => entry.path)
   }
 
-  // Reads the graph whenever the bar shows it for files it was not read for, such as a practice turned off or the
-  // Changed button pressed. Answers what stops it.
+  // The node filter as the session's graph takes it, for the selection the person made.
+  private get nodeFilter(): Record<string, unknown> {
+    return nodeFilter(this.store.state.graph.filter)
+  }
+
+  // What the graph is read for: the files listed and the node filter, so a change of either reads it again.
+  private get readKey(): string {
+    return `${this.paths.join('\n')}\n${JSON.stringify(this.nodeFilter)}`
+  }
+
+  // Reads the graph whenever the bar shows it for files or a node filter it was not read for, such as a practice turned
+  // off, the Changed button pressed or operations chosen. Answers what stops it.
   follow(): () => void {
     const readWhenStale = () => {
       const { fileBar, graph } = this.store.state
-      if (fileBar.view === 'graph' && !graph.isReading && graph.readFor !== this.paths.join('\n')) void this.read()
+      if (fileBar.view === 'graph' && !graph.isReading && graph.readFor !== this.readKey) void this.read()
     }
     readWhenStale()
     return this.store.subscribe(readWhenStale)
   }
 
-  // Reads the trees, then every member the graph holds, following the cdd server's progress until the trees arrive. A
-  // read that fails, or answers anything but a list, holds no tree and shows the failure in place of the graph.
+  // Reads the trees, then every member the graph holds and the node filter's choices for what it holds, following the cdd server's progress until the trees arrive.
+  // A read that fails, or answers anything other than what the tool returns, is shown and told; trees that arrived stay.
   async read(): Promise<void> {
     const paths = this.paths
-    const readFor = paths.join('\n')
+    const readFor = this.readKey
     this.store.change(({ graph }) => ({ graph: { ...graph, readFor, isReading: true, log: [], problem: '' } }))
     void this.followProgress(readFor)
     try {
-      const trees = listAnswered<ExplorerEntryData>('session.graph_trees', await this.session.graphTrees(paths))
+      const trees = listAnswered<ExplorerEntryData>('session.graph_trees', await this.session.graphTrees(paths, this.nodeFilter))
       this.store.change(({ graph }) => (graph.readFor === readFor ? { graph: { ...graph, trees, branches: {}, isReading: false } } : {}))
     } catch (failure) {
       this.store.change(({ graph }) => ({ graph: { ...graph, trees: [], isReading: false, problem: `The graph did not read: ${reasonOf(failure)}` } }))
@@ -76,6 +103,14 @@ export class FilesGraph {
       this.store.change(({ graph }) => ({ graph: { ...graph, members: [] } }))
       this.notices.fail(`The Files app did not read the graph's members: ${reasonOf(failure)}`, 'Showing the graph view, calling session.graph_members')
     }
+    try {
+      const { filter } = this.store.state.graph
+      const choices = choicesAnswered(await this.session.graphFilterChoices(filter.practices, filter.node_types))
+      this.store.change(({ graph }) => (graph.readFor === readFor ? { graph: { ...graph, choices } } : {}))
+    } catch (failure) {
+      this.store.change(({ graph }) => ({ graph: { ...graph, choices: NO_CHOICES } }))
+      this.notices.fail(`The Files app did not read the graph's node filter: ${reasonOf(failure)}`, 'Showing the graph view, calling session.graph_filter_choices')
+    }
   }
 
   // Adds each new progress report to the log while the read for readFor is under way. A report that does not come is
@@ -87,6 +122,19 @@ export class FilesGraph {
       const newest = reports?.at(-1)?.message
       if (newest && isUnderWay()) this.store.change(({ graph }) => (graph.log.at(-1) === newest ? {} : { graph: { ...graph, log: [...graph.log, newest] } }))
       await pause(PROGRESS_EVERY)
+    }
+  }
+
+  // Filters the graph's nodes by next, the lists Python's Filter offers for it: a change of node types takes the
+  // connectors and rules it offers for them, as the Graph app's filter does. The graph is read again with it.
+  async filterTo(next: FilterSelection): Promise<void> {
+    try {
+      const isNewTypes = next.node_types.join('\n') !== this.store.state.graph.filter.node_types.join('\n')
+      const choices = isNewTypes ? choicesAnswered(await this.session.graphFilterChoices(next.practices, next.node_types)) : this.store.state.graph.choices
+      const filter = isNewTypes ? chosen(next, choices) : next
+      this.store.change(({ graph }) => ({ graph: { ...graph, filter, choices } }))
+    } catch (failure) {
+      this.notices.fail(`The Files app did not filter the graph: ${reasonOf(failure)}`, 'Filtering the graph view, calling session.graph_filter_choices')
     }
   }
 
@@ -109,7 +157,7 @@ export class FilesGraph {
     this.store.change(({ graph }) => ({ graph: { ...graph, openNodes: isOpen ? graph.openNodes.filter(id => id !== entry.node_id) : [...graph.openNodes, entry.node_id] } }))
     if (isOpen || !entry.children_left_out || this.store.state.graph.branches[entry.node_id]) return
     try {
-      const branch = await this.session.graphBranch(entry.node_id, this.paths)
+      const branch = await this.session.graphBranch(entry.node_id, this.paths, this.nodeFilter)
       if (branch) this.store.change(({ graph }) => ({ graph: { ...graph, branches: { ...graph.branches, [entry.node_id]: branch } } }))
     } catch (failure) {
       this.notices.fail(`The Files app did not open ${entry.name} in the graph: ${reasonOf(failure)}`, 'Opening a node in the graph view, calling session.graph_branch')
