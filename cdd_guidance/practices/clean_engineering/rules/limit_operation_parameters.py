@@ -34,7 +34,7 @@ class LimitOperationParameters(OperationMeasureRule):
     slug = "limit-operation-parameters"
 
     def measure(self, operation: "Node") -> list[str]:
-        if self._parameter_count_exempt(operation.name):
+        if self._parameter_count_exempt(operation.name) or operation.get_fact("published_as_tool", False):
             return []
         names = [parameter.name for parameter in parameters_of(operation)]
         packed = operation.get_fact("packed_parameters", None) or {}

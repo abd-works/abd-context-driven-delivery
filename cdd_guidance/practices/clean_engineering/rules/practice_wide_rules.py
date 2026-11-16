@@ -103,14 +103,19 @@ class _ImportCycles:
     def _walk_from(self, start: str) -> None:
         work = [self._enter(start)]
         while work:
-            module, pending = work[-1]
-            imported = next(pending, None)
-            if imported is None:
-                self._leave(work)
-            elif imported not in self._index:
-                work.append(self._enter(imported))
-            elif imported in self._on_stack:
-                self._lowest[module] = min(self._lowest[module], self._index[imported])
+            self._step(work)
+
+    def _step(self, work: list[tuple[str, Iterator[str]]]) -> None:
+        """Follow the next import of the module on top of the walk: leave it when it has none left, enter a module not
+        yet reached, or lower its index to one still on the stack, which shares its group."""
+        module, pending = work[-1]
+        imported = next(pending, None)
+        if imported is None:
+            self._leave(work)
+        elif imported not in self._index:
+            work.append(self._enter(imported))
+        elif imported in self._on_stack:
+            self._lowest[module] = min(self._lowest[module], self._index[imported])
 
     def _enter(self, module: str) -> tuple[str, Iterator[str]]:
         self._index[module] = self._lowest[module] = len(self._index)

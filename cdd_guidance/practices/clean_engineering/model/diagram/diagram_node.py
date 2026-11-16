@@ -4,6 +4,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Dict, List, Optional
 
+from harness.graph.graph import Graph
+
 from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
     Module,
@@ -55,8 +57,8 @@ class DiagramNode(ABC):
 class DiagramClass(OoadClass, DiagramNode):
     """OoadClass on a page: name, members, height. Channel fills the label."""
 
-    def __init__(self, name: str = '', sequential_order: int = 1, **kwargs) -> None:
-        OoadClass.__init__(self, name, sequential_order, **kwargs)
+    def __init__(self, name: str = '', sequential_order: int = 1, intent: str = '') -> None:
+        OoadClass.__init__(self, name, sequential_order, intent)
         DiagramNode.__init__(self)
 
     def width(self) -> int:
@@ -80,14 +82,8 @@ class DiagramClass(OoadClass, DiagramNode):
 class ImportedClass(DiagramClass):
     """Compact card for a class owned by another aggregate."""
 
-    def __init__(
-        self,
-        name: str = '',
-        sequential_order: int = 1,
-        from_module: str = '',
-        **kwargs,
-    ) -> None:
-        super().__init__(name, sequential_order, **kwargs)
+    def __init__(self, name: str = '', sequential_order: int = 1, from_module: str = '') -> None:
+        super().__init__(name, sequential_order)
         self.from_module = from_module
 
     def clone(self):
@@ -112,8 +108,8 @@ class DiagramModule(Module, DiagramNode):
     cell_width = MODULE_CELL_WIDTH
     cell_min_height = MODULE_CELL_MIN_HEIGHT
 
-    def __init__(self, name: str = '', sequential_order: int = 1, **kwargs) -> None:
-        Module.__init__(self, name, sequential_order, **kwargs)
+    def __init__(self, name: str = '', sequential_order: int = 1, graph: Optional[Graph] = None) -> None:
+        Module.__init__(self, name, sequential_order, graph)
         self.nested = False
         # The words written on the arrow to each dependency, by the dependency's name; most arrows carry none.
         self.dependency_labels: Dict[str, str] = {}
@@ -182,9 +178,9 @@ class ContainmentForest:
                     needed.append(parent)
                 parent = path_parent(parent)
         for prefix in sorted(set(needed), key=lambda path: path.count('/')):
-            self.by_name[prefix] = Module(
-                name=prefix, sequential_order=0, description='nested modules', seam_terms=[]
-            )
+            nesting = Module(name=prefix, sequential_order=0)
+            nesting.description = 'nested modules'
+            self.by_name[prefix] = nesting
             self.synthetic.add(prefix)
 
     def _nest_by_path(self) -> None:
@@ -253,3 +249,22 @@ class ContainmentForest:
 
 class DiagramCleanEngineeringModel(CleanEngineeringModel):
     """Shared diagram channel. Draw.io extends this model."""
+
+    def load_module_cell(self, source: Module) -> DiagramModule:
+        """A module of this channel's own kind for a container module the containment forest made, filled from it."""
+        loaded = self.load_module(source)
+        loaded.translate_from(source)
+        return loaded
+
+
+class ModulesView:
+    """One modules view a diagram channel draws: the containment forest of the channel's modules, and the module each
+    is drawn as, the channel's own or a copy of a container the forest made. Each channel's view writes it its own way."""
+
+    def __init__(self, channel: DiagramCleanEngineeringModel) -> None:
+        self._channel = channel
+        self._forest = ContainmentForest.build(list(channel.modules), synthesize_parents=True)
+        self._cells: Dict[str, DiagramModule] = {
+            name: module if isinstance(module, DiagramModule) else channel.load_module_cell(module)
+            for name, module in self._forest.by_name.items()
+        }

@@ -60,7 +60,7 @@ class CleanEngineeringKit:
         return (self.kit_dir / f"{self.action_name}.md").read_text(encoding="utf-8")
 
     def contexts_section(self) -> str:
-        return self.load().scoped_markdown()
+        return self.load().scoped_markdown
 
     def examples(self) -> str:
         return Markdown.from_label(self.load(), "examples").extract()
@@ -126,7 +126,7 @@ with description("CleanEngineering action expansion"):
             kit.format_name = "python"
             self.kit = kit
             self.clean_engineering = kit.load()
-            self.contexts = self.clean_engineering.scoped_markdown()
+            self.contexts = self.clean_engineering.scoped_markdown
             self.examples = self.clean_engineering.examples().expand()
             self.template = self.clean_engineering.templates().expand()
 
@@ -184,7 +184,7 @@ with description("CleanEngineering action expansion"):
             kit.format_name = "markdown"
             kit.fidelity = "model"
             self.practice = kit.load()
-            self.contexts = self.practice.scoped_markdown()
+            self.contexts = self.practice.scoped_markdown
             self.examples = self.practice.examples().expand()
 
         with it("should keep Language and model contexts only"):

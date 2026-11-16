@@ -14,7 +14,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
 )
 from cdd_guidance.practices.clean_engineering.model.c_family_parse import CFamilyParse
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
-from cdd_guidance.practices.clean_engineering.model.operation import Operation, operation_body_fingerprint
+from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
 from cdd_guidance.practices.clean_engineering.model.property import Property
 
@@ -43,8 +43,8 @@ class CodeOperation(Operation):
 
     language: CodeLanguage
 
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, name: str, sequential_order: int = 0, return_type: str = "") -> None:
+        super().__init__(name, sequential_order, return_type)
         # The statements inside its braces as written, which the brace-language measures read.
         self._brace_text = SourceText("")
 
@@ -54,7 +54,7 @@ class CodeOperation(Operation):
         self.take_body(text, self.language)
         self._brace_text = SourceText(text)
         self.line_count = max(1, len([line for line in text.splitlines() if line.strip()]))
-        self.body_fingerprint = operation_body_fingerprint(text)
+        self.take_body_fingerprint(text)
 
     def load_brace_body_facts(self) -> None:
         """Fill the facts the rules measure on its brace-language body."""

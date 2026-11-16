@@ -12,6 +12,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from harness.graph.rule_fixture import RuleFixture, RulePair
+from harness.graph.location import Location
 
 from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass
@@ -40,12 +41,13 @@ def practice_from_files(files: dict[str, str]) -> RuleFixture:
 
 def practice_from_class_text(name: str, text: str, relative: str) -> RuleFixture:
     """One class node recorded from source the working copy does not scan (markdown model files)."""
-    oclass = OoadClass(name=name, sequential_order=1, line=1)
+    oclass = OoadClass(name=name, sequential_order=1)
+    oclass.line = 1
     oclass.end_line = text.count("\n") + 1
     oclass.take_lines(text.split("\n"))
     oclass.load_source_facts()
     fixture = practice_from_files({relative: text})
-    fixture.practice.reading.in_graph.add(oclass, f"clean_engineering:OoadClass:{relative}:{name}", relative, 1, text.count("\n") + 1)
+    fixture.practice.reading.in_graph.add(oclass, f"clean_engineering:OoadClass:{relative}:{name}", Location(relative, 1, text.count("\n") + 1))
     return fixture
 
 

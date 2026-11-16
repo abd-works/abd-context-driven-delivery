@@ -32,11 +32,13 @@ from cdd_guidance.practices.clean_engineering.model.code_class_model import (
     CodeOperation,
     CodeProperty,
 )
-from cdd_guidance.practices.clean_engineering.model.operation import Operation, operation_body_fingerprint
+from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import PythonFunctionBody
 
 _FUTURE_IMPORT = "from __future__ import annotations"
 _ABC_IMPORT = "from abc import ABC, abstractmethod"
+# The decorators that publish an operation as an MCP tool, whose parameters are the tool's argument schema.
+_TOOL_DECORATORS = frozenset({"mcp", "agent_tool"})
 # Calls that import a module named by a string: `importlib.import_module("a.b")`, `__import__("a.b")`.
 _IMPORT_CALLS = frozenset({"import_module", "__import__"})
 
@@ -74,23 +76,32 @@ class PythonOperation(CodeOperation):
     def from_function(cls, node: Function, text: str, owner: ast.ClassDef | None) -> "PythonOperation":
         """The operation a function in text declares: its signature, its body as written, and what the rules measure
         in it, read from its own syntax tree. A method names the class that declares it; a module function, None."""
-        end_line = getattr(node, "end_lineno", None) or node.lineno
         function = PythonFunctionBody(node, owner)
-        operation = cls(
-            name=node.name,
-            parameters=function.parameters(),
-            return_type=ast.unparse(node.returns) if node.returns is not None else "",
-            description=(ast.get_docstring(node) or "").strip(),
-            line=node.lineno,
-            end_line=end_line,
-            line_count=end_line - node.lineno + 1,
-            callees=function.callees(),
-            body_fingerprint=operation_body_fingerprint("\n".join(ast.unparse(stmt) for stmt in node.body)),
-        )
+        operation = cls(node.name, return_type=ast.unparse(node.returns) if node.returns is not None else "")
+        operation.take_parameters(function.parameters())
+        operation.description = (ast.get_docstring(node) or "").strip()
+        operation.callees = function.callees()
+        operation.take_place(node)
+        operation.take_body_fingerprint("\n".join(ast.unparse(stmt) for stmt in node.body))
         operation.take_body(function.body_text(text), PYTHON)
         operation.is_setter = any(isinstance(item, ast.Attribute) and item.attr == "setter" for item in node.decorator_list)
+        operation.published_as_tool = any(operation._decorator_name(item) in _TOOL_DECORATORS for item in node.decorator_list)
         operation.measure(function)
         return operation
+
+    def _decorator_name(self, decorator: ast.expr) -> str:
+        """The name a decorator is written with, with or without arguments: `@mcp`, `@agent_tool(...)`, `@tools.mcp`."""
+        if isinstance(decorator, ast.Call):
+            decorator = decorator.func
+        if isinstance(decorator, ast.Attribute):
+            return decorator.attr
+        return decorator.id if isinstance(decorator, ast.Name) else ""
+
+    def take_place(self, node: Function) -> None:
+        """Keep where its function sits in its file: its first and last line, and how many lines it spans."""
+        self.line = node.lineno
+        self.end_line = getattr(node, "end_lineno", None) or node.lineno
+        self.line_count = self.end_line - node.lineno + 1
 
     def measure(self, function: PythonFunctionBody) -> None:
         """Keep what the rules measure on its function: its decorators, the collaborators a constructor builds, and
@@ -196,7 +207,7 @@ class PythonModule(CodeModule):
             tokens = []
         return "\n".join(docstrings + [token.string for token in tokens if token.type == tokenize.COMMENT])
 
-    def import_targets(self, file: Path, root: Path) -> list[str]:
+    def _import_targets(self, file: Path, root: Path) -> list[str]:
         """Root-relative paths each `import` / `from … import` names, absolute or relative, wherever it sits in the
         file, and each module an `importlib.import_module` call names, as far as its text spells it. An import under
         `if TYPE_CHECKING:` names a type for an annotation and never runs, so it is no dependency and is left out."""
@@ -335,7 +346,8 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
 
     def _class_from_ast(self, node: ast.ClassDef, class_order: int) -> PythonClass:
         documented = DocComment(ast.get_docstring(node) or "")
-        oclass = PythonClass(name=node.name, sequential_order=class_order, line=node.lineno)
+        oclass = PythonClass(name=node.name, sequential_order=class_order)
+        oclass.line = node.lineno
         documented.describe(oclass)
         oclass.stereotypes = list(dict.fromkeys(self._stereotypes_above(node) + documented.stereotypes))
         oclass.end_line = getattr(node, "end_lineno", None) or node.lineno
@@ -358,7 +370,8 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
         top_ops = [PythonOperation.from_function(n, self._text, None) for n in tree.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
         if not top_ops:
             return
-        holder = PythonClass(name=MODULE_FUNCTION_HOLDER, sequential_order=len(module.classes) + 1, line=1)
+        holder = PythonClass(name=MODULE_FUNCTION_HOLDER, sequential_order=len(module.classes) + 1)
+        holder.line = 1
         holder.end_line = 1
         holder.operations = top_ops
         module.classes.append(holder)

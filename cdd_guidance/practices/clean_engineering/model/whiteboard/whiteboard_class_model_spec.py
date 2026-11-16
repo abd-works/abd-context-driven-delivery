@@ -12,14 +12,30 @@ from cdd_guidance.practices.clean_engineering.model.property import Property
 from cdd_guidance.practices.clean_engineering.model.whiteboard.whiteboard_class_model import WhiteboardCleanEngineeringModel
 
 
+def _class_with(name: str, sequential_order: int, properties: list) -> OoadClass:
+    """A class holding the properties given."""
+    made = OoadClass(name, sequential_order)
+    made.properties = properties
+    return made
+
+
+def _module_card(name: str, sequential_order: int, description: str, seam_terms: list, dependencies: list) -> Module:
+    """A module whose card says its purpose, its seam terms, and the modules it depends on."""
+    made = Module(name, sequential_order)
+    made.description = description
+    made.seam_terms = seam_terms
+    made.dependencies = dependencies
+    return made
+
+
 def orders_class_model() -> CleanEngineeringModel:
     model = CleanEngineeringModel("orders")
     module = Module("orders", 1)
-    cart = OoadClass("Cart", 1, properties=[Property(name="lines", type_hint="List[Line]")],
-                     operations=[Operation.from_signature("checkout(payment: Payment): Order")])
+    cart = _class_with("Cart", 1, [Property(name="lines", type_hint="List[Line]")])
+    cart.operations = [Operation.from_signature("checkout(payment: Payment): Order")]
     cart.stereotypes = ["Aggregate Root"]
-    line = OoadClass("Line", 2, properties=[Property(name="quantity", type_hint="int")])
-    priced = OoadClass("PricedLine", 3, properties=[Property(name="price", type_hint="Money")])
+    line = _class_with("Line", 2, [Property(name="quantity", type_hint="int")])
+    priced = _class_with("PricedLine", 3, [Property(name="price", type_hint="Money")])
     priced.bases = ["Line"]
     module.classes.extend([cart, line, priced])
     model.modules.append(module)
@@ -34,7 +50,7 @@ def two_module_model(classes_each: int) -> CleanEngineeringModel:
     for module_number, name in enumerate(("billing", "catalog"), start=1):
         module = Module(name, module_number)
         module.classes.extend(
-            OoadClass(f"{name.title()}{index}", index, properties=[Property(name="id", type_hint="str")])
+            _class_with(f"{name.title()}{index}", index, [Property(name="id", type_hint="str")])
             for index in range(1, classes_each + 1)
         )
         model.modules.append(module)
@@ -46,9 +62,9 @@ def two_module_model(classes_each: int) -> CleanEngineeringModel:
 
 def shop_modules_view() -> CleanEngineeringModel:
     model = CleanEngineeringModel("shop")
-    model.modules.append(Module("orders", 1, description="Take and pay orders.", seam_terms=["Cart", "Order"], dependencies=["catalog"]))
-    model.modules.append(Module("orders/returns", 2, description="Take goods back.", seam_terms=["Return"], dependencies=["orders"]))
-    model.modules.append(Module("catalog", 3, description="Keep what is for sale.", seam_terms=["Product"]))
+    model.modules.append(_module_card("orders", 1, "Take and pay orders.", ["Cart", "Order"], ["catalog"]))
+    model.modules.append(_module_card("orders/returns", 2, "Take goods back.", ["Return"], ["orders"]))
+    model.modules.append(_module_card("catalog", 3, "Keep what is for sale.", ["Product"], []))
     return model
 
 

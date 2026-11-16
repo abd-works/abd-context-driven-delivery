@@ -141,12 +141,13 @@ class BraceCall:
     starts, its parentheses, its callback's braces, and where it ends. A quoted first argument, the block's name, is
     skipped, so a brace or an arrow inside the name is not taken for the callback's."""
 
-    def __init__(self, text: str, start: int, open_paren: int, name: str) -> None:
+    def __init__(self, text: str, start: int, name: str) -> None:
         source = BracketStructure(text)
         # The text of the file the call was read from, which its body is part of.
         self.text = text
         self.start = start
         self.name = name
+        open_paren = text.index("(", start)
         self.close = source.closing_bracket(open_paren, "(", ")")
         limit = self.close if self.close is not None else len(text)
         quoted = _QUOTED_START.match(text, open_paren + 1)
@@ -173,7 +174,7 @@ class WrittenBlock:
     A BDD describe, context, or it, a story, scenario, or step chain: the language writes these lines back
     unchanged while the node still has the key it was read with."""
 
-    def __init__(self, language: CodeLanguage, key: WrittenKey, lead: List[str], heading: List[str]) -> None:
+    def __init__(self, language: CodeLanguage, key: WrittenKey, heading: List[str]) -> None:
         self.language = language
         self.key = key
         self.path = ""
@@ -181,7 +182,8 @@ class WrittenBlock:
         self.close: List[str] = []
         self._inline = ""
         self._inside: List[str] = []
-        self.lead = lead
+        # The lines above the block that lead into it, which its reader sets once it has read them.
+        self.lead = []
         self.closing = []
         self.inside = []
 
@@ -229,24 +231,34 @@ class WrittenBlock:
     def is_in(self, language: CodeLanguage, key: WrittenKey) -> bool:
         return self.language is language and self.key == key
 
-    @staticmethod
-    def split_inside(lines: List[str], inside: Tuple[int, int], children: List[Tuple[int, int]]) -> Tuple[List[str], List[List[str]], List[str]]:
-        """The lines inside one block as (setup, the lines above each child, the lines after the last child).
-        Blank lines right above the first child belong to it; with no child they close the block."""
-        start, end = inside
-        region = lines[start : children[0][0]] if children else lines[start:end]
+    def inside_for(self, body: CodeBody) -> List[str] | None:
+        """The setup or test body lines exactly as read, while the model's body still says the same.
+        A block written on one line keeps its body in the heading, so it has no inside lines."""
+        return self.inside if self.inside_body.text == body.text else None
+
+
+class InsideLines:
+    """The lines inside one block of a file, from the line after its heading up to its closing line, which its child
+    blocks divide."""
+
+    def __init__(self, lines: List[str], inside: Tuple[int, int]) -> None:
+        # Every line of the file, and the first and last-plus-one index of the block's inside.
+        self.lines = lines
+        self.start, self.end = inside
+
+    def split(self, children: List[Tuple[int, int]]) -> Tuple[List[str], List[List[str]], List[str]]:
+        """The lines inside the block as (setup, the lines above each child, the lines after the last child), each
+        child given by its first and last line. Blank lines right above the first child belong to it; with no child
+        they close the block."""
+        lines = self.lines
+        region = lines[self.start : children[0][0]] if children else lines[self.start : self.end]
         kept = len(region)
         while kept and not region[kept - 1].strip():
             kept -= 1
         if not children:
             return region[:kept], [], region[kept:]
         leads = [region[kept:]] + [lines[previous[1] + 1 : child[0]] for previous, child in zip(children, children[1:])]
-        return region[:kept], leads, lines[children[-1][1] + 1 : end]
-
-    def inside_for(self, body: CodeBody) -> List[str] | None:
-        """The setup or test body lines exactly as read, while the model's body still says the same.
-        A block written on one line keeps its body in the heading, so it has no inside lines."""
-        return self.inside if self.inside_body.text == body.text else None
+        return region[:kept], leads, lines[children[-1][1] + 1 : self.end]
 
 
 PYTHON_SPELLING = CodeSpelling(

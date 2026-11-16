@@ -24,13 +24,13 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import Clea
 from cdd_guidance.practices.clean_engineering.model.diagram.class_layout import PAGE_MARGIN, ArrowRouter, DiagramArrow
 from cdd_guidance.practices.clean_engineering.model.diagram.class_view import ClassView, ClassViewPage
 from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import (
-    ContainmentForest,
     DiagramClass,
     DiagramCleanEngineeringModel,
     DiagramModule,
     ImportedClass,
+    ModulesView,
 )
-from cdd_guidance.practices.clean_engineering.model.diagram.geometry import MODULE_CELL_WIDTH, Geometry
+from cdd_guidance.practices.clean_engineering.model.diagram.geometry import MODULE_CELL_WIDTH
 from cdd_guidance.practices.clean_engineering.model.diagram.module_layout import ModuleLayout
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
@@ -280,20 +280,8 @@ class _WhiteboardModuleLayout(ModuleLayout):
     row_gap = ModuleLayout.row_gap + NESTED_TITLE_ROOM
 
 
-class _ModulesBoard:
+class _ModulesBoard(ModulesView):
     """Draws one modules view: the modules where the shared modules layout stands them, and their dependencies."""
-
-    def __init__(self, channel: "WhiteboardCleanEngineeringModel") -> None:
-        self._channel = channel
-        self._forest = ContainmentForest.build(list(channel.modules), synthesize_parents=True)
-        self._cells = self._drawn_cells()
-
-    def _drawn_cells(self) -> Dict[str, WhiteboardModule]:
-        """The board module each module is drawn as: the channel's own, or a copy of a container the forest made."""
-        return {
-            name: module if isinstance(module, WhiteboardModule) else self._channel.load_module_cell(module)
-            for name, module in self._forest.by_name.items()
-        }
 
     def draw(self) -> Whiteboard:
         for name, cell in self._cells.items():
@@ -394,26 +382,9 @@ class _ClassBoardPage(ClassViewPage):
             from_id=self._element_id(arrow.source, page_name), to_id=self._element_id(arrow.target, page_name),
             from_side=arrow.exit_side, to_side=arrow.entry_side,
             label=label, dash=kind == "dependency", heads=heads,
-            bends=None if arrow.straight else _bends(arrow, cards[arrow.source].geometry, cards[arrow.target].geometry),
+            bends=None if arrow.straight else arrow.bends_from_middles(cards[arrow.source].geometry, cards[arrow.target].geometry),
         )
 
-
-def _bends(arrow: DiagramArrow, source: Geometry, target: Geometry) -> Optional[List[object]]:
-    """The route the router found, as a board writes it: the way the arrow leaves, then where each middle leg runs,
-    the first half from the middle of the card it leaves, the rest from the middle of the card it reaches. The route
-    is written with the cards where the router placed them; moving a page moves both ends, so the offsets hold."""
-    path = arrow.path
-    if len(path) < 3:
-        return None
-    middles = [(path[index], path[index + 1]) for index in range(1, len(path) - 2)]
-    from_side_count = math.ceil(len(middles) / 2)
-    bends: List[object] = ["h" if path[0][1] == path[1][1] else "v"]
-    for index, (start, end) in enumerate(middles):
-        level = start[1] == end[1]
-        card = source if index < from_side_count else target
-        middle = card.center
-        bends.append(round(start[1] - middle[1]) if level else round(start[0] - middle[0]))
-    return bends
 
 
 class WhiteboardCleanEngineeringModel(DiagramCleanEngineeringModel):
@@ -428,12 +399,6 @@ class WhiteboardCleanEngineeringModel(DiagramCleanEngineeringModel):
 
     def save(self) -> str:
         return self.render(self)
-
-    def load_module_cell(self, source: Module) -> WhiteboardModule:
-        """A board module for a container module the containment forest made, filled from it."""
-        loaded = self.load_module(source)
-        loaded.translate_from(source)
-        return loaded
 
     def imported_class(self, source: OoadClass, from_module: str = "") -> WhiteboardImportedClass:
         loaded = WhiteboardImportedClass(name=source.name, sequential_order=source.sequential_order, from_module=from_module)

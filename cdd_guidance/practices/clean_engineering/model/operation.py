@@ -13,19 +13,6 @@ _MIN_FINGERPRINTED_CHARACTERS = 40
 _FINGERPRINT_DIGITS = 24
 
 
-def operation_body_fingerprint(body: str) -> str:
-    """Stable hash of normalized method body text (shared by Python AST and C-family parse)."""
-    normalized = re.sub(r"\s+", " ", body.strip())
-    if len(normalized) < _MIN_FINGERPRINTED_CHARACTERS:
-        return ""
-    return _fingerprint(normalized)
-
-
-def _fingerprint(normalized: str) -> str:
-    """The hash two operations share when their whitespace-collapsed text is the same."""
-    return hashlib.sha256(normalized.encode()).hexdigest()[:_FINGERPRINT_DIGITS]
-
-
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
 from harness.graph.model_node import ModelChildren
 
@@ -125,6 +112,7 @@ class Operation(InvariantHolder, OoadNode):
         "is_classmethod",
         "is_property",
         "is_setter",
+        "published_as_tool",
         "body_fingerprint",
         "callees",
         "peer_private_access",
@@ -144,13 +132,13 @@ class Operation(InvariantHolder, OoadNode):
         "body_text",
     )
 
-    def __init__(self, name: str, sequential_order: int = 0, return_type: str = "", description: str = "",
-                 callees: List[str] | None = None, parameters: List[str] | None = None, **fields: object) -> None:
-        graph = fields.pop("graph", None)
-        super().__init__(name, sequential_order, graph)
+    def __init__(self, name: str, sequential_order: int = 0, return_type: str = "") -> None:
+        super().__init__(name, sequential_order)
         self.return_type = return_type
-        self.description = description
-        self.callees: List[str] = list(callees) if callees is not None else []
+        # What it says about itself: its doc comment, or its invariant lines joined.
+        self.description = ""
+        # The operations its body calls, as written.
+        self.callees: List[str] = []
         self._parameters = ModelChildren(self, "parameters")
         self.invariants: List = []
         # The class that declares it, once kept (keep_owner).
@@ -158,10 +146,6 @@ class Operation(InvariantHolder, OoadNode):
         self._start_modifiers()
         self._start_source()
         self._start_measures()
-        for key, value in fields.items():
-            setattr(self, key, value)
-        if parameters:
-            self._take_parameters(parameters)
 
     def _start_modifiers(self) -> None:
         """The kind of operation it is, a plain instance operation until its parser reads otherwise."""
@@ -173,6 +157,9 @@ class Operation(InvariantHolder, OoadNode):
         # says the same in every language.
         self.is_private = False
         self.is_classmethod = False
+        # Published as an MCP tool, such as Python's `@mcp` or `@agent_tool`: its parameters are the tool's published
+        # argument schema, which the tool's callers fill by name.
+        self.published_as_tool = False
 
     def _start_source(self) -> None:
         """Where it sits in its file and what its body says, empty until its parser reads the file."""
@@ -259,7 +246,8 @@ class Operation(InvariantHolder, OoadNode):
     def parameters(self, parameters: List[Parameter]) -> None:
         self._parameters.refill(parameters)
 
-    def _take_parameters(self, parameters: list) -> None:
+    def take_parameters(self, parameters: list) -> None:
+        """Take its parameters as written, each a `name: Type` line or a parameter to copy."""
         from cdd_guidance.practices.clean_engineering.model.type_refs import parse_parameter
 
         taken: List[Parameter] = []
@@ -301,6 +289,7 @@ class Operation(InvariantHolder, OoadNode):
         self.is_static = source.is_static
         self.is_private = source.is_private
         self.is_classmethod = source.is_classmethod
+        self.published_as_tool = source.published_as_tool
 
     def _copy_measures_from(self, source: "Operation") -> None:
         """Copy the measures the parser took of source's body."""
@@ -351,7 +340,17 @@ class Operation(InvariantHolder, OoadNode):
     def _span_fingerprint(self) -> str:
         """The fingerprint of the whole source it spans, for a parser that took none of its body."""
         normalized = re.sub(r"\s+", " ", self.span.text.strip())
-        return _fingerprint(normalized) if normalized else ""
+        return self._fingerprint(normalized) if normalized else ""
+
+    def take_body_fingerprint(self, body: str) -> None:
+        """Keep the fingerprint of its body text, which another operation with the same whitespace-collapsed body
+        shares; none for a body too short for two copies of it to be a duplication."""
+        normalized = re.sub(r"\s+", " ", body.strip())
+        self.body_fingerprint = self._fingerprint(normalized) if len(normalized) >= _MIN_FINGERPRINTED_CHARACTERS else ""
+
+    def _fingerprint(self, normalized: str) -> str:
+        """The hash two operations share when their whitespace-collapsed text is the same."""
+        return hashlib.sha256(normalized.encode()).hexdigest()[:_FINGERPRINT_DIGITS]
 
     def _delegates_io_and_domain(self) -> bool:
         """A long operation that calls both I/O and domain calculations does two jobs, even when it only delegates."""
@@ -364,9 +363,6 @@ class Operation(InvariantHolder, OoadNode):
         suffix = f": {self.return_type}" if self.return_type else ""
         prefix = "- " if self.name.startswith("_") else ""
         return f"{prefix}{self.name}({params}){suffix}"
-
-    def render(self) -> str:
-        return self.save()
 
     def as_record(self) -> dict:
         return {

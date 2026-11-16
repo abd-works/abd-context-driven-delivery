@@ -78,11 +78,8 @@ with description("Operation"):
 
     with context("constructed with parameters and return type"):
         with before.each:
-            self.op = Operation(
-                name="apply_discount",
-                parameters=["rate: float"],
-                return_type="float",
-            )
+            self.op = Operation(name="apply_discount", return_type="float")
+            self.op.take_parameters(["rate: float"])
 
         with it("should store parameters"):
             expect([parameter.save() for parameter in self.op.parameters]).to(equal(["rate: float"]))
@@ -162,10 +159,10 @@ with description("OoadClass"):
                 name="Cart",
                 sequential_order=1,
                 intent="Holds line items and places orders on behalf of the owner.",
-                properties=[_order_property()],
-                operations=[Operation(name="place_order", return_type="Order")],
-                collaborators=["Order", "LineItem"],
             )
+            self.cls.properties = [_order_property()]
+            self.cls.operations = [Operation(name="place_order", return_type="Order")]
+            self.cls.collaborators = ["Order", "LineItem"]
 
         with it("should store intent"):
             expect(self.cls.intent).to(equal("Holds line items and places orders on behalf of the owner."))
@@ -190,12 +187,8 @@ with description("OoadClass"):
     with context("translated from a source OoadClass"):
         with before.each:
             self.cls = OoadClass(name="Cart", sequential_order=1)
-            self.source = OoadClass(
-                name="Cart",
-                sequential_order=1,
-                intent="Updated intent.",
-                properties=[Property(name="items", type_hint="list")],
-            )
+            self.source = OoadClass(name="Cart", sequential_order=1, intent="Updated intent.")
+            self.source.properties = [Property(name="items", type_hint="list")]
             self.cls.translate_from(self.source)
 
         with it("should copy intent from source"):
@@ -211,13 +204,10 @@ with description("OoadClass"):
 with description("Module"):
     with context("constructed with modules-fidelity fields"):
         with before.each:
-            self.module = Module(
-                name="character",
-                sequential_order=1,
-                description="Sheet ownership.",
-                seam_terms=["Character", "ISource"],
-                dependencies=["checks"],
-            )
+            self.module = Module(name="character", sequential_order=1)
+            self.module.description = "Sheet ownership."
+            self.module.seam_terms = ["Character", "ISource"]
+            self.module.dependencies = ["checks"]
 
         with it("should store name"):
             expect(self.module.name).to(equal("character"))
@@ -236,11 +226,8 @@ with description("Module"):
 
     with context("public_terms"):
         with it("should prefer explicit seam_terms"):
-            module = Module(
-                name="checks",
-                sequential_order=1,
-                seam_terms=["Trait", "Check"],
-            )
+            module = Module(name="checks", sequential_order=1)
+            module.seam_terms = ["Trait", "Check"]
             module.classes.append(OoadClass(name="Ignored", sequential_order=1))
             expect(module.public_terms()).to(equal(["Trait", "Check"]))
 
@@ -251,25 +238,19 @@ with description("Module"):
             expect(module.public_terms()).to(equal(["Trait", "Check"]))
 
         with it("should fall back to comma-separated seam string"):
-            module = Module(
-                name="checks",
-                sequential_order=1,
-                seam="Trait, Check, CheckResult",
-            )
+            module = Module(name="checks", sequential_order=1)
+            module.seam = "Trait, Check, CheckResult"
             expect(module.public_terms()).to(equal(["Trait", "Check", "CheckResult"]))
 
     with context("update_self copies modules-fidelity fields"):
         with before.each:
             self.module = Module(name="character", sequential_order=1)
-            source = Module(
-                name="character",
-                sequential_order=1,
-                description="Updated purpose.",
-                seam="Character",
-                seam_terms=["Character", "ISource"],
-                dependencies=["checks"],
-                constraint="Callers use ISource only.",
-            )
+            source = Module(name="character", sequential_order=1)
+            source.description = "Updated purpose."
+            source.seam = "Character"
+            source.seam_terms = ["Character", "ISource"]
+            source.dependencies = ["checks"]
+            source.constraint = "Callers use ISource only."
             self.module.update_self(source)
 
         with it("should copy description"):
@@ -412,9 +393,11 @@ with description("call graph lines"):
 
 with description("a class's property list reconciling itself with another class's"):
     with before.each:
-        self.target = OoadClass("Cart", 1, properties=[Property("items", 1), Property("owner", 2)])
+        self.target = OoadClass("Cart", 1)
+        self.target.properties = [Property("items", 1), Property("owner", 2)]
         self.kept = self.target.properties[0]
-        self.source = OoadClass("Cart", 1, properties=[Property("items", 1, type_hint="list[Item]")])
+        self.source = OoadClass("Cart", 1)
+        self.source.properties = [Property("items", 1, type_hint="list[Item]")]
         self.target.properties.reconcile(self.source.properties, self.target.load_property)
 
     with it("should keep the property of the same name"):
@@ -429,7 +412,8 @@ with description("a class's property list reconciling itself with another class'
 
 with description("a class read from its file"):
     with before.each:
-        self.oclass = OoadClass("Cart", 1, line=2)
+        self.oclass = OoadClass("Cart", 1)
+        self.oclass.line = 2
         self.oclass.end_line = 3
         self.oclass.stereotypes = ["Aggregate Root"]
         self.oclass.take_lines(["# head", "class Cart:", "    # Interaction: total", "tail"])
@@ -446,7 +430,9 @@ with description("a model of each format translating another model"):
         from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 
         source = CleanEngineeringModel("Shop", 1)
-        source.modules = [Module("cart", 1, description="The cart.")]
+        cart_module = Module("cart", 1)
+        cart_module.description = "The cart."
+        source.modules = [cart_module]
         cart = OoadClass("Cart", 1)
         cart.intent = "Holds the lines."
         source.modules[0].classes = [cart]

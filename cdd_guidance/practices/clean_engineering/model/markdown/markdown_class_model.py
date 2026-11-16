@@ -114,8 +114,8 @@ class ClassHeading:
 
 class MarkdownOoadClass(OoadClass):
 
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, name: str, sequential_order: int, intent: str = "") -> None:
+        super().__init__(name, sequential_order, intent)
         # The card this class was read from, the note on its heading, and the class as it read then.
         self._card: Optional[str] = None
         self._card_note = ""
@@ -148,7 +148,7 @@ class MarkdownOoadClass(OoadClass):
         for operation in methods:
             if is_interface_name(self.name) and operation.name.startswith("_"):
                 continue
-            lines.append(self._public_line(operation.render()))
+            lines.append(self._public_line(operation.save()))
             lines.extend(self._notes_under(operation.callees, operation.invariant_lines()))
         lines.extend(line for item in self.dependencies for line in item.lines())
         return lines
@@ -374,8 +374,8 @@ class MarkdownModule(Module):
 
     _META_HEADINGS = frozenset({"seam", "dependencies", "modules fidelity", "purpose"})
 
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
+        super().__init__(name, sequential_order, graph)
         # Its heading line, its own lines in place, and each class card where it stood, as a card document wrote them;
         # none for a module no card document held.
         self._card_parts: Optional[list] = None

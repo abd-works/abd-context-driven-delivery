@@ -32,6 +32,7 @@ from cdd_guidance.practices.clean_engineering.rules.fixtures.multi_language_exam
     _USE_EXCEPTIONS_PROPERLY_FAULT,
 )
 from cdd_guidance.practices.clean_engineering.rules.rule_examples import (
+    assert_rule_pair,
     ce_rule_by_slug,
     files_rule_pair,
     module_example_pair,
@@ -43,6 +44,14 @@ from cdd_guidance.practices.clean_engineering.rules.rule_examples import (
 )
 
 _LANGS = ("python", "typescript", "javascript")
+# A toolset whose operation takes four arguments, published as an MCP tool when its decorator is filled in.
+_TICKETS = """from harness.mcp.mcp_annotations import mcp
+
+
+class Tickets:
+{decorator}    def create_ticket(self, title: str, stage: str, parent: str, tags: str) -> str:
+        return f"{{title}} {{stage}} {{parent}} {{tags}}"
+"""
 
 
 def _multilang_pairs(slug: str, fault: dict, clean: dict) -> list:
@@ -139,6 +148,12 @@ export class NumberInventorySearch {
             expect(self.create_factory.hits(ce_rule_by_slug("limit-operation-parameters"))).to(equal([]))
         with it("should not flag fromFields mapping factories"):
             expect(self.from_fields.hits(ce_rule_by_slug("limit-operation-parameters"))).to(equal([]))
+        with it("should not flag an operation published as an MCP tool, whose parameters are the tool's argument schema"):
+            assert_rule_pair(
+                "limit-operation-parameters",
+                _TICKETS.format(decorator=""),
+                _TICKETS.format(decorator="    @mcp\n"),
+            )
     with context("use-property-not-accessor"):
         with before.all:
             self.pair = python_example_pair("use-property-not-accessor")

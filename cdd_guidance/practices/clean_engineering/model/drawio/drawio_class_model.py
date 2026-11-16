@@ -42,7 +42,7 @@ from cdd_guidance.practices.clean_engineering.model.diagram.class_view import (
     cell_slug as _cell_slug,
     plain_class_name as _plain_class_name,
 )
-from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import ContainmentForest, DiagramCleanEngineeringModel
+from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import DiagramCleanEngineeringModel, ModulesView
 from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry
 from cdd_guidance.practices.clean_engineering.model.diagram.module_layout import MODULE_START_X, MODULE_START_Y, ModuleLayout
 from cdd_guidance.practices.clean_engineering.model.drawio.page.drawio_page import DrawioPage, class_name_in, style_value
@@ -93,12 +93,6 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
 
     def save(self) -> str:
         return self.render(self)
-
-    def load_module_cell(self, source: Module) -> DrawIOModule:
-        """A Draw.io cell for a container module the containment forest made, filled from it."""
-        loaded = self.load_module(source)
-        loaded.translate_from(source)
-        return loaded
 
     def imported_class(self, source: OoadClass, from_module: str = '') -> DrawIOImportedClass:
         loaded = DrawIOImportedClass(
@@ -272,7 +266,9 @@ class _ClassDiagramReader:
             name, stereotypes, props, ops = _class_card_members(cell.get('value', ''))
             if not name:
                 continue
-            oclass = DrawIOClass(name=_plain_class_name(name), sequential_order=1, properties=props, operations=ops)
+            oclass = DrawIOClass(name=_plain_class_name(name), sequential_order=1)
+            oclass.properties = props
+            oclass.operations = ops
             oclass.stereotypes = stereotypes + [item for item in marks_in(name) if item not in stereotypes]
             cards.append((cell, oclass))
         return cards
@@ -297,25 +293,16 @@ class _ClassDiagramReader:
                 prop.derive_relationship()
 
 
-class _ModulesDiagramWriter:
+class _ModulesDiagramWriter(ModulesView):
     """Writes one modules-view diagram: top-level modules layered by dependency depth, path children nested inside."""
 
     def __init__(self, channel: DrawIOCleanEngineeringModel) -> None:
-        self._channel = channel
-        self._forest = ContainmentForest.build(list(channel.modules), synthesize_parents=True)
-        self._cells = self._drawn_cells()
+        super().__init__(channel)
         self._bounds: Dict[str, Geometry] = {}
         self._parent_ids: Dict[str, str] = {}
         self._cell_ids: Dict[str, str] = {
             name: f'nest-{_cell_slug(name)}' if name in self._forest.synthetic else _cell_slug(name) or name
             for name in self._forest.by_name
-        }
-
-    def _drawn_cells(self) -> Dict[str, DrawIOModule]:
-        """The cell each module is drawn as: the channel's own module, or a Draw.io copy of a container the forest made."""
-        return {
-            name: module if isinstance(module, DrawIOModule) else self._channel.load_module_cell(module)
-            for name, module in self._forest.by_name.items()
         }
 
     def write(self) -> str:
@@ -490,7 +477,7 @@ class _ClassDiagramPage(ClassViewPage):
         if arrow.straight:
             style = style.replace('edgeStyle=orthogonalEdgeStyle;', 'edgeStyle=none;')
         cell = ET.Element('mxCell', attrib={
-            'id': edge_id, 'value': arrow.label, 'style': arrow_style(style, arrow, cards), 'edge': '1',
+            'id': edge_id, 'value': arrow.label, 'style': self._anchored_style(style, arrow, cards), 'edge': '1',
             'source': arrow.source, 'target': arrow.target, 'parent': '1',
         })
         geo = ET.SubElement(cell, 'mxGeometry', attrib={'relative': '1', 'as': 'geometry'})
@@ -500,18 +487,13 @@ class _ClassDiagramPage(ClassViewPage):
                 ET.SubElement(points, 'mxPoint', attrib={'x': str(x), 'y': str(y)})
         return cell
 
-
-def arrow_style(base_style: str, arrow: DiagramArrow, cards: Dict[str, DrawIOClass]) -> str:
-    """The arrow's style plus its exit and entry points, as fractions of each card, so Draw.io keeps both ends put."""
-    source, target = cards[arrow.source].geometry, cards[arrow.target].geometry
-    exit_x = round((arrow.exit_point[0] - source.x) / source.width, 4)
-    exit_y = round((arrow.exit_point[1] - source.y) / source.height, 4)
-    entry_x = round((arrow.entry_point[0] - target.x) / target.width, 4)
-    entry_y = round((arrow.entry_point[1] - target.y) / target.height, 4)
-    return (
-        f'{base_style}exitX={exit_x};exitY={exit_y};exitDx=0;exitDy=0;exitPerimeter=0;'
-        f'entryX={entry_x};entryY={entry_y};entryDx=0;entryDy=0;entryPerimeter=0;'
-    )
+    def _anchored_style(self, base_style: str, arrow: DiagramArrow, cards: Dict[str, DrawIOClass]) -> str:
+        """The arrow's style plus its exit and entry points, as fractions of each card, so Draw.io keeps both ends put."""
+        exit_x, exit_y, entry_x, entry_y = arrow.anchors_on(cards[arrow.source].geometry, cards[arrow.target].geometry)
+        return (
+            f'{base_style}exitX={exit_x};exitY={exit_y};exitDx=0;exitDy=0;exitPerimeter=0;'
+            f'entryX={entry_x};entryY={entry_y};entryDx=0;entryDy=0;entryPerimeter=0;'
+        )
 
 
 def _set_graph_attrs(graph: ET.Element, page_width: int, page_height: int) -> None:

@@ -12,6 +12,7 @@ import os
 import re
 from pathlib import Path
 
+from harness.agent_tools.progress import report_progress
 from harness.graph.graph import Node
 from harness.guidance.guidance import PracticeGuidance
 from harness.guidance.practice_reading import PracticeReading
@@ -95,14 +96,14 @@ class CallLinks:
         for caller in [*in_graph.nodes("Operation"), *in_graph.nodes("Property")]:
             called = self._called_by(caller)
             for member in called:
-                self._graph.link("invokes", caller, member, "relationship")
+                self._graph.edges.relate("invokes", caller, member)
             if not called and self._calls_nothing_by_design(caller):
                 caller.set_fact(EXEMPT_FACT, ["invokes"])
 
     def _calls_nothing_by_design(self, caller: Node) -> bool:
         """Whether caller is a member that has nothing to call: an abstract one, whose subclasses do the work, or one
         that takes nothing and answers a value, which is a property in all but name."""
-        return self._is_abstract(caller) or not self._graph.edges_from("hasParameter", caller)
+        return self._is_abstract(caller) or not self._graph.edges.from_parent("hasParameter", caller)
 
     def _is_abstract(self, caller: Node) -> bool:
         """An abstract member: marked so (`@abstractmethod`, `abstract`), or with no body but `...`, `pass`, or a raise of
@@ -140,9 +141,9 @@ class CallLinks:
 
     def _named(self, name: str, caller: Node) -> list[Node]:
         """The members called name other than caller, only its own class's when its class has one."""
-        owner = self._graph.direct_parent(caller)
+        owner = self._graph.edges.direct_parent(caller)
         members = [member for member in self._reading.code_index.members_named(name) if member is not caller]
-        return [member for member in members if self._graph.direct_parent(member) is owner] or members
+        return [member for member in members if self._graph.edges.direct_parent(member) is owner] or members
 
 
 class CodeIndex:
@@ -209,7 +210,7 @@ class ModelDocuments:
         self._read = True
         for file in self._files():
             relative = file.relative_to(self._root).as_posix()
-            graph.report_progress(f"clean_engineering · model · {relative}")
+            report_progress(f"clean_engineering · model · {relative}")
             self._models[relative] = self._model_in(file)
 
     def _model_in(self, file: Path) -> CleanEngineeringModel:
@@ -248,4 +249,4 @@ class ModelDocuments:
 def parameters_of(operation: Node) -> list[Node]:
     """The parameters an operation takes, in the order it declares them: the nodes its hasParameter edges lead to, which
     a graph read back from its saved file keeps too."""
-    return [edge.child for edge in operation.graph.edges_from("hasParameter", operation)]
+    return [edge.child for edge in operation.graph.edges.from_parent("hasParameter", operation)]

@@ -41,16 +41,8 @@ class ClassView:
 
     def __init__(self, channel: DiagramCleanEngineeringModel) -> None:
         self.channel = channel
-        self.cell_ids: dict[int, str] = {}
-        self.classes_by_cell: dict[str, OoadClass] = {}
-        self.module_of: dict[int, Module] = {}
         self.classes = [oclass for module in channel.modules for oclass in module.classes]
-        self._cell_ids_by_name: dict[str, list[str]] = {}
         self._assign_cell_ids()
-        self.arrow_labels: Dict[Tuple[str, str], str] = {}
-        # The interactions each pair's dependencies name, in model order: `stops`, `reads sections with`.
-        self.dependency_labels: Dict[Tuple[str, str], List[str]] = {}
-        self.relationships: Relationships = []
         self._collect_relationships()
         self.module_labels = {
             self.cell_ids[id(oclass)]: module_tab_label(module.name) for module in channel.modules for oclass in module.classes
@@ -87,6 +79,10 @@ class ClassView:
 
     def _assign_cell_ids(self) -> None:
         """One cell id per class. The same name in two modules is two boxes."""
+        self.cell_ids: dict[int, str] = {}
+        self.classes_by_cell: dict[str, OoadClass] = {}
+        self.module_of: dict[int, Module] = {}
+        self._cell_ids_by_name: dict[str, list[str]] = {}
         for module in self.channel.modules:
             for oclass in module.classes:
                 cell_id = f"{cell_slug(module.name)}--{cell_slug(oclass.name)}"
@@ -110,6 +106,11 @@ class ClassView:
         }
 
     def _collect_relationships(self) -> None:
+        """The arrows between the classes' cells, with the words each carries."""
+        self.arrow_labels: Dict[Tuple[str, str], str] = {}
+        # The interactions each pair's dependencies name, in model order: `stops`, `reads sections with`.
+        self.dependency_labels: Dict[Tuple[str, str], List[str]] = {}
+        self.relationships: Relationships = []
         for oclass in self.classes:
             source = self.cell_ids.get(id(oclass))
             if not source:
@@ -158,17 +159,13 @@ class ClassView:
         Imports are the targets of edges that leave a local class, and foreign subtypes that inherit into a local base.
         Inbound association sources stay on the other module's page."""
         imports: set[str] = set()
-        for relationship in self.relationships:
-            source, target, _kind = relationship
+        for source, target, kind in self.relationships:
+            inbound_inheritance = target in local_ids and source not in local_ids and (kind or 'association').lower() == 'inheritance'
             if source in local_ids and target not in local_ids and self.module_labels.get(target, '') != local_label:
                 imports.add(target)
-            elif self._is_inbound_inheritance(relationship, local_ids) and self.module_labels.get(source, '') != local_label:
+            elif inbound_inheritance and self.module_labels.get(source, '') != local_label:
                 imports.add(source)
         return sorted(imports)
-
-    def _is_inbound_inheritance(self, relationship: Tuple[str, str, str], local_ids: set[str]) -> bool:
-        source, target, kind = relationship
-        return target in local_ids and source not in local_ids and (kind or 'association').lower() == 'inheritance'
 
 
 

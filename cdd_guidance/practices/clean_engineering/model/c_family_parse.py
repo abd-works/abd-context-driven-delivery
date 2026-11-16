@@ -123,7 +123,8 @@ class CFamilyParse:
     def _read_class(self, match: re.Match, class_order: int) -> OoadClass:
         """The class declared at match, whose body this parse holds, with its head, heritage, and members."""
         head = ClassHead.above(self._text[: match.start()])
-        oclass = self.class_type(name=match.group(1), sequential_order=class_order, line=self._line_at(self._text, match.start()))
+        oclass = self.class_type(name=match.group(1), sequential_order=class_order)
+        oclass.line = self._line_at(self._text, match.start())
         head.documented.describe(oclass)
         oclass.stereotypes = head.stereotypes
         oclass.end_line = self._line_at(self._text, self._body_start + len(self._class_body))
@@ -154,7 +155,7 @@ class CFamilyParse:
             ctor_body, _rel = self._brace_body(self._class_body, ctor.end() - 1)
             if ctor_body is None:
                 continue
-            operation = self.operation_type(name="constructor", parameters=self._split_params(ctor.group(1)))
+            operation = self._declared_operation("constructor", ctor.group(1))
             operation.line = self._line_at(self._text, self._body_start + ctor.start())
             self._apply_method_end_line(operation, ctor.end() - 1)
             oclass.operations.insert(0, self._operation_from_body(operation, ctor_body))
@@ -163,7 +164,8 @@ class CFamilyParse:
         top_ops = self._top_level_functions()
         if not top_ops:
             return
-        holder = self.class_type(name=MODULE_FUNCTION_HOLDER, sequential_order=len(module.classes) + 1, line=1)
+        holder = self.class_type(name=MODULE_FUNCTION_HOLDER, sequential_order=len(module.classes) + 1)
+        holder.line = 1
         holder.end_line = 1
         holder.operations = top_ops
         self._load_body_facts(holder)
@@ -184,7 +186,7 @@ class CFamilyParse:
         body, body_start = self._brace_body(self._text, match.end() - 1)
         if body is None:
             return None
-        operation = self.operation_type(name=match.group(1), parameters=self._split_params(match.group(2) or ""))
+        operation = self._declared_operation(match.group(1), match.group(2) or "")
         operation.line = self._line_at(self._text, match.start())
         operation.end_line = self._line_at(self._text, body_start + len(body))
         return self._operation_from_body(operation, body)
@@ -192,11 +194,7 @@ class CFamilyParse:
     def _arrow_operation(self, match: re.Match) -> Operation:
         """The top-level constant arrow function declared at match."""
         body = self._arrow_body(match.end())
-        operation = self.operation_type(
-            name=match.group(1),
-            parameters=self._split_params(match.group(2) or ""),
-            return_type=(match.group(3) or "").strip(),
-        )
+        operation = self._declared_operation(match.group(1), match.group(2) or "", (match.group(3) or "").strip())
         operation.line = self._line_at(self._text, match.start())
         operation.end_line = self._line_at(self._text, self._text.find(body, match.end()) + len(body))
         return self._operation_from_body(operation, body)
@@ -243,10 +241,8 @@ class CFamilyParse:
     def _method(self, match: re.Match, method_body: str, class_name: str) -> Operation:
         """The method whose header is match, named constructor when it carries its class's name."""
         name = match.group(1)
-        operation = self.operation_type(
-            name="constructor" if class_name and name == class_name else name,
-            parameters=self._split_params(match.group(2) or ""),
-            return_type=(match.group(3) or "").strip(),
+        operation = self._declared_operation(
+            "constructor" if class_name and name == class_name else name, match.group(2) or "", (match.group(3) or "").strip()
         )
         header = match.group(0)
         header_start = match.start() + len(header) - len(header.lstrip())
@@ -275,11 +271,17 @@ class CFamilyParse:
         for match in _BODILESS_RE.finditer(self._top_level(code)):
             if match.group(1) in _NOT_MEMBERS:
                 continue
-            operation = self.operation_type(name=match.group(1), parameters=self._split_params(match.group(2) or ""), return_type=(match.group(3) or "").strip())
+            operation = self._declared_operation(match.group(1), match.group(2) or "", (match.group(3) or "").strip())
             operation.line = self._line_at(self._text, self._body_start + match.start(1))
             operation.end_line = operation.line
             operations.append(self._operation_from_body(operation, ""))
         return operations
+
+    def _declared_operation(self, name: str, parameters: str, return_type: str = "") -> Operation:
+        """An operation of this language's kind named name, with the parameters its header lists between parentheses."""
+        operation = self.operation_type(name, return_type=return_type)
+        operation.take_parameters(self._split_params(parameters))
+        return operation
 
     def _operation_from_body(self, operation: Operation, body: str) -> Operation:
         """The operation with the statements inside its braces as its body, the operations they call, and the notes

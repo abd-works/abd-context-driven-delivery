@@ -205,73 +205,87 @@ class SketchModule(Module):
 
     def read_classes(self, lines: List[str]) -> None:
         """The class cards written under this module's heading; a second card of a class it holds adds to it."""
-        for oclass in self._classes_in(textwrap.dedent("\n".join(lines))):
+        for oclass in _SketchCards(textwrap.dedent("\n".join(lines))).classes():
             existing = next((known for known in self.classes if known.name == oclass.name), None)
             if existing is None:
                 self.classes.append(oclass)
                 continue
             existing.merge(oclass)
 
-    def _classes_in(self, text: str) -> list[SketchOoadClass]:
-        if any(_BOLD_CLASS.match(raw.strip()) for raw in text.splitlines()):
-            return self._uml_classes(text)
-        lines = [raw.strip() for raw in text.splitlines() if raw.strip() and raw.strip() != "Fidelity:"]
-        classes: list[SketchOoadClass] = []
-        current: SketchOoadClass | None = None
-        index = 0
-        while index < len(lines):
-            stripped = lines[index]
-            if self._closes_card(stripped, current):
-                current = None
-            elif not stripped.startswith(("//", "#")):
-                headed = _CLASS.match(stripped)
-                if headed and (current is None or headed.group(1) != current.name):
-                    current = self._class_headed(headed, len(classes) + 1)
-                    classes.append(current)
-                elif current is not None:
-                    index = current.read_member(lines, index)
-                    continue
-            index += 1
-        return classes
 
-    def _closes_card(self, stripped: str, current: SketchOoadClass | None) -> bool:
+
+class _SketchCards:
+    """The class cards one module's text writes, read in order, each line adding to the card being read: UML cards,
+    `**Session**` with indented `+ name(args): type` lines, when any line is such a heading; else plain cards, a
+    `Cart <<Aggregate Root>> : Basket` heading and its member lines."""
+
+    def __init__(self, text: str) -> None:
+        written = text.splitlines()
+        self._uml = any(_BOLD_CLASS.match(line.strip()) for line in written)
+        self._lines = written if self._uml else [line.strip() for line in written if line.strip() and line.strip() != "Fidelity:"]
+        self._classes: list[SketchOoadClass] = []
+        self._current: SketchOoadClass | None = None
+
+    def classes(self) -> list[SketchOoadClass]:
+        """Every card the text writes, in order."""
+        read_line = self._read_uml_line if self._uml else self._read_card_line
+        index = 0
+        while index < len(self._lines):
+            index = read_line(index)
+        return self._classes
+
+    def _read_card_line(self, index: int) -> int:
+        """Read the line at index into the cards, and answer the index of the next line to read."""
+        stripped = self._lines[index]
+        if self._closes_card(stripped):
+            self._current = None
+            return index + 1
+        if stripped.startswith(("//", "#")):
+            return index + 1
+        headed = _CLASS.match(stripped)
+        if headed and (self._current is None or headed.group(1) != self._current.name):
+            self._start_card(self._class_headed(headed))
+            return index + 1
+        if self._current is not None:
+            return self._current.read_member(self._lines, index)
+        return index + 1
+
+    def _read_uml_line(self, index: int) -> int:
+        """Read the UML card line at index into the cards, and answer the index of the next line to read."""
+        line = self._lines[index]
+        stripped = line.strip()
+        indent = len(line) - len(line.lstrip(" "))
+        if not stripped or stripped.startswith(("//", "#")) or _is_rule(stripped):
+            return index + 1
+        heading = _BOLD_CLASS.match(stripped) if indent == 0 else None
+        if heading:
+            self._start_card(SketchOoadClass(name=heading.group(1), sequential_order=len(self._classes) + 1))
+            return index + 1
+        if self._current is None or indent == 0:
+            return index + 1
+        member = _uml_member(stripped)
+        if member is not None:
+            return self._current.read_uml_member(self._lines, index, member)
+        if self._current.operations and re.fullmatch(r"[A-Za-z][A-Za-z0-9]*", stripped):
+            self._current.operations[-1].add_invariant(stripped)
+        return index + 1
+
+    def _start_card(self, oclass: SketchOoadClass) -> None:
+        self._current = oclass
+        self._classes.append(oclass)
+
+    def _closes_card(self, stripped: str) -> bool:
         """A fence or a `----` rule ends the card being read, and so does a line of prose under it."""
         if stripped == "----" or stripped.startswith(_FENCE):
             return True
-        return current is not None and not stripped.startswith(("//", "#")) and self._is_prose(stripped)
+        return self._current is not None and not stripped.startswith(("//", "#")) and self._is_prose(stripped)
 
-    def _class_headed(self, headed: re.Match, sequential_order: int) -> SketchOoadClass:
+    def _class_headed(self, headed: re.Match) -> SketchOoadClass:
         """The class a `Cart <<Aggregate Root>> : Basket` heading names, with its stereotypes and bases."""
-        oclass = SketchOoadClass(name=headed.group(1), sequential_order=sequential_order)
+        oclass = SketchOoadClass(name=headed.group(1), sequential_order=len(self._classes) + 1)
         oclass.stereotypes = marks_in(headed.group(2) or "")
         oclass.bases = [base.strip() for base in split_top_level(headed.group(3) or "") if base.strip()]
         return oclass
-
-    def _uml_classes(self, text: str) -> list[SketchOoadClass]:
-        """`### **Session**` plus `+ name(args): type` lines. Indented bold labels stay notes."""
-        classes: list[SketchOoadClass] = []
-        current: SketchOoadClass | None = None
-        lines = text.splitlines()
-        index = 0
-        while index < len(lines):
-            stripped = lines[index].strip()
-            indent = len(lines[index]) - len(lines[index].lstrip(" "))
-            heading = _BOLD_CLASS.match(stripped) if indent == 0 else None
-            if not stripped or stripped.startswith(("//", "#")) or _is_rule(stripped):
-                index += 1
-                continue
-            if heading:
-                current = SketchOoadClass(name=heading.group(1), sequential_order=len(classes) + 1)
-                classes.append(current)
-            elif current is not None and indent > 0:
-                member = _uml_member(stripped)
-                if member is not None:
-                    index = current.read_uml_member(lines, index, member)
-                    continue
-                if current.operations and re.fullmatch(r"[A-Za-z][A-Za-z0-9]*", stripped):
-                    current.operations[-1].add_invariant(stripped)
-            index += 1
-        return classes
 
     def _is_prose(self, stripped: str) -> bool:
         if stripped.startswith("->") or "-->" in stripped:

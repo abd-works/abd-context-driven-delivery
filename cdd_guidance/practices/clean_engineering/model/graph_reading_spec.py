@@ -67,7 +67,7 @@ with description("Clean Engineering reading code into its graph"):
             self.charge = next(node for node in self.fixture.practice.reading.in_graph.nodes("Operation") if node.name == "charge")
 
         with it("should link each parameter through hasParameter, in the order the operation declares them"):
-            expect([edge.child.name for edge in self.fixture.practice.reading.graph.edges_from("hasParameter", self.charge)]).to(
+            expect([edge.child.name for edge in self.fixture.practice.reading.graph.edges.from_parent("hasParameter", self.charge)]).to(
                 equal(["amount", "note"])
             )
 

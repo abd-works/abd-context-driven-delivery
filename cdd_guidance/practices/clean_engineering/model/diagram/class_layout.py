@@ -59,6 +59,9 @@ _VERTICAL_SIDES = ("bottom", "top")
 _HORIZONTAL_SIDES = ("right", "left")
 
 
+# How many decimal places an arrow's anchor fractions keep.
+_ANCHOR_DIGITS = 4
+
 @dataclass
 class DiagramArrow:
     """The line drawn between two cards for every relationship one class has to another.
@@ -83,6 +86,32 @@ class DiagramArrow:
     @property
     def path(self) -> List[Point]:
         return [self.exit_point] + self.corners + [self.entry_point]
+
+    def anchors_on(self, source: Geometry, target: Geometry) -> Tuple[float, float, float, float]:
+        """Where it leaves the card it starts on and reaches the card it ends on, each as fractions of that card's
+        width and height: (exit x, exit y, entry x, entry y)."""
+        return (
+            round((self.exit_point[0] - source.x) / source.width, _ANCHOR_DIGITS),
+            round((self.exit_point[1] - source.y) / source.height, _ANCHOR_DIGITS),
+            round((self.entry_point[0] - target.x) / target.width, _ANCHOR_DIGITS),
+            round((self.entry_point[1] - target.y) / target.height, _ANCHOR_DIGITS),
+        )
+
+    def bends_from_middles(self, source: Geometry, target: Geometry) -> Optional[List[object]]:
+        """Its route as offsets from its cards' middles: the way it leaves (`h` or `v`), then where each middle leg
+        runs, the first half from the middle of the card it leaves, the rest from the middle of the card it reaches.
+        Moving both cards together keeps the offsets; none for a route with no middle leg."""
+        path = self.path
+        if len(path) < 3:
+            return None
+        middles = [(path[index], path[index + 1]) for index in range(1, len(path) - 2)]
+        from_side_count = math.ceil(len(middles) / 2)
+        bends: List[object] = ["h" if path[0][1] == path[1][1] else "v"]
+        for index, (start, end) in enumerate(middles):
+            level = start[1] == end[1]
+            middle = (source if index < from_side_count else target).center
+            bends.append(round(start[1] - middle[1]) if level else round(start[0] - middle[0]))
+        return bends
 
 
 
@@ -617,18 +646,21 @@ class ArrowRouter:
         # In the window round the arrow: clear of other arrows' ports, then past them, then along other arrows; only then
         # over the whole page. A search that finds no way walks its whole area, so the page is searched last.
         searched = _SearchedArrow(owner, begin, end, out, heading_in)
-        attempts = (
+        for attempt in self._attempts_in(window):
+            cells = _ArrowSearch(grid, searched, attempt).run()
+            if cells is not None:
+                return cells
+        return None
+
+    def _attempts_in(self, window: Tuple[int, int, int, int]) -> Tuple[_SearchAttempt, ...]:
+        """Each search an arrow tries, in order, until one finds a way."""
+        return (
             _SearchAttempt(window, respect_held_ports=True, may_run_along=False),
             _SearchAttempt(window, respect_held_ports=False, may_run_along=False),
             _SearchAttempt(window, respect_held_ports=False, may_run_along=True),
             _SearchAttempt(None, respect_held_ports=False, may_run_along=False),
             _SearchAttempt(None, respect_held_ports=False, may_run_along=True),
         )
-        for attempt in attempts:
-            cells = _ArrowSearch(grid, searched, attempt).run()
-            if cells is not None:
-                return cells
-        return None
 
     def _window_around(self, grid: _RouteGrid, cells: List[Point]) -> Tuple[int, int, int, int]:
         """The part of the page an arrow is searched in first: the box round its ends, with room to go
