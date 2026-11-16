@@ -10,13 +10,17 @@
       "discovery",
       "specification"
     ],
-    "version": 105
+    "version": 106
   },
   "practices": {
     "stories": {
       "formats": {
-        "story_map": [],
-        "scenarios": [],
+        "story_map": [
+          "markdown"
+        ],
+        "scenarios": [
+          "markdown"
+        ],
         "acceptance_tests": []
       },
       "enabled": true
@@ -40,9 +44,13 @@
     },
     "clean_engineering": {
       "formats": {
-        "modules": [],
+        "modules": [
+          "markdown"
+        ],
         "code": [],
-        "model": []
+        "model": [
+          "markdown"
+        ]
       },
       "enabled": true
     },
