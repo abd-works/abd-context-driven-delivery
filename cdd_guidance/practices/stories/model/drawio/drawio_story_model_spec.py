@@ -263,6 +263,13 @@ with description("a DrawIO Story Map") as self:
             expect(inc_bgs).to(have_len(2))
             expect(increment_stories).to(have_len(3))
 
+        with it("should widen a sub-epic to hold its fullest lane's stories on one row"):
+            stories = {story.name: story for story in self.source.every_story()}
+            self.source.append_increment(Increment("Increment C - crowded", 3, [stories["Story 1.1.1"]] * 4))
+            cells = ET.fromstring(self.source.save_thin_slice()).findall(".//mxCell[@vertex='1']")
+            crowded = [c for c in cells if c.attrib.get("id", "").startswith("inc-lane/increment-c-crowded/story")]
+            expect(len({c.find("mxGeometry").attrib["y"] for c in crowded})).to(equal(1))
+
         with it("should start the first increment lane below the sub-epic headers"):
             cells = ET.fromstring(self.text).findall(".//mxCell[@vertex='1']")
             header_bottom = max(

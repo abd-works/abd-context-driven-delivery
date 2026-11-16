@@ -131,7 +131,7 @@ supplements:
   ddd: tactics
 ```
 
-Its markdown keeps the usual Overview, Guidance and Shared rules, then one `## {Practice} · {fidelity}` section per supplemented fidelity with its own guidance and rules. Its graph rules live in its own folder the way a pattern's do: `rules/` for those it checks on every supplemented practice, and `practices/<practice>/rules` and `model/{schema,rules}.yaml` for those of one practice.
+Its markdown keeps the usual Overview and Guidance, then sections headed with the slugs of the fidelities they apply to (`## bdd-development`, or `## stories-acceptance-tests, bdd-development` for rules both share), each with its guidance and a `### Rules` list. It has no rules for every fidelity it supplements: each rule names the fidelities it is for. Its graph rules live in its own folder the way a pattern's do: `rules/` for one rule checked on several named practices (*SharedPracticeGraphRule*), and `practices/<practice>/rules` and `model/{schema,rules}.yaml` for those of one practice.
 
 PracticeSupplement(format)
 ------
@@ -150,9 +150,14 @@ hold_set(practices: dict[str, PracticeGuidance]): None
 	// resolves the front matter's practice and fidelity names into the set's own fidelities, once
 	-> practices[key].fidelity_called(name)
 text_for(fidelity: FidelityGuidance): str
-	// its Overview and Guidance, then the section for that fidelity, headed "## Supplement: {name}"; empty for a fidelity it does not supplement
+	// its Overview and Guidance, then each section whose heading names that fidelity's slug, headed "## Supplement: {name}"; empty for a fidelity it does not supplement
 rules_for(fidelity: FidelityGuidance): list[RulesCollection]
-	// its Shared rules, then that fidelity section's rules; empty for a fidelity it does not supplement
+	// the Rules of each section whose heading names that fidelity's slug; empty for a fidelity it does not supplement
+instructions: str
+	// read on its own (its skill and MCP prompt): its Overview, its Guidance, then every section named for a fidelity
+checked_rule_collections(): list[RulesCollection]
+	// the Rules of every section named for a fidelity; it has no Shared rules
+every_rule(): list[Rule]
 
 ## PracticeFormats
 

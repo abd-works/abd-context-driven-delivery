@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from cdd_guidance.practices.stories.model.diagram_story_model import (
     DiagramStoryCell,
@@ -43,6 +43,8 @@ class DrawIOIncrement(DiagramIncrement):
     )
 
     header_gap = 10
+    # The gap between story cards in a thin slice's lane, and around them.
+    card_gap = 6
 
     @classmethod
     def lane_top_y(cls, header_bottom: int) -> int:
@@ -444,81 +446,76 @@ class DrawIOStoryModel(DiagramStoryModel):
         ET.SubElement(graph_root, "mxCell", attrib={"id": "0"})
         ET.SubElement(graph_root, "mxCell", attrib={"id": "1", "parent": "0"})
 
-        story_x: Dict[str, List[int]] = {}
-        for epic in self.epics:
-            for name, xs in epic.story_xs().items():
-                story_x.setdefault(name, []).extend(xs)
-
-        grid_width = (
-            self.epics[-1].x + self.epics[-1].width - DiagramEpic.left_margin
-            if self.epics else 200
-        )
-
-        for epic in self.epics:
-            vertex = self._cell(epic.slug, epic.name)
-            vertex.x = epic.x
-            vertex.y = epic.y
-            vertex.width = epic.width
-            vertex.height = epic.height
-            vertex.style = epic.style
-            self._add_cell(graph_root, vertex)
-            for sub_epic in epic.epics:
-                sub_vertex = self._cell(sub_epic.cell_id, sub_epic.name)
-                sub_vertex.x = sub_epic.x
-                sub_vertex.y = sub_epic.y
-                sub_vertex.width = sub_epic.bar_width
-                sub_vertex.height = sub_epic.bar_height
-                sub_vertex.style = sub_epic.style
-                self._add_cell(graph_root, sub_vertex)
-
-        lane_start_x = DiagramEpic.left_margin - DrawIOIncrement.label_width
-        lane_total_width = DrawIOIncrement.label_width + grid_width
-        header_bottom = max(
-            (sub.y + sub.bar_height for epic in self.epics for sub in [epic, *epic.epics]),
-            default=DiagramEpic.row_y + DiagramEpic.bar_height,
-        )
+        columns = self._thin_slice_columns()
+        lanes = [(inc, self._stories_by_column(inc, columns)) for inc in self.increments]
+        widths = self._column_widths(len(columns), [held for _, held in lanes])
+        header_bottom = self._add_thin_slice_headers(graph_root, columns, widths)
         lane_y = DrawIOIncrement.lane_top_y(header_bottom)
-        for inc in self.increments:
-            inc_slug = inc.slug
-            # Background strip (no text).
-            background = self._cell(f"inc-lane/{inc_slug}/bg", "")
-            background.x = lane_start_x
-            background.y = lane_y
-            background.width = lane_total_width
-            background.height = DrawIOIncrement.lane_height
-            background.style = DrawIOIncrement.lane_style
-            self._add_cell(graph_root, background)
-            label = self._cell(f"inc-lane/{inc_slug}", inc.name)
-            label.x = lane_start_x
-            label.y = lane_y
-            label.width = DrawIOIncrement.label_width - 4
-            label.height = DrawIOIncrement.lane_height
-            label.style = DrawIOIncrement.label_style
-            self._add_cell(graph_root, label)
-            placed: Dict[str, int] = {}
-            for story in inc.stories:
-                story_name = story.name
-                xs = story_x.get(story_name, [])
-                seen = placed.get(story_name, 0)
-                placed[story_name] = seen + 1
-                if seen >= len(xs):
-                    continue
-                x = xs[seen]
-                slug = story.slug
-                story_vertex = self._cell(
-                    f"inc-lane/{inc_slug}/{slug}" if seen == 0 else f"inc-lane/{inc_slug}/{slug}-{seen + 1}",
-                    story_name,
-                )
-                story_vertex.x = x
-                story_vertex.y = lane_y + DrawIOIncrement.story_y_offset()
-                story_vertex.width = DiagramStory.size
-                story_vertex.height = DiagramStory.size
-                story_vertex.style = DrawIOIncrement.story_style
-                self._add_cell(graph_root, story_vertex)
+        width = DrawIOIncrement.label_width + sum(widths)
+        for inc, held in lanes:
+            self._add_thin_slice_lane(graph_root, inc, held, widths, lane_y, width)
             lane_y += DrawIOIncrement.lane_height + DrawIOIncrement.lane_gap
-
         body = ET.tostring(mxfile, encoding="unicode")
         return "<?xml version='1.0' encoding='utf-8'?>\n" + body
+
+    def _thin_slice_columns(self) -> List[Tuple[Epic, Epic]]:
+        """One column per sub-epic, or per epic with none, under its top epic, in map order."""
+        return [(epic, sub) for epic in self.epics for sub in (epic.epics or [epic])]
+
+    def _stories_by_column(self, inc, columns: List[Tuple[Epic, Epic]]) -> Dict[int, List[Story]]:
+        """An increment's stories under the column of the sub-epic that holds each, in the increment's order."""
+        by_column: Dict[int, List[Story]] = {}
+        for story in inc.stories:
+            by_column.setdefault(self._column_of(story, columns), []).append(story)
+        return by_column
+
+    def _column_widths(self, count: int, lanes: List[Dict[int, List[Story]]]) -> List[int]:
+        """Each column widened to hold, side by side on one row, the most stories any one increment puts in it, so a
+        lane is a single row of cards and a sub-epic is as wide as its fullest lane."""
+        pitch = DiagramStory.size + DrawIOIncrement.card_gap
+        return [max(1, *(len(held.get(index, [])) for held in lanes)) * pitch + DrawIOIncrement.card_gap for index in range(count)]
+
+    def _add_thin_slice_headers(self, graph_root, columns: List[Tuple[Epic, Epic]], widths: List[int]) -> int:
+        """Each epic over the columns it spans, and each column's sub-epic under it; answers the headers' bottom."""
+        x = DiagramEpic.left_margin
+        for index, (epic, sub) in enumerate(columns):
+            if index == 0 or columns[index - 1][0] is not epic:
+                span = sum(width for (top, _), width in zip(columns, widths) if top is epic)
+                self._add_header(graph_root, epic.slug, epic.name, x, DiagramEpic.row_y, span - 4, epic.style)
+            if sub is not epic:
+                self._add_header(graph_root, sub.cell_id, sub.name, x, DiagramEpic.nested_row_y, widths[index] - 4, sub.style)
+            x += widths[index]
+        return DiagramEpic.nested_row_y + DiagramEpic.bar_height
+
+    def _add_header(self, graph_root, cell_id: str, name: str, x: int, y: int, width: int, style: str) -> None:
+        vertex = self._cell(cell_id, name)
+        vertex.x, vertex.y, vertex.width, vertex.height, vertex.style = x, y, width, DiagramEpic.bar_height, style
+        self._add_cell(graph_root, vertex)
+
+    def _add_thin_slice_lane(self, graph_root, inc, held: Dict[int, List[Story]], widths: List[int], lane_y: int, width: int) -> None:
+        """One increment's lane: its label at the left and its stories in one row under their sub-epics."""
+        left = DiagramEpic.left_margin - DrawIOIncrement.label_width
+        height = DrawIOIncrement.lane_height
+        self._add_lane_cell(graph_root, f"inc-lane/{inc.slug}/bg", "", left, lane_y, width, height, DrawIOIncrement.lane_style)
+        self._add_lane_cell(graph_root, f"inc-lane/{inc.slug}", inc.name, left, lane_y, DrawIOIncrement.label_width - 4, height, DrawIOIncrement.label_style)
+        pitch = DiagramStory.size + DrawIOIncrement.card_gap
+        seen: Dict[str, int] = {}
+        for column, stories in held.items():
+            column_x = DiagramEpic.left_margin + sum(widths[:column])
+            for place, story in enumerate(stories):
+                count = seen[story.slug] = seen.get(story.slug, 0) + 1
+                cell_id = f"inc-lane/{inc.slug}/{story.slug}" + (f"-{count}" if count > 1 else "")
+                x = column_x + DrawIOIncrement.card_gap + place * pitch
+                y = lane_y + DrawIOIncrement.story_y_offset()
+                self._add_lane_cell(graph_root, cell_id, story.name, x, y, DiagramStory.size, DiagramStory.size, DrawIOIncrement.story_style)
+
+    def _column_of(self, story: Story, columns: List[Tuple[Epic, Epic]]) -> int:
+        """The column of the sub-epic that holds a story of this name; the last column for a story the map lacks."""
+        return next((index for index, (_, sub) in enumerate(columns) if any(held.name == story.name for held in sub.every_story())), len(columns) - 1)
+    def _add_lane_cell(self, graph_root, cell_id: str, name: str, x: int, y: int, width: int, height: int, style: str) -> None:
+        vertex = self._cell(cell_id, name)
+        vertex.x, vertex.y, vertex.width, vertex.height, vertex.style = x, y, width, height, style
+        self._add_cell(graph_root, vertex)
 
     def load_thin_slice(self, text: str) -> "DrawIOStoryModel":
         """Read a thin-slicing.drawio document into this map's increments, each delivering the map's own stories

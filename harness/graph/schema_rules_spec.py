@@ -131,4 +131,5 @@ with description("a practice's schema in a graph"):
     with it("should read the extended practice's schema from that practice's part of the same graph"):
         clean = self.graph.practice("clean_engineering")
         expect(self.schema.anchor_type("ValueObject")).to(equal("OoadClass"))
-        expect(clean.reading.in_graph.rule_run.schema_with(())).to(be(clean.reading.in_graph.rule_run.schema))
+        overlays = self.graph.applied_patterns.overlays_for(clean)
+        expect(clean.reading.in_graph.rule_run.schema_with(overlays)).to(be(clean.reading.in_graph.rule_run.schema))

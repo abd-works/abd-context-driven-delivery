@@ -38,6 +38,7 @@ outputs:
   markdown: ".context/story-map.md"
   drawio: ".context/story-map.drawio"
   whiteboard: ".context/story-map.whiteboard"
+  thin_slice: [".context/thin-slice.md", ".context/thin-slice.drawio"]
 ```
 
 #### Overview

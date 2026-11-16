@@ -7,7 +7,7 @@ import type { ChatBarClient } from './chat-bar-client'
 // The canvas's glyph for each format group; a group with none shows its name.
 // A format that is a group of its own, such as BDD's call graphs in realization, gets a glyph here; one not listed shows
 // its first and last letter, as an overlay does, so a long name never widens the chat bar.
-export const FORMAT_GLYPHS: Record<string, string> = { markdown: 'M↓', diagram: '◇', code: '</>', canvas: '▦', realization: '⇢' }
+export const FORMAT_GLYPHS: Record<string, string> = { markdown: 'M↓', diagram: '◇', code: '</>', canvas: '▦', realization: '⇢', thin_slice: '☰' }
 export const formatGlyphOf = (label: string): string => FORMAT_GLYPHS[label] ?? `${label.charAt(0).toUpperCase()}${label.slice(-1)}`
 
 const GAP = 1

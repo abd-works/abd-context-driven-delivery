@@ -398,7 +398,7 @@ class FidelitySessionOutput:
         found: list[Path] = []
         for label, paths in self.output_paths().items():
             for path in paths:
-                declared = self._declared(path)
+                declared = self._listed(path)
                 named = [repo.root / declared.glob] if declared.names_one_path else self._found(label, declared)
                 found += [file for file in named if file.is_file()]
         return found
@@ -427,18 +427,31 @@ class FidelitySessionOutput:
         """A declared path under this fidelity's root, as a path from the project."""
         return DeclaredFile(self._session.repo.path_from_top(path))
 
+    def _listed(self, path: str) -> DeclaredFile:
+        """A declared path as a page lists it. A session on the whole repository, such as main, holds every module's
+        documents, so where this fidelity writes at the repository's own folder, a path in ``.context`` is searched for
+        in every ``.context`` folder and the folders inside it, such as ``harness/.context/stories/story-map.md``, as
+        its patterns already find its tests anywhere."""
+        from_top = PurePosixPath(self._session.repo.path_from_top(path))
+        if self.root.resolve() != self._session.repo.root.resolve() or from_top.parts[:1] != (CONTEXT_FOLDER,):
+            return DeclaredFile(from_top.as_posix())
+        return DeclaredFile(PurePosixPath("**", CONTEXT_FOLDER, "**", *from_top.parts[1:]).as_posix())
+
     def _declared_files(self, label: str, path: str, changed: Callable[[], set[Path]]) -> list[FileEntry]:
         """A declared path, or each file the fidelity declares where a pattern searches, each marked when the session's
-        branch changed it; a pattern that finds none lists nothing, a pattern being no file."""
+        branch changed it; a pattern that finds none lists nothing, a pattern being no file. A path widened to every
+        ``.context`` folder that finds none lists the declared path itself, so a page still shows where it goes."""
         repo = self._session.repo
         if path.endswith("/") and Format(label).is_code:
             return self._worked_on_code(label, changed)
-        declared = self._declared(path)
+        listed, declared = self._listed(path), self._declared(path)
+        found = [] if listed.names_one_path else self._found(label, listed)
+        if found:
+            return [FileEntry(repo.path_from_top(file), True, file.resolve() in changed(), _canvas_link(file)) for file in found]
         if declared.names_one_path:
             named = repo.root / declared.glob
             return [FileEntry(declared.glob, named.exists(), named.exists() and named.resolve() in changed())]
-        found = self._found(label, declared)
-        return [FileEntry(repo.path_from_top(file), True, file.resolve() in changed(), _canvas_link(file)) for file in found]
+        return []
 
     def _worked_on_code(self, label: str, changed: Callable[[], set[Path]]) -> list[FileEntry]:
         """The code a fidelity that declares a folder per module writes, such as Clean Engineering's ``{module}/``: the
@@ -453,9 +466,9 @@ class FidelitySessionOutput:
         return [FileEntry(self._session.repo.path_from_top(file), file.exists(), True) for file in worked_on]
 
     def _found(self, label: str, declared: DeclaredFile) -> list[Path]:
-        """The files a declared pattern's search finds that this fidelity declares in the format label: a name used
-        twice in one declared path must be the same text both times."""
-        return [file for file in self._session.session_files.find(declared.glob) if self._fidelity.declares(file.as_posix(), label)]
+        """The files a declared pattern's search finds that it declares: a name used twice in one declared path must be
+        the same text both times."""
+        return [file for file in self._session.session_files.find(declared.glob) if self._fidelity.declares(file.as_posix(), label) or declared.pattern.search(file.as_posix())]
 
     def _exists(self, label: str, declared: DeclaredFile) -> bool:
         """Whether a file the declared path names is in the repository."""

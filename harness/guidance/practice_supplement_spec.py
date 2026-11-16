@@ -41,6 +41,14 @@ with description("a practice supplement") as self:
         with it("should not be listed among the practices"):
             expect(PracticeCatalogue.keys()).not_to(contain("sample_supplement"))
 
+        with context("read on its own"):
+            with it("should hold every section named for a fidelity in its instructions"):
+                expect(self.supplement.instructions).to(contain(
+                    "Sample supplement guidance", "Sample guidance both fidelities share", "fill one signature at a time", "write code only to turn a test green"))
+
+            with it("should hold the rules of every section named for a fidelity"):
+                expect([rule.slug for rule in self.supplement.every_rule()]).to(equal(["sample-shared-rule", "sample-bdd-rule", "sample-code-rule"]))
+
         with context("with a fidelity it supplements"):
             with it("should end the fidelity's instructions with its text for that fidelity"):
                 expect(self.bdd_development.instructions).to(contain(

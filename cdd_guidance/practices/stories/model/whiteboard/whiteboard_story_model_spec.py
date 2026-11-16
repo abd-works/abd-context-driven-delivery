@@ -8,6 +8,7 @@ from mamba import before, context, description, it
 
 from harness.whiteboard import UnreadableBoard, Whiteboard
 from cdd_guidance.practices.stories.model.fixtures.round_trip_story_map import outline, round_trip_story_map
+from cdd_guidance.practices.stories.model.diagram_story_model import DiagramIncrement
 from cdd_guidance.practices.stories.model.whiteboard.nodes import WhiteboardStory, WhiteboardStoryModel
 
 
@@ -58,3 +59,27 @@ with description("a story map drawn on a Claude whiteboard") as self:
     with context("that is read from a board with no story-map elements"):
         with it("should refuse the board"):
             expect(lambda: WhiteboardStoryModel().load(Whiteboard("Empty").save())).to(raise_error(UnreadableBoard))
+
+
+with description("a story map's thin slice drawn on a Claude whiteboard") as self:
+    with before.each:
+        self.story_map = WhiteboardStoryModel(round_trip_story_map())
+        stories = self.story_map.every_story()
+        self.story_map.append_increment(DiagramIncrement("Walking Skeleton", 1, [stories[0], stories[-1]]))
+        self.story_map.append_increment(DiagramIncrement("Next Slice", 2, stories[1:3]))
+        self.board = Whiteboard.from_text(self.story_map.save_thin_slice())
+        self.lanes = [element for element in self.board.elements if element.role == "lane"]
+
+    with it("should draw one lane per increment, each below the one before it"):
+        expect([(lane.text, lane.box.x) for lane in self.lanes]).to(equal([("Walking Skeleton", 20), ("Next Slice", 20)]))
+        expect(self.lanes[0].box.y + self.lanes[0].box.h).to(be_below(self.lanes[1].box.y))
+
+    with it("should put each lane's stories inside it, under the sub-epic that holds each"):
+        cards = [element for element in self.board.elements if element.role == "story"]
+        expect(sorted(sum(1 for card in cards if lane.holds(card)) for lane in self.lanes)).to(equal([2, 2]))
+
+    with it("should read back each increment with the stories its lane holds"):
+        read = WhiteboardStoryModel(round_trip_story_map()).load_thin_slice(self.board.save())
+        expect([(increment.name, [story.name for story in increment.stories]) for increment in read.increments]).to(equal(
+            [(increment.name, [story.name for story in increment.stories]) for increment in self.story_map.increments]
+        ))

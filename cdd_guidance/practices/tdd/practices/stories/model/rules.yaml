@@ -1,0 +1,4 @@
+# TDD overlay on stories: its acceptance test files, read as Story nodes. Extend only.
+story:
+  rules:
+    - unit-tier-fakes-every-boundary

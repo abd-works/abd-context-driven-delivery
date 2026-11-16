@@ -9,7 +9,7 @@ supplements:
 
 ## Overview
 
-Test-driven development at implementation: every behavior is proven working for real before it is trusted, then kept proven by a test at the fastest tier that can prove it. TDD supplements the implementation fidelities of Clean Engineering (code), Stories (acceptance tests), BDD (development), and DDD (tactics); UX front-end code is not supplemented. Its guidance is the process; its rules check what the finished tests and code show.
+Test-driven development at implementation: every behavior is proven working for real before it is trusted, then kept proven by a test at the fastest tier that can prove it. TDD supplements the implementation fidelities of Clean Engineering (code), Stories (acceptance tests), BDD (development), and DDD (tactics); UX front-end code is not supplemented. Its guidance is the process; its rules check what the finished tests and code show. It has no rules for every fidelity it supplements: each section of rules names the fidelities it is for. The graph checks `unit-tier-fakes-every-boundary` on BDD specs and on Stories acceptance tests (its overlay records each test file's tier and the real resources a unit test imports); validate judges the rest.
 
 ## Guidance
 
@@ -27,8 +27,8 @@ The order of work depends on whether the story crosses an architectural boundary
 **Flow B — another story or feature on a known area.** The seams are proven, so the order reverses:
 
 1. **Write the unit tests** on the seams that already exist, and see them fail for the right reason.
-2. **Write the code and run the tests** until they pass.
-3. **Hand it to the person to try.**
+2. **Write the code and run only the tests for the change** — the specs of the files it touched — until they pass. Not the whole tier.
+3. **Hand it to the person to try,** and while they test it, run the whole unit tier in a sub-task off the person's thread; report its result when it comes back.
 4. **Write the heavy and/or e2e tests in a sub-task:** hand them to a background agent so the person is not kept waiting, and tell the person when they are done.
 
 ### Red, green, refactor
@@ -70,26 +70,33 @@ Only an example that is still slow, or that exists to prove the real resource, m
 
 ### Cadence
 
+Stay off the person's thread. In the foreground run only what proves the change just made; every larger run (the whole unit tier, heavy, e2e) goes to a sub-task or background process, and its result is reported when it comes back.
+
 | Tier | When it runs | Who runs it |
 |---|---|---|
-| unit | After every change or pass | The agent, in the foreground (about 20 s) |
+| unit, for the change | After every change | The agent, in the foreground: only the specs of the files the change touched, so the answer comes in seconds |
+| unit, whole tier | While the person tries the change, and before a push | A sub-task off the person's thread (about 20 s); nobody waits on it |
 | heavy | Every hour, and once at the end of multi-pass work | A background process; push without waiting, report its result when it comes back |
 | e2e | Every day, before every release, and at the end of work that touches a browser or an agent | The daily scheduled run and the release command |
 
-Read the runner's slow list after every unit run and fix each example in the same pass, optimizing first. Keep the runner's timings (`.pycache/spec-seconds.json`): they order the next run's batches, longest first.
+Read the runner's slow list after every whole-tier unit run and fix each example in the same pass, optimizing first. Keep the runner's timings (`.pycache/spec-seconds.json`): they order the next run's batches, longest first.
 
 ### When stuck
 
 After two failed fixes for the same failure, stop and diagnose before a third: read the failure, reproduce it on its own, and find the cause.
 
-## Shared rules
+## stories-acceptance-tests, bdd-development
+
+The tests Stories acceptance tests and BDD development write share their tiers, their speed, their stubs and heavy coverage, and the cadence they run on.
+
+### Rules
 
 ```yaml
 alwaysApply: false
 globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*Spec.java,**/*.story.*,**/*_story.test.*"
 ```
 
-Whenever you create, alter, or delete tests or the code they prove at an implementation fidelity. Follow these rules.
+Whenever you create, alter, or delete acceptance tests or BDD specs. Follow these rules.
 
 **Tiers**
 - **`suffix-names-the-tier`** — `*_spec` is unit, `*_heavy_spec` is heavy, and `*_e2e_spec` / `*_agent_spec` is e2e; a story test's tier file follows the same suffixes. A suffix that names the wrong tier puts a slow test in the run that must stay fast.
@@ -102,7 +109,7 @@ Whenever you create, alter, or delete tests or the code they prove at an impleme
 **Speed**
 - **`unit-example-within-100-ms`** — Every unit example runs within 100 ms, its before-each and after-each included.
 - **`unit-file-within-2-seconds`** — A unit spec file runs within 2 s.
-- **`unit-tier-within-25-seconds`** — The whole unit tier finishes in under 25 s of wall clock on an idle machine, because it runs after every pass, and a slow unit tier stops being run.
+- **`unit-tier-within-25-seconds`** — The whole unit tier finishes in under 25 s of wall clock on an idle machine, because it runs in a sub-task while the person tries each change, and a slow unit tier stops being run.
 - **`specs-run-in-parallel`** — A spec can run beside any other: no fixed port, no shared temp folder, no shared `CDD_HOME`, no order between files.
 - **`heavy-spec-owns-its-resources`** — A heavy spec makes its own throwaway resources (repository, server port, `CDD_HOME`), so heavy specs can run in parallel too.
 - **`expensive-fixture-built-once`** — A read-only fixture that is slow to build is built once per file and shared, not once per example.

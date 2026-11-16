@@ -24,6 +24,7 @@ with description("a fidelity's declared outputs") as self:
             expect(self.outputs).to(equal({
                 "markdown": ".context/story-map.md", "drawio": ".context/story-map.drawio",
                 "whiteboard": ".context/story-map.whiteboard",
+                "thin_slice": [".context/thin-slice.md", ".context/thin-slice.drawio"],
             }))
 
     with context("with a fidelity that writes several files for one format"):

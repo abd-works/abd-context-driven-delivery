@@ -302,8 +302,10 @@ class TestCadence:
         """Run tier here to its end and record its result: the background process the cadence starts runs this, and so
         can a person. A run the cadence recorded as running is the one finished; otherwise a new one starts."""
         started = self.record.latest(tier)
-        if started is None or not started.is_run_by_this_process:
-            started = TestRun(tier, self._head(), self._clock(), pid=os.getpid())
+        head = self._head()
+        # A run left as running by a process that ended, on another commit, is not taken over: this run tests HEAD.
+        if started is None or not started.is_run_by_this_process or started.commit != head:
+            started = TestRun(tier, head, self._clock(), pid=os.getpid())
             self.record.save(started)
         exit_code, output = self._runner.run(tier, self.checkout)
         finished = started.finished(exit_code, output, self.record.previous(tier), self._clock())
@@ -330,6 +332,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("checkout")
     parser.add_argument("record", nargs="?", default="")
     arguments = parser.parse_args(argv)
+    # Run from a console, the output is echoed in its code page, such as cp1252, which cannot write every character a
+    # spec prints; one it cannot write is shown as ? rather than ending the run.
+    sys.stdout.reconfigure(errors="replace")
     checkout = Path(arguments.checkout).resolve()
     record = TestRunRecord(arguments.record or default_record_folder())
     run = TestCadence(checkout, record).run_now(TestTier(arguments.tier))

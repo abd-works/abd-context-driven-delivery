@@ -1,5 +1,69 @@
 {
   "name": "claude-whiteboard",
   "title": "claude-whiteboard",
-  "scope": "feature"
+  "scope": "feature",
+  "branch": "claude-whiteboard",
+  "worktree": "C:\\dev\\abd-cdd-claude-whiteboard",
+  "guidance": {
+    "stages": [
+      "discovery",
+      "specification",
+      "implementation"
+    ],
+    "version": 24
+  },
+  "practices": {
+    "ux": {
+      "formats": {
+        "mockup": [
+          "html"
+        ],
+        "ia": [
+          "drawio"
+        ]
+      },
+      "enabled": false
+    },
+    "stories": {
+      "formats": {
+        "story_map": [
+          "drawio"
+        ]
+      },
+      "enabled": true
+    },
+    "clean_engineering": {
+      "formats": {
+        "modules": [
+          "markdown",
+          "drawio"
+        ],
+        "model": [
+          "python"
+        ],
+        "code": [
+          "python"
+        ]
+      },
+      "enabled": true
+    },
+    "ddd": {
+      "enabled": false
+    },
+    "bdd": {
+      "enabled": true,
+      "formats": {
+        "behavior": [
+          "python"
+        ],
+        "realization": [
+          "markdown",
+          "python"
+        ],
+        "development": [
+          "python"
+        ]
+      }
+    }
+  }
 }
