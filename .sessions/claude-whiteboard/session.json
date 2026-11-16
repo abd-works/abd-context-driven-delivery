@@ -9,7 +9,7 @@
       "discovery",
       "specification"
     ],
-    "version": 32
+    "version": 33
   },
   "practices": {
     "ux": {
@@ -25,9 +25,7 @@
     },
     "stories": {
       "formats": {
-        "story_map": [
-          "drawio"
-        ],
+        "story_map": [],
         "scenarios": [
           "python"
         ]
@@ -37,12 +35,10 @@
     "clean_engineering": {
       "formats": {
         "modules": [
-          "markdown",
-          "drawio"
+          "markdown"
         ],
         "model": [
-          "python",
-          "drawio"
+          "python"
         ],
         "code": [
           "python"
