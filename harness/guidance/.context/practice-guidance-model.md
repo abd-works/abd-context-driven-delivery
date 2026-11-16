@@ -153,6 +153,11 @@ text_for(fidelity: FidelityGuidance): str
 	// its Overview and Guidance, then each section whose heading names that fidelity's slug, headed "## Supplement: {name}"; empty for a fidelity it does not supplement
 rules_for(fidelity: FidelityGuidance): list[RulesCollection]
 	// the Rules of each section whose heading names that fidelity's slug; empty for a fidelity it does not supplement
+instructions: str
+	// read on its own (its skill and MCP prompt): its Overview, its Guidance, then every section named for a fidelity
+checked_rule_collections(): list[RulesCollection]
+	// the Rules of every section named for a fidelity; it has no Shared rules
+every_rule(): list[Rule]
 
 ## PracticeFormats
 

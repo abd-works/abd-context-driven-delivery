@@ -7,13 +7,19 @@ from typing import TYPE_CHECKING, Any
 
 import yaml
 
+from harness.agent_tools.agent_tools import agent_instructions
 from harness.guidance.guidance import PracticeGuidance
-from harness.guidance.rule import RulesCollection
+from harness.installation.files import skill
+from harness.mcp.mcp_annotations import mcp
+from harness.guidance.rule import Rule, RulesCollection
 from harness.markdown.front_matter import FrontMatter
 from harness.markdown.markdown import MarkdownText
 
 if TYPE_CHECKING:
     from harness.guidance.guidance import FidelityGuidance
+
+# Its own sections, which every fidelity it supplements reads; every other top section names the fidelities it is for.
+_OWN_SECTIONS = ("overview", "guidance")
 
 
 class UnknownSupplementedFidelity(Exception):
@@ -95,3 +101,27 @@ class PracticeSupplement(PracticeGuidance):
         headings = [name for _start, _end, level, name in self.document.headings() if level == 2]
         named = [name for name in headings if fidelity.slug in (slug.strip() for slug in name.split(","))]
         return [self.document.slice_heading(name) for name in named]
+
+    @property
+    @mcp
+    @skill
+    @agent_instructions
+    def instructions(self) -> str:
+        """overview"""
+        parts = ((self.overview or "").strip(), (self.guidance or "").strip(), *self._fidelity_sections)
+        return "\n\n".join(part for part in parts if part)
+
+    def checked_rule_collections(self) -> list[RulesCollection]:
+        """The rules of every section, each named for the fidelities it applies to: what a validate of the supplement
+        itself checks."""
+        return [RulesCollection.from_markdown(MarkdownText(section).slice_heading("Rules"), None, self) for section in self._fidelity_sections]
+
+    def every_rule(self) -> list[Rule]:
+        """Every rule of every section it holds."""
+        return [rule for collection in self.checked_rule_collections() for rule in collection]
+
+    @property
+    def _fidelity_sections(self) -> list[str]:
+        """Each top section other than its Overview and Guidance: the sections named for the fidelities they apply to."""
+        headings = [name for _start, _end, level, name in self.document.headings() if level == 2]
+        return [self.document.slice_heading(name) for name in headings if name.casefold() not in _OWN_SECTIONS]
