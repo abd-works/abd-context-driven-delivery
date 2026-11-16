@@ -11,7 +11,7 @@
       "specification",
       "implementation"
     ],
-    "version": 72
+    "version": 73
   },
   "practices": {
     "stories": {
@@ -46,7 +46,7 @@
           "markdown"
         ]
       },
-      "enabled": false
+      "enabled": true
     },
     "bdd": {
       "formats": {
