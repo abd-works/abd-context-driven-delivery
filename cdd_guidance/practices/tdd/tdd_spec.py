@@ -1,5 +1,5 @@
 """TDD supplements the implementation fidelities of Clean Engineering, Stories, BDD, and DDD in every session, and
-holds the test tier, speed, stub, and cadence rules they share."""
+holds the test tier, speed, stub, and cadence rules that Stories acceptance tests and BDD development share."""
 
 from expects import contain, equal, expect
 from mamba import before, context, description, it
@@ -31,9 +31,13 @@ with description("the TDD supplement") as self:
             expect(PracticeCatalogue.keys()).not_to(contain("tdd"))
 
     with context("with a fidelity it supplements"):
-        with it("should add the tier rules every supplemented fidelity shares"):
-            for key, name in SUPPLEMENTED:
+        with it("should add the tier rules to the acceptance tests and BDD development"):
+            for key, name in (("stories", "acceptance_tests"), ("bdd", "development")):
                 expect(slugs_of(self.fidelity(key, name))).to(contain("suffix-names-the-tier", "unit-example-within-100-ms"))
+
+        with it("should leave the tier rules off Clean Engineering code and DDD tactics"):
+            for key, name in (("clean_engineering", "code"), ("ddd", "tactics")):
+                expect(slugs_of(self.fidelity(key, name))).not_to(contain("suffix-names-the-tier"))
 
         with it("should add the rules of that practice's section"):
             expect(slugs_of(self.fidelity("ddd", "tactics"))).to(contain("aggregate-tested-through-its-root"))

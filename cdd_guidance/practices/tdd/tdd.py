@@ -6,7 +6,7 @@ from __future__ import annotations
 import functools
 
 from harness.agent_tools.agent_tools import agent_toolset
-from harness.graph.pattern_overlays import GraphOverlay
+from cdd_guidance.practices.tdd.graph_overlay import TddOverlay
 from harness.guidance.practice_supplement import PracticeSupplement
 
 
@@ -17,6 +17,6 @@ class Tdd(PracticeSupplement):
     SHORT_NAME = "TDD"
 
     @functools.cached_property
-    def graph_overlay(self) -> GraphOverlay:
-        """Its graph rules on the practices it supplements, read from its own folder, as a pattern's are."""
-        return GraphOverlay(self)
+    def graph_overlay(self) -> TddOverlay:
+        """Its facts and graph rules on the practices it supplements, read from its own folder, as a pattern's are."""
+        return TddOverlay(self)

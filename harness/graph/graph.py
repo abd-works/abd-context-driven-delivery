@@ -1080,8 +1080,8 @@ class PracticeRuleRun:
 
     @property
     def schema(self) -> PracticeSchema:
-        """The practice's schema, with the graph's pattern overlays applied."""
-        return self.schema_with(tuple(self._part.graph.applied_patterns.graph_overlays))
+        """The practice's schema, with the graph's pattern overlays and the practice's supplements applied."""
+        return self.schema_with(self._part.graph.applied_patterns.overlays_for(self._part.practice))
 
     def schema_with(self, overlays: tuple[GraphOverlay, ...]) -> PracticeSchema:
         """The practice's schema with overlays applied, made the first time and kept here."""
