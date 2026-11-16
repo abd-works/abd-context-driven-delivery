@@ -986,6 +986,12 @@ with description("a practice"):
                     outputs = self.stories.fidelities["scenarios"].output_paths()
                     expect(outputs["markdown"]).to(equal([(self.work / "story_tests" / "{epic}/{sub-epic}/{story_snake}_story.test.md").resolve().as_posix()]))
 
+                with context("and the scenarios' own root one epic's folder in story_tests"):
+                    with it("should write the scenarios under that epic's folder only"):
+                        self.write_overrides({"stories": {"root": ".context/stories", "scenarios": {"root": "story_tests/manage-orders"}}})
+                        outputs = self.stories.fidelities["scenarios"].output_paths()
+                        expect(outputs["markdown"]).to(equal([(self.work / "story_tests" / "manage-orders" / "{sub-epic}/{story_snake}_story.test.md").resolve().as_posix()]))
+
                 with it("should let the session's file manager read the story tests in that story_tests"):
                     story_test = self.work / "story_tests" / "manage-orders" / "place-order" / "place-order.story.shared.py"
                     story_test.parent.mkdir(parents=True)
