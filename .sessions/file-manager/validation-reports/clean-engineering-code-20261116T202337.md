@@ -509,3 +509,26 @@ If this change will not stay here, follow `practices/clean-engineering/clean-eng
 - **`domain-tier-only-for-domain-logic`** — Add a domain tier only when `<aggregate>.ts` holds logic worth proving alone. A core that only states structure has nothing to run, and the server tier already exercises it.
 - **`same-signature-across-languages`** — When the domain is in another language, as a CDD-backed domain is, a behavior the Mamba spec states keeps the same `should` sentence in the shared behavior. A sentence on one side only shows a behavior untested on the other.
 - **`ask-cross-aggregate-sync`** — **Hard gate** when generating stories. Use AskQuestion; persist the answer under **Cross-aggregate sync** in `.context/grill-answers.md` before writing story files.
+## Judgment — `harness/process/process.py`
+
+Graph rules: no violations. One fix pass applied (commit dd8f605db): `ServerLanes.serving` and the private classmethod `_is_dev_home` became the factory `ServerLane.from_home` (prefer-instance-operations); `NodeScript.start(command)`, which took a command its object already held, was removed and `AppServer` starts its lane's command (hold-state-on-the-object-not-in-parameters); WMI's refusal got a heavy example (invariant-has-a-failing-case). What still fails after that pass:
+
+### `every-branch-taken-by-a-test` — Fail
+- process.py:246 `BackgroundStart.run` re-raises *PermissionError* off Windows; no spec takes that branch (the stub that raises it is only run as a Windows refusal).
+
+## Judgment — `harness/process/outside_job_launcher.py`
+
+### `eliminate-duplication` — Fail
+- outside_job_launcher.py:13 `_WINDOWLESS` repeats the no-window and new-process-group flags `BackgroundStart.creationflags` builds. Deliberate: the launcher runs as a bare script with no package on its path, so it cannot import harness.process; the copy omits breakaway on purpose. Still a second place to fix.
+
+## Judgment — `harness/process/outside_job_start_heavy_spec.py`
+
+### `stubbed-boundary-has-heavy-coverage` — Fail
+- outside_job_start_heavy_spec.py:107 runs WMI, the launcher, the log and a kill-on-close job for real, but its `should` sentences do not repeat the story's Then steps word for word under the same subject, so the pairing with `WmiStub` is by meaning only.
+
+### `heavy-example-has-a-stubbed-twin` — Fail
+- outside_job_start_heavy_spec.py:119 "should end when the command ends" has no unit twin: the launcher's wait is only proven for real.
+
+## Judgment — `harness/graph/app/start.ts`
+
+Passes on review: the offset is decided once in Python (`ServerLanes.DEV_APP_PORT_OFFSET`, `ServerLane.app_ports`); start.ts:16 moves the web server by as much as `--port` moved the page, which is arithmetic on the one port it is handed, not a second offset.

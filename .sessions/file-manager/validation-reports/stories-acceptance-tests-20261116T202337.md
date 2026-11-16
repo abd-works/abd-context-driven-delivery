@@ -509,3 +509,12 @@ If this change will not stay here, follow `practices/clean-engineering/clean-eng
 - **`domain-tier-only-for-domain-logic`** — Add a domain tier only when `<aggregate>.ts` holds logic worth proving alone. A core that only states structure has nothing to run, and the server tier already exercises it.
 - **`same-signature-across-languages`** — When the domain is in another language, as a CDD-backed domain is, a behavior the Mamba spec states keeps the same `should` sentence in the shared behavior. A sentence on one side only shows a behavior untested on the other.
 - **`ask-cross-aggregate-sync`** — **Hard gate** when generating stories. Use AskQuestion; persist the answer under **Cross-aggregate sync** in `.context/grill-answers.md` before writing story files.
+## Judgment — `harness/process/examples/outside_job_examples.py`
+
+Graph rules: no violations. The two story tests (`story_tests/register-and-install-toolsets/serve-cdd-code-in-lanes/serve-dev-lane-apps-on-their-own-ports/…_story.test.py` and `…/keep-a-lanes-server-running-after-its-chat-ends/…_story.test.py`) and `space/kanban/app/packages/session-board/serve.ts` sit outside the session's root (`harness`), so validate refused them; they were judged by reading. Both stories run green (31 lane-story examples, 0.6 s). What fails:
+
+### `system-stubs-domain-real` — Fail
+- outside_job_examples.py:33 `StartInsideAJobRefusingBreakaway` stubs the refusal by overriding the private `_start_breaking_away` of the production class rather than a boundary object; it reproduces Windows' answer (PermissionError, access denied) but the seam is a protected method, not a collaborator.
+
+### `heavy-example-has-a-stubbed-twin` — Fail
+- outside_job_examples.py:20 `WmiStub` covers create's success only; the heavy refusal example (*OutsideJobStartFailed*) has no stubbed twin in the story.
