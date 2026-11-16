@@ -502,3 +502,563 @@ Use typed public signatures. Do not put vanilla `dict`, `Any`, or untyped lists 
 - [X] **ERROR** **[graph rule]** - [tools/prompt_log/prompt_log.py](C:\dev\abd-cdd-version-1-refactoring\tools\prompt_log\prompt_log.py#L133): Parameter `text`: Parameter 'text' needs a domain-specific type, not a generic container.
 
 Evaluate the current context against this rule (use-typed-signatures):
+
+---
+
+Judgment by five parallel judges (2026-11-16), each graph hit confirmed or judged noise, with a cross-file pass (parallel models, duplication, vocabulary, state handed down, hidden storage, legacy API, dependency direction) that searched beyond the flagged files. The four test-coverage rules (operation-has-a-proving-test, class-demonstrated-by-a-test, invariant-has-a-failing-case, every-branch-taken-by-a-test) need a coverage run and were not judged.
+
+## Judgment — `cdd_guidance/patterns/lern_domain_driven/graph_overlay.py`
+
+### `do-not-invent-parallel-object-models` — Fail
+- graph_overlay.py:48 `_LernReading`: OSS's `_OssReading` is a second copy of this reading (overlay, graph, root, link, file-node creation, aggregate-folder discovery) instead of one shared pattern reading that both overlays extend.
+
+## Judgment — `cdd_guidance/patterns/lern_domain_driven/tier_facts.py`
+
+### `do-not-invent-parallel-object-models` — Fail
+- tier_facts.py:48 `TierFile`: OSS's `OssFile` repeats this class (text, relative, `_source`, `at`, `web_path_literals`, `_in_import`, `_in_comment`) for the same concept, a TypeScript tier file of a pattern the OSS pattern says it carries from LERN; there should be one tier-file model.
+
+## Judgment — `cdd_guidance/patterns/oss_portal_domain_driven/graph_overlay.py`
+
+### `limit-operation-parameters` — Fail
+- graph_overlay.py:136 `_tier_facts`: takes 5 values; `slug` and `service_name` are derived from `folder`, so callers pass setup, not intent (LERN holds these on `_AggregateTiers`).
+- graph_overlay.py:191 `_file_node`: takes 4 values (practice, relative, semantic, name); LERN's `_PracticeFiles(practice).node(relative, semantic, name)` shows the practice belongs on an object.
+
+### `eliminate-duplication` — Fail
+- graph_overlay.py:58 `__init__`: `_OssReading.__init__` is the same body as `_LernReading.__init__`; the whole reading class (and `_file_node` vs `_PracticeFiles.node`, `_link` vs `link`, `_aggregate_folders` vs `_tier_folders`) is copied from LERN.
+- graph_overlay.py:187 `_set_facts`: the same "for key, value in facts: node.set_fact" loop also appears in cdd_guidance/patterns/lern_domain_driven/graph_overlay.py:89, :114, :221 and cdd_guidance/patterns/cdd_web_domain_access/graph_overlay.py:30; `Node` (harness/graph/graph.py:540) owns facts and only offers `set_fact`, so each overlay copies the loop.
+- graph_overlay.py:191 `_file_node`: makes the practice's whole-file node exactly as LERN's `_PracticeFiles.node` (cdd_guidance/patterns/lern_domain_driven/graph_overlay.py:152) and cdd_guidance/patterns/cdd_web_domain_access/graph_overlay.py:29 do; three copies of one lookup-or-add.
+
+### `hold-state-on-the-object-not-in-parameters` — Fail
+- graph_overlay.py:191 `_file_node`: every caller (lines 92, 96, 102, 123, 166, 182) passes `self.ddd` or `self.stories` as `practice`, state the reading already holds on itself.
+
+### `hide-inner-details` — Fail
+- graph_overlay.py:198 `_file_node`: reads `practice.reading.graph` and `practice.reading.in_graph.source_root` and calls `in_graph.add_named` directly, so the practice reading's storage (harness/graph/graph.py:990 `add_named`, :114 `Source.whole_file`) is a contract for each pattern; LERN (cdd_guidance/patterns/lern_domain_driven/graph_overlay.py:154-159) reaches in the same way.
+
+### `use-consistent-naming` — Fail
+- graph_overlay.py:63 `_link`: the same operation is `link` in LERN's `_LernReading` (cdd_guidance/patterns/lern_domain_driven/graph_overlay.py:56); one verb, two names and visibilities.
+
+## Judgment — `cdd_guidance/patterns/oss_portal_domain_driven/practices/ddd/rules/oss_tier_rules.py`
+
+### `use-typed-signatures` — Fail
+- oss_tier_rules.py:16 `_hits`: `node` is untyped; it is a graph `Node`.
+- oss_tier_rules.py:27 `BrowserCallsOnlyTheBff.check`: `node` and `context` untyped; the base `PracticeGraphRule.check` and every LERN rule type them `Node` / `RuleCheckContext`.
+- oss_tier_rules.py:37 `TokensStayOnTheServer.check`: `node` and `context` untyped.
+- oss_tier_rules.py:47 `ViewsRenderOnly.check`: `node` and `context` untyped.
+- oss_tier_rules.py:58 `MaintainLayerPurity.check`: `node` and `context` untyped.
+- oss_tier_rules.py:73 `BffDecidesNextPage.check`: `node` and `context` untyped.
+- oss_tier_rules.py:86 `RepositoryOwnsAggregateLifecycle.check`: `node` and `context` untyped.
+- oss_tier_rules.py:96 `NoCrossServiceTables.check`: `node` and `context` untyped.
+- oss_tier_rules.py:106 `SanitisedErrorsOnly.check`: `node` and `context` untyped.
+- oss_tier_rules.py:116 `PublishEventsFromTheOwningService.check`: `node` and `context` untyped.
+- oss_tier_rules.py:126 `SecretsFromSecretManager.check`: `node` and `context` untyped.
+- oss_tier_rules.py:136 `NoPersonalDataInLogs.check`: `node` and `context` untyped.
+- oss_tier_rules.py:146 `OneProxyPerService.check`: `node` and `context` untyped.
+- oss_tier_rules.py:158 `VersionBreakingChanges.check`: `node` and `context` untyped.
+- oss_tier_rules.py:174 `StandardPolicyChain.check`: `node` and `context` untyped.
+- oss_tier_rules.py:191 `ExpandAndContractMigrations.check`: `node` and `context` untyped.
+
+### `eliminate-duplication` — Fail
+- oss_tier_rules.py:73 `BffDecidesNextPage.check`: same comprehension over `web_path_literals` as LERN `OneHomeForWebPaths.check`; the pattern says the rule is carried from LERN, so it should reuse LERN's rule as the OSS story rules do.
+
+## Judgment — `cdd_guidance/patterns/oss_portal_domain_driven/practices/stories/rules/oss_story_rules.py`
+
+### `use-typed-signatures` — Fail
+- oss_story_rules.py:16 `ServiceTierRunsARealDatabase.check`: `node` and `context` untyped, unlike the base `PracticeGraphRule.check`.
+- oss_story_rules.py:30 `JourneyTestPerRelease.check`: `node` and `context` untyped.
+
+## Judgment — `cdd_guidance/patterns/oss_portal_domain_driven/tier_facts.py`
+
+### `eliminate-duplication` — Fail
+- tier_facts.py:75 `OssFile.__init__`: same body as `TierFile.__init__`; `OssFile` is a copy of LERN's `TierFile`, which this module already uses for story files.
+- tier_facts.py:136 `OssFile.web_path_literals`: 78% the same as `TierFile.web_path_literals`; only the regex differs.
+- tier_facts.py:205 `OssFile._in_import`: the same logic as `TierFile._in_import`.
+- tier_facts.py:211 `OssFile._in_comment`: the same logic as `TierFile._in_comment`.
+- tier_facts.py:283 `AggregateFolder.__init__`: same body as LERN's `AggregateFolder.__init__`; the class is a copy of LERN's `AggregateFolder` under the same name.
+- tier_facts.py:194 `OssFile._brace_end`: brace matching that LERN's `TierFile._braced_body` (cdd_guidance/patterns/lern_domain_driven/tier_facts.py:200) and `_BraceScanner.matching_brace` (harness/catalog_generator/source_folds.py:163) already do; three brace scanners, only the last steps over strings and comments.
+
+### `do-not-invent-parallel-object-models` — Fail
+- tier_facts.py:280 `AggregateFolder`: a second class of the same name and role as LERN's `AggregateFolder` (cdd_guidance/patterns/lern_domain_driven/tier_facts.py:236), so the OSS overlay must import two `AggregateFolder`-shaped models from two modules.
+
+## Judgment — `cdd_guidance/patterns/cdd_web_domain_access/graph_overlay.py`
+
+### `eliminate-duplication` — Fail
+- graph_overlay.py:29 `WebDomainAccessOverlay.read`: inline whole-file node creation and the fact loop at line 30 repeat LERN's `_PracticeFiles.node` (cdd_guidance/patterns/lern_domain_driven/graph_overlay.py:152) and OSS's `_file_node` / `_set_facts` (cdd_guidance/patterns/oss_portal_domain_driven/graph_overlay.py:191, :187).
+
+### `hide-inner-details` — Fail
+- graph_overlay.py:29 `WebDomainAccessOverlay.read`: calls `ddd.reading.in_graph.add_named` on the DDD practice's reading storage directly instead of a named operation on the practice or graph (harness/graph/graph.py:990).
+
+## Judgment — `harness/annotations/annotation.py`
+
+### `prefer-instance-operations` — Fail
+- annotation.py:111 `Annotation.annotates`: a classmethod query on a kind of annotation, no factory; the registry could hold kind instances and ask them.
+- annotation.py:116 `Annotation.written_as`: classmethod returning the kind's typed name; not a creation or mapping factory.
+- annotation.py:122 `Annotation.installs_member`: classmethod policy query; belongs on an instance of the kind.
+- annotation.py:127 `Annotation.companion_flags`: classmethod policy query; not a factory.
+- annotation.py:157 `NamesAnnotation.names_on`: classmethod reader of the recorded names; not a factory.
+- annotation.py:171 `OmissionAnnotation.annotates`: classmethod override of the class-level query; not a factory.
+- annotation.py:184 `HostedOnly.annotates`: classmethod override of the class-level query; not a factory.
+- annotation.py:212 `Destination.installs_member`: classmethod policy query; not a factory.
+- annotation.py:217 `Destination.name_annotated_on`: classmethod reader of the name an annotation gave; not a factory.
+- annotation.py:223 `Destination.companion_flags`: classmethod policy query; not a factory.
+- annotation.py:227 `Destination.disabled_on`: classmethod policy query; not a factory.
+
+### `eliminate-duplication` — Fail
+- annotation.py:205 `Destination.annotate`: repeats `setattr(target, self.flag, True)` from `Annotation.annotate` (annotation.py:132) instead of calling `super().annotate(target)`, so a change to how a flag is recorded misses destinations.
+
+## Judgment — `harness/guidance/action_catalogue.py`
+
+### `prefer-instance-operations` — Fail
+- action_catalogue.py:121 `ActionCatalogue.register`: classmethod writing class-level ClassVar state, the global-state pattern the rule names; should be an instance the framework holds.
+- action_catalogue.py:127 `ActionCatalogue.run_actions_with`: classmethod setting a class-level runner; global state, not a factory.
+- action_catalogue.py:132 `ActionCatalogue.runner`: classmethod global accessor handing every caller the same class-level runner, which the rule says is not a factory.
+- action_catalogue.py:139 `ActionCatalogue.fidelity_actions`: classmethod query over class-level state.
+- action_catalogue.py:145 `ActionCatalogue.toolsets`: classmethod global accessor over class-level state.
+- action_catalogue.py:150 `ActionCatalogue.actions`: classmethod that caches into class-level state; not a factory.
+- action_catalogue.py:163 `ActionCatalogue.names`: classmethod query over class-level state.
+- action_catalogue.py:167 `ActionCatalogue.has`: classmethod query over class-level state.
+- action_catalogue.py:171 `ActionCatalogue.action`: classmethod lookup over class-level state; a lookup, not a creation factory.
+
+### `use-explicit-dependencies` — Fail
+- action_catalogue.py:61 `Action.run_on`: reaches the process-wide `ActionCatalogue.runner()` global instead of being handed its runner, so an action cannot run against another runner.
+- action_catalogue.py:93 `FidelityActions.__init__`: fetches its actions from the `ActionCatalogue.fidelity_actions()` global during construction rather than receiving the catalogue.
+
+## Judgment — `harness/guidance/practice_catalogue.py`
+
+### `prefer-instance-operations` — Fail
+- practice_catalogue.py:46 `PracticeCatalogue.register`: classmethod writing class-level ClassVar state; global registry, not a factory.
+- practice_catalogue.py:51 `PracticeCatalogue.register_supplements`: classmethod writing class-level state.
+- practice_catalogue.py:57 `PracticeCatalogue.supplement_classes`: classmethod global accessor over class-level state.
+- practice_catalogue.py:62 `PracticeCatalogue.keys`: classmethod query over class-level state.
+- practice_catalogue.py:67 `PracticeCatalogue.has`: classmethod query over class-level state.
+- practice_catalogue.py:100 `PracticeCatalogue._always_on_supplements`: classmethod helper reading class-level supplement classes; not itself a named factory.
+- practice_catalogue.py:109 `PracticeCatalogue.practice_class`: classmethod lookup over class-level state; not a factory.
+- practice_catalogue.py:116 `PracticeCatalogue._registered`: classmethod global accessor over class-level state.
+
+### `eliminate-duplication` — Fail
+- practice_catalogue.py:46 `PracticeCatalogue.register`: the same class-level "register classes, keep them in a ClassVar, look them up by name" registry as `ActionCatalogue.register` (harness/guidance/action_catalogue.py:121) and `PatternOverlays.register` (harness/graph/pattern_overlays.py:106); three registries with no shared owner.
+
+### `use-consistent-naming` — Fail
+- practice_catalogue.py:62 `PracticeCatalogue.keys`: the identifiers of what a registry holds are `keys` here but `names` on `ActionCatalogue.names` (harness/guidance/action_catalogue.py:163), `ApproachStages.names` (harness/guidance/stages.py:132) and `PatternOverlays.names` (harness/graph/pattern_overlays.py:223); two words for one concept.
+
+## Judgment — `harness/graph/pattern_overlays.py`
+
+### `eliminate-duplication` — Fail
+- pattern_overlays.py:106 `PatternOverlays.register`: copies the class-level registry of `ActionCatalogue.register` (harness/guidance/action_catalogue.py:121) and `PracticeCatalogue.register` (harness/guidance/practice_catalogue.py:46).
+
+### `prefer-instance-operations` — Fail
+- pattern_overlays.py:106 `PatternOverlays.register`: classmethod writing class-level `_registered`; global setter, not a factory.
+
+## Judgment — `harness/guidance/guidance.py`
+
+### `keep-classes-single-responsibility` — Fail
+- guidance.py:240 `PracticeGuidance`: one class reads its document and schema, picks fidelity and format, holds its practice set, binds to a session, renders, and serves instructions; several reasons to change.
+
+## Judgment — `harness/guidance/practice_reading.py`
+
+### `use-typed-signatures` — Fail
+- practice_reading.py:72 `graph`: `held_in(graph: Any, ...)` puts `Any` on a public signature; the graph could be named by a Protocol, as action_catalogue does with WorkedFidelity.
+- practice_reading.py:72 `nodes`: `held_in(..., nodes: Any)` puts `Any` on a public signature for the practice's PracticeNodes.
+
+## Judgment — `harness/guidance/stages.py`
+
+### `do-not-invent-parallel-object-models` — Fail
+- stages.py:67 `ApproachStage._OTHER_ACTIONS`: with `_BEFORE_STEPS` (line 66) and `_STEPS` (line 64), keeps a hand-written string list of action names ("partition", "iterate", "sketch", "document") beside the one list of actions, `ActionCatalogue.actions` (harness/guidance/action_catalogue.py:150); a renamed or added action is missed here.
+
+## Judgment — `harness/catalog_generator/stage_columns.py`
+
+### `do-not-invent-terms` — Fail
+- stage_columns.py:50 `_COLUMN_KEYS`: renames the stages `specification` and `implementation` (owner harness/guidance/stages.py:12-13) to "spec" and "engineer", a second vocabulary for the same stages.
+
+## Judgment — `harness/guidance_actions/guidance_actions.py`
+
+### `keep-classes-single-responsibility` — Fail
+- guidance_actions.py:480 `GuidanceAction`: one class resolves the call's session, holds the work list, logs to the session, builds overlay/story-scope prose, and builds session-context prose; several reasons to change.
+
+### `hold-state-on-the-object-not-in-parameters` — Fail
+- guidance_actions.py:88 `session_file_named`: the session is written into the guidance string as a `session=` word (space/kanban/app/src/kanban/ticket/ticket-chat-prompts.ts:18) and parsed back here, the exact pattern the rule names; `overlays=` and `format=` (guidance_actions.py:96, :184) ride the same string.
+
+## Judgment — `harness/diagnostics/probe_arguments.py`
+
+### `eliminate-duplication` — Fail
+- probe_arguments.py:47 `practice_named`: repeats the "find the practice whose `answers_to(slug)` is not none across a practice set" search that `_named` does (harness/guidance_actions/guidance_actions.py:236); the practice set has no owner for the lookup, so each caller writes its own.
+
+## Judgment — `harness/diagnostics/guidance_probe.py`
+
+### `hold-state-on-the-object-not-in-parameters` — Fail
+- guidance_probe.py:92 `_instructions_of`: passes the slug again to `practice.answers_to(slug)` to re-find the guidance that `practice_named` (harness/diagnostics/probe_arguments.py:47) already found by that slug and discarded.
+
+## Judgment — `harness/installation/repository_toolsets.py`
+
+### `eliminate-duplication` — Fail
+- repository_toolsets.py:226 `_is_hosted_only`: hard-codes "hosted_only", the name `HostedOnly.written_as()` (harness/annotations/annotation.py:116) already gives, and so misses the `@HostedOnly` spelling that line 233 catches through `Name(...).snake`.
+
+## Judgment — `harness/guidance/fixtures/sample_supplement/rules/__init__.py`
+
+### `one-way-deps` — Fail
+- __init__.py:2 `Bdd`: a harness fixture imports `cdd_guidance.practices` (also line 3), which AGENTS.md says harness never imports, so harness/guidance's specs cannot run without the practices built on it.
+- __init__.py:4 `SharedPracticeGraphRule`: a harness/guidance fixture imports `harness.graph`, a layer above guidance.
+
+## Judgment — `harness/guidance/fixtures/sample_supplement/sample_supplement.py`
+
+### `one-way-deps` — Fail
+- sample_supplement.py:16 `GraphOverlay`: a harness/guidance fixture imports `harness.graph.pattern_overlays`, a layer above guidance.
+
+## Judgment — `harness/agent_tools/agent_tools.py`
+
+### `prefer-instance-operations` — Fail
+- agent_tools.py:1316 `AgentToolAnnotation.installs_member`: classmethod answering a constant; not a creation factory, belongs as an instance operation or class attribute.
+- agent_tools.py:1327 `AgentInstructionsAnnotation.installs_member`: same classmethod constant answer; not a factory.
+
+## Judgment — `harness/agent_tools/tool_call.py`
+
+### `prefer-instance-operations` — Fail
+- tool_call.py:159 `ToolCall.open_sessions_with`: classmethod writing class-level global `ToolCall._sessions`; a global setter, not a factory.
+- tool_call.py:176 `ToolCall.session_in`: classmethod global accessor reading class-level `ToolCall._sessions`, which the rule names as not a factory.
+
+## Judgment — `harness/annotations`
+
+### `deep-module` — Fail
+- annotations:1 `annotations`: 8 of 9 classes named by other modules' production code (Name in 58 files), far over 40%; module-context's "all seam by design" is not an exemption the rule allows.
+
+## Judgment — `harness/catalog_generator/catalog_practice.py`
+
+### `use-explicit-dependencies` — Fail
+- catalog_practice.py:33 `CatalogSkills`: constructor builds `IdeLayout` and a `FileInstallation` (an install/file collaborator) instead of receiving them.
+
+## Judgment — `harness/catalog_generator/hub_board.py`
+
+### `do-not-invent-parallel-object-models` — Fail
+- hub_board.py:74 `HubBoard`: holds the catalog's practices, stage copy, and recomputes `stories = giving_stage_examples(practices)` exactly as `ApproachGrids` does (harness/catalog_generator/approach_page.py:172-183); both are fed the same Catalog data (catalog_generator.py:680, approach_page.py:360), so the "catalog approach" concept is modelled twice.
+
+## Judgment — `harness/catalog_generator/project_approach.py`
+
+### `use-explicit-dependencies` — Fail
+- project_approach.py:56 `ProjectFiles`: constructor builds `JsonFile` (an external file) instead of taking it as a collaborator.
+
+## Judgment — `harness/chat-ui/pane/hooks/health/cdd-version-client.ts`
+
+### `eliminate-duplication` — Fail
+- cdd-version-client.ts:104 `askVersion`: re-implements call → isError → JSON.parse-or-fail by hand (with `versionFrom` at :135) instead of using the one canonical `callTool` in harness/chat-ui/pane/hooks/chat-bar/chat-bar-client.ts:273.
+
+## Judgment — `harness/chat-ui/pane/hooks/health/server-health-client.ts`
+
+### `eliminate-duplication` — Fail
+- server-health-client.ts:126 `askServer`: same hand-rolled call/isError/JSON.parse-or-null (with `reportFrom` at :138) duplicating `callTool` in harness/chat-ui/pane/hooks/chat-bar/chat-bar-client.ts:273.
+
+## Judgment — `harness/chat-ui/pane/hooks/chat-bar/guidance-client.ts`
+
+### `eliminate-duplication` — Fail
+- guidance-client.ts:105 `call`: a third copy of call/isError/JSON.parse-or-throw, duplicating `callTool` in harness/chat-ui/pane/hooks/chat-bar/chat-bar-client.ts:273.
+
+## Judgment — `harness/chat/chat.py`
+
+### `keep-classes-single-responsibility` — Fail
+- chat.py:203 `Chat`: one chat's mailbox operations plus the roster of all chats (`list`) and opening new chats (`open`); 11 public operations, two reasons to change.
+
+### `prefer-instance-operations` — Fail
+- chat.py:233 `Chat.list`: classmethod enumerating every chat from the folder; a collection query, not a factory.
+- chat.py:242 `Chat.open`: classmethod acting through class-level `cls.opener`; not a factory.
+
+## Judgment — `harness/design_canvas`
+
+### `deep-module` — Fail
+- design_canvas:1 `design_canvas`: 5 of 10 classes (Artboard, CanvasBoard, CanvasVersions, DesignCanvas, Place) named by other modules (ux story_canvas.py, space/session/practice_session_output.py, drawio_class_model.py), over 40%.
+
+## Judgment — `harness/diagnostics/probe_outcome.py`
+
+### `use-typed-signatures` — Fail
+- probe_outcome.py:35 `ProbeOutcome.from_answer`: public parameter `answer: object` is an untyped bag; the rule gives factories no exemption from typed signatures.
+
+## Judgment — `harness/graph/graph.py`
+
+### `keep-classes-single-responsibility` — Fail
+- graph.py:1290 `Graph`: 22+ public operations spanning loading, refreshing, saving, overlays, inventory, and explorer views.
+- graph.py:859 `PracticeNodes`: holds nodes, links edges, builds schemas, and runs rule checks; several reasons to change.
+
+### `limit-operation-parameters` — Fail
+- graph.py:527 `Node.__init__`: 5 parameters; type/node_id/name/source form one identity concept that should be an object.
+- graph.py:990 `PracticeNodes.add_named`: 4 parameters repeating the Node constructor's setup.
+
+## Judgment — `harness/graph/model_node.py`
+
+### `prefer-instance-operations` — Fail
+- model_node.py:173 `register_practice`: classmethod writing class-level registry state; not a factory.
+- model_node.py:180 `practice_kind`: classmethod reading class-level registry state; not a factory.
+
+## Judgment — `harness/guidance`
+
+### `deep-module` — Fail
+- guidance:1 `guidance`: 20 of 39 classes named by other modules, over the 15 that 40% allows.
+
+## Judgment — `harness/hooks/hook_server.py`
+
+### `prefer-instance-operations` — Fail
+- hook_server.py:436 `HookServer.show_toasts_with`: classmethod setting class-level `_toast_shown_by`; global setter, not a factory.
+
+## Judgment — `harness/hooks/hooks.py`
+
+### `prefer-instance-operations` — Fail
+- hooks.py:92 `Hook.companion_flags`: classmethod, not a factory.
+- hooks.py:96 `Hook.disabled_on`: classmethod reading a flag off an operation; not a factory.
+
+## Judgment — `harness/installation/files.py`
+
+### `limit-operation-parameters` — Fail
+- files.py:100 `FileInstallation.__init__`: 4 parameters (layout, path, channel, repo), over the 3 allowed; constructors are not exempt.
+
+## Judgment — `harness/installation/installer.py`
+
+### `use-explicit-dependencies` — Fail
+- installer.py:326 `Installer`: constructor builds `InstallRecord(_SHARED_RECORD)` (a file record) and `IdeLayout` instead of receiving them.
+
+## Judgment — `harness/markdown`
+
+### `deep-module` — Fail
+- markdown:1 `markdown`: 7 of 17 classes named by other modules, over the 6 that 40% allows.
+
+## Judgment — `harness/mcp/mcp_server.py`
+
+### `use-explicit-dependencies` — Fail
+- mcp_server.py:225 `McpInstallation`: constructor builds `McpDaemon(CddHome())`, an external server collaborator, instead of receiving it.
+
+## Judgment — `harness/mcp/server_hooks.py`
+
+### `use-explicit-dependencies` — Fail
+- server_hooks.py:18 `CddServerHooks`: constructor builds `ServedCheckout`, `McpDaemon`, and reaches the global `RepositoryToolsets.of_running_checkout()`.
+
+## Judgment — `harness/process`
+
+### `deep-module` — Fail
+- process:1 `process`: 11 of 13 classes named by diagnostics, hooks, mcp, catalog_generator, and scripts, over the 5 that 40% allows.
+
+## Judgment — `harness/whiteboard/whiteboard.py`
+
+### `do-not-invent-parallel-object-models` — Fail
+- whiteboard.py:32 `Box`: the canonical geometry, but `MiroShape` (cdd_guidance/practices/stories/model/miro/nodes.py:42) copies its x/y/w/h fields instead of holding a `Box`; the copy is in MiroShape.
+
+## Judgment — `harness/whiteboard`
+
+### `deep-module` — Fail
+- whiteboard:1 `whiteboard`: 9 of 12 classes named by clean_engineering, stories, and ddd whiteboard models, over the 4 that 40% allows.
+
+## Judgment — `cdd_guidance/practices/clean_engineering/model/graph_reading.py`
+
+### `hide-inner-details` — Fail
+- graph_reading.py:77 `_exempt_test_code`: reads `node.data.get(...)` directly, the fact storage of `Node` (harness/graph/graph.py:534), instead of `node.get_fact` (graph.py:549); the dict becomes a cross-module contract.
+
+## Judgment — `scripts/unit_guard/sitecustomize.py`
+
+### `no-prototype-swapping` — Fail
+- sitecustomize.py:68 `_time_examples`: replaces mamba's `Example._finish` on the class at import time (`mamba_example.Example._finish = timed_finish`), monkeypatching a third-party type instead of hooking through a reporter or seam.
+
+## Judgment — `space/kanban/app/src/kanban/board/side-panel-client.ts`
+
+### `hold-state-on-the-object-not-in-parameters` — Fail
+- side-panel-client.ts:73 `closeTicketPanels`: takes the ticket's name, which `TicketClient.letGo` (ticket-client.tsx:223) passes as `this.name` though it holds the ticket; the name is also called `ticket`, while `ticket` is a `TicketClient` everywhere else in the file (line 44).
+
+## Judgment — `space/kanban/app/src/kanban/ticket/open-card-client.ts`
+
+### `hold-state-on-the-object-not-in-parameters` — Fail
+- open-card-client.ts:72 `releaseTicket`: takes a ticket's name, which `TicketClient.letGo` (ticket-client.tsx:222) passes as `this.name` while holding the ticket; the parameter is still called `ticket`, beside `ticket: TicketClient` in `toggle`/`open`/`openSegment`.
+- open-card-client.ts:80 `dropPractice`: `TicketPractices` (ticket-practices.ts:27) passes `this.ticket.name` down so the receiver matches tiles by name instead of being handed the ticket it holds.
+
+## Judgment — `space/kanban/app/src/kanban/ticket/files-panel-client.ts`
+
+### `eliminate-duplication` — Fail
+- files-panel-client.ts:54 `show`: re-implements the panel-replacing body `[...panels.filter(entry => entry.kind !== panel.kind), panel]` that `replacing` in side-panel-client.ts:13 already holds (and `change`, line 57, repeats `changeReport` from side-panel-client.ts:30 by kind); one store-of-panels operation written twice.
+
+## Judgment — `space/kanban/app/src/kanban/ticket/ticket-work.ts`
+
+### `do-not-invent-parallel-object-models` — Fail
+- ticket-work.ts:17 `WorkStanding`: a hand-made camelCase copy of Python's `StageWork` (space/kanban/ticket.py:1136: `action_states`, `has_violations`, `violation_count`, `allowed_actions`, `commands`), rebuilt field by field in `workIn` (line 71) and used by tile-actions-client.ts; under cdd_web_domain_access the browser uses the generated data/client, not a parallel type, and "standing" is a term the Python model does not use.
+
+## Judgment — `space/kanban/app/src/kanban/ticket/ticket-client.tsx`
+
+### `keep-classes-single-responsibility` — Fail
+- ticket-client.tsx:19 `TicketClient`: after splitting out work, practices, and prompts it still mixes display copy (`runNextLabel`, `runNextHint`, `nextNote`, `lockNote`, `stagePlace`, `standing`), chat opening and worktree activation, drop-target handling, optimistic move/follow wiring, and run-next dispatch; several independent reasons to change.
+
+## Judgment — `space/kanban/app/src/kanban/ticket/tile-client.ts`
+
+### `use-consistent-naming` — Fail
+- tile-client.ts:60 `change`: `ticket: string` (a name) in `change`/`openOn`/`isOpen`/`close`/`pin`/`hoverOut`, but `ticket: TicketClient` in `toggle` (line 81) and `TileSpot.ticket`; one name, two types.
+
+## Judgment — `space/kanban/board.py`
+
+### `keep-classes-single-responsibility` — Fail
+- board.py:104 `Board`: beyond finding columns, tickets, and items it lists repository folders for a workpath picker (`folders`, line 325), serves practice help (`help`, line 332), retries saves (`save_again`), and keeps a chat-fix preference (`set_sends_fixes_directly`); unrelated reasons to change on one class.
+
+## Judgment — `space/kanban/ticket.py`
+
+### `keep-classes-single-responsibility` — Fail
+- ticket.py:109 `Ticket`: 28 public operations spanning parent/child tree, chat assignment and links, file listings, format and overlay choices, activation/closing/archiving, stage moves, tagging/text, and violations reporting; many reasons to change.
+
+## Judgment — `space/repo/mock_repo.py`
+
+### `limit-operation-parameters` — Fail
+- mock_repo.py:154 `commit`: four values (`checkout`, `paths`, `message`, `untracked`); `checkout` is state the calling `MockRepo` already holds (`self.root`), so the fake takes setup a per-checkout object should carry.
+
+## Judgment — `space/repo/repo.py`
+
+### `keep-classes-single-responsibility` — Fail
+- repo.py:77 `Repo`: reads repository state (branches, refs, dirty, current commit) and also runs the publish workflows `push_commit`, `push_work`, `merge_to_main`, `push_to_main`, `push` (lines 269-337); querying git and the publishing process change for different reasons.
+
+## Judgment — `space/repo/repos.py`
+
+### `use-explicit-dependencies` — Fail
+- repos.py:116 `CddConfig`: builds its `JsonFile` (and a default `CddHome()`) inside `__init__`, so the file store cannot be swapped for a fake; only the home folder can be.
+
+## Judgment — `space/session/session.py`
+
+### `keep-classes-single-responsibility` — Fail
+- session.py:82 `Session`: 32 public operations covering identity and paths, idea text and tags, overlays, guidance selection, file read/write, graph explorer queries, chat context, file comments, loop and log, handoffs, debug, and CDR records; many reasons to change.
+
+## Judgment — `space/session/sessions.py`
+
+### `keep-classes-single-responsibility` — Fail
+- sessions.py:111 `Sessions`: the session collection (create, named, load, moved, removed, close) also serves process-wide answer caching (`answer`, `serve_answer`, line 146), the open-state/switch protocol for chats, and board practices; separate reasons to change.
+
+## Judgment — `tools/prompt_notify/ide_toast/watch_notice.js`
+
+### `never-swallow-exceptions` — Fail
+- watch_notice.js:12 `messageFromNotice`: `catch { return "" }` substitutes an empty message for any parse failure, so a file that is permanently malformed reads as "no notice" forever, unseen; the half-written case is not told apart from a broken one.
+
+## Judgment — `cdd_guidance/context_setup/context_index.py`
+
+### `use-explicit-dependencies` — Fail
+- context_index.py:131 `OpenAIEmbeddingProvider`: its constructor builds the external `OpenAI()` client (line 139) instead of taking it, so the adapter can only ever run against the live OpenAI service.
+- context_index.py:183 `ContextIndex`: when no provider was passed it builds `OpenAIEmbeddingProvider()` itself (default hidden behind the `None` at line 158), so the collaborator the constructor seems to take is fetched inside the class anyway.
+
+## Judgment — `cdd_guidance/practices/agent_bdd/agent_cli_bdd.py`
+
+### `use-explicit-dependencies` — Fail
+- agent_cli_bdd.py:273 `CliAgentBlock`: its constructor builds `CursorCli()` (line 282), the external command-line client, instead of receiving it; the sibling `ChatAgentBlock` (agent_chat_bdd.py:11) and the base `AgentBlock` (agent_block.py:34) take no such hidden client.
+
+## Judgment — `cdd_guidance/practices/clean_engineering/model/base_class_model.py`
+
+### `keep-classes-single-responsibility` — Fail
+- base_class_model.py:119 `OoadClass`: one class is the graph node (update_self, clone, reconcile_children, relationships), the source-fact extractor for rules (take_lines, load_source_facts, held_fields) and the doc-comment writer (doc_comment), three reasons to change.
+- base_class_model.py:344 `Module`: the graph node also scans import statements (_import_targets, _without_type_imports) and reads the folder's context files (load_folder_facts, take_public_sources).
+
+## Judgment — `cdd_guidance/practices/clean_engineering/model/diagram/class_layout.py`
+
+### `keep-operations-small-focused` — Fail
+- class_layout.py:468 `run`: 50 statements in one loop body that prunes, applies edge rules and prices each step; the speed reason in its docstring does not lift the limit.
+
+### `limit-comments` — Fail
+- class_layout.py:471 `run`: the docstring says it takes "the same steps at the same prices as `_steps` and `_price`", but neither method exists anywhere in the file, so the comment points at removed code.
+
+## Judgment — `cdd_guidance/practices/clean_engineering/model/operation.py`
+
+### `keep-classes-single-responsibility` — Fail
+- operation.py:88 `Operation`: graph node and signature parser, plus source-span measuring (load_span_facts, take_lines) and body fingerprinting for duplication (_fingerprint, take_body_fingerprint), several jobs on one class.
+
+## Judgment — `cdd_guidance/practices/clean_engineering/model/operation_metrics.py`
+
+### `keep-classes-single-responsibility` — Fail
+- operation_metrics.py:169 `SourceText`: 18 unrelated measures over any text, from exception handling and magic numbers to markdown card bullets (markdown_bullet_lines) and prototype swaps; code measures and markdown card reading are separate jobs.
+
+## Judgment — `cdd_guidance/practices/ddd/ddd.py`
+
+### `eliminate-duplication` — Fail
+- ddd.py:79 `__init__`: has the same body as ux.py:60 and bdd/bdd.py:35, and differs only in the default fidelity. `PracticeGuidance.__init__` (harness/guidance/guidance.py:297) could read a class attribute for the first fidelity instead of every practice copying a constructor.
+
+## Judgment — `cdd_guidance/practices/ux/ux.py`
+
+### `eliminate-duplication` — Fail
+- ux.py:60 `__init__`: the same body as ddd.py:79 and bdd/bdd.py:35, with only the default fidelity `"ia"` differing; the owner is `PracticeGuidance.__init__` at harness/guidance/guidance.py:297.
+
+## Judgment — `cdd_guidance/practices/bdd/bdd.py`
+
+### `eliminate-duplication` — Fail
+- bdd.py:35 `__init__`: a third copy of the constructor at ddd.py:79 and ux.py:60, there only to default the fidelity to `"behavior"`; it belongs once in `PracticeGuidance` (harness/guidance/guidance.py:297).
+
+## Judgment — `cdd_guidance/practices/ddd/model/graph_reading.py`
+
+### `use-typed-signatures` — Fail
+- graph_reading.py:122 `get_fact`: types `default` and the return value as bare `object`. The method it overrides, `Node.get_fact` (harness/graph/graph.py:546), uses the domain alias `FactValue`, so this override loosens the base's typing.
+
+## Judgment — `cdd_guidance/practices/stories/app/story-map/story-map-views.tsx`
+
+### `limit-operation-parameters` — Fail
+- story-map-views.tsx:32 `useStoryMapReading`: takes 4 parameters. `api` is built from `failures` (line 77), and `failures` and `editing` are also handed down to `useStoryMapEdit`.
+
+## Judgment — `cdd_guidance/practices/stories/model/claude_design`
+
+### `conforms-to-schema` — Fail
+- claude_design:1 `claude_design`: the package holds only an empty `__init__.py` (0 bytes) and nothing in the repository imports it, so it has no participants; it is a dead folder that should hold classes or be deleted.
+
+## Judgment — `cdd_guidance/practices/ux/story-demo/story-demo-page.js`
+
+### `use-explicit-dependencies` — Fail
+- story-demo-page.js:14 `StoryDemoPage`: the frames can be injected, but the constructor always builds `PlayDualRunner` (line 24), the engine that plays stories, along with `PaintReflect` and `ThenFeedback`, so the runner cannot be swapped.
+
+## Judgment — `harness/graph/app/filter_choices_record.py`
+
+### `one-way-deps` — Fail
+- filter_choices_record.py:87 `__main__`: harness imports `cdd_guidance.practices` to register practices. AGENTS.md says harness imports nothing from `cdd_guidance`; the practices register themselves from their package `__init__.py`.
+
+## Graph hits judged noise
+
+| File:line | Rule | Why it is noise |
+|---|---|---|
+| cdd_guidance/patterns/cdd_web_domain_access/access_facts.py:23 | do-not-invent-parallel-object-models | `AccessFile` and OSS `MigrationFile` are different concepts in unrelated patterns; the only shared fields are a file's name, text, and its `SourceText` wrapper, and no behaviour is copied. |
+| cdd_guidance/patterns/oss_portal_domain_driven/tier_facts.py:267 | eliminate-duplication | `MigrationFile.__init__` is three field assignments matching `AccessFile.__init__`; that is construction, not repeated logic, and the classes model different things. |
+| cdd_guidance/patterns/oss_portal_domain_driven/tier_facts.py:194 | simplify-control-flow | `_brace_end` nests for → elif → if, three levels; the scanner counts the `elif` as an extra level. |
+| cdd_guidance/patterns/oss_portal_domain_driven/graph_overlay.py:187 | use-typed-signatures | `_set_facts` is a private helper on the private `_OssReading`; the rule covers public signatures. |
+| cdd_guidance/patterns/oss_portal_domain_driven/graph_overlay.py:191 | use-typed-signatures | `_file_node` is private on the private `_OssReading`; the rule covers public signatures (the real problem, `practice` held on self, is a hold-state Fail). |
+| harness/guidance/practice_catalogue.py:89 | prefer-instance-operations | `create_all` is a creation factory (makes a new instance of every practice), a variant of the exempt `create`. |
+| harness/guidance/stages.py:26 | limit-operation-parameters | `StageScope.__init__` is the constructor of a plain value whose four fields are its full field set; creation that takes the field set needed to construct is exempt. |
+| harness/agent_tools/agent_tools.py:585 | prefer-instance-operations | `instantiate` is a creation factory making a toolset from configuration, which the rule exempts. |
+| harness/catalog_generator/brand.py:53 | keep-operations-single-responsibility | `apply` only joins a path and copies a folder; no domain calculation. |
+| harness/catalog_generator/brand.py:70 | keep-operations-single-responsibility | `copy_commons` is pure copying; no domain calculation mixed in. |
+| harness/catalog_generator/generate_cdd_catalog.py:31 | keep-operations-single-responsibility | `main` is the CLI entry point orchestrating parse/load/print; no calculation in it. |
+| harness/chat-ui/pane/hooks/chat-bar/chat-bar-client.ts:344 | never-swallow-exceptions | cdd_web_domain_access pattern: failure is shown to the person via `shownAsFailure` and the page stops (fail-loud-on-mcp). |
+| harness/chat-ui/pane/hooks/chat-bar/session-client.ts:36 | never-swallow-exceptions | cdd_web_domain_access pattern: shows the failure, then answers null so the page stops (`CddApi.post` answers null after showing). |
+| harness/chat-ui/pane/hooks/health/cdd-version-client.ts:102 | never-swallow-exceptions | cdd_web_domain_access fail-loud-on-mcp: an unreachable server's reason is kept as `problem` and shown on the badge; other failures call `showFailure`. |
+| harness/chat-ui/pane/hooks/health/cdd-version-client.ts:135 | never-swallow-exceptions | cdd_web_domain_access pattern: non-JSON text is a failure; the caller turns null into `showFailure` with the server's text. |
+| harness/chat-ui/pane/hooks/health/server-health-client.ts:138 | never-swallow-exceptions | cdd_web_domain_access pattern: null becomes a `tools-missing` answer carrying the server's text as `problem`, shown on the health panel. |
+| harness/graph/graph_rules_collection.py:18 | extensions-live-with-the-domain | graph sits above guidance; moving `GraphRule` into harness/guidance would make guidance import graph, inverting the one-way dependency. Not a domain extension hosted in a framework. |
+| harness/installation/data_class.py:177 | use-typed-signatures | Reflective serializer: `data(instance)` takes any annotated object by design; no narrower domain type exists. |
+| harness/installation/data_class.py:185 | use-typed-signatures | Same reflective serializer (`reference`); any data class instance is the contract. |
+| harness/installation/data_class.py:194 | use-typed-signatures | Private helper `_identity_data`; the rule covers public signatures. |
+| harness/installation/data_class.py:200 | use-typed-signatures | Private helper `_referenced`; not a public signature. |
+| harness/installation/data_class.py:212 | use-typed-signatures | `data_of(subject)` is the one any-value-to-JSON function; its input is any value by definition. |
+| harness/installation/language_adapter.py:522 | limit-comments | The "comment" is a line of generated TypeScript inside a string list, not a Python comment. |
+| harness/installation/repository_toolsets.py:93 | prefer-instance-operations | `of_running_checkout` is a creation factory returning a new instance. |
+| harness/mcp/mcp_server.py:607 | never-swallow-exceptions | Protocol boundary: logs with `logger.exception` and returns an MCP error result naming the failure type and text. |
+| harness/mcp/mcp_server.py:607 | use-exceptions-properly | Returns `isError` with the failure's name, not a default or fallback value; the only handler at the MCP boundary. |
+| harness/mcp/mcp_server.py:792 | use-typed-signatures | Private `_content_blocks`; its input is whatever any tool returned. |
+| harness/mcp/tool_calls.py:93 | use-typed-signatures | On private `_RunningCall`; holds any tool's return value. |
+| harness/mcp/tool_calls.py:152 | never-swallow-exceptions | The failure is recorded with `started.fail(failure)` and re-raised to waiting callers or logged by `log_unheard_failure`. |
+| harness/mcp/tool_calls.py:152 | use-exceptions-properly | Not a fallback: the caught failure is kept and delivered to the caller of `answer`. |
+| scripts/unit_guard:1 | no-module-per-class | The folder holds no class at all, only `sitecustomize.py`, which must sit alone in its own folder so `test.ps1` can put it first on PYTHONPATH. |
+| space/kanban/app/src/kanban/board/side-panel-client.ts:31 | use-typed-signatures | `panel` is annotated `(panel: SidePanel)` on line 31, and `ReportPanel` in the callback type on line 30. |
+| space/kanban/app/src/kanban/ticket/files-panel-client.ts:44 | keep-classes-single-responsibility | Every operation changes the one files panel's state (open, filter, tab, reload, save); comments are already split out to `OpenFileComments`. |
+| space/kanban/app/src/kanban/ticket/files-panel-client.ts:58 | use-typed-signatures | `panel` is annotated `(panel: SidePanel)`; the callback's `panel` is typed `FilesPanel` on line 57. |
+| space/kanban/app/src/kanban/ticket/files-panel-client.ts:63 | use-typed-signatures | `source` comes from a destructured parameter typed `Pick<FilesChoice, 'source' \| 'progress'>` on line 61. |
+| space/kanban/app/src/kanban/ticket/open-card-client.ts:12 | shape-classes-around-resources | `RequiredFidelity` is Python's wire data (`ColumnData['work_required']`), which cdd_web_domain_access supplies as data; behaviour stays in Python, and `OpenCardClient` only passes it through. |
+| space/kanban/app/src/kanban/ticket/report-client.ts:45 | shape-classes-around-resources | `ViolationData` is the `{Object}Data` that cdd_web_domain_access generates from Python's plain result; `ReportClient` wraps the report it owns and only formats violations into prompts. |
+| space/kanban/app/src/kanban/ticket/ticket-work.ts:21 | shape-classes-around-resources | `RequiredFidelity` is cdd_web_domain_access wire data from Python; `progressOn` only reads its slug to find the ticket's own progress. |
+| space/kanban/app/src/kanban/ticket/tile-client.ts:61 | use-typed-signatures | `tile` is annotated `(tile: Tile)` on line 61. |
+| space/kanban/app/src/session-board/http-exception.ts:31 | limit-operation-parameters | Express (lern_domain_driven) recognises error middleware only by its four-argument signature `(err, req, res, next)`. |
+| space/kanban/backlog_item.py:46 | keep-classes-single-responsibility | Each operation acts on the item itself: its file, its place in the Backlog (move, nest, leave), and starting a ticket from it; one resource. |
+| space/repo/mock_repo.py:69 | keep-classes-single-responsibility | `MockGit` is the fake for git; its operations mirror the git behaviour it stands in for, which is its one reason to change. |
+| space/session/practice_session_output.py:255 | keep-classes-single-responsibility | `FidelitySessionOutput` is one fidelity's output (root, formats, files); 10 operations, all on that output, with format choice already in `FidelityFormats`. |
+| tools/prompt_log/prompt_log.py:133 | use-typed-signatures | `_preview` is a private helper, not a public signature; it takes whatever a hook payload field holds. |
+| cdd_guidance/catalog/commons/catalog-approach.js:79 | state-change-returns-record-or-named-failure | `ApproachPage` is a constructor function: `new` returns the object it builds, and it coordinates no state change. The file is also a generated copy of harness/catalog_generator/templates/commons/catalog-approach.js |
+| cdd_guidance/catalog/commons/catalog-drawio.js:87 | state-change-returns-record-or-named-failure | `StoryMapZoom` is a constructor that only sets its own fields. The file is also a generated copy of harness/catalog_generator/templates/commons/catalog-drawio.js |
+| cdd_guidance/catalog/commons/catalog-foundry-tour.js:196 | state-change-returns-record-or-named-failure | `FloatingTooltips` is a constructor that sets three null fields. Note: this file has no source template under harness/catalog_generator/templates/commons, so it is generated output with no generator source |
+| cdd_guidance/catalog/commons/catalog-nav.js:255 | state-change-returns-record-or-named-failure | `NavDrawer` is a constructor that only looks up three elements. The file is also a generated copy of harness/catalog_generator/templates/commons/catalog-nav.js |
+| cdd_guidance/catalog/examples/ddd/tactics.ts:479 | eliminate-duplication | Teaching example. `authenticateAccount` and `register` share only a four-line guard-then-`becomeUser` shape, with different requirement checks, error keys and repository verbs; the shared part already lives in `repository()` and `becomeUser()` |
+| cdd_guidance/context_setup/context_setup.py:138 | keep-operations-single-responsibility | `_markdown_of` reads or converts one file and does no domain calculation; picking by file suffix is part of the read |
+| cdd_guidance/practices/agent_bdd/agent_cli_bdd.py:290 | errors-out-of-existence | A missing or unauthenticated `cursor-agent` is a broken environment, not an ordinary edge, so raising is right |
+| cdd_guidance/practices/clean_engineering/model/code_class_model.py:104 | keep-classes-single-responsibility | Every method is one step of writing a class declaration in one language: hooks each language subclass overrides. That is one job |
+| cdd_guidance/practices/clean_engineering/model/graph_reading.py:216 | keep-operations-single-responsibility | `_model_in` reads a file and hands it to the format's parse in one line; it calculates nothing itself |
+| cdd_guidance/practices/clean_engineering/model/operation_metrics.py:442 | keep-classes-single-responsibility | Every method measures the same Python syntax tree; the different jobs are already split out into `CatchClause`, `Constructions` and `OwnObjects` |
+| cdd_guidance/practices/clean_engineering/model/property.py:60 | keep-classes-single-responsibility | Its methods all describe one field: its signature, notes, relationship and owner. The count includes the base node's clone, save, as_record and update_self overrides |
+| cdd_guidance/practices/stories/app/story-map/story-map-failures.ts:7 | use-explicit-dependencies | The transport (`send`) comes in through the constructor. `StoryMapApi` is built in a factory over the base's own `notTold` callback, which no caller could supply, the same seam `PageFailures` uses (space/kanban/app/src/kanban/board/page-failures.ts:14) |
+| cdd_guidance/practices/stories/model/javascript/seeds:1 | conforms-to-schema | A folder of seed files that are read as text to start a new tree's step library (javascript_story_model.py:83), not a code package with participants |
+| cdd_guidance/practices/stories/model/json/nodes.py:304 | keep-operations-single-responsibility | `from_workspace` finds and reads the file, then hands the text to `parse_file`; no calculation is mixed in |
+| cdd_guidance/practices/stories/model/markdown/nodes.py:424 | keep-operations-single-responsibility | `_read_file` reads, then delegates to `parse` and adds the file name to the error; no domain calculation |
+| cdd_guidance/practices/ux/story-demo/mount-generated-mockup.js:527 | use-explicit-dependencies | A `WeakSet` is the class's own bookkeeping built from nothing outside, not a collaborator |
+
