@@ -11,17 +11,14 @@
       "specification",
       "implementation"
     ],
-    "version": 73
+    "version": 75
   },
   "practices": {
     "stories": {
       "formats": {
-        "story_map": [
-          "markdown"
-        ],
+        "story_map": [],
         "scenarios": [
-          "python",
-          "markdown"
+          "python"
         ],
         "acceptance_tests": [
           "python"
@@ -38,12 +35,12 @@
     },
     "clean_engineering": {
       "formats": {
-        "modules": [
-          "markdown"
+        "modules": [],
+        "code": [
+          "python"
         ],
-        "code": [],
         "model": [
-          "markdown"
+          "python"
         ]
       },
       "enabled": true
