@@ -15,7 +15,7 @@ from harness.agent_tools.agent_tools import noSessionLog, subAgent, tool_subject
 from harness.agent_tools.tool_call import ToolCall
 from harness.chat.chat import Chat
 from harness.graph.explorer import ExplorerEntry, NodeSource
-from harness.graph.graph import Graph
+from harness.graph.graph import Filter, Graph
 from harness.graph.saved_graph import GRAPH_FILE_NAME, SavedGraph
 from harness.guidance.stages import STAGES
 from harness.graph.pattern_overlays import PatternOverlays
@@ -723,22 +723,35 @@ class Session:
     @mcp
     @agent_tool
     @noSessionLog
-    def graph_trees(self, paths: list[str], call: ToolCall | None = None) -> list[ExplorerEntry]:
-        """Return the practice trees of this session's graph read from exactly the files at paths, each named from the project as the Files app lists them, and holding only the nodes read from them: each practice's root with the entries below it, closed, as graph.explorer_trees answers them. The files the page lists are the one filter: the graph reads them, its story tests in code and in markdown alike, and keeps what they hold. No paths, or none in the project, answer no tree."""
+    def graph_trees(self, paths: list[str], node_filter: dict | None = None, call: ToolCall | None = None) -> list[ExplorerEntry]:
+        """Return the practice trees of this session's graph read from exactly the files at paths, each named from the project as the Files app lists them, and holding only the nodes read from them: each practice's root with the entries below it, closed, as graph.explorer_trees answers them. The files the page lists are the one file filter: the graph reads them, its story tests in code and in markdown alike, and keeps what they hold. node_filter is a node filter as graph.explorer_trees takes it (types, relationships, violations, rules): it applies with the file list, narrowing the nodes of the files listed, and never widens the list, so any paths it names are the list's. No paths, or none in the project, answer no tree."""
         listed = self._in_project(paths)
         if not listed:
             return []
         graph = self.graph
         working = [key for key, output in self._own_outputs.items() if output.enabled]
         graph.load_files(str(self.repo_path.resolve()), working, listed, graph.overlays, call)
-        return graph.explorer.explorer_trees({"paths": listed})
+        return graph.explorer.explorer_trees(self._narrowed_to(listed, node_filter))
 
     @mcp
     @agent_tool
     @noSessionLog
-    def graph_branch(self, node_id: str, paths: list[str]) -> ExplorerEntry | None:
-        """Return the node node_id's entry in this session's graph, kept to the nodes read from the files at paths as graph_trees keeps them, with the entries below it, closed; None for an id the graph no longer holds."""
-        return self.graph.explorer.explorer_branch(node_id, {"paths": self._in_project(paths)})
+    def graph_branch(self, node_id: str, paths: list[str], node_filter: dict | None = None) -> ExplorerEntry | None:
+        """Return the node node_id's entry in this session's graph, kept to the nodes read from the files at paths and matched by node_filter as graph_trees keeps them, with the entries below it, closed; None for an id the graph no longer holds."""
+        return self.graph.explorer.explorer_branch(node_id, self._narrowed_to(self._in_project(paths), node_filter))
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def graph_filter_choices(self, practices: list[str], node_types: list[str], practices_before: list[str] | None = None) -> Filter:
+        """Return the node types the graph view's node filter offers and those it chooses, with the connectors and rules of the chosen ones, as graph.filter_choices answers them on this session's graph."""
+        return self.graph.explorer.filter_choices(practices, node_types, practices_before)
+
+    @staticmethod
+    def _narrowed_to(listed: list[str], node_filter: dict | None) -> dict:
+        """The graph's filter request for a node filter applied with the file list: the node filter's choices, kept to
+        the files listed, in place of any paths it names."""
+        return {**(node_filter or {}), "paths": listed}
 
     @mcp
     @agent_tool

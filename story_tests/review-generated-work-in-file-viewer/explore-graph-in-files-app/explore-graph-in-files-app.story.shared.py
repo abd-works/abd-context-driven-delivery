@@ -5,7 +5,8 @@ explore_graph_in_files_app_story.test.md. Map: .context/story-map.md, (E) Explor
 
 Steps reach the session only through the namespace a tier hands them (`world.Ticket`), so the domain spec and the cdd
 tools spec replay the same steps. Only the scenarios built so far are here: Expand Practice Tree In Files App, Follow
-Relationships Under Node In Files App, Apply Pattern Overlays In Files App and Open Calls Across Files In Files App. Covered by the Files app's own specs (`harness/files_app/app/files/files-graph.spec.ts`),
+Relationships Under Node In Files App, Filter Graph By Node Type And Connector In Files App, Apply Pattern Overlays In
+Files App and Open Calls Across Files In Files App. Covered by the Files app's own specs (`harness/files_app/app/files/files-graph.spec.ts`),
 not here, because only the page shows them: each node's kind mark, the load steps while the graph reads, and a call
 opened in place in the source view. The Thens below check what the session answers the page for each.
 """
@@ -15,13 +16,17 @@ from __future__ import annotations
 from expects import equal, expect
 
 from space.kanban.story_test import SharedStories
-from space.session.graph_view_examples import BOARD_CODE, LISTED, TICKET_CODE, node_id_of, seed_checkout_flow_with_graph_files, session_of
+from space.session.graph_view_examples import BOARD_CODE, LISTED, STORY_MAP, TICKET_CODE, node_id_of, seed_checkout_flow_with_graph_files, session_of
 from space.session.graph_view_rule_examples import (
     CHECKOUT_FLOW_WITH_DDD,
     LERN,
     LERN_DOMAIN_TIER_RULES,
     LISTED_WITH_DOMAIN_TIER,
+    NO_NODE_FILTER,
+    OPERATIONS,
+    OPERATIONS_ON_INVOKES,
     TICKET_DOMAIN_TIER,
+    names_of,
     rule_slugs_on,
     seed_checkout_flow_with_both_tickets,
 )
@@ -87,6 +92,98 @@ def _(s):
     @s.then("board.py opens beside ticket.py, at Board.reread")
     def _(world):
         expect(world.lines).to(equal([(BOARD_CODE, 2, 3)]))
+
+
+# --- Filter Graph By Node Type And Connector In Files App ---------------------------------------------------------
+
+# Seed: the Files app listing ticket.py but not board.py.
+TICKET_LISTED = [STORY_MAP, TICKET_CODE]
+
+
+@shared_stories.scenario("Filter Graph By Node Type And Connector In Files App", "Choosing a node type keeps only those nodes")
+def _(s):
+    @s.given("the Files app shows checkout-flow's graph with Clean Engineering on")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+
+    @s.when("the Person filters the graph to operations")
+    def _(world):
+        world.operations = names_of(world, "Operation", LISTED, OPERATIONS)
+        world.parameters = names_of(world, "Parameter", LISTED, OPERATIONS)
+        world.choices = world.data_of(session_of(world).graph_filter_choices(practices=[], node_types=OPERATIONS["types"]))
+
+    @s.then("the Clean Engineering tree holds Ticket.activate, Ticket.close, Ticket.delete and Board.reread")
+    def _(world):
+        expect((world.operations, world.parameters)).to(equal(({"activate", "close", "delete", "reread"}, set())))
+
+    @s.then("the connectors and rules offered narrow to the ones operations carry")
+    def _(world):
+        operation_rules = [rule for rule in world.choices["rules"] if rule.split(".")[-2] == "Operation"]
+        expect((world.choices["relationships"], operation_rules == world.choices["rules"])).to(equal((["owns", "hasParameter", "invokes"], True)))
+
+
+@shared_stories.scenario("Filter Graph By Node Type And Connector In Files App", "Choosing a connector keeps the nodes on that edge")
+def _(s):
+    @s.given("the Files app shows checkout-flow's graph filtered to operations")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+
+    @s.when("the Person filters the graph to the invokes connector")
+    def _(world):
+        world.operations = names_of(world, "Operation", LISTED, OPERATIONS_ON_INVOKES)
+
+    @s.then("the tree holds Ticket.delete and Board.reread, but not Ticket.activate or Ticket.close")
+    def _(world):
+        expect(world.operations).to(equal({"delete", "reread"}))
+
+
+@shared_stories.scenario("Filter Graph By Node Type And Connector In Files App", "A node filter narrows only the files listed")
+def _(s):
+    @s.given("the Files app lists ticket.py but not board.py")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+
+    @s.when("the Person filters the graph to operations")
+    def _(world):
+        world.operations = names_of(world, "Operation", TICKET_LISTED, OPERATIONS)
+
+    @s.then("the Clean Engineering tree holds Ticket.activate, Ticket.close and Ticket.delete, but not Board.reread")
+    def _(world):
+        expect(world.operations).to(equal({"activate", "close", "delete"}))
+
+
+@shared_stories.scenario("Filter Graph By Node Type And Connector In Files App", "Changing the file list keeps the node filter")
+def _(s):
+    @s.given("the graph is filtered to operations and the Files app lists ticket.py alone")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+        names_of(world, "Operation", TICKET_LISTED, OPERATIONS)
+
+    @s.when("the Person lists board.py too")
+    def _(world):
+        world.operations = names_of(world, "Operation", LISTED, OPERATIONS)
+        world.parameters = names_of(world, "Parameter", LISTED, OPERATIONS)
+
+    @s.then("Board.reread joins the Clean Engineering tree, and the graph stays filtered to operations")
+    def _(world):
+        expect((world.operations, world.parameters)).to(equal(({"activate", "close", "delete", "reread"}, set())))
+
+
+@shared_stories.scenario("Filter Graph By Node Type And Connector In Files App", "None clears a filter list")
+def _(s):
+    @s.given("the graph is filtered to operations")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+        names_of(world, "Operation", LISTED, OPERATIONS)
+
+    @s.when("the Person clears the node types with None")
+    def _(world):
+        world.classes = names_of(world, "OoadClass", LISTED, NO_NODE_FILTER)
+        world.parameters = names_of(world, "Parameter", LISTED, NO_NODE_FILTER)
+
+    @s.then("the graph view holds every node of the files listed again")
+    def _(world):
+        expect((world.classes, world.parameters)).to(equal(({"Ticket", "Board"}, {"board"})))
 
 
 # --- Apply Pattern Overlays In Files App -------------------------------------------------------------------------
