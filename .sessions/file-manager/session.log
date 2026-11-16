@@ -112,3 +112,4 @@
 2026-11-16T06:08:07Z error validate.validate C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 247 af5894a3-9c9f-4aa3-be83-2ef5749adcca C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\af5894a3-9c9f-4aa3-be83-2ef5749adcca.jsonl 1-6278
 2026-11-16T06:09:25Z tool session.read_handoff_format af5894a3-9c9f-4aa3-be83-2ef5749adcca C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\af5894a3-9c9f-4aa3-be83-2ef5749adcca.jsonl 1-6358
 2026-11-16T06:09:53Z tool session.write_handoff af5894a3-9c9f-4aa3-be83-2ef5749adcca C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\af5894a3-9c9f-4aa3-be83-2ef5749adcca.jsonl 1-6361
+2026-11-16T15:54:14Z tool cdd-version.set_next af5894a3-9c9f-4aa3-be83-2ef5749adcca C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\af5894a3-9c9f-4aa3-be83-2ef5749adcca.jsonl 1-6436
