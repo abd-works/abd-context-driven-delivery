@@ -8,7 +8,7 @@
     "stages": [
       "discovery"
     ],
-    "version": 14
+    "version": 16
   },
   "practices": {
     "ux": {
@@ -19,7 +19,8 @@
         "ia": [
           "drawio"
         ]
-      }
+      },
+      "enabled": false
     },
     "stories": {
       "formats": {
@@ -39,7 +40,7 @@
       "enabled": false
     },
     "ddd": {
-      "enabled": true
+      "enabled": false
     },
     "bdd": {
       "enabled": false
