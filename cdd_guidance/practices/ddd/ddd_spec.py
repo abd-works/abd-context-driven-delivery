@@ -215,3 +215,19 @@ with description("a file the DDD practice claims as its own, so a page filtering
         with context("in a folder that holds no domain"):
             with it("should leave it to the other practices, its name saying nothing about the business"):
                 expect(self.ddd.claims(self.written("agent_tools/agent_tools.py", "class AgentOperation:\n    pass\n"))).to(be_false)
+
+
+# (S) Person --> Choose Action And Formats
+with description("the DDD bounded_context fidelity's formats"):
+    with before.all:
+        self.outputs = PRACTICE_CATALOGUE.create("ddd", fidelity="bounded_context").fidelities.current.outputs
+
+    with it("should save the map as draw.io beside its markdown and whiteboard"):
+        expect(self.outputs).to(equal({
+            "markdown": ".context/bounded-context-map.md",
+            "drawio": ".context/bounded-context-map.drawio",
+            "whiteboard": ".context/bounded-context-map.whiteboard",
+        }))
+
+    with it("should read and write draw.io through the map's draw.io adapter"):
+        expect(Ddd.format_adapters["drawio"][1]).to(equal("DrawIOBoundedContextMap"))

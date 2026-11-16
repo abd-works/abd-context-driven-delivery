@@ -327,13 +327,12 @@ class _ModulesDiagramWriter(ModulesView):
         return ET.tostring(mxfile, encoding='unicode', xml_declaration=False)
 
     def _write_titles(self, root_el: ET.Element, page_width: int) -> None:
-        system_name = self._channel.name or 'System'
         subtitle = (
             'Independent modules with one-way dependencies. Arrows point toward the depended-on module (build before). '
             'Path nesting = containment; shared base terms live on the parent.'
         )
         for cell_id, value, style, y, height in (
-            ('title', f'{system_name} - Modules Context', MODULE_TITLE_STYLE, '20', '32'),
+            ('title', self._channel.modules_title, MODULE_TITLE_STYLE, '20', '32'),
             ('subtitle', subtitle, MODULE_SUBTITLE_STYLE, '55', '20'),
         ):
             cell = ET.SubElement(root_el, 'mxCell', attrib={'id': cell_id, 'value': value, 'style': style, 'parent': '1', 'vertex': '1'})

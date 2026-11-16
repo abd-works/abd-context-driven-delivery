@@ -28,6 +28,10 @@ from cdd_guidance.practices.clean_engineering.model.class_stereotypes import mar
 from cdd_guidance.practices.ddd.model.stereotypes import kind_named_by, plain_class_name
 
 _EVENT_MAP = "event map"
+# The `##` sections a map holds that are no context: the event map, and the template's explanation of the map's format.
+_NOT_CONTEXTS = (_EVENT_MAP, "map format")
+# The map's own heading, which names it.
+_TITLE = "# "
 _CONTEXT = "## "
 _AGGREGATE = "### "
 _NOTE = "> "
@@ -603,6 +607,7 @@ class MarkdownBoundedContextMap(BoundedContextMap, MarkdownDomainNode):
         self.contexts = []
         self._lines = text.splitlines()
         self._index = 0
+        self.title = next((line.strip()[len(_TITLE):].strip() for line in self._lines if line.strip().startswith(_TITLE)), "")
         self._read_contexts()
         return self
 
@@ -624,7 +629,8 @@ class MarkdownBoundedContextMap(BoundedContextMap, MarkdownDomainNode):
 
     def _text(self, source: BoundedContextMap) -> str:
         """source as markdown: each context's own lines, then the event map."""
-        lines = ["# Domain Model" if source.has_class_cards else "# Bounded Context Map", ""]
+        heading = "Domain Model" if source.has_class_cards else (source.title or "Bounded Context Map")
+        lines = [f"{_TITLE}{heading}", ""]
         for context in source.contexts:
             if isinstance(context, MarkdownBoundedContext):
                 lines.extend(context.lines())
@@ -646,7 +652,7 @@ class MarkdownBoundedContextMap(BoundedContextMap, MarkdownDomainNode):
             line = self._lines[index].strip()
             if line.startswith(_CONTEXT) and not line.startswith(_AGGREGATE):
                 title = line[len(_CONTEXT):].split("|", 1)[0].strip().lower()
-                if title != _EVENT_MAP:
+                if title not in _NOT_CONTEXTS:
                     return index
             index += 1
         return None

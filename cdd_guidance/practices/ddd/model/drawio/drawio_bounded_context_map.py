@@ -7,6 +7,9 @@ reading a drawing builds each cell as the cell type its style names, and each ce
 
 from __future__ import annotations
 
+import html
+from xml.etree import ElementTree as ET
+
 from cdd_guidance.practices.clean_engineering.model.drawio.diagram_node import DrawIOModule
 from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model import DrawIOCleanEngineeringModel
 from cdd_guidance.practices.ddd.model.drawn.drawn_map import AggregateCell, ContextCell, DrawnBoundedContextMap
@@ -38,6 +41,16 @@ class DrawIOBoundedContextMap(DrawnBoundedContextMap, DrawIOCleanEngineeringMode
         del previous
         self.draw(canonical if canonical is not None else self)
         return DrawIOCleanEngineeringModel.render(self, self)
+
+    def _read_title(self, cell: ET.Element) -> None:
+        """The map's own name, from the title it was drawn under; a modules view's title names its system instead."""
+        super()._read_title(cell)
+        if cell.get("id") == "title" and not self.name_from_modules_title(cell):
+            self.title = html.unescape(cell.get("value", "")).strip()
+
+    @staticmethod
+    def name_from_modules_title(cell: ET.Element) -> bool:
+        return html.unescape(cell.get("value", "")).rstrip().endswith("Modules Context")
 
     def parse(self, text: str) -> "DrawIOBoundedContextMap":
         """Read a drawing into this map, and return it."""

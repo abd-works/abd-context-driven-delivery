@@ -73,6 +73,7 @@ stage: discovery
 clean_engineering: modules
 outputs:
   markdown: ".context/bounded-context-map.md"
+  drawio: ".context/bounded-context-map.drawio"
   whiteboard: ".context/bounded-context-map.whiteboard"
 ```
 
@@ -80,7 +81,7 @@ outputs:
 
 Draw where language changes — at the level of **business areas, organizational departments, and systems** (or collections of systems that share one model) — then the aggregates that protect invariants inside each context, and the dependency arcs between contexts. A bounded context sits **above** aggregates; it is not one box per aggregate. Names and boundaries are cheap to change here; they are expensive once the model, stories, and code hang off them.
 
-**Produce:** `bounded-context-map.md` from `templates/bounded-context.md`. Call clean_engineering at **modules**.
+**Produce:** `bounded-context-map.md` from `templates/bounded-context.md`; render it to `drawio` or `whiteboard` for the drawn map. Call clean_engineering at **modules**.
 
 #### Sketch
 

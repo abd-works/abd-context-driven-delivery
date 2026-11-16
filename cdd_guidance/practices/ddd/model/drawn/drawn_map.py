@@ -84,9 +84,15 @@ class DrawnBoundedContextMap(BoundedContextMap):
         super().__init__()
         self.name = _TITLE
 
+    @property
+    def modules_title(self) -> str:
+        """The drawing's title: the map's own name, as its heading gives it, else the modules view's."""
+        return self.title or super().modules_title
+
     def draw(self, source: BoundedContextMap) -> None:
         """Make source this drawing's modules: the aggregate view when its aggregates hold class cards (model
-        fidelity); otherwise the map."""
+        fidelity); otherwise the map. The drawing takes the map's own name."""
+        self.title = source.title
         if source.has_class_cards:
             source.write_classes(self)
         else:

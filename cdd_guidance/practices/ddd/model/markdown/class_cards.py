@@ -45,6 +45,11 @@ class MarkdownDomainNode:
             name = name.split("|", 1)[0]
         return name.strip()
 
+    def member_name(self, text: str) -> str:
+        """A member line's name: every word it holds, the choices after a `|` included, since only a heading's `|`
+        names an owner."""
+        return text.replace("**", "").replace("`", "").strip()
+
     def owner_from(self, heading: str) -> str:
         if "|" not in heading:
             return ""
@@ -367,7 +372,7 @@ class MarkdownEntity(ClassCard, Entity):
     def load_invariant_objects(self) -> None:
         """Read each member line under the root as one of its invariant objects, once."""
         for line in self._member_lines:
-            self.invariant_objects.append(MarkdownInvariantObject(self.plain_name(line.strip()), len(self.invariant_objects)))
+            self.invariant_objects.append(MarkdownInvariantObject(self.member_name(line), len(self.invariant_objects)))
         self._member_lines = []
 
 
