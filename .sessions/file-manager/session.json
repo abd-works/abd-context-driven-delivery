@@ -11,7 +11,7 @@
       "specification",
       "implementation"
     ],
-    "version": 85
+    "version": 87
   },
   "practices": {
     "stories": {
@@ -46,7 +46,7 @@
           "typescript"
         ]
       },
-      "enabled": true
+      "enabled": false
     },
     "clean_engineering": {
       "formats": {
@@ -83,7 +83,7 @@
       "enabled": true
     },
     "ddd": {
-      "enabled": true,
+      "enabled": false,
       "formats": {
         "bounded_context": [
           "markdown",
