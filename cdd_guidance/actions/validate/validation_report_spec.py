@@ -21,6 +21,19 @@ from space.session import Session, Sessions
 from cdd_guidance.actions.validate.validation_report import ValidationReport
 
 
+class _CheckedGraph:
+    """The graph a validate checked, as a report reads it: its violations, the files it was read from, and nothing
+    held beside them."""
+
+    def __init__(self, violations: list[Violation]) -> None:
+        self._violations = violations
+        self.files = [Path("graph.json")]
+        self.held_beside: list[str] = []
+
+    def violations(self) -> list[Violation]:
+        return list(self._violations)
+
+
 with description("a validation report"):
     with context("with a session report folder under the workspace"):
         with before.each:
@@ -43,7 +56,7 @@ with description("a validation report"):
             session = Session(Sessions(self.root))
             session.workpath = self.root
             session.session_path = self.session_dir
-            report_md = ValidationReport(session, []).of_graph(self.violations)
+            report_md = ValidationReport(session, [], _CheckedGraph(self.violations)).for_judge()
             report_path = self.session_dir / "validate-clean-engineering-code-src.md"
             report_path.write_text(report_md, encoding="utf-8")
             account = (self.root / "src/customer/account/account.ts").resolve()

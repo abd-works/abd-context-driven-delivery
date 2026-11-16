@@ -6,7 +6,9 @@ import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from space.repo.repo import Repo
 from space.session.session_log import HookLog
+from space.session.violation_history import VIOLATION_HISTORY_FILE, ViolationHistory
 
 if TYPE_CHECKING:
     from space.session.session import Session
@@ -27,6 +29,13 @@ class SessionFolder:
         """The log called filename that a hook appends to while this session is open, such as dispatch.debug, in the
         ``logs`` folder of the session's folder."""
         return HookLog(self._session.session_path / _HOOK_LOGS_FOLDER / filename)
+
+    @property
+    def violation_history(self) -> ViolationHistory:
+        """The history of every graph hit this session's validations found, judged, and fixed, kept in its folder and
+        tracked with it, stamped with the commits of the checkout the session works in. Made from wherever the folder is
+        now, since a session's folder moves when it closes."""
+        return ViolationHistory(self._session.session_path / VIOLATION_HISTORY_FILE, Repo.of_project(self._session.work_root))
 
     def keep_file(self, file: Path) -> Path:
         """Move ``file`` into this session's folder, where it stays with the session's work until it becomes lasting

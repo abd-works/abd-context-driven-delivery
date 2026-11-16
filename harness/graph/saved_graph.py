@@ -218,6 +218,14 @@ class SavedPractice:
         return " ".join(name.lower().split())
 
     @property
+    def violated(self) -> SavedPractice:
+        """This practice keeping only its violations and the nodes they were found on, each without its facts: what a
+        reader of the violations needs to show them, a small part of a practice that can hold tens of thousands of nodes."""
+        hit = {violation.node_id for violation in self.violations}
+        nodes = [SavedNode({**node.record, "facts": {}}) for node in self.nodes if node.node_id in hit]
+        return SavedPractice.from_fields(self.name, self.source_root, {}, nodes, [], self.violations)
+
+    @property
     def violations_by_node(self) -> dict[str, list[Violation]]:
         """The practice's violations, by the id of the node each was found on."""
         found: dict[str, list[Violation]] = {}
@@ -321,6 +329,12 @@ class SavedGraph:
     @property
     def text(self) -> str:
         return json.dumps(self.document, separators=(",", ":"))
+
+    @property
+    def violated(self) -> SavedGraph:
+        """This graph keeping, in each practice, only its violations and the nodes they were found on, with the overlays
+        it was loaded with: what a validation report keeps beside it, so the board shows each violation on its node."""
+        return SavedGraph(self.overlays, {name: practice.violated for name, practice in self.practices.items()})
 
     def of_practices(self, keys: list[str]) -> SavedGraph:
         """This saved graph holding only the practices keys names."""

@@ -22,6 +22,8 @@ from space.kanban.board import Stage  # noqa: E402
 from harness.graph.violation import Violation  # noqa: E402
 from space.kanban.report import ReportRule  # noqa: E402
 from space.kanban.session_board_examples import saved_graph, saved_practice  # noqa: E402
+from harness.graph.edge import Edge  # noqa: E402
+from harness.graph.saved_graph import SavedGraph, SavedNode  # noqa: E402
 from space.kanban.story_test import progress_in  # noqa: E402
 from space.kanban.ticket import Ticket  # noqa: E402
 from space.kanban.board import NotAStageError  # noqa: E402
@@ -53,6 +55,52 @@ def pet_visits_reports(project: ProjectTools) -> None:
 
 def modules_report(project: ProjectTools) -> dict:
     return project.call("fidelity-progress.report", ticket="pet-visits", fidelity="clean-engineering-modules")
+
+
+# A report as validate now saves it: each rule's heading and where its text is kept, never the text, with its graph hits
+# and the judgment the validating agent appended.
+SAVED_MODULES_REPORT = """# Graph rule validation
+
+## Summary
+
+**Total graph violations:** 2
+
+## Rules
+
+### `domain-nouns-only`
+
+Rule text: [clean_engineering/clean_engineering.md:127](clean_engineering.md#L127)
+
+**Graph violations:** 2
+
+- [X] **ERROR** **[graph rule]** - [docs/map.md](docs/map.md#L12): Story ``: Name the story with a verb
+
+## Judgment — `docs/map.md`
+
+### `one-way-deps` — Fail
+- map.md:4 `pets`: pets imports visits, which imports pets.
+"""
+
+
+def whole_modules_graph() -> dict:
+    """The whole graph a validate of the modules checked: the node its hits are on, another node with facts and no hit,
+    and the edge between them."""
+    practice = saved_practice("clean_engineering", "node-1", "docs/map.md", 12, ("domain-nouns-only", "Name the story with a verb"), ("domain-nouns-only", "Name the epic with a verb"))
+    practice.nodes.append(SavedNode({"node_id": "node-2", "name": "visits", "type": "Module", "practice": "clean_engineering", "file": "docs/other.md", "line": 3, "end_line": 9, "stage": "", "facts": {"members": ["Visit", "Vet"]}}))
+    practice.edges.append(Edge.from_record({"kind": "depends_on", "parent": "node-1", "child": "node-2"}))
+    practice.root_facts = {"classes": ["Visit", "Vet"]}
+    return saved_graph(practice)
+
+
+def modules_report_on(graph: dict) -> dict:
+    """The report of pet-visits' modules fidelity, saved as validate saves it, with graph beside it."""
+    def read(project: ProjectTools) -> dict:
+        pet_visits_reports(project)
+        reports = project.sessions / "pet-visits" / "validation-reports"
+        (reports / "clean-engineering-modules-20261031T041200.md").write_text(SAVED_MODULES_REPORT, encoding="utf-8")
+        (reports / "clean-engineering-modules-20261031T041200.json").write_text(json.dumps(graph), encoding="utf-8")
+        return modules_report(project)
+    return ProjectTools.answer_of(read)
 
 
 def sign_up(project: ProjectTools, *log_lines: str) -> None:
@@ -175,6 +223,25 @@ with description("the board tools") as self:
         with context("that sets a WIP limit on a column that is not a stage"):
             with it("should refuse it, naming the column"):
                 expect(lambda: self.project.call("stage.set_wip_limit", stage="Backlog", limit=2)).to(raise_error(NotAStageError))
+
+        # Validate saves only a graph's violations and the nodes they are on beside a report, and points at each rule's
+        # text instead of copying it; the board shows the report as it did when both were saved whole.
+        with context("with a report saved with its rules pointed at and only its violations' part of the graph"):
+            with before.all:
+                whole = whole_modules_graph()
+                self.from_whole = modules_report_on(whole)
+                self.from_kept = modules_report_on(SavedGraph.from_document(whole).violated.document)
+
+            with it("should show every violation on its node, at its file and line, as the whole graph shows it"):
+                expect(self.from_kept["rules"]).to(equal(self.from_whole["rules"]))
+
+            with it("should describe each rule from its practice"):
+                rule = next(rule["rule"] for rule in self.from_kept["rules"] if rule["rule"]["slug"] == "domain-nouns-only")
+                expect(rule["body"]).to(start_with("Name modules after domain concepts"))
+
+            with it("should list the judgment's findings beside the graph's hits"):
+                judged = next(rule for rule in self.from_kept["rules"] if rule["rule"]["slug"] == "one-way-deps")
+                expect((judged["violations"][0]["location"], judged["violations"][0]["line"])).to(equal(("docs/map.md", 4)))
 
         # (S) Person --> Open Validation Report
         with context("with validation reports saved for a fidelity"):

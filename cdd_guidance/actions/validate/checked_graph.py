@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from harness.agent_tools.tool_call import ToolCall
+from harness.guidance.guidance import FidelityGuidance
 from harness.graph.saved_graph import SavedGraph
 from harness.graph.violation import Violation
 
@@ -97,11 +98,18 @@ class CheckedGraph:
         return self._checked.held_beside if self._checked is not None else []
 
     def save_at(self, destination: Path) -> None:
-        """Keep the graph this call checked at destination, beside a report, so the report's violations stay on their
-        nodes: the graph it built, the session's saved graph, or the graph files it was named, read as one saved graph."""
+        """Keep the violations of the graph this call checked at destination, beside a report, each with the node it
+        was found on, so the board shows the report's violations on their nodes: of the graph it built, the session's
+        saved graph, or the graph files it was named. Only those, since the whole graph of a repository runs to a hundred
+        megabytes and the board reads none of the rest; a graph file the call was named is left as it is."""
         if destination in self.files or self._checked is None:
             return
-        destination.write_text(self._checked.text, encoding="utf-8")
+        destination.write_text(self._checked.violated.text, encoding="utf-8")
+
+    def violations_of(self, fidelity: FidelityGuidance) -> list[Violation]:
+        """The violations this call reports that fidelity's practice found, which fidelity's report lists."""
+        key = fidelity.practice_guidance.key
+        return [violation for violation in self.violations() if violation.practice == key]
 
     def judged_files(self, on_graph: bool) -> str:
         """Each checked format and its files, for the fidelities judged on this call's graph (on_graph) or on their
