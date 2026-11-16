@@ -10,7 +10,7 @@ from harness.installation.app_ports import AppPorts
 FILES_APP_FOLDER = Path(__file__).resolve().parent / "app"
 # The page shows each file in the graph explorer's source view, which it builds from the Graph app's folder, so a
 # change there builds the Files app again.
-SOURCE_VIEW_FOLDER = Path(__file__).resolve().parents[3] / "harness" / "graph" / "app" / "source"
+SOURCE_VIEW_FOLDER = Path(__file__).resolve().parents[1] / "graph" / "app" / "source"
 
 # The Files app's ports, as ``app/ports.json`` gives them: ``files``, the ports its server listens on. Its server reads
 # the same file, so the port is written once.

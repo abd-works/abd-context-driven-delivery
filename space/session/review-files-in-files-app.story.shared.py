@@ -9,7 +9,7 @@ space/kanban/review-files-in-viewer.story.shared.py on 2026-11-14, when the File
 Steps reach the session only through the namespace a tier hands them (`world.Ticket`, `world.Chat`), so the domain spec
 and the cdd tools spec replay the same steps. A file is named from the project, as the Files app names it.
 
-Covered by the Files app's own specs (`app/files/*.spec.ts`), not here, because only the page shows them: the source
+Covered by the Files app's own specs (`harness/files_app/app/files/*.spec.ts`), not here, because only the page shows them: the source
 view drawing Python, a comment marker beside a line, opening a comment from its marker, a toast, the practice toggles,
 and the page showing a file again once its comment is processed. The Thens below check what the session answers for
 each: the file's text and language, the comments and their state, and the chat's queue.

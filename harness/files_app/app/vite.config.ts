@@ -14,8 +14,8 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@cdd': resolved('../../../../.claude/language-adapters/typescript'),
-      '@source-view': resolved('../../../../harness/graph/app/source'),
+      '@cdd': resolved('../../../.claude/language-adapters/typescript'),
+      '@source-view': resolved('../../graph/app/source'),
       react: resolved('./node_modules/react'),
       'react-dom': resolved('./node_modules/react-dom'),
       '@monaco-editor/react': resolved('./node_modules/@monaco-editor/react'),
