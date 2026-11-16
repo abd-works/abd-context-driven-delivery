@@ -115,7 +115,9 @@ class Label(BoardElement):
     y: float = 0
     text: str = ""
     size: str = ""
-    wrap: float = 0
+    wrap: Optional[float] = None
+    """The width the words wrap at; none, so they run on one line. A wrap of 0 would set every word on a line of its
+    own, so a label that wraps nowhere writes none."""
 
     @property
     def place(self) -> Optional[Box]:

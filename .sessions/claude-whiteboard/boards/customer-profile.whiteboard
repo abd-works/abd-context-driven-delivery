@@ -1,0 +1,414 @@
+{
+ "v": 1,
+ "title": "Customer Profile Classes",
+ "order": [
+  "title",
+  "class.bad825394dbb",
+  "class.9e9f7136c42d",
+  "class.819375af1c41",
+  "class.52573536cec4",
+  "class.bd4ddd78195f",
+  "class.e94ac670e80d",
+  "class.111e7cc81b2c",
+  "class.71809f34729c",
+  "class.1134330e436b",
+  "class.cb6574f282d6",
+  "class.d15073410575",
+  "class.aceb2d967c35",
+  "class.6c4a4895bc38",
+  "class.ec04967e0904",
+  "class.a4524ea496ac",
+  "class.3252ca9bf78e",
+  "class.9491a77cc9f8",
+  "class.49a049182fee",
+  "inheritance.256cf2504129",
+  "inheritance.341af94acd6b",
+  "inheritance.d05772186f8c",
+  "association.70a228f3be18",
+  "association.7e4dd71a67f2",
+  "association.fbf431b880fd",
+  "dependency.35c0b24568bd",
+  "dependency.a7fb42d00957",
+  "dependency.39460bafae1f",
+  "dependency.0d90eb38ecfd",
+  "dependency.f673b9a0e3c2",
+  "dependency.ee0acac7922b"
+ ],
+ "elements": {
+  "title": {
+   "type": "text",
+   "x": 60,
+   "y": -20,
+   "text": "Model - Classes",
+   "size": "large"
+  },
+  "class.bad825394dbb": {
+   "type": "shape",
+   "color": "white",
+   "text": "`customer-profile`\n**_module**\n---\n---\n+ Label()\n+ TextField()\n+ chooseDateLabel(shownDate: string)\n+ DateField(props: FieldProps)\n+ SelectField()\n+ PhoneField()\n+ AlertBox()\n+ Alerts()\n+ IdInformationTitle()\n+ IdInformation(form: Pick<FieldProps, 'profile' | 'setProfile'>)\n+ AddressInformation(form: Pick<FieldProps, 'profile' | 'setProfile'>)\n+ ConfirmDetailsView()",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 200.0,
+   "y": 60.0,
+   "w": 560.0,
+   "h": 360.0
+  },
+  "class.9e9f7136c42d": {
+   "type": "shape",
+   "color": "white",
+   "text": "`customer-profile`\n**CustomerProfileClient**\n---\n+ operationError: string | null\n+ detailsTouched: readonly ProfileField[]\n+ supportTouched: SupportTicketRequirement['field'][]\n+ dialCode\n---\n+ create(credentials: Credentials): Promise<CustomerProfileClient>\n+ shownDateOfBirth(): string\n+ otherPhoneNumberOnReview(): string | null\n+ shownOtherPhoneNumber(): string\n- _formattedOtherPhoneNumber(): string | null\n+ withPreferredName(preferredName: string): CustomerProfileClient\n+ withOtherPhoneNumber(otherPhoneNumber: string): CustomerProfileClient\n+ withAddress(field: AddressField, entered: string): CustomerProfileClient\n+ addressMessage(field: AddressRequirement['field']): string | null\n+ canSaveUpdates(): boolean\n+ saveUpdates(preferredName: string, otherPhoneNumber: string, address: Address): Promise<CustomerProfileClient>\n- _saved(response: Response): Promise<CustomerProfileClient>\n+ withSupportSubject(subject: string): CustomerProfileClient\n+ withSupportMessage(message: string): CustomerProfileClient\n+ leftSupportField(field: SupportTicketRequirement['field']): CustomerProfileClient\n+ supportMessageFor(field: SupportTicketRequirement['field']): string | null\n+ canSendSupportRequest(): boolean\n+ sendSupportRequest(subject: string, message: string): Promise<CustomerProfileClient>\n- _supportTicket(): SupportTicket\n- _touched(field: SupportTicketRequirement['field']): CustomerProfileClient\n+ withPersonaInquiry(inquiry: PersonaInquiry): CustomerProfileClient\n+ showsVerified(): boolean\n+ isDetailLocked(field: ProfileField): boolean\n+ detailOf(field: ProfileField): string\n+ withDetail(field: ProfileField, entered: string): CustomerProfileClient\n+ detailMessage(field: ProfileField): string | null\n+ canConfirmIdentity(): boolean\n+ editDetails(): CustomerProfileClient\n+ confirmIdentity(identity: Identity, address: Address, kyc: Kyc): Promise<CustomerProfileClient>\n- _withIdentity(preferredName: string, otherPhoneNumber: string): CustomerProfileClient\n- _copy(): CustomerProfileClient\n- _post(path: string, credentials: Credentials, operation: CustomerProfileOperation, fallbackMessage: string): Promise<CustomerProfileClient>",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 0.0,
+   "y": 820.0,
+   "w": 1100.0,
+   "h": 864.0
+  },
+  "class.819375af1c41": {
+   "type": "shape",
+   "color": "white",
+   "text": "`customer-profile`\n**CustomerProfileNode**\n---\n---\n+ fromRequest(req: ParadiseRequest, customerProfileRepository: CustomerProfileRepositoryNode, visitorAccess: { allowVisitor?: boolean }): Promise<CustomerProfileNode>\n+ fromPostedUpdates(req: ParadiseRequest & { body?: unknown }): z.output<typeof postedProfileUpdatesSchema>\n+ fromPostedIdentityConfirmation(req: ParadiseRequest & { body?: unknown }): z.output<typeof postedIdentityConfirmationSchema>\n+ fromPostedSupportRequest(req: ParadiseRequest & { body?: unknown }): z.output<typeof postedSupportRequestSchema>\n+ stored(): boolean\n+ response(): CustomerProfileResponse",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 2100.0,
+   "y": 820.0,
+   "w": 1280.0,
+   "h": 234.0
+  },
+  "class.52573536cec4": {
+   "type": "shape",
+   "color": "white",
+   "text": "`customer-profile`\n**CustomerProfileRepositoryNode**\n---\n---\n+ constructor()\n+ blank(credentials: Credentials, customerProfileId: string): CustomerProfileNode\n- _afterProfileSaved(): void\n- _emptyCustomerProfile(credentials: Credentials): CustomerProfileNode\n+ loadById(customerProfileId: string, credentials?: Credentials): CustomerProfileNode | null\n+ load(credentials: Credentials): Promise<CustomerProfileNode | null>\n+ createOnVerified(credentials: Credentials): Promise<CustomerProfileNode>\n+ draft(credentials: Credentials): CustomerProfileNode",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 1260.0,
+   "y": 820.0,
+   "w": 720.0,
+   "h": 276.0
+  },
+  "class.bd4ddd78195f": {
+   "type": "shape",
+   "color": "white",
+   "text": "`customer-profile`\n**_module**\n---\n---\n+ createCustomerProfileRoutes(customerProfileRepository: CustomerProfileRepositoryNode)\n+ registerProfileRoutes(router: Router, customerProfileRepository: CustomerProfileRepositoryNode)\n+ registerSelfCareRoutes(router: Router, customerProfileRepository: CustomerProfileRepositoryNode)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 2760.0,
+   "y": 60.0,
+   "w": 760.0,
+   "h": 171.0
+  },
+  "class.e94ac670e80d": {
+   "type": "shape",
+   "color": "white",
+   "text": "`customer-profile`\n*«Value Object»*\n**Identity**\n---\n+ requirements: Record<IdentityRequirement['field'], IdentityRequirement>\n+ name\n+ lastName\n+ fullName\n+ preferredName\n+ expiryDate\n+ dateOfBirth\n+ idNationality\n+ idNumber\n+ idType\n+ otherPhoneNumber\n---\n+ constructor(email: string, name, lastName, fullName, preferredName, expiryDate, dateOfBirth, idNationality, idNumber, idType, otherPhoneNumber)\n+ missingRequirements(): IdentityRequirement[]\n+ preferredNameIsSingleWord(): boolean\n+ digitsOf(phoneNumber: string): string\n+ withContactDetails(preferredName: string, otherPhoneNumber: string): Identity\n+ toJSON(): z.input<typeof identitySchema>",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 3500.0,
+   "y": 820.0,
+   "w": 1120.0,
+   "h": 486.0
+  },
+  "class.111e7cc81b2c": {
+   "type": "shape",
+   "color": "white",
+   "text": "`customer-profile`\n*«Value Object»*\n**Address**\n---\n+ requirements: Record<AddressRequirement['field'], AddressRequirement>\n+ street\n+ complement\n+ city\n+ parish\n+ postalCode\n+ country\n---\n+ constructor(street, complement, city, parish, postalCode, country)\n+ toJSON(): z.input<typeof addressSchema>\n+ missingRequirements(): AddressRequirement[]",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 4720.0,
+   "y": 820.0,
+   "w": 560.0,
+   "h": 339.0
+  },
+  "class.71809f34729c": {
+   "type": "shape",
+   "color": "white",
+   "text": "`customer-profile`\n*«Entity»*\n**SupportTicket**\n---\n+ requirements: Record<SupportTicketRequirement['field'], SupportTicketRequirement>\n+ subjects\n---\n+ missingRequirements(): SupportTicketRequirement[]\n+ toJSON(): z.input<typeof supportTicketSchema>",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 5380.0,
+   "y": 820.0,
+   "w": 660.0,
+   "h": 213.0
+  },
+  "class.1134330e436b": {
+   "type": "shape",
+   "color": "white",
+   "text": "`customer-profile`\n*«Value Object»*\n**Kyc**\n---\n+ verified\n---\n+ constructor(personaInquiryId: string | null, verified)\n+ toJSON(): z.input<typeof kycSchema>",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 6140.0,
+   "y": 820.0,
+   "w": 460.0,
+   "h": 192.0
+  },
+  "class.cb6574f282d6": {
+   "type": "shape",
+   "color": "white",
+   "text": "`customer-profile`\n*«Aggregate Root» «Entity»*\n**CustomerProfile**\n---\n+ id: string\n+ identity: Identity\n+ address: Address\n+ supportTickets: SupportTicket[]\n+ messages\n+ done\n+ identityTicketRequired\n+ kyc\n---\n+ constructor(credentials: Credentials, customerProfileId?: string, identity?: Identity, address?: Address, billing: CustomerProfileBilling | null)\n+ completeCart(done: boolean | null): void\n+ identityVerified(): boolean\n+ kycRequired(): boolean\n+ confirmIdentity(identity: Identity, address: Address, kyc: Kyc): void\n+ deferIdentityVerification(): void\n+ saveUpdates(preferredName: string, otherPhoneNumber: string, address: Address): void\n+ sendSupportRequest(subject: string, message: string): void\n- _refused(operation: CustomerProfileOperation, message: string): CustomerProfileException\n+ enterProfileDetails(identity: Identity, address: Address): void\n+ toJSON(): CustomerProfileJson",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 3720.0,
+   "y": 60.0,
+   "w": 1140.0,
+   "h": 528.0
+  },
+  "class.d15073410575": {
+   "type": "shape",
+   "color": "white",
+   "text": "`customer-profile`\n**CustomerProfileException**\n---\n---\n+ constructor(operation: CustomerProfileOperation, credentials: Credentials, message: string, cause: Error)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 5040.0,
+   "y": 60.0,
+   "w": 840.0,
+   "h": 129.0
+  },
+  "class.aceb2d967c35": {
+   "type": "shape",
+   "color": "white",
+   "text": "`customer-profile`\n*«Repository»*\n**CustomerProfileRepository**\n---\n+ customerProfiles\n+ nextCustomerProfileId\n+ failNextStore\n---\n+ blank(credentials: Credentials, customerProfileId: string): CustomerProfile\n- _reset(): void\n- _afterProfileSaved(): void\n- _failNextStore(): void\n- _emptyCustomerProfile(credentials: Credentials): CustomerProfile\n- _seedCustomerProfile(customerProfile: CustomerProfile): void\n- _seed(customerProfile: CustomerProfile): CustomerProfile\n+ loadById(customerProfileId: string, credentials?: Credentials): CustomerProfile | null\n+ update(customerProfile: CustomerProfile): void\n+ revive(stored: CustomerProfileJson, credentials: Credentials): CustomerProfile\n+ rejectSharedIdNumber(customerProfile: CustomerProfile, identity: Identity): void\n+ create(credentials: Credentials): Promise<CustomerProfile>\n+ ensureBillingActive(credentials: Credentials, customerProfile: CustomerProfile): Promise<void>\n+ load(credentials: Credentials): Promise<CustomerProfile | null>\n- _loadStored(credentials: Credentials): CustomerProfile | null\n+ persistCustomerProfile(credentials: Credentials): Promise<CustomerProfile | null>\n+ persistNewCustomerProfile(email: string, credentials: Credentials): Promise<CustomerProfile>\n- _nextFreeCustomerProfileId(): string\n+ validateToken(token: CredentialsToken): string | Error\n+ exception(operation: CustomerProfileOperation, credentials: Credentials, message: string): CustomerProfileException",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 1740.0,
+   "y": 60.0,
+   "w": 920.0,
+   "h": 612.0
+  },
+  "class.6c4a4895bc38": {
+   "type": "shape",
+   "color": "white",
+   "text": "`customer-profile`\n**_module**\n---\n---\n+ TextField()\n+ YourInformation()\n+ ContactInformation()\n+ AddressInformation()\n+ EditProfileView()",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 840.0,
+   "y": 60.0,
+   "w": 200.0,
+   "h": 213.0
+  },
+  "class.ec04967e0904": {
+   "type": "shape",
+   "color": "white",
+   "text": "`customer-profile`\n**_module**\n---\n---\n+ GreetingView()",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 1140.0,
+   "y": 60.0,
+   "w": 200.0,
+   "h": 129.0
+  },
+  "class.a4524ea496ac": {
+   "type": "shape",
+   "color": "white",
+   "text": "`customer-profile`\n*«Value Object»*\n**PersonaInquiry**\n---\n---\n+ constructor(inquiryId: string | null, verified: boolean, identity: Identity, address: Address)\n+ finished(onComplete): its id, `completed` or not, and the fields read from the ID. */\n  static fromCompletion(\n+ run(personaFailed): no inquiry, nothing read, the customer enters their details. */\n  static failed(): PersonaInquiry\n- _text(field: PersonaField | undefined): string\n- _shownDate(read: string): string",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 2920.0,
+   "y": 1830.0,
+   "w": 760.0,
+   "h": 276.0
+  },
+  "class.3252ca9bf78e": {
+   "type": "shape",
+   "color": "white",
+   "text": "`customer-profile`\n**_module**\n---\n---\n+ Thanks()\n+ MessageField()\n+ NoteForm()\n+ SendUsANoteView()",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 5940.0,
+   "y": 60.0,
+   "w": 200.0,
+   "h": 192.0
+  },
+  "class.9491a77cc9f8": {
+   "type": "shape",
+   "color": "white",
+   "text": "`customer-profile`\n**_module**\n---\n---\n+ SupportOption()\n+ SupportView()\n+ HaveFeedbackView()",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 6200.0,
+   "y": 60.0,
+   "w": 200.0,
+   "h": 171.0
+  },
+  "class.49a049182fee": {
+   "type": "shape",
+   "color": "white",
+   "text": "`customer-profile`\n**_module**\n---\n---\n+ VerifyIdView()",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 1440.0,
+   "y": 60.0,
+   "w": 200.0,
+   "h": 129.0
+  },
+  "inheritance.256cf2504129": {
+   "type": "arrow",
+   "from": "class.9e9f7136c42d",
+   "to": "class.cb6574f282d6",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "extends"
+  },
+  "inheritance.341af94acd6b": {
+   "type": "arrow",
+   "from": "class.819375af1c41",
+   "to": "class.cb6574f282d6",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "extends"
+  },
+  "inheritance.d05772186f8c": {
+   "type": "arrow",
+   "from": "class.52573536cec4",
+   "to": "class.aceb2d967c35",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "extends"
+  },
+  "association.70a228f3be18": {
+   "type": "arrow",
+   "from": "class.cb6574f282d6",
+   "to": "class.e94ac670e80d",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "identity",
+   "bends": [
+    "v",
+    456
+   ]
+  },
+  "association.7e4dd71a67f2": {
+   "type": "arrow",
+   "from": "class.cb6574f282d6",
+   "to": "class.111e7cc81b2c",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "address",
+   "bends": [
+    "v",
+    456
+   ]
+  },
+  "association.fbf431b880fd": {
+   "type": "arrow",
+   "from": "class.cb6574f282d6",
+   "to": "class.71809f34729c",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "supportTickets",
+   "bends": [
+    "v",
+    436
+   ]
+  },
+  "dependency.35c0b24568bd": {
+   "type": "arrow",
+   "from": "class.cb6574f282d6",
+   "to": "class.1134330e436b",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "confirmIdentity",
+   "dash": true,
+   "bends": [
+    "v",
+    416
+   ]
+  },
+  "dependency.a7fb42d00957": {
+   "type": "arrow",
+   "from": "class.6c4a4895bc38",
+   "to": "class.9e9f7136c42d",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "EditProfileView",
+   "dash": true,
+   "bends": [
+    "v",
+    134,
+    430,
+    -156,
+    -380,
+    -472
+   ]
+  },
+  "dependency.39460bafae1f": {
+   "type": "arrow",
+   "from": "class.ec04967e0904",
+   "to": "class.9e9f7136c42d",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "GreetingView",
+   "dash": true,
+   "bends": [
+    "v",
+    86,
+    -170,
+    -94,
+    240,
+    -502
+   ]
+  },
+  "dependency.0d90eb38ecfd": {
+   "type": "arrow",
+   "from": "class.49a049182fee",
+   "to": "class.a4524ea496ac",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "VerifyIdView",
+   "dash": true,
+   "bends": [
+    "v",
+    646,
+    530,
+    1656,
+    -150,
+    -198
+   ]
+  },
+  "dependency.f673b9a0e3c2": {
+   "type": "arrow",
+   "from": "class.bd4ddd78195f",
+   "to": "class.819375af1c41",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "registerProfileRoutes",
+   "dash": true,
+   "bends": [
+    "v",
+    624
+   ]
+  },
+  "dependency.ee0acac7922b": {
+   "type": "arrow",
+   "from": "class.9e9f7136c42d",
+   "to": "class.a4524ea496ac",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "withPersonaInquiry",
+   "dash": true,
+   "bends": [
+    "v",
+    548,
+    2610,
+    -178
+   ]
+  }
+ }
+}

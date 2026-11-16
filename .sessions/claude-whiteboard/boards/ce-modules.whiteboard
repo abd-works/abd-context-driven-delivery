@@ -1,0 +1,126 @@
+{
+ "v": 1,
+ "title": "CE Modules View",
+ "order": [
+  "module.1562cff31252",
+  "title",
+  "subtitle",
+  "about.1562cff31252",
+  "module.d581a05e375b",
+  "module.0843b98c31b8",
+  "module.7354fb826ffd",
+  "module.f0db3fa401ae",
+  "needs.478b0ccc7d56",
+  "needs.67b09a9ac1df",
+  "needs.bf81131db91a",
+  "needs.c23d2f688350",
+  "needs.4ce8000cfb50"
+ ],
+ "elements": {
+  "module.1562cff31252": {
+   "type": "container",
+   "color": "blue",
+   "text": "powers",
+   "x": 756.0,
+   "y": 100.0,
+   "w": 764.0,
+   "h": 198.0
+  },
+  "title": {
+   "type": "text",
+   "x": 40,
+   "y": -36,
+   "text": "Powers - Modules Context",
+   "size": "large"
+  },
+  "subtitle": {
+   "type": "text",
+   "x": 40,
+   "y": 20,
+   "text": "Independent modules with one-way dependencies. Arrows point toward the depended-on module (build before). Path nesting = containment; shared base terms live on the parent.",
+   "size": "small",
+   "wrap": 600
+  },
+  "about.1562cff31252": {
+   "type": "text",
+   "x": 772.0,
+   "y": 112.0,
+   "text": "*Shared Effect seam on the parent.*\n- Effect",
+   "size": "small",
+   "wrap": 732.0
+  },
+  "module.d581a05e375b": {
+   "type": "shape",
+   "color": "#dae8fc",
+   "text": "**powers/attack**\n*Specialize Effect for attack-type powers.*\n- AttackEffect",
+   "kind": "rounded",
+   "size": "small",
+   "textAlign": "left",
+   "x": 772.0,
+   "y": 178.0,
+   "w": 360.0,
+   "h": 87.0
+  },
+  "module.0843b98c31b8": {
+   "type": "shape",
+   "color": "#dae8fc",
+   "text": "**powers/defense**\n*Specialize Effect for defense-type powers.*\n- DefenseEffect\n- Shield",
+   "kind": "rounded",
+   "size": "small",
+   "textAlign": "left",
+   "x": 1144.0,
+   "y": 178.0,
+   "w": 360.0,
+   "h": 108.0
+  },
+  "module.7354fb826ffd": {
+   "type": "shape",
+   "color": "blue",
+   "text": "**checks**\n*Resolve d20 + trait against difficulty.*\n- Trait\n- Check\n- CheckResult",
+   "kind": "rounded",
+   "size": "small",
+   "textAlign": "left",
+   "x": 40.0,
+   "y": 100.0,
+   "w": 340.0,
+   "h": 129.0
+  },
+  "module.f0db3fa401ae": {
+   "type": "shape",
+   "color": "blue",
+   "text": "**character**\n*Character sheet ownership.*\n- Character\n- Ability\n- ISource",
+   "kind": "rounded",
+   "size": "small",
+   "textAlign": "left",
+   "x": 428.0,
+   "y": 100.0,
+   "w": 280.0,
+   "h": 129.0
+  },
+  "needs.478b0ccc7d56": {
+   "type": "arrow",
+   "from": "module.1562cff31252",
+   "to": "module.f0db3fa401ae"
+  },
+  "needs.67b09a9ac1df": {
+   "type": "arrow",
+   "from": "module.1562cff31252",
+   "to": "module.7354fb826ffd"
+  },
+  "needs.bf81131db91a": {
+   "type": "arrow",
+   "from": "module.d581a05e375b",
+   "to": "module.7354fb826ffd"
+  },
+  "needs.c23d2f688350": {
+   "type": "arrow",
+   "from": "module.0843b98c31b8",
+   "to": "module.f0db3fa401ae"
+  },
+  "needs.4ce8000cfb50": {
+   "type": "arrow",
+   "from": "module.f0db3fa401ae",
+   "to": "module.7354fb826ffd"
+  }
+ }
+}

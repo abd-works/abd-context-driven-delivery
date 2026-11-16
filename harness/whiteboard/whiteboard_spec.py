@@ -3,7 +3,7 @@
 from expects import be_below, equal, expect, raise_error
 from mamba import before, context, description, it
 
-from harness.whiteboard import Arrow, Box, Section, Shape, StoreWrite, UnreadableBoard, Whiteboard, WhiteboardNode
+from harness.whiteboard import Arrow, Box, Label, Section, Shape, StoreWrite, UnreadableBoard, Whiteboard, WhiteboardNode
 
 
 class CardNode(WhiteboardNode):
@@ -61,6 +61,10 @@ with description("a whiteboard") as self:
 
         with it("should carry the arrow's label"):
             expect(self.record["label"]).to(equal("then"))
+
+    with context("with a title that wraps nowhere"):
+        with it("should write no wrap, so its words run on one line rather than one word to a line"):
+            expect("wrap" in Label("title", x=0, y=0, text="Shop - Classes", size="large").record).to(equal(False))
 
     with context("that is saved and loaded again"):
         with it("should load the same title, elements and order"):

@@ -47,7 +47,7 @@ KEY_LENGTH = 12
 """Hex digits of a name's hash in an element id: enough that two modules or classes of one model never share one."""
 TITLE_ROOM = 80
 """How far above the first card or module the board's title stands."""
-SUBTITLE_ROOM = 40
+SUBTITLE_ROOM = 56
 SUBTITLE_WRAP = 600
 """How wide the line under a modules view's title runs before it wraps."""
 """How far a modules view's title stands above the line under it that says how to read the view."""
