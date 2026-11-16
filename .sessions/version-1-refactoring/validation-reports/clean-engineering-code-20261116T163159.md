@@ -505,84 +505,12 @@ Evaluate the current context against this rule (use-typed-signatures):
 
 ---
 
-Judgment by five parallel judges (2026-11-16), each graph hit confirmed or judged noise, with a cross-file pass (parallel models, duplication, vocabulary, state handed down, hidden storage, legacy API, dependency direction) that searched beyond the flagged files. The four test-coverage rules (operation-has-a-proving-test, class-demonstrated-by-a-test, invariant-has-a-failing-case, every-branch-taken-by-a-test) need a coverage run and were not judged.
-
-## Judgment — `cdd_guidance/patterns/lern_domain_driven/graph_overlay.py`
-
-### `do-not-invent-parallel-object-models` — Fail
-- graph_overlay.py:48 `_LernReading`: OSS's `_OssReading` is a second copy of this reading (overlay, graph, root, link, file-node creation, aggregate-folder discovery) instead of one shared pattern reading that both overlays extend.
-
-## Judgment — `cdd_guidance/patterns/lern_domain_driven/tier_facts.py`
-
-### `do-not-invent-parallel-object-models` — Fail
-- tier_facts.py:48 `TierFile`: OSS's `OssFile` repeats this class (text, relative, `_source`, `at`, `web_path_literals`, `_in_import`, `_in_comment`) for the same concept, a TypeScript tier file of a pattern the OSS pattern says it carries from LERN; there should be one tier-file model.
-
-## Judgment — `cdd_guidance/patterns/oss_portal_domain_driven/graph_overlay.py`
-
-### `limit-operation-parameters` — Fail
-- graph_overlay.py:136 `_tier_facts`: takes 5 values; `slug` and `service_name` are derived from `folder`, so callers pass setup, not intent (LERN holds these on `_AggregateTiers`).
-- graph_overlay.py:191 `_file_node`: takes 4 values (practice, relative, semantic, name); LERN's `_PracticeFiles(practice).node(relative, semantic, name)` shows the practice belongs on an object.
-
-### `eliminate-duplication` — Fail
-- graph_overlay.py:58 `__init__`: `_OssReading.__init__` is the same body as `_LernReading.__init__`; the whole reading class (and `_file_node` vs `_PracticeFiles.node`, `_link` vs `link`, `_aggregate_folders` vs `_tier_folders`) is copied from LERN.
-- graph_overlay.py:187 `_set_facts`: the same "for key, value in facts: node.set_fact" loop also appears in cdd_guidance/patterns/lern_domain_driven/graph_overlay.py:89, :114, :221 and cdd_guidance/patterns/cdd_web_domain_access/graph_overlay.py:30; `Node` (harness/graph/graph.py:540) owns facts and only offers `set_fact`, so each overlay copies the loop.
-- graph_overlay.py:191 `_file_node`: makes the practice's whole-file node exactly as LERN's `_PracticeFiles.node` (cdd_guidance/patterns/lern_domain_driven/graph_overlay.py:152) and cdd_guidance/patterns/cdd_web_domain_access/graph_overlay.py:29 do; three copies of one lookup-or-add.
-
-### `hold-state-on-the-object-not-in-parameters` — Fail
-- graph_overlay.py:191 `_file_node`: every caller (lines 92, 96, 102, 123, 166, 182) passes `self.ddd` or `self.stories` as `practice`, state the reading already holds on itself.
-
-### `hide-inner-details` — Fail
-- graph_overlay.py:198 `_file_node`: reads `practice.reading.graph` and `practice.reading.in_graph.source_root` and calls `in_graph.add_named` directly, so the practice reading's storage (harness/graph/graph.py:990 `add_named`, :114 `Source.whole_file`) is a contract for each pattern; LERN (cdd_guidance/patterns/lern_domain_driven/graph_overlay.py:154-159) reaches in the same way.
-
-### `use-consistent-naming` — Fail
-- graph_overlay.py:63 `_link`: the same operation is `link` in LERN's `_LernReading` (cdd_guidance/patterns/lern_domain_driven/graph_overlay.py:56); one verb, two names and visibilities.
-
-## Judgment — `cdd_guidance/patterns/oss_portal_domain_driven/practices/ddd/rules/oss_tier_rules.py`
-
-### `use-typed-signatures` — Fail
-- oss_tier_rules.py:16 `_hits`: `node` is untyped; it is a graph `Node`.
-- oss_tier_rules.py:27 `BrowserCallsOnlyTheBff.check`: `node` and `context` untyped; the base `PracticeGraphRule.check` and every LERN rule type them `Node` / `RuleCheckContext`.
-- oss_tier_rules.py:37 `TokensStayOnTheServer.check`: `node` and `context` untyped.
-- oss_tier_rules.py:47 `ViewsRenderOnly.check`: `node` and `context` untyped.
-- oss_tier_rules.py:58 `MaintainLayerPurity.check`: `node` and `context` untyped.
-- oss_tier_rules.py:73 `BffDecidesNextPage.check`: `node` and `context` untyped.
-- oss_tier_rules.py:86 `RepositoryOwnsAggregateLifecycle.check`: `node` and `context` untyped.
-- oss_tier_rules.py:96 `NoCrossServiceTables.check`: `node` and `context` untyped.
-- oss_tier_rules.py:106 `SanitisedErrorsOnly.check`: `node` and `context` untyped.
-- oss_tier_rules.py:116 `PublishEventsFromTheOwningService.check`: `node` and `context` untyped.
-- oss_tier_rules.py:126 `SecretsFromSecretManager.check`: `node` and `context` untyped.
-- oss_tier_rules.py:136 `NoPersonalDataInLogs.check`: `node` and `context` untyped.
-- oss_tier_rules.py:146 `OneProxyPerService.check`: `node` and `context` untyped.
-- oss_tier_rules.py:158 `VersionBreakingChanges.check`: `node` and `context` untyped.
-- oss_tier_rules.py:174 `StandardPolicyChain.check`: `node` and `context` untyped.
-- oss_tier_rules.py:191 `ExpandAndContractMigrations.check`: `node` and `context` untyped.
-
-### `eliminate-duplication` — Fail
-- oss_tier_rules.py:73 `BffDecidesNextPage.check`: same comprehension over `web_path_literals` as LERN `OneHomeForWebPaths.check`; the pattern says the rule is carried from LERN, so it should reuse LERN's rule as the OSS story rules do.
-
-## Judgment — `cdd_guidance/patterns/oss_portal_domain_driven/practices/stories/rules/oss_story_rules.py`
-
-### `use-typed-signatures` — Fail
-- oss_story_rules.py:16 `ServiceTierRunsARealDatabase.check`: `node` and `context` untyped, unlike the base `PracticeGraphRule.check`.
-- oss_story_rules.py:30 `JourneyTestPerRelease.check`: `node` and `context` untyped.
-
-## Judgment — `cdd_guidance/patterns/oss_portal_domain_driven/tier_facts.py`
-
-### `eliminate-duplication` — Fail
-- tier_facts.py:75 `OssFile.__init__`: same body as `TierFile.__init__`; `OssFile` is a copy of LERN's `TierFile`, which this module already uses for story files.
-- tier_facts.py:136 `OssFile.web_path_literals`: 78% the same as `TierFile.web_path_literals`; only the regex differs.
-- tier_facts.py:205 `OssFile._in_import`: the same logic as `TierFile._in_import`.
-- tier_facts.py:211 `OssFile._in_comment`: the same logic as `TierFile._in_comment`.
-- tier_facts.py:283 `AggregateFolder.__init__`: same body as LERN's `AggregateFolder.__init__`; the class is a copy of LERN's `AggregateFolder` under the same name.
-- tier_facts.py:194 `OssFile._brace_end`: brace matching that LERN's `TierFile._braced_body` (cdd_guidance/patterns/lern_domain_driven/tier_facts.py:200) and `_BraceScanner.matching_brace` (harness/catalog_generator/source_folds.py:163) already do; three brace scanners, only the last steps over strings and comments.
-
-### `do-not-invent-parallel-object-models` — Fail
-- tier_facts.py:280 `AggregateFolder`: a second class of the same name and role as LERN's `AggregateFolder` (cdd_guidance/patterns/lern_domain_driven/tier_facts.py:236), so the OSS overlay must import two `AggregateFolder`-shaped models from two modules.
+Judgment by five parallel judges (2026-11-16); the OSS portal pattern (cdd_guidance/patterns/oss_portal_domain_driven) is out of scope for this ticket and its findings are left out; each graph hit confirmed or judged noise, with a cross-file pass (parallel models, duplication, vocabulary, state handed down, hidden storage, legacy API, dependency direction) that searched beyond the flagged files. The four test-coverage rules (operation-has-a-proving-test, class-demonstrated-by-a-test, invariant-has-a-failing-case, every-branch-taken-by-a-test) need a coverage run and were not judged.
 
 ## Judgment — `cdd_guidance/patterns/cdd_web_domain_access/graph_overlay.py`
 
 ### `eliminate-duplication` — Fail
-- graph_overlay.py:29 `WebDomainAccessOverlay.read`: inline whole-file node creation and the fact loop at line 30 repeat LERN's `_PracticeFiles.node` (cdd_guidance/patterns/lern_domain_driven/graph_overlay.py:152) and OSS's `_file_node` / `_set_facts` (cdd_guidance/patterns/oss_portal_domain_driven/graph_overlay.py:191, :187).
+- graph_overlay.py:29 `WebDomainAccessOverlay.read`: inline whole-file node creation and the fact loop at line 30 repeat LERN's `_PracticeFiles.node` (cdd_guidance/patterns/lern_domain_driven/graph_overlay.py:152).
 
 ### `hide-inner-details` — Fail
 - graph_overlay.py:29 `WebDomainAccessOverlay.read`: calls `ddd.reading.in_graph.add_named` on the DDD practice's reading storage directly instead of a named operation on the practice or graph (harness/graph/graph.py:990).
@@ -1001,11 +929,6 @@ Judgment by five parallel judges (2026-11-16), each graph hit confirmed or judge
 
 | File:line | Rule | Why it is noise |
 |---|---|---|
-| cdd_guidance/patterns/cdd_web_domain_access/access_facts.py:23 | do-not-invent-parallel-object-models | `AccessFile` and OSS `MigrationFile` are different concepts in unrelated patterns; the only shared fields are a file's name, text, and its `SourceText` wrapper, and no behaviour is copied. |
-| cdd_guidance/patterns/oss_portal_domain_driven/tier_facts.py:267 | eliminate-duplication | `MigrationFile.__init__` is three field assignments matching `AccessFile.__init__`; that is construction, not repeated logic, and the classes model different things. |
-| cdd_guidance/patterns/oss_portal_domain_driven/tier_facts.py:194 | simplify-control-flow | `_brace_end` nests for → elif → if, three levels; the scanner counts the `elif` as an extra level. |
-| cdd_guidance/patterns/oss_portal_domain_driven/graph_overlay.py:187 | use-typed-signatures | `_set_facts` is a private helper on the private `_OssReading`; the rule covers public signatures. |
-| cdd_guidance/patterns/oss_portal_domain_driven/graph_overlay.py:191 | use-typed-signatures | `_file_node` is private on the private `_OssReading`; the rule covers public signatures (the real problem, `practice` held on self, is a hold-state Fail). |
 | harness/guidance/practice_catalogue.py:89 | prefer-instance-operations | `create_all` is a creation factory (makes a new instance of every practice), a variant of the exempt `create`. |
 | harness/guidance/stages.py:26 | limit-operation-parameters | `StageScope.__init__` is the constructor of a plain value whose four fields are its full field set; creation that takes the field set needed to construct is exempt. |
 | harness/agent_tools/agent_tools.py:585 | prefer-instance-operations | `instantiate` is a creation factory making a toolset from configuration, which the rule exempts. |
