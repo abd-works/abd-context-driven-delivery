@@ -11,7 +11,7 @@ import json
 import math
 import re
 from dataclasses import dataclass, field, fields, replace
-from typing import ClassVar, Dict, Iterable, List, Optional
+from typing import ClassVar, Collection, Dict, Iterable, List, Optional
 
 ID_PATTERN = re.compile(r"^[A-Za-z0-9_.~:@+-]{1,40}$")
 BATCH_SIZE = 50
@@ -22,6 +22,9 @@ CLEARED = {"__delete__": True}
 """What an update writes for a field the element no longer has, so the store drops it."""
 PIECE_MARK = "~"
 """What joins a block's id to the number of each further piece of it."""
+DrawnField = str | float | bool | list[str | float] | None
+"""What one drawn field of an element holds: its words, colour or size, a measure, a flag such as an arrow's dash, or
+the list of an arrow's heads or bends."""
 
 
 class UnreadableBoard(ValueError):
@@ -49,6 +52,8 @@ class BoardElement:
 
     id: str
     TYPE: ClassVar[str] = ""
+    HOLDS_OTHERS: ClassVar[bool] = False
+    """Whether the element is a container drawn round other elements, so it lies behind them."""
     STORE_NAMES: ClassVar[Dict[str, str]] = {
         "from_id": "from", "to_id": "to", "from_side": "fromSide", "to_side": "toSide", "text_align": "textAlign",
     }
@@ -67,6 +72,26 @@ class BoardElement:
                 continue
             written[self.STORE_NAMES.get(item.name, item.name)] = value
         return written
+
+    @classmethod
+    def shape(cls, element_id: str, box: Box, **drawn: DrawnField) -> "BoardElement":
+        """A block drawn in box: an epic bar, a story card, a class or module box."""
+        return Shape(element_id, box=box, **drawn)
+
+    @classmethod
+    def section(cls, element_id: str, box: Box, **drawn: DrawnField) -> "BoardElement":
+        """A container drawn in box, titled with its text, that holds the elements drawn inside it."""
+        return Section(element_id, box=box, **drawn)
+
+    @classmethod
+    def words(cls, element_id: str, corner: Box, **drawn: DrawnField) -> "BoardElement":
+        """A label: words with no box, starting at corner's top left; the board sizes it from its text."""
+        return Label(element_id, x=corner.x, y=corner.y, **drawn)
+
+    @classmethod
+    def arrow(cls, element_id: str, **drawn: DrawnField) -> "BoardElement":
+        """A line from the element ``from_id`` names to the one ``to_id`` names."""
+        return Arrow(element_id, **drawn)
 
     @classmethod
     def from_record(cls, element_id: str, record: Dict[str, object]) -> "BoardElement":
@@ -194,6 +219,7 @@ class Section(Block):
     """A container that holds other elements under its title; it lies behind what it holds."""
 
     TYPE: ClassVar[str] = "container"
+    HOLDS_OTHERS: ClassVar[bool] = True
 
 
 @dataclass
@@ -210,7 +236,7 @@ class Arrow(BoardElement):
     head: str = ""
     heads: Optional[List[str]] = None
     """What each end draws, from end first: ``none``, ``arrow`` or ``circle``."""
-    bends: Optional[List[object]] = None
+    bends: Optional[List[str | float]] = None
     """The route the arrow takes: the way it leaves its first element (``h`` or ``v``), then where each middle leg runs,
     the first half from the middle of the element it leaves, the rest from the middle of the one it reaches."""
 
@@ -265,9 +291,9 @@ class WhiteboardNode:
         """The elements this node draws, back to front."""
         raise NotImplementedError
 
-    def board_shape(self, element_id: str, **drawn: str) -> Shape:
+    def board_shape(self, element_id: str, **drawn: DrawnField) -> BoardElement:
         """A shape with this element id at this node's box."""
-        return Shape(element_id, box=self.board_box(), **drawn)
+        return BoardElement.shape(element_id, self.board_box(), **drawn)
 
 
 class Whiteboard:
@@ -301,6 +327,34 @@ class Whiteboard:
             wholes[whole] = element if whole not in wholes else wholes[whole].joined(element)
         return list(wholes.values())
 
+    @property
+    def sections(self) -> List[BoardElement]:
+        """The whole containers on the board, back to front."""
+        return self._whole_of(Section)
+
+    @property
+    def shapes(self) -> List[BoardElement]:
+        """The whole blocks on the board that are no container, back to front."""
+        return self._whole_of(Shape)
+
+    @property
+    def labels(self) -> List[BoardElement]:
+        return self._whole_of(Label)
+
+    @property
+    def arrows(self) -> List[BoardElement]:
+        return self._whole_of(Arrow)
+
+    def _whole_of(self, kind: type) -> List[BoardElement]:
+        return [element for element in self.whole_elements if isinstance(element, kind)]
+
+    def holding(self, roles: Collection[str], missing: str) -> "Whiteboard":
+        """This board, when an element on it draws one of roles. A board with none is not the drawing a practice reads,
+        so it raises *UnreadableBoard*, saying the board holds no missing."""
+        if not any(element.role in roles for element in self.whole_elements):
+            raise UnreadableBoard(f"The board holds no {missing}")
+        return self
+
     def add(self, element: BoardElement) -> BoardElement:
         """Put element in front of every element already on the board; a section goes behind every element but other
         sections, so it never covers what it holds. A block wider than a board draws one goes on as its pieces."""
@@ -311,19 +365,12 @@ class Whiteboard:
     def _add_one(self, element: BoardElement) -> None:
         if element.id in self._elements:
             raise ValueError(f"The board already holds an element {element.id!r}")
-        if not isinstance(element, Section):
+        if not element.HOLDS_OTHERS:
             self._elements[element.id] = element
             return
-        sections = {key: held for key, held in self._elements.items() if isinstance(held, Section)}
+        sections = {key: held for key, held in self._elements.items() if held.HOLDS_OTHERS}
         rest = {key: held for key, held in self._elements.items() if key not in sections}
         self._elements = {**sections, element.id: element, **rest}
-
-    def put(self, element: BoardElement) -> BoardElement:
-        """Put element in place of the element with its id, where that one lay; a new id is added as ``add`` adds."""
-        if element.id not in self._elements:
-            return self.add(element)
-        self._elements[element.id] = element
-        return element
 
     def draw(self, node: WhiteboardNode) -> None:
         """Add every element node draws."""

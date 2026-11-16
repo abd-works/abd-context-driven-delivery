@@ -107,16 +107,16 @@ with description("a project's approach page"):
 
     with it("should link no repository for a project that is not a git checkout"):
         with tempfile.TemporaryDirectory() as project_dir:
-            expect(ProjectApproach.for_project(ProjectFiles(project_dir, _PRACTICES)).repo_url).to(equal(""))
+            expect(ProjectApproach.for_project(ProjectFiles.load(project_dir, _PRACTICES)).repo_url).to(equal(""))
 
     with it("should take its title from the project's folder when none is saved"):
         with tempfile.TemporaryDirectory() as parent:
             project = Path(parent) / "demo-shop"
             project.mkdir()
-            expect(ProjectApproach.for_project(ProjectFiles(project, _PRACTICES)).project_title).to(equal("Demo Shop"))
+            expect(ProjectApproach.for_project(ProjectFiles.load(project, _PRACTICES)).project_title).to(equal("Demo Shop"))
 
     with it("should put the examples a JSON mapping names over the ones it found"):
         with tempfile.TemporaryDirectory() as project_dir:
-            chosen = ProjectApproach.for_project(ProjectFiles(project_dir, _PRACTICES)).with_examples_json('{"examples": {"ddd": {"discovery": "map.md"}}}')
+            chosen = ProjectApproach.for_project(ProjectFiles.load(project_dir, _PRACTICES)).with_examples_json('{"examples": {"ddd": {"discovery": "map.md"}}}')
             placed = {_place_of(shown): path for shown, path in chosen.examples.items()}
             expect(placed[("ddd", "discovery")]).to(equal((Path(project_dir) / "map.md").resolve()))

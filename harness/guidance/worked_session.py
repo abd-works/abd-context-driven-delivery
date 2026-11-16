@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 NamedPaths = list[str] | str | None
 
 
-class SessionFiles(Protocol):
+class _SessionFiles(Protocol):
     """The files under a session's root, which the session finds for guidance."""
 
     def find(self, pattern: str) -> list[Path]:
@@ -29,7 +29,7 @@ class WorkedSession(Protocol):
         """The folder the session works in."""
 
     @property
-    def session_files(self) -> SessionFiles:
+    def session_files(self) -> _SessionFiles:
         """The files under the session's root."""
 
     def document_named(self, content: str = "", paths: NamedPaths = None) -> str:

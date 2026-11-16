@@ -60,6 +60,17 @@ with description("a repository's toolsets") as self:
         with it("should collect the class"):
             expect(_texts(RepositoryToolsets(self.root).references())).to(contain("shop.books:Books"))
 
+    with context("with a class annotated HostedOnly by its class name"):
+        with before.each:
+            (self.root / "shop" / "rules.py").write_text(
+                "from harness.annotations.annotation import HostedOnly\nfrom harness.mcp.mcp_annotations import mcp\n\n\n"
+                "@HostedOnly\nclass Rules:\n    @mcp\n    def check(self) -> None:\n        pass\n",
+                encoding="utf-8",
+            )
+
+        with it("should leave the class out, as it leaves out one annotated hosted_only"):
+            expect(_texts(RepositoryToolsets(self.root).references())).to(equal([]))
+
     with context("with a class no annotation names"):
         with before.each:
             (self.root / "shop" / "plain.py").write_text("class Plain:\n    def run(self) -> None:\n        pass\n", encoding="utf-8")

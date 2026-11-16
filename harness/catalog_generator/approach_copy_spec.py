@@ -6,6 +6,10 @@ from expects import equal, expect
 from mamba import before, context, description, it
 
 from harness.catalog_generator.approach_copy import APPROACH_MARKDOWN, ApproachCopy
+from harness.catalog_generator.approach_page import ApproachGrids
+from harness.catalog_generator.catalog_examples import CatalogExamples
+from harness.catalog_generator.stage_columns import STAGE_COLUMNS
+from harness.guidance.stages import STAGES
 
 _MINIMAL_MD = """# Approach
 
@@ -112,8 +116,9 @@ with description("the approach page's copy"):
             scope = self.copy.stages[0].scope
             expect((scope.shape, scope.name, scope.reach)).to(equal(("solution", "Whole solution", "wide / shallow")))
 
-        with it("should give the board each stage by its column's key"):
-            expect(self.copy.board_stages["spec"].items).to(equal(("Spec Chip",)))
+        with it("should give the board each stage's copy by its column"):
+            approach = ApproachGrids([], self.copy.stages, CatalogExamples(None))
+            expect(approach.stage(STAGE_COLUMNS.of(STAGES.of("specification"))).items).to(equal(("Spec Chip",)))
 
     with context("kept beside the catalog generator"):
         with it("should open with the harness sentence"):

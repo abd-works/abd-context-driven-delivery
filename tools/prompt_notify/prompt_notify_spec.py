@@ -17,7 +17,7 @@ from harness.installation.installer import Installer  # noqa: F401 — load Dest
 from tempfile import TemporaryDirectory
 
 from harness.hooks.hook_server import rules_toast
-from harness.annotations.annotation import Toast
+from harness.hooks.hooks import Toast
 from tools.prompt_notify.prompt_notify import PromptNotify
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
 from harness.hooks.hook_server import HookPayload

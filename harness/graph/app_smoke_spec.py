@@ -34,7 +34,7 @@ with description("an example graph"):
                 expect(self.inventory["clean_engineering"]["node_counts"]).to(equal(direct_counts(self.graph, "clean_engineering")))
 
             with it("should count the same edges as the graph"):
-                expect(self.inventory["clean_engineering"]["edge_count"]).to(equal(len(self.graph.practice("clean_engineering").reading.in_graph.edges())))
+                expect(self.inventory["clean_engineering"]["edge_count"]).to(equal(len(self.graph.practice("clean_engineering").reading.in_graph.edge_index.of())))
 
             with it("should list the same node types as the graph"):
                 expect(self.inventory["clean_engineering"]["node_types"]).to(equal(sorted(self.graph.practice("clean_engineering").reading.in_graph.node_types)))
@@ -47,7 +47,7 @@ with description("an example graph"):
                 expect(self.inventory["stories"]["node_counts"]).to(equal(direct_counts(self.graph, "stories")))
 
             with it("should count the same edges as the graph"):
-                expect(self.inventory["stories"]["edge_count"]).to(equal(len(self.graph.practice("stories").reading.in_graph.edges())))
+                expect(self.inventory["stories"]["edge_count"]).to(equal(len(self.graph.practice("stories").reading.in_graph.edge_index.of())))
 
             with it("should list the same node types as the graph"):
                 expect(self.inventory["stories"]["node_types"]).to(equal(sorted(self.graph.practice("stories").reading.in_graph.node_types)))
@@ -57,7 +57,7 @@ with description("an example graph"):
                 expect(self.inventory["ddd"]["node_counts"]).to(equal(direct_counts(self.graph, "ddd")))
 
             with it("should count the same edges as the graph"):
-                expect(self.inventory["ddd"]["edge_count"]).to(equal(len(self.graph.practice("ddd").reading.in_graph.edges())))
+                expect(self.inventory["ddd"]["edge_count"]).to(equal(len(self.graph.practice("ddd").reading.in_graph.edge_index.of())))
 
             with it("should list the same node types as the graph"):
                 expect(self.inventory["ddd"]["node_types"]).to(equal(sorted(self.graph.practice("ddd").reading.in_graph.node_types)))
@@ -67,7 +67,7 @@ with description("an example graph"):
                 expect(self.inventory["bdd"]["node_counts"]).to(equal(direct_counts(self.graph, "bdd")))
 
             with it("should count the same edges as the graph"):
-                expect(self.inventory["bdd"]["edge_count"]).to(equal(len(self.graph.practice("bdd").reading.in_graph.edges())))
+                expect(self.inventory["bdd"]["edge_count"]).to(equal(len(self.graph.practice("bdd").reading.in_graph.edge_index.of())))
 
             with it("should list the same node types as the graph"):
                 expect(self.inventory["bdd"]["node_types"]).to(equal(sorted(self.graph.practice("bdd").reading.in_graph.node_types)))
@@ -77,7 +77,7 @@ with description("an example graph"):
                 expect(self.inventory["ux"]["node_counts"]).to(equal(direct_counts(self.graph, "ux")))
 
             with it("should count the same edges as the graph"):
-                expect(self.inventory["ux"]["edge_count"]).to(equal(len(self.graph.practice("ux").reading.in_graph.edges())))
+                expect(self.inventory["ux"]["edge_count"]).to(equal(len(self.graph.practice("ux").reading.in_graph.edge_index.of())))
 
             with it("should list the same node types as the graph"):
                 expect(self.inventory["ux"]["node_types"]).to(equal(sorted(self.graph.practice("ux").reading.in_graph.node_types)))

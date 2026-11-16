@@ -179,7 +179,7 @@ export class BoardOnProject {
     return chat
   }
 
-  // The links the run's cdd server handed the Claude app, one a line: Python's chat.open keeps them in the file the run
+  // The links the run's cdd server handed the Claude app, one a line: Python's chats.open keeps them in the file the run
   // names (see run-cdd-home.ts) instead of opening the app.
   openedChats(): string[] {
     const kept = openedChatsFile()

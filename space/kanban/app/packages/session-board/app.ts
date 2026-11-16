@@ -11,6 +11,7 @@ import { fileCommentsRoutes } from '@cdd/space/session/file-comments'
 import { practiceSessionOutputRoutes } from '@cdd/space/session/practice-session-output'
 import { sessionRoutes } from '@cdd/space/session/session'
 import { chatRoutes } from '@cdd/harness/chat/chat'
+import { chatsRoutes } from '@cdd/harness/chat/chats'
 import { appRoutes } from '@cdd/harness/diagnostics/app'
 import { cddRoutes } from '@src/session-board/cdd-routes'
 import { API_ROOT } from '@src/session-board/board-server-paths'
@@ -37,7 +38,7 @@ export function createApp(projects: ProjectConnections, port: number, staticRoot
   app.use(onlyThisMachine(port))
   app.use(express.json())
   // The board and the Story UI editor both reach the chat routes; each route is mounted once.
-  const routes = new Set([...boardRoutes, ...stageRoutes, ...ticketRoutes, ...fidelityProgressRoutes, ...sessionRoutes, ...fileCommentsRoutes, ...practiceSessionOutputRoutes, ...backlogItemRoutes, ...chatRoutes, ...appRoutes, ...storyMapRoutes])
+  const routes = new Set([...boardRoutes, ...stageRoutes, ...ticketRoutes, ...fidelityProgressRoutes, ...sessionRoutes, ...fileCommentsRoutes, ...practiceSessionOutputRoutes, ...backlogItemRoutes, ...chatRoutes, ...chatsRoutes, ...appRoutes, ...storyMapRoutes])
   app.use(API_ROOT, cddRoutes(projects, [...routes]))
   // The Story UI editor answers on this server too, at its own page, so it shares the board's port and the board's
   // state: its calls are the story map's generated routes above, and its page is the one its own folder builds.

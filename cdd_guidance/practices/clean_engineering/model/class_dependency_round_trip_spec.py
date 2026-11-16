@@ -21,13 +21,13 @@ def _processes() -> CleanEngineeringModel:
     running.operations = [Operation(name="alive", return_type="bool")]
     stoppable = OoadClass("StoppableProcess", 2, intent="Ends a process by its id.")
     stoppable.operations = [Operation(name="stop", return_type="None")]
-    stoppable.depend_on("RunningProcess", "stops")
-    stoppable.depend_on("RunningProcess", "reads pid of")
+    stoppable.arrows.depend_on("RunningProcess", "stops")
+    stoppable.arrows.depend_on("RunningProcess", "reads pid of")
     launcher = OoadClass("Launcher", 3, intent="Starts and ends one server.")
     launcher.properties = [Property("process", type_hint="StoppableProcess")]
     launcher.properties[0].stereotype = "composition"
-    launcher.properties[0].derive_relationship()
-    launcher.depend_on("StoppableProcess", "asks to stop")
+    launcher.properties[0].arrow.derive()
+    launcher.arrows.depend_on("StoppableProcess", "asks to stop")
     module = Module("process", 1)
     module.classes = [running, stoppable, launcher]
     model = CleanEngineeringModel("process")

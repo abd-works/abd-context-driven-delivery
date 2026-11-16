@@ -6,7 +6,7 @@ import sys
 from expects import equal, expect
 from mamba import before, description, it
 
-from harness.graph.graph import Graph, Source
+from harness.graph.graph import Graph
 import cdd_guidance.practices  # noqa: F401 - registers the practices a graph holds
 
 # Deeper than the call stack a node placing its children by calling itself could reach.
@@ -19,17 +19,17 @@ with description("a practice's explorer tree"):
             graph = Graph()
             practice = graph.practice("clean_engineering")
             self.part = practice.reading.in_graph
-            cart = self.part.add_named("OoadClass", "clean_engineering:OoadClass:Cart", "Cart", Source("cart.py", 1, 1))
+            cart = self.part.add_file("OoadClass", "cart.py", "Cart")
             graph.edges.link("owns", self.part.root, cart)
             operations = [
-                self.part.add_named("Operation", f"clean_engineering:Operation:step{index}", f"step{index}", Source("cart.py", index + 2, index + 2))
+                self.part.add_file("Operation", f"step{index}")
                 for index in range(_CHAIN)
             ]
             for caller, called in zip(operations, operations[1:]):
                 graph.edges.link("owns", cart, caller)
                 graph.edges.relate("invokes", caller, called)
             graph.edges.link("owns", cart, operations[-1])
-            self.part.rebuild_tree()
+            self.part.root.tree.rebuild()
             self.last = operations[-1]
             self.cart = cart
 

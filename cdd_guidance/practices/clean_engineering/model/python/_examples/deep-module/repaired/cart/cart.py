@@ -2,16 +2,26 @@ class Cart:
     def __init__(self) -> None:
         self._lines: list[Line] = []
 
-    def add(self, amount: int) -> None:
-        self._lines.append(Line(Price(amount)))
+    def add(self, amount: int, quantity: int) -> None:
+        self._lines.append(Line(Price(amount), quantity))
 
     def total(self) -> int:
-        return sum(line.price.amount for line in self._lines)
+        return self._taxed(self._discounted(sum(line.subtotal() for line in self._lines)))
+
+    def _discounted(self, amount: int) -> int:
+        return amount - Discount().off(amount)
+
+    def _taxed(self, amount: int) -> int:
+        return amount + Tax().on(amount)
 
 
 class Line:
-    def __init__(self, price: "Price") -> None:
+    def __init__(self, price: "Price", quantity: int) -> None:
         self.price = price
+        self.quantity = quantity
+
+    def subtotal(self) -> int:
+        return self.price.amount * self.quantity
 
 
 class Price:
@@ -20,10 +30,10 @@ class Price:
 
 
 class Discount:
-    def rate(self) -> int:
+    def off(self, amount: int) -> int:
         return 0
 
 
 class Tax:
-    def rate(self) -> int:
+    def on(self, amount: int) -> int:
         return 0

@@ -17,7 +17,7 @@ from harness.agent_tools.agent_tools import (
 from harness.annotations.annotation import hosted_only
 from harness.annotations.name import Name
 from harness.installation.data_class import data_field
-from harness.markdown.markdown import MarkdownCollection, MarkdownOwner, MarkdownText
+from harness.markdown.markdown import MarkdownCollection, MarkdownText, Owner
 from harness.hooks.hooks import Hook, hook
 
 if TYPE_CHECKING:
@@ -127,12 +127,12 @@ class Rule:
 
 @hosted_only
 @agent_toolset
-class RulesCollection(MarkdownCollection):
+class RulesCollection(MarkdownCollection[Owner]):
     def __init__(
         self,
         entries: dict[str, Rule | RulesCollection] | None = None,
         applies_to: AppliesTo | None = None,
-        parent: MarkdownOwner | None = None,
+        parent: Owner | None = None,
     ) -> None:
         super().__init__(dict(entries or {}), parent=parent)
         self._applies_to = applies_to if applies_to is not None else AppliesTo()
@@ -186,7 +186,7 @@ class RulesCollection(MarkdownCollection):
             return None
         return self._practice_on(node) or self._practice_on(getattr(node, "parent", None))
 
-    def _practice_on(self, node: MarkdownOwner | None) -> PracticeGuidance | None:
+    def _practice_on(self, node: Owner | None) -> PracticeGuidance | None:
         if node is None:
             return None
         practice = getattr(node, "practice_guidance", None)
@@ -201,7 +201,7 @@ class RulesCollection(MarkdownCollection):
         cls,
         text: str,
         fidelity: str | None = None,
-        parent: MarkdownOwner | None = None,
+        parent: Owner | None = None,
     ) -> RulesCollection:
         applies_to = AppliesTo.from_markdown(text)
         entries: dict[str, Rule | RulesCollection] = {}

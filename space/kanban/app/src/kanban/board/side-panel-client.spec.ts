@@ -16,8 +16,8 @@ const SESSION = 'session=.sessions/checkout-flow/session.json'
 const SLUG = 'stories-story-map'
 const REPORT_PATH = '.sessions/checkout-flow/validation-reports/stories-story-map-20261101T100000.md'
 const FAILING_LINE = 12
-// A graph validate saved with no hits, in the shape harness/graph/saved_graph.py writes (SAVED_SHAPE_VERSION 3).
-const CLEAN_GRAPH = { version: 3, overlays: [], practices: { stories: { source_root: '', root_facts: {}, nodes: [], edges: [], violations: [] } } }
+// A graph validate saved with no hits, in the shape harness/graph/saved_graph.py writes (SAVED_SHAPE_VERSION 5).
+const CLEAN_GRAPH = { version: 5, overlays: [], practices: { stories: { source_root: '', root_facts: {}, nodes: [], edges: [], violations: [] } } }
 
 let board: BoardOnProject
 

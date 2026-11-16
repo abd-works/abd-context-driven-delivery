@@ -38,7 +38,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from cdd_guidance.practices.stories.model.story_map_files import source_at
+from cdd_guidance.practices.stories.model.story_map_files import STORY_GRAPH_FILE, StoryMapFiles, source_at
 from cdd_guidance.practices.stories.model.story_model import (
     Background,
     Epic,
@@ -304,10 +304,10 @@ class JsonStoryModel(StoryModel):
     def from_workspace(cls, root: Path) -> Optional["JsonStoryModel"]:
         """Find story-graph.json in *root* and parse it; None when the folder has none. A file that is there but does
         not read is a JsonParseError naming the file, not a missing story map."""
-        json_path = Path(root).resolve() / "story-graph.json"
-        if not json_path.exists():
+        text = StoryMapFiles(root).story_graph_text()
+        if text is None:
             return None
-        return cls().parse_file(json_path.name, json_path.read_text(encoding="utf-8"))
+        return cls().parse_file(STORY_GRAPH_FILE, text)
 
     def parse_file(self, file: str, text: str) -> "JsonStoryModel":
         """Read the text of the story-graph.json called file into this map, every epic and story naming that file, and

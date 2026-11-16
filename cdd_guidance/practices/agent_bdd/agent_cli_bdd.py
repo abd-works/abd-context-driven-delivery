@@ -18,7 +18,7 @@ from cdd_guidance.practices.agent_bdd.agent_bdd_common import (
     _ShellCapture,
 )
 from cdd_guidance.practices.agent_bdd.agent_block import AgentBlock
-from cdd_guidance.practices.agent_bdd.cursor_cli import CursorAgentNotFound, CursorCli
+from cdd_guidance.practices.agent_bdd.cursor_cli import CursorAgentNotAuthenticated, CursorAgentNotFound, CursorCli
 
 # How long `cursor-agent status` may take to say whether the agent is signed in.
 _STATUS_TIMEOUT_SECONDS = 30
@@ -270,16 +270,21 @@ class _StreamBuckets:
         return None
 
 
+# The agent command line before any chat: whether it is installed, and the chats it starts. It holds no chat, so every
+# block shares it.
+CURSOR_AGENT = CursorCli()
+
+
 class CliAgentBlock(AgentBlock):
-    """One cursor-agent session: every instruct in the block resumes the same chat, and the judge runs in a fresh one."""
+    """One cursor-agent session: every instruct in the block resumes the same chat, and the judge runs in a fresh one.
+    It drives the agent command line it is given, the installed cursor-agent unless a caller gives another."""
 
     log_name = "agent_cli_bdd"
 
-    def __init__(self, workspace: Path, session_file: Path) -> None:
+    def __init__(self, workspace: Path, session_file: Path, cli: CursorCli = CURSOR_AGENT) -> None:
         super().__init__(workspace, session_file)
         self._session: AgentSession | None = None
-        # The agent command line before any chat: whether it is installed, and the chats it starts.
-        self._cli = CursorCli()
+        self._cli = cli
 
     def _open(self) -> None:
         if os.environ.get(AGENT_RUNS_OFF):
@@ -293,7 +298,7 @@ class CliAgentBlock(AgentBlock):
             raise CursorAgentNotFound()
         completed = subprocess.run([exe, "status"], capture_output=True, text=True, timeout=_STATUS_TIMEOUT_SECONDS)
         if completed.returncode != 0:
-            raise RuntimeError("cursor-agent not authenticated - run `cursor-agent login` first")
+            raise CursorAgentNotAuthenticated()
 
     def _answer(self, prefix: str, prompt: str, timeout_seconds: int) -> AgentResult:
         buckets = self._run(prompt, timeout_seconds, prefix)

@@ -89,3 +89,18 @@ export class BoardReader {
 """
         reader = _class(TypeScriptCleanEngineeringModel().parse(source), "BoardReader")
         expect([op.name for op in reader.operations]).to(equal(["apply", "refreshPressed"]))
+
+
+with description("CFamilyParse fields"):
+    with it("should hold a constructor parameter declared with an access modifier as a field, with its type"):
+        source = """
+export class OpenCardClient {
+  constructor(private readonly page: BoardPage, public name: string, plain: number) {}
+
+  closeCard(): void {
+    this.page.store.change({ openCard: null })
+  }
+}
+"""
+        client = _class(TypeScriptCleanEngineeringModel().parse(source), "OpenCardClient")
+        expect([(prop.name, prop.type_hint) for prop in client.properties]).to(equal([("page", "BoardPage"), ("name", "string")]))

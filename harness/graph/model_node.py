@@ -8,10 +8,11 @@ from __future__ import annotations
 
 from abc import ABCMeta
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Callable, Iterable, Iterator, Optional
+from typing import TYPE_CHECKING, Callable, ClassVar, Iterable, Iterator, Optional
 
 from harness.graph.edge import EdgeType
 from harness.graph.graph import Graph, Node, Source
+from harness.graph.saved_graph import NodeIdentity
 from harness.graph.location import Location
 
 if TYPE_CHECKING:
@@ -128,7 +129,7 @@ class ModelWithoutPractice(TypeError):
     """A model object class no practice registered, so the graph cannot tell which practice graph it belongs to."""
 
     def __init__(self, model_class: type) -> None:
-        super().__init__(f"{model_class.__name__} names no practice: its practice's module registers itself with register_practice on it or a base class.")
+        super().__init__(f"{model_class.__name__} names no practice: its practice's module sets itself as the practice_class of it or a base class.")
         self.model_class = model_class
 
 
@@ -153,7 +154,7 @@ class _SyncedOnceBuilt(ABCMeta):
 
 
 class ModelNode(Node, metaclass=_SyncedOnceBuilt):
-    """Base model object for one practice. Its practice registers it (``register_practice``), and subclasses name the
+    """Base model object for one practice. Its practice names itself on it (``practice_class``), and subclasses name the
     belongsTo pairs.
 
     An object made without a graph is detached: it belongs to no practice yet and records no edge. It joins a graph,
@@ -166,23 +167,18 @@ class ModelNode(Node, metaclass=_SyncedOnceBuilt):
     _schema_edge_fields: frozenset[str] = frozenset({"source", "collaborators", "dependencies", "type_hint", "return_type", "callees"})
     """Attributes whose new value can add or remove a schema edge; assigning one rebuilds the graph's schema edges."""
 
-    _practice_class: type | None = None
-    """The practice class registered for this model class and its subclasses; see ``register_practice``."""
+    practice_class: ClassVar[type | None] = None
+    """The practice of this model class and of every subclass that names none of its own, such as ``Stories``. A
+    practice's module sets it on its model's base class when it is imported (``StoryNode.practice_class = Stories``),
+    so the model never imports its practice and the dependency runs one way, from the practice to its model."""
 
-    @classmethod
-    def register_practice(cls, practice_class: type) -> None:
-        """Make practice_class the practice of this model class and of every subclass that registers none of its own.
-        A practice's module calls it on its model's base class when it is imported, so the model never imports its
-        practice and the dependency runs one way, from the practice to its model."""
-        cls._practice_class = practice_class
-
-    @classmethod
-    def practice_kind(cls) -> type:
-        """The class of the practice this object's graph node belongs to, such as ``Stories``: the one registered for
-        this class or the nearest base class that has one."""
-        if cls._practice_class is None:
-            raise ModelWithoutPractice(cls)
-        return cls._practice_class
+    @property
+    def practice_kind(self) -> type:
+        """The class of the practice this object's graph node belongs to: its class's ``practice_class``, or the nearest
+        base class's. ``ModelWithoutPractice`` when none names one."""
+        if self.practice_class is None:
+            raise ModelWithoutPractice(type(self))
+        return self.practice_class
 
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         self._child_lists: list[ModelChildren] = []
@@ -190,15 +186,13 @@ class ModelNode(Node, metaclass=_SyncedOnceBuilt):
         Node.__init__(
             self,
             None,
-            type(self)._semantic_type_name,
-            "",
-            name,
+            NodeIdentity(type=type(self)._semantic_type_name, node_id="", name=name),
             Source(NO_SOURCE_FILE, sequential_order or 1, sequential_order or 1),
         )
         self.sequential_order = sequential_order
         self._ready = False
         if graph is not None:
-            self.join(graph.practices.of(type(self).practice_kind()))
+            self.join(graph.practices.of(self.practice_kind))
 
 
     def finish_building(self) -> None:

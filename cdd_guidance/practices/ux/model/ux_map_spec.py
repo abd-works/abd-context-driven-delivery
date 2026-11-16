@@ -18,7 +18,7 @@ from cdd_guidance.practices.ux.model.ux_map_spec_fixture import made
 
 
 def edge_pairs(graph, kind):
-    return [(edge.parent.name, edge.child.name) for edge in graph.practice("ux").reading.in_graph.edges(kind)]
+    return [(edge.parent.name, edge.child.name) for edge in graph.practice("ux").reading.in_graph.edge_index.of(kind)]
 
 
 with description("a UxMap"):
@@ -63,8 +63,8 @@ with description("a ux map on a graph"):
 
     with it("should record screens and belongsTo"):
         practice = self.graph.practice("ux")
-        screens = [(edge.parent.name, edge.child.name) for edge in practice.reading.in_graph.edges("screens")]
-        belongs = [(edge.parent.name, edge.child.name) for edge in practice.reading.in_graph.edges("belongsTo")]
+        screens = [(edge.parent.name, edge.child.name) for edge in practice.reading.in_graph.edge_index.of("screens")]
+        belongs = [(edge.parent.name, edge.child.name) for edge in practice.reading.in_graph.edge_index.of("belongsTo")]
         expect(screens).to(contain(("UxMap", "Catalog")))
         expect(belongs).to(contain(("Catalog", "UxMap")))
 

@@ -3,20 +3,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from harness.guidance.stages import DISCOVERY, IMPLEMENTATION, SPECIFICATION, STAGES, ApproachStage, StageScope
+from harness.guidance.stages import STAGES, ApproachStage, StageScope
 from harness.annotations.name import Name
 
 
 @dataclass(frozen=True)
 class StageColumn:
-    """One column of the catalog board: a stage of the approach and the names the catalog gives it.
-
-    The stage's name, title, and scope come from the approach's stages. ``key`` is the column's name in the page
-    markup, its styles, and its scripts (discovery, spec, engineer), so they keep working whatever the stage is called.
-    """
+    """One column of the catalog board: a stage of the approach as the board heads it. The stage's name, title, and
+    scope come from the approach's stages; the page markup, its styles, and its scripts name the column by the stage's
+    name (discovery, specification, implementation)."""
 
     stage: ApproachStage
-    key: str
 
     @property
     def label(self) -> str:
@@ -29,7 +26,7 @@ class StageColumn:
 
 
 class StageColumns:
-    """The board's columns in the order the approach walks the stages; the one place a stage meets its board key."""
+    """The board's columns in the order the approach walks the stages."""
 
     def __init__(self, columns: tuple[StageColumn, ...]) -> None:
         self._columns = columns
@@ -46,9 +43,7 @@ class StageColumns:
         return tuple(column.stage.name for column in self._columns)
 
 
-# The catalog's own name for each stage's column, by the stage's name: its key in the page markup.
-_COLUMN_KEYS = {DISCOVERY: "discovery", SPECIFICATION: "spec", IMPLEMENTATION: "engineer"}
-STAGE_COLUMNS = StageColumns(tuple(StageColumn(stage, _COLUMN_KEYS[stage.name]) for stage in STAGES))
+STAGE_COLUMNS = StageColumns(tuple(StageColumn(stage) for stage in STAGES))
 
 
 class BoardLabel:

@@ -9,7 +9,7 @@ const fileNameOf = (path: string): string => path.split('/').at(-1) ?? path
 function subjectOf(panel: FilesPanel): string {
   if (panel.source === 'session') return `${panel.ticket.name} session folder`
   if (panel.source === 'workpath') return panel.ticket.session.workpath || 'whole repository'
-  return `${panel.ticket.name} · ${panel.ticket.stagePlace}`
+  return `${panel.ticket.name} · ${panel.ticket.face.stagePlace}`
 }
 
 // A toggle per practice of the ticket's stage, by its short form and in its colour, then the changed-files filter.

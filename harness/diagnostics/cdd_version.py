@@ -14,8 +14,8 @@ from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subje
 from harness.installation.data_class import data_field, language_adapter
 from harness.installation.files import command
 from harness.mcp.mcp_annotations import long_call, mcp
-from harness.process.git import Git, RepoConnectError
-from harness.process.github_cli import GitHubCli
+from harness.git.git import Git, RepoConnectError
+from harness.diagnostics.github_cli import GitHubCli
 
 # The checkout the cdd server runs its code from: the one whose version every chat it answers runs.
 SERVED_CHECKOUT = Path(__file__).resolve().parents[2]

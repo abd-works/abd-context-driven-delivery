@@ -17,7 +17,7 @@ from mamba import after, before, context, description, it
 
 from harness.agent_tools.chat_pointer import ChatPointer
 from harness.agent_tools.tool_call import CALLS_BEING_ANSWERED, ToolCall, ToolRequest
-from harness.chat.chat import KEPT_MESSAGES, Chat, ChatNotConnectedError, RecordedChatLinks
+from harness.chat.chat import KEPT_MESSAGES, Chat, ChatNotConnectedError, Chats, RecordedChatLinks
 from harness.installation.data_class import data_of
 
 CHAT = "ad6c04ab-chat"
@@ -38,13 +38,13 @@ def _titled(title: str) -> str:
     return json.dumps({"type": "custom-title", "customTitle": title, "sessionId": CHAT})
 
 
-def _prompt_opened_by(chat: str) -> str:
-    """The prompt of a new chat that chat asked chat.open for."""
+def _prompt_opened_by(chat: str, chats: Chats) -> str:
+    """The prompt of a new chat that chat asked chats.open for."""
     # Mamba reads every with statement in a spec file as a context, so the call is answered through an ExitStack.
     answering = ExitStack()
-    answering.enter_context(CALLS_BEING_ANSWERED.answering(ToolCall(request=ToolRequest(ChatPointer(chat), "chat.open"))))
+    answering.enter_context(CALLS_BEING_ANSWERED.answering(ToolCall(request=ToolRequest(ChatPointer(chat), "chats.open"))))
     try:
-        return parse_qs(urlsplit(Chat.open(WORKTREE, NEW_CHAT_PROMPT)).query)["q"][0]
+        return parse_qs(urlsplit(chats.open(WORKTREE, NEW_CHAT_PROMPT)).query)["q"][0]
     finally:
         answering.close()
 
@@ -67,7 +67,7 @@ with description("a chat") as self:
 
     with context("with no chat checked in"):
         with it("should list no chats"):
-            expect(Chat.list()).to(be_empty)
+            expect(Chats.load().list()).to(be_empty)
 
         with it("should refuse a command for a chat that is not connected"):
             expect(lambda: Chat.load(CHAT).send("command", "/actions-validate")).to(raise_error(ChatNotConnectedError))
@@ -75,11 +75,11 @@ with description("a chat") as self:
     # The board opens a ticket's new chat in the Claude app; the spec's chats keep each link instead of opening the app.
     with context("that a new chat is opened on a folder"):
         with before.each:
-            Chat.opener = RecordedChatLinks(self.chats / "opened-chats.txt")
-            self.link = Chat.open(WORKTREE, NEW_CHAT_PROMPT)
+            self.opened = RecordedChatLinks(self.chats / "opened-chats.txt")
+            self.link = Chats(self.chats, self.opened).open(WORKTREE, NEW_CHAT_PROMPT)
 
         with it("should hand the Claude app one new-chat link"):
-            expect(Chat.opener.links).to(equal([self.link]))
+            expect(self.opened.links).to(equal([self.link]))
 
         with it("should open it on the folder"):
             expect(parse_qs(urlsplit(self.link).query)["folder"]).to(equal([WORKTREE]))
@@ -95,8 +95,7 @@ with description("a chat") as self:
             (folder / f"{CHAT}.jsonl").write_text(_titled("main") + "\n", encoding="utf-8")
             CLOCK[0] += 31
             Chat.load(CHAT).check_in(is_busy=False, name="repo · first words", folder="C:\\dev\\repo")
-            Chat.opener = RecordedChatLinks(self.chats / "opened-chats.txt")
-            self.prompt = _prompt_opened_by(CHAT)
+            self.prompt = _prompt_opened_by(CHAT, Chats(self.chats, RecordedChatLinks(self.chats / "opened-chats.txt")))
 
         with it("should keep its prompt first"):
             expect(self.prompt).to(start_with(NEW_CHAT_PROMPT))
@@ -113,14 +112,14 @@ with description("a chat") as self:
             (damaged / "chat.json").write_text('{"name": "old", "seen": 1000.0}}', encoding="utf-8")
 
         with it("should list the chat that reads"):
-            expect([chat.id for chat in Chat.list()]).to(equal([CHAT]))
+            expect([chat.id for chat in Chats.load().list()]).to(equal([CHAT]))
 
         with context("that has checked in again"):
             with before.each:
                 Chat.load("damaged-chat").check_in(is_busy=False, name="repo · second words")
 
             with it("should list the chat again"):
-                expect([chat.id for chat in Chat.list()]).to(equal([CHAT, "damaged-chat"]))
+                expect([chat.id for chat in Chats.load().list()]).to(equal([CHAT, "damaged-chat"]))
 
     # (S) Chat --> Check In With Board
     with context("that has checked in"):
@@ -128,16 +127,16 @@ with description("a chat") as self:
             Chat.load(CHAT).check_in(is_busy=True, name="repo · first words")
 
         with it("should be listed by its id"):
-            expect([chat.id for chat in Chat.list()]).to(equal([CHAT]))
+            expect([chat.id for chat in Chats.load().list()]).to(equal([CHAT]))
 
         with it("should say a turn is running"):
-            expect(Chat.list()[0].is_busy).to(equal(True))
+            expect(Chats.load().list()[0].is_busy).to(equal(True))
 
         with it("should go by the name its mod sent while the app has given it no title"):
-            expect(Chat.list()[0].name).to(equal("repo · first words"))
+            expect(Chats.load().list()[0].name).to(equal("repo · first words"))
 
         with it("should name no folder while its mod has sent none"):
-            expect(Chat.list()[0].folder).to(equal(""))
+            expect(Chats.load().list()[0].folder).to(equal(""))
 
         # The board finds a ticket's chat by the worktree the chat works in.
         with context("from the folder it works in"):
@@ -145,7 +144,7 @@ with description("a chat") as self:
                 Chat.load(CHAT).check_in(is_busy=False, name="repo · first words", folder="C:/dev/repo-checkout-flow")
 
             with it("should name that folder"):
-                expect(Chat.list()[0].folder).to(equal("C:/dev/repo-checkout-flow"))
+                expect(Chats.load().list()[0].folder).to(equal("C:/dev/repo-checkout-flow"))
 
         with context("with a title the app wrote into its transcript, read at a later check-in"):
             with before.each:
@@ -156,7 +155,7 @@ with description("a chat") as self:
                 Chat.load(CHAT).check_in(is_busy=False, name="repo · first words")
 
             with it("should go by the latest title"):
-                expect(Chat.list()[0].name).to(equal("Session board handoff review"))
+                expect(Chats.load().list()[0].name).to(equal("Session board handoff review"))
 
             # The chat keeps the transcript it found, so a later title read does not search the projects folder again.
             with context("that the chat renamed, read at a later check-in after the projects folder moved"):
@@ -168,14 +167,14 @@ with description("a chat") as self:
                     Chat.load(CHAT).check_in(is_busy=False, name="repo · first words")
 
                 with it("should go by the new title from the transcript it kept"):
-                    expect(Chat.list()[0].name).to(equal("Renamed review"))
+                    expect(Chats.load().list()[0].name).to(equal("Renamed review"))
 
         with context("that has gone quiet"):
             with before.each:
                 CLOCK[0] += 6
 
             with it("should not be listed"):
-                expect(Chat.list()).to(be_empty)
+                expect(Chats.load().list()).to(be_empty)
 
         # (S) Person --> Send Command To Chat
         with context("that has been sent a command"):

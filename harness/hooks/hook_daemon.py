@@ -30,14 +30,13 @@ from harness.agent_tools.agent_tools import ToolsetReference
 from harness.hooks.hook_server import HookResult, HookServer
 from harness.hooks.hooks import InstalledHookHandlers
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
-from harness.installation.repository_toolsets import RepositoryToolsets
+from harness.installation.repository_toolsets import RUNNING_CHECKOUT, RepositoryToolsets
 from harness.process.process import (
     BackgroundStart,
     ExclusivePort,
     ProcessNotStopped,
     PythonInterpreter,
     RunningProcess,
-    StoppableProcess,
 )
 
 logger = logging.getLogger(__name__)
@@ -111,7 +110,7 @@ class HookDaemonAddress:
         self.pid = identity.pid
         self.stamp = identity.stamp
         self.repo = identity.repo
-        self.process = StoppableProcess(identity.pid or 0)
+        self.process = RunningProcess(identity.pid or 0)
 
     @classmethod
     def from_fields(cls, fields: dict[str, Any], host: str) -> HookDaemonAddress | None:
@@ -457,7 +456,7 @@ class HookDaemon:
         which names no checkout and holds the port this checkout's daemon may hold."""
         return not holder.repo or holder.serves(self.repo)
 
-    def _process_of(self, holder: HookDaemonAddress, port: ExclusivePort) -> StoppableProcess:
+    def _process_of(self, holder: HookDaemonAddress, port: ExclusivePort) -> RunningProcess:
         """The process of this checkout's daemon that answered as holder: the one it reports, or, for a daemon of the
         older layout, which reports none, the one its address file names, else the port's holder."""
         if holder.pid is not None:
@@ -471,10 +470,10 @@ class HookDaemon:
             raise HookPortTaken(self.repo, self.port, "a hook daemon of the older layout whose process cannot be found")
         return found
 
-    def _named(self, process: StoppableProcess | None, what: str) -> str:
+    def _named(self, process: RunningProcess | None, what: str) -> str:
         return f"{what} (pid {process.pid})" if process is not None else what
 
-    def _stop_process(self, process: StoppableProcess) -> None:
+    def _stop_process(self, process: RunningProcess) -> None:
         """Stop a daemon process of this checkout; raises *ProcessNotStopped* when it keeps running."""
         logger.warning("stopping hook daemon process %s of %s", process.pid, self.repo)
         process.stop(_STOP_SECONDS)
@@ -528,7 +527,7 @@ class HookDaemon:
 
 def run_hook_command() -> None:
     """The hook command: hand the event on stdin to this checkout's hook daemon and print its answer for the IDE."""
-    toolsets = RepositoryToolsets.of_running_checkout()
+    toolsets = RepositoryToolsets(RUNNING_CHECKOUT)
     daemon = HookDaemon(toolsets.root)
     daemon.toolsets.use_for_this_process()
     os.chdir(toolsets.root)

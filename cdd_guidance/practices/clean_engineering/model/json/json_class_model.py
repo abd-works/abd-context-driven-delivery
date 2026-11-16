@@ -67,7 +67,7 @@ class JsonOoadClass(OoadClass):
         loaded.properties = [JsonProperty.from_record(item) for item in record.get("properties", [])]
         loaded.operations = [JsonOperation.from_record(item) for item in record.get("operations", [])]
         for item in record.get("relationships", []):
-            loaded.place_relationship(JsonRelationship.from_record(item))
+            loaded.arrows.place(JsonRelationship.from_record(item))
         return loaded
 
     def render(self) -> str:

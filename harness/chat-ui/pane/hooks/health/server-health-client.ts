@@ -6,9 +6,8 @@ import type { ServerHealthData } from '@cdd/harness/diagnostics/server-health'
 
 import type { HealthViewJson, InstallJson, ServerHealthJson, TestRunJson, ToastedRunsJson } from '../../types'
 import { showFailure, shownAsFailure } from '../error-display/failure-client'
+import { callTool, CddToolFailed } from '../shared/cdd-tool'
 
-// The cdd plugin declares the server, and Claude Code names a plugin's server plugin:{plugin}:{server}.
-export const SERVER = 'plugin:cdd:cdd'
 export const REPORT_TOOL = 'server-health.report'
 // The CDD Kanban's label, which App.load takes as its identity: the board the chat checks in with.
 export const KANBAN = 'Kanban'
@@ -121,26 +120,14 @@ export async function runInstall($: EngineInterface): Promise<void> {
   }
 }
 
+// A server that cannot be reached is disconnected. One from another checkout has no such tool, and answers in words
+// (KeyError: 'server-health.report') or with isError: its tools are missing.
 async function askServer($: EngineInterface): Promise<Answer> {
-  let result
   try {
-    result = await $.mcp.call(SERVER, REPORT_TOOL, {})
+    return { connection: 'connected', report: await callTool<ServerHealthData>($, REPORT_TOOL, {}), problem: null }
   } catch (failure) {
+    if (failure instanceof CddToolFailed) return { connection: 'tools-missing', report: null, problem: failure.message }
     return { connection: 'disconnected', report: null, problem: String(failure) }
-  }
-  const text = result.content[0]?.text
-  const report = result.isError ? null : reportFrom(text)
-  if (report === null) return { connection: 'tools-missing', report: null, problem: text ?? `${REPORT_TOOL} sent back nothing` }
-  return { connection: 'connected', report, problem: null }
-}
-
-// A server from another checkout has no such tool, and answers in words: KeyError: 'server-health.report'.
-function reportFrom(text: string | undefined): ServerHealthData | null {
-  if (text === undefined) return null
-  try {
-    return JSON.parse(text) as ServerHealthData
-  } catch {
-    return null
   }
 }
 

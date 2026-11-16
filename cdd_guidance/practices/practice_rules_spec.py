@@ -15,7 +15,7 @@ from mamba import before, description, it
 import cdd_guidance.practices  # noqa: F401  (registers the practices)
 from harness.graph.schema_rules import PracticeSchema
 from harness.guidance.practice_reading import rules_in
-from harness.guidance.practice_catalogue import PracticeCatalogue
+from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 
 
 def _unlisted(practice) -> list[str]:
@@ -34,7 +34,7 @@ def _unlisted(practice) -> list[str]:
 with description("the graph rules of every practice CDD ships") as self:
     # Reading every practice, its schema, and its rules modules is the slow part, so it is read once for the examples.
     with before.all:
-        self.practices = PracticeCatalogue.create_all()
+        self.practices = PRACTICE_CATALOGUE.create_all()
         self.unlisted = [gap for practice in self.practices for gap in _unlisted(practice)]
 
     with it("should check the five practices"):
@@ -46,7 +46,7 @@ with description("the graph rules of every practice CDD ships") as self:
 
 with description("the fidelities of every practice CDD ships") as self:
     with before.all:
-        self.practices = PracticeCatalogue.create_all()
+        self.practices = PRACTICE_CATALOGUE.create_all()
 
     with it("should each give a Scaffold, which a partition at that fidelity indexes by"):
         missing = sorted(

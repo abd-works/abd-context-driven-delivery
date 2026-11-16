@@ -11,7 +11,6 @@ Appends to ``.sessions/{name}/logs/prompt-log.txt`` in the project being worked 
 
 from __future__ import annotations
 
-import json
 from collections.abc import Mapping
 from pathlib import Path
 from typing import TypedDict
@@ -19,7 +18,7 @@ from typing import TypedDict
 from harness.agent_tools.agent_tools import agent_toolset
 from harness.hooks.hook_server import HookPayload
 from harness.hooks.hooks import Hook, Hooks, hook
-from harness.installation.destination import noCatalog
+from harness.annotations.annotation import noCatalog
 from harness.installation.ide_layout import installed_guidance_kind
 from space.session.session_log import HookLog, LogTimestamp
 
@@ -130,11 +129,10 @@ class PromptLogEntry:
         kind = "rule" if attachment.get("type", "file") == "rule" else file.kind
         return f"  [{kind}] {file.path}"
 
-    def _preview(self, text: object) -> str:
-        if text is None:
+    def _preview(self, text: str) -> str:
+        """The text as the log shows it: whole when short, else its first lines and how long it is in all."""
+        if not text:
             return ""
-        if not isinstance(text, str):
-            text = json.dumps(text, indent=2)
         lines = text.splitlines()
         if len(lines) <= _PREVIEW_LINES and len(text) <= _PREVIEW_CHARS:
             return text

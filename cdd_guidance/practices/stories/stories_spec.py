@@ -17,7 +17,7 @@ from mamba import after, before, context, description, it
 from cdd_guidance.practices.stories.stories import Stories
 from harness.guidance.practice_formats import RenderRequest
 from harness.markdown.format import Format
-from harness.guidance.practice_catalogue import PracticeCatalogue
+from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.installation.ide_layout import IdeLayout
 
@@ -180,24 +180,24 @@ with description("Stories"):
 
     with context("that provides a CleanEngineering companion"):
         with it("should hold the code fidelity of its own set's Clean Engineering as the companion"):
-            stories = PracticeCatalogue.create("stories", fidelity="acceptance_tests", format="typescript")
-            expect(stories.fidelities.current.clean_engineering).to(be(stories.companion.fidelities["code"]))
+            stories = PRACTICE_CATALOGUE.create("stories", fidelity="acceptance_tests", format="typescript")
+            expect(stories.fidelities.current.clean_engineering).to(be(stories.working_set.companion.fidelities["code"]))
 
         with it("should join the companion's instructions to its own while it works in a code format"):
-            stories = PracticeCatalogue.create("stories", fidelity="acceptance_tests", format="typescript")
+            stories = PRACTICE_CATALOGUE.create("stories", fidelity="acceptance_tests", format="typescript")
             expect(stories.fidelities.current.companion_instructions).to(contain("Write working production code"))
 
         with it("should leave the companion in its own format while it writes TypeScript"):
-            stories = PracticeCatalogue.create("stories", fidelity="acceptance_tests", format="typescript")
+            stories = PRACTICE_CATALOGUE.create("stories", fidelity="acceptance_tests", format="typescript")
             expect(stories.fidelities.current.clean_engineering.format).to(equal("python"))
 
         with it("should leave the companion's own practice in its own format"):
-            stories = PracticeCatalogue.create("stories", fidelity="acceptance_tests", format="typescript")
+            stories = PRACTICE_CATALOGUE.create("stories", fidelity="acceptance_tests", format="typescript")
             companion = stories.fidelities.current.clean_engineering
             expect(companion.practice_guidance.format).not_to(equal("typescript"))
 
         with it("should fall back to CE's own default for a non-code format"):
-            stories = PracticeCatalogue.create("stories", fidelity="acceptance_tests", format="markdown")
+            stories = PRACTICE_CATALOGUE.create("stories", fidelity="acceptance_tests", format="markdown")
             companion = stories.fidelities.current.clean_engineering
             expect(companion.default_format).to(equal("python"))
 
@@ -235,7 +235,7 @@ with description("Stories"):
             expect("#### Scaffold" in Stories(fidelity="story_map").scoped_markdown).to(be_true)
 
         with it("should include the Clean Engineering companion's instructions"):
-            prose = _expanded(PracticeCatalogue.create("stories", fidelity="acceptance_tests"), "instructions")
+            prose = _expanded(PRACTICE_CATALOGUE.create("stories", fidelity="acceptance_tests"), "instructions")
             expect("Write working production code" in prose).to(be_true)
 
         with it("should NOT inline CleanEngineering generate instructions"):
@@ -251,12 +251,13 @@ with description("Stories"):
             import tempfile
 
             from harness.installation.files import FileChannel, FileInstallation
+            from harness.installation.install_target import InstallTarget
 
             stories = Stories()
             tool = stories.tools["instructions"]
             with tempfile.TemporaryDirectory() as tmp:
                 FileInstallation(
-                    IdeLayout("Cursor"), tmp, FileChannel("skill", True), repo=_REPO_ROOT
+                    InstallTarget(IdeLayout("Cursor"), tmp), FileChannel("skill", True), repo=_REPO_ROOT
                 ).write(tool)
                 text = next(Path(tmp).rglob("SKILL.md")).read_text(encoding="utf-8")
             expect(text).to(contain("storyNode:"))

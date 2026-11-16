@@ -3,17 +3,18 @@
 
 A pattern is a *PracticeGuidance* (LernDomainDriven, CddWebDomainAccess, CddClaudeMod) that owns a *GraphOverlay*: the
 nodes it adds on top of the practices and the rules it adds to each. The pattern makes its overlay once and keeps it as
-``graph_overlay``; the overlay holds its pattern. The package that defines the patterns registers their classes here
-when it is imported. Each graph holds one *PatternOverlays*, which makes each pattern once, the first time the graph
+``graph_overlay``; the overlay holds its pattern. The package that defines the patterns registers their classes with
+``REGISTERED_PATTERNS`` when it is imported. Each graph holds one *PatternOverlays*, which makes each pattern once, the first time the graph
 applies it or reads its schemas, so the patterns depend on the graph and never the other way round.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING
 
 from harness.annotations.class_folder import class_folder
+from harness.annotations.class_registry import ClassRegistry
 from harness.graph.patterns_file import PatternsFile
 from harness.graph.practice_rule import PracticeGraphRule, SharedPracticeGraphRule
 from harness.graph.schema_conformance import FRAMEWORK_RULES
@@ -100,19 +101,19 @@ class GraphOverlay:
         return {slug: rule for slug, rule in bound.items() if rule is not None}
 
 
+# The patterns are classes, and a class is defined once per process, so the registry of them is one per process too:
+# each pattern class by its ``pattern`` name, the name a graph applies it by.
+REGISTERED_PATTERNS: ClassRegistry[PracticeGuidance] = ClassRegistry(lambda pattern_class: pattern_class.pattern)
+
+
 class PatternOverlays:
     """The pattern overlays one graph applies. Each is a folder holding ``practices/``, named by its path or by the name
-    of a registered pattern; a pattern is its folder's name. The registry of pattern classes is the process's, as the
-    practice catalogue is; the pattern objects are this object's own, each made the first time it is wanted."""
+    of a registered pattern; a pattern is its folder's name. It is made with the registry of pattern classes, the
+    process's ``REGISTERED_PATTERNS`` unless a caller hands it another; the pattern objects are this object's own, each
+    made the first time it is wanted."""
 
-    _registered: ClassVar[dict[str, type]] = {}
-
-    @classmethod
-    def register(cls, *pattern_classes: type) -> None:
-        """Hold pattern_classes as the patterns a graph can apply, each by its ``pattern`` name."""
-        PatternOverlays._registered = {pattern_class.pattern: pattern_class for pattern_class in pattern_classes}
-
-    def __init__(self, overlays: list[str] | tuple[str, ...] = ()) -> None:
+    def __init__(self, overlays: list[str] | tuple[str, ...] = (), registered: ClassRegistry[PracticeGuidance] = REGISTERED_PATTERNS) -> None:
+        self._registered = registered
         self._made: dict[str, PracticeGuidance] = {}
         self.paths: list[str] = []
         self.patterns: list[PracticeGuidance] = []
@@ -139,7 +140,7 @@ class PatternOverlays:
         patterns: list[PracticeGuidance] = []
         for path in paths:
             name = Path(path).name
-            if name in self._registered and self._holds_practices(self._folder_of(name)):
+            if self._registered.has(name) and self._holds_practices(self._folder_of(name)):
                 pattern = self._pattern(name)
                 if pattern not in patterns:
                     patterns.append(pattern)
@@ -178,7 +179,7 @@ class PatternOverlays:
         supplements, as it does for its applied patterns."""
         found: list[GraphOverlay] = []
         for practice in practices:
-            for supplement in getattr(practice, "supplements", ()):
+            for supplement in practice.working_set.supplements:
                 overlay = getattr(supplement, "graph_overlay", None)
                 if overlay is not None and overlay not in found:
                     found.append(overlay)
@@ -222,18 +223,18 @@ class PatternOverlays:
         up to root, once each; none when no folder records any."""
         found = [PatternsFile.nearest(path, root) for path in paths]
         recorded = [name for patterns in found if patterns is not None for name in patterns.patterns]
-        return [name for name in dict.fromkeys(recorded) if name in self._registered]
+        return [name for name in dict.fromkeys(recorded) if self._registered.has(name)]
 
     @property
     def names(self) -> list[str]:
         """Every registered pattern by name, in name order, whether its folder holds practices yet or not: the patterns a
         person can choose to overlay."""
-        return sorted(self._registered)
+        return sorted(self._registered.names)
 
     @property
     def available(self) -> list[str]:
         """Every registered pattern that holds at least one practice."""
-        return [name for name in sorted(self._registered) if self._holds_practices(self._folder_of(name))]
+        return [name for name in self.names if self._holds_practices(self._folder_of(name))]
 
     def root_of(self, overlay: str) -> Path:
         """The overlay root a path or pattern name names: the folder itself when it holds ``practices/``, else the
@@ -241,13 +242,13 @@ class PatternOverlays:
         candidate = Path(overlay)
         if candidate.is_dir() and (candidate / "practices").is_dir():
             return candidate.resolve()
-        if overlay in self._registered and (self._folder_of(overlay) / "practices").is_dir():
+        if self._registered.has(overlay) and (self._folder_of(overlay) / "practices").is_dir():
             return self._folder_of(overlay)
         return candidate.resolve()
 
     def _folder_of(self, name: str) -> Path:
         """The folder the registered pattern name is defined in."""
-        return class_folder(self._registered[name])
+        return class_folder(self._registered.named(name))
 
     def pattern_named(self, name: str) -> PracticeGuidance:
         """The guidance of the registered pattern name, whether its folder holds practices or not, made the first time
@@ -257,7 +258,7 @@ class PatternOverlays:
     def _pattern(self, name: str) -> PracticeGuidance:
         """The guidance of the registered pattern name, made the first time this object wants it."""
         if name not in self._made:
-            self._made[name] = self._registered[name]()
+            self._made[name] = self._registered.named(name)()
         return self._made[name]
 
     def _holds_practices(self, entry: Path) -> bool:

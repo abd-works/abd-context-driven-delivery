@@ -9,7 +9,7 @@ theme: default format
 ce:
 PracticeGuidance : Guidance
   fidelities
-       // @markdownCollection: MarkdownCollection.coerce reads the Fidelities section
+       // @markdown_collection: MarkdownCollection.coerce reads the Fidelities section
        -> Markdown.fidelity_blocks
        -> FidelityGuidance
   format

@@ -100,7 +100,7 @@ with description("a generate action on practice guidance") as self:
             self.project = Path(tempfile.mkdtemp(prefix="cdd-generate-"))
             (self.project / ".git").mkdir()
             sessions = Sessions(self.project)
-            sessions.open(sessions.create("alpha", self.project))
+            sessions.opened.open(sessions.create("alpha", self.project))
             self.action = _made_for(self.project)
 
         with after.each:

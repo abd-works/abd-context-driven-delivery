@@ -11,6 +11,8 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from typing import Dict, Iterator, List, Optional, Tuple
 
+from harness.whiteboard.whiteboard import Box
+
 from cdd_guidance.practices.stories.model.diagram_story_model import (
     DiagramEpic,
     DiagramIncrement,
@@ -43,10 +45,7 @@ class MiroShape:
     """One card a Miro story map draws: its box, colours, text, and the role its kind of node reads it back by."""
 
     id: str
-    x: float
-    y: float
-    w: float
-    h: float
+    box: Box
     rx: int
     fill: str
     stroke: str
@@ -60,8 +59,8 @@ class MiroShape:
         """The card as the SVG rect line a canvas-composer SVG holds it on, its words and actor escaped."""
         actor_attr = f' data-actor="{html.escape(self.actor, quote=True)}"' if self.actor else ""
         return (
-            f'  <rect id="{self.id}" x="{self.x}" y="{self.y}" '
-            f'width="{self.w}" height="{self.h}" rx="{self.rx}" '
+            f'  <rect id="{self.id}" x="{self.box.x}" y="{self.box.y}" '
+            f'width="{self.box.w}" height="{self.box.h}" rx="{self.rx}" '
             f'fill="{self.fill}" stroke="{self.stroke}" stroke-width="{self.stroke_width}" '
             f'data-content="{html.escape(self.content, quote=True)}" data-role="{self.role}" '
             f'data-font-size="{self.font_size}"{actor_attr} />'
@@ -100,7 +99,7 @@ class MiroStory(LaidOutStory):
         if actor and actor != self._previous_actor(index):
             shapes.append(self._actor_shape(story_id, actor))
         shapes.append(MiroShape(
-            id=story_id, x=self.x, y=self.y, w=self.size, h=self.size, rx=0,
+            id=story_id, box=Box(self.x, self.y, self.size, self.size), rx=0,
             fill=self.fill, stroke=self.stroke, stroke_width=1,
             content=self.name, role=f"story:{self.story_type.value}", font_size=_STORY_FONT_SIZE, actor=actor,
         ))
@@ -115,8 +114,8 @@ class MiroStory(LaidOutStory):
 
     def _actor_shape(self, story_id: str, actor: str) -> MiroShape:
         return MiroShape(
-            id=f"{story_id}/actor", x=self.x, y=self.y - self.actor_height - self.actor_gap,
-            w=self.size, h=self.actor_height, rx=0, fill=self.actor_fill, stroke=self.actor_stroke, stroke_width=1,
+            id=f"{story_id}/actor", box=Box(self.x, self.y - self.actor_height - self.actor_gap, self.size, self.actor_height),
+            rx=0, fill=self.actor_fill, stroke=self.actor_stroke, stroke_width=1,
             content=actor, role="actor", font_size=_ACTOR_FONT_SIZE,
         )
 
@@ -148,7 +147,7 @@ class MiroEpic(LaidOutEpic):
         index = siblings.index(self) + 1
         sub_epic_id = f"{parent_id}/sub-{index}-{self.slug}-d{self.depth}"
         shapes: List[MiroShape] = [MiroShape(
-            id=sub_epic_id, x=self.x + self.tighten, y=self.y, w=self.width - self.tighten, h=self.height,
+            id=sub_epic_id, box=Box(self.x + self.tighten, self.y, self.width - self.tighten, self.height),
             rx=_SUB_EPIC_CORNER, fill=self.fill, stroke=self.stroke, stroke_width=1,
             content=self.name, role=f"subepic:{self.depth}", font_size=_SUB_EPIC_FONT_SIZE,
         )]
@@ -158,7 +157,7 @@ class MiroEpic(LaidOutEpic):
         index = self.parent.epics.index(self) + 1 if self.parent is not None else 1
         epic_id = f"epic-{index}-{self.slug}"
         shapes: List[MiroShape] = [MiroShape(
-            id=epic_id, x=self.x, y=self.y, w=self.width, h=self.height, rx=_EPIC_CORNER,
+            id=epic_id, box=Box(self.x, self.y, self.width, self.height), rx=_EPIC_CORNER,
             fill=self.fill, stroke=self.stroke, stroke_width=_EPIC_STROKE_WIDTH,
             content=self.name, role="epic", font_size=_EPIC_FONT_SIZE,
         )]

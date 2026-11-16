@@ -46,7 +46,7 @@ function useDropOver(ticket: TicketClient): (event: DragEvent) => Drop | undefin
     if (item) return ticket.isMain ? undefined : { kind: 'item', item }
     if (!other) return undefined
     if (isPlacedAbove(ticket, other, event)) return { kind: 'before', ticket: other }
-    return ticket.canTakeAsChild(other) ? { kind: 'child', ticket: other } : undefined
+    return ticket.drops.canTakeAsChild(other) ? { kind: 'child', ticket: other } : undefined
   }
 }
 

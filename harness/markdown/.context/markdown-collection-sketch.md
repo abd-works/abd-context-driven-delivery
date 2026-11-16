@@ -27,14 +27,14 @@ RulesCollection : MarkdownCollection
   inject_rules
        -> markdown
 
-@markdownCollection label
+@markdown_collection label
        -> Markdown.from_label
        -> MarkdownCollection.coerce return_type
        // same locate as @markdown; result.markdown is the extract
 
 Guidance
   rules
-       // @markdownCollection("shared rules") -> RulesCollection
+       // @markdown_collection("shared rules") -> RulesCollection
        // @rules lives on this member — not a twin string property
   instructions
        -> rules.markdown

@@ -57,12 +57,7 @@ class Ux(PracticeGuidance):
         "spec_blurb": "Interface mockups that work according to story specs and design templates",
     }
 
-    def __init__(
-        self,
-        fidelity: str = "ia",
-        format: str | None = None,
-    ) -> None:
-        super().__init__(format=format, fidelity=fidelity)
+    first_fidelity = "ia"
 
     default_workspace_folder = "ux"
     format_adapters = {
@@ -91,4 +86,4 @@ class Ux(PracticeGuidance):
         return practice
 
 
-UxNode.register_practice(Ux)
+UxNode.practice_class = Ux

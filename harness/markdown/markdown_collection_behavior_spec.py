@@ -5,7 +5,7 @@ from mamba import description, context, it
 with description("a markdown collection"):
     with context("that has been built from a Guidance member"):
         with context("with the member annotated as a markdown collection for shared rules"):
-            # @markdownCollection("shared rules")
+            # @markdown_collection("shared rules")
             # def rules(self) -> RulesCollection:
             with it("should expose the original extract on rules.markdown"):
                 # BDD: SIGNATURE
@@ -21,7 +21,7 @@ with description("a markdown collection"):
                 pass
 
         with context("with a list return type"):
-            # @markdownCollection("examples")
+            # @markdown_collection("examples")
             # def examples(self) -> list:
             with context("that has section bullets"):
                 with it("should iterate one markdown per bullet"):
@@ -34,7 +34,7 @@ with description("a markdown collection"):
                     pass
 
         with context("with a map return type"):
-            # @markdownCollection("shared rules")
+            # @markdown_collection("shared rules")
             # def rules(self) -> RulesCollection:
             with context("that has section bullets"):
                 with it("should key each entry by the bullet label"):

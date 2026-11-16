@@ -27,11 +27,20 @@ const READ_EVERY_MILLISECONDS = 2_000;
 
 type EditStatus = 'synced' | 'saving' | 'error';
 
+// What a page's reads and edits share, made once for its failures: the calls it makes, where their failures go, and
+// whether an edit is under way.
+interface StoryMapPageCalls {
+  api: StoryMapApi;
+  failures: StoryMapFailures;
+  editing: React.MutableRefObject<boolean>;
+}
+
 // The map the page shows, read when the page opens and again every READ_EVERY_MILLISECONDS, except while an edit is
 // under way. A read of the file already shown is taken on by the client the views hold.
-function useStoryMapReading(file: string | null, api: StoryMapApi, failures: StoryMapFailures, editing: React.RefObject<boolean>) {
+function useStoryMapReading(file: string | null, calls: StoryMapPageCalls) {
   const [client, setClient] = useState<StoryMapClient | null>(null);
   useEffect(() => {
+    const { api, failures, editing } = calls;
     let stopped = false;
     let held: StoryMapClient | null = null;
     const read = async () => {
@@ -46,15 +55,16 @@ function useStoryMapReading(file: string | null, api: StoryMapApi, failures: Sto
     void readReporting('Opening the story map in the Story UI');
     const timer = setInterval(() => void readReporting('Reading the story map again every two seconds'), READ_EVERY_MILLISECONDS);
     return () => { stopped = true; clearInterval(timer); };
-  }, [api, file, failures, editing]);
+  }, [calls, file]);
   return client;
 }
 
 // An edit answers the map as its file now holds it; one that fails leaves the map as it was and says why.
-function useStoryMapEdit(client: StoryMapClient | null, failures: StoryMapFailures, editing: React.MutableRefObject<boolean>) {
+function useStoryMapEdit(client: StoryMapClient | null, calls: StoryMapPageCalls) {
   const [status, setStatus] = useState<EditStatus>('synced');
   const edit = useCallback(async (change: (held: StoryMapClient) => Promise<StoryMapClient | null>) => {
     if (!client) return;
+    const { failures, editing } = calls;
     editing.current = true;
     setStatus('saving');
     try {
@@ -66,7 +76,7 @@ function useStoryMapEdit(client: StoryMapClient | null, failures: StoryMapFailur
     } finally {
       editing.current = false;
     }
-  }, [client, failures, editing]);
+  }, [client, calls]);
   return { status, edit };
 }
 
@@ -74,10 +84,11 @@ function useStoryMapEdit(client: StoryMapClient | null, failures: StoryMapFailur
 // failure, from a call, a read or an edit, goes through failures.fail: shown on the page and sent to the opening chat.
 export function useStoryMapPage(file: string | null, failures: StoryMapFailures) {
   const failure = useSyncExternalStore(failures.subscribe, () => failures.shown);
-  const api = useMemo(() => new StoryMapApi(failures.fail), [failures]);
   const editing = useRef(false);
-  const client = useStoryMapReading(file, api, failures, editing);
-  const { status, edit } = useStoryMapEdit(client, failures, editing);
+  const calls = useMemo<StoryMapPageCalls>(() => ({ api: new StoryMapApi(failures.fail), failures, editing }), [failures]);
+  const { api } = calls;
+  const client = useStoryMapReading(file, calls);
+  const { status, edit } = useStoryMapEdit(client, calls);
 
   // A story's acceptance-test file is read in the chat bar's file viewer of the chat this page was opened beside, never
   // here: the chat takes it at its next check-in.

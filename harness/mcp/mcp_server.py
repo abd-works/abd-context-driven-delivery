@@ -29,11 +29,11 @@ from harness.agent_tools.chat_pointer import ChatPointer
 from harness.process.claude_chat_process import ClaudeChatProcess, is_desktop_spare
 from harness.agent_tools.tool_call import CALLS_BEING_ANSWERED, ToolCall, ToolRequest
 from harness.installation.destination import ServerInstallation, SkippedTool, SkippedTools
-from harness.installation.data_class import data_of
+from harness.installation.data_class import SentValue, data_of
 from harness.installation.ide_layout import IdeLayout
 from harness.installation.installer import SERVER_CHANNELS
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
-from harness.installation.repository_toolsets import RepositoryToolsets
+from harness.installation.repository_toolsets import RUNNING_CHECKOUT, RepositoryToolsets
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_annotations import LongCall, Mcp  # noqa: F401 - importing the server defines Mcp, the channel install reads
 from harness.mcp.claude_plugins import ClaudePlugins
@@ -84,6 +84,14 @@ class ToolNotEnrolled(LookupError):
     def __init__(self, tool: str) -> None:
         super().__init__(f"{tool} is not a tool the cdd server publishes")
         self.tool = tool
+
+
+class _ChatCallFailed(Exception):
+    """A call a chat sent failed; the chat hears the failure's kind and its words, as ``LedgerIsLocked: the ledger is
+    locked``."""
+
+    def __init__(self, failure: Exception) -> None:
+        super().__init__(f"{type(failure).__name__}: {failure}")
 
 
 class CddEntry:
@@ -231,21 +239,26 @@ class McpInstallation(ServerInstallation):
     channel = "mcp"
     toolsets = (CddServerHooks,)
 
-    def __init__(self, layout: IdeLayout, path: Path | str, repo: Path | str | None = None) -> None:
-        super().__init__(layout, path, repo=repo)
-        lanes = ServerLanes()
+    def __init__(self, layout: IdeLayout, path: Path | str, served: ServedCheckout) -> None:
+        """served is the checkout the cdd server is installed from and serves, on the lane its folder runs on: the
+        stable lane for a main checkout, the dev lane for a ticket's worktree."""
+        super().__init__(layout, path, repo=served.checkout)
+        self.served = served
         # The stable lane's server is the one every chat's cdd plugin names, so the plugins and the IDE entry follow it.
-        self.daemon = lanes.stable.daemon
+        self.daemon = ServerLanes.from_serving(served.daemon.home, served.daemon.address).stable.daemon
         self.claude_plugins = ClaudePlugins(self.daemon.home)
         # The IDE's cdd entry, written once the whole install has been recorded.
         self.cdd_entry = CddEntry(self)
-        # The checkout the server is installed from and serves: this installation's repository, else the running one.
-        # A main checkout is served on the stable lane; a ticket's worktree on the dev lane.
-        checkout = Path(self.repo or RepositoryToolsets.of_running_checkout().root).resolve()
-        self.served = lanes.for_project(checkout).served_checkout(checkout)
         self.mcp_operations: list[AgentTool] = []
         self.host: McpHost | None = None
         self.diagnosis: dict[str, Any] | None = None
+
+    @classmethod
+    def create(cls, layout: IdeLayout, path: Path | str, repo: Path | str | None = None) -> McpInstallation:
+        """The cdd server's installation into path, serving repo, else the running checkout, on the lane its folder runs
+        on (*ServerLanes*)."""
+        checkout = Path(repo or RUNNING_CHECKOUT).resolve()
+        return cls(layout, path, ServerLanes().for_project(checkout).served_checkout(checkout))
 
     def write(self, tool: AgentTool) -> None:
         """Record the tool; the MCP config and the plugins are written once the whole install has been recorded, in
@@ -299,7 +312,7 @@ class McpServer:
         repo: str | Path | None = None,
         project: str | Path | None = None,
     ) -> None:
-        self.repo = Path(repo).resolve() if repo is not None else RepositoryToolsets.of_running_checkout().root
+        self.repo = Path(repo).resolve() if repo is not None else RUNNING_CHECKOUT
         self.project = Path(project).resolve() if project is not None else self.repo
         self.venv = self.repo / ".venv"
         self._tools: dict[str, AgentTool] = {}
@@ -565,14 +578,15 @@ class McpHost:
 
         @self._protocol.call_tool()
         async def handle_call_tool(name: str, arguments: dict[str, object] | None) -> types.CallToolResult:
-            result = await self._answer_chat(name, arguments)
-            # A worker thread runs to the end even when the client cancels it, and
-            # the cancellation has already answered the request. Stop here, because
-            # a second answer raises in the MCP session and takes down the host.
             import anyio.lowlevel
 
-            await anyio.lowlevel.checkpoint()
-            return result
+            try:
+                return await self._answer_chat(name, arguments)
+            finally:
+                # A worker thread runs to the end even when the client cancels it, and
+                # the cancellation has already answered the request. Stop here, because
+                # a second answer raises in the MCP session and takes down the host.
+                await anyio.lowlevel.checkpoint()
 
         self._register_prompt_handlers()
 
@@ -612,8 +626,8 @@ class McpHost:
         return [*builtins, *listed]
 
     async def _answer_chat(self, name: str, arguments: dict[str, object] | None) -> types.CallToolResult:
-        """Answer one call a chat sent. A failure goes back as an error result, which the client shows as a failed call
-        rather than as the tool's output."""
+        """Answer one call a chat sent. A failure is logged and raised as *_ChatCallFailed*, which the protocol answers
+        as an error result naming it, so the client shows a failed call rather than the tool's output."""
         types = self._mcp_types()
         try:
             call = self._call_from_chat(name, arguments)
@@ -623,8 +637,7 @@ class McpHost:
             return types.CallToolResult(content=self._content_blocks(value))
         except Exception as failure:
             logger.exception("MCP tool %s failed", name)
-            text = f"{type(failure).__name__}: {failure}"
-            return types.CallToolResult(content=[types.TextContent(type="text", text=text)], isError=True)
+            raise _ChatCallFailed(failure) from failure
 
     def _call_from_chat(self, name: str, arguments: dict[str, object] | None) -> ToolCall:
         """The call as the chat sent it: the tool it names, the project its header names, and the chat its arguments
@@ -641,7 +654,7 @@ class McpHost:
         running = process.session_id if process is not None else ""
         return ChatPointer.from_request(running or headers.get(CHAT_HEADER) or "")
 
-    async def _answer_off_loop(self, call: ToolCall) -> object:
+    async def _answer_off_loop(self, call: ToolCall) -> SentValue:
         """Run the call on a worker thread, because a synchronous call on the event loop holds every other chat's
         requests. A call still running at its time limit keeps running and is reported as still running, not failed.
         ``cdd.ping`` answers on the event loop itself, so it says whether the loop answers, whatever the worker threads
@@ -810,7 +823,7 @@ class McpHost:
         if session is not None:
             session.log.by(call.request.chat).failure(failure, tool=call.request.tool)
 
-    def _content_blocks(self, answer: object) -> list[types.TextContent]:
+    def _content_blocks(self, answer: SentValue) -> list[types.TextContent]:
         types = self._mcp_types()
         text = answer if isinstance(answer, str) else json.dumps(data_of(answer))
         return [types.TextContent(type="text", text=text)]

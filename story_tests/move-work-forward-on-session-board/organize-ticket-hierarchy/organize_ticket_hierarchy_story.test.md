@@ -85,7 +85,7 @@ The realizations name the operations these scenarios need. Built (2026-11-11): t
 *When* the Person adds the child ticket Enter card details to checkout-flow
 
 ```realization
-Board.ticket("checkout-flow")
+CardPlacement.ticket("checkout-flow")
   <- checkout-flow
 checkout-flow.add_child("Enter card details")
   -> self.session.hierarchy.open_child("Enter card details", scope="story")
@@ -102,9 +102,9 @@ checkout-flow.add_child("Enter card details")
 *When* the Person makes pet-visits a child of checkout-flow
 
 ```realization
-Board.ticket("pet-visits")
+CardPlacement.ticket("pet-visits")
   <- pet-visits
-Board.ticket("checkout-flow")
+CardPlacement.ticket("checkout-flow")
   <- checkout-flow
 pet-visits.reassign_parent(checkout-flow)
   -> self.session.hierarchy.set_parent(checkout-flow.session)
@@ -191,7 +191,7 @@ The realizations name the operations these scenarios need. `Ticket.pull_out` is 
 *When* the Person pulls enter-card-details out of checkout-flow
 
 ```realization
-Board.ticket("enter-card-details")
+CardPlacement.ticket("enter-card-details")
   <- enter-card-details
 enter-card-details.pull_out()
   -> self.session.hierarchy.mark_pulled_out()
@@ -208,7 +208,7 @@ enter-card-details.pull_out()
 *When* the Person moves enter-card-details to Specification
 
 ```realization
-Board.ticket("enter-card-details")
+CardPlacement.ticket("enter-card-details")
   <- enter-card-details
 enter-card-details.move_next()
   <- enter-card-details in Specification, its parent still checkout-flow
@@ -237,9 +237,9 @@ The realizations name the operations these scenarios need. Built (2026-11-11): d
 *When* the Person makes billing-report the parent of enter-card-details
 
 ```realization
-Board.ticket("enter-card-details")
+CardPlacement.ticket("enter-card-details")
   <- enter-card-details
-Board.ticket("billing-report")
+CardPlacement.ticket("billing-report")
   <- billing-report
 enter-card-details.reassign_parent(billing-report)
   -> self.session.hierarchy.set_parent(billing-report.session)
@@ -256,7 +256,7 @@ enter-card-details.reassign_parent(billing-report)
 *When* the Person takes enter-card-details off checkout-flow
 
 ```realization
-Board.ticket("enter-card-details")
+CardPlacement.ticket("enter-card-details")
   <- enter-card-details
 enter-card-details.reassign_parent(None)
   -> self.session.hierarchy.set_parent(None)
@@ -274,9 +274,9 @@ enter-card-details.reassign_parent(None)
 *When* the Person starts Gift cards as a child of checkout-flow
 
 ```realization
-Board.backlog_item("Gift cards")
+BoardReads.backlog_item("Gift cards")
   <- Gift cards
-Board.ticket("checkout-flow")
+CardPlacement.ticket("checkout-flow")
   <- checkout-flow
 Gift cards.start_under(checkout-flow)
   -> self.start()
@@ -293,9 +293,9 @@ Gift cards.start_under(checkout-flow)
 *When* the Person tries to make checkout-flow a child of enter-card-details
 
 ```realization
-Board.ticket("checkout-flow")
+CardPlacement.ticket("checkout-flow")
   <- checkout-flow
-Board.ticket("enter-card-details")
+CardPlacement.ticket("enter-card-details")
   <- enter-card-details
 checkout-flow.reassign_parent(enter-card-details)
   -> self._can_be_child_of(enter-card-details)
@@ -335,7 +335,7 @@ Board.show()
 *When* the Person moves confirm-order to Specification
 
 ```realization
-Board.ticket("confirm-order")
+CardPlacement.ticket("confirm-order")
   <- confirm-order
 confirm-order.move_next()
   <- confirm-order in Specification
@@ -353,7 +353,7 @@ Board.show()
 *When* the Person tries to move checkout-flow to Specification
 
 ```realization
-Board.ticket("checkout-flow")
+CardPlacement.ticket("checkout-flow")
   <- checkout-flow
 checkout-flow.move_next()
   -> self.children
@@ -382,7 +382,7 @@ Evidence gap: the source says to nest, not how. The folder and branch below are 
 
 ```realization
 ticket.create("Enter card details", scope="story", parent="checkout-flow")
-  -> Board.ticket("checkout-flow")
+  -> CardPlacement.ticket("checkout-flow")
   <- checkout-flow
   -> checkout-flow.add_child("Enter card details")
      -> self.session.hierarchy.open_child("Enter card details", scope="story")

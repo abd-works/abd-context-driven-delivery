@@ -47,7 +47,7 @@ def _(s):
 
     @s.when("the Person opens the knowledge graph from checkout-flow's graph widget")
     def _(world):
-        world.graph = world.board().ticket(CHECKOUT_FLOW.name).session.graph
+        world.graph = world.board().placement.ticket(CHECKOUT_FLOW.name).session.graph
         world.graph.load_practice_roots(world.app_call())
 
     @s.then("the Graph app opens on checkout-flow's practice roots: harness/.context/stories, harness/.context/ux and harness/.context")
@@ -65,11 +65,11 @@ def _(s):
     def _(world):
         CHECKOUT_FLOW.seed_into(world.project)
         BILLING_REPORT.seed_into(world.project)
-        world.board().ticket(CHECKOUT_FLOW.name).session.graph.load_practice_roots(world.app_call())
+        world.board().placement.ticket(CHECKOUT_FLOW.name).session.graph.load_practice_roots(world.app_call())
 
     @s.when("the Person opens the knowledge graph from billing-report's graph widget")
     def _(world):
-        world.graph = world.board().ticket(BILLING_REPORT.name).session.graph
+        world.graph = world.board().placement.ticket(BILLING_REPORT.name).session.graph
         world.graph.load_practice_roots(world.app_call())
 
     @s.then("the Graph app shows billing-report's practice roots: billing/.context/stories and billing/.context")
@@ -102,7 +102,7 @@ for opened_from, ticket, practice_trees in OPENINGS:
 
         @s.when(f"the Person opens the knowledge graph from {opened_from}")
         def _(world):
-            world.graph = world.board().ticket(ticket).session.graph
+            world.graph = world.board().placement.ticket(ticket).session.graph
             world.graph.load_practice_roots(world.app_call())
 
         @s.then(f"the graph shows the {', '.join(practice_trees)} trees")
@@ -153,7 +153,7 @@ def _(s):
     def _(world):
         CHECKOUT_FLOW.seed_into(world.project)
         world.project.seed_active(CHECKOUT_FLOW.seed)
-        world.ticket = world.board().ticket(CHECKOUT_FLOW.name)
+        world.ticket = world.board().placement.ticket(CHECKOUT_FLOW.name)
 
     @s.and_("its Stories story map row shows .context/story-map.md")
     def _(world):
@@ -177,7 +177,7 @@ for row in PRACTICE_ROWS:
         @s.given("checkout-flow's card is open on the board")
         def _(world):
             CHECKOUT_FLOW.seed_into(world.project)
-            world.ticket = world.board().ticket(CHECKOUT_FLOW.name)
+            world.ticket = world.board().placement.ticket(CHECKOUT_FLOW.name)
 
         @s.when(f"the Person looks at the {row.name} row")
         def _(world):
@@ -196,7 +196,7 @@ def _(s):
 
     @s.but_("search-orders has no session yet")
     def _(world):
-        world.item = world.board().backlog_item(SEARCH_ORDERS.heading)
+        world.item = world.board().reads.backlog_item(SEARCH_ORDERS.heading)
 
     @s.when("the Person looks at search-orders on the board")
     def _(world):
@@ -212,13 +212,13 @@ def _(s):
     @s.given("the CDD Kanban shows checkout-flow in Implementation In progress")
     def _(world):
         CHECKOUT_FLOW.seed_into(world.project)
-        world.board().ticket(CHECKOUT_FLOW.name).move_to(IMPLEMENTATION)
+        world.board().placement.ticket(CHECKOUT_FLOW.name).move_to(IMPLEMENTATION)
 
     @s.when("the Agent moves checkout-flow to Implementation Done through the ticket's tools")
     def _(world):
-        world.board().ticket(CHECKOUT_FLOW.name).move_to(IMPLEMENTATION, done=True)
+        world.board().placement.ticket(CHECKOUT_FLOW.name).move_to(IMPLEMENTATION, done=True)
 
     @s.then("the CDD Kanban shows checkout-flow in Implementation Done on its next read of the board")
     def _(world):
-        shown = world.board().show().ticket(CHECKOUT_FLOW.name)
+        shown = world.board().show().placement.ticket(CHECKOUT_FLOW.name)
         expect((shown.column.name, shown.is_done)).to(equal((IMPLEMENTATION, True)))

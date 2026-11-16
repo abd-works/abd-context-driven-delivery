@@ -9,7 +9,7 @@ import importlib
 from pathlib import Path
 
 from harness.annotations.name import Name
-from harness.guidance.action_catalogue import ActionCatalogue
+from harness.guidance.action_catalogue import ACTION_CATALOGUE
 
 import cdd_guidance.practices  # noqa: F401 - the actions work on the practices, so those are registered with them
 
@@ -26,4 +26,4 @@ def _action_toolsets() -> list[type]:
     ]
 
 
-ActionCatalogue.register(*_action_toolsets())
+ACTION_CATALOGUE.register(*_action_toolsets())

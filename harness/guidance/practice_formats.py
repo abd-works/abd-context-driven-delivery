@@ -200,7 +200,7 @@ class PracticeFormats:
         with no aggregate in it, is read by the formats of the practice this one extends, through that practice's own
         adapter."""
         parsed = self.adapter(format).parse(self._incoming(format, content))
-        extended = self._practice.extended
+        extended = self._practice.working_set.extended
         if extended is not None and getattr(parsed, "holds_classes_only", False):
             return extended.formats.parse(format, content)
         return parsed

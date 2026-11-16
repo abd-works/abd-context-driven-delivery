@@ -170,17 +170,25 @@ class RefineBoard:
 
 
 class ApproachGrids:
-    """The boards drawn under the approach's principles and in its library, for a catalog's practices in the order of
-    the practice catalogue, which each practice keeps as its position. On a project's approach page the examples are
+    """A catalog's approach: its practices in board order, the approach's copy for each stage, and the practice whose
+    artifacts are the stage examples (Stories). It draws the boards under the approach's principles and in its library,
+    listing the practices in the order of the practice catalogue, which each practice keeps as its position; the
+    catalog board (*HubBoard*) draws the same approach in board order. On a project's approach page the examples are
     the project's own, under the catalog's folder (*CatalogExamples*)."""
 
-    def __init__(self, practices: list, stages: tuple[StageCopy, ...], examples: CatalogExamples) -> None:
-        self.practices = sorted(practices, key=lambda practice: practice.position)
+    def __init__(self, practices: list[CatalogPractice], stages: tuple[StageCopy, ...], examples: CatalogExamples) -> None:
+        self.practices = practices
         self.stages = stages
         self.catalog_root = examples.catalog_root
         self.project_examples = examples.project
         # The practice whose artifacts are the approach's stage examples (Stories), among the practices shown.
-        self.stories = giving_stage_examples(self.practices)
+        self.stories = giving_stage_examples(practices)
+        self._listed = sorted(practices, key=lambda practice: practice.position)
+
+    def stage(self, column: StageColumn) -> StageCopy:
+        """The approach's copy for column's stage; only its name when the approach says nothing of it."""
+        name = column.stage.name
+        return next((stage for stage in self.stages if stage.id == name), None) or StageCopy(id=name)
 
     def html(self, kind: str) -> str:
         """The board a principle of ``kind`` draws: ``windows``, ``descriptions``, ``spec``, or ``tickets``."""
@@ -196,7 +204,7 @@ class ApproachGrids:
     def tickets(self) -> str:
         """Each practice's fidelities in the stage columns, each opening its fidelity page."""
         cells = [_LIBRARY_HEAD, *(self._column_head(column) for column in STAGE_COLUMNS)]
-        for practice in self.practices:
+        for practice in self._listed:
             cells.append(self._label(practice))
             cells.extend(self._ticket(practice, column) for column in STAGE_COLUMNS)
         return f'<div class="approach-grid approach-grid--tickets">{"".join(cells)}</div>'
@@ -204,7 +212,7 @@ class ApproachGrids:
     @property
     def spec(self) -> str:
         cells = []
-        for practice in self.practices:
+        for practice in self._listed:
             cells.append(self._label(practice))
             cells.append(f'<div class="approach-grid__cell">{html.escape(practice.spec_blurb)}</div>')
         return f'<div class="approach-grid approach-grid--span">{"".join(cells)}</div>'
@@ -230,7 +238,7 @@ class ApproachGrids:
         """One refine board per practice, each stage column holding the practice's example at that stage."""
         boards: list[str] = []
         all_panels: dict[str, str] = {}
-        for practice in self.practices:
+        for practice in self._listed:
             label = practice.product_engineering_label
             panels, openings = self._practice_panels(practice)
             all_panels.update({f"{practice.key}-{stage}": panel for stage, panel in panels.items()})

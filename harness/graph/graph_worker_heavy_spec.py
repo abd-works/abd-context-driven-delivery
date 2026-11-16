@@ -72,7 +72,7 @@ def _ddd_nodes(graph: Graph) -> list[tuple]:
 
 
 def _ddd_edges(graph: Graph) -> list[tuple]:
-    return sorted((edge.kind, edge.parent.node_id, edge.child.node_id) for edge in graph.practice("ddd").reading.in_graph.edges())
+    return sorted((edge.kind, edge.parent.node_id, edge.child.node_id) for edge in graph.practice("ddd").reading.in_graph.edge_index.of())
 
 
 def _class_names(graph: Graph) -> list[str]:
@@ -129,7 +129,7 @@ def _practice_state(graph: Graph, key: str) -> dict:
     return {
         "nodes": sorted((node.node_id, node.type, node.source.file, node.source.start_line, node.source.end_line, _facts(node)) for node in found),
         "root": _facts(part.root),
-        "edges": sorted((edge.kind, edge.parent.node_id, edge.child.node_id) for edge in part.edges()),
+        "edges": sorted((edge.kind, edge.parent.node_id, edge.child.node_id) for edge in part.edge_index.of()),
         "violations": sorted((violation.rule, violation.node_id, violation.message) for node in found for violation in node.rules.violations),
     }
 
@@ -211,7 +211,7 @@ with description("a graph built for a chat's call"):
         with before.all:
             self.here.save_json()
             self.reopened = _CountingReads()
-            self.reopened.open_saved(self.root)
+            self.reopened.reads.open_saved(self.root)
 
         with it("should hold the violations it was saved with"):
             expect(_violations(self.reopened)).to(equal(_violations(self.here)))
@@ -234,7 +234,7 @@ with description("a graph built for a chat's call"):
             self.domain_apart = Graph()
             self.domain_apart.load_working_copy(str(self.domain), practices, force=True, call=_FROM_A_CHAT)
             self.domain_reopened = Graph()
-            self.domain_reopened.open_saved(self.domain)
+            self.domain_reopened.reads.open_saved(self.domain)
 
         with after.all:
             shutil.rmtree(self.domain, ignore_errors=True)
@@ -277,11 +277,11 @@ with description("a graph built for a chat's call"):
             fresh.load_working_copy(str(self.every), practices, overlays=["lern_domain_driven"], force=True)
             self.fresh = {key: _practice_state(fresh, key) for key in _EVERY_PRACTICE}
             self.reopened = Graph()
-            self.reopened.open_saved(self.every)
+            self.reopened.reads.open_saved(self.every)
             # Each refresh opens a graph of its own and saves nothing, so their workers run side by side.
             def refreshed_with(file: str) -> Graph:
                 held = Graph()
-                held.open_saved(self.every)
+                held.reads.open_saved(self.every)
                 held.refresh([file], _FROM_A_CHAT)
                 return held
 
@@ -317,13 +317,13 @@ with description("a graph built for a chat's call"):
                 checked = Path(tempfile.mkdtemp())
                 file = _READ_BY_EACH_PRACTICE[0]
                 here = Graph()
-                here.open_saved(self.every)
-                here.refreshed([file], checked / "here.json")
+                here.reads.open_saved(self.every)
+                here.reads.refreshed([file], checked / "here.json")
                 apart = Graph()
-                apart.open_saved(self.every)
+                apart.reads.open_saved(self.every)
                 apart.refresh([_READ_BY_EACH_PRACTICE[1]], _FROM_A_CHAT)
                 with _SerialisedHere() as self.serialised:
-                    apart.refreshed([file], checked / "apart.json", _FROM_A_CHAT)
+                    apart.reads.refreshed([file], checked / "apart.json", _FROM_A_CHAT)
                 self.checked_here = SavedGraph.from_file(checked / "here.json").document
                 self.checked_apart = SavedGraph.from_file(checked / "apart.json").document
 
@@ -338,7 +338,7 @@ with description("a graph built for a chat's call"):
         with context("that is refreshed in a worker with each practice's file in turn"):
             with before.all:
                 self.chained = Graph()
-                self.chained.open_saved(self.every)
+                self.chained.reads.open_saved(self.every)
                 with _CountedTakes() as self.counted:
                     for file in _READ_BY_EACH_PRACTICE:
                         self.chained.refresh([file], _FROM_A_CHAT)

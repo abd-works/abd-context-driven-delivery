@@ -6,8 +6,8 @@ import type { CddVersionData } from '@cdd/harness/diagnostics/cdd-version'
 import type { CddVersionJson } from '../../types'
 import { BRAND } from '../shared/brand'
 import { promptCommand, showFailure } from '../error-display/failure-client'
+import { callTool, CddToolFailed } from '../shared/cdd-tool'
 
-const SERVER = 'plugin:cdd:cdd'
 const CHECK_TOOL = 'cdd-version.check'
 // Reads the version on disk against the latest release tag as last fetched, without fetching: cheap enough for every turn.
 const READ_TOOL = 'cdd-version.read'
@@ -100,20 +100,13 @@ export async function checkVersion($: EngineInterface): Promise<void> {
 }
 
 async function askVersion($: EngineInterface, tool: string): Promise<void> {
-  let result
   try {
-    result = await $.mcp.call(SERVER, tool, {})
+    const data = await callTool<CddVersionData>($, tool, {})
+    await update($, cddVersion, version => ({ ...version, data, problem: null }))
   } catch (failure) {
-    await update($, cddVersion, version => ({ ...version, problem: String(failure) }))
-    return
+    if (failure instanceof CddToolFailed) await showFailure($, `The CDD version was not read: ${failure.message}`, `Reading the CDD version, calling ${tool}`)
+    else await update($, cddVersion, version => ({ ...version, problem: String(failure) }))
   }
-  const text = result.content[0]?.text ?? ''
-  const data = result.isError ? null : versionFrom(text)
-  if (data === null) {
-    await showFailure($, `The CDD version was not read: ${text || `${tool} sent back nothing`}`, `Reading the CDD version, calling ${tool}`)
-    return
-  }
-  await update($, cddVersion, version => ({ ...version, data, problem: null }))
 }
 
 export async function askToUpdate($: EngineInterface): Promise<void> {
@@ -131,12 +124,3 @@ export async function updateToLatest($: EngineInterface): Promise<void> {
   await update($, cddVersion, version => ({ ...version, isAsking: false }))
   await promptCommand($, INSTALL_LATEST_COMMAND)
 }
-
-function versionFrom(text: string): CddVersionData | null {
-  try {
-    return JSON.parse(text) as CddVersionData
-  } catch {
-    return null
-  }
-}
-

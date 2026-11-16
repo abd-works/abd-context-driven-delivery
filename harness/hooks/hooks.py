@@ -1,4 +1,4 @@
-"""The ``@Hook`` and ``@Hooks`` annotations, and the files an IDE reads to run hooks: ``hooks.json``, which names the hook
+"""The ``@Hook``, ``@Hooks`` and ``@Toast`` annotations, and the files an IDE reads to run hooks: ``hooks.json``, which names the hook
 command for each event, and ``hook-handlers.json``, which lists the operations that command may run."""
 from __future__ import annotations
 
@@ -38,11 +38,20 @@ class Hooks(Annotation):
         return getattr(toolset_class, cls.flag, None) or cls()
 
 
+class Toast(Destination):
+    """Annotate an operation or instructions so the IDE shows a toast naming it when an agent calls it. The notifier
+    the hook server shows toasts with reads this annotation; the operation names no notifier."""
+
+    flag = "_toast"
+
+
 class Hook(Destination):
+    """``@Hook("event")``: the IDE runs the operation on that event; ``disabled=True`` keeps the hook there but turned
+    off, which the destination records on the operation."""
+
     flag = "_hook"
     channel = InstallDestination.HOOK
     enlists_member = True
-    disabled_flag = "_hook_disabled"
     EVENTS = frozenset(
         {
             "sessionStart",
@@ -81,21 +90,6 @@ class Hook(Destination):
         if callable(target):
             return inst.annotate(target)
         return inst
-
-    def annotate(self, target: Callable[..., object]) -> Callable[..., object]:
-        annotated = super().annotate(target)
-        if self.disabled:
-            setattr(annotated, self.disabled_flag, True)
-        return annotated
-
-    @classmethod
-    def companion_flags(cls) -> tuple[str, ...]:
-        return (*super().companion_flags(), cls.disabled_flag)
-
-    @classmethod
-    def disabled_on(cls, operation: Callable[..., object]) -> bool:
-        """True when ``@Hook(..., disabled=True)`` turned the hook on this operation off."""
-        return bool(getattr(operation, cls.disabled_flag, False))
 
 
 hook = Hook

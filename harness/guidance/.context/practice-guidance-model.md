@@ -61,6 +61,8 @@ PracticeGuidance(format, fidelity)
 ------
 default_workspace_folder: str
 	// a class attribute each practice sets, such as "tests" for Stories
+first_fidelity: str | None
+	// a class attribute: the fidelity a practice made without naming one starts at, such as "bounded_context" for DDD; a constructor given fidelity=None starts at no fidelity
 format_adapters: dict[str, Any]
 	// a class attribute: the parse and render adapter of each format the practice owns
 domain_markdown_path: Path
@@ -78,16 +80,10 @@ reading: PracticeReading
 	// made once, as the kind reading_type names; the graph that holds the practice talks to it
 schema: Schema
 	// {practice}/model/schema.yaml, read once
-companion: PracticeGuidance | None
-	// the Clean Engineering practice of the set it was made with (hold_set); none for a practice made apart from any set
-set_keys: tuple[str, ...]
-	// the keys of the practices it works with in its set: the one it extends and its Clean Engineering companion
+working_set: WorkingSet
+	// made once, as the kind working_set_type names: the practices of its set it works with
 	Invariant: an unsupported fidelity or format raises ValueError at construction
 extends: str
-extended: PracticeGuidance | None
-	// the practice extends names, held by reference from the same set of practices
-supplements: list[PracticeSupplement]
-	// the supplements of its set whose supplemented_practices hold this practice, by reference (hold_set); none for a practice made apart from any set
 sketch_lens: SketchLens
 	// the headings that open this practice's section of a sketch, such as "stories:"; the practice holds the one lens its sketch format reads its section with
 SHORT_NAME: str
@@ -107,8 +103,6 @@ instructions: str
 	// Guidance.instructions (its schema guide first), every fidelity's instructions, and scoped_markdown
 examples: str
 ----
-hold_set(practices: dict[str, PracticeGuidance], supplements: list[PracticeSupplement]): None
-	// holds the practice it extends, its Clean Engineering companion, and each supplement whose supplemented_practices hold it
 answers_to(slug: str): PracticeGuidance | FidelityGuidance | None
 	// itself for its slug, the fidelity whose slug it is, else none
 work_in(session_output: PracticeSessionOutput): None
@@ -119,6 +113,35 @@ render(format: str, content: RenderContent, source: str | None, previous: str): 
 	// at the fidelity the practice was made at, which renders it; a practice with no fidelity renders through its formats
 	-> fidelities.current.render
 	-> formats.render
+
+## WorkingSet
+
+The practices one practice works with, held by reference from the set it was made with. The catalogue that makes a set hands each practice's working set the set; a practice made apart from any set holds none of them.
+
+WorkingSet(practice: PracticeGuidance)
+------
+extended: PracticeGuidance | None
+	// the practice its practice's extends names, from the same set of practices
+companion: PracticeGuidance | None
+	// the Clean Engineering practice of the set; none for a practice made apart from any set
+supplements: list[PracticeSupplement]
+	// the supplements of its set whose supplemented_practices hold its practice, by reference
+names: tuple[str, ...]
+	// the names of the practices it works with in its set: the one its practice extends and its Clean Engineering companion
+----
+hold(practices: Mapping[str, PracticeGuidance], supplements: Sequence[PracticeSupplement]): None
+	// holds the practice its practice extends, its Clean Engineering companion, and each supplement whose supplemented_practices hold its practice
+
+## SupplementWorkingSet : WorkingSet
+
+A supplement's working set: beside the practices it works with, it reads the fidelities its supplement names into the set's own.
+
+SupplementWorkingSet(practice: PracticeSupplement)
+------
+----
+hold(practices: Mapping[str, PracticeGuidance], supplements: Sequence[PracticeSupplement]): None
+	-> WorkingSet.hold
+	-> PracticeSupplement.hold_supplemented
 
 ## PracticeSupplement : PracticeGuidance
 
@@ -138,9 +161,9 @@ Its markdown keeps the usual Overview and Guidance, then sections headed with th
 PracticeSupplement(format)
 ------
 supplemented_fidelities: list[FidelityGuidance]
-	// the fidelities it supplements (named apart from PracticeGuidance.supplements, which it inherits): the same set's own FidelityGuidance objects, held by reference once hold_set gives it the set, such as bdd.fidelities["development"]
-	Invariant: the front matter's names are read once, in hold_set, into the set's objects; nothing after holds a practice key or fidelity name as text
-	Invariant: a name with no practice in the set, or no such fidelity on that practice, raises UnknownSupplementedFidelity in hold_set
+	// the fidelities it supplements (named apart from its working set's supplements): the same set's own FidelityGuidance objects, held by reference once its working set is handed the set, such as bdd.fidelities["development"]
+	Invariant: the front matter's names are read once, in hold_supplemented, into the set's objects; nothing after holds a practice name or fidelity name as text
+	Invariant: a name with no practice in the set, or no such fidelity on that practice, raises UnknownSupplementedFidelity in hold_supplemented
 supplemented_practices: list[PracticeGuidance]
 	// the practice of each fidelity it supplements, once each: each fidelity's practice_guidance
 always_apply: bool
@@ -148,8 +171,8 @@ always_apply: bool
 graph_overlay: GraphOverlay
 	// on a subclass that checks graph rules, made once, as a pattern makes its own: harness/guidance imports no graph
 ----
-hold_set(practices: dict[str, PracticeGuidance]): None
-	// resolves the front matter's practice and fidelity names into the set's own fidelities, once
+hold_supplemented(practices: Mapping[str, PracticeGuidance]): None
+	// resolves the front matter's practice and fidelity names into the set's own fidelities, once; its working set calls it
 	-> practices[key].fidelities.called(name)
 text_for(fidelity: FidelityGuidance): str
 	// its Overview and Guidance, then each section whose heading names that fidelity's slug, headed "## Supplement: {name}"; empty for a fidelity it does not supplement
@@ -212,14 +235,15 @@ class_node_type: str
 source_ordered_types: frozenset[str]
 anchor_types: dict[str, str]
 rule_types: dict[str, tuple[str, ...]]
-graph: Graph | None
-in_graph: PracticeNodes | None
-	// the practice's nodes and edges in the graph that holds it
+graph: HoldingGraph | None
+	// the graph that holds the practice, named by a protocol harness/graph's Graph answers, since the graph sits above guidance
+in_graph: HeldNodes | None
+	// the practice's nodes and edges in the graph that holds it, named by a protocol harness/graph's PracticeNodes answers
 graph_checks: dict[str, PracticeGraphRule]
 	// read once
 package: str
 ----
-held_in(graph: Graph, nodes: PracticeNodes): None
+held_in(graph: HoldingGraph, nodes: HeldNodes): None
 read(): None
 	// offers its node types, then reads the working copy
 	-> read_working_copy
@@ -267,7 +291,7 @@ rules: RulesCollection
 	// the fidelity's Rules section
 supplements: list[PracticeSupplement]
 	// its practice's supplements that hold this fidelity among their supplements, such as TDD for BDD development
-	-> practice_guidance.supplements
+	-> practice_guidance.working_set.supplements
 	Invariant: a supplement supplements this fidelity exactly when this object is in supplement.supplemented_fidelities
 instructions: str
 	// practice overview, guidance, and shared rules, the companion's instructions, the template, this fidelity's own text, then each supplement's text for it
@@ -307,9 +331,9 @@ outputs: dict[str, str | list[str]]
 includes(path: str, format: str = ""): bool
 	// a file one of its outputs names, in format when one is named; DeclaredFile matches the end of the path
 output_paths(): dict[str, list[str]]
-	-> fidelity.session_output.output_paths
+	-> fidelity.session_output.written.output_paths
 files(): dict[str, list]
-	-> fidelity.session_output.files
+	-> fidelity.session_output.written.files
 has_output(): bool
 files_to_review(): dict[str, list]
 	// its fidelity's own files, or those of the fidelities it reviews files of, each file once
@@ -364,42 +388,68 @@ from_markdown(text: str): AppliesTo
 
 ## PracticeCatalogue
 
-Every practice CDD ships, in the order the approach walks them: Stories, DDD, UX, Clean Engineering, BDD. The package that defines the practices registers their classes when it is imported; the framework names none of them.
+Every practice CDD ships, in the order the approach walks them: Stories, DDD, UX, Clean Engineering, BDD. The package that defines the practices registers their classes with the process's one catalogue, `PRACTICE_CATALOGUE`, when it is imported; the framework names none of them. Its classes are kept in a *ClassRegistry* (harness/annotations), the one registry the practices, the actions, and the patterns register with.
 
 PracticeCatalogue
 ------
+names: tuple[str, ...]
+	// each practice's name, its folder's name; PracticesNotRegistered when no package registered the practices in this process
+practice_classes: tuple[type[PracticeGuidance], ...]
+supplement_classes: tuple[type[PracticeSupplement], ...]
 ----
 register(*practice_classes: type[PracticeGuidance])
-	// called by cdd_guidance/practices when it is imported; each class by its key (its folder's name)
-keys(): tuple[str, ...]
-	// PracticesNotRegistered when no package registered the practices in this process
-has(key: str): bool
+	// called by cdd_guidance/practices when it is imported; each class by its name (its folder's name)
+has(name: str): bool
 	// the catalogue holds classes only: every reader makes its own practices and holds them
-create(key: str): PracticeGuidance
+create(name: str): PracticeGuidance
 	Invariant: outside a session, a caller that changes a practice's fidelity or format makes its own instance here; a session makes its set once with create_all
-	// made with the practices of its set it works with (set_keys), each holding the others (hold_set)
+	// made with the practices of its set it works with (working_set.names), each holding the others (working_set.hold)
 register_supplements(*supplement_classes: type[PracticeSupplement])
-	// called by cdd_guidance/practices when it is imported; held apart from the practices, so keys() and the board never list a supplement
-create_all(): list[PracticeGuidance]
-	// also makes one of each registered supplement that is always on; each supplement holds the set first, then each practice holds the set and the supplements
-	-> PracticeSupplement.hold_set
-	-> PracticeGuidance.hold_set
+	// called by cdd_guidance/practices when it is imported; held apart from the practices, so names and the board never list a supplement
+create_all(): PracticeSet
+	// also makes one of each registered supplement that is always on; each supplement's working set holds the set first, then each practice's holds the set and the supplements
+	-> SupplementWorkingSet.hold
+	-> WorkingSet.hold
 	// each practice holds the one it extends and the Clean Engineering practice whose fidelities accompany its own, from the same set
-practice_class(key: str): type[PracticeGuidance]
+practice_class(name: str): type[PracticeGuidance]
+
+## PracticeSet
+
+One set of practices a reader made and holds, in catalogue order. It answers which of its practices or fidelities a slug names, so every reader that reads a slug asks its own set once.
+
+PracticeSet(practices: Iterable[PracticeGuidance]) : Sequence[PracticeGuidance]
+------
+slugs: list[str]
+	// each practice's slug, then each of its fidelities'
+----
+answering(slug: str): PracticeGuidance | FidelityGuidance | None
+	// the practice or fidelity whose slug it is
+	-> PracticeGuidance.answers_to
+practice_answering(slug: str): PracticeGuidance | None
+	// the practice the slug names, by its own slug or a fidelity's
+named(slug: str): PracticeGuidance | FidelityGuidance | None
+	// answering, else a fidelity by its bare name
+	-> GuidanceCollection.called
 
 ## ActionCatalogue
 
-Every action CDD ships: `cdd_guidance/actions` registers each action folder's toolset when it is imported, and each operation that toolset installs as a skill is one *Action*; a `@noDeploy` operation is not installed, so it is no action. A new action folder joins the catalogue by being there.
+Every action CDD ships, held once per process as `ACTION_CATALOGUE`: `cdd_guidance/actions` registers each action folder's toolset when it is imported, and each operation that toolset installs as a skill is one *Action*; a `@noDeploy` operation is not installed, so it is no action. A new action folder joins the catalogue by being there. harness/guidance_actions registers how an action runs on a fidelity (`run_actions_with`).
 
 ActionCatalogue
 ------
+toolsets: tuple[type, ...]
+	// the registered toolsets, kept in a ClassRegistry
+actions: tuple[Action, ...]
+	// made once from the registered toolsets, each holding this catalogue
+names: tuple[str, ...]
+runner: ActionRunner
+	// ActionsNotRegistered while no runner is registered
+fidelity_actions: tuple[Action, ...]
+	// the actions the runner runs on a fidelity
 ----
 register(*toolset_classes: type)
 	// called by cdd_guidance/actions when it is imported
-toolsets(): tuple[type, ...]
-	// the registered toolsets, kept for the process
-actions(): tuple[Action, ...]
-names(): tuple[str, ...]
+run_actions_with(runner: ActionRunner): None
 has(name: str): bool
 action(name: str): Action | None
 
@@ -407,7 +457,7 @@ action(name: str): Action | None
 
 One action CDD ships, such as generate, repair, or verify_fix. One toolset can install several.
 
-Action(name: str, toolset_class: type)
+Action(name: str, toolset_class: type, catalogue: ActionCatalogue)
 ------
 name: str
 toolset_class: type
@@ -416,6 +466,9 @@ operation: Callable
 folder: Path
 	// the toolset's folder under cdd_guidance/actions
 ----
+run_on(fidelity: WorkedFidelity, **arguments): Any
+	// through the runner the catalogue that made it holds
+	-> ActionCatalogue.runner
 
 ## ApproachStages
 
@@ -431,30 +484,50 @@ of(name: str): ApproachStage | None
 
 One stage: its name, its title, its scope, and the actions a person runs on a fidelity in it. The session board's and the catalog's stage columns are each built on one.
 
-ApproachStage(name: str, scope: StageScope)
+One stage reads its actions from the action catalogue: each action's operation carries an `@on_stage` annotation (*OnStage*) saying where it sits, which the stage reads back with `OnStage.recorded_on`, so no list of action names is kept here.
+
+ApproachStage(name: str, scope: StageScope, catalogue: ActionCatalogue)
 ------
 name: str
 title: str
 scope: StageScope
 steps: list[str]
-	// generate, validate, review
+	// the actions annotated on_stage(rank, STEP), in rank order: generate, validate
 actions: list[str]
-	// the steps, then iterate, sketch, render, document
+	// every action annotated on_stage, in rank order: partition, generate, validate, iterate, sketch, render, document
 producing_actions: list[str]
-	// every action but validate and review
+	// every one but those that check a fidelity's files (on_stage(rank, CHECKS)): every action but validate
+actions_with_formats: list[str]
+	// those annotated on_stage(rank, TAKES_FORMATS): generate, render
+----
+
+## OnStage : Annotation
+
+The annotation on an action's operation that says where it sits among the actions a person runs on a fidelity in its stage, typed `@on_stage(rank, *traits)` with the traits `STEP`, `TAKES_FORMATS`, and `CHECKS`, as `@on_stage(1, STEP, TAKES_FORMATS)` on generate.
+
+OnStage(rank: int, *traits: str)
+------
+rank: int
+step: bool
+takes_formats: bool
+checks: bool
 ----
 
 ## StageScope
 
 How much of the solution a stage's work covers, from the whole solution (Discovery) to one story (Implementation).
 
-StageScope(shape: str, name: str, reach: str, covers: str)
+StageScope(shape: str, name: str, reach: str)
 ------
 shape: str
 name: str
 reach: str
 covers: str
+	// empty unless the scope was made covering what its work decides
 ----
+covering(covers: str): StageScope
+	// this scope with what its work decides, such as `outcomes · scope · boundaries`
+
 
 ## Schema
 

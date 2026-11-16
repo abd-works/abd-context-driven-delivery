@@ -20,28 +20,28 @@ import time
 from expects import be, be_a, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
-from harness.graph.graph import Graph
+from harness.graph.graph_reads import GraphReads
 from harness.guidance.guidance import PracticeGuidance
 from harness.installation.data_class import data_of
 from harness.guidance_actions import GuidanceAction
 from harness.hooks.hook_server import HookPayload
-from harness.agent_tools.tool_call import ToolCall, ToolRequest
+from harness.agent_tools.tool_call import SESSION_OPENING, ToolCall, ToolRequest
 from harness.mcp.mcp_server import McpServer
 from space.repo.mock_repo import MockGit
 from space.repo.repo import Repo
 from space.session import Session, Sessions
 from harness.agent_tools.chat_pointer import ChatPointer
 from space.session.session_log import LoopNotFoundError
-from space.session.sessions import SessionNameRequiredError
+from space.session.open_sessions import SessionNameRequiredError
 from space.work_state import WorkState
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 from space.session.throwaway_project import ExampleHome, SPEC_RUN_HOME
-from harness.guidance.practice_catalogue import PracticeCatalogue
+from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 
 # The first practices a process makes read and parse their guidance for every later one; made once here, before any
 # example, so no example pays for that first read.
-PracticeCatalogue.create_all()
+PRACTICE_CATALOGUE.create_all()
 
 
 def _chat_in(session: Session, chat_id: str = "spec-chat") -> ChatPointer:
@@ -112,7 +112,7 @@ with description("a session"):
             expect(ToolCall({}, self.repo).session.session_path).to(equal(HookPayload({"cwd": str(self.repo)}).session.session_path))
 
         with it("should agree with the session opened for the project without a call"):
-            expect(ToolCall({}, self.repo).session.session_path).to(equal(ToolCall.session_in(self.repo).session_path))
+            expect(ToolCall({}, self.repo).session.session_path).to(equal(SESSION_OPENING.saved_in(self.repo).session_path))
 
         with context("with a named session open"):
             with before.each:
@@ -267,7 +267,7 @@ with description("a session"):
             # The board and the chat bar name the active ticket by the open session's name, so it follows the worktree
             # as current does: the ticket's own chat shows the ticket, not main.
             with it("should name that ticket as the session open"):
-                expect(Sessions(self.called).open_name).to(equal("alpha"))
+                expect(Sessions(self.called).opened.name_for()).to(equal("alpha"))
 
             with context("that a chat in the repository's own folder switches to"):
                 with before.each:
@@ -615,7 +615,7 @@ with description("a session"):
             self.session_path = Sessions(self.called).current().session_path
 
         with it("should read the repo path and the workpath from that session"):
-            session = Sessions(self.repo).load(self.session_path)
+            session = Sessions(self.repo).held.load(self.session_path)
             expect(session.repo_path).to(equal(self.repo.resolve()))
             expect(session.workpath).to(equal(self.work.resolve()))
 
@@ -842,7 +842,7 @@ with description("a practice"):
             expect(Sessions.of_project(self.called).current().practice("bdd").guidance).to(be(self.opened.guidance))
 
         with it("should hold the practice it extends from the same session"):
-            expect(self.session.practice("ddd").guidance.extended).to(be(self.session.practice("clean_engineering").guidance))
+            expect(self.session.practice("ddd").guidance.working_set.extended).to(be(self.session.practice("clean_engineering").guidance))
 
         with it("should open its graph on its workpath"):
             expect(self.opened.guidance.reading.in_graph.source_root).to(equal(str(self.work.resolve())))
@@ -882,7 +882,7 @@ with description("a practice"):
                 expect(saved["practices"]["ddd"]["enabled"]).to(equal(False))
 
             with it("should read as turned off from the same folder later"):
-                later = Sessions(self.repo).load(self.session.session_path)
+                later = Sessions(self.repo).held.load(self.session.session_path)
                 expect(later.practice("ddd").enabled).to(equal(False))
 
             with it("should be left out of the practices the session works on"):
@@ -1459,7 +1459,7 @@ with description("a session read for a board") as self:
         (self.repo / ".git").mkdir()
         Sessions(self.repo).switch("alpha", self.repo)
         Sessions(self.repo).create("beta", self.repo, title="Beta")
-        self.beta = Sessions(self.repo).load(self.repo / ".sessions" / "beta")
+        self.beta = Sessions(self.repo).held.load(self.repo / ".sessions" / "beta")
 
     with context("that was opened without becoming current"):
         with it("should leave the current session as it was"):
@@ -1557,17 +1557,17 @@ with description("a session whose graph two calls first ask for at once"):
         SPEC_RUN_HOME.ensure()
         self.repo = Path(tempfile.mkdtemp())
         session = Sessions(self.repo).current()
-        self.original = Graph.open_saved
+        self.original = GraphReads.open_saved
         self.made: list[object] = []
         opened = self.original
 
-        def slow_open(graph, folder):
+        def slow_open(reads, folder):
             # A slow read of the saved graph, so both calls are inside their first ask together.
-            self.made.append(graph)
+            self.made.append(reads)
             time.sleep(0.2)
-            return opened(graph, folder)
+            return opened(reads, folder)
 
-        Graph.open_saved = slow_open
+        GraphReads.open_saved = slow_open
         gate = threading.Barrier(2)
         self.graphs: list[object] = []
 
@@ -1581,7 +1581,7 @@ with description("a session whose graph two calls first ask for at once"):
         for caller in callers:
             caller.join()
 
-        Graph.open_saved = self.original
+        GraphReads.open_saved = self.original
 
     with after.all:
         shutil.rmtree(self.repo, ignore_errors=True)

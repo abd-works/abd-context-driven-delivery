@@ -5,7 +5,7 @@ The round-6 review (harness core, row 23) flagged `ToolCall.session_in(project)`
 ## Decision
 
 - **A loader or a class tool that takes `call` is handed the call it serves**, as one that takes `project` is handed the call's project (`TakesFromCall`, `FROM_THE_CALL`). `Session.from_file`, `PracticeSessionOutput.load` and `FileManager.load` take `call` and open their session through it (`call.session_named(...)`, `call.session`), so the session they open names the calling chat, and its log lines carry it.
-- **`ToolCall.session_in` stays for work that serves no call**: the agent BDD harness, which runs a request read from a spec's YAML, and the diagnostics probe, which opens the main session of a temporary project. Both read the session through the opener space/session registers (`ToolCall.open_sessions_with`), so neither imports space; neither has a chat to lose.
+- **`SESSION_OPENING.saved_in` (once `ToolCall.session_in`) stays for work that serves no call**: the agent BDD harness, which runs a request read from a spec's YAML, and the diagnostics probe, which opens the main session of a temporary project. Both read the session through the opener space/session registers (`SESSION_OPENING.open_with`), so neither imports space; neither has a chat to lose.
 
 ## Why `session_in` is not deleted
 

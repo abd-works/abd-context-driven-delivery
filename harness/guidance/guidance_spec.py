@@ -417,9 +417,9 @@ with description("practice and fidelity template files"):
 
 with description("a fidelity read from its practice's document"):
     with before.all:
-        from harness.guidance.practice_catalogue import PracticeCatalogue
+        from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 
-        self.stories = PracticeCatalogue.create("stories")
+        self.stories = PRACTICE_CATALOGUE.create("stories")
         self.story_map = self.stories.fidelities["story_map"]
 
     with context("with a ```yaml settings block"):

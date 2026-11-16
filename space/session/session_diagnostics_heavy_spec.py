@@ -33,7 +33,7 @@ with description("session diagnostics"):
     with it("should install session-diagnostics as a slash command with MCP invoke"):
         tree = Path(tempfile.mkdtemp())
         try:
-            mcp = Installer(ide="Cursor", path=tree, repo=_REPO_ROOT).install([SessionDiagnostics()]).of(McpInstallation)
+            mcp = Installer.create(ide="Cursor", path=tree, repo=_REPO_ROOT).install([SessionDiagnostics()]).of(McpInstallation)
             command_path = tree / "commands" / "space" / "session" / "session-diagnostics.md"
             expect(command_path.is_file()).to(equal(True))
             text = command_path.read_text(encoding="utf-8")
@@ -47,7 +47,7 @@ with description("session diagnostics"):
     with it("should write the session section to diagnostics.json"):
         tree = Path(tempfile.mkdtemp())
         try:
-            installer = Installer(ide="Cursor", path=tree, repo=_REPO_ROOT)
+            installer = Installer.create(ide="Cursor", path=tree, repo=_REPO_ROOT)
             report = SessionDiagnostics().write_to(installer.diagnostics)
             expect(report.startswith("green\n")).to(equal(True))
             data = json.loads((tree / "diagnostics.json").read_text(encoding="utf-8"))

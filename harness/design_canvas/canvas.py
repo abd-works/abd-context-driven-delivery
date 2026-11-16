@@ -64,6 +64,10 @@ class DesignCanvas:
         if text is not None:
             self._files[f"{PROJECT}/{name}"] = text
 
+    def placed(self, name: str) -> CanvasBoard:
+        """Where the canvas placed artboard *name*: its place and size, its page and its title."""
+        return self._boards[name]
+
     def artboards_in(self, folder: str) -> List[str]:
         """The artboards already in folder of the project, as ``folder/<name>.dc.html``, in name order."""
         found = self.project / folder if self.project is not None else None

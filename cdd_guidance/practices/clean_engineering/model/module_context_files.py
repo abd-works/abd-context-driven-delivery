@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import List
+from typing import Dict, List
 
 _MODULES_HEADING = re.compile(r"^\s*#{1,6}\s+Modules\b", re.MULTILINE | re.IGNORECASE)
 _SIX_DASHES = re.compile(r"^------\s*$", re.MULTILINE)
@@ -24,6 +24,8 @@ _CONSTRAINT = re.compile(r"^\s*#{1,6}\s+Constraints?\b|\*\*Constraints?:\*\*", r
 _IS_A = re.compile(r"\*is a type of\*", re.I)
 # `## Child : Parent`: a heading that writes a class with its base.
 _CHILD_PARENT = re.compile(r"^\s*#{1,6}\s+\S.+\s+:\s+\S", re.MULTILINE)
+# A section heading a public source file's documentation gives its internal design.
+_INTERNAL_MARKDOWN = re.compile(r"^##\s+Internal\b", re.MULTILINE | re.IGNORECASE)
 
 
 class ModuleContext:
@@ -73,3 +75,38 @@ class ModuleContext:
             for pattern, detail in _MODEL_BLOCKS
             if pattern.search(content)
         ]
+
+    def folder_facts(self) -> Dict[str, object]:
+        """The facts the folder's context files give the graph, each read from the card once: whether it has a module
+        card and a bounded context, and what its card says."""
+        return {
+            "has_module_context": self.exists(),
+            "has_bounded_context": (self.folder / ".context" / "bounded-context.md").is_file(),
+            "modules_heading": self.has_modules_heading(),
+            "names_seam": self.names_seam(),
+            "names_constraint": self.names_constraint(),
+            "model_blocks": self.model_blocks(),
+            "is_a_in_context": self.says_is_a_type_of(),
+            "child_parent_in_context": self.writes_child_parent_headings(),
+        }
+
+
+class PublicSources:
+    """<<Value Object>> The documentation of a folder's public source files, each file's doc strings and comments."""
+
+    def __init__(self, documentation: List[str]) -> None:
+        self._documentation = documentation
+
+    @property
+    def count(self) -> int:
+        return len(self._documentation)
+
+    def internal_notes(self) -> str:
+        """Whether the documentation carries internal design notes: 'heading' for an internal-design section heading,
+        'mixed' for internal notes inline, else ''."""
+        text = "\n".join(self._documentation)
+        if _INTERNAL_MARKDOWN.search(text):
+            return "heading"
+        if "## Internal" in text or "_ holds " in text:
+            return "mixed"
+        return ""

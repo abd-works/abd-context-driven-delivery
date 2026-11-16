@@ -12,7 +12,7 @@ from pathlib import Path
 from harness.installation.ide_layout import IdeLayout
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
 from harness.installation.repository_toolsets import RepositoryToolsets
-from harness.process.git import Git, RepoConnectError
+from harness.git.git import Git, RepoConnectError
 from harness.process.process import PythonInterpreter
 
 CDD_HOME_ENV = "CDD_HOME"

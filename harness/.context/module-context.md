@@ -4,19 +4,19 @@
 
 - **Purpose:** Give `cdd_guidance/`, `space/` and `tools/` one framework to build on, which can change and be tested without the code built on it.
 - **Seam (terms):** each module's own seam, named in its card.
-- **Dependencies (one-way):** `space/` and `tools/`. `harness/`, `space/`, and `tools/` are the lower layer together and may import each other, so something they share, such as the file viewer beside `space/session/file_manager.py`, is written once. `harness/` imports nothing from `cdd_guidance/`, neither directly nor through `importlib` strings; cdd_guidance registers with the framework instead, as space and tools still do through the seams already in place (`ToolCall.open_sessions_with`, `HookServer.show_toasts_with`, `PracticeCatalogue.register`, `ActionCatalogue.register` and `run_actions_with`).
+- **Dependencies (one-way):** `space/` and `tools/`. `harness/`, `space/`, and `tools/` are the lower layer together and may import each other, so something they share, such as the file viewer beside `space/session/file_manager.py`, is written once. `harness/` imports nothing from `cdd_guidance/`, neither directly nor through `importlib` strings; cdd_guidance registers with the framework instead, as space and tools still do through the seams already in place (`SESSION_OPENING.open_with`, `HOOK_TOASTS.show_with`, `PracticeCatalogue.register`, `ActionCatalogue.register` and `run_actions_with`).
 
 ## The layers, from the bottom up
 
 The order follows the modules' top-level imports; a module imports only the modules below it.
 
 1. `annotations`: the decorator annotations, *Name*, and `class_folder`. Imports nothing.
-2. `process`: starting, naming, and stopping processes, and git. Imports nothing. `whiteboard`, a Claude Whiteboard board and its elements that every practice's whiteboard format draws on, sits beside it and imports nothing either.
+2. `process`: starting, naming, and stopping processes. Imports nothing. `git`, the git command line run with one set of time limits and one error, sits beside it and imports nothing. `whiteboard`, a Claude Whiteboard board and its elements that every practice's whiteboard format draws on, sits beside it and imports nothing either.
 3. `markdown`: a class's prose kept in markdown beside it. Imports annotations.
 4. `agent_tools`: toolsets, their tools, and the per-call *ToolCall*. Imports annotations and markdown.
 5. `installation`: the *Installer* and what it publishes with, and the JSON files CDD keeps in a project. Imports annotations, markdown, and agent_tools.
 6. `hooks`: the hook annotations, the hook server, and the hook files. Imports annotations, process, agent_tools, and installation.
-7. `mcp`: the MCP host. Imports annotations, process, agent_tools, installation, and hooks.
+7. `mcp`: the MCP host. Imports annotations, process, git, agent_tools, installation, and hooks.
 8. `guidance`: practices, fidelities, rules, stages, and the practice and action catalogues. Imports annotations, markdown, agent_tools, installation, hooks, and mcp.
 9. `guidance_actions`: the base of every action, made for the session its call works in. Imports annotations, agent_tools, hooks, and guidance.
 10. `graph`: the knowledge graph. Imports annotations, agent_tools, installation, mcp, and guidance.

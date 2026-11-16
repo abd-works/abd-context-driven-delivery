@@ -22,7 +22,7 @@ def working_in(throwaway: ThrowawayProject, project: Path, root: Path) -> Sessio
     """The main session of the spec's own project, where its logs and reports go, made to work in root, a folder of the
     project checked out at project."""
     kept_in = ToolCall(project=throwaway.root).session.session_path
-    session = Sessions(Path(project).resolve()).load(kept_in)
+    session = Sessions(Path(project).resolve()).held.load(kept_in)
     session.workpath = Path(root).resolve()
     return session
 

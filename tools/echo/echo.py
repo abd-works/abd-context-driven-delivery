@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from harness.agent_tools import agent_instructions, agent_toolset, tools
 from harness.agent_tools.agent_tools import agent_tool
-from harness.installation.destination import noCatalog
+from harness.annotations.annotation import noCatalog
 from harness.installation.files import skill
 from harness.mcp.mcp_annotations import mcp
 

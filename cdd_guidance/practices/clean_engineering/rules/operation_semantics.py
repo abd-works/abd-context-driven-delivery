@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
 
-from cdd_guidance.practices.clean_engineering.rules.class_graph import ClassGraph
 from cdd_guidance.practices.clean_engineering.rules.production_code_rule import ProductionCodeRule
 
 if TYPE_CHECKING:
@@ -81,14 +80,15 @@ class StateChangeReturnsRecordOrNamedFailure(ProductionCodeRule):
 
 class DomainExceptionCarriesContext(ProductionCodeRule):
     """A failure raised with no message must name the rule it rejects. A failure the program declares, whose own
-    constructor gives its base the message, carries that context however it is raised."""
+    constructor gives its base the message, carries that context however it is raised; the build keeps whether it does on
+    the operation (``exception_gives_own_message``)."""
 
     slug = "domain-exception-carries-context"
     node_types = ("Operation",)
 
     def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         exception = node.get_fact("exception_without_message", "")
-        if exception and not context.index(ClassGraph).kinds.gives_own_message(exception):
+        if exception and not node.get_fact("exception_gives_own_message"):
             return [f"Operation '{node.name}' raises {exception} without context; name the rejected rule."]
         if node.get_fact("generic_exception_message"):
             return [f"Operation '{node.name}' raises a generic message; carry domain context."]

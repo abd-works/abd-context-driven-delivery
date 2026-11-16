@@ -13,12 +13,12 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     is_interface_name,
 )
 from cdd_guidance.practices.clean_engineering.model.c_family_parse import CFamilyParse
+from cdd_guidance.practices.clean_engineering.model.class_stereotypes import DocComment
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
 from cdd_guidance.practices.clean_engineering.model.property import Property
-
-_CONSTRUCTOR_NAMES = frozenset({"constructor", "__init__"})
+from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUCTOR_NAMES
 
 
 class CodeProperty(Property):
@@ -51,22 +51,22 @@ class CodeOperation(Operation):
     def take_brace_body(self, text: str, callees: List[str]) -> None:
         """Keep the statements inside its braces as its body, with the operations they call."""
         self.callees = callees
-        self.take_body(text, self.language)
+        self.source_facts.take_body(text, self.language)
         self._brace_text = SourceText(text)
         self.line_count = max(1, len([line for line in text.splitlines() if line.strip()]))
-        self.take_body_fingerprint(text)
+        self.source_facts.take_body_fingerprint(text)
 
     def load_brace_body_facts(self) -> None:
         """Fill the facts the rules measure on its brace-language body."""
         measured = self._brace_text
         self.max_control_flow_depth = measured.control_flow_depth()
-        self.has_bare_catch = measured.has_bare_catch()
-        self.swallows_exceptions = measured.swallows_exceptions()
+        self.has_bare_catch = measured.failures.has_bare_catch()
+        self.swallows_exceptions = measured.failures.swallows_exceptions()
         self.unnamed_literal_numbers = measured.unnamed_numbers()
-        self.peer_private_access = measured.reaches_peer_private(self._own_objects(), self._own_members())
+        self.peer_private_access = measured.collaborators.reaches_peer_private(self._own_objects(), self._own_members())
         if self.is_constructor_of(self.parent):
             parameters = frozenset(parameter.name for parameter in self.parameters if parameter.name)
-            self.constructed_types = measured.built_collaborators(parameters, self.line or 1)
+            self.constructed_types = measured.collaborators.built(parameters, self.line or 1)
 
     def _own_objects(self) -> frozenset[str]:
         """The names its body holds an object of its own class by, since privacy is per class: the class itself, each
@@ -76,7 +76,7 @@ class CodeOperation(Operation):
             return frozenset()
         typed = re.compile(rf"\b{re.escape(owner)}\b")
         parameters = {parameter.name for parameter in self.parameters if parameter.name and typed.search(parameter.type_hint or "")}
-        return frozenset({owner, *parameters, *self._brace_text.locals_built_of(owner)})
+        return frozenset({owner, *parameters, *self._brace_text.collaborators.locals_built_of(owner)})
 
     def _own_members(self) -> frozenset[str]:
         """The operations and fields the class that holds it declares, which any object of that class may read."""
@@ -94,11 +94,11 @@ class CodeOperation(Operation):
         raise NotImplementedError(f"{type(self).__name__} must spell its signature")
 
     def is_constructor_of(self, oclass: OoadClass) -> bool:
-        return self.name == oclass.name or self.name in _CONSTRUCTOR_NAMES
+        return self.name == oclass.name or self.name in CONSTRUCTOR_NAMES
 
     def answers_to(self, oclass: OoadClass, operation_name: str) -> bool:
         """True for its own name; "constructor" finds the constructor in any language."""
-        return self.name == operation_name or (operation_name in _CONSTRUCTOR_NAMES and self.is_constructor_of(oclass))
+        return self.name == operation_name or (operation_name in CONSTRUCTOR_NAMES and self.is_constructor_of(oclass))
 
 
 class CodeClass(OoadClass):
@@ -124,38 +124,38 @@ class CodeClass(OoadClass):
         interface, or a class with the bases it declares. An interface takes no decorators, so its stereotypes are
         marked in its doc comment."""
         if self.is_contract:
-            return [""] + self.doc(self.doc_comment(marked=True).text()) + self.interface_declaration()
-        lines = [""] + self.doc(self.doc_intent()) + self.stereotype_decorators()
-        return lines + self.class_declaration(self.declared_bases(known_names))
+            return [""] + self._doc(DocComment.from_class(self, marked=True).text()) + self._interface_declaration()
+        lines = [""] + self._doc(self._doc_intent()) + self._stereotype_decorators()
+        return lines + self._class_declaration(self.declared_bases(known_names))
 
-    def doc(self, intent: str) -> List[str]:
+    def _doc(self, intent: str) -> List[str]:
         return [f"/** {intent} */"] if intent else []
 
-    def doc_intent(self) -> str:
+    def _doc_intent(self) -> str:
         """What the class's doc comment says. A language with no decorators marks the stereotypes there."""
-        return self.doc_comment(marked=True).text()
+        return DocComment.from_class(self, marked=True).text()
 
-    def stereotype_decorators(self) -> List[str]:
+    def _stereotype_decorators(self) -> List[str]:
         """The decorator lines that carry the class's stereotypes; none for a language that marks them in the doc."""
         return []
 
-    def interface_declaration(self) -> List[str]:
+    def _interface_declaration(self) -> List[str]:
         raise NotImplementedError(f"{type(self).__name__} must spell interface_declaration")
 
-    def class_declaration(self, bases: List[str]) -> List[str]:
+    def _class_declaration(self, bases: List[str]) -> List[str]:
         """`class Name extends Base implements Contract, Other {`: the first base that is not an I{Class} contract is
         extended, and every other base is implemented."""
-        extended, implemented = self.heritage(bases)
+        extended, implemented = self._heritage(bases)
         extends = f" extends {extended}" if extended else ""
         implements = f" implements {', '.join(implemented)}" if implemented else ""
-        return [f"{self.class_modifiers(implemented)}class {self.name}{extends}{implements} {{"]
+        return [f"{self._class_modifiers(implemented)}class {self.name}{extends}{implements} {{"]
 
-    def heritage(self, bases: List[str]) -> tuple:
+    def _heritage(self, bases: List[str]) -> tuple:
         """(the one base a class extends, the bases it implements). A brace language extends one class only."""
         extended = next((base for base in bases if not is_interface_name(base)), "")
         return extended, [base for base in bases if base != extended]
 
-    def class_modifiers(self, implemented: List[str]) -> str:
+    def _class_modifiers(self, implemented: List[str]) -> str:
         """The words before `class`, such as Java's `public`."""
         return ""
 

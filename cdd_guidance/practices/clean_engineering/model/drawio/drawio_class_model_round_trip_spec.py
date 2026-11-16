@@ -17,7 +17,7 @@ from cdd_guidance.practices.clean_engineering.model.property import Property
 def _shop() -> CleanEngineeringModel:
     lines = Property(name="lines", type_hint="List[OrderLine]")
     lines.stereotype = "composition"
-    lines.derive_relationship()
+    lines.arrow.derive()
     order = OoadClass(name="Order", sequential_order=1)
     order.properties = [Property(name="number", type_hint="str"), lines]
     order.operations = [Operation.from_signature("add_line(product: str, quantity: int): OrderLine")]

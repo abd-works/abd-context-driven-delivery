@@ -18,7 +18,7 @@ from cdd_guidance.practices.bdd.model.nodes import DescribeBlock
 from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraph
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
-from cdd_guidance.practices.clean_engineering.model.graph_reading import parameters_of
+from cdd_guidance.practices.clean_engineering.model.class_graph import parameters_of
 from harness.graph.edge import Edge
 from harness.graph.graph import Graph, Node
 from harness.graph.saved_graph import SavedGraph
@@ -42,7 +42,7 @@ class GraphBddModel(BddModel):
         graph = Graph()
         graph.restored_from(SavedGraph.from_text(text))
         self._graph = graph
-        bdd = graph.practices.of(self.practice_kind())
+        bdd = graph.practices.of(self.practice_kind)
         self._clean = bdd.reading.clean_engineering_reading
         for spec in sorted(bdd.reading.in_graph.nodes("Spec"), key=lambda node: node.source.file):
             for saved in self._in_file_order(graph.edges.from_parent("descriptions", spec)):

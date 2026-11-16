@@ -20,7 +20,7 @@ from mamba import before, description, it
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 from cdd_guidance.practices.bdd.bdd import Bdd
 from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
-from cdd_guidance.practices.clean_engineering.model.operation import CONSTRUCTOR_NAMES
+from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUCTOR_NAMES
 from cdd_guidance.practices.ddd.ddd import Ddd
 from cdd_guidance.practices.ddd.model.stereotypes import BUILDING_BLOCK_KINDS
 from harness.graph.graph import Graph

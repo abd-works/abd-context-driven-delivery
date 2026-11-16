@@ -13,23 +13,27 @@ from harness.installation.data_class import data_field
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
+    from harness.graph.rule_context import RuleCheckContext
 
 
-class GraphRule(PracticeGraphRule, Rule):
-    """One schema rule on one node: its slug, its prose, whether a check runs it, and the violations it found there."""
+class GraphRule(Rule):
+    """One schema rule on one node: its slug, its prose, the graph check that runs it when one exists, whether that
+    check runs here, and the violations it found there. It is a guidance rule held on a node; the check is a part it
+    holds, not a kind of rule it is."""
 
     def __init__(self, node: Node, slug: str, check: PracticeGraphRule | None = None) -> None:
         """The rule slug on node, with the prose node's schema gives it, run by check when one exists."""
-        PracticeGraphRule.__init__(self)
-        Rule.__init__(self, slug=slug, body=node.schema.rule_prose.get(slug, ""))
+        super().__init__(slug=slug, body=node.schema.rule_prose.get(slug, ""))
         self.node = node
-        self.node_types = tuple(check.node_types) if check is not None else (node.type,)
+        self._check = check
         self.executable = check is not None
         self.runs = check is not None and any(check.applies_to(type_name) for type_name in self._applying_types())
         """Whether its check runs on this node: the check applies to the node's type, or to the type it is anchored to."""
-        if check is not None:
-            self.check = check.check  # type: ignore[method-assign]
         self._violations: list[Violation] = []
+
+    def check(self, context: RuleCheckContext) -> list[str]:
+        """The messages its check finds on its node; none when no check runs it."""
+        return self._check.check(self.node, context) if self._check is not None else []
 
     def _applying_types(self) -> set[str]:
         """The node types whose checks apply to this rule's node: its own, and the type of the extended practice it is
@@ -37,12 +41,6 @@ class GraphRule(PracticeGraphRule, Rule):
         node = self.node
         anchor = node.schema.anchor_type(node.type)
         return {node.type, anchor} if anchor else {node.type}
-
-    @property
-    @data_field
-    def slug(self) -> str:
-        """The guidance rule's slug; a check's own class attribute would hide it."""
-        return Rule.slug.fget(self)
 
     @property
     @data_field

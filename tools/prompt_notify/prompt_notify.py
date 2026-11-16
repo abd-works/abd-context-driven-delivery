@@ -20,11 +20,10 @@ from typing import Callable, ClassVar
 
 from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, agent_toolset
 from harness.annotations.name import Name
-from harness.installation.destination import noCatalog
+from harness.annotations.annotation import noCatalog
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
-from harness.annotations.annotation import Toast
-from harness.hooks.hook_server import TOAST_ARROW, HookPayload, HookServer, rules_toast
-from harness.hooks.hooks import hook
+from harness.hooks.hook_server import HOOK_TOASTS, TOAST_ARROW, HookPayload, rules_toast
+from harness.hooks.hooks import Toast, hook
 from harness.installation.ide_layout import installed_guidance_kind
 from space.session.session_log import LogTimestamp
 
@@ -60,10 +59,10 @@ class PromptNotify:
     def _practice_names(self) -> dict[str, str]:
         """Each practice's slug, each fidelity's slug, and each practice rule file's name, which joins the two
         (``bdd-bdd-behavior``)."""
-        from harness.guidance.practice_catalogue import PracticeCatalogue
+        from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 
         names: dict[str, str] = {}
-        for practice in PracticeCatalogue.create_all():
+        for practice in PRACTICE_CATALOGUE.create_all():
             names[practice.slug] = "practice"
             for fidelity in practice.fidelities:
                 names[fidelity.slug] = "fidelity"
@@ -72,9 +71,9 @@ class PromptNotify:
 
     def _action_names(self) -> dict[str, str]:
         """Each action in the action catalogue, such as generate, grill, and create-rule."""
-        from harness.guidance.action_catalogue import ActionCatalogue
+        from harness.guidance.action_catalogue import ACTION_CATALOGUE
 
-        return {self._compact(name): "action" for name in ActionCatalogue.names()}
+        return {self._compact(name): "action" for name in ACTION_CATALOGUE.names}
 
     @hook("preToolUse")
     def on_pre_tool_use(self, payload: HookPayload) -> dict:
@@ -122,9 +121,9 @@ class PromptNotify:
         hook server's one notifier. A toolset that fails to load raises, so a broken toolset is seen rather than silently
         not toasting."""
         from harness.agent_tools.agent_tools import AgentToolSet
-        from harness.installation.repository_toolsets import RepositoryToolsets
+        from harness.installation.repository_toolsets import RUNNING_CHECKOUT, RepositoryToolsets
 
-        references = RepositoryToolsets.of_running_checkout().references()
+        references = RepositoryToolsets(RUNNING_CHECKOUT).references()
         return AgentToolSet.from_items([reference.toolset_class for reference in references])
 
     def show_toast(self, toast: str, workspace_roots: list[Path]) -> list[Path]:
@@ -343,4 +342,4 @@ class ToastFile:
         return rules_toast(previous_source.strip(), names)
 
 
-HookServer.show_toasts_with(PromptNotify().show_toast)
+HOOK_TOASTS.show_with(PromptNotify().show_toast)

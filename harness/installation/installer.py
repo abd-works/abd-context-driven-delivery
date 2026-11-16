@@ -18,10 +18,12 @@ from harness.agent_tools.agent_tools import (
     agent_toolset,
     tool_subject,
 )
-from harness.installation.destination import Installation, ServerInstallation, is_temporary, noCatalog
+from harness.annotations.annotation import noCatalog
+from harness.installation.destination import Installation, ServerInstallation, is_temporary
 from harness.installation.files import FileChannel, FileInstallation, command
 from harness.installation.ide_layout import IdeLayout
 from harness.installation.install_diagnostics import InstallDiagnostics
+from harness.installation.install_target import InstallTarget
 from harness.installation.install_record import InstallRecord
 from harness.installation.language_adapter import LanguageAdapterInstallation
 from harness.installation.repository_toolsets import RepositoryToolsets
@@ -67,14 +69,14 @@ class InstallChannels:
         # an earlier install wrote; and the toolsets the install deployed, by their references.
         self.installing = installing
         self.deployed: list[str] = []
-        self.servers = [kind(layout, path, repo=repo) for kind in servers]
+        self.servers = [kind.create(layout, path, repo=repo) for kind in servers]
         self.language_adapters = LanguageAdapterInstallation(layout, path, repo=repo)
         self._files = {
-            (destination, mcp_mode): FileInstallation(layout, path, FileChannel(destination, mcp_mode), repo=repo)
+            (destination, mcp_mode): FileInstallation(installer.target, FileChannel(destination, mcp_mode), repo=repo)
             for destination in FileInstallation.CHANNELS
             for mcp_mode in (False, True)
         }
-        self.standing_rules = FileInstallation(layout, path, FileChannel(InstallDestination.RULE), repo=repo)
+        self.standing_rules = FileInstallation(installer.target, FileChannel(InstallDestination.RULE), repo=repo)
         for installation in (*self.servers, self.language_adapters, *self._files.values(), self.standing_rules):
             installation.track_writes_with(lambda written: installer.record.track(written, installer.path))
         # The toolsets the server channels publish into every install, such as the hooks that start the cdd server.
@@ -331,22 +333,52 @@ class Installer:
     MCP and hook channels each point the IDE at a server, and harness/mcp and harness/hooks register their installation
     with ``SERVER_CHANNELS`` when they are imported, so this module never imports them."""
 
-    def __init__(self, ide: str | None = None, path: str | Path | None = None, *, repo: str | Path) -> None:
-        self.repo = Path(repo).resolve()
-        last = InstallRecord(_SHARED_RECORD).saved if ide is None and path is None else {}
-        self.ide = ide or last.get("ide") or IdeLayout.DEFAULT_IDE
-        self.layout = IdeLayout(self.ide)
-        self.path = Path(path) if path is not None else self._last_or_default_folder(last.get("path"))
-        self.record = InstallRecord(self.path / InstallRecord.NAME if is_temporary(self.path) else _SHARED_RECORD)
-        self.diagnostics = InstallDiagnostics(self.path, self.layout)
-        self.toolsets = RepositoryToolsets(self.repo)
+    def __init__(self, target: InstallTarget, record: InstallRecord, toolsets: RepositoryToolsets) -> None:
+        self.target = target
+        """The IDE folder it installs into, with that IDE's layout."""
+        self.record = record
+        """The files the last install wrote, read and written by the install and the clean."""
+        self.toolsets = toolsets
+        """The toolsets of the repository it installs."""
+        self.diagnostics = target.diagnostics
+        """The install's ``diagnostics.json``, kept in the folder it installs into."""
         self.deployment = Deployment(self)
+
+    @classmethod
+    def create(cls, ide: str | None = None, path: str | Path | None = None, *, repo: str | Path) -> Installer:
+        """The installer of repo into path for ide; with neither named, into the IDE folder it last installed into,
+        else repo's own folder for the default IDE. An install into a temporary folder keeps its record there."""
+        root = Path(repo).resolve()
+        last = InstallRecord(_SHARED_RECORD).saved if ide is None and path is None else {}
+        layout = IdeLayout(ide or last.get("ide") or IdeLayout.DEFAULT_IDE)
+        target = InstallTarget(layout, path) if path is not None else InstallTarget.from_last_install(layout, last.get("path"), root)
+        record = InstallRecord(target.path / InstallRecord.NAME if target.is_temporary else _SHARED_RECORD)
+        return cls(target, record, RepositoryToolsets(root))
 
     @classmethod
     @tool_subject
     def load(cls, *, project: Path | str) -> Installer:
         """The installer of project, the folder the call names, into the IDE folder it last installed into."""
-        return cls(repo=project)
+        return cls.create(repo=project)
+
+    @property
+    def repo(self) -> Path:
+        """The repository it installs."""
+        return self.toolsets.root
+
+    @property
+    def layout(self) -> IdeLayout:
+        return self.target.layout
+
+    @property
+    def path(self) -> Path:
+        """The IDE folder it installs into."""
+        return self.target.path
+
+    @property
+    def ide(self) -> str:
+        return self.target.layout.ide
+
 
     @command(name="clean")
     @agent_tool
@@ -403,11 +435,6 @@ class Installer:
         """Compare this install with the last diagnostics.json entry and report counts, or what changed."""
         color, body = self.diagnostics.diagnosed(self.deployment.channels)
         return f"{color}\n{body}" if color != "red" else f"!\n{color}\n{body}\n{self.diagnose_instructions()}"
-
-    def _last_or_default_folder(self, last: str | None) -> Path:
-        if last and Path(last).exists() and not is_temporary(Path(last)):
-            return Path(last)
-        return self.repo / self.layout.folder_name
 
     @markdown("diagnose_install")
     def _diagnose_install_section(self) -> str:

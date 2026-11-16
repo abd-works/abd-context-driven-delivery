@@ -8,6 +8,7 @@ from mamba import before, context, description, it
 from harness.agent_tools.agent_tools import agent_instructions, agent_toolset
 from harness.installation.files import FileChannel, FileInstallation, InstructionsUnreadableAtInstall, command
 from harness.installation.ide_layout import IdeLayout
+from harness.installation.install_target import InstallTarget
 
 
 @agent_toolset
@@ -26,7 +27,7 @@ with description("an operation installed as a slash command"):
     with context("with instructions that fail when they are read"):
         with before.each:
             self.tool = _UnreadableInstructions().tools["instructions"]
-            self.installation = FileInstallation(IdeLayout("Claude"), tempfile.mkdtemp(), FileChannel("command"))
+            self.installation = FileInstallation(InstallTarget(IdeLayout("Claude"), tempfile.mkdtemp()), FileChannel("command"))
 
         with it("should stop the install instead of writing the docstring as the command"):
             expect(lambda: self.installation.install(self.tool)).to(raise_error(InstructionsUnreadableAtInstall))

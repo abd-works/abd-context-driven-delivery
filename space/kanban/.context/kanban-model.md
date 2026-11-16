@@ -67,7 +67,7 @@ Build order: `Column` → `Stage` → `Backlog` → `Complete` → `Card` → `T
 
 Purpose, seam, dependencies, and constraint: `.context/module-context.md`.
 
-Sources: `board.py`, `ticket.py`, `backlog_item.py`, and `report.py`. Every class and member here is in the code. `kanban-model.drawio` draws the same classes and relationships.
+Sources: `board.py`, `ticket.py`, `ticket_tree.py`, `ticket_choices.py`, `ticket_checkout.py`, `backlog_item.py`, and `report.py`. Every class and member here is in the code. `kanban-model.drawio` draws the same classes and relationships.
 
 A member noted *data field* is marked `@data_field`: MCP sends an object as exactly those members, each object they hold as its own data, and the language adapter types `{Class}Data` from them. A data field sent under another name says so (*data field `slug`*). A *reference* data field (`@data_field(reference=True)`) sends the object it holds by its `@identity` fields alone, such as `{"name": "Discovery"}` for a column: the object is sent in full by the one that holds it, so a ticket names its column without sending the column, and the column's tickets, again.
 
@@ -102,17 +102,24 @@ A `@tool_subject` loader or class tool that takes `project` is handed the projec
 + << composition >> columns: list[Column]
 	// data field; always Backlog, then one Stage for each `ApproachStage` in `STAGES` (`harness/guidance/stages.py`), then Complete
 + << composition >> tickets: list[Ticket]
-	// one per session of the repository, made once per board read and kept until `reread`
+	// one per session of the repository, made once per board read and kept until `CardPlacement.reread`
 	-> Sessions.all
 + << aggregation >> backlog_items: list[BacklogItem]
-	// every idea file in `.sessions/_backlog/`, and every ticket folder kept there, read once per board read and kept until `reread`
+	// every idea file in `.sessions/_backlog/`, and every ticket folder kept there, read once per board read and kept until `CardPlacement.reread`
 	-> Sessions.backlog_folder
 + cards: list[Card]
 	// its tickets, then its backlog items
 + active: Ticket
 	// reference data field: the ticket of the session saved as open, sent by its name, since its column sends it whole; main's ticket while the main session is
-	-> Sessions.open_name
-	-> Board.ticket
+	-> OpenSessions.name_for
+	-> CardPlacement.ticket
++ << composition >> placement: CardPlacement
+	// the cards it places, and what its current read has found, made once with it
++ << composition >> shared: BoardFile
+	// what its repository's sessions share on it, in `_board.json`
++ reads: BoardReads
+	// what its current read has found
+	-> CardPlacement.reads
 + worktrees: dict[Branch, Worktree]
 	// each branch's worktree, listed once per board read rather than once per ticket, because the board is read after every call; a project that is no git clone has none
 	-> Repo.is_clone
@@ -129,11 +136,14 @@ A `@tool_subject` loader or class tool that takes `project` is handed the projec
 	// `board.folders`: the folders inside one folder of the repository, as paths from the project; installed packages, caches, and hidden folders other than `.context` are left out, so a person can choose a `.context` folder as a practice root
 	-> Sessions.file_manager
 	-> FileManager.list
+	-> Folder.folder_paths
 + help(practice: str): Help
-+ set_sends_fixes_directly(sends: bool): Board
-	// `board.set_sends_fixes_directly`: keeps sends in `_board.json`, committed on main and pushed
 	// `board.help`: the help of the board's practice named practice, such as `stories`; a fidelity's help comes from its progress, `fidelity-progress.help`
 	-> BoardPractices.keyed
+	-> Help.on_practice
++ set_sends_fixes_directly(sends: bool): Board
+	// `board.set_sends_fixes_directly`: keeps sends in `_board.json`, committed on main and pushed
+	-> BoardFile.keep
 + unsaved: SaveFailure
 	// the latest save of the tickets' records on main that git refused, naming each change not yet saved; none while every save went through
 	-> Sessions.saves
@@ -141,41 +151,77 @@ A `@tool_subject` loader or class tool that takes `project` is handed the projec
 + save_again(): Board
 	// `board.save_again`: queues again the changes whose save git refused, as the board's Save again does
 	-> SessionSaves.retry
-+ open_ticket(title: str, scope: str, parent: str, path: str): Ticket
-	// a new ticket in Discovery, its session working on path, a folder in the repository; the session takes its name from the title
-	-> Sessions.create
-	-> CardPlacement.ticket_of
-+ ticket_of(session: Session): Ticket
-	// the ticket of a session just opened, moved between folders, closed, or reopened; the board forgets the cards it has read
-	-> Board.reread
-	-> CardPlacement.make_ticket
-+ make_ticket(session: Session): Ticket
-	// the ticket the board places for session, as it reads it now; the board is the one reader of the card classes the kanban package hands it, and its reads make their cards through it
-+ make_backlog_item(path: Path): BacklogItem
-	// the backlog item the board places for the idea kept in path
++ column(name: str): Column
+	// raises `ColumnNotFoundError` for a column the board does not have
++ stage(name: str): Stage
+	// raises `NotAStageError` for any column that is not a stage, for `stage.*` tools and `ticket.move_to`
+
+## CardPlacement
+
+The cards one board places, made once with the board: a ticket for each session and an item for each idea in its Backlog, of the kinds the kanban package hands over (`CARD_KINDS`), and what the board's current read has found. A change made through the board starts a new read.
+
++ CardPlacement(board: Board)
+------
++ << composition >> reads: BoardReads
+	// what the current read has found; replaced whole by `reread`
+----
 + reread()
-	// forgets the tickets, backlog items, and worktrees read so far, so the next read sees a change made since
-+ wip_limit(stage: Stage): int
-	// the limit saved for stage in `.sessions/_board.json`, else 3
-+ set_wip_limit(stage: Stage, limit: int)
-	// saved in `.sessions/_board.json` beside the other stages' limits, keeping whatever else the file holds
+	// forgets the tickets, backlog items, worktrees, and chats read so far, so the next read sees a change made since
 + ticket(name: str): Ticket
 	// read from that ticket's session folder alone, open before closed; none when no session has that name
 	-> Sessions.named
 + ticket_called(name: str): Ticket
 	// `ticket`, raising `TicketNotFoundError` when the board has none: where a ticket's name enters from a tool call
-+ children_of(ticket: Ticket): list[Ticket]
-	// the tickets whose session names ticket's as its parent, found once per board read
-	-> Session.parent
++ open_ticket(title: str, scope: str, path: str): Ticket
+	// a new ticket in Discovery, its session working on path, a folder in the repository; raises `FolderOutsideRepositoryError` for a folder outside it
+	-> Sessions.create
++ ticket_of(session: Session): Ticket
+	// the ticket of a session just opened, moved between folders, closed, or reopened; the board forgets the cards it has read
++ backlog_item_of(ticket: Ticket): BacklogItem
+	// the item a ticket becomes once its folder has moved into the Backlog
+	-> BacklogItem.from_ticket
++ make_ticket(session: Session): Ticket
+	// the ticket the board places for session, as it reads it now
++ make_backlog_item(path: Path): BacklogItem
+	// the backlog item the board places for the idea kept in path
+
+## BoardReads
+
+What one read of a board finds, each read once when first asked for: its tickets, its backlog items, its worktrees, its branches, and the chats connected.
+
++ BoardReads(board: Board)
+------
++ tickets: list[Ticket]
+	-> Sessions.all
++ backlog_items: list[BacklogItem]
+	-> Sessions.backlog_folder
+----
 + backlog_item(title: str): BacklogItem
 + backlog_item_called(title: str): BacklogItem
 	// `backlog_item`, raising `BacklogItemNotFoundError` when the board has none
++ children_of(ticket: Ticket): list[Ticket]
+	// the tickets whose session names ticket's as its parent, found once per board read
+	-> Session.parent
++ chat_named(name: str): Chat
+	// the first chat connected now that goes by name
+
+## BoardFile
+
+`.sessions/_board.json`, what a repository's sessions share on its board, read once per board read; the board is its one reader and writer.
+
++ BoardFile(board: Board)
+------
++ sends_fixes_directly: bool
+----
++ wip_limit(stage: Stage): int
+	// the limit saved for stage, else 3
++ set_wip_limit(stage: Stage, limit: int)
+	// saved beside the other stages' limits, keeping whatever else the file holds
 + order_in(column: Column): list[str]
-	// the keys of column's cards in the order a person last placed them, kept in `.sessions/_board.json`
+	// the keys of column's cards in the order a person last placed them
 + keep_order(column: Column, keys: list[str])
-	// saved in `.sessions/_board.json` beside the WIP limits, keeping whatever else the file holds
-+ column(name: str): Column
-	// raises `ColumnNotFoundError` for a column the board does not have
++ keep(values)
+	// writes values into the file, keeping whatever else it holds
 
 ## Column
 
@@ -277,17 +323,13 @@ The base type of Ticket and BacklogItem. It marks `title` and `last_activity` as
 + is_stacked: bool
 	// whether it shows inside another card rather than as a card of its own; only a ticket's child does
 ----
-+ move_next(): Card
-	// a person's move to the next column
-+ move_previous(): Card
-	// a person's move to the previous column
 + move_before(other: Card): Card
 	// a person's move of it just above other in their column; committed on main and pushed
 	-> Column.place_before
 
 ## Ticket : Card
 
-Marked `@identity("name")`. Never moves to another column by itself: a person moves it, and the move is written to its session log. It holds three parts, each made once with it: its *TicketWork* (its progress), its *TicketCheckout* (its branch and worktree), and its *StageMarks* (the moves and marks a person made). Its tools and data fields stay on it and hand the work to those parts, so their published names do not change (`cdr/0004`).
+Marked `@identity("name")`. Never moves to another column by itself: a person moves it, and the move is written to its session log. It holds five parts, each made once with it: its *TicketWork* (its progress), its *TicketCheckout* (its branch and worktree), its *StageMarks* (the moves and marks a person made), its *TicketTree* (where it sits among its parent and children), and its *TicketMoves* (Move next, Move previous, a drag). Its data fields stay on it, and its tools are declared by job on six bases mixed in ahead of *Card*, each `@hosted_only`, so the toolset still publishes every one as `ticket.*` (`cdr/0004`): *TicketCheckoutTools* (`branch`, `work_branch`, `assign_chat`, `close_choices`, `activate`, each asking its *TicketCheckout*), *TicketChoices* (`fidelity_files`, `root_files`, `format_choices`, `choose_formats`, `overlay_choices`, `choose_overlays`), *TicketMoveTools* (`move_next`, `move_previous`, `move_to`, asking its *TicketMoves*, and `move_before`), *TicketTreeTools* (`add_child`, `pull_out`, `reassign_parent`), *TicketEnding* (`close`, `archive`, `delete`, and `to_backlog`, which is no tool), and *TicketTextTools* (`edit_text`, `tag`). *TicketChoices*, *TicketTreeTools*, and *TicketEnding* do their own work on the ticket they are mixed into, with no part behind them. Below they are listed with the ticket, as its toolset publishes them.
 
 + Ticket(session: Session, board: Board)
 ------
@@ -305,9 +347,7 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	-> Session.tags
 + << association >> parent: Ticket
 	// the ticket its session names as its parent; none when it names none or one the board does not have
-	-> Board.ticket
-+ << association >> ancestors: list[Ticket]
-	// its parent, its parent's parent, and so on
+	-> CardPlacement.ticket
 + << aggregation >> children: list[Ticket]
 	// data field, sent whole, since a stacked child shows in no column: the tickets whose session names it as their parent
 	-> BoardReads.children_of
@@ -316,6 +356,7 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	-> Session.is_pulled_out
 + is_stacked: bool
 	// data field: an open child, not pulled out, of an open parent, shown inside the parent's card
+	-> TicketTree.is_stacked
 + << association >> session: Session
 	// data field: its folders, its practices and their files, and its log
 + << composition >> progress: list[FidelityProgress]
@@ -324,6 +365,8 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 + << composition >> work: TicketWork
 + << composition >> checkout: TicketCheckout
 + << composition >> marks: StageMarks
++ << composition >> tree: TicketTree
++ << composition >> moves: TicketMoves
 + << association >> column: Column
 	// reference data field: Complete once its session is closed; a parent's is the stage of its child furthest back; otherwise the stage of the fidelity its latest generate or validate names, unless a `move` line came after it, whose stage it then sits in; with neither, Discovery
 + is_closed: bool
@@ -337,6 +380,7 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	// data field: the columns besides the stages it can be dropped on: the Backlog always, Complete from Implementation's Done or while it is open
 + parent_choices: list[str]
 	// data field: the tickets it can be dropped on to become their child: any on the board but its parent, itself, and the tickets under it, which would make a loop; none for main. `reassign_parent` refuses the same loop with `ParentLoopError`
+	-> TicketTree.parent_choices
 + is_done: bool
 	// data field: true only in a stage: a parent's when every child of it in that stage is done; else when a person marked it done there or, with no mark since entering, when all its enabled work there is done
 + next_fidelity: FidelityProgress
@@ -357,11 +401,11 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 + load(ticket: str, project: Path): Ticket
 	// the `@tool_subject` of the `ticket.*` tools; raises `TicketNotFoundError` for a ticket the board does not show
 	-> Board.load
-	-> Board.ticket_called
+	-> CardPlacement.ticket_called
 + create(title: str, scope: str, parent: str, path: str, project: Path): Ticket
 	// `ticket.create`: a new ticket in Discovery, in progress; it does not become the current session. scope is feature, story, or slice; parent names the ticket it was split from; path is its workpath
 	-> Board.load
-	-> Board.open_ticket
+	-> CardPlacement.open_ticket
 + branch(): Branch
 	// `ticket.branch`: its own branch, named as the ticket, with whether the repository has it and whether it is checked out, so activating a ticket offers only what is missing and leaving one commits, pushes, and merges only its own branch
 	-> TicketCheckout.branch
@@ -369,54 +413,43 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	// `ticket.work_branch`: the branch its work is on, which leaving commits and pushes: its own branch while it is checked out, else the default branch while the checkout is on it, as for a session with no branch of its own; any other checkout gives its own branch, not checked out
 	-> TicketCheckout.work_branch
 + format_choices(fidelities: list[str]): list[FormatChoice]
-	// `ticket.format_choices`: the chips of an action bar over those fidelities, each fidelity's files read once
-+ choose_formats(fidelities: list[str], label: str, is_chosen: bool): list[FormatChoice]
-	// `ticket.choose_formats`: one press on a chip, in the chat bar or on the board, chooses or leaves out its formats in the session
-	-> FormatChoice.choose
+	// `ticket.format_choices`, from *TicketChoices*: the chips of an action bar over those fidelities, each fidelity's files read once
 	-> TicketWork.progress_of
-	-> FidelityProgress.files
 	-> FormatChoice.offered_by
++ choose_formats(fidelities: list[str], label: str, is_chosen: bool): list[FormatChoice]
+	// `ticket.choose_formats`, from *TicketChoices*: one press on a chip, in the chat bar or on the board, chooses or leaves out its formats in the session
+	-> FormatChoice.choose
 + activate(): Ticket
 	// `ticket.activate`: opens it in its own worktree, where its own chat works on it; the chat that asks keeps its session, and the repository's own folder stays on main
 	-> TicketCheckout.open
 + next_place: StagePlace
 	// where Move next puts it while it stays on a stage: its stage's Done, else the next stage's In progress; none when the move closes it, leaves it where it is, or is refused. The page shows the card there at once, and `move_next` goes where it says
-	-> Stage.next_stage
+	-> TicketMoves.next_place
 + previous_place: StagePlace
 	// where Move previous puts it while it stays on a stage: its stage's In progress, else the previous stage's Done; none when the move reopens it, sends it to the Backlog, leaves it where it is, or is refused
-	-> Stage.previous_stage
+	-> TicketMoves.previous_place
 + move_next(): Ticket
 	// `ticket.move_next`: from In progress it writes `done <stage>`, from Done it writes `move <next stage>`, and out of Implementation it closes; a parent raises `ParentMovesWithChildrenError`, as `move_previous` and `move_to` do
-	-> Ticket.next_place
-	-> StageMarks.mark
-	-> StageMarks.enter
+	-> TicketMoves.move_next
 + move_previous(): Ticket | BacklogItem
 	// `ticket.move_previous`: from Done it writes `in-progress <stage>`, from In progress it writes `move <previous stage>` and `done <previous stage>`; out of Complete it reopens, and out of Discovery it returns to the Backlog
-	-> Ticket.previous_place
-	-> StageMarks.place
-	-> SessionFolder.reopen
+	-> TicketMoves.move_previous
 + move_to(stage: str, done: bool): Ticket | BacklogItem
 	// `ticket.move_to`: a person's drag into a stage's In progress or Done; into the Backlog from any column it returns to the Backlog with its whole folder; raises `NotAStageError` for any other column
-	-> StageMarks.place
-	-> Session.close
-	-> SessionFolder.move_to_backlog
-	-> BacklogItem.from_ticket
-	-> BacklogItem.write_if_missing
+	-> TicketMoves.move_to
 + close(leaving: list[str]): Ticket
-	// `ticket.close`: does with its work what leaving names (handoff, commit, push, merge, delete_branch, delete_worktree); its session closes, its folder moves to `_complete/`, and that move is committed on main and pushed
+	// `ticket.close`, from *TicketEnding*: does with its work what leaving names (handoff, commit, push, merge, delete_branch, delete_worktree); its session closes, its folder moves to `_complete/`, and that move is committed on main and pushed; main raises `MainStaysOpenError`
+	-> TicketCheckout.write_handoff
 	-> TicketCheckout.free_worktree
 	-> TicketCheckout.keep_landing_release
-	-> Session.close
 	-> SessionFolder.move_to_closed
-	-> SessionSaves.now
+	-> TicketCheckout.save_work
 + assign_chat(chat: str): Ticket
 	// `ticket.assign_chat`: keeps the chat's id in its session.json, committed on main and pushed
 	-> TicketCheckout.assign_chat
 + archive(): Ticket
-	// `ticket.archive`: its session closes and its folder moves to `_archive/`, off the board; the move is committed on main and pushed
-	-> Session.close
+	// `ticket.archive`, from *TicketEnding*: its session closes and its folder moves to `_archive/`, off the board; the move is committed on main and pushed
 	-> SessionFolder.move_to_archive
-	-> SessionSaves.now
 + edit_text(text: str): Ticket
 	// `ticket.edit_text`: writes text under its idea file's heading, making the file when it has none; committed on main and pushed
 	-> Session.keep_text
@@ -424,28 +457,73 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	// `ticket.tag`: adds word to its session's tags; committed on main and pushed
 	-> Session.add_tag
 + delete()
-	// `ticket.delete`: its session closes and its folder is removed, that removal committed on main and pushed; main raises `MainStaysOpenError`
-	-> Session.close
+	// `ticket.delete`, from *TicketEnding*: its session closes and its folder is removed, that removal committed on main and pushed; main raises `MainStaysOpenError`
 	-> SessionFolder.remove
++ to_backlog(): BacklogItem
+	// from *TicketEnding*, no tool: into the Backlog from any column, its session closed and its whole folder a backlog item; main raises `MainStaysOpenError`
+	-> SessionFolder.move_to_backlog
+	-> CardPlacement.backlog_item_of
 + add_child(title: str): Ticket
-	// `ticket.add_child`: a new child ticket, a story In progress in Discovery, working where it works; committed on main and pushed
+	// `ticket.add_child`, from *TicketTreeTools*: a new child ticket, a story In progress in Discovery, working where it works; committed on main and pushed
 	-> SessionHierarchy.open_child
 	-> CardPlacement.ticket_of
 + pull_out(): Ticket
-	// `ticket.pull_out`: a child becomes a card of its own, keeping its parent; a ticket with no parent raises `NotAChildError`
+	// `ticket.pull_out`, from *TicketTreeTools*: a child becomes a card of its own, keeping its parent; a ticket with no parent raises `NotAChildError`
 	-> SessionHierarchy.mark_pulled_out
 + reassign_parent(parent: Ticket | None): Ticket
-	// `ticket.reassign_parent`: parent, or none, becomes its parent, and it is no longer pulled out; raises `ParentLoopError` when parent is it or one of its children; the tool names parent as it names any ticket
+	// `ticket.reassign_parent`, from *TicketTreeTools*: parent, or none, becomes its parent, and it is no longer pulled out; raises `ParentLoopError` when parent is it or one of its children; the tool names parent as it names any ticket
+	-> TicketTree.can_be_child_of
 	-> SessionHierarchy.set_parent
 + move_before(other: Ticket): Ticket
 	// `ticket.move_before`: keeps it just above other in their column; the tool names other as it names any ticket
 	-> Card.move_before
 + violations(): Report
 	// `ticket.violations`: the rules broken on every fidelity of its stage left with violations, each naming its fidelity, a rule two fidelities share listed once; its path is the session's reports folder from the project
-	-> FidelityProgress.report
-	-> Session.reports_folder
-	-> SessionPaths.from_project
-	-> Report.from_reports
+	-> TicketWork.violations
+
+## TicketTree
+
+`space/kanban/ticket_tree.py`. Where one ticket sits among the tickets its session names as parent and child, made once with the ticket. The changes a person makes to the tree are the ticket's own tools (`add_child`, `pull_out`, `reassign_parent`), declared on *TicketTreeTools*, which raise this file's `NotAChildError` and `ParentLoopError`.
+
++ TicketTree(ticket: Ticket)
+------
++ << association >> ancestors: list[Ticket]
+	// its parent, its parent's parent, and so on
+	-> Ticket.parent
++ is_stacked: bool
+	// an open child, not pulled out, of an open parent
++ parent_choices: list[str]
+	// any ticket on the board but its parent, itself, and the tickets under it; none for main
+	-> Board.tickets
++ furthest_back_child_stage: Stage
+	// the stage of its child furthest back on the board, which a parent's column is
+----
++ can_be_child_of(parent: Ticket): bool
++ refuse_moving_a_parent()
+	// raises `ParentMovesWithChildrenError` for a ticket with children
+
+## TicketMoves
+
+The moves a person makes with one ticket, made once with the ticket in `ticket.py`. A parent moves only with its children, so each move asks `TicketTree.refuse_moving_a_parent` first; each move is a mark in its *StageMarks*.
+
++ TicketMoves(ticket: Ticket)
+------
++ next_place: StagePlace
+	-> Stage.next_stage
++ previous_place: StagePlace
+	-> Stage.previous_stage
+----
++ move_next(): Ticket
+	-> StageMarks.mark
+	-> StageMarks.enter
+	-> Ticket.close
++ move_previous(): Ticket | BacklogItem
+	-> StageMarks.place
+	-> SessionFolder.reopen
+	-> Ticket.to_backlog
++ move_to(stage: str, done: bool): Ticket | BacklogItem
+	-> StageMarks.place
+	-> Ticket.to_backlog
 
 ## TicketWork
 
@@ -460,6 +538,12 @@ A ticket's progress on each fidelity the board requires whose practice its sessi
 	-> FidelityProgress.from_log
 + enabled: list[FidelityProgress]
 	// the progress of the fidelities whose practice its session works on
++ violations: Report
+	// the rules broken on every fidelity of the ticket's stage left with violations, taken together
+	-> FidelityProgress.report
+	-> Session.reports_folder
+	-> SessionPaths.from_project
+	-> Report.from_reports
 ----
 + progress_of(slug: str): FidelityProgress
 	// only that fidelity's progress is read; raises `FidelityNotFoundError` for a fidelity the ticket does not have
@@ -495,7 +579,7 @@ A ticket's progress on each fidelity the board requires whose practice its sessi
 	// opens the ticket in its own worktree: the one it has, else a new one on its own branch, after the session folders not yet committed are committed on main and pushed; records the branch and worktree in its session, and commits that record on main and pushes it, every time; refuses with TicketBranchUnclearError when several branches could each be the ticket's
 	-> SessionSaves.now
 	-> Branch.open_in_worktree
-	-> Board.reread
+	-> CardPlacement.reread
 	-> SessionRecord.save_fields
 + assign_chat(chat: str)
 	// keeps chat's id in the ticket's session.json, committed on main and pushed
@@ -654,7 +738,7 @@ A ticket's work in one stage taken together: the progress of each fidelity the s
 
 ## BacklogItem : Card
 
-Marked `@identity("title")`.
+Marked `@identity("title")`. Its two order tools, `move_before` and `move_after`, are declared on *BacklogOrderTools*, a `@hosted_only` base mixed in ahead of *Card*, so the toolset still publishes them as `backlog-item.*`; they are listed below with the item.
 
 + BacklogItem(path: Path, board: Board)
 ------
@@ -676,15 +760,13 @@ Marked `@identity("title")`.
 + load(backlog_item: str, project: Path): BacklogItem
 	// the `@tool_subject` of the `backlog-item.*` tools; raises `BacklogItemNotFoundError` for an item the board does not show
 	-> Board.load
-	-> Board.backlog_item_called
+	-> BoardReads.backlog_item_called
 + create(title: str, text: str, project: Path): BacklogItem
 	// `backlog-item.create`: writes one markdown file to `_backlog/`, the title as its heading and the text under it, committed on main and pushed
 	-> Sessions.backlog_folder
 	-> SessionSaves.later
 + from_ticket(ticket: Ticket): BacklogItem
-	// the item a ticket moved into the Backlog waits in: `_backlog/<name>/<name>.md`, inside the ticket's kept folder on the ticket's board
-+ write_if_missing(title: str)
-	// gives an item whose ticket never had an idea file one holding title, so it shows in the Backlog
+	// the item a ticket moved into the Backlog waits in: `_backlog/<name>/<name>.md`, inside the ticket's kept folder on the ticket's board, its idea file made holding the ticket's title when the ticket never had one
 + parent: str
 	// the title of the item whose folder keeps this one's file, `_backlog/<parent>/<child>.md`; empty for an item of its own
 + is_stacked: bool
@@ -693,9 +775,9 @@ Marked `@identity("title")`.
 	// the other markdown files in a folder that keeps no ticket's work, beside the parent's own `<parent>.md`; sent whole
 + start(scope: str, path: str): Ticket
 	// `backlog-item.start`: an item a ticket was moved into returns that ticket with its folder; a new item's file moves into the new session folder; its children start too, each a story ticket that is its child
-	-> Sessions.load
+	-> HeldSessions.load
 	-> SessionFolder.reopen
-	-> Board.open_ticket
+	-> CardPlacement.open_ticket
 	-> SessionFolder.keep_file
 	-> BacklogItem.start
 	-> Ticket.reassign_parent
@@ -707,11 +789,6 @@ Marked `@identity("title")`.
 	// `backlog-item.start_under`: starts the item, as dropping it on parent's card does, and gives its ticket parent as its parent
 	-> BacklogItem.start
 	-> Ticket.reassign_parent
-+ move_next(): Ticket
-	// a person's move forward out of the Backlog: starting the item
-	-> BacklogItem.start
-+ move_previous(): BacklogItem
-	// the Backlog is the first column, so the item stays where it is
 + edit_text(text: str): BacklogItem
 	// `backlog-item.edit_text`: rewrites the text under its file's heading, which keeps its title; committed on main and pushed
 	-> IdeaFile.rewrite_text
@@ -770,7 +847,7 @@ A fidelity as a board tile names it. The page shows its label and its skill's sl
 
 ## Report
 
-The rules a validation found broken, built from the saved report and the graph saved beside it. It lives in `report.py`.
+The rules a validation found broken, built from the saved report and the graph saved beside it, which keeps only the graph's violations and the nodes they were found on. It lives in `report.py`.
 
 + Report(path: str, text: str, rules: list[ReportRule], has_saved_graph: bool)
 ------
@@ -806,7 +883,7 @@ The rules a validation found broken, built from the saved report and the graph s
 
 ## ReportFile
 
-A validation report of one fidelity saved in a session folder, with the graph the validation checked saved beside it. It knows which of its practice's rules it answers for.
+A validation report of one fidelity saved in a session folder, with the violations of the graph the validation checked, and the nodes they were found on, saved beside it. It knows which of its practice's rules it answers for, and describes each from its practice: the saved report points at each rule's text instead of copying it.
 
 + ReportFile(file: Path, fidelity: FidelityGuidance)
 	// fidelity is the one its session holds: its practice's session names the folder the saved graph names files from, and that session's repository names the report's files from its top
@@ -839,7 +916,7 @@ A validation report of one fidelity saved in a session folder, with the graph th
 
 ## Judgment
 
-One rule the judgment in a validation report fails, in one judged file.
+One rule the judgment in a validation report fails, in one judged file. It lives in `space/session/validation_judgment.py`, beside *ReportJudgment*, so the session's violation history reads the judgment the same way the board does.
 
 ------
 + file: str
@@ -867,6 +944,8 @@ One rule the judgment in a validation report fails, in one judged file.
 
 ## ParentMovesWithChildrenError : ValueError
 
+`ticket_tree.py`, with `NotAChildError` and `ParentLoopError`.
+
 ## NotAChildError : ValueError
 
 ## ParentLoopError : ValueError
@@ -887,7 +966,7 @@ The classes below belong to other modules and are modelled in those modules' own
 
 ## Chat
 
-`harness/chat/chat.py`. `Board.chats` lists the connected chats once per board read with `Chat.list`; a ticket reads each chat's `folder` and `name`.
+`harness/chat/chat.py`. `Board.chats` lists the connected chats once per board read with `Chats.load().list()`; a ticket reads each chat's `folder` and `name`.
 
 ## Branch
 
@@ -895,7 +974,7 @@ The classes below belong to other modules and are modelled in those modules' own
 
 ## Sessions
 
-`space/session/sessions.py`. The board calls `all()`, `named(name)`, `load(folder)`, `open_name`, `create(name, workpath, title, scope, parent)`, `switch(name)`, `folder`, and `backlog_folder`; the board's own `_board.json` sits in its `folder`.
+`space/session/sessions.py`. The board calls `all()`, `named(name)`, `load(folder)`, `opened.name_for()` (*OpenSessions*), `create(name, workpath, title, scope, parent)`, `switch(name)`, `folder`, and `backlog_folder`; the board's own `_board.json` sits in its `folder`.
 
 ## Session
 
@@ -907,7 +986,7 @@ The classes below belong to other modules and are modelled in those modules' own
 
 ## PracticeGuidance
 
-`harness/guidance/guidance.py`, the board's own set, which the checkout's `Sessions` makes once with `PracticeCatalogue.create_all()` and holds as the catalog shows them (`board_practices`, `CatalogPractice.of_practices`). `key`, `slug`, `short_name`, and `colour` are data fields; the board reads `fidelities`, `rules`, `overview`, and `guidance`.
+`harness/guidance/guidance.py`, the board's own set, which the checkout's `Sessions` makes once with `PRACTICE_CATALOGUE.create_all()` and holds as the catalog shows them (`board_practices`, `CatalogPractice.of_practices`). `key`, `slug`, `short_name`, and `colour` are data fields; the board reads `fidelities`, `rules`, `overview`, and `guidance`.
 
 ## FidelityGuidance
 

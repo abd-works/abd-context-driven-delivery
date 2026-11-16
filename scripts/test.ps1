@@ -281,8 +281,8 @@ try {
     $failures = New-Object System.Collections.Generic.List[string]
 
     if ($Suite -eq "unit") {
-        # The unit tier's time budget: every spec process imports scripts/unit_guard/sitecustomize.py, which logs each
-        # example slower than the budget with its spec file, so that file fails here.
+        # The unit tier's time budget: every spec process reports through scripts/unit_guard/budget_formatter.py, a Mamba
+        # output format that logs each example slower than the budget with its spec file, so that file fails here.
         $guardLog = Join-Path ([IO.Path]::GetTempPath()) ("cdd-unit-guard-" + [guid]::NewGuid().ToString("N") + ".log")
         $env:CDD_UNIT_GUARD_LOG = $guardLog
         $env:CDD_UNIT_EXAMPLE_BUDGET_MS = "$ExampleBudgetMs"
@@ -300,9 +300,9 @@ try {
         $storyModule = Join-Path $repo "cdd_guidance\practices\stories\templates\py"
         $savedPath = $env:PYTHONPATH
         $env:PYTHONPATH = "$storyModule$([IO.Path]::PathSeparator)$savedPath"
-        $storyFailures = Invoke-Reported "Python story tests" $stories $python @("-m", "story_test", "--format", "documentation")
+        $storyFailures = Invoke-Reported "Python story tests" $stories $python @("-m", "story_test", "--format", "budget_formatter.BudgetDocumentation")
         $env:PYTHONPATH = $savedPath
-        $specFailures = Invoke-Reported "Mamba specs" $specs $mamba @("--format", "documentation")
+        $specFailures = Invoke-Reported "Mamba specs" $specs $mamba @("--format", "budget_formatter.BudgetDocumentation")
         foreach ($relative in @($storyFailures) + @($specFailures)) {
             if ($relative) { $failures.Add($relative) | Out-Null }
         }
@@ -315,9 +315,9 @@ try {
             $flaggedStories = @($flagged | Where-Object { $_ -like "*_story.test.py" })
             $flaggedSpecs = @($flagged | Where-Object { $_ -notlike "*_story.test.py" })
             $env:PYTHONPATH = "$storyModule$([IO.Path]::PathSeparator)$savedPath"
-            Invoke-Reported "Over the budget in parallel, run again alone" $flaggedStories $python @("-m", "story_test", "--format", "progress") -Parallel 1 | Out-Null
+            Invoke-Reported "Over the budget in parallel, run again alone" $flaggedStories $python @("-m", "story_test", "--format", "budget_formatter.BudgetProgress") -Parallel 1 | Out-Null
             $env:PYTHONPATH = $savedPath
-            Invoke-Reported "Over the budget in parallel, run again alone" $flaggedSpecs $mamba @("--format", "progress") -Parallel 1 | Out-Null
+            Invoke-Reported "Over the budget in parallel, run again alone" $flaggedSpecs $mamba @("--format", "budget_formatter.BudgetProgress") -Parallel 1 | Out-Null
             $slow = @(Read-SlowExamples $guardLog)
             if ($slow.Count -gt 0) {
                 Write-Host ""

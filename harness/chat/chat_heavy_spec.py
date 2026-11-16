@@ -14,7 +14,7 @@ for _root in (_REPO_ROOT, _REPO_ROOT / "tools"):
 from expects import be_empty, equal, expect
 from mamba import after, before, context, description, it
 
-from harness.chat.chat import Chat
+from harness.chat.chat import Chat, Chats
 
 CHAT = "ad6c04ab-chat"
 CLOCK = [1000.0]
@@ -63,7 +63,7 @@ with description("a chat") as self:
                 expect(self.failures).to(be_empty)
 
             with it("should still be listed"):
-                expect([chat.id for chat in Chat.list()]).to(equal([CHAT]))
+                expect([chat.id for chat in Chats.load().list()]).to(equal([CHAT]))
 
         with context("that has been sent a command"):
             with before.each:

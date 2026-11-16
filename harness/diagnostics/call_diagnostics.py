@@ -37,4 +37,4 @@ class CallDiagnostics:
 
     @cached_property
     def _installer(self) -> Installer:
-        return Installer(repo=self.call.project)
+        return Installer.create(repo=self.call.project)

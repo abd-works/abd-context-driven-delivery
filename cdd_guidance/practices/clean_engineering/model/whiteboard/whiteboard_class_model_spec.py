@@ -4,7 +4,7 @@ model."""
 from expects import be_above, be_true, contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
-from harness.whiteboard import Arrow, Label, Section, Shape, Whiteboard
+from harness.whiteboard.whiteboard import Arrow, Label, Section, Shape, UnreadableBoard, Whiteboard
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass, UnreadableSource
 from cdd_guidance.practices.clean_engineering.model.diagram.class_view import CLASSES_ON_ONE_PAGE
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
@@ -40,7 +40,7 @@ def orders_class_model() -> CleanEngineeringModel:
     module.classes.extend([cart, line, priced])
     model.modules.append(module)
     for prop in cart.properties:
-        prop.take_drawn_kind("composition")
+        prop.arrow.take_kind("composition")
     return model
 
 
@@ -56,7 +56,7 @@ def two_module_model(classes_each: int) -> CleanEngineeringModel:
         model.modules.append(module)
     product = Property(name="product", type_hint="Catalog1")
     model.modules[0].classes[0].properties.append(product)
-    product.take_drawn_kind("association")
+    product.arrow.take_kind("association")
     return model
 
 
@@ -160,5 +160,9 @@ with description("a modules view drawn on a Claude whiteboard") as self:
         ]))
 
     with context("that is read from a board with no modules or classes"):
-        with it("should refuse the board as an unreadable source"):
-            expect(lambda: WhiteboardCleanEngineeringModel().parse(Whiteboard("Empty").save())).to(raise_error(UnreadableSource, "The board holds no module and no class"))
+        with it("should refuse the board as another practice's drawing, which a read of code skips"):
+            expect(lambda: WhiteboardCleanEngineeringModel().parse(Whiteboard("Empty").save())).to(raise_error(UnreadableBoard, "The board holds no module and no class"))
+
+    with context("that is read from text that is no saved board"):
+        with it("should refuse the text as an unreadable source"):
+            expect(lambda: WhiteboardCleanEngineeringModel().parse("not a board")).to(raise_error(UnreadableSource))

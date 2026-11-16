@@ -23,7 +23,7 @@ from harness.mcp.mcp_server import McpInstallation
 
 
 def _installer(tree: Path, payload: dict) -> Installer:
-    installer = Installer(ide="Cursor", path=tree, repo=_REPO_ROOT)
+    installer = Installer.create(ide="Cursor", path=tree, repo=_REPO_ROOT)
     log = installer.diagnostics.path
     log.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return installer
@@ -61,7 +61,7 @@ with description("guidance diagnostics install"):
     with it("should install guidance-diagnostics as a slash command with MCP invoke"):
         tree = Path(tempfile.mkdtemp())
         try:
-            mcp = Installer(ide="Cursor", path=tree, repo=_REPO_ROOT).install([GuidanceDiagnostics()]).of(McpInstallation)
+            mcp = Installer.create(ide="Cursor", path=tree, repo=_REPO_ROOT).install([GuidanceDiagnostics()]).of(McpInstallation)
             command_path = tree / "commands" / "harness" / "diagnostics" / "guidance-diagnostics.md"
             expect(command_path.is_file()).to(equal(True))
             text = command_path.read_text(encoding="utf-8")

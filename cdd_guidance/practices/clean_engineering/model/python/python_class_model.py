@@ -82,8 +82,8 @@ class PythonOperation(CodeOperation):
         operation.description = (ast.get_docstring(node) or "").strip()
         operation.callees = function.callees()
         operation.take_place(node)
-        operation.take_body_fingerprint("\n".join(ast.unparse(stmt) for stmt in node.body))
-        operation.take_body(function.body_text(text), PYTHON)
+        operation.source_facts.take_body_fingerprint("\n".join(ast.unparse(stmt) for stmt in node.body))
+        operation.source_facts.take_body(function.body_text(text), PYTHON)
         operation.is_setter = any(isinstance(item, ast.Attribute) and item.attr == "setter" for item in node.decorator_list)
         operation.published_as_tool = any(operation._decorator_name(item) in _TOOL_DECORATORS for item in node.decorator_list)
         operation.measure(function)
@@ -109,12 +109,12 @@ class PythonOperation(CodeOperation):
         self.is_property = function.decorated("property") or function.decorated("cached_property")
         self.is_static = function.decorated("staticmethod")
         self.is_classmethod = function.decorated("classmethod")
-        self.constructed_types = function.built_collaborators() if self.is_constructor else []
+        self.constructed_types = function.collaborators.built() if self.is_constructor else []
         self.max_control_flow_depth = function.control_flow_depth()
         self.has_bare_catch, self.swallows_exceptions = function.except_flags()
         self.unnamed_literal_numbers = function.unnamed_numbers()
         self.narrative_comment_lines = 0
-        self.peer_private_access = function.reaches_peer_private()
+        self.peer_private_access = function.collaborators.reaches_peer_private()
         self.packed_parameters = function.packed_parameters()
 
     def signature(self, contract: bool) -> List[str]:
@@ -154,14 +154,14 @@ class PythonClass(CodeClass):
         bases = ", ".join(self.declared_bases(known_names) or (["ABC"] if self.is_contract else []))
         heading = f"class {self.name}({bases}):" if bases else f"class {self.name}:"
         lines = ["", ""] + [f"@{snake_case_decorator(item)}" for item in self.stereotypes] + [heading]
-        doc = self.doc_intent()
+        doc = self._doc_intent()
         if doc:
             lines.extend([f'    """{doc}"""', ""])
         return lines
 
-    def doc_intent(self) -> str:
+    def _doc_intent(self) -> str:
         """Python marks the stereotypes as decorators, so its doc comment does not."""
-        return self.doc_comment(marked=False).text()
+        return DocComment.from_class(self, marked=False).text()
 
     def closing(self, has_members: bool) -> List[str]:
         return [] if has_members else ["    pass"]
@@ -207,7 +207,7 @@ class PythonModule(CodeModule):
             tokens = []
         return "\n".join(docstrings + [token.string for token in tokens if token.type == tokenize.COMMENT])
 
-    def _import_targets(self, file: Path, root: Path) -> list[str]:
+    def import_targets(self, file: Path, root: Path) -> list[str]:
         """Root-relative paths each `import` / `from … import` names, absolute or relative, wherever it sits in the
         file, and each module an `importlib.import_module` call names, as far as its text spells it. An import under
         `if TYPE_CHECKING:` names a type for an annotation and never runs, so it is no dependency and is left out."""
@@ -338,7 +338,7 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
         self._attach_top_level_ops(module, tree)
         module.preamble = self._preamble_of(tree)
         module.keep_tree(tree)
-        module.take_lines(text)
+        module.source_facts.take_lines(text)
         self._file_module = module
         if module.classes:
             self.modules.append(module)

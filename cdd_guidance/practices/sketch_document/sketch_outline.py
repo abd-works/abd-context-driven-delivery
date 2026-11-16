@@ -6,7 +6,7 @@ from __future__ import annotations
 import re
 from typing import Iterator
 
-from harness.guidance.practice_catalogue import PracticeCatalogue
+from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 from harness.guidance.guidance import SketchLens
 
 
@@ -38,7 +38,7 @@ class SketchOutline:
         self._nesting_indent = nesting_indent
         # Every practice's lens, which each practice class holds, so no practice is built to read it: a heading that
         # opens any of them starts that practice's section, since a sketch holds one section for each practice.
-        self._lenses = tuple(PracticeCatalogue.practice_class(key).sketch_lens for key in PracticeCatalogue.keys())
+        self._lenses = tuple(practice_class.sketch_lens for practice_class in PRACTICE_CATALOGUE.practice_classes)
 
     @property
     def title(self) -> str:

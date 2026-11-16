@@ -11,7 +11,7 @@ from typing import Any
 
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_address import McpAddress
-from harness.process.process import BackgroundStart, ExclusivePort, ListeningPorts, RunningProcess, StoppableProcess
+from harness.process.process import BackgroundStart, ExclusivePort, RunningProcess
 
 # The process a throwaway server belongs to, such as the spec run that started it on a port of its own. The server ends
 # when that process does, so a run that is killed or hangs leaves no server behind; the person's own server names none.
@@ -48,7 +48,7 @@ class RunningServer:
         self.pid = int(answer.get("pid") or 0)
         self.source = str(answer.get("source") or "")
         self.projects = [str(project) for project in answer.get("projects") or []]
-        self.process = StoppableProcess(self.pid)
+        self.process = RunningProcess(self.pid)
 
 
 class McpDaemon:
@@ -56,10 +56,11 @@ class McpDaemon:
 
     Holding the port exclusively is the claim: two servers cannot both hold it, so a second start exits quietly."""
 
-    def __init__(self, home: CddHome, address: McpAddress | None = None, listening: ListeningPorts | None = None) -> None:
+    def __init__(self, home: CddHome, address: McpAddress | None = None, port: ExclusivePort | None = None) -> None:
         self.home = home
         self.address = address or McpAddress()
-        self._listening = listening or ListeningPorts()
+        # The server's port, asked which process holds it when the server there does not answer.
+        self._port = port or ExclusivePort(self.address.HOST, self.address.port)
         # This process, when it is the server: the port it claims and the address it publishes.
         self.this_process = ServingProcess(home, self.address)
 
@@ -98,7 +99,7 @@ class McpDaemon:
         by the port it listens on and stopped too: left running, it would keep every new server from claiming the
         port."""
         running = self.ping()
-        process = running.process if running is not None else self._listening.holder(self.port)
+        process = running.process if running is not None else self._port.holder()
         if process is not None:
             process.stop(_STOP_SECONDS)
 
@@ -135,7 +136,7 @@ class ServedCheckout:
     in ``~/.cdd/runtime``, or the checkout as it is on disk."""
 
     def __init__(self, daemon: McpDaemon, checkout: Path) -> None:
-        self._daemon = daemon
+        self.daemon = daemon
         self._home = daemon.home
         self.checkout = checkout
 
@@ -148,37 +149,37 @@ class ServedCheckout:
         """Install ``~/.cdd/`` from the checkout on first use and start the server when none answers. A server already
         running is left, with the code it serves, alone."""
         self._home.install(self.checkout, CONNECT_SCRIPT)
-        return self._daemon.status(self._daemon.ensure())
+        return self.daemon.status(self.daemon.ensure())
 
     def pin(self) -> str:
         """Serve the checkout's current commit from ``~/.cdd/runtime``, restarting the server onto it."""
         self._home.install(self.checkout, CONNECT_SCRIPT)
         self._home.pin(self.checkout)
-        return self._daemon.status(self._daemon.restart())
+        return self.daemon.status(self.daemon.restart())
 
     def update(self) -> str:
         """Serve the checkout's current code the way the server already serves it, pinned or as it is on disk,
         restarting the server onto it."""
         self._home.install(self.checkout, CONNECT_SCRIPT)
         self._home.serve_current(self.checkout)
-        return self._daemon.status(self._daemon.restart())
+        return self.daemon.status(self.daemon.restart())
 
     def serve_on_disk(self) -> str:
         """Serve the checkout as it is on disk, for working on CDD itself, restarting the server onto it."""
         self._home.install(self.checkout, CONNECT_SCRIPT)
         self._home.serve_from(self.checkout)
-        return self._daemon.status(self._daemon.restart())
+        return self.daemon.status(self.daemon.restart())
 
     def keep_pinned_current(self) -> str | None:
         """After a plain install, serve the checkout's current commit when the server is pinned to an older one, so
         every chat runs the code just installed. Left alone: a server serving a checkout on disk, an install run from
         a linked worktree (its commit is not what every chat should run), and an install run inside the server itself.
         Returns the server's status when it was restarted, else None."""
-        if self._daemon.this_process.is_this_process() or (self.checkout / ".git").is_file():
+        if self.daemon.this_process.is_this_process() or (self.checkout / ".git").is_file():
             return None
         if self._home.is_installed and self._home.mode != self._home.PINNED:
             return None
-        if self._home.is_installed and self._home.is_pinned_to(self.checkout) and self._daemon.is_running():
+        if self._home.is_installed and self._home.is_pinned_to(self.checkout) and self.daemon.is_running():
             return None
         return self.pin()
 
