@@ -151,6 +151,25 @@ def _(s):
         expect(world.names).to(contain("Delete Ticket", "a ticket is deleted", "given a ticket on the board"))
 
 
+@shared_stories.scenario("Switch Files App To Graph View", "A story listed only by its story map holds its scenarios")
+def _(s):
+    @s.given("the Files app lists only checkout-flow's story map, .context/story-map.md")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+
+    @s.but_("not Delete Ticket's scenarios file under story_tests")
+    def _(world):
+        pass
+
+    @s.when("the Person switches the file bar to the graph view")
+    def _(world):
+        world.names = names_in(world, [STORY_MAP])
+
+    @s.then("Delete Ticket holds its scenario and its steps, read from its scenarios file")
+    def _(world):
+        expect(world.names).to(contain("Delete Ticket", "a ticket is deleted", "given a ticket on the board"))
+
+
 # --- Filter Graph Like The File List ------------------------------------------------------------------------------
 
 

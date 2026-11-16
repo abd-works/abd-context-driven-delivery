@@ -91,6 +91,15 @@ section: body
 *When* the Person switches the file bar to the graph view  
 *Then* Delete Ticket holds its scenario and its steps from the scenarios file
 
+#### Scenario: A story listed only by its story map holds its scenarios
+
+Requested 2026-11-16: "scenarios not rendering in graph". The Files app listed file-manager's story map but not its unchanged scenarios files, so every story arrived with no scenarios.
+
+*Given* the Files app lists only checkout-flow's story map, .context/story-map.md  
+  *But* not Delete Ticket's scenarios file under story_tests  
+*When* the Person switches the file bar to the graph view  
+*Then* Delete Ticket holds its scenario and its steps, read from its scenarios file
+
 ## Story: Filter Graph Like The File List
 
 ### Evidence

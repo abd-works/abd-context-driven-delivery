@@ -462,7 +462,20 @@ class Filter:
             return False
         if self.relationships and not self._on_relationship(node):
             return False
-        return not self.paths or self._under_paths(node.source.file) or self._under_paths(self._named_from_folder(node.source))
+        return not self.paths or self._listed_or_below_listed(node)
+
+    def _listed_or_below_listed(self, node: Node) -> bool:
+        """True when node's file is listed, or a node above it was read from a listed file: a story listed by its story
+        map holds the scenarios and steps read for it from scenarios files the list leaves out."""
+        above: Node | None = node
+        while above is not None:
+            if self._source_listed(above.source):
+                return True
+            above = above.parent
+        return False
+
+    def _source_listed(self, source: Source) -> bool:
+        return self._under_paths(source.file) or self._under_paths(self._named_from_folder(source))
 
     def _listed(self, request: FilterRequest, many: str, one: str) -> list[str] | None:
         """A request key that takes a list or a single value, such as ``types`` or ``type``; none when it names neither."""
