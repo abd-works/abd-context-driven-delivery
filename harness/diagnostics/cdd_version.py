@@ -1,4 +1,5 @@
-"""The CDD version a chat runs, read against the latest on origin main, so the chat bar can say when to update."""
+"""The CDD version a chat runs, read against the latest release on origin (its newest ``v*`` tag), so the chat bar can
+say when to update."""
 from __future__ import annotations
 
 import re
@@ -19,7 +20,8 @@ from harness.process.github_cli import GitHubCli
 # The checkout the cdd server runs its code from: the one whose version every chat it answers runs.
 SERVED_CHECKOUT = Path(__file__).resolve().parents[2]
 PYPROJECT = "pyproject.toml"
-LATEST_BRANCH = "main"
+# A release is a tag such as v2.0.0 that /release pushes; commits on main after it are not released.
+RELEASE_TAG = re.compile(r'^v(\d+)\.(\d+)(\.\d+)?$')
 # The version line of pyproject.toml's [project] table, the one line /version rewrites.
 _VERSION_LINE = re.compile(r'^version\s*=\s*"[^"]*"', re.MULTILINE)
 _VERSION_TEXT = re.compile(r'^\d+\.\d+(\.\d+)?$')
@@ -28,7 +30,7 @@ FETCH_SECONDS = 8
 
 
 class VersionStanding(str, Enum):
-    """How the version a chat runs stands against the latest on origin main."""
+    """How the version a chat runs stands against the latest release on origin."""
 
     CURRENT = "current"
     BEHIND_MINOR = "behind minor"
@@ -57,6 +59,12 @@ class Release:
         numbers = [int(part) for part in tomllib.loads(text)["project"]["version"].split(".")[:2]]
         return cls(*numbers, *([0] * (2 - len(numbers))))
 
+    @classmethod
+    def from_tag(cls, tag: str) -> Release | None:
+        """The release a tag such as v2.0.0 names, or None when the tag is not a release."""
+        numbers = RELEASE_TAG.match(tag.strip())
+        return cls(int(numbers.group(1)), int(numbers.group(2))) if numbers else None
+
     @property
     def label(self) -> str:
         return f"v{self.major}.{self.minor}"
@@ -72,8 +80,8 @@ class Release:
 @language_adapter(language="typescript")
 @agent_toolset
 class CddVersion:
-    """Say which CDD version a chat runs and how it stands against the latest on origin main, so the chat bar's version
-    badge can show it green, yellow, or red and offer the update."""
+    """Say which CDD version a chat runs and how it stands against the latest release on origin, so the chat bar's
+    version badge can show it green, yellow, or red and offer the update."""
 
     def __init__(self, checkout: Path | str, git: Git | None = None, project: Path | str | None = None, project_git: Git | None = None,
                  gh: GitHubCli | None = None, test_runs: TestRunRecord | None = None) -> None:
@@ -101,10 +109,10 @@ class CddVersion:
     @agent_tool
     @noSessionLog
     def check(self) -> CddVersion:
-        """Fetch origin main, then answer the version this chat runs, the latest on origin main, and how the two stand.
-        When origin cannot be reached, the latest is the version origin main had when it was last fetched."""
+        """Fetch origin's release tags, then answer the version this chat runs, the latest release, and how the two
+        stand. When origin cannot be reached, the latest is the newest release tag as it was last fetched."""
         try:
-            self._git.run("fetch", "origin", LATEST_BRANCH, timeout=FETCH_SECONDS)
+            self._git.run("fetch", "--tags", "origin", timeout=FETCH_SECONDS)
         except RepoConnectError as unreachable:
             self._fetch_problem = str(unreachable)
         return self
@@ -113,7 +121,7 @@ class CddVersion:
     @agent_tool
     @noSessionLog
     def read(self) -> CddVersion:
-        """Answer the version this chat runs, read from disk now, against the version origin main had when last fetched,
+        """Answer the version this chat runs, read from disk now, against the latest release tag as last fetched,
         without fetching. The chat bar reads it after every turn, so a changed version shows at once without asking
         origin on each turn; ``check`` fetches."""
         return self
@@ -174,7 +182,7 @@ class CddVersion:
     @property
     @data_field
     def latest(self) -> str:
-        """The version on origin main, such as v0.2; empty when origin main has never been fetched."""
+        """The latest release, such as v2.0, from origin's newest v* tag; empty when no release tag has been fetched."""
         latest = self._latest
         return latest.label if latest is not None else ""
 
@@ -190,11 +198,11 @@ class CddVersion:
         """What the badge's tooltip says."""
         running, latest, standing = self.version, self.latest, self.standing
         if standing is VersionStanding.UNKNOWN:
-            return f"CDD {running}. The latest version on origin {LATEST_BRANCH} is unknown: {self._fetch_problem}"
+            return f"CDD {running}. The latest release on origin is unknown: {self._fetch_problem or 'no release tag has been fetched'}"
         if standing is VersionStanding.CURRENT:
-            return f"CDD {running} is the latest on origin {LATEST_BRANCH}."
+            return f"CDD {running} is the latest release."
         size = "major" if standing is VersionStanding.BEHIND_MAJOR else "minor"
-        return f"CDD {running} is behind {latest} on origin {LATEST_BRANCH}, a {size} update. Press to update and reinstall."
+        return f"CDD {running} is behind the {latest} release, a {size} update. Press to update and reinstall."
 
     @property
     def _running(self) -> Release:
@@ -202,7 +210,9 @@ class CddVersion:
 
     @property
     def _latest(self) -> Release | None:
+        """The newest release tag fetched, by version, not by date; None when there is none."""
         try:
-            return Release.from_pyproject(self._git.run("show", f"origin/{LATEST_BRANCH}:{PYPROJECT}"))
+            tags = self._git.run("tag", "--list", "v*", "--sort=-v:refname")
         except RepoConnectError:
             return None
+        return next((release for release in map(Release.from_tag, tags.splitlines()) if release is not None), None)

@@ -169,11 +169,12 @@ class Installer:
     @command(name="install-latest")
     @agent_tool
     def install_latest(self) -> int:
-        """Pull origin main and reinstall CDD on it, restarting every server, so this chat and the apps run the latest code.
+        """Merge the latest release (origin's newest v* tag, not the tip of main) and reinstall CDD on it, restarting every
+        server, so this chat and the apps run the latest released code.
 
         Before you run it, put these seven steps in your task list (in Claude Code, the plan the app shows under your message) and write them in the chat as a checklist:
 
-        1. Pull origin main into this checkout. A pull that fails or conflicts stops here, before anything is stopped: tell the person and wait.
+        1. Fetch origin's tags and merge the latest release into this checkout. A fetch or merge that fails or conflicts, or an origin with no release tag, stops here, before anything is stopped: tell the person and wait.
         2. Stop every app's server and the hook server.
         3. Restart the cdd server.
         4. Install every toolset: skills, commands, rules, MCP, and hooks. This is the long step, about a minute.

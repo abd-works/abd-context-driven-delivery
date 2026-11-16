@@ -57,8 +57,9 @@ def main() -> int:
     serving.add_argument(
         "--from-latest",
         action="store_true",
-        help="Pull origin main into this checkout, then run --restart-everything on the code just pulled. Stops at a "
-        "pull that fails or conflicts, before anything is stopped.",
+        help="Fetch origin's tags and merge the latest release (the newest v* tag) into this checkout, then run "
+        "--restart-everything on it. Commits on main after that release are not taken. Stops at a fetch or merge that "
+        "fails or conflicts, before anything is stopped.",
     )
     serving.add_argument(
         "--restart-everything",
@@ -123,7 +124,7 @@ def main() -> int:
 # The steps of /install-latest. The script reports each one as it starts and as it is done, flushed at once, so the agent
 # watching its output can tick each step in the chat as it happens; the agent does steps 6 and 7 itself.
 INSTALL_LATEST_STEPS = {
-    1: "Pull origin main",
+    1: "Merge the latest release",
     2: "Stop every app's server and the hook server",
     3: "Restart the cdd server",
     4: "Install every toolset",
@@ -145,14 +146,38 @@ def _step_failed(number: int, error: str) -> None:
     print(f"✗ {number}/{len(INSTALL_LATEST_STEPS)} {INSTALL_LATEST_STEPS[number]}: {error}", file=sys.stderr, flush=True)
 
 
+# A release is a tag such as v2.0.0 that /release pushes (harness/diagnostics/major_release.py).
+_RELEASE_TAG = re.compile(r"^v\d+\.\d+(\.\d+)?$")
+
+
+def _git(*args: str) -> subprocess.CompletedProcess:
+    return subprocess.run(["git", *args], cwd=_REPO, check=False, capture_output=True, text=True)
+
+
+def _latest_release() -> str:
+    """The newest release tag, by version, after fetching origin's tags; empty when there is none."""
+    listed = _git("tag", "--list", "v*", "--sort=-v:refname")
+    return next((tag for tag in listed.stdout.split() if _RELEASE_TAG.match(tag)), "")
+
+
 def _install_from_latest(args) -> int:
+    """Install the latest release, not the tip of main: the checkout takes the newest v* tag's commit and nothing
+    committed on main after it. A checkout already at or past that release merges nothing and keeps its own commits."""
     _step_started(1)
-    pulled = subprocess.run(["git", "pull", "origin", "main"], cwd=_REPO, check=False, capture_output=True, text=True)
-    if pulled.returncode != 0:
-        _step_failed(1, f"{(pulled.stderr or pulled.stdout).strip()} - nothing was stopped or installed: resolve the pull, then run this again.")
-        return pulled.returncode
-    pulled_result = pulled.stdout.strip().splitlines()[-1] if pulled.stdout.strip() else "pulled"
-    _step_done(1, f"{pulled_result}; {_match_origin_version()}")
+    fetched = _git("fetch", "--tags", "origin")
+    if fetched.returncode != 0:
+        _step_failed(1, f"{(fetched.stderr or fetched.stdout).strip()} - nothing was stopped or installed: fix the fetch, then run this again.")
+        return fetched.returncode
+    release = _latest_release()
+    if not release:
+        _step_failed(1, "origin has no release tag (v*) - nothing was stopped or installed: run /release first.")
+        return 1
+    merged = _git("merge", "--no-edit", release)
+    if merged.returncode != 0:
+        _step_failed(1, f"{(merged.stderr or merged.stdout).strip()} - nothing was stopped or installed: resolve the merge of {release}, then run this again.")
+        return merged.returncode
+    merged_result = "already up to date" if "Already up to date" in merged.stdout else f"merged {release}"
+    _step_done(1, f"{release}: {merged_result}; {_match_release_version(release)}")
     # The pull may have changed this script and the installer, so the install runs in a new process on the pulled code,
     # unbuffered, so its lines reach whoever watches as they are written.
     passed = [*(["--ide", args.ide] if args.ide else []), *(["--path", args.path] if args.path else [])]
@@ -163,13 +188,13 @@ def _install_from_latest(args) -> int:
 _VERSION_LINE = re.compile(r'^version = "[^"]*"$', re.MULTILINE)
 
 
-def _match_origin_version() -> str:
-    """Install from latest runs the version origin main carries, so a local edit to the version line in pyproject.toml,
-    which the pull leaves in place, is put back to origin main's; the rest of the file keeps any local edits."""
-    shown = subprocess.run(["git", "show", "origin/main:pyproject.toml"], cwd=_REPO, check=False, capture_output=True, text=True)
+def _match_release_version(release: str) -> str:
+    """Install from latest runs the version the release carries, so a local edit to the version line in pyproject.toml,
+    which the merge leaves in place, is put back to the release's; the rest of the file keeps any local edits."""
+    shown = _git("show", f"{release}:pyproject.toml")
     origin_line = _VERSION_LINE.search(shown.stdout) if shown.returncode == 0 else None
     if origin_line is None:
-        return "origin main's version was not read"
+        return f"{release}'s version was not read"
     pyproject = _REPO / "pyproject.toml"
     with pyproject.open(encoding="utf-8", newline="") as file:
         local = file.read()
@@ -178,7 +203,7 @@ def _match_origin_version() -> str:
         return origin_line.group(0)
     with pyproject.open("w", encoding="utf-8", newline="") as file:
         file.write(re.sub(r'^version = "[^"]*"(?=\r?$)', origin_line.group(0), local, count=1, flags=re.MULTILINE))
-    return f"{origin_line.group(0)} (set from origin main)"
+    return f"{origin_line.group(0)} (set from {release})"
 
 
 def _switch_server(args, server) -> str:

@@ -1,4 +1,4 @@
-"""Pull origin main and reinstall CDD on it, restarting every server: ``scripts/install.py --from-latest``, with any other
+"""Merge the latest release (origin's newest v* tag) and reinstall CDD on it, restarting every server: ``scripts/install.py --from-latest``, with any other
 arguments passed on. The ``/install-latest`` command runs this."""
 from __future__ import annotations
 
