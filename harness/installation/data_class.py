@@ -8,10 +8,16 @@ import functools
 import inspect
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias
 
 from harness.agent_tools.parameter_schema import is_built_in
 from harness.annotations.annotation import Annotatable, Annotation, NamesAnnotation
+
+# An object of a class that annotates its data (`@data_field`): its class says which of its fields are sent and which
+# name it. Any class can annotate its data, so the name says what the object is used as.
+DataObject: TypeAlias = object
+# A value an answer sends as data: a plain value, a path, an enum, a list or mapping of them, or a *DataObject*.
+SentValue: TypeAlias = object
 
 
 class LanguageAdapter(Annotation):
@@ -174,7 +180,7 @@ class DataClass:
         answer sends thousands of objects, so this is read once per class rather than once per object."""
         return tuple((key, field.fget, self.sends_by_identity(field)) for key, field in self.fields.items())
 
-    def data(self, instance: object) -> dict[str, Any]:
+    def data(self, instance: DataObject) -> dict[str, Any]:
         """instance's annotated fields as plain data."""
         sent: dict[str, Any] = {}
         for key, getter, by_identity in self._sent:
@@ -182,7 +188,7 @@ class DataClass:
             sent[key] = self._referenced(held) if by_identity else data_of(held)
         return sent
 
-    def reference(self, instance: object) -> dict[str, Any]:
+    def reference(self, instance: DataObject) -> dict[str, Any]:
         """instance by its identity alone, such as `{"name": "Discovery"}` for a stage, so data can name an object that is
         sent in full elsewhere without sending it again. An identity field that holds an object with an identity of its
         own sends that object by its reference too, so a fidelity's progress is `{ticket: {name}, fidelity: {slug}}`."""
@@ -191,13 +197,13 @@ class DataClass:
         fields = self.fields
         return {key: self._identity_data(fields[key].fget(instance)) for key in self.identity}
 
-    def _identity_data(self, held: object) -> Any:
+    def _identity_data(self, held: SentValue) -> Any:
         if held is None:
             return data_of(held)
         held_class = DataClass.of(type(held))
         return held_class.reference(held) if held_class.identity else data_of(held)
 
-    def _referenced(self, held: object) -> Any:
+    def _referenced(self, held: SentValue) -> Any:
         if held is None:
             return None
         if isinstance(held, (list, tuple)):
@@ -209,7 +215,7 @@ class DataClass:
 _PLAIN_TYPES = frozenset({str, int, float, bool, type(None)})
 
 
-def data_of(subject: object) -> Any:
+def data_of(subject: SentValue) -> Any:
     """subject as plain JSON data: an object with annotated properties as its fields, each object it holds as its own data.
 
     This is the one way a value of any type becomes data, for MCP results and every other JSON answer, so a path reads

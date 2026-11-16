@@ -12,7 +12,7 @@ from expects import be_false, be_true, equal, expect
 from mamba import after, before, context, description, it
 
 from harness.diagnostics.app import AppServer, NodeScript
-from harness.process.process import ListeningPorts
+from harness.process.process import ExclusivePort
 
 STARTED_WITHIN_SECONDS = 15
 
@@ -48,7 +48,7 @@ with description("an app's server") as self:
         self.server = AppServer(NodeScript(self.folder, "serve.js"), (self.port,))
 
     with after.each:
-        listening = ListeningPorts().holder(self.port)
+        listening = ExclusivePort("127.0.0.1", self.port).holder()
         if listening is not None:
             listening.stop(5)
         shutil.rmtree(self.folder, ignore_errors=True)

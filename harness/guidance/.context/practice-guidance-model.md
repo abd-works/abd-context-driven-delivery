@@ -331,9 +331,9 @@ outputs: dict[str, str | list[str]]
 includes(path: str, format: str = ""): bool
 	// a file one of its outputs names, in format when one is named; DeclaredFile matches the end of the path
 output_paths(): dict[str, list[str]]
-	-> fidelity.session_output.output_paths
+	-> fidelity.session_output.written.output_paths
 files(): dict[str, list]
-	-> fidelity.session_output.files
+	-> fidelity.session_output.written.files
 has_output(): bool
 files_to_review(): dict[str, list]
 	// its fidelity's own files, or those of the fidelities it reviews files of, each file once
@@ -484,7 +484,7 @@ of(name: str): ApproachStage | None
 
 One stage: its name, its title, its scope, and the actions a person runs on a fidelity in it. The session board's and the catalog's stage columns are each built on one.
 
-One stage reads its actions from the action catalogue: each action's operation carries an `@OnStage` annotation saying where it sits, so no list of action names is kept here.
+One stage reads its actions from the action catalogue: each action's operation carries an `@on_stage` annotation (*OnStage*) saying where it sits, which the stage reads back with `OnStage.recorded_on`, so no list of action names is kept here.
 
 ApproachStage(name: str, scope: StageScope, catalogue: ActionCatalogue)
 ------
@@ -492,20 +492,20 @@ name: str
 title: str
 scope: StageScope
 steps: list[str]
-	// the actions annotated OnStage(step=True), in rank order: generate, validate
+	// the actions annotated on_stage(rank, STEP), in rank order: generate, validate
 actions: list[str]
-	// every action annotated OnStage, in rank order: partition, generate, validate, iterate, sketch, render, document
+	// every action annotated on_stage, in rank order: partition, generate, validate, iterate, sketch, render, document
 producing_actions: list[str]
-	// every one but those that check a fidelity's files (OnStage(checks=True)): every action but validate
+	// every one but those that check a fidelity's files (on_stage(rank, CHECKS)): every action but validate
 actions_with_formats: list[str]
-	// those annotated OnStage(takes_formats=True): generate, render
+	// those annotated on_stage(rank, TAKES_FORMATS): generate, render
 ----
 
 ## OnStage : Annotation
 
-The annotation on an action's operation that says where it sits among the actions a person runs on a fidelity in its stage.
+The annotation on an action's operation that says where it sits among the actions a person runs on a fidelity in its stage, typed `@on_stage(rank, *traits)` with the traits `STEP`, `TAKES_FORMATS`, and `CHECKS`, as `@on_stage(1, STEP, TAKES_FORMATS)` on generate.
 
-OnStage(rank: int, step: bool, takes_formats: bool, checks: bool)
+OnStage(rank: int, *traits: str)
 ------
 rank: int
 step: bool
@@ -517,13 +517,17 @@ checks: bool
 
 How much of the solution a stage's work covers, from the whole solution (Discovery) to one story (Implementation).
 
-StageScope(shape: str, name: str, reach: str, covers: str)
+StageScope(shape: str, name: str, reach: str)
 ------
 shape: str
 name: str
 reach: str
 covers: str
+	// empty unless the scope was made covering what its work decides
 ----
+covering(covers: str): StageScope
+	// this scope with what its work decides, such as `outcomes · scope · boundaries`
+
 
 ## Schema
 

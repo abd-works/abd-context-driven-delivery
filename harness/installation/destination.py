@@ -1,6 +1,6 @@
-"""What install reads from a toolset beside its destinations: the omission annotations that keep a member out of install
-or the catalog, the Installation that writes one destination's files and its server kind, and the tools a server
-skipped. The data annotations are in data_class.py."""
+"""What install reads from a toolset beside its destinations: the Installation that writes one destination's files and
+its server kind, and the tools a server skipped. The omission annotations that keep a member out of install or the
+catalog (``@noDeploy``, ``@noCatalog``) are in harness/annotations; the data annotations are in data_class.py."""
 from __future__ import annotations
 
 import functools
@@ -11,38 +11,12 @@ from pathlib import Path
 from typing import Any, Callable
 
 from harness.agent_tools.agent_tools import AgentTool, AgentToolSetOrigin
-from harness.annotations.annotation import OmissionAnnotation
 from harness.installation.ide_layout import IdeLayout
 from harness.installation.repository_toolsets import RepositoryToolsets
 
 _logger = logging.getLogger(__name__)
 
 InstallTracker = Callable[[Path], None]
-
-
-class NoCatalog(OmissionAnnotation):
-    """Omit this class or operation from the catalog.
-
-    Install and deploy ignore this annotation. Use it when the behavior is real
-    but not ready to show in the catalog.
-    """
-
-    flag = "_no_catalog"
-
-
-class NoDeploy(OmissionAnnotation):
-    """Omit this operation from install.
-
-    Skill, command, MCP, and hook annotations on the same operation do not write
-    files. The catalog can still list it.
-    """
-
-    flag = "_no_deploy"
-    omits_install = True
-
-
-noCatalog = NoCatalog
-noDeploy = NoDeploy
 
 
 def is_temporary(folder: Path) -> bool:

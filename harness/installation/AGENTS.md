@@ -6,4 +6,4 @@
 - **The deploy walk parses `harness/`.** Annotated toolsets there install with the rest of the repository. Leave `harness/` off `PYTHONPATH` so `import mcp` stays the MCP SDK.
 - **The hook daemon loads every toolset class when it starts** (`RepositoryToolsets.classes()`), so the registrations made at import — the session opener and the toast notifier — hold there as they do in the MCP host.
 - Prove `/install` by the folder in `.install-state.json` matching this repository's `.cursor` or `.claude`, and by `cdd.ping` → `pong`. A returned `InstallChannels` object is not that proof.
-- **`@noDeploy` keeps that operation out of install.** Skill, command, MCP, and hook annotations on the same operation write no files. The catalog can still list it. Use it when the operation is not ready to deploy.
+- **`@noDeploy` (harness/annotations) keeps that operation out of install.** Skill, command, MCP, and hook annotations on the same operation write no files. The catalog can still list it. Use it when the operation is not ready to deploy.

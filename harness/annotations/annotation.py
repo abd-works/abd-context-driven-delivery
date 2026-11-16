@@ -104,6 +104,11 @@ class AnnotationKind(type):
         """True when this kind of annotation is on target."""
         return bool(getattr(target, kind.flag, False))
 
+    def recorded_on(kind, target: Annotatable) -> object:
+        """What this kind of annotation recorded on target: the annotation itself for one that records itself, such as
+        ``@on_stage`` with its place among a stage's actions; none when target carries none."""
+        return getattr(target, kind.flag, None)
+
     def written_as(kind) -> str:
         """The name an author types for this kind, such as ``skill`` for *Skill*: its class name in snake case, unless
         the kind names another, as ``agent_tool`` does for *AgentToolAnnotation*."""
@@ -208,9 +213,34 @@ class HostedOnly(OmissionAnnotation, metaclass=HostedOnlyKind):
 hosted_only = HostedOnly
 
 
+class NoCatalog(OmissionAnnotation):
+    """Omit this class or operation from the catalog.
+
+    Install and deploy ignore this annotation. Use it when the behavior is real
+    but not ready to show in the catalog.
+    """
+
+    flag = "_no_catalog"
+
+
+class NoDeploy(OmissionAnnotation):
+    """Omit this operation from install.
+
+    Skill, command, MCP, and hook annotations on the same operation do not write
+    files. The catalog can still list it.
+    """
+
+    flag = "_no_deploy"
+    omits_install = True
+
+
+noCatalog = NoCatalog
+noDeploy = NoDeploy
+
+
 class DestinationKind(AnnotationKind):
-    """A kind of annotation that names where a member is published: its channel, and the name the annotation gave the
-    member there."""
+    """A kind of annotation that names where a member is published: its channel, the name the annotation gave the
+    member there, and whether the annotation is turned off on it."""
 
     channel: str
 
@@ -224,18 +254,20 @@ class DestinationKind(AnnotationKind):
         return str(getattr(operation, f"{kind.flag}_name", "") or "")
 
     def companion_flags(kind) -> tuple[str, ...]:
-        return (f"{kind.flag}_name",)
+        return (f"{kind.flag}_name", f"{kind.flag}_disabled")
 
     def disabled_on(kind, operation: Annotatable) -> bool:
         """True when the annotation on operation is there but turned off, as ``@Hook(..., disabled=True)`` is."""
-        return False
+        return bool(getattr(operation, f"{kind.flag}_disabled", False))
 
 
 class Destination(Annotation, metaclass=DestinationKind):
     """An annotation that names where a member is published: a skill, a command, a rules file, an MCP tool, or a
     hook. Each publisher defines its own kind with the ``channel`` it writes, and the kind registers in
     ``annotation_kinds`` as it is defined, so the toolset that lists a member's destinations asks every channel
-    without importing the publishers. A channel whose publisher was never imported annotates nothing."""
+    without importing the publishers. A channel whose publisher was never imported annotates nothing. An annotation
+    that holds a ``name`` gives the member that name there, and one that holds ``disabled`` set turns itself off on
+    the member, as ``@Hook(..., disabled=True)`` does."""
 
     channel: ClassVar[str] = ""
     # True when this annotation alone makes a member a tool of its toolset, as a hook is: the IDE calls the member, so
@@ -247,26 +279,6 @@ class Destination(Annotation, metaclass=DestinationKind):
         name = getattr(self, "name", None)
         if name is not None:
             setattr(target, f"{self.flag}_name", name)
+        if getattr(self, "disabled", False):
+            setattr(target, f"{self.flag}_disabled", True)
         return target
-
-
-class Toast(Destination):
-    """Annotate an operation or instructions so the IDE shows a toast naming it when an agent calls it. The notifier
-    that shows toasts reads this annotation; the operation names no notifier."""
-
-    flag = "_toast"
-
-
-class NamedDestination(Destination):
-    """A destination whose annotation may name what it installs: ``@skill("name")``, ``@skill(name="name")``, or bare
-    ``@skill`` for the operation's own name."""
-
-    def __new__(cls, target: Annotatable | None = None, name: str | None = None):
-        annotation = object.__new__(cls)
-        if isinstance(target, str):
-            annotation.name = target
-            return annotation
-        annotation.name = name
-        if callable(target):
-            return annotation.annotate(target)
-        return annotation

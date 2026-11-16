@@ -86,19 +86,19 @@ class DeclaredOutputs:
         """Where the fidelity writes each format in the session its practice works in: its declared paths under the
         practice's root there. None when its practice works in no session."""
         session_output = self._fidelity.session_output
-        return session_output.output_paths() if session_output is not None else {}
+        return session_output.written.output_paths() if session_output is not None else {}
 
     def files(self) -> dict[str, list]:
         """The files the fidelity declares, by format, in the session its practice works in, each with its path from the
         project and whether it exists; none when its practice works in no session."""
         session_output = self._fidelity.session_output
-        return session_output.files() if session_output is not None else {}
+        return session_output.written.files() if session_output is not None else {}
 
     def has_output(self) -> bool:
         """Whether a file the fidelity declares is already in the session its practice works in, such as one a person
         wrote; false when its practice works in no session."""
         session_output = self._fidelity.session_output
-        return session_output is not None and session_output.has_output()
+        return session_output is not None and session_output.written.has_output()
 
     def files_to_review(self) -> dict[str, list]:
         """The files a person reviews for the fidelity, by format: its own, or those of the fidelities of its practice it

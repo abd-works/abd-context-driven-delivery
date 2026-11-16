@@ -12,10 +12,25 @@ from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDest
 from harness.annotations.name import Name
 from harness.installation.destination import Installation
 from harness.markdown.front_matter import FrontMatter
-from harness.annotations.annotation import Destination, NamedDestination
+from harness.annotations.annotation import Annotatable, Destination
 
 if TYPE_CHECKING:
     from harness.installation.install_target import InstallTarget
+
+
+class NamedDestination(Destination):
+    """A file destination whose annotation may name what it installs: ``@skill("name")``, ``@skill(name="name")``, or
+    bare ``@skill`` for the operation's own name."""
+
+    def __new__(cls, target: Annotatable | None = None, name: str | None = None):
+        annotation = object.__new__(cls)
+        if isinstance(target, str):
+            annotation.name = target
+            return annotation
+        annotation.name = name
+        if callable(target):
+            return annotation.annotate(target)
+        return annotation
 
 
 class Skill(NamedDestination):

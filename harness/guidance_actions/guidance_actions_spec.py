@@ -98,8 +98,8 @@ with description("a guidance action"):
         action._work_on(["stories", "clean-engineering-model"])
         listed = action.listed()
         expect([type(item).__name__ for item in listed]).to(equal(["Stories", "CleanEngineering"]))
-        expect(action.fidelity_of(listed[0]).name).to(equal("story_map"))
-        expect(action.fidelity_of(listed[1]).name).to(equal("model"))
+        expect(action.work.fidelity_of(listed[0]).name).to(equal("story_map"))
+        expect(action.work.fidelity_of(listed[1]).name).to(equal("model"))
 
     with it("should list stories at the scenarios fidelity from the short fidelity slug"):
         from harness.guidance_actions import GuidanceAction
@@ -109,7 +109,7 @@ with description("a guidance action"):
         listed = action.listed()
         expect(len(listed)).to(equal(1))
         expect(type(listed[0]).__name__).to(equal("Stories"))
-        expect(action.fidelity_of(listed[0]).name).to(equal("scenarios"))
+        expect(action.work.fidelity_of(listed[0]).name).to(equal("scenarios"))
 
     with it("should list each guidance slug in one string of slugs"):
         from harness.guidance_actions import GuidanceAction
@@ -124,7 +124,7 @@ with description("a guidance action"):
 
         action = GuidanceAction()
         action._work_on("ux-ia format=drawio")
-        expect([action.fidelity_of(item).format for item in action.listed()]).to(equal(["drawio"]))
+        expect([action.work.fidelity_of(item).format for item in action.listed()]).to(equal(["drawio"]))
 
     with it("should keep prose made of ordinary words as guidance text"):
         from harness.guidance_actions import GuidanceAction
@@ -215,7 +215,7 @@ with description("a guidance action"):
             scenarios = served.for_call(_call("stories-scenarios", self.project))
             scenarios.listed()
             served.for_call(_call("stories-story-map", self.project)).listed()
-            expect(scenarios.fidelity_of(scenarios.listed()[0]).name).to(equal("scenarios"))
+            expect(scenarios.work.fidelity_of(scenarios.listed()[0]).name).to(equal("scenarios"))
 
         with it("should work on the one practice the session holds, the same object a later call works on"):
             from harness.guidance_actions import GuidanceAction
@@ -280,7 +280,7 @@ with description("a guidance action"):
 
             action = GuidanceAction().for_call(_call(f"stories-story-map {self.session_word}", self.project))
             own = action.session.practices["stories"].guidance.fidelities["story_map"]
-            expect(action.fidelity_of(action.listed()[0])).to(be(own))
+            expect(action.work.fidelity_of(action.listed()[0])).to(be(own))
 
         with it("should give the format it names to the fidelity it names, which keeps it"):
             from harness.guidance_actions import GuidanceAction
@@ -316,7 +316,7 @@ with description("a guidance action"):
 
             action = GuidanceAction().for_call(_call(f"stories-story-map format=drawio {self.session_word}", self.project))
             action.run(lambda item: None, action="generate")
-            reloaded = Sessions(self.project).load(self.project / ".sessions" / "sign-up")
+            reloaded = Sessions(self.project).held.load(self.project / ".sessions" / "sign-up")
             expect(reloaded.practices["stories"].saved.get("formats")).to(equal({"story_map": ["markdown", "drawio"]}))
 
         with it("should work in the kept format when the next command names none"):
@@ -327,17 +327,17 @@ with description("a guidance action"):
                 lambda item: None, action="generate"
             )
             action = served.for_call(_call(f"stories-story-map {self.session_word}", self.project))
-            expect([action.fidelity_of(item).format for item in action.listed()]).to(equal(["drawio"]))
+            expect([action.work.fidelity_of(item).format for item in action.listed()]).to(equal(["drawio"]))
 
         # The story editor's format chips save the formats chosen for a fidelity as a list.
         with it("should work in the first of the formats a session keeps as a list"):
             from harness.guidance_actions import GuidanceAction
             from space.session import Sessions
 
-            session = Sessions(self.project).load(self.project / ".sessions" / "sign-up")
+            session = Sessions(self.project).held.load(self.project / ".sessions" / "sign-up")
             session.practices["stories"].save(formats={"story_map": ["drawio", "markdown"]})
             action = GuidanceAction().for_call(_call(f"stories-story-map {self.session_word}", self.project))
-            expect([action.fidelity_of(item).format for item in action.listed()]).to(equal(["drawio"]))
+            expect([action.work.fidelity_of(item).format for item in action.listed()]).to(equal(["drawio"]))
 
         with it("should keep the practice turned on when it keeps a format"):
             from harness.guidance_actions import GuidanceAction
@@ -345,7 +345,7 @@ with description("a guidance action"):
 
             action = GuidanceAction().for_call(_call(f"stories-story-map format=drawio {self.session_word}", self.project))
             action.run(lambda item: None, action="generate")
-            reloaded = Sessions(self.project).load(self.project / ".sessions" / "sign-up")
+            reloaded = Sessions(self.project).held.load(self.project / ".sessions" / "sign-up")
             expect(reloaded.practices["stories"].enabled).to(equal(True))
 
         with it("should log a call in that session"):
@@ -446,7 +446,7 @@ with description("a guidance action"):
                         toolset_class.__name__,
                         [(tool.name, tool.docstring) for tool in guidance_tools],
                         [type(item).__name__ for item in listed],
-                        [toolset.fidelity_of(item).name for item in listed],
+                        [toolset.work.fidelity_of(item).name for item in listed],
                     )
                 )
 
@@ -573,8 +573,8 @@ with description("two calls in one session on two fidelities of the same practic
         self.practice = self.story_map_call.listed()[0]
         self.scenarios_call = served.for_call(_call("stories-scenarios", self.project))
         self.scenarios_call.listed()
-        self.story_map = self.story_map_call.fidelity_of(self.practice)
-        self.scenarios = self.scenarios_call.fidelity_of(self.practice)
+        self.story_map = self.story_map_call.work.fidelity_of(self.practice)
+        self.scenarios = self.scenarios_call.work.fidelity_of(self.practice)
 
     with it("should work on the one practice the session holds in both calls"):
         expect(self.scenarios_call.listed()[0]).to(be(self.practice))

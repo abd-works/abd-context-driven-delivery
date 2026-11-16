@@ -1,5 +1,7 @@
 # Name lives in the annotations module, and the module is all seam
 
+**Partly superseded** by `0002-the-module-keeps-its-kinds-behind-its-bases.md`: the module is no longer all seam; *Name* still lives here.
+
 The round-5, round-6 and round-7 reviews (harness core, row 11 in round 7) asked for *Name* to move to a small module of its own, or for a record that keeps it, and counted 7 of the module's 8 classes as public (`deep-module`).
 
 *Name* stays in `harness/annotations`.
@@ -13,4 +15,4 @@ The round-5, round-6 and round-7 reviews (harness core, row 11 in round 7) asked
 ## Consequences
 
 - Converting a name between cases anywhere else is a second conversion, which the module's constraint forbids.
-- A deep-module count on this module reads its purpose, not a leak; the round-8 review should not count it.
+- ~~A deep-module count on this module reads its purpose, not a leak.~~ Replaced by `0002`: the module keeps its kinds behind its bases and meets the count.

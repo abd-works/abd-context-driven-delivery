@@ -1,7 +1,7 @@
 """Assemble agent instructions from @markdown properties."""
 from __future__ import annotations
 
-import functools
+from functools import cached_property
 from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
@@ -36,7 +36,7 @@ from harness.markdown import (
     MarkdownScope,
     MarkdownText,
     markdown,
-    markdownCollection,
+    markdown_collection,
 )
 from harness.markdown.format import Format
 from harness.markdown.markdown import MarkdownOwner
@@ -81,7 +81,7 @@ class Guidance:
         section, so a second read answers from the text the first read found."""
         return Markdown.held_by(self, label).extract()
 
-    @markdownCollection("shared rules")
+    @markdown_collection("shared rules")
     @rules
     @agent_tool
     def rules(self) -> RulesCollection:
@@ -344,7 +344,7 @@ class PracticeGuidance(Guidance):
         fidelities = vars(self).get("fidelities")
         return getattr(fidelities, "current", None)
 
-    @markdownCollection("shared rules")
+    @markdown_collection("shared rules")
     @rules
     @agent_tool
     def rules(self) -> RulesCollection:
@@ -357,14 +357,14 @@ class PracticeGuidance(Guidance):
         current = self._current_fidelity
         return replace(super().markdown_scope, fidelity=current.name if current is not None else None)
 
-    @functools.cached_property
+    @cached_property
     def document(self) -> MarkdownText:
         """The practice's own document, ``{key}.md`` beside its class, read once: its sections and each fidelity's
         block are read from this text."""
         path = self.domain_markdown_path
         return MarkdownText(path.read_text(encoding="utf-8") if path.is_file() else "")
 
-    @functools.cached_property
+    @cached_property
     def schema(self) -> Schema:
         """The practice's schema, ``model/schema.yaml`` beside its class, read once: the types it declares, the fidelity
         that creates each, and the text that tells an action the shape its output conforms to."""
@@ -482,7 +482,7 @@ class PracticeGuidance(Guidance):
         return "\n\n".join(part for part in (parent_text, extra, self.scoped_markdown) if part)
 
     @toolset_collection
-    @markdownCollection
+    @markdown_collection
     def fidelities(self) -> GuidanceCollection:
         """Fidelity children from the Fidelities section."""
 
@@ -714,7 +714,7 @@ class FidelityGuidance(Guidance):
         """A companion fidelity, or its name as a practice document writes it, such as ``code (Clean Engineering)``."""
         self._clean_engineering = Name(self._first_word(value)).snake if isinstance(value, str) else value
 
-    @functools.cached_property
+    @cached_property
     def _own_name(self) -> Name:
         """The fidelity's name in its practice, made once."""
         return Name(self.name)
@@ -768,7 +768,7 @@ class FidelityGuidance(Guidance):
         body = self.section
         return f"### {self.name}\n\n{body}" if body else ""
 
-    @markdownCollection
+    @markdown_collection
     @rules
     @agent_tool
     def rules(self) -> RulesCollection:
@@ -867,7 +867,7 @@ class FidelityGuidance(Guidance):
                 return located
         return None
 
-    @functools.cached_property
+    @cached_property
     def actions(self) -> FidelityActions:
         """The actions that work on this fidelity, each run on it: ``fidelity.actions.generate(format="drawio")``.
         The actions register with the action catalogue, so guidance names none of them."""

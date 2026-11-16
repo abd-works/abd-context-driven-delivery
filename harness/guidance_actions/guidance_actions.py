@@ -18,8 +18,7 @@ from harness.guidance.documents import document_in
 from harness.guidance.guidance import FidelityGuidance, Guidance, PracticeGuidance
 from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE, PracticeSet
 from harness.hooks.hook_server import rules_toast
-from harness.hooks.hooks import hook
-from harness.annotations.annotation import Toast
+from harness.hooks.hooks import Toast, hook
 
 if TYPE_CHECKING:
     from harness.hooks.hook_server import HookPayload
@@ -587,7 +586,7 @@ class GuidanceAction:
     The cdd server makes a new action for each call (``for_call``), so the guidance a call names, the session it works
     in, and the fidelity it works at on each practice it lists belong to that action alone. The practices themselves
     are the session's, which every call in the session shares, so an action never moves a practice's current fidelity:
-    it holds the fidelity it works at (``fidelity_of``) and hands that fidelity to each operation and log line. A board
+    it holds the fidelity it works at (``work.fidelity_of``) and hands that fidelity to each operation and log line. A board
     command names its ticket's session in a ``session=`` word, because it runs in whichever chat it is sent to, and the
     action reads it once into the *GuidanceCommand* it works on; any other call works in the session open in its
     project. What the agent is told about that session is the action's *SessionBrief* (``brief``). An action
@@ -670,11 +669,6 @@ class GuidanceAction:
             return
         self.work.take(GuidanceCommand.from_guidance(guidance))
 
-    def practice_of(self, guidance: WorkedGuidance) -> WorkedGuidance:
-        """The practice guidance belongs to: a fidelity's practice; guidance itself for a practice, other guidance, or
-        text."""
-        return self.work.practice_of(guidance)
-
     def listed(self) -> list[ListedGuidance]:
         """The Guidance this action works on (``WorkList.listed``)."""
         return self.work.listed()
@@ -683,10 +677,6 @@ class GuidanceAction:
     def practice_slugs(self) -> list[str]:
         """The slug of each practice this action works with, in catalogue order: the words a call names one by."""
         return [practice.slug for practice in self.work.practice_set()]
-
-    def fidelity_of(self, guidance: WorkedGuidance) -> FidelityGuidance | None:
-        """The fidelity this action works at on guidance, one of the Guidance it lists (``WorkList.fidelity_of``)."""
-        return self.work.fidelity_of(guidance)
 
     def session_practice(self, practice: WorkedGuidance) -> Any:
         """What practice, one of this action's practices, has in the session it works in (its PracticeSessionOutput);
@@ -706,7 +696,7 @@ class GuidanceAction:
         """What the fidelity this action works at on practice has in its session; none for guidance the session does
         not hold."""
         held = self.session_practice(practice)
-        fidelity = self.fidelity_of(practice) if held is not None else None
+        fidelity = self.work.fidelity_of(practice) if held is not None else None
         return fidelity.session_output if fidelity is not None else None
 
     def _inside(

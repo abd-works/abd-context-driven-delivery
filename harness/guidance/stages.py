@@ -6,7 +6,7 @@ draw the stages from here, so a stage's order, scope, and actions are written on
 
 from __future__ import annotations
 
-from harness.annotations.annotation import Annotatable, Annotation, AnnotationKind
+from harness.annotations.annotation import Annotatable, Annotation
 from harness.guidance.action_catalogue import ACTION_CATALOGUE, Action, ActionCatalogue
 from harness.installation.data_class import data_field
 
@@ -21,48 +21,68 @@ VALIDATE: str = "validate"
 RENDER: str = "render"
 
 
-class OnStageKind(AnnotationKind):
-    """The kind of ``@OnStage``, which reads back where an action sits on a fidelity's stage."""
+# What an action does on a fidelity's stage, beside its place among the stage's actions: every fidelity goes through it
+# (``STEP``, as generate and validate do), it takes the formats a person picks (``TAKES_FORMATS``, as generate and render
+# do), or it checks a fidelity's files rather than writing them (``CHECKS``, as validate does).
+STEP: str = "step"
+TAKES_FORMATS: str = "takes_formats"
+CHECKS: str = "checks"
 
-    def placed(kind, operation: Annotatable) -> OnStage | None:
-        """Where the ``@OnStage`` on operation puts it among a stage's actions; none when it is run on no stage."""
-        return getattr(operation, kind.flag, None)
 
-
-class OnStage(Annotation, metaclass=OnStageKind):
+class OnStage(Annotation):
     """Annotate an action's operation, such as generate, with where it sits among the actions a person runs on a
-    fidelity in its stage: its place in the order a board lists them (``rank``), whether every fidelity goes through
-    it (``step``, as generate and validate are), whether it takes the formats a person picks (``takes_formats``, as
-    generate and render do), and whether it checks a fidelity's files rather than writing them (``checks``, as validate
-    does). Each stage reads its actions from the action catalogue by this annotation, so an action is added to the
-    stages, renamed, or moved by changing its own annotation, never a list of names kept here."""
+    fidelity in its stage: its place in the order a board lists them (``rank``) and what it does there (``STEP``,
+    ``TAKES_FORMATS``, ``CHECKS``), as ``@on_stage(1, STEP, TAKES_FORMATS)``. Each stage reads its actions from the
+    action catalogue by this annotation (``OnStage.recorded_on``), so an action is added to the stages, renamed, or
+    moved by changing its own annotation, never a list of names kept here."""
 
     flag = "_on_stage"
     copied = False
 
-    def __new__(cls, rank: int, *, step: bool = False, takes_formats: bool = False, checks: bool = False):
+    def __new__(cls, rank: int, *traits: str):
         return object.__new__(cls)
 
-    def __init__(self, rank: int, *, step: bool = False, takes_formats: bool = False, checks: bool = False) -> None:
+    def __init__(self, rank: int, *traits: str) -> None:
         self.rank = rank
-        self.step = step
-        self.takes_formats = takes_formats
-        self.checks = checks
+        self._traits = frozenset(traits)
+
+    @property
+    def step(self) -> bool:
+        """Whether every fidelity goes through the action in its stage."""
+        return STEP in self._traits
+
+    @property
+    def takes_formats(self) -> bool:
+        """Whether the action's command takes the formats a person picks."""
+        return TAKES_FORMATS in self._traits
+
+    @property
+    def checks(self) -> bool:
+        """Whether the action checks a fidelity's files rather than writing them."""
+        return CHECKS in self._traits
 
     def annotate(self, target: Annotatable) -> Annotatable:
         setattr(target, self.flag, self)
         return target
 
 
+on_stage = OnStage
+
+
 class StageScope:
     """How much of the solution a stage's work covers, drawn as a shape that narrows and deepens along the board:
     Discovery takes in the whole solution wide and shallow, Implementation one story narrow and deep."""
 
-    def __init__(self, shape: str, name: str, reach: str, covers: str) -> None:
+    def __init__(self, shape: str, name: str, reach: str) -> None:
         self._shape = shape
         self._name = name
         self._reach = reach
-        self._covers = covers
+        self._covers = ""
+
+    def covering(self, covers: str) -> StageScope:
+        """This scope with what its work decides, such as `outcomes · scope · boundaries`; a scope made without it
+        decides nothing it names."""
+        return _CoveredScope(self, covers)
 
     @property
     @data_field
@@ -89,9 +109,17 @@ class StageScope:
         return self._covers
 
 
+class _CoveredScope(StageScope):
+    """A stage's scope with what its work decides, which ``StageScope.covering`` makes."""
+
+    def __init__(self, scope: StageScope, covers: str) -> None:
+        super().__init__(scope.shape, scope.name, scope.reach)
+        self._covers = covers
+
+
 class ApproachStage:
     """One stage of the CDD approach: the name each fidelity's **Stage:** gives it, its title, its scope, and the
-    actions a person runs on a fidelity in it, which are the actions of its catalogue annotated ``@OnStage``. The
+    actions a person runs on a fidelity in it, which are the actions of its catalogue annotated ``@on_stage``. The
     session board's stage columns and the catalog's columns are each built on one."""
 
     def __init__(self, name: str, scope: StageScope, catalogue: ActionCatalogue) -> None:
@@ -102,7 +130,7 @@ class ApproachStage:
     @property
     def _placed(self) -> list[tuple[OnStage, Action]]:
         """Each action of the catalogue run on a fidelity in this stage, with where it sits, in the order it sits."""
-        placed = [(place, action) for action in self._catalogue.actions if (place := OnStage.placed(action.operation)) is not None]
+        placed = [(place, action) for action in self._catalogue.actions if (place := OnStage.recorded_on(action.operation)) is not None]
         return sorted(placed, key=lambda entry: entry[0].rank)
 
     @property
@@ -172,7 +200,7 @@ class ApproachStages:
 
 
 STAGES = ApproachStages((
-    ApproachStage(DISCOVERY, StageScope("solution", "Whole solution", "wide / shallow", "outcomes · scope · boundaries"), ACTION_CATALOGUE),
-    ApproachStage(SPECIFICATION, StageScope("sprint", "Sprint", "narrow / deeper", "behaviour · design · logic"), ACTION_CATALOGUE),
-    ApproachStage(IMPLEMENTATION, StageScope("story", "Story", "narrowest / deep", "tests · code · interface"), ACTION_CATALOGUE),
+    ApproachStage(DISCOVERY, StageScope("solution", "Whole solution", "wide / shallow").covering("outcomes · scope · boundaries"), ACTION_CATALOGUE),
+    ApproachStage(SPECIFICATION, StageScope("sprint", "Sprint", "narrow / deeper").covering("behaviour · design · logic"), ACTION_CATALOGUE),
+    ApproachStage(IMPLEMENTATION, StageScope("story", "Story", "narrowest / deep").covering("tests · code · interface"), ACTION_CATALOGUE),
 ))

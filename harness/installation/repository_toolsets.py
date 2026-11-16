@@ -10,13 +10,17 @@ from pathlib import Path
 from typing import Iterable
 
 from harness.agent_tools.agent_tools import ToolsetReference
-from harness.annotations.annotation import HostedOnly, annotation_kinds
+from harness.annotations.annotation import annotation_kinds, hosted_only
 from harness.annotations.name import Name
 
 # The last name of every decorator a source file could carry, ``@mcp`` and ``@Hook("...")`` alike.
 _DECORATOR_NAME = re.compile(r"@\s*(?:\w+\s*\.\s*)*(\w+)")
 
 logger = logging.getLogger(__name__)
+
+# The CDD checkout this code was imported from, the code a hook server or a probe runs, whichever project its call came
+# from: the one place that works the checkout out from where the framework sits.
+RUNNING_CHECKOUT: Path = Path(__file__).resolve().parents[2]
 
 
 class ToolsetUnloadable(Exception):
@@ -88,12 +92,6 @@ class RepositoryToolsets:
     def references_folder(self) -> Path:
         """The reference documents the repository ships, which an installed file links to through its own copy."""
         return self.root / self.GUIDANCE_FOLDER / "references"
-
-    @classmethod
-    def of_running_checkout(cls) -> RepositoryToolsets:
-        """The toolsets of the CDD checkout this code was imported from, the code a hook server or a probe runs, whichever
-        project its call came from. This is the one place that works the checkout out from where the framework sits."""
-        return cls(Path(__file__).resolve().parents[2])
 
     def import_path_entries(self) -> list[str]:
         """The repository root, then tools and the guidance packages under ``cdd_guidance``. Never ``harness/``, which
@@ -224,7 +222,7 @@ class RepositoryToolsets:
     def _is_hosted_only(self, class_def: ast.ClassDef) -> bool:
         """Whether the class is annotated ``@hosted_only`` or ``@HostedOnly``: its tools run only through what holds it.
         A decorator is matched by its snake-case name, as the kinds that make a member installable are."""
-        return any(Name(self._annotation_id(dec) or "").snake == HostedOnly.written_as() for dec in class_def.decorator_list)
+        return any(Name(self._annotation_id(dec) or "").snake == hosted_only.written_as() for dec in class_def.decorator_list)
 
     def _class_is_installable(self, class_def: ast.ClassDef) -> bool:
         if any(self._annotation_id(dec) == "agent_toolset" for dec in class_def.decorator_list):
