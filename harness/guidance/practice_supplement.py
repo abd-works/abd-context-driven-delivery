@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from harness.guidance.guidance import FidelityGuidance
 
 # Its own sections, which every fidelity it supplements reads; every other top section names the fidelities it is for.
-_OWN_SECTIONS = ("overview", "guidance")
+_OWN_SECTIONS = ("overview", "guidance", "shared rules")
 
 
 class UnknownSupplementedFidelity(Exception):
@@ -40,8 +40,8 @@ class PracticeSupplement(PracticeGuidance):
     the fidelities it supplements (``supplements:``, practice key to fidelity name) and whether it is on in every
     session (``always_apply``). Its document keeps the usual Overview and Guidance, then sections headed with the slugs of
     the fidelities they apply to (``## bdd-development``, or ``## stories-acceptance-tests, bdd-development`` for one
-    that applies to both), each with its guidance and a ``### Rules`` list. It holds no rules that apply to every
-    fidelity it supplements: each rule names the fidelities it is for. A subclass that checks graph rules makes its *GraphOverlay* as ``graph_overlay``, as a pattern
+    that applies to both), each with its guidance and a ``### Rules`` list. Its Shared rules are the few that apply to
+    all work, such as choosing the flow before writing code; every other rule names the fidelities it is for. A subclass that checks graph rules makes its *GraphOverlay* as ``graph_overlay``, as a pattern
     does."""
 
     def __init__(self, format: str | None = None) -> None:
@@ -79,12 +79,19 @@ class PracticeSupplement(PracticeGuidance):
         """The practice of each fidelity it supplements, once each."""
         return list(dict.fromkeys(fidelity.practice_guidance for fidelity in self.supplemented_fidelities))
 
+    @property
+    def process(self) -> str:
+        """Its Overview and Guidance under ``## Supplement: {key}``: the order of work, which comes before any rule, and
+        which a reply naming several fidelities it supplements gives once."""
+        parts = (f"## Supplement: {self.key}", (self.overview or "").strip(), (self.guidance or "").strip())
+        return "\n\n".join(part for part in parts if part)
+
     def text_for(self, fidelity: FidelityGuidance) -> str:
-        """Its Overview and Guidance, then each of its sections that names fidelity, under ``## Supplement: {key}``;
-        empty for a fidelity it does not supplement."""
+        """Each of its sections that names fidelity, under ``## Supplement: {key} for {fidelity}``; empty for a fidelity
+        it does not supplement. Its process is given apart, once, by ``process``."""
         if fidelity not in self.supplemented_fidelities:
             return ""
-        parts = (f"## Supplement: {self.key}", (self.overview or "").strip(), (self.guidance or "").strip(), *self._sections_of(fidelity))
+        parts = (f"## Supplement: {self.key} for {fidelity.slug}", *self._sections_of(fidelity))
         return "\n\n".join(part for part in parts if part)
 
     def rules_for(self, fidelity: FidelityGuidance) -> list[RulesCollection]:

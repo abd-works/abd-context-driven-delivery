@@ -122,6 +122,22 @@ with description("a generate action on practice guidance") as self:
             with it("should name the roles a folder can hold of the pattern"):
                 expect(self.prose).to(contain("- lern_domain_driven: Boot, View, Client, Routes, Node, Domain, Store"))
 
+        # The process says what to do first, so it opens the reply: a long reply is read from the top, and an agent that
+        # meets the rules first treats the reply as a rulebook and skips the order of work.
+        with context("that generates two fidelities TDD supplements"):
+            with before.each:
+                listed = {"guidance": ["stories-acceptance-tests", "clean-engineering-code"]}
+                self.prose = _expanded_generate(_made_for(self.project), listed).instructions
+
+            with it("should open with the TDD process, before the first rule"):
+                expect(self.prose.index("### Choose the flow first") < self.prose.index("Evaluate the current context against this rule")).to(equal(True))
+
+            with it("should give the TDD process once"):
+                expect(self.prose.count("### Choose the flow first")).to(equal(1))
+
+            with it("should still give each fidelity the TDD section written for it"):
+                expect(self.prose).to(contain("One scenario at a time, in the flow's order", "Follow the flow. Crossing a boundary for the first time"))
+
         with context("that generates a fidelity in a format its earlier fidelity has no file in, but another format it has"):
             with before.each:
                 (self.project / ".context").mkdir(exist_ok=True)

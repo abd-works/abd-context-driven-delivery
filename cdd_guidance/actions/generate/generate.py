@@ -23,6 +23,8 @@ class Generate(GuidanceAction):
     def generate(self, guidance: GuidanceArg) -> str:
         """Write artifacts for each listed guidance at its current fidelity. The shared rules and that fidelity's rules are part of these instructions. After the artifact is written, call validate with the same guidance and paths set to the files you wrote."""
         self._work_on(guidance)
+        process = self._process_first()
+        instructions(process)
         rules = self.work.rules_to_follow
         instructions(rules)
         overlay_rules = self._overlay_rules()
@@ -38,6 +40,13 @@ class Generate(GuidanceAction):
         "After the artifact is written, call validate with this same guidance and paths set to the files you wrote: validate refreshes the session's graph with exactly those files, so the graph rules run on them as they are now."
         tools(self._validate().validate)
         return ""
+
+    def _process_first(self) -> str:
+        """The order of work the listed fidelities' supplements give, each once, ahead of every rule: a long reply is read
+        from the top, and the process says what to do first."""
+        worked = [self.fidelity_of(item) for item in self.listed() if isinstance(item, PracticeGuidance)]
+        processes = dict.fromkeys(fidelity.process for fidelity in worked if fidelity is not None and fidelity.process)
+        return "\n\n".join(processes)
 
     def _validate(self) -> Validate:
         """Validate as a tool, so its rules are injected again when it is called."""
@@ -87,7 +96,9 @@ class Generate(GuidanceAction):
         returned."""
         if isinstance(worked, str):
             return worked
-        return "\n\n".join(part.strip() for part in (worked.instructions, worked.generate_output()) if part and part.strip())
+        # The supplements' process opens the reply once, so each fidelity gives only its own words here.
+        text = worked.own_instructions if isinstance(worked, FidelityGuidance) else worked.instructions
+        return "\n\n".join(part.strip() for part in (text, worked.generate_output()) if part and part.strip())
 
     def _where_outputs_go(self) -> str:
         worked = [self.fidelity_of(item) for item in self.listed() if isinstance(item, PracticeGuidance)]
