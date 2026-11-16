@@ -36,10 +36,13 @@ _OUTSIDE_WORKTREE_NOTE = (
 )
 _DEFAULT_ROOTS_NOTE = (
     "**Output roots.** These practices write under their default folders, which nobody has checked: {roots}. Before "
-    "generating anything, look for where the repository already keeps each one's artifacts (for example a story map "
-    "in story_tests/ rather than harness/.context/). When they live elsewhere, call "
-    "practice-session-output.choose_root for that practice with that folder, so the Files app, the board and validate "
-    "find the existing files and new work lands beside them. Leave a default that already holds them, or where none "
+    "generating anything, look for where the repository already keeps each one's artifacts. A practice's documents and "
+    "its code or tests can sit in different areas: the story map in the project's .context, and its scenarios and "
+    "story tests in story_tests/<epic>/<sub-epic>/. Set both: practice-session-output.choose_root for the practice's "
+    "own root (the map, or the code), and fidelity-session-output.choose_root for each fidelity kept apart, such as "
+    "the stories scenarios and acceptance_tests. Choose the most local folder that holds this session's work, such as "
+    "its epic's folder in story_tests rather than all of story_tests, so the Files app, the board and validate show "
+    "this ticket's files and new work lands beside them. Leave a default that already holds them, or where none "
     "exist yet.\n\n"
 )
 _WORKTREE_TICKET_NOTE = (

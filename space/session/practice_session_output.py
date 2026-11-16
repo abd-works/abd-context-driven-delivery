@@ -223,6 +223,13 @@ class PracticeSessionOutput:
         relative = os.path.relpath(Path(root).resolve(), self._session.work_root)
         self._save_chosen_outputs({**self.chosen_outputs, "root": Path(relative).as_posix()})
 
+    def keep_fidelity_root(self, fidelity: str, root: Path) -> None:
+        """Write the files of fidelity, one of this practice's by name, under root, apart from the practice's own root;
+        kept in session.json relative to the workpath."""
+        relative = Path(os.path.relpath(Path(root).resolve(), self._session.work_root)).as_posix()
+        chosen = self.chosen_outputs
+        self._save_chosen_outputs({**chosen, fidelity: {**chosen.get(fidelity, {}), "root": relative}})
+
     @mcp
     @agent_tool
     @noSessionLog
@@ -297,6 +304,14 @@ class FidelitySessionOutput:
             return self.default_formats
         # A session saved before formats were chosen kept the one format its fidelity was last given.
         return [chosen] if isinstance(chosen, str) else list(chosen)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def choose_root(self, path: str) -> FidelitySessionOutput:
+        """Write this fidelity's files under path, a folder in the repository, apart from its practice's root: such as the stories scenarios and acceptance tests of one epic in story_tests/<epic>, while the story map stays in the practice's root, the project's .context."""
+        self._practice.keep_fidelity_root(self._fidelity.name, self._session.repo_path / path)
+        return self
 
     @mcp
     @agent_tool
