@@ -30,7 +30,10 @@ const barOf = (page: Page, slug: string) => details(page).locator(`[data-tile="$
 const chip = (bar: Locator, label: string) => bar.getByRole('button', { name: new RegExp(`^${label}:`) })
 const runOf = (bar: Locator) => bar.getByRole('button', { name: 'Run', exact: true })
 
+// A card already shown opens over its own press, so it is pressed only while another ticket is shown.
 async function selectBillingReport(page: Page): Promise<void> {
+  const title = page.locator('.details-title h2')
+  if ((await title.count()) && (await title.innerText()) === 'Billing report') return
   await card(page, 'billing-report').getByRole('button', { name: 'Show Billing report' }).click({ position: { x: 4, y: 4 } })
   await expect(page.locator('.details-title h2')).toHaveText('Billing report')
 }
