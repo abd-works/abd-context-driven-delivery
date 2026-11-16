@@ -9,7 +9,7 @@
       "discovery",
       "specification"
     ],
-    "version": 39
+    "version": 41
   },
   "practices": {
     "ux": {
@@ -30,7 +30,7 @@
           "python"
         ]
       },
-      "enabled": false
+      "enabled": true
     },
     "clean_engineering": {
       "formats": {
@@ -47,7 +47,7 @@
       "enabled": true
     },
     "ddd": {
-      "enabled": true
+      "enabled": false
     },
     "bdd": {
       "enabled": true,
