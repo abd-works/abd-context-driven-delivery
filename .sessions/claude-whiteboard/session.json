@@ -8,7 +8,7 @@
     "stages": [
       "specification"
     ],
-    "version": 36
+    "version": 37
   },
   "practices": {
     "ux": {
@@ -46,7 +46,7 @@
       "enabled": true
     },
     "ddd": {
-      "enabled": false
+      "enabled": true
     },
     "bdd": {
       "enabled": true,
