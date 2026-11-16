@@ -396,16 +396,16 @@ class GraphBuild:
         practices = graph.practices.in_reading_order()
         for practice in practices:
             practice.reading.read()
-        for overlay in graph.applied_patterns.graph_overlays:
+        for overlay in [*graph.applied_patterns.graph_overlays, *graph.applied_patterns.supplement_overlays_of(practices)]:
             overlay.read(graph)
         self._offer_overlay_types()
         graph.practices.check()
 
     def _offer_overlay_types(self) -> None:
         """Offer the overlay schemas' node and relationship types in the filter lists before rules run."""
-        overlays = self.graph.applied_patterns.graph_overlays
-        if overlays:
-            for practice in self.graph.practices.opened.values():
+        for practice in self.graph.practices.opened.values():
+            overlays = list(self.graph.applied_patterns.overlays_for(practice))
+            if overlays:
                 practice.reading.in_graph.rule_run.offer_overlay_types(overlays)
 
     def _registering_modules(self) -> list[str]:

@@ -44,6 +44,13 @@ with description("a format") as self:
         with it("should be picked in the diagram group, which comes first"):
             expect((Format("drawio").group, Format("drawio").group_order)).to(equal(("diagram", 0)))
 
+    with description("that is a Claude Whiteboard board"):
+        with it("should be picked in the diagram group, beside drawio"):
+            expect((Format("whiteboard").group, Format("whiteboard").is_code)).to(equal(("diagram", False)))
+
+        with it("should name its file extension"):
+            expect(Format("whiteboard").extension).to(equal(".whiteboard"))
+
     with description("that is a Claude Design canvas"):
         with it("should be picked in the canvas group, after the code"):
             expect((Format("claude_design").group, Format("claude_design").group_order)).to(equal(("canvas", 3)))

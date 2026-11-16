@@ -1,0 +1,213 @@
+{
+ "v": 1,
+ "title": "DDD Domain Model",
+ "order": [
+  "title",
+  "class.ac7ba377cffc",
+  "class.eb155216a29d",
+  "class.abf061338a7d",
+  "class.9bcb3c63b9a4",
+  "class.4f3f7750112c",
+  "class.5f175a39713b",
+  "class.cd3df887b359",
+  "class.d8beba78450f",
+  "composition.b9e9db4fe04e",
+  "composition.0bb12963dea8",
+  "dependency.2f178def5d0b",
+  "aggregation.a46dd72f6d29",
+  "dependency.cbd39a6c4258",
+  "dependency.318d6da6e1a4"
+ ],
+ "elements": {
+  "title": {
+   "type": "text",
+   "x": 60,
+   "y": -20,
+   "text": "Bounded Context Map - Classes",
+   "size": "large"
+  },
+  "class.ac7ba377cffc": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer | custom · Customer Profile`\n*«Aggregate Root» «Entity»*\n**CustomerProfile**\n---\n+ id: string\n+ accountEmail: string\n+ identity: Identity\n+ address: Address\n+ kycInquiryId: string\n---\n+ enterProfileDetails(identity: Identity, address: Address): void\n+ sendSupportRequest(subject: string, message: string): SupportTicket",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 440.0,
+   "y": 420.0,
+   "w": 560.0,
+   "h": 276.0
+  },
+  "class.eb155216a29d": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer | custom · Customer Profile`\n*«Repository»*\n**CustomerProfileRepository**\n---\n+ profiles: Collection<CustomerProfile>\n---\n+ create(accountCredentials: AccountCredentials): CustomerProfile\n+ load(accountCredentials: AccountCredentials): CustomerProfile\n+ update(profile: CustomerProfile): void",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 0.0,
+   "y": 60.0,
+   "w": 520.0,
+   "h": 213.0
+  },
+  "class.abf061338a7d": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer | custom · Customer Profile`\n*«Value Object»*\n**Identity**\n---\n+ name: string\n+ lastName: string\n+ dateOfBirth: string\n---",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 60.0,
+   "y": 840.0,
+   "w": 320.0,
+   "h": 192.0
+  },
+  "class.9bcb3c63b9a4": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer | custom · Customer Profile`\n*«Value Object»*\n**Address**\n---\n+ street: string\n+ city: string\n+ postalCode: string\n---",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 480.0,
+   "y": 840.0,
+   "w": 320.0,
+   "h": 192.0
+  },
+  "class.4f3f7750112c": {
+   "type": "shape",
+   "color": "#d5e8d4",
+   "text": "`Customer | custom · KYC`\n*«Aggregate Root» «Entity»*\n**KycInquiry**\n---\n+ inquiryId: string\n+ verified: boolean\n---\n+ fill(identity: Identity, address: Address): void\n+ verify(): void",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 520.0,
+   "y": 1180.0,
+   "w": 400.0,
+   "h": 213.0
+  },
+  "class.5f175a39713b": {
+   "type": "shape",
+   "color": "#d5e8d4",
+   "text": "`Customer | custom · KYC`\n*«Repository»*\n**KycInquiryRepository**\n---\n---\n+ create(identity: Identity, address: Address): KycInquiry\n+ load(inquiryId: string): KycInquiry\n+ update(inquiry: KycInquiry): void",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 920.0,
+   "y": 840.0,
+   "w": 460.0,
+   "h": 192.0
+  },
+  "class.cd3df887b359": {
+   "type": "shape",
+   "color": "#fff2cc",
+   "text": "`Service | custom · Subscription`\n*«Aggregate Root» «Entity»*\n**Subscription**\n---\n+ id: string\n+ planId: string\n---\n+ changePlan(planId: string): void",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 620.0,
+   "y": 60.0,
+   "w": 280.0,
+   "h": 192.0
+  },
+  "class.d8beba78450f": {
+   "type": "shape",
+   "color": "#fff2cc",
+   "text": "`Service | custom · Subscription`\n*«Repository»*\n**SubscriptionRepository**\n---\n---\n+ create(customerProfile: CustomerProfile): Subscription\n+ load(customerProfile: CustomerProfile): Subscription\n+ update(subscription: Subscription): void",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 980.0,
+   "y": 60.0,
+   "w": 460.0,
+   "h": 192.0
+  },
+  "composition.b9e9db4fe04e": {
+   "type": "arrow",
+   "from": "class.ac7ba377cffc",
+   "to": "class.abf061338a7d",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "identity",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    242
+   ]
+  },
+  "composition.0bb12963dea8": {
+   "type": "arrow",
+   "from": "class.ac7ba377cffc",
+   "to": "class.9bcb3c63b9a4",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "address",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    242
+   ]
+  },
+  "dependency.2f178def5d0b": {
+   "type": "arrow",
+   "from": "class.ac7ba377cffc",
+   "to": "class.5f175a39713b",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "«sendSupportRequest»",
+   "dash": true,
+   "bends": [
+    "v",
+    242
+   ]
+  },
+  "aggregation.a46dd72f6d29": {
+   "type": "arrow",
+   "from": "class.eb155216a29d",
+   "to": "class.ac7ba377cffc",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "profiles",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    214
+   ]
+  },
+  "dependency.cbd39a6c4258": {
+   "type": "arrow",
+   "from": "class.cd3df887b359",
+   "to": "class.ac7ba377cffc",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "«Customer/Supplier»",
+   "dash": true,
+   "bends": [
+    "v",
+    224
+   ]
+  },
+  "dependency.318d6da6e1a4": {
+   "type": "arrow",
+   "from": "class.5f175a39713b",
+   "to": "class.4f3f7750112c",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "update",
+   "dash": true,
+   "bends": [
+    "v",
+    204
+   ]
+  }
+ }
+}

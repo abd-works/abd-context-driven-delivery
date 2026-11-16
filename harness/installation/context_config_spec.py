@@ -31,6 +31,23 @@ with description("a project's context configuration"):
             self.config.update(practice_folders={"stories": "docs"})
             expect(self.config.guideline("mern-domain-driven")).to(equal("enabled"))
 
+    with context("that names default formats"):
+        with before.each:
+            self.config.save({"default_formats": {"*": ["default", "drawio"], "ux": ["default"], "ux.mockup": ["claude_design"]}})
+
+        with it("should answer a fidelity's own defaults first"):
+            expect(self.config.default_formats("ux", "mockup")).to(equal(["claude_design"]))
+
+        with it("should answer its practice's defaults when the fidelity names none"):
+            expect(self.config.default_formats("ux", "ia")).to(equal(["default"]))
+
+        with it("should answer the defaults for every fidelity when its practice names none"):
+            expect(self.config.default_formats("clean-engineering", "model")).to(equal(["default", "drawio"]))
+
+    with context("that names no default formats"):
+        with it("should answer none"):
+            expect(self.config.default_formats("stories", "story_map")).to(equal(None))
+
     with context("whose config.json is not valid JSON"):
         with before.each:
             self.config.path.parent.mkdir(parents=True, exist_ok=True)

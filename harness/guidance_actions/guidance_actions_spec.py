@@ -298,6 +298,14 @@ with description("a guidance action"):
             story_map, behavior = action.listed()
             expect((story_map.fidelities["story_map"].format, behavior.fidelities["behavior"].format)).to(equal(("markdown", "python")))
 
+        # A diagram chip stands for drawio and whiteboard; the fidelity is worked in each of them, one after the other.
+        with it("should work a fidelity once in each listed format it writes, in the order listed"):
+            from harness.guidance_actions import GuidanceAction
+
+            action = GuidanceAction().for_call(_call(f"stories-story-map format=drawio,whiteboard {self.session_word}", self.project))
+            worked = action.each(lambda fidelity: fidelity.format)
+            expect([str(format) for format in worked]).to(equal(["drawio", "whiteboard"]))
+
         with it("should leave the format of the practice's other fidelities as it was"):
             from harness.guidance_actions import GuidanceAction
 

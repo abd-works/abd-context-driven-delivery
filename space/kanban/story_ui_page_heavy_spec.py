@@ -58,6 +58,11 @@ def listening(origin: str, server: subprocess.Popen) -> None:
 
 with description("Deploy Story UI App With Board State") as self:
     with before.all:
+        # A fresh checkout has not installed the Story UI's packages, and its build needs them.
+        if not (STORY_UI_FOLDER / "node_modules").is_dir():
+            installed = Npm().run(STORY_UI_FOLDER, "install")
+            if installed.code != 0:
+                raise StoryUiNotBuilt(installed.stderr)
         built = Npm().run(STORY_UI_FOLDER, "run", "build")
         if built.code != 0:
             raise StoryUiNotBuilt(built.stderr)

@@ -33,25 +33,18 @@ import re
 import xml.etree.ElementTree as ET
 from typing import Dict, List, Optional, Tuple
 
-from harness.annotations.name import Name
-
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass, UnreadableSource
-from cdd_guidance.practices.clean_engineering.model.class_stereotypes import marks_in, without_marks
-from cdd_guidance.practices.clean_engineering.model.field_types import RELATIONSHIP_STRENGTH
-from cdd_guidance.practices.clean_engineering.model.diagram.class_layout import (
-    GROUP_FILL_COLORS,
-    SMALLEST_PORT_SPACING,
-    ArrowRouter,
-    CardPlacement,
-    CardSpacing,
-    DiagramArrow,
+from cdd_guidance.practices.clean_engineering.model.class_stereotypes import marks_in
+from cdd_guidance.practices.clean_engineering.model.diagram.class_layout import ArrowRouter, CardSpacing, DiagramArrow
+from cdd_guidance.practices.clean_engineering.model.diagram.class_view import (
+    ClassView,
+    ClassViewPage,
+    cell_slug as _cell_slug,
+    plain_class_name as _plain_class_name,
 )
-from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import (
-    ContainmentForest,
-    DiagramCleanEngineeringModel,
-    module_tab_label,
-)
-from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry, MODULE_CELL_MIN_HEIGHT, MODULE_CELL_WIDTH
+from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import ContainmentForest, DiagramCleanEngineeringModel
+from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry
+from cdd_guidance.practices.clean_engineering.model.diagram.module_layout import MODULE_START_X, MODULE_START_Y, ModuleLayout
 from cdd_guidance.practices.clean_engineering.model.drawio.page.drawio_page import DrawioPage, class_name_in, style_value
 from cdd_guidance.practices.clean_engineering.model.drawio.diagram_node import (
     DrawIOClass,
@@ -64,20 +57,11 @@ from cdd_guidance.practices.clean_engineering.model.property import Property
 _EDGE_BASE_STYLE = 'edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;'
 EDGE_STYLES = {'inheritance': f'{_EDGE_BASE_STYLE}endArrow=block;endSize=16;endFill=0;', 'composition': f'{_EDGE_BASE_STYLE}startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;', 'aggregation': f'{_EDGE_BASE_STYLE}startArrow=diamondThin;startFill=0;startSize=14;endArrow=open;endSize=12;', 'association': f'{_EDGE_BASE_STYLE}endArrow=open;endSize=12;', 'dependency': f'{_EDGE_BASE_STYLE}dashed=1;endArrow=open;endSize=12;'}
 DEFAULT_EDGE_STYLE = EDGE_STYLES['association']
-CLASSES_ON_ONE_PAGE = 40
 PAGE_EDGE_ALLOWANCE = 200
 CLASS_PAGE_WIDTH = 1654
 CLASS_PAGE_HEIGHT = 1169
 MODULES_PAGE_WIDTH = 1600
 MODULES_PAGE_HEIGHT = 1200
-MODULE_COL_GAP = 48
-MODULE_ROW_GAP = 32
-MODULE_START_X = 40
-MODULE_START_Y = 100
-MODULE_CHILD_PAD_X = 16
-MODULE_CHILD_PAD_Y = 12
-MODULE_CHILD_GAP = 12
-MODULE_CHILD_COLS = 2
 MODULE_DEP_EDGE_STYLE = 'edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=classic;html=1;strokeWidth=2;fontSize=10;'
 MODULE_TITLE_STYLE = 'text;html=1;align=center;verticalAlign=middle;fontSize=18;fontStyle=1;'
 MODULE_SUBTITLE_STYLE = 'text;html=1;align=center;verticalAlign=middle;fontSize=11;fontStyle=2;'
@@ -86,7 +70,6 @@ _MODULE_CHILD_MARKER = 'fillColor=#dae8fc'
 # The interaction a dependency names, written on its arrow as `«runs»` on `Repo ---<<runs>>--> Git`.
 _DEPENDENCY_LABEL = re.compile('«([^»]+)»')
 
-Relationships = List[Tuple[str, str, str]]
 
 
 class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
@@ -288,7 +271,10 @@ class _ModulesDiagramWriter:
         }
         self._bounds: Dict[str, Geometry] = {}
         self._parent_ids: Dict[str, str] = {}
-        self._cell_ids: Dict[str, str] = {}
+        self._cell_ids: Dict[str, str] = {
+            name: f'nest-{_cell_slug(name)}' if name in self._forest.synthetic else _cell_slug(name) or name
+            for name in self._forest.by_name
+        }
 
     def write(self) -> str:
         previous = DrawioPage.whole(self._channel.previous) if self._channel.previous else None
@@ -363,175 +349,27 @@ class _ModulesDiagramWriter:
                 ET.SubElement(cell, 'mxGeometry', attrib={'relative': '1', 'as': 'geometry'})
 
     def _lay_out(self) -> None:
-        """Layer roots by dependency depth, left to right; nest path children inside their parents."""
-        layers: Dict[int, List[str]] = {}
-        for root in self._forest.roots:
-            layers.setdefault(self._forest.module_dep_depth(root), []).append(root)
-        x_cursor = float(MODULE_START_X)
-        for depth in sorted(layers):
-            names = sorted(layers[depth], key=lambda n: (self._forest.by_name[n].sequential_order or 0, n))
-            y = float(MODULE_START_Y)
-            for name in names:
-                self._place(name, (x_cursor, y), '1')
-                y += self._bounds[name][3] + MODULE_ROW_GAP
-            x_cursor += max(self._size(name)[0] for name in names) + MODULE_COL_GAP
-
-    def _place(self, name: str, position: Tuple[float, float], parent_id: str) -> None:
-        if parent_id == '1':
-            self._bounds[name] = Geometry(position[0], position[1], *self._size(name))
-        cell_id = f'nest-{_cell_slug(name)}' if name in self._forest.synthetic else _cell_slug(name) or name
-        self._cell_ids[name] = cell_id
-        self._parent_ids[name] = parent_id
-        children = self._forest.children_of.get(name, [])
-        if not children:
-            return
-        header_height = float(self._cells[name].header_height())
-        sizes = [self._size(child) for child in children]
-        columns = min(MODULE_CHILD_COLS, len(children))
-        widths, heights = _grid_extents(sizes, columns)
-        for index, child in enumerate(children):
-            column, line = index % columns, index // columns
-            relative_x = MODULE_CHILD_PAD_X + sum(widths[:column]) + MODULE_CHILD_GAP * column
-            relative_y = header_height + MODULE_CHILD_PAD_Y + sum(heights[:line]) + MODULE_CHILD_GAP * line
-            self._bounds[child] = Geometry(relative_x, relative_y, *sizes[index])
-            self._place(child, (position[0] + relative_x, position[1] + relative_y), cell_id)
-
-    def _size(self, name: str) -> Tuple[float, float]:
-        """Width and height of a module cell, grown to hold its nested children."""
-        header_height = float(self._cells[name].header_height())
-        children = self._forest.children_of.get(name, [])
-        if not children:
-            return (float(MODULE_CELL_WIDTH), max(float(MODULE_CELL_MIN_HEIGHT), header_height))
-        columns = min(MODULE_CHILD_COLS, len(children))
-        widths, heights = _grid_extents([self._size(child) for child in children], columns)
-        grid_width = sum(widths) + MODULE_CHILD_GAP * (columns - 1)
-        grid_height = sum(heights) + MODULE_CHILD_GAP * (len(heights) - 1)
-        return (max(float(MODULE_CELL_WIDTH), grid_width + 2 * MODULE_CHILD_PAD_X), header_height + grid_height + 2 * MODULE_CHILD_PAD_Y)
-
-
-def _grid_extents(sizes: List[Tuple[float, float]], columns: int) -> Tuple[List[float], List[float]]:
-    """The widest card in each column and the tallest in each line of a grid filled left to right."""
-    widths = [0.0] * columns
-    heights = [0.0] * ((len(sizes) + columns - 1) // columns)
-    for index, (width, height) in enumerate(sizes):
-        widths[index % columns] = max(widths[index % columns], width)
-        heights[index // columns] = max(heights[index // columns], height)
-    return (widths, heights)
-
-
-class _ClassDiagramWriter:
-    """Writes one class-view diagram: a single page, or one page per module when the model is large.
-
-    Holds what every page needs: a cell id per class, the relationships between those ids, and each class's module."""
-
-    def __init__(self, channel: DrawIOCleanEngineeringModel) -> None:
-        self.channel = channel
-        self.cell_ids: dict[int, str] = {}
-        self.classes_by_cell: dict[str, OoadClass] = {}
-        self.module_of: dict[int, Module] = {}
-        self.classes = [oclass for module in channel.modules for oclass in module.classes]
-        self._cell_ids_by_name: dict[str, list[str]] = {}
-        self._assign_cell_ids()
-        self.arrow_labels: Dict[Tuple[str, str], str] = {}
-        # The interactions each pair's dependencies name, in model order: `stops`, `reads sections with`.
-        self.dependency_labels: Dict[Tuple[str, str], List[str]] = {}
-        self.relationships = self._collect_relationships()
-        self.module_labels = {
-            self.cell_ids[id(oclass)]: module_tab_label(module.name) for module in channel.modules for oclass in module.classes
+        """The shared modules layout: roots in columns by dependency depth, path children nested inside their parents."""
+        layout = ModuleLayout(self._forest, self._cells).lay_out()
+        self._bounds = layout.bounds
+        self._parent_ids = {
+            name: self._cell_ids[parent] if parent is not None else '1' for name, parent in layout.parent_of.items()
         }
-        self.named_modules = [module for module in channel.modules if module.classes]
-        self.module_fills = self._module_fill_colors()
-        # Each page of the diagram this render replaces, by name, when it keeps positions: a module page keeps the cards
-        # and arrows of the page with its name.
-        self.previous_pages = self._previous_pages()
+
+
+class _ClassDiagramWriter(ClassView):
+    """Writes one class-view diagram as Draw.io pages."""
 
     def write(self) -> str:
         mxfile = ET.Element('mxfile')
         mxfile.set('host', 'CleanEngineering.diagram.drawio')
-        if len(self.named_modules) < 2 or len(self.classes) <= CLASSES_ON_ONE_PAGE:
+        if self.on_one_page:
             self._write_single_page(mxfile)
         else:
             for module in self.named_modules:
                 self._write_module_page(mxfile, module)
         ET.indent(ET.ElementTree(mxfile), space='  ')
         return ET.tostring(mxfile, encoding='unicode', xml_declaration=False)
-
-    def resolve_target(self, source: OoadClass, target_name: str) -> Optional[str]:
-        """The cell id of the class target_name names, preferring one in source's own module."""
-        module = self.module_of.get(id(source))
-        if module is not None:
-            for oclass in module.classes:
-                if oclass.name == target_name or _plain_class_name(oclass.name) == target_name:
-                    return self.cell_ids[id(oclass)]
-        ids = self._cell_ids_by_name.get(target_name) or []
-        return ids[0] if ids else None
-
-    def _assign_cell_ids(self) -> None:
-        """One cell id per class. The same name in two modules is two boxes."""
-        for module in self.channel.modules:
-            for oclass in module.classes:
-                cell_id = f"{_cell_slug(module.name)}--{_cell_slug(oclass.name)}"
-                if cell_id in self.classes_by_cell:
-                    cell_id = f"{cell_id}-{oclass.sequential_order}"
-                self.cell_ids[id(oclass)] = cell_id
-                self.classes_by_cell[cell_id] = oclass
-                self.module_of[id(oclass)] = module
-                self._cell_ids_by_name.setdefault(oclass.name, []).append(cell_id)
-                plain = _plain_class_name(oclass.name)
-                if plain and plain != oclass.name:
-                    self._cell_ids_by_name.setdefault(plain, []).append(cell_id)
-
-    def _module_fill_colors(self) -> Dict[str, str]:
-        """One colour per module, so a reader sees where a class lives. One module needs no colour."""
-        if len(self.named_modules) < 2:
-            return {}
-        return {
-            module_tab_label(module.name): GROUP_FILL_COLORS[index % len(GROUP_FILL_COLORS)]
-            for index, module in enumerate(self.named_modules)
-        }
-
-    def _collect_relationships(self) -> Relationships:
-        relationships: Relationships = []
-        for oclass in self.classes:
-            source = self.cell_ids.get(id(oclass))
-            if not source:
-                continue
-            for prop in oclass.properties:
-                self._collect_property_relationship(source, oclass, prop, relationships)
-            for dependency in oclass.dependencies:
-                self._collect_dependency(source, oclass, dependency, relationships)
-            for base in self._base_names(oclass):
-                target = self.resolve_target(oclass, base)
-                if target and (source, target, 'inheritance') not in relationships:
-                    relationships.append((source, target, 'inheritance'))
-        return relationships
-
-    def _collect_property_relationship(self, source: str, oclass: OoadClass, prop: Property, relationships: Relationships) -> None:
-        relationship = getattr(prop, 'relationship', None)
-        target = self.resolve_target(oclass, relationship.target) if relationship is not None else None
-        if not target:
-            return
-        relationships.append((source, target, relationship.kind or 'association'))
-        named = self.arrow_labels.get((source, target))
-        self.arrow_labels[(source, target)] = f'{named}, {prop.name}' if named else prop.name
-
-    def _collect_dependency(self, source: str, oclass: OoadClass, dependency, relationships: Relationships) -> None:
-        target = self.resolve_target(oclass, dependency.target)
-        if not target or target == source:
-            return
-        if (source, target, 'dependency') not in relationships:
-            relationships.append((source, target, 'dependency'))
-        labels = self.dependency_labels.setdefault((source, target), [])
-        if dependency.label and dependency.label not in labels:
-            labels.append(dependency.label)
-
-    def arrow_label(self, pair: Tuple[str, str]) -> str:
-        """The arrow's words: the properties it stands for, then each interaction its dependencies name, as `«runs»`."""
-        named = [self.arrow_labels.get(pair, '')] + [f'«{label}»' for label in self.dependency_labels.get(pair, [])]
-        return ' '.join(part for part in named if part)
-
-    def _base_names(self, oclass: OoadClass) -> List[str]:
-        return list(oclass.bases)
 
     def _write_single_page(self, mxfile: ET.Element) -> None:
         graph = _add_diagram_page(mxfile, 'CleanEngineering Model', 'CleanEngineering-model')
@@ -545,8 +383,7 @@ class _ClassDiagramWriter:
     def _write_module_page(self, mxfile: ET.Element, module: Module) -> None:
         page_name = module.name.strip()
         graph = _add_diagram_page(mxfile, page_name, f'page-{_cell_slug(page_name)}')
-        local_ids = {self.cell_ids[id(oclass)] for oclass in module.classes}
-        import_ids = self._direct_import_ids(local_ids, module_tab_label(page_name))
+        local_ids, import_ids = self.module_page_ids(module)
         drawn = self.previous_pages.get(page_name)
         positions = drawn.positions() if drawn is not None else {}
         previous_edges = drawn.edges_by_ends() if drawn is not None else {}
@@ -563,40 +400,15 @@ class _ClassDiagramWriter:
         except ET.ParseError:
             return {}
 
-    def _direct_import_ids(self, local_ids: set[str], local_label: str) -> List[str]:
-        """Foreign class ids with a direct link from this module's page.
 
-        Imports are the targets of edges that leave a local class, and foreign subtypes that inherit into a local base.
-        Inbound association sources stay on the other module's page."""
-        imports: set[str] = set()
-        for source, target, kind in self.relationships:
-            if source in local_ids and target not in local_ids and self.module_labels.get(target, '') != local_label:
-                imports.add(target)
-            elif self._is_inbound_inheritance(source, target, kind, local_ids) and self.module_labels.get(source, '') != local_label:
-                imports.add(source)
-        return sorted(imports)
-
-    def _is_inbound_inheritance(self, source: str, target: str, kind: str, local_ids: set[str]) -> bool:
-        return target in local_ids and source not in local_ids and (kind or 'association').lower() == 'inheritance'
-
-
-class _ClassDiagramPage:
-    """One page of a class diagram: which classes it shows, which of them it owns, and which it imports."""
-
-    def __init__(self, writer: _ClassDiagramWriter, page_ids: set[str], local_ids: Optional[set[str]], import_ids: List[str]) -> None:
-        self._writer = writer
-        self._page_ids = page_ids
-        # None on a single page, where every class is local.
-        self._local_ids = local_ids
-        self._import_ids = import_ids
+class _ClassDiagramPage(ClassViewPage):
+    """One Draw.io page of a class diagram."""
 
     def write(self, graph: ET.Element, positions: Dict[str, Tuple[float, float]], previous_edges: Dict[Tuple[str, str], ET.Element]) -> None:
         """Place the cards, keeping any a person already placed (closing up the space between them when the render asks
         to), then draw arrows, keeping the routes already drawn."""
         root_el = _add_graph_root(graph)
-        arrows = self._arrows()
-        cards = self._cards(arrows)
-        self._place_cards_keeping(cards, arrows, positions)
+        cards, arrows = self.laid_out(positions)
         if self._writer.channel.kept_previous() and self._writer.channel.close_gaps and CardSpacing(list(cards.values()), arrows).close_gaps():
             # A card moved, so an arrow kept from the last drawing no longer meets it: every arrow is drawn again.
             previous_edges = {}
@@ -608,105 +420,6 @@ class _ClassDiagramPage:
         self._draw_arrows(root_el, cards, new_arrows, kept_paths)
         graph.set('pageWidth', str(int(max((card.geometry.x + card.geometry.width for card in cards.values()), default=0) + PAGE_EDGE_ALLOWANCE)))
         graph.set('pageHeight', str(int(max((card.geometry.y + card.geometry.height for card in cards.values()), default=0) + PAGE_EDGE_ALLOWANCE)))
-
-    def _relationships(self) -> Relationships:
-        local_ids = self._local_ids
-        return [
-            (source, target, kind) for source, target, kind in self._writer.relationships
-            if source in self._page_ids and target in self._page_ids
-            and (local_ids is None or source in local_ids or (target in local_ids and (kind or '').lower() == 'inheritance'))
-        ]
-
-    def _arrows(self) -> List[DiagramArrow]:
-        """One arrow per pair of classes on this page, keeping the strongest kind and naming every property it stands for."""
-        arrows: Dict[Tuple[str, str], DiagramArrow] = {}
-        for source, target, kind in self._relationships():
-            if source == target:
-                continue
-            label = self._writer.arrow_label((source, target))
-            arrow = arrows.setdefault((source, target), DiagramArrow(source, target, kind, label))
-            if RELATIONSHIP_STRENGTH[kind] > RELATIONSHIP_STRENGTH[arrow.kind]:
-                arrow.kind = kind
-        drawn = {
-            pair: arrow for pair, arrow in arrows.items()
-            if not self._repeats_inherited_arrow(arrow, arrows) and not _is_weaker_than_opposite(pair, arrows)
-        }
-        return list(drawn.values()) + self._arrows_for_unlinked_classes(drawn)
-
-    def _arrows_for_unlinked_classes(self, arrows: Dict[Tuple[str, str], DiagramArrow]) -> List[DiagramArrow]:
-        """A class no field reaches still belongs to the model, so its first use in an operation draws it in, dashed."""
-        linked = {cell_id for pair in arrows for cell_id in pair}
-        found = []
-        for cell_id in sorted(self._page_ids - linked):
-            arrow = self._operation_arrow(cell_id)
-            if arrow is not None:
-                found.append(arrow)
-        return found
-
-    def _operation_arrow(self, cell_id: str) -> Optional[DiagramArrow]:
-        oclass = self._writer.classes_by_cell[cell_id]
-        name = _plain_class_name(oclass.name)
-        for operation in oclass.operations:
-            for callee in operation.callees:
-                target = self._writer.resolve_target(oclass, callee.split('.', 1)[0].strip())
-                if target in self._page_ids and target != cell_id:
-                    return DiagramArrow(cell_id, target, 'dependency', operation.name)
-        for other_id in sorted(self._page_ids - {cell_id}):
-            for operation in self._writer.classes_by_cell[other_id].operations:
-                signature = operation.return_type + ' '.join(parameter.save() for parameter in operation.parameters)
-                if re.search(rf'\b{re.escape(name)}\b', signature):
-                    return DiagramArrow(other_id, cell_id, 'dependency', operation.name)
-        return None
-
-    def _repeats_inherited_arrow(self, arrow: DiagramArrow, arrows: Dict[Tuple[str, str], DiagramArrow]) -> bool:
-        """A subclass restating its base's field says nothing a reader cannot already see on the base. A dependency is
-        what the subclass itself does, so it stays."""
-        if arrow.kind == 'dependency':
-            return False
-        return any(
-            source == arrow.source and kind == 'inheritance' and (target, arrow.target) in arrows
-            for source, target, kind in self._writer.relationships
-        )
-
-    def _cards(self, arrows: List[DiagramArrow]) -> Dict[str, DrawIOClass]:
-        """One card per class on the page, in the model's order so the diagram reads back in that order, wide enough
-        to give every arrow on it its own port."""
-        cards: Dict[str, DrawIOClass] = {}
-        for cell_id in (cell_id for cell_id in self._writer.classes_by_cell if cell_id in self._page_ids):
-            node = self._card_node(cell_id)
-            arrow_count = sum(1 for arrow in arrows if cell_id in (arrow.source, arrow.target))
-            width = max(node.width(), SMALLEST_PORT_SPACING * (arrow_count + 1))
-            node.cell_id = cell_id
-            node.group = self._writer.module_labels.get(cell_id, '')
-            node.geometry = Geometry(0, 0, width, node.height())
-            cards[cell_id] = node
-        return cards
-
-    def _card_node(self, cell_id: str) -> DrawIOClass:
-        writer = self._writer
-        oclass = writer.classes_by_cell[cell_id]
-        if cell_id in self._import_ids:
-            return writer.channel.imported_class(oclass, writer.module_labels.get(cell_id, 'other'))
-        node = oclass
-        node.fill_color = writer.module_fills.get(writer.module_labels.get(cell_id, ''), '')
-        node.owning_module = writer.module_of[id(oclass)].name.strip() if id(oclass) in writer.module_of else ''
-        return node
-
-    def _place_cards_keeping(self, cards: Dict[str, DrawIOClass], arrows: List[DiagramArrow], positions: Dict[str, Tuple[float, float]]) -> None:
-        """Cards already on the page stay where a person left them. Only new ones are laid out, below the rest."""
-        new_cards = [card for cell_id, card in cards.items() if cell_id not in positions]
-        new_ids = {card.cell_id for card in new_cards}
-        inner = [arrow for arrow in arrows if arrow.source in new_ids and arrow.target in new_ids]
-        CardPlacement(new_cards, inner).place()
-        for cell_id, (x, y) in positions.items():
-            if cell_id in cards:
-                cards[cell_id].geometry = cards[cell_id].geometry.moved_to(x, y)
-        kept = [card for card in cards.values() if card.cell_id not in new_ids]
-        if not kept:
-            return
-        bottom = max(card.geometry.y + card.geometry.height for card in kept)
-        for card in new_cards:
-            card.geometry = card.geometry.shifted(0, bottom)
 
     def _copy_kept_edges(self, root_el: ET.Element, previous_edges: Dict[Tuple[str, str], ET.Element]) -> set:
         kept_pairs: set[Tuple[str, str]] = set()
@@ -724,14 +437,6 @@ class _ClassDiagramPage:
         first_id = max(used_ids, default=len(cards) + 10) + 1
         for offset, arrow in enumerate(routed):
             _append_edge(root_el, arrow, cards, str(first_id + offset))
-
-
-def _is_weaker_than_opposite(pair: Tuple[str, str], arrows: Dict[Tuple[str, str], DiagramArrow]) -> bool:
-    """A field drawn both ways keeps the stronger end. A dependency says what one class does to the other, so it stays."""
-    if arrows[pair].kind == 'dependency':
-        return False
-    opposite = arrows.get((pair[1], pair[0]))
-    return opposite is not None and RELATIONSHIP_STRENGTH[opposite.kind] > RELATIONSHIP_STRENGTH[arrows[pair].kind]
 
 
 def _append_edge(root_el: ET.Element, arrow: DiagramArrow, cards: Dict[str, DrawIOClass], edge_id: str) -> ET.Element:
@@ -815,11 +520,6 @@ def _vertex_diagram_kind(cell: ET.Element) -> Optional[str]:
     return None
 
 
-def _plain_class_name(name: str) -> str:
-    """A card's name without bold marks or `<<Mark>>`s, as diagrams drawn by hand sometimes write it."""
-    return without_marks(name.replace('*', ''))
-
-
 def _is_module_style(style: str) -> bool:
     return _MODULE_MARKER in style or _MODULE_CHILD_MARKER in style
 
@@ -854,8 +554,3 @@ def _card_lines(section: str) -> List[str]:
         for line in re.findall(r'(?:^|>|<br\s*/?>)\s*[+\-]\s*(.+?)(?=<br\s*/?>|</)', section, flags=re.IGNORECASE)
         if line.strip()
     ]
-
-
-def _cell_slug(name: str) -> str:
-    """A name as a cell id spells it: `cart-repository` for `Cart repository`, as Name spells every title."""
-    return Name(name).title_slug

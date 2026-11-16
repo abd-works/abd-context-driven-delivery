@@ -1027,6 +1027,24 @@ with description("a practice"):
             with it("should point that practice's folder at the workpath"):
                 expect(Path(self.opened.folder).resolve()).to(equal(self.work.resolve()))
 
+        with context("with config.json default_formats naming diagram formats for every fidelity"):
+            with before.each:
+                from harness.installation.context_config import ContextConfig
+
+                ContextConfig(self.repo).update(default_formats={"*": ["default", "drawio", "whiteboard"], "stories.scenarios": ["python"]})
+                Sessions(self.repo).switch("alpha")
+                self.stories = Sessions(self.called).current().practice("stories")
+
+            with it("should choose a fidelity's own default and the diagram formats it writes until the session chooses"):
+                expect(self.stories.fidelities["story_map"].session_output.chosen_formats).to(equal(["markdown", "drawio", "whiteboard"]))
+
+            with it("should choose what the project names for that one fidelity over its defaults for every fidelity"):
+                expect(self.stories.fidelities["scenarios"].session_output.chosen_formats).to(equal(["python"]))
+
+            with it("should keep what the session chooses over the project's defaults"):
+                chosen = self.stories.fidelities["story_map"].session_output.choose_format("whiteboard", False)
+                expect(chosen.chosen_formats).to(equal(["markdown", "drawio"]))
+
         with context("with a root a person chose for the practice"):
             with before.each:
                 self.custom = self.repo / "custom-bdd"
@@ -1110,6 +1128,46 @@ with description("a session working in a folder of its own, holding an aggregate
 
     with it("should find the declared file there"):
         expect(self.model.has_declared_output()).to(equal(True))
+
+
+# Main works on the whole repository, so a practice nobody gave a folder lists its documents from every .context folder,
+# as its patterns already find its tests anywhere.
+with description("a session working on the whole repository, whose story map is in a module's .context folder") as self:
+    with before.each:
+        self.home = ExampleHome()
+        self.repo = Path(tempfile.mkdtemp(prefix="session-whole-")).resolve()
+        (self.repo / ".git").mkdir()
+        story_map = self.repo / "harness" / ".context" / "stories" / "story-map.md"
+        story_map.parent.mkdir(parents=True)
+        story_map.write_text("# (E) Review Work\n", encoding="utf-8")
+        session = ToolCall({}, self.repo).session
+        session.session_files.changed = lambda: set()
+        self.story_map = session.practice("stories").fidelities["story_map"]
+
+    with after.each:
+        shutil.rmtree(self.repo, ignore_errors=True)
+        self.home.close()
+
+    with it("should list that story map as the story map's markdown"):
+        expect([entry.path for entry in self.story_map.files()["markdown"]]).to(equal(["harness/.context/stories/story-map.md"]))
+
+    with context("with a thin slice beside it"):
+        with before.each:
+            (self.repo / "harness" / ".context" / "stories" / "thin-slice.md").write_text("# Thin Slice\n", encoding="utf-8")
+
+        with it("should list the thin slice as the story map's thin slice"):
+            expect([entry.path for entry in self.story_map.files()["thin_slice"]]).to(contain("harness/.context/stories/thin-slice.md"))
+
+    with context("with the project's config naming the repository's own folder for stories"):
+        with before.each:
+            (self.repo / ".context" / "config.json").parent.mkdir(exist_ok=True)
+            (self.repo / ".context" / "config.json").write_text('{"practice_folders": {"stories": "."}}', encoding="utf-8")
+            session = ToolCall({}, self.repo).session
+            session.session_files.changed = lambda: set()
+            self.story_map = session.practice("stories").fidelities["story_map"]
+
+        with it("should still list that story map as the story map's markdown"):
+            expect([entry.path for entry in self.story_map.files()["markdown"]]).to(equal(["harness/.context/stories/story-map.md"]))
 
 
 # A fidelity that declares a folder per module, as Clean Engineering's code does with ``{module}/``, lists the code the

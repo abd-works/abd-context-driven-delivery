@@ -8,9 +8,9 @@
   "guidance": {
     "stages": [
       "discovery",
-      "specification"
+      "implementation"
     ],
-    "version": 26
+    "version": 30
   },
   "practices": {
     "stories": {
@@ -49,7 +49,7 @@
   },
   "outputs": {
     "stories": {
-      "root": ".context/stories"
+      "root": "../.context"
     }
   }
 }

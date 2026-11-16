@@ -40,15 +40,21 @@ with description("an MCP sketch prompt"):
 
     with it("should include each practice sketch template and rules"):
         from harness.mcp.mcp_server import McpHost
+        from space.session.throwaway_project import ThrowawayProject
 
-        repo = Path(__file__).resolve().parents[3]
-        host = McpHost.from_repo(repo)
-        result = str(
-            host.checkout_server.invoke_prompt(
-                "sketch.sketch",
-                {"guidance": ["stories", "clean-engineering-model"]},
+        # A project of its own, where every practice is on: this repository's main session may have practices off.
+        project = ThrowawayProject()
+        try:
+            host = McpHost.from_repo(_REPO_ROOT)
+            host.checkout_server.project = project.root
+            result = str(
+                host.checkout_server.invoke_prompt(
+                    "sketch.sketch",
+                    {"guidance": ["stories", "clean-engineering-model"]},
+                )
             )
-        )
+        finally:
+            project.close()
         expect(result).to(contain("verb-noun-format"))
         expect(result).to(contain("shape-classes-around-resources"))
         expect(result).to(contain("Sketch the story hierarchy"))

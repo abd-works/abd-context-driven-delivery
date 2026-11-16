@@ -1,0 +1,4 @@
+# TDD overlay on bdd. Extend only.
+spec:
+  rules:
+    - unit-tier-fakes-every-boundary

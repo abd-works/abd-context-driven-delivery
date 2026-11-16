@@ -1,0 +1,289 @@
+{
+ "v": 1,
+ "title": "pml-web Bounded Contexts",
+ "order": [
+  "context.b39f008e318e",
+  "context.ec99b813fa06",
+  "context.abf72c05c8c3",
+  "context.1cf4692aef73",
+  "context.1b6ac6527654",
+  "title",
+  "subtitle",
+  "about.b39f008e318e",
+  "aggregate.8d4abcf8629d",
+  "aggregate.d7d6bf5b6f68",
+  "about.ec99b813fa06",
+  "aggregate.68971b7d3adc",
+  "aggregate.e85df30af157",
+  "aggregate.d575148d3191",
+  "aggregate.0f49d0766ffe",
+  "about.abf72c05c8c3",
+  "aggregate.bd095dba4c9b",
+  "aggregate.0f220022c1d1",
+  "aggregate.e1a342d69a77",
+  "aggregate.e3a96915a974",
+  "aggregate.4a58701ded6c",
+  "about.1cf4692aef73",
+  "aggregate.fffc292181a9",
+  "about.1b6ac6527654",
+  "aggregate.a35f24ba4b00"
+ ],
+ "elements": {
+  "context.b39f008e318e": {
+   "type": "container",
+   "color": "green",
+   "text": "customer",
+   "x": 40.0,
+   "y": 100.0,
+   "w": 604.0,
+   "h": 345.0
+  },
+  "context.ec99b813fa06": {
+   "type": "container",
+   "color": "green",
+   "text": "inventory",
+   "x": 40.0,
+   "y": 521.0,
+   "w": 604.0,
+   "h": 423.0
+  },
+  "context.abf72c05c8c3": {
+   "type": "container",
+   "color": "green",
+   "text": "revenue",
+   "x": 40.0,
+   "y": 1020.0,
+   "w": 704.0,
+   "h": 711.0
+  },
+  "context.1cf4692aef73": {
+   "type": "container",
+   "color": "green",
+   "text": "pml-web",
+   "x": 40.0,
+   "y": 1807.0,
+   "w": 312.0,
+   "h": 135.0
+  },
+  "context.1b6ac6527654": {
+   "type": "container",
+   "color": "green",
+   "text": "my-paradise",
+   "x": 40.0,
+   "y": 2018.0,
+   "w": 312.0,
+   "h": 135.0
+  },
+  "title": {
+   "type": "text",
+   "x": 40,
+   "y": -36,
+   "text": "Bounded Context Map - Modules Context",
+   "size": "large"
+  },
+  "subtitle": {
+   "type": "text",
+   "x": 40,
+   "y": 20,
+   "text": "Independent modules with one-way dependencies. Arrows point toward the depended-on module (build before). Path nesting = containment; shared base terms live on the parent.",
+   "size": "small",
+   "wrap": 600
+  },
+  "about.b39f008e318e": {
+   "type": "text",
+   "x": 56.0,
+   "y": 112.0,
+   "text": "*bounded context*",
+   "size": "small",
+   "wrap": 572.0
+  },
+  "aggregate.8d4abcf8629d": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "**customer/credentials**\n*aggregate*\n- CredentialsClient\n- CredentialsNode\n- CredentialsRepositoryNode\n- ValidationCode\n- ValidationCodeMessage\n- CredentialsToken\n- CredentialsValidation\n- TemporaryPassword\n- PasswordReset\n- CredentialsException",
+   "kind": "rounded",
+   "size": "small",
+   "textAlign": "left",
+   "x": 56.0,
+   "y": 157.0,
+   "w": 280.0,
+   "h": 276.0
+  },
+  "aggregate.d7d6bf5b6f68": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "**customer/customer-profile**\n*aggregate*\n- CustomerProfileClient\n- CustomerProfileNode\n- CustomerProfileRepositoryNode\n- Identity\n- Address\n- SupportTicket\n- Kyc\n- CustomerProfileException\n- PersonaInquiry",
+   "kind": "rounded",
+   "size": "small",
+   "textAlign": "left",
+   "x": 348.0,
+   "y": 157.0,
+   "w": 280.0,
+   "h": 255.0
+  },
+  "about.ec99b813fa06": {
+   "type": "text",
+   "x": 56.0,
+   "y": 533.0,
+   "text": "*bounded context*",
+   "size": "small",
+   "wrap": 572.0
+  },
+  "aggregate.68971b7d3adc": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "**inventory/numbers**\n*aggregate*\n- NumberInventoryClient\n- NumberInventoryRepositoryNode\n- NumberInventorySearchNode\n- NumberInventoryException\n- TermNumberSearch\n- NumberInventorySearch",
+   "kind": "rounded",
+   "size": "small",
+   "textAlign": "left",
+   "x": 56.0,
+   "y": 578.0,
+   "w": 280.0,
+   "h": 192.0
+  },
+  "aggregate.e85df30af157": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "**inventory/plans**\n*aggregate*\n- PlanClient\n- PlanRepositoryNode\n- PlanNode\n- PlanFeature",
+   "kind": "rounded",
+   "size": "small",
+   "textAlign": "left",
+   "x": 348.0,
+   "y": 578.0,
+   "w": 280.0,
+   "h": 150.0
+  },
+  "aggregate.d575148d3191": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "**inventory/porting**\n*aggregate*\n- PortabilityClient\n- PortabilityRepositoryNode\n- PortabilityNode\n- PortabilityException",
+   "kind": "rounded",
+   "size": "small",
+   "textAlign": "left",
+   "x": 56.0,
+   "y": 782.0,
+   "w": 280.0,
+   "h": 150.0
+  },
+  "aggregate.0f49d0766ffe": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "**inventory/sim**\n*aggregate*\n- SimClient\n- SimNode\n- IccidInventoryRepositoryNode\n- IccidInventoryException",
+   "kind": "rounded",
+   "size": "small",
+   "textAlign": "left",
+   "x": 348.0,
+   "y": 782.0,
+   "w": 280.0,
+   "h": 150.0
+  },
+  "about.abf72c05c8c3": {
+   "type": "text",
+   "x": 56.0,
+   "y": 1032.0,
+   "text": "*bounded context*",
+   "size": "small",
+   "wrap": 672.0
+  },
+  "aggregate.bd095dba4c9b": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "**revenue/billing**\n*aggregate*\n- PaymentMethodClient\n- BillingAccountClient\n- BillingAccountRepositoryNode\n- BillingAccountNode\n- BillingException\n- Invoice\n- PaymentMethod",
+   "kind": "rounded",
+   "size": "small",
+   "textAlign": "left",
+   "x": 56.0,
+   "y": 1077.0,
+   "w": 280.0,
+   "h": 213.0
+  },
+  "aggregate.0f220022c1d1": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "**revenue/payment**\n*aggregate*\n- PaymentClient\n- DeviceWalletMerchantCredentialRepositoryNode\n- CardAuthorization\n- PaymentStatus\n- PaymentException\n- PaymentGateway",
+   "kind": "rounded",
+   "size": "small",
+   "textAlign": "left",
+   "x": 348.0,
+   "y": 1077.0,
+   "w": 380.0,
+   "h": 192.0
+  },
+  "aggregate.e1a342d69a77": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "**revenue/product-order**\n*aggregate*\n- ProductOrderClient\n- ProductOrderRepositoryNode\n- OrderTicket\n- ProductOrderException",
+   "kind": "rounded",
+   "size": "small",
+   "textAlign": "left",
+   "x": 56.0,
+   "y": 1302.0,
+   "w": 280.0,
+   "h": 150.0
+  },
+  "aggregate.e3a96915a974": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "**revenue/subscription**\n*aggregate*\n- CartClient\n- SubscriptionRepositoryNode\n- CartNode\n- CartStep\n- SubscriptionException\n- DataAllowance\n- SubscriptionUsage\n- Cart",
+   "kind": "rounded",
+   "size": "small",
+   "textAlign": "left",
+   "x": 348.0,
+   "y": 1302.0,
+   "w": 280.0,
+   "h": 234.0
+  },
+  "aggregate.4a58701ded6c": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "**revenue/voucher**\n*aggregate*\n- AppliedVoucherClient\n- AppliedVoucherRepositoryNode\n- AppliedVoucherNode\n- VoucherRedemption\n- VoucherTerms",
+   "kind": "rounded",
+   "size": "small",
+   "textAlign": "left",
+   "x": 56.0,
+   "y": 1548.0,
+   "w": 280.0,
+   "h": 171.0
+  },
+  "about.1cf4692aef73": {
+   "type": "text",
+   "x": 56.0,
+   "y": 1819.0,
+   "text": "*bounded context*",
+   "size": "small",
+   "wrap": 280.0
+  },
+  "aggregate.fffc292181a9": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "**pml-web/HttpException**\n*aggregate*",
+   "kind": "rounded",
+   "size": "small",
+   "textAlign": "left",
+   "x": 56.0,
+   "y": 1864.0,
+   "w": 280.0,
+   "h": 66.0
+  },
+  "about.1b6ac6527654": {
+   "type": "text",
+   "x": 56.0,
+   "y": 2030.0,
+   "text": "*bounded context*",
+   "size": "small",
+   "wrap": 280.0
+  },
+  "aggregate.a35f24ba4b00": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "**my-paradise/MyParadiseClient**\n*aggregate*",
+   "kind": "rounded",
+   "size": "small",
+   "textAlign": "left",
+   "x": 56.0,
+   "y": 2075.0,
+   "w": 280.0,
+   "h": 66.0
+  }
+ }
+}

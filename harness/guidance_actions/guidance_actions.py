@@ -151,14 +151,15 @@ class GuidanceArgument:
         named = [self._named(slug) for slug in slugs]
         if not named or None in named:
             return []
-        return [NamedGuidance(guidance, self._listed_format_of(guidance, listed)) for guidance in named]
+        return [NamedGuidance(guidance, format) for guidance in named for format in self._listed_formats_of(guidance, listed)]
 
-    def _listed_format_of(self, guidance: PracticeGuidance | FidelityGuidance, listed: list[str]) -> str:
-        """The first listed format the guidance writes: a stage Run lists the formats of every fidelity it acts on, and
-        each fidelity takes its own. A practice, or a fidelity that writes none of them, takes the first."""
+    def _listed_formats_of(self, guidance: PracticeGuidance | FidelityGuidance, listed: list[str]) -> list[str]:
+        """The listed formats the guidance writes, the action running once for each: a stage Run lists the formats of
+        every fidelity it acts on, and each fidelity takes its own, a diagram both drawio and whiteboard. A practice, or
+        a fidelity that writes none of them, takes the first."""
         outputs = guidance.outputs if isinstance(guidance, FidelityGuidance) else {}
         written = [name for name in listed if name in outputs]
-        return (written or listed or [""])[0]
+        return written or (listed or [""])[:1]
 
     def _item(self, item: Any) -> Any:
         """One Guidance as item names it; none for a string that names none."""
@@ -227,6 +228,9 @@ class WorkList:
         self._listed: list | None = None
         self._practices: list[PracticeGuidance] | None = None
         self._worked_at: dict[PracticeGuidance, FidelityGuidance | None] = {}
+        # Each listed entry's format and the fidelity (or practice) that writes it, by the entry's place in the list:
+        # a fidelity listed once per format, such as a diagram in drawio and in whiteboard, is worked in each in turn.
+        self._formats: list[tuple[Any, str]] = []
 
     @property
     def is_inside(self) -> bool:
@@ -273,8 +277,18 @@ class WorkList:
         if self.text is not None:
             return []
         if self._listed is None:
+            self._formats = []
             self._listed = [self._worked_on(raw) for raw in self._items]
         return self._listed
+
+    def entry(self, index: int) -> Any:
+        """The listed entry at index, its fidelity set to the format that entry names, so a fidelity listed once per
+        format works in each format in turn."""
+        item = self.listed()[index]
+        writer, format = self._formats[index] if index < len(self._formats) else (None, "")
+        if writer is not None and format and writer.format != format:
+            writer.format = format
+        return item
 
     def practice_set(self) -> list[PracticeGuidance]:
         """The practices worked with, made known once: the session's own instances, the ones its graph holds; for no
@@ -319,13 +333,16 @@ class WorkList:
         from raw when it names none of them."""
         named = raw if isinstance(raw, NamedGuidance) else self._own_counterpart(raw)
         if named is None:
+            self._formats.append((None, ""))
             return AgentToolSet.instantiate(self._held(raw))
         practice = named.practice
         fidelity = named.guidance if named.guidance is not practice else practice.fidelities.current
+        writer = fidelity if fidelity is not None else practice
         if named.format:
             # The fidelity chooses the format it is given in its session, so the next action on it works in it without
             # being told: the chosen formats are the session's choice, which every chat and page of the session reads.
-            (fidelity if fidelity is not None else practice).format = named.format
+            writer.format = named.format
+        self._formats.append((writer, named.format))
         if self._session is not None:
             self._session.practice(practice.key)
         self._worked_at[practice] = fidelity
@@ -566,7 +583,7 @@ class GuidanceAction:
         text = self.work.text
         if text is not None:
             return [operation(text)]
-        return [operation(self.at_fidelity(item)) for item in self.listed()]
+        return [operation(self.at_fidelity(self.work.entry(index))) for index in range(len(self.listed()))]
 
     def as_tool(self) -> GuidanceAction:
         """This action as another action's recipe names it: a tool the agent calls, listed by name, rather than its own

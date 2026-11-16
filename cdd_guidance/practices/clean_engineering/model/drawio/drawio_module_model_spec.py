@@ -399,7 +399,7 @@ with description('a Draw.io class diagram'):
 
         with context('with a model large enough for one page per module'):
             with before.all:
-                from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model import CLASSES_ON_ONE_PAGE
+                from cdd_guidance.practices.clean_engineering.model.diagram.class_view import CLASSES_ON_ONE_PAGE
 
                 def two_modules():
                     model = CleanEngineeringModel(name='Shop', sequential_order=1)

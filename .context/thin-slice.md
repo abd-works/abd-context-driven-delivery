@@ -133,49 +133,19 @@ section: body
 - *View Session Files*
 - *Open Validation Report From Violation Count*
 - *Review Session Fidelity*
-- *Open Story Map By Address*
 - *Browse Story Hierarchy*
-- *Pan Workspace Canvas With Right-Click Drag*
-- *Switch Between Map View And Increment View*
-- *Switch Color Mode*
-- *Expand One Story Card*
-- *Expand Descendant Story Cards*
-- *Expand And Collapse Whole Map*
-- *Widen Columns Around Expanded Story Cards*
-- *Add First Epic To Empty Map*
-- *Add Epic, SubEpic, Or Story At Chosen Position*
-- *Remove Epic, SubEpic, Or Story*
-- *Rename Node Inline*
-- *Reorder Sibling Epics, SubEpics, And Stories*
-- *Move Story To A Different SubEpic*
-- *Move SubEpic To A Different Epic*
-- *Drop Node Into Empty Parent*
-- *See Full-Size Drop Preview While Dragging*
-- *Add Increment*
-- *Rename Increment*
-- *Reorder Increments*
-- *Remove Increment*
-- *Assign Story To Increment By Dragging*
-- *Unassign Story From Increment*
-- *Add Scenario Under Story*
-- *Rename Scenario*
-- *Remove Scenario*
-- *Reorder Scenarios*
-- *Add Step*
-- *Edit Step Keyword And Text*
-- *Remove Step*
-- *Reorder Steps*
-- *Add Example To Scenario*
-- *Remove Example From Scenario*
-- *Add Example Field*
-- *Remove Example Field*
-- *Add Example Line*
-- *Edit Example Cell*
-- *Remove Example Line*
-- *Reorder Example Lines*
-- *Save Each Edit To The Server*
-- *Show Save Status*
-- *Refuse Edits That Break Map Rules*
+- *Adjust Workspace View*
+- *Expand And Collapse Story Cards*
+- *Add, Remove And Rename Map Nodes*
+- *Rearrange Map Nodes By Dragging*
+- *Manage Increments*
+- *Manage Increment Stories*
+- *Add, Rename, Remove And Reorder Scenarios*
+- *Add, Edit, Remove And Reorder Steps*
+- *Add And Remove Examples On Scenario*
+- *Add And Remove Example Fields*
+- *Add, Edit, Remove And Reorder Example Lines*
+- *Save Valid Edits And Keep Their History*
 - *Place Pages On The Canvas*
 - *Place Artboards On Their Pages*
 - *Write The Canvas Into A Project Folder*
@@ -269,7 +239,27 @@ section: body
 - *Choose Where A Backlog Item Works*
 - *Choose Session And Practice Roots*
 
-### Increment 1: Maintain Tickets On Board
+### Increment 1: Built - Review Work In Board Files
+
+**Outcome:** a person reads a ticket's context and changed files in a proper viewer, comments on them to the chat, and reads clean reports.
+
+**Slicing notes:** board-enhancements "Files" and the report fixes under "Actions".
+
+**Stories in this increment:**
+
+- *List Ticket Context Files*
+- *Open Session Files From Details*
+- *View Files In Rich Viewer*
+- *Save Edited File*
+- *Add Comment To File Selection*
+- *Send File Comments To Chat*
+- *Browse Ticket Files By Practice*
+- *Mark File Comment Processed*
+- *Show Changed File In Viewer*
+- *Clear Processed File Comments*
+- *Show AI Changes As Diff*
+
+### Increment 2: Built - Maintain Tickets On Board
 
 **Outcome:** a person edits, orders, tags and removes tickets, and arranges them as parents and children.
 
@@ -289,7 +279,7 @@ section: body
 - *Reassign Ticket Parent*
 - *Place Parent At Leftmost Child Stage*
 
-### Increment 2: Integrate Practice Content Editor Apps
+### Increment 3: Built - Integrate Practice Content Editor Apps
 
 **Outcome:** the board and the chat bar open the Story UI editor, the Claude Design story explorer and the Graph app on the ticket's own scope, using what each app already does.
 
@@ -311,7 +301,60 @@ section: body
 - *Show Board's Active Ticket In Story UI*
 - *Save Story Map Edit Through Domain*
 
-### Increment 3: Sync Design Canvas With Production
+### Increment 4: File Manager Complete
+
+**Outcome:** the Files app shows a session's generated work: files and folders or the graph, filtered like the files, opening and comparing several files, with comments sent to the chat.
+
+**Slicing notes:** the file-manager chat's work, the Review Generated Work In File Viewer epic.
+
+**Stories in this increment:**
+
+- *Open Stage Files From Chat Bar*
+- *Open Session Folder From Chat Bar*
+- *Open File From Another Page*
+- *List Files The Link Names*
+- *Open Diagram In Files App*
+- *Open File In File Browser*
+- *Switch File Bar Between Folders And List*
+- *Resize File Bar*
+- *List Only The Files The Branch Changed*
+- *Follow Chat Bar Selection In Files App*
+- *Select Guidance On The Session*
+- *Show Stages In Files App And Chat Bar*
+- *Filter Files By Format In Files App*
+- *Toggle Practice In Files App*
+- *Keep Chat Bar Practices In Sync*
+- *View File In Source View*
+- *Fold Classes And Operations*
+- *Mark Lines A Broken Rule Names*
+- *Browse Files Without Reading Rules*
+- *Save Edited File*
+- *Add Comment To File Selection*
+- *Open Edit And Delete File Comment*
+- *Send File Comments To Chat*
+- *Mark File Comment Processed*
+- *Show Changed File After Comment*
+- *Clear Processed File Comments*
+- *Show AI Changes As Diff*
+- *Add File Or Selection To Chat Context*
+- *Switch Files App To Graph View*
+- *Filter Graph Like The File List*
+- *Open Several Files From Graph Nodes*
+- *Fold Open Files To Selected Nodes*
+- *Expand Practice Tree In Files App*
+- *Follow Relationships Under Node In Files App*
+- *Filter Graph By Node Type And Connector In Files App*
+- *Apply Pattern Overlays In Files App*
+- *Show Graph Load Steps In Files App*
+- *Show Only Violating Nodes In Files App*
+- *See Rules Under Node In Files App*
+- *Open Violation In Files App Source*
+- *Fix Graph Violations From Files App*
+- *Fix Graph Violations From Chat Bar*
+- *Count Session Violations From Live Graph*
+- *Count Fidelity Violations From Live Graph*
+
+### Increment 5: Sync Design Canvas With Production
 
 **Outcome:** a design canvas shows production as it is: every file is proven against the product repo by hash, styles and assets come from one pinned Design System package, each screen mounts the real view, hosted edits come back before the next version, and a screen being redesigned is detached and marked diverged until its change reaches production.
 
@@ -341,7 +384,7 @@ section: body
 - *Mark Detached Screen As Diverged*
 - *Reattach A Screen Once Its Change Reaches Production*
 
-### Increment 4: Integrate Stories With The Canvas Explorer
+### Increment 6: Integrate Stories With The Canvas Explorer
 
 **Outcome:** a person tests a screen against its scenarios from the explorer, and changes stories from the canvas or story-ui with the map updating, both ending in the same story code.
 
@@ -361,10 +404,9 @@ section: body
 - *Refresh Map Artboard From A Data File*
 - *Save Story Map To Story Files*
 - *Comment On A Story In Story UI*
-- *Place Notes On The Story Map*
 - *Rearrange Stories Inside The Canvas*
 
-### Increment 5: Repair Guidance From Mistakes
+### Increment 7: Repair Guidance From Mistakes
 
 **Outcome:** a violation is traced back to the guidance that let it happen and that guidance is fixed, a mistake and its correction are captured as a regression example, and a failed example becomes a new named rule, so each error makes every later run better.
 
@@ -376,7 +418,7 @@ section: body
 - *Improve Guidance From Mistake*
 - *Add Rule From Failed Example*
 
-### Increment 6: Enter Commands Faster
+### Increment 8: Enter Commands Faster
 
 **Outcome:** a person types a CDD command with the actions, practices, fidelities and formats offered as they go.
 
@@ -390,7 +432,7 @@ section: body
 - *Add Comment To Sent Command*
 - *Announce CDD Tool Calls*
 
-### Increment 7: Check Clean Engineering On The Model
+### Increment 9: Check Clean Engineering On The Model
 
 **Outcome:** validating at the Clean Engineering model or code fidelity measures each function, class and module, keeps each measure as a fact on its node, and reports what is past a limit in the same validation report; the same validation finds the problems that only show across files, as graph rules where the graph can answer and as one AI-judged pass over the codebase where it cannot.
 
@@ -406,7 +448,7 @@ section: body
 - *Report One-Class Package*
 - *Judge Clean Engineering Rules Across Files*
 
-### Increment 8: Fully Integrated App Flow
+### Increment 10: Fully Integrated App Flow
 
 **Outcome:** the chat bar, the board, the Story UI editor with its story explorer, and the Graph app work on one ticket together, and violations are read from the latest graph that generate refreshes.
 
@@ -454,27 +496,7 @@ section: body
 - *Test Knowledge Graph Explorer On Session Files*
 - *Display Drawio File As Diagram*
 
-### Increment 9: Review Work In Board Files
-
-**Outcome:** a person reads a ticket's context and changed files in a proper viewer, comments on them to the chat, and reads clean reports.
-
-**Slicing notes:** board-enhancements "Files" and the report fixes under "Actions".
-
-**Stories in this increment:**
-
-- *List Ticket Context Files*
-- *Open Session Files From Details*
-- *View Files In Rich Viewer*
-- *Save Edited File*
-- *Add Comment To File Selection*
-- *Send File Comments To Chat*
-- *Browse Ticket Files By Practice*
-- *Mark File Comment Processed*
-- *Show Changed File In Viewer*
-- *Clear Processed File Comments*
-- *Show AI Changes As Diff*
-
-### Increment 10: Customize Board Workflow
+### Increment 11: Customize Board Workflow
 
 **Outcome:** a team shapes the board's stages, policies, steps and test strategy to its own way of working.
 
@@ -495,7 +517,7 @@ section: body
 - *Choose Testing Strategy*
 - *Toggle Sub Agents*
 
-### Increment 11: Author Story Maps
+### Increment 12: Author Story Maps
 
 **Outcome:** the Story UI editor gets its own remaining stories: dashboard, nested lanes, the node inspector, save history, real-time sessions and AI story changes.
 
@@ -504,21 +526,11 @@ section: body
 **Stories in this increment:**
 
 - *Test Story UI Editor On Session Story Map*
-- *Pick Story Map From Dashboard*
-- *Browse Nested SubEpic Lanes*
-- *Inspect Selected Node Fields*
-- *Show And Hide Scenarios And Examples*
-- *Record One Save Event Per Save*
-- *Browse Save History*
 - *Recover Workspace View State*
-- *Join Real-Time Story Map Session*
-- *Reconcile Concurrent View State Changes*
-- *Open AI Chat Panel*
-- *Request AI Story Change*
-- *Review Proposed Map Changes*
-- *Apply AI Change To Story Map*
+- *Share Real-Time Story Map Session*
+- *Change Story Map With AI*
 
-### Increment 12: Guard Work And Recover Fast
+### Increment 13: Guard Work And Recover Fast
 
 **Outcome:** a person sees at once when cdd is down, fixes it from where they are, and the agent is stopped before it breaks a rule.
 
@@ -538,7 +550,7 @@ section: body
 - *Restart Parts From Chat Bar*
 - *Open App From Health Panel*
 
-### Increment 13: Show Board Quickly
+### Increment 14: Show Board Quickly
 
 **Outcome:** `board.show` stops repeating git checks, guidance parsing and session file reads, so the board and the chat bar answer faster and `space/kanban/kanban_tools_spec.py` runs in under 60 s.
 
@@ -550,7 +562,7 @@ section: body
 - *Cache Practice Guidance By File And Change Time*
 - *Read Session File Once Per Board Build*
 
-### Increment 14: Bring Chat Bar Level With Board
+### Increment 15: Bring Chat Bar Level With Board
 
 **Outcome:** everything a person can do to one session on the board, they can do from the chat bar.
 
@@ -569,7 +581,7 @@ section: body
 - *Push Work From Chat Bar*
 - *Pull Latest From Chat Bar*
 
-### Increment 15: Draw Linked Models On The Canvas
+### Increment 16: Draw Linked Models On The Canvas
 
 **Outcome:** from any story a person reaches its screen, its classes and its bounded context by clicking, and back, and every diagram matches its drawio layout.
 
@@ -586,7 +598,7 @@ section: body
 - *See The Stories That Exercise A Class*
 - *Mark Model Nodes That Fail Rules*
 
-### Increment 16: Suggest The Next Step
+### Increment 17: Suggest The Next Step
 
 **Outcome:** the chat proposes the next command, and captures handoffs, corrections and decisions.
 
@@ -600,7 +612,7 @@ section: body
 - *Offer Correction Log Entry*
 - *Offer Decision Record*
 
-### Increment 17: Maybe Later
+### Increment 18: Maybe Later
 
 **Outcome:** work set aside for now because it is complicated and not needed yet; picked up only when asked.
 

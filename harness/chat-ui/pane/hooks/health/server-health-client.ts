@@ -4,7 +4,7 @@ import type { EngineInterface } from 'claude-code'
 import type { AppData } from '@cdd/harness/diagnostics/app'
 import type { ServerHealthData } from '@cdd/harness/diagnostics/server-health'
 
-import type { HealthViewJson, InstallJson, ServerHealthJson } from '../../types'
+import type { HealthViewJson, InstallJson, ServerHealthJson, TestRunJson, ToastedRunsJson } from '../../types'
 import { showFailure } from '../error-display/failure-client'
 
 // The cdd plugin declares the server, and Claude Code names a plugin's server plugin:{plugin}:{server}.
@@ -28,6 +28,9 @@ const serverHealth = atom({ plugin: 'cdd-board', key: 'serverHealth' } as const,
   attempt: 0,
 } as ServerHealthJson)
 const healthView = atom({ plugin: 'cdd-board', key: 'healthView' } as const, { areDetailsOpen: false } as HealthViewJson)
+const toastedRuns = atom({ plugin: 'cdd-board', key: 'toastedRuns' } as const, { runIds: [] } as ToastedRunsJson)
+// How many toasted runs the chat remembers; older ones have long since been replaced by newer runs.
+const TOASTED_RUNS_KEPT = 20
 const install = atom({ plugin: 'cdd-board', key: 'install' } as const, { state: 'idle', error: null } as InstallJson)
 
 type Answer = Pick<ServerHealthJson, 'connection' | 'report' | 'problem'>
@@ -47,6 +50,16 @@ export class ServerHealthClient {
 
   get isHookServerRunning(): boolean {
     return this.json?.is_hook_server_running ?? false
+  }
+
+  // The latest heavy and e2e run the cdd server ran on main, each that has run.
+  get testRuns(): TestRunJson[] {
+    return ((this.json as { test_runs?: TestRunJson[] } | null)?.test_runs) ?? []
+  }
+
+  // A run that failed after its tier's run before passed: the chat raises a toast for it.
+  get newFailures(): TestRunJson[] {
+    return this.testRuns.filter(run => run.state === 'failed' && run.is_new_failure)
   }
 }
 
@@ -135,6 +148,16 @@ async function recordAnswer($: EngineInterface, answer: Answer): Promise<void> {
   const tools = await $.tool.list()
   const toolCount = tools.filter(tool => tool.name.startsWith(TOOL_PREFIX)).length
   await update($, serverHealth, () => ({ ...answer, toolCount, attempt: 0 }))
+  await toastNewFailures($, new ServerHealthClient(answer.report))
+}
+
+// Each new failure of a scheduled test run is raised once, in the chat that reads the report first after it ends.
+async function toastNewFailures($: EngineInterface, health: ServerHealthClient): Promise<void> {
+  const { runIds } = await read($, toastedRuns)
+  const fresh = health.newFailures.filter(run => !runIds.includes(run.run_id))
+  if (fresh.length === 0) return
+  for (const run of fresh) $.ui.toast(`The scheduled ${run.name} tests failed on main: ${lastLines(run.summary)}`)
+  await update($, toastedRuns, held => ({ runIds: [...held.runIds, ...fresh.map(run => run.run_id)].slice(-TOASTED_RUNS_KEPT) }))
 }
 
 // The cdd home publishes this mod with the command that installs for a chat's folder: the served checkout's install

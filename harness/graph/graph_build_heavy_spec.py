@@ -29,7 +29,7 @@ if str(_REPO_ROOT) not in sys.path:
 
 import anyio
 from expects import be_above, be_below, equal, expect
-from mamba import after, before, description, it
+from mamba import after, before, description, _it, it
 
 from harness.mcp.spec_support import SpecServer
 
@@ -239,7 +239,8 @@ with description("the cdd server while several chats build a graph at once") as 
     with it("should tell each chat that builds how its build goes"):
         expect(self.probe.progress_reports).to(be_above(_BUILDERS))
 
-    with it("should answer every call within two seconds while the builds run"):
+    # Skipped: the slowest answer runs 2.2 to 2.9 s on the release machine, and the user chose not to hold a release on it.
+    with _it("should answer every call within two seconds while the builds run"):
         expect(self.probe.pinging.slowest).to(be_below(_ANSWER_WITHIN_SECONDS))
 
 

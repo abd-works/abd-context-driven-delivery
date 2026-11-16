@@ -1,7 +1,7 @@
 import type { AppData } from '@cdd/harness/diagnostics/app'
 import type { ServerHealthData } from '@cdd/harness/diagnostics/server-health'
 
-import type { AppOpeningJson, InstallJson, ServerHealthJson } from '../../types'
+import type { AppOpeningJson, InstallJson, ServerHealthJson, TestRunJson } from '../../types'
 import { BRAND } from '../shared/brand'
 import { RECONNECT_TRIES, REPORT_TOOL, SERVER, ServerHealthClient } from './server-health-client'
 
@@ -12,7 +12,8 @@ import { RECONNECT_TRIES, REPORT_TOOL, SERVER, ServerHealthClient } from './serv
 // cannot work without, stopped.
 export type Part = { icon: string; label: string; value: string; isUp: boolean; isDown?: boolean; app?: string }
 
-// A part shows as its icon alone: green while it runs, red when the MCP host is down, grey while an app does not run.
+// A part shows as its icon alone: green while it runs or passed, red when the MCP host is down or a scheduled test run
+// failed, grey while an app does not run or a test run has not ended.
 export function colourOf(part: Part): string {
   if (part.isUp) return BRAND.success
   return part.isDown ? BRAND.error : BRAND.muted
@@ -41,12 +42,21 @@ function hostPartOf({ connection, toolCount }: ServerHealthJson): Part {
   return { icon: '⬢', label: 'MCP host', value, isUp, isDown: connection === 'disconnected' }
 }
 
+// A scheduled test tier reads how its latest run on main ended: Heavy tests: passed, started 2026-11-15T12:00. It is
+// green once passed, red once failed, and grey while it runs or was abandoned.
+function testRunPartOf(run: TestRunJson): Part {
+  const label = `${run.name === 'e2e' ? 'E2e' : 'Heavy'} tests`
+  return { icon: run.name === 'e2e' ? '◎' : '◉', label, value: `${run.state}, started ${run.started.slice(0, 16)}`, isUp: run.state === 'passed', isDown: run.state === 'failed' }
+}
+
 export function partsOf(health: ServerHealthJson): Part[] {
-  const { apps, isHookServerRunning: isHookRunning } = new ServerHealthClient(health.report as ServerHealthData | null)
+  const client = new ServerHealthClient(health.report as ServerHealthData | null)
+  const { apps, isHookServerRunning: isHookRunning } = client
   return [
     hostPartOf(health),
     ...apps.map(appPartOf),
     { icon: '↪', label: 'Hook server', value: isHookRunning ? 'running' : 'not installed', isUp: isHookRunning },
+    ...client.testRuns.map(testRunPartOf),
   ]
 }
 

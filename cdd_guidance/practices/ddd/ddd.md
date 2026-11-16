@@ -73,6 +73,7 @@ stage: discovery
 clean_engineering: modules
 outputs:
   markdown: ".context/bounded-context-map.md"
+  whiteboard: ".context/bounded-context-map.whiteboard"
 ```
 
 #### Overview
@@ -169,6 +170,7 @@ outputs:
   typescript: "{bounded_context}/{aggregate}/{aggregate}.ts"
   markdown: ".context/domain-model.md"
   drawio: ".context/domain-model.drawio"
+  whiteboard: ".context/domain-model.whiteboard"
 ```
 
 #### Overview

@@ -1,0 +1,1045 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 60 68036.0 4755.0" width="17009" height="1189" font-family="Helvetica">
+<rect x="0" y="60" width="68036.0" height="4755.0" fill="#fafafa"/>
+<rect x="20.0" y="307.0" width="67976.0" height="160.0" fill="#f5f5f5" stroke="#999" stroke-width="2"/>
+<text x="28.0" y="297.0" font-size="22" font-weight="bold">Built Today</text>
+<rect x="20.0" y="543.0" width="67976.0" height="160.0" fill="#f5f5f5" stroke="#999" stroke-width="2"/>
+<text x="28.0" y="533.0" font-size="22" font-weight="bold">Built - Review Work In Board Files</text>
+<rect x="20.0" y="779.0" width="67976.0" height="160.0" fill="#f5f5f5" stroke="#999" stroke-width="2"/>
+<text x="28.0" y="769.0" font-size="22" font-weight="bold">Built - Maintain Tickets On Board</text>
+<rect x="20.0" y="1015.0" width="67976.0" height="160.0" fill="#f5f5f5" stroke="#999" stroke-width="2"/>
+<text x="28.0" y="1005.0" font-size="22" font-weight="bold">Built - Integrate Practice Content Editor Apps</text>
+<rect x="20.0" y="1251.0" width="67976.0" height="160.0" fill="#f5f5f5" stroke="#999" stroke-width="2"/>
+<text x="28.0" y="1241.0" font-size="22" font-weight="bold">File Manager Complete</text>
+<rect x="20.0" y="1487.0" width="67976.0" height="160.0" fill="#f5f5f5" stroke="#999" stroke-width="2"/>
+<text x="28.0" y="1477.0" font-size="22" font-weight="bold">Sync Design Canvas With Production</text>
+<rect x="20.0" y="1723.0" width="67976.0" height="160.0" fill="#f5f5f5" stroke="#999" stroke-width="2"/>
+<text x="28.0" y="1713.0" font-size="22" font-weight="bold">Integrate Stories With The Canvas Explorer</text>
+<rect x="20.0" y="1959.0" width="67976.0" height="160.0" fill="#f5f5f5" stroke="#999" stroke-width="2"/>
+<text x="28.0" y="1949.0" font-size="22" font-weight="bold">Repair Guidance From Mistakes</text>
+<rect x="20.0" y="2195.0" width="67976.0" height="160.0" fill="#f5f5f5" stroke="#999" stroke-width="2"/>
+<text x="28.0" y="2185.0" font-size="22" font-weight="bold">Enter Commands Faster</text>
+<rect x="20.0" y="2431.0" width="67976.0" height="160.0" fill="#f5f5f5" stroke="#999" stroke-width="2"/>
+<text x="28.0" y="2421.0" font-size="22" font-weight="bold">Check Clean Engineering On The Model</text>
+<rect x="20.0" y="2667.0" width="67976.0" height="160.0" fill="#f5f5f5" stroke="#999" stroke-width="2"/>
+<text x="28.0" y="2657.0" font-size="22" font-weight="bold">Fully Integrated App Flow</text>
+<rect x="20.0" y="2903.0" width="67976.0" height="160.0" fill="#f5f5f5" stroke="#999" stroke-width="2"/>
+<text x="28.0" y="2893.0" font-size="22" font-weight="bold">Customize Board Workflow</text>
+<rect x="20.0" y="3139.0" width="67976.0" height="160.0" fill="#f5f5f5" stroke="#999" stroke-width="2"/>
+<text x="28.0" y="3129.0" font-size="22" font-weight="bold">Author Story Maps</text>
+<rect x="20.0" y="3375.0" width="67976.0" height="160.0" fill="#f5f5f5" stroke="#999" stroke-width="2"/>
+<text x="28.0" y="3365.0" font-size="22" font-weight="bold">Guard Work And Recover Fast</text>
+<rect x="20.0" y="3611.0" width="67976.0" height="160.0" fill="#f5f5f5" stroke="#999" stroke-width="2"/>
+<text x="28.0" y="3601.0" font-size="22" font-weight="bold">Show Board Quickly</text>
+<rect x="20.0" y="3847.0" width="67976.0" height="160.0" fill="#f5f5f5" stroke="#999" stroke-width="2"/>
+<text x="28.0" y="3837.0" font-size="22" font-weight="bold">Bring Chat Bar Level With Board</text>
+<rect x="20.0" y="4083.0" width="67976.0" height="160.0" fill="#f5f5f5" stroke="#999" stroke-width="2"/>
+<text x="28.0" y="4073.0" font-size="22" font-weight="bold">Draw Linked Models On The Canvas</text>
+<rect x="20.0" y="4319.0" width="67976.0" height="160.0" fill="#f5f5f5" stroke="#999" stroke-width="2"/>
+<text x="28.0" y="4309.0" font-size="22" font-weight="bold">Suggest The Next Step</text>
+<rect x="20.0" y="4555.0" width="67976.0" height="160.0" fill="#f5f5f5" stroke="#999" stroke-width="2"/>
+<text x="28.0" y="4545.0" font-size="22" font-weight="bold">Maybe Later</text>
+<rect x="20.0" y="120.0" width="3536.0" height="60.0" rx="8" fill="#e1d5e7" stroke="#666"/>
+<text x="26.0" y="142.0" font-size="16">Register And Install Too</text>
+<rect x="20.0" y="195.0" width="924.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="26.0" y="217.0" font-size="16">Register Agent Toolsets</text>
+<rect x="952.0" y="195.0" width="1108.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="958.0" y="217.0" font-size="16">Register Guidance And Ac</text>
+<rect x="2068.0" y="195.0" width="740.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="2074.0" y="217.0" font-size="16">Install Markdown Files</text>
+<rect x="2816.0" y="195.0" width="740.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="2822.0" y="217.0" font-size="16">Install MCP And Hook Man</text>
+<rect x="3564.0" y="120.0" width="4860.0" height="60.0" rx="8" fill="#e1d5e7" stroke="#666"/>
+<text x="3570.0" y="142.0" font-size="16">Deliver Work With Contex</text>
+<rect x="3564.0" y="195.0" width="740.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="3570.0" y="217.0" font-size="16">Invoke Guidance Through </text>
+<rect x="4312.0" y="195.0" width="924.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="4318.0" y="217.0" font-size="16">Turn Source Material Int</text>
+<rect x="5244.0" y="195.0" width="740.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="5250.0" y="217.0" font-size="16">Shape The Solution With </text>
+<rect x="5992.0" y="195.0" width="740.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="5998.0" y="217.0" font-size="16">Produce Formal Artifacts</text>
+<rect x="6740.0" y="195.0" width="556.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="6746.0" y="217.0" font-size="16">Check Artifacts Against </text>
+<rect x="7304.0" y="195.0" width="188.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="7310.0" y="217.0" font-size="16">Deliver Work With Overla</text>
+<rect x="7500.0" y="195.0" width="924.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="7506.0" y="217.0" font-size="16">Inject Guidance Into Cha</text>
+<rect x="8432.0" y="120.0" width="12428.0" height="60.0" rx="8" fill="#e1d5e7" stroke="#666"/>
+<text x="8438.0" y="142.0" font-size="16">Move Work Forward On Ses</text>
+<rect x="8432.0" y="195.0" width="740.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="8438.0" y="217.0" font-size="16">Check CDD Server Health </text>
+<rect x="9180.0" y="195.0" width="1476.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="9186.0" y="217.0" font-size="16">See Work On Session Boar</text>
+<rect x="10664.0" y="195.0" width="1660.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="10670.0" y="217.0" font-size="16">Steer Ticket Sessions</text>
+<rect x="12332.0" y="195.0" width="740.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="12338.0" y="217.0" font-size="16">Maintain Tickets</text>
+<rect x="13080.0" y="195.0" width="1108.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="13086.0" y="217.0" font-size="16">Organize Ticket Hierarch</text>
+<rect x="14196.0" y="195.0" width="1476.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="14202.0" y="217.0" font-size="16">Guide Work Through Pract</text>
+<rect x="15680.0" y="195.0" width="1844.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="15686.0" y="217.0" font-size="16">Customize Board Workflow</text>
+<rect x="17532.0" y="195.0" width="556.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="17538.0" y="217.0" font-size="16">Show Board Quickly</text>
+<rect x="18096.0" y="195.0" width="2764.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="18102.0" y="217.0" font-size="16">Work Fidelity Outputs On</text>
+<rect x="20868.0" y="120.0" width="6516.0" height="60.0" rx="8" fill="#e1d5e7" stroke="#666"/>
+<text x="20874.0" y="142.0" font-size="16">Move Work Forward From C</text>
+<rect x="20868.0" y="195.0" width="740.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="20874.0" y="217.0" font-size="16">Check CDD Server Health </text>
+<rect x="21616.0" y="195.0" width="1292.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="21622.0" y="217.0" font-size="16">See Work In Chat Bar</text>
+<rect x="22916.0" y="195.0" width="740.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="22922.0" y="217.0" font-size="16">Steer Sessions</text>
+<rect x="23664.0" y="195.0" width="924.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="23670.0" y="217.0" font-size="16">Guide Work Through Pract</text>
+<rect x="24596.0" y="195.0" width="1476.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="24602.0" y="217.0" font-size="16">Work Fidelity Outputs In</text>
+<rect x="26080.0" y="195.0" width="556.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="26086.0" y="217.0" font-size="16">Enter CDD Commands Faste</text>
+<rect x="26644.0" y="195.0" width="740.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="26650.0" y="217.0" font-size="16">Guard Work Against Rules</text>
+<rect x="27392.0" y="120.0" width="8172.0" height="60.0" rx="8" fill="#e1d5e7" stroke="#666"/>
+<text x="27398.0" y="142.0" font-size="16">Review Generated Work In</text>
+<rect x="27392.0" y="195.0" width="1292.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="27398.0" y="217.0" font-size="16">Open Files In Files App</text>
+<rect x="28692.0" y="195.0" width="1476.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="28698.0" y="217.0" font-size="16">Filter Files In Files Ap</text>
+<rect x="30176.0" y="195.0" width="924.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="30182.0" y="217.0" font-size="16">View Files In Source Vie</text>
+<rect x="31108.0" y="195.0" width="1476.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="31114.0" y="217.0" font-size="16">Review Files With Commen</text>
+<rect x="32592.0" y="195.0" width="740.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="32598.0" y="217.0" font-size="16">Switch Files App Between</text>
+<rect x="33340.0" y="195.0" width="924.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="33346.0" y="217.0" font-size="16">Explore Graph In Files A</text>
+<rect x="34272.0" y="195.0" width="1292.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="34278.0" y="217.0" font-size="16">Review Graph Violations </text>
+<rect x="35572.0" y="120.0" width="3008.0" height="60.0" rx="8" fill="#e1d5e7" stroke="#666"/>
+<text x="35578.0" y="142.0" font-size="16">Author Story Maps</text>
+<rect x="35572.0" y="195.0" width="372.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="35578.0" y="217.0" font-size="16">View Story Map</text>
+<rect x="35952.0" y="195.0" width="924.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="35958.0" y="217.0" font-size="16">Build, Expand, Rearrange</text>
+<rect x="36884.0" y="195.0" width="372.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="36890.0" y="217.0" font-size="16">Author Scenarios And Ste</text>
+<rect x="37264.0" y="195.0" width="556.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="37270.0" y="217.0" font-size="16">Author Examples</text>
+<rect x="37828.0" y="195.0" width="556.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="37834.0" y="217.0" font-size="16">Save And Share Changes</text>
+<rect x="38392.0" y="195.0" width="188.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="38398.0" y="217.0" font-size="16">Author Story Changes Wit</text>
+<rect x="38588.0" y="120.0" width="3352.0" height="60.0" rx="8" fill="#e1d5e7" stroke="#666"/>
+<text x="38594.0" y="142.0" font-size="16">Explore Stories In Story</text>
+<rect x="38588.0" y="195.0" width="740.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="38594.0" y="217.0" font-size="16">Show Screen Frames In St</text>
+<rect x="39336.0" y="195.0" width="924.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="39342.0" y="217.0" font-size="16">Navigate The Story Tree</text>
+<rect x="40268.0" y="195.0" width="740.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="40274.0" y="217.0" font-size="16">Play Stories In The Expl</text>
+<rect x="41016.0" y="195.0" width="924.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="41022.0" y="217.0" font-size="16">Frame Design Canvas Scre</text>
+<rect x="41948.0" y="120.0" width="10564.0" height="60.0" rx="8" fill="#e1d5e7" stroke="#666"/>
+<text x="41954.0" y="142.0" font-size="16">Build Design Canvas Scre</text>
+<rect x="41948.0" y="195.0" width="1108.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="41954.0" y="217.0" font-size="16">Lay Out The Canvas Files</text>
+<rect x="43064.0" y="195.0" width="1292.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="43070.0" y="217.0" font-size="16">Load Scenario Fixtures W</text>
+<rect x="44364.0" y="195.0" width="740.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="44370.0" y="217.0" font-size="16">Start A Canvas Version</text>
+<rect x="45112.0" y="195.0" width="924.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="45118.0" y="217.0" font-size="16">Publish And Release A Ca</text>
+<rect x="46044.0" y="195.0" width="3868.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="46050.0" y="217.0" font-size="16">Reuse Production Assets </text>
+<rect x="49920.0" y="195.0" width="1108.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="49926.0" y="217.0" font-size="16">Check Screens Against Th</text>
+<rect x="51036.0" y="195.0" width="1476.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="51042.0" y="217.0" font-size="16">Draw Linked Models On Th</text>
+<rect x="52520.0" y="120.0" width="11324.0" height="60.0" rx="8" fill="#e1d5e7" stroke="#666"/>
+<text x="52526.0" y="142.0" font-size="16">Map Work Into Knowledge </text>
+<rect x="52520.0" y="195.0" width="1660.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="52526.0" y="217.0" font-size="16">Load And Save Graph</text>
+<rect x="54188.0" y="195.0" width="1660.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="54194.0" y="217.0" font-size="16">Build Practice Trees Fro</text>
+<rect x="55856.0" y="195.0" width="924.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="55862.0" y="217.0" font-size="16">Apply Pattern Overlays</text>
+<rect x="56788.0" y="195.0" width="1660.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="56794.0" y="217.0" font-size="16">Explore Graph In Graph A</text>
+<rect x="58456.0" y="195.0" width="1108.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="58462.0" y="217.0" font-size="16">Filter Graph In Graph Ap</text>
+<rect x="59572.0" y="195.0" width="924.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="59578.0" y="217.0" font-size="16">Find Nodes For Agent</text>
+<rect x="60504.0" y="195.0" width="1292.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="60510.0" y="217.0" font-size="16">Check Nodes Against Grap</text>
+<rect x="61804.0" y="195.0" width="740.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="61810.0" y="217.0" font-size="16">Review Violations In Gra</text>
+<rect x="62552.0" y="195.0" width="1292.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="62558.0" y="217.0" font-size="16">Report Graph Rules In Va</text>
+<rect x="63852.0" y="120.0" width="972.0" height="60.0" rx="8" fill="#e1d5e7" stroke="#666"/>
+<text x="63858.0" y="142.0" font-size="16">Draw Practice Models On </text>
+<rect x="63852.0" y="195.0" width="188.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="63858.0" y="217.0" font-size="16">Lay Out Shared Whiteboar</text>
+<rect x="64048.0" y="195.0" width="188.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="64054.0" y="217.0" font-size="16">Render Practice Models T</text>
+<rect x="64244.0" y="195.0" width="188.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="64250.0" y="217.0" font-size="16">Publish Board To Claude</text>
+<rect x="64440.0" y="195.0" width="188.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="64446.0" y="217.0" font-size="16">Load Whiteboard Into Pra</text>
+<rect x="64636.0" y="195.0" width="188.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="64642.0" y="217.0" font-size="16">Choose Whiteboard Format</text>
+<rect x="64832.0" y="120.0" width="3156.0" height="60.0" rx="8" fill="#e1d5e7" stroke="#666"/>
+<text x="64838.0" y="142.0" font-size="16">Connect Sessions Across </text>
+<rect x="64832.0" y="195.0" width="924.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="64838.0" y="217.0" font-size="16">Connect Chat Bar Board A</text>
+<rect x="65764.0" y="195.0" width="924.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="65770.0" y="217.0" font-size="16">Check Work In Generate</text>
+<rect x="66696.0" y="195.0" width="1292.0" height="60.0" rx="8" fill="#d5e8d4" stroke="#666"/>
+<text x="66702.0" y="217.0" font-size="16">Change Stories From Canv</text>
+<rect x="32.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="38.0" y="353.0" font-size="13">Register Agent Toolsets</text>
+<rect x="216.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="222.0" y="353.0" font-size="13">Register Agent Operation</text>
+<rect x="400.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="406.0" y="353.0" font-size="13">Register Agent Tools</text>
+<rect x="584.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="590.0" y="353.0" font-size="13">Register Agent Instructi</text>
+<rect x="768.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="774.0" y="353.0" font-size="13">Validate Instruction Bod</text>
+<rect x="964.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="970.0" y="353.0" font-size="13">Register Guidance</text>
+<rect x="1148.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="1154.0" y="353.0" font-size="13">Register Fidelities</text>
+<rect x="1332.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="1338.0" y="353.0" font-size="13">Register Action Tools</text>
+<rect x="1516.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="1522.0" y="353.0" font-size="13">Register Action Prompt</text>
+<rect x="1700.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="1706.0" y="353.0" font-size="13">Build Instruction Expans</text>
+<rect x="1884.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="1890.0" y="353.0" font-size="13">Collect Deferred Tools</text>
+<rect x="2080.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="2086.0" y="353.0" font-size="13">Publish Markdown Files</text>
+<rect x="2264.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="2270.0" y="353.0" font-size="13">Publish Guidance Files</text>
+<rect x="2448.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="2454.0" y="353.0" font-size="13">Publish Action Command</text>
+<rect x="2632.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="2638.0" y="353.0" font-size="13">Store Install State</text>
+<rect x="2828.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="2834.0" y="353.0" font-size="13">Record Mcp Operation</text>
+<rect x="3012.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="3018.0" y="353.0" font-size="13">Publish Mcp Manifest</text>
+<rect x="3196.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="3202.0" y="353.0" font-size="13">Register Hook Event</text>
+<rect x="3380.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="3386.0" y="353.0" font-size="13">Publish Hooks Manifest</text>
+<rect x="3576.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="3582.0" y="353.0" font-size="13">Compose Practice Action </text>
+<rect x="3760.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="3766.0" y="353.0" font-size="13">Load Practice Fidelity I</text>
+<rect x="3944.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="3950.0" y="353.0" font-size="13">Call CDD Tool Through MC</text>
+<rect x="4128.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="4134.0" y="353.0" font-size="13">Guide Output With Matchi</text>
+<rect x="4324.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="4330.0" y="353.0" font-size="13">Index Source Into Lens S</text>
+<rect x="4508.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="4514.0" y="353.0" font-size="13">Add Lens To Existing Ind</text>
+<rect x="4692.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="4698.0" y="353.0" font-size="13">Describe Existing Artifa</text>
+<rect x="4876.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="4882.0" y="353.0" font-size="13">Capture Documents Into S</text>
+<rect x="5060.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="5066.0" y="353.0" font-size="13">Capture Live App Context</text>
+<rect x="5256.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="5262.0" y="353.0" font-size="13">Grill Plan Against Conte</text>
+<rect x="5440.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="5446.0" y="353.0" font-size="13">Sketch Rough Draft</text>
+<rect x="5624.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="5630.0" y="353.0" font-size="13">Iterate One Slice At A T</text>
+<rect x="5808.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="5814.0" y="353.0" font-size="13">Record Context Decision</text>
+<rect x="6004.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="6010.0" y="353.0" font-size="13">Generate Fidelity Artifa</text>
+<rect x="6188.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="6194.0" y="353.0" font-size="13">Render Artifact Into Ano</text>
+<rect x="6372.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="6378.0" y="353.0" font-size="13">Generate From Previous F</text>
+<rect x="6556.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="6562.0" y="353.0" font-size="13">Generate Several Practic</text>
+<rect x="6752.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="6758.0" y="353.0" font-size="13">Validate Artifact Agains</text>
+<rect x="6936.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="6942.0" y="353.0" font-size="13">Satisfy Violations Until</text>
+<rect x="7512.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="7518.0" y="353.0" font-size="13">Start CDD Server On Sess</text>
+<rect x="7696.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="7702.0" y="353.0" font-size="13">Inject Action Rules Afte</text>
+<rect x="7880.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="7886.0" y="353.0" font-size="13">Inject Practice Rules Af</text>
+<rect x="8064.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="8070.0" y="353.0" font-size="13">Announce Running Action </text>
+<rect x="8248.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="8254.0" y="353.0" font-size="13">Log Prompts And Tool Cal</text>
+<rect x="8444.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="8450.0" y="353.0" font-size="13">Display Board Server Hea</text>
+<rect x="8628.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="8634.0" y="353.0" font-size="13">Update Board And CDD</text>
+<rect x="9192.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="9198.0" y="353.0" font-size="13">Open Board</text>
+<rect x="9376.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="9382.0" y="353.0" font-size="13">Display Board</text>
+<rect x="9560.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="9566.0" y="353.0" font-size="13">Arrange Board And Detail</text>
+<rect x="9744.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="9750.0" y="353.0" font-size="13">Display Backlog Items As</text>
+<rect x="9928.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="9934.0" y="353.0" font-size="13">Display Ticket Card</text>
+<rect x="10112.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="10118.0" y="353.0" font-size="13">Display Ticket Details</text>
+<rect x="10296.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="10302.0" y="353.0" font-size="13">Set Stage WIP Limit</text>
+<rect x="10480.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="10486.0" y="353.0" font-size="13">Arrange Side Panel</text>
+<rect x="10676.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="10682.0" y="353.0" font-size="13">Open Ticket Session</text>
+<rect x="10860.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="10866.0" y="353.0" font-size="13">Activate Ticket</text>
+<rect x="11044.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="11050.0" y="353.0" font-size="13">Close Active Session</text>
+<rect x="11228.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="11234.0" y="353.0" font-size="13">Move Ticket</text>
+<rect x="11412.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="11418.0" y="353.0" font-size="13">Write Ticket Handoff</text>
+<rect x="11596.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="11602.0" y="353.0" font-size="13">Display Latest Handoff</text>
+<rect x="11780.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="11786.0" y="353.0" font-size="13">Restrict Actions To Acti</text>
+<rect x="11964.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="11970.0" y="353.0" font-size="13">Open Ticket Chat On Sess</text>
+<rect x="12148.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="12154.0" y="353.0" font-size="13">Choose Where A Backlog I</text>
+<rect x="12344.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="12350.0" y="353.0" font-size="13">Add Backlog Item</text>
+<rect x="12528.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="12534.0" y="353.0" font-size="13">Archive Ticket</text>
+<rect x="13092.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="13098.0" y="353.0" font-size="13">Split Ticket Into Child </text>
+<rect x="14208.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="14214.0" y="353.0" font-size="13">Display Fidelity Progres</text>
+<rect x="14392.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="14398.0" y="353.0" font-size="13">Open Practice Tile</text>
+<rect x="14576.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="14582.0" y="353.0" font-size="13">Choose Ticket Practices</text>
+<rect x="14760.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="14766.0" y="353.0" font-size="13">Send Next Fidelity Actio</text>
+<rect x="14944.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="14950.0" y="353.0" font-size="13">Send Action To Stage Pra</text>
+<rect x="15128.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="15134.0" y="353.0" font-size="13">Mark Ticket Done In Stag</text>
+<rect x="15312.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="15318.0" y="353.0" font-size="13">Open Help</text>
+<rect x="15496.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="15502.0" y="353.0" font-size="13">Choose Session And Pract</text>
+<rect x="18108.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="18114.0" y="353.0" font-size="13">Choose Action And Format</text>
+<rect x="18292.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="18298.0" y="353.0" font-size="13">Resolve Fidelity Output </text>
+<rect x="18476.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="18482.0" y="353.0" font-size="13">Generate Fidelity Output</text>
+<rect x="18660.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="18666.0" y="353.0" font-size="13">Render Fidelity Format</text>
+<rect x="18844.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="18850.0" y="353.0" font-size="13">Send Tile Action To Chat</text>
+<rect x="19028.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="19034.0" y="353.0" font-size="13">Validate Fidelity</text>
+<rect x="19212.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="19218.0" y="353.0" font-size="13">Save Validation Report</text>
+<rect x="19396.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="19402.0" y="353.0" font-size="13">Open Validation Report</text>
+<rect x="19580.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="19586.0" y="353.0" font-size="13">Fix Report Violations</text>
+<rect x="19764.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="19770.0" y="353.0" font-size="13">Display Violations Band</text>
+<rect x="19948.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="19954.0" y="353.0" font-size="13">List Ticket Files</text>
+<rect x="20132.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="20138.0" y="353.0" font-size="13">View Fidelity Files</text>
+<rect x="20316.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="20322.0" y="353.0" font-size="13">Display Report Without H</text>
+<rect x="20500.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="20506.0" y="353.0" font-size="13">Display Report Errors In</text>
+<rect x="20684.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="20690.0" y="353.0" font-size="13">Refactor Knowledge Graph</text>
+<rect x="20880.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="20886.0" y="353.0" font-size="13">Display Server Health Ma</text>
+<rect x="21064.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="21070.0" y="353.0" font-size="13">Open Server Health Panel</text>
+<rect x="21248.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="21254.0" y="353.0" font-size="13">Reconnect CDD Server</text>
+<rect x="21432.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="21438.0" y="353.0" font-size="13">Reinstall CDD Tools</text>
+<rect x="21628.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="21634.0" y="353.0" font-size="13">Open Board From Chat</text>
+<rect x="21812.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="21818.0" y="353.0" font-size="13">Display Stage Strip</text>
+<rect x="21996.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="22002.0" y="353.0" font-size="13">Display Session Fidelity</text>
+<rect x="22180.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="22186.0" y="353.0" font-size="13">Display Stage Fidelities</text>
+<rect x="22364.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="22370.0" y="353.0" font-size="13">Display Session Card</text>
+<rect x="22548.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="22554.0" y="353.0" font-size="13">Show Active Session On S</text>
+<rect x="22732.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="22738.0" y="353.0" font-size="13">Add Active Ticket To Sys</text>
+<rect x="22928.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="22934.0" y="353.0" font-size="13">Create New Session</text>
+<rect x="23112.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="23118.0" y="353.0" font-size="13">Open Session</text>
+<rect x="23296.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="23302.0" y="353.0" font-size="13">Write Session Handoff</text>
+<rect x="23480.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="23486.0" y="353.0" font-size="13">Close Session From Chat </text>
+<rect x="23676.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="23682.0" y="353.0" font-size="13">Move Session To Next Sta</text>
+<rect x="24608.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="24614.0" y="353.0" font-size="13">Select Fidelity</text>
+<rect x="24792.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="24798.0" y="353.0" font-size="13">Choose Action</text>
+<rect x="24976.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="24982.0" y="353.0" font-size="13">Generate Session Fidelit</text>
+<rect x="25160.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="25166.0" y="353.0" font-size="13">Resolve Session Fidelity</text>
+<rect x="25344.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="25350.0" y="353.0" font-size="13">Fill Prompt With Fidelit</text>
+<rect x="25528.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="25534.0" y="353.0" font-size="13">Open Validation Report F</text>
+<rect x="25712.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="25718.0" y="353.0" font-size="13">Select Several Fidelitie</text>
+<rect x="25896.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="25902.0" y="353.0" font-size="13">Choose Format</text>
+<rect x="35584.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="35590.0" y="353.0" font-size="13">Browse Story Hierarchy</text>
+<rect x="35768.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="35774.0" y="353.0" font-size="13">Adjust Workspace View</text>
+<rect x="35964.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="35970.0" y="353.0" font-size="13">Expand And Collapse Stor</text>
+<rect x="36148.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="36154.0" y="353.0" font-size="13">Add, Remove And Rename M</text>
+<rect x="36332.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="36338.0" y="353.0" font-size="13">Rearrange Map Nodes By D</text>
+<rect x="36516.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="36522.0" y="353.0" font-size="13">Manage Increments</text>
+<rect x="36700.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="36706.0" y="353.0" font-size="13">Manage Increment Stories</text>
+<rect x="36896.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="36902.0" y="353.0" font-size="13">Add, Rename, Remove And </text>
+<rect x="37080.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="37086.0" y="353.0" font-size="13">Add, Edit, Remove And Re</text>
+<rect x="37276.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="37282.0" y="353.0" font-size="13">Add And Remove Examples </text>
+<rect x="37460.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="37466.0" y="353.0" font-size="13">Add And Remove Example F</text>
+<rect x="37644.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="37650.0" y="353.0" font-size="13">Add, Edit, Remove And Re</text>
+<rect x="37840.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="37846.0" y="353.0" font-size="13">Save Valid Edits And Kee</text>
+<rect x="41960.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="41966.0" y="353.0" font-size="13">Place Pages On The Canva</text>
+<rect x="42144.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="42150.0" y="353.0" font-size="13">Place Artboards On Their</text>
+<rect x="42328.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="42334.0" y="353.0" font-size="13">Write The Canvas Into A </text>
+<rect x="42512.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="42518.0" y="353.0" font-size="13">Name An Imported Screen </text>
+<rect x="42696.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="42702.0" y="353.0" font-size="13">Give Each Prototype Scre</text>
+<rect x="42880.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="42886.0" y="353.0" font-size="13">Place A Read-Only Story </text>
+<rect x="43076.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="43082.0" y="353.0" font-size="13">Load A Scenario Into A S</text>
+<rect x="43260.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="43266.0" y="353.0" font-size="13">Load The Explorer&#x27;s Scen</text>
+<rect x="43444.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="43450.0" y="353.0" font-size="13">Pick Another Scenario Fr</text>
+<rect x="43628.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="43634.0" y="353.0" font-size="13">Paste Dev Seed Data Into</text>
+<rect x="43812.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="43818.0" y="353.0" font-size="13">Follow A Screen Link To </text>
+<rect x="43996.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="44002.0" y="353.0" font-size="13">Edit A Screen On Its Own</text>
+<rect x="44180.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="44186.0" y="353.0" font-size="13">Report Where The Screen&#x27;</text>
+<rect x="44376.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="44382.0" y="353.0" font-size="13">Start The First Version</text>
+<rect x="44560.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="44566.0" y="353.0" font-size="13">Start The Next Version A</text>
+<rect x="44744.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="44750.0" y="353.0" font-size="13">Write Into The Version N</text>
+<rect x="44928.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="44934.0" y="353.0" font-size="13">Refuse To Add To A Publi</text>
+<rect x="45124.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="45130.0" y="353.0" font-size="13">Title A Published Canvas</text>
+<rect x="45308.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="45314.0" y="353.0" font-size="13">Record Each Version&#x27;s Pu</text>
+<rect x="45492.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="45498.0" y="353.0" font-size="13">Keep A Published Version</text>
+<rect x="45676.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="45682.0" y="353.0" font-size="13">Start Numbering Again Fr</text>
+<rect x="45860.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="45866.0" y="353.0" font-size="13">Find A Release&#x27;s Canvas </text>
+<rect x="52532.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="52538.0" y="353.0" font-size="13">Load Working Copy Into G</text>
+<rect x="52716.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="52722.0" y="353.0" font-size="13">Reuse Saved Graph</text>
+<rect x="52900.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="52906.0" y="353.0" font-size="13">Rebuild Graph After Sour</text>
+<rect x="53084.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="53090.0" y="353.0" font-size="13">Force Graph Reload</text>
+<rect x="53268.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="53274.0" y="353.0" font-size="13">Load Only Edited Files</text>
+<rect x="53452.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="53458.0" y="353.0" font-size="13">Skip Build And Cache Fol</text>
+<rect x="53636.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="53642.0" y="353.0" font-size="13">Report Load Progress</text>
+<rect x="53820.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="53826.0" y="353.0" font-size="13">Save Graph To Context Fo</text>
+<rect x="54004.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="54010.0" y="353.0" font-size="13">Keep Other Practices Whe</text>
+<rect x="54200.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="54206.0" y="353.0" font-size="13">Read Modules Classes And</text>
+<rect x="54384.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="54390.0" y="353.0" font-size="13">Read Clean Engineering M</text>
+<rect x="54568.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="54574.0" y="353.0" font-size="13">Place DDD Building Block</text>
+<rect x="54752.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="54758.0" y="353.0" font-size="13">Read Story Maps And Stor</text>
+<rect x="54936.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="54942.0" y="353.0" font-size="13">Read BDD Spec Trees</text>
+<rect x="55120.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="55126.0" y="353.0" font-size="13">Link Steps And Observati</text>
+<rect x="55304.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="55310.0" y="353.0" font-size="13">Link Examples To Classes</text>
+<rect x="55488.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="55494.0" y="353.0" font-size="13">Place Story Nodes On The</text>
+<rect x="55672.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="55678.0" y="353.0" font-size="13">Give Each Node Its Fidel</text>
+<rect x="55868.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="55874.0" y="353.0" font-size="13">Add Named Overlay From C</text>
+<rect x="56052.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="56058.0" y="353.0" font-size="13">Add Overlay Folder</text>
+<rect x="56236.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="56242.0" y="353.0" font-size="13">Remove Overlay</text>
+<rect x="56420.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="56426.0" y="353.0" font-size="13">Rebuild Graph With Overl</text>
+<rect x="56604.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="56610.0" y="353.0" font-size="13">Remember Applied Overlay</text>
+<rect x="56800.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="56806.0" y="353.0" font-size="13">Choose Repo Folder</text>
+<rect x="56984.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="56990.0" y="353.0" font-size="13">Reopen Last Folder</text>
+<rect x="57168.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="57174.0" y="353.0" font-size="13">Expand Practice Tree</text>
+<rect x="57352.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="57358.0" y="353.0" font-size="13">Follow Relationships Und</text>
+<rect x="57536.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="57542.0" y="353.0" font-size="13">Open Node Source</text>
+<rect x="57720.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="57726.0" y="353.0" font-size="13">Unfold Calls And Classes</text>
+<rect x="57904.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="57910.0" y="353.0" font-size="13">Show Load Steps While Lo</text>
+<rect x="58088.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="58094.0" y="353.0" font-size="13">Copy Load Failure For Ag</text>
+<rect x="58272.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="58278.0" y="353.0" font-size="13">Switch Display Theme</text>
+<rect x="58468.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="58474.0" y="353.0" font-size="13">Filter By Practice</text>
+<rect x="58652.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="58658.0" y="353.0" font-size="13">Filter By Node Type</text>
+<rect x="58836.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="58842.0" y="353.0" font-size="13">Filter By Connector</text>
+<rect x="59020.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="59026.0" y="353.0" font-size="13">Show Only Violations</text>
+<rect x="59204.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="59210.0" y="353.0" font-size="13">Filter Violations By Rul</text>
+<rect x="59388.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="59394.0" y="353.0" font-size="13">Select All Or No Filter </text>
+<rect x="59584.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="59590.0" y="353.0" font-size="13">Return Matching Nodes Wi</text>
+<rect x="59768.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="59774.0" y="353.0" font-size="13">Return Only Failing Node</text>
+<rect x="59952.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="59958.0" y="353.0" font-size="13">List Practice Inventory</text>
+<rect x="60136.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="60142.0" y="353.0" font-size="13">List Filter Choices</text>
+<rect x="60320.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="60326.0" y="353.0" font-size="13">Read Node Source With Me</text>
+<rect x="60516.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="60522.0" y="353.0" font-size="13">Attach Schema Rules To N</text>
+<rect x="60700.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="60706.0" y="353.0" font-size="13">Check Nodes Against Prac</text>
+<rect x="60884.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="60890.0" y="353.0" font-size="13">Inherit Clean Engineerin</text>
+<rect x="61068.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="61074.0" y="353.0" font-size="13">Add Overlay Rules</text>
+<rect x="61252.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="61258.0" y="353.0" font-size="13">Mark Prose Rules As Prom</text>
+<rect x="61436.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="61442.0" y="353.0" font-size="13">Place Violation At Node </text>
+<rect x="61620.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="61626.0" y="353.0" font-size="13">Name Rules By Practice N</text>
+<rect x="61816.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="61822.0" y="353.0" font-size="13">See Rules Under Node</text>
+<rect x="62000.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="62006.0" y="353.0" font-size="13">Hover Violating Rule For</text>
+<rect x="62184.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="62190.0" y="353.0" font-size="13">Open Violation In Source</text>
+<rect x="62368.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="62374.0" y="353.0" font-size="13">Copy Correct Prompt</text>
+<rect x="62564.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="62570.0" y="353.0" font-size="13">Build Graph From Edited </text>
+<rect x="62748.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="62754.0" y="353.0" font-size="13">Report Own Practice Viol</text>
+<rect x="62932.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="62938.0" y="353.0" font-size="13">Report Saved Graph Hits</text>
+<rect x="63116.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="63122.0" y="353.0" font-size="13">Leave Unedited Files Out</text>
+<rect x="63300.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="63306.0" y="353.0" font-size="13">Refuse Missing Path</text>
+<rect x="63484.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="63490.0" y="353.0" font-size="13">Save Checked Graph Besid</text>
+<rect x="63668.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="63674.0" y="353.0" font-size="13">Count Graph Hits From Re</text>
+<rect x="65776.0" y="331.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="65782.0" y="353.0" font-size="13">Attach Violations To Lat</text>
+<rect x="18108.0" y="567.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="18114.0" y="589.0" font-size="13">List Ticket Context File</text>
+<rect x="18292.0" y="567.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="18298.0" y="589.0" font-size="13">Open Session Files From </text>
+<rect x="18476.0" y="567.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="18482.0" y="589.0" font-size="13">Browse Ticket Files By P</text>
+<rect x="30188.0" y="567.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="30194.0" y="589.0" font-size="13">Save Edited File</text>
+<rect x="31120.0" y="567.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="31126.0" y="589.0" font-size="13">Add Comment To File Sele</text>
+<rect x="31304.0" y="567.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="31310.0" y="589.0" font-size="13">Send File Comments To Ch</text>
+<rect x="31488.0" y="567.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="31494.0" y="589.0" font-size="13">Mark File Comment Proces</text>
+<rect x="31672.0" y="567.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="31678.0" y="589.0" font-size="13">Clear Processed File Com</text>
+<rect x="31856.0" y="567.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="31862.0" y="589.0" font-size="13">Show AI Changes As Diff</text>
+<rect x="12344.0" y="803.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="12350.0" y="825.0" font-size="13">Edit Ticket Text</text>
+<rect x="12528.0" y="803.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="12534.0" y="825.0" font-size="13">Reorder Tickets In Colum</text>
+<rect x="12712.0" y="803.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="12718.0" y="825.0" font-size="13">Tag Ticket Session</text>
+<rect x="12896.0" y="803.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="12902.0" y="825.0" font-size="13">Delete Ticket</text>
+<rect x="9192.0" y="803.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="9198.0" y="825.0" font-size="13">Expand Ticket From Empty</text>
+<rect x="13092.0" y="803.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="13098.0" y="825.0" font-size="13">Add Child Ticket</text>
+<rect x="13276.0" y="803.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="13282.0" y="825.0" font-size="13">Display Child Tickets In</text>
+<rect x="13460.0" y="803.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="13466.0" y="825.0" font-size="13">Expand Parent Ticket</text>
+<rect x="13644.0" y="803.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="13650.0" y="825.0" font-size="13">Detach Child Ticket</text>
+<rect x="13828.0" y="803.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="13834.0" y="825.0" font-size="13">Reassign Ticket Parent</text>
+<rect x="14012.0" y="803.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="14018.0" y="825.0" font-size="13">Place Parent At Leftmost</text>
+<rect x="24608.0" y="1039.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="24614.0" y="1061.0" font-size="13">Open Editor App From App</text>
+<rect x="24792.0" y="1039.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="24798.0" y="1061.0" font-size="13">Open Stories File In Sto</text>
+<rect x="24976.0" y="1039.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="24982.0" y="1061.0" font-size="13">Load Session Folders In </text>
+<rect x="25160.0" y="1039.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="25166.0" y="1061.0" font-size="13">Follow Last Activated Se</text>
+<rect x="25344.0" y="1039.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="25350.0" y="1061.0" font-size="13">Trace Story Through Arti</text>
+<rect x="25528.0" y="1039.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="25534.0" y="1061.0" font-size="13">Invoke Claude Design Sto</text>
+<rect x="25712.0" y="1039.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="25718.0" y="1061.0" font-size="13">Show Board&#x27;s Active Tick</text>
+<rect x="25896.0" y="1039.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="25902.0" y="1061.0" font-size="13">Save Story Map Edit Thro</text>
+<rect x="18108.0" y="1039.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="18114.0" y="1061.0" font-size="13">Open Story UI On Ticket </text>
+<rect x="18292.0" y="1039.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="18298.0" y="1061.0" font-size="13">Filter Graph To Ticket S</text>
+<rect x="18476.0" y="1039.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="18482.0" y="1061.0" font-size="13">Filter Graph To Ticket P</text>
+<rect x="18660.0" y="1039.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="18666.0" y="1061.0" font-size="13">Show Board&#x27;s Active Tick</text>
+<rect x="18844.0" y="1039.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="18850.0" y="1061.0" font-size="13">Show Agent&#x27;s Ticket Chan</text>
+<rect x="27404.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="27410.0" y="1297.0" font-size="13">Open Stage Files From Ch</text>
+<rect x="27588.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="27594.0" y="1297.0" font-size="13">Open Session Folder From</text>
+<rect x="27772.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="27778.0" y="1297.0" font-size="13">Open File From Another P</text>
+<rect x="27956.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="27962.0" y="1297.0" font-size="13">List Files The Link Name</text>
+<rect x="28140.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="28146.0" y="1297.0" font-size="13">Open Diagram In Files Ap</text>
+<rect x="28324.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="28330.0" y="1297.0" font-size="13">Open File In File Browse</text>
+<rect x="28508.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="28514.0" y="1297.0" font-size="13">Switch File Bar Between </text>
+<rect x="28704.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="28710.0" y="1297.0" font-size="13">Resize File Bar</text>
+<rect x="28888.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="28894.0" y="1297.0" font-size="13">List Only The Files The </text>
+<rect x="29072.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="29078.0" y="1297.0" font-size="13">Follow Chat Bar Selectio</text>
+<rect x="29256.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="29262.0" y="1297.0" font-size="13">Select Guidance On The S</text>
+<rect x="29440.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="29446.0" y="1297.0" font-size="13">Show Stages In Files App</text>
+<rect x="29624.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="29630.0" y="1297.0" font-size="13">Filter Files By Format I</text>
+<rect x="29808.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="29814.0" y="1297.0" font-size="13">Toggle Practice In Files</text>
+<rect x="29992.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="29998.0" y="1297.0" font-size="13">Keep Chat Bar Practices </text>
+<rect x="30188.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="30194.0" y="1297.0" font-size="13">View File In Source View</text>
+<rect x="30372.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="30378.0" y="1297.0" font-size="13">Fold Classes And Operati</text>
+<rect x="30556.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="30562.0" y="1297.0" font-size="13">Mark Lines A Broken Rule</text>
+<rect x="30740.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="30746.0" y="1297.0" font-size="13">Browse Files Without Rea</text>
+<rect x="30924.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="30930.0" y="1297.0" font-size="13">Save Edited File</text>
+<rect x="31120.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="31126.0" y="1297.0" font-size="13">Add Comment To File Sele</text>
+<rect x="31304.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="31310.0" y="1297.0" font-size="13">Open Edit And Delete Fil</text>
+<rect x="31488.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="31494.0" y="1297.0" font-size="13">Send File Comments To Ch</text>
+<rect x="31672.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="31678.0" y="1297.0" font-size="13">Mark File Comment Proces</text>
+<rect x="31856.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="31862.0" y="1297.0" font-size="13">Show Changed File After </text>
+<rect x="32040.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="32046.0" y="1297.0" font-size="13">Clear Processed File Com</text>
+<rect x="32224.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="32230.0" y="1297.0" font-size="13">Show AI Changes As Diff</text>
+<rect x="32408.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="32414.0" y="1297.0" font-size="13">Add File Or Selection To</text>
+<rect x="32604.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="32610.0" y="1297.0" font-size="13">Switch Files App To Grap</text>
+<rect x="32788.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="32794.0" y="1297.0" font-size="13">Filter Graph Like The Fi</text>
+<rect x="32972.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="32978.0" y="1297.0" font-size="13">Open Several Files From </text>
+<rect x="33156.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="33162.0" y="1297.0" font-size="13">Fold Open Files To Selec</text>
+<rect x="33352.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="33358.0" y="1297.0" font-size="13">Expand Practice Tree In </text>
+<rect x="33536.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="33542.0" y="1297.0" font-size="13">Follow Relationships Und</text>
+<rect x="33720.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="33726.0" y="1297.0" font-size="13">Filter Graph By Node Typ</text>
+<rect x="33904.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="33910.0" y="1297.0" font-size="13">Apply Pattern Overlays I</text>
+<rect x="34088.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="34094.0" y="1297.0" font-size="13">Show Graph Load Steps In</text>
+<rect x="34284.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="34290.0" y="1297.0" font-size="13">Show Only Violating Node</text>
+<rect x="34468.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="34474.0" y="1297.0" font-size="13">See Rules Under Node In </text>
+<rect x="34652.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="34658.0" y="1297.0" font-size="13">Open Violation In Files </text>
+<rect x="34836.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="34842.0" y="1297.0" font-size="13">Fix Graph Violations Fro</text>
+<rect x="35020.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="35026.0" y="1297.0" font-size="13">Fix Graph Violations Fro</text>
+<rect x="35204.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="35210.0" y="1297.0" font-size="13">Count Session Violations</text>
+<rect x="35388.0" y="1275.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="35394.0" y="1297.0" font-size="13">Count Fidelity Violation</text>
+<rect x="46056.0" y="1511.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="46062.0" y="1533.0" font-size="13">Record Packaged Files In</text>
+<rect x="46240.0" y="1511.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="46246.0" y="1533.0" font-size="13">Fail Check When A Packag</text>
+<rect x="46424.0" y="1511.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="46430.0" y="1533.0" font-size="13">Report Version Traceabil</text>
+<rect x="46608.0" y="1511.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="46614.0" y="1533.0" font-size="13">Store Each Screenshot On</text>
+<rect x="46792.0" y="1511.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="46798.0" y="1533.0" font-size="13">Find Screen Files Throug</text>
+<rect x="46976.0" y="1511.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="46982.0" y="1533.0" font-size="13">Package Product Styles A</text>
+<rect x="47160.0" y="1511.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="47166.0" y="1533.0" font-size="13">Publish Product Package </text>
+<rect x="47344.0" y="1511.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="47350.0" y="1533.0" font-size="13">Record Installed Design </text>
+<rect x="47528.0" y="1511.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="47534.0" y="1533.0" font-size="13">Derive Publish List From</text>
+<rect x="47712.0" y="1511.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="47718.0" y="1533.0" font-size="13">Pull Hosted Edits Back B</text>
+<rect x="47896.0" y="1511.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="47902.0" y="1533.0" font-size="13">Bundle Product Views For</text>
+<rect x="48080.0" y="1511.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="48086.0" y="1533.0" font-size="13">Mount Production View In</text>
+<rect x="48264.0" y="1511.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="48270.0" y="1533.0" font-size="13">Answer Screen Requests F</text>
+<rect x="48448.0" y="1511.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="48454.0" y="1533.0" font-size="13">Keep Explorer Navigation</text>
+<rect x="48632.0" y="1511.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="48638.0" y="1533.0" font-size="13">Keep Product Styles Insi</text>
+<rect x="48816.0" y="1511.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="48822.0" y="1533.0" font-size="13">Type Scenario Values Int</text>
+<rect x="49000.0" y="1511.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="49006.0" y="1533.0" font-size="13">Generate Attached Screen</text>
+<rect x="49184.0" y="1511.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="49190.0" y="1533.0" font-size="13">Detach A Screen To Edita</text>
+<rect x="49368.0" y="1511.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="49374.0" y="1533.0" font-size="13">Keep Leaf Components Mou</text>
+<rect x="49552.0" y="1511.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="49558.0" y="1533.0" font-size="13">Mark Detached Screen As </text>
+<rect x="49736.0" y="1511.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="49742.0" y="1533.0" font-size="13">Reattach A Screen Once I</text>
+<rect x="49932.0" y="1747.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="49938.0" y="1769.0" font-size="13">Package End-To-End Resul</text>
+<rect x="50116.0" y="1747.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="50122.0" y="1769.0" font-size="13">Mark Each Explorer Scena</text>
+<rect x="50300.0" y="1747.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="50306.0" y="1769.0" font-size="13">Label Stale Test Results</text>
+<rect x="50484.0" y="1747.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="50490.0" y="1769.0" font-size="13">Run A Scenario&#x27;s Thens O</text>
+<rect x="50668.0" y="1747.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="50674.0" y="1769.0" font-size="13">Play A Story&#x27;s UI Steps </text>
+<rect x="50852.0" y="1747.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="50858.0" y="1769.0" font-size="13">Check Screen Logic Again</text>
+<rect x="66708.0" y="1747.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="66714.0" y="1769.0" font-size="13">Give Each Map Card A Sta</text>
+<rect x="66892.0" y="1747.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="66898.0" y="1769.0" font-size="13">Comment On A Story Card</text>
+<rect x="67076.0" y="1747.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="67082.0" y="1769.0" font-size="13">Change Story Code From A</text>
+<rect x="67260.0" y="1747.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="67266.0" y="1769.0" font-size="13">Refresh Map Artboard Fro</text>
+<rect x="67444.0" y="1747.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="67450.0" y="1769.0" font-size="13">Save Story Map To Story </text>
+<rect x="67628.0" y="1747.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="67634.0" y="1769.0" font-size="13">Comment On A Story In St</text>
+<rect x="67812.0" y="1747.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="67818.0" y="1769.0" font-size="13">Rearrange Stories Inside</text>
+<rect x="6752.0" y="1983.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="6758.0" y="2005.0" font-size="13">Repair Guidance Behind V</text>
+<rect x="6936.0" y="1983.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="6942.0" y="2005.0" font-size="13">Improve Guidance From Mi</text>
+<rect x="7120.0" y="1983.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="7126.0" y="2005.0" font-size="13">Add Rule From Failed Exa</text>
+<rect x="26092.0" y="2219.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="26098.0" y="2241.0" font-size="13">Autocomplete CDD Command</text>
+<rect x="26276.0" y="2219.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="26282.0" y="2241.0" font-size="13">Show Command Argument Hi</text>
+<rect x="26460.0" y="2219.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="26466.0" y="2241.0" font-size="13">Announce CDD Tool Calls</text>
+<rect x="24608.0" y="2219.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="24614.0" y="2241.0" font-size="13">Display Action Before Fi</text>
+<rect x="18108.0" y="2219.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="18114.0" y="2241.0" font-size="13">Add Comment To Sent Comm</text>
+<rect x="60516.0" y="2455.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="60522.0" y="2477.0" font-size="13">Record Code Metrics As N</text>
+<rect x="60700.0" y="2455.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="60706.0" y="2477.0" font-size="13">Check Code Metrics Again</text>
+<rect x="60884.0" y="2455.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="60890.0" y="2477.0" font-size="13">Report Unused Class For </text>
+<rect x="61068.0" y="2455.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="61074.0" y="2477.0" font-size="13">Report Runtime Dependenc</text>
+<rect x="61252.0" y="2455.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="61258.0" y="2477.0" font-size="13">Report Disconnected Clas</text>
+<rect x="61436.0" y="2455.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="61442.0" y="2477.0" font-size="13">Report One-Class Package</text>
+<rect x="61620.0" y="2455.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="61626.0" y="2477.0" font-size="13">Judge Clean Engineering </text>
+<rect x="65776.0" y="2691.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="65782.0" y="2713.0" font-size="13">Refresh Graph After Gene</text>
+<rect x="65960.0" y="2691.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="65966.0" y="2713.0" font-size="13">Judge Rules During Gener</text>
+<rect x="66144.0" y="2691.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="66150.0" y="2713.0" font-size="13">Fix Graph Violations</text>
+<rect x="66328.0" y="2691.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="66334.0" y="2713.0" font-size="13">Validate Fidelity On Dem</text>
+<rect x="66512.0" y="2691.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="66518.0" y="2713.0" font-size="13">Check Graph Rules When A</text>
+<rect x="34284.0" y="2691.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="34290.0" y="2713.0" font-size="13">Fix Graph Violations Fro</text>
+<rect x="64844.0" y="2691.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="64850.0" y="2713.0" font-size="13">Open Board Side Panel Fr</text>
+<rect x="65028.0" y="2691.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="65034.0" y="2713.0" font-size="13">Sync Chat Bar With Board</text>
+<rect x="65212.0" y="2691.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="65218.0" y="2713.0" font-size="13">Keep Chosen Formats Acro</text>
+<rect x="65396.0" y="2691.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="65402.0" y="2713.0" font-size="13">Start Ticket Session Fro</text>
+<rect x="65580.0" y="2691.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="65586.0" y="2713.0" font-size="13">Show Increment Ticket In</text>
+<rect x="40280.0" y="2691.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="40286.0" y="2713.0" font-size="13">Test Story Explorer On S</text>
+<rect x="40464.0" y="2691.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="40470.0" y="2713.0" font-size="13">Play The Next Story</text>
+<rect x="40648.0" y="2691.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="40654.0" y="2713.0" font-size="13">Hide And Show The Story </text>
+<rect x="40832.0" y="2691.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="40838.0" y="2713.0" font-size="13">Return To Story UI Map</text>
+<rect x="38600.0" y="2691.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="38606.0" y="2713.0" font-size="13">Switch Story Map To Scre</text>
+<rect x="38784.0" y="2691.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="38790.0" y="2713.0" font-size="13">Show Screen Frame Under </text>
+<rect x="38968.0" y="2691.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="38974.0" y="2713.0" font-size="13">Mark Story Without A Scr</text>
+<rect x="39152.0" y="2691.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="39158.0" y="2713.0" font-size="13">Open Story Explorer From</text>
+<rect x="39348.0" y="2691.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="39354.0" y="2713.0" font-size="13">Open The Explorer At A S</text>
+<rect x="39532.0" y="2691.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="39538.0" y="2713.0" font-size="13">Collapse And Reset The S</text>
+<rect x="39716.0" y="2691.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="39722.0" y="2713.0" font-size="13">Keep The Selected Story </text>
+<rect x="39900.0" y="2691.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="39906.0" y="2713.0" font-size="13">Copy A Request To Open A</text>
+<rect x="40084.0" y="2691.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="40090.0" y="2713.0" font-size="13">Pick An Outline Scenario</text>
+<rect x="41028.0" y="2691.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="41034.0" y="2713.0" font-size="13">Show Design Canvas Scree</text>
+<rect x="41212.0" y="2691.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="41218.0" y="2713.0" font-size="13">Choose The Screen For A </text>
+<rect x="41396.0" y="2691.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="41402.0" y="2713.0" font-size="13">Join A Step Without A Sc</text>
+<rect x="41580.0" y="2691.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="41586.0" y="2713.0" font-size="13">Show A Screenshot When N</text>
+<rect x="41764.0" y="2691.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="41770.0" y="2713.0" font-size="13">Keep Each Screen&#x27;s Own S</text>
+<rect x="18108.0" y="2691.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="18114.0" y="2713.0" font-size="13">Invoke Story Explorer In</text>
+<rect x="24608.0" y="2691.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="24614.0" y="2713.0" font-size="13">Open UX Design In Claude</text>
+<rect x="45124.0" y="2691.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="45130.0" y="2713.0" font-size="13">Remove Older Versions Wh</text>
+<rect x="61816.0" y="2691.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="61822.0" y="2713.0" font-size="13">Test Knowledge Graph Exp</text>
+<rect x="62000.0" y="2691.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="62006.0" y="2713.0" font-size="13">Display Drawio File As D</text>
+<rect x="15692.0" y="2927.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="15698.0" y="2949.0" font-size="13">Customize Workflow Stage</text>
+<rect x="15876.0" y="2927.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="15882.0" y="2949.0" font-size="13">Write Column Policies</text>
+<rect x="16060.0" y="2927.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="16066.0" y="2949.0" font-size="13">Collapse Column Policies</text>
+<rect x="16244.0" y="2927.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="16250.0" y="2949.0" font-size="13">Configure Todo List</text>
+<rect x="16428.0" y="2927.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="16434.0" y="2949.0" font-size="13">Run Work Type Flows</text>
+<rect x="16612.0" y="2927.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="16618.0" y="2949.0" font-size="13">Display Board From Custo</text>
+<rect x="16796.0" y="2927.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="16802.0" y="2949.0" font-size="13">Move Ticket Along Custom</text>
+<rect x="16980.0" y="2927.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="16986.0" y="2949.0" font-size="13">Approve Ticket Out Of Hu</text>
+<rect x="17164.0" y="2927.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="17170.0" y="2949.0" font-size="13">Track Ticket Status Thro</text>
+<rect x="17348.0" y="2927.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="17354.0" y="2949.0" font-size="13">Show Stage Practices Fro</text>
+<rect x="18108.0" y="2927.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="18114.0" y="2949.0" font-size="13">Choose Testing Strategy</text>
+<rect x="18292.0" y="2927.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="18298.0" y="2949.0" font-size="13">Toggle Sub Agents</text>
+<rect x="37840.0" y="3163.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="37846.0" y="3185.0" font-size="13">Test Story UI Editor On </text>
+<rect x="38024.0" y="3163.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="38030.0" y="3185.0" font-size="13">Recover Workspace View S</text>
+<rect x="38208.0" y="3163.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="38214.0" y="3185.0" font-size="13">Share Real-Time Story Ma</text>
+<rect x="38404.0" y="3163.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="38410.0" y="3185.0" font-size="13">Change Story Map With AI</text>
+<rect x="26656.0" y="3399.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="26662.0" y="3421.0" font-size="13">Refuse Forbidden Edits</text>
+<rect x="26840.0" y="3399.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="26846.0" y="3421.0" font-size="13">Warn When Work Outruns F</text>
+<rect x="27024.0" y="3399.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="27030.0" y="3421.0" font-size="13">Catch Banned Words In Ma</text>
+<rect x="27208.0" y="3399.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="27214.0" y="3421.0" font-size="13">Warn On Branch Mismatch</text>
+<rect x="8444.0" y="3399.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="8450.0" y="3421.0" font-size="13">Open Board Server Health</text>
+<rect x="8628.0" y="3399.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="8634.0" y="3421.0" font-size="13">Reconnect CDD Server Fro</text>
+<rect x="8812.0" y="3399.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="8818.0" y="3421.0" font-size="13">Reinstall CDD Tools From</text>
+<rect x="8996.0" y="3399.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="9002.0" y="3421.0" font-size="13">Reload Everything With O</text>
+<rect x="20880.0" y="3399.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="20886.0" y="3421.0" font-size="13">Update CDD From Chat Bar</text>
+<rect x="21064.0" y="3399.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="21070.0" y="3421.0" font-size="13">Restart Parts From Chat </text>
+<rect x="21248.0" y="3399.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="21254.0" y="3421.0" font-size="13">Open App From Health Pan</text>
+<rect x="17544.0" y="3635.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="17550.0" y="3657.0" font-size="13">Check Ticket Branches On</text>
+<rect x="17728.0" y="3635.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="17734.0" y="3657.0" font-size="13">Cache Practice Guidance </text>
+<rect x="17912.0" y="3635.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="17918.0" y="3657.0" font-size="13">Read Session File Once P</text>
+<rect x="23676.0" y="3871.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="23682.0" y="3893.0" font-size="13">Move Session To Previous</text>
+<rect x="23860.0" y="3871.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="23866.0" y="3893.0" font-size="13">Mark Session Done In Sta</text>
+<rect x="24044.0" y="3871.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="24050.0" y="3893.0" font-size="13">Choose Session Practices</text>
+<rect x="24228.0" y="3871.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="24234.0" y="3893.0" font-size="13">Open Fidelity Help</text>
+<rect x="24412.0" y="3871.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="24418.0" y="3893.0" font-size="13">Choose Session Folders F</text>
+<rect x="24608.0" y="3871.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="24614.0" y="3893.0" font-size="13">Fix Violations From Chat</text>
+<rect x="22928.0" y="3871.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="22934.0" y="3893.0" font-size="13">Add Backlog Item From Ch</text>
+<rect x="23112.0" y="3871.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="23118.0" y="3893.0" font-size="13">Commit Work From Chat Ba</text>
+<rect x="23296.0" y="3871.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="23302.0" y="3893.0" font-size="13">Push Work From Chat Bar</text>
+<rect x="23480.0" y="3871.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="23486.0" y="3893.0" font-size="13">Pull Latest From Chat Ba</text>
+<rect x="51048.0" y="4107.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="51054.0" y="4129.0" font-size="13">Draw Arrows From Drawio </text>
+<rect x="51232.0" y="4107.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="51238.0" y="4129.0" font-size="13">Draw Bounded Context Map</text>
+<rect x="51416.0" y="4107.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="51422.0" y="4129.0" font-size="13">Draw Domain Model As An </text>
+<rect x="51600.0" y="4107.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="51606.0" y="4129.0" font-size="13">Draw Module Class Models</text>
+<rect x="51784.0" y="4107.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="51790.0" y="4129.0" font-size="13">Follow Links From A Cont</text>
+<rect x="51968.0" y="4107.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="51974.0" y="4129.0" font-size="13">See The Classes A Scenar</text>
+<rect x="52152.0" y="4107.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="52158.0" y="4129.0" font-size="13">See The Stories That Exe</text>
+<rect x="52336.0" y="4107.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="52342.0" y="4129.0" font-size="13">Mark Model Nodes That Fa</text>
+<rect x="26092.0" y="4343.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="26098.0" y="4365.0" font-size="13">Suggest Next Command</text>
+<rect x="24608.0" y="4343.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="24614.0" y="4365.0" font-size="13">Write Handoff When Sessi</text>
+<rect x="24792.0" y="4343.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="24798.0" y="4365.0" font-size="13">Offer Correction Log Ent</text>
+<rect x="24976.0" y="4343.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="24982.0" y="4365.0" font-size="13">Offer Decision Record</text>
+<rect x="22928.0" y="4343.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="22934.0" y="4365.0" font-size="13">Display Latest Session H</text>
+<rect x="13092.0" y="4579.0" width="160.0" height="112.0" rx="8" fill="#fff2cc" stroke="#666"/>
+<text x="13098.0" y="4601.0" font-size="13">Nest Child Branch And Se</text>
+</svg>
