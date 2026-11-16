@@ -14,7 +14,7 @@ from cdd_guidance.practices.clean_engineering.model.module_context_files import 
 from cdd_guidance.practices.clean_engineering.model.ooad_node import OoadNode
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
-from cdd_guidance.practices.clean_engineering.model.script_imports import ScriptImports
+from cdd_guidance.practices.clean_engineering.model.script_imports import ClassReference, ScriptImports
 from cdd_guidance.practices.clean_engineering.model.source_facts import ClassSourceFacts
 from cdd_guidance.practices.clean_engineering.model.type_refs import domain_type_names
 
@@ -306,7 +306,7 @@ class Module(OoadNode):
         "public_source_internal",
         "public_source_files",
         "dependencies",
-        "imported_names",
+        "imported_classes",
     )
 
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
@@ -326,8 +326,9 @@ class Module(OoadNode):
         """The source this module is read from, empty until its parser keeps the file's text."""
         self.preamble = CodeBody()
         self.source_text = ""
-        # The class names this module's code imports or reaches as `module.Class`.
-        self.imported_names: List[str] = []
+        # The classes this module's code imports, re-exports, or reaches as `module.Class`, each with the module it
+        # names it from.
+        self.imported_classes: List[ClassReference] = []
         # What the file and folder it was read from say, as its parser reads them.
         self.source_facts = ModuleSourceFacts(self)
 
@@ -436,11 +437,11 @@ class ModuleSourceFacts:
             oclass.source_facts.take_lines(lines)
 
     def load(self, file: Path, root: Path) -> None:
-        """Fill the facts the file the module was read from owns: what it imports, the class names it imports, and
-        which classes share it. The graph keeps each class apart from its module, so each class keeps its peers' names."""
+        """Fill the facts the file the module was read from owns: what it imports, the classes it imports with the
+        module each comes from, and which classes share it. The graph keeps each class apart from its module, so each class keeps its peers' names."""
         module = self._module
         module.dependencies = module.import_targets(file, root)
-        module.imported_names = sorted(ScriptImports(module.source_text).class_names())
+        module.imported_classes = ScriptImports(module.source_text).class_references(file, root)
         peer_names = [oclass.name for oclass in module.classes]
         for oclass in module.classes:
             oclass.peer_names = peer_names

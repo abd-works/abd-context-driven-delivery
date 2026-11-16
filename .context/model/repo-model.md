@@ -4278,7 +4278,7 @@ A named module boundary grouping closely related classes.
 + constraint: str
 + seam_terms: list[str]
 + dependencies: list[str]
-+ imported_names: list[str]
++ imported_classes: list[ClassReference]
 + modules: list[Module]
 + << composition >> classes: list[OoadClass]
 + path_parent: str | None

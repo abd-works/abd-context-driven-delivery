@@ -1,6 +1,6 @@
 """How a compared fact is written on a node, and the facts each folder of the code keeps about the other folders: the
-imports of it that close a cycle, the sibling modules it imports, and which of the classes of a module's whole subtree
-code outside that subtree names."""
+imports of it that close a cycle and the sibling modules it imports. What of a module's subtree leaves it is
+``module_exposure.py``'s."""
 
 from __future__ import annotations
 
@@ -11,8 +11,6 @@ from cdd_guidance.practices.clean_engineering.model.import_cycles import ImportC
 if TYPE_CHECKING:
     from harness.graph.graph import Node, PracticeNodes
     from harness.graph.saved_graph import FactValue
-
-    from cdd_guidance.practices.clean_engineering.model.class_graph import ClassGraph
 
 _FOLDER_TYPES = ("Module", "Package")
 
@@ -104,60 +102,3 @@ class SiblingFanOut:
             for imported in imported_folders(folder)
             if imported.source.file
         }
-
-
-class ModuleExposure:
-    """How much of each module's whole subtree code outside the subtree names. A module is measured over its own files,
-    its packages, and the modules nested in it; each nested module is measured again over its own subtree. Each module
-    keeps the count of the production classes in its subtree (``subtree_class_count``), the public ones with the folders
-    outside the subtree that name them (``public_classes``), and how many are public and private (``public_class_count``,
-    ``private_class_count``). A private record, such as a parser's ``_Section``, is neither seam nor hidden design, so it
-    is not counted; a name starting with ``_`` is never public; tests and test support neither count nor name a class."""
-
-    def __init__(self, in_graph: "PracticeNodes", classes: "ClassGraph") -> None:
-        self._in_graph = in_graph
-        self._classes = classes
-
-    def record(self) -> None:
-        counted = [
-            (node.source.file, node.name)
-            for node in self._classes.classes
-            if not (node.name.startswith("_") and not self._classes.has_behavior(node))
-        ]
-        namers = self._namers()
-        for module in self._in_graph.nodes("Module"):
-            folder = module.source.file
-            names = [name for file, name in counted if is_under(file, folder)]
-            public = self._public(names, folder, namers)
-            module.set_facts(
-                {
-                    "subtree_class_count": len(names),
-                    "public_classes": public,
-                    "public_class_count": len(public),
-                    "private_class_count": len(names) - len(public),
-                }
-            )
-
-    def _public(self, names: list[str], folder: str, namers: dict[str, set[str]]) -> dict[str, list[str]]:
-        """The public classes among names, each with the folders outside the module's folder whose code names it."""
-        public: dict[str, list[str]] = {}
-        for name in sorted(set(names)):
-            outside = sorted(namer for namer in namers.get(name, set()) if not is_under(namer, folder))
-            if outside and not name.startswith("_"):
-                public[name] = outside
-        return public
-
-    def _namers(self) -> dict[str, set[str]]:
-        """Each class name production code imports or qualifies, with the folders whose code does it: the names each
-        folder's files import, which the read kept on the folder by file, and the names the files outside an edited-file
-        scope import, by the module that holds each, which it kept on the practice's root."""
-        namers: dict[str, set[str]] = {}
-        for folder in folders_of(self._in_graph):
-            by_file = folder.get_fact("imported_names_by_file") if folder.has_fact("imported_names_by_file") else {}
-            for name in {name for names in by_file.values() for name in names}:
-                namers.setdefault(name, set()).add(folder.source.file or "")
-        root = self._in_graph.root
-        outside = root.get_fact("imported_names_outside") if root.has_fact("imported_names_outside") else {}
-        for name, folders in outside.items():
-            namers.setdefault(name, set()).update(folders)
-        return namers

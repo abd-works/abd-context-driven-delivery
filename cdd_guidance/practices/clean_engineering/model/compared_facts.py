@@ -19,11 +19,9 @@ from cdd_guidance.practices.clean_engineering.model.class_facts import (
     ResourceShapes,
 )
 from cdd_guidance.practices.clean_engineering.model.class_graph import ClassGraph
-from cdd_guidance.practices.clean_engineering.model.folder_facts import (
-    ImportCycleFacts,
-    ModuleExposure,
-    SiblingFanOut,
-)
+from cdd_guidance.practices.clean_engineering.model.folder_facts import ImportCycleFacts, SiblingFanOut
+from cdd_guidance.practices.clean_engineering.model.module_exposure import ModuleExposure
+from cdd_guidance.practices.clean_engineering.model.public_routes import PublicRoutes, registered_in_this_process
 from cdd_guidance.practices.clean_engineering.model.operation_facts import BodyCopies, FailureMessages
 
 if TYPE_CHECKING:
@@ -44,7 +42,7 @@ class ComparedFacts:
         for part in (
             ImportCycleFacts(in_graph),
             SiblingFanOut(in_graph),
-            ModuleExposure(in_graph, classes),
+            ModuleExposure(in_graph, classes, PublicRoutes(registered_in_this_process())),
             ResourceShapes(classes),
             ParallelModels(classes),
             Forwarding(in_graph, classes),

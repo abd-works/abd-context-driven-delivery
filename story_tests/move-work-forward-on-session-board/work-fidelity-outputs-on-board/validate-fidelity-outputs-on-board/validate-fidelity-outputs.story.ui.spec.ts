@@ -21,9 +21,9 @@ const STORY_MAP_REPORT = 'stories-story-map-20261101T100000'
 const JUDGED_REPORT = '# Graph rule validation\n\n## Judgment — `.context/story-map.md`\n\n### `do-not-invent-requirements` — Fail\n- story-map.md:7 `Confirm Order`: no source names this story.\n'
 const CLEAN_REPORT = 'stories-story-map-20261101T120000'
 const CLEAN_STAMP = '2026-11-01T12:00:00Z'
-// A graph validate saved with no hits, in the shape harness/graph/saved_graph.py writes (SAVED_SHAPE_VERSION 4).
+// A graph validate saved with no hits, in the shape harness/graph/saved_graph.py writes (SAVED_SHAPE_VERSION 5).
 const CLEAN_GRAPH = {
-  version: 4,
+  version: 5,
   overlays: [],
   practices: { stories: { source_root: '', root_facts: {}, nodes: [{ node_id: 'node-1', name: '', type: 'Story', practice: 'stories', file: '.context/story-map.md', line: 6, end_line: 6, stage: '', facts: {} }], edges: [], violations: [] } },
 }

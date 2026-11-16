@@ -19,7 +19,16 @@ from cdd_guidance.practices.clean_engineering.rules.rule_examples import practic
 
 _CARD = "# module\n"
 _CART = "".join(f"class {name}:\n    def run(self) -> int:\n        return 1\n\n\n" for name in ("Cart", "Line", "Price"))
-_EXPOSURE = ("subtree_class_count", "public_classes", "public_class_count", "private_class_count")
+_EXPOSURE = (
+    "subtree_class_count",
+    "public_classes",
+    "public_class_count",
+    "private_class_count",
+    "operations_total",
+    "operations_public",
+    "operations_private",
+    "seam_operations",
+)
 
 
 def _shop(*names: str) -> dict[str, str]:
@@ -59,9 +68,13 @@ with description("compared facts"):
                 equal(
                     {
                         "subtree_class_count": 3,
-                        "public_classes": {"Cart": ["shop"], "Line": ["shop"]},
+                        "public_classes": {"cart/cart.py:Cart": {"named": ["shop"]}, "cart/cart.py:Line": {"named": ["shop"]}},
                         "public_class_count": 2,
                         "private_class_count": 1,
+                        "operations_total": 3,
+                        "operations_public": 3,
+                        "operations_private": 0,
+                        "seam_operations": 2,
                     }
                 )
             )
@@ -77,7 +90,7 @@ with description("compared facts"):
             self.cart = _module(self.fixture, "cart")
 
         with it("should record again the facts of the module the refresh did not read"):
-            expect(self.cart.get_fact("public_classes")).to(equal({"Cart": ["shop"]}))
+            expect(self.cart.get_fact("public_classes")).to(equal({"cart/cart.py:Cart": {"named": ["shop"]}}))
 
     with context("with a class whose operations only forward to another class"):
         with before.all:

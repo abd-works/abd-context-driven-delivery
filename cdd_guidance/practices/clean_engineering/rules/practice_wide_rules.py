@@ -79,14 +79,17 @@ class LowCoupling(ProductionCodeRule):
 
 
 class DeepModule(PracticeGraphRule):
-    """At most 40% of a module's classes are public: named by code outside the module.
+    """At most 40% of a module's classes are public: classes that leave the module.
 
     A module is a folder with a module card, measured over its whole subtree: its own files, the packages under it, and
-    the modules nested in it, each of which is measured again over its own subtree. A class is public when production
-    code outside the subtree imports it or reaches it as ``module.Class``; use inside the subtree, package to package or
-    nested module to parent, keeps it private, and a name starting with ``_`` keeps it private. Tests and test fixtures
-    neither count as classes nor make a class public. The build keeps the counts and the public classes on each module
-    (``subtree_class_count``, ``public_classes``), counting the callers outside a validated scope too.
+    the modules nested in it, each of which is measured again over its own subtree. A class definition is public when
+    it leaves the subtree: production code outside the subtree imports it or reaches it as ``module.Class``, each
+    import resolved to the one definition it names; a package registers it with a framework registry; or the installer
+    publishes it as a toolset. Use inside the subtree, package to package or nested module to parent, keeps it private,
+    and a name starting with ``_`` keeps it private. Tests, test support, examples, and test doubles neither count as
+    classes nor make a class public. The build keeps the counts and the public classes, by ``file:Name`` with the
+    routes that reach each, on each module (``subtree_class_count``, ``public_classes``), counting the callers outside a
+    validated scope too; the operation counts beside them are for reading, not judged.
     """
 
     slug = "deep-module"
@@ -96,7 +99,7 @@ class DeepModule(PracticeGraphRule):
         hits: list[tuple[str, str]] = []
         for module in context.nodes("Module"):
             count = module.get_fact("subtree_class_count") or 0
-            public = sorted(module.get_fact("public_classes") or {})
+            public = list(module.get_fact("public_classes") or {})
             if count >= _MIN_MEASURED_CLASSES and len(public) > self._allowed_public(count):
                 hits.append((module.node_id, self._exposure_message(module, public, count)))
         return hits
@@ -105,8 +108,13 @@ class DeepModule(PracticeGraphRule):
         return (
             f"Module '{module.name}' exposes {len(public)} of {class_count} classes to other modules, more "
             f"than the {self._allowed_public(class_count)} that {round(100 * _MAX_PUBLIC_SHARE)}% allows: "
-            f"{', '.join(public)}. Keep most classes behind a few public ones."
+            f"{', '.join(self._named(public))}. Keep most classes behind a few public ones."
         )
+
+    def _named(self, public: list[str]) -> list[str]:
+        """Each public class (``file:Name``) by its name, with its file when another public class shares the name."""
+        names = [key.rsplit(":", 1)[-1] for key in public]
+        return [name if names.count(name) == 1 else key for name, key in zip(names, public)]
 
     def _allowed_public(self, classes: int) -> int:
         """How many of a module's classes may be public: 40% of them, rounded down, since a count over it fails."""

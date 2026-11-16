@@ -8,7 +8,7 @@ One format's model becomes another's through `translate_from(source)`: each node
 
 Callers use the base nodes. The practice picks a format by name from `CleanEngineering(...).formats`. A class's bases and stereotypes are part of what it says itself, so every format writes and reads them and `update_self`, `clone`, and `as_record` copy them. Text a format cannot read raises *UnreadableSource*; the graph read records each such file on its folder, where the `source-parses` rule reports it.
 
-*CleanEngineering* (`practices/clean_engineering/clean_engineering.py`) holds its reading part, a *GraphReading* (`practices/clean_engineering/model/graph_reading.py`), which says what the graph reads from the practice. When `Graph.load_working_copy`, `Graph.load_files`, or `Graph.refresh` reads files, `Graph._read_working_copy` in `harness/graph/working_copy.py` asks each practice the graph holds to read, in dependency order. *CleanEngineering* reads each source file with the class model of its language, which it finds among its practice's formats by the file's extension (`formats.for_file`, which every practice has), and adds each folder as a *Module* that holds its *ModuleContext* (`module.source_facts.load_folder`), and each class, property, operation, and parameter the parser built, as nodes. The parser keeps the file's text on its module and the lines each class and operation spans on that class's and operation's source facts (`source_facts.take_lines`), so `ClassSourceFacts.load` and `OperationSourceFacts.load` read no file again. Each folder owns the folders under it and depends (`dependsOn` edges) on the folders its files import from; it keeps the class names each of its production files imports, by the file's path (`imported_names_by_file`), so a refresh that reads a file again replaces only that file's names. A getter is the operation its class shows as a property, so its node is that property (`Operation.is_property` makes its kind `Property`), typed by the type it returns (`value_type`); an operation's parameters are the *Parameter* nodes its `hasParameter` edges lead to (`parameters_of`, in `class_graph.py`), which every rule and BDD read. The practice's operations and properties are indexed once by name after each read, with its classes, in the reading's *CodeIndex* (`reading.code_index.members_named`, `classes_named`), so the type linking, every rule, and every practice that links to the code ask one index. Once every class is linked, *ComparedFacts* (`model/compared_facts.py`, with `folder_facts.py`, `class_facts.py`, and `operation_facts.py`) records on each node the facts that compare it with the rest of the graph, so every rule reads facts and compares them with its limit and none works anything out across nodes when it checks: it reads every node the practice holds, those read now and those a refresh kept, through their saved facts and the graph's edges, so a refresh records them again over the whole practice and a graph read back from `graph.json` holds them as saved. Its parts are *ClassGraph* (the production classes by name, their operations, fields, bases, and kinds), *ImportCycles*, and *NearCopies*. On each folder it records the imports that close a cycle (`import_cycles`, `file_import_cycles`) and the folder its classes only forward to (`forwards_to_module`); on each module the sibling modules it imports (`sibling_modules_imported`) and the classes of its whole subtree — its files, its packages, and its nested modules, each nested module measured again on its own — with those code outside the subtree names (`subtree_class_count`, `public_classes` with the folders that name each, `public_class_count`, `private_class_count`); on each production class the data bags it takes (`data_bags_taken`), what it copies of another class (`copied_fields`, `copied_references`), the class it only forwards to (`forwards_to`), the domain it extends from another package (`extends_domain`), and the collaborator its constructor builds (`constructs_collaborator`); and on each operation the body it copies (`duplicate_of`, `near_copy_of`) and whether the failure it raises without a message writes its own (`exception_gives_own_message`). Each read is a *CodeRead* (`code_read.py`) made for that read, with the folders it takes (*CodeFolders*), the class names outside an edited-file scope (*OutsideScope*), and the class nodes it adds and links (*ClassNodes*), so nothing one read finds stays on the practice. It then reads every `.context/*-model.md` in scope with the format the practice names for its model documents (`model_document_format`, its markdown format) and keeps the class model each one describes in the reading part's *ModelDocuments*, which answers `reading.model_documents.described_member(owner, name)`: the operation or property a model document describes, so a realization follows the model's interactions without a second copy of any member in the graph. A graph read back from `graph.json` reads the documents under its source root the first time it is asked. DDD reads after Clean Engineering and sees its classes as building blocks.
+*CleanEngineering* (`practices/clean_engineering/clean_engineering.py`) holds its reading part, a *GraphReading* (`practices/clean_engineering/model/graph_reading.py`), which says what the graph reads from the practice. When `Graph.load_working_copy`, `Graph.load_files`, or `Graph.refresh` reads files, `Graph._read_working_copy` in `harness/graph/working_copy.py` asks each practice the graph holds to read, in dependency order. *CleanEngineering* reads each source file with the class model of its language, which it finds among its practice's formats by the file's extension (`formats.for_file`, which every practice has), and adds each folder as a *Module* that holds its *ModuleContext* (`module.source_facts.load_folder`), and each class, property, operation, and parameter the parser built, as nodes. The parser keeps the file's text on its module and the lines each class and operation spans on that class's and operation's source facts (`source_facts.take_lines`), so `ClassSourceFacts.load` and `OperationSourceFacts.load` read no file again. Each folder owns the folders under it and depends (`dependsOn` edges) on the folders its files import from; it keeps the classes each of its production files imports, re-exports, or reaches as `module.Class`, each with the module it names it from, by the file's path (`imported_classes_by_file`), so a refresh that reads a file again replaces only that file's references. A getter is the operation its class shows as a property, so its node is that property (`Operation.is_property` makes its kind `Property`), typed by the type it returns (`value_type`); an operation's parameters are the *Parameter* nodes its `hasParameter` edges lead to (`parameters_of`, in `class_graph.py`), which every rule and BDD read. The practice's operations and properties are indexed once by name after each read, with its classes, in the reading's *CodeIndex* (`reading.code_index.members_named`, `classes_named`), so the type linking, every rule, and every practice that links to the code ask one index. Once every class is linked, *ComparedFacts* (`model/compared_facts.py`, with `folder_facts.py`, `class_facts.py`, and `operation_facts.py`) records on each node the facts that compare it with the rest of the graph, so every rule reads facts and compares them with its limit and none works anything out across nodes when it checks: it reads every node the practice holds, those read now and those a refresh kept, through their saved facts and the graph's edges, so a refresh records them again over the whole practice and a graph read back from `graph.json` holds them as saved. Its parts are *ClassGraph* (the production classes by name, their operations, fields, bases, and kinds), *ImportCycles*, and *NearCopies*. On each folder it records the imports that close a cycle (`import_cycles`, `file_import_cycles`) and the folder its classes only forward to (`forwards_to_module`); on each module the sibling modules it imports (`sibling_modules_imported`) and the classes of its whole subtree — its files, its packages, and its nested modules, each nested module measured again on its own — with the class definitions that leave it, each import resolved to the definition it names (`subtree_class_count`, `public_classes` by `file:Name` with the routes that reach each: `named` with the folders, `registered` with the registry, `published`; `public_class_count`, `private_class_count`), and their operations (`operations_total`, `operations_public`, `operations_private`, `seam_operations`); on each production class the data bags it takes (`data_bags_taken`), what it copies of another class (`copied_fields`, `copied_references`), the class it only forwards to (`forwards_to`), the domain it extends from another package (`extends_domain`), and the collaborator its constructor builds (`constructs_collaborator`); and on each operation the body it copies (`duplicate_of`, `near_copy_of`) and whether the failure it raises without a message writes its own (`exception_gives_own_message`). Each read is a *CodeRead* (`code_read.py`) made for that read, with the folders it takes (*CodeFolders*), the class names outside an edited-file scope (*OutsideScope*), and the class nodes it adds and links (*ClassNodes*), so nothing one read finds stays on the practice. It then reads every `.context/*-model.md` in scope with the format the practice names for its model documents (`model_document_format`, its markdown format) and keeps the class model each one describes in the reading part's *ModelDocuments*, which answers `reading.model_documents.described_member(owner, name)`: the operation or property a model document describes, so a realization follows the model's interactions without a second copy of any member in the graph. A graph read back from `graph.json` reads the documents under its source root the first time it is asked. DDD reads after Clean Engineering and sees its classes as building blocks.
 
 ```
 model = CleanEngineering().formats["markdown"]().parse(text)
@@ -106,8 +106,8 @@ Raised when `translate_from` is given a node of another semantic type.
 	-> load_classes
 + source_text: str
 	// the text of the file this module was read from, kept by its parser
-+ imported_names: list[str]
-	// the class names its code imports or reaches as module.Class
++ imported_classes: list[ClassReference]
+	// the classes its code imports, re-exports, or reaches as module.Class, each with the module it names it from
 + << composition >> source_facts: ModuleSourceFacts
 	// made once: what the file and the folder it was read from say
 + import_targets(file: Path, root: Path): list[str]
@@ -471,10 +471,48 @@ The module card, `.context/module-context.md`, of one code folder.
 
 + ScriptImports(source_text: str)
 ----
-+ class_names(): set[str]
-	// the names it imports (`from x import A`, `import { A } from`) or reaches as module.Class
++ class_references(file: Path, root: Path): list[ClassReference]
+	// each class it imports, re-exports, or reaches as module.Class, with the module it names it from
+	-> PythonImports.references
+	-> ScriptImportClauses.references
 + targets(file: Path, root: Path): list[str]
 	// root-relative paths its relative script imports reach; a type-only import TypeScript erases is left out
+
+## ClassReference
+
+<<Value Object>> A class name a file names and the module it names it from (`script_imports.py`), saved as `[source, name]`.
+
++ source: str
++ name: str
++ files(): list[str]
+	// the files the module may be, from the source root
+
+## ImportedClasses
+
+Resolves each class reference to the one class definition it names, following re-exports (`imported_classes.py`).
+
++ ImportedClasses(classes: list[Node], references: dict[str, list[ClassReference]])
+----
++ resolve(reference: ClassReference, importer: str): Node | None
+
+## ModuleExposure
+
+Records on each module what of its subtree leaves it: public class definitions by route, and its operations (`module_exposure.py`).
+
++ ModuleExposure(in_graph: PracticeNodes, classes: ClassGraph, routes: PublicRoutes)
+----
++ record(): None
+	-> ClassNamers.by_class
+	-> PublicRoutes.of
+	-> operation_count
+
+## PublicRoutes
+
+The routes besides naming that make a class public: registered with a framework registry, or published as a toolset (`public_routes.py`).
+
++ PublicRoutes(registered: RegisteredClasses)
+----
++ of(node: Node, operations: list[Node]): dict[str, str]
 
 ## ClassSourceFacts
 
