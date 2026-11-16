@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import re
 import threading
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Callable, Iterable, Iterator, TypedDict
 
 
@@ -18,6 +18,7 @@ from harness.mcp.mcp_annotations import long_call, mcp
 from harness.graph.edge import Display, Edge, EdgeIndex, EdgeType
 from harness.graph.explorer import ExplorerEntry, FilteredNode, GraphLoaded, GraphSaved, NodeSource, Overlay, PracticeInventory
 from harness.graph.file_lines import FileLines, PathKind
+from harness.markdown.markdown import MarkdownText
 from harness.graph.graph_build import BuildStep, BuildTask, CheckedFiles, GraphBuild
 from harness.graph.graph_practices import GraphPractices
 from harness.graph.graph_rules_collection import GraphRulesCollection
@@ -47,6 +48,10 @@ class Call:
         self.line = line
         self.order = order
         self.operation = operation
+
+
+# The files a slice reads as markdown sections rather than code: a story map's and a scenario file's text.
+MARKDOWN_SUFFIXES = frozenset({".md", ".markdown"})
 
 
 def _decorated_end(lines: list[str], after: int) -> int:
@@ -238,6 +243,17 @@ class Source:
         return Path(self.root, self.file)
 
     def _call_end(self, lines: list[str], start: int) -> int:
+        if PurePosixPath(self.file or "").suffix.lower() in MARKDOWN_SUFFIXES:
+            return self._section_end(lines, start)
+        return self._code_call_end(lines, start)
+
+    def _section_end(self, lines: list[str], start: int) -> int:
+        """In markdown, where prose's apostrophes and links are no code: the last line of the section a heading on start
+        opens, or start's own line for a step or any other line."""
+        section = MarkdownText("\n".join(lines)).section_lines(start + 1)
+        return section[1] if section is not None else start + 1
+
+    def _code_call_end(self, lines: list[str], start: int) -> int:
         """The line the call or block that opens at start closes on: the first where its parentheses and braces are
         all closed again after one has opened. A Python decorator, such as a shared story's scenario or step, closes
         its call on its own line, so it runs on through the function it decorates."""

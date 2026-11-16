@@ -29,6 +29,7 @@ from space.session.graph_view_examples import (
     SCENARIOS_SCENARIO_LINE,
     SCENARIOS_STORY_LINE,
     SCENARIOS_THEN_LINE,
+    SCENARIOS_WHEN_LINE,
     KANBAN_MODEL,
     SHARED_STORY,
     STEP_LISTED,
@@ -416,3 +417,18 @@ def _(s):
     def _(world):
         found = [(step["line"], [target["name"] for target in step["invokes"]], [target["file"] for target in step["invokes"]]) for step in world.steps]
         expect(found).to(equal([(STEP_STORY_GIVEN_LINE, ["ticket_on_board"], [TICKET_EXAMPLES]), (STEP_STORY_WHEN_LINE, ["delete"], [TICKET_CODE])]))
+
+
+@shared_stories.scenario("Open Story Scenarios Across Files", "Selecting a markdown step spans its own line, whatever its prose holds")
+def _(s):
+    @s.given("the Files app shows the Stories tree of checkout-flow's story map and Delete Ticket's scenarios")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+
+    @s.when("the Person selects the When step the Person deletes the ticket's card")
+    def _(world):
+        world.lines = story_map_lines(world, "when the Person deletes the ticket's card")
+
+    @s.then("the scenarios file opens at the When's own line alone")
+    def _(world):
+        expect(world.lines).to(equal([(SCENARIOS, SCENARIOS_WHEN_LINE, SCENARIOS_WHEN_LINE)]))

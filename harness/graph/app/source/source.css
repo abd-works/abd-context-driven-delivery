@@ -144,7 +144,7 @@
 }
 .source-snippet .callout-mark::after,
 .source-snippet .callout-inner-mark::after {
-  content: 'B8';
+  content: '\25B8';
   display: block;
   text-align: center;
   color: var(--accent);
@@ -152,7 +152,7 @@
 }
 .source-snippet .callout-mark.callout-mark-open::after,
 .source-snippet .callout-inner-mark.callout-mark-open::after {
-  content: 'BE';
+  content: '\25BE';
 }
 .source-snippet .callout-label {
   color: var(--muted);

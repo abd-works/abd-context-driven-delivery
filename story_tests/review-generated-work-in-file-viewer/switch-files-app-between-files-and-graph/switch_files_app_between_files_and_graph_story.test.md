@@ -247,6 +247,14 @@ Requested by the person on 2026-11-16.
 *When* the Person selects the scenario a ticket is deleted  
 *Then* the scenarios file opens at lines 5 to 9, its heading through its Then
 
+#### Scenario: Selecting a markdown step spans its own line, whatever its prose holds
+
+Reported by the person on 2026-11-16: a scenario selected in markdown ran past its last step, because a step's apostrophe (*checkout-flow's*) was read as code's quote.
+
+*Given* the Files app shows the Stories tree of checkout-flow's story map and Delete Ticket's scenarios  
+*When* the Person selects the When step the Person deletes the ticket's card  
+*Then* the scenarios file opens at the When's own line alone
+
 ## Story: Open Linked Sections In Place
 
 ### Evidence

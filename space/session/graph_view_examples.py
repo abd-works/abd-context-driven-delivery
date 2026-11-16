@@ -63,11 +63,13 @@ SCENARIOS_TEXT = (
     "\n"
     "#### Scenario: a ticket is deleted\n"
     "\n"
-    "*Given* a ticket on the board  \n"
-    "*When* the Person deletes it  \n"
-    "*Then* the [board](../../../space/kanban/.context/kanban-model.md#board) no longer shows it\n"
+    "*Given* a [ticket](../../../space/kanban/ticket.py) on the board  \n"
+    "*When* the Person deletes the ticket's card  \n"
+    "*Then* the ticket's card leaves the [board](../../../space/kanban/.context/kanban-model.md#board)\n"
 )
 SCENARIOS_GIVEN_LINE = 7
+# Its When, on line 8, holds an apostrophe, as prose does, which code's quotes would read as a string left open.
+SCENARIOS_WHEN_LINE = 8
 SCENARIOS_STORY_LINE = 3
 SCENARIOS_SCENARIO_LINE = 5
 SCENARIOS_THEN_LINE = 9

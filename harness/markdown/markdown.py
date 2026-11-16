@@ -200,10 +200,17 @@ class MarkdownText:
         """The lines, counted from 1, of the section under the heading a link names by anchor, such as
         ``story-delete-ticket`` for ``## Story: Delete Ticket``: its heading through its last line with text before the
         next heading as high or higher; none when no heading has that anchor."""
+        found = next((index for index, item in enumerate(self.headings()) if heading_anchor(item[3]) == anchor), None)
+        return self._section_lines(found) if found is not None else None
+
+    def section_lines(self, line: int) -> tuple[int, int] | None:
+        """The lines, counted from 1, of the section whose heading sits on line: its heading through its last line with
+        text before the next heading as high or higher; none when no heading sits on line."""
+        found = next((index for index, item in enumerate(self.headings()) if self._text.count("\n", 0, item[0]) + 1 == line), None)
+        return self._section_lines(found) if found is not None else None
+
+    def _section_lines(self, found: int) -> tuple[int, int]:
         headings = self.headings()
-        found = next((index for index, item in enumerate(headings) if heading_anchor(item[3]) == anchor), None)
-        if found is None:
-            return None
         start, _heading_end, level, _heading = headings[found]
         end = next((position for position, _e, next_level, _h in headings[found + 1 :] if next_level <= level), len(self._text))
         first = self._text.count("\n", 0, start) + 1
