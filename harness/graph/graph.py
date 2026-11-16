@@ -669,6 +669,7 @@ class Node:
             holder = self._new_kind_node(kind)
             holder.parent = self
             self.children.append(holder)
+            self.practice.reading.in_graph.hold_group(holder)
         return holder
 
     def _edges_in_source_order(self, kind: str) -> list[Edge]:
@@ -857,6 +858,9 @@ class PracticeNodes:
         self._source_root: Path | None = None
         self._root: Node | None = None
         self._by_id: dict[str, Node] = {}
+        # The relationship groups the explorer tree puts edges under, such as an operation's invokes; no node of the
+        # practice, so the practice's nodes and rules leave them out, but an explorer opens them by id.
+        self._groups: dict[str, Node] = {}
         self._nodes: dict[str, list[Node]] = {}
         # The node types offered, in the order they were first offered or held, so the explorer lists them the same
         # way in every process.
@@ -906,7 +910,7 @@ class PracticeNodes:
         """Forget every node and edge, so a load reads them again from nothing."""
         self.changed()
         self._root = None
-        for store in (self._by_id, self._nodes, self._node_types):
+        for store in (self._by_id, self._groups, self._nodes, self._node_types):
             store.clear()
         self.edge_index.clear()
 
@@ -940,8 +944,13 @@ class PracticeNodes:
         return {file.relative_to(root).as_posix() for file in files if file == root or root in file.parents}
 
     def node(self, node_id: str) -> Node | None:
-        """The practice's node called node_id; none when it holds none."""
-        return self._by_id.get(node_id)
+        """The practice's node called node_id, or the relationship group called node_id one of its nodes holds; none
+        when it holds neither."""
+        return self._by_id.get(node_id) or self._groups.get(node_id)
+
+    def hold_group(self, group: Node) -> None:
+        """Hold group, a relationship group one of the practice's nodes made, so an explorer opens it by its id."""
+        self._groups[group.node_id] = group
 
     def holds(self, node_id: str) -> bool:
         """Whether the practice already holds a node called node_id."""
