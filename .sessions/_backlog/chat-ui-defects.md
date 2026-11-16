@@ -168,3 +168,13 @@ Reported 2026-11-13 ("what happened to footer put below chat input"), right afte
 · folder) was gone. The `PromptHint` hook in `register.ts` draws it from the active session's ticket in the chat bar's
 last board read (`ChatBarClient.statusLine`), and draws nothing while that read holds no active ticket. Not yet
 diagnosed: whether the read after the restart or reload failed or had not happened yet, or whether the hook was skipped.
+
+## Fix on a chat bar failure did not reach the chat
+
+Reported 2026-11-16 (screenshot: "The fix did not reach the chat: cdd-board: prompt.submit: submits a prompt to the
+model; a text beginning with / would run a command as the user; run one with $.command.run({ command }) (host check)").
+Pressing Fix on that failure failed the same way. `FailureClient.fixPrompt` is the slash command
+`/space-session-debug-session choice=fix details=...`, and `fixFailure` sent it with `$.prompt.submit`, which the host
+refuses for text that starts with `/`. Fixed on file-manager (2026-11-16): `fixFailure` runs a slash command with
+`$.command.run`, as the board's own commands do, and submits any other text. Not walked in a chat yet: needs main and a
+repin to reach the installed mod.

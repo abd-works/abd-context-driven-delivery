@@ -4,6 +4,7 @@ import type { EngineInterface } from 'claude-code'
 import type { FailureData } from '@cdd/tools/error_display/failure'
 
 import type { FailureJson } from '../../types'
+import { commandOf } from '../shared/chat-command'
 import { debugCommandOf } from '../shared/debug-command'
 
 // Every failure in the mod is shown the same way, above the chat bar's line: what failed with the reason it gave, the
@@ -57,6 +58,12 @@ export function shownAsFailure($: EngineInterface, failure: string, context: str
   return thrown => showFailure($, failure, context, thrown)
 }
 
+// A slash command runs as if the person typed it, as the board's commands do: the engine refuses a submitted prompt that
+// starts with a slash. Any other text arrives as the person's own message.
+function sentToChat($: EngineInterface, text: string): Promise<unknown> {
+  return text.startsWith('/') ? $.command.run(commandOf(text)) : $.prompt.submit({ text, asUser: true })
+}
+
 export async function dismissFailure($: EngineInterface): Promise<void> {
   await update($, shownFailure, () => null)
 }
@@ -68,7 +75,7 @@ export async function fixFailure($: EngineInterface, failure: FailureClient): Pr
   if (failure.isFixing) return
   await update($, shownFailure, json => (json ? { ...json, is_fixing: true } : json))
   try {
-    await $.prompt.submit({ text: failure.fixPrompt, asUser: true })
+    await sentToChat($, failure.fixPrompt)
   } catch (thrown) {
     return showFailure($, 'The fix did not reach the chat', `Pressing Fix on: ${failure.failure}`, thrown)
   }
