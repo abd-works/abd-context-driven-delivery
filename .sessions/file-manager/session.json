@@ -11,14 +11,17 @@
       "specification",
       "implementation"
     ],
-    "version": 38
+    "version": 40
   },
   "practices": {
     "stories": {
       "formats": {
         "story_map": [
-          "drawio",
-          "whiteboard"
+          "markdown"
+        ],
+        "scenarios": [
+          "python",
+          "markdown"
         ]
       }
     },
