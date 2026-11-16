@@ -16,18 +16,23 @@ _VAGUE_TYPES = frozenset({"any", "object", "dict", "Dict", "Any", "Mapping", "ma
 # A client's `withEmail(email)` answers a copy with one field changed: a property setter, not an operation.
 _FIELD_CHANGE = re.compile(r"^with[A-Z]")
 _INVALID_PARAM_NAME = re.compile(r"^[\w$]+$")
+# A Python special operation whose parameters the language fixes, such as `__eq__` or `__contains__`; the operations
+# that build or call an object take whatever parameters the class chooses, so they are judged.
+_PROTOCOL_OPERATION = re.compile(r"^__(?!(?:init|new|call|post_init)__$)\w+__$")
 
 
 class UseTypedSignatures(ProductionCodeRule):
     """Judged on each parameter, which the graph reads for every operation's signature, so an untyped parameter is
     reported once, where it is written. A parameter of a language with no type syntax, such as plain JavaScript, has
-    nothing to judge."""
+    nothing to judge. Neither has a parameter of a Python protocol operation, such as `__eq__(self, other: object)` or
+    `__setattr__(self, name, value)`: Python fixes its signature, so the operation cannot choose a narrower type."""
 
     slug = "use-typed-signatures"
     node_types = ("Parameter",)
 
     def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
-        if _FIELD_CHANGE.match(str(node.get_fact("operation_name") or "")) or not node.has_fact("type_hint"):
+        operation = str(node.get_fact("operation_name") or "")
+        if _FIELD_CHANGE.match(operation) or _PROTOCOL_OPERATION.match(operation) or not node.has_fact("type_hint"):
             return []
         if not node.get_fact("in_typed_language", True):
             return []

@@ -92,13 +92,16 @@ class DoNotInventParallelObjectModels(PracticeGraphRule):
         classes = context.index(ClassGraph)
         # A mixin's annotations declare what the class it is mixed into holds, so it holds no model of its own.
         fields = {node.node_id: {} if classes.is_mixin(node) else classes.fields(node) for node in classes.classes}
+        # Two subclasses that each fill the fields of a base they share hold one model, the base's, so a copy is looked
+        # for only among the fields a class declares beyond its bases'.
+        declared = {node.node_id: self._beyond_bases(node, fields[node.node_id], classes) for node in classes.classes}
         holders: dict[str, list["Node"]] = {}
         for node in classes.classes:
-            for field in fields[node.node_id]:
+            for field in declared[node.node_id]:
                 holders.setdefault(field, []).append(node)
         hits: list[tuple[str, str]] = []
         for node in classes.classes:
-            hits.extend((node.node_id, message) for message in self._copied_fields(node, holders, fields))
+            hits.extend((node.node_id, message) for message in self._copied_fields(node, holders, declared))
             hits.extend((node.node_id, message) for message in self._copied_references(node, classes, fields[node.node_id]))
         return hits
 
@@ -126,6 +129,21 @@ class DoNotInventParallelObjectModels(PracticeGraphRule):
     def _related(self, node: "Node", other: "Node") -> bool:
         """A subclass repeats its base's fields by design."""
         return other.name in (node.get_fact("bases", []) or []) or node.name in (other.get_fact("bases", []) or [])
+
+    def _beyond_bases(self, node: "Node", fields: dict[str, str], classes: ClassGraph) -> dict[str, str]:
+        """The fields it holds that none of the classes it derives from declares, through every base the graph holds."""
+        inherited: set[str] = set()
+        seen: set[str] = set()
+        pending = classes.bases_of(node)
+        while pending:
+            base = pending.pop()
+            if base in seen:
+                continue
+            seen.add(base)
+            for declaring in classes.named(base):
+                inherited |= set(classes.fields(declaring))
+                pending.extend(classes.bases_of(declaring))
+        return {field: hint for field, hint in fields.items() if field not in inherited}
 
     def _copies(self, shared: set[str], own: set[str], theirs: set[str]) -> bool:
         smaller = min(len(own), len(theirs))

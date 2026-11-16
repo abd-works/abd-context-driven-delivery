@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING
 from harness.graph.practice_rule import PracticeGraphRule
 
 from cdd_guidance.practices.clean_engineering.model.graph_reading import parameters_of
+from cdd_guidance.practices.clean_engineering.model.operation import CONSTRUCTOR_NAMES
+from cdd_guidance.practices.clean_engineering.model.operation_metrics import StatementCount
 from cdd_guidance.practices.clean_engineering.rules.class_graph import ClassGraph
 from cdd_guidance.practices.clean_engineering.rules.near_copies import MIN_LINES, NearCopies
 from cdd_guidance.practices.clean_engineering.rules.operation_semantics import SEMANTIC_RULES
@@ -55,10 +57,21 @@ _STATIC_FACTORY_NAMES = frozenset({"instance", "create"})
 # with an object the caller holds.
 _STATIC_FACTORY_EXTRA_NAMES = frozenset({"fromRequest", "now", "every"})
 _CAMEL_FROM_FACTORY = re.compile(r"^from[A-Z]")
+# The operations React calls on a component class itself, which it requires to be static.
+_REACT_STATIC_OPERATIONS = frozenset({"getDerivedStateFromError", "getDerivedStateFromProps"})
+_SCRIPT_SUFFIXES = (".ts", ".tsx", ".js", ".jsx")
 _LOAD_FACTORY = re.compile(r"^load(?:[A-Z_].*)?$")
 # The names a return type spells: `list[CatalogPractice]` spells `list` and `CatalogPractice`.
 _TYPE_NAME = re.compile(r"[A-Za-z_]\w*")
+# The words a type's name is made of: `HookPayload` is `Hook` and `Payload`, `hook_payload` is `hook` and `payload`.
+_TYPE_WORD = re.compile(r"[A-Z]+(?![a-z])|[A-Z]?[a-z0-9]+")
 
+
+# The last word of a class that reaches outside its owner: storage, a remote system, a file, or another process.
+_OUTSIDE_COLLABORATOR = re.compile(
+    r"(?:Repository|Repo|Service|Client|Gateway|Api|API|Provider|File|Connection|Database|Server|Cli|Socket|Process"
+    r"|Daemon|Store)$"
+)
 
 _VAGUE_PARAMETER_NAMES = frozenset({"options", "opts", "config", "settings"})
 
@@ -80,14 +93,14 @@ GENERIC_NAMES = {
 }
 
 
-def _parameter_names(node: "Node") -> list[str]:
-    return [parameter.name for parameter in parameters_of(node)]
-
-
 class UseExplicitDependencies(ProductionCodeRule):
     """A collaborator a constructor builds that its caller cannot hand it. The parser leaves out what a caller can
     replace or what the class owns: a failure it raises, a parameter's default, a part built from its own state. This
-    rule passes values, failures, and collections (``ClassKinds.is_value``) and the peers an Entity composes."""
+    rule passes values, failures, and collections (``ClassKinds.is_value``), the peers an Entity composes, and a part
+    the owner builds once and keeps: a class of the program's own that is no outside collaborator. An outside
+    collaborator is a class the program does not declare, such as a library's client, or one whose name says it reaches
+    outside the object (a repository, service, client, gateway, file, connection, or other process): the caller has to
+    be able to hand it a different one."""
 
     slug = "use-explicit-dependencies"
     node_types = ("OoadClass",)
@@ -95,13 +108,23 @@ class UseExplicitDependencies(ProductionCodeRule):
     def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         classes = context.index(ClassGraph)
         for type_name in node.get_fact("constructs", []):
-            if type_name == node.name or classes.kinds.is_value(type_name):
+            if type_name == node.name or classes.kinds.is_value(type_name) or self._owned_part(node, type_name, classes):
                 continue
             # <<Entity>> / <<Aggregate Root>> may compose sibling types from the same file.
             if node.get_fact("composes_peers") and type_name in node.get_fact("peer_names", []):
                 continue
             return [f"Class '{node.name}' constructs '{type_name}' inside its constructor."]
         return []
+
+    def _owned_part(self, owner: "Node", type_name: str, classes: ClassGraph) -> bool:
+        """True for a class the program declares, whose name names no outside collaborator, that the constructor builds
+        from nothing: `EdgeIndex()`. One built from something outside the object, `Sessions(Path.cwd())`, ties the
+        class to that outside thing."""
+        if not classes.named(type_name) or _OUTSIDE_COLLABORATOR.search(type_name) is not None:
+            return False
+        built_empty = re.compile(rf"(?<![\w.$]){re.escape(type_name)}\s*\(\s*\)")
+        constructors = [operation for operation in classes.operations(owner) if operation.name in CONSTRUCTOR_NAMES]
+        return any(built_empty.search(operation.get_fact("body_text") or "") for operation in constructors)
 
 
 class OperationMeasureRule(ProductionCodeRule):
@@ -130,10 +153,23 @@ def operation_line_count(operation: "Node") -> int:
 
 
 class KeepOperationsSmall(OperationMeasureRule):
+    """Counts the statements of the body, as the rule says: a call, list, or string written over several lines is one
+    statement, and the signature and docstring are none. An operation whose body the graph did not keep, such as one a
+    model document declares, is measured by its lines."""
+
     slug = "keep-operations-small-focused"
     limit = 20
 
     def measure(self, operation: "Node") -> list[str]:
+        python = str(operation.source.file or "").endswith(".py")
+        statements = StatementCount(operation.get_fact("body_text") or "", python).count()
+        if statements is None:
+            return self._measure_lines(operation)
+        if statements <= self.limit:
+            return []
+        return [f"{operation_label(operation)} is {statements} statements (max {self.limit})."]
+
+    def _measure_lines(self, operation: "Node") -> list[str]:
         size = operation_line_count(operation)
         if size <= self.limit:
             return []
@@ -188,19 +224,29 @@ class ProvideMeaningfulContext(ProductionCodeRule):
 
 
 class AvoidVagueParameterNames(ProductionCodeRule):
+    """A placeholder name passes when the parameter's type names it: in `payload: HookPayload` the type says which
+    payload the caller supplies, so the name hides nothing."""
+
     slug = "avoid-vague-parameter-names"
     node_types = ("Parameter", "Operation")
 
     def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         if node.type == "Parameter":
-            if node.name.lower() in VAGUE_NAMES:
+            if node.name.lower() in VAGUE_NAMES and not self._named_by_type(node.name, node.get_fact("type_hint", "")):
                 return [f"Parameter '{node.name}' is vague. Use a domain-specific name."]
             return []
-        for name in _parameter_names(node):
-            lowered = name.lower()
-            if lowered in VAGUE_NAMES or lowered in _VAGUE_PARAMETER_NAMES:
-                return [f"Parameter '{name}' in '{node.name}' is vague."]
+        for parameter in parameters_of(node):
+            lowered = parameter.name.lower()
+            vague = lowered in VAGUE_NAMES or lowered in _VAGUE_PARAMETER_NAMES
+            if vague and not self._named_by_type(parameter.name, parameter.get_fact("type_hint", "")):
+                return [f"Parameter '{parameter.name}' in '{node.name}' is vague."]
         return []
+
+    def _named_by_type(self, name: str, type_hint: str) -> bool:
+        """True when a type the hint names has the parameter's name as one of its words: `HookPayload` for `payload`,
+        `RenderOptions` for `options`."""
+        words = {word.lower() for type_name in _TYPE_NAME.findall(type_hint or "") for word in _TYPE_WORD.findall(type_name)}
+        return name.strip("_").lower() in words
 
 
 # A Claude Code mod hands every hook its engine as `$`, the name the mod API documents, so a reader knows it on sight.
@@ -268,7 +314,7 @@ class PreferInstanceOperations(ProductionCodeRule):
         is_classmethod = bool(node.get_fact("is_classmethod"))
         if not is_static and not is_classmethod:
             return []
-        if self._allows_static_factory_operation(node.name) or self._makes_its_own_class(node):
+        if self._allows_static_factory_operation(node.name) or self._makes_its_own_class(node) or self._react_static(node):
             return []
         kind = "classmethod" if is_classmethod else "staticmethod"
         return [f"Operation '{node.name}' is a {kind}; prefer an instance operation."]
@@ -281,6 +327,12 @@ class PreferInstanceOperations(ProductionCodeRule):
         if _CAMEL_FROM_FACTORY.match(name):
             return True
         return _LOAD_FACTORY.match(name) is not None
+
+    def _react_static(self, operation: "Node") -> bool:
+        """A static operation React calls on a component class, such as `getDerivedStateFromError`: React requires it
+        to be static, so the class cannot make it an instance operation."""
+        script = str(operation.source.file or "").endswith(_SCRIPT_SUFFIXES)
+        return script and operation.name in _REACT_STATIC_OPERATIONS
 
     def _makes_its_own_class(self, operation: "Node") -> bool:
         """A factory: a class-level operation that makes its own class from what it is given, such as
@@ -304,7 +356,7 @@ class UsePropertyNotAccessor(ProductionCodeRule):
             return []
         if not any(node.name.startswith(prefix) for prefix in self._PREFIXES):
             return []
-        if _parameter_names(node):
+        if parameters_of(node):
             return []
         owner = node.get_fact("owner", "")
         return [f"Operation '{node.name}' on '{owner}' looks like a getter; use a property."]

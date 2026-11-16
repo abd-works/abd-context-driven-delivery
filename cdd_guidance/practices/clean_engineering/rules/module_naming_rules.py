@@ -17,6 +17,9 @@ _VERB_MODULE = re.compile(
     re.I,
 )
 _BAD_SUFFIX = re.compile(r"(Model|Runtime|Service|Manager|Helper|Util|Utils|Processor)$")
+# The stereotypes of a class that is a subsystem of its own: an agent toolset is installed, published, and given its
+# guidance as one unit, so its folder is a module even when the toolset is its one class.
+_INDEPENDENT_SUBSYSTEMS = frozenset({"Agent Toolset"})
 
 
 class DomainNounsOnly(ProductionCodeRule):
@@ -36,6 +39,9 @@ class DomainNounsOnly(ProductionCodeRule):
 
 
 class NoModulePerClass(ProductionCodeRule):
+    """A folder of one class passes when that class is a genuinely independent subsystem, as the rule allows: an agent
+    toolset, which is installed and published as a unit of its own, with its own guidance beside it."""
+
     slug = "no-module-per-class"
     node_types = ("Module",)
 
@@ -52,7 +58,8 @@ class NoModulePerClass(ProductionCodeRule):
             ]
         if self._holds_modules(node, context):
             return []
-        if self._public_classes_in(node, context) == 1 and node.get_fact("public_source_files", 0) <= 1:
+        public = self._public_classes_in(node, context)
+        if len(public) == 1 and node.get_fact("public_source_files", 0) <= 1 and not self._independent(public[0]):
             return [
                 f"Module {node.name!r} exposes a single class in one file; "
                 "group cohesive classes or merge into an existing module."
@@ -65,12 +72,17 @@ class NoModulePerClass(ProductionCodeRule):
         those folders, so it is not a module of one class."""
         return any(child.type in ("Module", "Package") for child in context.children(folder_node, "owns"))
 
-    def _public_classes_in(self, folder_node: "Node", context: "RuleCheckContext") -> int:
+    def _public_classes_in(self, folder_node: "Node", context: "RuleCheckContext") -> list["Node"]:
         """The classes the folder's production files declare whose names are public; a spec's classes are not its seam."""
-        count = 0
+        public: list["Node"] = []
         for class_node in context.nodes("OoadClass"):
             file = class_node.source.file or ""
             public_file = not file.rsplit("/", 1)[-1].startswith("_") and not is_test_code(file)
             if public_file and folder_node in context.targets(class_node, "belongsTo"):
-                count += 1
-        return count
+                public.append(class_node)
+        return public
+
+    def _independent(self, class_node: "Node") -> bool:
+        """True for a class its stereotype marks as a subsystem of its own, such as an `@agent_toolset`."""
+        stereotypes = {str(item) for item in class_node.get_fact("stereotypes", []) or []}
+        return bool(stereotypes & _INDEPENDENT_SUBSYSTEMS)
