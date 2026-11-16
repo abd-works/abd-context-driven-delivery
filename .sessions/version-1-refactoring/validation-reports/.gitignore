@@ -1,2 +1,2 @@
-# The graph JSON of a whole-repository report is over GitHub's 100 MB file limit
-clean-engineering-code-20261116T075749.json
+# Report graphs of the whole repository are over GitHub's 100 MB file limit
+*.json
