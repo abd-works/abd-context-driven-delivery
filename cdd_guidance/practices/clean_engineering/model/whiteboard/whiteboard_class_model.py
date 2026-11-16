@@ -19,8 +19,9 @@ import re
 from typing import Dict, List, Optional, Tuple
 
 from harness.whiteboard import BoardElement, Box, Whiteboard, WhiteboardNode
+from harness.whiteboard.whiteboard import UnreadableBoard
 
-from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass
+from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass, UnreadableSource
 from cdd_guidance.practices.clean_engineering.model.diagram.class_layout import PAGE_MARGIN, ArrowRouter, DiagramArrow
 from cdd_guidance.practices.clean_engineering.model.diagram.class_view import ClassView, ClassViewPage
 from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import (
@@ -422,8 +423,14 @@ class WhiteboardCleanEngineeringModel(DiagramCleanEngineeringModel):
         return _ModulesBoard(self).draw() if self.is_modules_view else _ClassBoard(self).draw()
 
     def parse(self, text: str) -> "WhiteboardCleanEngineeringModel":
-        """The modules view or class view a saved board's text holds, read into this model's own modules."""
-        return self.take_board(Whiteboard.from_text(text))
+        """The modules view or class view a saved board's text holds, read into this model's own modules. Text that is
+        not a saved board raises UnreadableSource, as a draw.io diagram that is not XML does; a saved board that draws
+        no module and no class, such as a Stories story map, raises UnreadableBoard from ``take_board``."""
+        try:
+            board = Whiteboard.from_text(text)
+        except UnreadableBoard as unreadable:
+            raise UnreadableSource(str(unreadable)) from unreadable
+        return self.take_board(board)
 
     def take_board(self, board: Whiteboard) -> "WhiteboardCleanEngineeringModel":
         """Read a modules view or a class view drawn on board into this model's own modules, and return it."""

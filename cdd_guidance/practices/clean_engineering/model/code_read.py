@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 from harness.agent_tools.progress import report_progress
 from harness.graph.skipped_folders import scanned_files, skips_folder
 from harness.graph.location import Location
+from harness.whiteboard.whiteboard import UnreadableBoard
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     Module,
@@ -91,7 +92,9 @@ class CodeRead:
 
     def _parsed(self, file: Path) -> Module | None:
         """The file's module, read by its language's class model from the practice's formats, with its source facts
-        loaded. A file that does not parse is kept with the reason, so the source-parses rule reports it."""
+        loaded. A file that does not parse is kept with the reason, so the source-parses rule reports it. A saved board
+        that draws no module and no class, such as a Stories story map, is another practice's drawing, not Clean
+        Engineering source, so it holds no module and is not kept."""
         text = self._text_of(file)
         if text is None:
             return None
@@ -99,6 +102,8 @@ class CodeRead:
             module = self._reading.practice.formats.for_file(file).parse(text).file_module()
         except UnreadableSource as unreadable:
             self._unreadable[file] = str(unreadable)
+            return None
+        except UnreadableBoard:
             return None
         module.source_facts.load(file, self._root)
         return module
