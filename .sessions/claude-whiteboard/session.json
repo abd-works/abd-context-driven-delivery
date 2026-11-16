@@ -10,7 +10,7 @@
       "specification",
       "implementation"
     ],
-    "version": 24
+    "version": 25
   },
   "practices": {
     "ux": {
@@ -39,7 +39,8 @@
           "drawio"
         ],
         "model": [
-          "python"
+          "python",
+          "drawio"
         ],
         "code": [
           "python"
