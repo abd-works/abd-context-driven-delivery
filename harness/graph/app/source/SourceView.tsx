@@ -25,6 +25,10 @@ export type SourceEditorInstance = Parameters<OnMount>[0];
 // file.
 export type SourceFold = { start: number; end: number; kind: 'class' | 'block' };
 
+// Lines of the source a page wants shown, such as the nodes a person selected in the graph: every fold holding one of
+// them starts open, and every other fold starts closed.
+export type SourceLines = { start: number; end: number };
+
 // What a page showing a whole file adds to the view: the folds its graph names, whether every fold starts open so the
 // file reads whole until a person folds it, the language the file is in, and the editor itself once it is made, so the
 // page can add its own gutter marks (each with the class SOURCE_MARK, which the fold toggle leaves alone) and menu
@@ -32,6 +36,7 @@ export type SourceFold = { start: number; end: number; kind: 'class' | 'block' }
 export type SourceHostProps = {
   folds?: SourceFold[];
   unfolded?: boolean;
+  openAround?: SourceLines[];
   language?: string;
   keepGlyphMargin?: boolean;
   onEditor?: (editor: SourceEditorInstance) => void;
@@ -40,6 +45,7 @@ export type SourceHostProps = {
 export const SOURCE_MARK = 'source-mark';
 
 const NO_FOLDS: SourceFold[] = [];
+const NO_LINES: SourceLines[] = [];
 
 type SourceViewProps = SourceHostProps & {
   source: NodeSourceData | null;
@@ -71,6 +77,7 @@ function SourceEditor({
   onSelectRule,
   folds = NO_FOLDS,
   unfolded = false,
+  openAround = NO_LINES,
   language = '',
   keepGlyphMargin = false,
   onEditor,
@@ -98,11 +105,14 @@ function SourceEditor({
       ),
     [source, text, members, owner, folds],
   );
-  const initialOpen = () => (unfolded ? prepared.folds.map(foldKey) : openBlockFolds(prepared.folds, source.type));
-  const [openFor, setOpenFor] = useState(source.node_id);
+  const initialOpen = () =>
+    openAround.length ? foldsAround(prepared.folds, openAround) : unfolded ? prepared.folds.map(foldKey) : openBlockFolds(prepared.folds, source.type);
+  // The folds start again whenever the source or the lines to show change, such as a node selected in the graph.
+  const openKey = `${source.node_id}|${openAround.map((lines) => `${lines.start}-${lines.end}`).join(',')}|${prepared.folds.length}`;
+  const [openFor, setOpenFor] = useState(openKey);
   const [openFolds, setOpenFolds] = useState<string[]>(initialOpen);
-  if (openFor !== source.node_id) {
-    setOpenFor(source.node_id);
+  if (openFor !== openKey) {
+    setOpenFor(openKey);
     setOpenFolds(initialOpen());
   }
   const glyphs = useRef(keepGlyphMargin);
@@ -288,6 +298,11 @@ function withNamedFolds<Layout extends { folds: InlineFold[] }>(layout: Layout, 
 
 function namedFold(fold: SourceFold): InlineFold {
   return { glyph: fold.start, start: fold.start + 1, end: fold.end, kind: fold.kind };
+}
+
+// The folds that hold one of the lines asked for, a class around a selected operation too.
+export function foldsAround(folds: InlineFold[], around: SourceLines[]): string[] {
+  return folds.filter((fold) => around.some((lines) => fold.glyph <= lines.start && fold.end >= lines.end)).map(foldKey);
 }
 
 function foldKey(fold: InlineFold): string {

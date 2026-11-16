@@ -72,6 +72,16 @@ button:disabled { cursor: default; opacity: 0.5; }
 .file-entry-note { color: var(--muted); }
 
 .open-file { min-width: 0; }
+.more-file { margin-top: var(--space-md); }
+.more-file-path { font-family: var(--font-mono); font-size: var(--text-sm); color: var(--muted); margin-bottom: var(--space-2xs); }
+
+.graph-tree { list-style: none; display: grid; gap: 2px; }
+.graph-tree .graph-tree { padding-left: var(--space-md); }
+.graph-row { display: flex; align-items: center; gap: var(--space-2xs); min-width: 0; }
+.graph-row.is-selected .graph-node { border-color: var(--select); background: var(--surface); }
+.graph-toggle { flex: none; width: 1.5em; padding: 0; border-color: transparent; background: transparent; color: var(--muted); }
+.graph-node { min-width: 0; text-align: left; border-color: transparent; background: transparent; font-family: var(--font-mono); font-size: var(--text-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.graph-type { flex: none; color: var(--muted); font-size: var(--text-sm); }
 .open-diagram { display: flex; flex-direction: column; height: calc(100vh - 7rem); }
 .drawio-frame { flex: 1; width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm); background: #fff; }
 .file-menu-backdrop { position: fixed; inset: 0; z-index: 20; }

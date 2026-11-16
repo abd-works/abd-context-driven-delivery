@@ -1052,17 +1052,25 @@ Built (2026-11-15): Add to context on a file's or folder's right-click menu in t
 
 Requested (2026-11-15, "the actual file viewer is going to have a toggle that can switch from folder files and graph"): a toggle at the top of the Files app switches its file bar between the files it lists, as a list or in folders (`file-bar.ts` *FileBar*), and the practice trees of the session's graph, as the Graph app's tree shows them. Switching back shows the files again.
 
+Built (2026-11-15), not walked: the file bar's Graph button beside List and Folders (`files-graph-view.tsx` *FilesGraphView*), reading `session.graph_trees` for the files the bar lists; each practice tree starts collapsed and the open file stays open. Tests: `harness/files_app/app/files/files-graph.spec.ts`, `space/session/session_graph_view_spec.py`.
+
 ### (S) Files App --> [Filter Graph Like The File List](review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md#story-filter-graph-like-the-file-list)
 
 Requested (2026-11-15, "graph filtered like file filter is"): the graph view holds only the nodes of the files the file list would show: the stages, practices and format groups of the session's guidance selection, the chat bar's selected fidelity dots while any are selected, and the Changed button's branch changes while it is on (`files-page.ts` `filesShown`, `file-bar.ts` `entries`). A filter changed in either view shows in both.
+
+Built (2026-11-15), not walked: the graph is read again whenever the bar lists other files (`FilesGraph.follow`), so a practice turned off here or on the chat bar, and the Changed button, narrow it as they narrow the list; the session keeps only the nodes read from those files (`Session.graph_trees`, the graph filter's `paths`).
 
 ### (S) Person --> [Open Several Files From Graph Nodes](review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md#story-open-several-files-from-graph-nodes)
 
 Requested (2026-11-15, "except for you're now selecting file(s), eg more than one file opens"): selecting a node in the graph view opens its file in the source view; selecting nodes in more than one file opens each of those files, where the Files app opens one file today and the Graph app shows one node's source.
 
+Built (2026-11-15), not walked: selecting a node opens its file at its lines (`Session.graph_node_range`); Ctrl, Cmd or Shift with the press selects it beside the others, and each other file opens below the first (`FilesPage.showNodes`).
+
 ### (S) Files App --> [Fold Open Files To Selected Nodes](review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md#story-fold-open-files-to-selected-nodes)
 
 Requested (2026-11-15, "expand and collapse in file viewer based on the nodes in the graph"): each open file unfolds the blocks of the nodes selected in the graph and folds its other classes and operations, from the folds the session's graph places (`session.file` folds); selecting another node unfolds it and leaves the rest folded. Builds on the Files app's Fold Classes And Operations and the Graph app's Unfold Calls And Classes In Source.
+
+Built (2026-11-15), not walked: an open file reads its folds and opens only those holding a selected node, its class too, scrolling to the first (`SourceView` `openAround`, `foldsAround`).
 
 ## (E) Explore Graph In Files App
 

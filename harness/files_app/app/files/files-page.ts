@@ -8,9 +8,10 @@ import { FileBrowser } from './file-browser'
 import { FileCommentsActions } from './file-comments-actions'
 import { FileMenu } from './file-menu'
 import type { FilesLink } from './files-link'
+import { FilesGraph } from './files-graph'
 import { FilesNotices } from './files-notices'
 import { isDrawio } from './files-paths'
-import { FilesStore, type FidelityFiles } from './files-state'
+import { FilesStore, type FidelityFiles, type SelectedNode } from './files-state'
 import { formatGlyphOf } from './format-chips'
 import { GuidanceSelector } from './guidance-selector'
 
@@ -58,6 +59,7 @@ export class FilesPage {
   readonly notices: FilesNotices
   readonly chatContext: ChatContext
   readonly menu: FileMenu
+  readonly graph: FilesGraph
   private refreshTimer: ReturnType<typeof setTimeout> | null = null
 
   constructor(
@@ -69,6 +71,7 @@ export class FilesPage {
     this.chatContext = new ChatContext(this.session, link.chat, this.notices)
     this.menu = new FileMenu(this.store, this.chatContext, new FileBrowser(api, this.notices))
     this.comments = new FileCommentsActions(this)
+    this.graph = new FilesGraph(this.store, this.session, this.fileBar, this.notices, selected => this.showNodes(selected))
     this.guidance = new GuidanceSelector(this.session, this.store, () => this.showSelected(), (failure, context) => this.notices.fail(failure, context))
   }
 
@@ -90,6 +93,7 @@ export class FilesPage {
     if (this.link.namesFiles) void this.readPlace()
     if (this.link.namesFiles && !this.link.isSessionFolder) void this.readRootFiles()
     const stopFollowing = this.link.isSessionFolder || !this.link.namesFiles ? () => undefined : this.guidance.follow()
+    const stopGraph = this.graph.follow()
     const reread = () => void this.refreshOpen()
     window.addEventListener('focus', reread)
     return () => {
@@ -97,6 +101,7 @@ export class FilesPage {
       window.removeEventListener('unhandledrejection', onRejection)
       window.removeEventListener('focus', reread)
       stopFollowing()
+      stopGraph()
       this.stopRefreshing()
     }
   }
@@ -213,7 +218,29 @@ export class FilesPage {
     await this.refreshOpen()
   }
 
+  // A file a person chooses from the list opens alone, leaving the nodes selected in the graph view.
   async open(path: string): Promise<void> {
+    this.store.change(({ graph }) => ({ moreFiles: [], graph: { ...graph, selected: [] } }))
+    await this.openAt(path)
+  }
+
+  // The files of the nodes selected in the graph view, each once, in the order they were selected: the first is the open
+  // file, the others open beside it. Each is read with its folds, which unfold to the nodes selected in it.
+  async showNodes(selected: SelectedNode[]): Promise<void> {
+    const [first, ...others] = [...new Set(selected.map(node => node.lines.path))]
+    if (!first) return
+    if (this.state.openPath === first && this.state.file) await this.refreshOpen()
+    else await this.openAt(first)
+    const read = await Promise.all(others.map(path => this.session.file(path, true, this.state.reads.crossFile)))
+    this.store.change(() => ({ moreFiles: read.filter(file => file !== null) }))
+  }
+
+  // The lines of the nodes selected in the graph view that sit in the file at path.
+  selectedLinesIn(path: string): { start: number; end: number }[] {
+    return this.state.graph.selected.filter(node => node.lines.path === path).map(node => ({ start: node.lines.start_line, end: node.lines.end_line }))
+  }
+
+  private async openAt(path: string): Promise<void> {
     this.store.change(() => ({ openPath: path, file: null }))
     // A .drawio file shows in the draw.io editor beside the file list, which reads the file itself.
     if (isDrawio(path)) return this.stopRefreshing()
@@ -227,7 +254,8 @@ export class FilesPage {
     this.stopRefreshing()
     try {
       const { rules, crossFile } = this.state.reads
-      const file = await this.session.file(path, rules, crossFile)
+      // A file opened from the graph view needs the folds its graph places, which only a read with rules answers.
+      const file = await this.session.file(path, rules || this.state.graph.selected.length > 0, crossFile)
       if (this.state.openPath !== path) return
       this.store.change(() => ({ file, problem: '' }))
       if (file?.comments.some(comment => comment.state === 'sent')) this.refreshTimer = setTimeout(() => void this.refreshOpen(), SENT_REFRESH_MILLISECONDS)

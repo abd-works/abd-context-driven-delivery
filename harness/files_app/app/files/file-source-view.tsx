@@ -1,7 +1,7 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { SessionFileData } from '@cdd/space/session/session'
-import { SourceView, type SourceEditorInstance } from '@source-view/SourceView'
+import { SourceView, type SourceEditorInstance, type SourceLines } from '@source-view/SourceView'
 
 import { CommentCardView, CommentComposerView } from './comment-box-view'
 import { placeUnder, useAddCommentAction, useAddToContextAction, useFileMarks, useMarkerPresses } from './editor-comments'
@@ -11,7 +11,19 @@ import { foldsOf, monacoLanguageOf, rulesOf, sourceOf, violationFocusOf } from '
 // The open file in the graph explorer's source view: folds from the session's graph, its broken rules as chips with the
 // chosen one marked, and the comments on it: Add comment and Add to context on the right-click menu, a marker beside
 // each comment's first line, and the box a marker opens.
-export function FileSourceView({ file, actions, onAddToContext }: { file: SessionFileData; actions: FileCommentsActions; onAddToContext: (lines: CommentLines) => void }) {
+// Lines asked to show, such as the nodes selected in the graph view, unfold and the view scrolls to the first; every other
+// fold stays closed. With none asked, every fold starts open.
+export function FileSourceView({
+  file,
+  actions,
+  onAddToContext,
+  openAround = [],
+}: {
+  file: SessionFileData
+  actions: FileCommentsActions
+  onAddToContext: (lines: CommentLines) => void
+  openAround?: SourceLines[]
+}) {
   const wrapper = useRef<HTMLDivElement>(null)
   const held = useRef(file)
   held.current = file
@@ -35,6 +47,10 @@ export function FileSourceView({ file, actions, onAddToContext }: { file: Sessio
   useAddToContextAction(editor, onAddToContext)
   useFileMarks(editor, file)
   useMarkerPresses(editor, held, open)
+  const firstShown = openAround[0]?.start ?? 0
+  useEffect(() => {
+    if (editor && firstShown) editor.revealLineInCenter(firstShown)
+  }, [editor, firstShown])
   const openedComment = file.comments.find(comment => comment.anchor === opened)
   return (
     <div className="file-source" ref={wrapper}>
@@ -46,6 +62,7 @@ export function FileSourceView({ file, actions, onAddToContext }: { file: Sessio
         onSelectRule={setChosenRule}
         folds={folds}
         unfolded
+        openAround={openAround}
         language={monacoLanguageOf(file)}
         keepGlyphMargin
         onEditor={setEditor}

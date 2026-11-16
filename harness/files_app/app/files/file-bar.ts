@@ -2,8 +2,9 @@ import type { FileEntryData } from '@cdd/space/session/session'
 
 import { FILE_BAR_WIDTH, type FilesStore } from './files-state'
 
-// The file bar's two ways of showing the files the page lists: one list, or the folder tree they are in.
-export type FileBarView = 'list' | 'folders'
+// The file bar's ways of showing the files the page lists: one list, the folder tree they are in, or the practice trees
+// of the session's graph holding only those files' nodes.
+export type FileBarView = 'list' | 'folders' | 'graph'
 
 // One folder of the tree, as Windows Explorer shows it: its path as the session names it, none for the top of the tree;
 // its name, the folders it holds that hold nothing else joined to it (`src/checkout`); the folders in it; and the files
