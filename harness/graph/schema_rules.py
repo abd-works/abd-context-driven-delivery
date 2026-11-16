@@ -125,10 +125,17 @@ class PracticeSchema:
         guidances.extend(overlay.pattern for overlay in self.overlays)
         merged = {slug: check.rule.body for slug, check in FRAMEWORK_RULES.items()}
         for guidance in guidances:
-            fidelities = getattr(getattr(guidance, "fidelities", None), "entries", None) or {}
-            for collection in (getattr(guidance, "rules", None), *(getattr(fidelity, "rules", None) for fidelity in fidelities.values())):
+            for collection in self._prose_collections(guidance):
                 merged.update(self._longest_prose(collection))
         return merged
+
+    def _prose_collections(self, guidance) -> list:
+        """The rule collections guidance gives prose from: a practice's or pattern's shared rules and each fidelity's;
+        a supplement's sections, each named for the fidelities it applies to (it has no shared rules)."""
+        if getattr(guidance, "supplemented_fidelities", None) is not None:
+            return guidance.checked_rule_collections()
+        fidelities = getattr(getattr(guidance, "fidelities", None), "entries", None) or {}
+        return [getattr(guidance, "rules", None), *(getattr(fidelity, "rules", None) for fidelity in fidelities.values())]
 
     @cached_property
     def requirements(self) -> list[RequiredRelationship]:

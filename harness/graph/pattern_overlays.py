@@ -155,11 +155,25 @@ class PatternOverlays:
         merged = {**FRAMEWORK_RULES, **practice.reading.graph_checks}
         for pattern in patterns:
             merged.update(pattern.graph_overlay.rules_for(practice))
-        for supplement in getattr(practice, "supplements", ()):
-            overlay = getattr(supplement, "graph_overlay", None)
-            if overlay is not None:
-                merged.update(overlay.rules_for(practice))
+        for overlay in self.supplement_overlays_of([practice]):
+            merged.update(overlay.rules_for(practice))
         return merged
+
+    def overlays_for(self, practice: Any) -> tuple[GraphOverlay, ...]:
+        """The overlays practice's schema reads: each applied pattern's, then each of its supplements', which apply
+        whatever overlays were chosen."""
+        return (*self.graph_overlays, *self.supplement_overlays_of([practice]))
+
+    def supplement_overlays_of(self, practices: list[Any]) -> list[GraphOverlay]:
+        """The graph overlay of each supplement the practices hold, once each: what a graph reads and checks for its
+        supplements, as it does for its applied patterns."""
+        found: list[GraphOverlay] = []
+        for practice in practices:
+            for supplement in getattr(practice, "supplements", ()):
+                overlay = getattr(supplement, "graph_overlay", None)
+                if overlay is not None and overlay not in found:
+                    found.append(overlay)
+        return found
 
     def record_content(self, folders: list[Path]) -> str:
         """Record each applied pattern in the patterns file of each folder content is generated in, and say how to

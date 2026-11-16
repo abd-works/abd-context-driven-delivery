@@ -9,7 +9,7 @@ supplements:
 
 ## Overview
 
-Test-driven development at implementation: every behavior is proven working for real before it is trusted, then kept proven by a test at the fastest tier that can prove it. TDD supplements the implementation fidelities of Clean Engineering (code), Stories (acceptance tests), BDD (development), and DDD (tactics); UX front-end code is not supplemented. Its guidance is the process; its rules check what the finished tests and code show. It has no rules for every fidelity it supplements: each section of rules names the fidelities it is for.
+Test-driven development at implementation: every behavior is proven working for real before it is trusted, then kept proven by a test at the fastest tier that can prove it. TDD supplements the implementation fidelities of Clean Engineering (code), Stories (acceptance tests), BDD (development), and DDD (tactics); UX front-end code is not supplemented. Its guidance is the process; its rules check what the finished tests and code show. It has no rules for every fidelity it supplements: each section of rules names the fidelities it is for. The graph checks `unit-tier-fakes-every-boundary` on BDD specs and on Stories acceptance tests (its overlay records each test file's tier and the real resources a unit test imports); validate judges the rest.
 
 ## Guidance
 
