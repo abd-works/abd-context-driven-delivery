@@ -5,5 +5,11 @@
   "branch": "version-1-refactoring",
   "worktree": "C:\\dev\\abd-cdd-version-1-refactoring",
   "stage": "Implementation",
-  "stage_mark": "in-progress"
+  "stage_mark": "in-progress",
+  "guidance": {
+    "stages": [
+      "implementation"
+    ],
+    "version": 1
+  }
 }
