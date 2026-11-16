@@ -61,6 +61,10 @@ class CleanEngineering(PracticeGuidance):
                 "java": JavaCleanEngineeringModel,
                 "javascript": JavaScriptCleanEngineeringModel,
                 "drawio": DrawIOCleanEngineeringModel,
+                "whiteboard": (
+                    "cdd_guidance.practices.clean_engineering.model.whiteboard.whiteboard_class_model",
+                    "WhiteboardCleanEngineeringModel",
+                ),
                 "sketch": SketchCleanEngineeringModel,
             },
         )
