@@ -27,11 +27,11 @@ section: body
 | --- | --- | --- | --- | --- |
 | ++Process Ticket Archive name++ | Stories | verb-noun-format | .context/story-map.md | 311 to 313 |
 | ++Handle Ticket Deletion name++ | Stories | verb-noun-format | .context/story-map.md | 315 to 317 |
-
-*Handle Ticket Deletion name* and *Process Ticket Archive name* are the verb-noun-format examples since 2026-11-16 (decided by the person): the real check passes *Delete Ticket*, a verb and a noun, and also an opening word it does not list, such as *Ticket*, so the examples open with a generic verb (handle, process), which it breaks.
 | ++Move Ticket size++ | Stories | right-size-story-nodes | .context/story-map.md | 269 to 271 |
 | ++Ticket details budget++ | UX | screen-story-budget | harness/.context/information-architecture.drawio | 8 to 10 |
 | ++Activate Ticket name++ | Clean Engineering | use-intention-revealing-names | space/kanban/ticket.py | 460 to 460 |
+
+*Handle Ticket Deletion name* and *Process Ticket Archive name* are the verb-noun-format examples since 2026-11-16 (decided by the person): the real check passes *Delete Ticket*, a verb and a noun, and also an opening word it does not list, such as *Ticket*, so the examples open with a generic verb (handle, process), which the graph lists for the judgment.
 
 ### checkout-flow violation counts
 
