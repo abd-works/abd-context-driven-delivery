@@ -1122,196 +1122,133 @@ Requested (2026-11-06, "default is to have a graph and just read the violations"
 
 # (E) Author Story Maps
 
-This epic is the app's own story map, `C:/dev/story-ui/.context/story-map.md`; its evidence lines name the app's files.
+This epic is the app's own story map, `C:/dev/story-ui/.context/story-map.md`; its evidence lines name the app's files. Condensed on 2026-11-16 at the person's request on the story map whiteboard: stories that were one interaction each became one story with acceptance criteria, which stay here in the source until they become scenarios.
+
 ## (E) View Story Map
 ### (S) Story Designer --> Browse Story Hierarchy
 
-Observed: The map renders Epic, SubEpic, and Story lanes on one shared grid, with each Story under its parent SubEpic column, lanes sized to their bottommost children, and collapsed titles kept on one line (stories-client.tsx `StoryHierarchyView`, `computeColumnLayout`; workspace.css).
+**Acceptance criteria:**
+- Observed: Epic, SubEpic and Story lanes render on one shared grid, each Story under its parent SubEpic column, lanes sized to their bottommost children and collapsed titles on one line (stories-client.tsx `StoryHierarchyView`, `computeColumnLayout`; workspace.css).
+- Intended: nested SubEpics render as two stacked SubEpic lanes under their parent SubEpic; the model in stories.ts holds only one SubEpic level (mern-story-map-ai-sketch.md, Browse Story Hierarchy).
+- Intended: selecting a Story shows its story_type and users, and a SubEpic its test_file and domain_concepts; the cards show only names and controls (mern-story-map-ai-sketch.md, "when the Story Designer selects a node").
 
-### (S) Story Designer --> Browse Nested SubEpic Lanes
+### (S) Story Designer --> Adjust Workspace View
 
-Intended (mern-story-map-ai-sketch.md, Browse Story Hierarchy): nested SubEpics render as two stacked SubEpic lanes under their parent SubEpic; the model in stories.ts holds only one SubEpic level.
+**Acceptance criteria:**
+- Observed: holding the right mouse button and dragging pans the canvas on both axes, without the browser menu, with a grabbing cursor, stopping on release even outside the canvas (stories-client.tsx `StoryMapWorkspaceView` `handleCanvasMouseDown`).
+- Observed: Map View and Increment View switch between the plain map and the map with increment lanes and an Unassigned drop zone (`useStoryMapViewState.toggleViewMode`, `StoryHierarchyView` `showIncrements`).
+- Intended: Show Scenarios and Show Examples show and hide them; today the buttons toggle but the card and scenario panel ignore them (story_map.information_architecture.md toolbar; story_map.modules.md session toggles).
+- Observed: the Executive / Engineering switch changes the theme and logo and remembers the choice in browser storage (`THEME_STORAGE_KEY`; workspace.css `data-theme`).
 
-### (S) Story Designer --> Inspect Selected Node Fields
-
-Intended (mern-story-map-ai-sketch.md, BDD "when the Story Designer selects a node"): selecting a Story shows story_type and users, a SubEpic shows test_file and domain_concepts; the cards show only names and controls.
-
-### (S) Story Designer --> Pan Workspace Canvas With Right-Click Drag
-
-Observed: Holding the right mouse button and dragging scrolls the canvas on both axes, suppresses the browser context menu, shows a grabbing cursor, and stops on release even outside the canvas (stories-client.tsx `StoryMapWorkspaceView` `handleCanvasMouseDown` and window mouse listeners).
-
-### (S) Story Designer --> Switch Between Map View And Increment View
-
-Observed: The toolbar's Map View and Increment View buttons switch between the plain map and the map with increment lanes and an Unassigned drop zone (stories-client.tsx `useStoryMapViewState.toggleViewMode`, `StoryHierarchyView` `showIncrements`).
-
-### (S) Story Designer --> Show And Hide Scenarios And Examples
-
-Intended (story_map.information_architecture.md toolbar; story_map.modules.md session toggles): Show Scenarios and Show Examples buttons toggle their active state in stories-client.tsx, but the story card and scenario panel ignore them, so nothing is shown or hidden.
-
-### (S) Story Designer --> Switch Color Mode
-
-Observed: The Executive / Engineering switch changes the page theme and logo and remembers the choice in browser storage (stories-client.tsx `StoryMapWorkspaceView` `THEME_STORAGE_KEY`; workspace.css `data-theme`).
-
-## (E) Build, Expand And Rearrange Story Map
-
-Merged on 2026-11-16 from Expand Story Details, Build Map Structure and Rearrange Map By Dragging, at the person's request on the story map whiteboard. Open Story Map By Address and Pick Story Map From Dashboard were removed from View Story Map the same day.
-
+## (E) Build, Expand, Rearrange And Plan Story Map
 ### (S) Story Designer --> Expand And Collapse Story Cards
 
-Observed: Clicking a Story card or its expand button opens that card inline to show its Scenarios, Steps, and Example tables while neighbouring cards stay collapsed; clicking again collapses it (stories-client.tsx `StoryCard`, `handleExpand`). The expand button on an Epic or SubEpic opens every Story card beneath it (`getAllDescendantStoryIds`, `useStoryMapViewState.expandDescendants`), and the toolbar's Expand All and Collapse All open or close the whole map (`StoryMapWorkspaceView` toolbar, `collapseAll`). Merged from Expand One Story Card, Expand Descendant Story Cards and Expand And Collapse Whole Map.
+**Acceptance criteria:**
+- Observed: clicking a Story card or its expand button opens it inline with its Scenarios, Steps and Example tables while neighbours stay collapsed, and clicking again collapses it (stories-client.tsx `StoryCard`, `handleExpand`).
+- Observed: the expand button on an Epic or SubEpic opens every Story card beneath it (`getAllDescendantStoryIds`, `useStoryMapViewState.expandDescendants`).
+- Observed: the toolbar's Expand All and Collapse All open or close the whole map (`StoryMapWorkspaceView` toolbar, `collapseAll`).
+- Observed: an expanded card's column, the lanes above it and everything to its right widen to fit it, and narrow again on collapse (workspace.css `.story-card.expanded`; shared grid in `StoryHierarchyView`).
 
-### (S) Story UI --> Widen Columns Around Expanded Story Cards
+### (S) Story Designer --> Add, Remove And Rename Map Nodes
 
-Observed: An expanded card grows to fit its content and its column, the SubEpic and Epic lanes above it, and everything to its right shift to make room, then narrow again on collapse (workspace.css `.story-card.expanded`; stories-client.tsx shared grid in `StoryHierarchyView`).
-
-### (S) Story Designer --> Add First Epic To Empty Map
-
-Observed: A map with no Epics shows a single "+ Epic" starter button that opens the title popover (stories-client.tsx `StoryHierarchyView` Epic lane, `AddNodePopoverButton`).
-
-### (S) Story Designer --> Add Epic, SubEpic, Or Story At Chosen Position
-
-Observed: The + on a card, or the leading + on the first card in a group, opens a title popover; Add uses the typed title or a default name, Cancel or Escape creates nothing, and the new node lands after that sibling or at the start (stories-client.tsx `AddNodePopoverButton`, `insertEpicAfter`, `prependSubEpic`, `insertSubEpicAfter`, `prependStory`, `insertStoryAfter`; stories-server.ts POST `/epics`, `/epics/:epicId/sub-epics`, `/sub-epics/:subEpicId/stories`).
-
-### (S) Story Designer --> Remove Epic, SubEpic, Or Story
-
-Observed: The − on a card deletes that node and everything under it and renumbers the remaining siblings to close the gap (stories.ts `removeEpic`, `removeSubEpic`, `removeStory`; stories-server.ts DELETE routes).
-
-### (S) Story Designer --> Rename Node Inline
-
-Observed: Double-clicking a card focuses its name; Enter, Tab, or leaving the field saves the new name and Escape restores the old one (stories-client.tsx `NodeNameInput`, `focusNameFieldOnDoubleClick`; stories-server.ts PATCH `/nodes/:nodeId` via `translateFrom`).
+**Acceptance criteria:**
+- Observed: a map with no Epics shows one "+ Epic" starter button that opens the title popover (`StoryHierarchyView` Epic lane, `AddNodePopoverButton`).
+- Observed: the + on a card, or the leading + on a group's first card, adds an Epic, SubEpic or Story with the typed or a default title after that sibling or at the start; Cancel or Escape adds nothing (`AddNodePopoverButton`, `insertEpicAfter`, `insertSubEpicAfter`, `insertStoryAfter`; stories-server.ts POST routes).
+- Observed: the − on a card deletes that node and everything under it and renumbers its siblings (stories.ts `removeEpic`, `removeSubEpic`, `removeStory`).
+- Observed: double-clicking a card edits its name inline; Enter, Tab or leaving saves and Escape restores (`NodeNameInput`; stories-server.ts PATCH `/nodes/:nodeId`).
 
 ### (S) Story Designer --> Rearrange Map Nodes By Dragging
 
-Observed: Dragging a card within its own lane or parent saves the new sibling order with whole-number positions (stories-client.tsx `makeEpicDragHandlers`; stories.ts `reorderEpics`, `reorderSubEpics`, `reorderStories`). Dropping a Story on another SubEpic, or a SubEpic on another Epic, moves it there with everything under it (`StoryMapModel.moveStory`, `moveSubEpic`); an empty Epic or SubEpic accepts a dropped node (`makeEmptyParentDropZone`); and the dragged card shows full-size at the spot it would land (`useDragVisuals`, `computeDisplayIds`, `suppressNativeDragImage`). Merged from Reorder Sibling Epics, SubEpics, And Stories, Move Story To A Different SubEpic, Move SubEpic To A Different Epic, Drop Node Into Empty Parent and See Full-Size Drop Preview While Dragging.
+**Acceptance criteria:**
+- Observed: dragging a card within its lane or parent saves the new sibling order (`makeEpicDragHandlers`; stories.ts `reorderEpics`, `reorderSubEpics`, `reorderStories`).
+- Observed: dropping a Story on another SubEpic, or a SubEpic on another Epic, moves it there with everything under it (`StoryMapModel.moveStory`, `moveSubEpic`).
+- Observed: an empty Epic or SubEpic accepts a dropped node (`makeEmptyParentDropZone`).
+- Observed: the dragged card shows full-size at the spot it would land, with no browser drag image (`useDragVisuals`, `computeDisplayIds`, `suppressNativeDragImage`).
 
-## (E) Plan Increments
-### (S) Story Designer --> Add Increment
+### (S) Story Designer --> Manage Increments
 
-Observed: In Increment View the "+ Increment" button appends a new increment lane at the bottom (stories-client.tsx `StoryHierarchyView`; stories.ts `appendIncrement`).
+**Acceptance criteria:**
+- Observed: in Increment View "+ Increment" appends a new increment lane at the bottom (stories.ts `appendIncrement`).
+- Observed: the increment label is an inline name field saved on Enter, Tab or leaving it, Escape restoring the old name (`IncrementLabel`).
+- Observed: dragging an increment label up or down saves the new increment order (stories.ts `reorderIncrements`).
+- Observed: the − on an increment label deletes it and its Stories return to the unassigned spine (stories.ts `removeIncrement`; DELETE `/increments/:incrementId`).
 
-### (S) Story Designer --> Rename Increment
+### (S) Story Designer --> Manage Increment Stories
 
-Observed: The increment label is an inline name field saved on Enter, Tab, or leaving it, with Escape restoring the old name (stories-client.tsx `IncrementLabel`).
-
-### (S) Story Designer --> Reorder Increments
-
-Observed: Dragging an increment label up or down saves the new increment order (stories-client.tsx `IncrementLabel` drag handlers; stories.ts `reorderIncrements`).
-
-### (S) Story Designer --> Remove Increment
-
-Observed: The − on an increment label deletes that increment and its Stories return to the unassigned spine (stories.ts `removeIncrement`; stories-server.ts DELETE `/increments/:incrementId`).
-
-### (S) Story Designer --> Assign Story To Increment By Dragging
-
-Observed: Dropping a Story card on an increment lane moves it into that increment, out of any other, while it stays under its SubEpic column (stories-client.tsx increment lane `onDrop`; stories.ts `assignStoryToIncrement`).
-
-### (S) Story Designer --> Unassign Story From Increment
-
-Observed: Dropping a Story card on the "Unassigned" zone, shown only in Increment View, removes it from its increment and puts it back in the spine (stories-client.tsx Unassigned drop zone; stories.ts `unassignStoryFromIncrement`).
+**Acceptance criteria:**
+- Observed: dropping a Story card on an increment lane moves it into that increment, out of any other, while it stays under its SubEpic column (stories.ts `assignStoryToIncrement`).
+- Observed: dropping a Story card on the Unassigned zone, shown only in Increment View, removes it from its increment (stories.ts `unassignStoryFromIncrement`).
 
 ## (E) Author Scenarios And Steps
-### (S) Story Designer --> Add Scenario Under Story
+### (S) Story Designer --> Add, Rename, Remove And Reorder Scenarios
 
-Observed: The + beside Scenarios in an expanded Story card adds "New Scenario" at the end of that Story's Scenarios (stories-client.tsx `handleAppendScenario`; stories.ts `StoryModel.appendScenario`).
+**Acceptance criteria:**
+- Observed: the + beside Scenarios in an expanded card adds "New Scenario" at the end (`handleAppendScenario`; stories.ts `StoryModel.appendScenario`).
+- Observed: the Scenario name is an inline field saved on Enter, Tab or leaving it, Escape restoring the old name (`ScenarioPanel` `saveScenarioName`).
+- Observed: the − on a Scenario deletes it and renumbers the rest (stories.ts `StoryModel.removeScenario`).
+- Observed: dragging a Scenario by its handle saves the new order (`StoryCard` `makeDragHandlers`; stories.ts `reorderScenarios`).
 
-### (S) Story Designer --> Rename Scenario
+### (S) Story Designer --> Add, Edit, Remove And Reorder Steps
 
-Observed: The Scenario name is an inline field saved on Enter, Tab, or leaving it, with Escape restoring the old name (stories-client.tsx `ScenarioPanel` `saveScenarioName`).
-
-### (S) Story Designer --> Remove Scenario
-
-Observed: The − on a Scenario deletes it and renumbers the remaining Scenarios (stories.ts `StoryModel.removeScenario`).
-
-### (S) Story Designer --> Reorder Scenarios
-
-Observed: Dragging a Scenario by its handle within the expanded card saves the new Scenario order (stories-client.tsx `StoryCard` `makeDragHandlers`; stories.ts `reorderScenarios`).
-
-### (S) Story Designer --> Add Step
-
-Observed: The + beside Steps adds a "Given New step" at the end of that Scenario (stories-client.tsx `handleAddStep`; stories.ts `ScenarioModel.addStep`).
-
-### (S) Story Designer --> Edit Step Keyword And Text
-
-Observed: Each Step has a Given/When/Then/And/But selector and a text field, saved on Enter or Tab and restored on Escape (stories-client.tsx `StepEditor`; stories.ts `updateStep`).
-
-### (S) Story Designer --> Remove Step
-
-Observed: The − on a Step deletes it and renumbers the remaining Steps (stories.ts `ScenarioModel.removeStep`).
-
-### (S) Story Designer --> Reorder Steps
-
-Observed: Dragging a Step by its handle saves the new Step order within that Scenario (stories-client.tsx `ScenarioPanel` step drag handlers; stories.ts `reorderSteps`).
+**Acceptance criteria:**
+- Observed: the + beside Steps adds "Given New step" at the end of the Scenario (`handleAddStep`; stories.ts `ScenarioModel.addStep`).
+- Observed: each Step has a Given/When/Then/And/But selector and a text field, saved on Enter or Tab and restored on Escape (`StepEditor`; stories.ts `updateStep`).
+- Observed: the − on a Step deletes it and renumbers the rest (stories.ts `ScenarioModel.removeStep`).
+- Observed: dragging a Step by its handle saves the new order (stories.ts `reorderSteps`).
 
 ## (E) Author Examples
-### (S) Story Designer --> Add Example To Scenario
+### (S) Story Designer --> Add And Remove Examples On Scenario
 
-Observed: The + beside Examples adds an empty "New Example" table to the Scenario (stories-client.tsx `handleAddExample`; stories.ts `ScenarioModel.addExample`).
+**Acceptance criteria:**
+- Observed: the + beside Examples adds an empty "New Example" table (`handleAddExample`; stories.ts `ScenarioModel.addExample`).
+- Observed: the − on an Example deletes that table and renumbers the rest (stories.ts `ScenarioModel.removeExample`).
 
-### (S) Story Designer --> Remove Example From Scenario
+### (S) Story Designer --> Add And Remove Example Fields
 
-Observed: The − on an Example deletes that table and renumbers the remaining Examples (stories.ts `ScenarioModel.removeExample`).
+**Acceptance criteria:**
+- Observed: typing a field name in the header and pressing + adds a column, and a name already in the table is refused (`ExampleBlock`; stories.ts `addExampleField`, `DUPLICATE_FIELD_NAME`).
+- Observed: the − on a column header removes that field (stories.ts `ScenarioModel.removeExampleField`).
 
-### (S) Story Designer --> Add Example Field
+### (S) Story Designer --> Add, Edit, Remove And Reorder Example Lines
 
-Observed: Typing a field name in the header and pressing + adds a column, and a name already in the table is refused (stories-client.tsx `ExampleBlock`; stories.ts `addExampleField`, `DUPLICATE_FIELD_NAME`).
-
-### (S) Story Designer --> Remove Example Field
-
-Observed: The − on a column header removes that field from the Example (stories.ts `ScenarioModel.removeExampleField`).
-
-### (S) Story Designer --> Add Example Line
-
-Observed: The add button under the table adds an empty line at the bottom of the Example table (stories-client.tsx `handleAddExampleRow`; stories.ts `addExampleRow`).
-
-### (S) Story Designer --> Edit Example Cell
-
-Observed: Each cell is an inline field saved on Enter or leaving it (stories-client.tsx `ExampleCellEditor`; stories.ts `updateExampleRow`).
-
-### (S) Story Designer --> Remove Example Line
-
-Observed: The − on a line deletes it and renumbers the remaining lines (stories.ts `ScenarioModel.removeExampleRow`).
-
-### (S) Story Designer --> Reorder Example Lines
-
-Observed: Dragging a line by its handle saves the new line order in that Example (stories-client.tsx `ExampleBlock` line drag handlers; stories.ts `reorderExampleRows`).
+**Acceptance criteria:**
+- Observed: the add button under the table adds an empty line at the bottom (`handleAddExampleRow`; stories.ts `addExampleRow`).
+- Observed: each cell is an inline field saved on Enter or leaving it (`ExampleCellEditor`; stories.ts `updateExampleRow`).
+- Observed: the − on a line deletes it and renumbers the rest (stories.ts `ScenarioModel.removeExampleRow`).
+- Observed: dragging a line by its handle saves the new order (stories.ts `reorderExampleRows`).
 
 ## (E) Save And Share Changes
-### (S) Story UI --> Save Valid Edits To The Server And Show Status
+### (S) Story UI --> Save Valid Edits And Keep Their History
 
-Observed: Every edit is sent to the server as one request, saved to MongoDB, and the map is reloaded from the saved copy (stories-client.tsx `useStoryModel`; stories-server.ts `StoryMapRepositoryServer`, `StoryMapServer.persist`). The server refuses an edit that breaks a map rule (a Scenario under a non-Story, an increment on a non-Story, an unknown increment, a node outside its claimed parent, a duplicate field name) with 422 and the rule code (stories.ts `MutationGuardError`). The status rail shows synced, pending changes, or save error (stories-client.tsx `StoryMapWorkspaceView`, `storyModelReducer`). Merged on 2026-11-16 from Save Each Edit To The Server, Show Save Status and Refuse Edits That Break Map Rules, at the person's request on the story map whiteboard.
-
-### (S) Story UI --> Record One Save Event Per Save
-
-Intended (mern-story-map-ai-sketch.md Resolved Implementation Decisions; story_map.modules.md audit): stories-server.ts only comments that the collaboration layer emits the event, and no audit module exists.
-
-### (S) Story Designer --> Browse Save History
-
-Intended (story_map.information_architecture.md, Version History Timeline scaffold): no history screen or save record exists.
+**Acceptance criteria:**
+- Observed: every edit is sent to the server as one request, saved to MongoDB, and the map reloaded from the saved copy (`useStoryModel`; stories-server.ts `StoryMapRepositoryServer`, `StoryMapServer.persist`).
+- Observed: an edit that breaks a map rule (a Scenario under a non-Story, an increment on a non-Story, an unknown increment, a node outside its claimed parent, a duplicate field name) is refused with 422 and the rule code (stories.ts `MutationGuardError`).
+- Observed: the status rail shows synced, pending changes, or save error (`StoryMapWorkspaceView`, `storyModelReducer`).
+- Intended: each save records one save event; today stories-server.ts only comments that the collaboration layer emits it (mern-story-map-ai-sketch.md; story_map.modules.md audit).
+- Intended: the designer browses the saved versions on a history timeline; no history screen exists (story_map.information_architecture.md, Version History Timeline).
 
 ### (S) Story Designer --> Recover Workspace View State
 
-Intended (story_map.stories.md, Recover Persisted Story Map State; story_map.modules.md session): session.ts and session-server.ts can store view mode, expanded nodes, and toggles, but app.ts never mounts `createSessionRouter` and the workspace never calls `useStoryMapSession`, so a reload resets the view.
+**Acceptance criteria:**
+- Intended: reloading keeps the view mode, expanded nodes and toggles; session.ts and session-server.ts can store them, but app.ts never mounts `createSessionRouter` and the workspace never calls `useStoryMapSession` (story_map.stories.md, Recover Persisted Story Map State).
 
-### (S) Story Designer --> Join Real-Time Story Map Session
+### (S) Story Designer --> Share Real-Time Story Map Session
 
-Intended (story_map.stories.md, Synchronize Story Map State; story_map.modules.md collaboration): no collaboration module or broadcast exists.
-
-### (S) Story UI --> Reconcile Concurrent View State Changes
-
-Intended (story_map.stories.md, Resolve Concurrent View State Changes; mern-story-map-ai-sketch.md realtime-collaboration): no collaboration module exists.
+**Acceptance criteria:**
+- Intended: designers on the same map see each other's changes as they happen; no collaboration module or broadcast exists (story_map.stories.md, Synchronize Story Map State).
+- Intended: concurrent view-state changes are reconciled; no collaboration module exists (story_map.stories.md, Resolve Concurrent View State Changes).
 
 ### (S) Agent --> Test Story UI Editor On Session Story Map
 
-Requested on 2026-11-06: the Story UI editor opens a CDD session's `story-map.md`, edits it and saves it back, and its tests run against that map. Each gap a test finds becomes an Intended story in this app's map, fixed before the board or chat bar invokes the app.
+**Acceptance criteria:**
+- Requested on 2026-11-06: the Story UI editor opens a CDD session's `story-map.md`, edits it and saves it back, and its tests run against that map; each gap a test finds becomes an Intended story here, fixed before the board or chat bar invokes the app.
 
 ## (E) Author Story Changes With AI
-### (S) Story Designer --> Request AI Story Change
+### (S) Story Designer --> Change Story Map With AI
 
-Intended (story_map.stories.md, Request AI Story Mutation; story_map.information_architecture.md, AI Chat Panel scaffold; story_map.modules.md ai-mutation): the person asks for a change in the AI chat panel; no chat panel or ai-mutation module exists. Merged on 2026-11-16 with Open AI Chat Panel, at the person's request on the story map whiteboard ("too many stories for such a simple thing").
-
-### (S) Agent --> Apply AI Change To Story Map
-
-Intended (story_map.stories.md, Apply AI Mutation to Story Map; mern-story-map-ai-sketch.md "Direct auto-apply changes"): no ai-mutation module exists. Review Proposed Map Changes and Place Notes On The Story Map were removed on 2026-11-16, at the person's request on the story map whiteboard.
+**Acceptance criteria:**
+- Intended: the designer asks for a change in an AI chat panel; no chat panel or ai-mutation module exists (story_map.stories.md, Request AI Story Mutation; story_map.information_architecture.md, AI Chat Panel).
+- Intended: the agent applies the change to the story map directly (story_map.stories.md, Apply AI Mutation to Story Map; mern-story-map-ai-sketch.md "Direct auto-apply changes").
 
 # (E) Explore Stories In Story UI
 
