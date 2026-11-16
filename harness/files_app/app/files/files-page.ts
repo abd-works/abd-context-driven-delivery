@@ -92,8 +92,7 @@ export class FilesPage {
     // A link naming no session, such as the app's bare address, has nothing to ask cdd about: list() says so.
     if (this.link.namesFiles) void this.readPlace()
     if (this.link.namesFiles && !this.link.isSessionFolder) void this.readRootFiles()
-    const stopFollowing = this.link.isSessionFolder || !this.link.namesFiles ? () => undefined : this.guidance.follow()
-    const stopGraph = this.graph.follow()
+    const stopFollowing = this.follow()
     const reread = () => void this.refreshOpen()
     window.addEventListener('focus', reread)
     return () => {
@@ -101,8 +100,18 @@ export class FilesPage {
       window.removeEventListener('unhandledrejection', onRejection)
       window.removeEventListener('focus', reread)
       stopFollowing()
-      stopGraph()
       this.stopRefreshing()
+    }
+  }
+
+  // Follows the session's guidance selection, which a link naming a ticket's files shows, and reads the graph view again
+  // whenever the files it lists change. Answers what stops both.
+  private follow(): () => void {
+    const stopGuidance = this.link.isSessionFolder || !this.link.namesFiles ? () => undefined : this.guidance.follow()
+    const stopGraph = this.graph.follow()
+    return () => {
+      stopGuidance()
+      stopGraph()
     }
   }
 

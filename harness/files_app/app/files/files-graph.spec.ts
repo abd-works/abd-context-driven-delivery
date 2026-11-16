@@ -125,7 +125,7 @@ class FakeFilesServer implements CddApi {
 const LINK = '?files=checkout-flow&fidelity=stories-story-map,clean-engineering-code&chat=chat-1'
 
 async function settled(): Promise<void> {
-  for (let turn = 0; turn < 8; turn += 1) await new Promise(resolve => setTimeout(resolve, 0))
+  for (let turn = 0; turn < 5; turn += 1) await new Promise(resolve => setTimeout(resolve, 0))
 }
 
 // The page as the person finds it once it opened, following the session's selection, its files listed in All session

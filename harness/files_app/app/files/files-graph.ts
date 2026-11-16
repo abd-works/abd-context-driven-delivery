@@ -78,7 +78,7 @@ export class FilesGraph {
 
   // Selects the node, alone or, with also, beside those already selected, then opens the file of each at its lines. A
   // node read from no lines of a file, such as a practice's root, selects nothing.
-  async select(entry: ExplorerEntryData, also = false): Promise<void> {
+  async select(entry: ExplorerEntryData, also: boolean = false): Promise<void> {
     try {
       const lines = await this.session.graphNodeRange(entry.node_id)
       if (!lines) return

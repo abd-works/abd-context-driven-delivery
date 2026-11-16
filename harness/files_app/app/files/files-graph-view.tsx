@@ -11,27 +11,35 @@ function useFilesState(page: FilesPage) {
 // A press with Ctrl, Cmd or Shift selects a node beside those already selected, as a file manager selects several.
 const isAlso = (event: MouseEvent): boolean => event.ctrlKey || event.metaKey || event.shiftKey
 
-// One node of a practice tree: a toggle while it holds entries below it, its name, which selects it, and its type.
+// A node's row: a toggle while it holds entries below it, its name, which selects it, and its type.
+function GraphRowView({ page, entry, hasBelow }: { page: FilesPage; entry: ExplorerEntryData; hasBelow: boolean }) {
+  const isOpen = page.graph.isOpen(entry)
+  const isSelected = page.graph.isSelected(entry)
+  return (
+    <span className={`graph-row ${isSelected ? 'is-selected' : ''}`}>
+      {hasBelow ? (
+        <button className="graph-toggle" aria-expanded={isOpen} aria-label={`${isOpen ? 'Close' : 'Open'} ${entry.name}`} onClick={() => void page.graph.toggle(entry)}>
+          {isOpen ? '▾' : '▸'}
+        </button>
+      ) : (
+        <span className="graph-toggle" />
+      )}
+      <button className="graph-node" aria-pressed={isSelected} title={`${entry.type} ${entry.name}`} onClick={event => void page.graph.select(entry, isAlso(event))}>
+        {entry.name}
+      </button>
+      <span className="graph-type">{entry.type}</span>
+    </span>
+  )
+}
+
+// One node of a practice tree, with the entries below it while it is open.
 function GraphEntryView({ page, entry }: { page: FilesPage; entry: ExplorerEntryData }) {
   useFilesState(page)
   const below = page.graph.childrenOf(entry)
-  const hasBelow = below.length > 0 || entry.children_left_out > 0
   const isOpen = page.graph.isOpen(entry)
   return (
     <li className="graph-entry">
-      <span className={`graph-row ${page.graph.isSelected(entry) ? 'is-selected' : ''}`}>
-        {hasBelow ? (
-          <button className="graph-toggle" aria-expanded={isOpen} aria-label={`${isOpen ? 'Close' : 'Open'} ${entry.name}`} onClick={() => void page.graph.toggle(entry)}>
-            {isOpen ? '▾' : '▸'}
-          </button>
-        ) : (
-          <span className="graph-toggle" />
-        )}
-        <button className="graph-node" aria-pressed={page.graph.isSelected(entry)} title={`${entry.type} ${entry.name}`} onClick={event => void page.graph.select(entry, isAlso(event))}>
-          {entry.name}
-        </button>
-        <span className="graph-type">{entry.type}</span>
-      </span>
+      <GraphRowView page={page} entry={entry} hasBelow={below.length > 0 || entry.children_left_out > 0} />
       {isOpen && below.length ? (
         <ul className="graph-tree">
           {below.map(child => (
