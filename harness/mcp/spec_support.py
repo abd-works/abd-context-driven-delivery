@@ -11,7 +11,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from harness.mcp.cdd_home import CDD_HOME_ENV, CddHome
-from harness.mcp.mcp_address import PROJECT_HEADER, SERVER_PORT_ENV
+from harness.mcp.mcp_address import PROJECT_HEADER, SERVER_PORT_ENV, McpAddress
 from harness.mcp.mcp_daemon import CONNECT_SCRIPT, SERVER_OWNER_ENV, McpDaemon, RunningServer
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -50,7 +50,7 @@ class SpecServer:
 
     def __init__(self, toolsets: tuple[str, ...] = (), home: Path | str | None = None, port: int | None = None) -> None:
         self.home = CddHome(home or tempfile.mkdtemp(prefix="cdd-home-"))
-        self.daemon = McpDaemon(self.home, port=port or self._free_port())
+        self.daemon = McpDaemon(self.home, McpAddress(port or self._free_port()))
         self._toolsets = toolsets
         self._prior = {key: os.environ.get(key) for key in (CDD_HOME_ENV, SERVER_PORT_ENV, SERVER_OWNER_ENV, _TOOLSET_REFS_ENV)}
 

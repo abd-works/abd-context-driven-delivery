@@ -36,13 +36,22 @@ def _example_path(example: Example) -> str:
     return " / ".join(reversed(names))
 
 
-def _record_if_over_budget(example: Example) -> None:
-    """Write an example that ran past the budget to the guard's log, with its spec file and its time."""
+def _over_budget_line(example: Example) -> str:
+    """The guard's log line for an example that ran past the budget: its spec file, its time, and its path; empty for
+    an example within the budget."""
     seconds = example.elapsed_time.total_seconds()
     if seconds <= _BUDGET_SECONDS:
+        return ""
+    return f"{_spec_file(example)}\t{round(seconds * MILLISECONDS_PER_SECOND)}\t{_example_path(example)}\n"
+
+
+def _record_if_over_budget(example: Example) -> None:
+    """Write an example that ran past the budget to the guard's log."""
+    line = _over_budget_line(example)
+    if not line:
         return
     with open(_LOG, "a", encoding="utf-8") as log:
-        log.write(f"{_spec_file(example)}\t{round(seconds * MILLISECONDS_PER_SECOND)}\t{_example_path(example)}\n")
+        log.write(line)
 
 
 def _time_examples() -> None:

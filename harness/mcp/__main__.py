@@ -10,6 +10,7 @@ def main() -> None:
     arguments = _arguments()
     from harness.installation.repository_toolsets import RepositoryToolsets
     from harness.mcp.cdd_home import CddHome
+    from harness.mcp.mcp_address import McpAddress
     from harness.mcp.mcp_daemon import McpDaemon
     from harness.mcp.mcp_server import McpHost
 
@@ -17,7 +18,7 @@ def main() -> None:
     # The server imports every toolset of the checkout it runs from by its full name.
     toolsets = RepositoryToolsets(source)
     toolsets.ensure_import_path()
-    daemon = McpDaemon(CddHome(), port=arguments.port)
+    daemon = McpDaemon(CddHome(), McpAddress(arguments.port))
     listener = daemon.this_process.claim_port()
     if listener is None:
         return

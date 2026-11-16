@@ -40,7 +40,7 @@ _TEXT_SUFFIXES = {
 }
 
 
-HookResult = dict[str, Any]
+CheckReport = dict[str, Any]
 """One JSON entry of the exercise report, as written to stdout."""
 
 _LARGEST_EXAMPLE_BYTES = 1_000_000
@@ -63,7 +63,7 @@ class HookExercise:
         sys.stdout.write("\n")
         return 0 if report["ok"] else 1
 
-    def _report(self, ping: HookResult, live: HookResult, checks: list[HookResult]) -> HookResult:
+    def _report(self, ping: CheckReport, live: CheckReport, checks: list[CheckReport]) -> CheckReport:
         failed = [item for item in checks if not item["ok"]]
         return {
             "ok": ping["ping"] == "pong" and live["live_injects"] and not failed,
@@ -75,7 +75,7 @@ class HookExercise:
             "counts": {"checked": len(checks), "passed": len(checks) - len(failed), "failed": len(failed)},
         }
 
-    def _ping(self) -> HookResult:
+    def _ping(self) -> CheckReport:
         from harness.hooks.hook_daemon import HookDaemon
 
         address = HookDaemon(self.repo).live_address()
@@ -83,16 +83,16 @@ class HookExercise:
             return {"ping": "down"}
         return {"ping": "pong", "host": address.host, "port": address.port, "pid": address.pid}
 
-    def _live_injects(self) -> HookResult:
+    def _live_injects(self) -> CheckReport:
         """Whether the running hook daemon injects a fidelity's rules, with the reason when it could not be asked."""
-        from harness.hooks.hook_daemon import HookDaemon, HookDaemonNotReady, HookPortTaken
+        from harness.hooks.hook_daemon import HookDaemon, HookDaemonUnavailable
 
         sample = self._example_for("modules", "clean-engineering")
         if sample is None:
             return {"live_injects": False, "live_error": "no clean-engineering modules example found"}
         try:
             result = HookDaemon(self.repo).ensure().handle_stdin(json.dumps(self._payload(sample)).encode("utf-8"))
-        except (HookDaemonNotReady, HookPortTaken, OSError) as error:
+        except (HookDaemonUnavailable, OSError) as error:
             return {"live_injects": False, "live_error": f"{type(error).__name__}: {error}"}
         return {"live_injects": "domain-nouns-only" in (result.get("additional_context") or "")}
 
@@ -103,7 +103,7 @@ class HookExercise:
             self._hook_server = HookServer.from_handlers(self.repo / ".cursor" / "hook-handlers.json", repo=self.repo)
         return self._hook_server
 
-    def _payload(self, path: Path) -> HookResult:
+    def _payload(self, path: Path) -> CheckReport:
         return {
             "hook_event_name": "postToolUse",
             "tool_name": "Write",
@@ -125,12 +125,12 @@ class HookExercise:
         practices = [AgentToolSet.instantiate(toolset) for toolset in practice_classes]
         return [practice for practice in practices if practice.fidelities.entries]
 
-    def _exercise_practice(self, practice: PracticeGuidance) -> list[HookResult]:
+    def _exercise_practice(self, practice: PracticeGuidance) -> list[CheckReport]:
         practice_name = getattr(practice, "slug", None) or type(practice).__name__
         fidelities = practice.fidelities
         return [self._exercise_fidelity(practice_name, name, fidelities[name]) for name in fidelities.entries]
 
-    def _exercise_fidelity(self, practice_name: str, name: str, fidelity: FidelityGuidance) -> HookResult:
+    def _exercise_fidelity(self, practice_name: str, name: str, fidelity: FidelityGuidance) -> CheckReport:
         example = self._example_for(name, practice_name)
         slugs = self._rule_slugs(fidelity.rules)
         base = {
@@ -148,7 +148,7 @@ class HookExercise:
             return {**base, "ok": False, "hook_fired": False, "error": f"{type(error).__name__}: {error}"}
         return {**base, **self._injection_outcome(slugs, injected, chat)}
 
-    def _injection_outcome(self, slugs: list[str], injected: str, chat: str) -> HookResult:
+    def _injection_outcome(self, slugs: list[str], injected: str, chat: str) -> CheckReport:
         """Whether the hook injected anything and, when the fidelity has rules, whether every one reached the chat."""
         missing = [slug for slug in slugs if slug not in injected or slug not in chat]
         error = ""

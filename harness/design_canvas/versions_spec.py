@@ -71,8 +71,8 @@ with description("Canvas versions") as self:
 
         with it("renames the version's folder and its link to the release"):
             expect((self.root / "design-system-setup" / "project" / "Main.dc.html").is_file()).to(equal(True))
-            expect(self.versions.links()["design-system-setup"]).to(equal("https://claude.ai/artifact/2"))
-            expect(list(self.versions.links())).to(equal(["version-1", "design-system-setup"]))
+            expect(self.versions.published.of("design-system-setup")).to(equal("https://claude.ai/artifact/2"))
+            expect(list(self.versions.published.all())).to(equal(["version-1", "design-system-setup"]))
 
         with it("starts the next version from the release once no numbered version is left"):
             import shutil

@@ -11,7 +11,7 @@ import sys
 import time
 from enum import Enum
 from pathlib import Path
-from typing import Callable, ClassVar
+from typing import Callable
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, tool_subject
@@ -53,7 +53,7 @@ class AppNotRegistered(KeyError):
     """A call named an app no module registered."""
 
     def __init__(self, label: str) -> None:
-        super().__init__(f"no app is registered as {label}; the apps are {', '.join(app.label for app in App.registered())}")
+        super().__init__(f"no app is registered as {label}; the apps are {', '.join(app.label for app in APPS.registered)}")
         self.label = label
 
 
@@ -116,14 +116,31 @@ class PortProbe:
             return probe.connect_ex((_HOST, port)) == 0
 
 
-class AppServer:
-    """The server an app answers from: the script node runs, the folder it runs in, and the ports it tries in turn. The
-    chat that opens an app starts it, as long as that chat lasts, so this says how; two apps the same server serves,
-    as the board's server serves the Story UI editor, share one."""
+class NodeScript:
+    """A script node runs in a folder, as an app's server is started: through tsx for a TypeScript one."""
 
-    def __init__(self, folder: Path, script: str, ports: tuple[int, ...], probe: PortProbe | None = None) -> None:
-        self._folder = Path(folder)
+    def __init__(self, folder: Path, script: str) -> None:
+        self.folder = Path(folder)
         self.script = script
+
+    @property
+    def command(self) -> list[str]:
+        """What starts it, run in its folder: node on its script, through tsx for a TypeScript one."""
+        loader = list(TYPESCRIPT_LOADER) if self.script.endswith(".ts") else []
+        return ["node", *loader, self.script]
+
+    def start(self) -> None:
+        """Start it on its own, so it outlives whoever started it and opens no console window."""
+        subprocess.Popen(self.command, cwd=self.folder, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=_DETACHED, start_new_session=sys.platform != "win32")
+
+
+class AppServer:
+    """The server an app answers from: the script node runs in its folder, and the ports it tries in turn. The chat
+    that opens an app starts it, as long as that chat lasts, so this says how; two apps the same server serves, as the
+    board's server serves the Story UI editor, share one."""
+
+    def __init__(self, script: NodeScript, ports: tuple[int, ...], probe: PortProbe | None = None) -> None:
+        self._script = script
         self.ports = tuple(ports)
         self._probe = probe or PortProbe()
 
@@ -131,14 +148,13 @@ class AppServer:
     @data_field
     def folder(self) -> str:
         """The folder it runs in, written with forward slashes, as a chat starts it there."""
-        return self._folder.as_posix()
+        return self._script.folder.as_posix()
 
     @property
     @data_field
     def command(self) -> list[str]:
         """What starts it, run in its folder: node on its script, through tsx for a TypeScript one."""
-        loader = list(TYPESCRIPT_LOADER) if self.script.endswith(".ts") else []
-        return ["node", *loader, self.script]
+        return self._script.command
 
     @property
     def port(self) -> int | None:
@@ -153,7 +169,7 @@ class AppServer:
         if not self.stop():
             return False
         try:
-            subprocess.Popen(self.command, cwd=self._folder, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=_DETACHED, start_new_session=sys.platform != "win32")
+            self._script.start()
         except OSError as failed:
             raise AppServerNotRestarted(self, f"{' '.join(self.command)} did not start: {failed}") from failed
         self._wait_until(lambda: self.port is not None, f"nothing answered on {', '.join(map(str, self.ports))} within {RESTART_SECONDS} s")
@@ -244,6 +260,54 @@ class Npm:
         os.kill(process, signal.SIGTERM)
 
 
+class AppPackage:
+    """The npm package an app installs from: its folder, its ``package.json``, what its install reads (*AppSources*:
+    its own folder and the folders outside it its build imports, such as the language adapters), and npm, which
+    installs it and builds its page."""
+
+    def __init__(self, folder: Path, imports: tuple[Path, ...] = (), npm: Npm | None = None) -> None:
+        self.folder = Path(folder)
+        self.file = JsonFile(self.folder / "package.json")
+        self.sources = AppSources(self.folder, imports)
+        self.npm = npm or Npm()
+
+
+class AppPage:
+    """Where an app's page answers: the server that serves it and its path there. Two apps one server serves each have
+    a page of their own on it, as the CDD Kanban and the Story UI editor do on the board's server."""
+
+    def __init__(self, server: AppServer, path: str = "/") -> None:
+        self.server = server
+        self.path = path
+
+
+class Apps:
+    """The one registry of apps: each module that owns an app makes it once and registers it here."""
+
+    def __init__(self) -> None:
+        self._apps: list[App] = []
+
+    def register(self, app: App) -> None:
+        """Register app; registering a label again replaces the earlier app rather than listing it twice."""
+        place = next((index for index, held in enumerate(self._apps) if held.label == app.label), len(self._apps))
+        self._apps[place : place + 1] = [app]
+
+    @property
+    def registered(self) -> list[App]:
+        """Every app registered, in the order registered."""
+        return list(self._apps)
+
+    def named(self, label: str) -> App:
+        """The registered app whose label is label; one no module registered is refused."""
+        found = next((app for app in self._apps if app.label == label), None)
+        if found is None:
+            raise AppNotRegistered(label)
+        return found
+
+
+APPS = Apps()
+
+
 @identity("label")
 @language_adapter(language="typescript")
 @agent_toolset
@@ -254,8 +318,6 @@ class App:
     # open answers an app installed, or refuses; the chat that opens it starts its server for as long as it lasts.
     # status is read from the folder and the ports each time it is asked; the app keeps no copy of it.
 
-    _registered: ClassVar[list[App]] = []
-
     # The fingerprints the last install kept, each beside what it describes, so removing either folder forgets it.
     PACKAGES_STAMP = Path("node_modules") / ".cdd-packages"
     BUILD_STAMP = Path("dist") / ".cdd-build"
@@ -263,36 +325,25 @@ class App:
     # beside its packages, so a change to its server's code still counts as a change.
     SOURCES_STAMP = Path("node_modules") / ".cdd-sources"
 
-    def __init__(self, label: str, folder: Path, server: AppServer, page: str = "/", imports: tuple[Path, ...] = (), npm: Npm | None = None) -> None:
-        """imports are the folders outside its own that its build reads, such as the language adapters."""
+    def __init__(self, label: str, package: AppPackage, page: AppPage) -> None:
         self._label = label
-        self.folder = Path(folder)
-        self._server = server
-        self.page = page
-        self._npm_system = npm or Npm()
-        self._package = JsonFile(self.folder / "package.json")
-        self._sources = AppSources(self.folder, imports)
+        self.folder = package.folder
+        self._server = page.server
+        self.page = page.path
+        self._npm_system = package.npm
+        self._package = package.file
+        self._sources = package.sources
 
     def register(self) -> App:
-        """Register this app; registering a label again replaces the earlier app rather than listing it twice."""
-        held = App._registered
-        place = next((index for index, app in enumerate(held) if app.label == self.label), len(held))
-        held[place : place + 1] = [self]
+        """Register this app in the one registry of apps; registering a label again replaces the earlier app."""
+        APPS.register(self)
         return self
-
-    @classmethod
-    def registered(cls) -> list[App]:
-        """Every app registered, in the order registered."""
-        return list(cls._registered)
 
     @classmethod
     @tool_subject
     def load(cls, app: str, *, project: Path | str) -> App:
         """The registered app whose label is app, such as Kanban; one no module registered is refused."""
-        found = next((registered for registered in cls._registered if registered.label == app), None)
-        if found is None:
-            raise AppNotRegistered(app)
-        return found
+        return APPS.named(app)
 
     @property
     @data_field
@@ -423,4 +474,4 @@ class App:
 # harness/graph sits below this module and imports nothing of it, so the Graph app is made and registered here, from
 # the ports file its servers read; space/kanban registers the CDD Kanban and the Story UI editor the same way.
 _GRAPH_FOLDER = GRAPH_APP_PORTS.file.path.parent
-GRAPH_APP = App("Graph", _GRAPH_FOLDER, AppServer(_GRAPH_FOLDER, "start.ts", GRAPH_APP_PORTS.of("app"))).register()
+GRAPH_APP = App("Graph", AppPackage(_GRAPH_FOLDER), AppPage(AppServer(NodeScript(_GRAPH_FOLDER, "start.ts"), GRAPH_APP_PORTS.of("app")))).register()

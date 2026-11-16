@@ -124,6 +124,32 @@ class ScenarioSource:
     path: str
 
 
+# A fixture screen's page: its head, the bar at the top of its root element, its body, and its script.
+_SCREEN_PAGE = '''<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{title}</title>
+<script src="./support.js"></script>
+{head}
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{{margin:0}}
+a.button-primary{{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}}
+</style>
+</helmet>
+<div class="{root_class}">
+{bar}{body}
+</div>
+</x-dc>
+{component}</body>
+</html>
+'''
+
+
 @dataclass(frozen=True)
 class FixtureScreen:
     """A whole fixture-driven screen artboard: *head* (stylesheets, the fixtures script), the bar at the top of the
@@ -144,31 +170,8 @@ class FixtureScreen:
 
     @property
     def html(self) -> str:
-        title, head, root_class, body = self.title, self.head, self.root_class, self.body
-        artboard = self.artboard
-        return f'''<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<title>{title}</title>
-<script src="./support.js"></script>
-{head}
-</head>
-<body>
-<x-dc>
-<helmet>
-<style>
-body{{margin:0}}
-a.button-primary{{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}}
-</style>
-</helmet>
-<div class="{root_class}">
-{bar(artboard)}{body}
-</div>
-</x-dc>
-{self._component}</body>
-</html>
-'''
+        return _SCREEN_PAGE.format(title=self.title, head=self.head, root_class=self.root_class, body=self.body, bar=bar(self.artboard),
+                                   component=self._component)
 
     @property
     def _component(self) -> str:

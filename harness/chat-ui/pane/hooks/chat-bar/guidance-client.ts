@@ -4,7 +4,7 @@ import type { EngineInterface } from 'claude-code'
 import type { GuidanceSelectionData } from '@cdd/space/session/session'
 
 import { SERVER } from '../health/server-health-client'
-import { showFailure } from '../error-display/failure-client'
+import { shownAsFailure } from '../error-display/failure-client'
 import { reasonOf } from '../shared/reason'
 import { clearChosenAction } from './action-picker-client'
 import type { ToolArguments } from './chat-bar-client'
@@ -42,7 +42,7 @@ export async function followGuidance($: EngineInterface, sessionFileOf: () => Pr
       failed = 0
     } catch (failure) {
       failed += 1
-      if (failed === FAILED_READS_SHOWN) await showFailure($, 'The chat bar has not read the stages, practices and formats selected for ten tries', 'Following the session, calling session.guidance_selection_after', failure)
+      if (failed === FAILED_READS_SHOWN) await shownAsFailure($, 'The chat bar has not read the stages, practices and formats selected for ten tries', 'Following the session, calling session.guidance_selection_after')(failure)
       await pause($)
     }
   }
@@ -84,7 +84,7 @@ async function toggle($: EngineInterface, session: string, part: Part, name: str
   try {
     await accept($, await call($, 'session.update_guidance_selection', { session, [part]: selected }))
   } catch (failure) {
-    await showFailure($, `The ${name} ${part.slice(0, -1)} was not ${selected.includes(name) ? 'selected' : 'cleared'}`, `Pressing ${name} on the chat bar, calling session.update_guidance_selection`, failure)
+    await shownAsFailure($, `The ${name} ${part.slice(0, -1)} was not ${selected.includes(name) ? 'selected' : 'cleared'}`, `Pressing ${name} on the chat bar, calling session.update_guidance_selection`)(failure)
   }
 }
 

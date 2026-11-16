@@ -18,6 +18,8 @@ The *Files app* shows a session's files beside the chat and takes a person's com
 
 **Seam (terms):** the page's link and its query (`files`, `fidelity`, `session-folder`, `file`, `chat`, `project`); the server's routes under its API root (the generated `session.*`, `file-comments.*`, `fidelity-progress.*`, `practice-session-output.*` and `chat.send` routes, the draw.io page, and `/reveal`); the *App* `FILES_APP` that `app.open('Files')` readies.
 
-**Constraint.** A link names its files; one with neither `files` nor `session-folder` shows that it names none. A practice change reaches the chat bar only while the chat checks in with the board, as comments do. A field added to a session operation's data reaches the page only after the language adapters are written again (an install, or `Installer.write_language_adapters`) and the app is built again.
+**Depends on:** the generated TypeScript adapters (`.claude/language-adapters/typescript`), the graph explorer's source view (`harness/graph/app/source`), harness/diagnostics (*App*, *AppPackage*, *AppPage*, *AppServer*), and the cdd server. Nothing imports it.
 
-**Depends on:** the generated TypeScript adapters (`.claude/language-adapters/typescript`), the graph explorer's source view (`harness/graph/app/source`), harness/diagnostics (*App*, *AppServer*), and the cdd server. Nothing imports it.
+## Constraint
+
+Open the Files app only through `app.open('Files')` and a link that names its files, and reach a session only through the server's generated routes; the page keeps no rule or copy of the session of its own. A link names its files; one with neither `files` nor `session-folder` shows that it names none. A practice change reaches the chat bar only while the chat checks in with the board, as comments do. A field added to a session operation's data reaches the page only after the language adapters are written again (an install, or `installer.deployment.write_language_adapters()`) and the app is built again.

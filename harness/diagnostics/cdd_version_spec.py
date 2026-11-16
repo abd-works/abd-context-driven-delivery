@@ -20,7 +20,8 @@ def pyproject(version: str) -> str:
 class OriginStub:
     """Git in a checkout whose origin main holds pyproject.toml at one version, or that origin cannot be reached."""
 
-    def __init__(self, latest: str | None, is_reachable: bool = True) -> None:
+    def __init__(self, latest: str | None, is_reachable: bool = True, folder: Path = Path()) -> None:
+        self.folder = folder
         self._latest = latest
         self._is_reachable = is_reachable
         self.ran: list[tuple[str, ...]] = []
@@ -44,7 +45,8 @@ with description("the CDD version a chat runs") as self:
 
     def checked(self, origin: OriginStub) -> CddVersion:
         self.origin = origin
-        return CddVersion(self.checkout, git=origin).check()
+        origin.folder = self.checkout
+        return CddVersion(origin).check()
 
     with context("checked"):
         with it("should fetch origin main before reading its version"):
@@ -60,9 +62,9 @@ with description("the CDD version a chat runs") as self:
     # The chat bar reads it after every turn, so a version changed on disk shows at once without asking origin each time.
     with context("read again without fetching"):
         with before.each:
-            self.origin = OriginStub("0.2.0")
+            self.origin = OriginStub("0.2.0", folder=self.checkout)
             (self.checkout / "pyproject.toml").write_text(pyproject("0.2.0"), encoding="utf-8")
-            self.read = CddVersion(self.checkout, git=self.origin).read()
+            self.read = CddVersion(self.origin).read()
 
         with it("should not fetch origin main"):
             expect([args[0] for args in self.origin.ran]).not_to(contain("fetch"))
@@ -104,8 +106,8 @@ with description("the next CDD version") as self:
     with before.each:
         self.project = Path(tempfile.mkdtemp(prefix="cdd-next-version-"))
         (self.project / "pyproject.toml").write_text(pyproject("0.1.0") + '\n[tool.setuptools]\npackages = []\n', encoding="utf-8")
-        self.project_git = OriginStub("0.1.0")
-        self.subject = CddVersion(self.project, git=OriginStub("0.1.0"), project=self.project, project_git=self.project_git)
+        self.project_git = OriginStub("0.1.0", folder=self.project)
+        self.subject = CddVersion(OriginStub("0.1.0", folder=self.project), self.project_git)
 
     with after.each:
         shutil.rmtree(self.project, ignore_errors=True)

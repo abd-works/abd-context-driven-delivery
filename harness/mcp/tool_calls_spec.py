@@ -14,7 +14,7 @@ import anyio._backends._asyncio  # noqa: F401 - the backend anyio.run loads, loa
 from expects import be_a, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
-from harness.agent_tools.tool_call import ToolCall
+from harness.agent_tools.tool_call import ToolCall, ToolRequest
 from harness.mcp.tool_calls import ThrottledReporter, _StillRunning, _ToolCalls
 
 # Short enough that a held call outlives it; long enough that a released call finishes inside it.
@@ -31,7 +31,7 @@ class HeldWork:
         self.starts = 0
         self._value = value
 
-    def __call__(self, _reporter) -> object:
+    def __call__(self, _call: ToolCall, _reporter) -> object:
         self.starts += 1
         self.released.wait(LONG_SECONDS)
         self.finished.set()
@@ -39,7 +39,7 @@ class HeldWork:
 
 
 class FailedWork:
-    def __call__(self, _reporter) -> object:
+    def __call__(self, _call: ToolCall, _reporter) -> object:
         raise ValueError("graph is corrupt")
 
 
@@ -51,7 +51,7 @@ async def _until_every_run_ended(calls: _ToolCalls) -> None:
 
 
 def _call(arguments: dict | None = None) -> ToolCall:
-    return ToolCall.sent(arguments or {"paths": ["src"]}, Path("project"), tool="validate.validate")
+    return ToolCall.sent(arguments or {"paths": ["src"]}, Path("project"), ToolRequest(tool="validate.validate"))
 
 
 class LoggedFailures(logging.Handler):
@@ -67,16 +67,16 @@ class LoggedFailures(logging.Handler):
 
 with description("tool calls on worker threads") as self:
     with before.each:
-        self.calls = _ToolCalls()
         self.work = HeldWork()
+        self.calls = _ToolCalls(self.work)
 
     with context("with a call that outlives its time limit"):
         with before.each:
             async def outlive_then_collect():
-                self.first = await self.calls.run(_call(), SHORT_SECONDS, self.work, None)
+                self.first = await self.calls.run(_call(), SHORT_SECONDS, None)
                 self.work.released.set()
                 await anyio.to_thread.run_sync(self.work.finished.wait, LONG_SECONDS)
-                self.again = await self.calls.run(_call(), LONG_SECONDS, self.work, None)
+                self.again = await self.calls.run(_call(), LONG_SECONDS, None)
 
             anyio.run(outlive_then_collect)
 
@@ -98,10 +98,10 @@ with description("tool calls on worker threads") as self:
     with context("with an identical call made while the first is still running"):
         with before.each:
             async def join():
-                self.joined = await self.calls.run(_call(), LONG_SECONDS, self.work, None)
+                self.joined = await self.calls.run(_call(), LONG_SECONDS, None)
 
             async def call_twice():
-                await self.calls.run(_call(), SHORT_SECONDS, self.work, None)
+                await self.calls.run(_call(), SHORT_SECONDS, None)
                 async with anyio.create_task_group() as group:
                     group.start_soon(join)
                     await anyio.sleep(SHORT_SECONDS)
@@ -118,8 +118,8 @@ with description("tool calls on worker threads") as self:
     with context("with a different call made while the first is still running"):
         with it("should start the work for it"):
             async def call_two_paths():
-                await self.calls.run(_call({"paths": ["src"]}), SHORT_SECONDS, self.work, None)
-                await self.calls.run(_call({"paths": ["docs"]}), SHORT_SECONDS, self.work, None)
+                await self.calls.run(_call({"paths": ["src"]}), SHORT_SECONDS, None)
+                await self.calls.run(_call({"paths": ["docs"]}), SHORT_SECONDS, None)
                 self.work.released.set()
                 await _until_every_run_ended(self.calls)
 
@@ -131,8 +131,8 @@ with description("tool calls on worker threads") as self:
             self.work.released.set()
 
             async def call_twice_in_turn():
-                self.first = await self.calls.run(_call(), LONG_SECONDS, self.work, None)
-                self.second = await self.calls.run(_call(), LONG_SECONDS, self.work, None)
+                self.first = await self.calls.run(_call(), LONG_SECONDS, None)
+                self.second = await self.calls.run(_call(), LONG_SECONDS, None)
 
             anyio.run(call_twice_in_turn)
 
@@ -145,7 +145,7 @@ with description("tool calls on worker threads") as self:
     with context("with a call whose work fails"):
         with it("should raise the failure to the caller"):
             async def call_failing():
-                await self.calls.run(_call(), LONG_SECONDS, FailedWork(), None)
+                await _ToolCalls(FailedWork()).run(_call(), LONG_SECONDS, None)
 
             expect(lambda: anyio.run(call_failing)).to(raise_error(ValueError, "graph is corrupt"))
 
@@ -154,7 +154,7 @@ with description("tool calls on worker threads") as self:
             async def call_from_two_chats():
                 for chat in ("chat-a", "chat-b"):
                     arguments = {"paths": ["src"], "conversation_id": chat, "transcript_path": "transcript.jsonl"}
-                    await self.calls.run(_call(arguments), SHORT_SECONDS, self.work, None)
+                    await self.calls.run(_call(arguments), SHORT_SECONDS, None)
                 self.work.released.set()
                 await _until_every_run_ended(self.calls)
 
@@ -172,14 +172,16 @@ with description("tool calls on worker threads") as self:
         with it("should log the failure nobody heard"):
             failing = HeldWork(value=None)
 
-            def fail_when_released(reporter) -> object:
-                failing(reporter)
+            def fail_when_released(call: ToolCall, reporter) -> object:
+                failing(call, reporter)
                 raise ValueError("graph is corrupt")
+
+            self.calls = _ToolCalls(fail_when_released)
 
             async def cancel_the_caller():
                 with anyio.move_on_after(SHORT_SECONDS) as scope:
                     scope.cancel()
-                    await self.calls.run(_call(), LONG_SECONDS, fail_when_released, None)
+                    await self.calls.run(_call(), LONG_SECONDS, None)
                 failing.released.set()
                 await _until_every_run_ended(self.calls)
 

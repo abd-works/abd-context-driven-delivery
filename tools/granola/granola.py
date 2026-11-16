@@ -25,15 +25,26 @@ _TITLE_LENGTH_IN_FILE_NAME = 60
 REVIEW_FOLDER = "Review Before Filing"
 
 
-class PlannedNote(TypedDict, total=False):
-    """One note of a filing plan: the note, the folder the agent proposes for it, whether that folder is new, and why."""
+class MeetingNote(TypedDict):
+    """A Granola note as the agent names it: its id, its title, and the date of its meeting (YYYY-MM-DD)."""
 
     note_id: str
     title: str
     date: str
+
+
+class PlannedNote(MeetingNote, total=False):
+    """One note of a filing plan: the note, the folder the agent proposes for it, whether that folder is new, and why."""
+
     folder: str
     new_folder: bool
     reason: str
+
+
+class GranolaNote(MeetingNote):
+    """The Granola note a context file is written for, with its link in Granola."""
+
+    url: str
 
 
 @agent_toolset
@@ -109,21 +120,23 @@ class Granola:
     @mcp
     @skill
     @agent_tool
-    def write_note_context(self, folder: str, note_id: str, title: str, date: str, url: str, content: str) -> str:
+    def write_note_context(self, folder: str, note: GranolaNote, content: str) -> str:
         """Write one Granola note as an independent context file in {folder}/.context/granola/{date}-{slug}.md.
-        date: YYYY-MM-DD of the meeting. content: the note's summary and notes as markdown, verbatim from Granola.
+        note: {"note_id", "title", "date": YYYY-MM-DD of the meeting, "url"}. content: the note's summary and notes as
+        markdown, verbatim from Granola.
         Front matter marks the file as Granola source with note_id, title, date and url.
         Overwrites the file for the same note so re-running refreshes it. Returns the written path."""
         context_dir = self._context_dir(folder)
         context_dir.mkdir(parents=True, exist_ok=True)
-        target = context_dir / f"{date}-{self._slug(title)}.md"
+        title = note["title"]
+        target = context_dir / f"{note['date']}-{self._slug(title)}.md"
         front = "\n".join([
             "---",
             "source: granola",
-            f"note_id: {note_id}",
+            f"note_id: {note['note_id']}",
             f"title: {json.dumps(title)}",
-            f"date: {date}",
-            f"url: {url}",
+            f"date: {note['date']}",
+            f"url: {note['url']}",
             "---",
         ])
         target.write_text(f"{front}\n\n# {title}\n\n{content.strip()}\n", encoding="utf-8")

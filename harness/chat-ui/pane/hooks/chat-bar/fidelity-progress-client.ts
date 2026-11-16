@@ -7,6 +7,7 @@ import type { FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
 import type { TicketData } from '@cdd/space/kanban/ticket'
 
 import { post } from '../board-chat/board'
+import type { ChatBarClient } from './chat-bar-client'
 import { clearChosenAction } from './action-picker-client'
 
 // The canvas's progress looks (design/StageStrip.dc.html), one for each state FidelityProgress.state sends; each
@@ -23,15 +24,27 @@ const LOOKS: Record<string, { mark: string; word: string; colour: string; shade:
 const SHORT_NAMES: Record<string, string> = { 'Information architecture': 'Info architecture' }
 
 // One fidelity's progress on the active session, as the Python FidelityProgress sends it, drawn as a dot of its
-// practice's colour shaded by its state. It holds the progress itself and reads every answer from it.
+// practice's colour shaded by its state. It holds the progress itself and reads every answer from it; the chat bar it
+// is drawn on says how the board names it, its practice, and whether that practice is on.
 export class FidelityProgressClient {
   constructor(
     readonly progress: FidelityProgressData,
     private readonly ticket: TicketData,
-    private readonly practice: BoardPracticeData | undefined,
-    readonly isSelected: boolean,
-    private readonly label: string,
+    private readonly chatBar: ChatBarClient,
   ) {}
+
+  // Whether its practice is on for the session, so its dot is drawn selected.
+  get isSelected(): boolean {
+    return this.chatBar.isPracticeOn(this.progress.practice.key)
+  }
+
+  private get label(): string {
+    return this.chatBar.labelOf(this.progress.fidelity.slug)
+  }
+
+  private get practice(): BoardPracticeData | undefined {
+    return this.chatBar.practiceNamed(this.progress.practice.key)
+  }
 
   // The fidelity's slug, such as ux-mockup: what names its progress to the fidelity-progress tools and its guidance to
   // the actions.

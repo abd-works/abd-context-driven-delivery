@@ -20,6 +20,7 @@ import os
 import socket
 import threading
 import time
+from dataclasses import dataclass
 from typing import Any
 
 import harness.hooks.hook_server as hook_server_module
@@ -66,7 +67,11 @@ _HOOK_SERVER_FILES = (
 )
 
 
-class HookDaemonNotReady(Exception):
+class HookDaemonUnavailable(Exception):
+    """No hook daemon can answer for this checkout: one did not come up in time, or another process holds its port."""
+
+
+class HookDaemonNotReady(HookDaemonUnavailable):
     """The hook daemon this checkout started did not answer in time."""
 
     def __init__(self, repo: Path, seconds: float) -> None:
@@ -74,7 +79,7 @@ class HookDaemonNotReady(Exception):
         self.repo = repo
 
 
-class HookPortTaken(Exception):
+class HookPortTaken(HookDaemonUnavailable):
     """This checkout's hook port is held by a process that is not a hook daemon of this checkout, or by a daemon that
     would not stop, so no hook daemon can serve the checkout until that process ends."""
 
@@ -84,19 +89,29 @@ class HookPortTaken(Exception):
         self.port = port
 
 
+@dataclass(frozen=True)
+class HookDaemonIdentity:
+    """Who a running hook daemon is: its process, the stamp of the hook code it loaded, and its checkout. A daemon
+    started by the older layout says none of them."""
+
+    pid: int | None = None
+    stamp: str = ""
+    repo: str = ""
+
+
 class HookDaemonAddress:
     """Where a running hook daemon answers, and who it is: its host and port, its process, the stamp of the hook code
     it loaded, and its checkout. A daemon publishes this in its address file and answers it to a ping. A hook command
     sends its event here; a daemon on older code is stopped through its process. A daemon started by the older layout
     answers a ping with no process, stamp, or checkout."""
 
-    def __init__(self, host: str, port: int, pid: int | None = None, stamp: str = "", repo: str = "") -> None:
+    def __init__(self, host: str, port: int, identity: HookDaemonIdentity = HookDaemonIdentity()) -> None:
         self.host = host
         self.port = port
-        self.pid = pid
-        self.stamp = stamp
-        self.repo = repo
-        self.process = StoppableProcess(pid or 0)
+        self.pid = identity.pid
+        self.stamp = identity.stamp
+        self.repo = identity.repo
+        self.process = StoppableProcess(identity.pid or 0)
 
     @classmethod
     def from_fields(cls, fields: dict[str, Any], host: str) -> HookDaemonAddress | None:
@@ -104,13 +119,8 @@ class HookDaemonAddress:
         if not isinstance(fields, dict) or not fields.get("port"):
             return None
         pid = fields.get("pid")
-        return cls(
-            str(fields.get("host") or host),
-            int(fields["port"]),
-            int(pid) if isinstance(pid, int) and pid > 0 else None,
-            str(fields.get("stamp") or ""),
-            str(fields.get("repo") or ""),
-        )
+        identity = HookDaemonIdentity(int(pid) if isinstance(pid, int) and pid > 0 else None, str(fields.get("stamp") or ""), str(fields.get("repo") or ""))
+        return cls(str(fields.get("host") or host), int(fields["port"]), identity)
 
     def as_fields(self) -> dict[str, Any]:
         return {"host": self.host, "port": self.port, "pid": self.pid, "stamp": self.stamp, "repo": self.repo}
@@ -385,11 +395,10 @@ class HookDaemon:
         }
         self.folder.mkdir(parents=True, exist_ok=True)
         with open(self.log_path, "a", encoding="utf-8") as log:
-            BackgroundStart().run(
+            BackgroundStart(log).run(
                 [PythonInterpreter().windowless, "-m", "harness.hooks.hook_daemon", "serve", str(self.repo)],
-                cwd=self.repo,
-                env=env,
-                log=log,
+                self.repo,
+                env,
             )
 
     def serve(self, server: HookServer | None = None) -> None:
@@ -400,7 +409,7 @@ class HookDaemon:
         listener = self.claim_port()
         if listener is None:
             return
-        serving = _Serving(HookDaemonAddress(self.HOST, listener.getsockname()[1], os.getpid(), self.source_stamp, str(self.repo)))
+        serving = _Serving(HookDaemonAddress(self.HOST, listener.getsockname()[1], HookDaemonIdentity(os.getpid(), self.source_stamp, str(self.repo))))
         acceptor = threading.Thread(target=self._accept_until_stopped, args=(listener, serving), daemon=True)
         try:
             acceptor.start()

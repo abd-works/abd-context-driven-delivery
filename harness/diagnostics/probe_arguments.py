@@ -149,7 +149,7 @@ class ProbeArguments:
 
     def _sample_guidance_file(self) -> str:
         """A practice's own document for a read probe: the first practice in the catalogue's, as it answers its path."""
-        return str(self.practices[0].domain_markdown_path())
+        return str(self.practices[0].domain_markdown_path)
 
 
 class _OperationParameters:

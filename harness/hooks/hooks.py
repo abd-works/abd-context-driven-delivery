@@ -13,8 +13,8 @@ from harness.installation.json_file import JsonFile, JsonFileUnreadable
 
 class Hooks(Annotation):
     """Class annotation on a toolset: ``@Hooks(disabled=True)`` turns off every hook operation on it, and
-    ``deploy=False`` keeps them out of install. The hook server and the hook install read it through ``disabled_on``
-    and ``deploys``, so a subclass carries its base's setting."""
+    ``deploy=False`` keeps them out of install. The hook server and the hook install read it through
+    ``Hooks.from_toolset_class``, so a subclass carries its base's setting."""
 
     flag = "_hooks"
     copied = False
@@ -32,20 +32,10 @@ class Hooks(Annotation):
         return toolset_class
 
     @classmethod
-    def _on(cls, toolset: object) -> Hooks | None:
-        return getattr(type(toolset), cls.flag, None)
-
-    @classmethod
-    def disabled_on(cls, toolset: object) -> bool:
-        """True when ``@Hooks(disabled=True)`` turned off every hook of toolset's class."""
-        annotation = cls._on(toolset)
-        return annotation is not None and annotation.disabled
-
-    @classmethod
-    def deploys(cls, toolset: object) -> bool:
-        """False when ``@Hooks(deploy=False)`` keeps the hooks of toolset's class out of install."""
-        annotation = cls._on(toolset)
-        return annotation is None or annotation.deploy
+    def from_toolset_class(cls, toolset_class: type) -> Hooks:
+        """The ``@Hooks`` annotation on toolset_class or a class it derives from; a class annotated with none has every
+        hook on and deployed."""
+        return getattr(toolset_class, cls.flag, None) or cls()
 
 
 class Hook(Destination):
@@ -102,15 +92,6 @@ class Hook(Destination):
     def companion_flags(cls) -> tuple[str, ...]:
         return (*super().companion_flags(), cls.disabled_flag)
 
-    # Cursor reports a file edit under afterFileEdit as well as postToolUse, so a postToolUse hook answers both.
-    _ALSO_SERVES = {"postToolUse": ("afterFileEdit",)}
-
-    @classmethod
-    def events_served(cls, event: str) -> tuple[str, ...]:
-        """The IDE events a hook annotated for event answers: event itself, and those the IDE reports the same thing
-        under."""
-        return (event, *cls._ALSO_SERVES.get(event, ()))
-
     @classmethod
     def disabled_on(cls, operation: Callable[..., object]) -> bool:
         """True when ``@Hook(..., disabled=True)`` turned the hook on this operation off."""
@@ -119,6 +100,15 @@ class Hook(Destination):
 
 hook = Hook
 hooks = Hooks
+
+# Cursor reports a file edit under afterFileEdit as well as postToolUse, so a postToolUse hook answers both.
+_ALSO_SERVES = {"postToolUse": ("afterFileEdit",)}
+
+
+def events_served(event: str) -> tuple[str, ...]:
+    """The IDE events a hook annotated for event answers: event itself, and those the IDE reports the same thing
+    under."""
+    return (event, *_ALSO_SERVES.get(event, ()))
 
 
 class HooksFileUnreadable(JsonFileUnreadable):

@@ -15,7 +15,7 @@ from harness.installation.repository_toolsets import RepositoryToolsets
 
 RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 
-from harness.diagnostics.app import App, AppServer  # noqa: E402
+from harness.diagnostics.app import APPS, App, AppPackage, AppPage, AppServer, NodeScript  # noqa: E402
 from harness.diagnostics.server_health import ServerHealth  # noqa: E402
 from harness.hooks.hook_daemon import HookDaemon  # noqa: E402
 from harness.installation.data_class import data_of  # noqa: E402
@@ -38,14 +38,14 @@ with description("server health") as self:
     # Each app registers itself; the report lists every one, read as it is now, so the status row shows each.
     with context("with an app registered and answering on the second of its ports"):
         with before.each:
-            self.held = App.registered()
+            self.held = APPS.registered
             self.listener = socket.socket()
             self.listener.bind(("127.0.0.1", 0))
             self.listener.listen()
             self.port = self.listener.getsockname()[1]
             (self.root / "package.json").write_text("{}", encoding="utf-8")
             (self.root / "node_modules").mkdir()
-            App("Graph", self.root, AppServer(self.root, "serve.js", (closed_port(), self.port))).register()
+            App("Graph", AppPackage(self.root), AppPage(AppServer(NodeScript(self.root, "serve.js"), (closed_port(), self.port)))).register()
 
         with after.each:
             self.listener.close()
@@ -66,7 +66,7 @@ with description("server health") as self:
             self.server.start(("harness.diagnostics.server_health:ServerHealth",))
 
         with it("should answer the band's call with every part"):
-            result = self.server.invoke_tool("server-health.report", {})
+            result = self.server.invoke("server-health.report", {})
             answer = json.loads(json.dumps(result, default=data_of))
             expect(sorted(answer)).to(equal(["apps", "is_hook_server_running", "test_runs"]))
 

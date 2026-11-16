@@ -159,7 +159,7 @@ class PromptLog:
         works in."""
         if self._log is not None:
             return HookLog(self._log)
-        return payload.session.hook_log(_LOG_NAME)
+        return payload.session.folder.hook_log(_LOG_NAME)
 
     def _append(self, payload: HookPayload, entry: PromptLogEntry) -> None:
         self.log_for(payload).append(entry.text)

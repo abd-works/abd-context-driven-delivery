@@ -10,7 +10,7 @@ import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
-from typing import Any, Callable, NamedTuple
+from typing import Any, Callable, NamedTuple, TypedDict
 
 _REPO = Path(__file__).resolve().parents[1]
 if str(_REPO) not in sys.path:
@@ -27,6 +27,14 @@ PING_TIMEOUT_SECONDS = 2
 
 PROCESS_LIST_TIMEOUT_SECONDS = {"win32": 60, "posix": 30}
 """How long listing processes may take: PowerShell's CIM query starts slowly on Windows, ``ps`` is quick."""
+
+
+class ProcessEntry(TypedDict, total=False):
+    """One process as the system's process listing reports it in JSON."""
+
+    CommandLine: str
+    ProcessId: int
+    ParentProcessId: int
 
 
 class Process(NamedTuple):
@@ -254,7 +262,7 @@ class RepoProcesses:
         entries = data if isinstance(data, list) else [data]
         return [process for process in map(self._process_from_entry, entries) if process is not None]
 
-    def _process_from_entry(self, entry: object) -> Process | None:
+    def _process_from_entry(self, entry: ProcessEntry) -> Process | None:
         if not isinstance(entry, dict):
             return None
         command = str(entry.get("CommandLine") or "").strip()
@@ -319,11 +327,8 @@ class HttpPing:
     def run(self, service: HttpService) -> int:
         found = self.processes.root_pids(service.include)
         ports = {pid: self.processes.tree_ports(pid) for pid in found}
-        answered = {pid: self.answers.first_pong(service, ports.get(pid, [])) for pid in found}
-        healthy = [pid for pid, body in answered.items() if body is not None]
-        keeper, stopped = self.processes.collapse(found, min(healthy) if healthy else None)
-        body = self._keeper_answer(service, keeper, answered)
-        port = self._port(service, keeper, body, ports)
+        keeper, stopped, body = self._collapse_to_keeper(service, found, ports)
+        port = self._port(service, body, (ports.get(keeper) or []) if keeper is not None else None)
         url = body.get("url") if body is not None else None
         ok = body is not None and body.get("ping") == "pong"
         return PingReport().emit(
@@ -338,6 +343,16 @@ class HttpPing:
             }
         )
 
+    def _collapse_to_keeper(
+        self, service: HttpService, found: list[int], ports: dict[int, list[int]]
+    ) -> tuple[int | None, list[int], PingAnswer | None]:
+        """Keep the lowest process that answers a ping, stop the rest, and answer the keeper, what was stopped, and what
+        the keeper answered."""
+        answered = {pid: self.answers.first_pong(service, ports.get(pid, [])) for pid in found}
+        healthy = [pid for pid, body in answered.items() if body is not None]
+        keeper, stopped = self.processes.collapse(found, min(healthy) if healthy else None)
+        return keeper, stopped, self._keeper_answer(service, keeper, answered)
+
     def _keeper_answer(
         self, service: HttpService, keeper: int | None, answered: dict[int, PingAnswer | None]
     ) -> PingAnswer | None:
@@ -346,17 +361,15 @@ class HttpPing:
         body = answered.get(keeper)
         return body if body is not None else self.answers.first_pong(service, self.processes.tree_ports(keeper))
 
-    def _port(
-        self, service: HttpService, keeper: int | None, body: PingAnswer | None, ports: dict[int, list[int]]
-    ) -> int | None:
-        """The port the keeper answered on, else the one it should listen on, else the first it was heard on."""
+    def _port(self, service: HttpService, body: PingAnswer | None, heard: list[int] | None) -> int | None:
+        """The port the keeper answered on, else the one it should listen on, else the first it was heard on; heard
+        is none when no process was kept."""
         if body is not None and body.get("port") is not None:
             return body["port"]
-        if keeper is None:
+        if heard is None:
             return None
         if service.preferred_ports:
             return service.preferred_ports[0]
-        heard = ports.get(keeper) or []
         return heard[0] if heard else None
 
 

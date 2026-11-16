@@ -3,7 +3,7 @@ import type { EngineInterface } from 'claude-code'
 import { CHAT_QUERY, projectPageUrl } from '../board-chat/board'
 import { runningBoardUrl } from '../board-chat/board-server'
 import { openApp } from '../health/app-client'
-import { showFailure } from '../error-display/failure-client'
+import { showFailure, shownAsFailure } from '../error-display/failure-client'
 import { openInBrowserPane } from '../shared/browser-pane'
 import { currentChatBar, type ChatBarClient } from './chat-bar-client'
 import type { FidelityProgressClient } from './fidelity-progress-client'
@@ -26,7 +26,7 @@ async function openBoardPage($: EngineInterface, what: string, query: Record<str
   try {
     url = await runningBoardUrl($)
   } catch (failure) {
-    return showFailure($, `${what} did not open: the board is not running and did not start`, `Opening ${what}, starting the board server`, failure)
+    return shownAsFailure($, `${what} did not open: the board is not running and did not start`, `Opening ${what}, starting the board server`)(failure)
   }
   if (!url) return showFailure($, `${what} did not open: the board is not running and did not start`, `Opening ${what}, starting the board server`)
   const link = await projectPageUrl($, new URL(BOARD_PAGE, url).toString(), { [CHAT_QUERY]: await $.session.id(), ...query })
@@ -39,7 +39,7 @@ async function openFilesLink($: EngineInterface, what: string, query: Record<str
   try {
     url = (await openApp($, FILES_APP)).url
   } catch (failure) {
-    return showFailure($, `${what} did not open: the ${FILES_APP} app did not start`, `Opening ${what}, calling app.open for the ${FILES_APP} app`, failure)
+    return shownAsFailure($, `${what} did not open: the ${FILES_APP} app did not start`, `Opening ${what}, calling app.open for the ${FILES_APP} app`)(failure)
   }
   const link = await projectPageUrl($, url, { [CHAT_QUERY]: await $.session.id(), ...query })
   const problem = await openInBrowserPane($, link)

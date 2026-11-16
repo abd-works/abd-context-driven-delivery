@@ -6,7 +6,7 @@ import type { FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
 import type { TicketData } from '@cdd/space/kanban/ticket'
 
 import type { ChatBarJson } from '../../types'
-import { showFailure } from '../error-display/failure-client'
+import { shownAsFailure } from '../error-display/failure-client'
 import { reasonOf } from '../shared/reason'
 import { SERVER } from '../health/server-health-client'
 import { debugCommandOf } from '../shared/debug-command'
@@ -161,7 +161,7 @@ export class ChatBarClient {
     if (!ticket) return []
     return ticket.progress
       .filter(progress => this.shownStages.includes(progress.stage.name))
-      .map(progress => new FidelityProgressClient(progress, ticket, this.practiceNamed(progress.practice.key), this.isPracticeOn(progress.practice.key), this.labelOf(progress.fidelity.slug)))
+      .map(progress => new FidelityProgressClient(progress, ticket, this))
   }
 
   // The format chips: each format group the selected fidelities offer, selected or not, as the session holds them.
@@ -241,12 +241,12 @@ export class ChatBarClient {
   }
 
   // A fidelity's label as the board names it, such as story-map; its slug when the board names none.
-  private labelOf(slug: string): string {
+  labelOf(slug: string): string {
     return this.board?.fidelities.find(shown => shown.fidelity.slug === slug)?.label ?? slug
   }
 
   // The practice a fidelity's progress names, as the board sends it with its colour.
-  private practiceNamed(key: string): BoardPracticeData | undefined {
+  practiceNamed(key: string): BoardPracticeData | undefined {
     return this.board?.practices.find(shown => shown.practice.key === key)
   }
 }
@@ -347,7 +347,7 @@ export async function restartServer($: EngineInterface): Promise<void> {
     const restarted = await callTool<RestartData>($, 'cdd.restart', {})
     $.ui.toast(`cdd server restarted with ${restarted.tools} tools`)
   } catch (failure) {
-    await showFailure($, 'The cdd server did not restart', 'Restart on the health panel, calling cdd.restart', failure)
+    await shownAsFailure($, 'The cdd server did not restart', 'Restart on the health panel, calling cdd.restart')(failure)
     return
   }
   await refreshChatBar($)
@@ -391,7 +391,7 @@ export async function moveNext($: EngineInterface, chatBar: ChatBarClient): Prom
   try {
     await callTool<TicketData>($, 'ticket.move_next', { ticket: chatBar.sessionName })
   } catch (failure) {
-    await showFailure($, `${chatBar.sessionName} did not move to the next stage`, 'The stage button on the chat bar, calling ticket.move_next', failure)
+    await shownAsFailure($, `${chatBar.sessionName} did not move to the next stage`, 'The stage button on the chat bar, calling ticket.move_next')(failure)
     return new MoveRefused(reasonOf(failure))
   }
   await refreshChatBar($)

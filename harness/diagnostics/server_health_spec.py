@@ -29,6 +29,6 @@ with description("server health") as self:
             self.server.start(("harness.diagnostics.server_health:ServerHealth",))
 
         with it("should leave the session log alone"):
-            self.server.invoke_tool("server-health.report", {})
+            self.server.invoke("server-health.report", {})
             logged = [log.read_text(encoding="utf-8") for log in self.root.glob(".sessions/**/session.log")]
             expect("server-health" in "".join(logged)).to(be_false)

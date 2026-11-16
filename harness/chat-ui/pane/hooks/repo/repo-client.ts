@@ -3,7 +3,7 @@ import type { EngineInterface } from 'claude-code'
 
 import type { ToMainJson } from '../../types'
 import { callTool, currentChatBar, refreshChatBar } from '../chat-bar/chat-bar-client'
-import { showFailure } from '../error-display/failure-client'
+import { shownAsFailure } from '../error-display/failure-client'
 
 // Where a push lands: the session's own branch, or merged into main on origin.
 export type PushTarget = 'branch' | 'main'
@@ -67,7 +67,7 @@ async function pushTo($: EngineInterface, target: PushTarget): Promise<void> {
     await update($, toMain, json => ({ ...json, state: 'installed' }))
   } catch (failure) {
     await update($, toMain, json => ({ ...json, state: 'failed', error: String(failure) }))
-    await showFailure($, FAILED[target], `${PRESSED[target]}, calling ${TOOLS[target]}`, failure)
+    await shownAsFailure($, FAILED[target], `${PRESSED[target]}, calling ${TOOLS[target]}`)(failure)
   }
   await refreshChatBar($)
 }

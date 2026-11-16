@@ -23,7 +23,7 @@ def free_port() -> int:
 with description("the cdd server stopped") as self:
     def daemon_with(self, holder: RecordingProcess | None) -> McpDaemon:
         self.listening = ListeningPortsStub(holder)
-        return McpDaemon(CddHome(), port=self.port, listening=self.listening)
+        return McpDaemon(CddHome(), McpAddress(self.port), self.listening)
 
     with context("that holds its port without answering"):
         with before.each:

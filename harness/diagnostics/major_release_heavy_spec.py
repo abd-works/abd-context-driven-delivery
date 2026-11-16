@@ -73,7 +73,7 @@ with description("a major release of a throwaway repository") as self:
         for tier in (TestTier.E2E, TestTier.HEAVY):
             self.record.save(TestRun(tier, head, datetime.now(timezone.utc), RunOutcome.PASSED))
         self.gh = RecordingGh()
-        self.release = MajorRelease(self.checkout, Git(self.checkout), self.gh, self.record)
+        self.release = MajorRelease(Git(self.checkout), self.gh, self.record)
 
     with after.each:
         shutil.rmtree(self.root, ignore_errors=True)

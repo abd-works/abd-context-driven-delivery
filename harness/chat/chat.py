@@ -18,7 +18,7 @@ from harness.installation.data_class import data_field, identity, language_adapt
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
 from harness.mcp.mcp_annotations import mcp
 from harness.agent_tools.chat_pointer import ChatPointer
-from harness.agent_tools.tool_call import ToolCall
+from harness.agent_tools.tool_call import CALLS_BEING_ANSWERED
 
 # The mod checks in every second, so a chat silent for this long has gone.
 CHAT_GONE_SECONDS = 5
@@ -163,7 +163,7 @@ class ChatLinks:
     def _join_opener_section(self) -> str:
         """What a new chat is told so it lands beside the chat that opened it: the app knows that chat by its title and
         folder, not by the transcript id cdd has, so the new chat finds it by those. Empty when no titled chat asked."""
-        call = ToolCall.answering()
+        call = CALLS_BEING_ANSWERED.current
         opener = Chat.load(call.chat_id) if call is not None and call.chat_id else None
         if opener is None or not opener.title:
             return ""
@@ -218,6 +218,8 @@ class Chat:
         self._folder = folder
         # What the chat's mod last said at check-in: its name, whether a turn runs, its folder, and its title.
         self._state_file = ChatStateFile(self, JsonFile(folder / STATE_FILE))
+        # The messages sent to the chat, one file each in the folder of the state it is in.
+        self.mailbox = ChatMailbox(self, folder)
 
     @classmethod
     @tool_subject
@@ -246,33 +248,15 @@ class Chat:
     @noSessionLog
     def send(self, kind: CommandKind, text: str) -> Chat:
         """Send chat a command: a fill puts text in its prompt for the person to review, a submit sends it, a command runs a slash command, an open_file shows the file text names, a path from the project, in its chat bar's file viewer, a refresh has its chat bar read the board again, as after a page such as the Files app changed the session, and a select has its chat bar select the fidelities text names, slugs separated by commas, none to clear the selection, as a practice pressed in the Files app does, and a failure shows a page's failure on its chat bar as the bar shows its own, text a JSON object with the failure and the context it happened in. A fill waits until the chat's turn has ended."""
-        self.queue(kind, text)
+        self.mailbox.queue(kind, text)
         return self
-
-    def queue(self, kind: CommandKind, text: str) -> ChatMessage:
-        """Queue a command for chat, as ``send`` does, and answer with the message it waits in, so the sender can follow
-        the message to done."""
-        if not self.is_connected:
-            raise ChatNotConnectedError(self.id)
-        waiting = self._folder / WAITING
-        waiting.mkdir(parents=True, exist_ok=True)
-        path = waiting / self._next_file_name()
-        JsonFile(path).write({"kind": kind, "text": text, "sent_at": self.clock()})
-        return self._message(path, WAITING)
-
-    def message(self, message: str) -> ChatMessage | None:
-        """The message sent to chat with this id, in whatever state it is; none once it was removed or forgotten."""
-        found = next(((path, state) for state in MESSAGE_STATES if (path := self._folder / state / f"{message}.json").is_file()), None)
-        return self._message(*found) if found is not None else None
 
     @mcp
     @agent_tool
     @noSessionLog
     def messages(self) -> list[ChatMessage]:
         """List the latest messages sent to chat, newest first: what each one said, when it was sent, whether it waits, was taken, was shown in the chat, or failed, and why it failed."""
-        sent = [(path, state) for state in MESSAGE_STATES for path in self._sent_in(state)]
-        newest = sorted(sent, key=lambda entry: entry[0].name, reverse=True)[: self.kept_messages]
-        return [self._message(path, state) for path, state in newest]
+        return self.mailbox.latest()
 
     @mcp
     @agent_tool
@@ -286,8 +270,8 @@ class Chat:
         self._folder.mkdir(parents=True, exist_ok=True)
         state: ChatCheckIn = {"name": name, "is_busy": is_busy, "seen": self.clock(), "folder": folder}
         self._state_file.write({**state, **self._state_file.title_state()})
-        self._finish_worked_on(is_busy)
-        return self._take_ready(is_busy)
+        self.mailbox.finish_worked_on(is_busy)
+        return self.mailbox.take_ready(is_busy)
 
     @mcp
     @agent_tool
@@ -301,13 +285,7 @@ class Chat:
     @noSessionLog
     def confirm(self, message: str, is_shown: bool, reason: str = "") -> Chat:
         """Say whether chat showed a message it took, as its cdd-board mod does once the message has entered the chat or been refused; reason says why it was refused."""
-        taken = self._folder / TAKEN / f"{message}.json"
-        if not taken.is_file():
-            return self
-        if not is_shown:
-            record = JsonFile(taken)
-            record.write({**record.read(), "reason": reason})
-        self._move(taken, SHOWN if is_shown else FAILED)
+        self.mailbox.confirm(message, is_shown, reason)
         return self
 
     @mcp
@@ -315,9 +293,7 @@ class Chat:
     @noSessionLog
     def finish(self, message: str) -> Chat:
         """Say chat has finished working on a message it showed, as its cdd-board mod does once the chat's turn has ended."""
-        shown = self._folder / SHOWN / f"{message}.json"
-        if shown.is_file():
-            self._move(shown, DONE)
+        self.mailbox.finish(message)
         return self
 
     @mcp
@@ -325,12 +301,7 @@ class Chat:
     @noSessionLog
     def resend(self, message: str) -> Chat:
         """Put a message chat took but did not show back in its queue, so the chat takes it again at its next check-in."""
-        for state in (TAKEN, FAILED):
-            unshown = self._folder / state / f"{message}.json"
-            if unshown.is_file():
-                record = JsonFile(unshown)
-                record.write({key: value for key, value in record.read().items() if key != "reason"})
-                self._move(unshown, WAITING)
+        self.mailbox.resend(message)
         return self
 
     @mcp
@@ -338,8 +309,7 @@ class Chat:
     @noSessionLog
     def remove(self, message: str) -> Chat:
         """Remove a message sent to chat, whatever its state; one still waiting is never given to the chat."""
-        for state in MESSAGE_STATES:
-            (self._folder / state / f"{message}.json").unlink(missing_ok=True)
+        self.mailbox.remove(message)
         return self
 
     @property
@@ -377,9 +347,72 @@ class Chat:
     def _state(self) -> ChatCheckIn:
         return self._state_file.read()
 
-    # Oldest first. Each sent command is its own file, so a sender never writes a file the chat is reading. A taken command
-    # waits in the taken folder until the chat confirms it, so the board can show what the chat never showed.
-    def _take_ready(self, is_busy: bool) -> list[ChatCommand]:
+
+
+class ChatMailbox:
+    """The messages sent to one chat, each its own file in the folder of the state it is in (waiting, taken, shown,
+    done, or failed), so a sender never writes a file the chat is reading. A message moves from one folder to the next
+    as the chat takes it, shows it, and finishes it."""
+
+    def __init__(self, chat: Chat, folder: Path) -> None:
+        self._chat = chat
+        self._folder = folder
+
+    def queue(self, kind: CommandKind, text: str) -> ChatMessage:
+        """Queue a command for the chat, as ``chat.send`` does, and answer with the message it waits in, so the sender
+        can follow the message to done."""
+        if not self._chat.is_connected:
+            raise ChatNotConnectedError(self._chat.id)
+        waiting = self._folder / WAITING
+        waiting.mkdir(parents=True, exist_ok=True)
+        path = waiting / self._next_file_name()
+        JsonFile(path).write({"kind": kind, "text": text, "sent_at": self._chat.clock()})
+        return self._message(path, WAITING)
+
+    def message(self, message: str) -> ChatMessage | None:
+        """The message sent to the chat with this id, in whatever state it is; none once it was removed or forgotten."""
+        found = next(((path, state) for state in MESSAGE_STATES if (path := self._folder / state / f"{message}.json").is_file()), None)
+        return self._message(*found) if found is not None else None
+
+    def latest(self) -> list[ChatMessage]:
+        """The latest messages sent to the chat, newest first, as many as it keeps."""
+        sent = [(path, state) for state in MESSAGE_STATES for path in self._sent_in(state)]
+        newest = sorted(sent, key=lambda entry: entry[0].name, reverse=True)[: self._chat.kept_messages]
+        return [self._message(path, state) for path, state in newest]
+
+    def confirm(self, message: str, is_shown: bool, reason: str) -> None:
+        """A message the chat took was shown, or was refused for reason."""
+        taken = self._folder / TAKEN / f"{message}.json"
+        if not taken.is_file():
+            return
+        if not is_shown:
+            record = JsonFile(taken)
+            record.write({**record.read(), "reason": reason})
+        self._move(taken, SHOWN if is_shown else FAILED)
+
+    def finish(self, message: str) -> None:
+        """The chat has finished working on a message it showed."""
+        shown = self._folder / SHOWN / f"{message}.json"
+        if shown.is_file():
+            self._move(shown, DONE)
+
+    def resend(self, message: str) -> None:
+        """A message the chat took but did not show waits again, for the chat to take at its next check-in."""
+        for state in (TAKEN, FAILED):
+            unshown = self._folder / state / f"{message}.json"
+            if unshown.is_file():
+                record = JsonFile(unshown)
+                record.write({key: value for key, value in record.read().items() if key != "reason"})
+                self._move(unshown, WAITING)
+
+    def remove(self, message: str) -> None:
+        for state in MESSAGE_STATES:
+            (self._folder / state / f"{message}.json").unlink(missing_ok=True)
+
+    # Oldest first. A taken command waits in the taken folder until the chat confirms it, so the board can show what the
+    # chat never showed.
+    def take_ready(self, is_busy: bool) -> list[ChatCommand]:
+        """The commands ready for the chat, moved to taken; a fill waits while a turn runs."""
         taken: list[ChatCommand] = []
         for path in self._sent_in(WAITING):
             command = JsonFile(path).read()
@@ -392,7 +425,7 @@ class Chat:
 
     # The mod finishes what it runs, but a mod that reloads mid-turn forgets it, so a shown message the chat has been busy
     # with is also done once the chat checks in idle.
-    def _finish_worked_on(self, is_busy: bool) -> None:
+    def finish_worked_on(self, is_busy: bool) -> None:
         for path in self._sent_in(SHOWN):
             record = JsonFile(path)
             sent = record.read()
@@ -405,7 +438,7 @@ class Chat:
     # sorts in the order sent.
     def _next_file_name(self) -> str:
         latest = max((int(path.stem) for state in MESSAGE_STATES for path in self._sent_in(state)), default=0)
-        return f"{max(int(self.clock() * NANOSECONDS_PER_SECOND), latest + 1)}.json"
+        return f"{max(int(self._chat.clock() * NANOSECONDS_PER_SECOND), latest + 1)}.json"
 
     def _sent_in(self, state: str) -> list[Path]:
         folder = self._folder / state
@@ -418,7 +451,7 @@ class Chat:
 
     def _forget_old_messages(self) -> None:
         handled = sorted((path for state in (TAKEN, SHOWN, DONE, FAILED) for path in self._sent_in(state)), key=lambda path: path.name)
-        for path in handled[: -self.kept_messages]:
+        for path in handled[: -self._chat.kept_messages]:
             path.unlink()
 
     def _message(self, path: Path, state: MessageState) -> ChatMessage:

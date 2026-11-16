@@ -12,8 +12,11 @@ from pathlib import Path
 from expects import be_true, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
+from harness.mcp.mcp_address import CHAT_HEADER, CHAT_PROCESS_HEADER, PROJECT_HEADER, McpAddress
+
 _SCRIPT = Path(__file__).resolve().parent / "scripts" / "connect.py"
-_URL = "http://127.0.0.1:8790/mcp"
+_ADDRESS = McpAddress(8790)
+_URL = _ADDRESS.url
 _REPOSITORY = Path(__file__).resolve().parents[2]
 _spec = importlib.util.spec_from_file_location("cdd_connect", _SCRIPT)
 connect = importlib.util.module_from_spec(_spec)
@@ -50,29 +53,29 @@ with description("what a chat's connect script prints") as self:
 
     with context("for an IDE's headers helper, with the chat's folder passed"):
         with it("should be the headers alone, naming that folder and an unnamed chat"):
-            expect(connect.answer([r"C:\dev\pets"], _URL, "x-cdd-project", "x-cdd-chat")).to(equal({"x-cdd-project": r"C:\dev\pets", "x-cdd-chat": connect.UNNAMED_CHAT}))
+            expect(connect.answer([r"C:\dev\pets"], _ADDRESS)).to(equal({PROJECT_HEADER: r"C:\dev\pets", CHAT_HEADER: connect.UNNAMED_CHAT}))
 
     with context("for a Claude Code chat's headers helper"):
         with it("should name the chat, so the server can follow it to the folder it works in now"):
             os.environ[connect.CHAT_ID_VARIABLE] = "chat-7"
-            expect(connect.answer([r"C:\dev\pets"], _URL, "x-cdd-project", "x-cdd-chat")).to(equal({"x-cdd-project": r"C:\dev\pets", "x-cdd-chat": "chat-7"}))
+            expect(connect.answer([r"C:\dev\pets"], _ADDRESS)).to(equal({PROJECT_HEADER: r"C:\dev\pets", CHAT_HEADER: "chat-7"}))
 
     with context("for a headers helper run by a Claude Code chat process"):
         with it("should name that process, so the server can read the folder its session works in now"):
-            headers = connect.answer([r"C:\dev\pets"], _URL, "x-cdd-project", "x-cdd-chat", {"x-cdd-chat-process": "40364"})
-            expect(headers["x-cdd-chat-process"]).to(equal("40364"))
+            headers = connect.answer([r"C:\dev\pets"], _ADDRESS, 40364)
+            expect(headers[CHAT_PROCESS_HEADER]).to(equal("40364"))
 
     with context("for a language adapter, asked for the server's address in the project's folder"):
         with it("should be the server's address with the headers naming the folder it runs in"):
-            expect(connect.answer(["--address"], _URL, "x-cdd-project", "x-cdd-chat")).to(equal({"url": _URL, "headers": {"x-cdd-project": os.getcwd(), "x-cdd-chat": connect.UNNAMED_CHAT}}))
+            expect(connect.answer(["--address"], _ADDRESS)).to(equal({"url": _URL, "headers": {PROJECT_HEADER: os.getcwd(), CHAT_HEADER: connect.UNNAMED_CHAT}}))
 
         # A board or graph server started from a chat serves every chat, so it never takes on the chat that started it:
         # the server would otherwise follow that chat to its folder and show that repository to everyone.
         with context("that a Claude Code chat started"):
             with it("should name only the project, never the chat or its process"):
                 os.environ[connect.CHAT_ID_VARIABLE] = "chat-7"
-                answer = connect.answer(["--address"], _URL, "x-cdd-project", "x-cdd-chat", {"x-cdd-chat-process": "40364"})
-                expect(answer["headers"]).to(equal({"x-cdd-project": os.getcwd(), "x-cdd-chat": connect.UNNAMED_CHAT}))
+                answer = connect.answer(["--address"], _ADDRESS, 40364)
+                expect(answer["headers"]).to(equal({PROJECT_HEADER: os.getcwd(), CHAT_HEADER: connect.UNNAMED_CHAT}))
 
 
 # An install swaps the pinned runtime in place; a headers helper that exits then prints nothing, and its chat is cut

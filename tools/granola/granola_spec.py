@@ -41,10 +41,8 @@ with description("a Granola toolset"):
         with it("should write a Granola-marked file that list_note_context then finds"):
             with tempfile.TemporaryDirectory() as root:
                 granola = Granola(root)
-                written = granola.write_note_context(
-                    "src/inventory", "abc-123", "Inventory and payment systems", "2026-08-31",
-                    "https://notes.granola.ai/d/abc-123", "## Summary\nStock moves.",
-                )
+                note = {"note_id": "abc-123", "title": "Inventory and payment systems", "date": "2026-08-31", "url": "https://notes.granola.ai/d/abc-123"}
+                written = granola.write_note_context("src/inventory", note, "## Summary\nStock moves.")
                 stored = Path(written).read_text(encoding="utf-8")
                 expect("source: granola" in stored).to(be_true)
                 expect("note_id: abc-123" in stored).to(be_true)
@@ -57,8 +55,8 @@ with description("a Granola toolset"):
 
             with tempfile.TemporaryDirectory() as project:
                 tool = AgentToolSet.instantiate(Granola).tools["write_note_context"]
-                note = {"folder": "src", "note_id": "n1", "title": "Pricing", "date": "2026-09-01", "url": "u", "content": "c"}
-                written = tool.invoke(note, project=project)
+                arguments = {"folder": "src", "note": {"note_id": "n1", "title": "Pricing", "date": "2026-09-01", "url": "u"}, "content": "c"}
+                written = tool.invoke(arguments, project=project)
                 expect(Path(str(written)).is_relative_to(Path(project).resolve())).to(be_true)
 
     with context("whose organize action is expanded"):

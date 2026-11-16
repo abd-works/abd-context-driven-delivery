@@ -32,6 +32,20 @@ def main() -> int:
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Install CDD toolsets into the IDE path.")
+    _add_install_options(parser)
+    _add_serving_options(parser)
+    parser.add_argument(
+        "--from-chat",
+        default=None,
+        metavar="FOLDER",
+        help="Install for the chat working in FOLDER: from FOLDER when it is a CDD checkout, the one the person is "
+        "working on, else from this checkout. The chat bar's Run install runs this.",
+    )
+    return parser
+
+
+def _add_install_options(parser: argparse.ArgumentParser) -> None:
+    """Where to install, and what."""
     parser.add_argument(
         "--ide",
         default=None,
@@ -48,6 +62,10 @@ def _parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Deploy only the Installer toolset (slash /install and /clean, hooks).",
     )
+
+
+def _add_serving_options(parser: argparse.ArgumentParser) -> None:
+    """Which code the cdd server serves to every chat, and how an install restarts it; one at a time."""
     serving = parser.add_mutually_exclusive_group()
     serving.add_argument(
         "--pin-runtime",
@@ -82,14 +100,6 @@ def _parser() -> argparse.ArgumentParser:
         "port without answering; then install in full and ping the server. A chat that connected in the seconds it was "
         "down needs its cdd connection reconnected.",
     )
-    parser.add_argument(
-        "--from-chat",
-        default=None,
-        metavar="FOLDER",
-        help="Install for the chat working in FOLDER: from FOLDER when it is a CDD checkout, the one the person is "
-        "working on, else from this checkout. The chat bar's Run install runs this.",
-    )
-    return parser
 
 
 def _other_chat_checkout(args: argparse.Namespace) -> Path | None:
@@ -117,12 +127,12 @@ def _install(args: argparse.Namespace) -> int:
     installer = Installer(ide=args.ide, path=args.path, repo=_REPO)
     server = McpInstallation(installer.layout, installer.path, repo=_REPO)
     # Switching the code the server runs takes seconds; a full install takes a minute, so the switch runs alone.
-    if args.update:
-        from space.repo.repo import Repo
-
-        Repo.of_project(_REPO).catch_up_with_origin()
     if args.pin_runtime or args.update or args.serve_from_checkout:
         return _switch_server_only(args, installer, server)
+    return _install_in_full(args, installer, server)
+
+
+def _install_in_full(args: argparse.Namespace, installer: Installer, server: McpInstallation) -> int:
     if args.restart_everything:
         _restart_everything(installer, server)
         _step_started(4)
@@ -134,21 +144,25 @@ def _install(args: argparse.Namespace) -> int:
 
 
 def _switch_server_only(args: argparse.Namespace, installer: Installer, server: McpInstallation) -> int:
+    if args.update:
+        from space.repo.repo import Repo
+
+        Repo.of_project(_REPO).origin.catch_up()
     print(f"cdd server: {_switch_server(args, server)}")
     if installer.layout.is_claude_code:
         print(f"cdd-board: {server.claude_plugins.install_board()}")
-    print(f"language adapters: {len(installer.write_language_adapters())} written")
+    print(f"language adapters: {len(installer.deployment.write_language_adapters())} written")
     _write_runtime_adapters(installer, server)
     return 0
 
 
 def _install_toolsets(args: argparse.Namespace, installer: Installer, server: McpInstallation) -> None:
     if args.self:
-        installer.install_self(replace=not args.no_replace)
+        installer.deployment.install_self(replace=not args.no_replace)
         return
     installer.install(replace=not args.no_replace)
     # A plain install from the main checkout also moves the server onto the commit it just installed.
-    restarted = server.keep_pinned_current()
+    restarted = server.served.keep_pinned_current()
     if restarted:
         print(f"cdd server: {restarted}")
     _write_runtime_adapters(installer, server)
@@ -219,10 +233,10 @@ def _switch_server(args: argparse.Namespace, server: McpInstallation) -> str:
     """Serve the code the flags name: the checkout on disk, the pinned commit, or for an update, the current code served
     the way it already is, so an update from the board leaves a person working on CDD itself on their checkout."""
     if args.serve_from_checkout:
-        return server.serve_from_checkout()
+        return server.served.serve_on_disk()
     if args.update:
-        return server.update_server()
-    return server.pin_server()
+        return server.served.update()
+    return server.served.pin()
 
 
 def _restart_everything(installer: Installer, server: McpInstallation) -> None:
@@ -232,12 +246,12 @@ def _restart_everything(installer: Installer, server: McpInstallation) -> None:
     is refused, and leaves that chat's cdd connection failed until it is reconnected."""
     import space.kanban  # noqa: F401  registers the Kanban and Story UI apps
     import space.session  # noqa: F401  registers the Files app
-    from harness.diagnostics.app import App
+    from harness.diagnostics.app import APPS
     from harness.hooks.hook_installation import HookInstallation
 
     _step_started(2)
     # Two apps can share one server, as the Kanban and the Story UI do; the second finds it already stopped.
-    stopped = [app.label for app in App.registered() if app.server.stop()]
+    stopped = [app.label for app in APPS.registered if app.server.stop()]
     HookInstallation(installer.layout, installer.path, repo=_REPO).daemon.stop()
     apps = f"stopped {', '.join(stopped)}" if stopped else "no app server was running"
     _step_done(2, f"{apps}; hook server stopped")

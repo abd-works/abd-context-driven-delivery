@@ -2,7 +2,7 @@ import type { EngineInterface } from 'claude-code'
 
 import type { LeaveChoicesData, TicketData } from '@cdd/space/kanban/ticket'
 
-import { showFailure, shownAsFailure } from '../error-display/failure-client'
+import { shownAsFailure } from '../error-display/failure-client'
 import { reasonOf } from '../shared/reason'
 import { chosenFolder } from '../shared/folder-dialog'
 import { callTool, callToolText, currentChatBar, refreshChatBar, type ChatBarClient } from './chat-bar-client'
@@ -37,7 +37,7 @@ async function activatedTicket($: EngineInterface, ticketName: string): Promise<
   try {
     return await callTool<TicketData>($, 'ticket.activate', { ticket: ticketName })
   } catch (failure) {
-    await showFailure($, `${ticketName} did not open`, `Opening ${ticketName} from the session list, calling ticket.activate`, failure)
+    await shownAsFailure($, `${ticketName} did not open`, `Opening ${ticketName} from the session list, calling ticket.activate`)(failure)
     return null
   }
 }
@@ -51,7 +51,7 @@ export async function createSession($: EngineInterface, sessionName: string): Pr
     await chooseNewSessionFolder($, '')
     await activateTicket($, created.name)
   } catch (failure) {
-    await showFailure($, `${sessionName} was not created`, `Creating a session${path ? ` on ${path}` : ''}, calling ticket.create`, failure)
+    await shownAsFailure($, `${sessionName} was not created`, `Creating a session${path ? ` on ${path}` : ''}, calling ticket.create`)(failure)
     await refreshChatBar($)
   }
 }
@@ -65,7 +65,7 @@ export async function toggleRepoListWithRepos($: EngineInterface): Promise<void>
     await showRepos($, await callTool<RepoRowJson[]>($, 'repos.siblings', {}))
   } catch (failure) {
     await showRepos($, [])
-    await showFailure($, 'Repositories not listed', 'Opening the repository list, calling repos.siblings', failure)
+    await shownAsFailure($, 'Repositories not listed', 'Opening the repository list, calling repos.siblings')(failure)
   }
 }
 
@@ -78,7 +78,7 @@ export async function openRepo($: EngineInterface, name: string): Promise<void> 
     const answer = await whileBusy($, `Opening repository ${name}`, () => callToolText($, 'repos.open', { name, visibility: 'private' }))
     $.ui.toast(`${name}: ${answer.split('\n').pop()?.replace(/^- /, '') ?? 'opened'}`)
   } catch (failure) {
-    await showFailure($, `${name} did not open`, `Opening repository ${name}, calling repos.open`, failure)
+    await shownAsFailure($, `${name} did not open`, `Opening repository ${name}, calling repos.open`)(failure)
   }
 }
 
@@ -90,7 +90,7 @@ export async function openFolder($: EngineInterface, path: string): Promise<void
     const answer = await whileBusy($, `Opening folder ${path}`, () => callToolText($, 'repos.open_folder', { path }))
     $.ui.toast(answer)
   } catch (failure) {
-    await showFailure($, `${path} did not open`, `Opening folder ${path}, calling repos.open_folder`, failure)
+    await shownAsFailure($, `${path} did not open`, `Opening folder ${path}, calling repos.open_folder`)(failure)
   }
 }
 
@@ -113,7 +113,7 @@ export async function openClose($: EngineInterface, chatBar: ChatBarClient): Pro
   try {
     await showClose($, await callTool<LeaveChoicesData>($, 'ticket.close_choices', { ticket: chatBar.sessionName }))
   } catch (failure) {
-    await showFailure($, `${chatBar.sessionName} cannot close`, `Opening the close dialog, calling ticket.close_choices`, failure)
+    await shownAsFailure($, `${chatBar.sessionName} cannot close`, `Opening the close dialog, calling ticket.close_choices`)(failure)
   }
 }
 
@@ -128,7 +128,7 @@ async function closedSession($: EngineInterface, chatBar: ChatBarClient, leaving
     await callTool<TicketData>($, 'ticket.close', { ticket: chatBar.sessionName, leaving })
   } catch (failure) {
     await refreshChatBar($)
-    await showFailure($, `${chatBar.title} did not close`, `Closing ${chatBar.sessionName}${leaving.length ? ` leaving ${leaving.join(', ')}` : ''}, calling ticket.close`, failure)
+    await shownAsFailure($, `${chatBar.title} did not close`, `Closing ${chatBar.sessionName}${leaving.length ? ` leaving ${leaving.join(', ')}` : ''}, calling ticket.close`)(failure)
     return new CloseRefused(reasonOf(failure))
   }
   const left = leaving.map(step => LEFT_STEPS[step] ?? step)

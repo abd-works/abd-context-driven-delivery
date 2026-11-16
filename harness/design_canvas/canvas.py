@@ -19,7 +19,7 @@ PROJECT = "project"
 # The date canvas.json gives for its files. It is fixed, so regenerating a canvas whose boards did not change writes
 # the same canvas.json, and a version shows only the changes people or the generator made.
 FILES_CREATED_AT = "2026-10-28T18:00:00Z"
-# How round a card's corners are, unless its caller says otherwise.
+# How round a card's corners are.
 CARD_RADIUS = 6
 
 
@@ -123,17 +123,12 @@ def stem(path: str) -> str:
     return Path(path).name.removesuffix(".dc.html")
 
 
-def artboard(title: str, width: int, height: int, body: str, style: str, root_style: str, head: str = "",
-             zoomable: bool = False) -> str:
-    """A static ``.dc.html`` artboard: *body* absolutely placed inside a *width* × *height* root. A *zoomable* artboard
-    zooms with a trackpad pinch (or ctrl + wheel) and its − / fit / + buttons."""
-    if zoomable:
-        return _zoomable_artboard(_ArtboardPage(title, width, height, body, style, root_style, head))
-    return f"""<!doctype html>
+# A static artboard page: its body absolutely placed inside a root of its size.
+_STATIC_PAGE = """<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>{html.escape(title)}</title>
+<title>{title}</title>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -151,7 +146,6 @@ renderVals() {{ return {{}}; }}
 </body>
 </html>
 """
-
 
 ZOOM_BUTTON = ("font: 600 12px/1 ui-monospace, Consolas, monospace; padding: 6px 10px; border: 1px solid #2A2A2A; "
                "border-radius: 4px; background: #111113; color: #E8E8ED; cursor: pointer")
@@ -219,28 +213,13 @@ zoomReset: () => this.zoomTo(1)
 """
 
 
-class _ArtboardPage(NamedTuple):
-    """One artboard's page: its title, its size, what it shows, its styles, and what its head adds."""
-
-    title: str
-    width: int
-    height: int
-    body: str
-    style: str
-    root_style: str
-    head: str
-
-
-def _zoomable_artboard(page: _ArtboardPage) -> str:
-    """The artboard fills its frame and scrolls; the map inside zooms with CSS ``zoom`` through one class per 5% step
-    (the canvas fills holes in class names, not inside styles), so zooming never shrinks the frame."""
-    title, width, height, body, style, root_style, head = page
-    zoom_classes = "".join(f".zoom-{level}{{zoom:{level / 100}}}" for level in ZOOM_RANGE)
-    return f"""<!doctype html>
+# A zoomable artboard page: it fills its frame and scrolls, and the map inside zooms with CSS ``zoom`` through one class
+# per 5% step (the canvas fills holes in class names, not inside styles), so zooming never shrinks the frame.
+_ZOOMABLE_PAGE = """<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>{html.escape(title)}</title>
+<title>{title}</title>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -251,27 +230,60 @@ def _zoomable_artboard(page: _ArtboardPage) -> str:
 {body}
 </div>
 </div>
-{ZOOM_CONTROLS}</x-dc>
+{controls}</x-dc>
 <script type="text/x-dc" data-dc-script data-props='{{"$preview":{{"width":{width},"height":{height}}}}}'>
-{ZOOM_COMPONENT}</script>
+{component}</script>
 </body>
 </html>
 """
+_ZOOM_CLASSES = "".join(f".zoom-{level}{{zoom:{level / 100}}}" for level in ZOOM_RANGE)
 
 
-def box(left: int, top: int, width: int, height: int, look: CardLook, text: str, radius: int = CARD_RADIUS, icon: str = "") -> str:
-    """A labelled card at an absolute place, drawn in *look* (fill, stroke, color, font, size, weight, extra css)."""
-    return (f'<div style="position: absolute; left: {left}px; top: {top}px; width: {width}px; height: {height}px; '
-            f'box-sizing: border-box; padding: 4px 8px; gap: 6px; display: flex; align-items: center; justify-content: center; '
-            f'text-align: center; background: {look["fill"]}; border: 1px solid {look["stroke"]}; border-radius: {radius}px; '
-            f'font-family: {look["font"]}; font-size: {look["size"]}px; font-weight: {look["weight"]}; color: {look["color"]}; '
-            f'{look["extra"]}">{icon}<span>{html.escape(text)}</span></div>')
+class Artboard(NamedTuple):
+    """A ``.dc.html`` artboard: *body* absolutely placed inside a *width* × *height* root, with its styles and what its
+    head adds. A *zoomable* artboard zooms with a trackpad pinch (or ctrl + wheel) and its − / fit / + buttons."""
+
+    title: str
+    width: int
+    height: int
+    body: str
+    style: str
+    root_style: str
+    head: str = ""
+    zoomable: bool = False
+
+    @property
+    def text(self) -> str:
+        """The artboard's file text."""
+        fields = {**self._asdict(), "title": html.escape(self.title)}
+        if self.zoomable:
+            return _ZOOMABLE_PAGE.format(**fields, zoom_classes=_ZOOM_CLASSES, controls=ZOOM_CONTROLS, component=ZOOM_COMPONENT)
+        return _STATIC_PAGE.format(**fields)
 
 
-def thumbnail(left: int, top: int, width: int, height: int, caption: str, image: str, href: str) -> str:
-    """A screen at thumbnail size that links to *href*."""
-    picture = (f'<img src="{image}" alt="{html.escape(caption)}" style="display: block; width: 100%; height: 100%; object-fit: cover; object-position: top">' if image
-               else '<span style="display: flex; height: 100%; align-items: center; justify-content: center; color: #9B9BA8; font-size: 11px">No screenshot</span>')
-    return (f'<a href="{href}" aria-label="{html.escape(caption)}" style="position: absolute; left: {left}px; top: {top}px; display: block; '
-            f'width: {width}px; height: {height}px; background: #111113; border: 1px solid #2A2A2A; '
-            f'border-radius: 6px; overflow: hidden; box-sizing: border-box">{picture}</a>')
+class Place(NamedTuple):
+    """Where a card or a thumbnail sits on an artboard: its top left corner and its size, in pixels."""
+
+    left: int
+    top: int
+    width: int
+    height: int
+
+    def card(self, look: CardLook, text: str, icon: str = "") -> str:
+        """A labelled card here, drawn in *look* (fill, stroke, color, font, size, weight, extra css), with *icon* before
+        its text."""
+        return (f'<div style="position: absolute; left: {self.left}px; top: {self.top}px; width: {self.width}px; height: {self.height}px; '
+                f'box-sizing: border-box; padding: 4px 8px; gap: 6px; display: flex; align-items: center; justify-content: center; '
+                f'text-align: center; background: {look["fill"]}; border: 1px solid {look["stroke"]}; border-radius: {CARD_RADIUS}px; '
+                f'font-family: {look["font"]}; font-size: {look["size"]}px; font-weight: {look["weight"]}; color: {look["color"]}; '
+                f'{look["extra"]}">{icon}<span>{html.escape(text)}</span></div>')
+
+    def thumbnail(self, caption: str, image: str, href: str) -> str:
+        """A screen here at thumbnail size, captioned, that links to *href*; *image* is its screenshot, empty when there
+        is none."""
+        label = html.escape(caption)
+        picture = (f'<img src="{image}" alt="{label}" style="display: block; width: 100%; height: 100%; object-fit: cover; object-position: top">' if image
+                   else '<span style="display: flex; height: 100%; align-items: center; justify-content: center; color: #9B9BA8; font-size: 11px">No screenshot</span>')
+        return (f'<a href="{href}" aria-label="{label}" style="position: absolute; left: {self.left}px; top: {self.top}px; display: block; '
+                f'width: {self.width}px; height: {self.height}px; background: #111113; border: 1px solid #2A2A2A; '
+                f'border-radius: 6px; overflow: hidden; box-sizing: border-box">{picture}</a>')

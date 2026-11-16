@@ -72,11 +72,11 @@ class ReleaseNotes:
 
 
 class MajorRelease:
-    """The next major release of the checkout at project: previewed until it is published, which writes the version,
+    """The next major release of the checkout git runs in: previewed until it is published, which writes the version,
     commits and pushes it, tags it, and creates the GitHub release."""
 
-    def __init__(self, project: Path | str, git: Git, github_cli: GitHubCli, test_runs: TestRunRecord) -> None:
-        self._project = Path(project)
+    def __init__(self, git: Git, github_cli: GitHubCli, test_runs: TestRunRecord) -> None:
+        self._project = Path(git.folder)
         self._git = git
         self._github_cli = github_cli
         self._test_runs = test_runs

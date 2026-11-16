@@ -2,7 +2,7 @@ import type { ChatCommandData } from '@cdd/harness/chat/chat'
 import type { EngineInterface } from 'claude-code'
 
 import { commandOf, filledPrompt, REFUSED_WITHIN_MILLISECONDS } from '../shared/chat-command'
-import { showFailure } from '../error-display/failure-client'
+import { showFailure, shownAsFailure } from '../error-display/failure-client'
 import { reasonOf } from '../shared/reason'
 import { post } from '../board-chat/board'
 import { currentChatName } from '../board-chat/chat-name'
@@ -106,7 +106,7 @@ export async function keepInTouch($: EngineInterface, chat: string, isCheckIn: b
   } catch (failure) {
     failedCheckIns += 1
     if (failedCheckIns !== FAILED_CHECK_INS_SHOWN) return
-    await showFailure($, `This chat has not reached cdd for ${FAILED_CHECK_INS_SHOWN} check-ins`, 'The check-in every second, calling chat.check_in', failure)
+    await shownAsFailure($, `This chat has not reached cdd for ${FAILED_CHECK_INS_SHOWN} check-ins`, 'The check-in every second, calling chat.check_in')(failure)
   }
 }
 
