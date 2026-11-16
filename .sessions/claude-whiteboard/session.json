@@ -8,7 +8,7 @@
     "stages": [
       "discovery"
     ],
-    "version": 12
+    "version": 14
   },
   "practices": {
     "ux": {
@@ -35,10 +35,14 @@
           "markdown",
           "drawio"
         ]
-      }
+      },
+      "enabled": false
     },
     "ddd": {
       "enabled": true
+    },
+    "bdd": {
+      "enabled": false
     }
   }
 }
