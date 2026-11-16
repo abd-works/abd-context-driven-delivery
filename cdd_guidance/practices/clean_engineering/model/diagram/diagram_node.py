@@ -76,7 +76,7 @@ class DiagramClass(OoadClass, DiagramNode):
             return
         for prop in self.properties:
             if target in pascal_type_names(prop.type_hint or ""):
-                prop.take_drawn_kind(kind)
+                prop.arrow.take_kind(kind)
 
 
 class ImportedClass(DiagramClass):

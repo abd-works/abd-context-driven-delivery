@@ -23,22 +23,22 @@ def _parsed_operation(method: str) -> Operation:
 
 with description("peer private access in operation bodies"):
     with it("should ignore this._field and self._field on the same object"):
-        expect(SourceText("this._email = email;").reaches_peer_private()).to(equal(False))
-        expect(SourceText("return self._total;").reaches_peer_private()).to(equal(False))
+        expect(SourceText("this._email = email;").collaborators.reaches_peer_private()).to(equal(False))
+        expect(SourceText("return self._total;").collaborators.reaches_peer_private()).to(equal(False))
 
     with it("should flag another receiver's _field"):
-        expect(SourceText("return peer._secret;").reaches_peer_private()).to(equal(True))
+        expect(SourceText("return peer._secret;").collaborators.reaches_peer_private()).to(equal(True))
 
     with it("should ignore aggregate _repository wiring from a repository"):
-        expect(SourceText("customerProfile._repository = this;").reaches_peer_private()).to(equal(False))
+        expect(SourceText("customerProfile._repository = this;").collaborators.reaches_peer_private()).to(equal(False))
 
     with it("should ignore same-type field copy from a method parameter"):
         body = "this._plan = source._plan;\nthis.simType = source.simType;"
-        expect(SourceText(body).reaches_peer_private()).to(equal(False))
+        expect(SourceText(body).collaborators.reaches_peer_private()).to(equal(False))
 
     with it("should still flag reading a parameter private field without copying to this"):
         body = "return source._plan;"
-        expect(SourceText(body).reaches_peer_private()).to(equal(True))
+        expect(SourceText(body).collaborators.reaches_peer_private()).to(equal(True))
 
     with it("should set peer_private_access on a parsed operation that reads another object's private member"):
         expect(_parsed_operation("run(other: Order) { return other._state; }").peer_private_access).to(equal(True))

@@ -4,7 +4,7 @@ from __future__ import annotations
 from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import subAgent
 from harness.guidance_actions import GuidanceAction, GuidanceArg
-from harness.installation.destination import noCatalog
+from harness.annotations.annotation import noCatalog
 from harness.installation.files import skill
 from harness.mcp.mcp_annotations import mcp
 

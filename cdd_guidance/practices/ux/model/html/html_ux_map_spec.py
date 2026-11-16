@@ -152,7 +152,7 @@ with description("a UX map written as an HTML mockup"):
             fresh.load_working_copy(str(self.working_copy), {"stories": "."})
             fresh.save_json()
             reopened = Graph()
-            reopened.open_saved(self.working_copy)
+            reopened.reads.open_saved(self.working_copy)
             self.fresh_tree = explorer_tree_in(render_showing_first_story(fresh))
             self.reopened_tree = explorer_tree_in(render_showing_first_story(reopened))
 

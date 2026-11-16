@@ -18,7 +18,7 @@ from cdd_guidance.practices.agent_bdd.agent_bdd_common import (
     _ShellCapture,
 )
 from cdd_guidance.practices.agent_bdd.agent_block import AgentBlock
-from cdd_guidance.practices.agent_bdd.cursor_cli import CursorAgentNotFound, CursorCli
+from cdd_guidance.practices.agent_bdd.cursor_cli import CursorAgentNotAuthenticated, CursorAgentNotFound, CursorCli
 
 # How long `cursor-agent status` may take to say whether the agent is signed in.
 _STATUS_TIMEOUT_SECONDS = 30
@@ -298,7 +298,7 @@ class CliAgentBlock(AgentBlock):
             raise CursorAgentNotFound()
         completed = subprocess.run([exe, "status"], capture_output=True, text=True, timeout=_STATUS_TIMEOUT_SECONDS)
         if completed.returncode != 0:
-            raise RuntimeError("cursor-agent not authenticated - run `cursor-agent login` first")
+            raise CursorAgentNotAuthenticated()
 
     def _answer(self, prefix: str, prompt: str, timeout_seconds: int) -> AgentResult:
         buckets = self._run(prompt, timeout_seconds, prefix)

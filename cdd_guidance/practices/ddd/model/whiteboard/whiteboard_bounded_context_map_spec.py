@@ -6,7 +6,7 @@ from pathlib import Path
 from expects import be_true, equal, expect
 from mamba import before, context, description, it
 
-from harness.whiteboard import Arrow, Section, Shape, Whiteboard
+from harness.whiteboard.whiteboard import Arrow, Section, Shape, Whiteboard
 from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownBoundedContextMap
 from cdd_guidance.practices.ddd.model.whiteboard.whiteboard_bounded_context_map import WhiteboardBoundedContextMap
 

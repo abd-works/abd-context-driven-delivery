@@ -27,7 +27,7 @@ def _nodes(graph: Graph) -> list[tuple]:
 
 def _edges(graph: Graph) -> list[tuple]:
     practice = graph.practice("clean_engineering")
-    return sorted((edge.parent.node_id, edge.child.node_id, edge.kind, edge.type.order, edge.display) for edge in practice.reading.in_graph.edges())
+    return sorted((edge.parent.node_id, edge.child.node_id, edge.kind, edge.type.order, edge.display) for edge in practice.reading.in_graph.edge_index.of())
 
 
 def _violations(graph: Graph) -> list[tuple]:

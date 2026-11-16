@@ -282,7 +282,7 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
         for callee in operation.callees:
             target, dot, _called = callee.strip().partition(".")
             if dot and target[:1].isupper() and target not in local:
-                oclass.depend_on(target, operation.name)
+                oclass.arrows.depend_on(target, operation.name)
 
     def _infer_relationships(self) -> None:
         """Code holds `identity: Identity`, not `<< composition >>`: a member the aggregate holds is composed, and a

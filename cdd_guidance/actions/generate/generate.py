@@ -6,7 +6,7 @@ from pathlib import Path
 
 from harness.guidance.guidance import FidelityGuidance, Guidance, PracticeGuidance
 from harness.guidance_actions import GuidanceArg, GuidanceAction
-from harness.guidance.stages import OnStage
+from harness.guidance.stages import STEP, TAKES_FORMATS, on_stage
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
 from harness.installation.files import skill
 from harness.markdown.format import Format
@@ -18,7 +18,7 @@ from cdd_guidance.actions.validate.validate import Validate
 class Generate(GuidanceAction):
     """Generate artifacts for provided context tools."""
 
-    @OnStage(1, step=True, takes_formats=True)
+    @on_stage(1, STEP, TAKES_FORMATS)
     @mcp
     @skill
     @agent_instructions
@@ -57,7 +57,7 @@ class Generate(GuidanceAction):
         return "\n\n".join(render for render in renders if render)
 
     def _earlier_render(self, practice: PracticeGuidance) -> str:
-        current = self.fidelity_of(practice)
+        current = self.work.fidelity_of(practice)
         wanted = (current.format if current is not None else practice.format).name
         earlier = self._fidelity_before(practice, current) if current is not None else None
         if earlier is None or not wanted or wanted not in {Format(label).name for label in earlier.outputs}:
@@ -92,7 +92,7 @@ class Generate(GuidanceAction):
         return "\n\n".join(part.strip() for part in (worked.instructions, worked.generate_output()) if part and part.strip())
 
     def _where_outputs_go(self) -> str:
-        worked = [self.fidelity_of(item) for item in self.listed() if isinstance(item, PracticeGuidance)]
+        worked = [self.work.fidelity_of(item) for item in self.listed() if isinstance(item, PracticeGuidance)]
         outputs = [fidelity.declared.output_paths() for fidelity in worked if fidelity is not None]
         places = [f"{label}: {', '.join(paths)}" for listed in outputs for label, paths in listed.items()]
         if not places:
@@ -102,7 +102,7 @@ class Generate(GuidanceAction):
     def _output_folders(self) -> list[Path]:
         """The folder of each file a listed fidelity writes, once each; the pattern overlays record their patterns at
         the root of each. A templated path's folder is left to the agent."""
-        worked = [self.fidelity_of(item) for item in self.listed() if isinstance(item, PracticeGuidance)]
+        worked = [self.work.fidelity_of(item) for item in self.listed() if isinstance(item, PracticeGuidance)]
         paths = [path for fidelity in worked if fidelity is not None for listed in fidelity.declared.output_paths().values() for path in listed]
         return list(dict.fromkeys(self.session.paths.path_named(path).parent for path in paths if "{" not in path))
 

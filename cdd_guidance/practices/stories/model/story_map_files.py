@@ -64,6 +64,8 @@ _SCENARIO_FOLDERS = ("scenarios", "md")
 _SCENARIO_FILES = ("scenarios.md",)
 _STORY_SCENARIO_FILES = ("story-scenarios.md",)
 _STORIES_FOLDER = "stories"
+# The file a story map saved as JSON is written to.
+STORY_GRAPH_FILE = "story-graph.json"
 
 
 class StoryMapFiles:
@@ -85,6 +87,11 @@ class StoryMapFiles:
                 markdown = [path for path in maps if path.suffix.lower() == _MARKDOWN]
                 return (markdown or maps)[0]
         return None
+
+    def story_graph_text(self) -> Optional[str]:
+        """The story map this folder holds saved as JSON (``story-graph.json``), as text; none when it holds none."""
+        saved = self.folder / STORY_GRAPH_FILE
+        return saved.read_text(encoding="utf-8") if saved.is_file() else None
 
     def markdown_below(self) -> List[Path]:
         """The markdown story maps this folder holds: its own when it has one, else every one in the folders below it."""

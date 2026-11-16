@@ -50,7 +50,7 @@ class RuleCheckContext:
 
     def edges(self, kind: str) -> list[Edge[Node]]:
         """The checked practice's edges of kind."""
-        return self.practice.reading.in_graph.edges(kind)
+        return self.practice.reading.in_graph.edge_index.of(kind)
 
     def node(self, node_id: str) -> Node | None:
         """The node called node_id in the graph; none when no practice holds one."""

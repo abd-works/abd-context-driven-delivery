@@ -10,6 +10,7 @@ from mamba import before, context, description, it
 
 from harness.graph.edge import EdgeType
 from harness.graph.graph import Graph, Node, Source
+from harness.graph.saved_graph import NodeIdentity
 from harness.graph.saved_graph import SavedGraph, SavedPractice
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 
@@ -22,14 +23,18 @@ with description("a graph"):
     with context("with a failing operation and a passing operation"):
         with before.all:
             self.graph = Graph()
-            self.graph.open(_HERE)
+            self.graph.reads.open(_HERE)
             self.practice = self.graph.practice("clean_engineering")
             self.failure = Node(
-                self.practice, "Operation", "clean_engineering:Operation:failure.ts:failure:Account", "failure", Source(".", 1, 1)
+                self.practice,
+                NodeIdentity(type="Operation", node_id="clean_engineering:Operation:failure.ts:failure:Account", name="failure"),
+                Source(".", 1, 1)
             )
             self.failure.rules.record_violation("limit-operation-parameters", "too many")
             self.register = Node(
-                self.practice, "Operation", "clean_engineering:Operation:register.ts:register:Account", "register", Source(".", 1, 1)
+                self.practice,
+                NodeIdentity(type="Operation", node_id="clean_engineering:Operation:register.ts:register:Account", name="register"),
+                Source(".", 1, 1)
             )
             root = self.practice.reading.in_graph.root
             root.children.extend([self.failure, self.register])
@@ -52,11 +57,11 @@ with description("a graph"):
     with context("with a relationship selected"):
         with before.all:
             self.graph = Graph()
-            self.graph.open(_HERE)
+            self.graph.reads.open(_HERE)
             self.practice = self.graph.practice("clean_engineering")
-            self.module = Node(self.practice, "Module", "id:module", "account-credentials", Source(".", 1, 1))
-            self.class_node = Node(self.practice, "OoadClass", "id:class", "AccountCredentials", Source(".", 1, 1))
-            self.other = Node(self.practice, "OoadClass", "id:other", "Customer", Source(".", 1, 1))
+            self.module = Node(self.practice, NodeIdentity(type="Module", node_id="id:module", name="account-credentials"), Source(".", 1, 1))
+            self.class_node = Node(self.practice, NodeIdentity(type="OoadClass", node_id="id:class", name="AccountCredentials"), Source(".", 1, 1))
+            self.other = Node(self.practice, NodeIdentity(type="OoadClass", node_id="id:other", name="Customer"), Source(".", 1, 1))
             self.module.stage = "discovery"
             self.class_node.stage = "implementation"
             root = self.practice.reading.in_graph.root
@@ -68,7 +73,7 @@ with description("a graph"):
             expect(self.class_node.stage).to(equal("implementation"))
 
         with it("should give the edge the child node's stage"):
-            edge = self.practice.reading.in_graph.edges("owns")[0]
+            edge = self.practice.reading.in_graph.edge_index.of("owns")[0]
             expect(edge.child.stage).to(equal("implementation"))
 
         with it("should return the nodes on the selected edge"):
@@ -105,7 +110,7 @@ with description("a graph"):
                 ],
             })
             graph.restored_from(SavedGraph([], {"clean_engineering": saved}))
-            self.tree = data_of(graph.practice("clean_engineering").reading.in_graph.root.serialize())
+            self.tree = data_of(graph.practice("clean_engineering").reading.in_graph.root.tree.serialize())
 
         with it("should parent the package on the module"):
             package = next(child for child in self.tree["children"][0]["children"] if child["name"] == "customer")

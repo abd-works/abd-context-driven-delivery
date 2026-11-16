@@ -185,7 +185,7 @@ class Stories(PracticeGuidance):
         project = Path(project).resolve()
         outputs = [fidelity.session_output for fidelity in self.fidelities if fidelity.session_output is not None]
         held = {}
-        for path in sorted({file.resolve() for output in outputs for file in output.every_file()}):
+        for path in sorted({file.resolve() for output in outputs for file in output.written.every_file()}):
             reader = self._story_test_reader(path)
             if reader is not None:
                 held[path_from(project, path)] = [story.name for story in reader.story_type.load_file(path.read_text(encoding="utf-8"), project)]

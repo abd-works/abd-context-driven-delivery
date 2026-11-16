@@ -7,10 +7,10 @@ from typing import TYPE_CHECKING
 
 from harness.guidance.guidance import Guidance
 from harness.guidance_actions import GuidanceArg, GuidanceAction
-from harness.guidance.stages import OnStage
+from harness.guidance.stages import CHECKS, STEP, on_stage
 from harness.agent_tools import agent_instructions, agent_toolset
 from harness.agent_tools.tool_call import ToolCall
-from harness.installation.destination import noDeploy
+from harness.annotations.annotation import noDeploy
 from harness.installation.files import skill
 from harness.mcp.mcp_annotations import mcp
 from harness.guidance.rule import Rule
@@ -37,7 +37,7 @@ class Validate(GuidanceAction):
         self._graph: CheckedGraph | None = None
         self._reports: ReportFiles | None = None
 
-    @OnStage(2, step=True, checks=True)
+    @on_stage(2, STEP, CHECKS)
     @mcp
     @skill
     @agent_instructions
@@ -121,7 +121,7 @@ class Validate(GuidanceAction):
         so its fidelity's reports go to that session; an item with no current fidelity, or no practice a session works
         on, has none."""
         items = [item for item in self.listed() if not isinstance(item, str)]
-        worked = [(item, self.fidelity_of(item)) for item in items]
+        worked = [(item, self.work.fidelity_of(item)) for item in items]
         return [fidelity for item, fidelity in worked if fidelity is not None and self.session_practice(item) is not None]
 
     def _judging_instruction(self) -> str:

@@ -29,7 +29,7 @@ with description("a practice's explorer tree"):
                 graph.edges.link("owns", cart, caller)
                 graph.edges.relate("invokes", caller, called)
             graph.edges.link("owns", cart, operations[-1])
-            self.part.rebuild_tree()
+            self.part.root.tree.rebuild()
             self.last = operations[-1]
             self.cart = cart
 

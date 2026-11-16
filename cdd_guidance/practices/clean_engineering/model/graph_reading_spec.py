@@ -17,7 +17,7 @@ _CART = (
 
 def _targets(fixture, kind: str, source_name: str) -> list[str]:
     """The names of the nodes an edge of kind leads to from the node called source_name."""
-    return sorted(edge.child.name for edge in fixture.practice.reading.in_graph.edges(kind) if edge.parent.name == source_name)
+    return sorted(edge.child.name for edge in fixture.practice.reading.in_graph.edge_index.of(kind) if edge.parent.name == source_name)
 
 
 with description("Clean Engineering reading code into its graph"):

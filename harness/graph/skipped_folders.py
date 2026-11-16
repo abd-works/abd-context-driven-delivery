@@ -2,9 +2,10 @@
 fixture, and template folders that hold deliberately faulty, throwaway, or unfinished source.
 
 An `_examples` folder holds each rule's faulty and repaired example, a `fixtures` folder holds test input, a
-`catalog-examples` folder holds the source the catalog shows for each practice, and a `templates` folder holds the files
-an installer or a practice fills in, with placeholders where the values go; read as the project's own code, their
-faults are reported as the project's. The rule specs copy an example into a folder of its own before they read it.
+`catalog-examples` folder holds the source the catalog shows for each practice, a `templates` folder holds the files
+an installer or a practice fills in, with placeholders where the values go, and a `seeds` folder holds the files a
+practice copies into a tree it writes, such as the Stories helpers a JavaScript story test imports; read as the
+project's own code, their faults are reported as the project's. The rule specs copy an example into a folder of its own before they read it.
 `.examples*` folders hold example source the practices read, so they are scanned like any other folder.
 """
 
@@ -39,6 +40,7 @@ SKIPPED_FOLDERS = frozenset(
         "fixtures",
         "catalog-examples",
         "templates",
+        "seeds",
     }
 )
 

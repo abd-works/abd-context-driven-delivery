@@ -286,11 +286,11 @@ class _ClassDiagramReader:
             if kind == 'inheritance' and target_name not in source.bases:
                 source.bases.append(target_name)
             for label in _DEPENDENCY_LABEL.findall(html.unescape(cell.get('value', '') or '')):
-                source.depend_on(target_name, label.strip())
+                source.arrows.depend_on(target_name, label.strip())
             source.take_arrow(target_name, kind)
         for oclass in self._classes_by_cell.values():
             for prop in oclass.properties:
-                prop.derive_relationship()
+                prop.arrow.derive()
 
 
 class _ModulesDiagramWriter(ModulesView):

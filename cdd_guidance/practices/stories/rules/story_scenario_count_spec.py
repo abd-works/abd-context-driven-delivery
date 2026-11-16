@@ -13,6 +13,7 @@ from mamba import context, description, it
 from cdd_guidance.practices.stories.model.story_model import Scenario, Story
 from cdd_guidance.practices.stories.rules.story_map import FourToNineChildren, StoryScenariosAtMostSeven
 from harness.graph.graph import Graph, Node, Source
+from harness.graph.saved_graph import NodeIdentity
 from harness.graph.rule_context import RuleCheckContext
 from harness.graph.rule_fixture import SchemaRuleRun
 from harness.graph.schema_rules import PracticeSchema
@@ -21,7 +22,7 @@ from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 
 def _Node(name: str, node_type: str, facts: dict) -> Node:
     """A stories graph node carrying the given facts, held by its practice as a read holds it."""
-    node = Node(Graph().practice("stories"), node_type, f"stories:{node_type}:{name}", name, Source(".", 1, 1))
+    node = Node(Graph().practice("stories"), NodeIdentity(type=node_type, node_id=f"stories:{node_type}:{name}", name=name), Source(".", 1, 1))
     for key, value in facts.items():
         node.set_fact(key, value)
     node.practice.reading.in_graph.hold(node)

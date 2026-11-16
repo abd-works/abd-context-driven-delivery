@@ -8,7 +8,7 @@ One format's model becomes another's through `translate_from(source)`: each node
 
 Callers use the base nodes. The practice picks a format by name from `CleanEngineering(...).formats`. A class's bases and stereotypes are part of what it says itself, so every format writes and reads them and `update_self`, `clone`, and `as_record` copy them. Text a format cannot read raises *UnreadableSource*; the graph read records each such file on its folder, where the `source-parses` rule reports it.
 
-*CleanEngineering* (`practices/clean_engineering/clean_engineering.py`) holds its reading part, a *GraphReading* (`practices/clean_engineering/model/graph_reading.py`), which says what the graph reads from the practice. When `Graph.load_working_copy`, `Graph.load_files`, or `Graph.refresh` reads files, `Graph._read_working_copy` in `harness/graph/working_copy.py` asks each practice the graph holds to read, in dependency order. *CleanEngineering* reads each source file with the class model of its language, which it finds among its practice's formats by the file's extension (`formats.for_file`, which every practice has), and adds each folder as a *Module* that holds its *ModuleContext* (`load_folder_facts`), and each class, property, operation, and parameter the parser built, as nodes. The parser keeps the file's text on its module and the lines each class and operation spans on that class and operation (`take_lines`), so `load_source_facts` and `load_span_facts` read no file again. Each folder owns the folders under it and depends (`dependsOn` edges) on the folders its files import from; it keeps the class names its files import (`imported_names`). A getter is the operation its class shows as a property, so its node is that property (`Operation.is_property` makes its kind `Property`), typed by the type it returns (`value_type`); an operation's parameters are the *Parameter* nodes its `hasParameter` edges lead to (`parameters_of`), which every rule and BDD read. The practice's operations and properties are indexed once by name after each read, with its classes, in the reading's *CodeIndex* (`reading.code_index.members_named`, `classes_named`), so the type linking, every rule, and every practice that links to the code ask one index. Each read is a *CodeRead* (`code_read.py`) made for that read, with the folders it takes (*CodeFolders*), the class names outside an edited-file scope (*OutsideScope*), and the class nodes it adds and links (*ClassNodes*), so nothing one read finds stays on the practice. It then reads every `.context/*-model.md` in scope with the format the practice names for its model documents (`model_document_format`, its markdown format) and keeps the class model each one describes in the reading part's *ModelDocuments*, which answers `reading.model_documents.described_member(owner, name)`: the operation or property a model document describes, so a realization follows the model's interactions without a second copy of any member in the graph. A graph read back from `graph.json` reads the documents under its source root the first time it is asked. DDD reads after Clean Engineering and sees its classes as building blocks.
+*CleanEngineering* (`practices/clean_engineering/clean_engineering.py`) holds its reading part, a *GraphReading* (`practices/clean_engineering/model/graph_reading.py`), which says what the graph reads from the practice. When `Graph.load_working_copy`, `Graph.load_files`, or `Graph.refresh` reads files, `Graph._read_working_copy` in `harness/graph/working_copy.py` asks each practice the graph holds to read, in dependency order. *CleanEngineering* reads each source file with the class model of its language, which it finds among its practice's formats by the file's extension (`formats.for_file`, which every practice has), and adds each folder as a *Module* that holds its *ModuleContext* (`module.source_facts.load_folder`), and each class, property, operation, and parameter the parser built, as nodes. The parser keeps the file's text on its module and the lines each class and operation spans on that class's and operation's source facts (`source_facts.take_lines`), so `ClassSourceFacts.load` and `OperationSourceFacts.load` read no file again. Each folder owns the folders under it and depends (`dependsOn` edges) on the folders its files import from; it keeps the class names its files import (`imported_names`). A getter is the operation its class shows as a property, so its node is that property (`Operation.is_property` makes its kind `Property`), typed by the type it returns (`value_type`); an operation's parameters are the *Parameter* nodes its `hasParameter` edges lead to (`parameters_of`), which every rule and BDD read. The practice's operations and properties are indexed once by name after each read, with its classes, in the reading's *CodeIndex* (`reading.code_index.members_named`, `classes_named`), so the type linking, every rule, and every practice that links to the code ask one index. Each read is a *CodeRead* (`code_read.py`) made for that read, with the folders it takes (*CodeFolders*), the class names outside an edited-file scope (*OutsideScope*), and the class nodes it adds and links (*ClassNodes*), so nothing one read finds stays on the practice. It then reads every `.context/*-model.md` in scope with the format the practice names for its model documents (`model_document_format`, its markdown format) and keeps the class model each one describes in the reading part's *ModelDocuments*, which answers `reading.model_documents.described_member(owner, name)`: the operation or property a model document describes, so a realization follows the model's interactions without a second copy of any member in the graph. A graph read back from `graph.json` reads the documents under its source root the first time it is asked. DDD reads after Clean Engineering and sees its classes as building blocks.
 
 ```
 model = CleanEngineering().formats["markdown"]().parse(text)
@@ -108,28 +108,37 @@ Raised when `translate_from` is given a node of another semantic type.
 	// the text of the file this module was read from, kept by its parser
 + imported_names: list[str]
 	// the class names its code imports or reaches as module.Class
-+ take_lines(text: str): None
-	// keeps the file's text, and gives each class the lines it spans
-	-> OoadClass.take_lines
-+ load_source_facts(file: Path, root: Path): None
-	// the graph facts the file it was read from gives: its imports, the class names it imports, and the classes that share it.
-	// The graph keeps each class apart from its module, so the module gives each class its peers' names
-	-> ScriptImports.class_names
-- _import_targets(file: Path, root: Path): list[str]
++ << composition >> source_facts: ModuleSourceFacts
+	// made once: what the file and the folder it was read from say
++ import_targets(file: Path, root: Path): list[str]
 	// root-relative paths of the relative script imports; a PythonModule reads its own from its syntax tree
 	-> ScriptImports.targets
-+ load_folder_facts(folder: Path): None
-	// keeps the graph facts a code folder's context files give as its own
-	-> ModuleContext.folder_facts
-	// production code whose name does not start with _
-+ take_public_sources(sources: list[Module]): None
-	// how many public source files the folder holds, and whether their documentation carries internal design notes
-	-> Module.documentation
-	-> PublicSources.internal_notes
 + documentation: str
 	// the doc strings and comments of the file it was read from; only a Python module's is read, from the syntax tree it keeps
 + clone(): Module
 + as_record(): dict
+
+## ModuleSourceFacts
+
+What the file and the folder a module was read from say (`base_class_model.py`), which the module makes once and keeps (`module.source_facts`).
+
++ ModuleSourceFacts(module: Module)
+----
++ take_lines(text: str): None
+	// keeps the file's text on the module, and gives each class the lines it spans
+	-> ClassSourceFacts.take_lines
++ load(file: Path, root: Path): None
+	// the graph facts the file it was read from gives: its imports, the class names it imports, and the classes that share it.
+	// The graph keeps each class apart from its module, so the module gives each class its peers' names
+	-> Module.import_targets
+	-> ScriptImports.class_names
++ load_folder(folder: Path): None
+	// keeps the graph facts a code folder's context files give as the module's own
+	-> ModuleContext.folder_facts
++ take_public_sources(sources: list[Module]): None
+	// how many public source files the folder holds, and whether their documentation carries internal design notes
+	-> Module.documentation
+	-> PublicSources.internal_notes
 
 ## OoadClass : OoadNode
 
@@ -154,19 +163,13 @@ Raised when `translate_from` is given a node of another semantic type.
 	// the other classes in the same source file
 + composes_peers: bool
 	// an Entity or Aggregate Root builds the peers it owns; derived from its stereotypes
-+ span: SourceText
-	// the lines it spans in its file, kept by take_lines
 + module_helpers: list[list]
 	// the module's private functions only this class calls
++ << composition >> source_facts: ClassSourceFacts
+	// made once: the lines it spans and the facts they give
++ << composition >> arrows: ClassArrows
+	// made once: where each relationship drawn from it lands
 ----
-+ place_relationship(relationship: Relationship): None
-	// puts the relationship on every property whose type names its target. Inheritance is not a property relationship
-	-> Property.take_relationship
-+ take_lines(lines: list[str]): None
-	// keeps the lines from its line to its end line, and each operation's
-+ load_source_facts(): None
-	// keeps the shape and source-span facts the graph reads as its own
-	-> ClassSourceFacts.facts
 + held_fields: dict[str, str]
 	-> ClassSourceFacts.held_fields
 + declared_bases(known_names: list[str]): list[str]
@@ -175,6 +178,18 @@ Raised when `translate_from` is given a node of another semantic type.
 + load_operation(source: Operation): Operation
 + clone(): OoadClass
 + as_record(): dict
+
+## ClassArrows
+
+Where each relationship drawn from a class lands (`base_class_model.py`), which the class makes once and keeps (`oclass.arrows`).
+
++ ClassArrows(oclass: OoadClass)
+----
++ place(relationship: Relationship): None
+	// puts the relationship on every property whose type names its target; a dependency joins the class's dependencies. Inheritance is not a property relationship
+	-> FieldArrow.take
++ depend_on(target: str, label: str): None
+	// what the class does to target at run time, labelled by the interaction; the same pair and label once
 
 ## Property : InvariantHolder, OoadNode
 
@@ -196,21 +211,33 @@ Raised when `translate_from` is given a node of another semantic type.
 	// composition. Each // line under the field, in file order
 + callees: list[str]
 	// a derived property can ask collaborators for its value, written under it as -> Sessions.saved
++ << composition >> arrow: FieldArrow
+	// made once: the relationship arrow it stands for
 ----
 + take_note(text: str): None
 	// a // line under the field: its stereotype, its cardinality, where it comes from, or an invariant
-	-> derive_relationship
-+ take_relationship(relationship: Relationship): None
-	// becomes the field a relationship drawn to its type stands for
-	-> derive_relationship
+	-> FieldArrow.derive
 + notes(): list[str]
 	// origin, cardinality, then invariants, in file order
-+ derive_relationship(): None
-	// a relationship exists only when the type names a domain class; an unmarked lower-case collection adds none
 + save(): str
 	// name: type
 + clone(): Property
 + as_record(): dict
+
+## FieldArrow
+
+The relationship arrow a property stands for (`property.py`), which the property makes once and keeps (`prop.arrow`).
+
++ FieldArrow(field: Property)
+----
++ take(relationship: Relationship): None
+	// becomes the arrow a relationship drawn to the field's type is: its kind, cardinality, and origin
+	-> derive
++ take_kind(kind: str): None
+	// an arrow of kind drawn to the field's type, unless a stronger kind already marks it
+	-> derive
++ derive(): None
+	// a relationship exists only when the type names a domain class; an unmarked lower-case collection adds none
 
 ## Operation : InvariantHolder, OoadNode
 
@@ -241,20 +268,14 @@ Raised when `translate_from` is given a node of another semantic type.
 ----
 + source_lines: tuple[int, int]
 	// its line through its end line, else as many lines as its body counts
-+ span: SourceText
-+ take_lines(lines: list[str]): None
++ << composition >> source_facts: OperationSourceFacts
+	// made once: its body, its fingerprint, the lines it spans, and the facts they give
 + take_parameters(parameters: list): None
 	// each a `name: Type` line or a parameter to copy
-+ take_body_fingerprint(body: str): None
-	-> BodyFingerprint.of_body
-+ load_span_facts(): None
-	// keeps the facts the operation rules read from its own source lines as its own
-	-> OperationSpanFacts.facts
 + declares_types: bool
 	// the language it is written in has a syntax for a parameter's type; false for a JavaScriptOperation
 + save(): str
 	// name(parameters): return type, with - for a private name
-+ load_parameter(source: Parameter): Parameter
 + clone(): Operation
 + as_record(): dict
 
@@ -286,19 +307,9 @@ A span of source in any language, an operation body or a class, and what the rul
 ------
 ----
 + control_flow_depth(): int
-+ has_bare_catch(): bool
-+ swallows_exceptions(): bool
 + unnamed_numbers(): list[str]
-+ reaches_peer_private(own_objects: frozenset[str] = frozenset(), own_members: frozenset[str] = frozenset()): bool
-	// a read of another object's `_` member; a member read off one of own_objects, or one its class declares (own_members), is its class's own
-+ locals_built_of(class_name: str): frozenset[str]
-	// each local the body declares as a `new` object of the class
 + mixes_io_and_domain(): bool
 + calls_io_and_domain(): bool
-+ raises_on_empty(): bool
-	// a builtin failure raised on an empty value; a failure the program declares is a named refusal and is left out
-+ exception_without_message(): str
-+ generic_exception_message(): bool
 + mutates_without_record(): bool
 + has_prose_comment(hash_only: bool = False): bool
 + prototype_swap(start_line: int): dict
@@ -307,6 +318,36 @@ A span of source in any language, an operation body or a class, and what the rul
 + hits(pattern: Pattern): list[list]
 	// [line, matched code] for each match
 + << composition >> brackets: BracketStructure
++ << composition >> failures: SpanFailures
+	// made once: what the span raises and catches
++ << composition >> collaborators: SpanCollaborators
+	// made once: the objects the span builds and reads
+
+## SpanFailures
+
+The failures a span of source raises and catches (`operation_metrics.py`), which its *SourceText* makes once and keeps (`span.failures`).
+
++ SpanFailures(span: SourceText, brackets: BracketStructure)
+----
++ has_bare_catch(): bool
++ swallows_exceptions(): bool
++ raises_on_empty(): bool
+	// a builtin failure raised on an empty value; a failure the program declares is a named refusal and is left out
++ exception_without_message(): str
++ generic_exception_message(): bool
+
+## SpanCollaborators
+
+The objects a brace-language span builds and reads (`operation_metrics.py`), which its *SourceText* makes once and keeps (`span.collaborators`).
+
++ SpanCollaborators(span: SourceText)
+----
++ reaches_peer_private(own_objects: frozenset[str] = frozenset(), own_members: frozenset[str] = frozenset()): bool
+	// a read of another object's `_` member; a member read off one of own_objects, or one its class declares (own_members), is its class's own
++ built(parameter_names: frozenset[str], start_line: int): list[tuple[str, int]]
+	// the classes a constructor body builds with `new` that a caller cannot hand it, each with its line
++ locals_built_of(class_name: str): frozenset[str]
+	// each local the body declares as a `new` object of the class
 
 ## BracketStructure
 
@@ -327,10 +368,8 @@ A Python function read from its syntax tree, and what the rules measure in it.
 
 + PythonFunctionBody(node: FunctionDef, owner: ClassDef | None)
 	// a method keeps the class that declares it; a module function has none
-+ << composition >> own: OwnObjects
-	// made once from the node and its class: the names the function holds its own class's objects by, and the private members the class declares
-+ << composition >> constructions: Constructions
-	// the objects a constructor builds, and which of them its caller cannot hand it
++ << composition >> collaborators: FunctionCollaborators
+	// made once: the objects the function builds and reads
 ------
 ----
 + control_flow_depth(): int
@@ -341,9 +380,22 @@ A Python function read from its syntax tree, and what the rules measure in it.
 + except_flags(): tuple[bool, bool]
 	-> CatchClause
 + unnamed_numbers(): list[str]
++ packed_parameters(): dict[str, int]
+
+## FunctionCollaborators
+
+The objects a Python function builds and reads, read from its syntax tree (`operation_metrics.py`), which its *PythonFunctionBody* makes once and keeps (`function.collaborators`).
+
++ FunctionCollaborators(node: FunctionDef, owner: ClassDef | None)
++ << composition >> own: OwnObjects
+	// made once from the node and its class: the names the function holds its own class's objects by, and the private members the class declares
+------
+----
 + reaches_peer_private(): bool
 	// privacy in Python is per class: the class's own name, a parameter typed as it, the other operand of a comparison dunder, a local it builds from the class, and a loop over a field holding the class are all itself
-+ packed_parameters(): dict[str, int]
++ built(): list[tuple[str, int]]
+	// the classes a constructor builds that a caller cannot hand it, each with its line
+	-> Constructions.collaborators
 
 ## Parameter : OoadNode
 
@@ -422,25 +474,39 @@ The module card, `.context/module-context.md`, of one code folder.
 
 ## ClassSourceFacts
 
-The facts a class's source gives the rules (`source_facts.py`), which the class keeps as its graph facts.
+What a class's source says (`source_facts.py`), which the class makes once and keeps (`oclass.source_facts`): the lines it spans, and the facts they give the rules, which the class keeps as its graph facts.
 
 + ClassSourceFacts(oclass: OoadClass)
+------
++ span: SourceText
+	// the lines it spans in its file, kept by take_lines
 ----
-+ facts(): dict[str, object]
-	// operation shapes, property names, what the constructor builds, prose comments, a prototype swap, and its card bullets
++ take_lines(lines: list[str]): None
+	// keeps the lines from its line to its end line, and each operation's
+	-> OperationSourceFacts.take_lines
++ load(): None
+	// keeps operation shapes, property names, what the constructor builds, prose comments, a prototype swap, and its card bullets as the class's graph facts
 	-> CardBullets.lines
 + held_fields(): dict[str, str]
 	// its declared properties, then the fields its constructor assigns
 
-## OperationSpanFacts
+## OperationSourceFacts
 
-The facts the lines an operation spans give (`source_facts.py`), which the operation keeps as its graph facts.
+What an operation's source says (`source_facts.py`), which the operation makes once and keeps (`operation.source_facts`): its body and fingerprint, the lines it spans, and the facts they give the rules, which the operation keeps as its graph facts.
 
-+ OperationSpanFacts(operation: Operation)
++ OperationSourceFacts(operation: Operation)
+------
++ span: SourceText
+	// the lines it spans in its file, kept by take_lines
 ----
-+ facts(): dict[str, object]
-	// its span's fingerprint when its parser took none, I/O mixed with domain work, empty-case and message-less exceptions, unrecorded state changes, prose comments, its card bullets
-	-> SourceText
++ take_body(text: str, language: CodeLanguage): None
+	// the statements its parser read, as the operation's body
++ take_body_fingerprint(body: str): None
+	-> BodyFingerprint.of_body
++ take_lines(lines: list[str]): None
++ load(): None
+	// keeps its span's fingerprint when its parser took none, I/O mixed with domain work, empty-case and message-less exceptions, unrecorded state changes, prose comments, its card bullets as the operation's graph facts
+	-> SpanFailures
 	-> BodyFingerprint.of_span
 	-> CardBullets.lines
 
@@ -793,7 +859,8 @@ A class as one language writes it.
 	// lines written instead of the class; JavaScript writes an example type as a note
 + opening(known_names: list[str]): list[str]
 	// a blank line, the doc comment, the stereotype decorators, then the declaration for its kind
-+ doc, doc_intent, stereotype_decorators, interface_declaration, class_declaration, heritage, class_modifiers
+- _doc, _doc_intent, _stereotype_decorators, _interface_declaration, _class_declaration, _heritage, _class_modifiers
+	// the pieces of opening each language spells for itself; only opening asks them
 + closing(has_members: bool): list[str]
 + block_close(): list[str]
 + constructor_lines(constructor: Operation | None, body: list[str]): list[str]
@@ -835,7 +902,7 @@ The brace-language reading mixed into BraceCleanEngineeringModel: reads TypeScri
 	// the preamble, each class with its doc comment, stereotypes, and the bases its heritage clause names, each field with its line, then the top-level functions
 	// every operation records its line and its end line
 	-> ClassHead.above
-	-> Module.take_lines
+	-> ModuleSourceFacts.take_lines
 
 ## PythonCleanEngineeringModel : CodeCleanEngineeringModel
 

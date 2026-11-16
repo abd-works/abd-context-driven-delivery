@@ -27,7 +27,7 @@ from harness.graph.graph import Graph  # noqa: E402
 from harness.graph.schema_rules import PracticeSchema  # noqa: E402
 from harness.installation.data_class import data_of  # noqa: E402
 from harness.installation.json_file import JsonFile  # noqa: E402
-from harness.installation.repository_toolsets import RepositoryToolsets  # noqa: E402
+from harness.installation.repository_toolsets import RUNNING_CHECKOUT, RepositoryToolsets  # noqa: E402
 
 FILE = JsonFile(Path(__file__).resolve().parent / "filter-choices.json")
 
@@ -86,5 +86,5 @@ def read() -> dict[str, Any]:
 
 if __name__ == "__main__":
     # Loading the checkout's toolsets registers its practices, the ones the fixture names, with the practice catalogue.
-    RepositoryToolsets.of_running_checkout().classes()
+    RepositoryToolsets(RUNNING_CHECKOUT).classes()
     FILE.write(recorded(read()))

@@ -5,13 +5,12 @@ from __future__ import annotations
 import re
 from typing import List
 
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
+from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
 from harness.graph.model_node import ModelChildren
 
 from cdd_guidance.practices.clean_engineering.model.ooad_node import OoadNode
-from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
 from cdd_guidance.practices.clean_engineering.model.property import InvariantHolder
-from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUCTOR_NAMES, BodyFingerprint, OperationSpanFacts
+from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUCTOR_NAMES, OperationSourceFacts
 from cdd_guidance.practices.clean_engineering.model.type_refs import name_with_type, split_top_level
 
 # `save(cart: Cart, note: str = ""): Receipt` as a model line writes an operation.
@@ -150,7 +149,8 @@ class Operation(InvariantHolder, OoadNode):
         self.line_count: int | None = None
         self.body_fingerprint: str = ""
         self.body = CodeBody()
-        self.span = SourceText("")
+        # What its source says, as its parser reads it: its body, its fingerprint, and the lines it spans.
+        self.source_facts = OperationSourceFacts(self)
         self.constructed_types: list[tuple[str, int]] = []
 
     def _start_measures(self) -> None:
@@ -293,26 +293,6 @@ class Operation(InvariantHolder, OoadNode):
             return start, start + self.line_count - 1
         return start, start
 
-    def take_body(self, text: str, language: CodeLanguage) -> None:
-        """Keep the statements its parser read, in the language they are written in, as its body."""
-        self.body = CodeBody(text, language)
-
-    def take_lines(self, lines: List[str]) -> None:
-        """Keep the lines of its file this operation spans."""
-        start, end = self.source_lines
-        self.span = SourceText("\n".join(lines[start - 1 : end]))
-
-    def load_span_facts(self) -> None:
-        """Keep the facts this operation's own source span carries, beyond what the parser measured, as its own graph
-        facts."""
-        for name, fact in OperationSpanFacts(self).facts().items():
-            setattr(self, name, fact)
-
-    def take_body_fingerprint(self, body: str) -> None:
-        """Keep the fingerprint of its body text, which another operation with the same whitespace-collapsed body
-        shares; none for a body too short for two copies of it to be a duplication."""
-        self.body_fingerprint = BodyFingerprint(body).of_body()
-
     def save(self) -> str:
         params = ", ".join(parameter.save() for parameter in self.parameters)
         suffix = f": {self.return_type}" if self.return_type else ""
@@ -331,7 +311,7 @@ class Operation(InvariantHolder, OoadNode):
         assert isinstance(source, Operation)
         self._copy_from(source)
 
-    def load_parameter(self, source: Parameter) -> Parameter:
+    def _load_parameter(self, source: Parameter) -> Parameter:
         return type(self.parameters[0])(source.name, source.sequential_order, source.type_hint) if self.parameters else Parameter(
             source.name, source.sequential_order, source.type_hint
         )
@@ -339,5 +319,5 @@ class Operation(InvariantHolder, OoadNode):
     def reconcile_children(self, source: OoadNode) -> None:
         assert isinstance(source, Operation)
         if source.parameters:
-            self._parameters.reconcile(source.parameters, self.load_parameter)
+            self._parameters.reconcile(source.parameters, self._load_parameter)
 

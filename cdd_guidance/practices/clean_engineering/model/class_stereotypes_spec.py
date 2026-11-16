@@ -95,9 +95,9 @@ def _kept_cart(channel) -> OoadClass:
     model = _cart_model()
     cart = model.modules[0].classes[0]
     cart.module_path = ["Sales | custom", "ShoppingCart"]
-    cart.depend_on("Product", "Customer/Supplier")
+    cart.arrows.depend_on("Product", "Customer/Supplier")
     cart.dependencies[0].details = {"direction": "downstream", "crosses": "product identity"}
-    cart.depend_on("Clock", "reads time from")
+    cart.arrows.depend_on("Clock", "reads time from")
     return _read(channel, channel.render(model))
 
 

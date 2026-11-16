@@ -7,14 +7,19 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from harness.graph.edge import EdgeType
 from harness.graph.graph import Graph, Node
 from harness.graph.pattern_overlays import GraphOverlay
+from harness.graph.saved_graph import NodeFacts
 from harness.graph.skipped_folders import scanned_files
 
 from cdd_guidance.patterns.lern_domain_driven.tier_facts import TierFile
 from cdd_guidance.patterns.oss_portal_domain_driven.tier_facts import AggregateFolder, MigrationFile, OssFile, ProxyFolder
+
+if TYPE_CHECKING:
+    from harness.guidance.guidance import PracticeGuidance
 
 # Each aggregate tier file, by name pattern, and the node type it becomes.
 _TIER_FILES = (
@@ -183,10 +188,10 @@ class _OssReading:
 
     # Nodes -----------------------------------------------------------------------------------------------------------
 
-    def _set_facts(self, node: Node, facts: dict) -> None:
+    def _set_facts(self, node: Node, facts: NodeFacts) -> None:
         for key, value in facts.items():
             node.set_fact(key, value)
 
-    def _file_node(self, practice, relative: str, semantic: str, name: str = "") -> Node:
+    def _file_node(self, practice: PracticeGuidance, relative: str, semantic: str, name: str = "") -> Node:
         """The node for one file or folder of practice, made the first time the overlay names it."""
         return practice.reading.in_graph.add_file(semantic, relative, name)

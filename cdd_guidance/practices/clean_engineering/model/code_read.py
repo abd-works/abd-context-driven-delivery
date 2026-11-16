@@ -101,7 +101,7 @@ class CodeRead:
         except UnreadableSource as unreadable:
             self._unreadable[file] = str(unreadable)
             return None
-        module.load_source_facts(file, self._root)
+        module.source_facts.load(file, self._root)
         return module
 
     def _text_of(self, file: Path) -> str | None:
@@ -116,7 +116,7 @@ class CodeRead:
         """Give each folder the modules of its own public source files: each one this read parsed, and each one an
         edited-file scope left out, read now. A file that cannot be read counts as a file with no documentation."""
         for folder, paths in self._folders.public_files():
-            folder.take_public_sources([self._module_of(path) or Module(name=path.name, sequential_order=1) for path in paths])
+            folder.source_facts.take_public_sources([self._module_of(path) or Module(name=path.name, sequential_order=1) for path in paths])
 
 
 class OutsideScope:
@@ -191,7 +191,7 @@ class ClassNodes:
 
     def add(self, relative: str, folder: "Node", cls: OoadClass) -> None:
         """Add the class, its properties, and its operations; each is the object the parser built."""
-        cls.load_source_facts()
+        cls.source_facts.load()
         for member in [*cls.public_properties, *cls.operations]:
             member.keep_owner()
         node = self._in_graph.add(cls, f"clean_engineering:OoadClass:{relative}:{cls.name}", Location(relative, cls.line, cls.end_line))
@@ -210,7 +210,7 @@ class ClassNodes:
         ``return_type``): a refresh drops the edges to the classes of the files it reads again, and this links the
         members it did not read to the classes it read now."""
         self._class_names |= self._index.class_names()
-        for edge in self._in_graph.edges("properties"):
+        for edge in self._in_graph.edge_index.of("properties"):
             self._link_property(edge.parent, edge.child)
         for operation in self._in_graph.nodes("Operation"):
             for other in self._classes_named_in(operation.get_fact("return_type")):
@@ -226,7 +226,7 @@ class ClassNodes:
 
     def _operation(self, relative: str, cls: "Node", operation: "Operation") -> None:
         start, end = operation.source_lines
-        operation.load_span_facts()
+        operation.source_facts.load()
         node = self._in_graph.add(operation, f"clean_engineering:Operation:{relative}:{operation.name}:{cls.name}", Location(relative, start, end))
         self._graph.edges.link("owns", cls, node)
         for parameter in operation.parameters:
@@ -398,7 +398,7 @@ class CodeFolders:
         if not has_code and not (folder / ".context").is_dir():
             return None
         module = Module(name=folder.name, sequential_order=1)
-        module.load_folder_facts(folder)
+        module.source_facts.load_folder(folder)
         module.set_fact(PRODUCTION_FACT, any(not is_test_code(f"{relative}/{name}".lstrip("/")) for name in sources))
         if module.has_module_context:
             module.type = "Module"

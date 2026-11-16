@@ -9,6 +9,7 @@ from harness.installation.data_class import data_of  # noqa: E402
 from mamba import before, context, description, it
 
 from harness.graph.graph import Graph, Node, Source
+from harness.graph.saved_graph import NodeIdentity
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 
 
@@ -26,11 +27,11 @@ with description("rule categories"):
     with context("on an operation and a class"):
         with before.each:
             self.graph = Graph()
-            self.graph.open(Path("."))
+            self.graph.reads.open(Path("."))
             self.practice = self.graph.practice("clean_engineering")
-            self.failure = Node(self.practice, "Operation", "clean_engineering:Operation:failure", "failure", Source(".", 1, 2))
-            self.register = Node(self.practice, "Operation", "clean_engineering:Operation:register", "register", Source(".", 3, 4))
-            self.account = Node(self.practice, "OoadClass", "clean_engineering:OoadClass:AccountCredentials", "AccountCredentials", Source(".", 1, 8))
+            self.failure = Node(self.practice, NodeIdentity(type="Operation", node_id="clean_engineering:Operation:failure", name="failure"), Source(".", 1, 2))
+            self.register = Node(self.practice, NodeIdentity(type="Operation", node_id="clean_engineering:Operation:register", name="register"), Source(".", 3, 4))
+            self.account = Node(self.practice, NodeIdentity(type="OoadClass", node_id="clean_engineering:OoadClass:AccountCredentials", name="AccountCredentials"), Source(".", 1, 8))
             self.failure.rules.record_violation(
                 "limit-operation-parameters",
                 "Operation 'failure' takes 4 parameters (maximum 3, excluding self).",
@@ -41,26 +42,26 @@ with description("rule categories"):
                 node.parent = root
 
         with it("should attach the parameter rule to the operation that fails it"):
-            rule = rule_on(data_of(self.failure.serialize()), "limit-operation-parameters")
+            rule = rule_on(data_of(self.failure.tree.serialize()), "limit-operation-parameters")
             expect(rule["status"]).to(equal("violating"))
             expect(rule["violations"][0]["message"]).to(
                 contain("takes 4 parameters (maximum 3, excluding self)")
             )
 
         with it("should attach the parameter rule to the operation that passes it"):
-            expect(rule_on(data_of(self.register.serialize()), "limit-operation-parameters")["status"]).to(equal("passing"))
+            expect(rule_on(data_of(self.register.tree.serialize()), "limit-operation-parameters")["status"]).to(equal("passing"))
 
         with it("should leave the class rule off an operation"):
-            category = next(child for child in data_of(self.failure.serialize())["children"] if child["name"] == "rules")
+            category = next(child for child in data_of(self.failure.tree.serialize())["children"] if child["name"] == "rules")
             names = [child["name"] for child in category["children"]]
             expect("use-explicit-dependencies" in names).to(equal(False))
 
         with it("should attach the class rule to the class"):
-            rule = rule_on(data_of(self.account.serialize()), "use-explicit-dependencies")
+            rule = rule_on(data_of(self.account.tree.serialize()), "use-explicit-dependencies")
             expect(rule["status"]).to(equal("passing"))
 
         with it("should leave the parameter rule off the class"):
-            category = next(child for child in data_of(self.account.serialize())["children"] if child["name"] == "rules")
+            category = next(child for child in data_of(self.account.tree.serialize())["children"] if child["name"] == "rules")
             names = [child["name"] for child in category["children"]]
             expect("limit-operation-parameters" in names).to(equal(False))
 
@@ -69,12 +70,12 @@ with description("rule categories"):
                 self.graph.explorer.filter.select_violations(["limit-operation-parameters"])
 
             with it("should attach the violation on the serialized operation"):
-                rule = rule_on(data_of(self.failure.serialize()), "limit-operation-parameters")
+                rule = rule_on(data_of(self.failure.tree.serialize()), "limit-operation-parameters")
                 expect(rule["status"]).to(equal("violating"))
                 expect(len(rule["violations"])).to(be_above(0))
 
             with it("should leave the passing rule off the serialized operation"):
-                names = [child["name"] for child in data_of(self.register.serialize())["children"]]
+                names = [child["name"] for child in data_of(self.register.tree.serialize())["children"]]
                 expect("rules" in names).to(equal(False))
 
             with it("should attach that violation on the nodes the filter returns"):

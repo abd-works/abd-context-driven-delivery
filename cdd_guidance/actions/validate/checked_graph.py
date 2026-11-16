@@ -150,8 +150,8 @@ class CheckedGraph:
 
         The session's graph holds every practice, because one builds on another (DDD building blocks come from the
         clean engineering classes); the report keeps only the listed guidance's practice."""
-        self.session.graph.hold_whole(self._call)
-        self.session.graph.refreshed(self.prefixes, destination, self._call)
+        self.session.graph.reads.hold_whole(self._call)
+        self.session.graph.reads.refreshed(self.prefixes, destination, self._call)
         self._checked = SavedGraph.from_file(destination)
         return destination
 

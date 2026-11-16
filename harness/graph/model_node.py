@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Callable, ClassVar, Iterable, Iterator, Option
 
 from harness.graph.edge import EdgeType
 from harness.graph.graph import Graph, Node, Source
+from harness.graph.saved_graph import NodeIdentity
 from harness.graph.location import Location
 
 if TYPE_CHECKING:
@@ -185,9 +186,7 @@ class ModelNode(Node, metaclass=_SyncedOnceBuilt):
         Node.__init__(
             self,
             None,
-            type(self)._semantic_type_name,
-            "",
-            name,
+            NodeIdentity(type=type(self)._semantic_type_name, node_id="", name=name),
             Source(NO_SOURCE_FILE, sequential_order or 1, sequential_order or 1),
         )
         self.sequential_order = sequential_order

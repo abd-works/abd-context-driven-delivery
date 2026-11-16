@@ -31,12 +31,18 @@ FactValue: TypeAlias = Any
 NodeFacts: TypeAlias = dict[str, FactValue]
 
 
-class NodeRecord(TypedDict):
-    """A node as ``graph.json`` writes it."""
+class NodeIdentity(TypedDict):
+    """What a node is called: the id its practice holds it by, the name the explorer shows, and its type. A node is
+    made from it, and ``graph.json`` writes it as the first keys of the node's record."""
 
     node_id: str
     name: str
     type: str
+
+
+class NodeRecord(NodeIdentity):
+    """A node as ``graph.json`` writes it: what it is called, then its practice, its place, its stage, and its facts."""
+
     practice: str
     file: str
     line: int
@@ -162,7 +168,7 @@ class SavedPractice:
         """The practice as the graph that holds it has it now, only its nodes read from files and the edges files
         keeps."""
         nodes = [node for node in practice.reading.in_graph.nodes() if files.reads(node)]
-        edges = [edge for edge in practice.reading.in_graph.edges() if files.keeps(edge)]
+        edges = [edge for edge in practice.reading.in_graph.edge_index.of() if files.keeps(edge)]
         return cls.from_fields(
             practice.key,
             practice.reading.in_graph.source_root,
@@ -387,8 +393,9 @@ class SavedGraphFile:
         except (JsonFileUnreadable, SavedGraphOutdated):
             return None
 
-    def write(self, saved: SavedGraph) -> Path:
-        return self._file.write(saved.document)
+    def save(self, saved: SavedGraph) -> Path:
+        """Write saved over what the file holds: the practices it keeps that saved does not hold stay in the file."""
+        return self._file.write(saved.merged_over(self.read()).document)
 
     def holding(self, practice_roots: dict[str, Path], overlays: list[str]) -> SavedGraph | None:
         """The saved graph, when it holds these practices, each on the same root, and these overlays. It is not checked

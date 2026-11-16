@@ -93,7 +93,7 @@ class CFamilyParse:
         module.preamble = self._read_preamble()
         self._append_classes(module)
         self._attach_top_level(module)
-        module.take_lines(text)
+        module.source_facts.take_lines(text)
         self._file_module = module
         if module.classes:
             self.modules.append(module)
@@ -396,7 +396,7 @@ class CFamilyParse:
     def _derive_member_relationships(self, oclass: OoadClass) -> None:
         """A field relates only when its type names a domain class."""
         for prop in oclass.properties:
-            prop.derive_relationship()
+            prop.arrow.derive()
 
     def _body_open(self, after: int) -> int:
         """Where the class body opens: the first `{` after the class name outside the type arguments of its heritage

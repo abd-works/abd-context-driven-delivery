@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from harness.guidance_actions import ActionSession, GuidanceArg, GuidanceAction, WorkedGuidance, source_label
-from harness.guidance.stages import OnStage
+from harness.guidance.stages import on_stage
 from cdd_guidance.actions.partition.partition_index import PartitionIndex
 from cdd_guidance.actions.partition.segment import (
     MIN_ENTRY_BODY_CHARS, SEGMENT_FILE, SEGMENT_FILES, Segment, SegmentCompletenessConfig,
@@ -77,10 +77,10 @@ class Partition(GuidanceAction):
         """partition_guidance.md for one listed practice, handed over at the fidelity this partition works at, naming
         that practice's own file and the fidelity's Scaffold subsection, which says what the index lists. Text guidance,
         and a practice with no current fidelity, have none."""
-        fidelity = None if isinstance(guidance, str) else self.fidelity_of(guidance)
+        fidelity = None if isinstance(guidance, str) else self.work.fidelity_of(guidance)
         if fidelity is None:
             return ""
-        values = {"slug": self.practice_of(guidance).key, "scaffold": fidelity.scaffold}
+        values = {"slug": self.work.practice_of(guidance).key, "scaffold": fidelity.scaffold}
         return RecipePlaceholders(values, set(values)).filled(self.partition_guidance)
 
     def _folder(self, out_root: str | None) -> Path:
@@ -123,7 +123,7 @@ class Partition(GuidanceAction):
         found = self._folder(out_root).glob(SEGMENT_FILES)
         return [path.resolve().as_posix() for path in sorted(found) if path.is_file()]
 
-    @OnStage(0)
+    @on_stage(0)
     @mcp
     @skill
     @agent_instructions

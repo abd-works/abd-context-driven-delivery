@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 from urllib.parse import quote, urlencode
 
-from harness.design_canvas.canvas import Artboard, CanvasBoard, DesignCanvas, Place, stem
+from harness.design_canvas.canvas import Artboard, DesignCanvas, Place, stem
 from harness.design_canvas.look import BACKGROUND, FONTS, LOOK
 from cdd_guidance.practices.ux.model.claude_design.nodes import ClaudeDesignUxMap
 from cdd_guidance.practices.ux.model.ux_map import UxMap
@@ -181,7 +181,7 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
                                                                      "title": "Story explorer", "is_interactive": True, "expand": "fill"}, self._explorer())
         for name, board in self.screen_map.boards(self._screen_files()).items():
             canvas.add_board(name, board)
-            self._add_context_panel(name, board)
+            self._add_context_panel(name)
         return canvas
 
     context_folder = "context"
@@ -189,11 +189,12 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
     context_gap = 80
     """The space between a screen and the story panel beside it."""
 
-    def _add_context_panel(self, name: str, board: CanvasBoard) -> None:
-        """Beside the screen artboard name (on board), the panel of the stories it serves; none when it serves none."""
+    def _add_context_panel(self, name: str) -> None:
+        """Beside the screen artboard name, on its page, the panel of the stories it serves; none when it serves none."""
         focus = self._stories_shown_on(name)
         if not focus:
             return
+        board = self.canvas.placed(name)
         self.canvas.add_board(f"{self.context_folder}/{stem(name)}.dc.html",
                               {"x": board["w"] + self.context_gap, "y": 0, "w": self.context_width, "h": board["h"],
                                "page": board["page"], "title": "Stories"}, self._context_panel(focus, board["h"]))

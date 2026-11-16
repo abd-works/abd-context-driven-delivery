@@ -518,6 +518,7 @@ export class NumberExamples {
 
             from cdd_guidance.practices.clean_engineering.rules.module_graph_rules import NamedSeamAndConstraint
             from harness.graph.graph import Graph, Node, Source
+            from harness.graph.saved_graph import NodeIdentity
             from harness.graph.rule_context import RuleCheckContext
 
             temp = tempfile.TemporaryDirectory()
@@ -529,15 +530,13 @@ export class NumberExamples {
                 encoding="utf-8",
             )
             graph = Graph()
-            graph.open(Path(str(root)))
+            graph.reads.open(Path(str(root)))
             practice = graph.practice("ddd")
             practice._temp_dir = temp  # type: ignore[attr-defined]
             rel = "src/customer/.context/bounded-context.md"
             node = Node(
                 practice,
-                "BoundedContext",
-                "ddd:BoundedContext:src/customer:Customer",
-                "Customer",
+                NodeIdentity(type="BoundedContext", node_id="ddd:BoundedContext:src/customer:Customer", name="Customer"),
                 Source(rel, 1, 3),
             )
             rule = NamedSeamAndConstraint()
@@ -549,6 +548,7 @@ export class NumberExamples {
 
             from cdd_guidance.practices.clean_engineering.rules.module_graph_rules import NamedSeamAndConstraint
             from harness.graph.graph import Graph, Node, Source
+            from harness.graph.saved_graph import NodeIdentity
             from harness.graph.rule_context import RuleCheckContext
 
             temp = tempfile.TemporaryDirectory()
@@ -560,15 +560,13 @@ export class NumberExamples {
                 encoding="utf-8",
             )
             graph = Graph()
-            graph.open(Path(str(root)))
+            graph.reads.open(Path(str(root)))
             practice = graph.practice("ddd")
             practice._temp_dir = temp  # type: ignore[attr-defined]
             rel = "src/inventory/numbers"
             node = Node(
                 practice,
-                "Aggregate",
-                "ddd:Aggregate:src/inventory/numbers",
-                "numbers",
+                NodeIdentity(type="Aggregate", node_id="ddd:Aggregate:src/inventory/numbers", name="numbers"),
                 Source(rel, 1, 1),
             )
             rule = NamedSeamAndConstraint()

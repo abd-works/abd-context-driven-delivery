@@ -385,7 +385,7 @@ class MarkdownStoryModel(StoryModel):
         story map, the increments of the thin slice beside it: the map an edit writes back to path. A scenarios file
         keeps its own lines and no increments."""
         path = Path(path).resolve()
-        story_map = self._read_file(path, path_from(Path(project).resolve(), path))
+        story_map = self._parsed_file(path.read_text(encoding="utf-8"), path_from(Path(project).resolve(), path))
         if story_map.scenario_document is None:
             story_map.slicing = thin_slice_in(path.parent, story_map, project)
         return story_map
@@ -415,20 +415,19 @@ class MarkdownStoryModel(StoryModel):
             rel = path_from(base, md_path)
             if on_file is not None:
                 on_file(rel)
-            self._take_map(self._read_file(md_path, rel), rel)
+            self._take_map(self._parsed_file(md_path.read_text(encoding="utf-8"), rel), rel)
         if not self.epics:
             return
         workspace = root.parent if root.is_file() else root
         self._attach_markdown(workspace, on_file=on_file, base=base)
 
-    def _read_file(self, path: Path, file: str) -> "MarkdownStoryModel":
-        """The map the markdown file at path holds, each node naming file, keeping its text as one of its sources. A file
-        that does not read is a MarkdownParseError naming the file."""
-        text = path.read_text(encoding="utf-8")
+    def _parsed_file(self, text: str, file: str) -> "MarkdownStoryModel":
+        """The map text, the markdown file called file, holds, each node naming file, keeping text as one of its
+        sources. Text that does not read is a MarkdownParseError naming the file."""
         try:
             parsed = self.parse(text, file)
         except MarkdownParseError as err:
-            raise MarkdownParseError(f"{path}: {err}") from err
+            raise MarkdownParseError(f"{file}: {err}") from err
         parsed.sources.add(file, text)
         return parsed
 

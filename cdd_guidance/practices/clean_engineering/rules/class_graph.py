@@ -40,6 +40,8 @@ _STANDARD_VALUES = frozenset(
         "Date",
         "Map",
         "Set",
+        "WeakMap",
+        "WeakSet",
         "URL",
         "RegExp",
     }

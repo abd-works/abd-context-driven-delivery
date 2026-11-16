@@ -4,6 +4,7 @@ from expects import be, be_a, contain, equal, expect
 from mamba import before, description, it
 
 from harness.graph.graph import Graph, Node, Source
+from harness.graph.saved_graph import NodeIdentity
 from harness.graph.graph_rules_collection import GraphRulesCollection
 from harness.graph.pattern_overlays import PatternOverlays
 from harness.graph.schema_rules import PracticeSchema
@@ -20,9 +21,7 @@ with description("schema rules on a node"):
         self.practice = self.graph.practice("clean_engineering")
         self.operation = Node(
             self.practice,
-            "Operation",
-            "clean_engineering:Operation:op",
-            "save",
+            NodeIdentity(type="Operation", node_id="clean_engineering:Operation:op", name="save"),
             Source(".", 1, 5),
         )
 

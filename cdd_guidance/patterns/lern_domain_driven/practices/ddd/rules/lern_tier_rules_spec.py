@@ -28,6 +28,7 @@ from cdd_guidance.patterns.lern_domain_driven.tier_facts import (
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
 from cdd_guidance.practices.clean_engineering.rules.no_prototype_swapping import NoPrototypeSwapping
 from harness.graph.graph import Graph, Node, Source
+from harness.graph.saved_graph import NodeIdentity
 from harness.graph.pattern_overlays import PatternOverlays
 
 
@@ -40,7 +41,7 @@ def checks(practice, *patterns):
 
 def tier_node(name, node_type, facts, file="src/a/a-node.ts"):
     """A graph node carrying the facts the LERN recorder would set on it."""
-    node = Node(Graph().practice("ddd"), node_type, f"ddd:{node_type}:{file}", name, Source(file, 1, 1))
+    node = Node(Graph().practice("ddd"), NodeIdentity(type=node_type, node_id=f"ddd:{node_type}:{file}", name=name), Source(file, 1, 1))
     for key, value in facts.items():
         node.set_fact(key, value)
     return node

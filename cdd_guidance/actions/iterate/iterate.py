@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from cdd_guidance.actions.grill_context.grill_context import GrillContext
 from harness.guidance_actions import GuidanceArg, GuidanceAction
-from harness.guidance.stages import OnStage
+from harness.guidance.stages import on_stage
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
 from harness.agent_tools.agent_tools import agent_tool
 from harness.installation.files import skill
@@ -23,7 +23,7 @@ class Iterate(GuidanceAction):
         Call only after 2-3 grill answers that unlock ONE small slice - never as a prelude to dumping the whole artifact."""
         return "iterate-round"
 
-    @OnStage(3)
+    @on_stage(3)
     @mcp
     @skill
     @agent_instructions

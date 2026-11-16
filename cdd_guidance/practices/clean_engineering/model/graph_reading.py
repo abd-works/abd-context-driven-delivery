@@ -211,11 +211,15 @@ class ModelDocuments:
         for file in self._files():
             relative = file.relative_to(self._root).as_posix()
             report_progress(f"clean_engineering · model · {relative}")
-            self._models[relative] = self._model_in(file)
+            self._models[relative] = self._model_described_by(self._text_of(file))
 
-    def _model_in(self, file: Path) -> CleanEngineeringModel:
-        """The class model one document describes, read in the practice's model document format."""
-        return self._format().parse(file.read_text(encoding="utf-8"))
+    def _text_of(self, file: Path) -> str:
+        """The text of one model document, as it is on disk now."""
+        return file.read_text(encoding="utf-8")
+
+    def _model_described_by(self, text: str) -> CleanEngineeringModel:
+        """The class model a document's text describes, read in the practice's model document format."""
+        return self._format().parse(text)
 
     def described_member(self, owner: str, name: str) -> Operation | Property | None:
         """The operation or property a document describes as owner.name; none when none does. A graph read back from a

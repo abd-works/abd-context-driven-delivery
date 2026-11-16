@@ -461,10 +461,8 @@ export class AccountCredentials {
   }
 
   async register(): Promise<void> {
-    const repository = this.repository();
-    if (this.missingRequirements().length > 0)
-      throw { ...emptyAccountCredentialsErrors(), register: 'Account credential requirements are unmet' };
-    this.becomeUser(await repository.create(this));
+    this.refuseUnmet(this.missingRequirements(), 'register');
+    this.becomeUser(await this.repository().create(this));
   }
 
   async activate(validationCode: ValidationCode): Promise<void> {
@@ -477,10 +475,8 @@ export class AccountCredentials {
   }
 
   async authenticateAccount(): Promise<void> {
-    const repository = this.repository();
-    if (this.unmetSignInRequirements().length > 0)
-      throw { ...emptyAccountCredentialsErrors(), signIn: 'Account credential requirements are unmet' };
-    this.becomeUser(await repository.read(this));
+    this.refuseUnmet(this.unmetSignInRequirements(), 'signIn');
+    this.becomeUser(await this.repository().read(this));
   }
 
   async resendValidationCode(): Promise<void> {
@@ -513,6 +509,11 @@ export class AccountCredentials {
   private repository(): AccountRepository {
     if (!this._repository) throw new Error('AccountCredentials has no repository. Use accountRepository.newAccount().');
     return this._repository;
+  }
+
+  /** Refuse the step when any of its requirements is unmet, with the errors naming that step. */
+  private refuseUnmet(unmet: AccountCredentialRequirement[], step: 'register' | 'signIn'): void {
+    if (unmet.length > 0) throw { ...emptyAccountCredentialsErrors(), [step]: 'Account credential requirements are unmet' };
   }
 
   /** Take on the user Cognito answered with, or throw the errors it answered with instead. */

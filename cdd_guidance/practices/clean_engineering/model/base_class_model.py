@@ -13,7 +13,6 @@ from cdd_guidance.practices.clean_engineering.model.field_types import Relations
 from cdd_guidance.practices.clean_engineering.model.module_context_files import ModuleContext, PublicSources
 from cdd_guidance.practices.clean_engineering.model.ooad_node import OoadNode
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
-from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
 from cdd_guidance.practices.clean_engineering.model.property import Property
 from cdd_guidance.practices.clean_engineering.model.script_imports import ScriptImports
 from cdd_guidance.practices.clean_engineering.model.source_facts import ClassSourceFacts
@@ -137,7 +136,10 @@ class OoadClass(OoadNode):
         self.bases: List[str] = []
         self.peer_names: List[str] = []
         self.module_helpers: List[list] = []
-        self.span = SourceText("")
+        # What its source says, as its parser reads it: the lines it spans and the facts they give.
+        self.source_facts = ClassSourceFacts(self)
+        # Where each relationship drawn from it lands: on the properties it types, or among its dependencies.
+        self.arrows = ClassArrows(self)
 
     @property
     def properties(self) -> List["Property"]:
@@ -160,23 +162,11 @@ class OoadClass(OoadNode):
         """An Entity or Aggregate Root owns the peers it builds, so building them is not a hidden dependency."""
         return bool(_PEER_COMPOSING_STEREOTYPES & {item.lower() for item in self.stereotypes})
 
-    def take_lines(self, lines: List[str]) -> None:
-        """Keep the lines of its file this class spans, from its line to its end line, and each operation's."""
-        start = self.line or 1
-        self.span = SourceText("\n".join(lines[start - 1 : self.end_line or start]))
-        for operation in self.operations:
-            operation.take_lines(lines)
-
     @property
     def held_fields(self) -> dict[str, str]:
         """Each field the class holds, with its type hint. It saves with the graph, so a rule that compares the
         classes' fields reads them from a class read back from a saved graph too."""
-        return ClassSourceFacts(self).held_fields()
-
-    def load_source_facts(self) -> None:
-        """Keep the shape and source-span facts its source gives, as its own graph facts."""
-        for name, fact in ClassSourceFacts(self).facts().items():
-            setattr(self, name, fact)
+        return self.source_facts.held_fields()
 
     def declared_bases(self, known_names: Iterable[str]) -> List[str]:
         """The bases its declaration names: its own, then the I{Class} contract it implements when one is known."""
@@ -265,27 +255,37 @@ class OoadClass(OoadNode):
             if getattr(prop, "relationship", None) is not None
         ]
 
-    def place_relationship(self, relationship: Relationship) -> None:
-        """Put this relationship on every property whose type names the target."""
-        if (relationship.kind or "").lower() == "inheritance":
+
+class ClassArrows:
+    """Where each relationship drawn from a class lands, which the class makes once and keeps (``oclass.arrows``): a
+    composition, aggregation, or association becomes the properties whose type names its target; a dependency, what
+    the class does to another class at run time, joins the class's dependencies; inheritance is the class's bases."""
+
+    def __init__(self, oclass: OoadClass) -> None:
+        self._class = oclass
+
+    def place(self, relationship: Relationship) -> None:
+        """Put the relationship on every property whose type names its target, or keep it as a dependency."""
+        kind = (relationship.kind or "").lower()
+        if kind == "inheritance":
             return
-        if (relationship.kind or "").lower() == "dependency":
+        if kind == "dependency":
             self._keep_dependency(relationship)
             return
-        for prop in self.properties:
-            if relationship.target not in domain_type_names(getattr(prop, "type_hint", "") or ""):
-                continue
-            prop.take_relationship(relationship)
+        for prop in self._class.properties:
+            if relationship.target in domain_type_names(getattr(prop, "type_hint", "") or ""):
+                prop.arrow.take(relationship)
 
     def depend_on(self, target: str, label: str) -> None:
-        """Record that this class acts on target at run time, labelled by the interaction; the same pair and label once."""
+        """Record that the class acts on target at run time, labelled by the interaction; the same pair and label once."""
         self._keep_dependency(Relationship(target=target, kind="dependency", label=label))
 
     def _keep_dependency(self, dependency: Relationship) -> None:
         """Keep the dependency as read, with its details; the same target and label once."""
-        if any(item.target == dependency.target and item.label == dependency.label for item in self.dependencies):
+        held = self._class.dependencies
+        if any(item.target == dependency.target and item.label == dependency.label for item in held):
             return
-        self.dependencies.append(dependency)
+        held.append(dependency)
 
 
 class Module(OoadNode):
@@ -328,6 +328,8 @@ class Module(OoadNode):
         self.source_text = ""
         # The class names this module's code imports or reaches as `module.Class`.
         self.imported_names: List[str] = []
+        # What the file and folder it was read from say, as its parser reads them.
+        self.source_facts = ModuleSourceFacts(self)
 
     @property
     def modules(self) -> List["Module"]:
@@ -401,38 +403,10 @@ class Module(OoadNode):
         it fills the rest."""
         return self.class_type(name=source.name, sequential_order=source.sequential_order)
 
-    def take_lines(self, text: str) -> None:
-        """Keep the text of the file this module was read from, and the span of each class in it."""
-        self.source_text = text
-        lines = text.split("\n")
-        for oclass in self.classes:
-            oclass.take_lines(lines)
-
-    def load_source_facts(self, file: Path, root: Path) -> None:
-        """Fill the facts the file this module was read from owns: what it imports, the class names it imports, and
-        which classes share it. The graph keeps each class apart from its module, so each class keeps its peers' names."""
-        self.dependencies = self._import_targets(file, root)
-        self.imported_names = sorted(ScriptImports(self.source_text).class_names())
-        peer_names = [oclass.name for oclass in self.classes]
-        for oclass in self.classes:
-            oclass.peer_names = peer_names
-
-    def _import_targets(self, file: Path, root: Path) -> List[str]:
+    def import_targets(self, file: Path, root: Path) -> List[str]:
         """Root-relative paths the relative script imports of its file reach; a language that reads its imports
         another way, as Python reads its syntax tree, names its own."""
         return ScriptImports(self.source_text).targets(file, root)
-
-    def load_folder_facts(self, folder: Path) -> None:
-        """Keep the facts a code folder's context files give, what its module card says, as its own graph facts."""
-        for name, fact in ModuleContext(folder).folder_facts().items():
-            setattr(self, name, fact)
-
-    def take_public_sources(self, sources: List["Module"]) -> None:
-        """Keep the facts this folder's public source files give, each read into its module: how many there are, and
-        whether their documentation carries internal design notes."""
-        public = PublicSources([source.documentation for source in sources])
-        self.public_source_files = public.count
-        self.public_source_internal = public.internal_notes()
 
     @property
     def documentation(self) -> str:
@@ -444,6 +418,44 @@ class Module(OoadNode):
         assert isinstance(source, Module)
         self._modules.reconcile(source.modules, self.load_module)
         self._classes.reconcile(source.classes, self.load_class)
+
+
+class ModuleSourceFacts:
+    """What the file and the folder a module was read from say, which the module makes once and keeps
+    (``module.source_facts``): the file's text and the lines each class spans, what the file imports, the facts the
+    folder's context files give, and what its public source files document."""
+
+    def __init__(self, module: Module) -> None:
+        self._module = module
+
+    def take_lines(self, text: str) -> None:
+        """Keep the text of the file the module was read from, and the span of each class in it."""
+        self._module.source_text = text
+        lines = text.split("\n")
+        for oclass in self._module.classes:
+            oclass.source_facts.take_lines(lines)
+
+    def load(self, file: Path, root: Path) -> None:
+        """Fill the facts the file the module was read from owns: what it imports, the class names it imports, and
+        which classes share it. The graph keeps each class apart from its module, so each class keeps its peers' names."""
+        module = self._module
+        module.dependencies = module.import_targets(file, root)
+        module.imported_names = sorted(ScriptImports(module.source_text).class_names())
+        peer_names = [oclass.name for oclass in module.classes]
+        for oclass in module.classes:
+            oclass.peer_names = peer_names
+
+    def load_folder(self, folder: Path) -> None:
+        """Keep the facts a code folder's context files give, what its module card says, as the module's graph facts."""
+        for name, fact in ModuleContext(folder).folder_facts().items():
+            setattr(self._module, name, fact)
+
+    def take_public_sources(self, sources: List[Module]) -> None:
+        """Keep the facts the folder's public source files give, each read into its module: how many there are, and
+        whether their documentation carries internal design notes."""
+        public = PublicSources([source.documentation for source in sources])
+        self._module.public_source_files = public.count
+        self._module.public_source_internal = public.internal_notes()
 
 
 class CleanEngineeringModel(OoadNode):

@@ -459,6 +459,15 @@ class _SearchAttempt(NamedTuple):
     may_run_along: bool
 
 
+class _Move(NamedTuple):
+    """One step a search may take out of a cell: onto the cell following, in the heading of the step, and whether it
+    goes straight on from the heading the search came in by or turns."""
+
+    following: Point
+    step: Heading
+    straight: bool
+
+
 class _ArrowSearch:
     """One arrow's cheapest way across the grid, paying for each corner and far more for each crossing."""
 
@@ -505,16 +514,17 @@ class _ArrowSearch:
         for step in _STEPS:
             if step[0] == -heading[0] and step[1] == -heading[1]:
                 continue
-            following = (cell[0] + step[0], cell[1] + step[1])
-            price = self._price(following, step, step == heading, carries)
+            move = _Move((cell[0] + step[0], cell[1] + step[1]), step, step == heading)
+            price = self._price(move, carries)
             if price is not None:
-                self._offer(following, step, cost + price, (cell, heading))
+                self._offer(move, cost + price, (cell, heading))
 
-    def _price(self, following: Point, step: Heading, straight: bool, carries: Tuple[bool, bool]) -> Optional[int]:
+    def _price(self, move: _Move, carries: Tuple[bool, bool]) -> Optional[int]:
         """What the step onto following costs: one, a turn's price, a crossing's for crossing or running along another
         arrow, and the clearance price beside a card. None where the arrow may not go: outside the window, into a card
         but its own end, onto a cell held for another arrow's port, or along another arrow while the attempt forbids it."""
         grid, end = self._grid, self._arrow.end
+        following, step = move.following, move.step
         left, top, right, bottom = self._window
         if not (left <= following[0] <= right and top <= following[1] <= bottom):
             return None
@@ -522,24 +532,26 @@ class _ArrowSearch:
             return None
         if following in (self._held_horizontal if step[0] else self._held_vertical):
             return None
-        running_along = self._runs_along(following, step, straight, carries)
+        running_along = self._runs_along(move, carries)
         if running_along and not self._attempt.may_run_along:
             return None
         crossing = following in (grid.vertical if step[0] else grid.horizontal)
-        price = 1 + (0 if straight else TURN_PRICE) + (CROSSING_PRICE if crossing or running_along else 0)
+        price = 1 + (0 if move.straight else TURN_PRICE) + (CROSSING_PRICE if crossing or running_along else 0)
         return price + (CLEARANCE_PRICE if following in grid.blocked and following != end else 0)
 
-    def _runs_along(self, following: Point, step: Heading, straight: bool, carries: Tuple[bool, bool]) -> bool:
-        """Whether the step runs along an arrow already drawn, or turns on one."""
+    def _runs_along(self, move: _Move, carries: Tuple[bool, bool]) -> bool:
+        """Whether the move runs along an arrow already drawn, or turns on one."""
         grid = self._grid
-        if step[0]:
-            along = following in grid.horizontal or carries[0]
+        if move.step[0]:
+            along = move.following in grid.horizontal or carries[0]
         else:
-            along = following in grid.vertical or carries[1]
-        return along or (not straight and (carries[0] or carries[1]))
+            along = move.following in grid.vertical or carries[1]
+        return along or (not move.straight and (carries[0] or carries[1]))
 
-    def _offer(self, following: Point, step: Heading, total: int, came_from: Tuple[Point, Heading]) -> None:
-        """Keep the way to following at total when it is cheaper than any found before, to search from later."""
+    def _offer(self, move: _Move, total: int, came_from: Tuple[Point, Heading]) -> None:
+        """Keep the way to the cell the move reaches at total when it is cheaper than any found before, to search from
+        later."""
+        following, step = move.following, move.step
         key = (following, step)
         if total >= self._best.get(key, _UNREACHED) or total > self._expanded.get(key, _UNREACHED) - CROSSING_PRICE:
             return

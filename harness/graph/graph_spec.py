@@ -13,6 +13,7 @@ from mamba import after, before, context, description, it
 
 from harness.graph.edge import EdgeType
 from harness.graph.graph import Graph, Node, Source
+from harness.graph.saved_graph import NodeIdentity
 from harness.graph.location import Location
 from harness.guidance.guidance import PracticeGuidance
 from harness.graph.explorer import PracticeInventory
@@ -169,7 +170,7 @@ def judged_alone(hits: set[tuple[str, str]]) -> set[tuple[str, str]]:
 
 
 def edges_in(graph: Graph, practice: str, scope: list[str]) -> set[tuple[str, str, str]]:
-    edges = graph.practice(practice).reading.in_graph.edges()
+    edges = graph.practice(practice).reading.in_graph.edge_index.of()
     return {
         (edge.parent.node_id, edge.child.node_id, edge.kind)
         for edge in edges
@@ -191,7 +192,7 @@ with description("a graph"):
         with context("with clean engineering"):
             with before.all:
                 self.clean = self.graph.practice("clean_engineering")
-                self.clean_tree = data_of(self.clean.reading.in_graph.root.serialize())
+                self.clean_tree = data_of(self.clean.reading.in_graph.root.tree.serialize())
                 self.account = tree_named(self.clean_tree, "AccountCredentials", "OoadClass")
 
             with it("should count three modules"):
@@ -378,7 +379,7 @@ with description("a graph"):
                 with context("with violations of the parameter rule"):
                     with before.all:
                         self.graph.explorer.filter.select_violations(["limit-operation-parameters"])
-                        self.violation_tree = data_of(self.graph.practice("clean_engineering").reading.in_graph.root.serialize())
+                        self.violation_tree = data_of(self.graph.practice("clean_engineering").reading.in_graph.root.tree.serialize())
 
                     with it("should return the operation that fails the rule"):
                         returned = [node["name"] for node in data_of(self.graph.return_nodes())]
@@ -441,8 +442,8 @@ with description("a graph"):
         with context("with stories"):
             with before.all:
                 self.stories = self.graph.practice("stories")
-                self.stories_tree = data_of(self.stories.reading.in_graph.root.serialize())
-                self.clean_tree = data_of(self.graph.practice("clean_engineering").reading.in_graph.root.serialize())
+                self.stories_tree = data_of(self.stories.reading.in_graph.root.tree.serialize())
+                self.clean_tree = data_of(self.graph.practice("clean_engineering").reading.in_graph.root.tree.serialize())
 
             with it("should count one epic"):
                 expect(tree_count(self.stories_tree, "Epic")).to(equal(1))
@@ -701,7 +702,7 @@ with description("a graph"):
         with context("with domain-driven design"):
             with before.all:
                 self.ddd = self.graph.practice("ddd")
-                self.ddd_tree = data_of(self.ddd.reading.in_graph.root.serialize())
+                self.ddd_tree = data_of(self.ddd.reading.in_graph.root.tree.serialize())
                 self.bounded_context = tree_named(self.ddd_tree, "bounded context", "BoundedContext")
                 self.aggregate = tree_named(self.ddd_tree, "account-credentials", "Aggregate")
 
@@ -876,7 +877,7 @@ with description("a graph"):
 
         with context("with behavior-driven development that has one story spec without describes"):
             with before.all:
-                self.bdd_tree = data_of(self.graph.practice("bdd").reading.in_graph.root.serialize())
+                self.bdd_tree = data_of(self.graph.practice("bdd").reading.in_graph.root.tree.serialize())
 
             with it("should count one spec"):
                 expect(tree_count(self.bdd_tree, "Spec")).to(equal(1))
@@ -921,7 +922,7 @@ with description("a graph"):
 
         with context("with experience design that has no map"):
             with before.all:
-                self.ux_tree = data_of(self.graph.practice("ux").reading.in_graph.root.serialize())
+                self.ux_tree = data_of(self.graph.practice("ux").reading.in_graph.root.tree.serialize())
 
             with it("should count zero maps"):
                 expect(tree_count(self.ux_tree, "UxMap")).to(equal(0))
@@ -1018,7 +1019,7 @@ with description("a graph"):
 
 
 def _node(practice: PracticeGuidance, type: str, name: str, line: int) -> Node:
-    return Node(practice, type, f"{type}:{line}:{name}", name, Source("story.ts", line, line))
+    return Node(practice, NodeIdentity(type=type, node_id=f"{type}:{line}:{name}", name=name), Source("story.ts", line, line))
 
 
 with description("a node's fidelity"):
@@ -1069,10 +1070,10 @@ with description("a scenario"):
             self.practice.reading.graph.edges.record(owns, self.scenario, self.then)
             self.practice.reading.graph.edges.record(owns, self.scenario, self.when)
             self.practice.reading.graph.edges.record(owns, self.scenario, self.given)
-            self.scenario.populate()
+            self.scenario.tree.populate()
 
         with it("should list the steps in source order"):
-            names = tree_names(data_of(self.scenario.serialize()))
+            names = tree_names(data_of(self.scenario.tree.serialize()))
             expect(names).to(equal([self.given.name, self.when.name, self.then.name]))
 
     with context("with an invoked operation recorded before an earlier definition"):
@@ -1084,10 +1085,10 @@ with description("a scenario"):
             invokes = EdgeType("invokes", 2, "grouped")
             self.practice.reading.graph.edges.record(invokes, self.step, self.later)
             self.practice.reading.graph.edges.record(invokes, self.step, self.earlier)
-            self.step.populate()
+            self.step.tree.populate()
 
         with it("should keep that call order under the step"):
-            names = tree_names(tree_child(data_of(self.step.serialize()), "invokes"))
+            names = tree_names(tree_child(data_of(self.step.tree.serialize()), "invokes"))
             expect(names).to(equal([self.later.name, self.earlier.name]))
 
 
@@ -1295,7 +1296,7 @@ with description("a graph opened on a folder"):
         self.source = self.folder / "src" / "order.py"
         self.source.write_text("class Order:\n    pass\n", encoding="utf-8")
         self.graph = Graph()
-        self.graph.open(self.folder.resolve())
+        self.graph.reads.open(self.folder.resolve())
 
     with after.each:
         import shutil
@@ -1356,7 +1357,7 @@ def _class_names_in(graph: Graph) -> list[str]:
 
 
 def _file_language(graph: Graph, practice: str, file: str) -> str | None:
-    return Node(graph.practice(practice), "OoadClass", f"{practice}:OoadClass:{file}", "Cart", Source(file, 1, 1)).file_language
+    return Node(graph.practice(practice), NodeIdentity(type="OoadClass", node_id=f"{practice}:OoadClass:{file}", name="Cart"), Source(file, 1, 1)).file_language
 
 
 with description("the language of a node's file"):
@@ -1379,14 +1380,14 @@ with description("a graph a validate judges on") as self:
             self.folder = Path(tempfile.mkdtemp(prefix="cdd-graph-whole-"))
             shutil.copytree(_SAMPLE, self.folder, dirs_exist_ok=True, ignore=shutil.ignore_patterns(".context"))
             self.graph = Graph()
-            self.graph.open(self.folder)
+            self.graph.reads.open(self.folder)
 
         with it("should hold none of the working copy yet"):
             expect(self.graph.scope.over_whole).to(be(False))
 
         with context("that a validate makes hold the whole working copy"):
             with before.all:
-                self.graph.hold_whole()
+                self.graph.reads.hold_whole()
 
             with it("should hold the whole working copy"):
                 expect(self.graph.scope.over_whole).to(be(True))

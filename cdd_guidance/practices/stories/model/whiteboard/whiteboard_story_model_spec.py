@@ -6,7 +6,7 @@ do for drawio and miro."""
 from expects import be_a, be_below, equal, expect, raise_error
 from mamba import before, context, description, it
 
-from harness.whiteboard import UnreadableBoard, Whiteboard
+from harness.whiteboard.whiteboard import UnreadableBoard, Whiteboard
 from cdd_guidance.practices.stories.model.fixtures.round_trip_story_map import outline, round_trip_story_map
 from cdd_guidance.practices.stories.model.diagram_story_model import DiagramIncrement
 from cdd_guidance.practices.stories.model.whiteboard.nodes import WhiteboardStory, WhiteboardStoryModel

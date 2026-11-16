@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 from harness.guidance_actions import GuidanceArg, GuidanceAction
-from harness.guidance.stages import OnStage
+from harness.guidance.stages import on_stage
 from harness.agent_tools import agent_instructions, agent_toolset, tools
 from harness.installation.files import skill
 from harness.mcp.mcp_annotations import mcp
+
+# Document's place among a stage's actions: last, after render, since it records what is there rather than making it.
+DOCUMENT_RANK_ON_STAGE = 6
+
 
 @agent_toolset
 class Document(GuidanceAction):
@@ -15,7 +19,7 @@ class Document(GuidanceAction):
     # Document records what is there without correcting it, so an edit it makes is no work the rules should steer.
     injects_rules = False
 
-    @OnStage(6)
+    @on_stage(DOCUMENT_RANK_ON_STAGE)
     @mcp
     @skill
     @agent_instructions

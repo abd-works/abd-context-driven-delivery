@@ -31,12 +31,10 @@ The toolset the graph tools run on. A session holds one (`Session.graph`), with 
 ----
 + Graph(practices=None)
 	// holds practices, each of which then holds this graph and its PracticeNodes; with none, a set of its own from PRACTICE_CATALOGUE.create_all(fidelity=None)
++ reads: GraphReads
+	// what the graph reads and when, each read run alone; every load tool hands its call to it in one line
 + for_call(call): Graph
 	// the call's session's graph, so every graph tool a call in that session makes runs on it
-+ open(folder): None
-	// every practice rooted on folder, holding its root node alone
-+ open_saved(folder): None
-	// open, then hold the saved graph's practices on their saved roots
 + practice(key): PracticeGuidance
 	// -> practices.named(key): the one lookup by key, for a call that names a practice by the key it sent
 + node(node_id): Node | None
@@ -49,20 +47,20 @@ The toolset the graph tools run on. A session holds one (`Session.graph`), with 
 + restored_from(saved: SavedGraph): None
 	// the saved overlays, then practices.hold(saved)
 + load_working_copy(folder, practices, database=None, overlays=None, force=False, call=None): GraphLoaded
-	// @mcp. chooses the practices' roots and the overlays, then -> build.load(force, call)
+	// @mcp. -> reads.working_copy(WorkingCopyRead(...), call)
++ load_practice_roots(call=None): GraphLoaded
+	// @mcp. -> reads.practice_roots(call)
 + load_files(folder, practices, files, overlays=None, call=None): GraphLoaded
-	// @mcp, /load-files. scope = LoadScope.of_paths(folder, files); build from only the edited files; never touches the saved graph
+	// @mcp, /load-files. -> reads.files(FilesRead(...), call); never touches the saved graph
 + refresh(paths, call=None): GraphLoaded
-	// @mcp. -> build.refresh(paths, call)
-+ refreshed(paths, checked, call=None): None
-	// refresh, and write the nodes read from paths at checked, as one change; the worker writes them for a chat's call
+	// @mcp. -> reads.refresh(paths, call)
 + save_json(): GraphSaved
-	// @mcp. merge into .context/graph.json through SavedGraphFile; practices already saved and not loaded now stay
+	// @mcp. -> saved_file.save(SavedGraph.from_graph(self)); practices already saved and not loaded now stay
 + saved_file: SavedGraphFile
 + set_overlays(overlays, call=None): AppliedOverlays
-	// @mcp. reload the open folder with these overlays
+	// @mcp. -> AppliedOverlays(reads.apply_overlays(overlays, call)), which names the overlays now applied
 + overlay_of(folder): Overlay
-	// @mcp. raises GraphFailure when the folder and its parents hold no practices/
+	// @mcp. -> explorer.overlay_of(folder), which raises GraphFailure when the folder and its parents hold no practices/
 + practice_names(): list[str]
 	// @mcp. the key of every practice the graph holds
 + inventory(), filter_choices(...), source(node_id), return_nodes(filter=None), explorer_trees(filter=None),
@@ -71,6 +69,35 @@ The toolset the graph tools run on. A session holds one (`Session.graph`), with 
 	// entry's next level, so the page reads only the levels a person opens
 + report_progress(message): None
 	// -> harness.agent_tools.progress.report_progress
+
+## GraphReads (graph_reads.py)
+
+What a graph reads, and when: the graph makes it once and keeps it (`graph.reads`). It holds the lock that runs a load,
+a refresh, and a write alone, since calls in one session can arrive at once.
+
++ GraphReads(graph)
+----
++ open(folder): None
+	// every practice rooted on folder, holding its root node alone
++ open_saved(folder): None
+	// open, then hold the saved graph's practices on their saved roots
++ working_copy(read: WorkingCopyRead, call): GraphLoaded
+	// chooses the practices' roots and the overlays read names, then -> build.load(read.force, call)
++ practice_roots(call): GraphLoaded
+	// each practice on its session root that is there to read, then -> build.load(False, call)
++ files(read: FilesRead, call): GraphLoaded
+	// scope = LoadScope.of_paths(read.folder, read.files); build from only the edited files
++ refresh(paths, call): GraphLoaded
+	// -> build.refresh(paths, call)
++ hold_whole(call=None): None
+	// load the whole working copy when the graph holds only some files
++ refreshed(paths, checked, call=None): None
+	// refresh, and write the nodes read from paths at checked, as one change; the worker writes them for a chat's call
++ apply_overlays(overlays, call): Graph
+	// apply the overlays and load the open folder again with them; answers the graph
+
+*WorkingCopyRead* (`folder`, `practices`, `database`, `overlays`, `force`) and *FilesRead* (`folder`, `practices`,
+`files`, `overlays`) are the reads a call asks for, as values.
 
 ## GraphPractices (graph_practices.py)
 
@@ -107,13 +134,15 @@ The toolset the graph tools run on. A session holds one (`Session.graph`), with 
 
 ## PracticeNodes
 
-+ root, source_root, nodes(type=None), nodes_read_now(type=None), node(node_id), holds(node_id), node_types, add(...), add_file(type, relative, name=""), hold(node)
++ root, source_root, nodes(type=None), node(node_id), holds(node_id), node_types, offer_node_types(types), add(...), add_file(type, relative, name=""), hold(node), unused_node_id(type, name)
 	// add_file: the practice's node for a whole file or folder (a pattern's tier file, an aggregate's folder), the one held or a new one; one place for every pattern overlay
-+ edges(kind=None), record(edge_type, parent, child), drop_edges(dropped), rebuild_tree()
+	// the nodes themselves are kept by id and by type in a store it shares with its loading (_HeldNodes)
 + edge_index: EdgeIndex
-	// the edges by kind, with the kinds' EdgeTypes and the indexes by pair, by parent, and by direct child
+	// the edges by kind (edge_index.of(kind)), with the kinds' EdgeTypes and the indexes by pair, by parent, and by direct child
 + rule_run: PracticeRuleRun
-	// schema, schema_with(overlays), checks, rule_labels, rule_labels_for(types), check()
+	// schema, schema_with(overlays), checks, rule_labels, rule_labels_for(types), check(), renew()
++ loading: PracticeLoading
+	// open(root), close(), release(node), nodes_read_now(type=None), forget_files(files), forget(dropped), put_in_source_order(): what a load, a refresh, or a restore does to the nodes the practice holds
 + restore: PracticeRestore
 	// nodes(saved), changes(changes), links(saved): one way to take saved state, for a restore and a worker's changes
 
@@ -148,6 +177,8 @@ One loaded practice as the explorer's inventory shows it, read from the graph th
 
 A parsed object a practice reader added, or a plain node read back from `graph.json`. Model objects that build their own edges extend `ModelNode`.
 
++ Node(practice, identity: NodeIdentity, source)
+	// NodeIdentity(type, node_id, name): what a node is called, as one value
 + practice: PracticeGuidance
 + type: str
 + node_id: str
@@ -161,6 +192,8 @@ A parsed object a practice reader added, or a plain node read back from `graph.j
 	// class attribute: the parsed object's attributes that save with the graph
 + children: list[Node]
 + parent: Node | None
++ tree: NodeTree
+	// its place in the explorer tree, made once
 + facts: dict
 	// graph_facts attributes, then data; what graph.json keeps
 + rules: GraphRulesCollection
@@ -182,14 +215,26 @@ A parsed object a practice reader added, or a plain node read back from `graph.j
 + has_fact(key): bool
 + place(file, start_line, end_line): None
 	// a practice whose reader finds a node by a nearby line, as Stories' recording does, moves it onto the lines that declare it
++ forget_rules(): None
+
+## NodeTree
+
+One node's place in its practice's explorer tree, which the node makes once and keeps (`node.tree`). The node keeps
+its `parent` and `children`; this part keeps whether its children are placed yet.
+
++ NodeTree(node)
+----
 + populate(parent=None): None
-	// for each edge kind by order, for each edge leaving this node:
-	//   direct: edge.child.populate(this)
-	//   grouped | relationship: edge.child.populate(holder), holder being this node's child named for the kind
+	// for each edge kind by order, for each edge leaving the node:
+	//   direct: edge.child.tree.populate(node)
+	//   grouped | relationship: edge.child.tree.populate(holder), holder being the node's child named for the kind
 	// the types a practice lists in source_ordered_types follow their source lines
++ leave(): None
+	// out of the tree, so the next populate places it again
++ rebuild(): None
+	// on a practice's root: every node of the practice leaves the tree, then the root places them again
 + serialize(seen, via, stack): ExplorerEntry
 	// the full child list only at the node's home parent; a relationship copy is empty; a node already on the path is a stub
-+ release(): None
 
 ## ModelNode
 
@@ -409,7 +454,8 @@ Extends `RulesCollection` (harness/guidance). The rules that apply to one node, 
 
 ## GraphRule
 
-Extends `PracticeGraphRule` and `Rule`. One schema rule on one node.
+Extends `Rule` (harness/guidance). One schema rule on one node; it holds the graph check that runs it (a
+*PracticeGraphRule*) when one exists, rather than being one.
 
 + node: Node
 + slug: str
@@ -417,10 +463,14 @@ Extends `PracticeGraphRule` and `Rule`. One schema rule on one node.
 	// the rule's prose from the practice's or pattern's guidance (PracticeSchema.rule_prose)
 + executable: bool
 	// a check with this slug exists
++ runs: bool
+	// its check applies to the node's type, or to the type it is anchored to
 + status: str
 	// violating | passing | prompt (no check runs it)
 + violations: list[Violation]
 ----
++ check(context): list[str]
+	// -> its check's check(node, context); none when no check runs it
 + record(message): None
 	// -> NodeViolation.at_node; the same message is kept once
 + restore(violation): None

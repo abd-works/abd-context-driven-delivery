@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 
 from harness.agent_tools.progress import report_progress
 from harness.graph.graph import Node, PracticeNodes
+from harness.graph.saved_graph import NodeIdentity
 from harness.graph.saved_graph import FactValue
 from harness.graph.location import Location
 from harness.guidance.practice_reading import PracticeReading
@@ -63,7 +64,7 @@ class BuildingBlock(Node):
 
     def __init__(self, practice: PracticeGuidance, tactical: TacticalClass, kind: str) -> None:
         oclass = tactical.oclass
-        super().__init__(practice, kind, "", oclass.name, oclass.source)
+        super().__init__(practice, NodeIdentity(type=kind, node_id="", name=oclass.name), oclass.source)
         self.tactical = tactical
 
     @property
@@ -186,7 +187,7 @@ class _DomainClasses:
         support is never a domain building block, whatever its name."""
         if self._classes is None:
             return []
-        return [cls for cls in self._classes.nodes_read_now("OoadClass") if not is_test_code(cls.source.file)]
+        return [cls for cls in self._classes.loading.nodes_read_now("OoadClass") if not is_test_code(cls.source.file)]
 
     def holds_a_domain(self, folder: str) -> bool:
         return folder in self._stereotyped_folders
@@ -273,7 +274,7 @@ class _WorkingCopyRead:
     def _unmarked_context(self) -> BoundedContext:
         """The one bounded context of a folder where no folder marks a context: the whole folder."""
         context = BoundedContext("bounded context", 1)
-        context.load_folder_facts(self._root)
+        context.source_facts.load_folder(self._root)
         return context
 
     def _read_contexts(self, found: list[tuple[str, BoundedContext, str]]) -> None:
@@ -311,7 +312,7 @@ class _WorkingCopyRead:
     def _aggregate(self, folder: str, members: list[tuple[TacticalClass, str]]) -> Node:
         context = self._contexts.around(folder) or self._in_graph.root
         aggregate = Aggregate(Path(folder).name, 1)
-        aggregate.load_folder_facts(self._root / folder)
+        aggregate.source_facts.load_folder(self._root / folder)
         node = self._in_graph.add(aggregate, self._aggregate_id(folder), Location(folder, 1, 1))
         self._graph.edges.link("owns", context, node)
         self._graph.edges.relate("belongsTo", node, context)
