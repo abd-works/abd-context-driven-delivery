@@ -1088,6 +1088,10 @@ Requested (2026-11-16, "story map md story has scenario file"): selecting a stor
 
 Requested (2026-11-16, "should have callout to expand and see story scenarios; scenario has domain references in its terms, callout to markdown class model if it exists"): a markdown line that links to a heading in another file carries a callout that opens that heading's section in place, as a call opens in place in code: a story map story opens its scenarios, and a scenario's domain term opens its class in the markdown model (`SessionFile.callouts`).
 
+### (S) Person --> [Follow Story Steps To Code](../story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md#story-follow-story-steps-to-code)
+
+Requested (2026-11-16, "observes and invokes do not reach the Python code; tested for TypeScript but not Python"; "class callouts in tests should be placed next to steps if they are step relationships"): a Python story test's step invokes the functions it calls by name as well as the operations it calls on an object (`StoryLinks._functions_called`), and in the source view a story test's callouts sit on the step whose invokes and observes they are, never on a line that only names a class in prose.
+
 ## (E) Explore Graph In Files App
 
 [Scenarios](../story_tests/review-generated-work-in-file-viewer/explore-graph-in-files-app/explore_graph_in_files_app_story.test.md). Requested (2026-11-15, "we basically ingest all of the stories and functionality that the Graph application can do"): each story brings one of the Graph app's into the Files app's graph view, working on the files it lists rather than on a folder chosen in the app.

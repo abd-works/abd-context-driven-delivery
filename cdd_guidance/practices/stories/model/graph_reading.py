@@ -12,10 +12,13 @@ from pathlib import Path
 from harness.graph.skipped_folders import scanned_files
 from harness.guidance.practice_reading import PracticeReading
 
+from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER
 from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel
 from cdd_guidance.practices.stories.model.story_map_files import StoryMapFiles
 
 _MEMBER_CALL = re.compile(r"\.([\w$]+)\s*\(")
+# A call by name alone, with no object before it: `seed_ticket(world)`, not `board.reread()` or `def seed_ticket(`.
+_FUNCTION_CALL = re.compile(r"(?<![\w$.])(?<!def )(?<!function )([A-Za-z_$][\w$]*)\s*\(")
 _STEP_TYPES = frozenset({"Step", "Given", "When", "Then"})
 # A story map's epic is recorded as an Epic, or as a SubEpic under another epic; a map built on a graph without being
 # recorded calls every epic an Epic.
@@ -241,6 +244,7 @@ class StoryLinks:
         body = self._step_body(step)
         called = set(step.get_fact("callees") or []) | set(_MEMBER_CALL.findall(body))
         matched = [member for name in sorted(called) for member in self.clean.code_index.members_named(name)]
+        matched += [function for function in self._functions_called(body) if function not in matched]
         epic = self.tree.epic_of(step) if matched else None
         for operation in matched:
             self.graph.link("invokes", step, operation, "relationship")
@@ -265,6 +269,12 @@ class StoryLinks:
             if prop.name in reads:
                 self.graph.link("retrievedUsing", example, prop, "relationship")
                 self.graph.link("retrievedUsing", prop, example, "relationship")
+
+    def _functions_called(self, body: str) -> list:
+        """The functions body calls by name, such as a Python story test's ``seed_ticket(world)``: only a function of a
+        module answers a bare call, never a class's operation, which is called on an object."""
+        names = sorted(set(_FUNCTION_CALL.findall(body)))
+        return [member for name in names for member in self.clean.code_index.members_named(name) if member.get_fact("owner") == MODULE_FUNCTION_HOLDER]
 
     def _observed_by(self, step, body: str) -> list:
         """The examples step observes: those its own text and body name, and for a Then, those its scenario's Givens

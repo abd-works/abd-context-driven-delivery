@@ -31,6 +31,7 @@ from space.session.graph_view_examples import (
     SCENARIOS_THEN_LINE,
     KANBAN_MODEL,
     SHARED_STORY,
+    STEP_LISTED,
     STORY_MAP_DELETE_LINE,
     STORY_TEST,
     TICKET_CODE,
@@ -360,3 +361,37 @@ def _(s):
     @s.then("neither line carries a callout")
     def _(world):
         expect(world.callouts).to(equal([]))
+
+
+# --- Follow Story Steps To Code -----------------------------------------------------------------------------------
+
+
+def related_under(world, step: str, group: str) -> list[str]:
+    """The names in step's relationship group, each branch opened as the page opens it."""
+    session = session_of(world)
+    opened = world.data_of(session.graph_branch(node_id=node_id_of(world, step, STEP_LISTED), paths=STEP_LISTED))
+    held = next((child for child in opened["children"] if child["name"] == group), None)
+    if held is None:
+        return []
+    branch = world.data_of(session.graph_branch(node_id=held["node_id"], paths=STEP_LISTED))
+    return [child["name"] for child in branch["children"] if "children_left_out" in child]
+
+
+@shared_stories.scenario("Follow Story Steps To Code", "A step in a Python story test invokes the functions and operations it calls")
+def _(s):
+    @s.given("the Files app shows the Stories tree of Delete Ticket's Python shared story test, whose Given calls the function ticket_on_board and whose When calls Ticket.delete")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+
+    @s.when("the Person opens the Given and the When")
+    def _(world):
+        world.given = related_under(world, "given a ticket on the board", "invokes")
+        world.when = related_under(world, "when the Person deletes it", "invokes")
+
+    @s.then("the Given shows an invokes group holding ticket_on_board")
+    def _(world):
+        expect(world.given).to(equal(["ticket_on_board"]))
+
+    @s.then("the When shows an invokes group holding delete")
+    def _(world):
+        expect(world.when).to(equal(["delete"]))

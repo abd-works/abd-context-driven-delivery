@@ -264,7 +264,34 @@ Requested by the person on 2026-11-16.
 
 #### Scenario: A callout opens and closes from its mark beside the line
 
-*Given* the Files app shows the story map, its callouts closed  
+Changed by the person on 2026-11-16 ("only shade once; on expand, hide the callout label and show the content; on collapse, bring it back"): the label that names the section shows while it is closed, and the section alone, shaded once, while it is open.
+
+*Given* the Files app shows the story map, its callouts closed, Delete Ticket's line labelled with the scenarios it opens  
 *When* the Person presses the callout mark beside Delete Ticket  
-*Then* Delete Ticket's scenarios show under its line, with the file they come from  
-  *And* a second press closes them again
+*Then* Delete Ticket's scenarios show under its line, shaded once, and the label is hidden  
+  *And* a second press closes them again and brings the label back
+
+## Story: Follow Story Steps To Code
+
+### Evidence
+
+| Source | Note |
+|--------|------|
+| user request, 2026-11-16 | "when the Person opens ..." shows observes and invokes "but they do not reach the Python code; this has been tested for TypeScript but not Python before" |
+| user request, 2026-11-16 | "it's not clear what class callouts are for in the tests. Are they story to code relationships? They should be placed next to steps if they are step relationships." |
+| probe of the file-manager worktree, 2026-11-16 | a Python step invoked the operations it called on an object (`session_of(world).graph_branch(...)` reached Session.graph_branch) but none of the functions it called by name (`session_of`, `node_id_of`), which the graph holds as operations of their module |
+
+#### Scenario: A step in a Python story test invokes the functions and operations it calls
+
+*Given* the Files app shows the Stories tree of Delete Ticket's Python shared story test, whose Given calls the function ticket_on_board and whose When calls Ticket.delete  
+*When* the Person opens the Given and the When  
+*Then* the Given shows an invokes group holding ticket_on_board  
+  *And* the When shows an invokes group holding delete
+
+#### Scenario: A story test's callouts sit on the step that invokes them
+
+*Given* the Files app shows checkout-flow's graph of Delete Ticket's Python shared story test, whose docstring names the class Ticket  
+*When* the Person views the shared story test  
+*Then* the When's line carries a callout to Ticket.delete, the operation it invokes  
+  *And* the Given's line a callout to ticket_on_board  
+  *But* the docstring's line carries none

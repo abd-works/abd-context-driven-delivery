@@ -105,11 +105,38 @@ SHARED_STORY_TEXT = (
     '        world.shown = False\n'
 )
 LISTED = [STORY_MAP, TICKET_CODE, BOARD_CODE]
+# Seed: the examples the story test below takes its ticket from, a function of its module, not a class's operation.
+TICKET_EXAMPLES = "space/kanban/ticket_story_examples.py"
+TICKET_EXAMPLES_TEXT = 'def ticket_on_board(world) -> str:\n    return "checkout"\n'
+# Seed: Delete Ticket's Python shared story test, its docstring naming the class Ticket on line 1, its Given on line 9
+# calling the function ticket_on_board, its When on line 13 calling Ticket.delete.
+STEP_STORY = "story_tests/manage-tickets/remove-tickets/delete-ticket.story.shared.py"
+STEP_STORY_TEXT = (
+    '"""Delete Ticket: a Ticket leaves the board."""\n'
+    "from space.kanban.story_test import SharedStories\n"
+    "from space.kanban.ticket_story_examples import ticket_on_board\n"
+    "\n"
+    'shared_stories = SharedStories("Remove Tickets")\n'
+    "\n"
+    '@shared_stories.scenario("Delete Ticket", "a ticket on the board is deleted")\n'
+    "def _(s):\n"
+    '    @s.given("a ticket on the board")\n'
+    "    def _(world):\n"
+    "        world.ticket = ticket_on_board(world)\n"
+    "\n"
+    '    @s.when("the Person deletes it")\n'
+    "    def _(world):\n"
+    "        world.ticket.delete(world.board)\n"
+)
+STEP_STORY_DOCSTRING_LINE = 1
+STEP_STORY_GIVEN_LINE = 9
+STEP_STORY_WHEN_LINE = 13
+STEP_LISTED = [STEP_STORY, TICKET_CODE, BOARD_CODE, TICKET_EXAMPLES]
 
 
 def seed_checkout_flow_with_graph_files(world) -> None:
     world.project.seed_session(CHECKOUT_FLOW)
-    for path, text in ((TICKET_CODE, TICKET_TEXT), (BOARD_CODE, BOARD_TEXT), (STORY_MAP, STORY_MAP_TEXT), (OLD_MAP, OLD_MAP_TEXT), (STORY_TEST, STORY_TEST_TEXT), (RESTORE_TEST, RESTORE_TEST_TEXT), (SCENARIOS, SCENARIOS_TEXT), (SHARED_STORY, SHARED_STORY_TEXT), (KANBAN_MODEL, KANBAN_MODEL_TEXT)):
+    for path, text in ((TICKET_CODE, TICKET_TEXT), (BOARD_CODE, BOARD_TEXT), (STORY_MAP, STORY_MAP_TEXT), (OLD_MAP, OLD_MAP_TEXT), (STORY_TEST, STORY_TEST_TEXT), (RESTORE_TEST, RESTORE_TEST_TEXT), (SCENARIOS, SCENARIOS_TEXT), (SHARED_STORY, SHARED_STORY_TEXT), (KANBAN_MODEL, KANBAN_MODEL_TEXT), (TICKET_EXAMPLES, TICKET_EXAMPLES_TEXT), (STEP_STORY, STEP_STORY_TEXT)):
         world.project.seed_file(path, text)
 
 
