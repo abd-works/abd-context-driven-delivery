@@ -24,6 +24,8 @@ from space.session.graph_view_examples import (
     LISTED,
     STORY_MAP,
     RESTORE_TEST,
+    SCENARIOS,
+    SCENARIOS_GIVEN_LINE,
     STORY_TEST,
     TICKET_CODE,
     node_id_of,
@@ -119,6 +121,21 @@ def _(s):
         expect((world.names.count("Delete Ticket"), "Manage Tickets In Drawio" in world.names)).to(equal((1, False)))
 
 
+@shared_stories.scenario("Switch Files App To Graph View", "The Stories tree holds a story's scenarios listed in markdown")
+def _(s):
+    @s.given("the Files app lists only the markdown formats: checkout-flow's story map and Delete Ticket's scenarios")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+
+    @s.when("the Person switches the file bar to the graph view")
+    def _(world):
+        world.names = names_in(world, [STORY_MAP, SCENARIOS])
+
+    @s.then("Delete Ticket holds its scenario and its steps from the scenarios file")
+    def _(world):
+        expect(world.names).to(contain("Delete Ticket", "a ticket is deleted", "given a ticket on the board"))
+
+
 # --- Filter Graph Like The File List ------------------------------------------------------------------------------
 
 
@@ -168,3 +185,20 @@ def _(s):
     @s.then("ticket.py and board.py both open, board.py at the lines Board covers")
     def _(world):
         expect(sorted(world.lines)).to(equal([(BOARD_CODE, 1, 3), (TICKET_CODE, 1, 9)]))
+
+
+@shared_stories.scenario("Open Several Files From Graph Nodes", "Selecting a step opens its scenarios file at the step's line")
+def _(s):
+    @s.given("the Files app shows the Stories tree of checkout-flow's story map and Delete Ticket's scenarios")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+
+    @s.when("the Person selects the Given step a ticket on the board")
+    def _(world):
+        listed = [STORY_MAP, SCENARIOS]
+        ranges = world.data_of(session_of(world).graph_node_ranges(node_id=node_id_of(world, "given a ticket on the board", listed), paths=listed))
+        world.lines = [(found["path"], found["start_line"]) for found in ranges]
+
+    @s.then("the scenarios file opens at the Given's own line")
+    def _(world):
+        expect(world.lines).to(equal([(SCENARIOS, SCENARIOS_GIVEN_LINE)]))
