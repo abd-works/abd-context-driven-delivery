@@ -429,12 +429,11 @@ class FidelitySessionOutput:
 
     def _listed(self, path: str) -> DeclaredFile:
         """A declared path as a page lists it. A session on the whole repository, such as main, holds every module's
-        documents, so where nobody said where this practice writes, a path in ``.context`` is searched for in every
-        ``.context`` folder and the folders inside it, such as ``harness/.context/stories/story-map.md``, as its
-        patterns already find its tests anywhere."""
+        documents, so where this fidelity writes at the repository's own folder, a path in ``.context`` is searched for
+        in every ``.context`` folder and the folders inside it, such as ``harness/.context/stories/story-map.md``, as
+        its patterns already find its tests anywhere."""
         from_top = PurePosixPath(self._session.repo.path_from_top(path))
-        whole_repository = self._session.work_root == self._session.repo.root
-        if not (whole_repository and self._practice.is_root_default and not self._chosen.get("root")) or from_top.parts[:1] != (CONTEXT_FOLDER,):
+        if self.root.resolve() != self._session.repo.root.resolve() or from_top.parts[:1] != (CONTEXT_FOLDER,):
             return DeclaredFile(from_top.as_posix())
         return DeclaredFile(PurePosixPath("**", CONTEXT_FOLDER, "**", *from_top.parts[1:]).as_posix())
 

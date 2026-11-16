@@ -1129,6 +1129,17 @@ with description("a session working on the whole repository, whose story map is 
     with it("should list that story map as the story map's markdown"):
         expect([entry.path for entry in self.story_map.files()["markdown"]]).to(equal(["harness/.context/stories/story-map.md"]))
 
+    with context("with the project's config naming the repository's own folder for stories"):
+        with before.each:
+            (self.repo / ".context" / "config.json").parent.mkdir(exist_ok=True)
+            (self.repo / ".context" / "config.json").write_text('{"practice_folders": {"stories": "."}}', encoding="utf-8")
+            session = ToolCall({}, self.repo).session
+            session.session_files.changed = lambda: set()
+            self.story_map = session.practice("stories").fidelities["story_map"]
+
+        with it("should still list that story map as the story map's markdown"):
+            expect([entry.path for entry in self.story_map.files()["markdown"]]).to(equal(["harness/.context/stories/story-map.md"]))
+
 
 # A fidelity that declares a folder per module, as Clean Engineering's code does with ``{module}/``, lists the code the
 # session's branch changed; git is the boundary, so the branch's changes are given, not read.
