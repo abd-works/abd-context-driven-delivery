@@ -259,7 +259,7 @@ function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw)
           {ActionButtonView($, elements, draw)}
           {FilesButtonView($, elements, draw)}
           {IconButtonView(elements, 'handoff', '⇥', 'handoff', () => runHandoff($, chatBar))}
-          {IconButtonView(elements, 'debug', '🐞', 'debug: capture what went wrong, then fix it or request help', () => runDebug($, chatBar))}
+          {IconButtonView(elements, 'debug', '⚑', 'debug: capture what went wrong, then fix it or request help', () => runDebug($, chatBar))}
         </Box>
         <Box flexGrow={1} />
         {SessionNameView($, elements, draw)}
