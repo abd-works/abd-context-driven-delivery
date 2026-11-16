@@ -239,7 +239,15 @@ Requested by the person on 2026-11-16.
 *Given* the Files app shows the Stories tree of checkout-flow's story map and Delete Ticket's scenarios  
 *When* the Person selects the story Delete Ticket  
 *Then* the story map opens at line 5, Delete Ticket's line  
-  *And* the scenarios file opens below it at lines 5 to 9, the scenario a ticket is deleted
+  *And* the scenarios file opens below it at lines 3 to 9, from Delete Ticket's own heading through its scenario a ticket is deleted
+
+#### Scenario: Selecting a story map sub-epic opens its scenarios file from its heading
+
+Reported by the person on 2026-11-16: a selected sub-epic's lines in its scenarios file began at its first scenario, below its own heading.
+
+*Given* the Files app shows the Stories tree of checkout-flow's story map and Delete Ticket's scenarios  
+*When* the Person selects the sub-epic Remove Tickets  
+*Then* the scenarios file opens from its Sub-epic: Remove Tickets heading, on line 1, through its last scenario
 
 #### Scenario: Selecting a markdown scenario spans its heading through its last step
 

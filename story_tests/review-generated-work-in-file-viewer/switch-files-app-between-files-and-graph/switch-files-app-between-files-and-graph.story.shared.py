@@ -285,9 +285,25 @@ def _(s):
     def _(world):
         world.lines = story_map_lines(world, "Delete Ticket")
 
-    @s.then("the story map opens at Delete Ticket's line, and the scenarios file below it at the scenario a ticket is deleted")
+    @s.then("the story map opens at Delete Ticket's line, and the scenarios file below it from Delete Ticket's heading through its scenario")
     def _(world):
-        expect(world.lines).to(equal([(STORY_MAP, STORY_MAP_DELETE_LINE, STORY_MAP_DELETE_LINE), (SCENARIOS, SCENARIOS_SCENARIO_LINE, SCENARIOS_THEN_LINE)]))
+        expect(world.lines).to(equal([(STORY_MAP, STORY_MAP_DELETE_LINE, STORY_MAP_DELETE_LINE), (SCENARIOS, SCENARIOS_STORY_LINE, SCENARIOS_THEN_LINE)]))
+
+
+@shared_stories.scenario("Open Story Scenarios Across Files", "Selecting a story map sub-epic opens its scenarios file from its heading")
+def _(s):
+    @s.given("the Files app shows the Stories tree of checkout-flow's story map and Delete Ticket's scenarios")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+
+    @s.when("the Person selects the sub-epic Remove Tickets")
+    def _(world):
+        world.lines = story_map_lines(world, "Remove Tickets")
+
+    @s.then("the scenarios file opens from its Sub-epic: Remove Tickets heading, on line 1, through its last scenario")
+    def _(world):
+        scenarios = [lines for lines in world.lines if lines[0] == SCENARIOS]
+        expect(scenarios).to(equal([(SCENARIOS, 1, SCENARIOS_THEN_LINE)]))
 
 
 @shared_stories.scenario("Open Story Scenarios Across Files", "Selecting a markdown scenario spans its heading through its last step")

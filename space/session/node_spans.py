@@ -5,7 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from harness.graph.explorer import ExplorerEntry
-from harness.graph.graph import FilterRequest, Graph
+from harness.graph.graph import MARKDOWN_SUFFIXES, FilterRequest, Graph
+from harness.markdown.markdown import MarkdownText
 
 
 class NodeSpans:
@@ -20,11 +21,24 @@ class NodeSpans:
         self._root = root
         self._seen: set[str] = set()
         self._spans: dict[Path, tuple[int, int]] = {}
+        # The name of the node collected first, the one the spans are for.
+        self._name = ""
 
     @property
     def spans(self) -> dict[Path, tuple[int, int]]:
-        """Each file's first and last line the node covers."""
-        return dict(self._spans)
+        """Each file's first and last line the node covers. In a markdown file that heads the node's part with a heading
+        of its own, such as a story map's story or sub-epic in its scenarios file (``## Story: Delete Ticket``), the
+        span starts at that heading, not at the first scenario below it."""
+        return {path: (self._heading_above(path, start), end) for path, (start, end) in self._spans.items()}
+
+    def _heading_above(self, path: Path, start: int) -> int:
+        """The line of the last heading at or above start that names the node, after its kind (``Sub-epic: Remove
+        Tickets``); start itself when none does or the file is not markdown."""
+        if not self._name or path.suffix.lower() not in MARKDOWN_SUFFIXES:
+            return start
+        text = MarkdownText(path.read_text(encoding="utf-8"))
+        named = [text.text.count("\n", 0, offset) + 1 for offset, _end, _level, title in text.headings() if title.split(":", 1)[-1].strip() == self._name]
+        return max((line for line in named if line <= start), default=start)
 
     def collect(self, node_id: str, below_lines: bool = False) -> NodeSpans:
         """Widen the spans with the lines node_id covers in its file and the lines of the nodes it is made of, wherever
@@ -34,8 +48,10 @@ class NodeSpans:
         calls."""
         if node_id in self._seen:
             return self
-        self._seen.add(node_id)
         node = self._graph.node(node_id)
+        if not self._seen and node is not None:
+            self._name = node.name
+        self._seen.add(node_id)
         source = node.source if node is not None else None
         if source is None:
             return self
