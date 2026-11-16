@@ -364,14 +364,15 @@ class Whiteboard:
         return self
 
     def writes(self, previous: Optional["Whiteboard"] = None) -> List[StoreWrite]:
-        """The store writes that turn previous, the board as it is in Claude, into this board: its meta, each new
-        element set, each changed element updated with only its changed fields, and each element a practice drew that
-        this board no longer holds deleted. Elements a person added, of a kind no practice draws, are left alone and
-        kept at the back of the order."""
+        """The store writes that turn previous, the board as it is in Claude, into this board: its meta, then each
+        element a practice drew that this board no longer holds deleted, then each new element set and each changed
+        element updated with only its changed fields. The deletes go first so a board people watch while the writes
+        land never shows the old drawing under the new one. Elements a person added, of a kind no practice draws, are
+        left alone and kept at the back of the order."""
         before = previous or Whiteboard()
         kept = [element.id for element in before.elements if isinstance(element, OtherElement)]
         meta = {**self.meta, "order": kept + self.order}
-        return [StoreWrite("set", "board", "meta", meta, before.versions.get("meta")), *self._element_writes(before), *self._deletes(before)]
+        return [StoreWrite("set", "board", "meta", meta, before.versions.get("meta")), *self._deletes(before), *self._element_writes(before)]
 
     def batches(self, previous: Optional["Whiteboard"] = None) -> List[List[Dict[str, object]]]:
         """The writes against previous as ArtifactData ``batch`` entries, at most fifty a batch, in order."""

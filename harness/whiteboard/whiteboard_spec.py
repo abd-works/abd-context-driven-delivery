@@ -1,6 +1,6 @@
 """Mamba spec: a Claude Whiteboard board as a practice draws it, saves it, and sends it to the board's store."""
 
-from expects import equal, expect, raise_error
+from expects import be_below, equal, expect, raise_error
 from mamba import before, context, description, it
 
 from harness.whiteboard import Arrow, Box, Section, Shape, StoreWrite, UnreadableBoard, Whiteboard, WhiteboardNode
@@ -119,6 +119,10 @@ with description("a whiteboard") as self:
 
         with it("should delete each element the board no longer holds, pinned to the version read"):
             expect(self.by_key["elements/story.gone"]).to(equal(StoreWrite("delete", "elements", "story.gone", None, 9)))
+
+        with it("should delete before it sets or updates, so a watched board never shows both drawings"):
+            ops = [write.op for write in self.writes[1:]]
+            expect(ops.index("delete")).to(be_below(min(ops.index("set"), ops.index("update"))))
 
         with it("should write nothing for an element that did not change"):
             expect("elements/story.a1" in self.by_key).to(equal(False))
