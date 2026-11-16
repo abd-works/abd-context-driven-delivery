@@ -11,7 +11,7 @@
       "specification",
       "implementation"
     ],
-    "version": 80
+    "version": 84
   },
   "practices": {
     "stories": {
@@ -33,7 +33,16 @@
     "ux": {
       "formats": {
         "ia": [
-          "drawio"
+          "drawio",
+          "markdown"
+        ],
+        "mockup": [
+          "claude_design",
+          "html"
+        ],
+        "front_end_code": [
+          "html",
+          "typescript"
         ]
       },
       "enabled": true
@@ -59,12 +68,36 @@
     },
     "bdd": {
       "formats": {
-        "behavior": []
+        "behavior": [
+          "python"
+        ],
+        "realization": [
+          "markdown",
+          "python"
+        ],
+        "development": [
+          "python"
+        ]
       },
-      "enabled": false
+      "enabled": true
     },
     "ddd": {
-      "enabled": false
+      "enabled": true,
+      "formats": {
+        "bounded_context": [
+          "markdown",
+          "whiteboard"
+        ],
+        "model": [
+          "markdown",
+          "drawio",
+          "whiteboard",
+          "python"
+        ],
+        "tactics": [
+          "python"
+        ]
+      }
     }
   },
   "outputs": {
