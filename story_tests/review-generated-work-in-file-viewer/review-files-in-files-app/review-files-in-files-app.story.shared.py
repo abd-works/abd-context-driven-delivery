@@ -29,6 +29,7 @@ from space.kanban.session_board_examples import (
     ORDER_RULE,
     CHECKOUT_CHAT,
     CHECKOUT_FLOW_IN_SRC_CHECKOUT,
+    CHECKOUT_FLOW_WITHOUT_DDD,
     EDITED_LINE_14,
     EMPTY_CART_COMMENT,
     EMPTY_CART_FILL,
@@ -63,6 +64,45 @@ def queued_fills(world) -> list[str]:
     """The fills sent to checkout-chat, oldest first."""
     newest_first = world.data_of(world.Chat.load(CHECKOUT_CHAT).messages())
     return [message["text"] for message in reversed(newest_first) if message["kind"] == "fill"]
+
+
+# --- Toggle Practice In Files App ---------------------------------------------------------------------------------
+
+
+def practices_saved(world) -> list[str]:
+    """The practices checkout-flow's session works on, read again from its session.json."""
+    selection = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.guidance_selection())
+    return [practice["key"] for practice in selection["practices"] if practice["is_selected"]]
+
+
+@shared_stories.scenario("Toggle Practice In Files App", "Turn a practice on to show its files")
+def _(s):
+    @s.given("the Files app shows the DDD toggle as an outline")
+    def _(world):
+        world.project.seed_session(CHECKOUT_FLOW_WITHOUT_DDD)
+
+    @s.when("the Person turns DDD on")
+    def _(world):
+        world.Ticket.load(CHECKOUT_FLOW.name).session.update_guidance_selection(practices=[*practices_saved(world), "ddd"])
+
+    @s.then("checkout-flow's session works on DDD, saved in its session.json")
+    def _(world):
+        expect(practices_saved(world)).to(contain("stories", "ddd"))
+
+
+@shared_stories.scenario("Toggle Practice In Files App", "Turn a practice off to hide its files")
+def _(s):
+    @s.given("the Files app shows the Stories toggle filled")
+    def _(world):
+        world.project.seed_session(CHECKOUT_FLOW_WITHOUT_DDD)
+
+    @s.when("the Person turns Stories off")
+    def _(world):
+        world.Ticket.load(CHECKOUT_FLOW.name).session.update_guidance_selection(practices=[key for key in practices_saved(world) if key != "stories"])
+
+    @s.then("checkout-flow's session no longer works on Stories")
+    def _(world):
+        expect("stories" in practices_saved(world)).to(equal(False))
 
 
 # --- View Files In Rich Viewer ------------------------------------------------------------------------------------
