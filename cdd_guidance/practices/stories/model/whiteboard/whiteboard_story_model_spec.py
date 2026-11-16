@@ -70,11 +70,13 @@ with description("a story map's thin slice drawn on a Claude whiteboard") as sel
         self.board = Whiteboard.from_text(self.story_map.save_thin_slice())
         self.lanes = [element for element in self.board.elements if element.role == "lane"]
 
-    with it("should draw one lane per increment, each below the one before it"):
-        expect([(lane.text, lane.box.x) for lane in self.lanes]).to(equal([("Walking Skeleton", 20), ("Next Slice", 20)]))
+    with it("should draw one lane per increment, each below the one before it, its name in a label at its left"):
+        labels = [element for element in self.board.elements if element.role == "increment"]
+        expect([(label.text, lane.holds(label), label.box.x < min(card.box.x for card in self.board.elements if card.role == "story"))
+                for lane, label in zip(self.lanes, labels)]).to(equal([("Walking Skeleton", True, True), ("Next Slice", True, True)]))
         expect(self.lanes[0].box.y + self.lanes[0].box.h).to(be_below(self.lanes[1].box.y))
 
-    with it("should put each lane's stories inside it, in the map's order"):
+    with it("should put each lane's stories inside it"):
         cards = [element for element in self.board.elements if element.role == "story"]
         expect(sorted(sum(1 for card in cards if lane.holds(card)) for lane in self.lanes)).to(equal([2, 2]))
 

@@ -124,6 +124,14 @@ with description("a whiteboard") as self:
             ops = [write.op for write in self.writes[1:]]
             expect(ops.index("delete")).to(be_below(min(ops.index("set"), ops.index("update"))))
 
+        with it("should clear a field the element no longer has"):
+            previous = Whiteboard("Orders")
+            previous.add(Section("lane.l1", box=Box(0, 0, 200, 120), text="Release 1"))
+            previous.versions = {"meta": 1, "lane.l1": 4}
+            board = Whiteboard("Orders")
+            board.add(Section("lane.l1", box=Box(0, 0, 200, 120)))
+            expect(board.writes(previous)[1]).to(equal(StoreWrite("update", "elements", "lane.l1", {"text": {"__delete__": True}}, 4)))
+
         with it("should write nothing for an element that did not change"):
             expect("elements/story.a1" in self.by_key).to(equal(False))
 

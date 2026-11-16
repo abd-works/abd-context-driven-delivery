@@ -18,6 +18,8 @@ BATCH_SIZE = 50
 """The most writes the artifact store takes in one batch."""
 MAX_SIDE = 8000
 """The widest or tallest block a board draws; the Whiteboard page draws a block over it at its default size."""
+CLEARED = {"__delete__": True}
+"""What an update writes for a field the element no longer has, so the store drops it."""
 PIECE_MARK = "~"
 """What joins a block's id to the number of each further piece of it."""
 
@@ -387,6 +389,7 @@ class Whiteboard:
                 found.append(StoreWrite("set", "elements", element.id, element.record))
                 continue
             changed = {name: value for name, value in element.record.items() if had.record.get(name) != value}
+            changed.update({name: CLEARED for name in had.record if name not in element.record})
             if changed:
                 found.append(StoreWrite("update", "elements", element.id, changed, before.versions.get(element.id)))
         return found

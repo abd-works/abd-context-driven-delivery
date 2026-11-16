@@ -49,8 +49,9 @@ class WhiteboardStory(LaidOutStory, _BoardStoryNode):
     grows a block too small for its words over its neighbours, so the card is sized for a story name of three lines
     at the board's small text, and cards stand the board's 24 units apart."""
 
-    card_width = 160
-    size = 112
+    size = 152
+    card_width = size
+    """A story card is square, as drawio draws it, and big enough for its actor and a name of three lines."""
     pitch = card_width + 24
     column_pad = 12
     row_y = 280
@@ -162,11 +163,14 @@ class WhiteboardStoryModel(DiagramStoryModel):
         lanes = sorted((element for element in board.whole_elements if isinstance(element, Section) and element.role == "lane"),
                        key=lambda lane: lane.box.y)
         cards = [element for element in board.whole_elements if isinstance(element, Shape) and element.role == "story"]
+        labels = [element for element in board.whole_elements if isinstance(element, Shape) and element.role == "increment"]
         increments = []
         for lane in lanes:
             held = sorted((card for card in cards if lane.holds(card)), key=lambda card: (card.box.y, card.box.x))
             names = [_BoardCell(card).text for card in held]
-            increments.append(self.increment_type(lane.text.strip(), len(increments) + 1, self.stories_named(names)))
+            label = next((found for found in labels if lane.holds(found)), None)
+            name = label.text.strip() if label is not None else lane.text.strip()
+            increments.append(self.increment_type(name, len(increments) + 1, self.stories_named(names)))
         self.increments.refill(increments)
         return self
 
@@ -174,19 +178,21 @@ class WhiteboardStoryModel(DiagramStoryModel):
 class _ThinSliceBoard:
     """A story map's thin slice drawn as board elements, in the layout the diagram model gives every format."""
 
-    LANE_TITLE_ROOM = 52
     LANE_INSET = 24
     LANE_GAP = 24
+    LABEL_WIDTH = 200
+    """The increment's name sits in a label at the left of its lane, as drawio draws it, and the columns start after it."""
 
     def __init__(self, story_map: WhiteboardStoryModel) -> None:
         self.story_map = story_map
+        self.left = WhiteboardEpic.first_x + self.LABEL_WIDTH + self.LANE_GAP
         self.columns = story_map.thin_slice_columns()
         self.lanes = story_map.thin_slice_lanes(self.columns)
         self.widths = story_map.thin_slice_widths(self.columns, self.lanes, WhiteboardStory.pitch, WhiteboardStory.column_pad)
 
     def board(self) -> Whiteboard:
         board = Whiteboard("Thin Slice")
-        left = WhiteboardEpic.first_x
+        left = self.left
         for index, (epic, sub) in enumerate(self.columns):
             if index == 0 or self.columns[index - 1][0] is not epic:
                 span = sum(width for (top, _), width in zip(self.columns, self.widths) if top is epic)
@@ -196,7 +202,7 @@ class _ThinSliceBoard:
                 board.add(Shape(f"subepic.{sub.depth}.{sub.board_key}", box=Box(left, DiagramEpic.nested_row_y, self.widths[index] - WhiteboardEpic.bar_gap, DiagramEpic.bar_height),
                                 kind="rounded", color="green", size="body", text=sub.name))
             left += self.widths[index]
-        top = DiagramEpic.nested_row_y + DiagramEpic.bar_height + self.LANE_TITLE_ROOM
+        top = DiagramEpic.nested_row_y + DiagramEpic.bar_height + self.LANE_GAP
         for increment, held in self.lanes:
             top = self._draw_lane(board, increment, held, top)
         return board
@@ -204,13 +210,15 @@ class _ThinSliceBoard:
     def _draw_lane(self, board: Whiteboard, increment, held: dict, top: float) -> float:
         lane_key = hashlib.sha1(f"lane:{increment.name}".encode("utf-8")).hexdigest()[:KEY_LENGTH]
         height = WhiteboardStory.size + 2 * self.LANE_INSET
-        board.add(Section(f"lane.{lane_key}", box=Box(WhiteboardEpic.first_x, top, sum(self.widths), height), color="white", text=increment.name))
+        board.add(Section(f"lane.{lane_key}", box=Box(WhiteboardEpic.first_x, top, self.left - WhiteboardEpic.first_x + sum(self.widths), height), color="white"))
+        board.add(Shape(f"increment.{lane_key}", box=Box(WhiteboardEpic.first_x + self.LANE_INSET, top + self.LANE_INSET, self.LABEL_WIDTH - self.LANE_INSET, WhiteboardStory.size),
+                        kind="rounded", color="white", size="body", text=increment.name))
         for column, stories in held.items():
-            column_left = WhiteboardEpic.first_x + sum(self.widths[:column]) + WhiteboardStory.column_pad
+            column_left = self.left + sum(self.widths[:column]) + WhiteboardStory.column_pad
             for place, story in enumerate(self._map_story(story) for story in stories):
                 if isinstance(story, WhiteboardStory):
                     board.add(story.lane_card(lane_key, column_left + place * WhiteboardStory.pitch, top + self.LANE_INSET))
-        return top + height + self.LANE_GAP + self.LANE_TITLE_ROOM
+        return top + height + self.LANE_GAP
 
     def _map_story(self, story):
         """The map's own whiteboard story of this name, which carries the card's actor and size."""
