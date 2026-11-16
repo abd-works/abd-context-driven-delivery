@@ -11,12 +11,15 @@
       "specification",
       "implementation"
     ],
-    "version": 77
+    "version": 78
   },
   "practices": {
     "stories": {
       "formats": {
-        "story_map": [],
+        "story_map": [
+          "drawio",
+          "whiteboard"
+        ],
         "scenarios": [
           "python"
         ],
@@ -35,12 +38,17 @@
     },
     "clean_engineering": {
       "formats": {
-        "modules": [],
+        "modules": [
+          "drawio",
+          "whiteboard"
+        ],
         "code": [
           "python"
         ],
         "model": [
-          "python"
+          "python",
+          "drawio",
+          "whiteboard"
         ]
       },
       "enabled": true
