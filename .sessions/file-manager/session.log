@@ -113,3 +113,9 @@
 2026-11-16T06:09:25Z tool session.read_handoff_format af5894a3-9c9f-4aa3-be83-2ef5749adcca C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\af5894a3-9c9f-4aa3-be83-2ef5749adcca.jsonl 1-6358
 2026-11-16T06:09:53Z tool session.write_handoff af5894a3-9c9f-4aa3-be83-2ef5749adcca C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\af5894a3-9c9f-4aa3-be83-2ef5749adcca.jsonl 1-6361
 2026-11-16T15:54:14Z tool cdd-version.set_next af5894a3-9c9f-4aa3-be83-2ef5749adcca C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\af5894a3-9c9f-4aa3-be83-2ef5749adcca.jsonl 1-6436
+2026-11-16T15:55:39Z tool sessions.switch 5731abe5-a4c7-449c-9703-c87f3bda7c50 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\5731abe5-a4c7-449c-9703-c87f3bda7c50.jsonl 1-49
+2026-11-16T15:55:41Z error session.folder_files C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 312 5731abe5-a4c7-449c-9703-c87f3bda7c50 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\5731abe5-a4c7-449c-9703-c87f3bda7c50.jsonl 1-60
+2026-11-16T15:56:03Z tool app.open 5731abe5-a4c7-449c-9703-c87f3bda7c50 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\5731abe5-a4c7-449c-9703-c87f3bda7c50.jsonl 1-107
+2026-11-16T15:56:03Z error app.open C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 344 5731abe5-a4c7-449c-9703-c87f3bda7c50 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\5731abe5-a4c7-449c-9703-c87f3bda7c50.jsonl 1-107
+2026-11-16T15:56:05Z tool app.open 5731abe5-a4c7-449c-9703-c87f3bda7c50 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\5731abe5-a4c7-449c-9703-c87f3bda7c50.jsonl 1-112
+2026-11-16T15:56:18Z tool app.open 5731abe5-a4c7-449c-9703-c87f3bda7c50 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\5731abe5-a4c7-449c-9703-c87f3bda7c50.jsonl 1-152
