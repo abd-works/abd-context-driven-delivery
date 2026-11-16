@@ -260,8 +260,8 @@ Requested (the person, 2026-11-15): two buttons. All session files lists every f
 
 *Given* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) was opened from *checkout-chat*, which has checked in
 *When* the Person turns DDD on in the Files app
-*Then* *checkout-chat* gets a refresh
-*And* *checkout-chat*'s chat bar reads the board again and shows ddd-bounded-context's dot
+*Then* *checkout-chat*'s chat bar, waiting on [session.guidance_selection_after](../../../space/session/session.py), shows ddd-bounded-context's dot
+*And* no refresh message is sent to *checkout-chat*
 
 #### Scenario: Show a practice turned off on the chat bar in the Files app
 
