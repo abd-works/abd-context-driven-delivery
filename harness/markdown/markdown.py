@@ -6,7 +6,10 @@ import functools
 import threading
 import html
 import inspect
+import os
 import re
+import stat
+import time
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Callable, ClassVar, Literal, TypeVar, get_args, get_origin, get_type_hints
@@ -26,6 +29,7 @@ __all__ = [
     "MarkdownScope",
     "MarkdownText",
     "MarkdownTypeUnresolved",
+    "SOURCE_STAMPS",
     "markdown",
     "markdownCollection",
 ]
@@ -247,6 +251,48 @@ class MarkdownText:
         return self.slice_heading(heading)
 
 
+class SourceStamps:
+    """When each file or folder of the guidance a process ships was last written, and its size: what tells a cache of
+    that guidance it was edited. The guidance's own packages register their folders; a path under one is looked at again
+    at most once every ``STEADY_SECONDS``, so an edit is seen within a second. Every session, board read and spec builds
+    the practices again and asks for the same few hundred files and folders, and asking the file system each time was
+    most of what a board read and a spec cost. Any other path, such as a session's own files, is looked at every time."""
+
+    STEADY_SECONDS = 1.0
+
+    def __init__(self) -> None:
+        self._roots: tuple[str, ...] = ()
+        self._seen: dict[str, tuple[float, tuple[int, int, bool] | None]] = {}
+        self._lock = threading.Lock()
+
+    def hold_steady(self, *folders: Path | str) -> None:
+        """Look at what is under folders at most once every STEADY_SECONDS: the folders of guidance this process ships."""
+        added = tuple(os.path.normcase(os.path.abspath(str(folder))) + os.sep for folder in folders)
+        with self._lock:
+            self._roots = tuple(dict.fromkeys(self._roots + added))
+
+    def of(self, path: Path) -> tuple[int, int, bool] | None:
+        """path's last-written time, its size, and whether it is a file; none when nothing is there."""
+        key = os.path.normcase(os.path.abspath(path))
+        steady = key.startswith(self._roots) if self._roots else False
+        now = time.monotonic()
+        if steady:
+            seen = self._seen.get(key)
+            if seen is not None and now - seen[0] < self.STEADY_SECONDS:
+                return seen[1]
+        try:
+            status = os.stat(key)
+            stamp: tuple[int, int, bool] | None = (status.st_mtime_ns, status.st_size, stat.S_ISREG(status.st_mode))
+        except (FileNotFoundError, NotADirectoryError):
+            stamp = None
+        if steady:
+            self._seen[key] = (now, stamp)
+        return stamp
+
+
+SOURCE_STAMPS = SourceStamps()
+
+
 class ReadDocuments:
     """Every markdown file this process has read, parsed once and shared: a practice's document is read for each of its
     sections, and again by every session that makes the practice. A file is read again once its last-written time or
@@ -257,12 +303,11 @@ class ReadDocuments:
         self._lock = threading.Lock()
 
     def of(self, path: Path) -> MarkdownText | None:
-        """The parsed document at path; none when there is no file."""
-        try:
-            status = path.stat()
-        except (FileNotFoundError, NotADirectoryError):
+        """The parsed document at path; none when there is no file there."""
+        stamp = SOURCE_STAMPS.of(path)
+        if stamp is None or not stamp[2]:
             return None
-        version = (status.st_mtime_ns, status.st_size)
+        version = stamp[:2]
         with self._lock:
             held = self._held.get(path)
             if held is not None and held[0] == version:
@@ -284,7 +329,7 @@ class MarkdownFile:
         self._heading = heading
 
     def _load(self) -> MarkdownText | None:
-        return READ_DOCUMENTS.of(self._path) if self._path.is_file() else None
+        return READ_DOCUMENTS.of(self._path)
 
     def section_exists(self) -> bool:
         if not self._heading:
@@ -525,10 +570,8 @@ class AssetLocator:
         """When each folder a search looks in last had an entry added, removed, or renamed; none for one not there."""
         changed_at: list[int | None] = []
         for folder in (self._module_dir, *self._template_folders()):
-            try:
-                changed_at.append(folder.stat().st_mtime_ns)
-            except OSError:
-                changed_at.append(None)
+            stamp = SOURCE_STAMPS.of(folder)
+            changed_at.append(stamp[0] if stamp is not None else None)
         return tuple(changed_at)
 
     def _locate(self) -> AssetLocation:
