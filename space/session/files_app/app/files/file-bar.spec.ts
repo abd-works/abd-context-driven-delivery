@@ -1,7 +1,7 @@
 // Switch File Bar Between Folders And List, as
 // harness/.context/stories/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md writes it. Only the
 // page shows it: the session answers the same files either way, so it has no step in the Python story tiers.
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 
 import type { CddApi } from '@cdd/cdd-shared'
 import type { FileEntryData } from '@cdd/space/session/session'
@@ -9,6 +9,7 @@ import type { FileEntryData } from '@cdd/space/session/session'
 import { treeOf, type FileFolder } from './file-bar'
 import { FilesLink } from './files-link'
 import { FilesPage } from './files-page'
+import { FILE_BAR_WIDTH } from './files-state'
 
 const STORY_MAP = '.context/story-map.md'
 const ORDER = 'src/checkout/order.py'
@@ -114,6 +115,42 @@ describe('Switch File Bar Between Folders And List', () => {
         page.store.change(state => ({ entries: [entry(STORY_MAP, true), ...state.entries] }))
         expect(page.fileBar.isOpen(folderShown(page, '.context')!)).toBe(false)
       })
+    })
+  })
+})
+
+describe('Resize File Bar', () => {
+  // Each example starts in a browser that remembers no width.
+  beforeEach(() => window.localStorage.clear())
+
+  it('should start at its usual width', async () => {
+    expect((await pageWithOrderOpen()).state.fileBar.width).toBe(FILE_BAR_WIDTH.usual)
+  })
+
+  describe('that the Person drags wider', () => {
+    it('should take the width it was dragged to', async () => {
+      const page = await pageWithOrderOpen()
+      page.fileBar.resize(420)
+      expect(page.state.fileBar.width).toBe(420)
+    })
+
+    it('should open the next page at that width', async () => {
+      ;(await pageWithOrderOpen()).fileBar.resize(420)
+      expect((await pageWithOrderOpen()).state.fileBar.width).toBe(420)
+    })
+  })
+
+  describe('that the Person drags past either end', () => {
+    it('should stop at its narrowest width', async () => {
+      const page = await pageWithOrderOpen()
+      page.fileBar.resize(20)
+      expect(page.state.fileBar.width).toBe(FILE_BAR_WIDTH.narrowest)
+    })
+
+    it('should stop at its widest width', async () => {
+      const page = await pageWithOrderOpen()
+      page.fileBar.resize(5000)
+      expect(page.state.fileBar.width).toBe(FILE_BAR_WIDTH.widest)
     })
   })
 })

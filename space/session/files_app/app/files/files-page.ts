@@ -1,12 +1,15 @@
 import type { CddApi } from '@cdd/cdd-shared'
-import { ChatClientGenerated } from '@cdd/harness/chat/chat'
 import { TicketClientGenerated } from '@cdd/space/kanban/ticket'
 import { SessionClientGenerated, type FileEntryData, type GuidanceSelectionData } from '@cdd/space/session/session'
 
+import { ChatContext } from './chat-context'
 import { FileBar } from './file-bar'
+import { FileBrowser } from './file-browser'
 import { FileCommentsActions } from './file-comments-actions'
+import { FileMenu } from './file-menu'
 import type { FilesLink } from './files-link'
-import { isDrawio, REVEAL_PATH } from './files-paths'
+import { FilesNotices } from './files-notices'
+import { isDrawio } from './files-paths'
 import { FilesStore, type FidelityFiles } from './files-state'
 import { formatGlyphOf } from './format-chips'
 import { GuidanceSelector } from './guidance-selector'
@@ -14,7 +17,6 @@ import { GuidanceSelector } from './guidance-selector'
 // While a comment on the open file is with a chat, the file is read again this often, so the chat's change and the
 // comment's processed state show without a reload. Nothing else is read again: never the list, never a board.
 export const SENT_REFRESH_MILLISECONDS = 2_000
-const TOAST_MILLISECONDS = 8_000
 
 const reasonOf = (failure: unknown): string => (failure instanceof Error ? failure.message : String(failure))
 
@@ -53,17 +55,21 @@ export class FilesPage {
   readonly comments: FileCommentsActions
   readonly fileBar = new FileBar(this.store)
   readonly guidance: GuidanceSelector
+  readonly notices: FilesNotices
+  readonly chatContext: ChatContext
+  readonly menu: FileMenu
   private refreshTimer: ReturnType<typeof setTimeout> | null = null
-  // The failures already shown here and sent to the chat that opened the page.
-  private readonly toldChat = new Set<string>()
 
   constructor(
     readonly api: CddApi,
     readonly link: FilesLink,
   ) {
     this.session = SessionClientGenerated.named(api, link.sessionFile)
+    this.notices = new FilesNotices(this.store, api, link.chat)
+    this.chatContext = new ChatContext(this.session, link.chat, this.notices)
+    this.menu = new FileMenu(this.store, this.chatContext, new FileBrowser(api, this.notices))
     this.comments = new FileCommentsActions(this)
-    this.guidance = new GuidanceSelector(this.session, this.store, () => this.showSelected(), (failure, context) => this.fail(failure, context))
+    this.guidance = new GuidanceSelector(this.session, this.store, () => this.showSelected(), (failure, context) => this.notices.fail(failure, context))
   }
 
   get state() {
@@ -73,7 +79,8 @@ export class FilesPage {
   // Read the files the link names and open the one it names, else the first; reading the open file again whenever the
   // person comes back to the page. Answers what stops it.
   start(): () => void {
-    const uncaught = (failure: unknown) => this.fail(`The Files page met a failure nothing caught: ${reasonOf(failure)}`, 'An uncaught failure in the Files page')
+    this.fileBar.restoreWidth()
+    const uncaught = (failure: unknown) => this.notices.fail(`The Files page met a failure nothing caught: ${reasonOf(failure)}`, 'An uncaught failure in the Files page')
     const onError = (event: ErrorEvent) => uncaught(event.error ?? event.message)
     const onRejection = (event: PromiseRejectionEvent) => uncaught(event.reason)
     window.addEventListener('error', onError)
@@ -105,7 +112,7 @@ export class FilesPage {
       const session = await this.session.show()
       if (session) this.store.change(() => ({ place: [session.repoName, session.branch, session.root].filter(Boolean).join(' · ') }))
     } catch (failure) {
-      this.fail(`The Files app did not read where the session works: ${reasonOf(failure)}`, 'Opening the Files app, calling session.show')
+      this.notices.fail(`The Files app did not read where the session works: ${reasonOf(failure)}`, 'Opening the Files app, calling session.show')
     }
   }
 
@@ -119,7 +126,7 @@ export class FilesPage {
       if (first) await this.open(first)
     } catch (failure) {
       this.store.change(() => ({ isListing: false, problem: `The files did not list: ${reasonOf(failure)}` }))
-      this.fail(`The Files app did not list the files: ${reasonOf(failure)}`, `Opening the Files app on ${this.link.subject}`, { isShownOnPage: true })
+      this.notices.fail(`The Files app did not list the files: ${reasonOf(failure)}`, `Opening the Files app on ${this.link.subject}`, { isShownOnPage: true })
     }
   }
 
@@ -145,7 +152,7 @@ export class FilesPage {
       const rootFiles = (await TicketClientGenerated.named(this.api, this.link.ticket).rootFiles()) ?? []
       this.store.change(state => ({ rootFiles, entries: this.shownFrom({ ...state, rootFiles }) }))
     } catch (failure) {
-      this.fail(`The Files app did not list the files under the session's root: ${reasonOf(failure)}`, 'Opening the Files app, calling ticket.root_files')
+      this.notices.fail(`The Files app did not list the files under the session's root: ${reasonOf(failure)}`, 'Opening the Files app, calling ticket.root_files')
     }
   }
 
@@ -173,7 +180,7 @@ export class FilesPage {
       this.store.change(state => ({ byFidelity: [...state.byFidelity, ...read.filter(each => !state.byFidelity.some(held => held.slug === each.slug))] }))
       this.store.change(state => ({ entries: this.shownFrom(state) }))
     } catch (failure) {
-      this.fail(`The Files app did not list the files of ${missing.join(', ')}: ${reasonOf(failure)}`, 'Showing the stages and practices selected')
+      this.notices.fail(`The Files app did not list the files of ${missing.join(', ')}: ${reasonOf(failure)}`, 'Showing the stages and practices selected')
     }
   }
 
@@ -181,20 +188,6 @@ export class FilesPage {
   // work included. The stages, practices and formats selected filter both.
   showScope(scope: 'session' | 'all'): void {
     this.store.change(() => ({ scope }))
-  }
-
-  // A press on a stage, practice, or format button: the session's one guidance selection, which the chat bar's buttons
-  // show too.
-  toggleStage(name: string): Promise<void> {
-    return this.guidance.toggleStage(name)
-  }
-
-  togglePractice(key: string): Promise<void> {
-    return this.guidance.togglePractice(key)
-  }
-
-  toggleFormat(label: string): Promise<void> {
-    return this.guidance.toggleFormat(label)
   }
 
   // Why the list is empty: the formats selected hold none of the files of the fidelities listed, such as code at a stage
@@ -220,46 +213,6 @@ export class FilesPage {
     await this.refreshOpen()
   }
 
-  // A right-click on a file or folder shows its menu where the person clicked.
-  openMenu(path: string, x: number, y: number): void {
-    this.store.change(() => ({ menu: { path, x, y } }))
-  }
-
-  closeMenu(): void {
-    this.store.change(() => ({ menu: null }))
-  }
-
-  // The file the menu is on, added whole to the context of the chat that opened the page.
-  async addToContext(): Promise<void> {
-    const path = this.state.menu?.path
-    this.closeMenu()
-    if (path) await this.addLinesToContext(path)
-  }
-
-  // A file, or lines of it, added to the context of the chat that opened the page: the session puts them in its prompt
-  // box, to go with the person's next prompt, as Claude's own file viewer does.
-  async addLinesToContext(path: string, lines?: { start: number; end: number }): Promise<void> {
-    const name = path.split('/').at(-1) ?? path
-    try {
-      await this.session.addToChatContext(this.link.chat, path, lines?.start, lines?.end)
-      this.toast(`${name} added to the chat's context`)
-    } catch (failure) {
-      this.fail(`${name} was not added to the chat's context: ${reasonOf(failure)}`, `Adding ${path} to the chat's context`)
-    }
-  }
-
-  // The file or folder the menu is on, shown in the system's file browser by the Files server, on this machine.
-  async reveal(): Promise<void> {
-    const path = this.state.menu?.path
-    this.closeMenu()
-    if (!path) return
-    try {
-      await this.api.post(REVEAL_PATH, { path })
-    } catch (failure) {
-      this.fail(`${path} did not open in the file browser: ${reasonOf(failure)}`, `Opening ${path} in the file browser`)
-    }
-  }
-
   async open(path: string): Promise<void> {
     this.store.change(() => ({ openPath: path, file: null }))
     // A .drawio file shows in the draw.io editor beside the file list, which reads the file itself.
@@ -280,7 +233,7 @@ export class FilesPage {
       if (file?.comments.some(comment => comment.state === 'sent')) this.refreshTimer = setTimeout(() => void this.refreshOpen(), SENT_REFRESH_MILLISECONDS)
     } catch (failure) {
       this.store.change(() => ({ problem: `${path} did not open: ${reasonOf(failure)}` }))
-      this.fail(`The Files app did not open ${path}: ${reasonOf(failure)}`, `Opening ${path} in the Files app`, { isShownOnPage: true })
+      this.notices.fail(`The Files app did not open ${path}: ${reasonOf(failure)}`, `Opening ${path} in the Files app`, { isShownOnPage: true })
     }
   }
 
@@ -289,37 +242,12 @@ export class FilesPage {
     this.refreshTimer = null
   }
 
-  // Every failure in the page goes through here: it is shown here and sent to the chat that opened the page, which shows
-  // it on its chat bar as it shows its own, so the person can have the chat fix it. A failure the page already shows in
-  // its problem line gets no toast as well. Each failure is shown and sent once, however often a read every few seconds
-  // or a return to the page meets it again.
-  fail(failure: string, context: string, { isShownOnPage = false } = {}): void {
-    if (this.toldChat.has(failure)) return
-    this.toldChat.add(failure)
-    if (!isShownOnPage) this.toast(failure)
-    this.tellChat(failure, context)
-  }
-
-  // A failure that cannot reach the chat stays on the page, since telling the chat again would fail the same way.
-  private tellChat(failure: string, context: string): void {
-    if (!this.link.chat) return
-    const told = ChatClientGenerated.named(this.api, this.link.chat).send('failure', JSON.stringify({ failure, context }))
-    void told.catch(reason => this.toast(`The chat was not told: ${reasonOf(reason)}`))
-  }
-
-  // A toast already showing is not shown twice: toasts are known by their text, and two alike confuse the list.
-  toast(text: string): void {
-    if (this.state.toasts.includes(text)) return
-    this.store.change(state => ({ toasts: [...state.toasts, text] }))
-    setTimeout(() => this.store.change(state => ({ toasts: state.toasts.filter(shown => shown !== text) })), TOAST_MILLISECONDS)
-  }
-
   async attempt(what: string, work: () => Promise<unknown>): Promise<boolean> {
     try {
       await work()
       return true
     } catch (failure) {
-      this.fail(`${what}: ${reasonOf(failure)}`, 'A press on a comment in the Files app')
+      this.notices.fail(`${what}: ${reasonOf(failure)}`, 'A press on a comment in the Files app')
       return false
     } finally {
       await this.refreshOpen()

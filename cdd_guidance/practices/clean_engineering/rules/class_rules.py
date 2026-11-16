@@ -23,11 +23,13 @@ def _is_accessor(name: str) -> bool:
 
 
 def _public_operations_for_budget(shapes: list[dict]) -> list[str]:
-    """Public behavior only: property getters and setters do not count."""
+    """Public behavior only: property getters and setters do not count, nor an operation declared private, by a leading
+    `_` or by the language's own keyword."""
     return [
         str(shape["name"])
         for shape in shapes
         if not str(shape["name"]).startswith("_")
+        and not shape.get("is_private")
         and shape["name"] not in {"constructor", "__init__", "get", "set"}
         and not shape.get("is_property")
         and not _is_accessor(str(shape["name"]))

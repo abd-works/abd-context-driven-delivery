@@ -232,6 +232,9 @@ class CFamilyParse:
             if re.search(r"\bget\s+\w+\s*\(", header) or re.search(r"\bset\s+\w+\s*\(", header):
                 filled.is_property = True
             filled.is_static = bool(re.search(r"\bstatic\b", prefix) or re.search(r"\bstatic\b", header))
+            # Only the method's own line can declare it private: a `private` further up belongs to another member.
+            own_line = prefix.rsplit("\n", 1)[-1] + header.split("(", 1)[0]
+            filled.is_private = bool(re.search(r"\bprivate\b", own_line))
             ops.append(filled)
         return ops
 
