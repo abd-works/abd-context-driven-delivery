@@ -7,15 +7,14 @@ const POLL_INTERVAL_MS = 300;
 
 /**
  * The message a notice file holds; empty while the file holds no notice. The notifier writes the file whole, but a
- * read can land on it half written, which is no notice yet: the next poll reads it again.
+ * read can land on it half written, which is no notice yet: the next poll reads it again. A file that is written
+ * whole (it ends its JSON object) and still does not parse is broken: that raises, so the watcher reports it.
  */
 function messageFromNotice(raw) {
-  let body;
-  try {
-    body = JSON.parse(raw);
-  } catch {
+  if (!raw.trimEnd().endsWith("}")) {
     return "";
   }
+  const body = JSON.parse(raw);
   return typeof body.message === "string" ? body.message.trim() : "";
 }
 
@@ -32,6 +31,7 @@ class NoticeWatcher {
   constructor(watching) {
     this.folders = watching.folders;
     this.onMessage = watching.onMessage;
+    this.onBroken = watching.onBroken || ((file, err) => console.error(`prompt-notify: ${file} is not a notice: ${err.message}`));
     this.seen = watching.seen || new Map();
     this.fileSystem = watching.fs || fs;
     this.intervalMs = watching.intervalMs || POLL_INTERVAL_MS;
@@ -95,7 +95,14 @@ class NoticeWatcher {
     if (this.seen.get(file) === raw) {
       return;
     }
-    const message = messageFromNotice(raw);
+    let message;
+    try {
+      message = messageFromNotice(raw);
+    } catch (err) {
+      this.seen.set(file, raw);
+      this.onBroken(file, err);
+      return;
+    }
     if (!message) {
       return;
     }

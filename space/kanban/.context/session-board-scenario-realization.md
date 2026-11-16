@@ -308,22 +308,22 @@ it should unlock every ticket with Active session only off
 
 ```
 it should say what runs next
--> TicketClient.nextNote
+-> TicketFace.nextNote
 ```
 
 ```
 it should say another session must be activated to run it
--> TicketClient.lockNote
+-> TicketFace.lockNote
 ```
 
 ```
 it should name a split ticket by its parent
--> TicketClient.origin
+-> TicketFace.origin
 ```
 
 ```
 it should name the ticket's stage and how far it has got there
--> TicketClient.stagePlace
+-> TicketFace.stagePlace
 ```
 
 ```
@@ -341,7 +341,7 @@ it should offer the review with no chat connected, since it is the person\'s own
   -> BoardStore.change()
     -> board-store.saveLayout()
     -> BoardStore.dismissToast()
--> TicketClient.canRunNext
+-> TicketNextStep.canRun
 ```
 
 ```
@@ -350,7 +350,7 @@ it should show the review done once Run next records it
   -> BoardStore.change()
     -> board-store.saveLayout()
     -> BoardStore.dismissToast()
--> TicketClient.runNext()
+-> TicketNextStep.run()
 -> TicketClient.actionsOf('stories-story-map')
 ```
 
@@ -400,7 +400,7 @@ it should select its item
 
 ```
 it should let a ticket in any column be dropped on the Backlog
--> TicketClient.dropOn('Backlog')
+-> TicketDrops.dropOn('Backlog')
   -> TicketClient.moveTo()
     -> cdd ticket.move_to
       -> Ticket.move_to(stage: str, done: bool)
@@ -426,38 +426,38 @@ it should let a ticket in any column be dropped on the Backlog
 
 ```
 it should let only the active ticket, or one done in Implementation, be dropped on Complete
--> TicketClient.canDropOn('Complete')
+-> TicketDrops.canDropOn('Complete')
 ```
 
 ### Send Next Fidelity Action
 
 ```
 it should name the step that runs next
--> TicketClient.runNextLabel
+-> TicketFace.runNextLabel
 ```
 
 ```
 it should say review violations on held violations
--> TicketClient.runNextLabel
+-> TicketFace.runNextLabel
 ```
 
 #### with generate next
 
 ```
 it should send the generate command in the default format
--> TicketClient.runNext()
+-> TicketNextStep.run()
 ```
 
 #### with generate next on a fidelity of a stage the ticket has moved past
 
 ```
 it should generate it in its own stage's default format
--> TicketClient.runNext()
+-> TicketNextStep.run()
 ```
 
 ```
 it should mark its tile as the next one
--> TicketClient.runNext()
+-> TicketNextStep.run()
 -> BoardPage.board
 -> BoardClient.stageNamed('Discovery')
 -> TicketClient.isNext(discovery, 'stories-story-map')
@@ -465,24 +465,24 @@ it should mark its tile as the next one
 
 ```
 it should fill the prompt on validate
--> TicketClient.runNext()
+-> TicketNextStep.run()
 ```
 
 #### with violations held and no chat connected
 
 ```
 it should still offer Run next
--> TicketClient.canRunNext
+-> TicketNextStep.canRun
 ```
 
 ```
 it should open the report
--> TicketClient.runNext()
+-> TicketNextStep.run()
 ```
 
 ```
 it should stay off with no chat to send to
--> TicketClient.canRunNext
+-> TicketNextStep.canRun
 ```
 
 ### Choose Ticket Practices

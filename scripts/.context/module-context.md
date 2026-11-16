@@ -3,7 +3,7 @@ The scripts are the command lines a person, a slash command, or a cloud session 
 
 *Install* (`install.py`, with `install.ps1` and `install-latest.py`) installs CDD into an IDE's folder through the *Installer* and decides which code the shared cdd server serves: pinned to a commit in `~/.cdd/runtime`, or this checkout as it is on disk. `--from-latest` pulls origin main first and reports each step as it starts and ends, so the `/install-latest` command can show progress in the chat.
 
-*Test* (`test.ps1`, `test-with-agent-bdd.ps1`) runs one tier of the suite: unit, heavy, or e2e. The unit tier puts `unit_guard/` first on the Python path, so every spec process times its examples against the unit budget.
+*Test* (`test.ps1`, `test-with-agent-bdd.ps1`) runs one tier of the suite: unit, heavy, or e2e. The unit tier puts `unit_guard/` on the Python path and runs every spec with its output format `budget_formatter.BudgetDocumentation`, so every spec process times its examples against the unit budget.
 
 *ServiceStart* (`start.py`, with `start_hook.py`, `start_graph_app.py`, `start_graph_web.py`) stops every running copy of a service started from this checkout, starts one, and waits until it answers its ping. *HookPing* and *HttpPing* (`instances.py`, with `ping_hook.py` and `ping_graph_web.py`) ping a service and stop the extra copies, keeping the one that answers. *RepoProcesses* lists the processes started from this checkout and the ports they listen on; *HttpService* names a service by its command line, its ports, and the name its `/ping` gives; *PingAnswers* asks a port for that pong. Each prints one JSON report, so an agent can read the result.
 

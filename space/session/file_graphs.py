@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 from harness.graph.graph import Graph
 from harness.graph.saved_graph import GRAPH_FILE_NAME, SavedGraph
-from harness.guidance.practice_catalogue import PracticeCatalogue
+from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 
 if TYPE_CHECKING:
     from space.session.session import Session
@@ -43,7 +43,7 @@ class FileGraphs:
         modified = path.stat().st_mtime if path.is_file() else -1.0
         with self._alone_lock:
             if self._alone is None or self._alone[0] != working:
-                practices = [practice for practice in PracticeCatalogue.create_all() if practice.key in working]
+                practices = [practice for practice in PRACTICE_CATALOGUE.create_all() if practice.key in working]
                 self._alone = (working, Graph(practices), None)
             _working, graph, read = self._alone
             if read != (path, modified):

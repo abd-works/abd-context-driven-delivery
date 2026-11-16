@@ -38,7 +38,7 @@ export class ActivationClient {
     if (!activated) return
     const opened = this.page.ticket(activated.toJSON())
     opened.choose()
-    if (!opened.chat.found) return opened.openChat()
+    if (!opened.chat.found) return opened.chatOpening.open()
     this.page.store.toast(`${opened.title} is open in its worktree ${opened.worktree} · its chat is chosen`)
   }
 

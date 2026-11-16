@@ -12,7 +12,7 @@ from pathlib import Path
 
 from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import noSessionLog, tool_subject
-from harness.chat.chat import Chat
+from harness.chat.chat import links_of_run
 from harness.installation.data_class import data_field
 from harness.installation.files import command
 from harness.installation.json_file import JsonFile
@@ -95,7 +95,7 @@ class NewChat:
 
     @property
     def link(self) -> str:
-        return Chat.opener.link_to_new(str(self._root), self.first_prompt)
+        return links_of_run().link_to_new(str(self._root), self.first_prompt)
 
     @property
     def instructions(self) -> str:
@@ -108,7 +108,7 @@ class NewChat:
     def open(self) -> str:
         """Hand the link to the desktop app; when the system cannot open it, say how to start the chat instead."""
         try:
-            Chat.opener.hand_over(self.link)
+            links_of_run().hand_over(self.link)
         except (OSError, subprocess.SubprocessError):
             return self.instructions
         return f"Opened a new chat on {self._root} in the Claude app: send its first prompt there to open the session {self._session}."
@@ -116,8 +116,13 @@ class NewChat:
 class CddConfig:
     """The person's own cdd settings, in ``~/.cdd/config.json``: one object, read whole and written whole."""
 
-    def __init__(self, home: CddHome | None = None) -> None:
-        self.file = JsonFile((home or CddHome()).folder / _CONFIG_FILE)
+    def __init__(self, file: JsonFile) -> None:
+        self.file = file
+
+    @classmethod
+    def in_home(cls, home: CddHome) -> CddConfig:
+        """The settings file in home, ``config.json``."""
+        return cls(JsonFile(home.folder / _CONFIG_FILE))
 
     def value(self, key: str) -> str:
         found = self.file.read().get(key)
@@ -169,16 +174,16 @@ class SiblingRepo:
 class Repos:
     """The repositories in the repos folder, each a sibling of the others; opening one gives it its own chat."""
 
-    def __init__(self, project: Path | str, cdd_config: CddConfig | None = None) -> None:
+    def __init__(self, project: Path | str, cdd_config: CddConfig) -> None:
         # The checkout the calling chat works in: by default the repos folder is the folder its main clone sits in.
         self.project = Path(project).resolve()
-        self.cdd_config = cdd_config or CddConfig()
+        self.cdd_config = cdd_config
 
     @classmethod
     @tool_subject
     def load(cls, *, project: Path | str) -> Repos:
         """The repositories beside the checkout of project, the folder the calling chat works in."""
-        return cls(project)
+        return cls(project, CddConfig.in_home(CddHome()))
 
     @property
     def folder(self) -> Path:

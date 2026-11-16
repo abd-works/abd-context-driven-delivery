@@ -1,13 +1,17 @@
-import type { FormatChoiceData } from '@cdd/space/kanban/ticket'
+import type { FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
+import type { FormatChoiceData, StageWorkData } from '@cdd/space/kanban/ticket'
 
 import { ACTION_STANDINGS, countOf, STEP_FAILED } from '../shared/board-brand'
 import type { BoardPage } from '../board/board-page'
 import type { Tile } from '../shared/board-store'
 import type { FidelityProgressClient } from './fidelity-progress-client'
 import type { TicketClient } from './ticket-client'
-import type { WorkStanding } from './ticket-work'
 import { headPlace, slugsOf } from './tile-client'
 import { chosenFormats } from './tile-formats'
+
+// The work an action bar acts on, as Python sends it: a stage's work taken together (StageWork) on a stage head, one
+// fidelity's progress (FidelityProgress) on a tile. Both answer the same fields.
+type BarWork = StageWorkData | FidelityProgressData
 
 export type ChipFace = FormatChoiceData & { hint: string; isOn: boolean; isDone: boolean; count: string }
 export type StepFace = { mark: string; color: string; hint: string; text: string }
@@ -40,9 +44,9 @@ const stepFaceOf = (standing: string, name: string): StepFace => {
   return { mark, color, hint: `${name}: ${label}`, text: '' }
 }
 
-function validateFaceOf(work: WorkStanding): StepFace {
-  if (!work.hasViolations) return stepFaceOf(work.actions.validate, 'Validate')
-  const text = work.violationCount ? countOf(work.violationCount, 'violation') : 'violations'
+function validateFaceOf(work: BarWork): StepFace {
+  if (!work.has_violations) return stepFaceOf(work.actions.validate, 'Validate')
+  const text = work.violation_count ? countOf(work.violation_count, 'violation') : 'violations'
   return { mark: STEP_FAILED, color: 'var(--violations)', hint: text, text }
 }
 
@@ -55,7 +59,7 @@ export class TileActionsClient {
   }
 
   private save(tile: Tile, change: Partial<Tile>): void {
-    this.page.tiles.change(tile.ticket.name, tile.place, open => ({ ...open, ...change, isPinned: true }))
+    this.page.tiles.change(tile.ticket, tile.place, open => ({ ...open, ...change, isPinned: true }))
   }
 
   chooseAction(tile: Tile, action: string): void {
@@ -73,17 +77,17 @@ export class TileActionsClient {
 
   // A stage head's bar acts on the ticket's work in that stage, which Python answers taken together; a tile's bar acts
   // on its one fidelity.
-  private workOf(ticket: TicketClient, tile: Tile): WorkStanding | undefined {
+  private workOf(ticket: TicketClient, tile: Tile): BarWork | undefined {
     if (tile.place === headPlace(tile.stage.name)) return ticket.work.workIn(tile.stage)
-    return ticket.work.progressOn(tile.fidelities)[0]
+    return ticket.work.progressOn(tile.fidelities)[0]?.toJSON()
   }
 
   // Python says which actions have something to work on; Render waits for output to convert.
-  private allows(ticket: TicketClient, work: WorkStanding | undefined, action: string): boolean {
-    return !ticket.isLocked && Boolean(work?.allowedActions.includes(action))
+  private allows(ticket: TicketClient, work: BarWork | undefined, action: string): boolean {
+    return !ticket.isLocked && Boolean(work?.allowed_actions.includes(action))
   }
 
-  private canRun(ticket: TicketClient, tile: Tile, work: WorkStanding | undefined): boolean {
+  private canRun(ticket: TicketClient, tile: Tile, work: BarWork | undefined): boolean {
     if (!this.chat.canSend || !tile.fidelities.length) return false
     if (!chosenFormats(tile.choices).length) return false
     return this.allows(ticket, work, tile.action)

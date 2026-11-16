@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import threading
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -12,9 +11,7 @@ from harness.agent_tools.tool_call import ToolCall
 from harness.chat.chat import Chat
 from harness.graph.explorer import ExplorerEntry, NodeSource
 from harness.graph.graph import Graph
-from harness.guidance.stages import STAGES
 from harness.graph.pattern_overlays import PatternOverlays
-from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.files import command, skill
 from harness.mcp.mcp_annotations import long_call, mcp
@@ -27,12 +24,13 @@ from space.session.file_range import Range
 from space.session.handoffs import HANDOFF_FORMAT_FILE, Handoffs
 from space.session.idea_file import IdeaFile
 from space.session.practice_session_output import PracticeSessionOutput
+from space.session.practice_outputs import PracticeOutputs
 from space.session.progress_cache import ProgressCache
 from space.session.file_graphs import FileGraphs
 from space.session.guidance_selection import GuidanceSelection
 from space.session.guidance_version import GuidanceVersion
-from space.session.node_spans import NodeSpans
 from space.session.session_file import RuleReads, SessionFile
+from space.session.session_explorer import SessionExplorer
 from space.session.session_files import SessionFiles
 from space.session.session_folder import COMPLETE_FOLDER, SessionFolder
 from space.session.session_hierarchy import SessionHierarchy
@@ -97,15 +95,6 @@ class Session:
         self.context_config = ContextConfig(self.repo_path)
         self._workpath: Path | None = None
         self._session_path: Path | None = None
-        # The practices and graph this session keeps between calls, made when first asked for, and the practices the
-        # graph was made with, so turning one on or off makes it again.
-        self._outputs: dict[str, PracticeSessionOutput] | None = None
-        self._graph: Graph | None = None
-        self._graph_practices: frozenset[str] = frozenset()
-        # Calls from several chats reach this one object at once; the first to ask makes the practices and the graph,
-        # and the others wait for them, so the session never holds two. Reentrant, because the graph asks for the
-        # practices while it is being made.
-        self._parts_lock = threading.RLock()
         self._make_parts()
 
     def _make_parts(self) -> None:
@@ -123,6 +112,9 @@ class Session:
         self.log = SessionLog(self)
         self.session_files = SessionFiles(self)
         self.chat_injections = ChatInjections(self)
+        # The practices and graph this session keeps between calls, made when first asked for.
+        self.practice_outputs = PracticeOutputs(self)
+        self.explorer = SessionExplorer(self)
 
     @classmethod
     @tool_subject
@@ -157,11 +149,9 @@ class Session:
     def workpath(self, folder: Path | None) -> None:
         """Work in folder from now on. The practices and graph this session keeps were made on its old root, so they
         are made again on the new one when next asked for."""
-        with self._parts_lock:
-            self._workpath = folder
-            self.decision_records = DecisionRecords(self.work_root / CONTEXT_FOLDER / _DECISION_RECORDS_FOLDER)
-            self._outputs = None
-            self._graph = None
+        self._workpath = folder
+        self.decision_records = DecisionRecords(self.work_root / CONTEXT_FOLDER / _DECISION_RECORDS_FOLDER)
+        self.practice_outputs.forget()
 
     @property
     def session_path(self) -> Path | None:
@@ -205,34 +195,7 @@ class Session:
         the graph saved on its root, so a session opened again, such as a ticket just activated, shows what was loaded
         in it before. A session whose root has moved gets a new graph, with new practices, on the new root. It holds only
         the practices the session works on, so turning one on or off makes it again with those."""
-        with self._parts_lock:
-            working = frozenset(key for key, output in self._own_outputs.items() if output.enabled)
-            if self._graph is None or working != self._graph_practices:
-                self._graph = self._graph_of(working)
-                self._graph_practices = working
-                self.file_graphs.opened()
-            return self._graph
-
-    def _graph_of(self, working: frozenset[str]) -> Graph:
-        """A graph of only the practices the session works on: a practice turned off for it is never read into it. A
-        session uses a graph created for it and saved in its own folder; a graph saved anywhere else, such as the graph
-        tool's, is not the session's."""
-        graph = Graph(self._own_outputs[key].guidance for key in self._own_outputs if key in working)
-        graph.kept_in = self.session_path
-        graph.open_saved(self.work_root)
-        if self.overlays:
-            graph.overlays = self.overlays
-        return graph
-
-    @property
-    def _own_outputs(self) -> dict[str, PracticeSessionOutput]:
-        """A new instance of every practice, by key, each working in this session: made once on its root."""
-        with self._parts_lock:
-            if self._outputs is None:
-                self._outputs = {practice.key: PracticeSessionOutput(practice, self) for practice in PracticeCatalogue.create_all()}
-                for output in self._outputs.values():
-                    output.guidance.work_in(output)
-            return self._outputs
+        return self.practice_outputs.graph
 
     @property
     @data_field
@@ -317,15 +280,13 @@ class Session:
         if unknown:
             raise NotAPatternError(unknown, patterns)
         self.record.save_fields(overlays=list(overlays))
-        with self._parts_lock:
-            if self._graph is not None:
-                self._graph.overlays = list(overlays)
+        self.practice_outputs.overlay(overlays)
 
     @property
     def answer(self) -> int | None:
         """The answer this session's sessions are giving, which what it reads from its files is held for; none when
         they serve no answer, and it reads them on every ask."""
-        return self._sessions.answer
+        return self._sessions.answers.current
 
     @property
     @data_field(key="workpath")
@@ -348,7 +309,7 @@ class Session:
     def practice(self, name: str) -> PracticeSessionOutput:
         """The practice called name in this session, on or off for it: the session's one instance of it, so a practice
         turned off can be turned on again. One the session works on is opened in its graph first."""
-        found = self.practices.get(name) or self._own_outputs.get(name)
+        found = self.practices.get(name) or self.practice_outputs.every.get(name)
         if found is None:
             raise UnknownPracticeError(name)
         return found
@@ -358,7 +319,7 @@ class Session:
         """The practices the session works on, by practice key, each the session's one instance of it: the ones its
         graph holds, kept between calls with the graph, which opening here gives each practice to work in. A practice
         turned off for the session is in ``own_practices`` and ``practice(name)``, not here."""
-        outputs = self._own_outputs
+        outputs = self.practice_outputs.every
         return {key: outputs[key] for key in self.graph.practices.held}
 
     @property
@@ -367,7 +328,7 @@ class Session:
         """The same practices, without opening the graph, for reading what each one declares, its folder and fidelities:
         a board listing every session would otherwise read every session's saved graph. A practice that runs is reached
         through ``practices``, so it works in the graph."""
-        return dict(self._own_outputs)
+        return dict(self.practice_outputs.every)
 
     @property
     @data_field(key="handoff")
@@ -383,7 +344,7 @@ class Session:
         """Close this work session: when it is the open session of its project, main becomes the open one.
 
         ``session`` is the session's session.json; ask ``sessions.current`` for it when the user names no session."""
-        self.sessions.close(self)
+        self.sessions.opened.close(self)
 
     @mcp
     @agent_tool
@@ -448,26 +409,8 @@ class Session:
     @noSessionLog
     def update_guidance_selection(self, stages: list[str] | None = None, practices: list[str] | None = None, formats: list[str] | None = None) -> GuidanceSelection:
         """Select exactly these stages (such as discovery), practices (such as stories), and format groups (such as markdown), each list in place of what was selected, a list left out unchanged; save it in session.json, raise the version once, and return the selection. A practice selected is one the session works on; a format group selected is chosen for every selected fidelity offering it."""
-        with self.guidance_version.batch():
-            if practices is not None:
-                self._select_practices(practices)
-            if stages is not None:
-                self.guidance_version.save(stages=[stage for stage in STAGES.names if stage in stages])
-            if formats is not None:
-                self._select_format_groups(formats)
+        self.guidance_version.select(stages, practices, formats)
         return GuidanceSelection(self)
-
-    def _select_practices(self, practices: list[str]) -> None:
-        """Turn on exactly the practices named, each changed only when it differs, so an unchanged one writes nothing."""
-        for output in self.own_practices.values():
-            if output.enabled != (output.name in practices):
-                output.enable(output.name in practices)
-
-    def _select_format_groups(self, formats: list[str]) -> None:
-        """Choose exactly the format groups named for every selected fidelity offering them."""
-        for group in GuidanceSelection(self).formats:
-            if group.is_selected != (group.label in formats):
-                group.select(group.label in formats)
 
     @long_call
     @mcp
@@ -492,35 +435,28 @@ class Session:
     @noSessionLog
     def graph_trees(self, paths: list[str], call: ToolCall | None = None) -> list[ExplorerEntry]:
         """Return the practice trees of this session's graph read from exactly the files at paths, each named from the project as the Files app lists them, and holding only the nodes read from them: each practice's root with the entries below it, closed, as graph.explorer_trees answers them. The files the page lists are the one filter: the graph reads them, its story tests in code and in markdown alike, and keeps what they hold. No paths, or none in the project, answer no tree."""
-        listed = self.paths.in_project(paths)
-        if not listed:
-            return []
-        graph = self.graph
-        working = [key for key, output in self._own_outputs.items() if output.enabled]
-        graph.load_files(str(self.repo_path.resolve()), working, listed, graph.overlays, call)
-        return graph.explorer.explorer_trees({"paths": listed})
+        return self.explorer.trees(paths, call)
 
     @mcp
     @agent_tool
     @noSessionLog
     def graph_branch(self, node_id: str, paths: list[str]) -> ExplorerEntry | None:
         """Return the node node_id's entry in this session's graph, kept to the nodes read from the files at paths as graph_trees keeps them, with the entries below it, closed; None for an id the graph no longer holds."""
-        return self.graph.explorer.explorer_branch(node_id, {"paths": self.paths.in_project(paths)})
+        return self.explorer.branch(node_id, paths)
 
     @mcp
     @agent_tool
     @noSessionLog
     def graph_node_ranges(self, node_id: str, paths: list[str]) -> list[Range]:
         """Return the lines the node node_id covers, one range for each file, each named from the project, so a viewer opens every file there. A node read from lines of a file answers that one range; a node read from no file's lines, such as a module that is a folder, answers each file the nodes below it come from, among paths, spanning the lines they cover; none for an id the graph no longer holds."""
-        spans = NodeSpans(self.graph, {"paths": self.paths.in_project(paths)}, self.work_root).collect(node_id).spans
-        return [self.file(self.paths.from_project(path)).range(start, end) for path, (start, end) in spans.items()]
+        return self.explorer.node_ranges(node_id, paths)
 
     @mcp
     @agent_tool
     @noSessionLog
     def graph_members(self) -> list[NodeSource]:
         """Return every class, operation, and property this session's graph holds, each with its text and the class it belongs to, so a viewer opens a call in place even when it reaches another file. Read after graph_trees, which reads the files the page lists."""
-        return self.graph.explorer.source_members()
+        return self.explorer.members()
 
     @mcp
     @agent_tool

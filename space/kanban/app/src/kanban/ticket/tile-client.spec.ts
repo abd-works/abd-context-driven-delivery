@@ -56,7 +56,7 @@ async function activeTicketPage({ isMarkdownMade = false } = {}) {
 }
 
 const spot = (page: BoardPage, fidelities = [STORY_MAP_FIDELITY], place = PLACE) => ({ ticket: ticketOn(page, TICKET), stage: STAGE, place, fidelities })
-const barAt = (page: BoardPage, place = PLACE) => page.tiles.openOn(TICKET, place)
+const barAt = (page: BoardPage, place = PLACE) => page.tiles.openOn(ticketOn(page, TICKET), place)
 const openPlaces = (page: BoardPage) => page.store.state.tiles.map(tile => tile.place)
 
 // Python answers each chip of a bar, and whether the session keeps it chosen.
@@ -126,7 +126,7 @@ describe('Choose Action And Formats', () => {
   it('should keep Run off on a locked ticket', async () => {
     const { page } = await activeTicketPage()
     await page.tiles.open({ ...spot(page), ticket: ticketOn(page, 'move-me') }, true)
-    expect(page.tileActions.barOf(ticketOn(page, 'move-me'), page.tiles.openOn('move-me', PLACE)!).runOff).toBe(true)
+    expect(page.tileActions.barOf(ticketOn(page, 'move-me'), page.tiles.openOn(ticketOn(page, 'move-me'), PLACE)!).runOff).toBe(true)
   })
 
   it('should keep Run off with no chat connected', async () => {
@@ -259,7 +259,7 @@ describe('Open Practice Tile', () => {
     const { page } = await activeTicketPage()
     await page.tiles.open(spot(page), false)
     pointerTimers()
-    page.tiles.hoverOut(TICKET, PLACE)
+    page.tiles.hoverOut(ticketOn(page, TICKET), PLACE)
     await vi.advanceTimersByTimeAsync(LEAVE_MILLISECONDS)
     expect(page.store.state.tiles).toEqual([])
   })
@@ -268,7 +268,7 @@ describe('Open Practice Tile', () => {
     const { page, ticket } = await activeTicketPage()
     await page.tiles.toggle(ticket, spot(page))
     pointerTimers()
-    page.tiles.hoverOut(TICKET, PLACE)
+    page.tiles.hoverOut(ticketOn(page, TICKET), PLACE)
     await vi.advanceTimersByTimeAsync(LEAVE_MILLISECONDS)
     expect(openPlaces(page)).toEqual([PLACE])
   })
@@ -329,7 +329,7 @@ describe('Open Practice Tile', () => {
 
     it('should close the hovered bar on leaving, and keep the pressed one', async () => {
       const page = await pressedAndHovered()
-      page.tiles.hoverOut(TICKET, OTHER_PLACE)
+      page.tiles.hoverOut(ticketOn(page, TICKET), OTHER_PLACE)
       await vi.advanceTimersByTimeAsync(LEAVE_MILLISECONDS)
       expect(openPlaces(page)).toEqual([PLACE])
     })

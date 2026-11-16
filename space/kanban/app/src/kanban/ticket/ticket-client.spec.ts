@@ -37,24 +37,24 @@ describe('Restrict Actions To Active Session', () => {
 describe('Display Ticket Details', () => {
   it('should say what runs next', async () => {
     const { page } = await board.page()
-    expect(ticketOn(page, OTHER).nextNote).toBe('Next: stories-story-map, generate')
+    expect(ticketOn(page, OTHER).face.nextNote).toBe('Next: stories-story-map, generate')
   })
 
   it('should say another session must be activated to run it', async () => {
     const { page } = await board.page()
-    expect(ticketOn(page, OTHER).lockNote).toBe('Activate this session to run actions')
+    expect(ticketOn(page, OTHER).face.lockNote).toBe('Activate this session to run actions')
   })
 
   it('should name a split ticket by its parent', async () => {
     board.write('.sessions/child/session.json', JSON.stringify({ name: 'child', title: 'Child', scope: 'story', parent: 'epic', workpath: board.root, repo_path: board.root }))
     board.write('.sessions/child/session.log', '')
     const { page } = await board.page()
-    expect(ticketOn(page, 'child').origin).toBe('story of epic')
+    expect(ticketOn(page, 'child').face.origin).toBe('story of epic')
   })
 
   it("should name the ticket's stage and how far it has got there", async () => {
     const { page } = await board.page()
-    expect(ticketOn(page, OTHER).stagePlace).toBe('Discovery · in progress')
+    expect(ticketOn(page, OTHER).face.stagePlace).toBe('Discovery · in progress')
   })
 
   it('should keep a practice with two words in its skill', async () => {
@@ -138,18 +138,18 @@ describe('Move Ticket', () => {
 
   it('should let a ticket in any column be dropped on the Backlog', async () => {
     const { page } = await board.page()
-    await ticketOn(page, 'almost-shipped').dropOn('Backlog')
+    await ticketOn(page, 'almost-shipped').drops.dropOn('Backlog')
     expect(page.board.backlogItems.map(item => item.title)).toContain('Almost shipped')
   })
 
   it('should let a ticket from any stage be dropped on Complete', async () => {
     const { page } = await board.page()
-    expect([ticketOn(page, ACTIVE).canDropOn('Complete'), ticketOn(page, 'almost-shipped').canDropOn('Complete'), ticketOn(page, OTHER).canDropOn('Complete')]).toEqual([true, true, true])
+    expect([ticketOn(page, ACTIVE).drops.canDropOn('Complete'), ticketOn(page, 'almost-shipped').drops.canDropOn('Complete'), ticketOn(page, OTHER).drops.canDropOn('Complete')]).toEqual([true, true, true])
   })
 
   it('should close a ticket not opened at once when it is dropped on Complete', async () => {
     const { page } = await board.page()
-    await ticketOn(page, OTHER).dropOn('Complete')
+    await ticketOn(page, OTHER).drops.dropOn('Complete')
     expect(page.board.tickets.find(ticket => ticket.name === OTHER)?.column.name).toBe('Complete')
   })
 })
@@ -157,12 +157,12 @@ describe('Move Ticket', () => {
 describe('Send Next Fidelity Action', () => {
   it('should name the step that runs next', async () => {
     const { page } = await board.page()
-    expect(ticketOn(page, OTHER).runNextLabel).toBe('Run next: generate')
+    expect(ticketOn(page, OTHER).face.runNextLabel).toBe('Run next: generate')
   })
 
   it('should name validate on held violations', async () => {
     const { page } = await board.page()
-    expect(ticketOn(page, ACTIVE).runNextLabel).toBe('Run next: validate')
+    expect(ticketOn(page, ACTIVE).face.runNextLabel).toBe('Run next: validate')
   })
 
   describe('with generate next', () => {
@@ -170,7 +170,7 @@ describe('Send Next Fidelity Action', () => {
       await board.activate(OTHER)
       const { page, asked } = await board.page()
       const chat = await board.connectChat(page)
-      await ticketOn(page, OTHER).runNext()
+      await ticketOn(page, OTHER).nextStep.run()
       return { asked, chat }
     }
 
@@ -188,7 +188,7 @@ describe('Send Next Fidelity Action', () => {
       await board.activate(OTHER)
       const { page } = await board.page()
       const chat = await board.connectChat(page)
-      await ticketOn(page, OTHER).runNext()
+      await ticketOn(page, OTHER).nextStep.run()
       return { page, chat }
     }
 
@@ -207,19 +207,19 @@ describe('Send Next Fidelity Action', () => {
     await board.activate('back-to-backlog')
     const { page } = await board.page()
     const chat = await board.connectChat(page)
-    await ticketOn(page, 'back-to-backlog').runNext()
+    await ticketOn(page, 'back-to-backlog').nextStep.run()
     expect(await chat.checkIn()).toEqual([{ kind: 'fill', text: '/actions-validate stories-story-map session=.sessions/back-to-backlog/session.json' }])
   })
 
   describe('with violations held and no chat connected', () => {
     it('should still offer Run next', async () => {
       const { page } = await board.page()
-      expect(ticketOn(page, ACTIVE).canRunNext).toBe(true)
+      expect(ticketOn(page, ACTIVE).nextStep.canRun).toBe(true)
     })
 
     it('should open the report', async () => {
       const { page } = await board.page()
-      await ticketOn(page, ACTIVE).runNext()
+      await ticketOn(page, ACTIVE).nextStep.run()
       expect(page.store.state.panels.map(panel => panel.kind)).toEqual(['report'])
     })
   })
@@ -227,7 +227,7 @@ describe('Send Next Fidelity Action', () => {
   it('should stay off with no chat to send to', async () => {
     await board.activate(OTHER)
     const { page } = await board.page()
-    expect(ticketOn(page, OTHER).canRunNext).toBe(false)
+    expect(ticketOn(page, OTHER).nextStep.canRun).toBe(false)
   })
 })
 
@@ -403,13 +403,13 @@ describe('Open Ticket Chat', () => {
     })
   })
 
-  // Python's chat.open hands the Claude app a claude://code/new link on a folder; the person confirms the folder and sends.
+  // Python's chats.open hands the Claude app a claude://code/new link on a folder; the person confirms the folder and sends.
   describe("with no chat working in the ticket's worktree, and its chat opened", () => {
     async function clicked(times = 1) {
       const { page } = await board.page()
       const worktree = board.openWorktree(ACTIVE)
       await page.reader.refresh()
-      for (let click = 0; click < times; click++) await ticketOn(page, ACTIVE).openChat()
+      for (let click = 0; click < times; click++) await ticketOn(page, ACTIVE).chatOpening.open()
       return { worktree, opened: board.openedChats() }
     }
 
@@ -434,7 +434,7 @@ describe('Open Ticket Chat', () => {
       const { page } = await board.page()
       board.openWorktree(ACTIVE)
       await page.reader.refresh()
-      await ticketOn(page, ACTIVE).openChat()
+      await ticketOn(page, ACTIVE).chatOpening.open()
       expect(page.chat.opening.isOpeningFor(ACTIVE)).toBe(true)
     })
 
@@ -446,7 +446,7 @@ describe('Open Ticket Chat', () => {
   describe('with a ticket that has no worktree yet', () => {
     async function clicked() {
       const { page } = await board.page()
-      await ticketOn(page, ACTIVE).openChat()
+      await ticketOn(page, ACTIVE).chatOpening.open()
       return { page, opened: board.openedChats() }
     }
 
@@ -465,7 +465,7 @@ describe('Open Ticket Chat', () => {
   describe('with a ticket in Complete', () => {
     it('should open no new chat', async () => {
       const { page } = await board.page()
-      await page.board.tickets.find(ticket => ticket.name === 'shipped-work')!.openChat()
+      await page.board.tickets.find(ticket => ticket.name === 'shipped-work')!.chatOpening.open()
       expect(board.openedChats()).toEqual([])
     })
   })

@@ -81,7 +81,7 @@ class McpSanity:
         from harness.installation.installer import Installer
         from harness.mcp.mcp_server import McpHost
 
-        installer = Installer(repo=self.repo)
+        installer = Installer.create(repo=self.repo)
         refs = tuple(str(reference) for reference in installer.toolsets.references())
         return McpHost.from_refs(refs, repo=str(self.repo), project=str(self.repo))
 

@@ -35,8 +35,10 @@ Sessions, a session, and its log
 	// `.sessions` under root
 + backlog_folder: Path
 	// `.sessions/_backlog`, where sessions wait before work starts
-+ open_name: str
-	// the session saved as open in `.sessions/session.json`; main when none is
++ << composition >> opened: OpenSessions
+	// which session each chat has open, and switching a chat to another: `name_for(chat)` is the session saved as open for the chat; main when none is
++ << composition >> answers: ServedAnswers
+	// the answer the process gives from these sessions while it serves calls from them
 ----
 + of_project(project: Path): Sessions
 	// the `@tool_subject` of the `sessions.*` tools, handed the call's project: the sessions this process holds for it
@@ -75,7 +77,7 @@ Sessions, a session, and its log
 - A session's graph and practices are made once, by its kept session, and every call's session answers them from it.
 - main works on the whole repository and is never a work session: `all` and `named` leave it out.
 - A name is always a slug (`name_of`), since a git branch refuses a space.
-- switch with no name and nothing saved refuses with `SessionNameRequiredError`.
+- switch with no name and nothing saved refuses with `SessionNameRequiredError` (open_sessions.py).
 
 ### **CallSessions**
 
@@ -94,7 +96,7 @@ Sessions, a session, and its log
 
 **Interactions**
 
-- Registered with `ToolCall.open_sessions_with` when the module is imported, so the framework opens a call's session without importing space.
+- Registered with `SESSION_OPENING.open_with` when the module is imported, so the framework opens a call's session without importing space.
 
 ### **Session**
 
@@ -142,7 +144,7 @@ Sessions, a session, and its log
 	// the `@tool_subject` of the `session.*` tools: the session a call names, through `call.session_named`
 + practice(name: str): PracticeSessionOutput
 	// the session's one instance of it; refuses a practice CDD does not have with `UnknownPracticeError`
-	-> PracticeCatalogue.has
+	-> PRACTICE_CATALOGUE.has
 + reset(): None
 	// forget the opened practices
 + save(): None
@@ -443,7 +445,7 @@ it should keep the name, the workpath, and the repo path
 it should write --- 1 as the first line of a new session.log
   -> expect(session.log.path).to start with "--- 1"
 it should record the name in repo sessions session.json
-  -> expect(Sessions(project).open_name).to equal name
+  -> expect(Sessions(project).opened.name_for()).to equal name
 ```
 
 #### that is closed
@@ -451,7 +453,7 @@ it should record the name in repo sessions session.json
 ```
 -> session.close()
 it should go back to the main session
-  -> expect(Sessions(project).open_name).to equal "main"
+  -> expect(Sessions(project).opened.name_for()).to equal "main"
 ```
 
 #### that is selected
@@ -588,7 +590,7 @@ it should be the same practice the next call in the session works with
 it should return that same practice on the next ask
   -> expect(session.practice(name)).to be the entry from the first ask
 it should list every practice CDD has, opened or not
-  -> expect(session.practices.keys()).to equal PracticeCatalogue.keys()
+  -> expect(session.practices.keys()).to equal PRACTICE_CATALOGUE.names
 ```
 
 ##### that a person chooses a folder as the practice's root

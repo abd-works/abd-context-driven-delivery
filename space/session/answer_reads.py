@@ -36,6 +36,26 @@ class AnswerReads:
 ANSWER_READS = AnswerReads()
 
 
+class ServedAnswers:
+    """*ServedAnswers* are the answers the process gives from one checkout's sessions: none until a call or a hook event
+    finds those sessions (*CallSessions*), so sessions a spec makes itself read on every ask; then the process's current
+    answer, which their sessions hold what they read from their files for."""
+
+    def __init__(self) -> None:
+        self._is_serving = False
+
+    @property
+    def current(self) -> int | None:
+        """The answer being given; none while the process serves no calls from these sessions."""
+        return ANSWER_READS.current if self._is_serving else None
+
+    def begin(self) -> None:
+        """Begin an answer from these sessions: what their sessions read from their files is read again, so a change
+        another process wrote since the last answer is seen."""
+        self._is_serving = True
+        ANSWER_READS.begin()
+
+
 class HeldForAnswer(Generic[_Value]):
     """One value read from a session's files, held for the answer it was read in. A session that serves no answer,
     such as one a spec loads from sessions it made itself, holds nothing and reads the value on every ask."""

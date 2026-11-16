@@ -9,13 +9,14 @@ from typing import TYPE_CHECKING, Callable, TypeVar
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
-from harness.chat.chat import Chat
+from harness.chat.chat import Chat, links_of_run
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
-from harness.graph.pattern_overlays import PatternOverlays
 from harness.guidance.stages import GENERATE, RENDER, VALIDATE
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.markdown.format import Format
 from harness.mcp.mcp_annotations import long_call, mcp
+from space.kanban.format_choice import FormatChoice
+from space.kanban.overlay_choice import OverlayChoice
 from space.kanban.board import (
     RequiredFidelity,
     BACKLOG_COLUMN,
@@ -27,10 +28,10 @@ from space.kanban.board import (
     Help,
     Stage,
 )
-from space.kanban.format_choice import FormatChoice
-from space.kanban.overlay_choice import OverlayChoice
 from space.kanban.report import Report, ReportFile
+from space.kanban.ticket_choices import TicketChoices
 from space.kanban.ticket_checkout import LeaveChoices, TicketCheckout
+from space.kanban.ticket_tree import TicketTree
 from space.repo.repo import Branch
 from space.session import Session
 from space.session.session import MAIN_SESSION_NAME
@@ -61,27 +62,6 @@ class MainStaysOpenError(ValueError):
         super().__init__(f"main is the default session and stays open; it cannot {action}")
 
 
-class ParentMovesWithChildrenError(ValueError):
-    """Raised when a person moves a ticket that has children: a parent takes the stage of its child furthest back."""
-
-    def __init__(self, ticket: str) -> None:
-        super().__init__(f"{ticket} has child tickets; a parent moves only with its children")
-
-
-class NotAChildError(ValueError):
-    """Raised when a ticket with no parent is pulled out of one."""
-
-    def __init__(self, ticket: str) -> None:
-        super().__init__(f"{ticket} has no parent to be pulled out of")
-
-
-class ParentLoopError(ValueError):
-    """Raised when a ticket would become its own parent, or a child of one of its own children."""
-
-    def __init__(self, ticket: str, parent: str) -> None:
-        super().__init__(f"{parent} cannot be the parent of {ticket}: it is {ticket} or one of its children")
-
-
 class StagePlace:
     """*StagePlace* is where a move puts a ticket that stays on a stage: the stage, and whether in its Done or its In
     progress. The board sends it on each ticket for Move next and Move previous, so the page can show the card there
@@ -110,8 +90,10 @@ class Ticket(Card):
     """Show one work session as a unit of delivery and move it through the stages."""
 
     # It works with its session, which holds its folders, practices, and files, and the board it sits on, and holds
-    # three parts made once: its work (its progress on each fidelity the board requires), its checkout (its branch and
-    # worktree), and its stage marks (the moves and marks a person made). Callers reach those through it.
+    # parts made once: its work (its progress on each fidelity the board requires), its checkout (its branch and
+    # worktree), its stage marks (the moves and marks a person made), its tree (its parent and children), its choices
+    # (the files and chips it offers), its moves (Move next, Move previous, a drag), and its ending (closing, archiving,
+    # deleting, or shelving it in the Backlog). Callers reach those through it; each of its tools asks one part.
     # Never moves to another column by itself: a person moves it, and the move is written to its session log.
     # The board is read after every cdd call, so these tools stay out of the session log; a move writes its own line.
     # Its tools and data fields stay on it, so their published names do not change (.context/cdr/0004).
@@ -122,6 +104,10 @@ class Ticket(Card):
         self.work = TicketWork(self)
         self.checkout = TicketCheckout(self)
         self.marks = StageMarks(self)
+        self.tree = TicketTree(self)
+        self.choices = TicketChoices(self)
+        self.moves = TicketMoves(self)
+        self.ending = TicketEnding(self)
         # What it has worked out about itself so far, such as its column, its parent, and whether it is done: one answer
         # asks each many times, for every column, mark, and drop target. Forgotten whenever the ticket writes anything.
         self._remembered: dict[str, object] = {}
@@ -216,12 +202,6 @@ class Ticket(Card):
         return self._board.ticket(named) if named else None
 
     @property
-    def ancestors(self) -> list[Ticket]:
-        """Its parent, its parent's parent, and so on."""
-        parent = self.parent
-        return [parent, *parent.ancestors] if parent is not None else []
-
-    @property
     @data_field
     def children(self) -> list[Ticket]:
         """The tickets whose session names this one's as their parent: stacked inside its card, or, pulled out, cards of
@@ -239,10 +219,7 @@ class Ticket(Card):
     def is_stacked(self) -> bool:
         """Whether it shows inside its parent's card rather than as a card of its own: an open child, not pulled out, of
         an open parent."""
-        if self.is_pulled_out or self.is_closed:
-            return False
-        parent = self.parent
-        return parent is not None and not parent.is_closed
+        return self.tree.is_stacked
 
     @property
     @data_field
@@ -268,7 +245,7 @@ class Ticket(Card):
     def _read_column(self) -> Column:
         if self._session.is_closed:
             return self._board.column(COMPLETE_COLUMN)
-        furthest_back = self._furthest_back_child_stage
+        furthest_back = self.tree.furthest_back_child_stage
         if furthest_back is not None:
             return furthest_back
         return self.work.stage_worked_since_latest_move or self.marks.moved_into or self._board.stages[0]
@@ -283,7 +260,7 @@ class Ticket(Card):
     @data_field
     def is_active(self) -> bool:
         """Whether its session is the one saved as open, which the agent works in."""
-        return self._remember("is_active", lambda: self._board.sessions.open_name == self.name)
+        return self._remember("is_active", lambda: self._board.sessions.opened.name_for() == self.name)
 
     @property
     @data_field
@@ -297,14 +274,7 @@ class Ticket(Card):
     def parent_choices(self) -> list[str]:
         """The tickets a person can drop it on to make it their child: any on the board but its own parent, itself, and
         the tickets under it, which would make a loop."""
-        if self.is_main:
-            return []
-        # By name: its parent is a ticket of its own, never one of the board's ticket objects.
-        parent_name = self.parent.name if self.parent is not None else None
-        return [ticket.name for ticket in self._board.tickets if ticket.name != parent_name and self._can_be_child_of(ticket)]
-
-    def _can_be_child_of(self, parent: Ticket) -> bool:
-        return self.name not in [parent.name, *(ancestor.name for ancestor in parent.ancestors)]
+        return self.tree.parent_choices
 
     @property
     @data_field
@@ -386,7 +356,7 @@ class Ticket(Card):
             f"ticket. First call sessions.switch with name {self.name}, so every tool works on its session, then read the "
             "session's latest handoff."
         )
-        return Chat.opener.link_to_new(self.worktree, prompt)
+        return links_of_run().link_to_new(self.worktree, prompt)
 
     @property
     @data_field
@@ -423,7 +393,7 @@ class Ticket(Card):
     @noSessionLog
     def fidelity_files(self, fidelities: list[str]) -> dict[str, dict[str, list[FileEntry]]]:
         """Return the files a person reviews for each of fidelities, slugs such as stories-story-map, on ticket, by slug and then by format, as each fidelity-progress.files answers them: one call for a page listing many fidelities, sharing one look at what the branch changed."""
-        return {slug: self.work.progress_of(slug).files() for slug in fidelities}
+        return self.choices.fidelity_files(fidelities)
 
     @long_call
     @mcp
@@ -431,42 +401,34 @@ class Ticket(Card):
     @noSessionLog
     def root_files(self) -> list[FileEntry]:
         """Return every file under the folder ticket's session works in, each with its path from the project, whether the branch changed it, its format, and the fidelities whose files it is, so a page narrows it by the stages, practices, and formats selected; a file no fidelity declares names none."""
-        progress = self.work.progress
-        repo = self._session.repo.root
-        return [entry.belonging_to([each.fidelity.slug for each in progress if each.holds(repo / entry.path)]) for entry in self._session.session_files.under_root()]
+        return self.choices.root_files()
 
     @mcp
     @agent_tool
     @noSessionLog
     def format_choices(self, fidelities: list[str]) -> list[FormatChoice]:
         """Return the format chips of an action bar on ticket over fidelities, slugs such as stories-story-map: each group of formats they offer, the format each fidelity uses from it, how many offer it and have a file in it already, and whether it is chosen for them in the session."""
-        read = [(progress.fidelity, progress.files()) for progress in (self.work.progress_of(slug) for slug in fidelities)]
-        return FormatChoice.offered_by(read)
+        return self.choices.format_choices(fidelities)
 
     @mcp
     @agent_tool
     @noSessionLog
     def choose_formats(self, fidelities: list[str], label: str, is_chosen: bool) -> list[FormatChoice]:
         """Turn the chip label, such as markdown, on or off for fidelities, slugs such as stories-story-map, on ticket: each fidelity chooses, or leaves out, the format it uses from that group in the session, the same choice the Story UI's toggles make; return the chips again."""
-        chips = self.format_choices(fidelities)
-        next(chip for chip in chips if chip.label == label).choose(is_chosen)
-        return self.format_choices(fidelities)
+        return self.choices.choose_formats(fidelities, label, is_chosen)
 
     @mcp
     @agent_tool
     @noSessionLog
     def overlay_choices(self) -> list[OverlayChoice]:
         """Return the pattern overlays a person can choose for ticket's session: every registered pattern in name order, each with its icon, its first and last letter, and whether the session overlays it on its graph."""
-        chosen = self._session.overlays
-        return [OverlayChoice(pattern, pattern in chosen) for pattern in PatternOverlays().names]
+        return self.choices.overlay_choices()
 
     @mcp
     @agent_tool
     def choose_overlays(self, overlays: list[str]) -> list[OverlayChoice]:
         """Overlay the patterns overlays names, such as lern_domain_driven, on ticket's session's graph in place of those chosen before, refusing a name that is no pattern with NotAPatternError; return its overlay choices."""
-        self._session.choose_overlays(overlays)
-        self.forget_reads()
-        return self.overlay_choices()
+        return self.choices.choose_overlays(overlays)
 
     @mcp
     @agent_tool
@@ -490,68 +452,35 @@ class Ticket(Card):
     @noSessionLog
     def move_next(self) -> Ticket:
         """Move ticket on: from In progress to its stage's Done, from Done to the next column, whatever its work. Out of Implementation it closes, but main, the default session, stays in Implementation's Done. A ticket with children moves only with them, so it is refused."""
-        self._refuse_moving_a_parent()
-        column = self.column
-        if not isinstance(column, Stage):
-            return self
-        place = self.next_place
-        if place is None:
-            return self if self.is_main else self.close()
-        return self.marks.mark(MARKED_DONE, column) if place.is_done else self.marks.enter(place.stage)
+        return self.moves.move_next()
 
     @property
     @data_field
     def next_place(self) -> StagePlace | None:
         """Where Move next puts the ticket while it stays on a stage: its stage's Done, else the next stage's In progress.
         None when the move closes it, leaves it where it is, or is refused, which only the move itself can show."""
-        column = self.column
-        if self.children or not isinstance(column, Stage):
-            return None
-        if not self.is_done:
-            return StagePlace(column, True)
-        following = column.next_stage
-        return StagePlace(following, False) if following is not None else None
+        return self.moves.next_place
 
     @mcp
     @agent_tool
     @noSessionLog
     def move_previous(self) -> Ticket | BacklogItem:
         """Move ticket back: from Done to its stage's In progress, from In progress to the previous column's Done. Out of Complete it reopens in Implementation; out of Discovery it goes to the Backlog with its work, but main stays in Discovery. A ticket with children moves only with them, so it is refused."""
-        self._refuse_moving_a_parent()
-        column = self.column
-        if not isinstance(column, Stage):
-            reopened, final = self._board.placement.ticket_of(self._session.folder.reopen()), self._board.stages[-1]
-            reopened.marks.enter(final)
-            return reopened.marks.mark(MARKED_DONE, final)
-        place = self.previous_place
-        if place is None:
-            return self if self.is_main else self._return_to_backlog()
-        return self.marks.place(place.stage, MARKED_DONE) if place.is_done else self.marks.mark(MARKED_IN_PROGRESS, column)
+        return self.moves.move_previous()
 
     @property
     @data_field
     def previous_place(self) -> StagePlace | None:
         """Where Move previous puts the ticket while it stays on a stage: its stage's In progress, else the previous
         stage's Done. None when the move reopens it, sends it to the Backlog, leaves it where it is, or is refused."""
-        column = self.column
-        if self.children or not isinstance(column, Stage):
-            return None
-        if self.is_done:
-            return StagePlace(column, False)
-        earlier = column.previous_stage
-        return StagePlace(earlier, True) if earlier is not None else None
+        return self.moves.previous_place
 
     @mcp
     @agent_tool
     @noSessionLog
     def move_to(self, stage: str, done: bool = False) -> Ticket | BacklogItem:
         """Move ticket straight into stage's In progress, or its Done when done is true, whatever its work; dragging a card does this. Out of Complete it reopens first. Into the Backlog, from any column, it becomes a backlog item that keeps its whole folder. A ticket with children moves only with them, so it is refused."""
-        self._refuse_moving_a_parent()
-        if stage == BACKLOG_COLUMN:
-            return self._return_to_backlog()
-        target = self._board.stage(stage)
-        moved = self if isinstance(self.column, Stage) else self._board.placement.ticket_of(self._session.folder.reopen())
-        return moved.marks.place(target, MARKED_DONE if done else MARKED_IN_PROGRESS)
+        return self.moves.move_to(stage, done)
 
     @long_call
     @mcp
@@ -559,33 +488,14 @@ class Ticket(Card):
     @noSessionLog
     def close(self, leaving: list[str] | None = None) -> Ticket:
         """Close ticket: leaving names what to do with its work first (handoff, commit, push, merge, delete_branch, delete_worktree); then its session ends, its folder moves to _complete/, that move is committed on main and pushed, and it shows in Complete. The repository's own folder stays on main."""
-        if self.is_main:
-            raise MainStaysOpenError("close")
-        chosen = leaving or []
-        self.checkout.write_handoff(chosen)
-        # A worktree something still holds open fails to delete; deleting it first stops the close with nothing changed.
-        self.checkout.free_worktree(chosen)
-        self.checkout.keep_landing_release(chosen)
-        self._session.close()
-        closed = self._board.placement.ticket_of(self._session.folder.move_to_closed())
-        # The work is saved after the folder moves, so the move is committed with it.
-        self.checkout.save_work(chosen)
-        self.checkout.return_to_default_branch()
-        # The ticket's record is kept on main, so its move among the closed sessions is committed and pushed there.
-        self._board.sessions.saves.now(f"sessions: close {self.name}")
-        return closed
+        return self.ending.close(leaving or [])
 
     @mcp
     @agent_tool
     @noSessionLog
     def archive(self) -> Ticket:
         """Archive ticket: its session ends, its folder moves to _archive/, that move is committed on main and pushed, and it leaves the board. Main never archives."""
-        if self.is_main:
-            raise MainStaysOpenError("archive")
-        self._session.close()
-        archived = self._board.placement.ticket_of(self._session.folder.move_to_archive())
-        self._board.sessions.saves.now(f"sessions: archive {self.name}")
-        return archived
+        return self.ending.archive()
 
     @mcp
     @agent_tool
@@ -619,41 +529,28 @@ class Ticket(Card):
     @noSessionLog
     def delete(self) -> None:
         """Delete ticket: its session ends and its folder, log, and files are removed, that removal committed on main and pushed, and it leaves the board. Main never deletes."""
-        if self.is_main:
-            raise MainStaysOpenError("be deleted")
-        self._session.close()
-        self._session.folder.remove()
-        self._board.reread()
+        self.ending.delete()
 
     @mcp
     @agent_tool
     @noSessionLog
     def add_child(self, title: str) -> Ticket:
         """Open a child ticket of ticket titled title, a story In progress in Discovery, working where ticket works. Committed on main and pushed."""
-        child = self._board.placement.ticket_of(self._session.hierarchy.open_child(title, scope="story"))
-        return child
+        return self.tree.add_child(title)
 
     @mcp
     @agent_tool
     @noSessionLog
     def pull_out(self) -> Ticket:
         """Pull ticket out of its parent: it moves on the board as a card of its own, still keeping its parent, which keeps a row for it. Committed on main and pushed."""
-        if self.parent is None:
-            raise NotAChildError(self.name)
-        self._session.hierarchy.mark_pulled_out()
-        self.forget_reads()
-        return self
+        return self.tree.pull_out()
 
     @mcp
     @agent_tool
     @noSessionLog
     def reassign_parent(self, parent: Ticket | None = None) -> Ticket:
         """Make parent ticket's parent, as dragging ticket onto it does, or none, so ticket is a ticket of its own (Alt-dragging it out of its parent); either way it is no longer pulled out. Committed on main and pushed."""
-        if parent is not None and not self._can_be_child_of(parent):
-            raise ParentLoopError(self.name, parent.name)
-        self._session.hierarchy.set_parent(parent.session if parent is not None else None)
-        self.forget_reads()
-        return self
+        return self.tree.reassign_parent(parent)
 
     @mcp
     @agent_tool
@@ -662,28 +559,6 @@ class Ticket(Card):
         """Move ticket just above other in their column, as dragging it there does; the column keeps that order, in .sessions/_board.json. Committed on main and pushed."""
         super().move_before(other)
         return self
-
-    @property
-    def _furthest_back_child_stage(self) -> Stage | None:
-        """The stage of its child furthest back on the board; none while no child of it is on a stage."""
-        stages = self._board.stages
-        staged = [column for column in (child.column for child in self.children) if isinstance(column, Stage)]
-        return min(staged, key=stages.index) if staged else None
-
-    def _refuse_moving_a_parent(self) -> None:
-        if self.children:
-            raise ParentMovesWithChildrenError(self.name)
-
-    def _return_to_backlog(self) -> BacklogItem:
-        """Into the Backlog from any column: its session closes and its whole folder becomes a backlog item, so starting
-        the item brings the ticket back with its work. The move is committed on main and pushed."""
-        if self.is_main:
-            raise MainStaysOpenError("go to the Backlog")
-        self._session.close()
-        kept_in_backlog = self._board.placement.ticket_of(self._session.folder.move_to_backlog())
-        item = self._board.placement.backlog_item_of(kept_in_backlog)
-        item.write_if_missing(kept_in_backlog.title)
-        return item
 
     def in_overview(self) -> OverviewTicket:
         """This ticket as the board's overview sends it: whole, but with its children by name."""
@@ -701,6 +576,139 @@ class OverviewTicket(Ticket):
     def children(self) -> list[Ticket]:
         """The tickets whose session names this one's as their parent, each by its name."""
         return self._board.reads.children_of(self)
+
+
+class TicketMoves:
+    """*TicketMoves* are the moves a person makes with one ticket: Move next and Move previous, where each puts a ticket
+    that stays on a stage, and a drag straight into a stage or the Backlog. A parent moves only with its children, so
+    each move refuses one; each move is a mark in the ticket's *StageMarks*."""
+
+    def __init__(self, ticket: Ticket) -> None:
+        self._ticket = ticket
+
+    def move_next(self) -> Ticket:
+        """From In progress to its stage's Done, from Done to the next column; out of Implementation it closes, but main
+        stays in Implementation's Done."""
+        ticket = self._ticket
+        ticket.tree.refuse_moving_a_parent()
+        column = ticket.column
+        if not isinstance(column, Stage):
+            return ticket
+        place = self.next_place
+        if place is None:
+            return ticket if ticket.is_main else ticket.ending.close([])
+        return ticket.marks.mark(MARKED_DONE, column) if place.is_done else ticket.marks.enter(place.stage)
+
+    @property
+    def next_place(self) -> StagePlace | None:
+        """Where Move next puts the ticket while it stays on a stage; none when the move closes it, leaves it where it
+        is, or is refused."""
+        ticket = self._ticket
+        column = ticket.column
+        if ticket.children or not isinstance(column, Stage):
+            return None
+        if not ticket.is_done:
+            return StagePlace(column, True)
+        following = column.next_stage
+        return StagePlace(following, False) if following is not None else None
+
+    def move_previous(self) -> Ticket | BacklogItem:
+        """From Done to its stage's In progress, from In progress to the previous column's Done; out of Complete it
+        reopens in Implementation; out of Discovery it goes to the Backlog with its work, but main stays in Discovery."""
+        ticket = self._ticket
+        ticket.tree.refuse_moving_a_parent()
+        column = ticket.column
+        if not isinstance(column, Stage):
+            reopened, final = ticket.board.placement.ticket_of(ticket.session.folder.reopen()), ticket.board.stages[-1]
+            reopened.marks.enter(final)
+            return reopened.marks.mark(MARKED_DONE, final)
+        place = self.previous_place
+        if place is None:
+            return ticket if ticket.is_main else ticket.ending.to_backlog()
+        return ticket.marks.place(place.stage, MARKED_DONE) if place.is_done else ticket.marks.mark(MARKED_IN_PROGRESS, column)
+
+    @property
+    def previous_place(self) -> StagePlace | None:
+        """Where Move previous puts the ticket while it stays on a stage; none when the move reopens it, sends it to the
+        Backlog, leaves it where it is, or is refused."""
+        ticket = self._ticket
+        column = ticket.column
+        if ticket.children or not isinstance(column, Stage):
+            return None
+        if ticket.is_done:
+            return StagePlace(column, False)
+        earlier = column.previous_stage
+        return StagePlace(earlier, True) if earlier is not None else None
+
+    def move_to(self, stage: str, done: bool) -> Ticket | BacklogItem:
+        """Straight into stage's In progress, or its Done when done; out of Complete it reopens first; into the Backlog
+        it becomes a backlog item that keeps its whole folder."""
+        ticket = self._ticket
+        ticket.tree.refuse_moving_a_parent()
+        if stage == BACKLOG_COLUMN:
+            return ticket.ending.to_backlog()
+        target = ticket.board.stage(stage)
+        moved = ticket if isinstance(ticket.column, Stage) else ticket.board.placement.ticket_of(ticket.session.folder.reopen())
+        return moved.marks.place(target, MARKED_DONE if done else MARKED_IN_PROGRESS)
+
+
+class TicketEnding:
+    """*TicketEnding* is how one ticket leaves the board's stages: closed into Complete after doing what the person chose
+    with its work, archived, deleted, or shelved in the Backlog as an item that keeps its whole folder. Main, the default
+    session, never leaves; each ending's move is committed on main and pushed."""
+
+    def __init__(self, ticket: Ticket) -> None:
+        self._ticket = ticket
+
+    def _refuse_main(self, action: str) -> None:
+        if self._ticket.is_main:
+            raise MainStaysOpenError(action)
+
+    def close(self, leaving: list[str]) -> Ticket:
+        """Do what leaving names with its work, end its session, and move its folder to _complete/."""
+        self._refuse_main("close")
+        ticket = self._ticket
+        checkout = ticket.checkout
+        checkout.write_handoff(leaving)
+        # A worktree something still holds open fails to delete; deleting it first stops the close with nothing changed.
+        checkout.free_worktree(leaving)
+        checkout.keep_landing_release(leaving)
+        ticket.session.close()
+        closed = ticket.board.placement.ticket_of(ticket.session.folder.move_to_closed())
+        # The work is saved after the folder moves, so the move is committed with it.
+        checkout.save_work(leaving)
+        checkout.return_to_default_branch()
+        # The ticket's record is kept on main, so its move among the closed sessions is committed and pushed there.
+        ticket.board.sessions.saves.now(f"sessions: close {ticket.name}")
+        return closed
+
+    def archive(self) -> Ticket:
+        """End its session and move its folder to _archive/."""
+        self._refuse_main("archive")
+        ticket = self._ticket
+        ticket.session.close()
+        archived = ticket.board.placement.ticket_of(ticket.session.folder.move_to_archive())
+        ticket.board.sessions.saves.now(f"sessions: archive {ticket.name}")
+        return archived
+
+    def delete(self) -> None:
+        """End its session and remove its folder, log, and files."""
+        self._refuse_main("be deleted")
+        ticket = self._ticket
+        ticket.session.close()
+        ticket.session.folder.remove()
+        ticket.board.reread()
+
+    def to_backlog(self) -> BacklogItem:
+        """Into the Backlog from any column: its session closes and its whole folder becomes a backlog item, so starting
+        the item brings the ticket back with its work."""
+        self._refuse_main("go to the Backlog")
+        ticket = self._ticket
+        ticket.session.close()
+        kept_in_backlog = ticket.board.placement.ticket_of(ticket.session.folder.move_to_backlog())
+        item = ticket.board.placement.backlog_item_of(kept_in_backlog)
+        item.write_if_missing(kept_in_backlog.title)
+        return item
 
 
 class TicketWork:

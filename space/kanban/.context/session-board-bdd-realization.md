@@ -30,7 +30,7 @@ Add Backlog Item
     -> BoardPage.draft
     -> BacklogDraftClient.type(field: 'title' | 'text', typed: string)
     -> BacklogDraftClient.add()
-    -> TileClient.isOpen(ticket: string, place: string)
+    -> TileClient.isOpen(ticket: TicketClient, place: string)
     it should close the form
     ```
   Start Backlog Item
@@ -826,19 +826,19 @@ Restrict Actions To Active Session
 
 Display Ticket Details
   ```
-  -> TicketClient.nextNote
+  -> TicketFace.nextNote
   it should say what runs next
   ```
   ```
-  -> TicketClient.lockNote
+  -> TicketFace.lockNote
   it should say another session must be activated to run it
   ```
   ```
-  -> TicketClient.origin
+  -> TicketFace.origin
   it should name a split ticket by its parent
   ```
   ```
-  -> TicketClient.stagePlace
+  -> TicketFace.stagePlace
   it should name the ticket's stage and how far it has got there
   ```
   ```
@@ -856,13 +856,13 @@ Review Fidelity
     ```
     -> BoardPage.layout
     -> BoardLayoutClient.toggleOnlyActive()
-    -> TicketClient.canRunNext
+    -> TicketNextStep.canRun
     it should offer the review with no chat connected, since it is the person\'s own approval
     ```
     ```
     -> BoardPage.layout
     -> BoardLayoutClient.toggleOnlyActive()
-    -> TicketClient.runNext()
+    -> TicketNextStep.run()
     -> TicketClient.actionsOf(slug: string)
     it should show the review done once Run next records it
     ```
@@ -878,13 +878,13 @@ Move Ticket
   it should select a dragged ticket in the stage it was dropped on
   ```
   ```
-  -> TicketClient.dropOn(edge: string)
+  -> TicketDrops.dropOn(edge: string)
   -> BoardPage.board
   -> BoardClient.backlogItems
   it should let a ticket in any column be dropped on the Backlog
   ```
   ```
-  -> TicketClient.canDropOn(edge: string)
+  -> TicketDrops.canDropOn(edge: string)
   it should let only the active ticket, or one done in Implementation, be dropped on Complete
   ```
   that a person has moved to the Backlog
@@ -900,33 +900,33 @@ Move Ticket
 
 Send Next Fidelity Action
   ```
-  -> TicketClient.runNextLabel
+  -> TicketFace.runNextLabel
   it should name the step that runs next
   ```
   ```
-  -> TicketClient.runNextLabel
+  -> TicketFace.runNextLabel
   it should say review violations on held violations
   ```
   ```
-  -> TicketClient.runNext()
+  -> TicketNextStep.run()
   it should fill the prompt on validate
   ```
   ```
-  -> TicketClient.canRunNext
+  -> TicketNextStep.canRun
   it should stay off with no chat to send to
   ```
   with generate next
     ```
-    -> TicketClient.runNext()
+    -> TicketNextStep.run()
     it should send the generate command in the default format
     ```
   with generate next on a fidelity of a stage the ticket has moved past
     ```
-    -> TicketClient.runNext()
+    -> TicketNextStep.run()
     it should generate it in its own stage's default format
     ```
     ```
-    -> TicketClient.runNext()
+    -> TicketNextStep.run()
     -> BoardPage.board
     -> BoardClient.stageNamed(name: string)
     -> TicketClient.isNext(stage: ColumnClient, slug: string)
@@ -934,11 +934,11 @@ Send Next Fidelity Action
     ```
   with violations held and no chat connected
     ```
-    -> TicketClient.canRunNext
+    -> TicketNextStep.canRun
     it should still offer Run next
     ```
     ```
-    -> TicketClient.runNext()
+    -> TicketNextStep.run()
     it should open the report
     ```
 
@@ -1173,14 +1173,14 @@ Open Practice Tile
   ```
   ```
   -> BoardPage.tiles
-  -> TileClient.hoverOut(ticket: string, place: string)
+  -> TileClient.hoverOut(ticket: TicketClient, place: string)
   it should close it on leaving
   ```
   ```
   -> BoardPage.tiles
   -> OpenCardClient.toggle(ticket: TicketClient)
   -> TileClient.toggle(ticket: TicketClient, spot: TileSpot)
-  -> TileClient.hoverOut(ticket: string, place: string)
+  -> TileClient.hoverOut(ticket: TicketClient, place: string)
   it should keep a tile a person pressed open after the pointer leaves
   ```
   ```
@@ -1230,7 +1230,7 @@ Open Practice Tile
     -> OpenCardClient.toggle(ticket: TicketClient)
     -> TileClient.toggle(ticket: TicketClient, spot: TileSpot)
     -> TileClient.hoverIn(spot: TileSpot)
-    -> TileClient.hoverOut(ticket: string, place: string)
+    -> TileClient.hoverOut(ticket: TicketClient, place: string)
     it should close the hovered bar on leaving, and keep the pressed one
     ```
   with two stage heads pressed

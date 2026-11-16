@@ -24,7 +24,7 @@ def main() -> int:
     from harness.diagnostics.agent_tools_probe import AgentToolsProbe
     from harness.installation.installer import Installer
 
-    installer = Installer(path=args.path, repo=_REPO)
+    installer = Installer.create(path=args.path, repo=_REPO)
     installer.toolsets.ensure_import_path()
     report = AgentToolsProbe(installer, args.guidance).run()
     print(report)

@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Iterator
 
 from space.repo.origin import Merges, Origin
-from space.repo.repo import SERVED_CHECKOUTS, Branch, Repo
+from space.repo.repo import SERVED_CHECKOUTS, Branch, Publishing, Repo
 from space.repo.worktree import Worktree, Worktrees
 
 _IGNORED_ALWAYS = (".git",)
@@ -100,8 +100,7 @@ class MockGit:
             self.trees[self.default_branch] = {}
             self.logs[self.default_branch] = []
             self.checked_out[self.root] = self.default_branch
-            self.commit(self.root, [self.root], "Fixture", untracked=True)
-        self.serve(self.root)
+            self.serve(self.root).commit([str(self.root)], "Fixture", untracked=True)
 
     def add_branch(self, name: str, start_point: str = "") -> None:
         """A branch made from start_point, the checked-out branch when none is named."""
@@ -138,12 +137,6 @@ class MockGit:
         linked = [(folder, branch) for folder, branch in self.checked_out.items() if folder != self.root]
         return [(self.root, self.branch_of(self.root)), *sorted(linked)]
 
-    def uncommitted(self, checkout: Path, under: Path | None = None) -> list[str]:
-        """The files in checkout, or under a folder of it, whose content its branch has not committed, as paths from the
-        checkout's top; the files .gitignore names are not counted."""
-        committed = self.trees.get(self.branch_of(checkout), {})
-        return sorted(path for path, digest in self._files(checkout, under or checkout).items() if committed.get(path) != digest)
-
     def changed_since_fork(self, branch: str) -> list[str]:
         """The files branch committed since it was made from the default branch."""
         fork, tree = self.forks.get(branch, {}), self.trees.get(branch, {})
@@ -151,19 +144,12 @@ class MockGit:
 
     # --- What the board does -----------------------------------------------------------------------------------------
 
-    def commit(self, checkout: Path, paths: list[Path], message: str, *, untracked: bool) -> bool:
-        """Commit the changes under paths on the branch checkout has checked out; false when there was nothing to
-        commit. Without untracked, only files the branch already holds are committed."""
+    def record_commit(self, branch: str, changed: dict[str, str], message: str) -> None:
+        """changed, each file's path from the top with the hash of its content, committed on branch with message."""
         with self.lock:
-            branch = self.branch_of(checkout)
-            tree = self.trees.setdefault(branch, {})
-            changed = {path: digest for folder in paths for path, digest in self._files(checkout, folder).items() if tree.get(path) != digest and (untracked or path in tree)}
-            if not changed:
-                return False
-            tree.update(changed)
+            self.trees.setdefault(branch, {}).update(changed)
             self.logs.setdefault(branch, []).append(message)
             self.calls.append(("commit", branch, message))
-            return True
 
     def check_out(self, checkout: Path, branch: str) -> None:
         with self.lock:
@@ -192,43 +178,6 @@ class MockGit:
             shutil.rmtree(folder, ignore_errors=True)
             self.calls.append(("remove_worktree", str(folder)))
 
-    def _files(self, checkout: Path, under: Path) -> dict[str, str]:
-        """Every file under the folder under in checkout, by its path from checkout's top, with the hash of its content;
-        what checkout's .gitignore names, and the .git marker, are left out, as git leaves them out."""
-        ignored = self._ignore_patterns(checkout)
-        top = checkout.resolve()
-        found = {}
-        for path in self._files_at(under.resolve()):
-            if not path.is_relative_to(top):
-                continue
-            relative = path.relative_to(top).as_posix()
-            if relative.split("/", 1)[0] in _IGNORED_ALWAYS or any(pattern.search(relative) for pattern in ignored):
-                continue
-            found[relative] = hashlib.sha1(path.read_bytes()).hexdigest()
-        return found
-
-    def _ignore_patterns(self, checkout: Path) -> list[re.Pattern[str]]:
-        gitignore = checkout / ".gitignore"
-        if not gitignore.is_file():
-            return []
-        patterns = []
-        for line in gitignore.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if not line or line.startswith(("#", "!")):
-                continue
-            body = re.escape(line.strip("/")).replace(r"\*\*/", "(?:.*/)?").replace(r"\*", "[^/]*")
-            anchored = "^" if "/" in line.strip("/") else "(?:^|/)"
-            patterns.append(re.compile(f"{anchored}{body}(?:/|$)"))
-        return patterns
-
-    def _files_at(self, start: Path) -> list[Path]:
-        """The file start names, or every file under the folder it names; none when nothing is there."""
-        if start.is_file():
-            return [start]
-        if start.is_dir():
-            return [path for path in start.rglob("*") if path.is_file()]
-        return []
-
 
 class MockRepo(Repo):
     """Our Repo for one checkout of a *MockGit*: every question and command answered from memory, none by git."""
@@ -239,6 +188,7 @@ class MockRepo(Repo):
         self.worktrees = MockWorktrees(self, held)
         self.origin = MockOrigin(self)
         self.merges = MockMerges(self)
+        self.publishing = Publishing(self)
         self._from_top: dict[Path, str] = {}
         self.writing_index = held.lock
         self._held = held
@@ -295,15 +245,64 @@ class MockRepo(Repo):
         return False
 
     def is_dirty(self, path: str | Path | None = None, *, untracked: bool = True) -> bool:
-        return bool(self._held.uncommitted(self.root, Path(path) if path is not None else None))
+        return bool(self.uncommitted(Path(path) if path is not None else None))
 
     @property
     def is_merging(self) -> bool:
         return False
 
     def commit(self, paths: list[str], message: str, *, untracked: bool = False) -> str:
-        self._held.commit(self.root, [Path(path) for path in paths], message, untracked=untracked)
+        """Commit the changes under paths on the branch this checkout has checked out. Without untracked, only files the
+        branch already holds are committed."""
+        with self._held.lock:
+            tree = self._held.trees.get(self._held.branch_of(self.root), {})
+            changed = {path: digest for folder in paths for path, digest in self._files(Path(folder)).items() if tree.get(path) != digest and (untracked or path in tree)}
+            if changed:
+                self._held.record_commit(self._held.branch_of(self.root), changed, message)
         return self.current_commit
+
+    def uncommitted(self, under: Path | None = None) -> list[str]:
+        """The files in this checkout, or under a folder of it, whose content its branch has not committed, as paths
+        from the checkout's top; the files .gitignore names are not counted."""
+        committed = self._held.trees.get(self._held.branch_of(self.root), {})
+        return sorted(path for path, digest in self._files(under or self.root).items() if committed.get(path) != digest)
+
+    def _files(self, under: Path) -> dict[str, str]:
+        """Every file under the folder under in this checkout, by its path from the checkout's top, with the hash of its
+        content; what the checkout's .gitignore names, and the .git marker, are left out, as git leaves them out."""
+        ignored = self._ignore_patterns()
+        found = {}
+        for path in self._files_at(under.resolve()):
+            if not path.is_relative_to(self.root):
+                continue
+            relative = path.relative_to(self.root).as_posix()
+            if relative.split("/", 1)[0] in _IGNORED_ALWAYS or any(pattern.search(relative) for pattern in ignored):
+                continue
+            found[relative] = hashlib.sha1(path.read_bytes()).hexdigest()
+        return found
+
+    def _ignore_patterns(self) -> list[re.Pattern[str]]:
+        gitignore = self.root / ".gitignore"
+        if not gitignore.is_file():
+            return []
+        patterns = []
+        for line in gitignore.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line or line.startswith(("#", "!")):
+                continue
+            body = re.escape(line.strip("/")).replace(r"\*\*/", "(?:.*/)?").replace(r"\*", "[^/]*")
+            anchored = "^" if "/" in line.strip("/") else "(?:^|/)"
+            patterns.append(re.compile(f"{anchored}{body}(?:/|$)"))
+        return patterns
+
+    def _files_at(self, start: Path) -> list[Path]:
+        """The file start names, or every file under the folder it names; none when nothing is there."""
+        if start.is_file():
+            return [start]
+        if start.is_dir():
+            return [path for path in start.rglob("*") if path.is_file()]
+        return []
+
 
     @property
     def has_origin(self) -> bool:
@@ -364,7 +363,7 @@ class MockBranch(Branch):
         committed = self._held.changed_since_fork(self.name)
         if self._repo.current_branch != self:
             return committed
-        return sorted({*committed, *self._held.uncommitted(self._repo.root)})
+        return sorted({*committed, *self._repo.uncommitted()})
 
     def check_out(self) -> Branch:
         self._held.check_out(self._repo.root, self.name)

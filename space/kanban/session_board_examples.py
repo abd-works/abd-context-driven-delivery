@@ -512,7 +512,7 @@ class MockCheckout:
         self._project = project
         self.held = MockGit(project.root)
         # The board finds the project's repository where it finds every checkout's, so it works on the mock from now on.
-        self.held.serve(project.root)
+        self.repo = self.held.serve(project.root)
 
     def seed_git_checkout(self) -> None:
         self.held.make_clone()
@@ -534,7 +534,7 @@ class MockCheckout:
         return self.held.branch_of(folder.resolve())
 
     def uncommitted(self, path: str) -> list[str]:
-        return self.held.uncommitted(self.held.root, self.held.root / path if path else None)
+        return self.repo.uncommitted(self.held.root / path if path else None)
 
     def origin_log(self, branch: str) -> list[str]:
         return list(reversed(self.held.origin.logs.get(branch, [])))

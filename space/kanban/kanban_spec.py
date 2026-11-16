@@ -13,6 +13,7 @@ from harness.installation.repository_toolsets import RepositoryToolsets
 
 RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 
+import cdd_guidance.actions  # noqa: E402,F401 - registers the actions each stage's steps come from, as the cdd server does when it loads every toolset
 from cdd_guidance.practices.bdd.bdd import Bdd  # noqa: E402
 from cdd_guidance.practices.ddd.ddd import Ddd  # noqa: E402
 from cdd_guidance.practices.stories.stories import Stories  # noqa: E402

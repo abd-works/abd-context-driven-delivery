@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.catalog_generator.catalog_examples import CatalogFidelity
-from harness.chat.chat import Chat
+from harness.chat.chat import Chat, Chats
 from harness.diagnostics.app import App
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.installation.data_class import data_field, identity, language_adapter
@@ -249,7 +249,7 @@ class Board:
     def active(self) -> Ticket | None:
         """The ticket of the session saved as open, main's own ticket while main is. Sent whole, so
         a reader such as the chat bar draws the active session from it without finding the ticket again by its name."""
-        return self.ticket(self.sessions.open_name)
+        return self.ticket(self.sessions.opened.name_for())
 
     def column(self, name: str) -> Column:
         found = next((column for column in self._columns if column.name == name), None)
@@ -324,15 +324,14 @@ class Board:
     @noSessionLog
     def folders(self, path: str = "") -> list[str]:
         """List the folders inside path, a folder in the repository (its top when empty), as paths from the project, for a person choosing a workpath or a practice root. Installed packages, caches, and hidden folders hold no one's work, so they are left out, apart from .context, which holds a module's models and maps and can be a practice root."""
-        return sorted(entry.path for entry in self.sessions.file_manager.list(path).folders)
+        return self.sessions.file_manager.list(path).folder_paths
 
     @mcp
     @agent_tool
     @noSessionLog
     def help(self, practice: str) -> Help:
         """Return the overview, guidance, and shared rules of the board's practice named practice, such as stories or clean_engineering, with its page on the forge. A fidelity's help comes from its progress on a ticket: fidelity-progress.help."""
-        found = self.catalogued_practices.keyed(practice)
-        return Help(found.practice, found)
+        return Help.on_practice(self.catalogued_practices.keyed(practice))
 
 
 class CardKinds:
@@ -467,7 +466,7 @@ class BoardReads:
 
     @cached_property
     def chats(self) -> list[Chat]:
-        return Chat.list()
+        return Chats.load().list()
 
     @cached_property
     def _chats_by_name(self) -> dict[str, Chat]:
@@ -741,6 +740,11 @@ class Help:
         self._stage = required.stage if required is not None else None
         # The catalog's view of the practice, which names every page on the forge: the one the board holds.
         self._catalogued = catalogued
+
+    @classmethod
+    def on_practice(cls, catalogued: CatalogPractice) -> Help:
+        """Help on the practice catalogued shows: its overview, guidance, and shared rules, with its page on the forge."""
+        return cls(catalogued.practice, catalogued)
 
     @property
     @data_field

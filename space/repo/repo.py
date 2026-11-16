@@ -86,6 +86,8 @@ class Repo:
         # What it exchanges with origin, and how it merges a branch in.
         self.origin = Origin(self)
         self.merges = Merges(self)
+        # How its work is published: committed and pushed on its branch, or taken to main.
+        self.publishing = Publishing(self)
         # Each path already written from the top. The board names every session file this way thousands of times a
         # refresh, and the answer depends only on the path and this repository's root, which never changes.
         self._from_top: dict[Path, str] = {}
@@ -276,13 +278,7 @@ class Repo:
         """Commit this checkout's working tree using ``message`` (subject and optional body), and push its branch: the
         checkout of the project the call names, which is the folder the calling chat works in, such as a ticket's own
         worktree."""
-        text = (message or "").strip()
-        if not text:
-            raise CommitMessageRequiredError()
-        sha = self.commit([str(self.root)], text, untracked=untracked)
-        if sync_remote:
-            self.origin.push_upstream()
-        return Commit(sha, text)
+        return self.publishing.push_commit(message, untracked=untracked, sync_remote=sync_remote)
 
     @long_call
     @agent_tool
@@ -291,11 +287,7 @@ class Repo:
         """Commit this checkout's work on its branch and push the branch, nothing merged: the chat bar's push. The
         checkout is the one of the project the call names, the folder the calling chat works in. Answer the commit the
         branch is on."""
-        branch = self.current_branch
-        self.commit([str(self.root)], f"{branch.name}: work pushed", untracked=True)
-        if self.has_origin:
-            self.origin.push_upstream()
-        return Commit(self.current_commit, self.head_message)
+        return self.publishing.push_work()
 
     @long_call
     @agent_tool
@@ -304,7 +296,7 @@ class Repo:
         """Commit this checkout's work on its branch, then merge that branch into main in the main clone, which goes back
         to the branch it had; nothing is pushed. The checkout is the one of the project the call names, the folder the
         calling chat works in, such as a session's own worktree. Answer the commit main is on."""
-        return self._take_work_to_main(push=False)
+        return self.publishing.take_work_to_main(push=False)
 
     @long_call
     @agent_tool
@@ -313,24 +305,7 @@ class Repo:
         """Commit this checkout's work on its branch and push the branch, merge it into main in the main clone, and push
         main, so origin's main holds the work; the main clone goes back to the branch it had. Answer the commit main is
         on."""
-        return self._take_work_to_main(push=True)
-
-    def _take_work_to_main(self, push: bool) -> Commit:
-        branch = self.current_branch
-        self.commit([str(self.root)], f"{branch.name}: work taken to main", untracked=True)
-        if push and not branch.is_default and self.has_origin:
-            self.origin.push_upstream()
-        clone = self.main_clone
-        returning_to = clone.current_branch
-        # The clone's own changes are its work too, such as the session's log, which this call has just written there; a
-        # merge refuses to run over them.
-        clone.commit([str(clone.root)], f"{returning_to.name}: work kept before merging {branch.name}", untracked=True)
-        branch.merge_into_default()
-        if push and clone.has_origin:
-            clone.origin.push_upstream()
-        landed = Commit(clone.current_commit, clone.head_message)
-        returning_to.switch_to()
-        return landed
+        return self.publishing.take_work_to_main(push=True)
 
     @command(name="push")
     @agent_instructions
@@ -351,6 +326,54 @@ class Repo:
         Otherwise call MCP ``repo.push_commit`` with the full message (subject plus body when useful).
         """
         return ""
+
+
+class Publishing:
+    """*Publishing* is how one checkout's work leaves it: committed on its branch and pushed, or taken to main in the main
+    clone, which goes back to the branch it had. The *Repo* answers what git holds; this runs the steps that publish it."""
+
+    def __init__(self, repo: Repo) -> None:
+        self._repo = repo
+
+    def push_commit(self, message: str, *, untracked: bool, sync_remote: bool) -> Commit:
+        """Commit the checkout's working tree with message, and push its branch when sync_remote."""
+        text = (message or "").strip()
+        if not text:
+            raise CommitMessageRequiredError()
+        repo = self._repo
+        sha = repo.commit([str(repo.root)], text, untracked=untracked)
+        if sync_remote:
+            repo.origin.push_upstream()
+        return Commit(sha, text)
+
+    def push_work(self) -> Commit:
+        """Commit the checkout's work on its branch and push the branch, nothing merged."""
+        repo = self._repo
+        branch = repo.current_branch
+        repo.commit([str(repo.root)], f"{branch.name}: work pushed", untracked=True)
+        if repo.has_origin:
+            repo.origin.push_upstream()
+        return Commit(repo.current_commit, repo.head_message)
+
+    def take_work_to_main(self, push: bool) -> Commit:
+        """Commit the checkout's work on its branch, merge it into main in the main clone, pushing both when push, and
+        bring the main clone back to the branch it had."""
+        repo = self._repo
+        branch = repo.current_branch
+        repo.commit([str(repo.root)], f"{branch.name}: work taken to main", untracked=True)
+        if push and not branch.is_default and repo.has_origin:
+            repo.origin.push_upstream()
+        clone = repo.main_clone
+        returning_to = clone.current_branch
+        # The clone's own changes are its work too, such as the session's log, which this call has just written there; a
+        # merge refuses to run over them.
+        clone.commit([str(clone.root)], f"{returning_to.name}: work kept before merging {branch.name}", untracked=True)
+        branch.merge_into_default()
+        if push and clone.has_origin:
+            clone.origin.push_upstream()
+        landed = Commit(clone.current_commit, clone.head_message)
+        returning_to.switch_to()
+        return landed
 
 
 class Branch:

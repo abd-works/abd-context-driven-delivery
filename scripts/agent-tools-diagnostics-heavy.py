@@ -13,7 +13,7 @@ def main() -> int:
     from harness.diagnostics.agent_tools_probe import AgentToolsProbe
     from harness.installation.installer import Installer
 
-    installer = Installer(repo=_REPO)
+    installer = Installer.create(repo=_REPO)
     report = AgentToolsProbe(installer).run()
     print(report)
     return 1 if report.split("\n", 1)[0].lstrip("!").startswith("red") else 0

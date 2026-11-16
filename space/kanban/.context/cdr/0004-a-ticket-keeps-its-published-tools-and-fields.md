@@ -15,3 +15,16 @@ That took `Ticket` from 48 methods and a total complexity of 143 to 33 methods a
 Each published method is one line that asks a part, or the few lines that decide a column or a move from what the parts answer. The one private method left, `_return_to_backlog`, is shared by `move_previous` and `move_to`.
 
 Revisit when the harness can publish a held part's tools under its owner's name: then the checkout's five tools can move onto `TicketCheckout` without renaming them, and `Ticket` drops under 30.
+
+## Version 1 refactoring: four more parts
+
+The Clean Engineering review of the version 1 refactoring found `Ticket` still changing for many reasons: its parent and child tree, its file listings and format and overlay choices, its stage moves, and closing, archiving, deleting, and shelving it. Each is now a part made once with the ticket, and each published tool or data field asks one of them in one line:
+
+- *TicketTree* (`ticket.tree`, `ticket_tree.py`, with `ParentMovesWithChildrenError`, `NotAChildError`, and `ParentLoopError`): its ancestors, the tickets it can become a child of, whether it is stacked, the stage of its child furthest back, refusing to move a parent, and `add_child`, `pull_out`, and `reassign_parent`.
+- *TicketChoices* (`ticket.choices`, `ticket_choices.py`): `fidelity_files`, `root_files`, `format_choices`, `choose_formats`, `overlay_choices`, and `choose_overlays`.
+- *TicketMoves* (`ticket.moves`): `move_next`, `move_previous`, `move_to`, and where Move next and Move previous put it (`next_place`, `previous_place`).
+- *TicketEnding* (`ticket.ending`): `close`, `archive`, `delete`, and `to_backlog`, each refusing main.
+
+The published names still sit on `Ticket`, for the reason above: a toolset publishes a tool under its own class's name, and the generated TypeScript `TicketData` reads its data fields by key. What changes when a tree rule, a choice, a move, or an ending changes is now the part, not the ticket.
+
+The same holds for `Board` (`board.folders`, `board.help`, `board.save_again`, `board.set_sends_fixes_directly`), `Repo` (`repo.push_commit`, `push_work`, `merge_to_main`, `push_to_main`, which ask its *Publishing*), `Session` (the graph tools, which ask its *SessionExplorer*; its graph and practices, which are its *PracticeOutputs*; a guidance selection's update, which its *GuidanceVersion* makes), and `Sessions` (`sessions.current` and `sessions.switch`, which ask its *OpenSessions*): each keeps its published names and asks the part that owns the reason to change.

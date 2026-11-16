@@ -91,6 +91,11 @@ class Folder:
         packages, caches, and hidden folders other than .context are left out."""
         return [entry for entry in self._entries if entry.is_folder and holds_work(entry.name)]
 
+    @property
+    def folder_paths(self) -> list[str]:
+        """Those folders as paths from the project, sorted, as a folder picker lists them."""
+        return sorted(entry.path for entry in self.folders)
+
 
 class FileEntry:
     """One file something declares, such as a fidelity's output, as a path from the project, whether it is there yet,

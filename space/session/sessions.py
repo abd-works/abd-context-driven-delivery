@@ -2,65 +2,32 @@
 
 from __future__ import annotations
 
-import re
 import threading
 from functools import cached_property
 from pathlib import Path
 
 from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import tool_subject
-from harness.agent_tools.tool_call import CALLS_BEING_ANSWERED, ToolCall
+from harness.agent_tools.tool_call import SESSION_OPENING, ToolCall
 from harness.catalog_generator.catalog_practice import CatalogPractice
-from harness.guidance.practice_catalogue import PracticeCatalogue
+from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 from harness.installation.files import command
 from harness.mcp.mcp_annotations import mcp
 from harness.annotations.name import Name
 from space.repo.repo import Repo
 from space.session.file_manager import FileManager
 from space.session.session_saves import SERVED_SAVES, SessionSaves
-from space.session.answer_reads import ANSWER_READS
+from space.session.answer_reads import ServedAnswers
+from space.session.open_sessions import OpenSessions
 from space.session.session import MAIN_SESSION_NAME, Session, SessionNotFoundError
 from space.session.session_folder import COMPLETE_FOLDER
 from space.session.session_record import SESSION_FILE
 from space.session.session_roots import SessionRoots
-from space.work_state import SESSIONS_FOLDER, WorkState
+from space.work_state import SESSIONS_FOLDER
 
 BACKLOG_FOLDER = "_backlog"
 # Folders in `.sessions` whose names start with this are the ones the sessions share, such as the backlog.
 _SHARED_FOLDER_MARK = "_"
-# Said first when a chat switches to a session whose own worktree is not where the chat works: work done here would
-# land in the wrong folder.
-_OUTSIDE_WORKTREE_NOTE = (
-    "This chat works in {chat}, but {session}'s worktree is {worktree}. Do this session's work in a chat started there "
-    "(start_session with cwd {worktree}), not in this chat.\n\n"
-)
-_DEFAULT_ROOTS_NOTE = (
-    "**Output roots.** These practices write under their default folders, which nobody has checked: {roots}. Before "
-    "generating anything, look for where the repository already keeps each one's artifacts. A practice's documents and "
-    "its code or tests can sit in different areas: the story map in the project's .context, and its scenarios and "
-    "story tests in story_tests/<epic>/<sub-epic>/. Set both: practice-session-output.choose_root for the practice's "
-    "own root (the map, or the code), and fidelity-session-output.choose_root for each fidelity kept apart, such as "
-    "the stories scenarios and acceptance_tests. Choose the most local folder that holds this session's work, such as "
-    "its epic's folder in story_tests rather than all of story_tests, so the Files app, the board and validate show "
-    "this ticket's files and new work lands beside them. Leave a default that already holds them, or where none "
-    "exist yet.\n\n"
-)
-_WORKTREE_TICKET_NOTE = (
-    "This chat works in {ticket}'s own worktree, so its session is {ticket}, not {asked}. To work on {asked}, open it "
-    "from the main chat.\n\n"
-)
-
-
-class SessionNameRequiredError(ValueError):
-    """Raised when switch-session has no name and the chat has no session or branch open."""
-
-    def __init__(self) -> None:
-        super().__init__(
-            "session name is required: pass name, or switch to a branch first so "
-            "the session can take its name"
-        )
-
-
 class PracticeNotFoundError(LookupError):
     """Raised when a caller names a practice, such as clean_engineering, that the board or ticket does not have. It
     names the practice and what was searched for it."""
@@ -110,10 +77,9 @@ class BoardPractices:
 @agent_toolset
 class Sessions:
     """The work sessions of one checkout: open ones in ``.sessions/{name}/``, closed ones in ``.sessions/_complete/``.
-    Which one is open is kept per chat by the cdd server under ``~/.cdd`` (*WorkState*), never in the checkout: the
-    chat a call comes from keeps its own, and a call naming no chat keeps one for this checkout folder. ``main`` works
-    on the whole repository and is open when no other is. The open session is read each time it is asked for, so a
-    switch or a close made through another client of the same chat is seen at once.
+    Which one each chat has open is its part *OpenSessions* (``sessions.opened``); ``main`` works on the whole
+    repository and is open when no other is. Whether the process is giving an answer from them, which their sessions
+    hold what they read for, is its part *ServedAnswers* (``sessions.answers``).
 
     One *Session* is kept here for each session folder, made the first time it is read and read again from its folder
     on each ask, so every call in a session, from any chat, works on the same object, which holds that session's graph
@@ -128,26 +94,16 @@ class Sessions:
         self.roots = SessionRoots(self)
         self._held: dict[Path, Session] = {}
         self._held_lock = threading.Lock()
-        # Whether the process serves calls from these sessions (*CallSessions*), each call an answer of its own.
-        self._serves_answers = False
+        # The answer the process gives from these sessions, while it serves calls from them (*CallSessions*).
+        self.answers = ServedAnswers()
+        # Which session each chat has open in this checkout, and switching a chat to another.
+        self.opened = OpenSessions(self)
 
     @classmethod
     @tool_subject
     def of_project(cls, project: Path) -> Sessions:
         """The sessions of project, the project the running call names, as this process holds them between calls."""
         return SERVED_SESSIONS.of_project(project)
-
-    @property
-    def answer(self) -> int | None:
-        """The answer these sessions are giving, which their sessions hold what they read from their files for
-        (*AnswerReads*); none when the process serves no calls from them, so their sessions read on every ask."""
-        return ANSWER_READS.current if self._serves_answers else None
-
-    def serve_answer(self) -> None:
-        """Begin an answer from these sessions: what their sessions read from their files is read again, so a change
-        another process wrote since the last answer is seen."""
-        self._serves_answers = True
-        ANSWER_READS.begin()
 
     @cached_property
     def board_practices(self) -> BoardPractices:
@@ -156,7 +112,7 @@ class Sessions:
         pages, and skills, is the same for every session, so no single session's instances stand for it, and no other
         reader changes these. The board is made again for every call, so it is held here, where the process keeps the
         checkout's sessions."""
-        return BoardPractices(CatalogPractice.of_practices(PracticeCatalogue.create_all()))
+        return BoardPractices(CatalogPractice.of_practices(PRACTICE_CATALOGUE.create_all()))
 
     @cached_property
     def file_manager(self) -> FileManager:
@@ -201,9 +157,9 @@ class Sessions:
         return bool(name) and name != MAIN_SESSION_NAME and not name.startswith(_SHARED_FOLDER_MARK)
 
     def _is_open_session_folder(self, folder: Path) -> bool:
-        return folder.is_dir() and self._is_work_session(folder.name) and not self._is_left_behind(folder)
+        return folder.is_dir() and self._is_work_session(folder.name) and not self.is_left_behind(folder)
 
-    def _is_left_behind(self, folder: Path) -> bool:
+    def is_left_behind(self, folder: Path) -> bool:
         """Whether folder, among the open sessions, is only what a closed session of its name left there, such as a
         progress cache written before its move or a folder Windows would not let go of: it holds no session.json, and
         the session is kept among the closed ones. The board would otherwise list that session twice."""
@@ -266,37 +222,6 @@ class Sessions:
         with self._held_lock:
             self._held.pop(session.session_path.resolve(), None)
 
-    def open_state(self, chat: str = "") -> WorkState:
-        """What chat keeps open, under ``~/.cdd``: the chat named, else the chat of the call being answered, else this
-        checkout folder's own entry, for a call that names no chat."""
-        if not chat:
-            call = CALLS_BEING_ANSWERED.current
-            chat = call.chat_id if call is not None else ""
-        return WorkState(self.root, chat)
-
-    def open_name_for(self, chat: str = "") -> str:
-        """The name of the session chat works on: the ticket of the worktree these sessions serve, whatever any chat
-        chose to open, as ``current`` answers; else the session chat has open; main when none is. The board names its
-        active ticket from this, so a ticket's own chat bar shows that ticket rather than main."""
-        ticket = self._ticket_of_worktree()
-        if ticket is not None:
-            return ticket.name
-        chosen = self.open_state(chat).session
-        # Another chat may have closed the chosen session since. Working on it would write its folder back among the
-        # open sessions, where the board lists it again, so a chat whose session was closed works on main.
-        if not chosen or self._is_closed_since(chosen):
-            return MAIN_SESSION_NAME
-        return chosen
-
-    def _is_closed_since(self, name: str) -> bool:
-        open_folder = self.folder_of(name)
-        return (not open_folder.is_dir() or self._is_left_behind(open_folder)) and (self.folder / COMPLETE_FOLDER / name).is_dir()
-
-    @property
-    def open_name(self) -> str:
-        """The name of the session open for the call being answered; main when none is."""
-        return self.open_name_for()
-
     def create(self, name: str, workpath: Path | None = None, *, title: str = "", scope: str = "", parent: str = "") -> Session:
         """A new session called name, its name, title, scope, and parent written once in its ``session.json``. workpath
         is kept only when it is a folder chosen other than this checkout, since the root is otherwise derived. It is not
@@ -311,33 +236,14 @@ class Sessions:
         session.log.seed_first_loop()
         return session
 
-    def open(self, session: Session, chat: str = "") -> Session:
-        """Make session the one chat has open. Nothing is written in the checkout: the choice is kept under ``~/.cdd``."""
-        self.open_state(chat).session = "" if session.name == MAIN_SESSION_NAME else session.name
-        return session
-
     @mcp
     @command(name="current-session")
     @agent_tool
     def current(self, call: ToolCall | None = None) -> Session:
         """The open session of this chat; the main session, which works on the whole repository, when none is named."""
-        return self.load(self.folder_of(self.open_name_for(call.chat_id if call is not None else "")))
+        return self.opened.current(call.chat_id if call is not None else "")
 
-    def _ticket_of_worktree(self) -> Session | None:
-        """The ticket whose own worktree these sessions serve: a chat there works on that ticket, whatever any chat
-        chose to open. None in the repository's own folder, and in a worktree whose branch names no ticket."""
-        if not self.repo.is_linked_worktree() or not self.repo.is_on_branch:
-            # A worktree on no branch, such as one detached at a commit, names no ticket.
-            return None
-        branch = self.repo.current_branch.name
-        tickets = self._open_ticket_names()
-        if branch in tickets:
-            return self.named(branch)
-        # The Claude desktop app names a branch around the ticket's name, such as claude/checkout-flow-cef4bc.
-        holding = [name for name in tickets if re.search(rf"(^|[/_-]){re.escape(name)}($|[/_-])", branch)]
-        return self.named(holding[0]) if len(holding) == 1 else None
-
-    def _open_ticket_names(self) -> list[str]:
+    def open_ticket_names(self) -> list[str]:
         """The names of the open work sessions in the repository's own .sessions."""
         if not self.folder.is_dir():
             return []
@@ -355,61 +261,7 @@ class Sessions:
         worktree and the call's chat works elsewhere, the answer opens by saying to start a chat in that worktree.
         A chat in a ticket's own worktree always opens that ticket's session, whatever name it asks for, because the
         worktree holds only that ticket's work; the answer says so when it asked for another."""
-        chat = call.chat_id if call is not None else ""
-        ticket = self._ticket_of_worktree()
-        if ticket is not None:
-            opened = self.open(ticket, chat)
-            return self._worktree_ticket_note(ticket, name) + self._default_roots_note(opened) + opened.log.instructions()
-        wanted = self._name_to_switch_to(name, chat)
-        folder = self.folder_of(wanted)
-        is_kept = (folder / SESSION_FILE).is_file() or wanted == MAIN_SESSION_NAME
-        session = self.load(folder) if is_kept else self.create(wanted, workpath)
-        opened = self.open(session, chat)
-        return self._outside_worktree_note(session, call) + self._default_roots_note(opened) + opened.log.instructions()
-
-    def _default_roots_note(self, session: Session) -> str:
-        """What a chat opening session is told about the practices it works on whose roots nobody set, so it points each
-        at the folder that already holds its artifacts; nothing for main, or when every root was set."""
-        if session.name == MAIN_SESSION_NAME:
-            return ""
-        defaults = [
-            f"{key} → {practice.root}"
-            for key, practice in session.own_practices.items()
-            if practice.enabled and practice.is_root_default
-        ]
-        return _DEFAULT_ROOTS_NOTE.format(roots=", ".join(defaults)) if defaults else ""
-
-    def _worktree_ticket_note(self, ticket: Session, asked: str) -> str:
-        """What a chat in ticket's worktree that asked for another session is told; nothing when it asked for none or
-        for ticket."""
-        cleaned = Name(asked).title_slug if asked else ""
-        if not cleaned or cleaned == ticket.name:
-            return ""
-        return _WORKTREE_TICKET_NOTE.format(ticket=ticket.name, asked=cleaned)
-
-    def _outside_worktree_note(self, session: Session, call: ToolCall | None) -> str:
-        """What a chat working outside session's own worktree must do instead; nothing when it works there, or the
-        session has none."""
-        if call is None or call.project is None or session.name == MAIN_SESSION_NAME:
-            return ""
-        worktree = self.roots.worktree_of(session.name)
-        if worktree is None or worktree == call.project or worktree in call.project.parents:
-            return ""
-        return _OUTSIDE_WORKTREE_NOTE.format(chat=call.project, session=session.name, worktree=worktree)
-
-    def _name_to_switch_to(self, name: str, chat: str = "") -> str:
-        state = self.open_state(chat)
-        cleaned = Name(name or state.session).title_slug
-        if not cleaned:
-            raise SessionNameRequiredError()
-        return cleaned
-
-    def close(self, session: Session) -> None:
-        """Close session: when it is the one the call's chat has open, main becomes its open session."""
-        state = self.open_state()
-        if session.name != (state.session or MAIN_SESSION_NAME):
-            return
-        state.session = ""
+        return self.opened.switch(name, workpath, call)
 
 
 class CallSessions:
@@ -418,7 +270,7 @@ class CallSessions:
     a tool call finds the sessions it works in: the session open in the call's project, or the one a board command names
     by its session.json; and the session open in a project for work that serves no call, such as a hook event. Each is
     the one object its sessions hold for its folder; the lines a call logs point at the call's chat through
-    ``session.log.by(call.request.chat)``. Registered with *ToolCall* when this module is imported,
+    ``session.log.by(call.request.chat)``. Registered with ``SESSION_OPENING`` when this module is imported,
     so the framework opens a session without importing space."""
 
     def __init__(self) -> None:
@@ -435,7 +287,7 @@ class CallSessions:
             if held is None:
                 held = self._of_project[repo.root] = Sessions(repo.root)
         # Each call, and each hook event, finds its sessions here, so each begins an answer of its own.
-        held.serve_answer()
+        held.answers.begin()
         return held
 
     def saved_in(self, project: Path) -> Session:
@@ -453,4 +305,4 @@ class CallSessions:
 
 # The sessions this process serves, held for as long as it runs.
 SERVED_SESSIONS = CallSessions()
-ToolCall.open_sessions_with(SERVED_SESSIONS)
+SESSION_OPENING.open_with(SERVED_SESSIONS)

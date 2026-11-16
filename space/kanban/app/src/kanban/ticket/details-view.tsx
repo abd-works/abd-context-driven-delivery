@@ -47,12 +47,12 @@ function TicketPlaceView({ ticket }: { ticket: TicketClient }) {
   return (
     <span className="details-place">
       <PlaceLinkView label={ticket.name} hint="Browse the session folder" onPress={() => page.files.openFolder(ticket, 'session')} />
-      {ticket.origin ? ` · ${ticket.origin}` : ''}
+      {ticket.face.origin ? ` · ${ticket.face.origin}` : ''}
       {' · root '}
       <PlaceLinkView label={ticket.session.workpath || 'whole repository'} hint="Browse the folder the session works in" onPress={() => page.files.openFolder(ticket, 'workpath')} />{' '}
       <PlaceLinkView label="roots" hint="Choose the session's workpath and each practice's practice root" onPress={() => page.roots.openFor(ticket)} />
       {' · '}
-      <PlaceLinkView label={ticket.stagePlace} hint={`Browse the files of ${stage?.name ?? 'this stage'}`} isOff={!stageProgress.length} onPress={() => page.files.openFiles(ticket, stageProgress)} />
+      <PlaceLinkView label={ticket.face.stagePlace} hint={`Browse the files of ${stage?.name ?? 'this stage'}`} isOff={!stageProgress.length} onPress={() => page.files.openFiles(ticket, stageProgress)} />
     </span>
   )
 }
@@ -69,13 +69,13 @@ function TicketNotesView({ ticket }: { ticket: TicketClient }) {
       ) : (
         'No handoff yet'
       )}
-      {ticket.nextNote ? (
+      {ticket.face.nextNote ? (
         <>
           {' · '}
-          <PlaceLinkView label={ticket.nextNote} hint={ticket.runNextHint} isOff={!ticket.canRunNext} onPress={() => ticket.runNext()} />
+          <PlaceLinkView label={ticket.face.nextNote} hint={ticket.face.runNextHint} isOff={!ticket.nextStep.canRun} onPress={() => ticket.nextStep.run()} />
         </>
       ) : null}
-      {ticket.lockNote ? ` · ${ticket.lockNote}` : ''}
+      {ticket.face.lockNote ? ` · ${ticket.face.lockNote}` : ''}
     </div>
   )
 }

@@ -11,6 +11,9 @@ function activate(context) {
     onMessage(message) {
       vscode.window.showInformationMessage(message);
     },
+    onBroken(file, err) {
+      vscode.window.showWarningMessage(`Prompt notify: ${file} is not a notice (${err.message})`);
+    },
   });
   context.subscriptions.push({ dispose: () => watcher.dispose() });
   context.subscriptions.push(
