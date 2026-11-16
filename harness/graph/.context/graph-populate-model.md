@@ -174,7 +174,7 @@ A parsed object a practice reader added, or a plain node read back from `graph.j
 ----
 + get_fact(key, default=None): object
 	// this node's fact, else the nearest ancestor's: a fact a whole file owns is kept once, on the file's top node
-+ set_fact(key, value): None
++ set_fact(key, fact): None
 + has_fact(key): bool
 + place(file, start_line, end_line): None
 	// a practice whose reader finds a node by a nearby line, as Stories' recording does, moves it onto the lines that declare it
