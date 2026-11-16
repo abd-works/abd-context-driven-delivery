@@ -1124,14 +1124,6 @@ Requested (2026-11-06, "default is to have a graph and just read the violations"
 
 This epic is the app's own story map, `C:/dev/story-ui/.context/story-map.md`; its evidence lines name the app's files.
 ## (E) View Story Map
-### (S) Story Designer --> Open Story Map By Address
-
-Observed: The workspace loads the map named in the `?mapId=` query (or `default`) and, when no map with that id exists yet, the server creates and saves an empty one so the designer always lands on a map (main.tsx; stories-server.ts `createStoryMapRouter` GET `/`).
-
-### (S) Story Designer --> Pick Story Map From Dashboard
-
-Intended (story_map.information_architecture.md, Story Map Dashboard scaffold): a dashboard lists maps and "open map" takes the designer into the workspace; no dashboard screen exists.
-
 ### (S) Story Designer --> Browse Story Hierarchy
 
 Observed: The map renders Epic, SubEpic, and Story lanes on one shared grid, with each Story under its parent SubEpic column, lanes sized to their bottommost children, and collapsed titles kept on one line (stories-client.tsx `StoryHierarchyView`, `computeColumnLayout`; workspace.css).
@@ -1160,24 +1152,18 @@ Intended (story_map.information_architecture.md toolbar; story_map.modules.md se
 
 Observed: The Executive / Engineering switch changes the page theme and logo and remembers the choice in browser storage (stories-client.tsx `StoryMapWorkspaceView` `THEME_STORAGE_KEY`; workspace.css `data-theme`).
 
-## (E) Expand Story Details
-### (S) Story Designer --> Expand One Story Card
+## (E) Build, Expand And Rearrange Story Map
 
-Observed: Clicking a Story card or its expand button opens that card inline to show its Scenarios, Steps, and Example tables while neighbouring cards stay collapsed in their columns; clicking again collapses it (stories-client.tsx `StoryCard`, `handleExpand`).
+Merged on 2026-11-16 from Expand Story Details, Build Map Structure and Rearrange Map By Dragging, at the person's request on the story map whiteboard. Open Story Map By Address and Pick Story Map From Dashboard were removed from View Story Map the same day.
 
-### (S) Story Designer --> Expand Descendant Story Cards
+### (S) Story Designer --> Expand And Collapse Story Cards
 
-Observed: The expand button on an Epic or SubEpic opens every Story card beneath it side by side in their own columns (stories-client.tsx `getAllDescendantStoryIds`, `useStoryMapViewState.expandDescendants`).
-
-### (S) Story Designer --> Expand And Collapse Whole Map
-
-Observed: The toolbar's Expand All opens every Epic, SubEpic, and Story, and Collapse All closes them all (stories-client.tsx `StoryMapWorkspaceView` toolbar, `collapseAll`).
+Observed: Clicking a Story card or its expand button opens that card inline to show its Scenarios, Steps, and Example tables while neighbouring cards stay collapsed; clicking again collapses it (stories-client.tsx `StoryCard`, `handleExpand`). The expand button on an Epic or SubEpic opens every Story card beneath it (`getAllDescendantStoryIds`, `useStoryMapViewState.expandDescendants`), and the toolbar's Expand All and Collapse All open or close the whole map (`StoryMapWorkspaceView` toolbar, `collapseAll`). Merged from Expand One Story Card, Expand Descendant Story Cards and Expand And Collapse Whole Map.
 
 ### (S) Story UI --> Widen Columns Around Expanded Story Cards
 
 Observed: An expanded card grows to fit its content and its column, the SubEpic and Epic lanes above it, and everything to its right shift to make room, then narrow again on collapse (workspace.css `.story-card.expanded`; stories-client.tsx shared grid in `StoryHierarchyView`).
 
-## (E) Build Map Structure
 ### (S) Story Designer --> Add First Epic To Empty Map
 
 Observed: A map with no Epics shows a single "+ Epic" starter button that opens the title popover (stories-client.tsx `StoryHierarchyView` Epic lane, `AddNodePopoverButton`).
@@ -1194,26 +1180,9 @@ Observed: The − on a card deletes that node and everything under it and renumb
 
 Observed: Double-clicking a card focuses its name; Enter, Tab, or leaving the field saves the new name and Escape restores the old one (stories-client.tsx `NodeNameInput`, `focusNameFieldOnDoubleClick`; stories-server.ts PATCH `/nodes/:nodeId` via `translateFrom`).
 
-## (E) Rearrange Map By Dragging
-### (S) Story Designer --> Reorder Sibling Epics, SubEpics, And Stories
+### (S) Story Designer --> Rearrange Map Nodes By Dragging
 
-Observed: Dragging a card within its own lane or parent saves the new sibling order with whole-number positions (stories-client.tsx `makeEpicDragHandlers`; stories.ts `reorderEpics`, `reorderSubEpics`, `reorderStories`).
-
-### (S) Story Designer --> Move Story To A Different SubEpic
-
-Observed: Dropping a Story card on another SubEpic, even under a different Epic, moves it there with its Scenarios at the dropped position (stories-client.tsx `makeStoryDragHandlers`; stories.ts `StoryMapModel.moveStory`).
-
-### (S) Story Designer --> Move SubEpic To A Different Epic
-
-Observed: Dropping a SubEpic lane on another Epic moves it and all its Stories there at the dropped position (stories-client.tsx `makeSubEpicDragHandlers`; stories.ts `StoryMapModel.moveSubEpic`).
-
-### (S) Story Designer --> Drop Node Into Empty Parent
-
-Observed: An Epic with no SubEpics or a SubEpic with no Stories accepts a dragged SubEpic or Story into its empty placeholder (stories-client.tsx `makeEmptyParentDropZone`).
-
-### (S) Story Designer --> See Full-Size Drop Preview While Dragging
-
-Observed: While dragging, the card itself shows full-size, greyed and dashed, at the spot it would land and its siblings shift around it, with no floating browser drag image (stories-client.tsx `useDragVisuals`, `computeDisplayIds`, `suppressNativeDragImage`).
+Observed: Dragging a card within its own lane or parent saves the new sibling order with whole-number positions (stories-client.tsx `makeEpicDragHandlers`; stories.ts `reorderEpics`, `reorderSubEpics`, `reorderStories`). Dropping a Story on another SubEpic, or a SubEpic on another Epic, moves it there with everything under it (`StoryMapModel.moveStory`, `moveSubEpic`); an empty Epic or SubEpic accepts a dropped node (`makeEmptyParentDropZone`); and the dragged card shows full-size at the spot it would land (`useDragVisuals`, `computeDisplayIds`, `suppressNativeDragImage`). Merged from Reorder Sibling Epics, SubEpics, And Stories, Move Story To A Different SubEpic, Move SubEpic To A Different Epic, Drop Node Into Empty Parent and See Full-Size Drop Preview While Dragging.
 
 ## (E) Plan Increments
 ### (S) Story Designer --> Add Increment
@@ -1307,17 +1276,9 @@ Observed: The − on a line deletes it and renumbers the remaining lines (storie
 Observed: Dragging a line by its handle saves the new line order in that Example (stories-client.tsx `ExampleBlock` line drag handlers; stories.ts `reorderExampleRows`).
 
 ## (E) Save And Share Changes
-### (S) Story UI --> Save Each Edit To The Server
+### (S) Story UI --> Save Valid Edits To The Server And Show Status
 
-Observed: Every edit is sent to the server as one request, saved to MongoDB, and the map is reloaded from the saved copy (stories-client.tsx `useStoryModel`; stories-server.ts `StoryMapRepositoryServer`, `StoryMapServer.persist`).
-
-### (S) Story UI --> Show Save Status
-
-Observed: The status rail shows synced, pending changes, or save error, and notes when an update report is available (stories-client.tsx `StoryMapWorkspaceView` status rail, `storyModelReducer`).
-
-### (S) Story UI --> Refuse Edits That Break Map Rules
-
-Observed: The server refuses a Scenario under a non-Story, an increment on a non-Story, an unknown increment, a node outside its claimed parent, or a duplicate field name, answers 422 with the rule code, and the status rail shows save error (stories.ts `MutationGuardError`; stories-server.ts error handler).
+Observed: Every edit is sent to the server as one request, saved to MongoDB, and the map is reloaded from the saved copy (stories-client.tsx `useStoryModel`; stories-server.ts `StoryMapRepositoryServer`, `StoryMapServer.persist`). The server refuses an edit that breaks a map rule (a Scenario under a non-Story, an increment on a non-Story, an unknown increment, a node outside its claimed parent, a duplicate field name) with 422 and the rule code (stories.ts `MutationGuardError`). The status rail shows synced, pending changes, or save error (stories-client.tsx `StoryMapWorkspaceView`, `storyModelReducer`). Merged on 2026-11-16 from Save Each Edit To The Server, Show Save Status and Refuse Edits That Break Map Rules, at the person's request on the story map whiteboard.
 
 ### (S) Story UI --> Record One Save Event Per Save
 
@@ -1344,25 +1305,13 @@ Intended (story_map.stories.md, Resolve Concurrent View State Changes; mern-stor
 Requested on 2026-11-06: the Story UI editor opens a CDD session's `story-map.md`, edits it and saves it back, and its tests run against that map. Each gap a test finds becomes an Intended story in this app's map, fixed before the board or chat bar invokes the app.
 
 ## (E) Author Story Changes With AI
-### (S) Story Designer --> Open AI Chat Panel
-
-Intended (story_map.information_architecture.md, open chat to AI Chat Panel scaffold): no chat panel exists.
-
 ### (S) Story Designer --> Request AI Story Change
 
-Intended (story_map.stories.md, Request AI Story Mutation; story_map.modules.md ai-mutation): no ai-mutation module exists.
-
-### (S) Story Designer --> Review Proposed Map Changes
-
-Intended (story_map.stories.md, Review Proposed Graph Changes): no proposal view exists.
+Intended (story_map.stories.md, Request AI Story Mutation; story_map.information_architecture.md, AI Chat Panel scaffold; story_map.modules.md ai-mutation): the person asks for a change in the AI chat panel; no chat panel or ai-mutation module exists. Merged on 2026-11-16 with Open AI Chat Panel, at the person's request on the story map whiteboard ("too many stories for such a simple thing").
 
 ### (S) Agent --> Apply AI Change To Story Map
 
-Intended (story_map.stories.md, Apply AI Mutation to Story Map; mern-story-map-ai-sketch.md "Direct auto-apply changes"): no ai-mutation module exists.
-
-### (S) Story Designer --> Place Notes On The Story Map
-
-Requested (2026-11-10, "native claude markup panel": "annotate on the story editor app with notes and have a canvas like experience, eg comments sent directly to claude for processing; then potentially reuse that for a bespoke class editor and realization editor"), from `.sessions/_backlog/integrate-stories-with-the-canvas-explorer.md`: a person places notes anywhere on the Story UI editor's map, as on a canvas, beside the nodes they are about. The same markup may later serve a bespoke class editor and a realization editor; those editors are not on this map yet.
+Intended (story_map.stories.md, Apply AI Mutation to Story Map; mern-story-map-ai-sketch.md "Direct auto-apply changes"): no ai-mutation module exists. Review Proposed Map Changes and Place Notes On The Story Map were removed on 2026-11-16, at the person's request on the story map whiteboard.
 
 # (E) Explore Stories In Story UI
 
