@@ -9,7 +9,7 @@ import { promptCommand, showFailure } from '../error-display/failure-client'
 
 const SERVER = 'plugin:cdd:cdd'
 const CHECK_TOOL = 'cdd-version.check'
-// Reads the version on disk against origin main as last fetched, without fetching: cheap enough for every turn.
+// Reads the version on disk against the latest release tag as last fetched, without fetching: cheap enough for every turn.
 const READ_TOOL = 'cdd-version.read'
 const INSTALL_LATEST_COMMAND = '/harness:installation:install-latest'
 // The cdd server is still connecting as a chat opens, so the first check waits as the server health's first look does.
