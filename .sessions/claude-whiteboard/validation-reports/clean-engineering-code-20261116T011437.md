@@ -398,3 +398,27 @@ If this change will not stay here, follow `practices/clean-engineering/clean-eng
 - **`domain-tier-only-for-domain-logic`** — Add a domain tier only when `<aggregate>.ts` holds logic worth proving alone. A core that only states structure has nothing to run, and the server tier already exercises it.
 - **`same-signature-across-languages`** — When the domain is in another language, as a CDD-backed domain is, a behavior the Mamba spec states keeps the same `should` sentence in the shared behavior. A sentence on one side only shows a behavior untested on the other.
 - **`ask-cross-aggregate-sync`** — **Hard gate** when generating stories. Use AskQuestion; persist the answer under **Cross-aggregate sync** in `.context/grill-answers.md` before writing story files.
+## Judgment — `harness/whiteboard/whiteboard.py`
+
+Scope: the whiteboard channel's own code. The hits on `cdd_guidance/practices/stories/model/diagram_story_model.py` (`bar_y`, `line_y`, `place`, `DiagramEpic`, `DiagramStory`, `DiagramIncrement`) are on code that predates this ticket; the file was named only because `DiagramStoryCell` and `place_cells` were added to it, and those two have no hits.
+
+### `do-not-invent-parallel-object-models` — Fail
+- whiteboard.py:25 `Box`: copied Block's x, y, w, h. Fixed after this report (da425f5a7): Block now holds one Box and writes it flat for the store.
+
+### `shape-classes-around-resources` — Fail
+- whiteboard.py:107 `Section`: was a data bag the class model measured containment on. Fixed (da425f5a7): `Block.holds(other)`, and `BoardElement.role` names what an element draws.
+
+## Judgment — `cdd_guidance/practices/clean_engineering/model/whiteboard/whiteboard_class_model.py`
+
+### `keep-operations-single-responsibility` — Fail
+- whiteboard_class_model.py:245 `parse`: called `Whiteboard.load` and `read_board`. Fixed (da425f5a7): `parse` hands `Whiteboard.from_text(text)` to `take_board`.
+
+### `use-intention-revealing-names` — Fail
+- whiteboard_class_model.py:217 `place_from(x, y)`. Fixed (da425f5a7): `place_from(left, top)`.
+
+## Judgment — `cdd_guidance/practices/stories/model/whiteboard/nodes.py`
+
+### `keep-operations-single-responsibility` — Fail
+- nodes.py:143 `parse`. Fixed (da425f5a7) the same way: `take_board(Whiteboard.from_text(text))`.
+
+Not re-validated after da425f5a7: the CDD server dropped twice during validate runs this session; the specs (whiteboard 15, story 6, class 8, story channel 37) pass on the fixed code.
