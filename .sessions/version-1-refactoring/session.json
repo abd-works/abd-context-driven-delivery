@@ -1,5 +1,7 @@
 {
   "name": "version-1-refactoring",
   "title": "Version 1 refactoring",
-  "scope": "feature"
+  "scope": "feature",
+  "branch": "version-1-refactoring",
+  "worktree": "C:\\dev\\abd-cdd-version-1-refactoring"
 }
