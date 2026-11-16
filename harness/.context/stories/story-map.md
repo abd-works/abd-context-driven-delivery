@@ -2011,6 +2011,118 @@ Observed: the graph a validation checked is saved beside its report under the sa
 
 Observed: the session board reads the graph saved beside a validation report and counts its rule hits, so a fidelity with graph-rule violations still needs Validate (`space/kanban/report.py` `ReportFile.report`, `validate_fidelity_story.test.py` "Count Validate done only with no graph-rule violations").
 
+# (E) Draw Practice Models On Claude Whiteboard
+
+Requested (2026-11-15, ticket claude-whiteboard): Claude Whiteboard becomes one more channel a practice renders to and loads from, with the same architecture and object model as drawio and miro. The channel-agnostic diagram types (`DiagramNode`, `DiagramClass`, `DiagramModule` in `clean_engineering/model/diagram/diagram_node.py`; `DiagramStoryNode`, `DiagramStoryModel` in `stories/model/diagram_story_model.py`) are extended by whiteboard types exactly as `DrawIOClass`, `DrawIOModule` (`clean_engineering/model/drawio/diagram_node.py`) and `MiroStory`, `MiroEpic`, `MiroStoryModel` (`stories/model/miro/nodes.py`) extend them. The code every practice shares (the whiteboard element, the board and its writes) goes in `harness/whiteboard`; each practice's whiteboard types go in `cdd_guidance/practices/{practice}/model/whiteboard`; and the format is registered with the practice's adapters (`PracticeFormats`, `harness/guidance/practice_formats.py`) as `drawio` and `miro` are. A board is a Claude Artifact made from the Whiteboard type: `board/meta` holds its title and back-to-front order, and each `elements/<id>` is one shape, section, text or arrow, written and read through the artifact's store. The difference from drawio and miro is only that: the artifacts are whiteboards in Claude, loaded into the graph from what was rendered.
+
+## (E) Lay Out Shared Whiteboard Elements
+
+Requested (2026-11-15, "common code should go into harness/whiteboard (eg whiteboard node, whiteboard, etc)"): the board and its elements, which every practice's whiteboard types draw with, as `DrawioVertex` and the drawio page are for drawio.
+
+### (S:technical) Whiteboard Node --> Place Element From Diagram Geometry
+
+Requested: a whiteboard node takes the `Geometry` a diagram node was placed at (`clean_engineering/model/diagram/geometry.py`) and writes it as the element's `x`, `y`, `w` and `h`, so a whiteboard is laid out by the same placement as its drawio.
+
+### (S:technical) Whiteboard Node --> Write Node As Board Element
+
+Requested: each node writes itself as one `elements/<id>` record — a `shape` with its kind, colour and text, a `container` for a section, or a `text` for a title — as `DrawioVertex.append_to` writes one `mxCell`.
+
+### (S:technical) Whiteboard --> Order Board Elements Back To Front
+
+Requested: the board writes `board/meta` with its title and every element id in back-to-front order, sections before what they hold.
+
+### (S:technical) Whiteboard --> Join Elements With Arrows
+
+Requested: a dependency or relationship between two nodes is written as an `arrow` element from one element id to the other, with its sides and, where its meaning is not plain, its label.
+
+### (S:technical) Whiteboard --> Keep Element Ids Across Renders
+
+Requested (as drawio's `keep_positioning` and `previous` keep a diagram's layout): a node drawn before keeps its element id and the position a person moved it to, and only new nodes are placed.
+
+## (E) Render Practice Models To Whiteboard
+
+Requested (2026-11-15, "practice specific rendering goes in practices/{practice}/model/whiteboard"; "whiteboard should extend diagram just like drawio and hopefully miro"): each practice that draws a diagram today draws the same model on a whiteboard.
+
+### (S) Agent --> Render Story Map To Whiteboard
+
+Requested: `WhiteboardStoryModel`, `WhiteboardEpic`, `WhiteboardStory` and `WhiteboardIncrement` extend the `Diagram*` story types as the miro types do, drawing epics and sub-epics as bars, stories as cards with their actor above, and increments as lanes.
+
+### (S) Agent --> Render Module Diagram To Whiteboard
+
+Requested: a whiteboard module extends `DiagramModule` as `DrawIOModule` does, drawing each module with its purpose and seam terms, and its dependencies as arrows.
+
+### (S) Agent --> Render Class Model To Whiteboard
+
+Requested: a whiteboard class extends `DiagramClass` as `DrawIOClass` does, drawing each class with its stereotypes, properties and operations, an imported class dashed, and its relationships as arrows.
+
+### (S) Agent --> Render Bounded Context Map To Whiteboard
+
+Requested (DDD draws its bounded context map in drawio today, `ddd/model/drawio/drawio_bounded_context_map.py`): the same map drawn on a whiteboard, each context a section holding its aggregates.
+
+### (S) Agent --> Render Information Architecture To Whiteboard
+
+Requested (UX draws its information architecture in drawio today, `ux/model/drawio/nodes.py` `DrawioUxMap`): the same screens and the moves between them drawn on a whiteboard.
+
+## (E) Publish Board To Claude
+
+Requested (2026-11-15, "the only difference you are creating whiteboard artifacts in claude"): what a render wrote reaches a Whiteboard artifact in Claude.
+
+### (S) Agent --> Create Whiteboard Artifact For Fidelity File
+
+Requested: the first render of a fidelity's file creates a Whiteboard artifact titled after it, and the board's address is kept beside the file, so the next render updates the same board.
+
+### (S) Agent --> Write Board Elements To Artifact Store
+
+Requested: the agent writes `board/meta` and the elements, back to front, to the board's store in batches the store accepts.
+
+### (S) Agent --> Update Changed Elements On Existing Board
+
+Requested: a render to a board that exists writes only the elements whose content changed, adds the new ones and removes the gone ones with their arrows, and never rebuilds the board, so what people moved or added stays.
+
+### (S) Agent --> Link Board From Fidelity Outputs
+
+Requested: the fidelity's files list the board's address with its drawio and markdown, so a person opens the board from where they open the other formats.
+
+## (E) Load Whiteboard Into Practice Model
+
+Requested (2026-11-15, "loading graph from that"): a board read back becomes the practice's model, as a drawio or miro file is parsed today (`MiroStoryModel.load`, `DrawIOModule.from_cell`).
+
+### (S) Agent --> Read Board Into Whiteboard File
+
+Requested: the agent reads the board's `board/meta` and every element from its store into a file in the session, which the practice reads as it reads a `.drawio` file.
+
+### (S:system) Whiteboard Story Model --> Parse Story Map From Board
+
+Requested: epics, sub-epics, stories with their actors, and increments come back from the board's elements, keeping each story's kind.
+
+### (S:system) Whiteboard Class Model --> Parse Classes And Modules From Board
+
+Requested: classes with their members and stereotypes, modules with their seam terms, and the arrows between them come back from the board's elements.
+
+### (S:system) Knowledge Graph --> Load Whiteboard File Into Graph
+
+Requested: a whiteboard file in a fidelity's outputs is read into the knowledge graph through its practice's adapter, as its drawio is, so graph rules run on what the board shows.
+
+## (E) Choose Whiteboard Format In Channels
+
+Requested (2026-11-15, "add claude whiteboard as a channel"): the whiteboard format is picked and run like any other format.
+
+### (S) Person --> Pick Whiteboard Format Chip
+
+Requested: the whiteboard is offered in the diagram format group (`Format.GROUPS`, `harness/markdown/format.py`), so its chip shows on the board ticket and in the chat bar for each fidelity that offers it.
+
+### (S) Agent --> Generate Fidelity Into Whiteboard
+
+Requested: `/actions-generate` with `format=whiteboard` writes the fidelity's whiteboard and publishes it, and `/actions-render` turns an artifact already written into one.
+
+### (S:system) Story Channel --> Round Trip Story Map Through Whiteboard
+
+Requested: the story channel spec (`stories/model/story_channel.feature.py`) saves a map to the whiteboard and reads it back from every other format, keeping each epic, sub-epic, story and actor, with scenarios left out as for drawio and miro.
+
+### (S) Agent --> Scan Whiteboard Layout Rules
+
+Requested (as `Drawio.scan` runs drawio's layout scanners): the whiteboard's own layout rules, such as no overlapping elements and no arrow crossing a shape, are scanned on its file, and a definitive failure sends the generator to repair.
+
 # (E) Connect Sessions Across Channels And Apps
 
 The chat bar, the CDD Kanban, the Story UI editor and the knowledge graph work on one ticket's session at a time, so each one opens the others on that ticket and shows what the others are doing. Validation moves into generate: the graph is rebuilt from what changed, its violations are read straight from it, and Fix is an action of its own. The stories were requested on 2026-11-06.
@@ -2099,6 +2211,6 @@ Intended (integrate-stories-with-the-canvas-explorer.md slice 6, after Phase 0 o
 
 ## Scope boundary
 
-**In scope:** Authoring an Agent Toolset with `@agent_tool` and `@agent_instructions`. Installing that toolset as two writes — File Installation publishes skill, slash command, and rules as one story (same channel, same write) and Mcp Installation publishes `mcp.json` — then invoking the skill, slash command, and MCP tool and prompt. Installed rules are not invoked as a file check — they constrain valid output. Context Guidance is installed the same way (skill and `.mdc` rules), invoked so `instructions` come back, then used to generate content those rules constrain. Practice Guidance is that same Guidance plus registered fidelities — invoke at practice scope and at fidelity scope; shared rules and fidelity-specific rules each constrain the matching AI output. Hook dispatch; extracting co-located markdown via `@markdown`; the CDD Kanban and the Chat Bar as two channels that move a ticket's session through its practices, each with its own stories; the practice content editor apps those channels invoke (Story UI, design canvas, Graph app), with each app's own story map; connecting sessions across the channels and apps, which joins the channels and apps on one ticket, and validation read from the latest graph; every host-action kit from `actions/.context/module-context.md` (`partition`, `grill`, `sketch`, `iterate`, `generate`, `document`, `render`, `satisfy`, `validate`, `scan`, `repair`, `createRule`).
+**In scope:** Authoring an Agent Toolset with `@agent_tool` and `@agent_instructions`. Installing that toolset as two writes — File Installation publishes skill, slash command, and rules as one story (same channel, same write) and Mcp Installation publishes `mcp.json` — then invoking the skill, slash command, and MCP tool and prompt. Installed rules are not invoked as a file check — they constrain valid output. Context Guidance is installed the same way (skill and `.mdc` rules), invoked so `instructions` come back, then used to generate content those rules constrain. Practice Guidance is that same Guidance plus registered fidelities — invoke at practice scope and at fidelity scope; shared rules and fidelity-specific rules each constrain the matching AI output. Hook dispatch; extracting co-located markdown via `@markdown`; the CDD Kanban and the Chat Bar as two channels that move a ticket's session through its practices, each with its own stories; the practice content editor apps those channels invoke (Story UI, design canvas, Graph app), with each app's own story map; Claude Whiteboard as a format that practices render to and load from, extending the shared diagram types as drawio and miro do; connecting sessions across the channels and apps, which joins the channels and apps on one ticket, and validation read from the latest graph; every host-action kit from `actions/.context/module-context.md` (`partition`, `grill`, `sketch`, `iterate`, `generate`, `document`, `render`, `satisfy`, `validate`, `scan`, `repair`, `createRule`).
 
 **Out of scope:** Catalog HTML pages; on the Chat Bar, the board's whole-board views (columns, Backlog items, WIP limits, side panels, ticket hierarchy) and sending one action to a whole stage (CDR 0001); one-time renames and repository moves; YAML manifest CLI / `tools.ps1` invoke; inventing extra practices or product domains beyond this framework spine; scenario and acceptance-test text (later fidelities).
