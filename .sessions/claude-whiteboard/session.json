@@ -10,7 +10,7 @@
       "specification",
       "implementation"
     ],
-    "version": 25
+    "version": 27
   },
   "practices": {
     "ux": {
@@ -28,6 +28,9 @@
       "formats": {
         "story_map": [
           "drawio"
+        ],
+        "scenarios": [
+          "python"
         ]
       },
       "enabled": true
