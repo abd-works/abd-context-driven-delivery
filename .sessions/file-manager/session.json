@@ -11,7 +11,7 @@
       "specification",
       "implementation"
     ],
-    "version": 88
+    "version": 89
   },
   "practices": {
     "stories": {
@@ -80,7 +80,7 @@
           "python"
         ]
       },
-      "enabled": true
+      "enabled": false
     },
     "ddd": {
       "enabled": false,
