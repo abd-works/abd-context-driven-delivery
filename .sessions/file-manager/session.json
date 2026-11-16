@@ -10,7 +10,7 @@
       "discovery",
       "specification"
     ],
-    "version": 47
+    "version": 49
   },
   "practices": {
     "stories": {
@@ -19,8 +19,8 @@
           "markdown"
         ],
         "scenarios": [
-          "markdown",
-          "python"
+          "python",
+          "markdown"
         ],
         "acceptance_tests": []
       }
