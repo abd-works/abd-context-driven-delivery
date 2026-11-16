@@ -54,8 +54,8 @@ class MarkdownExample(Example):
     unchanged example is written back as read, an edited one changes only the cells the edit changed, and one taken off
     its scope writes no line."""
 
-    def __init__(self, name: str, value: "Dict[str, str] | str", read: ExampleRowLine) -> None:
-        super().__init__(name, value)
+    def __init__(self, name: str, fields: "Dict[str, str] | str", read: ExampleRowLine) -> None:
+        super().__init__(name, fields)
         self.read = read
         self.read_row: Dict[str, str] = dict(self.row)
 
@@ -79,10 +79,19 @@ class MarkdownExample(Example):
 class MarkdownStep(Step):
     """Step whose text may still carry a markdown And or But prefix."""
 
-    def __init__(self, *args, read_line: Optional[str] = None, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        # The keyword, text, and line the step was read with, so an unchanged step is written back as read.
-        self.markdown_line: Optional[tuple] = (self.keyword, self.text, read_line) if read_line is not None else None
+    markdown_line: Optional[tuple] = None
+    """The keyword, text, and line the step was read with, so an unchanged step is written back as read; None for a
+    step read from no line."""
+
+    def read_from(self, line: str) -> None:
+        """Keep line as the one this step was read from, with the keyword and text it says now, and take the concepts,
+        values and actor its markup names: its bold terms are the concepts, the first its actor, and its italic values
+        the values."""
+        self.markdown_line = (self.keyword, self.text, line)
+        actor = _BOLD_TERM.search(self.text)
+        self.concepts = _BOLD_TERM.findall(self.text)
+        self.values = [value.strip("`").strip() for value in _ITALIC_VALUE.findall(self.text) if value]
+        self.actor = actor.group(1).strip() if actor else ""
 
     def line_as_read(self) -> Optional[str]:
         """The line this step was read from, while its keyword and text are unchanged; otherwise None."""
@@ -94,17 +103,6 @@ class MarkdownStep(Step):
         """Step text without a leading And or But. The keyword already says which."""
         return _STEP_CONTINUATION.sub("", self.text).strip()
 
-
-
-def step_marks(text: str) -> dict:
-    """What a step line's markup names: its bold terms are the concepts, the first its actor, and its italic values the
-    values."""
-    actor = _BOLD_TERM.search(text)
-    return {
-        "concepts": _BOLD_TERM.findall(text),
-        "values": [value.strip("`").strip() for value in _ITALIC_VALUE.findall(text) if value],
-        "actor": actor.group(1).strip() if actor else "",
-    }
 
 
 def step_prose(step: Step) -> str:

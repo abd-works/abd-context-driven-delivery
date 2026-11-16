@@ -79,7 +79,7 @@ class ValidationReport:
             lines.extend(self._rule_section(rule.slug, rule, grouped.get(rule.slug)))
         checked = {rule.slug for rule in rules}
         every = {slug: check.rule for slug, check in FRAMEWORK_RULES.items()}
-        every.update((rule.slug, rule) for item in self._guidance for rule in item.every_rule())
+        every.update((rule.slug, rule) for item in self._guidance for rule in item.every_rule)
         for slug in sorted(grouped.keys() - checked):
             lines.extend(self._rule_section(slug, every.get(slug), grouped[slug]))
         return lines

@@ -488,8 +488,8 @@ class ProductPanel {
     paintAbilities(character, this.mockup.root);
     this._paintBoundLists(snapshot);
     paintBoundFields(snapshot, this.mockup.root);
-    if (scenario?.currentStep) this.mockup.frame.emphasize(scenario.currentStep);
-    this.mockup.frame.paintEmphasis();
+    if (scenario?.currentStep) this.mockup.frame.emphasis.emphasize(scenario.currentStep);
+    this.mockup.frame.emphasis.paint();
   }
 
   _paintBoundLists(snapshot) {
@@ -628,7 +628,7 @@ class GeneratedMockup {
   reset() {
     this.session = {};
     this.activateStory(this.index);
-    this.page?.storyDemoFrame.clearEmphasis();
+    this.page?.storyDemoFrame.emphasis.clear();
     this.page?.explorerFrame.clearMessage();
   }
 

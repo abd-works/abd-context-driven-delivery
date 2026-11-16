@@ -12,11 +12,11 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 # Actor: Person
 with story("Set Stage WIP Limit"):
     with scenario("Set a stage's limit"):
-        # Evidence: observed: board-client.spec 'Set Stage WIP Limit' — 'should save a whole number', 'should read the board again'; Board.set_wip_limit.
+        # Evidence: observed: board-client.spec 'Set Stage WIP Limit' — 'should save a whole number', 'should read the board again'; BoardFile.set_wip_limit.
         with given("the Discovery [stage](../../../.context/kanban-model.md#stage--column) has the limit 3"):
             pass
         with when("the Person sets Discovery's limit to 4"):
-            # Person -> Board.set_wip_limit('Discovery', 4)
+            # Person -> BoardFile.set_wip_limit('Discovery', 4)
             # Board -> .sessions/_board.json: {'wip_limits': {'Discovery': 4}}
             # Board page -> Board.show()
             pass
@@ -30,7 +30,7 @@ with story("Set Stage WIP Limit"):
             pass
         with when("the session board reads the [board](../../../.context/kanban-model.md#board)"):
             # Stage -> Stage.wip_limit
-            # Board -> Board.wip_limit(stage) <- 3
+            # Board -> BoardFile.wip_limit(stage) <- 3
             pass
         with then("Discovery, Specification, and Implementation each show the limit 3"):
             pass
@@ -39,7 +39,7 @@ with story("Set Stage WIP Limit"):
         with given("the Discovery [stage](../../../.context/kanban-model.md#stage--column) holds the [tickets](../../../.context/kanban-model.md#ticket--card) billing-report, move-me, and back-to-backlog"):
             pass
         with when("the Person sets Discovery's limit to 2"):
-            # Person -> Board.set_wip_limit('Discovery', 2)
+            # Person -> BoardFile.set_wip_limit('Discovery', 2)
             # Stage -> data_of(Stage) <- is_over_limit: true
             pass
         with then("Discovery's count shows in red, over its limit"):

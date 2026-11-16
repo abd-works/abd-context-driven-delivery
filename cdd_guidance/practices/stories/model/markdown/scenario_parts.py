@@ -13,6 +13,9 @@ from cdd_guidance.practices.stories.model.story_model import Background, Scenari
 # Where a read scenarios document had a heading or a step line. Every other line is kept as written.
 HEADING_LINE = "heading"
 STEP_LINE = "step"
+# One part of a read scenarios document, in the order the document gives them: the heading marker, a line kept as
+# written, a (STEP_LINE, owner) pair where a step line was, an example row, a story section, or a scenario.
+type DocumentPart = object
 
 
 class StorySection:

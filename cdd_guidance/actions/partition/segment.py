@@ -78,7 +78,29 @@ class SegmentEntry:
         return self.status == "OK"
 
 
-class Segment:
+class PartitionFile:
+    """A markdown file a partition writes, its index or one of its segments: where it is, its text, and the
+    completeness its segments are checked with."""
+
+    def __init__(self, path: Path, text: str, completeness: SegmentCompletenessConfig) -> None:
+        self._path = path
+        self._text = text
+        self._completeness = completeness
+
+    @property
+    def path(self) -> Path:
+        return self._path
+
+    @property
+    def text(self) -> str:
+        return self._text
+
+    @property
+    def completeness(self) -> SegmentCompletenessConfig:
+        return self._completeness
+
+
+class Segment(PartitionFile):
     """A partitioned ``*-segment.md`` chunk on disk (or in memory). Its expected entries are the ones its
     ``<!-- expected-entries -->`` marker names, unless the caller names them instead."""
 
@@ -89,9 +111,7 @@ class Segment:
     )
 
     def __init__(self, path: Path, text: str, completeness: SegmentCompletenessConfig) -> None:
-        self._path = path
-        self._text = text
-        self._completeness = completeness
+        super().__init__(path, text, completeness)
         self._expected_names = self._names_from_marker()
 
     @classmethod
@@ -115,18 +135,6 @@ class Segment:
         if expected_names.strip():
             segment._expected_names = segment._split_names(expected_names)
         return segment
-
-    @property
-    def path(self) -> Path:
-        return self._path
-
-    @property
-    def text(self) -> str:
-        return self._text
-
-    @property
-    def completeness(self) -> SegmentCompletenessConfig:
-        return self._completeness
 
     @property
     def expected_names(self) -> list[str]:

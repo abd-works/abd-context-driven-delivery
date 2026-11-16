@@ -62,18 +62,16 @@ class Ux(PracticeGuidance):
         fidelity: str = "ia",
         format: str | None = None,
     ) -> None:
-        super().__init__(
-            format=format,
-            fidelity=fidelity,
-            default_workspace_folder="ux",
-            formats={
-                "drawio": ("cdd_guidance.practices.ux.model.drawio.nodes", "DrawioUxMap"),
-                "html": ("cdd_guidance.practices.ux.model.html.nodes", "HtmlUxMap"),
-                "markdown": ("cdd_guidance.practices.ux.model.markdown.nodes", "MarkdownUxMap"),
-                "json": ("cdd_guidance.practices.ux.model.json.nodes", "JsonUxMap"),
-                "claude_design": ("cdd_guidance.practices.ux.model.claude_design.nodes", "ClaudeDesignUxMap"),
-            },
-        )
+        super().__init__(format=format, fidelity=fidelity)
+
+    default_workspace_folder = "ux"
+    format_adapters = {
+        "drawio": ("cdd_guidance.practices.ux.model.drawio.nodes", "DrawioUxMap"),
+        "html": ("cdd_guidance.practices.ux.model.html.nodes", "HtmlUxMap"),
+        "markdown": ("cdd_guidance.practices.ux.model.markdown.nodes", "MarkdownUxMap"),
+        "json": ("cdd_guidance.practices.ux.model.json.nodes", "JsonUxMap"),
+        "claude_design": ("cdd_guidance.practices.ux.model.claude_design.nodes", "ClaudeDesignUxMap"),
+    }
 
     @agent_tool
     def ensure_javascript(self, practice: str, source_format: str, content: str) -> dict:

@@ -95,7 +95,9 @@ class SketchStep(Step):
 
     @classmethod
     def from_line(cls, keyword: str, text: str, order: int) -> "SketchStep":
-        return cls(text, _STEP_TYPES.get(keyword, StepType.THEN), order, keyword=keyword)
+        step = cls(text, _STEP_TYPES.get(keyword, StepType.THEN), order)
+        step.keyword = keyword
+        return step
 
     def sketch_lines(self, pad: str, keyword: str) -> List[str]:
         return [f"{pad}{keyword} {self.text}"] + [f"{pad}    {extra.keyword.lower()} {extra.text}" for extra in self.ands]
@@ -110,8 +112,7 @@ class SketchStep(Step):
         step = _STEP.match(text)
         if step is None or step.group(1).lower() not in _CHAINED:
             return False
-        keyword = step.group(1).lower()
-        self.ands = [*self.ands, SketchStep(step.group(2), self.step_type, len(self.ands) + 1, keyword=keyword)]
+        self.continue_with(step.group(1).lower(), step.group(2))
         return True
 
 
@@ -221,11 +222,11 @@ class SketchEpic(Epic):
             story = _STORY.match(_epic_name(entry.text))
             if story:
                 read = SketchStory.from_match(story, len(self.stories) + 1)
-                self.append_story(read)
+                self.stories.append(read)
                 read.read_lines(entry.nested)
                 continue
             child = SketchEpic(_epic_name(entry.text), len(self.epics) + 1)
-            self.append_epic(child)
+            self.epics.append(child)
             child.read_lines(entry.nested)
 
     def sketch_lines(self, depth: int) -> List[str]:
@@ -248,7 +249,7 @@ class SketchStoryModel(StoryModel):
 
     def parse(self, text: str) -> "SketchStoryModel":
         """Read the sketch's stories section into this map, and return it."""
-        self.epics = []
+        self.epics.refill([])
         self.increments.refill([])
         body = SketchOutline(text, _NESTING_INDENT).body_for(self.lens)
         self.read_lines(self._story_lines(body))
@@ -260,13 +261,13 @@ class SketchStoryModel(StoryModel):
             story = _STORY.match(_epic_name(entry.text))
             if story is None:
                 epic = SketchEpic(_epic_name(entry.text), len(self.epics) + 1)
-                self.append_epic(epic)
+                self.epics.append(epic)
                 epic.read_lines(entry.nested)
                 continue
             if not self.epics:
-                self.append_epic(SketchEpic("Stories", 1))
+                self.epics.append(SketchEpic("Stories", 1))
             read = SketchStory.from_match(story, len(self.epics[-1].stories) + 1)
-            self.epics[-1].append_story(read)
+            self.epics[-1].stories.append(read)
             read.read_lines(entry.nested)
 
     def _story_lines(self, body: str) -> SketchLines:
@@ -282,7 +283,7 @@ class SketchStoryModel(StoryModel):
             increment = _INCREMENT.match(stripped)
             if increment is not None:
                 in_increments = True
-                self.append_increment(Increment(increment.group(1), len(self.increments) + 1))
+                self.increments.append(Increment(increment.group(1), len(self.increments) + 1))
             elif not in_increments:
                 lines.append(raw)
         return read_sketch_lines(lines)

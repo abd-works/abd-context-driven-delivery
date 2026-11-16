@@ -94,8 +94,8 @@ class ContextSetup:
 
     def _in_project(self, capture: LiveAppCapture) -> LiveAppCapture:
         """The application a call captures, with the folders it names read from the session's project."""
-        repository = str(self.session.path_named(capture.repo_path))
-        written_to = str(self.session.path_named(capture.capture_repo)) if capture.capture_repo else ""
+        repository = str(self.session.paths.path_named(capture.repo_path))
+        written_to = str(self.session.paths.path_named(capture.capture_repo)) if capture.capture_repo else ""
         return dataclasses.replace(capture, repo_path=repository, capture_repo=written_to)
 
     @property
@@ -119,7 +119,7 @@ class ContextSetup:
         Returns a ConversionResult containing markdown_files (absolute paths) and
         structure_notes (one StructureNote per file with heading_depth, heading_count,
         word_count)."""
-        root = self.session.path_named(folder_path)
+        root = self.session.paths.path_named(folder_path)
         out_dir = root / "markdown"
         out_dir.mkdir(parents=True, exist_ok=True)
         notes = [self._convert_source(src, out_dir) for src in sorted(root.iterdir()) if self._is_convertible(src)]

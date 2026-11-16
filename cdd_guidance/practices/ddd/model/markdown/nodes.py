@@ -468,12 +468,14 @@ class MarkdownBoundedContext(BoundedContext, MarkdownDomainNode):
             level = sketch_level(raw)
             if level == 1:
                 aggregate, group = None, self._read_sketch_holder(stripped)
-            elif level == 2 and self._is_entity_heading(stripped):
+                continue
+            if level == 2 and self._is_entity_heading(stripped):
                 aggregate = self._open_sketch_entity(stripped.split("//", 1)[0].strip().rstrip(":"), aggregate, group)
-            elif aggregate is not None:
+                continue
+            if aggregate is not None:
                 aggregate.take_sketch_line(raw)
-            else:
-                self._keep_note(stripped, group)
+                continue
+            self._keep_note(stripped, group)
         for item in self.aggregates:
             item.load_sketch()
 

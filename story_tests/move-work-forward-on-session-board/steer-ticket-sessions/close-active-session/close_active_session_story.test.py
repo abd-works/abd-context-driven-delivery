@@ -36,7 +36,7 @@ with story("Close Active Session"):
             # Person -> Ticket.close(['commit', 'push'])
             # Ticket -> Repo.push_commit('checkout-flow: leave session', sync_remote=True)
             # Ticket -> Session.close()
-            # Ticket -> Session.move_to_closed()
+            # Ticket -> SessionFolder.move_to_closed()
             # Board page -> Board.show()
             pass
         with then("checkout-flow shows in Complete and is selected"):
@@ -52,7 +52,7 @@ with story("Close Active Session"):
         with when("the Person closes checkout-flow, committing and pushing"):
             # Person -> Ticket.close(['commit', 'push'])
             # Ticket -> Session.close()
-            # Ticket -> Session.move_to_closed()
+            # Ticket -> SessionFolder.move_to_closed()
             # Ticket -> Repo.push_commit('checkout-flow: leave session', sync_remote=True)
             # Ticket -> Branch(main).check_out()
             pass
@@ -95,7 +95,7 @@ with story("Close Active Session"):
             # Person -> Ticket.close(['commit', 'push'])
             # Ticket -> Repo.push_commit('checkout-flow: leave session', sync_remote=True)
             # Ticket -> Session.close()
-            # Ticket -> Session.move_to_closed()
+            # Ticket -> SessionFolder.move_to_closed()
             pass
         with then("main on origin holds the commit checkout-flow: leave session"):
             pass
@@ -111,7 +111,7 @@ with story("Close Active Session"):
             # Person -> Ticket.close(['handoff'])
             # Ticket -> Handoffs.write(LeavingHandoff(ticket).document)
             # Ticket -> Session.close()
-            # Ticket -> Session.move_to_closed()
+            # Ticket -> SessionFolder.move_to_closed()
             pass
         with then("checkout-flow's folder in .sessions/_complete holds a handoff"):
             pass
@@ -126,7 +126,7 @@ with story("Close Active Session"):
         with when("the Person moves checkout-flow into Complete and confirms"):
             # Person -> Ticket.close([])
             # Ticket -> Session.close()
-            # Ticket -> Session.move_to_closed()
+            # Ticket -> SessionFolder.move_to_closed()
             pass
         with then("checkout-flow shows in Complete"):
             pass

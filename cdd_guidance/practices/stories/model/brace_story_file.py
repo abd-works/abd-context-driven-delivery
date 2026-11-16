@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from typing import List, Sequence, Tuple
 
-from cdd_guidance.practices.clean_engineering.model.code_body import BraceCall, CodeBody, WrittenBlock
+from cdd_guidance.practices.clean_engineering.model.code_body import BraceCall, CodeBody, InsideLines, WrittenBlock
 from cdd_guidance.practices.stories.model.code_story_model import unescaped
 from cdd_guidance.practices.stories.model.story_file import CodeBlock, StoryFile
 
@@ -34,7 +34,7 @@ class BraceStoryFile(StoryFile):
             if found and match.start() < found[-1].call.end:
                 continue
             name = unescaped(match.group(group)) if group else ""
-            call = BraceCall(self.text, match.start(), self.text.index("(", match.start()), name)
+            call = BraceCall(self.text, match.start(), name)
             if call.is_whole:
                 found.append(BraceBlock(self, call))
         return found
@@ -64,7 +64,7 @@ class BraceStoryFile(StoryFile):
         return self.text.count("\n", 0, index)
 
     def _call_at(self, start: int, name: str) -> BraceCall:
-        return BraceCall(self.text, start, self.text.index("(", start), unescaped(name))
+        return BraceCall(self.text, start, unescaped(name))
 
 
 class BraceBlock:
@@ -100,12 +100,13 @@ class BraceBlock:
 
     def written(self, lead: List[str]) -> WrittenBlock:
         start, brace, inner_end, end = (self.file.line(index) for index in (self.call.start, self.call.brace, self.call.inner_end, self.call.end - 1))
-        written = WrittenBlock(self.file.language, None, lead, self.file.lines[start : brace + 1])
+        written = WrittenBlock(self.file.language, None, self.file.lines[start : brace + 1])
+        written.lead = lead
         written.close = self.file.lines[inner_end : end + 1]
         return written
 
     def split_inside(self, children: Sequence[CodeBlock]) -> Tuple[List[str], List[List[str]], List[str]]:
-        return WrittenBlock.split_inside(self.file.lines, self._inside, [child.line_span for child in children])
+        return InsideLines(self.file.lines, self._inside).split([child.line_span for child in children])
 
     def scenarios(self) -> List[CodeBlock]:
         return self.file.calls(_SCENARIO, range(self.call.brace + 1, self.call.inner_end), group=2)

@@ -22,7 +22,7 @@ from cdd_guidance.actions.partition.partition import Partition
 from cdd_guidance.actions.partition.segment import Segment, SegmentCompletenessConfig, SegmentEntry
 
 from harness.markdown import Markdown
-from space.session.throwaway_project import ThrowawayProject
+from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 from harness.agent_tools.agent_tools import AgentToolSet
 from harness.agent_tools.tool_call import ToolCall
 
@@ -48,7 +48,7 @@ with description("the partition action's guidance"):
         ThrowawayProject()
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     with it("should document partition, index (Step 1), and segment (Step 2) in partition.md"):
         content = _section("partition")
@@ -63,7 +63,7 @@ with description("a practice guidance beside the partition action"):
         ThrowawayProject()
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     with it("should not expose partition on practice Guidance"):
         cls = type(AgentToolSet.instantiate(_CAR_CHRONICLE_TOOLSET))
@@ -77,7 +77,7 @@ with description("a partition action"):
         self.project = ThrowawayProject().root
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     with context("that runs on a practice"):
         with it("should finish partitioning the corpus for that practice"):
@@ -247,7 +247,7 @@ with description("a SegmentCompletenessConfig"):
         ThrowawayProject()
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     with context("that uses all defaults"):
         with before.each:
@@ -273,7 +273,7 @@ with description("a SegmentEntry"):
         ThrowawayProject()
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     with context("that has no body"):
         with before.each:
@@ -345,7 +345,7 @@ with description("a Segment"):
         ThrowawayProject()
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     with context("that is built from text with no expected-entries marker"):
         with before.each:
@@ -436,7 +436,7 @@ with description("a PartitionIndex"):
         ThrowawayProject()
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     with context("that is built from text with a partition-config block"):
         with before.each:
@@ -508,7 +508,7 @@ with description("Partition verifying segment completeness"):
         ThrowawayProject()
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     with context("that segment path does not exist"):
         with it("should return completeness FAIL with file-not-found error"):

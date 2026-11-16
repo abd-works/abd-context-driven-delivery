@@ -18,7 +18,7 @@ with story("Archive Ticket"):
         with when("the Person archives pet-visits"):
             # Person -> Ticket.archive()
             # Ticket -> Session.close()
-            # Ticket -> Session.move_to_archive()
+            # Ticket -> SessionFolder.move_to_archive()
             pass
         with then("no [column](../../../.context/kanban-model.md#column) shows pet-visits"):
             pass

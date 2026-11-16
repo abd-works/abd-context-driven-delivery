@@ -8,7 +8,8 @@ from __future__ import annotations
 
 import html
 import xml.etree.ElementTree as ET
-from typing import Dict, Iterator, List, Optional, Tuple, TypedDict
+from dataclasses import dataclass
+from typing import Dict, Iterator, List, Optional, Tuple
 
 from cdd_guidance.practices.stories.model.diagram_story_model import (
     DiagramEpic,
@@ -37,7 +38,8 @@ _TABLE_ROW_HEIGHT = 40
 _TABLE_COLUMN_PAD = 20
 
 
-class MiroShape(TypedDict, total=False):
+@dataclass
+class MiroShape:
     """One card a Miro story map draws: its box, colours, text, and the role its kind of node reads it back by."""
 
     id: str
@@ -52,7 +54,18 @@ class MiroShape(TypedDict, total=False):
     content: str
     role: str
     font_size: int
-    actor: str
+    actor: str = ""
+
+    def svg_line(self) -> str:
+        """The card as the SVG rect line a canvas-composer SVG holds it on, its words and actor escaped."""
+        actor_attr = f' data-actor="{html.escape(self.actor, quote=True)}"' if self.actor else ""
+        return (
+            f'  <rect id="{self.id}" x="{self.x}" y="{self.y}" '
+            f'width="{self.w}" height="{self.h}" rx="{self.rx}" '
+            f'fill="{self.fill}" stroke="{self.stroke}" stroke-width="{self.stroke_width}" '
+            f'data-content="{html.escape(self.content, quote=True)}" data-role="{self.role}" '
+            f'data-font-size="{self.font_size}"{actor_attr} />'
+        )
 
 
 
@@ -177,13 +190,15 @@ class _MiroReading:
         label = element.get("data-content", "")
         if role == "epic":
             self.epic = MiroEpic(label, len(self.story_map.epics) + 1)
-            self.story_map.append_epic(self.epic)
+            self.story_map.epics.append(self.epic)
             self.sub_epics = []
-        elif self.epic is None:
             return
-        elif role.startswith("subepic:"):
+        if self.epic is None:
+            return
+        if role.startswith("subepic:"):
             self._sub_epic(label, int(role.split(":", 1)[1]))
-        elif role.startswith("story:"):
+            return
+        if role.startswith("story:"):
             self._story(label, role, element.get("data-actor", "").strip())
 
     def _sub_epic(self, label: str, depth: int) -> None:
@@ -191,7 +206,7 @@ class _MiroReading:
             self.sub_epics.pop()
         owner = self.sub_epics[-1] if self.sub_epics else self.epic
         sub_epic = MiroEpic(label, len(owner.epics) + 1)
-        owner.append_epic(sub_epic)
+        owner.epics.append(sub_epic)
         self.sub_epics.append(sub_epic)
 
     def _story(self, label: str, role: str, actor: str) -> None:
@@ -199,7 +214,7 @@ class _MiroReading:
         story = MiroStory(label, len(parent.stories) + 1, StoryType.from_mark(role.split(":", 1)[1]))
         if actor:
             story.actors = [actor]
-        parent.append_story(story)
+        parent.stories.append(story)
 
 
 class MiroStoryModel(DiagramStoryModel):
@@ -235,7 +250,7 @@ class MiroStoryModel(DiagramStoryModel):
         one per sub-epic, or per innermost sub-epic of a sub-epic that has its own."""
         columns = [(epic.name, list(epic.stories))] if epic.stories else []
         for sub_epic in epic.epics:
-            leaves = sub_epic.leaf_epics()
+            leaves = sub_epic.columns.leaf_epics()
             names = [f"{epic.name} / {sub_epic.name}"] if not sub_epic.epics else [f"{epic.name} / … / {leaf.name}" for leaf in leaves]
             columns.extend((name, list(leaf.stories)) for name, leaf in zip(names, leaves))
         return columns
@@ -267,7 +282,7 @@ class MiroStoryModel(DiagramStoryModel):
         for row in rows:
             cells = [(cell.text or "").strip() for cell in row if self._local_name(cell) == "td"]
             if cells and cells[0]:
-                increments.append(MiroIncrement(cells[0], len(increments) + 1, self.stories_named(cells[1:])))
+                increments.append(MiroIncrement(cells[0], len(increments) + 1, self.descendants.stories_named(cells[1:])))
         self.increments.refill(increments)
         return self
 
@@ -284,18 +299,7 @@ class MiroStoryModel(DiagramStoryModel):
 
     def _build_rect_lines(self) -> List[str]:
         """One SVG rect line per epic, sub-epic, story, and actor. Each node places itself."""
-        return [self._shape_to_svg_line(shape) for epic in self.epics for shape in epic.shapes()]
-
-    def _shape_to_svg_line(self, shape: MiroShape) -> str:
-        actor = shape.get("actor", "")
-        actor_attr = f' data-actor="{self._escaped(actor)}"' if actor else ""
-        return (
-            f'  <rect id="{shape["id"]}" x="{shape["x"]}" y="{shape["y"]}" '
-            f'width="{shape["w"]}" height="{shape["h"]}" rx="{shape["rx"]}" '
-            f'fill="{shape["fill"]}" stroke="{shape["stroke"]}" stroke-width="{shape["stroke_width"]}" '
-            f'data-content="{self._escaped(shape["content"])}" data-role="{shape["role"]}" '
-            f'data-font-size="{shape["font_size"]}"{actor_attr} />'
-        )
+        return [shape.svg_line() for epic in self.epics for shape in epic.shapes()]
 
     def load(self, text: str) -> "MiroStoryModel":
         """Read a canvas-composer SVG into a Miro story map."""
@@ -319,10 +323,6 @@ class MiroStoryModel(DiagramStoryModel):
             if self._local_name(child) == "rect" and child.get("data-role"):
                 yield child
             yield from self._cards_in_order(child)
-
-    def _escaped(self, text: str) -> str:
-        """XML-escape a string for use in SVG attributes and text."""
-        return html.escape(text, quote=True)
 
     def _local_name(self, element: ET.Element) -> str:
         tag = element.tag

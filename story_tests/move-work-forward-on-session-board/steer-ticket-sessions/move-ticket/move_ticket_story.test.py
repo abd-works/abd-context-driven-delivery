@@ -62,7 +62,7 @@ with story("Move Ticket"):
         with when("the Person moves back-to-backlog into the Backlog"):
             # Person -> Ticket.move_to('Backlog')
             # Ticket -> Session.close()
-            # Ticket -> Session.move_to_backlog()
+            # Ticket -> SessionFolder.move_to_backlog()
             # Ticket -> BacklogItem.from_ticket(ticket, board)
             # BacklogItem -> .sessions/_backlog/back-to-backlog/back-to-backlog.md: # Back to backlog
             # Ticket <- BacklogItem Back to backlog
@@ -84,7 +84,7 @@ with story("Move Ticket"):
             # Ticket -> Stage.next_stage <- none
             # Ticket -> Ticket.close()
             # Ticket -> Session.close()
-            # Ticket -> Session.move_to_closed()
+            # Ticket -> SessionFolder.move_to_closed()
             pass
         with then("almost-shipped shows in Complete"):
             pass
@@ -96,7 +96,7 @@ with story("Move Ticket"):
             pass
         with when("the Person moves shipped-work back"):
             # Person -> Ticket.move_previous()
-            # Ticket -> Session.reopen()
+            # Ticket -> SessionFolder.reopen()
             # Ticket -> TicketWork.record('move Implementation')
             # Ticket -> TicketWork.record('done Implementation')
             pass

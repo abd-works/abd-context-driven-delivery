@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Tuple
 
 
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeLanguage, WrittenBlock
+from cdd_guidance.practices.clean_engineering.model.code_body import CodeLanguage, InsideLines, WrittenBlock
 from cdd_guidance.practices.stories.model.story_map_files import source_at
 
 
@@ -59,7 +59,7 @@ class StoryFile:
         written, leads = self._written_around(blocks, path)
         if not blocks:
             return story_type.load_all(self.text), written
-        imports = story_type.example_imports(self.text)
+        imports = story_type.syntax.example_imports(self.text)
         stories = []
         for block, lead in zip(blocks, leads):
             story = story_type.from_block(block, lead, "\n".join([imports, self.comment_above(block), block.text]))
@@ -70,10 +70,10 @@ class StoryFile:
     def _written_around(self, blocks: List[CodeBlock], path: str) -> Tuple[WrittenBlock, List[List[str]]]:
         """The file's own code above, between, and below blocks, kept to write back to path, and the lines that lead
         each block."""
-        written = WrittenBlock(self.language, None, [], [])
+        written = WrittenBlock(self.language, None, [])
         written.path = path
-        written.inside, leads, written.closing = WrittenBlock.split_inside(
-            self.lines, (0, len(self.lines)), [block.line_span for block in blocks]
+        written.inside, leads, written.closing = InsideLines(self.lines, (0, len(self.lines))).split(
+            [block.line_span for block in blocks]
         )
         return written, leads
 

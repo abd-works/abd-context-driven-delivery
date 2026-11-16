@@ -76,12 +76,10 @@ class Stories(PracticeGuidance):
     ) -> None:
         # Step library folder for the TypeScript render; a pattern names it. None keeps story-test.ts at the tests root.
         self.story_test_folder = story_test_folder
-        super().__init__(
-            format=format,
-            fidelity=fidelity,
-            default_workspace_folder="tests",
-            formats=dict(_FORMAT_ADAPTERS),
-        )
+        super().__init__(format=format, fidelity=fidelity)
+
+    default_workspace_folder = "tests"
+    format_adapters = _FORMAT_ADAPTERS
 
     ## reading story maps and story tests from files
 
@@ -130,7 +128,7 @@ class Stories(PracticeGuidance):
     def _take_map(self, merged: StoryModel, read: StoryModel) -> None:
         merged.sources.take(read.sources)
         for epic in list(read.epics):
-            merged.append_epic(epic)
+            merged.epics.append(epic)
 
     def _read_story_test(self, path: Path, project: Path, on_file: OnFile) -> StorySource:
         file = path_from(project, path)
@@ -142,7 +140,7 @@ class Stories(PracticeGuidance):
         """The story test's scenarios onto merged's Story of the same name, and its text and its examples modules'."""
         merged.sources.take(self._story_test_sources(test, project))
         reader = self._story_test_reader(project / test.file)
-        merged.take_scenarios(reader.story_type.stories_in(test.text, project), test.file)
+        merged.test_scenarios.take(reader.story_type.load_file(test.text, project), test.file)
 
     def open_file(self, path: Path, project: Path):
         """The story map an edit to the Stories file at path writes back: a markdown story map or scenarios file read
@@ -165,11 +163,11 @@ class Stories(PracticeGuidance):
         under story_tests."""
         merged = StoryModel()
         for reader, texts in self._texts_by_reader(tests, project).items():
-            read = reader(tests_root=STORY_TESTS_FOLDER).parse(texts, on_file=on_file)
+            read = type(reader)(tests_root=STORY_TESTS_FOLDER).parse(texts, on_file=on_file)
             merged.sources.take(read.sources)
             held = {epic.name for epic in merged.epics}
             for epic in [epic for epic in read.epics if epic.name not in held]:
-                merged.append_epic(epic)
+                merged.epics.append(epic)
         return merged
 
     def _texts_by_reader(self, tests: list[Path], project: Path) -> dict[type, dict[str, str]]:
@@ -188,15 +186,15 @@ class Stories(PracticeGuidance):
         for path in sorted({file.resolve() for output in outputs for file in output.every_file()}):
             reader = self._story_test_reader(path)
             if reader is not None:
-                held[path_from(project, path)] = [story.name for story in reader.story_type.stories_in(path.read_text(encoding="utf-8"), project)]
+                held[path_from(project, path)] = [story.name for story in reader.story_type.load_file(path.read_text(encoding="utf-8"), project)]
         return held
 
     def _story_test_reader(self, path: Path):
         """The code format whose story type reads the story test at path; none for any other file."""
         from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel
 
-        adapters = (self.formats.adapter_class(name) for name in self.formats)
-        return next((adapter for adapter in adapters if issubclass(adapter, CodeStoryModel) and adapter.is_story_file(path)), None)
+        adapters = (self.formats.adapter(name) for name in self.formats)
+        return next((adapter for adapter in adapters if isinstance(adapter, CodeStoryModel) and adapter.is_story_file(path)), None)
 
     def _story_map_file(self, path: Path, project: Path, on_file: OnFile = None) -> StoryModel:
         """The story map in the file at path, read by the format that reads its extension."""

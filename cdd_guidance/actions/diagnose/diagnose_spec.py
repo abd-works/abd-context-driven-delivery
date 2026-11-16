@@ -17,7 +17,7 @@ from mamba import after, before, context, description, it
 from cdd_guidance.actions.diagnose.diagnose import Diagnose
 from harness.agent_tools.agent_tools import AgentToolSet
 from harness.agent_tools.agent_tools import SUB_AGENT_CALLER_PREAMBLE, SubAgentAnnotation
-from space.session.throwaway_project import ThrowawayProject
+from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 
 
 def diagnose_tool():
@@ -87,7 +87,7 @@ with description("a diagnose action in a project being worked on"):
         ThrowawayProject()
 
     with after.each:
-        ThrowawayProject.close_all()
+        OPEN_PROJECTS.close_all()
 
     with context("that names a practice fidelity"):
         with before.each:

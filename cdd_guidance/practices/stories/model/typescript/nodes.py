@@ -6,6 +6,7 @@ from pathlib import Path
 from harness.annotations.name import Name
 
 from cdd_guidance.practices.stories.model.brace_story import BraceScenario, BraceStory
+from cdd_guidance.practices.stories.model import name_facts
 from cdd_guidance.practices.stories.model.code_story_model import CodeEpic
 from cdd_guidance.practices.stories.model.typescript.screen_spec_file import ScreenSpecFile, is_screen_spec
 
@@ -69,7 +70,7 @@ class TypeScriptEpic(CodeEpic):
     def _aggregate_noun(self) -> str:
         """The epic's name without its opening verb: Create Customer names a Customer."""
         words = self.name.split()
-        if len(words) > 1 and self.opens_with_verb():
+        if len(words) > 1 and name_facts.opens_with_verb(self.name):
             return Name(" ".join(words[1:])).title_pascal or "Unnamed"
         return self.pascal()
 

@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Callable, Iterator, Optional
 from pathlib import Path, PurePosixPath
 
 from harness.graph.graph import Node
+from harness.graph.location import Location
 
 from cdd_guidance.practices.stories.model.story_map_files import source_at
 
@@ -225,7 +226,7 @@ class StoryRecording:
         self.graph = practice.reading.graph
         self.on_node = on_node
         self.story_at = 0
-        self.story_total = len(story_map.every_story())
+        self.story_total = len(story_map.descendants.stories())
         self._cursor: dict[str, int] = {}
 
     def write(self) -> None:
@@ -243,7 +244,7 @@ class StoryRecording:
         if not self.practice.reading.in_graph.holds(node_id):
             story_object.name = story_object.recorded_name
             story_object.type = story_object.recorded_type
-        node = self.practice.reading.in_graph.add(story_object, node_id, lines.file or ".", lines.start_line, lines.end_line or lines.start_line)
+        node = self.practice.reading.in_graph.add(story_object, node_id, Location(lines.file or ".", lines.start_line, lines.end_line or lines.start_line))
         self._align(node)
         return node
 

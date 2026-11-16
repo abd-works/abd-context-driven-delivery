@@ -9,7 +9,9 @@ import re
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
+from harness.agent_tools.progress import report_progress
 from harness.graph.graph import Node, PracticeNodes
+from harness.graph.location import Location
 from harness.guidance.practice_reading import PracticeReading
 from harness.graph.model_node import schema_sync_paused
 from harness.graph.skipped_folders import skips_folder
@@ -154,7 +156,7 @@ class DddReading(PracticeReading):
         if not self.root.is_dir():
             return
         with schema_sync_paused():
-            self.graph.report_progress("ddd · bounded contexts")
+            report_progress("ddd · bounded contexts")
             _WorkingCopyRead(self, self._domain_classes).read()
 
     @property
@@ -168,16 +170,15 @@ class DddReading(PracticeReading):
 
 class _DomainClasses:
     """The classes Clean Engineering read, seen by the folders that hold them: which folders hold a domain, which classes
-    are building blocks, and which production classes are none."""
+    are building blocks, and which production classes are none. Without Clean Engineering open in the graph there are
+    no classes; a folder where a class carries a DDD stereotype holds a domain."""
 
     def __init__(self, classes: PracticeNodes | None) -> None:
-        # Clean Engineering's nodes in the graph; none when the graph does not hold the practice open.
         self._classes = classes
         every = classes.nodes("OoadClass") if classes is not None else []
         self._every = every
         self._names = {cls.name for cls in every}
-        # The folders where a class carries a DDD stereotype, which says the folder holds a domain.
-        self._modelled = {folder_of(cls.source.file) for cls in every if kind_named_by(cls.get_fact("stereotypes") or [])}
+        self._stereotyped_folders = {folder_of(cls.source.file) for cls in every if kind_named_by(cls.get_fact("stereotypes") or [])}
 
     def read_now(self) -> list[Node]:
         """The production classes Clean Engineering read in this pass: a class in a spec, a test folder, or test
@@ -187,7 +188,7 @@ class _DomainClasses:
         return [cls for cls in self._classes.nodes_read_now("OoadClass") if not is_test_code(cls.source.file)]
 
     def holds_a_domain(self, folder: str) -> bool:
-        return folder in self._modelled
+        return folder in self._stereotyped_folders
 
     def block_of(self, tactical: TacticalClass, in_domain: bool) -> tuple[TacticalClass, str] | None:
         """The class with the building-block kind it is: its stereotype's, or in a folder that holds a domain the one
@@ -277,11 +278,11 @@ class _WorkingCopyRead:
     def _read_contexts(self, found: list[tuple[str, BoundedContext, str]]) -> None:
         """Each bounded context by its folder, under the context of the folder around it."""
         for rel, context, markdown in found:
-            node = self._in_graph.add(context, f"ddd:BoundedContext:{rel}:{context.name}", markdown, 1, context.context_file_lines)
+            node = self._in_graph.add(context, f"ddd:BoundedContext:{rel}:{context.name}", Location(markdown, 1, context.context_file_lines))
             parent = self._contexts.around(folder_of(rel)) if rel != "." else None
-            self._graph.link("owns", parent or self._in_graph.root, node)
+            self._graph.edges.link("owns", parent or self._in_graph.root, node)
             if parent is not None:
-                self._graph.link("belongsTo", node, parent, "relationship")
+                self._graph.edges.relate("belongsTo", node, parent)
             self._contexts.add(rel, node)
 
     def _members_by_folder(self, marked: bool) -> dict[str, list[tuple[TacticalClass, str]]]:
@@ -310,18 +311,18 @@ class _WorkingCopyRead:
         context = self._contexts.around(folder) or self._in_graph.root
         aggregate = Aggregate(Path(folder).name, 1)
         aggregate.load_folder_facts(self._root / folder)
-        node = self._in_graph.add(aggregate, self._aggregate_id(folder), folder, 1, 1)
-        self._graph.link("owns", context, node)
-        self._graph.link("belongsTo", node, context, "relationship")
+        node = self._in_graph.add(aggregate, self._aggregate_id(folder), Location(folder, 1, 1))
+        self._graph.edges.link("owns", context, node)
+        self._graph.edges.relate("belongsTo", node, context)
         for tactical, kind in members:
             self._block(node, tactical, kind)
         return node
 
     def _block(self, aggregate: Node, tactical: TacticalClass, kind: str) -> None:
         source = tactical.oclass.source
-        block = self._in_graph.add(BuildingBlock(self._reading.practice, tactical, kind), f"ddd:{kind}:{source.file}:{tactical.oclass.name}", source.file, source.start_line, source.end_line)
-        self._graph.link("root" if kind == "EntityRoot" else "owns", aggregate, block)
-        self._graph.link("belongsTo", block, aggregate, "relationship")
+        block = self._in_graph.add(BuildingBlock(self._reading.practice, tactical, kind), f"ddd:{kind}:{source.file}:{tactical.oclass.name}", Location(source.file, source.start_line, source.end_line))
+        self._graph.edges.link("root" if kind == "EntityRoot" else "owns", aggregate, block)
+        self._graph.edges.relate("belongsTo", block, aggregate)
 
     def _link_blocks(self) -> None:
         """Link the building blocks DDD holds, those read now and those it built before: each repository accesses the
@@ -338,14 +339,14 @@ class _WorkingCopyRead:
     def _link_kept_root(self, block: Node, by_name: dict[str, Node]) -> None:
         root = by_name.get(root_kept_by(block.name) or "") if block.type == "Repository" else None
         if root is not None:
-            self._graph.link("accesses", block, root, "relationship")
+            self._graph.edges.relate("accesses", block, root)
 
     def _link_foreign_roots(self, block: Node, by_name: dict[str, Node]) -> None:
         if block.type != "EntityRoot":
             return
         for other in _FOREIGN_KEY.findall(block.source.text):
             if other in by_name and other != block.name:
-                self._graph.link("associates", block, by_name[other], "relationship")
+                self._graph.edges.relate("associates", block, by_name[other])
 
     def _map_contexts(self, marked: list[tuple[str, BoundedContext, str]]) -> None:
         """Each context mapping a bounded context's file lists, under that context, and linked to the aggregates its two
@@ -362,14 +363,14 @@ class _WorkingCopyRead:
     def _mapping_node(self, mapping: ContextMapping, context: Node, markdown: str) -> Node:
         """The mapping on the graph, under its context, at the line of the context's file that lists it."""
         line = mapping.sequential_order
-        node = self._in_graph.add(mapping, f"ddd:ContextMapping:{markdown}:{line}", markdown, line, line)
-        self._graph.link("mappedTo", context, node)
+        node = self._in_graph.add(mapping, f"ddd:ContextMapping:{markdown}:{line}", Location(markdown, line, line))
+        self._graph.edges.link("mappedTo", context, node)
         return node
 
     def _link_sides(self, node: Node, mapping: ContextMapping, aggregates: dict[str, Node]) -> None:
         for side, name in mapping.aggregate_names.items():
             if name in aggregates:
-                self._graph.link(side, node, aggregates[name], "relationship")
+                self._graph.edges.relate(side, node, aggregates[name])
 
     def _from_root(self, path: Path) -> str:
         """path as a path from the practice's root, with forward slashes."""

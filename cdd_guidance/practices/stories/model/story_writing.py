@@ -17,8 +17,13 @@ from typing import Dict, List, Optional, Tuple
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeLanguage, WrittenBlock, WrittenKey
 from cdd_guidance.practices.stories.model.story_model import Background, Epic, Scenario, Step, Story, StoryType
 
-StepClause = Tuple[Step, str, List[Step]]
-# One step, the verb it opens with, and the steps a language chains onto it.
+class StepClause:
+    """One step, the verb it opens with, and the steps a language chains onto it."""
+
+    def __init__(self, step: Step, verb: str) -> None:
+        self.step = step
+        self.verb = verb
+        self.continuations: List[Step] = []
 
 
 def example_names_of(stories: List[Story]) -> List[str]:
@@ -112,7 +117,7 @@ class StoryWriting:
         opened = len(lines)
         for story in epic.stories:
             gap = [] if len(lines) == opened else [""]
-            lines = (lines if self.is_as_read(story) else self._spaced(lines, gap)) + self.story_lines(story)
+            lines = (lines if self._is_as_read(story) else self._spaced(lines, gap)) + self.story_lines(story)
         return path, "\n".join(lines + (written.closing if written is not None else [""]))
 
     def story_text(self, story: "Story") -> str:
@@ -136,37 +141,37 @@ class StoryWriting:
     def scenario_background_lines(self, background: "Background", indent: str) -> List[str]:
         return []
 
-    def quoted(self, text: str) -> str:
+    def _quoted(self, text: str) -> str:
         """text as a quoted name in this language, its backslashes and quotes escaped."""
         mark = self.quote_mark
         return mark + re.sub(r"[\\" + mark + "]", lambda found: "\\" + found.group(0), text) + mark
 
-    def clauses(self, steps: List["Step"]) -> List[StepClause]:
+    def _clauses(self, steps: List["Step"]) -> List[StepClause]:
         """(step, the verb it opens with, steps chained onto it)."""
         clauses: List[StepClause] = []
         for step in steps:
-            if self.chains_repeated_phase and clauses and step.step_type == clauses[-1][0].step_type:
-                clauses[-1][2].append(step)
+            if self.chains_repeated_phase and clauses and step.step_type == clauses[-1].step.step_type:
+                clauses[-1].continuations.append(step)
             else:
-                clauses.append((step, self.verb(step), []))
+                clauses.append(StepClause(step, self._verb(step)))
         return clauses
 
-    def verb(self, step: "Step") -> str:
+    def _verb(self, step: "Step") -> str:
         return self.verbs.get(step.keyword) or self.default_verb or step.keyword.lower()
 
-    def step_lines(self, clause: StepClause, indent: str) -> List[str]:
+    def _step_lines(self, clause: StepClause, indent: str) -> List[str]:
         """One step and the steps chained onto it, each with its body. A body not written yet gets the placeholder."""
-        step, verb, continuations = clause
-        lines = [self._step_open(verb, step, indent)] + self._body_lines(step, indent + self.language.indent)
+        step = clause.step
+        lines = [self._step_open(clause.verb, step, indent)] + self._body_lines(step, indent + self.language.indent)
         lines.extend(self._closing(self.step_closing, indent))
-        for extra in [*step.ands, *continuations]:
+        for extra in [*step.ands, *clause.continuations]:
             lines.append(self._and_open(extra, indent))
             lines.extend(self._body_lines(extra, indent + self.language.indent * self.and_body_depth))
             lines.extend(self._closing(self.and_closing, indent))
         lines[-1] += self.statement_end
         return lines
 
-    def is_as_read(self, node: "Story | Scenario") -> bool:
+    def _is_as_read(self, node: "Story | Scenario") -> bool:
         return as_read(node.written, self.language, node.code_key) is not None
 
     def _spaced(self, lines: List[str], gap: List[str]) -> List[str]:
@@ -185,7 +190,7 @@ class StoryWriting:
         opened = len(lines)
         for scenario in story.scenarios:
             gap = [] if len(lines) == opened else self.scenario_gap
-            lines = (lines if self.is_as_read(scenario) else self._spaced(lines, gap)) + self._scenario_lines(scenario, self.scenario_indent)
+            lines = (lines if self._is_as_read(scenario) else self._spaced(lines, gap)) + self._scenario_lines(scenario, self.scenario_indent)
         return lines
 
     def _scenario_lines(self, scenario: "Scenario", indent: str) -> List[str]:
@@ -194,24 +199,24 @@ class StoryWriting:
         if written is not None:
             return written.lead + written.heading + written.inside + written.closing + written.close
         inner = indent + self.language.indent
-        lines = [self._filled(self.scenario_opening, indent=indent, name=self.quoted(scenario.name))]
+        lines = [self._filled(self.scenario_opening, indent=indent, name=self._quoted(scenario.name))]
         lines += scenario.setup.lines_in(self.language, inner, "")
         for background in scenario.backgrounds:
             lines.extend(self.scenario_background_lines(background, inner))
         if scenario.examples:
             lines.append(f"{inner}{self.language.comment('examples: ' + ', '.join(scenario.examples))}")
-        for clause in self.clauses(scenario.steps):
-            lines.extend(self.step_lines(clause, inner))
+        for clause in self._clauses(scenario.steps):
+            lines.extend(self._step_lines(clause, inner))
         if not scenario.steps and scenario.setup.is_empty:
             lines.extend(f"{inner}{line}" for line in self.empty_block)
         return lines + self._closing(self.scenario_closing, indent)
 
     def _step_open(self, verb: str, step: "Step", indent: str) -> str:
-        return self._filled(self.step_opening, indent=indent, verb=verb, text=self.quoted(step.text), callback=self._callback(step))
+        return self._filled(self.step_opening, indent=indent, verb=verb, text=self._quoted(step.text), callback=self._callback(step))
 
     def _and_open(self, step: "Step", indent: str) -> str:
         verb = self.and_verbs[1] if step.keyword == "But" else self.and_verbs[0]
-        return self._filled(self.and_opening, indent=indent, verb=verb, text=self.quoted(step.text), callback=self._callback(step))
+        return self._filled(self.and_opening, indent=indent, verb=verb, text=self._quoted(step.text), callback=self._callback(step))
 
     def _callback(self, step: "Step") -> str:
         """The opening of a step's callback in a language that writes one; async when its body awaits."""

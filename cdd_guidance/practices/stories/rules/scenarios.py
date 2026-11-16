@@ -91,7 +91,7 @@ class OutlineRequiresManyPermutations(PracticeGraphRule):
     node_types = ("Scenario",)
 
     def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        if not context.scenario_outline(node):
+        if not self._is_outline(node):
             return []
         examples = context.child_count(node, ("examples",))
         if examples <= _ALTERNATIVES_WITHOUT_AN_OUTLINE:
@@ -99,6 +99,10 @@ class OutlineRequiresManyPermutations(PracticeGraphRule):
                 f"Scenario outline {node.name!r} needs more than two example rows (found {examples})."
             ]
         return []
+
+    def _is_outline(self, node: Node) -> bool:
+        """The scenario's node records it as an outline."""
+        return bool(node.facts.get("is_outline"))
 
 def scenario_domain_concepts(steps: list[Node]) -> set[str]:
     """The bold terms the steps name, less their actors: who acts (Customer, My Paradise) is not a concept to give an
@@ -165,11 +169,16 @@ class FlaggedWritesIntendedGwt(PracticeGraphRule):
     node_types = ("Scenario",)
 
     def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        if not any("intended" in item.casefold() for item in context.scenario_evidence(node)):
+        if not any("intended" in item.casefold() for item in self._evidence(node)):
             return []
         if context.child_count(node, ("steps",)) == 0:
             return [f"Scenario {node.name!r} is marked intended but has no GWT steps written."]
         return []
+
+    def _evidence(self, node: Node) -> list[str]:
+        """The evidence labels the scenario's node records; none when it records none."""
+        raw = node.facts.get("evidence")
+        return [str(item) for item in raw] if isinstance(raw, list) else []
 
 class GivenNamesComplexStateRootFirst(PracticeGraphRule):
     """Which concept is an aggregate root and which are its owned parts comes from the DDD model loaded beside the
@@ -199,10 +208,10 @@ class GivenNamesComplexStateRootFirst(PracticeGraphRule):
             return {}
         owned: dict[str, str] = {}
         for aggregate in ddd.in_graph.nodes("Aggregate"):
-            roots = [edge.child.name for edge in graph.edges_from("root", aggregate)]
+            roots = [edge.child.name for edge in graph.edges.from_parent("root", aggregate)]
             if not roots:
                 continue
-            for edge in graph.edges_from("owns", aggregate):
+            for edge in graph.edges.from_parent("owns", aggregate):
                 if edge.child.type in _OWNED_PART_TYPES:
                     owned[edge.child.name] = roots[0]
         return owned

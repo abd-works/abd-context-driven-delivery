@@ -25,7 +25,7 @@ Narrative for maintainers of the sketch module itself. AI reading this file: thi
 3. After three or four grill answers, the agent sketches that theme into the same file, saves it, and reviews it again.
 4. The instructions end with `Generate.generate` for the same guidance, so the agreed sketch can become the formal artifact.
 
-Sketch and grill answers go in `Session.context_folder(module)`, the one place a session says where its `.context` folder is.
+Sketch and grill answers go in `SessionPaths.context_folder(module)`, the one place a session says where its `.context` folder is.
 
 Template discovery is tiered: a template the caller passes in the session, then `{agent_dir}/templates/*-sketch.*`, then `templates/sketch-template.md`.
 

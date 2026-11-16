@@ -88,10 +88,11 @@ class ThinSlice:
     """The thin slice file one markdown story map keeps its increments in, with the lines it was read with: those above
     its first increment, the number its first increment carries, and its text then."""
 
-    def __init__(self, path: Path, above: List[str], first_number: int = 1, text: str = "") -> None:
+    def __init__(self, path: Path, reading: "_ThinSliceReading", text: str) -> None:
+        """The thin slice at path as reading read text, the file then; text is empty for a thin slice not written yet."""
         self.path = path
-        self.above = above
-        self.first_number = first_number
+        self.above = reading.above
+        self.first_number = reading.first_number
         self.text_as_read = text
 
     def text(self, increments: List[MarkdownIncrement]) -> str:
@@ -119,13 +120,12 @@ def thin_slice_in(folder: Path, story_map: StoryModel, project: Path) -> ThinSli
     """The thin slice in folder (``StoryMapFiles.thin_slicing``), its increments read onto story_map, each delivering
     story_map's own stories and naming its file from project; a new `thin-slice.md` in folder when it holds none."""
     found = StoryMapFiles(folder).thin_slicing()
-    if found is None:
-        return ThinSlice(Path(folder) / "thin-slice.md", list(_NEW_THIN_SLICE))
-    text = found.read_text(encoding="utf-8")
-    reading = _ThinSliceReading(story_map, path_from(Path(project).resolve(), found))
-    for increment in reading.read(text.splitlines()):
-        story_map.append_increment(increment)
-    return ThinSlice(found, reading.above, reading.first_number, text)
+    path = found if found is not None else Path(folder) / "thin-slice.md"
+    text = found.read_text(encoding="utf-8") if found is not None else ""
+    reading = _ThinSliceReading(story_map, path_from(Path(project).resolve(), path))
+    for increment in reading.read(text.splitlines() if found is not None else list(_NEW_THIN_SLICE)):
+        story_map.increments.append(increment)
+    return ThinSlice(path, reading, text)
 
 
 class _ThinSliceReading:
@@ -188,7 +188,7 @@ class _ThinSliceReading:
     def _read_bullet(self, raw: str, named: str, increment: MarkdownIncrement) -> None:
         """A story bullet: the increment delivers the map's story of that name; a name the map lacks is kept as written."""
         if self._stories_by_name is None:
-            self._stories_by_name = self.story_map.stories_by_name()
+            self._stories_by_name = self.story_map.descendants.stories_by_name()
         story = self._stories_by_name.get(strip_markup(named))
         found = [story] if story is not None else []
         increment.lines.bullets.append((raw, found[0] if found else None, found[0].name if found else ""))

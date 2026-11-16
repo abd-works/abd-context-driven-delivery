@@ -29,7 +29,7 @@ class Render(GuidanceAction):
                 return worked
             return worked.render_files(format, paths, source) if paths else worked.render(format, content, source)
 
-        converted = self.each(on)
+        converted = self.work.each(on)
         tools(self.act_quickly)
         tools(self.place_rendered)
         if self._session is not None:

@@ -196,7 +196,7 @@ class DrawioUxMap(UxMap):
             self._append_transition(back, target, origin)
 
     def _append_transition(self, trigger: str, origin: Screen, target: Screen) -> None:
-        self.transitions.append(self.transition_type(trigger, len(self.transitions), origin, target, trigger))
+        self.transitions.append(self.transition_type(trigger, len(self.transitions)).joining(origin, target))
 
     def render(self, canonical: UxMap) -> str:
         """canonical as Detailed IA + Site Map: copied into a draw.io map with this map's timeout, which draws itself."""

@@ -60,7 +60,7 @@ export class StoryDemoPage {
     this.runner.start(this.story, scenarioIndex);
     const scenario = this.runner.scenario;
     this.explorerFrame.highlightStep(scenario.steps[0] ?? null);
-    this.storyDemoFrame.clearEmphasis();
+    this.storyDemoFrame.emphasis.clear();
   }
 
   /**

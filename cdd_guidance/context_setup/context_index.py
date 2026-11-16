@@ -170,7 +170,7 @@ class ContextIndex:
     def _path_named(self, named: str) -> Path:
         """named as a path in this index's session's project; read as given when it works in no session, as an index
         run in process does."""
-        return self._session.path_named(named) if self._session is not None else Path(named)
+        return self._session.paths.path_named(named) if self._session is not None else Path(named)
 
     def _segment_named(self, named: str) -> Path:
         """The segment file named, which the session's files refuse when it is not there: embedding it as empty text

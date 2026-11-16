@@ -93,4 +93,4 @@ def _parent(node: Node) -> Optional[Node]:
     """The node above node: the parent its tree gives it, else the one a direct edge of its graph hangs it under."""
     if node.parent is not None:
         return node.parent
-    return node.graph.direct_parent(node) if node.practice is not None else None
+    return node.graph.edges.direct_parent(node) if node.practice is not None else None

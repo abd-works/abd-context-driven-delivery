@@ -26,8 +26,8 @@ from cdd_guidance.practices.stories.model.story_map_files import StoryMapFiles, 
 from cdd_guidance.practices.stories.model.markdown.links import StoryMapLinks, unlink
 from cdd_guidance.practices.stories.model.markdown.map_reading import OutlineLines, described, has_map_structure, is_outline, read_at, read_map
 from cdd_guidance.practices.stories.model.markdown.markup import MarkdownExample, MarkdownStep, step_line, step_lines, strip_backticks
-from cdd_guidance.practices.stories.model.markdown.scenario_file import SCENARIO_HEADING, ScenarioFileReading, scenario_sections_in
-from cdd_guidance.practices.stories.model.markdown.scenario_parts import HEADING_LINE, STEP_LINE, StorySection
+from cdd_guidance.practices.stories.model.markdown.scenario_file import SCENARIO_HEADING, ScenarioFileReading, ScenarioFiles
+from cdd_guidance.practices.stories.model.markdown.scenario_parts import HEADING_LINE, STEP_LINE, DocumentPart, StorySection
 from cdd_guidance.practices.stories.model.story_model import StoryModel
 from cdd_guidance.practices.stories.model.markdown.thin_slice import MarkdownIncrement, thin_slice_in
 
@@ -143,7 +143,7 @@ class MarkdownStory(Story):
         out.extend(self._as_markdown(scenario).document_text() for scenario in self.scenarios if not any(scenario is part for part in parts))
         return "".join(out)
 
-    def _document_part(self, part: object, steps: "_SectionLines") -> str:
+    def _document_part(self, part: DocumentPart, steps: "_SectionLines") -> str:
         """One part of the document it was read from, as it is written now: its heading, a scenario it still holds, or
         a step or example line."""
         if part == HEADING_LINE:
@@ -309,7 +309,7 @@ class _ScenarioDocument:
                 out.append((story if isinstance(story, MarkdownStory) else MarkdownStory(story)).document_text())
         return "".join(out)
 
-    def _written_part(self, part: object, steps: "_SectionLines") -> str:
+    def _written_part(self, part: DocumentPart, steps: "_SectionLines") -> str:
         if part == HEADING_LINE:
             return self.heading_line()
         if isinstance(part, MarkdownStory):
@@ -385,10 +385,7 @@ class MarkdownStoryModel(StoryModel):
         story map, the increments of the thin slice beside it: the map an edit writes back to path. A scenarios file
         keeps its own lines and no increments."""
         path = Path(path).resolve()
-        file = path_from(Path(project).resolve(), path)
-        text = path.read_text(encoding="utf-8")
-        story_map = self.parse(text, file)
-        story_map.sources.add(file, text)
+        story_map = self._read_file(path, path_from(Path(project).resolve(), path))
         if story_map.scenario_document is None:
             story_map.slicing = thin_slice_in(path.parent, story_map, project)
         return story_map
@@ -418,24 +415,34 @@ class MarkdownStoryModel(StoryModel):
             rel = path_from(base, md_path)
             if on_file is not None:
                 on_file(rel)
-            text = md_path.read_text(encoding="utf-8")
-            try:
-                parsed = self.parse(text, rel)
-            except MarkdownParseError as err:
-                raise MarkdownParseError(f"{md_path}: {err}") from err
-            self.sources.add(rel, text)
-            for epic in parsed.epics:
-                self.epics.append(epic)
-            if not self.has_source_file:
-                self.source = source_at(rel, 1)
+            self._take_map(self._read_file(md_path, rel), rel)
         if not self.epics:
             return
         workspace = root.parent if root.is_file() else root
         self._attach_markdown(workspace, on_file=on_file, base=base)
 
+    def _read_file(self, path: Path, file: str) -> "MarkdownStoryModel":
+        """The map the markdown file at path holds, each node naming file, keeping its text as one of its sources. A file
+        that does not read is a MarkdownParseError naming the file."""
+        text = path.read_text(encoding="utf-8")
+        try:
+            parsed = self.parse(text, file)
+        except MarkdownParseError as err:
+            raise MarkdownParseError(f"{path}: {err}") from err
+        parsed.sources.add(file, text)
+        return parsed
+
+    def _take_map(self, parsed: "MarkdownStoryModel", file: str) -> None:
+        """Take parsed's epics and sources onto this map, which names file as its own when it names none yet."""
+        self.sources.take(parsed.sources)
+        for epic in list(parsed.epics):
+            self.epics.append(epic)
+        if not self.has_source_file:
+            self.source = source_at(file, 1)
+
     def _attach_markdown(self, root: Path, on_file: Optional[Callable[[str], None]] = None, base: Optional[Path] = None) -> None:
-        sections = scenario_sections_in(root, MarkdownScenario, on_file=on_file, base=base)
-        for story in self.every_story():
+        sections = ScenarioFiles(root, base).sections(MarkdownScenario, on_file)
+        for story in self.descendants.stories():
             story.load_scenarios(sections)
         if not self.increments and StoryMapFiles(root).thin_slicing() is not None:
             self.slicing = thin_slice_in(root, self, root)
@@ -499,7 +506,7 @@ class MarkdownStoryModel(StoryModel):
         return False
 
     def _is_discovery_story_map(self, story_map: "MarkdownStoryModel") -> bool:
-        return not any(story.scenarios or story.backgrounds for story in story_map.every_story())
+        return not any(story.scenarios or story.backgrounds for story in story_map.descendants.stories())
 
     def _wrap_story_map_document(self, body: str, previous: Optional[str]) -> str:
         document = DiscoveryDocument("story-map", "Story Map", previous or "")
@@ -558,7 +565,7 @@ class MarkdownStoryModel(StoryModel):
         story_map.scenario_document = _ScenarioDocument(parts, holder, reading.tree_heading)
         return story_map
 
-    def _document_part(self, part: object, holder: MarkdownEpic, file: str) -> object:
+    def _document_part(self, part: DocumentPart, holder: MarkdownEpic, file: str) -> DocumentPart:
         """A part of a scenarios document as its map keeps it: a story section becomes a story on holder."""
         if not isinstance(part, StorySection):
             return part

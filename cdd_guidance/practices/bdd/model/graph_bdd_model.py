@@ -29,7 +29,8 @@ NO_OPERATION = "// the graph holds no operation this observation calls"
 _CHILD_EDGES = ("contexts", "observations")
 # A code member a call names: its class and its own name, `("Session", "change_workpath")`.
 Member = tuple[str, str]
-# The members a call graph has followed to reach the current call, outermost first; its length is the call's depth.
+# The members a call graph has followed to reach a call, outermost first, ending with the member called; the members
+# before it are the call's depth.
 CallPath = tuple[Member, ...]
 _MEMBER_CALL = re.compile(r"^([A-Za-z_]\w*)\.([A-Za-z_]\w*)")
 
@@ -44,13 +45,13 @@ class GraphBddModel(BddModel):
         bdd = graph.practices.of(self.practice_kind())
         self._clean = bdd.reading.clean_engineering_reading
         for spec in sorted(bdd.reading.in_graph.nodes("Spec"), key=lambda node: node.source.file):
-            for saved in self._in_file_order(graph.edges_from("descriptions", spec)):
+            for saved in self._in_file_order(graph.edges.from_parent("descriptions", spec)):
                 self._read_block(saved, self.add_child("description", saved.name))
         return self
 
     def _read_block(self, saved: Node, block: DescribeBlock) -> None:
         """The saved block's contexts and observations, in the order its file has them, under block."""
-        children = self._in_file_order(edge for kind in _CHILD_EDGES for edge in self._graph.edges_from(kind, saved))
+        children = self._in_file_order(edge for kind in _CHILD_EDGES for edge in self._graph.edges.from_parent(kind, saved))
         for order, child in enumerate(children, start=1):
             if child.type == "Observation":
                 block.add_child("it", child.name, order).call_graph = self._realization(child)
@@ -62,17 +63,18 @@ class GraphBddModel(BddModel):
 
     def _realization(self, observation: Node) -> CallGraph:
         entries = CallGraph()
-        for edge in self._graph.edges_from("invokes", observation):
+        for edge in self._graph.edges.from_parent("invokes", observation):
             member = edge.child
-            entries.extend(self._call((member.get_fact("owner", ""), member.name), (), member))
+            entries.extend(self._call(((member.get_fact("owner", ""), member.name),), member))
         if not entries:
             entries.add_line(NO_OPERATION, 0)
         return entries
 
-    def _call(self, member: Member, path: CallPath, code: Optional[Node]) -> CallGraph:
-        """A call on the member, reached through path, then the interactions the model gives it, then what it returns."""
-        owner, name = member
-        depth = len(path)
+    def _call(self, path: CallPath, code: Optional[Node]) -> CallGraph:
+        """A call on the last member of path, reached through the members before it, then the interactions the model
+        gives it, then what it returns."""
+        owner, name = path[-1]
+        depth = len(path) - 1
         described = self._clean.model_documents.described_member(owner, name) if self._clean is not None else None
         # A described property, a described getter, and a getter's code node all read as a property.
         subject = described if described is not None else code
@@ -81,7 +83,7 @@ class GraphBddModel(BddModel):
         entries = CallGraph()
         entries.add_line(f"-> {owner}.{name}" if is_property else f"-> {owner}.{name}({signature})", depth)
         if depth < _DEEPEST_CALL and described is not None:
-            entries.extend(self._interactions(described, (*path, member)))
+            entries.extend(self._interactions(described, path))
         returns = described.value_type.strip() if described is not None else ""
         if returns:
             entries.add_line(f"<- {returns}", depth)
@@ -94,7 +96,7 @@ class GraphBddModel(BddModel):
         for interaction in described.callees:
             callee = self._member_named(interaction)
             if callee is not None and callee not in path:
-                found.extend(self._call(callee, path, self._code_member(*callee)))
+                found.extend(self._call((*path, callee), self._code_member(*callee)))
         return found
 
     def _member_named(self, interaction: str) -> Optional[Member]:

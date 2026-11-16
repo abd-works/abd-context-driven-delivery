@@ -16,7 +16,7 @@ from typing import Callable, Dict, List, Optional
 
 
 from cdd_guidance.practices.stories.model.markdown.links import unlink
-from cdd_guidance.practices.stories.model.markdown.markup import ExampleRowLine, MarkdownExample, MarkdownStep, step_marks, strip_markup
+from cdd_guidance.practices.stories.model.markdown.markup import ExampleRowLine, MarkdownExample, MarkdownStep, strip_markup
 from cdd_guidance.practices.stories.model.markdown.scenario_parts import (
     HEADING_LINE,
     STEP_LINE,
@@ -75,20 +75,31 @@ def _named_by_place(path: Path) -> str:
     return path.stem.replace("-", " ")
 
 
-def scenario_sections_in(root: Path, scenario_type: type, *, on_file: Optional[Callable[[str], None]] = None, base: Path | None = None) -> List[StorySection]:
-    """The story sections of every scenarios markdown file under root, or of root when it is one, each file read once
-    by a reading made for it, and named from base, the folder its story map's own file is named from, so every node of
-    one map names its file the same way; from root when no base is given."""
-    root = Path(root).resolve()
-    named_from = Path(base).resolve() if base is not None else root
-    files = [root] if root.is_file() else StoryMapFiles(root).scenario_files_below()
-    sections: List[StorySection] = []
-    for path in files:
-        rel = path.name if path == root else os.path.relpath(path, named_from).replace("\\", "/")
-        if on_file is not None:
-            on_file(rel)
-        sections.extend(ScenarioFileReading(path.read_text(encoding="utf-8"), rel, scenario_type).read())
-    return sections
+class ScenarioFiles:
+    """The scenarios markdown files under a root, or the root when it is one, each named from base, the folder its
+    story map's own file is named from, so every node of one map names its file the same way; from the root when no
+    base is given."""
+
+    def __init__(self, root: Path, base: Path | None = None) -> None:
+        self.root = Path(root).resolve()
+        self._named_from = Path(base).resolve() if base is not None else self.root
+
+    def sections(self, scenario_type: type, on_file: Optional[Callable[[str], None]] = None) -> List[StorySection]:
+        """The story sections of every file, each file read once by a reading made for it; on_file hears each file's
+        name as it is read."""
+        sections: List[StorySection] = []
+        for path in self._files():
+            rel = self._name_of(path)
+            if on_file is not None:
+                on_file(rel)
+            sections.extend(ScenarioFileReading(path.read_text(encoding="utf-8"), rel, scenario_type).read())
+        return sections
+
+    def _files(self) -> List[Path]:
+        return [self.root] if self.root.is_file() else StoryMapFiles(self.root).scenario_files_below()
+
+    def _name_of(self, path: Path) -> str:
+        return path.name if path == self.root else os.path.relpath(path, self._named_from).replace("\\", "/")
 
 
 class ScenarioFileReading:
@@ -228,10 +239,10 @@ class ScenarioFileReading:
         previous = steps[-1] if word in ("and", "but") and steps else None
         phase = previous.step_type if previous is not None else _PHASES.get(word, StepType.THEN)
         order = len(previous.ands if previous is not None else steps) + 1
-        step = MarkdownStep(
-            text=text, step_type=phase, sequential_order=order, keyword=word.capitalize(),
-            source=source_at(self.rel, self.number), read_line=self.kept, **step_marks(text),
-        )
+        step = MarkdownStep(text, phase, order)
+        step.keyword = word.capitalize()
+        step.source = source_at(self.rel, self.number)
+        step.read_from(self.kept)
         if previous is not None:
             previous.ands = [*previous.ands, step]
         else:

@@ -7,8 +7,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from harness.agent_tools.progress import report_progress
 from harness.annotations.name import Name
 from harness.graph.graph import Node
+from harness.graph.location import Location
 from harness.guidance.practice_reading import PracticeReading
 from harness.graph.model_node import schema_sync_paused
 
@@ -41,7 +43,7 @@ class BddGraphReading(PracticeReading):
         with schema_sync_paused():
             for index, file in enumerate(specs, start=1):
                 relative = file.relative_to(root).as_posix()
-                self.graph.report_progress(f"bdd · specs · {index}/{len(specs)} · {relative}")
+                report_progress(f"bdd · specs · {index}/{len(specs)} · {relative}")
                 self._add_spec(file, relative)
         clean = self.clean_engineering_reading
         if clean is not None:
@@ -75,14 +77,14 @@ class BddGraphReading(PracticeReading):
         """The spec and each node of its describe tree, each at its own lines with the facts its span holds."""
         behavior = spec.behavior_nodes()
         parents = {id(node): node.parent for node in behavior}
-        added = {id(spec): self.in_graph.add(spec, f"bdd:Spec:{relative}", relative, 1, max(1, len(lines)))}
-        self.graph.link("owns", self.in_graph.root, added[id(spec)])
+        added = {id(spec): self.in_graph.add(spec, f"bdd:Spec:{relative}", Location(relative, 1, max(1, len(lines))))}
+        self.graph.edges.link("owns", self.in_graph.root, added[id(spec)])
         for node in behavior:
             node.load_span_facts("\n".join(lines[node.line - 1 : node.end_line]))
             node_id = f"bdd:{node.type}:{relative}:{node.line}:{node.name}"
-            added[id(node)] = self.in_graph.add(node, node_id, relative, node.line, node.end_line)
+            added[id(node)] = self.in_graph.add(node, node_id, Location(relative, node.line, node.end_line))
             parent = added.get(id(parents[id(node)]), added[id(spec)])
-            self.graph.link(_BEHAVIOR_EDGES[node.type], parent, added[id(node)])
+            self.graph.edges.link(_BEHAVIOR_EDGES[node.type], parent, added[id(node)])
 
 
 class ObservationLinks:
@@ -116,8 +118,8 @@ class ObservationLinks:
                     invoked = found + [member for member in invoked if member not in found]
                     break
             for member in invoked:
-                self.graph.link("invokes", node, member, "relationship")
-                self.graph.link("invokedBy", member, node, "relationship")
+                self.graph.edges.relate("invokes", node, member)
+                self.graph.edges.relate("invokedBy", member, node)
 
     def _enclosing(self, nodes: list[Node], index: int) -> list[Node]:
         """Each describe or context around nodes[index], innermost first."""
@@ -130,14 +132,14 @@ class ObservationLinks:
 
 
 class ReachedMembers:
-    """The code members one block's reach names, in the spec's own language family: Python, or script."""
+    """The code members one block's reach names, in the spec's own language family: Python, or script. A call that
+    carries a tool by its name is transport, not the act, so it links to nothing itself."""
 
     def __init__(self, clean: PracticeReading, reach: Reach, is_python: bool) -> None:
         self._clean = clean
         self._reach = reach
         self._is_python = is_python
         self._reads = set(reach.get("reads", []))
-        # A call that carries a tool by its name is transport, not the act, so it links to nothing itself.
         self._transports = {transport for transport, _toolset, _operation in reach.get("tools", [])}
 
     @property

@@ -158,7 +158,7 @@ class Validate(GuidanceAction):
 
         violations = self._graph.violations()
         self._log_graph_validation(violations)
-        guidance = [self.at_fidelity(item) for item in self.listed() if not isinstance(item, str)]
+        guidance = [self.work.at_fidelity(item) for item in self.listed() if not isinstance(item, str)]
         sources =[str(path.resolve()) for path in self._graph.files]
         return ValidationReport(self.session, guidance).of_graph(violations, sources, self._graph.held_beside)
 

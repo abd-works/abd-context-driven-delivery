@@ -24,18 +24,18 @@ def round_trip_story_map(story_map: StoryModel | None = None) -> StoryModel:
     """The fixture map, built into *story_map* (a format's own model) or a plain StoryModel."""
     story_map = story_map if story_map is not None else StoryModel()
     pay = Epic("Pay Bills", 1)
-    story_map.append_epic(pay)
-    pay.append_story(_story("Review Statement", StoryType.USER, "Customer"))
+    story_map.epics.append(pay)
+    pay.stories.append(_story("Review Statement", StoryType.USER, "Customer"))
     enter = Epic("Enter Payment", 1)
-    pay.append_epic(enter)
+    pay.epics.append(enter)
     submit = _story("Submit Payment", StoryType.USER, "Customer")
     submit.backgrounds.append(_background())
     submit.scenarios.append(_scenario())
-    enter.append_story(submit)
-    enter.append_story(_story("Post Payment To Ledger", StoryType.SYSTEM, "Ledger"))
+    enter.stories.append(submit)
+    enter.stories.append(_story("Post Payment To Ledger", StoryType.SYSTEM, "Ledger"))
     reconcile = Epic("Reconcile Ledger", 2)
-    pay.append_epic(reconcile)
-    reconcile.append_story(_story("Rebuild Ledger Index", StoryType.TECHNICAL, "Batch"))
+    pay.epics.append(reconcile)
+    reconcile.stories.append(_story("Rebuild Ledger Index", StoryType.TECHNICAL, "Batch"))
     return story_map
 
 
@@ -71,17 +71,17 @@ def _story(name: str, kind: StoryType, actor: str) -> Story:
 
 def _background() -> Background:
     background = Background("background", 1)
-    background.steps = [Step("an open account", StepType.GIVEN, 1, keyword="Given")]
+    background.steps = [Step("an open account", StepType.GIVEN, 1)]
     return background
 
 
 def _scenario() -> Scenario:
     scenario = Scenario("pays a bill that is due", 1)
-    given = Step("a bill is due", StepType.GIVEN, 1, keyword="Given")
-    given.ands = [Step("the balance covers it", StepType.GIVEN, 1, keyword="And")]
+    given = Step("a bill is due", StepType.GIVEN, 1)
+    given.continue_with("And", "the balance covers it")
     scenario.steps = [
         given,
-        Step("the customer submits payment", StepType.WHEN, 2, keyword="When"),
-        Step("the bill is paid", StepType.THEN, 3, keyword="Then"),
+        Step("the customer submits payment", StepType.WHEN, 2),
+        Step("the bill is paid", StepType.THEN, 3),
     ]
     return scenario

@@ -16,7 +16,7 @@ export class ThenFeedback {
       this._explorer.clearMessage();
     } else {
       this._explorer.showMessage(result.message);
-      this._frame.tintFailed(result);
+      this._frame.emphasis.tintFailed(result);
     }
   }
 }

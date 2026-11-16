@@ -170,7 +170,7 @@ class WhiteboardStoryModel(DiagramStoryModel):
             names = [_BoardCell(card).text for card in held]
             label = next((found for found in labels if lane.holds(found)), None)
             name = label.text.strip() if label is not None else lane.text.strip()
-            increments.append(self.increment_type(name, len(increments) + 1, self.stories_named(names)))
+            increments.append(self.increment_type(name, len(increments) + 1, self.descendants.stories_named(names)))
         self.increments.refill(increments)
         return self
 
@@ -224,7 +224,7 @@ class _ThinSliceBoard:
 
     def _map_story(self, story: Story) -> Story:
         """The map's own whiteboard story of this name, which carries the card's actor and size."""
-        return next((held for held in self.story_map.every_story() if held.name == story.name), story)
+        return next((held for held in self.story_map.descendants.stories() if held.name == story.name), story)
 
 
 class _BoardCell(DiagramStoryCell):

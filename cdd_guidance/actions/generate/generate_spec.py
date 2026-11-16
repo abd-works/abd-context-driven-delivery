@@ -163,7 +163,7 @@ with description("a generate action on practice guidance") as self:
             with before.each:
                 server = McpServer(project=self.project)
                 server.start(("cdd_guidance.actions.generate.generate:Generate",))
-                self.reply = server.invoke_prompt("generate.generate", {"guidance": "stories-story-map"})
+                self.reply = server.invoke("generate.generate", {"guidance": "stories-story-map"})
 
             with it("should name the session's session.json"):
                 expect(self.reply).to(contain((self.project / ".sessions" / "alpha" / "session.json").resolve().as_posix()))
@@ -185,7 +185,7 @@ with description("a generate action on practice guidance") as self:
                 (other / "session.json").write_text('{"name": "beta", "workpath": "' + (self.project / "src").as_posix() + '"}', encoding="utf-8")
                 server = McpServer(project=self.project)
                 server.start(("cdd_guidance.actions.generate.generate:Generate",))
-                self.reply = server.invoke_prompt("generate.generate", {"guidance": "stories-story-map session=.sessions/beta/session.json"})
+                self.reply = server.invoke("generate.generate", {"guidance": "stories-story-map session=.sessions/beta/session.json"})
 
             with it("should describe that session, not the one open"):
                 expect(self.reply).to(contain((self.project / ".sessions" / "beta" / "session.json").resolve().as_posix()))
@@ -201,8 +201,8 @@ with description("a generate action on practice guidance") as self:
             with before.each:
                 server = McpServer(project=self.project)
                 server.start(("cdd_guidance.actions.generate.generate:Generate",))
-                server.invoke_prompt("generate.generate", {"guidance": "stories-story-map"})
-                server.invoke_prompt("generate.generate", {"guidance": "stories-scenarios"})
+                server.invoke("generate.generate", {"guidance": "stories-story-map"})
+                server.invoke("generate.generate", {"guidance": "stories-scenarios"})
 
             with it("should log a generate line for each call"):
                 expect(_logged_verbs(self.project).count("generate")).to(equal(2))

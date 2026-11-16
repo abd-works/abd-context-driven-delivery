@@ -34,7 +34,7 @@ with story("Activate Ticket"):
         with given("billing-report's session folder is not yet committed"):
             pass
         with when("the Person activates billing-report"):
-            # TicketCheckout -> Repo.commit(.sessions), Repo.push_upstream()
+            # TicketCheckout -> Repo.commit(.sessions), Origin.push_upstream()
             pass
         with then("main on origin holds billing-report's session folder"):
             pass
@@ -60,7 +60,7 @@ with story("Activate Ticket"):
         with but_("checkout-flow's session records no branch or worktree"):
             pass
         with when("the Person activates checkout-flow"):
-            # TicketCheckout -> Repo.branches, Worktrees.of(branch) -> Session.save_fields(branch, worktree)
+            # TicketCheckout -> Repo.branches, Worktrees.of(branch) -> SessionRecord.save_fields(branch, worktree)
             pass
         with then("checkout-flow opens in that worktree, creating nothing"):
             pass

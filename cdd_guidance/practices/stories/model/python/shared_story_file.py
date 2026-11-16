@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from cdd_guidance.practices.clean_engineering.model.code_body import PYTHON, CodeBody
-from cdd_guidance.practices.stories.model.story_model import Example, Scenario, StepType, Story
+from cdd_guidance.practices.stories.model.story_model import Example, ExampleValue, Scenario, StepType, Story
 
 if TYPE_CHECKING:
     from cdd_guidance.practices.stories.model.story_recording import StoryRecording
@@ -38,8 +38,8 @@ class FixtureExample(Example):
     """An example a shared story file takes from its examples module: its fixture's fields as its value, and the facts
     the statements that use it give, which it records with in place of the facts a story file's own example reads."""
 
-    def __init__(self, name: str, value: Any = None, facts: dict | None = None) -> None:
-        super().__init__(name, value)
+    def __init__(self, name: str, example_value: ExampleValue = None, facts: dict | None = None) -> None:
+        super().__init__(name, example_value)
         self.fixture_facts = dict(facts or {})
 
     def recorded_facts(self, recording: "StoryRecording", file: str) -> dict:
@@ -148,7 +148,8 @@ class SharedStoryFile:
         continued = scenario.steps[-1] if code.kind in _CONTINUATIONS and scenario.steps else None
         phase = _PHASES.get(code.kind) or (continued.step_type if continued is not None else StepType.GIVEN)
         order = len(continued.ands if continued is not None else scenario.steps) + 1
-        made = scenario.step_type(code.words, phase, order, keyword=_CONTINUATIONS.get(code.kind, code.kind.capitalize()))
+        made = scenario.step_type(code.words, phase, order)
+        made.keyword = _CONTINUATIONS.get(code.kind, code.kind.capitalize())
         made.body = CodeBody(self._code_of(code.function), PYTHON)
         if continued is not None:
             continued.ands = [*continued.ands, made]

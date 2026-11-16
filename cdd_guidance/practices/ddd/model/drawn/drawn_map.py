@@ -13,6 +13,9 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import Modu
 from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownBoundedContext, MarkdownIntegration
 from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContext, BoundedContextMap
 
+# What a drawn map is called on the page it is drawn on.
+_TITLE = "Bounded Context Map"
+
 
 class MapCell:
     """A module on a drawn map that reads itself back into the map: a context or an aggregate."""
@@ -31,7 +34,9 @@ class ContextCell(MapCell):
 
     @classmethod
     def drawing(cls, context: BoundedContext) -> "ContextCell":
-        return cls(context.module_path, context.sequential_order, description=cls.PURPOSE)
+        cell = cls(context.module_path, context.sequential_order)
+        cell.description = cls.PURPOSE
+        return cell
 
     def read_into(self, drawn: BoundedContextMap) -> None:
         drawn.context_at(self.name.split("/"))
@@ -46,12 +51,10 @@ class AggregateCell(MapCell):
 
     @classmethod
     def drawing(cls, aggregate: Aggregate) -> "AggregateCell":
-        return cls(
-            aggregate.module_path,
-            aggregate.sequential_order,
-            description=cls.PURPOSE,
-            seam_terms=aggregate.drawn_members[: cls.seam_bullets],
-        )
+        cell = cls(aggregate.module_path, aggregate.sequential_order)
+        cell.description = cls.PURPOSE
+        cell.seam_terms = aggregate.drawn_members[: cls.seam_bullets]
+        return cell
 
     def depend_on_aggregate(self, target: Aggregate, pattern: str) -> None:
         """An arrow to the aggregate an integration reaches, named by the integration's pattern."""
@@ -76,6 +79,10 @@ class DrawnBoundedContextMap(BoundedContextMap):
     bounded_context_type = MarkdownBoundedContext
     context_cell_type: type[ContextCell] = ContextCell
     aggregate_cell_type: type[AggregateCell] = AggregateCell
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.name = _TITLE
 
     def draw(self, source: BoundedContextMap) -> None:
         """Make source this drawing's modules: the aggregate view when its aggregates hold class cards (model

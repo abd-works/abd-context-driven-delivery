@@ -57,7 +57,7 @@ class FlowZoom {
     else this.apply(1);
   }
 
-  /** Zoom to `next`, keeping the content under `point` (or the pane's centre) where it was. */
+  /** Zoom to `next`, keeping the content under `point` (or the pane's centre) where it was; answers the zoom now. */
   apply(next, point) {
     const previous = this.zoom;
     const rect = this.pane.getBoundingClientRect();
@@ -72,6 +72,7 @@ class FlowZoom {
       this.pane.scrollTop = contentY * (this.zoom / previous) - localY;
     }
     if (this.readout) this.readout.textContent = `${Math.round(this.zoom * FlowZoom.PERCENT)}%`;
+    return this.zoom;
   }
 
   /** Keep the zoom between the smallest and largest, rounded to a whole percent. */

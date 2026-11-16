@@ -7,7 +7,7 @@ import re
 import textwrap
 from typing import Callable, List, Optional, Tuple, Union
 
-from cdd_guidance.practices.clean_engineering.model.code_body import JAVASCRIPT, PYTHON, TYPESCRIPT, BraceCall, CodeBody, CodeLanguage, WrittenBlock
+from cdd_guidance.practices.clean_engineering.model.code_body import JAVASCRIPT, PYTHON, TYPESCRIPT, BraceCall, CodeBody, CodeLanguage, InsideLines, WrittenBlock
 from cdd_guidance.practices.bdd.model.bdd_model import BddModel
 from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation
 from cdd_guidance.practices.bdd.model.spec_source import SIGNATURE
@@ -116,7 +116,7 @@ class CodeBddModel(BddModel):
     def _read_block(self, node: Union[BddModel, BehaviorBlock], inside: Tuple[int, int], children: List[ChildBlock]) -> List[str]:
         """Read the lines inside one block: setup before the first child, each child with the lines above it,
         and return the lines after the last child. Blank lines right above the first child belong to it."""
-        setup, leads, closing = WrittenBlock.split_inside(self._lines, inside, [(first, last) for first, last, _ in children])
+        setup, leads, closing = InsideLines(self._lines, inside).split([(first, last) for first, last, _ in children])
         node.setup = CodeBody("\n".join(setup), self.language)
         node.written.inside = setup
         for order, ((_first, _last, read), lead) in enumerate(zip(children, leads), 1):
@@ -189,7 +189,7 @@ class CodeBddModel(BddModel):
         """The whole file as one block: the preamble above the first description, then the descriptions,
         then whatever follows the last one. An it outside every describe stays text."""
         self.descriptions = []
-        self.written = WrittenBlock(self.language, _SPEC, [], [])
+        self.written = WrittenBlock(self.language, _SPEC, [])
         self.written.closing = self._read_block(self, (0, len(lines)), children)
         self.preamble, self.setup = self.setup, CodeBody()
 
@@ -262,11 +262,13 @@ class PythonBddModel(CodeBddModel):
         if statement.body[0].lineno == statement.lineno:
             source = "\n".join(self._lines)
             inline = "\n".join(ast.get_source_segment(source, inner) or "" for inner in statement.body)
-            whole = WrittenBlock(self.language, node.name, lead, self._lines[statement.lineno - 1 : statement.end_lineno])
+            whole = WrittenBlock(self.language, node.name, self._lines[statement.lineno - 1 : statement.end_lineno])
+            whole.lead = lead
             return self._inline(node, whole, inline)
         heading_last = self._heading_last(statement)
         inside = (heading_last + 1, statement.end_lineno)
-        node.written = WrittenBlock(self.language, node.name, lead, self._lines[statement.lineno - 1 : heading_last + 1])
+        node.written = WrittenBlock(self.language, node.name, self._lines[statement.lineno - 1 : heading_last + 1])
+        node.written.lead = lead
         if isinstance(node, Observation):
             node.written.inside = self._lines[slice(*inside)]
             node.body = self._body("\n".join(node.written.inside))
@@ -315,8 +317,11 @@ class TypeScriptBddModel(CodeBddModel):
     def _node(self, call: "DescribeCall", node: BehaviorBlock, lead: List[str]) -> BehaviorBlock:
         node.line, node.end_line = call.first_line + 1, call.last_line + 1
         if call.is_inline:
-            return self._inline(node, WrittenBlock(self.language, call.name, lead, call.whole_lines), call.body)
-        node.written = WrittenBlock(self.language, call.name, lead, call.heading_lines)
+            whole = WrittenBlock(self.language, call.name, call.whole_lines)
+            whole.lead = lead
+            return self._inline(node, whole, call.body)
+        node.written = WrittenBlock(self.language, call.name, call.heading_lines)
+        node.written.lead = lead
         node.written.close = call.close_lines
         if isinstance(node, Observation):
             node.written.inside = call.inside_lines
@@ -332,7 +337,7 @@ class DescribeCall(BraceCall):
     nested in its callback, which it adopts."""
 
     def __init__(self, text: str, match: re.Match, file_lines: List[str]) -> None:
-        super().__init__(text, match.start(), text.index("(", match.start()), match.group(3))
+        super().__init__(text, match.start(), match.group(3))
         self.kind = match.group(1)
         self.children: List[DescribeCall] = []
         self._file_lines = file_lines

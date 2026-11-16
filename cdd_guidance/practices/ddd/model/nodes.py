@@ -94,7 +94,8 @@ class InvariantObject(DomainNode, Property):
     _semantic_type_name = "InvariantObject"
 
     def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
-        super().__init__(name, sequential_order, kwargs.get("type_hint", ""), kwargs.get("description", ""))
+        super().__init__(name, sequential_order, kwargs.get("type_hint", ""))
+        self.description = kwargs.get("description", "")
         self.stereotype = "invariant"
 
 
@@ -154,10 +155,22 @@ class DomainEvent(DomainNode, Property):
     _semantic_type_name = "DomainEvent"
 
     def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
-        super().__init__(name, sequential_order, kwargs.get("type_hint", ""), kwargs.get("description", ""))
+        super().__init__(name, sequential_order, kwargs.get("type_hint", ""))
+        self.description = kwargs.get("description", "")
         self.producer = None
         self.consumers = []
-        self.subject = Property("subject", 0, description="the state of the event")
+        self.subject = self._blank_subject()
+
+    def _blank_subject(self) -> Property:
+        """The subject property an event starts with: the state of the event, with no fields read yet."""
+        subject = Property("subject", 0)
+        subject.description = "the state of the event"
+        return subject
+
+    def emitted_by(self, producer: "Aggregate") -> None:
+        """Become the event producer emits, starting again from a blank subject."""
+        self.producer = producer
+        self.subject = self._blank_subject()
 
     def map_entry(self) -> str:
         """The event as a map's event map lists it: `CartCheckedOut: emitted by ShoppingCart; consumed by Inventory`,
@@ -545,8 +558,7 @@ class _EventWiring:
         if event is None:
             event = DomainEvent(name, len(producer.root.properties))
             producer.root.properties.append(event)
-        event.producer = producer
-        event.subject = Property("subject", 0, description="the state of the event")
+        event.emitted_by(producer)
         return event
 
     def _consumer(self, name: str, order: int) -> Aggregate | DomainService:

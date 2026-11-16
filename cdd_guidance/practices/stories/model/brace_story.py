@@ -5,68 +5,57 @@ import re
 from typing import List, Optional
 
 from cdd_guidance.practices.stories.model.brace_story_file import BraceStoryFile
-from cdd_guidance.practices.stories.model.code_story_model import CodeScenario, CodeStory, CodeStoryModel, unescaped
+from cdd_guidance.practices.stories.model.code_story_model import CodeScenario, CodeStory, CodeStoryModel, StorySyntax, unescaped
 from cdd_guidance.practices.stories.model.story_model import Background, Epic, Story
-from cdd_guidance.practices.stories.model.story_writing import StoryWriting, background_examples_line, example_names_of, story_description
+from cdd_guidance.practices.stories.model.story_writing import StepClause, StoryWriting, background_examples_line, example_names_of, story_description
 
 
-class BraceScenario(CodeScenario):
-    """A scenario read from a brace-language story file: TypeScript and JavaScript read it the same way."""
+class BraceSyntax(StorySyntax):
+    """How a brace-language story file writes stories: `story(...)`, `scenario(...)` and `background(...)` calls whose
+    callbacks hold `given(...)` step calls. TypeScript and JavaScript read them the same way."""
 
     _CALL = re.compile(
         r"(?P<kw>\.(?:and|but)|(?<![.\w])(?:given|when|then|but))\(\s*(?P<q>['\"`])(?P<text>(?:\\.|(?!(?P=q)).)*)(?P=q)",
         re.IGNORECASE,
     )
-    _SCENARIO = re.compile(r"scenario\(\s*(?P<q>['\"`])(?P<name>(?:\\.|(?!(?P=q)).)*)(?P=q)")
+    scenario_pattern = re.compile(r"scenario\(\s*(?P<q>['\"`])(?P<name>(?:\\.|(?!(?P=q)).)*)(?P=q)")
     _BACKGROUND = re.compile(r"background\(\s*(?:(?P<q>['\"])(?P<scope>\w+)(?P=q)\s*,\s*)?")
-    _IMPORT = re.compile(
+    import_pattern = re.compile(
         r"import\s*\{(?P<names>[^}]+)\}\s*from\s*['\"][^'\"]*examples[^'\"]*['\"]"
     )
+    story_start = re.compile(r"(?=/\*\*\s*\n \* Story:)")
+    story_mark = re.compile(r"\*\s*Story:")
+    story_name_pattern = re.compile(r"\*\s*Story:\s*(?P<name>.+)")
+    _CALL_NAME = re.compile(r"(?i)(?:shareStory|story)\(\s*(['\"])(?P<name>(?:\\.|(?!\1).)*)\1")
 
-    def read(self, body: str, example_names: List[str] | None = None) -> None:
-        self.backgrounds = self.backgrounds_in(body)
-        super().read(self.without_background(body), example_names)
-
-    @classmethod
-    def without_background(cls, body: str) -> str:
+    def without_background(self, body: str) -> str:
+        """The body with every background call and its callback taken out."""
         while True:
-            match = cls._BACKGROUND.search(body)
+            match = self._BACKGROUND.search(body)
             if match is None:
                 return body
             arrow = body.find("=>", match.end())
             brace = body.find("{", arrow if arrow >= 0 else match.end())
             if brace < 0:
                 return body[:match.start()] + body[match.end():]
-            inner = cls.balanced(body, brace)
+            inner = self._balanced(body, brace)
             body = body[:match.start()] + body[brace + len(inner) + 2:]
 
-    @classmethod
-    def calls_in(cls, body: str) -> List[tuple]:
-        return [(match.group("kw").lstrip("."), unescaped(match.group("text"))) for match in cls._CALL.finditer(body)]
-
-    @classmethod
-    def scenario_blocks(cls, content: str) -> List[tuple]:
+    def scenario_blocks(self, content: str) -> List[tuple]:
         blocks = []
-        for match in cls._SCENARIO.finditer(content):
+        for match in self.scenario_pattern.finditer(content):
             arrow = content.find("=>", match.end())
             brace = content.find("{", arrow if arrow >= 0 else match.end())
-            body = cls.balanced(content, brace) if brace >= 0 else ""
+            body = self._balanced(content, brace) if brace >= 0 else ""
             blocks.append((match.group("name"), body))
         return blocks
 
-    @classmethod
-    def backgrounds_in(cls, content: str) -> List[Background]:
+    def backgrounds_in(self, content: str) -> List[Background]:
         found: List[Background] = []
-        for match in cls._BACKGROUND.finditer(content):
-            if cls._inside_scenario(content, match.start()):
-                continue
-            arrow = content.find("=>", match.end())
-            brace = content.find("{", arrow if arrow >= 0 else match.end())
-            if brace < 0:
-                continue
-            body = cls.outside_scenarios(cls.balanced(content, brace))
-            steps = cls.steps_from(cls.calls_in(body))
-            if not steps and not match.group("scope"):
+        for match in self._BACKGROUND.finditer(content):
+            body = self._background_body(content, match)
+            steps = self.steps_in(body) if body is not None else []
+            if body is None or (not steps and not match.group("scope")):
                 continue
             background = Background(match.group("scope") or "background", len(found) + 1)
             background.steps = [step for step in steps if step.keyword == "Given"]
@@ -74,37 +63,51 @@ class BraceScenario(CodeScenario):
             found.append(background)
         return found
 
-    @classmethod
-    def _inside_scenario(cls, content: str, pos: int) -> bool:
-        for match in cls._SCENARIO.finditer(content):
+    def _background_body(self, content: str, match: re.Match) -> Optional[str]:
+        """The code of the background call match opens, outside any scenario in it; None for a call inside a scenario
+        or one with no callback."""
+        if self._inside_scenario(content, match.start()):
+            return None
+        arrow = content.find("=>", match.end())
+        brace = content.find("{", arrow if arrow >= 0 else match.end())
+        return self._outside_scenarios(self._balanced(content, brace)) if brace >= 0 else None
+
+    def _calls_in(self, body: str) -> List[tuple]:
+        return [(match.group("kw").lstrip("."), unescaped(match.group("text"))) for match in self._CALL.finditer(body)]
+
+    def _name_in(self, content: str) -> Optional[str]:
+        """The name the story's comment gives, else the name its story call is made with."""
+        call = self._CALL_NAME.search(content)
+        return super()._name_in(content) or (call.group("name") if call else None)
+
+    def _inside_scenario(self, content: str, pos: int) -> bool:
+        for match in self.scenario_pattern.finditer(content):
             if match.start() >= pos:
                 break
             brace = content.find("{", content.find("=>", match.end()))
             if brace < 0:
                 continue
-            inner = cls.balanced(content, brace)
+            inner = self._balanced(content, brace)
             if brace <= pos <= brace + len(inner):
                 return True
         return False
+
+
+class BraceScenario(CodeScenario):
+    """A scenario read from a brace-language story file: TypeScript and JavaScript read it the same way."""
+
+    syntax = BraceSyntax()
+
+    def read(self, body: str, example_names: List[str] | None = None) -> None:
+        self.backgrounds = self.syntax.backgrounds_in(body)
+        super().read(self.syntax.without_background(body), example_names)
 
 
 class BraceStory(CodeStory):
     """A story read from a brace-language story file: TypeScript and JavaScript read it the same way."""
 
     scenario_type = BraceScenario
-    _STORY_START = re.compile(r"(?=/\*\*\s*\n \* Story:)")
-    _STORY_MARK = re.compile(r"\*\s*Story:")
-    _NAME = re.compile(r"\*\s*Story:\s*(?P<name>.+)")
-    _CALL_NAME = re.compile(r"(?i)(?:shareStory|story)\(\s*(['\"])(?P<name>(?:\\.|(?!\1).)*)\1")
-
-    @classmethod
-    def name_in(cls, content: str) -> Optional[str]:
-        """The name the story's comment gives, else the name its story call is made with."""
-        call = cls._CALL_NAME.search(content)
-        return super().name_in(content) or (call.group("name") if call else None)
-
-
-
+    syntax = BraceScenario.syntax
 
 
 class BraceStoryWriting(StoryWriting):
@@ -137,22 +140,22 @@ class BraceStoryWriting(StoryWriting):
 
     def story_open(self, story: "Story") -> List[str]:
         lines = ["/**", f" * Story: {story.name}", *story_description(story, " * "), " */", ""]
-        return lines + background_examples_line(story, "// ") + [f"story({self.quoted(story.name)}, () => {{"]
+        return lines + background_examples_line(story, "// ") + [f"story({self._quoted(story.name)}, () => {{"]
 
     def story_background_lines(self, background: "Background") -> List[str]:
         scope = background.name if re.fullmatch(r"\w+", background.name or "") else "each"
-        lines = [f"  background({self.quoted(scope)}, ({{ given }}) => {{"]
+        lines = [f"  background({self._quoted(scope)}, ({{ given }}) => {{"]
         for step in background.steps:
             if step.keyword.lower() == "given":
-                lines.extend(self.step_lines((step, "given", []), "    "))
+                lines.extend(self._step_lines(StepClause(step, "given"), "    "))
         return lines + [f"  }}){self.statement_end}"]
 
     def scenario_background_lines(self, background: "Background", indent: str) -> List[str]:
         scope = background.name if re.fullmatch(r"\w+", background.name or "") else "background"
-        lines = [f"{indent}background({self.quoted(scope)}, ({{ given }}) => {{"]
-        for lead, _verb, continuations in self.clauses(background.steps):
-            verb = lead.keyword.lower() if lead.keyword in ("And", "But") else "given"
-            lines.extend(self.step_lines((lead, verb, continuations), indent + self.language.indent))
+        lines = [f"{indent}background({self._quoted(scope)}, ({{ given }}) => {{"]
+        for clause in self._clauses(background.steps):
+            clause.verb = clause.step.keyword.lower() if clause.step.keyword in ("And", "But") else "given"
+            lines.extend(self._step_lines(clause, indent + self.language.indent))
         return lines + [f"{indent}}});"]
 
 

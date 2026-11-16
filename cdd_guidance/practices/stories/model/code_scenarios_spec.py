@@ -66,7 +66,7 @@ test.describe('Pay For Order', () => {
 def _scenarios(practice, story: str) -> list[str]:
     part = practice.reading.in_graph
     found = next(node for node in part.nodes("Story") if node.name == story)
-    return sorted(edge.child.name for edge in practice.reading.graph.edges_from("scenarios", found))
+    return sorted(edge.child.name for edge in practice.reading.graph.edges.from_parent("scenarios", found))
 
 
 with description("the stories a graph reads at acceptance tests"):

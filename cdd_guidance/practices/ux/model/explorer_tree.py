@@ -11,6 +11,9 @@ if TYPE_CHECKING:
 
     from .nodes import Screen
 
+# One entry of the explorer's tree as its JavaScript reads it: a screen, a story, a scenario, or a step, by its kind.
+type ExplorerEntry = dict
+
 
 class ExplorerScreen:
     """One screen as the story explorer lists it: by the slug the mockup page marks it with, holding each story it
@@ -55,7 +58,7 @@ class ExplorerScreen:
         steps = [self._step_entry(scenario_entry, step) for step in self.story_tree.steps(scenario)]
         return {**scenario_entry, "children": steps}
 
-    def _step_entry(self, scenario_entry: dict, step: "Node") -> dict:
+    def _step_entry(self, scenario_entry: ExplorerEntry, step: "Node") -> ExplorerEntry:
         """A step as the explorer lists it under its scenario (scenario_entry): it carries the scenario's story, index,
         and key, so the explorer plays the scenario from any of its steps."""
         return {

@@ -138,11 +138,14 @@ class HeadingMapReading(MapReading):
             return True
         if lowered in _NON_STORY_SECTIONS:
             self.ignored_heading_depth = depth
-        elif lowered.startswith("story:"):
+            return True
+        if lowered.startswith("story:"):
             self._named_story(name.split(":", 1)[1].strip() or name)
-        elif self._is_epic_heading(depth):
+            return True
+        if self._is_epic_heading(depth):
             self._open_heading_epic(name, depth)
-        elif self.epic is not None:
+            return True
+        if self.epic is not None:
             self._accept_nested_heading(name, depth)
         return True
 
@@ -253,7 +256,7 @@ class OutlineMapReading(MapReading):
         self.story_map.outline = OutlineLines()
         for self.number, self.raw in enumerate(lines, start=1):
             self._read_line()
-        for node in [self.story_map, *self.story_map.every_epic(), *self.story_map.every_story()]:
+        for node in [self.story_map, *self.story_map.descendants.epics(), *self.story_map.descendants.stories()]:
             node.outline.read_from(node)
         return self.story_map
 

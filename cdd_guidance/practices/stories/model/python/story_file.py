@@ -6,7 +6,7 @@ import ast
 import re
 from typing import List, Optional, Sequence, Tuple
 
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage, WrittenBlock
+from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage, InsideLines, WrittenBlock
 from cdd_guidance.practices.stories.model.story_file import CodeBlock, StoryFile
 
 _STEP_CALLS = frozenset({"given", "when", "then", "and_", "but_"})
@@ -78,10 +78,12 @@ class PythonBlock:
 
     def written(self, lead: List[str]) -> WrittenBlock:
         heading = self.file.lines[self.node.lineno - 1 : self._inside[0]]
-        return WrittenBlock(self.file.language, None, lead, heading)
+        written = WrittenBlock(self.file.language, None, heading)
+        written.lead = lead
+        return written
 
     def split_inside(self, children: Sequence[CodeBlock]) -> Tuple[List[str], List[List[str]], List[str]]:
-        return WrittenBlock.split_inside(self.file.lines, self._inside, [child.line_span for child in children])
+        return InsideLines(self.file.lines, self._inside).split([child.line_span for child in children])
 
     def scenarios(self) -> List[CodeBlock]:
         return self._within("scenario")

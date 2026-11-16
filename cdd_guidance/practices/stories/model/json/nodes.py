@@ -52,6 +52,9 @@ from cdd_guidance.practices.stories.model.story_model import (
     StoryType,
 )
 
+# What story-graph.json holds once it is read as JSON: an object of the schema above, until it is checked.
+type JsonDocument = object
+
 
 # -- Records of the plain parts every story node holds -------------------------
 
@@ -93,15 +96,11 @@ class JsonStep(Step):
     @classmethod
     def from_record(cls, record: Dict[str, Any], order: int) -> "JsonStep":
         phase = record.get("stepType")
-        step = cls(
-            str(record.get("text", "")),
-            StepType(phase) if phase else None,
-            order,
-            keyword=str(record.get("keyword", "")),
-            concepts=list(record.get("concepts") or []),
-            values=list(record.get("values") or []),
-            actor=str(record.get("actor", "") or ""),
-        )
+        step = cls(str(record.get("text", "")), StepType(phase) if phase else None, order)
+        step.keyword = str(record.get("keyword", ""))
+        step.concepts = list(record.get("concepts") or [])
+        step.values = list(record.get("values") or [])
+        step.actor = str(record.get("actor", "") or "")
         step.ands = [cls.from_record(extra, index) for index, extra in enumerate(record.get("ands") or [], start=1)]
         return step
 
@@ -153,7 +152,7 @@ class JsonIncrement(Increment):
         increment = cls(
             name=record["name"],
             sequential_order=int(record.get("sequentialOrder", 0)),
-            stories=story_map.stories_named(named),
+            stories=story_map.descendants.stories_named(named),
         )
         increment.outcome = str(record.get("outcome", "") or "")
         increment.decision_prompt = str(record.get("decisionPrompt", "") or "")
@@ -296,7 +295,7 @@ class JsonStoryModel(StoryModel):
         except json.JSONDecodeError as err:
             raise JsonParseError(f"Not valid JSON: {err}") from err
         self._guard_schema(payload)
-        self.epics = [JsonEpic.from_record(record) for record in payload.get("epics", [])]
+        self.epics.refill(JsonEpic.from_record(record) for record in payload.get("epics", []))
         _take_examples(self.examples, payload)
         self.increments.refill([JsonIncrement.from_record(record, self) for record in payload.get("increments", [])])
         return self
@@ -308,17 +307,21 @@ class JsonStoryModel(StoryModel):
         json_path = Path(root).resolve() / "story-graph.json"
         if not json_path.exists():
             return None
-        text = json_path.read_text(encoding="utf-8")
-        try:
-            story_map = cls().parse(text)
-        except JsonParseError as err:
-            raise JsonParseError(f"{json_path}: {err}") from err
-        story_map.sources.add(json_path.name, text)
-        story_map.place_in(json_path.name)
-        story_map.source = source_at(json_path.name, 1)
-        return story_map
+        return cls().parse_file(json_path.name, json_path.read_text(encoding="utf-8"))
 
-    def _guard_schema(self, document: object) -> None:
+    def parse_file(self, file: str, text: str) -> "JsonStoryModel":
+        """Read the text of the story-graph.json called file into this map, every epic and story naming that file, and
+        return it; text that does not read is a JsonParseError naming the file."""
+        try:
+            self.parse(text)
+        except JsonParseError as err:
+            raise JsonParseError(f"{file}: {err}") from err
+        self.sources.add(file, text)
+        self.descendants.place_in(file)
+        self.source = source_at(file, 1)
+        return self
+
+    def _guard_schema(self, document: JsonDocument) -> None:
         if not isinstance(document, dict):
             raise JsonParseError("Root must be an object")
         if "epics" not in document:

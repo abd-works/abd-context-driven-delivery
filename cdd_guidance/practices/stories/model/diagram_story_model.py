@@ -46,8 +46,8 @@ class DiagramStoryNode:
         if not isinstance(self, Epic):
             return 0
         if isinstance(self.parent, Epic):
-            return DiagramStoryModel.base_width * max(self.diagram_span_columns(), 1)
-        return DiagramStoryModel.base_width * self.span_columns()
+            return DiagramStoryModel.base_width * max(self.columns.diagram_span(), 1)
+        return DiagramStoryModel.base_width * self.columns.span()
 
     @property
     def height(self) -> int:
@@ -97,9 +97,9 @@ class DiagramStoryNode:
         children = self._placed_children()
         previous = children[-1] if children else None
         if isinstance(child, Epic):
-            self.append_epic(child)
+            self.epics.append(child)
         elif isinstance(child, Story):
-            self.append_story(child)
+            self.stories.append(child)
         child.place("below", self)
         if previous is not None:
             child.place("after", previous)
@@ -223,8 +223,8 @@ class LaidOutEpic(DiagramEpic):
     @property
     def width(self) -> int:
         if isinstance(self.parent, Epic):
-            return max(self.diagram_span_columns(), 1) * self.story_pitch
-        return self.span_columns() * self.story_pitch
+            return max(self.columns.diagram_span(), 1) * self.story_pitch
+        return self.columns.span() * self.story_pitch
 
     @property
     def height(self) -> int:
@@ -259,13 +259,13 @@ class DiagramStoryModel(StoryModel):
         owners: List[DiagramStoryCell] = []
         for cell in sorted((c for c in cells if c.role == "epic"), key=lambda c: c.x):
             cell.node = self.epic_type(cell.text.strip(), len(self.epics) + 1)
-            self.append_epic(cell.node)
+            self.epics.append(cell.node)
             owners.append(cell)
         for cell in sorted((c for c in cells if c.role == "subepic"), key=lambda c: (c.depth, c.x)):
             owner = cell.beneath([o for o in owners if o.depth < cell.depth])
             if owner is not None:
                 cell.node = self.epic_type(cell.text, len(owner.node.epics) + 1)
-                owner.node.append_epic(cell.node)
+                owner.node.epics.append(cell.node)
                 owners.append(cell)
         self._place_stories(cells, owners)
         return owners
@@ -282,7 +282,7 @@ class DiagramStoryModel(StoryModel):
             actor = actors[id(cell)].text.strip() if id(cell) in actors else cell.actor
             if actor:
                 story.actors = [actor]
-            owner.node.append_story(story)
+            owner.node.stories.append(story)
 
     def thin_slice_columns(self) -> List[tuple]:
         """The thin slice's columns: one per sub-epic, or per epic with none, with its top epic, in map order."""
@@ -296,7 +296,7 @@ class DiagramStoryModel(StoryModel):
             by_column: dict = {}
             for story in increment.stories:
                 column = next((index for index, (_, sub) in enumerate(columns)
-                               if any(held.name == story.name for held in sub.every_story())), len(columns) - 1)
+                               if any(held.name == story.name for held in sub.descendants.stories())), len(columns) - 1)
                 by_column.setdefault(column, []).append(story)
             lanes.append((increment, by_column))
         return lanes
@@ -311,7 +311,7 @@ class DiagramStoryModel(StoryModel):
     def max_sub_epic_depth(self) -> int:
         deepest = 0
         for epic in self.epics:
-            deepest = max(deepest, epic.tree_depth())
+            deepest = max(deepest, epic.columns.tree_depth())
         return deepest
 
     @property

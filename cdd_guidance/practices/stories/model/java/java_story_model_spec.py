@@ -20,7 +20,7 @@ from cdd_guidance.practices.stories.model.story_model import StoryModel
 def _story_map_with_stories() -> StoryModel:
     story_map = StoryModel()
     for i in range(1, 5):
-        story_map.append_epic(Epic(f"Epic {i}", i))
+        story_map.epics.append(Epic(f"Epic {i}", i))
     first = story_map.epics[0]
     for j in range(1, 4):
         sub = Epic(f"Epic 1.{j}", j)
@@ -39,7 +39,7 @@ with description("a Java runnable-story Story Map") as self:
     with context("that holds rendered stories"):
         with before.each:
             self.tree = self.java.render(_story_map_with_stories())
-            self.leaf_paths = self.java.leaf_files_of(self.tree)
+            self.leaf_paths = sorted(path for path in self.tree if self.java.is_story_file(path))
 
         with it("should emit one `*Story.java` for the sub-epic in the parent epic folder"):
             for path in self.leaf_paths:

@@ -13,7 +13,7 @@ from cdd_guidance.practices.stories.model.python.shared_story_file import SHARED
 from cdd_guidance.practices.stories.model.python.story_file import PythonStoryFile
 from cdd_guidance.practices.stories.model.story_file import flat_steps
 from cdd_guidance.practices.stories.model.story_model import Background, Epic, Story
-from cdd_guidance.practices.stories.model.story_writing import StoryWriting, background_examples_line, example_names_of, story_description
+from cdd_guidance.practices.stories.model.story_writing import StepClause, StoryWriting, background_examples_line, example_names_of, story_description
 
 
 class PythonStoryWriting(StoryWriting):
@@ -44,13 +44,13 @@ class PythonStoryWriting(StoryWriting):
         lines = [self.language.comment(f"Story: {story.name}"), *story_description(story, "# ")]
         if story.domain_terms:
             lines.append(self.language.comment("Domain terms: " + ", ".join(story.domain_terms)))
-        return lines + background_examples_line(story, "# ") + [f"with story({self.quoted(story.name)}):"]
+        return lines + background_examples_line(story, "# ") + [f"with story({self._quoted(story.name)}):"]
 
     def story_background_lines(self, background: "Background") -> List[str]:
         scope = background.name if re.fullmatch(r"\w+", background.name or "") else "each"
         lines = [f"{self.language.indent}with background.{scope}:"]
         for step in background.steps:
-            lines.extend(self.step_lines((step, "given", []), self.language.indent * 2))
+            lines.extend(self._step_lines(StepClause(step, "given"), self.language.indent * 2))
         return lines
 
     def scenario_background_lines(self, background: "Background", indent: str) -> List[str]:

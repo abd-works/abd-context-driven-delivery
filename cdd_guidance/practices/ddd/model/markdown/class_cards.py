@@ -81,7 +81,9 @@ class ClassCard(MarkdownDomainNode):
     def read(section: list[str]) -> "ClassCard":
         """The card a `####` section writes: its heading, then its members and invariants."""
         card = ClassCard.from_heading(section[0].strip()[len(CARD):])
-        card._read_lines(section[1:])
+        body = _CardBody(card)
+        for line in (raw.strip() for raw in section[1:] if raw.strip()):
+            body.read(line)
         return card
 
     @staticmethod
@@ -134,44 +136,6 @@ class ClassCard(MarkdownDomainNode):
         prop = _PROPERTY.match(line)
         return self._add_property(prop) if prop else None
 
-    def add_sketch_member(self, line: str, calls: list[str]) -> None:
-        """One sketch line that names a member, the way the clean-engineering sketch reads one: `Name <<Stereotype>>`
-        is an owned member; a line with calls under it, or with parameters, is an operation; a single word a property."""
-        tokens = plain_class_name(line).replace("()", " ").split()
-        if not tokens:
-            return
-        if marks_in(line):
-            self._add_owned(tokens[0])
-        elif calls or len(tokens) > 1 or "(" in line:
-            self._add_sketch_operation(tokens, calls)
-        else:
-            self.properties.append(Property(tokens[0], len(self.properties) + 1))
-
-    def _read_lines(self, lines: list[str]) -> None:
-        """Read the card's body: its members under `------` and `----`, the notes and calls under each, and the
-        invariants it lists."""
-        in_operations = False
-        in_invariants = False
-        last: Property | Operation | None = None
-        for line in (raw.strip() for raw in lines if raw.strip()):
-            if line in (_PROPERTIES, _OPERATIONS):
-                in_operations = line == _OPERATIONS
-            elif line.lower().startswith("**invariants**"):
-                in_invariants = True
-            elif in_invariants and line.startswith("- "):
-                self.invariants.append(line[2:].strip())
-            elif not self._reads_note(line, last) and line.startswith(("+", "-")):
-                last = self.add_member(line, in_operations)
-
-    def _reads_note(self, line: str, last: Property | Operation | None) -> bool:
-        """A `-> call` under an operation or a `// description` under a member belongs to that member."""
-        if line.startswith(_CALL) and isinstance(last, Operation):
-            last.callees.append(line[len(_CALL):].strip())
-            return True
-        if line.startswith(_NOTE) and last is not None:
-            last.description = line[len(_NOTE):].strip()
-            return True
-        return False
 
     def lines(self) -> list[str]:
         written = [f"{CARD}{self.heading}", "", _PROPERTIES]
@@ -230,12 +194,8 @@ class ClassCard(MarkdownDomainNode):
     def _add_operation(self, written: re.Match[str]) -> Operation:
         """The operation a `+ name(parameters): Type` line writes."""
         access, _kind, name, parameters, returned = written.groups()
-        found = Operation(
-            name,
-            len(self.operations) + 1,
-            return_type=(returned or "").strip(),
-            parameters=[item.strip() for item in parameters.split(",") if item.strip()],
-        )
+        found = Operation(name, len(self.operations) + 1, return_type=(returned or "").strip())
+        found.take_parameters([item.strip() for item in parameters.split(",") if item.strip()])
         found.access = "private" if access == "-" else "public"
         self.operations.append(found)
         return found
@@ -249,21 +209,41 @@ class ClassCard(MarkdownDomainNode):
         self.properties.append(found)
         return found
 
-    def _add_owned(self, member: str) -> None:
-        """A member the class composes, held under its own name in lower camel case."""
-        owned = Property(member[0].lower() + member[1:], len(self.properties) + 1, member)
-        owned.stereotype = "composition"
-        self.properties.append(owned)
 
-    def _add_sketch_operation(self, tokens: list[str], calls: list[str]) -> None:
-        """An operation named by the first token, its parameters the identifiers after it, calling calls."""
-        operation = Operation(
-            tokens[0].split("(", 1)[0],
-            len(self.operations) + 1,
-            parameters=[token for token in tokens[1:] if _IDENT.match(token)],
-        )
-        operation.callees.extend(calls)
-        self.operations.append(operation)
+
+class _CardBody:
+    """One read of a card's body onto its card: its members under `------` and `----`, the notes and calls under each,
+    and the invariants it lists. It keeps which list it is in and the member read last, which a note below belongs
+    to."""
+
+    def __init__(self, card: ClassCard) -> None:
+        self._card = card
+        self._in_operations = False
+        self._in_invariants = False
+        self._last: Property | Operation | None = None
+
+    def read(self, line: str) -> None:
+        if line in (_PROPERTIES, _OPERATIONS):
+            self._in_operations = line == _OPERATIONS
+            return
+        if line.lower().startswith("**invariants**"):
+            self._in_invariants = True
+            return
+        if self._in_invariants and line.startswith("- "):
+            self._card.invariants.append(line[2:].strip())
+            return
+        if not self._reads_note(line) and line.startswith(("+", "-")):
+            self._last = self._card.add_member(line, self._in_operations)
+
+    def _reads_note(self, line: str) -> bool:
+        """A `-> call` under an operation or a `// description` under a member belongs to that member."""
+        if line.startswith(_CALL) and isinstance(self._last, Operation):
+            self._last.callees.append(line[len(_CALL):].strip())
+            return True
+        if line.startswith(_NOTE) and self._last is not None:
+            self._last.description = line[len(_NOTE):].strip()
+            return True
+        return False
 
 
 class _SketchFence:
@@ -293,19 +273,50 @@ class _SketchFence:
         lower = line.lower()
         if lower.startswith(_INVARIANT):
             self._card.invariants.append(line.split(":", 1)[1].strip())
-        elif lower.startswith("refs:"):
-            self._read_references()
-        elif lower.startswith("repo:"):
-            self._repositories.append(self._repository_named(line.split(":", 1)[1].strip()))
-        elif line.startswith(_CALL) and isinstance(self._last, Operation):
-            self._last.callees.append(line[len(_CALL):].strip())
-        elif line.endswith(":") or line.startswith(_MAP_LINES):
             return
-        elif line.startswith(("+", "-")):
+        if lower.startswith("refs:"):
+            self._read_references()
+            return
+        if lower.startswith("repo:"):
+            self._repositories.append(self._repository_named(line.split(":", 1)[1].strip()))
+            return
+        if line.startswith(_CALL) and isinstance(self._last, Operation):
+            self._last.callees.append(line[len(_CALL):].strip())
+            return
+        if line.endswith(":") or line.startswith(_MAP_LINES):
+            return
+        if line.startswith(("+", "-")):
             self._last = self._card.add_member(line, "(" in line)
-        else:
-            self._last = None
-            self._card.add_sketch_member(line, self._calls_below())
+            return
+        self._last = None
+        self._add_sketch_member(line, self._calls_below())
+
+    def _add_sketch_member(self, line: str, calls: list[str]) -> None:
+        """One sketch line that names a member, the way the clean-engineering sketch reads one: `Name <<Stereotype>>`
+        is an owned member; a line with calls under it, or with parameters, is an operation; a single word a property."""
+        tokens = plain_class_name(line).replace("()", " ").split()
+        if not tokens:
+            return
+        if marks_in(line):
+            self._add_owned(tokens[0])
+            return
+        if calls or len(tokens) > 1 or "(" in line:
+            self._add_sketch_operation(tokens, calls)
+            return
+        self._card.properties.append(Property(tokens[0], len(self._card.properties) + 1))
+
+    def _add_owned(self, member: str) -> None:
+        """A member the class composes, held under its own name in lower camel case."""
+        owned = Property(member[0].lower() + member[1:], len(self._card.properties) + 1, member)
+        owned.stereotype = "composition"
+        self._card.properties.append(owned)
+
+    def _add_sketch_operation(self, tokens: list[str], calls: list[str]) -> None:
+        """An operation named by the first token, its parameters the identifiers after it, calling calls."""
+        operation = Operation(tokens[0].split("(", 1)[0], len(self._card.operations) + 1)
+        operation.take_parameters([token for token in tokens[1:] if _IDENT.match(token)])
+        operation.callees.extend(calls)
+        self._card.operations.append(operation)
 
     def _read_references(self) -> None:
         """The `refs:` entries below: each another aggregate the card's class holds by its identity."""

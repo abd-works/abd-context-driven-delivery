@@ -6,7 +6,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from harness.guidance_actions import ActionSession, GuidanceArg, GuidanceAction, WorkedGuidance
+from harness.guidance_actions import ActionSession, GuidanceArg, GuidanceAction, WorkedGuidance, source_label
 from cdd_guidance.actions.partition.partition_index import PartitionIndex
 from cdd_guidance.actions.partition.segment import (
     MIN_ENTRY_BODY_CHARS, SEGMENT_FILE, SEGMENT_FILES, Segment, SegmentCompletenessConfig,
@@ -35,7 +35,7 @@ class Partition(GuidanceAction):
         super().__init__(session, call)
         self._context_setup = context_setup if context_setup is not None else ContextSetup()
 
-    def made_for(self, session: ActionSession | None, call: ToolCall | None = None) -> Partition:
+    def _made_for(self, session: ActionSession | None, call: ToolCall | None = None) -> Partition:
         """A partition made for session and call, holding the same ContextSetup, so its embedding provider carries over."""
         return type(self)(session=session, call=call, context_setup=self._context_setup)
 
@@ -62,10 +62,10 @@ class Partition(GuidanceAction):
     ) -> str:
         """Run named-entry completeness on a ``*-segment.md`` chunk.
         segment_path, index_path: from the project's root, or absolute."""
-        path = self.path_named(segment_path)
+        path = self.files.path_named(segment_path)
         if not path.is_file():
             return f"completeness: FAIL\nerror: segment not found: {segment_path}\n"
-        index = PartitionIndex.at(self.path_named(index_path)) if index_path.strip() else PartitionIndex.near(path)
+        index = PartitionIndex.at(self.files.path_named(index_path)) if index_path.strip() else PartitionIndex.near(path)
         completeness = index.completeness if index is not None else SegmentCompletenessConfig(min_body_chars=int(min_body_chars))
         return Segment.at(path, completeness, expected_names).completeness_report()
 
@@ -84,7 +84,7 @@ class Partition(GuidanceAction):
 
     def _folder(self, out_root: str | None) -> Path:
         """The folder the index and segments go under: out_root when the call names one, else the session's root."""
-        return self.path_named(out_root) if out_root else self.session.work_root
+        return self.files.path_named(out_root) if out_root else self.session.work_root
 
     def _corpus(self, source: str) -> str:
         """The corpus a line names: the paths or text the call gave, else a request to ask for them, so no line tells
@@ -102,7 +102,7 @@ class Partition(GuidanceAction):
         """Write the partition index for this corpus in the .context folder under out_root (from the project's root, or absolute), or under the session's root when out_root is omitted. Name every expected segment so completeness can be checked later.
         paths: a file, a list of files, or a folder. Pass paths. This action reads them locally. Do not pass the corpus in context.
         context: in-process text. Leave this empty on an MCP call."""
-        source = self.source_label(context, paths)
+        source = source_label(context, paths)
         return f"Index {self._corpus(source)} under {self._folder(out_root).as_posix()}/.context/. Read those files locally."
 
     @mcp
@@ -135,7 +135,7 @@ class Partition(GuidanceAction):
         mode: one_go, or the named partition mode.
         out_root: folder for the index and segments. Omit it to use the session's root, the folder it works in."""
         self._work_on(guidance)
-        source = self.source_label(context, paths)
+        source = source_label(context, paths)
         folder = self._folder(out_root).as_posix()
         "Step 0 — Convert: when the corpus holds documents that are not markdown or code (.docx, .doc, .pdf, .pptx, .ppt, .txt, .html, .htm), call context_setup.convert with the folder that holds them, and partition the markdown_files it returns in their place. A structure note with heading_depth 0 and word_count over 200 is a document with no headings: tell the user it may need a semantic pass, and carry on."
         tools(self.context_setup.convert)

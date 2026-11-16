@@ -4,7 +4,7 @@ The Claude Design channel renders the story map, its scenarios, and the UX scree
 
 **Where things live.** In the workspace: each session's canvas in the UX practice's root, `<ux root>/design-canvas/` (`CanvasVersions.in_practice_root(ux_root)`, the root session.json names for the UX practice, never the session's own `.sessions/<session>/` folder), with each version at `version-N/project/` (a version kept as a release at `<release name>/project/`) (artboards, `canvas.json`, `fixtures/`, `shots/`) and the UX map with its story → screen edges at `ux/ux.json`. In CDD: the generic canvas — `DesignCanvas` (pages, boards, `canvas.json`, writing to a folder), artboard and card helpers, the abd look, and the fixture bar — is `harness/design_canvas/`; `story_canvas.py` beside this file lays out the story map and the explorer, and `ClaudeDesignUxMap` (`nodes.py`) lays out the Screens page.
 
-Render it with `ClaudeDesignStoryModel` (`cdd_guidance.practices.ux.model.claude_design.story_canvas`): `ClaudeDesignStoryModel().render(story_map, workspace=..., ux_map=ux_map)` returns every canvas file as JSON (path → text). The story map comes from the latest story map drawio; the screens come from the UX map you pass, which you read first (for example `ux/ux.json` beside the canvas, through the UX practice's json format). The canvas keeps that map as a Claude Design map, which places each screen on its own page. Do not hand-edit the rendered files: change the generator, re-render, and republish.
+Render it with `ClaudeDesignStoryModel` (`cdd_guidance.practices.ux.model.claude_design.story_canvas`): `ClaudeDesignStoryModel().render(story_map, setup=StoryCanvasSetup(workspace=..., ux_map=ux_map))` returns every canvas file as JSON (path → text). The story map comes from the latest story map drawio; the screens come from the UX map you pass, which you read first (for example `ux/ux.json` beside the canvas, through the UX practice's json format). The canvas keeps that map as a Claude Design map, which places each screen on its own page. Do not hand-edit the rendered files: change the generator, re-render, and republish.
 
 ---
 
@@ -20,7 +20,7 @@ Render it with `ClaudeDesignStoryModel` (`cdd_guidance.practices.ux.model.claude
 
 - **`two-pages`** — `canvas.json` has two pages: **Story map** and **Screens**. The Story map page holds one artboard; the Screens page holds one board per prototype screen.
 - **`one-map-artboard`** — The whole story map is one artboard (`Main.dc.html`) with one Play button. Do not split the map into an artboard per epic or story: many live artboards render hatched and slow.
-- **`map-zooms`** — The map zooms with a trackpad pinch (ctrl + wheel) and its − / % / + buttons (`artboard(..., zoomable=True)`).
+- **`map-zooms`** — The map zooms with a trackpad pinch (ctrl + wheel) and its − / % / + buttons (`Artboard(..., zoomable=True)`).
 
 ## Story map artboard
 

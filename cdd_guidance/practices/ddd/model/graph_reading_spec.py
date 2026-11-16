@@ -30,8 +30,8 @@ def mappings_of(graph: Graph) -> list[tuple]:
     ddd = graph.practice("ddd").reading
     found = []
     for mapping in ddd.in_graph.nodes("ContextMapping"):
-        sides = tuple((side, [edge.child.name for edge in graph.edges_from(side, mapping)]) for side in ("local", "remote"))
-        found.append((mapping.name, mapping.source.start_line, graph.direct_parent(mapping).name, sides))
+        sides = tuple((side, [edge.child.name for edge in graph.edges.from_parent(side, mapping)]) for side in ("local", "remote"))
+        found.append((mapping.name, mapping.source.start_line, graph.edges.direct_parent(mapping).name, sides))
     return found
 
 

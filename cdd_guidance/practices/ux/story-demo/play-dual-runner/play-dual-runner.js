@@ -11,7 +11,7 @@ import { collect as collectStory } from "./story-test-core.js";
 
 export class PlayDualRunner {
   /**
-   * @param {{ paintReflect?: { apply(snapshot: object): void }, thenFeedback?: { apply(result: object): void }, storyDemoFrame?: { emphasize(step: object): void, bind?(snapshot: object): void }, explorerFrame?: { highlightStep(step: object): void } }} [collaborators]
+   * @param {{ paintReflect?: { apply(snapshot: object): void }, thenFeedback?: { apply(result: object): void }, storyDemoFrame?: { emphasis: { emphasize(step: object): void }, bind?(snapshot: object): void }, explorerFrame?: { highlightStep(step: object): void } }} [collaborators]
    */
   constructor(collaborators = {}) {
     this._paintReflect = collaborators.paintReflect ?? null;
@@ -73,7 +73,7 @@ export class PlayDualRunner {
     this._paintReflect?.apply(snapshot);
     this._storyDemoFrame?.bind?.(snapshot);
     this._explorerFrame?.highlightStep(step);
-    this._storyDemoFrame?.emphasize(step);
+    this._storyDemoFrame?.emphasis.emphasize(step);
     if (step.kind === "then") {
       this._thenFeedback?.apply(result);
     }

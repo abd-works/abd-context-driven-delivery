@@ -7,7 +7,7 @@ from pathlib import Path
 
 import yaml
 
-from cdd_guidance.actions.partition.segment import MIN_ENTRY_BODY_CHARS, SegmentCompletenessConfig
+from cdd_guidance.actions.partition.segment import MIN_ENTRY_BODY_CHARS, PartitionFile, SegmentCompletenessConfig
 
 _PARTITION_CONFIG = re.compile(
     r"<!--\s*partition-config\s*\n(.*?)-->",
@@ -18,19 +18,18 @@ _PARTITION_CONFIG = re.compile(
 type PartitionSettings = dict[str, object]
 
 
-class PartitionIndex:
+class PartitionIndex(PartitionFile):
     """The shared partition index at ``{root}/.context/{subject}-index.md``, where root is the partition's out_root, else
     the session's root. Its ``<!-- partition-config -->`` block, when it has one, sets how its segments are checked."""
 
     def __init__(self, path: Path, text: str) -> None:
-        self._path = path
-        self._text = text
-        self._settings = self._config_settings()
-        self._completeness = SegmentCompletenessConfig(
+        self._settings = self._config_settings(text)
+        completeness = SegmentCompletenessConfig(
             min_body_chars=self._min_body_chars(),
             non_entry_headers=self._non_entry_headers(),
             short_body_pattern=self._short_body_pattern(),
         )
+        super().__init__(path, text, completeness)
 
     @classmethod
     def at(cls, path: Path) -> PartitionIndex | None:
@@ -56,21 +55,9 @@ class PartitionIndex:
                 return cls.at(indexes[0])
         return None
 
-    @property
-    def path(self) -> Path:
-        return self._path
-
-    @property
-    def text(self) -> str:
-        return self._text
-
-    @property
-    def completeness(self) -> SegmentCompletenessConfig:
-        return self._completeness
-
-    def _config_settings(self) -> PartitionSettings:
-        """The settings the index's partition-config block names, as YAML; none when it has no block."""
-        match = _PARTITION_CONFIG.search(self._text)
+    def _config_settings(self, text: str) -> PartitionSettings:
+        """The settings the partition-config block of the index's text names, as YAML; none when it has no block."""
+        match = _PARTITION_CONFIG.search(text)
         if not match:
             return {}
         loaded = yaml.safe_load(match.group(1))

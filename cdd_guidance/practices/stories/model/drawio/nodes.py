@@ -189,7 +189,7 @@ class DrawIOEpic(LaidOutEpic):
             drawn.extend(story.cells(self.cell_id))
         estimate = (self.estimate or "").strip()
         if estimate:
-            label = self.estimate_label()
+            label = self.columns.estimate_label()
             drawn.append(DrawIOStoryModel.Vertex.make(
                 f"{self.cell_id}/epic-estimate", label, self.x, self.estimate_row_y,
                 min(_EPIC_ESTIMATE_MAX_WIDTH, self.width), self.estimate_height, self.epic_estimate_style,
@@ -335,7 +335,7 @@ class DrawIOStoryModel(DiagramStoryModel):
 
     @property
     def has_outline_estimates(self) -> bool:
-        return any(epic._has_estimate() for epic in self.epics)
+        return any(epic.columns.has_estimate() for epic in self.epics)
 
     @property
     def sub_epic_top(self) -> int:
@@ -385,7 +385,7 @@ class DrawIOStoryModel(DiagramStoryModel):
         text = path.read_text(encoding="utf-8")
         loaded = cls().load(text)
         loaded.sources.add(file, text)
-        loaded.place_in(file)
+        loaded.descendants.place_in(file)
         return loaded
 
     def load(self, text: str) -> "DrawIOStoryModel":
@@ -475,7 +475,7 @@ class DrawIOStoryModel(DiagramStoryModel):
                 names[parts[1]] = cell.attrib.get("value", "").strip()
                 lanes.setdefault(parts[1], [])
             elif style.startswith("increment-story;") and len(parts) >= 3:
-                lanes.setdefault(parts[1], []).extend(self.stories_named([cell.attrib.get("value", "").strip()]))
+                lanes.setdefault(parts[1], []).extend(self.descendants.stories_named([cell.attrib.get("value", "").strip()]))
         return names, lanes
 
 

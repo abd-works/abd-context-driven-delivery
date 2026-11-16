@@ -57,7 +57,8 @@ class ScreenSpecFile:
         scenario = story.scenario_type(name=test.group("name"), sequential_order=len(story.scenarios) + 1)
         body = BracketStructure(test.string).braced(test.end() - 1) or ""
         for order, step in enumerate(self._steps_in(body), start=1):
-            made = scenario.step_type(step.lines[0].strip(), step.phase, order, keyword=_KEYWORDS[step.phase])
+            made = scenario.step_type(step.lines[0].strip(), step.phase, order)
+            made.keyword = _KEYWORDS[step.phase]
             made.body = CodeBody("\n".join(step.lines), TYPESCRIPT)
             scenario.steps.append(made)
         return scenario
@@ -70,22 +71,21 @@ class ScreenSpecFile:
         steps: list[StepLines] = []
         for line in lines:
             starts = len(line) - len(line.lstrip()) == base
-            phase = _phase_of(line, acted=any(step.phase is not StepType.GIVEN for step in steps)) if starts else steps[-1].phase
+            phase = self._phase_of(line, acted=any(step.phase is not StepType.GIVEN for step in steps)) if starts else steps[-1].phase
             if not steps or (starts and phase is not steps[-1].phase):
                 steps.append(StepLines(phase))
             steps[-1].lines.append(line)
         return steps
 
+    def _phase_of(self, statement: str, acted: bool) -> StepType:
+        """A check is a Then; a seed before anything is done is a Given; anything else is a When."""
+        if _CHECK.search(statement):
+            return StepType.THEN
+        if not acted and _SEED.search(statement):
+            return StepType.GIVEN
+        return StepType.WHEN
+
 
 def is_screen_spec(text: str) -> bool:
     """True for the text of a screen spec: it describes its stories with ``test.describe(...)``."""
     return bool(_DESCRIBE.search(text))
-
-
-def _phase_of(statement: str, acted: bool) -> StepType:
-    """A check is a Then; a seed before anything is done is a Given; anything else is a When."""
-    if _CHECK.search(statement):
-        return StepType.THEN
-    if not acted and _SEED.search(statement):
-        return StepType.GIVEN
-    return StepType.WHEN

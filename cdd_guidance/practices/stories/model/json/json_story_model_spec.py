@@ -88,7 +88,7 @@ with description("a story-graph.json document") as self:
             "with a fifth Epic appended and the document re-serialized"
         ):
             with before.each:
-                self.source.append_epic(Epic("Epic 5", 5))
+                self.source.epics.append(Epic("Epic 5", 5))
                 self.new_payload = json_module.loads(self.json_map.render(self.source))
 
             with it("should contain 5 Epic entries"):

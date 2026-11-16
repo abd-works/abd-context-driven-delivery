@@ -31,5 +31,5 @@ with description("a TypeScript story test read alone"):
 
     with it("should give its background the Given steps it holds"):
         background = self.stories.nodes("Background")[0]
-        given = [edge.child.type for edge in self.graph.edges_from("given", background)]
+        given = [edge.child.type for edge in self.graph.edges.from_parent("given", background)]
         expect(given).to(equal(["Given"]))

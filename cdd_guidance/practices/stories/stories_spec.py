@@ -92,7 +92,7 @@ with description("Stories"):
                 expect(self.filled).to(equal("story_tests/move-work-on-board/display-board/open-board/open_board_story.test.py"))
 
             with it("should give its scenarios to the Story of the same name on the map"):
-                expect([len(story.scenarios) for story in self.model.every_story()]).to(equal([1]))
+                expect([len(story.scenarios) for story in self.model.descendants.stories()]).to(equal([1]))
 
         # Code goes straight in the root and documents in the root's .context, so the map a story test belongs to is
         # in .context, beside the folders that hold the story tests rather than above them.
@@ -115,7 +115,7 @@ with description("Stories"):
                 shutil.rmtree(self.root, ignore_errors=True)
 
             with it("should give its scenarios to the Story of the same name on the map in the root's .context"):
-                expect([len(story.scenarios) for story in self.model.every_story()]).to(equal([1]))
+                expect([len(story.scenarios) for story in self.model.descendants.stories()]).to(equal([1]))
 
         # The MCP host serves every project from its own folder, so the paths a call names are read from the project
         # of the session the practice works in, and each node names its file from there.
@@ -140,10 +140,10 @@ with description("Stories"):
                 shutil.rmtree(self.root, ignore_errors=True)
 
             with it("should read the stories on that project's map"):
-                expect([story.name for story in self.model.every_story()]).to(equal(["Open Board"]))
+                expect([story.name for story in self.model.descendants.stories()]).to(equal(["Open Board"]))
 
             with it("should name each story's file from that project's root"):
-                expect([str(story.source.file) for story in self.model.every_story()]).to(equal(["tests/story-map.md"]))
+                expect([str(story.source.file) for story in self.model.descendants.stories()]).to(equal(["tests/story-map.md"]))
 
         with context("that works in no session, so it has no project to name paths from"):
             with it("should refuse to read story tests by a relative path rather than read them from the host's own folder"):
@@ -230,9 +230,9 @@ with description("Stories"):
         with it("should tell the agent to use Scaffold under story_map for names only"):
             prose = _expanded(Stories(fidelity="story_map"), "instructions")
             expect("names only" in prose).to(be_true)
-            expect("When scaffolding only" in Stories(fidelity="story_map").scoped_markdown()).to(be_true)
-            expect("Stop reading this skill when scaffolding" in Stories(fidelity="story_map").scoped_markdown()).to(be_true)
-            expect("#### Scaffold" in Stories(fidelity="story_map").scoped_markdown()).to(be_true)
+            expect("When scaffolding only" in Stories(fidelity="story_map").scoped_markdown).to(be_true)
+            expect("Stop reading this skill when scaffolding" in Stories(fidelity="story_map").scoped_markdown).to(be_true)
+            expect("#### Scaffold" in Stories(fidelity="story_map").scoped_markdown).to(be_true)
 
         with it("should include the Clean Engineering companion's instructions"):
             prose = _expanded(PracticeCatalogue.create("stories", fidelity="acceptance_tests"), "instructions")
@@ -250,13 +250,13 @@ with description("Stories"):
         with it("should include the stories schema in the practice skill"):
             import tempfile
 
-            from harness.installation.files import FileInstallation
+            from harness.installation.files import FileChannel, FileInstallation
 
             stories = Stories()
             tool = stories.tools["instructions"]
             with tempfile.TemporaryDirectory() as tmp:
                 FileInstallation(
-                    IdeLayout("Cursor"), tmp, "skill", mcp_mode=True, repo=_REPO_ROOT
+                    IdeLayout("Cursor"), tmp, FileChannel("skill", True), repo=_REPO_ROOT
                 ).write(tool)
                 text = next(Path(tmp).rglob("SKILL.md")).read_text(encoding="utf-8")
             expect(text).to(contain("storyNode:"))
@@ -324,7 +324,7 @@ with description("Stories"):
     with context("whose contexts section is expanded at story_map"):
         with before.each:
             self.stories = Stories(fidelity="story_map")
-            self.contexts = self.stories.scoped_markdown()
+            self.contexts = self.stories.scoped_markdown
 
         with it("should return non-empty prose"):
             expect(len(self.contexts) > 0).to(be_true)
@@ -348,7 +348,7 @@ with description("Stories"):
     with context("whose contexts section is expanded at scenarios"):
         with before.each:
             self.stories = Stories(fidelity="scenarios")
-            self.contexts = self.stories.scoped_markdown()
+            self.contexts = self.stories.scoped_markdown
 
         with it("should include the gwt-steps-trace-to-domain-operations rule slug"):
             expect("gwt-steps-trace-to-domain-operations" in self.contexts).to(be_true)
@@ -383,7 +383,7 @@ with description("Stories"):
     with context("whose contexts section is expanded at acceptance_tests"):
         with before.each:
             self.stories = Stories(fidelity="acceptance_tests")
-            self.contexts = self.stories.scoped_markdown()
+            self.contexts = self.stories.scoped_markdown
 
         with it("should reference scenarios rules via deployed skill notation"):
             expect("@stories" in self.contexts).to(be_true)

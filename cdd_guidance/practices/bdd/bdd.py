@@ -37,20 +37,18 @@ class Bdd(PracticeGuidance):
         fidelity: str = "behavior",
         format: str | None = None,
     ) -> None:
-        super().__init__(
-            format=format,
-            fidelity=fidelity,
-            default_workspace_folder="src",
-            formats={
-                "sketch": SketchBddModel,
-                # The describe tree as indented lines: the canonical model spells it itself.
-                "markdown": BddModel,
-                "python": PythonBddModel,
-                "typescript": TypeScriptBddModel,
-                # A saved knowledge graph, read only: rendering from it draws the realization fidelity.
-                "graph": GraphBddModel,
-            },
-        )
+        super().__init__(format=format, fidelity=fidelity)
+
+    default_workspace_folder = "src"
+    format_adapters = {
+        "sketch": SketchBddModel,
+        # The describe tree as indented lines: the canonical model spells it itself.
+        "markdown": BddModel,
+        "python": PythonBddModel,
+        "typescript": TypeScriptBddModel,
+        # A saved knowledge graph, read only: rendering from it draws the realization fidelity.
+        "graph": GraphBddModel,
+    }
 
     # In the knowledge graph: BDD's describe trees, linked to the Clean Engineering members each observation drives.
     reading_type = BddGraphReading

@@ -426,7 +426,7 @@ The `sketch` format: the `domain driven design:` section of an integrated sketch
 
 ## DrawnBoundedContextMap : BoundedContextMap
 
-The map drawn as Clean Engineering modules (`drawn_map.py`), shared by the draw.io and whiteboard formats. A bounded
+The map drawn as Clean Engineering modules (`drawn/drawn_map.py`), shared by the draw.io and whiteboard formats. A bounded
 context and an aggregate are modules and the building blocks are classes, so the map is Clean Engineering's drawing,
 with its layout and its arrow routing; DDD keeps no layout of its own. The bounded context map is the modules view: each
 context a module, each aggregate a module nested in its context's (named by its `module_path`, `Sales |

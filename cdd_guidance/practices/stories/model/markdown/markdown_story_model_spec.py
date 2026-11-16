@@ -109,7 +109,7 @@ with description("a Markdown document") as self:
             "with a fifth Epic appended in the source Story Map and re-rendered"
         ):
             with before.each:
-                self.source.append_epic(Epic("Epic 5", 5))
+                self.source.epics.append(Epic("Epic 5", 5))
                 self.new_text = self.markdown.render(self.source)
 
             with it("should contain 5 top-level headings"):

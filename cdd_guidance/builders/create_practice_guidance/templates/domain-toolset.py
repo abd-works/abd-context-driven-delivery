@@ -15,11 +15,9 @@ class {ClassName}(PracticeGuidance):
         fidelity: str = "{default_fidelity}",
         format: str | None = None,
     ) -> None:
-        super().__init__(
-            format=format,
-            fidelity=fidelity,
-            default_workspace_folder=".",
-            # formats={{
-            #     "markdown": ("{domain_slug}.model.markdown.nodes", "MarkdownModel"),
-            # }},
-        )
+        super().__init__(format=format, fidelity=fidelity)
+
+    default_workspace_folder = "."
+    # format_adapters = {{
+    #     "markdown": ("{domain_slug}.model.markdown.nodes", "MarkdownModel"),
+    # }}

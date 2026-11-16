@@ -81,12 +81,10 @@ class Ddd(PracticeGuidance):
         fidelity: str = "bounded_context",
         format: str | None = None,
     ) -> None:
-        super().__init__(
-            format=format,
-            fidelity=fidelity,
-            default_workspace_folder="src",
-            formats=dict(_FORMATS),
-        )
+        super().__init__(format=format, fidelity=fidelity)
+
+    default_workspace_folder = "src"
+    format_adapters = _FORMATS
 
     # Its scoped markdown shows every fidelity, since a bounded context, its model and its tactics read as one.
     shows_every_fidelity = True
