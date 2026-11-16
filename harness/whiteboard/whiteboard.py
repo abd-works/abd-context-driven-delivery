@@ -150,8 +150,8 @@ class Block(BoardElement):
 
     def pieces(self) -> List[BoardElement]:
         """This block as the board draws it: a board draws no block wider than MAX_SIDE, so a wider one, such as the bar
-        of an epic over many stories, is cut into equal pieces side by side, each with the block's words, the first
-        under the block's own id and the rest under ``<id>~2``, ``<id>~3``, ..."""
+        of an epic over many stories, is cut into equal pieces side by side, the first under the block's own id with its
+        words and the rest under ``<id>~2``, ``<id>~3``, ... with none, so the words show once."""
         if self.box.h > MAX_SIDE:
             raise ValueError(f"Element {self.id!r} is {self.box.h} tall; a board draws none taller than {MAX_SIDE}")
         count = math.ceil(self.box.w / MAX_SIDE)
@@ -160,7 +160,7 @@ class Block(BoardElement):
         width = self.box.w / count
         return [
             replace(self, id=self.id if index == 0 else f"{self.id}{PIECE_MARK}{index + 1}",
-                    box=Box(self.box.x + index * width, self.box.y, width, self.box.h))
+                    box=Box(self.box.x + index * width, self.box.y, width, self.box.h), text=self.text if index == 0 else "")
             for index in range(count)
         ]
 

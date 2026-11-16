@@ -74,7 +74,7 @@ with description("a story map's thin slice drawn on a Claude whiteboard") as sel
         expect([(lane.text, lane.box.x) for lane in self.lanes]).to(equal([("Walking Skeleton", 20), ("Next Slice", 20)]))
         expect(self.lanes[0].box.y + self.lanes[0].box.h).to(be_below(self.lanes[1].box.y))
 
-    with it("should put each lane's stories inside it, under the sub-epic that holds each"):
+    with it("should put each lane's stories inside it, in the map's order"):
         cards = [element for element in self.board.elements if element.role == "story"]
         expect(sorted(sum(1 for card in cards if lane.holds(card)) for lane in self.lanes)).to(equal([2, 2]))
 

@@ -142,8 +142,8 @@ with description("a whiteboard") as self:
                 ("epic.e1~3", Box(100 + 2 * 20000 / 3, 0, 20000 / 3, 60)),
             ]))
 
-        with it("should write the block's words on every piece"):
-            expect({element.text for element in self.board.elements}).to(equal({"Move Work Forward"}))
+        with it("should write the block's words on its first piece only"):
+            expect([element.text for element in self.board.elements]).to(equal(["Move Work Forward", "", ""]))
 
         with it("should read the pieces back as the one block they draw"):
             read = Whiteboard.from_text(self.board.save()).whole_elements
