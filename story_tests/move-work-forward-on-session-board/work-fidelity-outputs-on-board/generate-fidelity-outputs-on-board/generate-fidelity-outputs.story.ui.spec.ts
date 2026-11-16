@@ -127,8 +127,11 @@ test.describe('with a chat connected', () => {
 
   test.afterAll(() => chat.stop())
 
+  // Opening a ticket shows its own chat at the top, and none while it has none, so the chat is picked with
+  // billing-report shown, which makes it billing-report's chat.
   async function openWithChat(page: Page): Promise<void> {
     await openBoard(page)
+    await selectBillingReport(page)
     await waitForChat(page, chat)
   }
 

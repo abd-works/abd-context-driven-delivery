@@ -37,8 +37,9 @@ from harness.installation.repository_toolsets import RepositoryToolsets
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_annotations import LongCall, Mcp  # noqa: F401 - importing the server defines Mcp, the channel install reads
 from harness.mcp.claude_plugins import ClaudePlugins
-from harness.mcp.mcp_address import CHAT_HEADER, CHAT_PROCESS_HEADER, MCP_PATH, PING_PATH, PROJECT_HEADER
-from harness.mcp.mcp_daemon import McpDaemon, ServedCheckout
+from harness.mcp.mcp_address import CHAT_HEADER, CHAT_PROCESS_HEADER, LANE_CALL_PATH, MCP_PATH, PING_PATH, PROJECT_HEADER
+from harness.mcp.mcp_daemon import McpDaemon
+from harness.mcp.server_lanes import LaneCall, ServerLane, ServerLanes
 from harness.mcp.server_hooks import CddServerHooks
 from harness.mcp.restart_gate import _RestartGate
 from harness.mcp.tool_calls import ThrottledReporter, _StillRunning, _ToolCalls
@@ -232,12 +233,16 @@ class McpInstallation(ServerInstallation):
 
     def __init__(self, layout: IdeLayout, path: Path | str, repo: Path | str | None = None) -> None:
         super().__init__(layout, path, repo=repo)
-        self.daemon = McpDaemon(CddHome())
+        lanes = ServerLanes()
+        # The stable lane's server is the one every chat's cdd plugin names, so the plugins and the IDE entry follow it.
+        self.daemon = lanes.stable.daemon
         self.claude_plugins = ClaudePlugins(self.daemon.home)
         # The IDE's cdd entry, written once the whole install has been recorded.
         self.cdd_entry = CddEntry(self)
         # The checkout the server is installed from and serves: this installation's repository, else the running one.
-        self.served = ServedCheckout(self.daemon, Path(self.repo or RepositoryToolsets.of_running_checkout().root).resolve())
+        # A main checkout is served on the stable lane; a ticket's worktree on the dev lane.
+        checkout = Path(self.repo or RepositoryToolsets.of_running_checkout().root).resolve()
+        self.served = lanes.for_project(checkout).served_checkout(checkout)
         self.mcp_operations: list[AgentTool] = []
         self.host: McpHost | None = None
         self.diagnosis: dict[str, Any] | None = None
@@ -487,6 +492,8 @@ class McpHost:
         self._claude_settings = IdeLayout("Claude").user_settings_folder.resolve()
         # The cdd home of the server process, once it serves chats; a host made in-process for a probe or spec has none.
         self._home: CddHome | None = None
+        # The two lanes as the running server sees them; none for a host answering calls in process.
+        self._lanes: ServerLanes | None = None
 
     @property
     def _protocol(self) -> Any:
@@ -758,10 +765,24 @@ class McpHost:
         """Answer call: the built-in ping and restart here, any other tool on the server of the project it names."""
         if call.request.tool == BUILTIN_PING_TOOL:
             return PONG
+        other_lane = self._other_lane_answering(call)
+        if other_lane is not None:
+            return other_lane.answer(call)
         if call.request.tool == BUILTIN_RESTART_TOOL:
             return self.restart()
         with self._restart_gate.running_call():
             return self._answer_between_restarts(call)
+
+    def route_between_lanes(self, lanes: ServerLanes, home: CddHome) -> None:
+        """Answer as the server running from home: as the stable lane, hand each call whose project runs on the dev lane
+        to the dev lane's server."""
+        self._lanes = lanes
+        self._home = home
+
+    def _other_lane_answering(self, call: ToolCall) -> ServerLane | None:
+        if self._lanes is None or self._home is None:
+            return None
+        return self._lanes.other_lane_answering(self._home, call.project)
 
     def _project_named_outside_a_chat(self) -> Path:
         """The project of a call made in process, which no chat names: the folder ``CDD_PROJECT`` names, else the
@@ -801,7 +822,7 @@ class McpHost:
         from harness.mcp.listening_loop import _ListeningLoop
 
         daemon.this_process.publish(self._checkout_server.repo)
-        self._home = daemon.home
+        self.route_between_lanes(ServerLanes.from_serving(daemon.home, daemon.address), daemon.home)
         try:
             server = uvicorn.Server(uvicorn.Config(self._http_app(daemon.port), log_level="warning"))
             asyncio.run(server.serve(sockets=[listener]), loop_factory=_ListeningLoop(server).new_event_loop)
@@ -822,9 +843,37 @@ class McpHost:
         manager = StreamableHTTPSessionManager(app=self._protocol, security_settings=security, session_idle_timeout=None)
 
         return Starlette(
-            routes=[Route(PING_PATH, self._answer_ping), Route(MCP_PATH, endpoint=StreamableHTTPASGIApp(manager))],
+            routes=[
+                Route(PING_PATH, self._answer_ping),
+                Route(LANE_CALL_PATH, self._answer_lane_call, methods=["POST"]),
+                Route(MCP_PATH, endpoint=StreamableHTTPASGIApp(manager)),
+            ],
             lifespan=lambda _app: manager.run(),
         )
+
+    async def _answer_lane_call(self, request: Request) -> JSONResponse:
+        """Answer a tool call the other lane's server handed over, for the chat that sent it there. Only a server on
+        this machine may hand one over: a browser page, which names its Origin, is refused."""
+        from starlette.responses import JSONResponse
+
+        if request.headers.get("origin"):
+            return JSONResponse({"failure": {"kind": "LaneCallRefused", "message": "a browser page may not hand over tool calls"}}, status_code=403)
+        lane_call = LaneCall.from_data(await request.json())
+        return JSONResponse(await self._lane_reply(self._call_from_lane(lane_call)))
+
+    def _call_from_lane(self, lane_call: LaneCall) -> ToolCall:
+        request = ToolRequest(ChatPointer.from_request(lane_call.chat), lane_call.tool, self, answers_a_chat=True)
+        return ToolCall.sent(lane_call.arguments, lane_call.project or None, request)
+
+    async def _lane_reply(self, call: ToolCall) -> dict[str, Any]:
+        """The reply the other lane reads: the answer, or the failure named by its kind and message, so the chat sees
+        the same failure it would have seen here."""
+        import anyio.to_thread
+
+        try:
+            return {"answer": await anyio.to_thread.run_sync(self._answer_reporting, call, None)}
+        except Exception as failure:  # noqa: BLE001 - handed back by name to the lane that raises it for the chat
+            return {"failure": {"kind": type(failure).__name__, "message": str(failure)}}
 
     async def _answer_ping(self, _request: Request) -> JSONResponse:
         """The ``/ping`` answer: which process and checkout serve, and the projects its chats work on."""
