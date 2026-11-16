@@ -285,7 +285,7 @@ class FidelitySessionOutput:
         default format."""
         chosen = self._practice.saved.get("formats", {}).get(self._fidelity.name)
         if chosen is None:
-            return self._project_defaults()
+            return self.default_formats
         # A session saved before formats were chosen kept the one format its fidelity was last given.
         return [chosen] if isinstance(chosen, str) else list(chosen)
 
@@ -304,7 +304,29 @@ class FidelitySessionOutput:
         self._session.guidance_changed()
         return self
 
-    def _project_defaults(self) -> list[str]:
+    def used_from(self, group: list[str]) -> list[str]:
+        """The formats this fidelity uses from a group of the formats it writes, such as its diagram formats: those
+        chosen there, else those it would choose. A chip standing for the group does each of them."""
+        return self.chosen_from(group) or self.wanted_from(group)
+
+    def chosen_from(self, group: list[str]) -> list[str]:
+        """The formats chosen for this fidelity from group, in the order chosen."""
+        return [name for name in self.chosen_formats if name in group]
+
+    def wanted_from(self, group: list[str]) -> list[str]:
+        """What choosing group chooses: the project's default formats for this fidelity in it, else its default format
+        when group holds it, else group's first."""
+        defaults = [name for name in self.default_formats if name in group]
+        own = self._fidelity.default_format.name if self._fidelity.default_format else ""
+        return defaults or [own if own in group else group[0]]
+
+    def choose_from(self, group: list[str], is_chosen: bool) -> None:
+        """Choose every format this fidelity would use from group, or leave out every one of group chosen for it."""
+        for name in (self.wanted_from(group) if is_chosen else self.chosen_from(group)):
+            self.choose_format(name, is_chosen)
+
+    @property
+    def default_formats(self) -> list[str]:
         """The formats the project's ``.context/config.json`` chooses for this fidelity by default, ``default`` standing
         for the fidelity's own default format, each the fidelity writes and each once; its own default format when the
         project names none, or none it writes."""

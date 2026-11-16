@@ -75,7 +75,8 @@ class PracticeSelection:
 
 class FormatSelection:
     """One group of formats the selected fidelities offer, such as markdown or code: selected while every one of them
-    offering it has the format it uses from the group chosen in the session."""
+    offering it has a format of the group chosen in the session. A group of several formats, such as a diagram's drawio
+    and whiteboard, sends each one a fidelity uses."""
 
     def __init__(self, label: str, offering: list[FidelityGuidance]) -> None:
         self._label = label
@@ -89,8 +90,9 @@ class FormatSelection:
     @property
     @data_field
     def formats(self) -> list[str]:
-        """The format each fidelity uses from the group, each once: what a generate sends while the group is selected."""
-        return list(dict.fromkeys(self.used_by(fidelity) for fidelity in self._offering))
+        """The formats each fidelity uses from the group, each once: what a generate sends while the group is selected,
+        the action running once for each."""
+        return list(dict.fromkeys(name for fidelity in self._offering for name in fidelity.session_output.used_from(self._in_group(fidelity))))
 
     @property
     @data_field
@@ -101,17 +103,15 @@ class FormatSelection:
     @property
     @data_field
     def is_selected(self) -> bool:
-        return all(self.used_by(fidelity) in fidelity.session_output.chosen_formats for fidelity in self._offering)
+        return all(fidelity.session_output.chosen_from(self._in_group(fidelity)) for fidelity in self._offering)
 
     def select(self, is_selected: bool) -> None:
-        """Choose, or leave out, the format each fidelity offering the group uses from it."""
+        """Choose every format each fidelity offering the group would use from it, or leave out every one chosen."""
         for fidelity in self._offering:
-            fidelity.session_output.choose_format(self.used_by(fidelity), is_selected)
+            fidelity.session_output.choose_from(self._in_group(fidelity), is_selected)
 
-    def used_by(self, fidelity: FidelityGuidance) -> str:
-        """A fidelity uses its default format from the group when it holds it, else the first it offers there."""
-        in_group = [name for name in fidelity.outputs if Format(name).group == self._label]
-        return fidelity.default_format if fidelity.default_format in in_group else in_group[0]
+    def _in_group(self, fidelity: FidelityGuidance) -> list[str]:
+        return [name for name in fidelity.outputs if Format(name).group == self._label]
 
 
 class GuidanceSelection:
