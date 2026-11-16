@@ -9,12 +9,14 @@
     "stages": [
       "discovery"
     ],
-    "version": 24
+    "version": 25
   },
   "practices": {
     "stories": {
       "formats": {
-        "story_map": []
+        "story_map": [
+          "drawio"
+        ]
       }
     },
     "ux": {
