@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import List, Optional
 
 from cdd_guidance.practices.stories.model.story_model import Epic, Increment, Story, StoryModel, StoryType
 
@@ -128,6 +128,47 @@ class DiagramStoryNode:
         return children
 
 
+class DiagramStoryCell:
+    """One story-map element as it sits on a drawn map: its role (``epic``, ``subepic``, ``story`` or ``actor``), its
+    bar depth, its story kind, its words, and its box. Each diagram format reads its own elements into cells; the map
+    places them by where they sit, not by their order in the file, because people restack elements on a drawing."""
+
+    def __init__(self) -> None:
+        self.role = ""
+        self.depth = -1
+        self.kind = ""
+        self.text = ""
+        # The actor a story cell names on itself, for a format that writes it on the card rather than in a cell above.
+        self.actor = ""
+        self.x = self.y = self.width = self.height = 0.0
+        self.node: Optional[Epic] = None
+
+    @property
+    def center(self) -> float:
+        return self.x + self.width / 2
+
+    @property
+    def story_type(self) -> StoryType:
+        return StoryType.from_mark(self.kind or None)
+
+    def spans(self, across: float) -> bool:
+        return self.x <= across < self.x + self.width
+
+    def story_below(self, stories: List["DiagramStoryCell"]) -> Optional["DiagramStoryCell"]:
+        """The story an actor names: the nearest one beneath it in the same column."""
+        column = [story for story in stories if story.spans(self.center) and story.y > self.y]
+        return min(column, key=lambda story: story.y, default=None)
+
+    def beneath(self, bars: List["DiagramStoryCell"], across: Optional[float] = None) -> Optional["DiagramStoryCell"]:
+        """The deepest bar spanning this cell's center, or ``across`` when given; the nearest bar when the cell was
+        dragged past every bar's edge."""
+        where = self.center if across is None else across
+        spanning = [bar for bar in bars if bar.spans(where)]
+        if spanning:
+            return max(spanning, key=lambda bar: bar.depth)
+        return min(bars, key=lambda bar: abs(bar.center - where), default=None)
+
+
 class DiagramEpic(Epic, DiagramStoryNode):
     row_y = 120
     nested_row_y = 195
@@ -156,6 +197,45 @@ class DiagramStory(Story, DiagramStoryNode):
     actor_stroke = "#6c8ebf"
 
 
+
+class LaidOutStory(DiagramStory):
+    """A story card in a drawn map's story line: in its epic's column after the epic's inset, the stories before it in
+    the epic each taking one pitch. Every drawn format places its stories this way, with its own pitch and padding."""
+
+    column_pad = 0
+
+    @property
+    def x(self) -> int:
+        parent = self.parent
+        if not isinstance(parent, Epic):
+            return 0
+        return parent.x + type(parent).tighten + self.column_pad + parent.stories.index(self) * self.pitch
+
+    @property
+    def y(self) -> int:
+        return self._story_line_y()
+
+
+class LaidOutEpic(DiagramEpic):
+    """An epic bar in a drawn map: as wide as the story columns it spans at its format's story pitch, a sub-epic one
+    bar lower for each level it is nested. Every drawn format places its bars this way, with its own pitch."""
+
+    @property
+    def width(self) -> int:
+        if isinstance(self.parent, Epic):
+            return max(self.diagram_span_columns(), 1) * self.story_pitch
+        return self.span_columns() * self.story_pitch
+
+    @property
+    def height(self) -> int:
+        return self.bar_height
+
+    @property
+    def y(self) -> int:
+        if isinstance(self.parent, Epic):
+            return self._sub_epic_bar_y(self.depth)
+        return self.row_y
+
 class DiagramIncrement(Increment, DiagramStoryNode):
     label_width = 160
     lane_height = 70
@@ -171,6 +251,60 @@ class DiagramStoryModel(StoryModel):
     row_height = 100
     epic_type = DiagramEpic
     story_type = DiagramStory
+
+    def place_cells(self, cells: List[DiagramStoryCell]) -> List[DiagramStoryCell]:
+        """Read the epics and stories cells draw into this map by where they sit: epics left to right, each sub-epic
+        under the shallower bar above it, each story under the deepest bar over it with the actor just above it as its
+        actor. Answers the cells that became epics and sub-epics, which a format places what else it draws under."""
+        owners: List[DiagramStoryCell] = []
+        for cell in sorted((c for c in cells if c.role == "epic"), key=lambda c: c.x):
+            cell.node = self.epic_type(cell.text.strip(), len(self.epics) + 1)
+            self.append_epic(cell.node)
+            owners.append(cell)
+        for cell in sorted((c for c in cells if c.role == "subepic"), key=lambda c: (c.depth, c.x)):
+            owner = cell.beneath([o for o in owners if o.depth < cell.depth])
+            if owner is not None:
+                cell.node = self.epic_type(cell.text, len(owner.node.epics) + 1)
+                owner.node.append_epic(cell.node)
+                owners.append(cell)
+        self._place_stories(cells, owners)
+        return owners
+
+    def _place_stories(self, cells: List[DiagramStoryCell], owners: List[DiagramStoryCell]) -> None:
+        stories = sorted((c for c in cells if c.role == "story"), key=lambda c: (c.x, c.y))
+        actors = {id(story): actor for actor in cells if actor.role == "actor"
+                  for story in [actor.story_below(stories)] if story is not None}
+        for cell in stories:
+            owner = cell.beneath(owners)
+            if owner is None:
+                continue
+            story = self.story_type(cell.text, len(owner.node.stories) + 1, cell.story_type)
+            actor = actors[id(cell)].text.strip() if id(cell) in actors else cell.actor
+            if actor:
+                story.actors = [actor]
+            owner.node.append_story(story)
+
+    def thin_slice_columns(self) -> List[tuple]:
+        """The thin slice's columns: one per sub-epic, or per epic with none, with its top epic, in map order."""
+        return [(epic, sub) for epic in self.epics for sub in (epic.epics or [epic])]
+
+    def thin_slice_lanes(self, columns: List[tuple]) -> List[tuple]:
+        """Each increment with its stories under the column of the sub-epic that holds each, in the increment's order;
+        a story the map lacks goes under the last column."""
+        lanes = []
+        for increment in self.increments:
+            by_column: dict = {}
+            for story in increment.stories:
+                column = next((index for index, (_, sub) in enumerate(columns)
+                               if any(held.name == story.name for held in sub.every_story())), len(columns) - 1)
+                by_column.setdefault(column, []).append(story)
+            lanes.append((increment, by_column))
+        return lanes
+
+    def thin_slice_widths(self, columns: List[tuple], lanes: List[tuple], pitch: int, gap: int) -> List[int]:
+        """Each column widened to hold, side by side on one row, the most stories any one increment puts in it, so a
+        lane is a single row of cards and a sub-epic is as wide as its fullest lane."""
+        return [max([1] + [len(held.get(index, [])) for _, held in lanes]) * pitch + gap for index in range(len(columns))]
 
     @property
     def max_sub_epic_depth(self) -> int:

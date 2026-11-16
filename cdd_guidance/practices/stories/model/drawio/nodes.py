@@ -13,6 +13,9 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from cdd_guidance.practices.stories.model.diagram_story_model import (
+    DiagramStoryCell,
+    LaidOutEpic,
+    LaidOutStory,
     DiagramEpic,
     DiagramIncrement,
     DiagramStory,
@@ -55,7 +58,7 @@ class DrawIOIncrement(DiagramIncrement):
         return (cls.lane_height - DiagramStory.size) // 2
 
 
-class DrawIOStory(DiagramStory):
+class DrawIOStory(LaidOutStory):
     shaping_row_y = 275
     inset = 10
     actor_style = (
@@ -82,18 +85,6 @@ class DrawIOStory(DiagramStory):
                 seen += 1
         return self.slug if seen == 0 else f"{self.slug}-{seen + 1}"
 
-    @property
-    def x(self) -> int:
-        parent = self.parent
-        if not isinstance(parent, Epic):
-            return 0
-        index = parent.stories.index(self)
-        return parent.x + DrawIOEpic.tighten + index * self.pitch
-
-    @property
-    def y(self) -> int:
-        return self._story_line_y()
-
     def cells(self, parent_id: str) -> List["DrawIOStoryModel.Vertex"]:
         actor = self.actors[0].strip() if self.actors else ""
         cell_id = f"{parent_id}/{self.cell_slug}"
@@ -111,7 +102,7 @@ class DrawIOStory(DiagramStory):
         return drawn
 
 
-class DrawIOEpic(DiagramEpic):
+class DrawIOEpic(LaidOutEpic):
     # A draw.io epic starts at the map's margin, its sub-epics after the stories it holds itself.
     first_x = DiagramEpic.left_margin
     epic_spacing = DiagramEpic.gap
@@ -135,24 +126,8 @@ class DrawIOEpic(DiagramEpic):
         return self.slug
 
     @property
-    def width(self) -> int:
-        if isinstance(self.parent, Epic):
-            return max(self.diagram_span_columns(), 1) * DrawIOStory.pitch
-        return self.span_columns() * DiagramStory.pitch
-
-    @property
     def bar_width(self) -> int:
         return self.width - self.tighten * 2
-
-    @property
-    def height(self) -> int:
-        return self.bar_height
-
-    @property
-    def y(self) -> int:
-        if not isinstance(self.parent, Epic):
-            return self.row_y
-        return self._sub_epic_bar_y(self.depth)
 
     @property
     def style(self) -> str:
@@ -227,51 +202,26 @@ class DrawIOParseError(Exception):
     """Raised when a document is not a valid Draw.io story map."""
 
 
-class _PlacedCell:
+class _PlacedCell(DiagramStoryCell):
     """One vertex of a story map diagram as it sits on screen: its role from the style, its bar depth, and its box."""
 
     def __init__(self, element: ET.Element) -> None:
+        super().__init__()
         self.style = element.attrib.get("style", "")
-        self.value = element.attrib.get("value", "")
+        self.text = element.attrib.get("value", "")
         self.cell_id = element.attrib.get("id", "")
         head = self.style.split(";", 1)[0]
         self.role = head.split(":", 1)[0]
         self.depth = int(head.split(":", 1)[1]) if self.role == "subepic" and ":" in head else -1
+        self.kind = head.split(":", 1)[1] if self.role == "story" and ":" in head else ""
         geometry = element.find("mxGeometry")
         box = geometry.attrib if geometry is not None else {}
         self.x, self.y = float(box.get("x", 0)), float(box.get("y", 0))
         self.width, self.height = float(box.get("width", 0)), float(box.get("height", 0))
-        self.node = None
-
-    @property
-    def center(self) -> float:
-        return self.x + self.width / 2
-
-    @property
-    def story_type(self) -> StoryType:
-        """The kind a story cell's style names after ``story:``."""
-        head = self.style.split(";", 1)[0]
-        return StoryType.from_mark(head.split(":", 1)[1] if ":" in head else None)
 
     @property
     def is_epic_estimate(self) -> bool:
         return self.cell_id.endswith("/epic-estimate") or (self.cell_id.endswith("/estimate") and self.cell_id.count("/") == 1)
-
-    def spans(self, x: float) -> bool:
-        return self.x <= x < self.x + self.width
-
-    def story_below(self, stories: List["_PlacedCell"]) -> Optional["_PlacedCell"]:
-        """The story an actor names: the nearest one beneath it in the same column."""
-        column = [story for story in stories if story.spans(self.center) and story.y > self.y]
-        return min(column, key=lambda story: story.y, default=None)
-
-    @staticmethod
-    def beneath(x: float, bars: List["_PlacedCell"]) -> Optional["_PlacedCell"]:
-        """The deepest bar spanning ``x``; the nearest bar when a cell was dragged past every bar's edge."""
-        spanning = [bar for bar in bars if bar.spans(x)]
-        if spanning:
-            return max(spanning, key=lambda bar: bar.depth)
-        return min(bars, key=lambda bar: abs(bar.center - x), default=None)
 
 
 class DrawIOStoryModel(DiagramStoryModel):
@@ -403,8 +353,7 @@ class DrawIOStoryModel(DiagramStoryModel):
         front, so bringing a cell forward or sending it back moves it in the file but not on screen."""
         cells = [_PlacedCell(element) for element in self._vertices(self._graph_model(text))]
         story_map = DrawIOStoryModel()
-        owners = self._place_epics(story_map, cells)
-        self._place_stories(cells, owners)
+        owners = story_map.place_cells(cells)
         self._place_estimates(cells, owners)
         return story_map
 
@@ -422,49 +371,18 @@ class DrawIOStoryModel(DiagramStoryModel):
             raise DrawIOParseError("mxfile has no mxGraphModel child")
         return tree
 
-    def _place_epics(self, story_map: "DrawIOStoryModel", cells: List["_PlacedCell"]) -> List["_PlacedCell"]:
-        """Epics left to right, then each sub-epic under the shallower bar it sits beneath."""
-        owners: List[_PlacedCell] = []
-        for cell in sorted((c for c in cells if c.role == "epic"), key=lambda c: c.x):
-            cell.node = DrawIOEpic(cell.value.strip(), len(story_map.epics) + 1)
-            story_map.append_epic(cell.node)
-            owners.append(cell)
-        for cell in sorted((c for c in cells if c.role == "subepic"), key=lambda c: (c.depth, c.x)):
-            owner = _PlacedCell.beneath(cell.center, [o for o in owners if o.depth < cell.depth])
-            if owner is None:
-                continue
-            cell.node = DrawIOEpic(cell.value, len(owner.node.epics) + 1)
-            owner.node.append_epic(cell.node)
-            owners.append(cell)
-        return owners
-
-    def _place_stories(self, cells: List["_PlacedCell"], owners: List["_PlacedCell"]) -> None:
-        """Stories by column, then down, each under the deepest epic it sits beneath, with the actor drawn just
-        above it."""
-        stories = sorted((c for c in cells if c.role == "story"), key=lambda c: (c.x, c.y))
-        actors = {id(story): actor for actor in cells if actor.role == "actor"
-                  for story in [actor.story_below(stories)] if story is not None}
-        for cell in stories:
-            owner = _PlacedCell.beneath(cell.center, owners)
-            if owner is None:
-                continue
-            story = DrawIOStory(cell.value, len(owner.node.stories) + 1, cell.story_type)
-            if id(cell) in actors:
-                story.actors = [actors[id(cell)].value.strip()]
-            owner.node.append_story(story)
-
     def _place_estimates(self, cells: List["_PlacedCell"], owners: List["_PlacedCell"]) -> None:
         epics = [owner for owner in owners if owner.depth < 0]
         for cell in cells:
             if cell.role == "text":
-                owner = _PlacedCell.beneath(cell.center, epics)
-                estimate = self._parse_estimate_value(cell.value)
-                if owner is not None and estimate and ("approx" in estimate.lower() or cell.value.strip().startswith("*")):
+                owner = cell.beneath(epics)
+                estimate = self._parse_estimate_value(cell.text)
+                if owner is not None and estimate and ("approx" in estimate.lower() or cell.text.strip().startswith("*")):
                     owner.node.estimate = estimate
             elif cell.role == "estimate":
-                owner = _PlacedCell.beneath(cell.x, epics if cell.is_epic_estimate else owners)
+                owner = cell.beneath(epics if cell.is_epic_estimate else owners, across=cell.x)
                 if owner is not None:
-                    owner.node.estimate = self._parse_estimate_value(cell.value)
+                    owner.node.estimate = self._parse_estimate_value(cell.text)
 
     def _vertices(self, tree) -> List[ET.Element]:
         """Vertex cells in document order. A linked cell sits in a ``UserObject`` that holds
@@ -502,9 +420,9 @@ class DrawIOStoryModel(DiagramStoryModel):
         ET.SubElement(graph_root, "mxCell", attrib={"id": "0"})
         ET.SubElement(graph_root, "mxCell", attrib={"id": "1", "parent": "0"})
 
-        columns = self._thin_slice_columns()
-        lanes = [(inc, self._stories_by_column(inc, columns)) for inc in self.increments]
-        widths = self._column_widths(len(columns), [held for _, held in lanes])
+        columns = self.thin_slice_columns()
+        lanes = self.thin_slice_lanes(columns)
+        widths = self.thin_slice_widths(columns, lanes, DiagramStory.size + DrawIOIncrement.card_gap, DrawIOIncrement.card_gap)
         header_bottom = self._add_thin_slice_headers(graph_root, columns, widths)
         lane_y = DrawIOIncrement.lane_top_y(header_bottom)
         width = DrawIOIncrement.label_width + sum(widths)
@@ -513,23 +431,6 @@ class DrawIOStoryModel(DiagramStoryModel):
             lane_y += DrawIOIncrement.lane_height + DrawIOIncrement.lane_gap
         body = ET.tostring(mxfile, encoding="unicode")
         return "<?xml version='1.0' encoding='utf-8'?>\n" + body
-
-    def _thin_slice_columns(self) -> List[Tuple[Epic, Epic]]:
-        """One column per sub-epic, or per epic with none, under its top epic, in map order."""
-        return [(epic, sub) for epic in self.epics for sub in (epic.epics or [epic])]
-
-    def _stories_by_column(self, inc, columns: List[Tuple[Epic, Epic]]) -> Dict[int, List[Story]]:
-        """An increment's stories under the column of the sub-epic that holds each, in the increment's order."""
-        by_column: Dict[int, List[Story]] = {}
-        for story in inc.stories:
-            by_column.setdefault(self._column_of(story, columns), []).append(story)
-        return by_column
-
-    def _column_widths(self, count: int, lanes: List[Dict[int, List[Story]]]) -> List[int]:
-        """Each column widened to hold, side by side on one row, the most stories any one increment puts in it, so a
-        lane is a single row of cards and a sub-epic is as wide as its fullest lane."""
-        pitch = DiagramStory.size + DrawIOIncrement.card_gap
-        return [max(1, *(len(held.get(index, [])) for held in lanes)) * pitch + DrawIOIncrement.card_gap for index in range(count)]
 
     def _add_thin_slice_headers(self, graph_root, columns: List[Tuple[Epic, Epic]], widths: List[int]) -> int:
         """Each epic over the columns it spans, and each column's sub-epic under it; answers the headers' bottom."""
@@ -565,9 +466,6 @@ class DrawIOStoryModel(DiagramStoryModel):
                 y = lane_y + DrawIOIncrement.story_y_offset()
                 self._add_lane_cell(graph_root, cell_id, story.name, x, y, DiagramStory.size, DiagramStory.size, DrawIOIncrement.story_style)
 
-    def _column_of(self, story: Story, columns: List[Tuple[Epic, Epic]]) -> int:
-        """The column of the sub-epic that holds a story of this name; the last column for a story the map lacks."""
-        return next((index for index, (_, sub) in enumerate(columns) if any(held.name == story.name for held in sub.every_story())), len(columns) - 1)
     def _add_lane_cell(self, graph_root, cell_id: str, name: str, x: int, y: int, width: int, height: int, style: str) -> None:
         vertex = self._cell(cell_id, name)
         vertex.x, vertex.y, vertex.width, vertex.height, vertex.style = x, y, width, height, style

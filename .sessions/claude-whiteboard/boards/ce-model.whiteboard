@@ -1,0 +1,2625 @@
+{
+ "v": 1,
+ "title": "CE Class Model",
+ "order": [
+  "page.0e85749a6f40",
+  "page.9c2386e61901",
+  "page.44656820495b",
+  "page.cf2e5f26fef8",
+  "page.a404c2abcdfc",
+  "page.ca3a4fa5e833",
+  "page.44357ae55a21",
+  "page.abaec4522bf6",
+  "page.8fde48f31aff",
+  "page.779db9a7c6f7",
+  "title",
+  "class.3b1048740c51",
+  "class.0acf18f28963",
+  "class.7430ccf06e86",
+  "class.97a3105280f1",
+  "class.d75a2bfac507",
+  "class.c0e433fef93a",
+  "class.b0df9b5197a5",
+  "class.81d02e3acf04",
+  "class.dba5bbcadb93",
+  "class.c0ae59ba9b3e",
+  "class.370da1c0b851",
+  "class.b19263fd13f3",
+  "class.fee893d64e9d",
+  "class.e3a9c2229fb6",
+  "class.221389b88341",
+  "class.99f93fac8bcf",
+  "class.d5729cad1a34",
+  "class.abff8e50eb4a",
+  "class.142a1bbac724",
+  "class.bf51b026459b",
+  "class.a426e0114fc6",
+  "class.e8ab6b396431",
+  "imported.29a2109e0a4a",
+  "imported.d739c8a4ba79",
+  "imported.88b5372df836",
+  "imported.7d3da9444980",
+  "imported.59916317f419",
+  "imported.68fe10b79ecf",
+  "imported.e9a9cd5ca218",
+  "imported.a7d3ba9f962c",
+  "composition.e6363fcec9e6",
+  "composition.19d359a22cf4",
+  "association.7d05cae3b9a3",
+  "association.0dbafdd01e36",
+  "association.4c1bb64ed7c7",
+  "association.04ab0c4d9d44",
+  "association.eaf4681e1851",
+  "aggregation.cfba857e503d",
+  "association.9b42ac0fd12d",
+  "association.e4209b982fab",
+  "association.19a4be9df07a",
+  "composition.adadc3da9dfb",
+  "composition.af9c149263a4",
+  "aggregation.46d3e1d62f36",
+  "association.8816dc3c222e",
+  "association.1005ac367dfd",
+  "association.07e9e4b15058",
+  "association.66b13a9e10e6",
+  "association.82cfb5cd600c",
+  "association.3c4e528ffba1",
+  "association.763aaa6e5d57",
+  "composition.564dbd3e3a5c",
+  "composition.67337967ede2",
+  "composition.6ffa4905a552",
+  "dependency.c06906f779c5",
+  "dependency.dad007e33418",
+  "class.ecffb72669ed",
+  "class.d666a74dc83c",
+  "association.8ce8c1e77f9f",
+  "imported.d85f7f65c8ce",
+  "imported.1ed7f1cb8bb5",
+  "class.745f7cf964fe",
+  "class.8065980f4ba6",
+  "class.bc7e4f06b5fb",
+  "class.708688ab9515",
+  "class.d20b14e6e7a5",
+  "class.4303718f12c6",
+  "class.3aa6a68e8fa7",
+  "class.6b538078f811",
+  "class.60ec8ca103b3",
+  "class.d3cf68be8f7a",
+  "class.a019aaba74b6",
+  "class.73d777e8e47a",
+  "imported.3e8ca0bf424e",
+  "imported.3f8f2e82056d",
+  "imported.e54defcf5017",
+  "association.9a6d4bbee388",
+  "composition.f29e5908beb1",
+  "composition.17653ee8241f",
+  "association.cf745e410b97",
+  "association.cd435b059e03",
+  "association.3cbd7b238295",
+  "association.c4d7ed85f850",
+  "aggregation.63bc44bb9bb7",
+  "association.de58ce2b7017",
+  "association.1c8d9974452d",
+  "association.6a8428057c24",
+  "composition.98fab5b66bb0",
+  "composition.1ccf07038a18",
+  "class.b354eb908478",
+  "class.6cdfefeff864",
+  "class.7efe0a94cbb0",
+  "class.4429b429007d",
+  "aggregation.cbe35569964e",
+  "association.b6ad4cf1873f",
+  "dependency.c82a8e747b76",
+  "class.504f681b8363",
+  "class.ad7c924887ee",
+  "class.2df855e78fd7",
+  "class.ebafd8938620",
+  "class.1cb5c87bd3b8",
+  "class.be3f991dcda4",
+  "class.742d1c78437f",
+  "class.40e41e049e54",
+  "aggregation.f7d971b1f567",
+  "association.6e8f091b7ec9",
+  "aggregation.c742e4a4e1d9",
+  "association.0a28ad9b3aab",
+  "dependency.c13279850d4f",
+  "dependency.8ccd07ada91a",
+  "dependency.1d84b4c3f2aa",
+  "class.02b9c70a6aba",
+  "class.cf7808d1e3b3",
+  "class.c27e5a0cb029",
+  "class.e7fe8eaa2593",
+  "dependency.5a5a1666a638",
+  "dependency.04776c026b8e",
+  "class.e82a2537fe23",
+  "class.910f9e6faf55",
+  "class.8af2d2fb54e7",
+  "class.dde8ab8b6a16",
+  "class.e15b51ea1b08",
+  "class.f363d9f6e4c6",
+  "class.6e37ab90c41a",
+  "class.604b8a15106d",
+  "composition.d17b60b8e61d",
+  "composition.7b2802f2b47c",
+  "dependency.6431c58d1791",
+  "dependency.e8e55005be90",
+  "dependency.9f87eac9be53",
+  "class.231f770dbd7d",
+  "class.6960f834a3e1",
+  "class.8aaf27689208",
+  "class.22ef3f47e17f",
+  "class.a2d2eaf33de6",
+  "class.efdc1f2933df",
+  "class.b82e68ac69f7",
+  "class.d27fbaa5b052",
+  "class.3479baa76663",
+  "composition.60f5fbaf72a0",
+  "composition.27ee6b4f0b24",
+  "aggregation.4cc04eda7517",
+  "association.2cee62bf1a9d",
+  "composition.cfddbe7f1ea1",
+  "dependency.36e715846e23",
+  "dependency.8c0b1514eae0",
+  "imported.2554dbd29a51",
+  "imported.fb9ce11b93d1",
+  "class.8de8a9d3fdf0",
+  "class.0e7325e76fde",
+  "class.2974b926a084",
+  "class.518166dcd065",
+  "class.63bddd7f0424",
+  "class.0d2b9756cd2d",
+  "class.afec5bec5a7d",
+  "class.fea979f6afa0",
+  "class.04626b0767f1",
+  "class.fa75727302fa",
+  "class.c27034be8141",
+  "association.285f87713634",
+  "composition.a2db7674cbd4",
+  "composition.df442b4d5856",
+  "composition.83616b1d6ee4",
+  "association.34d95962b686",
+  "association.9baeb51028fa",
+  "association.8818f49842ed",
+  "aggregation.8ca309cc5f92",
+  "association.d1ef066dee7d",
+  "association.0f0c76d6f2ef",
+  "composition.998201f4d720",
+  "class.973c0214c4a9",
+  "class.44def0f3a21c",
+  "class.60f676119d10",
+  "class.9a3a1f3e18c5",
+  "class.f02bd96d4eef",
+  "class.6956d9184cea",
+  "class.d4a480483a9b",
+  "aggregation.44598b308abf",
+  "association.7b7f506a75f9",
+  "dependency.28406df043b7"
+ ],
+ "elements": {
+  "page.0e85749a6f40": {
+   "type": "container",
+   "text": "Customer",
+   "x": 0.0,
+   "y": 60.0,
+   "w": 4596.0,
+   "h": 2497.0
+  },
+  "page.9c2386e61901": {
+   "type": "container",
+   "text": "KYC",
+   "x": 4796.0,
+   "y": 60.0,
+   "w": 736.0,
+   "h": 837.0
+  },
+  "page.44656820495b": {
+   "type": "container",
+   "text": "Cart",
+   "x": 5732.0,
+   "y": 60.0,
+   "w": 3456.0,
+   "h": 1878.0
+  },
+  "page.cf2e5f26fef8": {
+   "type": "container",
+   "text": "Plans",
+   "x": 9388.0,
+   "y": 60.0,
+   "w": 736.0,
+   "h": 1111.0
+  },
+  "page.a404c2abcdfc": {
+   "type": "container",
+   "text": "Numbers and SIMs",
+   "x": 0.0,
+   "y": 2757.0,
+   "w": 1736.0,
+   "h": 1068.0
+  },
+  "page.ca3a4fa5e833": {
+   "type": "container",
+   "text": "Porting",
+   "x": 1936.0,
+   "y": 2757.0,
+   "w": 1016.0,
+   "h": 788.0
+  },
+  "page.44357ae55a21": {
+   "type": "container",
+   "text": "Payments",
+   "x": 3152.0,
+   "y": 2757.0,
+   "w": 1556.0,
+   "h": 688.0
+  },
+  "page.abaec4522bf6": {
+   "type": "container",
+   "text": "Billing",
+   "x": 4908.0,
+   "y": 2757.0,
+   "w": 1956.0,
+   "h": 1311.0
+  },
+  "page.8fde48f31aff": {
+   "type": "container",
+   "text": "Subscription",
+   "x": 7064.0,
+   "y": 2757.0,
+   "w": 2396.0,
+   "h": 1648.0
+  },
+  "page.779db9a7c6f7": {
+   "type": "container",
+   "text": "Care",
+   "x": 9660.0,
+   "y": 2757.0,
+   "w": 1736.0,
+   "h": 979.0
+  },
+  "title": {
+   "type": "text",
+   "x": 60,
+   "y": -20,
+   "text": "Model - Classes",
+   "size": "large"
+  },
+  "class.3b1048740c51": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer`\n*«Aggregate Root» «Entity»*\n**Customer**\n---\n+ id: string\n+ verified: boolean\n+ identity: Identity\n+ address: Address\n+ accountCredentials: AccountCredentials\n+ cart: Cart | null\n+ billing: Billing | null\n+ subscriptions: Subscription[]\n+ personaInquiry: PersonaInquiry | null\n---\n+ Customer(accountCredentials: AccountCredentials)\n+ confirmIdentity(): Customer",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 928.0,
+   "y": 638.0,
+   "w": 400.0,
+   "h": 360.0
+  },
+  "class.0acf18f28963": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer`\n*«Repository»*\n**CustomerRepository**\n---\n+ customers: Collection<Customer>\n+ midtierCustomerService: MidtierCustomerService\n---\n+ CustomerRepository(...)\n+ create(accountCredentials: AccountCredentials): Customer | null\n+ load(accountCredentials: AccountCredentials): Customer",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 48.0,
+   "y": 108.0,
+   "w": 520.0,
+   "h": 234.0
+  },
+  "class.7430ccf06e86": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer`\n*«Service»*\n**MidtierCustomerService**\n---\n---\n+ MidtierCustomerService(...)\n+ validate(accountToken: AccountToken): string | Error\n+ create(accountToken: AccountToken): string | Error\n+ read(accountToken: AccountToken): MavenirCustomer | Error",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 208.0,
+   "y": 638.0,
+   "w": 480.0,
+   "h": 213.0
+  },
+  "class.97a3105280f1": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer`\n*«Exception»*\n**CustomerException**\n---\n+ operation: CustomerOperation\n+ accountCredentials: AccountCredentials\n+ message: string\n+ cause: Error\n---\n+ CustomerException(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 1768.0,
+   "y": 108.0,
+   "w": 340.0,
+   "h": 234.0
+  },
+  "class.d75a2bfac507": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer`\n*«Entity»*\n**Identity**\n---\n+ email: string\n+ name: string\n+ lastName: string\n+ fullName: string\n+ preferredName: string\n+ expiryDate: string\n+ dateOfBirth: string\n+ idNationality: string\n+ idNumber: string\n+ idType: string\n+ otherPhoneNumber: string\n---\n+ Identity(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 1578.0,
+   "y": 1138.0,
+   "w": 220.0,
+   "h": 381.0
+  },
+  "class.c0e433fef93a": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer`\n*«Entity»*\n**Address**\n---\n+ street: string\n+ complement: string\n+ city: string\n+ parish: string\n+ postalCode: string\n+ country: string\n---\n+ Address(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 1898.0,
+   "y": 1138.0,
+   "w": 200.0,
+   "h": 276.0
+  },
+  "class.b0df9b5197a5": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer`\n*«Aggregate Root» «Entity»*\n**AccountCredentials**\n---\n+ email: string\n+ password: string\n+ confirmPassword: string\n+ validationCode: string\n+ verified: boolean\n+ token: AccountToken | null\n+ customerId: string | null\n+ validationCodeWasSent: boolean\n+ canActivate: boolean\n+ isUpdatable: boolean\n+ isPersistable: boolean\n+ resendMessage: string | null\n+ errors: AccountCredentialsErrors\n+ requirements: AccountCredentialRequirements\n---\n+ AccountCredentials(emailOrCognitoUser: string | CognitoUser)\n+ missingRequirements(): AccountCredentialRequirement[]\n+ register(): void\n+ activate(validationCode: ValidationCode): void\n+ authenticateAccount(): void\n+ resendValidationCode(): void\n+ signOut(): void\n+ storeCustomerId(customerId: string): CognitoUser",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 2618.0,
+   "y": 1138.0,
+   "w": 500.0,
+   "h": 591.0
+  },
+  "class.81d02e3acf04": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer`\n*«Repository»*\n**AccountRepository**\n---\n+ accountCredentials: Collection<AccountCredentials>\n+ amplifyService: AmplifyService\n---\n+ AccountRepository(...)\n+ newAccount(credentials?: AccountCredentials): AccountCredentials\n+ persistNewAccount(accountCredentials: AccountCredentials): CognitoUser | AccountCredentialsErrors\n+ confirmAccount(accountCredentials: AccountCredentials): CognitoUser | AccountCredentialsErrors\n+ authenticateAccount(accountCredentials: AccountCredentials): CognitoUser | AccountCredentialsErrors\n+ resendAccountCode(accountCredentials: AccountCredentials): CognitoUser | null",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 2628.0,
+   "y": 108.0,
+   "w": 800.0,
+   "h": 297.0
+  },
+  "class.dba5bbcadb93": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer`\n**AccountCredentialsErrors**\n---\n+ register: string | null\n+ signIn: string | null\n+ validationCode: string | null\n---\n+ AccountCredentialsErrors(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 2098.0,
+   "y": 1878.0,
+   "w": 260.0,
+   "h": 192.0
+  },
+  "class.c0ae59ba9b3e": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer`\n*«Exception»*\n**ValidationCodeResendWaitException**\n---\n+ availableAt: Date\n---\n+ ValidationCodeResendWaitException(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 668.0,
+   "y": 108.0,
+   "w": 340.0,
+   "h": 171.0
+  },
+  "class.370da1c0b851": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer`\n**AccountCredentialRequirement**\n---\n+ field: string\n+ requirement: string\n---\n+ AccountCredentialRequirement(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 2148.0,
+   "y": 2338.0,
+   "w": 300.0,
+   "h": 171.0
+  },
+  "class.b19263fd13f3": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer`\n**AccountCredentialRequirements**\n---\n+ emailRequired: AccountCredentialRequirement\n+ emailFormat: AccountCredentialRequirement\n+ passwordRequired: AccountCredentialRequirement\n+ passwordLetters: AccountCredentialRequirement\n+ passwordNumber: AccountCredentialRequirement\n+ passwordSymbol: AccountCredentialRequirement\n+ passwordLength: AccountCredentialRequirement\n+ confirmRequired: AccountCredentialRequirement\n+ confirmMismatch: AccountCredentialRequirement\n---\n+ AccountCredentialRequirements(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 1578.0,
+   "y": 1878.0,
+   "w": 400.0,
+   "h": 318.0
+  },
+  "class.fee893d64e9d": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer`\n*«Service» «System»*\n**AmplifyService**\n---\n---\n+ AmplifyService(...)\n+ signUp(email: string, password: string): CognitoUser | Error\n+ signIn(email: string, password: string): CognitoUser | Error\n+ confirmSignUp(email: string, validationCode: ValidationCode): CognitoUser | Error\n+ resendSignUp(email: string): ValidationCodeSend | Error\n+ signOut(): void\n+ fetchUserAttributes(email: string): CognitoUser | Error\n+ getUser(email: string): CognitoUser | null",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 3728.0,
+   "y": 638.0,
+   "w": 660.0,
+   "h": 297.0
+  },
+  "class.e3a9c2229fb6": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer`\n*«System» «Entity»*\n**CognitoUser**\n---\n+ email: string\n+ confirmed: boolean\n+ customerId: string | null\n+ validationCodeSentAt: Date | null\n+ accountToken: AccountToken | null\n---\n+ CognitoUser(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 2208.0,
+   "y": 108.0,
+   "w": 300.0,
+   "h": 255.0
+  },
+  "class.221389b88341": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer`\n*«System»*\n**AccountToken**\n---\n+ email: string\n+ customerId: string | null\n---\n+ AccountToken(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 2778.0,
+   "y": 1878.0,
+   "w": 240.0,
+   "h": 192.0
+  },
+  "class.99f93fac8bcf": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer`\n*«System»*\n**ValidationCode**\n---\n+ code: string\n---\n+ ValidationCode(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 2458.0,
+   "y": 1878.0,
+   "w": 200.0,
+   "h": 171.0
+  },
+  "class.d5729cad1a34": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer`\n*«System»*\n**ValidationCodeSend**\n---\n+ code: string\n+ sentAt: Date\n+ kind: initial | resend\n---\n+ ValidationCodeSend(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 3698.0,
+   "y": 1138.0,
+   "w": 220.0,
+   "h": 213.0
+  },
+  "class.abff8e50eb4a": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer`\n*«Aggregate Root» «Entity»*\n**MavenirCustomer**\n---\n+ id: string\n+ productOrder: MavenirProductOrder | null\n+ billingAccount: MavenirBillingAccount | null\n+ phoneVerified: boolean\n+ waitingPsim: string | null\n+ done: string | null\n+ inquiryId: string | null\n+ voucher: Voucher | null\n+ shoppingCart: MavenirShoppingCart | null\n+ contactMedium: ContactMedium\n+ engagedParty: EngagedParty\n---\n+ MavenirCustomer(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 1188.0,
+   "y": 108.0,
+   "w": 380.0,
+   "h": 381.0
+  },
+  "class.142a1bbac724": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer`\n*«Service» «System»*\n**PortalGateway**\n---\n---\n+ PortalGateway(...)\n+ create(email: string): MavenirCustomer | Error\n+ read(id: string): MavenirCustomer | Error\n+ patchPhoneVerified(mavenirCustomerId: string): MavenirCustomer | Error\n+ patchWaitingPsim(mavenirCustomerId: string, waitingPsim: boolean): MavenirCustomer | Error\n+ patchProfile(mavenirCustomer: MavenirCustomer, engagedParty: EngagedParty, contactMedium: ContactMedium): MavenirCustomer | Error\n+ patchVoucher(mavenirCustomer: MavenirCustomer, voucher: Voucher): MavenirCustomer | Error\n+ removeVoucher(mavenirCustomer: MavenirCustomer): MavenirCustomer | Error\n+ patchDone(mavenirCustomerId: string): MavenirCustomer | Error",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 3528.0,
+   "y": 108.0,
+   "w": 1020.0,
+   "h": 318.0
+  },
+  "class.bf51b026459b": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer`\n**ContactMedium**\n---\n+ emailAddress: string\n+ phoneNumber: string\n+ street1: string\n+ street2: string\n+ city: string\n+ stateOrProvince: string\n+ postCode: string\n+ country: string\n---\n+ ContactMedium(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 2528.0,
+   "y": 638.0,
+   "w": 220.0,
+   "h": 297.0
+  },
+  "class.a426e0114fc6": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer`\n**EngagedParty**\n---\n+ givenName: string\n+ familyName: string\n+ preferredGivenName: string\n+ birthDate: string\n+ individualIdentification: IndividualIdentification\n---\n+ EngagedParty(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 3168.0,
+   "y": 638.0,
+   "w": 420.0,
+   "h": 234.0
+  },
+  "class.e8ab6b396431": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer`\n**IndividualIdentification**\n---\n+ identificationId: string\n+ identificationType: string\n+ issuingAuthority: string\n+ validated: boolean\n+ endDateTime: string\n---\n+ IndividualIdentification(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 3338.0,
+   "y": 1138.0,
+   "w": 260.0,
+   "h": 234.0
+  },
+  "imported.29a2109e0a4a": {
+   "type": "shape",
+   "color": "white",
+   "text": "*«from: Cart»*\n**Cart**\n---\n+ customer: Customer\n+ id: string\n+ line: Line\n+ bundle: Bundle | null\n---",
+   "kind": "rect",
+   "stroke": "#666666",
+   "size": "small",
+   "textAlign": "left",
+   "x": 1278.0,
+   "y": 1138.0,
+   "w": 200.0,
+   "h": 192.0
+  },
+  "imported.d739c8a4ba79": {
+   "type": "shape",
+   "color": "white",
+   "text": "*«from: Cart»*\n**Voucher**\n---\n+ code: string\n+ campaign: string\n+ expired: boolean\n+ redeemed: boolean\n---",
+   "kind": "rect",
+   "stroke": "#666666",
+   "size": "small",
+   "textAlign": "left",
+   "x": 1888.0,
+   "y": 638.0,
+   "w": 200.0,
+   "h": 192.0
+  },
+  "imported.88b5372df836": {
+   "type": "shape",
+   "color": "white",
+   "text": "*«from: Cart»*\n**MavenirShoppingCart**\n---\n+ id: string\n+ customerId: string\n+ lineCount: number\n+ serviceProviderId: string\n---",
+   "kind": "rect",
+   "stroke": "#666666",
+   "size": "small",
+   "textAlign": "left",
+   "x": 2188.0,
+   "y": 638.0,
+   "w": 240.0,
+   "h": 192.0
+  },
+  "imported.7d3da9444980": {
+   "type": "shape",
+   "color": "white",
+   "text": "*«from: Billing»*\n**Billing**\n---\n+ id: string\n+ state: string\n+ balance: string\n+ defaultPayment\n---",
+   "kind": "rect",
+   "stroke": "#666666",
+   "size": "small",
+   "textAlign": "left",
+   "x": 678.0,
+   "y": 1138.0,
+   "w": 200.0,
+   "h": 192.0
+  },
+  "imported.59916317f419": {
+   "type": "shape",
+   "color": "white",
+   "text": "*«from: Billing»*\n**MavenirBillingAccount**\n---\n+ id: string\n+ name: string\n+ href: string\n+ state: string\n---",
+   "kind": "rect",
+   "stroke": "#666666",
+   "size": "small",
+   "textAlign": "left",
+   "x": 1568.0,
+   "y": 638.0,
+   "w": 220.0,
+   "h": 192.0
+  },
+  "imported.68fe10b79ecf": {
+   "type": "shape",
+   "color": "white",
+   "text": "*«from: Subscription»*\n**Subscription**\n---\n+ id: string\n+ status: string\n+ line: Line\n+ bundle: Bundle\n---",
+   "kind": "rect",
+   "stroke": "#666666",
+   "size": "small",
+   "textAlign": "left",
+   "x": 2198.0,
+   "y": 1138.0,
+   "w": 200.0,
+   "h": 192.0
+  },
+  "imported.e9a9cd5ca218": {
+   "type": "shape",
+   "color": "white",
+   "text": "*«from: Subscription»*\n**MavenirProductOrder**\n---\n+ id: string\n---",
+   "kind": "rect",
+   "stroke": "#666666",
+   "size": "small",
+   "textAlign": "left",
+   "x": 2848.0,
+   "y": 638.0,
+   "w": 200.0,
+   "h": 129.0
+  },
+  "imported.a7d3ba9f962c": {
+   "type": "shape",
+   "color": "white",
+   "text": "*«from: Care»*\n**PersonaInquiry**\n---\n+ inquiryId: string\n+ status: string\n+ verified: boolean\n+ email: string\n---",
+   "kind": "rect",
+   "stroke": "#666666",
+   "size": "small",
+   "textAlign": "left",
+   "x": 978.0,
+   "y": 1138.0,
+   "w": 200.0,
+   "h": 192.0
+  },
+  "composition.e6363fcec9e6": {
+   "type": "arrow",
+   "from": "class.3b1048740c51",
+   "to": "class.d75a2bfac507",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "identity",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    240
+   ]
+  },
+  "composition.19d359a22cf4": {
+   "type": "arrow",
+   "from": "class.3b1048740c51",
+   "to": "class.c0e433fef93a",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "address",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    210,
+    80,
+    190,
+    -700,
+    -238
+   ]
+  },
+  "association.7d05cae3b9a3": {
+   "type": "arrow",
+   "from": "class.3b1048740c51",
+   "to": "class.b0df9b5197a5",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "accountCredentials",
+   "bends": [
+    "v",
+    290,
+    120,
+    750,
+    -280,
+    -336
+   ]
+  },
+  "association.0dbafdd01e36": {
+   "type": "arrow",
+   "from": "class.3b1048740c51",
+   "to": "imported.29a2109e0a4a",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "cart",
+   "bends": [
+    "v",
+    260
+   ]
+  },
+  "association.4c1bb64ed7c7": {
+   "type": "arrow",
+   "from": "class.3b1048740c51",
+   "to": "imported.7d3da9444980",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "billing",
+   "bends": [
+    "v",
+    280
+   ]
+  },
+  "association.04ab0c4d9d44": {
+   "type": "arrow",
+   "from": "class.3b1048740c51",
+   "to": "imported.68fe10b79ecf",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "subscriptions",
+   "bends": [
+    "v",
+    730,
+    1040,
+    -136
+   ]
+  },
+  "association.eaf4681e1851": {
+   "type": "arrow",
+   "from": "class.3b1048740c51",
+   "to": "imported.a7d3ba9f962c",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "personaInquiry",
+   "bends": [
+    "v",
+    280
+   ]
+  },
+  "aggregation.cfba857e503d": {
+   "type": "arrow",
+   "from": "class.0acf18f28963",
+   "to": "class.3b1048740c51",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "customers",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    353
+   ]
+  },
+  "association.9b42ac0fd12d": {
+   "type": "arrow",
+   "from": "class.0acf18f28963",
+   "to": "class.7430ccf06e86",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "midtierCustomerService",
+   "bends": [
+    "v",
+    373
+   ]
+  },
+  "association.e4209b982fab": {
+   "type": "arrow",
+   "from": "class.97a3105280f1",
+   "to": "class.b0df9b5197a5",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "accountCredentials",
+   "bends": [
+    "v",
+    273,
+    1140,
+    -366
+   ]
+  },
+  "association.19a4be9df07a": {
+   "type": "arrow",
+   "from": "class.b0df9b5197a5",
+   "to": "class.221389b88341",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "token",
+   "bends": [
+    "v",
+    404
+   ]
+  },
+  "composition.adadc3da9dfb": {
+   "type": "arrow",
+   "from": "class.b0df9b5197a5",
+   "to": "class.dba5bbcadb93",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "errors",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    374
+   ]
+  },
+  "composition.af9c149263a4": {
+   "type": "arrow",
+   "from": "class.b0df9b5197a5",
+   "to": "class.b19263fd13f3",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "requirements",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    354
+   ]
+  },
+  "aggregation.46d3e1d62f36": {
+   "type": "arrow",
+   "from": "class.81d02e3acf04",
+   "to": "class.b0df9b5197a5",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "accountCredentials",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    202,
+    90,
+    -346
+   ]
+  },
+  "association.8816dc3c222e": {
+   "type": "arrow",
+   "from": "class.81d02e3acf04",
+   "to": "class.fee893d64e9d",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "amplifyService",
+   "bends": [
+    "v",
+    352,
+    110,
+    832,
+    280,
+    612,
+    -390,
+    -188
+   ]
+  },
+  "association.1005ac367dfd": {
+   "type": "arrow",
+   "from": "class.b19263fd13f3",
+   "to": "class.370da1c0b851",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "emailRequired, emailFormat, passwordRequired, passwordLetters, passwordNumber, passwordSymbol, passwordLength, confirmRequired, confirmMismatch",
+   "bends": [
+    "v",
+    261
+   ]
+  },
+  "association.07e9e4b15058": {
+   "type": "arrow",
+   "from": "class.e3a9c2229fb6",
+   "to": "class.221389b88341",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "accountToken",
+   "bends": [
+    "v",
+    242,
+    740,
+    872,
+    790,
+    1862,
+    -150,
+    -126,
+    -50,
+    -166
+   ]
+  },
+  "association.66b13a9e10e6": {
+   "type": "arrow",
+   "from": "class.abff8e50eb4a",
+   "to": "imported.e9a9cd5ca218",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "productOrder",
+   "bends": [
+    "v",
+    220,
+    120,
+    200,
+    -1410,
+    -184
+   ]
+  },
+  "association.82cfb5cd600c": {
+   "type": "arrow",
+   "from": "class.abff8e50eb4a",
+   "to": "imported.59916317f419",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "billingAccount",
+   "bends": [
+    "v",
+    300
+   ]
+  },
+  "association.3c4e528ffba1": {
+   "type": "arrow",
+   "from": "class.abff8e50eb4a",
+   "to": "imported.d739c8a4ba79",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "voucher",
+   "bends": [
+    "v",
+    280
+   ]
+  },
+  "association.763aaa6e5d57": {
+   "type": "arrow",
+   "from": "class.abff8e50eb4a",
+   "to": "imported.88b5372df836",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "shoppingCart",
+   "bends": [
+    "v",
+    260
+   ]
+  },
+  "composition.564dbd3e3a5c": {
+   "type": "arrow",
+   "from": "class.abff8e50eb4a",
+   "to": "class.bf51b026459b",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "contactMedium",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    240
+   ]
+  },
+  "composition.67337967ede2": {
+   "type": "arrow",
+   "from": "class.abff8e50eb4a",
+   "to": "class.a426e0114fc6",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "engagedParty",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    320,
+    -150,
+    310,
+    -220,
+    -677,
+    80,
+    -187
+   ]
+  },
+  "composition.6ffa4905a552": {
+   "type": "arrow",
+   "from": "class.a426e0114fc6",
+   "to": "class.e8ab6b396431",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "individualIdentification",
+   "heads": [
+    "circle",
+    "arrow"
+   ]
+  },
+  "dependency.c06906f779c5": {
+   "type": "arrow",
+   "from": "class.b0df9b5197a5",
+   "to": "class.99f93fac8bcf",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "activate",
+   "dash": true,
+   "bends": [
+    "v",
+    394
+   ]
+  },
+  "dependency.dad007e33418": {
+   "type": "arrow",
+   "from": "class.fee893d64e9d",
+   "to": "class.d5729cad1a34",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "resendSignUp",
+   "dash": true
+  },
+  "class.ecffb72669ed": {
+   "type": "shape",
+   "color": "#d5e8d4",
+   "text": "`KYC`\n**ProfileRequirement**\n---\n+ field: string\n+ requirement: string\n---\n+ ProfileRequirement(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 5054.0,
+   "y": 678.0,
+   "w": 220.0,
+   "h": 171.0
+  },
+  "class.d666a74dc83c": {
+   "type": "shape",
+   "color": "#d5e8d4",
+   "text": "`KYC`\n**ProfileRequirements**\n---\n+ nameRequired: ProfileRequirement\n+ lastNameRequired: ProfileRequirement\n+ dateOfBirthRequired: ProfileRequirement\n+ idNationalityRequired: ProfileRequirement\n+ idTypeRequired: ProfileRequirement\n+ idNumberRequired: ProfileRequirement\n+ expiryRequired: ProfileRequirement\n+ streetRequired: ProfileRequirement\n+ parishRequired: ProfileRequirement\n+ postalCodeRequired: ProfileRequirement\n---\n+ ProfileRequirements(...)\n+ missing(identity: Identity, address: Address): ProfileRequirement[]\n+ validateInquiry(identity: Identity): string\n+ mapInquiry(customer: Customer, personaInquiry: PersonaInquiry): Customer\n+ storeFailedInquiry(customer: Customer, personaInquiry: PersonaInquiry): Customer",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 4844.0,
+   "y": 108.0,
+   "w": 640.0,
+   "h": 423.0
+  },
+  "association.8ce8c1e77f9f": {
+   "type": "arrow",
+   "from": "class.d666a74dc83c",
+   "to": "class.ecffb72669ed",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "nameRequired, lastNameRequired, dateOfBirthRequired, idNationalityRequired, idTypeRequired, idNumberRequired, expiryRequired, streetRequired, parishRequired, postalCodeRequired"
+  },
+  "imported.d85f7f65c8ce": {
+   "type": "shape",
+   "color": "white",
+   "text": "*«from: Customer»*\n**Customer**\n---\n+ id: string\n+ verified: boolean\n+ identity: Identity\n+ address: Address\n---",
+   "kind": "rect",
+   "stroke": "#666666",
+   "size": "small",
+   "textAlign": "left",
+   "x": 7510.0,
+   "y": 1238.0,
+   "w": 200.0,
+   "h": 192.0
+  },
+  "imported.1ed7f1cb8bb5": {
+   "type": "shape",
+   "color": "white",
+   "text": "*«from: Customer»*\n**CustomerRepository**\n---\n+ customers: Collection<Customer>\n+ midtierCustomerService: MidtierCustomerService\n---",
+   "kind": "rect",
+   "stroke": "#666666",
+   "size": "small",
+   "textAlign": "left",
+   "x": 6900.0,
+   "y": 548.0,
+   "w": 400.0,
+   "h": 150.0
+  },
+  "class.745f7cf964fe": {
+   "type": "shape",
+   "color": "#fff2cc",
+   "text": "`Cart`\n*«Aggregate Root» «Entity»*\n**Cart**\n---\n+ customer: Customer\n+ id: string\n+ line: Line\n+ bundle: Bundle | null\n+ portability: Portability | null\n+ voucher: Voucher | null\n+ growthBook: GrowthBook\n+ defaultPayment: boolean\n+ orderSuccess: boolean | null\n+ payUpFront: boolean | null\n---\n+ Cart(...)\n+ setupAccount(): Customer | null\n+ pickPlan(plan: Plan): Cart | CartErrors    //applyPlan\n+ pickNumber(availableNumber: AvailableNumber): Cart | CartErrors\n+ bringNumber(portability: Portability): Cart | CartErrors\n+ applyVoucher(code: string): Cart | VoucherErrors\n+ removeVoucher(): Cart | VoucherErrors\n+ checkout(payment: Payment): Cart | PaymentErrors\n+ createOrder(customer: Customer): Cart\n+ storeOrderResult(customer: Customer, success: boolean, payUpFront: boolean | null, verified: boolean): Cart",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 7520.0,
+   "y": 548.0,
+   "w": 860.0,
+   "h": 549.0
+  },
+  "class.8065980f4ba6": {
+   "type": "shape",
+   "color": "#fff2cc",
+   "text": "`Cart`\n*«type»*\n**OnboardingStep**\n---\n---",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 6300.0,
+   "y": 108.0,
+   "w": 200.0,
+   "h": 129.0
+  },
+  "class.bc7e4f06b5fb": {
+   "type": "shape",
+   "color": "#fff2cc",
+   "text": "`Cart`\n*«Entity»*\n**Bundle**\n---\n+ id: string\n+ name: string\n+ description: string\n+ price: number\n+ fees: number\n+ totalPrice: number\n+ features\n+ plan: Plan\n---\n+ Bundle(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 6490.0,
+   "y": 1238.0,
+   "w": 200.0,
+   "h": 318.0
+  },
+  "class.708688ab9515": {
+   "type": "shape",
+   "color": "#fff2cc",
+   "text": "`Cart`\n*«System»*\n**GrowthBook**\n---\n+ DISABLE_ESIM: string\n+ DISABLE_PSIM: string\n+ PAY_UP_FRONT: string\n+ PAYMENT_ATTEMPTS: string\n+ ROAMING_PLAN_TICKET: string\n---\n+ GrowthBook(...)\n+ evaluate(key: string): boolean\n+ value(key: string): number",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 6810.0,
+   "y": 1238.0,
+   "w": 280.0,
+   "h": 297.0
+  },
+  "class.d20b14e6e7a5": {
+   "type": "shape",
+   "color": "#fff2cc",
+   "text": "`Cart`\n*«Repository»*\n**CartRepository**\n---\n+ carts: Collection<Cart>\n+ portalGateway: PortalGateway\n+ customerRepository: CustomerRepository\n---\n+ CartRepository(...)\n+ load(customer: Customer): Cart | null\n+ create(customer: Customer): Cart",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 6620.0,
+   "y": 108.0,
+   "w": 340.0,
+   "h": 255.0
+  },
+  "class.4303718f12c6": {
+   "type": "shape",
+   "color": "#fff2cc",
+   "text": "`Cart`\n*«Exception»*\n**CartException**\n---\n+ operation: CartOperation\n+ customer: Customer\n+ message: string\n+ cause: Error\n---\n+ CartException(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 7100.0,
+   "y": 108.0,
+   "w": 220.0,
+   "h": 234.0
+  },
+  "class.3aa6a68e8fa7": {
+   "type": "shape",
+   "color": "#fff2cc",
+   "text": "`Cart`\n*«System» «Entity»*\n**Voucher**\n---\n+ code: string\n+ campaign: string\n+ expired: boolean\n+ redeemed: boolean\n---\n+ Voucher(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 7190.0,
+   "y": 1238.0,
+   "w": 200.0,
+   "h": 234.0
+  },
+  "class.6b538078f811": {
+   "type": "shape",
+   "color": "#fff2cc",
+   "text": "`Cart`\n*«Service» «System»*\n**Vouchera**\n---\n---\n+ Vouchera(...)\n+ read(code: string): Voucher | Error\n+ redeem(code: string, redeemerIdentifier: string, orderAmount: number): VoucherRedemption",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 7920.0,
+   "y": 108.0,
+   "w": 700.0,
+   "h": 192.0
+  },
+  "class.60ec8ca103b3": {
+   "type": "shape",
+   "color": "#fff2cc",
+   "text": "`Cart`\n*«Aggregate Root» «Entity»*\n**MavenirShoppingCart**\n---\n+ id: string\n+ customerId: string\n+ lineCount: number\n+ serviceProviderId: string\n+ cartItem: bundle\n+ productCharacteristic: ProductCharacteristic\n+ channel: Channel\n---\n+ MavenirShoppingCart(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 7440.0,
+   "y": 108.0,
+   "w": 380.0,
+   "h": 297.0
+  },
+  "class.d3cf68be8f7a": {
+   "type": "shape",
+   "color": "#fff2cc",
+   "text": "`Cart`\n*«Service» «System»*\n**PortalGateway**\n---\n---\n+ PortalGateway(...)\n+ read(mavenirCustomerId: string): MavenirShoppingCart | Error\n+ create(mavenirCustomerId: string): MavenirShoppingCart | Error\n+ patchBundle(mavenirCustomerId: string, bundleId: string): MavenirShoppingCart | Error\n+ patchMsisdn(mavenirCustomerId: string, msisdn: string): MavenirShoppingCart | Error\n+ patchPortability(mavenirCustomerId: string, msisdn: string, characteristics: ProductCharacteristic[]): MavenirShoppingCart | Error\n+ patchSimType(mavenirCustomerId: string, simType: string): MavenirShoppingCart | Error\n+ patchIccid(mavenirCustomerId: string, iccid: string): MavenirShoppingCart | Error\n+ createProductOrder(mavenirCustomerId: string): MavenirProductOrder | Error\n+ patchSubmitOrder(mavenirCustomerId: string): MavenirShoppingCart | Error",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 5780.0,
+   "y": 548.0,
+   "w": 1020.0,
+   "h": 339.0
+  },
+  "class.a019aaba74b6": {
+   "type": "shape",
+   "color": "#fff2cc",
+   "text": "`Cart`\n**ProductCharacteristic**\n---\n+ name: string\n+ value: string\n---\n+ ProductCharacteristic(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 8600.0,
+   "y": 548.0,
+   "w": 240.0,
+   "h": 171.0
+  },
+  "class.73d777e8e47a": {
+   "type": "shape",
+   "color": "#fff2cc",
+   "text": "`Cart`\n**Channel**\n---\n+ id: string\n+ name: string\n+ role: string\n---\n+ Channel(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 8940.0,
+   "y": 548.0,
+   "w": 200.0,
+   "h": 192.0
+  },
+  "imported.3e8ca0bf424e": {
+   "type": "shape",
+   "color": "white",
+   "text": "*«from: Plans»*\n**Plan**\n---\n+ id: string\n+ name: string\n+ price: number\n+ isSellable: boolean\n---",
+   "kind": "rect",
+   "stroke": "#666666",
+   "size": "small",
+   "textAlign": "left",
+   "x": 7360.0,
+   "y": 1698.0,
+   "w": 200.0,
+   "h": 192.0
+  },
+  "imported.3f8f2e82056d": {
+   "type": "shape",
+   "color": "white",
+   "text": "*«from: Porting»*\n**Portability**\n---\n+ donorOperator: string\n+ portNumber: string\n+ accountNumber: string | null\n+ userType: string\n---",
+   "kind": "rect",
+   "stroke": "#666666",
+   "size": "small",
+   "textAlign": "left",
+   "x": 7830.0,
+   "y": 1238.0,
+   "w": 260.0,
+   "h": 192.0
+  },
+  "imported.e54defcf5017": {
+   "type": "shape",
+   "color": "white",
+   "text": "*«from: Subscription»*\n**Line**\n---\n+ msisdn: string | null\n+ simType: SimType | null\n+ iccid: string | null\n+ availableNumbers: string[]\n---",
+   "kind": "rect",
+   "stroke": "#666666",
+   "size": "small",
+   "textAlign": "left",
+   "x": 8190.0,
+   "y": 1238.0,
+   "w": 240.0,
+   "h": 192.0
+  },
+  "association.9a6d4bbee388": {
+   "type": "arrow",
+   "from": "class.745f7cf964fe",
+   "to": "imported.d85f7f65c8ce",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "customer",
+   "bends": [
+    "v",
+    356
+   ]
+  },
+  "composition.f29e5908beb1": {
+   "type": "arrow",
+   "from": "class.745f7cf964fe",
+   "to": "imported.e54defcf5017",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "line",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    376
+   ]
+  },
+  "composition.17653ee8241f": {
+   "type": "arrow",
+   "from": "class.745f7cf964fe",
+   "to": "class.bc7e4f06b5fb",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "bundle",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    296,
+    -600,
+    -299
+   ]
+  },
+  "association.cf745e410b97": {
+   "type": "arrow",
+   "from": "class.745f7cf964fe",
+   "to": "imported.3f8f2e82056d",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "portability",
+   "bends": [
+    "v",
+    376
+   ]
+  },
+  "association.cd435b059e03": {
+   "type": "arrow",
+   "from": "class.745f7cf964fe",
+   "to": "class.3aa6a68e8fa7",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "voucher",
+   "bends": [
+    "v",
+    336
+   ]
+  },
+  "association.3cbd7b238295": {
+   "type": "arrow",
+   "from": "class.745f7cf964fe",
+   "to": "class.708688ab9515",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "growthBook",
+   "bends": [
+    "v",
+    316
+   ]
+  },
+  "association.c4d7ed85f850": {
+   "type": "arrow",
+   "from": "class.bc7e4f06b5fb",
+   "to": "imported.3e8ca0bf424e",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "plan",
+   "bends": [
+    "v",
+    241
+   ]
+  },
+  "aggregation.63bc44bb9bb7": {
+   "type": "arrow",
+   "from": "class.d20b14e6e7a5",
+   "to": "class.745f7cf964fe",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "carts",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    152,
+    280,
+    -158,
+    -60,
+    -344
+   ]
+  },
+  "association.de58ce2b7017": {
+   "type": "arrow",
+   "from": "class.d20b14e6e7a5",
+   "to": "class.d3cf68be8f7a",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "portalGateway",
+   "bends": [
+    "v",
+    272
+   ]
+  },
+  "association.1c8d9974452d": {
+   "type": "arrow",
+   "from": "class.d20b14e6e7a5",
+   "to": "imported.1ed7f1cb8bb5",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "customerRepository",
+   "bends": [
+    "v",
+    272
+   ]
+  },
+  "association.6a8428057c24": {
+   "type": "arrow",
+   "from": "class.4303718f12c6",
+   "to": "imported.d85f7f65c8ce",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "customer",
+   "bends": [
+    "v",
+    293,
+    120,
+    813,
+    -750,
+    1433,
+    120,
+    584,
+    -20,
+    124,
+    -130,
+    -136
+   ]
+  },
+  "composition.98fab5b66bb0": {
+   "type": "arrow",
+   "from": "class.60ec8ca103b3",
+   "to": "class.a019aaba74b6",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "productCharacteristic",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    242
+   ]
+  },
+  "composition.1ccf07038a18": {
+   "type": "arrow",
+   "from": "class.60ec8ca103b3",
+   "to": "class.73d777e8e47a",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "channel",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    202
+   ]
+  },
+  "class.b354eb908478": {
+   "type": "shape",
+   "color": "#ffe6cc",
+   "text": "`Plans`\n*«Aggregate Root» «Entity»*\n**Plan**\n---\n+ id: string\n+ name: string\n+ price: number\n+ isSellable: boolean\n+ bypassVerified: boolean\n---\n+ Plan(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 9436.0,
+   "y": 468.0,
+   "w": 240.0,
+   "h": 255.0
+  },
+  "class.6cdfefeff864": {
+   "type": "shape",
+   "color": "#ffe6cc",
+   "text": "`Plans`\n*«Repository»*\n**PlanRepository**\n---\n+ plans: Collection<Plan>\n+ portalGateway: PortalGateway\n---\n+ PlanRepository(...)\n+ list(): Plan[]",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 9626.0,
+   "y": 108.0,
+   "w": 260.0,
+   "h": 213.0
+  },
+  "class.7efe0a94cbb0": {
+   "type": "shape",
+   "color": "#ffe6cc",
+   "text": "`Plans`\n*«System» «Entity»*\n**MavenirProductOffering**\n---\n+ id: string\n+ name: string\n+ isBundle: boolean\n+ productOfferingPrice\n+ bundledProductOffering\n---\n+ MavenirProductOffering(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 9626.0,
+   "y": 868.0,
+   "w": 260.0,
+   "h": 255.0
+  },
+  "class.4429b429007d": {
+   "type": "shape",
+   "color": "#ffe6cc",
+   "text": "`Plans`\n*«Service» «System»*\n**PortalGateway**\n---\n---\n+ PortalGateway(...)\n+ list(): MavenirProductOffering[]",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 9796.0,
+   "y": 468.0,
+   "w": 280.0,
+   "h": 171.0
+  },
+  "aggregation.cbe35569964e": {
+   "type": "arrow",
+   "from": "class.6cdfefeff864",
+   "to": "class.b354eb908478",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "plans",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    214
+   ]
+  },
+  "association.b6ad4cf1873f": {
+   "type": "arrow",
+   "from": "class.6cdfefeff864",
+   "to": "class.4429b429007d",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "portalGateway",
+   "bends": [
+    "v",
+    214
+   ]
+  },
+  "dependency.c82a8e747b76": {
+   "type": "arrow",
+   "from": "class.4429b429007d",
+   "to": "class.7efe0a94cbb0",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "list",
+   "dash": true
+  },
+  "class.504f681b8363": {
+   "type": "shape",
+   "color": "#e1d5e7",
+   "text": "`Numbers and SIMs`\n*«Repository»*\n**MsisdnInventoryRepository**\n---\n+ availableNumbers: Collection<AvailableNumber>\n+ inventoryGateway: InventoryGateway\n---\n+ MsisdnInventoryRepository(...)\n+ list(size: number, category: string): AvailableNumber[]\n+ search(searchTerm: SearchTerm): AvailableNumber[]\n+ reserve(id: string, previousId: string | null, portin: boolean): void | Error",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 308.0,
+   "y": 2805.0,
+   "w": 620.0,
+   "h": 255.0
+  },
+  "class.ad7c924887ee": {
+   "type": "shape",
+   "color": "#e1d5e7",
+   "text": "`Numbers and SIMs`\n*«Repository»*\n**IccidInventoryRepository**\n---\n+ availableSims: Collection<AvailableSim>\n+ inventoryGateway: InventoryGateway\n---\n+ IccidInventoryRepository(...)\n+ read(id: string): AvailableSim | Error",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 1088.0,
+   "y": 2805.0,
+   "w": 340.0,
+   "h": 213.0
+  },
+  "class.2df855e78fd7": {
+   "type": "shape",
+   "color": "#e1d5e7",
+   "text": "`Numbers and SIMs`\n**AvailableNumber**\n---\n+ id: string\n---\n+ AvailableNumber(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 48.0,
+   "y": 3205.0,
+   "w": 200.0,
+   "h": 150.0
+  },
+  "class.ebafd8938620": {
+   "type": "shape",
+   "color": "#e1d5e7",
+   "text": "`Numbers and SIMs`\n**AvailableSim**\n---\n+ id: string\n---\n+ AvailableSim(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 1488.0,
+   "y": 3205.0,
+   "w": 200.0,
+   "h": 150.0
+  },
+  "class.1cb5c87bd3b8": {
+   "type": "shape",
+   "color": "#e1d5e7",
+   "text": "`Numbers and SIMs`\n**SearchTerm**\n---\n+ input: string\n+ converted: string\n---\n+ SearchTerm(...)\n+ convert(): string",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 348.0,
+   "y": 3205.0,
+   "w": 200.0,
+   "h": 192.0
+  },
+  "class.be3f991dcda4": {
+   "type": "shape",
+   "color": "#e1d5e7",
+   "text": "`Numbers and SIMs`\n*«System» «Entity»*\n**MavenirMsisdnResource**\n---\n+ id: string\n+ resourceStatus: string\n---\n+ MavenirMsisdnResource(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 588.0,
+   "y": 3585.0,
+   "w": 240.0,
+   "h": 192.0
+  },
+  "class.742d1c78437f": {
+   "type": "shape",
+   "color": "#e1d5e7",
+   "text": "`Numbers and SIMs`\n*«Service» «System»*\n**InventoryGateway**\n---\n---\n+ InventoryGateway(...)\n+ list(size: number, category: string): MavenirMsisdnResource[]\n+ search(pattern: string): MavenirMsisdnResource[]\n+ reserve(id: string, previousId: string | null, portin: boolean): void | Error\n+ read(id: string): MavenirSimResource | Error",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 708.0,
+   "y": 3205.0,
+   "w": 620.0,
+   "h": 234.0
+  },
+  "class.40e41e049e54": {
+   "type": "shape",
+   "color": "#e1d5e7",
+   "text": "`Numbers and SIMs`\n*«System» «Entity»*\n**MavenirSimResource**\n---\n+ id: string\n+ resourceStatus: string\n---\n+ MavenirSimResource(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 928.0,
+   "y": 3585.0,
+   "w": 220.0,
+   "h": 192.0
+  },
+  "aggregation.f7d971b1f567": {
+   "type": "arrow",
+   "from": "class.504f681b8363",
+   "to": "class.2df855e78fd7",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "availableNumbers",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    212
+   ]
+  },
+  "association.6e8f091b7ec9": {
+   "type": "arrow",
+   "from": "class.504f681b8363",
+   "to": "class.742d1c78437f",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "inventoryGateway",
+   "bends": [
+    "v",
+    232
+   ]
+  },
+  "aggregation.c742e4a4e1d9": {
+   "type": "arrow",
+   "from": "class.ad7c924887ee",
+   "to": "class.ebafd8938620",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "availableSims",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    254
+   ]
+  },
+  "association.0a28ad9b3aab": {
+   "type": "arrow",
+   "from": "class.ad7c924887ee",
+   "to": "class.742d1c78437f",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "inventoryGateway",
+   "bends": [
+    "v",
+    254
+   ]
+  },
+  "dependency.c13279850d4f": {
+   "type": "arrow",
+   "from": "class.742d1c78437f",
+   "to": "class.be3f991dcda4",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "list",
+   "dash": true,
+   "bends": [
+    "v",
+    223
+   ]
+  },
+  "dependency.8ccd07ada91a": {
+   "type": "arrow",
+   "from": "class.742d1c78437f",
+   "to": "class.40e41e049e54",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "read",
+   "dash": true,
+   "bends": [
+    "v",
+    223
+   ]
+  },
+  "dependency.1d84b4c3f2aa": {
+   "type": "arrow",
+   "from": "class.504f681b8363",
+   "to": "class.1cb5c87bd3b8",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "search",
+   "dash": true,
+   "bends": [
+    "v",
+    232
+   ]
+  },
+  "class.02b9c70a6aba": {
+   "type": "shape",
+   "color": "#f8cecc",
+   "text": "`Porting`\n*«Aggregate Root» «Entity»*\n**Portability**\n---\n+ donorOperator: string\n+ portNumber: string\n+ accountNumber: string | null\n+ userType: string\n+ accountType: string\n+ device: string\n+ planSelected: string\n+ verified: boolean\n---\n+ Portability(...)\n+ verify(portingSmsCode: PortingSmsCode): Portability | PortingErrors\n+ resendSms(): void",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 1984.0,
+   "y": 2805.0,
+   "w": 560.0,
+   "h": 360.0
+  },
+  "class.cf7808d1e3b3": {
+   "type": "shape",
+   "color": "#f8cecc",
+   "text": "`Porting`\n*«Service» «System»*\n**TwilioService**\n---\n---\n+ TwilioService(...)\n+ start(portNumber: string): void\n+ check(portNumber: string, portingSmsCode: PortingSmsCode): void | Error",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 2004.0,
+   "y": 3305.0,
+   "w": 580.0,
+   "h": 192.0
+  },
+  "class.c27e5a0cb029": {
+   "type": "shape",
+   "color": "#f8cecc",
+   "text": "`Porting`\n*«System»*\n**PortingSmsCode**\n---\n+ code: string\n---\n+ PortingSmsCode(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 2684.0,
+   "y": 3305.0,
+   "w": 200.0,
+   "h": 171.0
+  },
+  "class.e7fe8eaa2593": {
+   "type": "shape",
+   "color": "#f8cecc",
+   "text": "`Porting`\n**PortingErrors**\n---\n+ portingSmsCode: string | null\n---\n+ PortingErrors(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 2644.0,
+   "y": 2805.0,
+   "w": 260.0,
+   "h": 150.0
+  },
+  "dependency.5a5a1666a638": {
+   "type": "arrow",
+   "from": "class.02b9c70a6aba",
+   "to": "class.cf7808d1e3b3",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "verify",
+   "dash": true,
+   "bends": [
+    "v",
+    280
+   ]
+  },
+  "dependency.04776c026b8e": {
+   "type": "arrow",
+   "from": "class.02b9c70a6aba",
+   "to": "class.c27e5a0cb029",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "verify",
+   "dash": true,
+   "bends": [
+    "v",
+    280
+   ]
+  },
+  "class.e82a2537fe23": {
+   "type": "shape",
+   "color": "#d0ece7",
+   "text": "`Payments`\n*«Aggregate Root» «Entity»*\n**Payment**\n---\n+ paymentAttempts: number\n+ paymentCharge: PaymentCharge\n+ paymentErrors: PaymentErrors\n---\n+ Payment(...)\n+ enter(cart: Cart): Payment | PaymentErrors\n+ recordFailed(): Payment | PaymentErrors",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 3200.0,
+   "y": 2805.0,
+   "w": 360.0,
+   "h": 255.0
+  },
+  "class.910f9e6faf55": {
+   "type": "shape",
+   "color": "#d0ece7",
+   "text": "`Payments`\n**PaymentErrors**\n---\n+ load: string | null\n+ unverified: string | null\n---\n+ PaymentErrors(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 3200.0,
+   "y": 3205.0,
+   "w": 240.0,
+   "h": 171.0
+  },
+  "class.8af2d2fb54e7": {
+   "type": "shape",
+   "color": "#d0ece7",
+   "text": "`Payments`\n**PaymentCharge**\n---\n+ title: string\n+ submit: string\n+ chargedValue: number\n---\n+ PaymentCharge(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 3540.0,
+   "y": 3205.0,
+   "w": 200.0,
+   "h": 192.0
+  },
+  "class.dde8ab8b6a16": {
+   "type": "shape",
+   "color": "#d0ece7",
+   "text": "`Payments`\n*«System» «Entity»*\n**PaymentIframe**\n---\n+ html: string\n+ transactionId: string\n---\n+ PaymentIframe(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 3840.0,
+   "y": 3205.0,
+   "w": 200.0,
+   "h": 192.0
+  },
+  "class.e15b51ea1b08": {
+   "type": "shape",
+   "color": "#d0ece7",
+   "text": "`Payments`\n*«Service» «System»*\n**FAC**\n---\n---\n+ FAC(...)\n+ create(customer: Customer): PaymentIframe | Error\n+ read(customer: Customer, transactionId: string): PaymentStatus | Error",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 3700.0,
+   "y": 2805.0,
+   "w": 580.0,
+   "h": 192.0
+  },
+  "class.f363d9f6e4c6": {
+   "type": "shape",
+   "color": "#d0ece7",
+   "text": "`Payments`\n*«System» «Entity»*\n**PaymentStatus**\n---\n+ status: string\n+ reason: string\n---\n+ PaymentStatus(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 4140.0,
+   "y": 3205.0,
+   "w": 200.0,
+   "h": 192.0
+  },
+  "class.6e37ab90c41a": {
+   "type": "shape",
+   "color": "#d0ece7",
+   "text": "`Payments`\n*«System» «Entity»*\n**ApplePayCertificate**\n---\n+ keyIdentifier: string\n+ certificate: string\n---\n+ ApplePayCertificate(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 4440.0,
+   "y": 3205.0,
+   "w": 220.0,
+   "h": 192.0
+  },
+  "class.604b8a15106d": {
+   "type": "shape",
+   "color": "#d0ece7",
+   "text": "`Payments`\n*«Service» «System»*\n**Apple**\n---\n---\n+ Apple(...)\n+ read(): ApplePayCertificate",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 4400.0,
+   "y": 2805.0,
+   "w": 260.0,
+   "h": 171.0
+  },
+  "composition.d17b60b8e61d": {
+   "type": "arrow",
+   "from": "class.e82a2537fe23",
+   "to": "class.8af2d2fb54e7",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "paymentCharge",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    232
+   ]
+  },
+  "composition.7b2802f2b47c": {
+   "type": "arrow",
+   "from": "class.e82a2537fe23",
+   "to": "class.910f9e6faf55",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "paymentErrors",
+   "heads": [
+    "circle",
+    "arrow"
+   ]
+  },
+  "dependency.6431c58d1791": {
+   "type": "arrow",
+   "from": "class.604b8a15106d",
+   "to": "class.6e37ab90c41a",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "read",
+   "dash": true
+  },
+  "dependency.e8e55005be90": {
+   "type": "arrow",
+   "from": "class.e15b51ea1b08",
+   "to": "class.dde8ab8b6a16",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "create",
+   "dash": true,
+   "bends": [
+    "v",
+    264
+   ]
+  },
+  "dependency.9f87eac9be53": {
+   "type": "arrow",
+   "from": "class.e15b51ea1b08",
+   "to": "class.f363d9f6e4c6",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "read",
+   "dash": true,
+   "bends": [
+    "v",
+    264
+   ]
+  },
+  "class.231f770dbd7d": {
+   "type": "shape",
+   "color": "#e6e6e6",
+   "text": "`Billing`\n*«Aggregate Root» «Entity»*\n**Billing**\n---\n+ id: string\n+ state: string\n+ balance: string\n+ defaultPayment\n+ invoices: Invoice[]\n+ transactions: Transaction[]\n---\n+ Billing(...)\n+ create(customer: Customer): Billing | Error\n+ applyCredit(): Billing",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 4956.0,
+   "y": 3305.0,
+   "w": 380.0,
+   "h": 318.0
+  },
+  "class.6960f834a3e1": {
+   "type": "shape",
+   "color": "#e6e6e6",
+   "text": "`Billing`\n*«Repository»*\n**BillingRepository**\n---\n+ billings: Collection<Billing>\n+ portalGateway: PortalGateway\n---\n+ BillingRepository(...)\n+ find(customer: Customer): Billing | null\n+ create(customer: Customer): Billing | Error",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 5446.0,
+   "y": 2805.0,
+   "w": 380.0,
+   "h": 234.0
+  },
+  "class.8aaf27689208": {
+   "type": "shape",
+   "color": "#e6e6e6",
+   "text": "`Billing`\n*«Entity»*\n**Invoice**\n---\n+ invoiceId: string\n+ billDate: string\n+ dueDate: string\n+ dueAmount: string\n+ status: string\n---\n+ Invoice(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 5336.0,
+   "y": 3765.0,
+   "w": 200.0,
+   "h": 255.0
+  },
+  "class.22ef3f47e17f": {
+   "type": "shape",
+   "color": "#e6e6e6",
+   "text": "`Billing`\n*«Entity»*\n**Transaction**\n---\n+ id: string\n+ paymentDate: string\n+ totalAmount: string\n---\n+ Transaction(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 5636.0,
+   "y": 3765.0,
+   "w": 200.0,
+   "h": 213.0
+  },
+  "class.a2d2eaf33de6": {
+   "type": "shape",
+   "color": "#e6e6e6",
+   "text": "`Billing`\n*«System» «Entity»*\n**MavenirBillingAccount**\n---\n+ id: string\n+ name: string\n+ href: string\n+ state: string\n+ ratingType: string\n+ billCycle: string\n+ defaultPaymentMethod\n+ relatedParty\n+ accountBalance\n+ creditAdjustments: MavenirCreditAdjustment[]\n---\n+ MavenirBillingAccount(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 5946.0,
+   "y": 2805.0,
+   "w": 380.0,
+   "h": 360.0
+  },
+  "class.efdc1f2933df": {
+   "type": "shape",
+   "color": "#e6e6e6",
+   "text": "`Billing`\n*«System» «Entity»*\n**MavenirInvoice**\n---\n+ invoiceId: string\n+ billDate: string\n+ dueDate: string\n+ dueAmount: string\n+ status: string\n---\n+ MavenirInvoice(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 5936.0,
+   "y": 3765.0,
+   "w": 200.0,
+   "h": 255.0
+  },
+  "class.b82e68ac69f7": {
+   "type": "shape",
+   "color": "#e6e6e6",
+   "text": "`Billing`\n*«System» «Entity»*\n**ArTransaction**\n---\n+ id: string\n+ status: string\n+ totalAmount: string\n+ paymentDate: string\n---\n+ ArTransaction(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 6236.0,
+   "y": 3765.0,
+   "w": 200.0,
+   "h": 234.0
+  },
+  "class.d27fbaa5b052": {
+   "type": "shape",
+   "color": "#e6e6e6",
+   "text": "`Billing`\n*«System» «Entity»*\n**MavenirCreditAdjustment**\n---\n+ amount: number\n+ unit: string\n+ glCode: string\n+ transactionType: string\n+ transactionSubType: string\n+ serviceProviderId: string\n+ reason: string\n---\n+ MavenirCreditAdjustment(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 6556.0,
+   "y": 3305.0,
+   "w": 260.0,
+   "h": 297.0
+  },
+  "class.3479baa76663": {
+   "type": "shape",
+   "color": "#e6e6e6",
+   "text": "`Billing`\n*«Service» «System»*\n**PortalGateway**\n---\n---\n+ PortalGateway(...)\n+ createBilling(mavenirCustomer: MavenirCustomer): MavenirBillingAccount | Error\n+ read(mavenirCustomer: MavenirCustomer): MavenirBillingAccount | Error\n+ readInvoices(mavenirCustomer: MavenirCustomer): MavenirInvoice[]\n+ readTransactions(mavenirCustomer: MavenirCustomer): ArTransaction[]\n+ readInvoicePdf(billingAccountId: string, invoiceId: string)\n+ applyCredit(mavenirCustomer: MavenirCustomer, creditAdjustment: MavenirCreditAdjustment): MavenirCreditAdjustment",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 5516.0,
+   "y": 3305.0,
+   "w": 900.0,
+   "h": 276.0
+  },
+  "composition.60f5fbaf72a0": {
+   "type": "arrow",
+   "from": "class.231f770dbd7d",
+   "to": "class.8aaf27689208",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "invoices",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    261
+   ]
+  },
+  "composition.27ee6b4f0b24": {
+   "type": "arrow",
+   "from": "class.231f770dbd7d",
+   "to": "class.22ef3f47e17f",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "transactions",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    241
+   ]
+  },
+  "aggregation.4cc04eda7517": {
+   "type": "arrow",
+   "from": "class.6960f834a3e1",
+   "to": "class.231f770dbd7d",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "billings",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    343
+   ]
+  },
+  "association.2cee62bf1a9d": {
+   "type": "arrow",
+   "from": "class.6960f834a3e1",
+   "to": "class.3479baa76663",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "portalGateway",
+   "bends": [
+    "v",
+    343
+   ]
+  },
+  "composition.cfddbe7f1ea1": {
+   "type": "arrow",
+   "from": "class.a2d2eaf33de6",
+   "to": "class.d27fbaa5b052",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "creditAdjustments",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    280
+   ]
+  },
+  "dependency.36e715846e23": {
+   "type": "arrow",
+   "from": "class.3479baa76663",
+   "to": "class.b82e68ac69f7",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "readTransactions",
+   "dash": true,
+   "bends": [
+    "v",
+    282
+   ]
+  },
+  "dependency.8c0b1514eae0": {
+   "type": "arrow",
+   "from": "class.3479baa76663",
+   "to": "class.efdc1f2933df",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "readInvoices",
+   "dash": true,
+   "bends": [
+    "v",
+    282
+   ]
+  },
+  "imported.2554dbd29a51": {
+   "type": "shape",
+   "color": "white",
+   "text": "*«from: Cart»*\n**Bundle**\n---\n+ id: string\n+ name: string\n+ description: string\n+ price: number\n---",
+   "kind": "rect",
+   "stroke": "#666666",
+   "size": "small",
+   "textAlign": "left",
+   "x": 7932.0,
+   "y": 3705.0,
+   "w": 200.0,
+   "h": 192.0
+  },
+  "imported.fb9ce11b93d1": {
+   "type": "shape",
+   "color": "white",
+   "text": "*«from: Porting»*\n**Portability**\n---\n+ donorOperator: string\n+ portNumber: string\n+ accountNumber: string | null\n+ userType: string\n---",
+   "kind": "rect",
+   "stroke": "#666666",
+   "size": "small",
+   "textAlign": "left",
+   "x": 8132.0,
+   "y": 4165.0,
+   "w": 260.0,
+   "h": 192.0
+  },
+  "class.8de8a9d3fdf0": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Subscription`\n*«Entity»*\n**Line**\n---\n+ msisdn: string | null\n+ simType: SimType | null\n+ iccid: string | null\n+ availableNumbers: string[]\n+ portability: Portability | null\n---\n+ Line(...)\n+ selectSim(simType: SimType): void | Error\n+ attachIccid(iccid: string): void | Error\n+ activateSim(iccid: string): void | Error",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 7452.0,
+   "y": 3705.0,
+   "w": 360.0,
+   "h": 318.0
+  },
+  "class.0e7325e76fde": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Subscription`\n*«Aggregate Root» «Entity»*\n**Subscription**\n---\n+ id: string\n+ status: string\n+ line: Line\n+ bundle: Bundle\n+ usage: Usage\n+ portability: Portability | null\n+ productOrder: MavenirProductOrder | null\n+ voucherRedemption: VoucherRedemption | null\n---\n+ Subscription(...)\n+ changePlan(plan: Plan): Subscription | Error",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 7592.0,
+   "y": 3225.0,
+   "w": 380.0,
+   "h": 339.0
+  },
+  "class.2974b926a084": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Subscription`\n*«Entity»*\n**Usage**\n---\n---\n+ Usage(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 8232.0,
+   "y": 3705.0,
+   "w": 200.0,
+   "h": 150.0
+  },
+  "class.518166dcd065": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Subscription`\n*«Repository»*\n**SubscriptionRepository**\n---\n+ subscriptions: Collection<Subscription>\n+ portalGateway: PortalGateway\n+ ccsGateway: CcsGateway\n---\n+ SubscriptionRepository(...)\n+ list(customer: Customer): Subscription[]",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 8172.0,
+   "y": 2805.0,
+   "w": 340.0,
+   "h": 234.0
+  },
+  "class.63bddd7f0424": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Subscription`\n*«System» «Entity»*\n**MavenirAgreement**\n---\n+ id: string\n+ status: string\n+ agreementType: string\n+ initialDate: string\n+ characteristic\n+ agreementItem: MavenirAgreementProduct[]\n---\n+ MavenirAgreement(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 7692.0,
+   "y": 2805.0,
+   "w": 340.0,
+   "h": 276.0
+  },
+  "class.0d2b9756cd2d": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Subscription`\n*«System» «Entity»*\n**MavenirAgreementProduct**\n---\n+ id: string\n+ name: string\n+ description: string\n+ orderDate\n+ productPrice\n---\n+ MavenirAgreementProduct(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 7112.0,
+   "y": 3225.0,
+   "w": 260.0,
+   "h": 255.0
+  },
+  "class.afec5bec5a7d": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Subscription`\n*«System» «Entity»*\n**MavenirProductOrder**\n---\n+ id: string\n---\n+ MavenirProductOrder(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 8532.0,
+   "y": 3705.0,
+   "w": 220.0,
+   "h": 171.0
+  },
+  "class.fea979f6afa0": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Subscription`\n*«System» «Entity»*\n**MsisdnDataUsage**\n---\n---\n+ MsisdnDataUsage(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 8632.0,
+   "y": 2805.0,
+   "w": 200.0,
+   "h": 150.0
+  },
+  "class.04626b0767f1": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Subscription`\n*«Service» «System»*\n**PortalGateway**\n---\n---\n+ PortalGateway(...)\n+ listAgreements(mavenirCustomerId: string): MavenirAgreement[]\n+ createProductOrder(mavenirCustomerId: string): MavenirProductOrder | Error\n+ changePlan(mavenirCustomerId: string, plan: Plan): MavenirAgreement | Error",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 8192.0,
+   "y": 3225.0,
+   "w": 620.0,
+   "h": 213.0
+  },
+  "class.fa75727302fa": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Subscription`\n*«Service» «System»*\n**CcsGateway**\n---\n---\n+ CcsGateway(...)\n+ readUsage(msisdn: string, planName: string): MsisdnDataUsage",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 8912.0,
+   "y": 3225.0,
+   "w": 500.0,
+   "h": 171.0
+  },
+  "class.c27034be8141": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Subscription`\n*«System» «Entity»*\n**VoucherRedemption**\n---\n+ success: boolean\n+ discountAmount: number\n+ totalAmount: number\n---\n+ VoucherRedemption(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 8852.0,
+   "y": 3705.0,
+   "w": 220.0,
+   "h": 213.0
+  },
+  "association.285f87713634": {
+   "type": "arrow",
+   "from": "class.8de8a9d3fdf0",
+   "to": "imported.fb9ce11b93d1",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "portability",
+   "bends": [
+    "v",
+    261
+   ]
+  },
+  "composition.a2db7674cbd4": {
+   "type": "arrow",
+   "from": "class.0e7325e76fde",
+   "to": "class.8de8a9d3fdf0",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "line",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    270
+   ]
+  },
+  "composition.df442b4d5856": {
+   "type": "arrow",
+   "from": "class.0e7325e76fde",
+   "to": "imported.2554dbd29a51",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "bundle",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    270
+   ]
+  },
+  "composition.83616b1d6ee4": {
+   "type": "arrow",
+   "from": "class.0e7325e76fde",
+   "to": "class.2974b926a084",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "usage",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    250
+   ]
+  },
+  "association.34d95962b686": {
+   "type": "arrow",
+   "from": "class.0e7325e76fde",
+   "to": "imported.fb9ce11b93d1",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "portability",
+   "bends": [
+    "v",
+    250,
+    10,
+    290,
+    -360,
+    -156
+   ]
+  },
+  "association.9baeb51028fa": {
+   "type": "arrow",
+   "from": "class.0e7325e76fde",
+   "to": "class.afec5bec5a7d",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "productOrder",
+   "bends": [
+    "v",
+    230
+   ]
+  },
+  "association.8818f49842ed": {
+   "type": "arrow",
+   "from": "class.0e7325e76fde",
+   "to": "class.c27034be8141",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "voucherRedemption",
+   "bends": [
+    "v",
+    210
+   ]
+  },
+  "aggregation.8ca309cc5f92": {
+   "type": "arrow",
+   "from": "class.518166dcd065",
+   "to": "class.0e7325e76fde",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "subscriptions",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    143,
+    -280,
+    -147,
+    -120,
+    -240
+   ]
+  },
+  "association.d1ef066dee7d": {
+   "type": "arrow",
+   "from": "class.518166dcd065",
+   "to": "class.04626b0767f1",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "portalGateway",
+   "bends": [
+    "v",
+    263
+   ]
+  },
+  "association.0f0c76d6f2ef": {
+   "type": "arrow",
+   "from": "class.518166dcd065",
+   "to": "class.fa75727302fa",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "ccsGateway",
+   "bends": [
+    "v",
+    243
+   ]
+  },
+  "composition.998201f4d720": {
+   "type": "arrow",
+   "from": "class.63bddd7f0424",
+   "to": "class.0d2b9756cd2d",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "agreementItem",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    232
+   ]
+  },
+  "class.973c0214c4a9": {
+   "type": "shape",
+   "color": "#d5e8d4",
+   "text": "`Care`\n*«Aggregate Root» «Entity»*\n**Case**\n---\n+ subject: string\n---\n+ Case(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 9978.0,
+   "y": 3475.0,
+   "w": 240.0,
+   "h": 171.0
+  },
+  "class.44def0f3a21c": {
+   "type": "shape",
+   "color": "#d5e8d4",
+   "text": "`Care`\n*«Repository»*\n**CaseRepository**\n---\n+ cases: Collection<Case>\n+ zendesk: Zendesk\n---\n+ CaseRepository(...)\n+ open(customer: Customer, subject: string): Case",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 9708.0,
+   "y": 2805.0,
+   "w": 400.0,
+   "h": 213.0
+  },
+  "class.60f676119d10": {
+   "type": "shape",
+   "color": "#d5e8d4",
+   "text": "`Care`\n*«System» «Entity»*\n**Ticket**\n---\n+ id: string\n+ subject: string\n+ requesterName: string\n+ requesterEmail: string\n---\n+ Ticket(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 10208.0,
+   "y": 2805.0,
+   "w": 220.0,
+   "h": 234.0
+  },
+  "class.9a3a1f3e18c5": {
+   "type": "shape",
+   "color": "#d5e8d4",
+   "text": "`Care`\n*«Service» «System»*\n**Zendesk**\n---\n---\n+ Zendesk(...)\n+ create(customer: Customer, subject: string): Ticket",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 10318.0,
+   "y": 3475.0,
+   "w": 440.0,
+   "h": 171.0
+  },
+  "class.f02bd96d4eef": {
+   "type": "shape",
+   "color": "#d5e8d4",
+   "text": "`Care`\n*«System» «Entity»*\n**PersonaInquiry**\n---\n+ inquiryId: string\n+ status: string\n+ verified: boolean\n+ email: string\n+ nameFirst: string\n+ nameLast: string\n+ birthdate: string\n+ selectedCountryCode: string\n+ identificationNumber: string\n+ identificationClass: string\n+ expiryDate: string\n+ addressStreet1: string\n+ addressStreet2: string\n+ addressCity: string\n+ addressSubdivision: string\n+ addressPostalCode: string\n+ addressCountryCode: string\n+ currentGovernmentId: string | null\n---\n+ PersonaInquiry(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 10488.0,
+   "y": 2805.0,
+   "w": 300.0,
+   "h": 528.0
+  },
+  "class.6956d9184cea": {
+   "type": "shape",
+   "color": "#d5e8d4",
+   "text": "`Care`\n*«System» «Entity»*\n**PersonaDocument**\n---\n+ documentId: string\n+ expirationDate: string\n+ email: string\n---\n+ PersonaDocument(...)",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 10858.0,
+   "y": 3475.0,
+   "w": 220.0,
+   "h": 213.0
+  },
+  "class.d4a480483a9b": {
+   "type": "shape",
+   "color": "#d5e8d4",
+   "text": "`Care`\n*«Service» «System»*\n**PersonaService**\n---\n---\n+ PersonaService(...)\n+ create(customer: Customer): PersonaInquiry\n+ readDocument(documentId: string): PersonaDocument | Error",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 10868.0,
+   "y": 2805.0,
+   "w": 480.0,
+   "h": 192.0
+  },
+  "aggregation.44598b308abf": {
+   "type": "arrow",
+   "from": "class.44def0f3a21c",
+   "to": "class.973c0214c4a9",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "cases",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    524
+   ]
+  },
+  "association.7b7f506a75f9": {
+   "type": "arrow",
+   "from": "class.44def0f3a21c",
+   "to": "class.9a3a1f3e18c5",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "zendesk",
+   "bends": [
+    "v",
+    504
+   ]
+  },
+  "dependency.28406df043b7": {
+   "type": "arrow",
+   "from": "class.d4a480483a9b",
+   "to": "class.6956d9184cea",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "readDocument",
+   "dash": true
+  }
+ }
+}

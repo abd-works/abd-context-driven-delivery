@@ -16,7 +16,7 @@ from harness.design_canvas.versions import CanvasVersions
 from harness.guidance.guidance import DeclaredFile
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.mcp.mcp_annotations import mcp
-from harness.installation.context_config import CONTEXT_FOLDER
+from harness.installation.context_config import CONTEXT_FOLDER, DEFAULT_FORMAT
 from harness.markdown.format import Format
 from space.session.answer_reads import HeldForAnswer
 from space.session.file_manager import FileEntry
@@ -281,10 +281,11 @@ class FidelitySessionOutput:
     @data_field
     def chosen_formats(self) -> list[str]:
         """The formats chosen for this fidelity in the session, in the order chosen: what a story map edit renders to
-        and what a chip shows picked. Its default format until a person or an action chooses."""
+        and what a chip shows picked. Until a person or an action chooses, the project's defaults for it, else its
+        default format."""
         chosen = self._practice.saved.get("formats", {}).get(self._fidelity.name)
         if chosen is None:
-            return [self._fidelity.default_format.name] if self._fidelity.default_format else []
+            return self._project_defaults()
         # A session saved before formats were chosen kept the one format its fidelity was last given.
         return [chosen] if isinstance(chosen, str) else list(chosen)
 
@@ -302,6 +303,18 @@ class FidelitySessionOutput:
         self._practice.save(formats={**self._practice.saved.get("formats", {}), self._fidelity.name: chosen})
         self._session.guidance_changed()
         return self
+
+    def _project_defaults(self) -> list[str]:
+        """The formats the project's ``.context/config.json`` chooses for this fidelity by default, ``default`` standing
+        for the fidelity's own default format, each the fidelity writes and each once; its own default format when the
+        project names none, or none it writes."""
+        own = [self._fidelity.default_format.name] if self._fidelity.default_format else []
+        configured = self._session.context_config.default_formats(self._practice.name, self._fidelity.name)
+        if configured is None:
+            return own
+        named = [name for each in configured for name in (own if each == DEFAULT_FORMAT else [Format(each).name])]
+        offered = [name for name in dict.fromkeys(named) if name in self.offered_formats]
+        return offered or own
 
     @property
     def _session(self) -> Session:

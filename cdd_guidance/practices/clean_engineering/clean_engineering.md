@@ -43,6 +43,7 @@ stage: discovery
 outputs:
   markdown: "{module}/.context/module-context.md"
   drawio: ".context/modules.drawio"
+  whiteboard: ".context/modules.whiteboard"
 ```
 
 **Diagram format:** `drawio` (modules view with blue boxes, public-interface bullets, and one-way dependency arrows; template `templates/modules.drawio`). **Markdown:** `module-context.md` uses template `templates/modules.md`. Programming-language channels are for **model** and later.
@@ -160,6 +161,7 @@ outputs:
   typescript: "{module}/"
   markdown: "{module}/.context/{module}-model.md"
   drawio: "{module}/.context/{module}-model.drawio"
+  whiteboard: "{module}/.context/{module}-model.whiteboard"
 ```
 
 #### Overview

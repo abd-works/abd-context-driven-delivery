@@ -11,7 +11,7 @@
 The order follows the modules' top-level imports; a module imports only the modules below it.
 
 1. `annotations`: the decorator annotations, *Name*, and `class_folder`. Imports nothing.
-2. `process`: starting, naming, and stopping processes, and git. Imports nothing.
+2. `process`: starting, naming, and stopping processes, and git. Imports nothing. `whiteboard`, a Claude Whiteboard board and its elements that every practice's whiteboard format draws on, sits beside it and imports nothing either.
 3. `markdown`: a class's prose kept in markdown beside it. Imports annotations.
 4. `agent_tools`: toolsets, their tools, and the per-call *ToolCall*. Imports annotations and markdown.
 5. `installation`: the *Installer* and what it publishes with, and the JSON files CDD keeps in a project. Imports annotations, markdown, and agent_tools.

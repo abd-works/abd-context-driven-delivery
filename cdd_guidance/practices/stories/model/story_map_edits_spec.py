@@ -231,7 +231,7 @@ with description("a story map edited through its tools") as self:
             expect(self.shown["file"]).to(equal(MAP_FILE))
 
         with it("should show the formats its fidelity offers and the ones chosen"):
-            expect((self.shown["formats"]["offered_formats"], self.shown["formats"]["chosen_formats"])).to(equal((["markdown", "drawio", "thin_slice"], ["markdown"])))
+            expect((self.shown["formats"]["offered_formats"], self.shown["formats"]["chosen_formats"])).to(equal((["markdown", "drawio", "whiteboard", "thin_slice"], ["markdown"])))
 
         with it("should take edits"):
             expect(self.shown["refusal"]).to(equal(""))

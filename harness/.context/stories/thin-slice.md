@@ -133,49 +133,19 @@ section: body
 - *View Session Files*
 - *Open Validation Report From Violation Count*
 - *Review Session Fidelity*
-- *Open Story Map By Address*
 - *Browse Story Hierarchy*
-- *Pan Workspace Canvas With Right-Click Drag*
-- *Switch Between Map View And Increment View*
-- *Switch Color Mode*
-- *Expand One Story Card*
-- *Expand Descendant Story Cards*
-- *Expand And Collapse Whole Map*
-- *Widen Columns Around Expanded Story Cards*
-- *Add First Epic To Empty Map*
-- *Add Epic, SubEpic, Or Story At Chosen Position*
-- *Remove Epic, SubEpic, Or Story*
-- *Rename Node Inline*
-- *Reorder Sibling Epics, SubEpics, And Stories*
-- *Move Story To A Different SubEpic*
-- *Move SubEpic To A Different Epic*
-- *Drop Node Into Empty Parent*
-- *See Full-Size Drop Preview While Dragging*
-- *Add Increment*
-- *Rename Increment*
-- *Reorder Increments*
-- *Remove Increment*
-- *Assign Story To Increment By Dragging*
-- *Unassign Story From Increment*
-- *Add Scenario Under Story*
-- *Rename Scenario*
-- *Remove Scenario*
-- *Reorder Scenarios*
-- *Add Step*
-- *Edit Step Keyword And Text*
-- *Remove Step*
-- *Reorder Steps*
-- *Add Example To Scenario*
-- *Remove Example From Scenario*
-- *Add Example Field*
-- *Remove Example Field*
-- *Add Example Line*
-- *Edit Example Cell*
-- *Remove Example Line*
-- *Reorder Example Lines*
-- *Save Each Edit To The Server*
-- *Show Save Status*
-- *Refuse Edits That Break Map Rules*
+- *Adjust Workspace View*
+- *Expand And Collapse Story Cards*
+- *Add, Remove And Rename Map Nodes*
+- *Rearrange Map Nodes By Dragging*
+- *Manage Increments*
+- *Manage Increment Stories*
+- *Add, Rename, Remove And Reorder Scenarios*
+- *Add, Edit, Remove And Reorder Steps*
+- *Add And Remove Examples On Scenario*
+- *Add And Remove Example Fields*
+- *Add, Edit, Remove And Reorder Example Lines*
+- *Save Valid Edits And Keep Their History*
 - *Place Pages On The Canvas*
 - *Place Artboards On Their Pages*
 - *Write The Canvas Into A Project Folder*
@@ -434,7 +404,6 @@ section: body
 - *Refresh Map Artboard From A Data File*
 - *Save Story Map To Story Files*
 - *Comment On A Story In Story UI*
-- *Place Notes On The Story Map*
 - *Rearrange Stories Inside The Canvas*
 
 ### Increment 7: Repair Guidance From Mistakes
@@ -557,19 +526,9 @@ section: body
 **Stories in this increment:**
 
 - *Test Story UI Editor On Session Story Map*
-- *Pick Story Map From Dashboard*
-- *Browse Nested SubEpic Lanes*
-- *Inspect Selected Node Fields*
-- *Show And Hide Scenarios And Examples*
-- *Record One Save Event Per Save*
-- *Browse Save History*
 - *Recover Workspace View State*
-- *Join Real-Time Story Map Session*
-- *Reconcile Concurrent View State Changes*
-- *Open AI Chat Panel*
-- *Request AI Story Change*
-- *Review Proposed Map Changes*
-- *Apply AI Change To Story Map*
+- *Share Real-Time Story Map Session*
+- *Change Story Map With AI*
 
 ### Increment 13: Guard Work And Recover Fast
 

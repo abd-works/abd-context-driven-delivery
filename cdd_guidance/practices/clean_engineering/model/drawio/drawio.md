@@ -4,7 +4,7 @@ Rules for rendering and auditing UML class diagrams in Draw.io under clean engin
 
 ## How the diagram is drawn
 
-`diagram/class_layout.py` draws every class-shaped view, so the Clean Engineering class view and the DDD aggregate view read the same way.
+`diagram/class_layout.py` draws every class-shaped view, so the Clean Engineering class view and the DDD aggregate view read the same way. `diagram/class_view.py` decides what a class view draws (its pages, one card per class, one arrow per pair of classes) and `diagram/module_layout.py` where a modules view stands each module, so every diagram format (drawio, whiteboard) draws the same layout and writes it in its own way.
 
 - **Cards fit their text.** Each card is as wide as its longest line, so nothing wraps and the card height stays true.
 - **Cards sit in layers.** `CardPlacement` puts a base above what derives from it and an owner above what it owns, one row per layer, so inheritance fans out downwards and most arrows run down the page. A subclass sits in the row right under its base, whatever owns it. Each row is ordered so a card sits under the cards it is joined to and a module's cards stay together; a row too wide for the page wraps. Cards in a row are spaced by the arrows between them. The order is worked out, not searched for, so one model always gives one diagram.

@@ -24,11 +24,12 @@ from cdd_guidance.practices.stories.model.javascript.javascript_story_model impo
 from cdd_guidance.practices.stories.model.python.python_story_model import PythonStoryModel
 from cdd_guidance.practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
 from cdd_guidance.practices.stories.model.code_story_model import CodeStoryNode
+from cdd_guidance.practices.stories.model.whiteboard.nodes import WhiteboardStoryModel
 
 EXPECTED = Path(__file__).resolve().parent / "_examples" / "expected"
 ACTUAL = Path(__file__).resolve().parent / "_examples" / "actual"
 
-_DIAGRAM = ("drawio", "miro")
+_DIAGRAM = ("drawio", "miro", "whiteboard")
 _CODE = ("typescript", "python", "javascript", "java")
 _FLUENT = ("typescript", "javascript")
 
@@ -211,7 +212,7 @@ def _write_markdown(source: StoryModel, folder: Path) -> None:
 
 
 _SOURCES = ("markdown", "drawio", "typescript")
-_CHANNELS = ("markdown", "json", "drawio", "miro", "typescript", "python", "javascript", "java")
+_CHANNELS = ("markdown", "json", "drawio", "miro", "whiteboard", "typescript", "python", "javascript", "java")
 
 
 def _expected_typescript() -> dict:
@@ -257,6 +258,8 @@ def _write_channel(folder: Path, target: str, source: StoryModel) -> None:
         _write(folder / "story-map.drawio", DrawIOStoryModel(source).save())
     elif target == "miro":
         _write(folder / "story-map.svg", MiroStoryModel(source).save())
+    elif target == "whiteboard":
+        _write(folder / "story-map.whiteboard", WhiteboardStoryModel(source).save())
     else:
         _write_tree(folder, _CODE_MAPS[target](source).save())
 
@@ -270,6 +273,8 @@ def _read_channel(folder: Path, target: str) -> StoryModel:
         return DrawIOStoryModel().load((folder / "story-map.drawio").read_text(encoding="utf-8"))
     if target == "miro":
         return MiroStoryModel().load((folder / "story-map.svg").read_text(encoding="utf-8"))
+    if target == "whiteboard":
+        return WhiteboardStoryModel().load((folder / "story-map.whiteboard").read_text(encoding="utf-8"))
     return _CODE_MAPS[target]().load(_read_tree(folder))
 
 
@@ -290,7 +295,7 @@ with shared_context("a story map saved through a channel"):
     with it("should match each epic, sub-epic, story, actor, background, scenario, example, and step"):
         expected = self.source
         actual = self.loaded
-        stores_scenarios = self.channel not in ("drawio", "miro")
+        stores_scenarios = self.channel not in _DIAGRAM
         stores_steps = stores_scenarios
 
         def node_name(name):
@@ -409,6 +414,15 @@ with describe("a story map"):
                 with it("should bring the epics and stories back and leave the scenarios out"):
                     kinds = {entry[0] for entry in walk(self.loaded)}
                     expect("story" in kinds and "scenario" not in kinds).to(equal(True))
+        with describe("to whiteboard"):
+            with before.all:
+                _open(self, "markdown", "whiteboard")
+            with included_context("a story map saved through a channel"):
+                pass
+            with context("with scenarios left out of the file"):
+                with it("should bring the epics and stories back and leave the scenarios out"):
+                    kinds = {entry[0] for entry in walk(self.loaded)}
+                    expect("story" in kinds and "scenario" not in kinds).to(equal(True))
         with describe("to typescript"):
             with before.all:
                 _open(self, "markdown", "typescript")
@@ -467,6 +481,11 @@ with describe("a story map"):
                 _open(self, "drawio", "miro")
             with included_context("a story map saved through a channel"):
                 pass
+        with describe("to whiteboard"):
+            with before.all:
+                _open(self, "drawio", "whiteboard")
+            with included_context("a story map saved through a channel"):
+                pass
         with describe("to typescript"):
             with before.all:
                 _open(self, "drawio", "typescript")
@@ -507,6 +526,11 @@ with describe("a story map"):
         with describe("to miro"):
             with before.all:
                 _open(self, "typescript", "miro")
+            with included_context("a story map saved through a channel"):
+                pass
+        with describe("to whiteboard"):
+            with before.all:
+                _open(self, "typescript", "whiteboard")
             with included_context("a story map saved through a channel"):
                 pass
         with describe("to typescript"):

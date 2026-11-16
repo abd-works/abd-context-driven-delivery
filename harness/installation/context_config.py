@@ -8,6 +8,8 @@ from harness.installation.json_file import HeldJsonFile, JsonFile, JsonFileUnrea
 
 CONTEXT_FOLDER = ".context"
 CONFIG_NAME = "config.json"
+DEFAULT_FORMAT = "default"
+"""What a project's ``default_formats`` writes for a fidelity's own default format."""
 
 
 class MalformedContextConfigError(JsonFileUnreadable):
@@ -62,6 +64,21 @@ class ContextConfig:
 
     def practice_folder(self, practice: str) -> str | None:
         return self._value_named("practice_folders", practice)
+
+    def default_formats(self, practice: str, fidelity: str) -> list[str] | None:
+        """The formats a fidelity is chosen in until its session chooses, as ``default_formats`` names them: under
+        ``"practice.fidelity"``, else ``"practice"``, else ``"*"`` for every fidelity, such as
+        ``{"*": ["default", "drawio", "whiteboard"], "ux.mockup": ["claude_design"]}``, where ``default`` is the
+        fidelity's own default format. None when the project names no defaults for it."""
+        section = self.load().get("default_formats")
+        if not isinstance(section, Mapping):
+            return None
+        lists = {self._match_key(str(key)): value for key, value in section.items() if isinstance(value, list)}
+        for key in (f"{practice}.{fidelity}", practice, "*"):
+            found = lists.get(self._match_key(key))
+            if found is not None:
+                return [str(name).strip() for name in found if str(name).strip()]
+        return None
 
     def _value_named(self, section: str, name: str) -> str | None:
         wanted = self._match_key(name)

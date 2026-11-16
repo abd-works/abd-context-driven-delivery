@@ -1,0 +1,96 @@
+{
+ "v": 1,
+ "title": "DDD Bounded Context Map",
+ "order": [
+  "context.75d09dacc69d",
+  "context.cdf6a7dcc28d",
+  "title",
+  "subtitle",
+  "about.75d09dacc69d",
+  "aggregate.584d0d27c654",
+  "about.cdf6a7dcc28d",
+  "aggregate.0b11973b7377",
+  "needs.f685634a729f"
+ ],
+ "elements": {
+  "context.75d09dacc69d": {
+   "type": "container",
+   "color": "green",
+   "text": "Sales | custom",
+   "x": 400.0,
+   "y": 100.0,
+   "w": 312.0,
+   "h": 177.0
+  },
+  "context.cdf6a7dcc28d": {
+   "type": "container",
+   "color": "green",
+   "text": "Catalog | bespoke",
+   "x": 40.0,
+   "y": 100.0,
+   "w": 312.0,
+   "h": 135.0
+  },
+  "title": {
+   "type": "text",
+   "x": 40,
+   "y": -36,
+   "text": "Bounded Context Map - Modules Context",
+   "size": "large"
+  },
+  "subtitle": {
+   "type": "text",
+   "x": 40,
+   "y": 20,
+   "text": "Independent modules with one-way dependencies. Arrows point toward the depended-on module (build before). Path nesting = containment; shared base terms live on the parent.",
+   "size": "small",
+   "wrap": 600
+  },
+  "about.75d09dacc69d": {
+   "type": "text",
+   "x": 416.0,
+   "y": 112.0,
+   "text": "*bounded context*",
+   "size": "small",
+   "wrap": 280.0
+  },
+  "aggregate.584d0d27c654": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "**Sales | custom/ShoppingCart**\n*aggregate*\n- CartItem\n- Discount",
+   "kind": "rounded",
+   "size": "small",
+   "textAlign": "left",
+   "x": 416.0,
+   "y": 157.0,
+   "w": 280.0,
+   "h": 108.0
+  },
+  "about.cdf6a7dcc28d": {
+   "type": "text",
+   "x": 56.0,
+   "y": 112.0,
+   "text": "*bounded context*",
+   "size": "small",
+   "wrap": 280.0
+  },
+  "aggregate.0b11973b7377": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "**Catalog | bespoke/Product**\n*aggregate*",
+   "kind": "rounded",
+   "size": "small",
+   "textAlign": "left",
+   "x": 56.0,
+   "y": 157.0,
+   "w": 280.0,
+   "h": 66.0
+  },
+  "needs.f685634a729f": {
+   "type": "arrow",
+   "from": "aggregate.584d0d27c654",
+   "to": "aggregate.0b11973b7377",
+   "label": "Customer/Supplier"
+  }
+ }
+}

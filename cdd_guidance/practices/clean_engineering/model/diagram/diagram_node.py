@@ -10,6 +10,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     OoadClass,
     path_parent,
 )
+from cdd_guidance.practices.clean_engineering.model.type_refs import pascal_type_names
 from cdd_guidance.practices.clean_engineering.model.diagram.geometry import (
     CELL_MIN_HEIGHT,
     CELL_WIDTH,
@@ -49,9 +50,22 @@ class DiagramClass(OoadClass, DiagramNode):
         OoadClass.__init__(self, name, sequential_order, **kwargs)
         DiagramNode.__init__(self)
 
+    def width(self) -> int:
+        """The width of the card before the arrows it carries widen it; a format whose words need more sets its own."""
+        return CELL_WIDTH
+
     def height(self) -> int:
         n_content = len(self.properties) + len(self.operations)
         return max(CELL_MIN_HEIGHT, 30 + n_content * LINE_HEIGHT + 2 * SECTION_PAD)
+
+    def take_arrow(self, target: str, kind: str) -> None:
+        """An arrow of kind drawn to target is the property whose type names the target. Inheritance and a dependency
+        stand for no property."""
+        if (kind or "").lower() in {"inheritance", "dependency"}:
+            return
+        for prop in self.properties:
+            if target in pascal_type_names(prop.type_hint or ""):
+                prop.take_drawn_kind(kind)
 
 
 class ImportedClass(DiagramClass):
@@ -85,6 +99,9 @@ class DiagramModule(Module, DiagramNode):
 
     # How many seam terms the card lists before it ends the list with `...`.
     seam_bullets = MODULE_MAX_SEAM_BULLETS
+    # The box a module with nothing nested in it starts as; a format whose words take more room sets its own.
+    cell_width = MODULE_CELL_WIDTH
+    cell_min_height = MODULE_CELL_MIN_HEIGHT
 
     def __init__(self, name: str = '', sequential_order: int = 1, **kwargs) -> None:
         Module.__init__(self, name, sequential_order, **kwargs)

@@ -1130,247 +1130,133 @@ Requested (2026-11-06, "default is to have a graph and just read the violations"
 
 # (E) Author Story Maps
 
-This epic is the app's own story map, `C:/dev/story-ui/.context/story-map.md`; its evidence lines name the app's files.
+This epic is the app's own story map, `C:/dev/story-ui/.context/story-map.md`; its evidence lines name the app's files. Condensed on 2026-11-16 at the person's request on the story map whiteboard: stories that were one interaction each became one story with acceptance criteria, which stay here in the source until they become scenarios.
+
 ## (E) View Story Map
-### (S) Story Designer --> Open Story Map By Address
-
-Observed: The workspace loads the map named in the `?mapId=` query (or `default`) and, when no map with that id exists yet, the server creates and saves an empty one so the designer always lands on a map (main.tsx; stories-server.ts `createStoryMapRouter` GET `/`).
-
-### (S) Story Designer --> Pick Story Map From Dashboard
-
-Intended (story_map.information_architecture.md, Story Map Dashboard scaffold): a dashboard lists maps and "open map" takes the designer into the workspace; no dashboard screen exists.
-
 ### (S) Story Designer --> Browse Story Hierarchy
 
-Observed: The map renders Epic, SubEpic, and Story lanes on one shared grid, with each Story under its parent SubEpic column, lanes sized to their bottommost children, and collapsed titles kept on one line (stories-client.tsx `StoryHierarchyView`, `computeColumnLayout`; workspace.css).
+**Acceptance criteria:**
+- Observed: Epic, SubEpic and Story lanes render on one shared grid, each Story under its parent SubEpic column, lanes sized to their bottommost children and collapsed titles on one line (stories-client.tsx `StoryHierarchyView`, `computeColumnLayout`; workspace.css).
+- Intended: nested SubEpics render as two stacked SubEpic lanes under their parent SubEpic; the model in stories.ts holds only one SubEpic level (mern-story-map-ai-sketch.md, Browse Story Hierarchy).
+- Intended: selecting a Story shows its story_type and users, and a SubEpic its test_file and domain_concepts; the cards show only names and controls (mern-story-map-ai-sketch.md, "when the Story Designer selects a node").
 
-### (S) Story Designer --> Browse Nested SubEpic Lanes
+### (S) Story Designer --> Adjust Workspace View
 
-Intended (mern-story-map-ai-sketch.md, Browse Story Hierarchy): nested SubEpics render as two stacked SubEpic lanes under their parent SubEpic; the model in stories.ts holds only one SubEpic level.
+**Acceptance criteria:**
+- Observed: holding the right mouse button and dragging pans the canvas on both axes, without the browser menu, with a grabbing cursor, stopping on release even outside the canvas (stories-client.tsx `StoryMapWorkspaceView` `handleCanvasMouseDown`).
+- Observed: Map View and Increment View switch between the plain map and the map with increment lanes and an Unassigned drop zone (`useStoryMapViewState.toggleViewMode`, `StoryHierarchyView` `showIncrements`).
+- Intended: Show Scenarios and Show Examples show and hide them; today the buttons toggle but the card and scenario panel ignore them (story_map.information_architecture.md toolbar; story_map.modules.md session toggles).
+- Observed: the Executive / Engineering switch changes the theme and logo and remembers the choice in browser storage (`THEME_STORAGE_KEY`; workspace.css `data-theme`).
 
-### (S) Story Designer --> Inspect Selected Node Fields
+## (E) Build, Expand, Rearrange And Plan Story Map
+### (S) Story Designer --> Expand And Collapse Story Cards
 
-Intended (mern-story-map-ai-sketch.md, BDD "when the Story Designer selects a node"): selecting a Story shows story_type and users, a SubEpic shows test_file and domain_concepts; the cards show only names and controls.
+**Acceptance criteria:**
+- Observed: clicking a Story card or its expand button opens it inline with its Scenarios, Steps and Example tables while neighbours stay collapsed, and clicking again collapses it (stories-client.tsx `StoryCard`, `handleExpand`).
+- Observed: the expand button on an Epic or SubEpic opens every Story card beneath it (`getAllDescendantStoryIds`, `useStoryMapViewState.expandDescendants`).
+- Observed: the toolbar's Expand All and Collapse All open or close the whole map (`StoryMapWorkspaceView` toolbar, `collapseAll`).
+- Observed: an expanded card's column, the lanes above it and everything to its right widen to fit it, and narrow again on collapse (workspace.css `.story-card.expanded`; shared grid in `StoryHierarchyView`).
 
-### (S) Story Designer --> Pan Workspace Canvas With Right-Click Drag
+### (S) Story Designer --> Add, Remove And Rename Map Nodes
 
-Observed: Holding the right mouse button and dragging scrolls the canvas on both axes, suppresses the browser context menu, shows a grabbing cursor, and stops on release even outside the canvas (stories-client.tsx `StoryMapWorkspaceView` `handleCanvasMouseDown` and window mouse listeners).
+**Acceptance criteria:**
+- Observed: a map with no Epics shows one "+ Epic" starter button that opens the title popover (`StoryHierarchyView` Epic lane, `AddNodePopoverButton`).
+- Observed: the + on a card, or the leading + on a group's first card, adds an Epic, SubEpic or Story with the typed or a default title after that sibling or at the start; Cancel or Escape adds nothing (`AddNodePopoverButton`, `insertEpicAfter`, `insertSubEpicAfter`, `insertStoryAfter`; stories-server.ts POST routes).
+- Observed: the − on a card deletes that node and everything under it and renumbers its siblings (stories.ts `removeEpic`, `removeSubEpic`, `removeStory`).
+- Observed: double-clicking a card edits its name inline; Enter, Tab or leaving saves and Escape restores (`NodeNameInput`; stories-server.ts PATCH `/nodes/:nodeId`).
 
-### (S) Story Designer --> Switch Between Map View And Increment View
+### (S) Story Designer --> Rearrange Map Nodes By Dragging
 
-Observed: The toolbar's Map View and Increment View buttons switch between the plain map and the map with increment lanes and an Unassigned drop zone (stories-client.tsx `useStoryMapViewState.toggleViewMode`, `StoryHierarchyView` `showIncrements`).
+**Acceptance criteria:**
+- Observed: dragging a card within its lane or parent saves the new sibling order (`makeEpicDragHandlers`; stories.ts `reorderEpics`, `reorderSubEpics`, `reorderStories`).
+- Observed: dropping a Story on another SubEpic, or a SubEpic on another Epic, moves it there with everything under it (`StoryMapModel.moveStory`, `moveSubEpic`).
+- Observed: an empty Epic or SubEpic accepts a dropped node (`makeEmptyParentDropZone`).
+- Observed: the dragged card shows full-size at the spot it would land, with no browser drag image (`useDragVisuals`, `computeDisplayIds`, `suppressNativeDragImage`).
 
-### (S) Story Designer --> Show And Hide Scenarios And Examples
+### (S) Story Designer --> Manage Increments
 
-Intended (story_map.information_architecture.md toolbar; story_map.modules.md session toggles): Show Scenarios and Show Examples buttons toggle their active state in stories-client.tsx, but the story card and scenario panel ignore them, so nothing is shown or hidden.
+**Acceptance criteria:**
+- Observed: in Increment View "+ Increment" appends a new increment lane at the bottom (stories.ts `appendIncrement`).
+- Observed: the increment label is an inline name field saved on Enter, Tab or leaving it, Escape restoring the old name (`IncrementLabel`).
+- Observed: dragging an increment label up or down saves the new increment order (stories.ts `reorderIncrements`).
+- Observed: the − on an increment label deletes it and its Stories return to the unassigned spine (stories.ts `removeIncrement`; DELETE `/increments/:incrementId`).
 
-### (S) Story Designer --> Switch Color Mode
+### (S) Story Designer --> Manage Increment Stories
 
-Observed: The Executive / Engineering switch changes the page theme and logo and remembers the choice in browser storage (stories-client.tsx `StoryMapWorkspaceView` `THEME_STORAGE_KEY`; workspace.css `data-theme`).
-
-## (E) Expand Story Details
-### (S) Story Designer --> Expand One Story Card
-
-Observed: Clicking a Story card or its expand button opens that card inline to show its Scenarios, Steps, and Example tables while neighbouring cards stay collapsed in their columns; clicking again collapses it (stories-client.tsx `StoryCard`, `handleExpand`).
-
-### (S) Story Designer --> Expand Descendant Story Cards
-
-Observed: The expand button on an Epic or SubEpic opens every Story card beneath it side by side in their own columns (stories-client.tsx `getAllDescendantStoryIds`, `useStoryMapViewState.expandDescendants`).
-
-### (S) Story Designer --> Expand And Collapse Whole Map
-
-Observed: The toolbar's Expand All opens every Epic, SubEpic, and Story, and Collapse All closes them all (stories-client.tsx `StoryMapWorkspaceView` toolbar, `collapseAll`).
-
-### (S) Story UI --> Widen Columns Around Expanded Story Cards
-
-Observed: An expanded card grows to fit its content and its column, the SubEpic and Epic lanes above it, and everything to its right shift to make room, then narrow again on collapse (workspace.css `.story-card.expanded`; stories-client.tsx shared grid in `StoryHierarchyView`).
-
-## (E) Build Map Structure
-### (S) Story Designer --> Add First Epic To Empty Map
-
-Observed: A map with no Epics shows a single "+ Epic" starter button that opens the title popover (stories-client.tsx `StoryHierarchyView` Epic lane, `AddNodePopoverButton`).
-
-### (S) Story Designer --> Add Epic, SubEpic, Or Story At Chosen Position
-
-Observed: The + on a card, or the leading + on the first card in a group, opens a title popover; Add uses the typed title or a default name, Cancel or Escape creates nothing, and the new node lands after that sibling or at the start (stories-client.tsx `AddNodePopoverButton`, `insertEpicAfter`, `prependSubEpic`, `insertSubEpicAfter`, `prependStory`, `insertStoryAfter`; stories-server.ts POST `/epics`, `/epics/:epicId/sub-epics`, `/sub-epics/:subEpicId/stories`).
-
-### (S) Story Designer --> Remove Epic, SubEpic, Or Story
-
-Observed: The − on a card deletes that node and everything under it and renumbers the remaining siblings to close the gap (stories.ts `removeEpic`, `removeSubEpic`, `removeStory`; stories-server.ts DELETE routes).
-
-### (S) Story Designer --> Rename Node Inline
-
-Observed: Double-clicking a card focuses its name; Enter, Tab, or leaving the field saves the new name and Escape restores the old one (stories-client.tsx `NodeNameInput`, `focusNameFieldOnDoubleClick`; stories-server.ts PATCH `/nodes/:nodeId` via `translateFrom`).
-
-## (E) Rearrange Map By Dragging
-### (S) Story Designer --> Reorder Sibling Epics, SubEpics, And Stories
-
-Observed: Dragging a card within its own lane or parent saves the new sibling order with whole-number positions (stories-client.tsx `makeEpicDragHandlers`; stories.ts `reorderEpics`, `reorderSubEpics`, `reorderStories`).
-
-### (S) Story Designer --> Move Story To A Different SubEpic
-
-Observed: Dropping a Story card on another SubEpic, even under a different Epic, moves it there with its Scenarios at the dropped position (stories-client.tsx `makeStoryDragHandlers`; stories.ts `StoryMapModel.moveStory`).
-
-### (S) Story Designer --> Move SubEpic To A Different Epic
-
-Observed: Dropping a SubEpic lane on another Epic moves it and all its Stories there at the dropped position (stories-client.tsx `makeSubEpicDragHandlers`; stories.ts `StoryMapModel.moveSubEpic`).
-
-### (S) Story Designer --> Drop Node Into Empty Parent
-
-Observed: An Epic with no SubEpics or a SubEpic with no Stories accepts a dragged SubEpic or Story into its empty placeholder (stories-client.tsx `makeEmptyParentDropZone`).
-
-### (S) Story Designer --> See Full-Size Drop Preview While Dragging
-
-Observed: While dragging, the card itself shows full-size, greyed and dashed, at the spot it would land and its siblings shift around it, with no floating browser drag image (stories-client.tsx `useDragVisuals`, `computeDisplayIds`, `suppressNativeDragImage`).
-
-## (E) Plan Increments
-### (S) Story Designer --> Add Increment
-
-Observed: In Increment View the "+ Increment" button appends a new increment lane at the bottom (stories-client.tsx `StoryHierarchyView`; stories.ts `appendIncrement`).
-
-### (S) Story Designer --> Rename Increment
-
-Observed: The increment label is an inline name field saved on Enter, Tab, or leaving it, with Escape restoring the old name (stories-client.tsx `IncrementLabel`).
-
-### (S) Story Designer --> Reorder Increments
-
-Observed: Dragging an increment label up or down saves the new increment order (stories-client.tsx `IncrementLabel` drag handlers; stories.ts `reorderIncrements`).
-
-### (S) Story Designer --> Remove Increment
-
-Observed: The − on an increment label deletes that increment and its Stories return to the unassigned spine (stories.ts `removeIncrement`; stories-server.ts DELETE `/increments/:incrementId`).
-
-### (S) Story Designer --> Assign Story To Increment By Dragging
-
-Observed: Dropping a Story card on an increment lane moves it into that increment, out of any other, while it stays under its SubEpic column (stories-client.tsx increment lane `onDrop`; stories.ts `assignStoryToIncrement`).
-
-### (S) Story Designer --> Unassign Story From Increment
-
-Observed: Dropping a Story card on the "Unassigned" zone, shown only in Increment View, removes it from its increment and puts it back in the spine (stories-client.tsx Unassigned drop zone; stories.ts `unassignStoryFromIncrement`).
+**Acceptance criteria:**
+- Observed: dropping a Story card on an increment lane moves it into that increment, out of any other, while it stays under its SubEpic column (stories.ts `assignStoryToIncrement`).
+- Observed: dropping a Story card on the Unassigned zone, shown only in Increment View, removes it from its increment (stories.ts `unassignStoryFromIncrement`).
 
 ## (E) Author Scenarios And Steps
-### (S) Story Designer --> Add Scenario Under Story
+### (S) Story Designer --> Add, Rename, Remove And Reorder Scenarios
 
-Observed: The + beside Scenarios in an expanded Story card adds "New Scenario" at the end of that Story's Scenarios (stories-client.tsx `handleAppendScenario`; stories.ts `StoryModel.appendScenario`).
+**Acceptance criteria:**
+- Observed: the + beside Scenarios in an expanded card adds "New Scenario" at the end (`handleAppendScenario`; stories.ts `StoryModel.appendScenario`).
+- Observed: the Scenario name is an inline field saved on Enter, Tab or leaving it, Escape restoring the old name (`ScenarioPanel` `saveScenarioName`).
+- Observed: the − on a Scenario deletes it and renumbers the rest (stories.ts `StoryModel.removeScenario`).
+- Observed: dragging a Scenario by its handle saves the new order (`StoryCard` `makeDragHandlers`; stories.ts `reorderScenarios`).
 
-### (S) Story Designer --> Rename Scenario
+### (S) Story Designer --> Add, Edit, Remove And Reorder Steps
 
-Observed: The Scenario name is an inline field saved on Enter, Tab, or leaving it, with Escape restoring the old name (stories-client.tsx `ScenarioPanel` `saveScenarioName`).
-
-### (S) Story Designer --> Remove Scenario
-
-Observed: The − on a Scenario deletes it and renumbers the remaining Scenarios (stories.ts `StoryModel.removeScenario`).
-
-### (S) Story Designer --> Reorder Scenarios
-
-Observed: Dragging a Scenario by its handle within the expanded card saves the new Scenario order (stories-client.tsx `StoryCard` `makeDragHandlers`; stories.ts `reorderScenarios`).
-
-### (S) Story Designer --> Add Step
-
-Observed: The + beside Steps adds a "Given New step" at the end of that Scenario (stories-client.tsx `handleAddStep`; stories.ts `ScenarioModel.addStep`).
-
-### (S) Story Designer --> Edit Step Keyword And Text
-
-Observed: Each Step has a Given/When/Then/And/But selector and a text field, saved on Enter or Tab and restored on Escape (stories-client.tsx `StepEditor`; stories.ts `updateStep`).
-
-### (S) Story Designer --> Remove Step
-
-Observed: The − on a Step deletes it and renumbers the remaining Steps (stories.ts `ScenarioModel.removeStep`).
-
-### (S) Story Designer --> Reorder Steps
-
-Observed: Dragging a Step by its handle saves the new Step order within that Scenario (stories-client.tsx `ScenarioPanel` step drag handlers; stories.ts `reorderSteps`).
+**Acceptance criteria:**
+- Observed: the + beside Steps adds "Given New step" at the end of the Scenario (`handleAddStep`; stories.ts `ScenarioModel.addStep`).
+- Observed: each Step has a Given/When/Then/And/But selector and a text field, saved on Enter or Tab and restored on Escape (`StepEditor`; stories.ts `updateStep`).
+- Observed: the − on a Step deletes it and renumbers the rest (stories.ts `ScenarioModel.removeStep`).
+- Observed: dragging a Step by its handle saves the new order (stories.ts `reorderSteps`).
 
 ## (E) Author Examples
-### (S) Story Designer --> Add Example To Scenario
+### (S) Story Designer --> Add And Remove Examples On Scenario
 
-Observed: The + beside Examples adds an empty "New Example" table to the Scenario (stories-client.tsx `handleAddExample`; stories.ts `ScenarioModel.addExample`).
+**Acceptance criteria:**
+- Observed: the + beside Examples adds an empty "New Example" table (`handleAddExample`; stories.ts `ScenarioModel.addExample`).
+- Observed: the − on an Example deletes that table and renumbers the rest (stories.ts `ScenarioModel.removeExample`).
 
-### (S) Story Designer --> Remove Example From Scenario
+### (S) Story Designer --> Add And Remove Example Fields
 
-Observed: The − on an Example deletes that table and renumbers the remaining Examples (stories.ts `ScenarioModel.removeExample`).
+**Acceptance criteria:**
+- Observed: typing a field name in the header and pressing + adds a column, and a name already in the table is refused (`ExampleBlock`; stories.ts `addExampleField`, `DUPLICATE_FIELD_NAME`).
+- Observed: the − on a column header removes that field (stories.ts `ScenarioModel.removeExampleField`).
 
-### (S) Story Designer --> Add Example Field
+### (S) Story Designer --> Add, Edit, Remove And Reorder Example Lines
 
-Observed: Typing a field name in the header and pressing + adds a column, and a name already in the table is refused (stories-client.tsx `ExampleBlock`; stories.ts `addExampleField`, `DUPLICATE_FIELD_NAME`).
-
-### (S) Story Designer --> Remove Example Field
-
-Observed: The − on a column header removes that field from the Example (stories.ts `ScenarioModel.removeExampleField`).
-
-### (S) Story Designer --> Add Example Line
-
-Observed: The add button under the table adds an empty line at the bottom of the Example table (stories-client.tsx `handleAddExampleRow`; stories.ts `addExampleRow`).
-
-### (S) Story Designer --> Edit Example Cell
-
-Observed: Each cell is an inline field saved on Enter or leaving it (stories-client.tsx `ExampleCellEditor`; stories.ts `updateExampleRow`).
-
-### (S) Story Designer --> Remove Example Line
-
-Observed: The − on a line deletes it and renumbers the remaining lines (stories.ts `ScenarioModel.removeExampleRow`).
-
-### (S) Story Designer --> Reorder Example Lines
-
-Observed: Dragging a line by its handle saves the new line order in that Example (stories-client.tsx `ExampleBlock` line drag handlers; stories.ts `reorderExampleRows`).
+**Acceptance criteria:**
+- Observed: the add button under the table adds an empty line at the bottom (`handleAddExampleRow`; stories.ts `addExampleRow`).
+- Observed: each cell is an inline field saved on Enter or leaving it (`ExampleCellEditor`; stories.ts `updateExampleRow`).
+- Observed: the − on a line deletes it and renumbers the rest (stories.ts `ScenarioModel.removeExampleRow`).
+- Observed: dragging a line by its handle saves the new order (stories.ts `reorderExampleRows`).
 
 ## (E) Save And Share Changes
-### (S) Story UI --> Save Each Edit To The Server
+### (S) Story UI --> Save Valid Edits And Keep Their History
 
-Observed: Every edit is sent to the server as one request, saved to MongoDB, and the map is reloaded from the saved copy (stories-client.tsx `useStoryModel`; stories-server.ts `StoryMapRepositoryServer`, `StoryMapServer.persist`).
-
-### (S) Story UI --> Show Save Status
-
-Observed: The status rail shows synced, pending changes, or save error, and notes when an update report is available (stories-client.tsx `StoryMapWorkspaceView` status rail, `storyModelReducer`).
-
-### (S) Story UI --> Refuse Edits That Break Map Rules
-
-Observed: The server refuses a Scenario under a non-Story, an increment on a non-Story, an unknown increment, a node outside its claimed parent, or a duplicate field name, answers 422 with the rule code, and the status rail shows save error (stories.ts `MutationGuardError`; stories-server.ts error handler).
-
-### (S) Story UI --> Record One Save Event Per Save
-
-Intended (mern-story-map-ai-sketch.md Resolved Implementation Decisions; story_map.modules.md audit): stories-server.ts only comments that the collaboration layer emits the event, and no audit module exists.
-
-### (S) Story Designer --> Browse Save History
-
-Intended (story_map.information_architecture.md, Version History Timeline scaffold): no history screen or save record exists.
+**Acceptance criteria:**
+- Observed: every edit is sent to the server as one request, saved to MongoDB, and the map reloaded from the saved copy (`useStoryModel`; stories-server.ts `StoryMapRepositoryServer`, `StoryMapServer.persist`).
+- Observed: an edit that breaks a map rule (a Scenario under a non-Story, an increment on a non-Story, an unknown increment, a node outside its claimed parent, a duplicate field name) is refused with 422 and the rule code (stories.ts `MutationGuardError`).
+- Observed: the status rail shows synced, pending changes, or save error (`StoryMapWorkspaceView`, `storyModelReducer`).
+- Intended: each save records one save event; today stories-server.ts only comments that the collaboration layer emits it (mern-story-map-ai-sketch.md; story_map.modules.md audit).
+- Intended: the designer browses the saved versions on a history timeline; no history screen exists (story_map.information_architecture.md, Version History Timeline).
 
 ### (S) Story Designer --> Recover Workspace View State
 
-Intended (story_map.stories.md, Recover Persisted Story Map State; story_map.modules.md session): session.ts and session-server.ts can store view mode, expanded nodes, and toggles, but app.ts never mounts `createSessionRouter` and the workspace never calls `useStoryMapSession`, so a reload resets the view.
+**Acceptance criteria:**
+- Intended: reloading keeps the view mode, expanded nodes and toggles; session.ts and session-server.ts can store them, but app.ts never mounts `createSessionRouter` and the workspace never calls `useStoryMapSession` (story_map.stories.md, Recover Persisted Story Map State).
 
-### (S) Story Designer --> Join Real-Time Story Map Session
+### (S) Story Designer --> Share Real-Time Story Map Session
 
-Intended (story_map.stories.md, Synchronize Story Map State; story_map.modules.md collaboration): no collaboration module or broadcast exists.
-
-### (S) Story UI --> Reconcile Concurrent View State Changes
-
-Intended (story_map.stories.md, Resolve Concurrent View State Changes; mern-story-map-ai-sketch.md realtime-collaboration): no collaboration module exists.
+**Acceptance criteria:**
+- Intended: designers on the same map see each other's changes as they happen; no collaboration module or broadcast exists (story_map.stories.md, Synchronize Story Map State).
+- Intended: concurrent view-state changes are reconciled; no collaboration module exists (story_map.stories.md, Resolve Concurrent View State Changes).
 
 ### (S) Agent --> Test Story UI Editor On Session Story Map
 
-Requested on 2026-11-06: the Story UI editor opens a CDD session's `story-map.md`, edits it and saves it back, and its tests run against that map. Each gap a test finds becomes an Intended story in this app's map, fixed before the board or chat bar invokes the app.
+**Acceptance criteria:**
+- Requested on 2026-11-06: the Story UI editor opens a CDD session's `story-map.md`, edits it and saves it back, and its tests run against that map; each gap a test finds becomes an Intended story here, fixed before the board or chat bar invokes the app.
 
 ## (E) Author Story Changes With AI
-### (S) Story Designer --> Open AI Chat Panel
+### (S) Story Designer --> Change Story Map With AI
 
-Intended (story_map.information_architecture.md, open chat to AI Chat Panel scaffold): no chat panel exists.
-
-### (S) Story Designer --> Request AI Story Change
-
-Intended (story_map.stories.md, Request AI Story Mutation; story_map.modules.md ai-mutation): no ai-mutation module exists.
-
-### (S) Story Designer --> Review Proposed Map Changes
-
-Intended (story_map.stories.md, Review Proposed Graph Changes): no proposal view exists.
-
-### (S) Agent --> Apply AI Change To Story Map
-
-Intended (story_map.stories.md, Apply AI Mutation to Story Map; mern-story-map-ai-sketch.md "Direct auto-apply changes"): no ai-mutation module exists.
-
-### (S) Story Designer --> Place Notes On The Story Map
-
-Requested (2026-11-10, "native claude markup panel": "annotate on the story editor app with notes and have a canvas like experience, eg comments sent directly to claude for processing; then potentially reuse that for a bespoke class editor and realization editor"), from `.sessions/_backlog/integrate-stories-with-the-canvas-explorer.md`: a person places notes anywhere on the Story UI editor's map, as on a canvas, beside the nodes they are about. The same markup may later serve a bespoke class editor and a realization editor; those editors are not on this map yet.
+**Acceptance criteria:**
+- Intended: the designer asks for a change in an AI chat panel; no chat panel or ai-mutation module exists (story_map.stories.md, Request AI Story Mutation; story_map.information_architecture.md, AI Chat Panel).
+- Intended: the agent applies the change to the story map directly (story_map.stories.md, Apply AI Mutation to Story Map; mern-story-map-ai-sketch.md "Direct auto-apply changes").
 
 # (E) Explore Stories In Story UI
 
@@ -2019,6 +1905,118 @@ Observed: the graph a validation checked is saved beside its report under the sa
 
 Observed: the session board reads the graph saved beside a validation report and counts its rule hits, so a fidelity with graph-rule violations still needs Validate (`space/kanban/report.py` `ReportFile.report`, `validate_fidelity_story.test.py` "Count Validate done only with no graph-rule violations").
 
+# (E) Draw Practice Models On Claude Whiteboard
+
+Requested (2026-11-15, ticket claude-whiteboard): Claude Whiteboard becomes one more channel a practice renders to and loads from, with the same architecture and object model as drawio and miro. The channel-agnostic diagram types (`DiagramNode`, `DiagramClass`, `DiagramModule` in `clean_engineering/model/diagram/diagram_node.py`; `DiagramStoryNode`, `DiagramStoryModel` in `stories/model/diagram_story_model.py`) are extended by whiteboard types exactly as `DrawIOClass`, `DrawIOModule` (`clean_engineering/model/drawio/diagram_node.py`) and `MiroStory`, `MiroEpic`, `MiroStoryModel` (`stories/model/miro/nodes.py`) extend them. The code every practice shares (the whiteboard element, the board and its writes) goes in `harness/whiteboard`; each practice's whiteboard types go in `cdd_guidance/practices/{practice}/model/whiteboard`; and the format is registered with the practice's adapters (`PracticeFormats`, `harness/guidance/practice_formats.py`) as `drawio` and `miro` are. A board is a Claude Artifact made from the Whiteboard type: `board/meta` holds its title and back-to-front order, and each `elements/<id>` is one shape, section, text or arrow, written and read through the artifact's store. The difference from drawio and miro is only that: the artifacts are whiteboards in Claude, loaded into the graph from what was rendered.
+
+## (E) Lay Out Shared Whiteboard Elements
+
+Requested (2026-11-15, "common code should go into harness/whiteboard (eg whiteboard node, whiteboard, etc)"): the board and its elements, which every practice's whiteboard types draw with, as `DrawioVertex` and the drawio page are for drawio.
+
+### (S:technical) Whiteboard Node --> Place Element From Diagram Geometry
+
+Requested: a whiteboard node takes the `Geometry` a diagram node was placed at (`clean_engineering/model/diagram/geometry.py`) and writes it as the element's `x`, `y`, `w` and `h`, so a whiteboard is laid out by the same placement as its drawio.
+
+### (S:technical) Whiteboard Node --> Write Node As Board Element
+
+Requested: each node writes itself as one `elements/<id>` record — a `shape` with its kind, colour and text, a `container` for a section, or a `text` for a title — as `DrawioVertex.append_to` writes one `mxCell`.
+
+### (S:technical) Whiteboard --> Order Board Elements Back To Front
+
+Requested: the board writes `board/meta` with its title and every element id in back-to-front order, sections before what they hold.
+
+### (S:technical) Whiteboard --> Join Elements With Arrows
+
+Requested: a dependency or relationship between two nodes is written as an `arrow` element from one element id to the other, with its sides and, where its meaning is not plain, its label.
+
+### (S:technical) Whiteboard --> Keep Element Ids Across Renders
+
+Requested (as drawio's `keep_positioning` and `previous` keep a diagram's layout): a node drawn before keeps its element id and the position a person moved it to, and only new nodes are placed.
+
+## (E) Render Practice Models To Whiteboard
+
+Requested (2026-11-15, "practice specific rendering goes in practices/{practice}/model/whiteboard"; "whiteboard should extend diagram just like drawio and hopefully miro"): each practice that draws a diagram today draws the same model on a whiteboard.
+
+### (S) Agent --> Lay Out Story Map On Whiteboard
+
+Requested: `WhiteboardStoryModel`, `WhiteboardEpic`, `WhiteboardStory` and `WhiteboardIncrement` extend the `Diagram*` story types as the miro types do, drawing epics and sub-epics as bars, stories as cards with their actor above, and increments as lanes.
+
+### (S) Agent --> Draw Module Dependencies On Whiteboard
+
+Requested: a whiteboard module extends `DiagramModule` as `DrawIOModule` does, drawing each module with its purpose and seam terms, and its dependencies as arrows.
+
+### (S) Agent --> Show Class Members And Relationships On Whiteboard
+
+Requested: a whiteboard class extends `DiagramClass` as `DrawIOClass` does, drawing each class with its stereotypes, properties and operations, an imported class dashed, and its relationships as arrows.
+
+### (S) Agent --> Group Aggregates In Bounded Context Sections
+
+Requested (DDD draws its bounded context map in drawio today, `ddd/model/drawio/drawio_bounded_context_map.py`): the same map drawn on a whiteboard, each context a section holding its aggregates.
+
+### (S) Agent --> Connect Screens By Navigation Moves
+
+Requested (UX draws its information architecture in drawio today, `ux/model/drawio/nodes.py` `DrawioUxMap`): the same screens and the moves between them drawn on a whiteboard.
+
+## (E) Publish Board To Claude
+
+Requested (2026-11-15, "the only difference you are creating whiteboard artifacts in claude"): what a render wrote reaches a Whiteboard artifact in Claude.
+
+### (S) Agent --> Create Whiteboard Artifact For Fidelity File
+
+Requested: the first render of a fidelity's file creates a Whiteboard artifact titled after it, and the board's address is kept beside the file, so the next render updates the same board.
+
+### (S) Agent --> Write Board Elements To Artifact Store
+
+Requested: the agent writes `board/meta` and the elements, back to front, to the board's store in batches the store accepts.
+
+### (S) Agent --> Update Changed Elements On Existing Board
+
+Requested: a render to a board that exists writes only the elements whose content changed, adds the new ones and removes the gone ones with their arrows, and never rebuilds the board, so what people moved or added stays.
+
+### (S) Agent --> Link Board From Fidelity Outputs
+
+Requested: the fidelity's files list the board's address with its drawio and markdown, so a person opens the board from where they open the other formats.
+
+## (E) Load Whiteboard Into Practice Model
+
+Requested (2026-11-15, "loading graph from that"): a board read back becomes the practice's model, as a drawio or miro file is parsed today (`MiroStoryModel.load`, `DrawIOModule.from_cell`).
+
+### (S) Agent --> Read Board Into Whiteboard File
+
+Requested: the agent reads the board's `board/meta` and every element from its store into a file in the session, which the practice reads as it reads a `.drawio` file.
+
+### (S:system) Whiteboard Story Model --> Parse Story Map From Board
+
+Requested: epics, sub-epics, stories with their actors, and increments come back from the board's elements, keeping each story's kind.
+
+### (S:system) Whiteboard Class Model --> Parse Classes And Modules From Board
+
+Requested: classes with their members and stereotypes, modules with their seam terms, and the arrows between them come back from the board's elements.
+
+### (S:system) Knowledge Graph --> Load Whiteboard File Into Graph
+
+Requested: a whiteboard file in a fidelity's outputs is read into the knowledge graph through its practice's adapter, as its drawio is, so graph rules run on what the board shows.
+
+## (E) Choose Whiteboard Format In Channels
+
+Requested (2026-11-15, "add claude whiteboard as a channel"): the whiteboard format is picked and run like any other format.
+
+### (S) Person --> Pick Whiteboard Format Chip
+
+Requested: the whiteboard is offered in the diagram format group (`Format.GROUPS`, `harness/markdown/format.py`), so its chip shows on the board ticket and in the chat bar for each fidelity that offers it.
+
+### (S) Agent --> Generate Fidelity Into Whiteboard
+
+Requested: `/actions-generate` with `format=whiteboard` writes the fidelity's whiteboard and publishes it, and `/actions-render` turns an artifact already written into one.
+
+### (S:system) Story Channel --> Round Trip Story Map Through Whiteboard
+
+Requested: the story channel spec (`stories/model/story_channel.feature.py`) saves a map to the whiteboard and reads it back from every other format, keeping each epic, sub-epic, story and actor, with scenarios left out as for drawio and miro.
+
+### (S) Agent --> Scan Whiteboard Layout Rules
+
+Requested (as `Drawio.scan` runs drawio's layout scanners): the whiteboard's own layout rules, such as no overlapping elements and no arrow crossing a shape, are scanned on its file, and a definitive failure sends the generator to repair.
+
 # (E) Connect Sessions Across Channels And Apps
 
 The chat bar, the CDD Kanban, the Story UI editor and the knowledge graph work on one ticket's session at a time, so each one opens the others on that ticket and shows what the others are doing. Validation moves into generate: the graph is rebuilt from what changed, its violations are read straight from it, and Fix is an action of its own. The stories were requested on 2026-11-06.
@@ -2107,6 +2105,6 @@ Intended (integrate-stories-with-the-canvas-explorer.md slice 6, after Phase 0 o
 
 ## Scope boundary
 
-**In scope:** Authoring an Agent Toolset with `@agent_tool` and `@agent_instructions`. Installing that toolset as two writes — File Installation publishes skill, slash command, and rules as one story (same channel, same write) and Mcp Installation publishes `mcp.json` — then invoking the skill, slash command, and MCP tool and prompt. Installed rules are not invoked as a file check — they constrain valid output. Context Guidance is installed the same way (skill and `.mdc` rules), invoked so `instructions` come back, then used to generate content those rules constrain. Practice Guidance is that same Guidance plus registered fidelities — invoke at practice scope and at fidelity scope; shared rules and fidelity-specific rules each constrain the matching AI output. Hook dispatch; extracting co-located markdown via `@markdown`; the CDD Kanban and the Chat Bar as two channels that move a ticket's session through its practices, each with its own stories; the practice content editor apps those channels invoke (Story UI, design canvas, Graph app), with each app's own story map; connecting sessions across the channels and apps, which joins the channels and apps on one ticket, and validation read from the latest graph; every host-action kit from `actions/.context/module-context.md` (`partition`, `grill`, `sketch`, `iterate`, `generate`, `document`, `render`, `satisfy`, `validate`, `scan`, `repair`, `createRule`).
+**In scope:** Authoring an Agent Toolset with `@agent_tool` and `@agent_instructions`. Installing that toolset as two writes — File Installation publishes skill, slash command, and rules as one story (same channel, same write) and Mcp Installation publishes `mcp.json` — then invoking the skill, slash command, and MCP tool and prompt. Installed rules are not invoked as a file check — they constrain valid output. Context Guidance is installed the same way (skill and `.mdc` rules), invoked so `instructions` come back, then used to generate content those rules constrain. Practice Guidance is that same Guidance plus registered fidelities — invoke at practice scope and at fidelity scope; shared rules and fidelity-specific rules each constrain the matching AI output. Hook dispatch; extracting co-located markdown via `@markdown`; the CDD Kanban and the Chat Bar as two channels that move a ticket's session through its practices, each with its own stories; the practice content editor apps those channels invoke (Story UI, design canvas, Graph app), with each app's own story map; Claude Whiteboard as a format that practices render to and load from, extending the shared diagram types as drawio and miro do; connecting sessions across the channels and apps, which joins the channels and apps on one ticket, and validation read from the latest graph; every host-action kit from `actions/.context/module-context.md` (`partition`, `grill`, `sketch`, `iterate`, `generate`, `document`, `render`, `satisfy`, `validate`, `scan`, `repair`, `createRule`).
 
 **Out of scope:** Catalog HTML pages; on the Chat Bar, the board's whole-board views (columns, Backlog items, WIP limits, side panels, ticket hierarchy) and sending one action to a whole stage (CDR 0001); one-time renames and repository moves; YAML manifest CLI / `tools.ps1` invoke; inventing extra practices or product domains beyond this framework spine; scenario and acceptance-test text (later fidelities).

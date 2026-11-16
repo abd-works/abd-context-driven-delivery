@@ -20,10 +20,11 @@ class Format(str):
     _NAMES_BY_SHORT_NAME = {short: name for name, short in _SHORT_NAMES.items()}
     CODE = frozenset({"python", "typescript", "java", "javascript"})
     TEMPLATED = frozenset({"markdown", *CODE})
-    # The groups a person picks formats by, in the order an action bar offers them: a diagram, the markdown, the code,
+    # The groups a person picks formats by, in the order an action bar offers them: a diagram (a draw.io file or a
+    # Claude Whiteboard board), the markdown, the code,
     # or a Claude Design canvas. Any other format is a group of its own, under its own name.
     GROUPS: dict[str, tuple[str, ...]] = {
-        "diagram": ("drawio",),
+        "diagram": ("drawio", "whiteboard"),
         "markdown": ("markdown",),
         "code": ("python", "typescript", "javascript", "java", "html"),
         "canvas": ("claude_design",),
