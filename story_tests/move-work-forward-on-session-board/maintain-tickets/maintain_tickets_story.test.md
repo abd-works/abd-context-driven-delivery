@@ -120,7 +120,7 @@ Board.show()
 *When* the Person edits checkout-flow's text to Pay for the basket by card.
 
 ```realization
-Board.ticket("checkout-flow")
+CardPlacement.ticket("checkout-flow")
   <- checkout-flow
 checkout-flow.edit_text("Pay for the basket by card.")
   -> self.session.keep_text("Pay for the basket by card.")
@@ -137,7 +137,7 @@ checkout-flow.edit_text("Pay for the basket by card.")
 *When* the Person edits pet-visits' text to Book a visit for a pet.
 
 ```realization
-Board.ticket("pet-visits")
+CardPlacement.ticket("pet-visits")
   <- pet-visits
 pet-visits.edit_text("Book a visit for a pet.")
   -> self.session.keep_text("Book a visit for a pet.")
@@ -153,7 +153,7 @@ pet-visits.edit_text("Book a visit for a pet.")
 *When* the Person edits Gift cards' text to Sell gift cards at the till.
 
 ```realization
-Board.backlog_item("Gift cards")
+BoardReads.backlog_item("Gift cards")
   <- Gift cards
 Gift cards.edit_text("Sell gift cards at the till.")
   <- Gift cards with the text Sell gift cards at the till.
@@ -170,7 +170,7 @@ Gift cards.edit_text("Sell gift cards at the till.")
 *When* the Person edits confirm-order's text inside checkout-flow's card to Show the order, then take the payment.
 
 ```realization
-Board.ticket("confirm-order")
+CardPlacement.ticket("confirm-order")
   <- confirm-order
 confirm-order.edit_text("Show the order, then take the payment.")
   -> self.session.keep_text("Show the order, then take the payment.")
@@ -197,7 +197,7 @@ The realizations name the operations these scenarios need; none of them exists y
 *When* the Person moves sign-up above pet-visits in Discovery
 
 ```realization
-Board.ticket("sign-up")
+CardPlacement.ticket("sign-up")
   <- sign-up
 sign-up.move_before(pet-visits)
   <- Discovery with sign-up above pet-visits
@@ -212,7 +212,7 @@ sign-up.move_before(pet-visits)
 *When* the Person moves Returns and refunds above Gift cards
 
 ```realization
-Board.backlog_item("Returns and refunds")
+BoardReads.backlog_item("Returns and refunds")
   <- Returns and refunds
 Returns and refunds.move_before(Gift cards)
   <- the Backlog with Returns and refunds above Gift cards
@@ -256,7 +256,7 @@ Evidence gap: the source does not say what becomes of a deleted ticket's branch 
 *When* the Person deletes pet-visits
 
 ```realization
-Board.ticket("pet-visits")
+CardPlacement.ticket("pet-visits")
   <- pet-visits
 pet-visits.delete()
   -> self.session.folder.remove()
@@ -272,7 +272,7 @@ pet-visits.delete()
 *When* the Person deletes no-such-ticket
 
 ```realization
-Board.ticket("no-such-ticket")
+CardPlacement.ticket("no-such-ticket")
   <- TicketNotFoundError: no ticket named 'no-such-ticket' on the board
 ```
 
@@ -296,7 +296,7 @@ The realizations name the operations these scenarios need; none of them exists y
 *When* the Person tags pet-visits' [session](../../../space/kanban/.context/kanban-model.md#session) with billing
 
 ```realization
-Board.ticket("pet-visits")
+CardPlacement.ticket("pet-visits")
   <- pet-visits
 pet-visits.tag("billing")
   -> self.session.add_tag("billing")
@@ -312,7 +312,7 @@ pet-visits.tag("billing")
 *When* the Person tags pet-visits' [session](../../../space/kanban/.context/kanban-model.md#session) with urgent
 
 ```realization
-Board.ticket("pet-visits")
+CardPlacement.ticket("pet-visits")
   <- pet-visits
 pet-visits.tag("urgent")
   -> self.session.add_tag("urgent")

@@ -124,7 +124,7 @@ class PracticeInventory:
     @property
     @data_field
     def edge_count(self) -> int:
-        return len(self._practice.reading.in_graph.edges())
+        return len(self._practice.reading.in_graph.edge_index.of())
 
     @property
     @data_field

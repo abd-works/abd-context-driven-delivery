@@ -4,7 +4,11 @@ one phase's outcomes and owns the colour rule."""
 from __future__ import annotations
 
 import json
-from typing import Any
+from collections.abc import Mapping, Sequence
+from typing import Any, TypeAlias
+
+# What an MCP operation answers a probe: its text, or the JSON data its result is sent as.
+ProbedAnswer: TypeAlias = str | int | float | bool | Mapping[str, object] | Sequence[object] | None
 
 _PREVIEW_CHARS = 180
 _FAILURE_CHARS = 400
@@ -32,7 +36,7 @@ class ProbeOutcome:
         self.details = details
 
     @classmethod
-    def from_answer(cls, mcp: str, answer: object) -> ProbeOutcome:
+    def from_answer(cls, mcp: str, answer: ProbedAnswer) -> ProbeOutcome:
         """Green with a preview of what the operation answered; red when it answered nothing."""
         text = answer.strip() if isinstance(answer, str) else "" if answer is None else json.dumps(answer, default=str)
         if not text:

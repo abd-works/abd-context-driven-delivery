@@ -12,3 +12,5 @@ The round-9 review (harness core, row 6) found *GuidanceAction* kept what it wor
 
 - `work_on_fidelity` is gone from the action: its one caller, *FidelityActionRunner* in this module, hands the fidelity to the action's list (`action.work.take_fidelity`) directly. Nothing outside this module called it.
 - The verbs this record keeps stay on the action (`listed`, `fidelity_of`, `practice_of`, `practice_slugs`). What it does not cover moved into parts: running an operation once per listed guidance at its fidelity, and the rules each listed guidance holds the agent to, are the list's (`action.work.each`, `at_fidelity`, `rules_to_follow`); the files a call names and the action writes are *ActionFiles* (`action.files.path_named`, `read`, `wrote`); `source_label` is a function of the module. The hooks only an action's subclasses use are protected: `_made_for` and `_tool_inside`, which lists another action as a tool in place of `as_tool`.
+
+- The version-1 refactoring moved the session context and the overlay rules into a part of their own, *SessionBrief* (`action.brief`), and renamed `_session_practice` to `session_practice`, which the brief and Validate ask.

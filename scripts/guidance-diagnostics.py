@@ -18,7 +18,7 @@ def main() -> int:
     from harness.diagnostics.guidance_probe import GuidanceProbe
     from harness.installation.installer import Installer
 
-    probe = GuidanceProbe.from_filter(Installer(repo=_REPO), args.guidance)
+    probe = GuidanceProbe.from_filter(Installer.create(repo=_REPO), args.guidance)
     report = "\n\n".join((probe.instructions(), probe.actions()))
     print(report)
     return 1 if _is_red(report) else 0

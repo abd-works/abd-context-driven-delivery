@@ -61,11 +61,9 @@ class CleanEngineering(PracticeGuidance):
         "sketch": SketchCleanEngineeringModel,
     }
 
-    def __init__(
-        self,
-        fidelity: str = "modules",
-        format: str | None = None,
-    ) -> None:
+    first_fidelity = "modules"
+
+    def __init__(self, fidelity: str | None = "", format: str | None = None) -> None:
         super().__init__(format=format, fidelity=fidelity)
         self._drawio: Drawio | None = None
 
@@ -94,4 +92,4 @@ class CleanEngineering(PracticeGuidance):
     
 
 
-OoadNode.register_practice(CleanEngineering)
+OoadNode.practice_class = CleanEngineering

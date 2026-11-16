@@ -16,8 +16,8 @@ from mamba import after, before, context, description, it
 
 from harness.diagnostics.release import CddRelease, ReleaseAlreadyTagged
 from harness.diagnostics.test_runs import RunOutcome, TestCadence, TestRun, TestRunRecord, TestRunner, TestTier, main_checkout
-from harness.process.git import Git
-from harness.process.github_cli import GitHubCli, GitHubCliError
+from harness.git.git import Git
+from harness.diagnostics.github_cli import GitHubCli, GitHubCliError
 
 # How long the background run of a stand-in test.ps1 has to record its result.
 RECORDED_SECONDS = 60

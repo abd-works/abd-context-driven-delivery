@@ -74,8 +74,8 @@ function EdgeCardsView({ column }: { column: ColumnClient }) {
     <div className="card-lists is-single">
       <DropZoneView
         className="card-list"
-        accepts={ticket => ticket.canDropOn(column.name)}
-        onDrop={ticket => ticket.dropOn(column.name)}
+        accepts={ticket => ticket.drops.canDropOn(column.name)}
+        onDrop={ticket => ticket.drops.dropOn(column.name)}
         acceptsItem={item => column.isBacklog && item.isStacked}
         onItemDrop={item => item.leaveParent()}
       >
@@ -205,6 +205,6 @@ function useKeptSelection(): void {
   const { page, state } = useBoard()
   const isGone = state.board !== null && state.openCard !== null && !page.board.tickets.some(ticket => ticket.name === state.openCard)
   useEffect(() => {
-    if (isGone && state.openCard) page.cards.releaseTicket(state.openCard)
+    if (isGone) page.cards.closeCard()
   }, [isGone, page, state.openCard])
 }

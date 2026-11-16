@@ -40,9 +40,9 @@ const ORDER_LINES = [
   LINE_14,
   ...Array.from({ length: 27 }, (_, index) => `        # step ${index + 15}`),
 ]
-// The graph checkout-flow saved, in the shape harness/graph/saved_graph.py writes (SAVED_SHAPE_VERSION 3).
+// The graph checkout-flow saved, in the shape harness/graph/saved_graph.py writes (SAVED_SHAPE_VERSION 5).
 const ORDER_GRAPH = {
-  version: 3,
+  version: 5,
   overlays: [],
   practices: {
     clean_engineering: {

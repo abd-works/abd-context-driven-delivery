@@ -13,7 +13,7 @@ from mamba import after, before, context, description, it
 
 from harness.diagnostics.server_health import ServerHealth
 from harness.diagnostics.test_runs import RunOutcome, TestCadence, TestRun, TestRunRecord, TestTier, main_checkout
-from harness.process.git import RepoConnectError
+from harness.git.git import RepoConnectError
 
 NOON = datetime(2026, 11, 15, 12, 0, tzinfo=timezone.utc)
 # A process id that is never running.

@@ -17,7 +17,7 @@ from harness.catalog_generator.catalog_examples import CatalogFidelity, ProjectE
 from harness.catalog_generator.catalog_practice import CatalogPractice
 from harness.catalog_generator.git_citation import GitCitation
 from harness.installation.json_file import JsonFile
-from harness.process.git import RepoConnectError
+from harness.git.git import RepoConnectError
 
 # Where a project keeps the examples it chose for its approach page.
 _EXAMPLES_MANIFEST = Path(".context") / "project-approach-examples.json"
@@ -57,12 +57,18 @@ class ProjectFiles:
     """A project's checkout as its approach page reads it, for the catalog's practices: the example files in its tree,
     the examples, title, and repository it saved, and its git origin."""
 
-    def __init__(self, root: str | Path, practices: list[CatalogPractice]) -> None:
-        self.root = Path(root).resolve()
+    def __init__(self, root: Path, practices: list[CatalogPractice], manifest: JsonFile) -> None:
+        """manifest holds the examples, title, and repository the project saved."""
+        self.root = root
         self.practices = practices
         self.classifier = ExampleClassifier(self.root, practices)
-        # The examples, title, and repository the project saved, in its .context folder.
-        self.manifest = JsonFile(self.root / _EXAMPLES_MANIFEST)
+        self.manifest = manifest
+
+    @classmethod
+    def load(cls, root: str | Path, practices: list[CatalogPractice]) -> ProjectFiles:
+        """The checkout at root, whose saved examples are in its .context folder."""
+        resolved = Path(root).resolve()
+        return cls(resolved, practices, JsonFile(resolved / _EXAMPLES_MANIFEST))
 
     @property
     def discovered(self) -> Examples:

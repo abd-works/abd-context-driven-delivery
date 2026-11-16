@@ -1,4 +1,4 @@
-import { ChatClientGenerated } from '@cdd/harness/chat/chat'
+import { ChatsClientGenerated } from '@cdd/harness/chat/chats'
 
 import type { BoardApi } from '../board/board-api'
 import type { BoardStore } from '../shared/board-store'
@@ -31,7 +31,7 @@ export class ChatOpening {
     return asked !== undefined && Date.now() - asked < STARTING_CHAT_MILLISECONDS
   }
 
-  // A ticket's new chat opens in the Claude app on the ticket's worktree, through Python's chat.open; the app asks the
+  // A ticket's new chat opens in the Claude app on the ticket's worktree, through Python's chats.open; the app asks the
   // person to confirm the folder and send. With no worktree there is nothing to open it on, and it is no longer coming.
   async startFor(ticket: string, worktree: string): Promise<void> {
     if (!worktree) {
@@ -39,7 +39,7 @@ export class ChatOpening {
       this.store.change({ startingChats: starting })
       return
     }
-    if (await ChatClientGenerated.open(this.api, worktree, newChatPrompt(ticket))) this.store.toast(`Confirm the folder and send in the Claude app to start the chat of ${ticket}`)
+    if (await new ChatsClientGenerated(this.api).open(worktree, newChatPrompt(ticket))) this.store.toast(`Confirm the folder and send in the Claude app to start the chat of ${ticket}`)
   }
 }
 

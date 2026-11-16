@@ -107,7 +107,7 @@ def _order_property() -> Property:
     prop = Property(name="order", type_hint="Order")
     prop.stereotype = "association"
     prop.cardinality = "0..1"
-    prop.derive_relationship()
+    prop.arrow.derive()
     return prop
 
 
@@ -116,7 +116,7 @@ with description("a property type"):
         customers = Property(name="customers", type_hint="Collection<Customer>")
         customers.stereotype = "aggregation"
         customers.cardinality = "0..*"
-        customers.derive_relationship()
+        customers.arrow.derive()
         expect(customers.relationship.target).to(equal("Customer"))
         expect(customers.relationship.kind).to(equal("aggregation"))
         expect(customers.relationship.cardinality).to(equal("0..*"))
@@ -124,8 +124,8 @@ with description("a property type"):
     with it("should leave a primitive and a third-party type without a relationship"):
         identifier = Property(name="id", type_hint="string")
         cause = Property(name="cause", type_hint="Error")
-        identifier.derive_relationship()
-        cause.derive_relationship()
+        identifier.arrow.derive()
+        cause.arrow.derive()
         expect(identifier.relationship).to(equal(None))
         expect(cause.relationship).to(equal(None))
 
@@ -372,8 +372,8 @@ with description("a clean engineering model on a graph"):
 
     with it("should record participants and belongsTo"):
         practice = self.graph.practice("clean_engineering")
-        participants = [(edge.parent.name, edge.child.name) for edge in practice.reading.in_graph.edges("participants")]
-        belongs = [(edge.parent.name, edge.child.name) for edge in practice.reading.in_graph.edges("belongsTo")]
+        participants = [(edge.parent.name, edge.child.name) for edge in practice.reading.in_graph.edge_index.of("participants")]
+        belongs = [(edge.parent.name, edge.child.name) for edge in practice.reading.in_graph.edge_index.of("belongsTo")]
         expect(participants).to(contain(("orders", "Order"), ("Order", "place")))
         expect(belongs).to(contain(("Order", "orders"), ("place", "Order")))
 
@@ -416,10 +416,10 @@ with description("a class read from its file"):
         self.oclass.line = 2
         self.oclass.end_line = 3
         self.oclass.stereotypes = ["Aggregate Root"]
-        self.oclass.take_lines(["# head", "class Cart:", "    # Interaction: total", "tail"])
+        self.oclass.source_facts.take_lines(["# head", "class Cart:", "    # Interaction: total", "tail"])
 
     with it("should keep the lines it spans"):
-        expect(self.oclass.span.text).to(equal("class Cart:\n    # Interaction: total"))
+        expect(self.oclass.source_facts.span.text).to(equal("class Cart:\n    # Interaction: total"))
 
     with it("should compose its peers as an aggregate root"):
         expect(self.oclass.composes_peers).to(be_true)

@@ -66,14 +66,14 @@ class JavaScriptClass(CodeClass):
             f"// Use {base_type_name_for(self.name)} directly.",
         ]
 
-    def interface_declaration(self) -> List[str]:
+    def _interface_declaration(self) -> List[str]:
         """JavaScript has no interfaces, so the contract is a class that says it is one."""
-        return [f"// interface {self.name}"] + self.class_declaration([])
+        return [f"// interface {self.name}"] + self._class_declaration([])
 
-    def class_declaration(self, bases: List[str]) -> List[str]:
+    def _class_declaration(self, bases: List[str]) -> List[str]:
         """JavaScript extends one class and has no `implements`, so the other bases are named in an `// implements`
         line above the class, where the parse reads them back."""
-        extended, implemented = self.heritage(bases)
+        extended, implemented = self._heritage(bases)
         extends = f" extends {extended}" if extended else ""
         noted = [f"// implements {', '.join(implemented)}"] if implemented else []
         return noted + [f"class {self.name}{extends} {{"]

@@ -29,11 +29,16 @@ from harness.catalog_generator.git_citation import GitCitation
 
 
 def main(argv: list[str] | None = None) -> None:
+    print(_generated(argv))
+
+
+def _generated(argv: list[str] | None) -> str:
+    """Generate what the command line asks for and say what was done."""
     arguments = _parser().parse_args(argv)
     # Loading the checkout's toolsets imports the packages that register its practices and actions, as the cdd server
     # does, so the catalog shows them.
     RepositoryToolsets(_REPO_ROOT).classes()
-    print(_run(_catalog(arguments), arguments))
+    return _run(_catalog(arguments), arguments)
 
 
 def _run(catalog: Catalog, arguments: argparse.Namespace) -> str:

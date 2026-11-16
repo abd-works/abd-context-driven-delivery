@@ -67,6 +67,7 @@ from harness.mcp.mcp_server import McpInstallation, McpServer
 from harness.mcp.mcp_daemon import McpDaemon
 from harness.mcp.spec_support import ThrowawayMachine
 from harness.installation.ide_layout import IdeLayout
+from harness.installation.install_target import InstallTarget
 
 
 
@@ -193,7 +194,7 @@ with description("an agent toolset") as self:
             with before.each:
                 self._tmp = tempfile.mkdtemp()
                 self.tree = Path(self._tmp)
-                self.installer = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT)
+                self.installer = Installer.create(ide="Cursor", path=self.tree, repo=_REPO_ROOT)
                 self.installer.install([SampleAgenticOps()])
 
             with after.each:
@@ -234,7 +235,7 @@ with description("an agent toolset") as self:
                 with before.each:
                     self._branch_tmp = tempfile.mkdtemp()
                     self.tree = Path(self._branch_tmp)
-                    self.installer = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT)
+                    self.installer = Installer.create(ide="Cursor", path=self.tree, repo=_REPO_ROOT)
                     self.mcp = self.installer.install([SampleMcpOps()]).of(McpInstallation)
 
                 with after.each:
@@ -307,7 +308,7 @@ with description("an agent toolset") as self:
                 with before.each:
                     self._branch_tmp = tempfile.mkdtemp()
                     self.tree = Path(self._branch_tmp)
-                    self.installer = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT)
+                    self.installer = Installer.create(ide="Cursor", path=self.tree, repo=_REPO_ROOT)
                     self.run = self.installer.install([SampleHookOps()])
 
                 with after.each:
@@ -350,7 +351,7 @@ with description("an agent toolset") as self:
                         '{"version": 1, "hooks": {"stop": [{"command": "keep-me"}]}}\n',
                         encoding="utf-8",
                     )
-                    Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install([SampleAgenticOps()])
+                    Installer.create(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install([SampleAgenticOps()])
 
                 with after.each:
                     shutil.rmtree(self._branch_tmp, ignore_errors=True)
@@ -365,7 +366,7 @@ with description("an agent toolset") as self:
             self._tmp = tempfile.mkdtemp()
             self.tree = Path(self._tmp)
             self.tool = SampleGuidance(format="markdown")
-            self.installer = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT)
+            self.installer = Installer.create(ide="Cursor", path=self.tree, repo=_REPO_ROOT)
             self.mcp = self.installer.install([self.tool]).of(McpInstallation)
 
         with after.each:
@@ -407,7 +408,7 @@ with description("an agent toolset") as self:
                 with before.each:
                     self._tmp = tempfile.mkdtemp()
                     self.tree = Path(self._tmp)
-                    self.installer = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT)
+                    self.installer = Installer.create(ide="Cursor", path=self.tree, repo=_REPO_ROOT)
                     self.installer.install([SampleAgenticOps()])
                     self.orphan = self.tree / "skills" / "stale-orphan" / "SKILL.md"
                     self.orphan.parent.mkdir(parents=True, exist_ok=True)
@@ -419,7 +420,7 @@ with description("an agent toolset") as self:
                 # (S) Installer --> Clean previously installed skills
                 with context("that has been cleansed"):
                     with before.each:
-                        self.removed = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).clean()
+                        self.removed = Installer.create(ide="Cursor", path=self.tree, repo=_REPO_ROOT).clean()
 
                     with it("should remove the published skill"):
                         expect(len(self.removed) > 0).to(be_true)
@@ -485,7 +486,7 @@ with description("an agent toolset") as self:
                 with before.each:
                     self._tmp = tempfile.mkdtemp()
                     self.tree = Path(self._tmp)
-                    Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install([SampleMcpOps()])
+                    Installer.create(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install([SampleMcpOps()])
 
                 with after.each:
                     shutil.rmtree(self._tmp, ignore_errors=True)
@@ -493,7 +494,7 @@ with description("an agent toolset") as self:
                 # (S) Installer --> Cleanse previously installed MCP tools
                 with context("that has been cleansed"):
                     with before.each:
-                        Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).clean()
+                        Installer.create(ide="Cursor", path=self.tree, repo=_REPO_ROOT).clean()
 
                     with it("should keep the MCP manifest so Cursor stays connected to the cdd server"):
                         expect((self.tree / "mcp.json").is_file()).to(equal(True))
@@ -535,7 +536,7 @@ with description("an agent toolset") as self:
                     self.project = Path(self._tmp)
                     self.cursor = self.project / ".cursor"
                     self.cursor.mkdir()
-                    Installer(ide="Cursor", path=self.cursor, repo=_REPO_ROOT).install([SampleMcpOps()])
+                    Installer.create(ide="Cursor", path=self.cursor, repo=_REPO_ROOT).install([SampleMcpOps()])
 
                 with after.each:
                     shutil.rmtree(self._tmp, ignore_errors=True)
@@ -558,8 +559,8 @@ with description("an agent toolset") as self:
                 with before.each:
                     self._tmp = tempfile.mkdtemp()
                     self.tree = Path(self._tmp)
-                    self.mcp = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
-                        [Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT)]
+                    self.mcp = Installer.create(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
+                        [Installer.create(ide="Cursor", path=self.tree, repo=_REPO_ROOT)]
                     ).of(McpInstallation)
 
                 with after.each:
@@ -592,7 +593,7 @@ with description("an agent toolset") as self:
                 with it("should install only itself via install_self"):
                     tree = Path(tempfile.mkdtemp())
                     try:
-                        Installer(ide="Cursor", path=tree, repo=_REPO_ROOT).deployment.install_self()
+                        Installer.create(ide="Cursor", path=tree, repo=_REPO_ROOT).deployment.install_self()
                         path = InstalledTree(tree).command_path("install")
                         expect(path is not None).to(equal(True))
                         expect(path.read_text(encoding="utf-8")).to(contain("scripts/install.py"))
@@ -612,7 +613,7 @@ with description("an agent toolset") as self:
                     try:
 
                         def run():
-                            Installer(ide="Cursor", path=tree, repo=_REPO_ROOT).install(
+                            Installer.create(ide="Cursor", path=tree, repo=_REPO_ROOT).install(
                                 ["no.such.module:Nope"]
                             )
 
@@ -625,7 +626,7 @@ with description("an agent toolset") as self:
                 with before.each:
                     self._branch_tmp = tempfile.mkdtemp()
                     self.tree = Path(self._branch_tmp)
-                    self.installer = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT)
+                    self.installer = Installer.create(ide="Cursor", path=self.tree, repo=_REPO_ROOT)
                     self.log = self.tree / "diagnostics.json"
 
                 with after.each:
@@ -714,7 +715,7 @@ with description("an agent toolset") as self:
                     self.machine.leave()
 
                 with it("should leave the hook server and the cdd server answering"):
-                    installer = Installer(ide="Cursor", path=_REPO_ROOT / ".cursor", repo=_REPO_ROOT)
+                    installer = Installer.create(ide="Cursor", path=_REPO_ROOT / ".cursor", repo=_REPO_ROOT)
                     status = installer.deployment.ensure_runtimes()
                     expect(status["hook"]).to(equal("running"))
                     expect(status["mcp"]).to(start_with("running"))
@@ -757,11 +758,11 @@ with description("an agent toolset") as self:
                     before = shared.read_text(encoding="utf-8") if shared.is_file() else ""
                     tmp = tempfile.mkdtemp()
                     try:
-                        Installer(ide="Cursor", path=tmp, repo=self.repo).install([])
+                        Installer.create(ide="Cursor", path=tmp, repo=self.repo).install([])
                         after = shared.read_text(encoding="utf-8") if shared.is_file() else ""
                         expect(after).to(equal(before))
                         expect(
-                            Installer(path=tmp, repo=self.repo).record.path.parent
+                            Installer.create(path=tmp, repo=self.repo).record.path.parent
                         ).to(equal(Path(tmp)))
                     finally:
                         shutil.rmtree(tmp, ignore_errors=True)
@@ -782,7 +783,7 @@ with description("a practice guidance class") as self:
             self._tmp = tempfile.mkdtemp()
             self.tree = Path(self._tmp)
             self.tool = SamplePracticeGuidance(format="markdown")
-            self.installer = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT)
+            self.installer = Installer.create(ide="Cursor", path=self.tree, repo=_REPO_ROOT)
             self.mcp = self.installer.install([self.tool]).of(McpInstallation)
 
         with after.each:
@@ -804,7 +805,7 @@ with description("a practice guidance class") as self:
             from harness.installation.files import FileChannel, FileInstallation
 
             overview = "sample preamble"
-            writer = FileInstallation(IdeLayout("Cursor"), self.tree, FileChannel("skill"))
+            writer = FileInstallation(InstallTarget(IdeLayout("Cursor"), self.tree), FileChannel("skill"))
             text = writer._skill_front_matter(
                 "sample-tool",
                 writer._skill_overview(
@@ -820,7 +821,7 @@ with description("a practice guidance class") as self:
                 from harness.installation.files import FileChannel, FileInstallation
 
                 overview = "## Overview\n\nsample preamble\n\nsecond paragraph\n\n---"
-                writer = FileInstallation(IdeLayout("Cursor"), self.tree, FileChannel("skill"))
+                writer = FileInstallation(InstallTarget(IdeLayout("Cursor"), self.tree), FileChannel("skill"))
                 self.description = writer._skill_overview(type("Host", (), {"overview": overview})(), [overview])
 
             with it("should describe the skill with the opening paragraph alone"):
@@ -832,7 +833,7 @@ with description("a practice guidance class") as self:
 
                 self.text = "See [tools](../../references/language-tools.md); follow `practices/ddd/ddd-model.mdc`."
                 self.dest = self.tree / "rules" / "practices" / "ddd" / "ddd-model.md"
-                self.writer = FileInstallation(IdeLayout("Claude"), self.tree, FileChannel("rules"), repo=_REPO_ROOT)
+                self.writer = FileInstallation(InstallTarget(IdeLayout("Claude"), self.tree), FileChannel("rules"), repo=_REPO_ROOT)
 
             with it("should copy the shared file into the IDE references folder"):
                 self.writer._with_installed_references(self.text, self.dest)
@@ -859,7 +860,7 @@ with description("a practice guidance class") as self:
                 with before.each:
                     from harness.installation.files import FileChannel, FileInstallation
 
-                    FileInstallation(IdeLayout("Claude"), self.tree, FileChannel("rules"), repo=_REPO_ROOT).write_standing_rule(self.source)
+                    FileInstallation(InstallTarget(IdeLayout("Claude"), self.tree), FileChannel("rules"), repo=_REPO_ROOT).write_standing_rule(self.source)
                     self.text = (self.tree / "rules" / "coding.md").read_text(encoding="utf-8")
 
                 with it("should load in every session, with no paths"):
@@ -872,7 +873,7 @@ with description("a practice guidance class") as self:
                 with it("should keep the source front matter as an .mdc rule"):
                     from harness.installation.files import FileChannel, FileInstallation
 
-                    FileInstallation(IdeLayout("Cursor"), self.tree, FileChannel("rules"), repo=_REPO_ROOT).write_standing_rule(self.source)
+                    FileInstallation(InstallTarget(IdeLayout("Cursor"), self.tree), FileChannel("rules"), repo=_REPO_ROOT).write_standing_rule(self.source)
                     text = (self.tree / "rules" / "coding.mdc").read_text(encoding="utf-8")
                     expect(text).to(equal(self.source.read_text(encoding="utf-8")))
 
@@ -880,7 +881,7 @@ with description("a practice guidance class") as self:
             with it("should leave that section name out of the skill body"):
                 from harness.installation.files import FileChannel, FileInstallation
 
-                writer = FileInstallation(IdeLayout("Cursor"), self.tree, FileChannel("skill", True))
+                writer = FileInstallation(InstallTarget(IdeLayout("Cursor"), self.tree), FileChannel("skill", True))
                 tool = type("Tool", (), {"docstring": "overview"})()
                 expect(writer._body_for(tool)).to(equal(""))
 
@@ -898,7 +899,7 @@ with description("a practice guidance class") as self:
             with it("should kebab-case the practice folder to match fidelity skill names"):
                 from harness.installation.files import FileChannel, FileInstallation
 
-                writer = FileInstallation(IdeLayout("Cursor"), Path("."), FileChannel("skill"))
+                writer = FileInstallation(InstallTarget(IdeLayout("Cursor"), Path(".")), FileChannel("skill"))
                 tools = {"instructions": _skill_tool("instructions")}
                 toolset = type(
                     "Practice",
@@ -915,7 +916,7 @@ with description("a practice guidance class") as self:
             self._tmp = tempfile.mkdtemp()
             self.tree = Path(self._tmp)
             self.tool = SamplePracticeGuidance(format="markdown")
-            self.installer = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT)
+            self.installer = Installer.create(ide="Cursor", path=self.tree, repo=_REPO_ROOT)
             self.mcp = self.installer.install([self.tool]).of(McpInstallation)
 
         with after.each:
@@ -946,7 +947,7 @@ with description("a practice guidance class") as self:
 
                 self._branch_tmp = tempfile.mkdtemp()
                 self.tree = Path(self._branch_tmp)
-                Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
+                Installer.create(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
                     [Bdd(), CleanEngineering()]
                 )
                 handlers_path = self.tree / "hook-handlers.json"
@@ -986,7 +987,7 @@ with description("a practice guidance class") as self:
 
                 self._branch_tmp = tempfile.mkdtemp()
                 self._car_tree = Path(self._branch_tmp)
-                Installer(ide="Cursor", path=self._car_tree, repo=_REPO_ROOT).install(
+                Installer.create(ide="Cursor", path=self._car_tree, repo=_REPO_ROOT).install(
                     [Car(), CarStory()]
                 )
 
@@ -1014,7 +1015,7 @@ with description("a practice guidance class") as self:
             self._tmp = tempfile.mkdtemp()
             self.tree = Path(self._tmp)
             self.tool = SamplePracticeWithFidelities(format="markdown")
-            self.mcp = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install([self.tool]).of(McpInstallation)
+            self.mcp = Installer.create(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install([self.tool]).of(McpInstallation)
 
         with after.each:
             shutil.rmtree(self._tmp, ignore_errors=True)
@@ -1037,7 +1038,7 @@ with description("a practice guidance class") as self:
             with it("should keep the practice folder and name the leaf practice-fidelity"):
                 from harness.installation.files import FileChannel, FileInstallation
 
-                writer = FileInstallation(IdeLayout("Cursor"), Path("."), FileChannel("skill"))
+                writer = FileInstallation(InstallTarget(IdeLayout("Cursor"), Path(".")), FileChannel("skill"))
                 tools = {"instructions": _skill_tool("instructions")}
                 practice = type("Practice", (), {"slug": "sample-tool"})()
                 toolset = type(
@@ -1058,7 +1059,7 @@ with description("a practice guidance class") as self:
             with it("should kebab-case the practice parent so it matches the fidelity leaf"):
                 from harness.installation.files import FileChannel, FileInstallation
 
-                writer = FileInstallation(IdeLayout("Cursor"), Path("."), FileChannel("skill"))
+                writer = FileInstallation(InstallTarget(IdeLayout("Cursor"), Path(".")), FileChannel("skill"))
                 tools = {"instructions": _skill_tool("instructions")}
                 practice = type("Practice", (), {"slug": "sample-tool"})()
                 toolset = type(
@@ -1107,7 +1108,7 @@ with description("a practice guidance class") as self:
                     self._branch_tmp = tempfile.mkdtemp()
                     self.tree = Path(self._branch_tmp)
                     self.tool = Stories()
-                    self.mcp = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
+                    self.mcp = Installer.create(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
                         [self.tool]
                     ).of(McpInstallation)
                     self.server = _server_publishing(self.mcp)
@@ -1127,7 +1128,7 @@ with description("a practice guidance class") as self:
                 with before.each:
                     self._branch_tmp = tempfile.mkdtemp()
                     self.tree = Path(self._branch_tmp)
-                    Installer(ide="VS Code", path=self.tree, repo=_REPO_ROOT).install(
+                    Installer.create(ide="VS Code", path=self.tree, repo=_REPO_ROOT).install(
                         [SamplePracticeWithFidelities(format="markdown")]
                     )
 
@@ -1175,7 +1176,7 @@ with description("lifecycle actions annotated for installation") as self:
 
                     self._tmp = tempfile.mkdtemp()
                     self.tree = Path(self._tmp)
-                    self.mcp = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
+                    self.mcp = Installer.create(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
                         [
                             Document(),
                             Generate(),
@@ -1228,7 +1229,7 @@ with description("lifecycle actions annotated for installation") as self:
 
                     self._tmp = tempfile.mkdtemp()
                     self.tree = Path(self._tmp)
-                    self.mcp = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
+                    self.mcp = Installer.create(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
                         [Improvement()]
                     ).of(McpInstallation)
 
@@ -1250,7 +1251,7 @@ with description("lifecycle actions annotated for installation") as self:
 
                     self._tmp = tempfile.mkdtemp()
                     self.tree = Path(self._tmp)
-                    self.mcp = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
+                    self.mcp = Installer.create(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
                         [Generate()]
                     ).of(McpInstallation)
 
@@ -1277,7 +1278,7 @@ with description("lifecycle actions annotated for installation") as self:
 
                     self._tmp = tempfile.mkdtemp()
                     self.tree = Path(self._tmp)
-                    self.mcp = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
+                    self.mcp = Installer.create(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
                         [Improvement(), Validate()]
                     ).of(McpInstallation)
 
@@ -1312,7 +1313,7 @@ with description("guidance agents"):
     with it("should install the agents from cdd_guidance/agents"):
         tree = Path(tempfile.mkdtemp())
         try:
-            Installer(ide="Cursor", path=tree, repo=_REPO_ROOT).deployment._install_agents()
+            Installer.create(ide="Cursor", path=tree, repo=_REPO_ROOT).deployment._install_agents()
             installed = sorted(path.name for path in (tree / "agents").glob("*.md"))
             expect(installed).to(equal(["context.md", "discoverer.md", "implementation.md", "specification.md"]))
             expect((tree / "agents" / "discoverer.md").read_text(encoding="utf-8")).to(contain("name: discoverer"))
@@ -1368,7 +1369,7 @@ with description("toolsets installed for Claude Code") as self:
         (self.tree / "settings.json").write_text(
             json.dumps({"permissions": {"allow": ["Bash(ls)"]}}), encoding="utf-8"
         )
-        Installer(ide="Claude", path=self.tree, repo=_REPO_ROOT).install(
+        Installer.create(ide="Claude", path=self.tree, repo=_REPO_ROOT).install(
             [SamplePracticeWithFidelities(format="markdown"), SampleMcpOps(), SampleHookOps()]
         )
         self.settings = json.loads((self.tree / "settings.json").read_text(encoding="utf-8"))
@@ -1517,7 +1518,7 @@ with description("toolsets installed for Claude Code") as self:
         with it("should list each glob under paths"):
             from harness.installation.files import FileChannel, FileInstallation
 
-            text = FileInstallation(IdeLayout("Claude"), Path("."), FileChannel("rules"))._claude_rules_front_matter(
+            text = FileInstallation(InstallTarget(IdeLayout("Claude"), Path(".")), FileChannel("rules"))._claude_rules_front_matter(
                 "d", "**/*.py, **/*.ts"
             )
             expect(text).to(equal('---\ndescription: "d"\npaths:\n  - "**/*.py"\n  - "**/*.ts"\n---\n\n'))
@@ -1534,7 +1535,7 @@ with description("Repo branch commands installed into Cursor") as self:
     with before.each:
         self._tmp = tempfile.mkdtemp()
         self.tree = Path(self._tmp)
-        self.mcp = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
+        self.mcp = Installer.create(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
             ["space.repo.repo:Repo"]
         ).of(McpInstallation)
 

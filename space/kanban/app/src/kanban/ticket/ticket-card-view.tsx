@@ -63,8 +63,8 @@ function CardMarkView({ ticket }: { ticket: TicketClient }) {
 // Opening a ticket's chat shows a wheel while the Claude app opens it.
 function ChatOpenerView({ ticket }: { ticket: TicketClient }) {
   if (ticket.chat.isOpening) return <span className="progress-wheel" role="status" title="Opening its chat in the Claude app" aria-label="Opening its chat" />
-  if (!ticket.canOpenChat) return null
-  return <SessionActionView action="chat" label={`Open the chat of ${ticket.title}`} hint="Open its chat: its worktree and a new chat in the Claude app" isOff={false} onPress={() => ticket.openChat()} />
+  if (!ticket.chatOpening.canOpen) return null
+  return <SessionActionView action="chat" label={`Open the chat of ${ticket.title}`} hint="Open its chat: its worktree and a new chat in the Claude app" isOff={false} onPress={() => ticket.chatOpening.open()} />
 }
 
 function CardTitleLineView({ ticket }: { ticket: TicketClient }) {
@@ -87,7 +87,7 @@ function CardWorkView({ ticket, stage }: { ticket: TicketClient; stage: ColumnCl
     <>
       <SegmentsView ticket={ticket} stage={stage} onSkill={setSkill} />
       {skill ? <div className="card-skill">{skill}</div> : null}
-      {ticket.work.workIn(stage)?.hasViolations ? (
+      {ticket.work.workIn(stage)?.has_violations ? (
         <button className="violations-link card-violations" onClick={withoutSelecting(() => page.panels.openReport(ticket, null))}>
           violations
         </button>
@@ -138,7 +138,7 @@ function SessionActionsView({ ticket }: { ticket: TicketClient }) {
   const cannotFill = useCannotFill(ticket)
   return (
     <span className="file-views">
-      <SessionActionView action="next" label={ticket.runNextLabel} hint={ticket.runNextHint} isOff={!ticket.canRunNext} onPress={() => ticket.runNext()} />
+      <SessionActionView action="next" label={ticket.face.runNextLabel} hint={ticket.face.runNextHint} isOff={!ticket.nextStep.canRun} onPress={() => ticket.nextStep.run()} />
       <SessionActionView action="handoff" label="Handoff" hint="Write a handoff for this session" isOff={cannotFill} onPress={() => ticket.prompts.fillHandoff()} />
       {ticket.isOpen ? (
         <SessionActionView action="close" label="Close" hint={ticket.prompts.closeHint} isOff={false} onPress={() => ticket.prompts.startClose()} />

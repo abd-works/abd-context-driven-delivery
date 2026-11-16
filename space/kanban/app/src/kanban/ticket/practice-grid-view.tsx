@@ -25,7 +25,7 @@ function GridStageHeadView({ ticket, stage }: { ticket: TicketClient; stage: Col
   const { page } = useBoard()
   const place = headPlace(stage.name)
   const spot = { ticket, stage, place, fidelities: ticket.work.progressIn(stage).map(progress => progress.fidelity) }
-  const isOpen = page.tiles.isOpen(ticket.name, place)
+  const isOpen = page.tiles.isOpen(ticket, place)
   return (
     <StageHeadView stage={stage}>
       <button className="expand-mark" aria-label={`Actions for ${stage.name}`} aria-expanded={isOpen} onClick={() => void page.tiles.toggle(ticket, spot)}>
@@ -42,7 +42,7 @@ function StageBarsView({ ticket }: { ticket: TicketClient }) {
   // Each read of stages builds new clients, so every bar finds its stage by position in one list.
   const stages = page.board.stages
   const open = stages.flatMap((stage, index) => {
-    const tile = page.tiles.openOn(ticket.name, headPlace(stage.name))
+    const tile = page.tiles.openOn(ticket, headPlace(stage.name))
     return tile ? [{ stage, index, tile }] : []
   })
   if (!open.length) return null

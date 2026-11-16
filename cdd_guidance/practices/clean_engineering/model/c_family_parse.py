@@ -38,6 +38,12 @@ _METHOD_RE = re.compile(
     r"(\w+)\s*\(([^)]*)\)\s*(?::\s*([^{;]+))?\s*\{",
 )
 _CTOR_RE = re.compile(r"constructor\s*\(([^)]*)\)\s*\{")
+# A TypeScript constructor parameter declared with an access modifier, `private readonly page: BoardPage`, declares a
+# field the class holds as well as a parameter.
+_PARAMETER_PROPERTY_RE = re.compile(
+    r"^\s*(?P<modifiers>(?:(?:public|private|protected|readonly|override)\s+)+)(?P<name>\w+)\??\s*(?::\s*(?P<type>[^=]+?))?\s*(?:=.*)?$",
+    re.S,
+)
 _TOP_FN_RE = re.compile(
     r"(?:export\s+)?(?:async\s+)?function\s+(\w+)\s*\(([^)]*)\)\s*(?::\s*[^{]+)?\s*\{",
 )
@@ -46,6 +52,8 @@ _TOP_ARROW_RE = re.compile(
     r"^(?:export\s+)?const\s+(\w+)\s*(?::[^=\n]+)?=\s*(?:async\s*)?\(([^)]*)\)\s*(?::\s*([^=\n]+?))?\s*=>\s*",
     re.M,
 )
+# A field a constructor function assigns on the object it builds: `this.stages = stages`.
+_THIS_FIELD_RE = re.compile(r"\bthis\.\w+\s*=(?!=)")
 _CALL_RE = re.compile(r"\b([A-Za-z_]\w*)\s*\(")
 # A name after ``new`` is constructed, not called.
 _CONSTRUCTION_RE = re.compile(r"\bnew\s+$")
@@ -93,7 +101,7 @@ class CFamilyParse:
         module.preamble = self._read_preamble()
         self._append_classes(module)
         self._attach_top_level(module)
-        module.take_lines(text)
+        module.source_facts.take_lines(text)
         self._file_module = module
         if module.classes:
             self.modules.append(module)
@@ -175,7 +183,23 @@ class CFamilyParse:
         class_spans = self._class_spans()
         functions = [self._function_operation(match) for match in self._outside(_TOP_FN_RE.finditer(self._text), class_spans)]
         arrows = [self._arrow_operation(match) for match in self._outside(_TOP_ARROW_RE.finditer(self._text), class_spans)]
-        return sorted([operation for operation in functions if operation is not None] + arrows, key=lambda operation: operation.line)
+        found = sorted([operation for operation in functions if operation is not None] + arrows, key=lambda operation: operation.line)
+        for operation in found:
+            operation.is_private = not self._is_exported(operation.name)
+        return found
+
+    def _is_exported(self, name: str) -> bool:
+        """True for a top-level function its file exports: `export function name`, `export const name =`, `export
+        default function name`, a name in an `export { ... }` list, or a CommonJS `module.exports` naming it. Any other
+        is private to its file."""
+        word = re.escape(name)
+        exported = (
+            rf"\bexport\s+(?:default\s+)?(?:async\s+)?(?:function|const)\s+{word}\b",
+            rf"\bexport\s*\{{[^}}]*\b{word}\b[^}}]*\}}",
+            rf"\bmodule\.exports\b[^;]*\b{word}\b",
+            rf"\bexports\.{word}\s*=",
+        )
+        return any(re.search(pattern, self._text) for pattern in exported)
 
     def _outside(self, matches: Iterator[re.Match], class_spans: list[tuple[int, int]]) -> list[re.Match]:
         """The matches that start outside every class body: a class's methods are no top-level functions."""
@@ -189,7 +213,17 @@ class CFamilyParse:
         operation = self._declared_operation(match.group(1), match.group(2) or "")
         operation.line = self._line_at(self._text, match.start())
         operation.end_line = self._line_at(self._text, body_start + len(body))
+        operation.is_constructor_function = self._is_constructor_function(match.group(1), body)
         return self._operation_from_body(operation, body)
+
+    def _is_constructor_function(self, name: str, body: str) -> bool:
+        """True for an old-style JavaScript constructor: a capitalised function that assigns `this.` fields and that
+        its file calls with `new`."""
+        return (
+            name[:1].isupper()
+            and _THIS_FIELD_RE.search(body) is not None
+            and re.search(rf"\bnew\s+{re.escape(name)}\s*\(", self._text) is not None
+        )
 
     def _arrow_operation(self, match: re.Match) -> Operation:
         """The top-level constant arrow function declared at match."""
@@ -351,7 +385,28 @@ class CFamilyParse:
             if match.group("name") not in seen:
                 seen.add(match.group("name"))
                 fields.append(self._field(match, len(fields) + 1))
+        for field in self._parameter_properties(len(fields)):
+            if field.name not in seen:
+                seen.add(field.name)
+                fields.append(field)
         return fields
+
+    def _parameter_properties(self, declared: int) -> list[Property]:
+        """The fields the constructors' parameter properties declare (`constructor(private readonly page: BoardPage)`),
+        numbered after the ``declared`` fields the body already declares."""
+        fields: list[Property] = []
+        for ctor in _CTOR_RE.finditer(self._class_body):
+            for part in split_top_level(ctor.group(1)):
+                match = _PARAMETER_PROPERTY_RE.match(part)
+                if match:
+                    fields.append(self._parameter_property(match, ctor.start(1), declared + len(fields) + 1))
+        return fields
+
+    def _parameter_property(self, match: re.Match, list_start: int, order: int) -> Property:
+        """The field one parameter property declares, on the line of the constructor's parameter list."""
+        field = self.property_type(name=match.group("name"), sequential_order=order, type_hint=(match.group("type") or "").strip())
+        field.line = self._line_at(self._text, self._body_start + list_start)
+        return field
 
     def _declared_fields(self, outside: str) -> list[Property]:
         """The fields declared with a type, `name: Type;`, each with the `//` notes right above it."""
@@ -396,7 +451,7 @@ class CFamilyParse:
     def _derive_member_relationships(self, oclass: OoadClass) -> None:
         """A field relates only when its type names a domain class."""
         for prop in oclass.properties:
-            prop.derive_relationship()
+            prop.arrow.derive()
 
     def _body_open(self, after: int) -> int:
         """Where the class body opens: the first `{` after the class name outside the type arguments of its heritage

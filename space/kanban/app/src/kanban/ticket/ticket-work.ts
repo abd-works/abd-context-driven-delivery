@@ -1,6 +1,6 @@
 import type { RequiredFidelity } from '../board/column-client'
 import type { FidelityProgressClientGenerated, FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
-import type { ActionStatesData } from '@cdd/space/kanban/ticket'
+import type { StageWorkData } from '@cdd/space/kanban/ticket'
 
 import type { BoardPage } from '../board/board-page'
 import type { ColumnClient } from '../board/column-client'
@@ -11,10 +11,6 @@ import type { TicketClient } from './ticket-client'
 // Each fidelity's files by format, as its own files tool answers, by the fidelity's slug: a tile or panel over several
 // fidelities reads them side by side.
 export type FilesByFidelity = Record<string, NonNullable<Awaited<ReturnType<FidelityProgressClientGenerated['files']>>>>
-
-// How far some of a ticket's work has got, as Python answers it for one fidelity's progress or for a stage's work taken
-// together: what an action bar shows and allows.
-export type WorkStanding = { actions: ActionStatesData; hasViolations: boolean; violationCount: number; allowedActions: string[]; commands: Record<string, string> }
 
 // A ticket's progress on each fidelity the board requires, as the page knows it: each fidelity's progress answers its own
 // tools, and the files and reports a tile or panel over several of them reads side by side.
@@ -65,10 +61,9 @@ export class TicketWork {
     return this.ticket.next ? this.progressNamed(this.ticket.next.fidelity.slug) : undefined
   }
 
-  // Its work in a stage taken together, which a stage head's action bar shows and acts on.
-  workIn(stage: ColumnClient): WorkStanding | undefined {
-    const work = this.ticket.stageWork.find(entry => entry.stage.name === stage.name)
-    return work && { actions: work.actions, hasViolations: work.has_violations, violationCount: work.violation_count, allowedActions: work.allowed_actions, commands: work.commands }
+  // Its work in a stage taken together, as Python sends it (StageWork), which a stage head's action bar shows and acts on.
+  workIn(stage: ColumnClient): StageWorkData | undefined {
+    return this.ticket.stageWork.find(entry => entry.stage.name === stage.name)
   }
 
   // Each fidelity answers for its own files, so a tile or panel over several fidelities reads them side by side; none

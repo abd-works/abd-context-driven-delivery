@@ -154,7 +154,7 @@ class TicketCheckout:
             self._refuse_unclear_branch()
             board.sessions.saves.now(f"sessions: save before opening {self._ticket.name}")
             self.branch.open_in_worktree()
-            board.reread()
+            board.placement.reread()
         self._ticket.session.record.save_fields(branch=self.branch.name, worktree=self.worktree)
         board.sessions.saves.now(f"sessions: open {self._ticket.name}")
 
@@ -201,7 +201,7 @@ class TicketCheckout:
         # Checked out in the repository itself, else in the ticket's own worktree.
         checkout = self._repo if branch.is_checked_out else branch.worktree.repository
         if LEAVE_COMMIT in leaving or LEAVE_PUSH in leaving:
-            checkout.commit([str(checkout.root)], f"{self._ticket.name}: leave session", untracked=True)
+            checkout.working_tree.commit([str(checkout.root)], f"{self._ticket.name}: leave session", untracked=True)
         if LEAVE_PUSH in leaving:
             checkout.origin.push_upstream()
 
@@ -214,7 +214,7 @@ class TicketCheckout:
             return
         worktree.close(f"{self._ticket.name}: leave session")
         self._work_from_main_clone()
-        self._ticket.board.reread()
+        self._ticket.board.placement.reread()
 
     def _work_from_main_clone(self) -> None:
         """The ticket may have been read from the worktree just deleted, where git can no longer run, so its branch is

@@ -308,22 +308,22 @@ it should unlock every ticket with Active session only off
 
 ```
 it should say what runs next
--> TicketClient.nextNote
+-> TicketFace.nextNote
 ```
 
 ```
 it should say another session must be activated to run it
--> TicketClient.lockNote
+-> TicketFace.lockNote
 ```
 
 ```
 it should name a split ticket by its parent
--> TicketClient.origin
+-> TicketFace.origin
 ```
 
 ```
 it should name the ticket's stage and how far it has got there
--> TicketClient.stagePlace
+-> TicketFace.stagePlace
 ```
 
 ```
@@ -341,7 +341,7 @@ it should offer the review with no chat connected, since it is the person\'s own
   -> BoardStore.change()
     -> board-store.saveLayout()
     -> BoardStore.dismissToast()
--> TicketClient.canRunNext
+-> TicketNextStep.canRun
 ```
 
 ```
@@ -350,7 +350,7 @@ it should show the review done once Run next records it
   -> BoardStore.change()
     -> board-store.saveLayout()
     -> BoardStore.dismissToast()
--> TicketClient.runNext()
+-> TicketNextStep.run()
 -> TicketClient.actionsOf('stories-story-map')
 ```
 
@@ -400,7 +400,7 @@ it should select its item
 
 ```
 it should let a ticket in any column be dropped on the Backlog
--> TicketClient.dropOn('Backlog')
+-> TicketDrops.dropOn('Backlog')
   -> TicketClient.moveTo()
     -> cdd ticket.move_to
       -> Ticket.move_to(stage: str, done: bool)
@@ -426,38 +426,38 @@ it should let a ticket in any column be dropped on the Backlog
 
 ```
 it should let only the active ticket, or one done in Implementation, be dropped on Complete
--> TicketClient.canDropOn('Complete')
+-> TicketDrops.canDropOn('Complete')
 ```
 
 ### Send Next Fidelity Action
 
 ```
 it should name the step that runs next
--> TicketClient.runNextLabel
+-> TicketFace.runNextLabel
 ```
 
 ```
 it should say review violations on held violations
--> TicketClient.runNextLabel
+-> TicketFace.runNextLabel
 ```
 
 #### with generate next
 
 ```
 it should send the generate command in the default format
--> TicketClient.runNext()
+-> TicketNextStep.run()
 ```
 
 #### with generate next on a fidelity of a stage the ticket has moved past
 
 ```
 it should generate it in its own stage's default format
--> TicketClient.runNext()
+-> TicketNextStep.run()
 ```
 
 ```
 it should mark its tile as the next one
--> TicketClient.runNext()
+-> TicketNextStep.run()
 -> BoardPage.board
 -> BoardClient.stageNamed('Discovery')
 -> TicketClient.isNext(discovery, 'stories-story-map')
@@ -465,24 +465,24 @@ it should mark its tile as the next one
 
 ```
 it should fill the prompt on validate
--> TicketClient.runNext()
+-> TicketNextStep.run()
 ```
 
 #### with violations held and no chat connected
 
 ```
 it should still offer Run next
--> TicketClient.canRunNext
+-> TicketNextStep.canRun
 ```
 
 ```
 it should open the report
--> TicketClient.runNext()
+-> TicketNextStep.run()
 ```
 
 ```
 it should stay off with no chat to send to
--> TicketClient.canRunNext
+-> TicketNextStep.canRun
 ```
 
 ### Choose Ticket Practices
@@ -2036,7 +2036,7 @@ it should bring the ticket back with its work
 it should list the file with whether it exists
 -> FidelityProgress.files(ticket=TICKET, fidelity=FIDELITY)
   -> FidelityGuidance.declared.files()
-    -> FidelitySessionOutput.output_paths()
+    -> WrittenFiles.output_paths()
       -> FidelityGuidance.outputs
       <- dict
     <- dict
@@ -2347,7 +2347,7 @@ it should open a ticket in Discovery
     <- Session
   <- Ticket
 <- Ticket
--> Board.ticket("returns-and-refunds")
+-> CardPlacement.ticket("returns-and-refunds")
 <- Ticket
 -> Ticket.column
 <- Column
@@ -2411,7 +2411,7 @@ it should keep its file in the ticket's session folder
 it should be in the Backlog
 -> Sessions.of_project(project).load(folder: Path)
 <- Session
--> Board.ticket("pet-visits")
+-> CardPlacement.ticket("pet-visits")
 <- Ticket
 -> Board.backlog_items
 <- list[BacklogItem]
@@ -2421,7 +2421,7 @@ it should be in the Backlog
 it should keep the ticket's whole folder, its history included
 -> Sessions.of_project(project).load(folder: Path)
 <- Session
--> Board.ticket("pet-visits")
+-> CardPlacement.ticket("pet-visits")
 <- Ticket
 ```
 
@@ -2429,7 +2429,7 @@ it should keep the ticket's whole folder, its history included
 it should show the ticket's own idea file as its text
 -> Sessions.of_project(project).load(folder: Path)
 <- Session
--> Board.ticket("pet-visits")
+-> CardPlacement.ticket("pet-visits")
 <- Ticket
 -> Board.backlog_items
 <- list[BacklogItem]
@@ -2439,7 +2439,7 @@ it should show the ticket's own idea file as its text
 it should be off the stages
 -> Sessions.of_project(project).load(folder: Path)
 <- Session
--> Board.ticket("pet-visits")
+-> CardPlacement.ticket("pet-visits")
 <- Ticket
 -> Ticket.progress
 <- list[FidelityProgress]
@@ -2541,7 +2541,7 @@ it should not count the review
 
 ```
 it should be done, waiting in its stage's done part
--> Board.ticket("pet-visits")
+-> CardPlacement.ticket("pet-visits")
 <- Ticket
 -> Board.column("Discovery")
 <- Column
@@ -2549,7 +2549,7 @@ it should be done, waiting in its stage's done part
 
 ```
 it should have no next
--> Board.ticket("pet-visits")
+-> CardPlacement.ticket("pet-visits")
 <- Ticket
 ```
 
@@ -2625,7 +2625,7 @@ it should be done in that stage
 
 ```
 it should be in progress in that stage
--> Board.ticket("pet-visits")
+-> CardPlacement.ticket("pet-visits")
 <- Ticket
 -> Ticket.move_to("Discovery")
   -> BacklogItem.from_ticket(ticket: Ticket, board: Board)
@@ -2641,7 +2641,7 @@ it should be in progress in that stage
 
 ```
 it should be open again, in progress in that stage
--> Board.ticket("pet-visits")
+-> CardPlacement.ticket("pet-visits")
 <- Ticket
 ```
 
@@ -2663,13 +2663,13 @@ it should be done with the one practice it works on
 
 ```
 it should be in Complete
--> Board.ticket("pet-visits")
+-> CardPlacement.ticket("pet-visits")
 <- Ticket
 ```
 
 ```
 it should have its folder in closed
--> Board.ticket("pet-visits")
+-> CardPlacement.ticket("pet-visits")
 <- Ticket
 ```
 
@@ -2677,7 +2677,7 @@ it should have its folder in closed
 
 ```
 it should be off the board
--> Board.ticket("pet-visits")
+-> CardPlacement.ticket("pet-visits")
 <- Ticket
 -> Ticket.archive()
   -> Session.close()
@@ -2690,7 +2690,7 @@ it should be off the board
 
 ```
 it should have its folder in the archive
--> Board.ticket("pet-visits")
+-> CardPlacement.ticket("pet-visits")
 <- Ticket
 -> Ticket.archive()
   -> Session.close()
@@ -2813,7 +2813,7 @@ it should write that practice's files there
 <- PracticeSessionOutput
 -> FidelityProgress.files(ticket="pet-visits", fidelity="stories-story-map")
   -> FidelityGuidance.declared.files()
-    -> FidelitySessionOutput.output_paths()
+    -> WrittenFiles.output_paths()
       -> FidelityGuidance.outputs
       <- dict
     <- dict
@@ -3402,7 +3402,7 @@ it should list the files a pattern finds there
 <- BacklogItem
 -> FidelityProgress.files(ticket="pet-visits", fidelity="bdd-behavior")
   -> FidelityGuidance.declared.files()
-    -> FidelitySessionOutput.output_paths()
+    -> WrittenFiles.output_paths()
       -> FidelityGuidance.outputs
       <- dict
     <- dict
@@ -3420,7 +3420,7 @@ it should list the files a named part of the path finds there, in folders at any
 <- BacklogItem
 -> FidelityProgress.files(ticket="pet-visits", fidelity="clean-engineering-model")
   -> FidelityGuidance.declared.files()
-    -> FidelitySessionOutput.output_paths()
+    -> WrittenFiles.output_paths()
       -> FidelityGuidance.outputs
       <- dict
     <- dict
@@ -3440,7 +3440,7 @@ it should list the file with whether it exists
 <- BacklogItem
 -> FidelityProgress.files(ticket="pet-visits", fidelity="stories-story-map")
   -> FidelityGuidance.declared.files()
-    -> FidelitySessionOutput.output_paths()
+    -> WrittenFiles.output_paths()
       -> FidelityGuidance.outputs
       <- dict
     <- dict
@@ -3458,7 +3458,7 @@ it should list only the fidelities asked for
 <- BacklogItem
 -> FidelityProgress.files(ticket="pet-visits", fidelity="stories-story-map")
   -> FidelityGuidance.declared.files()
-    -> FidelitySessionOutput.output_paths()
+    -> WrittenFiles.output_paths()
       -> FidelityGuidance.outputs
       <- dict
     <- dict
@@ -3841,7 +3841,7 @@ it should list only the files the ticket's branch changed
   -> SessionLog.guidance_action(action: str)
 -> FidelityProgress.files(ticket="pet-visits", fidelity="bdd-behavior")
   -> FidelityGuidance.declared.files()
-    -> FidelitySessionOutput.output_paths()
+    -> WrittenFiles.output_paths()
       -> FidelityGuidance.outputs
       <- dict
     <- dict

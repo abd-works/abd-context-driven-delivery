@@ -73,14 +73,16 @@ class NoModulePerClass(ProductionCodeRule):
         return any(child.type in ("Module", "Package") for child in context.children(folder_node, "owns"))
 
     def _public_classes_in(self, folder_node: "Node", context: "RuleCheckContext") -> list["Node"]:
-        """The classes the folder's production files declare whose names are public; a spec's classes are not its seam."""
-        public: list["Node"] = []
-        for class_node in context.nodes("OoadClass"):
-            file = class_node.source.file or ""
-            public_file = not file.rsplit("/", 1)[-1].startswith("_") and not is_test_code(file)
-            if public_file and folder_node in context.targets(class_node, "belongsTo"):
-                public.append(class_node)
-        return public
+        """The classes the folder owns that its production files declare under public names; a spec's classes are not
+        its seam."""
+        return [
+            class_node
+            for class_node in context.targets(folder_node, "owns")
+            if class_node.type == "OoadClass" and self._in_public_file(class_node.source.file or "")
+        ]
+
+    def _in_public_file(self, file: str) -> bool:
+        return not file.rsplit("/", 1)[-1].startswith("_") and not is_test_code(file)
 
     def _independent(self, class_node: "Node") -> bool:
         """True for a class its stereotype marks as a subsystem of its own, such as an `@agent_toolset`."""

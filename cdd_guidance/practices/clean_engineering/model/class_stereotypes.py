@@ -80,6 +80,17 @@ class DocComment:
     def __init__(self, text: str = "") -> None:
         self._lines = text.strip().splitlines()
 
+    @classmethod
+    def from_class(cls, oclass: "OoadClass", marked: bool) -> "DocComment":
+        """The doc comment oclass is written with: its module path line, its intent, marked with its stereotypes for a
+        language that has no decorators, then the dependencies that name details, since a plain dependency shows in
+        code as the call that makes it."""
+        lines = [f"{MODULE_LINE} {joined_module_path(oclass.module_path)}"] if oclass.module_path else []
+        intent = marked_intent(list(oclass.stereotypes) if marked else [], oclass.intent)
+        lines.extend([intent] if intent else [])
+        lines.extend(line.strip() for item in oclass.dependencies if item.details for line in item.lines())
+        return cls("\n".join(lines))
+
     def text(self) -> str:
         return "\n".join(self._lines)
 

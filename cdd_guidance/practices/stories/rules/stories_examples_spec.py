@@ -62,7 +62,7 @@ with description("stories TypeScript story-test examples") as self:
         with it("should apply to stories as a prompt rule with no executable check"):
             from cdd_guidance.practices.stories.rules import BY_SLUG
             from harness.graph.schema_rules import PracticeSchema
-            from harness.guidance.practice_catalogue import PracticeCatalogue
+            from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 
             expect("vocabulary-traces-to-domain-source" in BY_SLUG).to(equal(False))
-            expect(PracticeSchema(PracticeCatalogue.create("stories")).slugs_for("Story")).to(contain("vocabulary-traces-to-domain-source"))
+            expect(PracticeSchema(PRACTICE_CATALOGUE.create("stories")).slugs_for("Story")).to(contain("vocabulary-traces-to-domain-source"))

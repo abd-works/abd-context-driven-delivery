@@ -125,8 +125,8 @@ def _install(args: argparse.Namespace) -> int:
     from harness.installation.installer import Installer
     from harness.mcp.mcp_server import McpInstallation
 
-    installer = Installer(ide=args.ide, path=args.path, repo=_REPO)
-    server = McpInstallation(installer.layout, installer.path, repo=_REPO)
+    installer = Installer.create(ide=args.ide, path=args.path, repo=_REPO)
+    server = McpInstallation.create(installer.layout, installer.path, repo=_REPO)
     # Switching the code the server runs takes seconds; a full install takes a minute, so the switch runs alone.
     if args.pin_runtime or args.update or args.serve_from_checkout:
         return _switch_server_only(args, installer, server)

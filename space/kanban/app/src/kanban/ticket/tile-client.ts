@@ -19,7 +19,10 @@ export const slugsOf = (fidelities: RequiredFidelity[]): string[] => fidelities.
 export type TileSpot = { ticket: TicketClient; stage: ColumnClient; place: string; fidelities: RequiredFidelity[] }
 
 // A bar is found by its ticket's name and its place, because each board read makes new ticket clients.
-export const isAt = (tile: Tile, ticket: string, place: string): boolean => tile.ticket.name === ticket && tile.place === place
+export const isAt = (tile: Tile, ticket: TicketClient, place: string): boolean => tile.ticket.name === ticket.name && tile.place === place
+
+// What a change makes of one open bar.
+type TileChange = (tile: Tile) => Tile
 
 // Which action bars are open. A press keeps a bar open, and several can be kept at once; a hover only looks, so it
 // opens one bar that is not kept and closes it again when the pointer leaves.
@@ -47,55 +50,55 @@ export class TileClient {
     this.store.change(state => ({ tiles: [...this.othersKept(state.tiles, shown), shown] }))
     const choices = (await ticket.formatChoices(slugsOf(fidelities))) ?? []
     if (this.latestOpening.get(`${ticket.name} ${place}`) !== order) return
-    this.change(ticket.name, place, tile => ({ ...tile, choices }))
+    this.change(ticket, place, tile => ({ ...tile, choices }))
   }
 
   // A bar a hover opens replaces any other bar a hover opened; pressed bars stay.
   private othersKept(tiles: Tile[], shown: Tile): Tile[] {
-    const others = tiles.filter(tile => !isAt(tile, shown.ticket.name, shown.place))
+    const others = tiles.filter(tile => !isAt(tile, shown.ticket, shown.place))
     return shown.isPinned ? others : others.filter(tile => tile.isPinned)
   }
 
   // Changes the one open bar on that ticket at that place, and leaves every other bar as it is.
-  change(ticket: string, place: string, changed: (tile: Tile) => Tile): void {
+  change(ticket: TicketClient, place: string, changed: TileChange): void {
     this.store.change(state => ({ tiles: state.tiles.map((tile: Tile) => (isAt(tile, ticket, place) ? changed(tile) : tile)) }))
   }
 
-  openOn(ticket: string, place: string): Tile | undefined {
+  openOn(ticket: TicketClient, place: string): Tile | undefined {
     return this.store.state.tiles.find(tile => isAt(tile, ticket, place))
   }
 
-  isOpen(ticket: string, place: string): boolean {
+  isOpen(ticket: TicketClient, place: string): boolean {
     return this.openOn(ticket, place) !== undefined
   }
 
-  close(ticket: string, place: string): void {
+  close(ticket: TicketClient, place: string): void {
     this.store.change(state => ({ tiles: state.tiles.filter(tile => !isAt(tile, ticket, place)) }))
   }
 
-  pin(ticket: string, place: string): void {
+  pin(ticket: TicketClient, place: string): void {
     this.change(ticket, place, tile => ({ ...tile, isPinned: true }))
   }
 
   // The first press on a tile a hover opened keeps it open; the next closes it.
   async toggle(ticket: TicketClient, spot: TileSpot): Promise<void> {
     clearTimeout(this.hoverOpenTimer)
-    ticket.select()
-    const open = this.openOn(ticket.name, spot.place)
+    ticket.selection.select()
+    const open = this.openOn(ticket, spot.place)
     if (!open) return this.open(spot, true)
-    if (open.isPinned) this.close(ticket.name, spot.place)
-    else this.pin(ticket.name, spot.place)
+    if (open.isPinned) this.close(ticket, spot.place)
+    else this.pin(ticket, spot.place)
   }
 
   // A hover only looks, so it leaves every bar a person pressed open.
   hoverIn(spot: TileSpot): void {
     clearTimeout(this.hoverOpenTimer)
     clearTimeout(this.hoverCloseTimer)
-    if (this.isOpen(spot.ticket.name, spot.place)) return
+    if (this.isOpen(spot.ticket, spot.place)) return
     this.hoverOpenTimer = setTimeout(() => void this.open(spot, false), HOVER_OPEN_MILLISECONDS)
   }
 
-  hoverOut(ticket: string, place: string): void {
+  hoverOut(ticket: TicketClient, place: string): void {
     clearTimeout(this.hoverOpenTimer)
     clearTimeout(this.hoverCloseTimer)
     this.hoverCloseTimer = setTimeout(() => {
@@ -110,6 +113,6 @@ export class TileClient {
 
   private async reloadChoices(tile: Tile): Promise<void> {
     const choices = await tile.ticket.formatChoices(slugsOf(tile.fidelities))
-    if (choices) this.change(tile.ticket.name, tile.place, open => ({ ...open, choices }))
+    if (choices) this.change(tile.ticket, tile.place, open => ({ ...open, choices }))
   }
 }

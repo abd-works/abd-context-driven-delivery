@@ -54,6 +54,8 @@ class InvariantHolder:
 _SIGNATURE = re.compile(r"^(\w+)\??\s*:\s*(.+)$")
 _CARDINALITY = re.compile(r"^(?:\d+\.\.\*|\d+\.\.\d+|\*|\d+)$")
 _ORIGIN = re.compile(r"^from\s+([A-Z][\w ]*)$")
+# The kinds of arrow a field's relationship can be; any other kind reads as an association.
+_ARROW_KINDS = frozenset({"composition", "aggregation", "association", "relative"})
 _STEREOTYPE_NOTE = re.compile(r"^<<\s*(composition|aggregation|association)\s*>>$", re.I)
 
 
@@ -79,6 +81,8 @@ class Property(InvariantHolder, OoadNode):
         # The line its parser read it from, and whether it is a static field, which the class's instances do not hold.
         self.line: int | None = None
         self.is_static = False
+        # The relationship arrow it stands for when its type names a domain class, a part it makes once.
+        self.arrow = FieldArrow(self)
 
     @classmethod
     def from_signature(cls, text: str) -> "Property | None":
@@ -131,25 +135,7 @@ class Property(InvariantHolder, OoadNode):
                 self.origin = origin.group(1).strip()
             else:
                 self.add_invariant(cleaned)
-        self.derive_relationship()
-
-    def take_relationship(self, relationship: Relationship) -> None:
-        """Become the field a relationship drawn to its type stands for: its kind, cardinality, and origin."""
-        if relationship.kind:
-            self.stereotype = relationship.kind
-        if relationship.cardinality:
-            self.cardinality = relationship.cardinality
-        if relationship.description and not self.origin:
-            self.origin = relationship.description
-        self.derive_relationship()
-
-    def take_drawn_kind(self, kind: str) -> None:
-        """Become the field an arrow of kind drawn to its type stands for, unless a stronger kind already marks it."""
-        drawn = (kind or "association").lower()
-        current = (self.stereotype or "").lower()
-        if RELATIONSHIP_STRENGTH.get(drawn, 0) >= RELATIONSHIP_STRENGTH.get(current, 0):
-            self.stereotype = drawn
-        self.derive_relationship()
+        self.arrow.derive()
 
     def notes(self) -> List[str]:
         """Notes written back under the field, in file order: origin, cardinality, then invariants."""
@@ -160,25 +146,6 @@ class Property(InvariantHolder, OoadNode):
             lines.append(self.cardinality)
         lines.extend(self.invariant_lines())
         return lines
-
-    def derive_relationship(self) -> None:
-        """A relationship exists only when the field's type names a domain class."""
-        targets = domain_type_names(self.type_hint)
-        is_unmarked_collection = not self.stereotype and (self.type_hint or " ")[0].islower()
-        if not targets or is_unmarked_collection:
-            # An unmarked list is derived from relationships drawn elsewhere, so it adds no arrow of its own.
-            self.relationship = None
-            return
-        kind = (self.stereotype or "association").lower()
-        if kind not in {"composition", "aggregation", "association", "relative"}:
-            kind = "association"
-        self.stereotype = kind
-        self.relationship = Relationship(
-            target=targets[0],
-            kind=kind,
-            cardinality=self.cardinality,
-            description=self.origin,
-        )
 
     def save(self) -> str:
         return name_with_type(self.name, self.type_hint)
@@ -204,3 +171,47 @@ class Property(InvariantHolder, OoadNode):
         self.relationship = source_relationship.clone() if source_relationship is not None else None
         self.invariants = [item.clone() for item in getattr(source, "invariants", [])]
         self.callees = list(getattr(source, "callees", []))
+
+
+class FieldArrow:
+    """The relationship arrow a property stands for, which the property makes once and keeps (``prop.arrow``): an arrow
+    exists only when the field's type names a domain class, marked by its stereotype, cardinality, and origin, which an
+    arrow drawn to that type, or a note under the field, gives it."""
+
+    def __init__(self, field: Property) -> None:
+        self._field = field
+
+    def take(self, relationship: Relationship) -> None:
+        """Become the arrow a relationship drawn to the field's type is: its kind, cardinality, and origin."""
+        field = self._field
+        if relationship.kind:
+            field.stereotype = relationship.kind
+        if relationship.cardinality:
+            field.cardinality = relationship.cardinality
+        if relationship.description and not field.origin:
+            field.origin = relationship.description
+        self.derive()
+
+    def take_kind(self, kind: str) -> None:
+        """Become the arrow of kind drawn to the field's type, unless a stronger kind already marks it."""
+        field = self._field
+        drawn = (kind or "association").lower()
+        current = (field.stereotype or "").lower()
+        if RELATIONSHIP_STRENGTH.get(drawn, 0) >= RELATIONSHIP_STRENGTH.get(current, 0):
+            field.stereotype = drawn
+        self.derive()
+
+    def derive(self) -> None:
+        """Give the field its relationship, which exists only when the field's type names a domain class."""
+        field = self._field
+        targets = domain_type_names(field.type_hint)
+        is_unmarked_collection = not field.stereotype and (field.type_hint or " ")[0].islower()
+        if not targets or is_unmarked_collection:
+            # An unmarked list is derived from relationships drawn elsewhere, so it adds no arrow of its own.
+            field.relationship = None
+            return
+        kind = (field.stereotype or "association").lower()
+        if kind not in _ARROW_KINDS:
+            kind = "association"
+        field.stereotype = kind
+        field.relationship = Relationship(target=targets[0], kind=kind, cardinality=field.cardinality, description=field.origin)

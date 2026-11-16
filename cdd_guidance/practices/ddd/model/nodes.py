@@ -321,7 +321,7 @@ class BoundedContext(DomainNode, Module):
         self.name = title.group(1).strip() if title else folder.name
         self.context_file_lines = max(1, text.count("\n") if text.endswith("\n") else text.count("\n") + 1)
         self.mappings = self._mappings_in(text)
-        self.load_folder_facts(folder)
+        self.source_facts.load_folder(folder)
 
     def _mappings_in(self, text: str) -> list[ContextMapping]:
         """Each `Local → Remote` line of the context's file, as the mapping it lists."""

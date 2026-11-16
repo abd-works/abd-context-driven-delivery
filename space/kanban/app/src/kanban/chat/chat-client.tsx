@@ -1,4 +1,5 @@
 import { ChatClientGenerated, type ChatData } from '@cdd/harness/chat/chat'
+import { ChatsClientGenerated } from '@cdd/harness/chat/chats'
 
 import type { BoardApi } from '../board/board-api'
 import type { BoardStore } from '../shared/board-store'
@@ -39,7 +40,7 @@ export class ChatClient {
   // The chat a person picked while it is connected, and none otherwise: the list reorders as chats work, so its first
   // chat is whichever was busy last. The pick is remembered, so a chat that reconnects is chosen again.
   async refresh(): Promise<void> {
-    const chats = await ChatClientGenerated.list(this.api)
+    const chats = await new ChatsClientGenerated(this.api).list()
     if (!chats) return
     const { pickedChat } = this.store.state
     const picked = chats.find(chat => chat.id === pickedChat)

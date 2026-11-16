@@ -25,7 +25,8 @@ class RuleFixture:
             path.write_text(text, encoding="utf-8")
         graph = Graph()
         practice = graph.practices.of(practice_class)
-        read = [practice, *([practice.extended] if practice.extended is not None else [])]
+        extended = practice.working_set.extended
+        read = [practice, *([extended] if extended is not None else [])]
         graph.load_working_copy(str(self.root), {each.key: str(self.root) for each in read}, force=True)
         self.practice = practice
 

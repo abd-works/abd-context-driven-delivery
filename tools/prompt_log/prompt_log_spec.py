@@ -203,7 +203,7 @@ with description("a prompt log hook"):
         with before.all:
             self._tmp = tempfile.mkdtemp()
             self.tree = Path(self._tmp)
-            Installer(ide="Cursor", path=self.tree, repo=Path(__file__).resolve().parents[2]).install([pl.PromptLog()])
+            Installer.create(ide="Cursor", path=self.tree, repo=Path(__file__).resolve().parents[2]).install([pl.PromptLog()])
 
         with after.all:
             shutil.rmtree(self._tmp, ignore_errors=True)

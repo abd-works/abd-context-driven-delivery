@@ -100,7 +100,7 @@ class GraphPractices:
 
     def rebuild_trees(self) -> None:
         for practice in self.opened.values():
-            practice.reading.in_graph.rebuild_tree()
+            practice.reading.in_graph.root.tree.rebuild()
 
     def _opened(self, practice: PracticeGuidance) -> PracticeGuidance:
         """practice, opened in the graph on the folder it last loaded the first time it is asked for."""
@@ -110,10 +110,10 @@ class GraphPractices:
 
     def _open(self, practice: PracticeGuidance, root: Path | None) -> None:
         self.opened[practice.key] = practice
-        practice.reading.in_graph.open(root)
+        practice.reading.in_graph.loading.open(root)
 
     def _close_all(self) -> None:
         """Forget every practice's nodes and edges, so a load reads them again from nothing."""
         self.opened = {}
         for practice in self.held.values():
-            practice.reading.in_graph.close()
+            practice.reading.in_graph.loading.close()

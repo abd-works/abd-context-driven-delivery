@@ -185,6 +185,21 @@ export class BoardStore {
     for (const listener of this.listeners) listener()
   }
 
+  // The open panel of a kind beside the board; one of each kind is open at a time.
+  panelOf<Kind extends SidePanel['kind']>(kind: Kind): Extract<SidePanel, { kind: Kind }> | undefined {
+    return this.state.panels.find((panel): panel is Extract<SidePanel, { kind: Kind }> => panel.kind === kind)
+  }
+
+  // A panel shown beside the board replaces the open one of its kind.
+  showPanel(panel: SidePanel): void {
+    this.change(state => ({ panels: [...state.panels.filter(entry => entry.kind !== panel.kind), panel] }))
+  }
+
+  // Changes the open panel of a kind, and leaves every other panel as it is.
+  changePanel<Kind extends SidePanel['kind']>(kind: Kind, change: (panel: Extract<SidePanel, { kind: Kind }>) => Extract<SidePanel, { kind: Kind }>): void {
+    this.change(state => ({ panels: state.panels.map(panel => (panel.kind === kind ? change(panel as Extract<SidePanel, { kind: Kind }>) : panel)) }))
+  }
+
   toast(text: string, isFailure = false): void {
     if (this.state.toasts.some(toast => toast.text === text)) return
     const id = this.nextToast++

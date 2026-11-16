@@ -6,15 +6,15 @@ import type { TicketData } from '@cdd/space/kanban/ticket'
 import { showFailure } from '../error-display/failure-client'
 import { reasonOf } from '../shared/reason'
 import { linkNotOpened } from '../shared/system-link'
-import { callTool } from './chat-bar-client'
+import { callTool } from '../shared/cdd-tool'
 
 // A ticket's work happens in a chat of its own, in the ticket's worktree: the server decides which ticket a chat works
 // on from the folder it is in. Opening a ticket from the main chat never moves the main chat; it finds the ticket's chat
 // or starts a new one in the worktree.
 
-// The name a person reads for the chat working on a ticket, as chat.list names it; its id when the list names none.
+// The name a person reads for the chat working on a ticket, as chats.list names it; its id when the list names none.
 async function nameOfChat($: EngineInterface, chatId: string): Promise<string> {
-  const chats = await callTool<ChatData[]>($, 'chat.list', {})
+  const chats = await callTool<ChatData[]>($, 'chats.list', {})
   return chats.find(chat => chat.id === chatId)?.name || chatId
 }
 
@@ -25,7 +25,7 @@ async function nameOfChat($: EngineInterface, chatId: string): Promise<string> {
 // the folder to open it in.
 export async function startedChatIn($: EngineInterface, ticket: TicketData): Promise<void> {
   if (ticket.working_chat) {
-    $.ui.toast(`${ticket.name} is already open in the chat ${await nameOfChat($, ticket.working_chat.id).catch(failure => `${ticket.working_chat?.id} (chat.list failed: ${reasonOf(failure)})`)}`)
+    $.ui.toast(`${ticket.name} is already open in the chat ${await nameOfChat($, ticket.working_chat.id).catch(failure => `${ticket.working_chat?.id} (chats.list failed: ${reasonOf(failure)})`)}`)
     return
   }
   if (!ticket.worktree) {

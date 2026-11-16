@@ -104,7 +104,7 @@ Moved (2026-11-14) to the Files app's scenarios, Open Diagram In Files App.
 | Source | Note |
 |--------|------|
 | User, 2026-11-11 | "opens a list box for LERN, MERN eg all patterns we have (how can we set this list dynamically based on contents of folder)" |
-| `cdd_guidance/patterns/__init__.py` | registers each pattern with `PatternOverlays.register` |
+| `cdd_guidance/patterns/__init__.py` | registers each pattern with `REGISTERED_PATTERNS.register` |
 | `harness/graph/pattern_overlays.py` | `PatternOverlays` holds the registered pattern classes by their `pattern` name |
 
 #### Scenario: Offer every pattern the patterns folder holds

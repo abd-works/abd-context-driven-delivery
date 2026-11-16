@@ -64,6 +64,30 @@ async function secondRewriteShowsAndDuplicateDoesNot() {
   assert.deepStrictEqual(shown, ["one", "two"]);
 }
 
+async function halfWrittenWaitsAndBrokenIsReportedOnce() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "toast-spec-"));
+  const file = path.join(root, ".cursor", "prompt-notify-toast.json");
+  writeNotice(file, "baseline");
+  const shown = [];
+  const broken = [];
+  const watcher = createNoticeWatcher({
+    folders: () => [root],
+    onMessage: (message) => shown.push(message),
+    onBroken: (brokenFile) => broken.push(brokenFile),
+    intervalMs: 50,
+  });
+  await wait(120);
+  fs.writeFileSync(file, '{"message": "half');
+  await wait(200);
+  assert.deepStrictEqual(broken, [], "a half-written notice is not broken");
+  fs.writeFileSync(file, '{"message": oops}\n');
+  await wait(300);
+  watcher.dispose();
+  fs.rmSync(root, { recursive: true, force: true });
+  assert.deepStrictEqual(shown, []);
+  assert.deepStrictEqual(broken, [file], "a broken notice is reported once");
+}
+
 async function everyWorkspaceFolderReachesShow() {
   const parent = fs.mkdtempSync(path.join(os.tmpdir(), "toast-spec-"));
   const roots = [path.join(parent, "a"), path.join(parent, "b")];
@@ -132,6 +156,7 @@ async function extensionActivateReachesShowInformationMessage() {
 (async () => {
   await rewriteWhileSlowWatcherOwnsThePath();
   await secondRewriteShowsAndDuplicateDoesNot();
+  await halfWrittenWaitsAndBrokenIsReportedOnce();
   await everyWorkspaceFolderReachesShow();
   await extensionActivateReachesShowInformationMessage();
   console.log("watch_notice_spec passed");

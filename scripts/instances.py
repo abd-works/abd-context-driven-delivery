@@ -17,7 +17,7 @@ if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 from harness.graph.graph_app import GRAPH_APP_PORTS  # noqa: E402
-from harness.process.process import ListeningPorts, RunningProcess  # noqa: E402
+from harness.process.process import RunningProcess  # noqa: E402
 
 PingAnswer = dict[str, Any]
 """The JSON a service's ``/ping`` answered, or the report a ping script prints."""
@@ -132,12 +132,10 @@ class RepoProcesses:
     def __init__(self, repo: Path | str | None = None) -> None:
         self.repo = Path(repo or Path(__file__).resolve().parents[1]).resolve()
         self._process_cache: list[Process] | None = None
-        self._port_cache: dict[int, list[int]] | None = None
 
     def refresh(self) -> None:
-        """Forget the processes and ports read so far, so the next question reads them again."""
+        """Forget the processes read so far, so the next question reads them again."""
         self._process_cache = None
-        self._port_cache = None
 
     def matching(self, include: Callable[[str], bool]) -> list[Process]:
         return [item for item in self.processes() if include(item.command)]
@@ -156,10 +154,9 @@ class RepoProcesses:
         return self._process_cache
 
     def tree_ports(self, pid: int) -> list[int]:
-        ports = self._listening_ports()
         heard: set[int] = set()
         for item in self._descendants(pid):
-            heard.update(ports.get(item, []))
+            heard.update(RunningProcess(item).listening_ports)
         return sorted(heard)
 
     def stop(self, pid: int) -> None:
@@ -197,11 +194,6 @@ class RepoProcesses:
             return self.in_repo(command) and include(command)
 
         return [item.pid for item in self.roots(self.matching(scoped))]
-
-    def _listening_ports(self) -> dict[int, list[int]]:
-        if self._port_cache is None:
-            self._port_cache = ListeningPorts().by_process()
-        return self._port_cache
 
     def _descendants(self, pid: int) -> list[int]:
         by_parent: dict[int, list[int]] = {}

@@ -25,7 +25,7 @@ from cdd_guidance.actions.sketch.sketch import Sketch
 from cdd_guidance.actions.validate.validate import Validate
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.agent_tools.tool_call import ToolCall
-from harness.guidance.practice_catalogue import PracticeCatalogue
+from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 from space.session import Sessions
 from space.session.throwaway_project import ThrowawayProject
 
@@ -35,7 +35,7 @@ _SCENARIOS = "stories-scenarios"
 
 def _fidelity(name: str, practice: str = "stories"):
     """A fidelity of practice as a practice no session holds has it, to compare an action's text against."""
-    return PracticeCatalogue.create(practice).fidelities[name]
+    return PRACTICE_CATALOGUE.create(practice).fidelities[name]
 
 
 def _expansion(project: Path | None, action_type, recipe, arguments: dict):
@@ -65,7 +65,7 @@ def _open_project() -> ThrowawayProject:
     """A throwaway project with its session alpha open, which the actions it is named for log to."""
     throwaway = ThrowawayProject()
     sessions = Sessions(throwaway.root)
-    sessions.open(sessions.create("alpha", throwaway.root))
+    sessions.opened.open(sessions.create("alpha", throwaway.root))
     return throwaway
 
 
@@ -354,8 +354,8 @@ with description("an action that writes a practice's artifacts") as self:
 def _rules_given_twice() -> list[str]:
     """Each fidelity of every practice with the rule slugs its checked rules hold more than once."""
     found = []
-    for key in PracticeCatalogue.keys():
-        for fidelity in PracticeCatalogue.create(key).fidelities:
+    for key in PRACTICE_CATALOGUE.names:
+        for fidelity in PRACTICE_CATALOGUE.create(key).fidelities:
             slugs = [rule.slug for collection in fidelity.checked_rule_collections for rule in collection]
             found.extend(f"{fidelity.slug}: {slug}" for slug in dict.fromkeys(slugs) if slugs.count(slug) > 1)
     return found

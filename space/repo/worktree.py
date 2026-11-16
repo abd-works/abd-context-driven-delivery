@@ -12,10 +12,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from harness.hooks.hook_daemon import HookDaemon
-from harness.process.git import RepoConnectError
+from harness.git.git import RepoConnectError
 
 if TYPE_CHECKING:
-    from space.repo.repo import Branch, Repo
+    from space.repo.repo import Branch, Repo, ServedCheckouts
 
 logger = logging.getLogger(__name__)
 
@@ -96,12 +96,15 @@ class Worktrees:
     with the branch checked out there. A branch is opened in a sibling folder of the main clone. Each listed *Worktree*
     keeps the *Worktrees* that listed it, which removes it when it closes."""
 
-    def __init__(self, repo: Repo) -> None:
+    def __init__(self, repo: Repo, checkouts: ServedCheckouts) -> None:
         self._repo = repo
+        self._checkouts = checkouts
 
-    def repository_at(self, folder: Path) -> Repo:
-        """The repository as checked out at folder, one of these checkouts: the main clone's own when folder is its."""
-        return self._repo if folder == self._repo.root else self._repo.checkout_at(folder)
+    def repository_at(self, folder: Path | str) -> Repo:
+        """The repository as checked out at folder, one of these checkouts, as this process holds it: this checkout's own
+        when folder is its."""
+        resolved = Path(folder).resolve()
+        return self._repo if resolved == self._repo.root else self._checkouts.at(resolved)
 
     def __iter__(self) -> Iterator[Worktree]:
         # Every checkout lists the same worktrees; the main clone lists them even after the checkout these were read

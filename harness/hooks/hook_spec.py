@@ -23,6 +23,7 @@ from harness.agent_tools import agent_toolset
 
 from harness.agent_tools.agent_tools import agent_tool
 from harness.hooks.hook_server import (
+    HOOK_TOASTS,
     HandlerCatalog,
     HookPayload,
     HookResult,
@@ -583,7 +584,7 @@ with description("a project's hook logs") as self:
         with context("that was closed"):
 
             with it("should go to the main session's logs folder"):
-                self.sessions.close(self.sessions.current())
+                self.sessions.opened.close(self.sessions.opened.current())
                 expect(_dispatch_log_folder(self.root).as_posix()).to(equal(self.main_logs))
 
         with context("that was switched to main"):
@@ -818,16 +819,16 @@ with description("a hook that gives a toast"):
     with before.each:
         self.shown: list[tuple[str, list[Path]]] = []
         self.root = Path(tempfile.mkdtemp())
-        self.registered = HookServer._toast_shown_by
+        self.registered = HOOK_TOASTS.shown_by
         self.payload = HookPayload({"hook_event_name": "postToolUse", "tool_name": "Write", "workspace_roots": [str(self.root)]})
 
     with after.each:
-        HookServer._toast_shown_by = self.registered
+        HOOK_TOASTS.show_with(self.registered)
         shutil.rmtree(self.root, ignore_errors=True)
 
     with context("with a notifier registered to show toasts"):
         with before.each:
-            HookServer.show_toasts_with(lambda toast, roots: self.shown.append((toast, roots)))
+            HOOK_TOASTS.show_with(lambda toast, roots: self.shown.append((toast, roots)))
             self.result = HookServer(self.root, HandlerCatalog([_ToastingInject], self.root)).dispatch(self.payload)
 
         with it("should have the notifier show the toast in the chat's workspace folders"):
@@ -838,7 +839,7 @@ with description("a hook that gives a toast"):
 
     with context("with no notifier registered"):
         with before.each:
-            HookServer._toast_shown_by = None
+            HOOK_TOASTS.show_with(None)
 
         with it("should still give the IDE the hook's context"):
             result = HookServer(self.root, HandlerCatalog([_ToastingInject], self.root)).dispatch(self.payload)

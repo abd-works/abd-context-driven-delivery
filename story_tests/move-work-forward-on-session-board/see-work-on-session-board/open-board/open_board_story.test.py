@@ -20,7 +20,7 @@ with story("Open Board"):
         with when("the Person opens the session board at http://127.0.0.1:8778"):
             # Board page -> Board.show()
             # Board <- data_of(Board): project, active, columns
-            # Board page -> Chat.list()
+            # Board page -> Chats.load().list()
             # Chat <- the chats whose cdd-board mod checked in lately
             pass
         with then("the header reads cdd-board-surface-fixture · 10 tickets · active: Checkout flow"):

@@ -10,12 +10,7 @@ from harness.guidance.guidance import PracticeGuidance
 class {ClassName}(PracticeGuidance):
     """{ClassName}: what this practice brings to the work, in one sentence."""
 
-    def __init__(
-        self,
-        fidelity: str = "{default_fidelity}",
-        format: str | None = None,
-    ) -> None:
-        super().__init__(format=format, fidelity=fidelity)
+    first_fidelity = "{default_fidelity}"
 
     default_workspace_folder = "."
     # format_adapters = {{

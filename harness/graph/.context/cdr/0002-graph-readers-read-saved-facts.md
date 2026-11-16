@@ -20,7 +20,7 @@ Every reader works from what it read now plus facts that survive a save. A reade
 
 - its `node_id`, `name`, `type`, and `source`;
 - its facts, through `node.get_fact(key)`;
-- the graph's edges (`graph.edges.from_parent`, `graph.edges.direct_parent`, `practice.in_graph.edges(kind)`).
+- the graph's edges (`graph.edges.from_parent`, `graph.edges.direct_parent`, `practice.in_graph.edge_index.of(kind)`).
 
 Anything a reader needs from the parsed object is a saved fact: the model class lists it in its `graph_facts`, so a parsed object answers it from its own attribute and a node read back answers it from what was saved. This round adds `body_text` to *Operation* and *Step*, `return_type` and `value_type` to *Operation*, `value_type` to *Property*, `held_fields` to *OoadClass*, and `source_names` and `source_reads` to a story's *Example* (recorded from the source of the function that declares it). Because readers read every node the same way, a reader links or checks the nodes held from before and those read now in one pass: a refresh drops the edges of the files it reads again, and the reader links the nodes it kept to the nodes it read now from their facts.
 

@@ -138,7 +138,14 @@ class ContextSetup:
     def _markdown_of(self, src: Path) -> str:
         """src as markdown. A markdown document is read as it is, so a folder of markdown never makes the converter."""
         if src.suffix.lower() == ".md":
-            return src.read_text(encoding="utf-8")
+            return self._markdown_as_written(src)
+        return self._converted_to_markdown(src)
+
+    def _markdown_as_written(self, src: Path) -> str:
+        return src.read_text(encoding="utf-8")
+
+    def _converted_to_markdown(self, src: Path) -> str:
+        """src, a document in another format, as the converter writes it in markdown; empty when it finds no text."""
         return self._document_converter.convert(str(src)).text_content or ""
 
     @mcp

@@ -23,7 +23,7 @@ with description("an MCP config that cdd writes its entry into") as self:
     with before.each:
         self.project = Path(tempfile.mkdtemp(prefix="cdd-mcp-config-"))
         self.config = self.project / ".mcp.json"
-        self.installation = McpInstallation(IdeLayout("Claude"), self.project / ".claude")
+        self.installation = McpInstallation.create(IdeLayout("Claude"), self.project / ".claude")
         self.installation.write(SimpleNamespace(install_to_mcp=True))
 
     with after.each:
@@ -59,7 +59,7 @@ with description("an MCP config that cdd writes its entry into") as self:
 with description("a VS Code install tree's MCP config") as self:
     with before.each:
         self.tree = Path(tempfile.mkdtemp(prefix="cdd-vscode-tree-")) / ".vscode"
-        self.installation = McpInstallation(IdeLayout("VS Code"), self.tree)
+        self.installation = McpInstallation.create(IdeLayout("VS Code"), self.tree)
         self.installation.write(SimpleNamespace(install_to_mcp=True))
         self.installation.cdd_entry.write()
         self.config = json.loads(self.installation.cdd_entry.path.read_text(encoding="utf-8"))

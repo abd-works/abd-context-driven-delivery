@@ -10,6 +10,7 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
+import json
 import shutil
 import tempfile
 import threading
@@ -573,8 +574,10 @@ with description("a validate action on practice guidance") as self:
         with it("should write no graph that every call in the session shares"):
             expect((self.sample_session / "edited-graph.json").exists()).to(equal(False))
 
-        with it("should name the graph it checked, beside the report, in the report"):
-            expect(self.entity_root_report).to(contain(str(self.entity_root_saved.with_suffix(".json"))))
+        # The judge reads the classes and operations of the whole graph built, which the report's saved graph leaves out.
+        with it("should name the whole graph it built for the judge in the report"):
+            built = self.sample_session / ".context" / "checked-graphs" / self.entity_root_saved.stem / "graph.json"
+            expect(self.entity_root_report).to(contain(str(built)))
 
         # At the code and model fidelities the rules are about the object model the code holds, which validate builds as a graph.
         with it("should tell the judge to judge the graph it built at a code fidelity"):
@@ -597,6 +600,27 @@ with description("a validate action on practice guidance") as self:
         with it("should keep the rule hits on the nodes of the saved graph"):
             slugs = [violation.rule for violation in SavedGraph.from_file(self.entity_root_saved.with_suffix(".json")).violations(["ddd"])]
             expect(slugs).to(contain("private-method-naming"))
+
+        # A report's saved graph of a whole repository ran to a hundred megabytes, of which the board reads only the hits.
+        with it("should keep in the graph beside the report only the violations and the nodes they were found on"):
+            saved = SavedGraph.from_file(self.entity_root_saved.with_suffix(".json"))
+            hit = {violation.node_id for violation in saved.violations()}
+            expect({node.node_id for practice in saved.practices.values() for node in practice.nodes}).to(equal(hit))
+            expect([edge for practice in saved.practices.values() for edge in practice.edges]).to(equal([]))
+
+        # Every saved report copied the full text of every rule; the practice's document already keeps it.
+        with it("should point at where each rule's text is kept instead of copying it into the saved report"):
+            saved = self.entity_root_saved.read_text(encoding="utf-8")
+            expect(saved).to(contain("### `private-method-naming`\n\nRule text: [ddd/ddd.md:"))
+            expect(saved).not_to(contain("Public `+name`; private `- _name`."))
+
+        with it("should leave how to judge out of the saved report"):
+            expect(self.entity_root_saved.read_text(encoding="utf-8")).not_to(contain("Take the persona of a **critical judge**"))
+
+        with it("should record each graph hit it found in the session's violation history"):
+            history = [json.loads(line) for line in (self.sample_session / "violation-history.jsonl").read_text(encoding="utf-8").splitlines()]
+            found = [(event["rule"], event["file"]) for event in history if event["event"] == "found" and event["run"] == self.entity_root_saved.name]
+            expect(found).to(contain(("private-method-naming", ENTITY_ROOT_FILE)))
 
         with it("should leave an earlier report's saved graph as it was"):
             expect(self.earlier.read_text(encoding="utf-8")).to(equal("[]"))

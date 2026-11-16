@@ -5,8 +5,8 @@ from __future__ import annotations
 import html
 from dataclasses import dataclass, field
 
-from harness.catalog_generator.approach_copy import StageCopy
-from harness.catalog_generator.catalog_practice import CatalogPractice, giving_stage_examples
+from harness.catalog_generator.approach_page import ApproachGrids
+from harness.catalog_generator.catalog_practice import CatalogPractice
 from harness.catalog_generator.catalog_examples import CatalogFidelity, StageExample
 from harness.catalog_generator.stage_columns import STAGE_COLUMNS, BoardLabel, StageColumn
 
@@ -72,26 +72,19 @@ class BoardTools:
 
 
 class HubBoard:
-    """The board for one catalog: its practices in board order, its lifecycle actions and utilities (each with its
-    ``name`` and page ``href``), and the approach's copy for each stage column. A practice page highlights its
-    practice; a fidelity page highlights the fidelity too."""
+    """The board for one catalog: its approach (*ApproachGrids*), whose practices it lists in board order with the
+    approach's copy for each stage column, and its lifecycle actions and utilities (each with its ``name`` and page
+    ``href``). A practice page highlights its practice; a fidelity page highlights the fidelity too."""
 
-    def __init__(self, practices: list, tools: BoardTools, stages: dict[str, StageCopy]) -> None:
-        self.practices = practices
+    def __init__(self, approach: ApproachGrids, tools: BoardTools) -> None:
+        self.approach = approach
         self.tools = tools
-        self.stages = stages
-        # The practice whose artifacts are the stage examples each column title opens (Stories).
-        self.stories = giving_stage_examples(practices)
 
     def html(
         self, *, path_prefix: str = "", practice: CatalogPractice | None = None, fidelity: CatalogFidelity | None = None
     ) -> str:
         """The board on a page ``path_prefix`` away from the hub, highlighting ``practice`` and its ``fidelity``."""
         return _BoardOnPage(self, path_prefix, _Highlight(practice, fidelity)).html
-
-    def stage(self, column: StageColumn) -> StageCopy:
-        """The approach's copy for column's stage; only its name when the approach says nothing of it."""
-        return self.stages.get(column.key) or StageCopy(id=column.stage.name)
 
 
 class _Highlight:
@@ -108,7 +101,7 @@ class _Highlight:
             return attributes
         attributes += f' data-initial-family="{html.escape(self.practice.key)}"'
         if self.column is not None:
-            attributes += f' data-initial-stage="{html.escape(self.column.key)}"'
+            attributes += f' data-initial-stage="{html.escape(self.column.stage.name)}"'
         return attributes
 
     @property
@@ -172,7 +165,7 @@ class _BoardOnPage:
             f'data-perspective="cdd" '
             f'href="{html.escape(path_prefix + "cdd-approach.html")}">{html.escape(str(BoardLabel("cdd")))}</a>'
         )
-        practices = "".join(self._practice_card(practice) for practice in self.board.practices)
+        practices = "".join(self._practice_card(practice) for practice in self.board.approach.practices)
         return f'<div class="foundry-practice-col" aria-label="Context tools">{approach_head}{practices}</div>'
 
     def _practice_card(self, practice: CatalogPractice) -> str:
@@ -187,10 +180,10 @@ class _BoardOnPage:
         )
 
     def _column(self, column: StageColumn) -> str:
-        cells = "".join(self._cell(column, listed) for listed in self.board.practices)
+        cells = "".join(self._cell(column, listed) for listed in self.board.approach.practices)
         active = " active" if self.highlight.column is column else ""
         return (
-            f'<div class="kb-col{active}" data-id="col-{column.key}" data-stage="{column.key}">'
+            f'<div class="kb-col{active}" data-id="col-{column.stage.name}" data-stage="{column.stage.name}">'
             f'<div class="kb-col-head{" kb-col-head--current" if active else ""}">'
             f'<div class="kb-col-head-row">'
             f"{self._scope_shape(column)}"
@@ -203,7 +196,7 @@ class _BoardOnPage:
 
     def _column_title(self, column: StageColumn) -> str:
         """The column's label, linked to the stage's example when the catalog has one."""
-        example_href = StageExample(self.board.stage(column), self.board.stories).href(self.path_prefix)
+        example_href = StageExample(self.board.approach.stage(column), self.board.approach.stories).href(self.path_prefix)
         label = html.escape(column.label)
         if example_href:
             return f'<a class="kb-col-head-title__link" href="{html.escape(example_href)}">{label}</a>'
@@ -214,7 +207,7 @@ class _BoardOnPage:
         if fidelity is None:
             return f'<div class="aad-skill-row {practice.family} aad-skill-row--empty" data-family="{html.escape(practice.key)}"></div>'
         current = " kb-ticket--current" if fidelity is self.highlight.fidelity else ""
-        data = f' data-stage="{html.escape(column.key)}"' + (
+        data = f' data-stage="{html.escape(column.stage.name)}"' + (
             f' data-perspective="{html.escape(practice.perspective)}"' if practice.perspective else ""
         )
         ticket = _Ticket(fidelity.label, self.path_prefix + practice.fidelity_href(fidelity.fidelity))
@@ -238,7 +231,7 @@ class _BoardOnPage:
 
     def _stage_detail(self, column: StageColumn) -> str:
         """The approach's chips and paragraphs for the stage, shown inside its column."""
-        stage = self.board.stage(column)
+        stage = self.board.approach.stage(column)
         chips = "".join(
             f'<li class="tour-stage-detail__chip tour-stage-detail__chip--{_CHIP_FAMILIES[index % len(_CHIP_FAMILIES)]}">'
             f"{html.escape(item)}</li>"
@@ -246,7 +239,7 @@ class _BoardOnPage:
         )
         paragraphs = "".join(f'<p class="tour-stage-detail__desc">{html.escape(para)}</p>' for para in stage.paras)
         return (
-            f'<div class="tour-stage-detail" data-stage-detail="{html.escape(column.key)}">'
+            f'<div class="tour-stage-detail" data-stage-detail="{html.escape(column.stage.name)}">'
             f'<ul class="tour-stage-detail__chips">{chips}</ul>'
             f"{paragraphs}"
             f"</div>"
@@ -255,13 +248,14 @@ class _BoardOnPage:
     def _stage_policies(self) -> str:
         cells = [_POLICY_TOGGLE]
         for column in STAGE_COLUMNS:
-            stage = self.board.stage(column)
+            stage = self.board.approach.stage(column)
             items = "".join(f'<li class="kanban-stage-questions__item">{html.escape(item)}</li>' for item in stage.items)
             paragraphs = "".join(f'<p class="kanban-stage-questions__desc">{html.escape(para)}</p>' for para in stage.paras)
-            href = f"{self.path_prefix}fidelities/cdd-{column.key}.html"
+            # Like the column's heading, a stage's policies open the stage's example when the catalog has one.
+            href = StageExample(stage, self.board.approach.stories).href(self.path_prefix)
+            link = f' href="{html.escape(href)}"' if href else ""
             cells.append(
-                f'<a class="kanban-stage-questions__cell" data-stage="{html.escape(column.key)}" '
-                f'href="{html.escape(href)}">'
+                f'<a class="kanban-stage-questions__cell" data-stage="{html.escape(column.stage.name)}"{link}>'
                 f'<ul class="kanban-stage-questions__list">{items}</ul>'
                 f"{paragraphs}"
                 f"</a>"

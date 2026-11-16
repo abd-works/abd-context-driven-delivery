@@ -5,7 +5,7 @@ from expects import contain, equal, expect
 from mamba import before, context, description, it
 
 import cdd_guidance.practices  # noqa: F401 - registers the practices and TDD with the practice catalogue
-from harness.guidance.practice_catalogue import PracticeCatalogue
+from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 
 SUPPLEMENTED = (("clean_engineering", "code"), ("stories", "acceptance_tests"), ("bdd", "development"), ("ddd", "tactics"))
 
@@ -16,9 +16,9 @@ def slugs_of(fidelity):
 
 with description("the TDD supplement") as self:
     with before.all:
-        self.practices = {practice.key: practice for practice in PracticeCatalogue.create_all(fidelity=None)}
+        self.practices = {practice.key: practice for practice in PRACTICE_CATALOGUE.create_all(fidelity=None)}
         self.fidelity = lambda key, name: self.practices[key].fidelities.called(name)
-        self.tdd = self.practices["bdd"].supplements[0]
+        self.tdd = self.practices["bdd"].working_set.supplements[0]
 
     with context("that the catalogue makes with a session's practices"):
         with it("should supplement the four implementation fidelities"):
@@ -28,7 +28,7 @@ with description("the TDD supplement") as self:
             expect(self.tdd.always_apply).to(equal(True))
 
         with it("should not be listed among the practices"):
-            expect(PracticeCatalogue.keys()).not_to(contain("tdd"))
+            expect(PRACTICE_CATALOGUE.names).not_to(contain("tdd"))
 
     # The installer writes the shared rules into the rule file every IDE loads on every turn. Without them the file is
     # empty, and the flow is read only inside a generate reply, where an agent can skip it.

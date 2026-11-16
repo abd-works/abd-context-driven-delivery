@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import is_interface_name
-from cdd_guidance.practices.clean_engineering.model.class_stereotypes import pascal_case_decorator
+from cdd_guidance.practices.clean_engineering.model.class_stereotypes import DocComment, pascal_case_decorator
 from cdd_guidance.practices.clean_engineering.model.code_body import TYPESCRIPT
 from cdd_guidance.practices.clean_engineering.model.code_class_model import (
     BraceCleanEngineeringModel,
@@ -48,20 +48,20 @@ class TypeScriptClass(CodeClass):
     property_type = TypeScriptProperty
     operation_type = TypeScriptOperation
 
-    def doc(self, intent: str) -> List[str]:
+    def _doc(self, intent: str) -> List[str]:
         notes = [f" * {note.strip()}" for note in intent.splitlines() if note.strip()]
         return ["/**", *notes, " */"] if notes else []
 
-    def doc_intent(self) -> str:
-        return self.doc_comment(marked=False).text()
+    def _doc_intent(self) -> str:
+        return DocComment.from_class(self, marked=False).text()
 
-    def stereotype_decorators(self) -> List[str]:
+    def _stereotype_decorators(self) -> List[str]:
         return [f"@{pascal_case_decorator(item)}()" for item in self.stereotypes]
 
-    def interface_declaration(self) -> List[str]:
+    def _interface_declaration(self) -> List[str]:
         return [f"interface {self.name} {{"]
 
-    def class_modifiers(self, implemented: List[str]) -> str:
+    def _class_modifiers(self, implemented: List[str]) -> str:
         """A class that implements its I{Class} contract leaves the contract's members to its subclasses."""
         return "abstract " if any(is_interface_name(base) for base in implemented) else ""
 

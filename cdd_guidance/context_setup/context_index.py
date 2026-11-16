@@ -4,7 +4,8 @@ from __future__ import annotations
 import dataclasses
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, Protocol
+from functools import cached_property
+from typing import TYPE_CHECKING, Any, Callable, Protocol
 
 from harness.agent_tools import agent_instructions, agent_toolset, tools
 from harness.agent_tools.agent_tools import agent_tool
@@ -128,15 +129,25 @@ class EmbeddingProvider(Protocol):
     def embed_query(self, text: str) -> list[float]:
         ...
 
+def _openai_client() -> Any:
+    """The live OpenAI client, which reads its key from the environment when it is made."""
+    from openai import OpenAI
+
+    return OpenAI()
+
+
 class OpenAIEmbeddingProvider:
-    """Default provider — calls OpenAI text-embedding-3-small."""
+    """The live provider: embeds with OpenAI's text-embedding-3-small through the client its factory makes. The client
+    is made on the first embed, so a process that never embeds, such as an install, needs no OpenAI key."""
 
     _MODEL = "text-embedding-3-small"
 
-    def __init__(self) -> None:
-        from openai import OpenAI
+    def __init__(self, client_factory: Callable[[], Any] = _openai_client) -> None:
+        self._client_factory = client_factory
 
-        self._client = OpenAI()
+    @cached_property
+    def _client(self) -> Any:
+        return self._client_factory()
 
     def embed_texts(self, texts: list[str]) -> list[list[float]]:
         response = self._client.embeddings.create(model=self._MODEL, input=texts)
@@ -144,6 +155,9 @@ class OpenAIEmbeddingProvider:
 
     def embed_query(self, text: str) -> list[float]:
         return self.embed_texts([text])[0]
+
+# The provider an index embeds with when it is given none: the cdd server makes the toolset with no arguments.
+LIVE_EMBEDDINGS = OpenAIEmbeddingProvider()
 
 # ── Toolset ───────────────────────────────────────────────────────────────────
 
@@ -154,8 +168,8 @@ class ContextIndex:
     The cdd server makes one for each call, for the session that call works in, so every path a call names is read from
     that session's project rather than the server's own folder."""
 
-    def __init__(self, embedding_provider: Optional[EmbeddingProvider] = None, session: Session | None = None) -> None:
-        self._provider = embedding_provider  # None → lazy-init OpenAIEmbeddingProvider on first use
+    def __init__(self, embedding_provider: EmbeddingProvider = LIVE_EMBEDDINGS, session: Session | None = None) -> None:
+        self._provider = embedding_provider
         self._session = session
 
     def for_call(self, call: ToolCall) -> ContextIndex:
@@ -178,11 +192,6 @@ class ContextIndex:
         session, as one run in process does."""
         return self._session.session_files.existing(named) if self._session is not None else Path(named)
 
-    def _get_provider(self) -> EmbeddingProvider:
-        if self._provider is None:
-            self._provider = OpenAIEmbeddingProvider()
-        return self._provider
-
     # ── @tools — deterministic Python ────────────────────────────────────────
 
     @mcp
@@ -201,7 +210,7 @@ class ContextIndex:
         if not texts:
             return EmbedResult(index_path=str(out_dir), segment_count=0, views_covered=[])
         segments = [IndexedSegment.of_file(file, text) for file, text in zip(files, texts)]
-        index = SegmentIndex.built(out_dir, segments, self._get_provider().embed_texts(texts))
+        index = SegmentIndex.built(out_dir, segments, self._provider.embed_texts(texts))
         return EmbedResult(index_path=str(out_dir), segment_count=len(index.segments), views_covered=index.views)
 
     @mcp
@@ -214,7 +223,7 @@ class ContextIndex:
         top_k — maximum number of chunks to return (default 5).
         Returns SearchResult with chunks ordered from most to least relevant."""
         index = SegmentIndex.opened(self._path_named(index_path))
-        return SearchResult(chunks=index.ranked(self._get_provider().embed_query(query), top_k))
+        return SearchResult(chunks=index.ranked(self._provider.embed_query(query), top_k))
 
     # ── @agent_instructions — AI reads recipe; owns judgment ──────────────────────────────
 

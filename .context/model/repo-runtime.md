@@ -50,7 +50,7 @@ Read `annotation_kinds` as the one private registry of annotation kinds in harne
 - `McpServer.answer_tool` `-> AgentTool.answer(call)` · harness/mcp/mcp_server.py:533
 - `AgentTool.answer` `-> AgentToolSet.for_call(call)` the toolset as the call works on it · harness/agent_tools/agent_tools.py:801
 - `AgentTool.answer` `-> AgentTool.log_session_invocation(call) -> ToolCall.session` logs the call in the session open in its project · harness/agent_tools/agent_tools.py:802
-- `ToolCall.session` `-> ToolCall._sessions.open_in(call)` the opener space/session registered (`ToolCall.open_sessions_with`) · harness/agent_tools/tool_call.py:89
+- `ToolCall.session` `-> SESSION_OPENING.open_in(call)` the opener space/session registered (`SESSION_OPENING.open_with`) · harness/agent_tools/tool_call.py:89
 - `AgentTool.answer` `-> toolset operation(**arguments)` runs the annotated operation with its coerced arguments · harness/agent_tools/agent_tools.py:803
 -   `<- object` the operation's result, sent back to the chat · harness/agent_tools/agent_tools.py:803
 
@@ -90,7 +90,7 @@ Read `annotation_kinds` as the one private registry of annotation kinds in harne
 - `Validate.validate` `-> GuidanceAction.run(on, action="validate")` runs once per listed guidance and logs the action · cdd_guidance/actions/validate/validate.py:80
 - `Validate.listed_rules -> _rules_text` `-> PracticeGuidance.checked_rule_collections` the shared rules, then the current fidelity's · cdd_guidance/actions/validate/validate.py:218
 - `PracticeGuidance.checked_rule_collections` `-> FidelityGuidance.rules` <- list[RulesCollection] · harness/guidance/guidance.py:118
-- `Validate.validate` `-> ReportFiles(session, fidelities).save(report, graph_paths)` writes the report in the session · cdd_guidance/actions/validate/validate.py:83
+- `Validate.validate` `-> ReportFiles(session, fidelities).save(ValidationReport.for_saving(), graph)` writes the report in the session, the graph's violations and their nodes beside it (`SavedGraph.violated`), and records the run in `session.folder.violation_history` · cdd_guidance/actions/validate/report_files.py:48
 
 # harness/name
 
@@ -102,7 +102,7 @@ No class of this module acts on another class of the model at run time.
 
 # harness/process
 
-Starting, watching, stopping and talking to other processes. Every class here is a leaf: it calls nothing else in the model, and the daemons, the repository and the catalog rely on it.
+Starting, watching, and stopping other processes. Every class here is a leaf: it calls nothing else in the model, and the daemons and the scripts rely on it.
 
 ## RunningProcess
 
@@ -110,15 +110,15 @@ Starting, watching, stopping and talking to other processes. Every class here is
   - `HookDaemon` `-> RunningProcess(pid).alive` checks whether the hook server holding the address file is still alive · harness/hooks/hook_daemon.py:130
   - `scripts/instances.py` `-> RunningProcess(pid).alive` lists live servers · scripts/instances.py:85
 
-## StoppableProcess `<<is a>>` RunningProcess
+## RunningProcess, stopped
 
-- `StoppableProcess.stop`
-  - `-> raise ProcessNotStopped` when the signal is refused or the process outlives the wait · harness/process/stoppable_process.py:38
-- `StoppableProcess._wait_until_ended`
-  - `-> raise ProcessNotStopped` · harness/process/stoppable_process.py:46
+- `RunningProcess.stop`
+  - `-> raise ProcessNotStopped` when the signal is refused or the process outlives the wait · harness/process/process.py
+- `RunningProcess._wait_until_ended`
+  - `-> raise ProcessNotStopped` · harness/process/process.py
 - **Used by**
-  - `McpDaemon` `-> StoppableProcess(pid).stop(_STOP_SECONDS)` stops the old cdd server before a restart · harness/mcp/mcp_daemon.py:91
-  - `HookDaemon` `-> StoppableProcess(pid).stop(_STOP_SECONDS)` replaces a stale hook server · harness/hooks/hook_daemon.py:204
+  - `McpDaemon` `-> RunningProcess(pid).stop(_STOP_SECONDS)` stops the old cdd server before a restart · harness/mcp/mcp_daemon.py
+  - `HookDaemon` `-> RunningProcess(pid).stop(_STOP_SECONDS)` replaces a stale hook server · harness/hooks/hook_daemon.py
 
 ## PythonInterpreter
 
@@ -135,14 +135,18 @@ Starting, watching, stopping and talking to other processes. Every class here is
   - `HookDaemon` `-> BackgroundStart().run` starts the hook server · harness/hooks/hook_daemon.py:229
   - `scripts/start.py` `-> BackgroundStart().creationflags / .startupinfo` · scripts/start.py:184
 
+# harness/git
+
+Running git. Its class is a leaf: it calls nothing else in the model, and the repository, the catalog, the pinned runtime, and the release rely on it.
+
 ## Git
 
 The one way the code runs git, with a timeout and no stdin.
 
 - `Git.run`
-  - `-> raise RepoConnectError` when git fails or times out · harness/process/git.py:39
+  - `-> raise RepoConnectError` when git fails or times out · harness/git/git.py:41
 - `Git._executable`
-  - `-> raise RepoConnectError` when git is not installed · harness/process/git.py:58
+  - `-> raise RepoConnectError` when git is not installed · harness/git/git.py:65
 - **Used by**
   - `Repo.git` `-> Git(root)` every branch, commit and worktree operation of a repository · space/repo/repo.py:122
   - `CddHome` `-> Git(folder).run / .succeeds` checks the remote and copies the pinned runtime · harness/mcp/cdd_home.py:213, :216, :227
@@ -430,8 +434,8 @@ The one way the code runs git, with a timeout and no stdin.
 ## HookDaemon
 
 - `HookDaemon.replace_stale`
-  - `-> StoppableProcess().stop` creates · harness/hooks/hook_daemon.py:204
-  - `-> StoppableProcess()` creates · harness/hooks/hook_daemon.py:204
+  - `-> RunningProcess().stop` creates · harness/hooks/hook_daemon.py:204
+  - `-> RunningProcess()` creates · harness/hooks/hook_daemon.py:204
 - `HookDaemon.spawn`
   - `-> RepositoryToolsets()` creates · harness/hooks/hook_daemon.py:220
   - `-> RepositoryToolsets.pycache_prefix` calls pycache_prefix on · harness/hooks/hook_daemon.py:224
@@ -1033,7 +1037,7 @@ The one way the code runs git, with a timeout and no stdin.
 
 - `CatalogPractice.load_all`
   - `-> PracticeCatalogue.practices` lists practices from · harness/catalog_generator/catalog_generator.py:84
-  - `-> NoCatalog.annotates` reads the annotation · harness/catalog_generator/catalog_generator.py:84
+  - `-> noCatalog.annotates` reads the annotation · harness/catalog_generator/catalog_generator.py:84
   - `<- list[CatalogPractice]`
 - `CatalogPractice._card_of`
   - `-> Name()` creates · harness/catalog_generator/catalog_generator.py:90
@@ -1041,7 +1045,7 @@ The one way the code runs git, with a timeout and no stdin.
   - `-> PracticeGuidance.key` reads key of · harness/catalog_generator/catalog_generator.py:97
 - `CatalogPractice.fidelities`
   - `-> PracticeGuidance.fidelities` reads fidelities of · harness/catalog_generator/catalog_generator.py:137
-  - `-> NoCatalog.annotates` reads the annotation · harness/catalog_generator/catalog_generator.py:137
+  - `-> noCatalog.annotates` reads the annotation · harness/catalog_generator/catalog_generator.py:137
   - `<- list[FidelityGuidance]`
 - `CatalogPractice.column_of`
   - `-> FidelityGuidance.stage` reads stage of · harness/catalog_generator/catalog_generator.py:140
@@ -1084,11 +1088,11 @@ No class of this module acts on another class of the model at run time.
   - `-> Git.run` runs · space/repo/repo.py:191
 - `Repo.default_start_point`
   - `-> Git.succeeds` calls succeeds on · space/repo/repo.py:197
-- `Repo.has_ref`
+- `Refs.has`
   - `-> Git.succeeds` calls succeeds on · space/repo/repo.py:200
-- `Repo.is_dirty`
+- `WorkingTree.is_dirty`
   - `-> Git.run` runs · space/repo/repo.py:207
-- `Repo.commit`
+- `WorkingTree.commit`
   - `-> Git.run` runs · space/repo/repo.py:222
 - `Origin.push_upstream`
   - `-> Git.run` runs · space/repo/repo.py:229
@@ -1110,7 +1114,7 @@ No class of this module acts on another class of the model at run time.
 ## Branch
 
 - `Branch.exists`
-  - `-> Repo.has_ref` asks whether a ref exists through · space/repo/repo.py:477
+  - `-> Refs.has` asks whether a ref exists through · space/repo/repo.py:477
 - `Branch.is_checked_out`
   - `-> Repo.current_branch` reads current branch of · space/repo/repo.py:483
 - `Branch.is_default`
@@ -1119,7 +1123,7 @@ No class of this module acts on another class of the model at run time.
   - `-> Repo.worktrees` reads worktrees of · space/repo/repo.py:492
   - `<- Worktree | None`
 - `Branch.start_point`
-  - `-> Repo.has_ref` asks whether a ref exists through · space/repo/repo.py:497
+  - `-> Refs.has` asks whether a ref exists through · space/repo/repo.py:497
   - `-> Repo.default_start_point` reads default start point of · space/repo/repo.py:499
 - `Branch.changed_files`
   - `-> Repo.git` reads git of · space/repo/repo.py:506
@@ -1133,7 +1137,7 @@ No class of this module acts on another class of the model at run time.
   - `<- Worktree`
 - `Branch.delete`
   - `-> Repo.git` reads git of · space/repo/repo.py:566
-  - `-> Repo.has_ref` asks whether a ref exists through · space/repo/repo.py:567
+  - `-> Refs.has` asks whether a ref exists through · space/repo/repo.py:567
 
 ## Worktree
 
@@ -1154,7 +1158,7 @@ No class of this module acts on another class of the model at run time.
   - `-> Repo.root` reads root of · space/session/sessions.py:42
 - `Sessions.folder_of`
   - `-> Worktrees.primary_root` calls primary_root on · space/session/sessions.py:68
-- `Sessions.load`
+- `HeldSessions.load`
   - `-> Session.load` loads · space/session/sessions.py:98
   - `<- Session`
 - `Sessions.create`
@@ -1174,7 +1178,7 @@ No class of this module acts on another class of the model at run time.
 - `Sessions.close`
   - `-> Session.name` reads name of · space/session/sessions.py:162
 - `Sessions.<module>`
-  - `-> ToolCall.open_sessions_with` opens sessions with · space/session/sessions.py:184
+  - `-> SESSION_OPENING.open_with` opens sessions with · space/session/sessions.py:184
 - Annotations it carries: `AgentToolAnnotation` · space/session/sessions.py:135
 
 ## Session
@@ -1340,11 +1344,11 @@ No class of this module acts on another class of the model at run time.
 - `Board.active`
   - `-> Sessions.open_name` reads open name of · space/kanban/board.py:166
   - `<- Ticket | None`
-- `Board.ticket`
+- `CardPlacement.ticket`
   - `-> Sessions.named` loads · space/kanban/board.py:179
   - `-> Ticket()` creates · space/kanban/board.py:180
   - `<- Ticket | None`
-- `Board.open_ticket`
+- `CardPlacement.open_ticket`
   - `-> Name()` creates · space/kanban/board.py:188
   - `-> Repo.root` reads root of · space/kanban/board.py:189
   - `-> Sessions.create` loads · space/kanban/board.py:191
@@ -1584,7 +1588,7 @@ No class of this module acts on another class of the model at run time.
 - `PromptNotify._echo_kind_label`
   - `-> Name()` creates · tools/prompt_notify/prompt_notify.py:274
 - `PromptNotify.<module>`
-  - `-> HookServer.show_toasts_with` shows toasts with · tools/prompt_notify/prompt_notify.py:380
+  - `-> HOOK_TOASTS.show_with` shows toasts with · tools/prompt_notify/prompt_notify.py:380
 - Annotations it carries: `Hook` · tools/prompt_notify/prompt_notify.py:81; `NoCatalog` · tools/prompt_notify/prompt_notify.py:40
 
 # tools/sub_agent

@@ -8,7 +8,8 @@ import { after } from '../shared/clock'
 import { openInBrowserPane } from '../shared/browser-pane'
 import { shownAsFailure } from '../error-display/failure-client'
 import { reasonOf } from '../shared/reason'
-import { refreshHealth, SERVER } from './server-health-client'
+import { callToolText } from '../shared/cdd-tool'
+import { refreshHealth } from './server-health-client'
 
 // A press on an app in the status row: Python's App.open installs it while it is not installed and answers it with its
 // url and its server, or refuses saying what failed and how to fix it. While it is not running, this chat starts its
@@ -44,9 +45,7 @@ const STILL_RUNNING_CALLS = 90
 
 async function installedApp($: EngineInterface, label: string): Promise<AppData> {
   for (let call = 0; call < STILL_RUNNING_CALLS; call += 1) {
-    const result = await $.mcp.call(SERVER, OPEN_TOOL, { app: label })
-    const text = result.content[0]?.text ?? ''
-    if (result.isError) throw new AppNotOpened(text || `${OPEN_TOOL} failed for ${label}`)
+    const text = await callToolText($, OPEN_TOOL, { app: label })
     if (!text.startsWith(STILL_RUNNING)) return JSON.parse(text) as AppData
   }
   throw new AppNotOpened(`The ${label} is still installing after fifteen minutes; press it again to wait for that install.`)

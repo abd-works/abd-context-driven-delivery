@@ -3,7 +3,8 @@ import type { ServerHealthData } from '@cdd/harness/diagnostics/server-health'
 
 import type { AppOpeningJson, InstallJson, ServerHealthJson, TestRunJson } from '../../types'
 import { BRAND } from '../shared/brand'
-import { RECONNECT_TRIES, REPORT_TOOL, SERVER, ServerHealthClient } from './server-health-client'
+import { SERVER } from '../shared/cdd-tool'
+import { RECONNECT_TRIES, REPORT_TOOL, ServerHealthClient } from './server-health-client'
 
 // The server health panel's words: what each part reads, the headline, the details and the install line. The panel's
 // view paints them; ServerHealthClient carries the report they are read from.

@@ -23,6 +23,10 @@ with description("a running process"):
         with it("should not be alive"):
             expect(RunningProcess(0).alive).to(equal(False))
 
+    with context("that listens on no port"):
+        with it("should list no listening port"):
+            expect(RunningProcess(0).listening_ports).to(equal([]))
+
     with context("that was asked about"):
         with it("should keep running"):
             child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(5)"])

@@ -47,7 +47,7 @@ class PracticeSchema:
     @cached_property
     def _rules(self) -> dict[str, tuple[str, ...]]:
         """Each node type with the rule slugs it carries: its own, its supertypes', and its anchored type's."""
-        extended = self.practice.extended
+        extended = self.practice.working_set.extended
         if extended is None:
             return dict(self._direct_rules)
         anchored_rules = self._extended_schema._direct_rules
@@ -55,7 +55,7 @@ class PracticeSchema:
 
     @cached_property
     def _extended_schema(self) -> PracticeSchema:
-        return self._schema_of(self.practice.extended, self.overlays)
+        return self._schema_of(self.practice.working_set.extended, self.overlays)
 
     @cached_property
     def _without_overlays(self) -> PracticeSchema:
@@ -85,7 +85,7 @@ class PracticeSchema:
         own = self.practice.reading.anchor_types
         if own:
             return node_type if node_type in own.values() else None
-        extended = self.practice.extended
+        extended = self.practice.working_set.extended
         if extended is None:
             return None
         anchors = extended.reading.anchor_types
@@ -255,7 +255,7 @@ class PracticeSchema:
 
     def _supertype_chain(self, node_type: str) -> tuple[str, ...]:
         """node_type, then each local supertype its ``is:`` names, up to the first anchor word."""
-        anchors = self.practice.extended.reading.anchor_types if self.practice.extended is not None else {}
+        anchors = self.practice.working_set.extended.reading.anchor_types if self.practice.working_set.extended is not None else {}
         chain: list[str] = []
         current = node_type
         while current and current not in chain:

@@ -13,10 +13,11 @@ from harness.annotations.name import Name
 from harness.catalog_generator.catalog_examples import EXAMPLES_FOLDER, CatalogFidelity
 from harness.catalog_generator.stage_columns import StageColumn
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
-from harness.guidance.practice_catalogue import PracticeCatalogue
-from harness.installation.destination import NoCatalog
+from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
+from harness.annotations.annotation import noCatalog
 from harness.installation.files import FileChannel, FileInstallation
 from harness.installation.ide_layout import IdeLayout
+from harness.installation.install_target import InstallTarget
 from harness.markdown.format import Format
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -38,9 +39,14 @@ class CatalogSkills:
 
     _FOLDERS: ClassVar[dict[tuple[str, str], str]] = {}
 
-    def __init__(self) -> None:
+    def __init__(self, install: FileInstallation) -> None:
+        self._install = install
+
+    @classmethod
+    def create(cls) -> CatalogSkills:
+        """The skill install of the IDE whose skill names the catalog shows as slash commands (Claude's)."""
         layout = IdeLayout(_SLASH_COMMAND_IDE)
-        self._install = FileInstallation(layout, _REPO_ROOT / layout.folder_name, FileChannel(InstallDestination.SKILL), repo=_REPO_ROOT)
+        return cls(FileInstallation(InstallTarget(layout, _REPO_ROOT / layout.folder_name), FileChannel(InstallDestination.SKILL), repo=_REPO_ROOT))
 
     def skill_of(self, guidance: PracticeGuidance | FidelityGuidance) -> str:
         """The skill that runs guidance, a practice or one of its fidelities: the folder the skill install writes its
@@ -59,12 +65,12 @@ class _PracticeGroup:
     """The practices one catalog shows together, made once: each keeps its place among them, and all share one skill
     install."""
 
-    def __init__(self, practices: tuple[PracticeGuidance, ...] = ()) -> None:
+    def __init__(self, practices: tuple[PracticeGuidance, ...], skills: CatalogSkills) -> None:
         self.practices = practices
-        self.skills = CatalogSkills()
+        self.skills = skills
 
     def position_of(self, practice: PracticeGuidance) -> int:
-        """Where practice sits among the group's practices; the first place for a practice made outside any group."""
+        """Where practice sits among the group's practices."""
         return next((position for position, held in enumerate(self.practices) if held is practice), 0)
 
 
@@ -84,9 +90,8 @@ class CatalogPractice:
         "stage_examples": False,
     }
 
-    def __init__(self, practice: PracticeGuidance, group: _PracticeGroup | None = None) -> None:
+    def __init__(self, practice: PracticeGuidance, group: _PracticeGroup) -> None:
         self.practice = practice
-        group = group if group is not None else _PracticeGroup()
         self.position = group.position_of(practice)
         # Every practice of the catalog this one was made with, made once, whose formats name a file this one cannot.
         self._catalogue = group.practices
@@ -97,7 +102,7 @@ class CatalogPractice:
     def of_practices(cls, practices: Iterable[PracticeGuidance]) -> list[CatalogPractice]:
         """The catalog's view of each of practices, in their order: each keeps its place among them, and all share one
         skill install, made once here. A reader that holds these, such as a checkout's session board, makes them once."""
-        group = _PracticeGroup(tuple(practices))
+        group = _PracticeGroup(tuple(practices), CatalogSkills.create())
         return [cls(practice, group) for practice in group.practices]
 
     @classmethod
@@ -105,7 +110,7 @@ class CatalogPractice:
         """Every practice in the practice catalogue with a fidelity on the board, unless annotated ``@noCatalog``, in the
         order each practice's catalog card gives. Each keeps its place in the catalogue, the order the approach's grids
         list the practices in, and all share one skill install."""
-        practices = [practice for practice in cls.of_practices(PracticeCatalogue.create_all()) if not NoCatalog.annotates(type(practice.practice))]
+        practices = [practice for practice in cls.of_practices(PRACTICE_CATALOGUE.create_all()) if not noCatalog.annotates(type(practice.practice))]
         shown = [practice for practice in practices if practice.on_board]
         return sorted(shown, key=lambda practice: (practice.order, practice.display_name))
 
@@ -174,7 +179,7 @@ class CatalogPractice:
     @cached_property
     def shown_fidelities(self) -> list[CatalogFidelity]:
         """The catalog's view of each fidelity it shows, in declared order, made once."""
-        return [CatalogFidelity(fidelity, self) for fidelity in self.practice.fidelities if not NoCatalog.annotates(fidelity)]
+        return [CatalogFidelity(fidelity, self) for fidelity in self.practice.fidelities if not noCatalog.annotates(fidelity)]
 
     def fidelity_in(self, column: StageColumn) -> CatalogFidelity | None:
         """The practice's fidelity in ``column``; none when the practice has no fidelity at that stage."""

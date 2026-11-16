@@ -15,7 +15,7 @@ import { API_ROOT } from './board-server-paths'
 const APP_FOLDER = resolve(fileURLToPath(new URL('.', import.meta.url)), '..', '..')
 const KANBAN = join(APP_FOLDER, 'src', 'kanban')
 // The domain objects whose routes the installer generates, as a route names them.
-const DOMAIN_ROUTE = /['`]\/(board|stage|ticket|fidelity-progress|backlog-item|session|practice-session-output|fidelity-session-output|chat|app|file-manager|story-model)\//
+const DOMAIN_ROUTE = /['`]\/(board|stage|ticket|fidelity-progress|backlog-item|session|practice-session-output|fidelity-session-output|chat|chats|app|file-manager|story-model)\//
 // A post whose path the page spells out itself.
 const HAND_WRITTEN_POST = /\.post(<[^>]*>)?\(\s*['`]/
 

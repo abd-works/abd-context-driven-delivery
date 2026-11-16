@@ -76,12 +76,7 @@ class Ddd(PracticeGuidance):
             return True
         return any(carries_a_stereotype(file.read_text(encoding="utf-8", errors="replace")) for file in folder.iterdir() if file.suffix in _CODE_SUFFIXES and file.is_file())
 
-    def __init__(
-        self,
-        fidelity: str = "bounded_context",
-        format: str | None = None,
-    ) -> None:
-        super().__init__(format=format, fidelity=fidelity)
+    first_fidelity = "bounded_context"
 
     default_workspace_folder = "src"
     format_adapters = _FORMATS
@@ -91,4 +86,4 @@ class Ddd(PracticeGuidance):
     extends = "clean_engineering"
 
 
-DomainNode.register_practice(Ddd)
+DomainNode.practice_class = Ddd

@@ -48,7 +48,7 @@ with description("a lifecycle action's page"):
 with description("a fidelity's page"):
     with before.all:
         self.actions = LifecycleAction.load_all()
-        practice = CatalogPractice(Ddd())
+        practice = CatalogPractice.of_practices([Ddd()])[0]
         tactics = next(shown for shown in practice.shown_fidelities if shown.name == "tactics")
         self.page = FidelityPage(tactics, _CITATION, self.actions).body
 
@@ -64,7 +64,7 @@ with description("a fidelity's page"):
 
 with description("a practice's page"):
     with before.all:
-        self.page = PracticePage(CatalogPractice(Ddd())).body
+        self.page = PracticePage(CatalogPractice.of_practices([Ddd()])[0]).body
 
     with it("should show the practice's name"):
         expect("Domain-Driven Design" in self.page).to(be_true)

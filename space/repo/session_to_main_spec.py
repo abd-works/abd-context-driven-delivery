@@ -39,10 +39,10 @@ with description("a session's work taken to main") as self:
                 self.landed = self.held.serve(self.tree).merge_to_main()
 
             with it("should commit the work on the session's branch"):
-                expect(self.held.trees[SESSION_BRANCH]).to(have_key("work.txt"))
+                expect(self.held.branches.trees[SESSION_BRANCH]).to(have_key("work.txt"))
 
             with it("should hold the work on main in the clone"):
-                expect(self.held.trees["main"]).to(have_key("work.txt"))
+                expect(self.held.branches.trees["main"]).to(have_key("work.txt"))
 
             with it("should leave main on origin without the work"):
                 expect(self.held.origin.trees["main"]).not_to(have_key("work.txt"))
@@ -59,7 +59,7 @@ with description("a session's work taken to main") as self:
                 self.held.serve(self.tree).merge_to_main()
 
             with it("should hold the clone's changes on main beside the work"):
-                expect(self.held.trees["main"]).to(have_key("session.log"))
+                expect(self.held.branches.trees["main"]).to(have_key("session.log"))
 
         with context("that is pushed to main"):
             with before.each:
@@ -81,7 +81,7 @@ with description("a session's work taken to main") as self:
                 self.held.serve(self.clone).merge_to_main()
 
             with it("should hold the work on main"):
-                expect(self.held.trees["main"]).to(have_key("work.txt"))
+                expect(self.held.branches.trees["main"]).to(have_key("work.txt"))
 
             with it("should leave the clone on the session's branch"):
                 expect(self.held.branch_of(self.clone)).to(equal(SESSION_BRANCH))
@@ -100,8 +100,8 @@ with description("a session's work taken to main") as self:
     with context("from a repository whose default branch is master"):
         with before.each:
             self.held.default_branch = "master"
-            self.held.trees["master"] = self.held.trees.pop("main")
-            self.held.logs["master"] = self.held.logs.pop("main")
+            self.held.branches.trees["master"] = self.held.branches.trees.pop("main")
+            self.held.branches.logs["master"] = self.held.branches.logs.pop("main")
             self.held.checked_out[self.clone] = "master"
             self.held.origin.add()
             self.tree = self.tmp / "clone-demo"
@@ -138,4 +138,4 @@ with description("a session's work pushed on its own branch") as self:
         expect(self.held.origin.trees[SESSION_BRANCH]).to(have_key("work.txt"))
 
     with it("should leave main without the work"):
-        expect(self.held.trees["main"]).not_to(have_key("work.txt"))
+        expect(self.held.branches.trees["main"]).not_to(have_key("work.txt"))

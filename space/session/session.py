@@ -2,19 +2,16 @@
 
 from __future__ import annotations
 
-import threading
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
 from harness.agent_tools.agent_tools import noSessionLog, subAgent, tool_subject
 from harness.agent_tools.tool_call import ToolCall
+from harness.annotations.annotation import hosted_only
 from harness.chat.chat import Chat
-from harness.graph.explorer import ExplorerEntry, NodeSource
-from harness.graph.graph import Filter, Graph
-from harness.guidance.stages import STAGES
+from harness.graph.graph import Graph
 from harness.graph.pattern_overlays import PatternOverlays
-from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.files import command, skill
 from harness.mcp.mcp_annotations import long_call, mcp
@@ -23,16 +20,16 @@ from space.repo.repo import Repo
 from space.session.chat_injections import ChatInjections
 from space.session.decision_records import FORMAT_FILE, DecisionRecords
 from space.session.file_manager import FileEntry, FileText
-from space.session.file_range import Range
 from space.session.handoffs import HANDOFF_FORMAT_FILE, Handoffs
 from space.session.idea_file import IdeaFile
 from space.session.practice_session_output import PracticeSessionOutput
+from space.session.practice_outputs import PracticeOutputs
 from space.session.progress_cache import ProgressCache
 from space.session.file_graphs import FileGraphs
 from space.session.guidance_selection import GuidanceSelection
 from space.session.guidance_version import GuidanceVersion
-from space.session.node_spans import NodeSpans
 from space.session.session_file import RuleReads, SessionFile
+from space.session.session_explorer import SessionExplorer
 from space.session.session_files import SessionFiles
 from space.session.session_folder import COMPLETE_FOLDER, SessionFolder
 from space.session.session_hierarchy import SessionHierarchy
@@ -76,337 +73,12 @@ class UnknownPracticeError(ValueError):
         super().__init__(f"Unknown practice {practice}")
 
 
-@identity("session_file")
-@language_adapter(language="typescript")
-@agent_toolset
-class Session:
-    """One named piece of work in a project, kept in ``.sessions/{name}/``. It holds where it works, the practices it
-    uses, and its title; its log, files, handoffs, decision records, and chat injections are objects of their own, made
-    with it. It holds the *Sessions* that loaded it and their repository, which keep one Session for each session
-    folder, so every call made in the session, from any chat, works on this one object: its graph and its one instance
-    of each practice. Every tool on it acts on the session whose ``session.json`` its ``session`` argument names; a
-    line a call logs points at that call's chat, which the call holds, never the session."""
+@hosted_only
+class SessionFileTools:
+    """The tools that list, read, and write a session's files, and put a file into a chat's context: each asks the
+    session's *SessionFiles*, the part that owns its files."""
 
-    def __init__(self, sessions: Sessions) -> None:
-        self._session_name = ""
-        # The sessions of the checkout that loaded this one, and their repository, which holds this session's ``.sessions``.
-        self._sessions = sessions
-        self.repo: Repo = sessions.repo
-        self.repo_path: Path = sessions.root
-        # The project's ``.context/config.json``, which names the folder each practice writes in.
-        self.context_config = ContextConfig(self.repo_path)
-        self._workpath: Path | None = None
-        self._session_path: Path | None = None
-        # The practices and graph this session keeps between calls, made when first asked for, and the practices the
-        # graph was made with, so turning one on or off makes it again.
-        self._outputs: dict[str, PracticeSessionOutput] | None = None
-        self._graph: Graph | None = None
-        self._graph_practices: frozenset[str] = frozenset()
-        # Calls from several chats reach this one object at once; the first to ask makes the practices and the graph,
-        # and the others wait for them, so the session never holds two. Reentrant, because the graph asks for the
-        # practices while it is being made.
-        self._parts_lock = threading.RLock()
-        self._make_parts()
-
-    def _make_parts(self) -> None:
-        """The parts the session holds, each made once with it: what it reads and writes is theirs to keep."""
-        self.paths = SessionPaths(self)
-        self.record = SessionRecord(self)
-        self.folder = SessionFolder(self)
-        self.hierarchy = SessionHierarchy(self)
-        self.file_graphs = FileGraphs(self)
-        self.guidance_version = GuidanceVersion(self)
-        self.decision_records = DecisionRecords(self.work_root / CONTEXT_FOLDER / _DECISION_RECORDS_FOLDER)
-        self.handoffs: Handoffs | None = None
-        # What a board read costs most to work out for each of its fidelities, kept in its folder between reads.
-        self.progress_cache = ProgressCache(None)
-        self.log = SessionLog(self)
-        self.session_files = SessionFiles(self)
-        self.chat_injections = ChatInjections(self)
-
-    @classmethod
-    @tool_subject
-    def from_file(cls, session: str, *, call: ToolCall) -> Session:
-        """The session whose session.json is session, a path from the call's project or an absolute one, read without
-        opening it, from the sessions this process holds for that project. A board command names its ticket's session
-        this way, because it runs in whichever chat it is sent to, and that chat's open session can be another. A tool
-        is handed the call it answers."""
-        return call.session_named(session)
-
-    @property
-    @data_field
-    def name(self) -> str:
-        """Named work session (not the toolset slug)."""
-        return self._session_name
-
-    @name.setter
-    def name(self, value: str) -> None:
-        self._session_name = (value or "").strip()
-
-    @property
-    def sessions(self) -> Sessions:
-        """The sessions of this session's checkout, which loaded it."""
-        return self._sessions
-
-    @property
-    def workpath(self) -> Path | None:
-        """The folder the session works in; none for the whole repository."""
-        return self._workpath
-
-    @workpath.setter
-    def workpath(self, folder: Path | None) -> None:
-        """Work in folder from now on. The practices and graph this session keeps were made on its old root, so they
-        are made again on the new one when next asked for."""
-        with self._parts_lock:
-            self._workpath = folder
-            self.decision_records = DecisionRecords(self.work_root / CONTEXT_FOLDER / _DECISION_RECORDS_FOLDER)
-            self._outputs = None
-            self._graph = None
-
-    @property
-    def session_path(self) -> Path | None:
-        """The session's folder, such as ``.sessions/alpha``; none for a session not yet kept in one."""
-        return self._session_path
-
-    @session_path.setter
-    def session_path(self, folder: Path | None) -> None:
-        self._session_path = folder
-        self.record.kept_in(folder)
-        self.handoffs = Handoffs(folder) if folder is not None else None
-        self.progress_cache = ProgressCache(folder)
-
-    @property
-    def is_closed(self) -> bool:
-        return self.session_path is not None and self.session_path.parent.name == COMPLETE_FOLDER
-
-    @property
-    def session_file(self) -> Path:
-        """The ``session.json`` in this session's folder, which holds its title, workpath, practice roots, and practices."""
-        return self.session_path / SESSION_FILE
-
-    @property
-    @data_field(key="session_file")
-    def session_file_from_project(self) -> str:
-        """Its session.json as a path from the project: the name every board command gives this session."""
-        return self.paths.from_project(self.session_file)
-
-    @property
-    def work_root(self) -> Path:
-        """The folder the session works in: its workpath, or the whole repository when it chose none. Actions write
-        their sketches, grill answers, and partitions under it, each practice's folder is kept relative to it, and the
-        file manager reads under it."""
-        return self.paths.resolved(Path(self.workpath or self.repo_path))
-
-    @property
-    def graph(self) -> Graph:
-        """The knowledge graph this session works with, opened on its root, holding the session's one instance of each
-        practice, made once on its root, so every call in the session works on the same graph and the same practices
-        and none rebuilds them; an action that writes files refreshes the graph with exactly those files. It reads back
-        the graph saved on its root, so a session opened again, such as a ticket just activated, shows what was loaded
-        in it before. A session whose root has moved gets a new graph, with new practices, on the new root. It holds only
-        the practices the session works on, so turning one on or off makes it again with those."""
-        with self._parts_lock:
-            working = frozenset(key for key, output in self._own_outputs.items() if output.enabled)
-            if self._graph is None or working != self._graph_practices:
-                self._graph = self._graph_of(working)
-                self._graph_practices = working
-                self.file_graphs.opened()
-            return self._graph
-
-    def _graph_of(self, working: frozenset[str]) -> Graph:
-        """A graph of only the practices the session works on: a practice turned off for it is never read into it. A
-        session uses a graph created for it and saved in its own folder; a graph saved anywhere else, such as the graph
-        tool's, is not the session's."""
-        graph = Graph(self._own_outputs[key].guidance for key in self._own_outputs if key in working)
-        graph.kept_in = self.session_path
-        graph.open_saved(self.work_root)
-        if self.overlays:
-            graph.overlays = self.overlays
-        return graph
-
-    @property
-    def _own_outputs(self) -> dict[str, PracticeSessionOutput]:
-        """A new instance of every practice, by key, each working in this session: made once on its root."""
-        with self._parts_lock:
-            if self._outputs is None:
-                self._outputs = {practice.key: PracticeSessionOutput(practice, self) for practice in PracticeCatalogue.create_all()}
-                for output in self._outputs.values():
-                    output.guidance.work_in(output)
-            return self._outputs
-
-    @property
-    @data_field
-    def title(self) -> str:
-        """The title a person gave the session's ticket; empty when it has none."""
-        return self.record.fields.get("title", "")
-
-    @property
-    @data_field
-    def repo_name(self) -> str:
-        """The repository the session works in, by its folder's name, as a page heads it."""
-        return self.repo.root.name
-
-    @property
-    @data_field
-    def branch(self) -> str:
-        """The branch the session works on, as its session.json names it, else the session's own name."""
-        return self.record.fields.get("branch") or self.name
-
-    @property
-    @data_field
-    def root(self) -> str:
-        """The whole path of the folder the session works in, as a page heads it."""
-        return str(self.work_root)
-
-    @property
-    @data_field
-    def scope(self) -> str:
-        """feature, story, or slice; empty when no one said."""
-        return self.record.fields.get("scope", "")
-
-    @property
-    @data_field
-    def parent(self) -> str:
-        """The name of the session this one was split from; empty when it was not split from one."""
-        return self.hierarchy.parent
-
-    @property
-    def tags(self) -> list[str]:
-        """The words a person tagged this session with, in the order they were added."""
-        return list(self.record.fields.get(_TAGS_FIELD, []))
-
-    def add_tag(self, word: str) -> None:
-        """Tag this session with word, once however often it is added."""
-        tags = self.tags
-        if word not in tags:
-            self.record.save_fields(**{_TAGS_FIELD: [*tags, word]})
-
-    @property
-    def idea_file(self) -> IdeaFile:
-        """``<name>.md`` in this session's folder: what its work is about, the backlog item's file when it was started from one."""
-        return IdeaFile(self.session_path / f"{self.name}.md")
-
-    @property
-    def text(self) -> str:
-        """The text of its idea file; empty while it has none."""
-        return self.idea_file.text
-
-    @property
-    def stories(self) -> list[str]:
-        """The stories its idea file names: this session's increment, which generate and validate work on."""
-        return self.idea_file.stories
-
-    def keep_text(self, text: str) -> None:
-        """Write text under its idea file's heading, making the file, headed with its title, when it has none."""
-        idea = self.idea_file
-        idea.write(idea.heading or self.title or self.name, text)
-        self.record.saved("text")
-
-    @property
-    def overlays(self) -> list[str]:
-        """The patterns this session overlays on its graph, by name, as its session.json keeps them; none until a
-        person chooses some."""
-        return list(self.record.fields.get("overlays", []))
-
-    def choose_overlays(self, overlays: list[str]) -> None:
-        """Overlay the patterns named on this session's graph from now on, in place of those chosen before: kept in its
-        session.json, and applied to its graph at once when it has one. A name that is no registered pattern is refused
-        with NotAPatternError, and nothing changes."""
-        patterns = PatternOverlays().names
-        unknown = [name for name in overlays if name not in patterns]
-        if unknown:
-            raise NotAPatternError(unknown, patterns)
-        self.record.save_fields(overlays=list(overlays))
-        with self._parts_lock:
-            if self._graph is not None:
-                self._graph.overlays = list(overlays)
-
-    @property
-    def answer(self) -> int | None:
-        """The answer this session's sessions are giving, which what it reads from its files is held for; none when
-        they serve no answer, and it reads them on every ask."""
-        return self._sessions.answer
-
-    @property
-    @data_field(key="workpath")
-    def workpath_from_checkout(self) -> str:
-        """The folder the session works in, as its session.json saves it and the board shows it: from its checkout's
-        top, so a ticket working in its own worktree shows the folder it chose there, and it can never name a folder in
-        another checkout of the repository; empty for the whole checkout, and absolute when it lies outside it."""
-        root = self.work_root
-        checkout = self.paths.resolved(self.repo_path)
-        if not root.is_relative_to(checkout):
-            return root.as_posix()
-        relative = root.relative_to(checkout).as_posix()
-        return "" if relative == "." else relative
-
-    @property
-    def reports_folder(self) -> Path:
-        """Where Validate saves its reports in this session, each with the graph it checked beside it."""
-        return self.session_path / _REPORT_FOLDER
-
-    def practice(self, name: str) -> PracticeSessionOutput:
-        """The practice called name in this session, on or off for it: the session's one instance of it, so a practice
-        turned off can be turned on again. One the session works on is opened in its graph first."""
-        found = self.practices.get(name) or self._own_outputs.get(name)
-        if found is None:
-            raise UnknownPracticeError(name)
-        return found
-
-    @property
-    def practices(self) -> dict[str, PracticeSessionOutput]:
-        """The practices the session works on, by practice key, each the session's one instance of it: the ones its
-        graph holds, kept between calls with the graph, which opening here gives each practice to work in. A practice
-        turned off for the session is in ``own_practices`` and ``practice(name)``, not here."""
-        outputs = self._own_outputs
-        return {key: outputs[key] for key in self.graph.practices.held}
-
-    @property
-    @data_field(key="practices")
-    def own_practices(self) -> dict[str, PracticeSessionOutput]:
-        """The same practices, without opening the graph, for reading what each one declares, its folder and fidelities:
-        a board listing every session would otherwise read every session's saved graph. A practice that runs is reached
-        through ``practices``, so it works in the graph."""
-        return dict(self._own_outputs)
-
-    @property
-    @data_field(key="handoff")
-    def latest_handoff(self) -> str:
-        """The newest handoff file, as a path from the project; empty before one is written."""
-        latest = self.handoffs.latest
-        return self.paths.from_project(latest) if latest is not None else ""
-
-    @mcp
-    @command(name="close-session")
-    @agent_tool
-    def close(self) -> None:
-        """Close this work session: when it is the open session of its project, main becomes the open one.
-
-        ``session`` is the session's session.json; ask ``sessions.current`` for it when the user names no session."""
-        self.sessions.close(self)
-
-    @mcp
-    @agent_tool
-    @noSessionLog
-    def choose_workpath(self, path: str = "") -> Session:
-        """Make path, a folder in the repository, this session's workpath: the folder its practices write under and its graph loads from. An empty path is the whole repository."""
-        # A practice root a person chose is kept relative to the workpath, so each is saved again against the new one
-        # and still names the same folder.
-        # The practices on the new workpath are kept again with it, so each root is kept by the practice that works there.
-        chosen = {key: practice.folder for key, practice in self.practices.items() if practice.is_root_chosen}
-        self.workpath = self._sessions.roots.in_checkout(self.repo_path, self.repo_path / path)
-        self.record.save()
-        moved = self.practices
-        for key, root in chosen.items():
-            moved[key].keep_root(root)
-        return self
-
-    @mcp
-    @agent_tool
-    @noSessionLog
-    def show(self) -> Session:
-        """This session as it stands, changing nothing: its title, workpath, and each practice with whether it is on and its colour."""
-        return self
+    session_files: SessionFiles
 
     @mcp
     @agent_tool
@@ -436,6 +108,31 @@ class Session:
         """Save text as the whole of path, a file in this repository or under a folder this session's practices write to, named as read_file names it; the file as saved."""
         return self.session_files.write(path, text)
 
+    @long_call
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def file(self, path: str, rules: bool = False, cross_file: bool = False) -> SessionFile:
+        """Return path, a file named as read_file names it, as the viewer shows it: its text and language, the comments on it, and with either of rules or cross_file the folds of its classes, operations, and properties. With rules, the rules it breaks read on its own, under a second; with cross_file, the rules only the whole working copy finds broken in it, linking files and practices, which takes far longer. Each on its range of lines. Both off, browsing never reads a graph."""
+        return SessionFile(self, path, RuleReads(rules, cross_file))
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def add_to_chat_context(self, chat: str, path: str, start_line: int = 0, end_line: int = 0) -> Chat:
+        """Add path, a file named from the project, or its lines start_line to end_line, to the context of chat, a chat's id: a fill in its prompt box that goes with the person's next prompt, as Claude's own file viewer adds a file. The whole file goes as an @ mention of its path; lines go as the path and range with each line quoted. A chat that is not connected refuses it."""
+        text = self.file(path).range(start_line, end_line).context if start_line else f"@{path} "
+        added_to = Chat.load(chat)
+        added_to.mailbox.queue("fill", text)
+        return added_to
+
+
+@hosted_only
+class SessionGuidanceTools:
+    """The tools that read and change a session's guidance selection, whose versions its *GuidanceVersion* keeps."""
+
+    guidance_version: GuidanceVersion
+
     @mcp
     @agent_tool
     @noSessionLog
@@ -448,26 +145,8 @@ class Session:
     @noSessionLog
     def update_guidance_selection(self, stages: list[str] | None = None, practices: list[str] | None = None, formats: list[str] | None = None) -> GuidanceSelection:
         """Select exactly these stages (such as discovery), practices (such as stories), and format groups (such as markdown), each list in place of what was selected, a list left out unchanged; save it in session.json, raise the version once, and return the selection. A practice selected is one the session works on; a format group selected is chosen for every selected fidelity offering it."""
-        with self.guidance_version.batch():
-            if practices is not None:
-                self._select_practices(practices)
-            if stages is not None:
-                self.guidance_version.save(stages=[stage for stage in STAGES.names if stage in stages])
-            if formats is not None:
-                self._select_format_groups(formats)
+        self.guidance_version.select(stages, practices, formats)
         return GuidanceSelection(self)
-
-    def _select_practices(self, practices: list[str]) -> None:
-        """Turn on exactly the practices named, each changed only when it differs, so an unchanged one writes nothing."""
-        for output in self.own_practices.values():
-            if output.enabled != (output.name in practices):
-                output.enable(output.name in practices)
-
-    def _select_format_groups(self, formats: list[str]) -> None:
-        """Choose exactly the format groups named for every selected fidelity offering them."""
-        for group in GuidanceSelection(self).formats:
-            if group.is_selected != (group.label in formats):
-                group.select(group.label in formats)
 
     @long_call
     @mcp
@@ -478,78 +157,15 @@ class Session:
         self.guidance_version.wait_past(version)
         return GuidanceSelection(self)
 
-    @long_call
-    @mcp
-    @agent_tool
-    @noSessionLog
-    def file(self, path: str, rules: bool = False, cross_file: bool = False) -> SessionFile:
-        """Return path, a file named as read_file names it, as the viewer shows it: its text and language, the comments on it, and with either of rules or cross_file the folds of its classes, operations, and properties. With rules, the rules it breaks read on its own, under a second; with cross_file, the rules only the whole working copy finds broken in it, linking files and practices, which takes far longer. Each on its range of lines. Both off, browsing never reads a graph."""
-        return SessionFile(self, path, RuleReads(rules, cross_file))
 
-    @long_call
-    @mcp
-    @agent_tool
-    @noSessionLog
-    def graph_trees(self, paths: list[str], node_filter: dict | None = None, call: ToolCall | None = None) -> list[ExplorerEntry]:
-        """Return the practice trees of this session's graph read from exactly the files at paths, each named from the project as the Files app lists them, and holding only the nodes read from them: each practice's root with the entries below it, closed, as graph.explorer_trees answers them. The files the page lists are the one file filter: the graph reads them, its story tests in code and in markdown alike, and keeps what they hold. node_filter is a node filter as graph.explorer_trees takes it (types, relationships, violations, rules): it applies with the file list, narrowing the nodes of the files listed, and never widens the list, so any paths it names are the list's. No paths, or none in the project, answer no tree."""
-        listed = self.paths.in_project(paths)
-        if not listed:
-            return []
-        graph = self.graph
-        working = [key for key, output in self._own_outputs.items() if output.enabled]
-        graph.load_files(str(self.repo_path.resolve()), working, listed, graph.overlays, call)
-        return graph.explorer.explorer_trees(self._narrowed_to(listed, node_filter))
+@hosted_only
+class SessionLogTools:
+    """The tools that mark and read a session's log loops, add notes to it, and hand its work on: each asks the
+    session's *SessionLog* or its *Handoffs*."""
 
-    @mcp
-    @agent_tool
-    @noSessionLog
-    def graph_branch(self, node_id: str, paths: list[str], node_filter: dict | None = None) -> ExplorerEntry | None:
-        """Return the node node_id's entry in this session's graph, kept to the nodes read from the files at paths and matched by node_filter as graph_trees keeps them, with the entries below it, closed; None for an id the graph no longer holds."""
-        return self.graph.explorer.explorer_branch(node_id, self._narrowed_to(self.paths.in_project(paths), node_filter))
-
-    @mcp
-    @agent_tool
-    @noSessionLog
-    def graph_filter_choices(self, practices: list[str], node_types: list[str], practices_before: list[str] | None = None) -> Filter:
-        """Return the node types the graph view's node filter offers and those it chooses, with the connectors and rules of the chosen ones, as graph.filter_choices answers them on this session's graph."""
-        return self.graph.explorer.filter_choices(practices, node_types, practices_before)
-
-    def _narrowed_to(self, listed: list[str], node_filter: dict | None) -> dict:
-        """The graph's filter request for a node filter applied with the file list: the node filter's choices, kept to
-        the files listed, in place of any paths it names."""
-        return {**(node_filter or {}), "paths": listed}
-
-    @mcp
-    @agent_tool
-    @noSessionLog
-    def graph_node_ranges(self, node_id: str, paths: list[str]) -> list[Range]:
-        """Return the lines the node node_id covers, one range for each file, each named from the project, so a viewer opens every file there. A node read from lines of a file answers that one range; a node read from no file's lines, such as a module that is a folder, answers each file the nodes below it come from, among paths, spanning the lines they cover; none for an id the graph no longer holds."""
-        spans = NodeSpans(self.graph, {"paths": self.paths.in_project(paths)}, self.work_root).collect(node_id).spans
-        return [self.file(self.paths.from_project(path)).range(start, end) for path, (start, end) in spans.items()]
-
-    @mcp
-    @agent_tool
-    @noSessionLog
-    def graph_members(self) -> list[NodeSource]:
-        """Return every class, operation, and property this session's graph holds, each with its text and the class it belongs to, so a viewer opens a call in place even when it reaches another file. Read after graph_trees, which reads the files the page lists."""
-        return self.graph.explorer.source_members()
-
-    @mcp
-    @agent_tool
-    @noSessionLog
-    def add_to_chat_context(self, chat: str, path: str, start_line: int = 0, end_line: int = 0) -> Chat:
-        """Add path, a file named from the project, or its lines start_line to end_line, to the context of chat, a chat's id: a fill in its prompt box that goes with the person's next prompt, as Claude's own file viewer adds a file. The whole file goes as an @ mention of its path; lines go as the path and range with each line quoted. A chat that is not connected refuses it."""
-        text = self.file(path).range(start_line, end_line).context if start_line else f"@{path} "
-        added_to = Chat.load(chat)
-        added_to.mailbox.queue("fill", text)
-        return added_to
-
-    @property
-    def file_comments(self) -> FileComments:
-        """The comments a person wrote on this session's files, kept in its folder."""
-        from space.session.file_comments import FileComments
-
-        return FileComments(self)
+    log: SessionLog
+    paths: SessionPaths
+    handoffs: Handoffs | None
 
     @mcp
     @command(name="mark-loop")
@@ -640,6 +256,14 @@ class Session:
         """Step 6 - When the sub-agent reports, pass its result on to the person: the cause, the change, and where it went."""
         return "Debug report written; fix or help request under way."
 
+
+@hosted_only
+class SessionDecisionTools:
+    """The tools that list and write a session's Context Decision Records, which its *DecisionRecords* keep."""
+
+    decision_records: DecisionRecords
+    paths: SessionPaths
+
     @mcp
     @skill
     @agent_tool
@@ -687,3 +311,305 @@ class Session:
         """Step 4 - When a qualifying decision crystallises, offer a CDR briefly (title + one-line gist). If the user accepts, write the record to a file and call write_cdr immediately with a kebab slug and paths set to that file. Do not pass the record body. Do not batch; do not wait until the end."""
         """Step 5 - Keep CDRs short. Prefer a single paragraph. Add Status / Considered Options / Consequences only when they add genuine value."""
         return "CDR session active."
+
+
+@identity("session_file")
+@language_adapter(language="typescript")
+@agent_toolset
+class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionLogTools, SessionDecisionTools):
+    """One named piece of work in a project, kept in ``.sessions/{name}/``. It holds where it works, the practices it
+    uses, and its title; its log, files, handoffs, decision records, and chat injections are objects of their own, made
+    with it. It holds the *Sessions* that loaded it and their repository, which keep one Session for each session
+    folder, so every call made in the session, from any chat, works on this one object: its graph and its one instance
+    of each practice. Every tool on it acts on the session whose ``session.json`` its ``session`` argument names; a
+    line a call logs points at that call's chat, which the call holds, never the session."""
+
+    def __init__(self, sessions: Sessions) -> None:
+        self._session_name = ""
+        # The sessions of the checkout that loaded this one, and their repository, which holds this session's ``.sessions``.
+        self._sessions = sessions
+        self.repo: Repo = sessions.repo
+        self.repo_path: Path = sessions.root
+        # The project's ``.context/config.json``, which names the folder each practice writes in.
+        self.context_config = ContextConfig(self.repo_path)
+        self._workpath: Path | None = None
+        self._session_path: Path | None = None
+        self._make_parts()
+
+    def _make_parts(self) -> None:
+        """The parts the session holds, each made once with it: what it reads and writes is theirs to keep."""
+        self.paths = SessionPaths(self)
+        self.record = SessionRecord(self)
+        self.folder = SessionFolder(self)
+        self.hierarchy = SessionHierarchy(self)
+        self.file_graphs = FileGraphs(self)
+        self.guidance_version = GuidanceVersion(self)
+        self.decision_records = DecisionRecords(self.work_root / CONTEXT_FOLDER / _DECISION_RECORDS_FOLDER)
+        self.handoffs: Handoffs | None = None
+        # What a board read costs most to work out for each of its fidelities, kept in its folder between reads.
+        self.progress_cache = ProgressCache(None)
+        self.log = SessionLog(self)
+        self.session_files = SessionFiles(self)
+        self.chat_injections = ChatInjections(self)
+        # The practices and graph this session keeps between calls, made when first asked for.
+        self.practice_outputs = PracticeOutputs(self)
+
+    @classmethod
+    @tool_subject
+    def from_file(cls, session: str, *, call: ToolCall) -> Session:
+        """The session whose session.json is session, a path from the call's project or an absolute one, read without
+        opening it, from the sessions this process holds for that project. A board command names its ticket's session
+        this way, because it runs in whichever chat it is sent to, and that chat's open session can be another. A tool
+        is handed the call it answers."""
+        return call.session_named(session)
+
+    @property
+    @data_field
+    def name(self) -> str:
+        """Named work session (not the toolset slug)."""
+        return self._session_name
+
+    @name.setter
+    def name(self, value: str) -> None:
+        self._session_name = (value or "").strip()
+
+    @property
+    def sessions(self) -> Sessions:
+        """The sessions of this session's checkout, which loaded it."""
+        return self._sessions
+
+    @property
+    def workpath(self) -> Path | None:
+        """The folder the session works in; none for the whole repository."""
+        return self._workpath
+
+    @workpath.setter
+    def workpath(self, folder: Path | None) -> None:
+        """Work in folder from now on. The practices and graph this session keeps were made on its old root, so they
+        are made again on the new one when next asked for."""
+        self._workpath = folder
+        self.decision_records = DecisionRecords(self.work_root / CONTEXT_FOLDER / _DECISION_RECORDS_FOLDER)
+        self.practice_outputs.forget()
+
+    @property
+    def session_path(self) -> Path | None:
+        """The session's folder, such as ``.sessions/alpha``; none for a session not yet kept in one."""
+        return self._session_path
+
+    @session_path.setter
+    def session_path(self, folder: Path | None) -> None:
+        self._session_path = folder
+        self.record.kept_in(folder)
+        self.handoffs = Handoffs(folder) if folder is not None else None
+        self.progress_cache = ProgressCache(folder)
+
+    @property
+    def is_closed(self) -> bool:
+        return self.session_path is not None and self.session_path.parent.name == COMPLETE_FOLDER
+
+    @property
+    def session_file(self) -> Path:
+        """The ``session.json`` in this session's folder, which holds its title, workpath, practice roots, and practices."""
+        return self.session_path / SESSION_FILE
+
+    @property
+    @data_field(key="session_file")
+    def session_file_from_project(self) -> str:
+        """Its session.json as a path from the project: the name every board command gives this session."""
+        return self.paths.from_project(self.session_file)
+
+    @property
+    def work_root(self) -> Path:
+        """The folder the session works in: its workpath, or the whole repository when it chose none. Actions write
+        their sketches, grill answers, and partitions under it, each practice's folder is kept relative to it, and the
+        file manager reads under it."""
+        return self.paths.resolved(Path(self.workpath or self.repo_path))
+
+    @property
+    def graph(self) -> Graph:
+        """The knowledge graph this session works with, opened on its root, holding the session's one instance of each
+        practice, made once on its root, so every call in the session works on the same graph and the same practices
+        and none rebuilds them; an action that writes files refreshes the graph with exactly those files. It reads back
+        the graph saved on its root, so a session opened again, such as a ticket just activated, shows what was loaded
+        in it before. A session whose root has moved gets a new graph, with new practices, on the new root. It holds only
+        the practices the session works on, so turning one on or off makes it again with those."""
+        return self.practice_outputs.graph
+
+    @property
+    @data_field
+    def title(self) -> str:
+        """The title a person gave the session's ticket; empty when it has none."""
+        return self.record.fields.get("title", "")
+
+    @property
+    @data_field
+    def repo_name(self) -> str:
+        """The repository the session works in, by its folder's name, as a page heads it."""
+        return self.repo.root.name
+
+    @property
+    @data_field
+    def branch(self) -> str:
+        """The branch the session works on, as its session.json names it, else the session's own name."""
+        return self.record.fields.get("branch") or self.name
+
+    @property
+    @data_field
+    def root(self) -> str:
+        """The whole path of the folder the session works in, as a page heads it."""
+        return str(self.work_root)
+
+    @property
+    @data_field
+    def scope(self) -> str:
+        """feature, story, or slice; empty when no one said."""
+        return self.record.fields.get("scope", "")
+
+    @property
+    @data_field
+    def parent(self) -> str:
+        """The name of the session this one was split from; empty when it was not split from one."""
+        return self.hierarchy.parent
+
+    @property
+    def tags(self) -> list[str]:
+        """The words a person tagged this session with, in the order they were added."""
+        return list(self.record.fields.get(_TAGS_FIELD, []))
+
+    def add_tag(self, word: str) -> None:
+        """Tag this session with word, once however often it is added."""
+        tags = self.tags
+        if word not in tags:
+            self.record.save_fields(**{_TAGS_FIELD: [*tags, word]})
+
+    @property
+    def idea_file(self) -> IdeaFile:
+        """``<name>.md`` in this session's folder: what its work is about, the backlog item's file when it was started from one."""
+        return IdeaFile(self.session_path / f"{self.name}.md")
+
+    @property
+    def text(self) -> str:
+        """The text of its idea file; empty while it has none."""
+        return self.idea_file.text
+
+    @property
+    def stories(self) -> list[str]:
+        """The stories its idea file names: this session's increment, which generate and validate work on."""
+        return self.idea_file.stories
+
+    def keep_text(self, text: str) -> None:
+        """Write text under its idea file's heading, making the file, headed with its title, when it has none."""
+        idea = self.idea_file
+        idea.write(idea.heading or self.title or self.name, text)
+        self.record.saved("text")
+
+    @property
+    def overlays(self) -> list[str]:
+        """The patterns this session overlays on its graph, by name, as its session.json keeps them; none until a
+        person chooses some."""
+        return list(self.record.fields.get("overlays", []))
+
+    def choose_overlays(self, overlays: list[str]) -> None:
+        """Overlay the patterns named on this session's graph from now on, in place of those chosen before: kept in its
+        session.json, and applied to its graph at once when it has one. A name that is no registered pattern is refused
+        with NotAPatternError, and nothing changes."""
+        patterns = PatternOverlays().names
+        unknown = [name for name in overlays if name not in patterns]
+        if unknown:
+            raise NotAPatternError(unknown, patterns)
+        self.record.save_fields(overlays=list(overlays))
+        self.practice_outputs.overlay(overlays)
+
+    @property
+    def answer(self) -> int | None:
+        """The answer this session's sessions are giving, which what it reads from its files is held for; none when
+        they serve no answer, and it reads them on every ask."""
+        return self._sessions.answers.current
+
+    @property
+    @data_field(key="workpath")
+    def workpath_from_checkout(self) -> str:
+        """The folder the session works in, as its session.json saves it and the board shows it: from its checkout's
+        top, so a ticket working in its own worktree shows the folder it chose there, and it can never name a folder in
+        another checkout of the repository; empty for the whole checkout, and absolute when it lies outside it."""
+        root = self.work_root
+        checkout = self.paths.resolved(self.repo_path)
+        if not root.is_relative_to(checkout):
+            return root.as_posix()
+        relative = root.relative_to(checkout).as_posix()
+        return "" if relative == "." else relative
+
+    @property
+    def reports_folder(self) -> Path:
+        """Where Validate saves its reports in this session, each with the graph it checked beside it."""
+        return self.session_path / _REPORT_FOLDER
+
+    def practice(self, name: str) -> PracticeSessionOutput:
+        """The practice called name in this session, on or off for it: the session's one instance of it, so a practice
+        turned off can be turned on again. One the session works on is opened in its graph first."""
+        found = self.practices.get(name) or self.practice_outputs.every.get(name)
+        if found is None:
+            raise UnknownPracticeError(name)
+        return found
+
+    @property
+    def practices(self) -> dict[str, PracticeSessionOutput]:
+        """The practices the session works on, by practice key, each the session's one instance of it: the ones its
+        graph holds, kept between calls with the graph, which opening here gives each practice to work in. A practice
+        turned off for the session is in ``own_practices`` and ``practice(name)``, not here."""
+        outputs = self.practice_outputs.every
+        return {key: outputs[key] for key in self.graph.practices.held}
+
+    @property
+    @data_field(key="practices")
+    def own_practices(self) -> dict[str, PracticeSessionOutput]:
+        """The same practices, without opening the graph, for reading what each one declares, its folder and fidelities:
+        a board listing every session would otherwise read every session's saved graph. A practice that runs is reached
+        through ``practices``, so it works in the graph."""
+        return dict(self.practice_outputs.every)
+
+    @property
+    @data_field(key="handoff")
+    def latest_handoff(self) -> str:
+        """The newest handoff file, as a path from the project; empty before one is written."""
+        latest = self.handoffs.latest
+        return self.paths.from_project(latest) if latest is not None else ""
+
+    @mcp
+    @command(name="close-session")
+    @agent_tool
+    def close(self) -> None:
+        """Close this work session: when it is the open session of its project, main becomes the open one.
+
+        ``session`` is the session's session.json; ask ``sessions.current`` for it when the user names no session."""
+        self.sessions.opened.close(self)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def choose_workpath(self, path: str = "") -> Session:
+        """Make path, a folder in the repository, this session's workpath: the folder its practices write under and its graph loads from. An empty path is the whole repository."""
+        # A practice root a person chose is kept relative to the workpath, so each is saved again against the new one
+        # and still names the same folder.
+        # The practices on the new workpath are kept again with it, so each root is kept by the practice that works there.
+        chosen = {key: practice.folder for key, practice in self.practices.items() if practice.is_root_chosen}
+        self.workpath = self._sessions.roots.in_checkout(self.repo_path, self.repo_path / path)
+        self.record.save()
+        moved = self.practices
+        for key, root in chosen.items():
+            moved[key].keep_root(root)
+        return self
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def show(self) -> Session:
+        """This session as it stands, changing nothing: its title, workpath, and each practice with whether it is on and its colour."""
+        return self
+
+    @property
+    def file_comments(self) -> FileComments:
+        """The comments a person wrote on this session's files, kept in its folder."""
+        from space.session.file_comments import FileComments
+
+        return FileComments(self)

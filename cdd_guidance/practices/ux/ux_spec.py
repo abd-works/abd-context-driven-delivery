@@ -106,7 +106,7 @@ with description("Ux ensure_javascript tool"):
             self.project = Path(tempfile.mkdtemp(prefix="cdd-ux-"))
             (self.project / ".git").mkdir()
             sessions = Sessions(self.project)
-            self.session = sessions.open(sessions.create("alpha", self.project))
+            self.session = sessions.opened.open(sessions.create("alpha", self.project))
             self.ux = self.session.practices["ux"].guidance
 
         with after.each:

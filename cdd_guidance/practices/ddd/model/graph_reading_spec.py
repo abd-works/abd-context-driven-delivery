@@ -54,7 +54,7 @@ with description("DDD's reading of a working copy into the graph"):
             with before.all:
                 self.graph.save_json()
                 self.reopened = Graph()
-                self.reopened.open_saved(self.fixture.root)
+                self.reopened.reads.open_saved(self.fixture.root)
 
             with it("should hold the mappings the build that saved it held"):
                 expect(mappings_of(self.reopened)).to(equal(mappings_of(self.graph)))

@@ -12,7 +12,7 @@ from expects import contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.mcp.cdd_home import CddHome
-from harness.process.git import Git
+from harness.git.git import Git
 from space.repo.repos import CddConfig, FolderIsAWorktreeError, PathIsAFileError, NotAReposFolderError, Repos, RepoNameRequiredError
 
 
@@ -31,7 +31,7 @@ with description("Repos") as self:
         self.top = Path(tempfile.mkdtemp(prefix="cdd-repos-")).resolve()
         self.home = CddHome(self.top / ".cdd")
         self.here = _repository(self.top / "abd-cdd")
-        self.repos = Repos(self.here, CddConfig(self.home))
+        self.repos = Repos(self.here, CddConfig.in_home(self.home))
 
     with after.each:
         shutil.rmtree(self.top, ignore_errors=True)
@@ -45,7 +45,7 @@ with description("Repos") as self:
             chosen = self.top / "elsewhere"
             chosen.mkdir()
             self.repos.set_folder(str(chosen))
-            expect(Repos(self.here, CddConfig(self.home)).folder).to(equal(chosen.resolve()))
+            expect(Repos(self.here, CddConfig.in_home(self.home)).folder).to(equal(chosen.resolve()))
 
         with it("should refuse a folder that is not there"):
             expect(lambda: self.repos.set_folder(str(self.top / "missing"))).to(raise_error(NotAReposFolderError))

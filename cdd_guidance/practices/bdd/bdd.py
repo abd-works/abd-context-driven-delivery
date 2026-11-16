@@ -32,12 +32,7 @@ class Bdd(PracticeGuidance):
         "spec_blurb": "Nested describe/it behaviour tests that serve as both documentation and automated tests for domain logic",
     }
 
-    def __init__(
-        self,
-        fidelity: str = "behavior",
-        format: str | None = None,
-    ) -> None:
-        super().__init__(format=format, fidelity=fidelity)
+    first_fidelity = "behavior"
 
     default_workspace_folder = "src"
     format_adapters = {
@@ -54,5 +49,5 @@ class Bdd(PracticeGuidance):
     reading_type = BddGraphReading
 
 
-BddModel.register_practice(Bdd)
-BehaviorNode.register_practice(Bdd)
+BddModel.practice_class = Bdd
+BehaviorNode.practice_class = Bdd

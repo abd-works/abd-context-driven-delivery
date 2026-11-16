@@ -45,7 +45,7 @@ def _installer(
     mcp_items: list[str],
     toolset_items: list[str] | None = None,
 ) -> Installer:
-    installer = Installer(ide="Cursor", path=tree, repo=_REPO_ROOT)
+    installer = Installer.create(ide="Cursor", path=tree, repo=_REPO_ROOT)
     log = installer.diagnostics.path
     entry: dict = {"mcp": {"items": mcp_items}}
     if toolset_items is not None:

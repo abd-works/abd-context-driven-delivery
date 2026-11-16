@@ -357,7 +357,7 @@ Drawn as the code is today (dashed); the refactor changes each one to what *shou
 | McpServer | Mcp | serves the operations annotated | R | harness/mcp/mcp_server.py:486 | dependency | acts on the members an author annotated, reading the annotation through annotation_kinds |
 | SpecServer | CddHome | serves from, installs | R | harness/mcp/spec_support.py:49 | composition 1 | SpecServer creates its own CddHome once and keeps it |
 | UserMcpConfig | IdeLayout | creates | R | harness/mcp/mcp_server.py:112 | composition 1 | UserMcpConfig creates its own IdeLayout once and keeps it |
-| Git | RepoConnectError | raises | R | harness/process/git.py:43 | dependency | Git raises its named failure |
+| Git | RepoConnectError | raises | R | harness/git/git.py:45 | dependency | Git raises its named failure |
 | StoppableProcess | ProcessNotStopped | raises | R | harness/process/stoppable_process.py:38 | dependency | StoppableProcess raises its named failure |
 | Column | Board | reads cards of | R | space/kanban/board.py:241 | association (held) | Column asks a Board it already holds through its public operations |
 | FidelityProgress | FidelityGuidance | calls has_declared_output on, calls files on | R | space/kanban/ticket.py:427 | association (held) | FidelityProgress asks a FidelityGuidance it already holds through its public operations |

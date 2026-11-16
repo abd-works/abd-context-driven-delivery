@@ -16,7 +16,7 @@ from harness.annotations.class_folder import class_folder
 from harness.annotations.name import Name
 from harness.agent_tools.parameter_schema import ParameterSchema, TypeHint, is_built_in
 from harness.agent_tools.tool_call import CALLS_BEING_ANSWERED, ToolCall
-from harness.markdown.markdown import Markdown, MarkdownCollection, OperationProperty
+from harness.markdown.markdown import Markdown, MarkdownCollection, operation_property
 from harness.annotations.annotation import Annotatable, Annotation, NamesAnnotation, annotation_kinds
 from harness.agent_tools.recipe import ExpansionMode, ExpansionResult, RecipeExpansion, RecipePlaceholders, RecipeSource, RecipeTarget
 
@@ -189,7 +189,7 @@ class Collect:
     def _property(self, operation: Callable[..., Any]) -> property:
         self._name = operation.__name__
         self._return_type = self._declared_return(operation)
-        return OperationProperty(operation).reading(self.of)
+        return operation_property(operation, self.of)
 
     def of(self, collection: AgentToolSetOrigin) -> Any:
         """The collected value of this property on collection's children."""
@@ -582,7 +582,7 @@ class AgentToolSet(AgentToolSetOrigin):
         self._mode = ExpansionMode(str(new_mode)).value
 
     @classmethod
-    def instantiate(cls, toolset: ToolsetConfiguration = None) -> Any:
+    def instantiate(cls, toolset: ToolsetConfiguration = None) -> AgentToolSet:
         """A toolset made from what configuration names: a ``<module>:<Class>`` reference, ``{"toolset": reference,
         "context": {...}}`` with the constructor's arguments, a toolset class, or a toolset already made."""
         if toolset is None:
@@ -1311,10 +1311,7 @@ class AgentToolAnnotation(Annotation):
 
     flag = "_is_agent_tool"
     typed_name = "agent_tool"
-
-    @classmethod
-    def installs_member(cls) -> bool:
-        return True
+    makes_installable = True
 
 
 class AgentInstructionsAnnotation(Annotation):
@@ -1322,10 +1319,7 @@ class AgentInstructionsAnnotation(Annotation):
 
     flag = "_is_agent_instructions"
     typed_name = "agent_instructions"
-
-    @classmethod
-    def installs_member(cls) -> bool:
-        return True
+    makes_installable = True
 
 
 class _ClassJoiningAnnotation(Annotation):
@@ -1345,7 +1339,7 @@ class _ClassJoiningAnnotation(Annotation):
     def _joined(self, target: type, base: type) -> type:
         """target joined with base, or target itself when it already carries this annotation. Raises TypeError for a class
         that subclasses base directly."""
-        if self.flag in target.__dict__ or self.annotates(target):
+        if self.flag in target.__dict__ or type(self).annotates(target):
             return target
         if issubclass(target, base):
             raise TypeError(f"{target.__name__} must use @{self.annotation_name} — do not subclass {base.__name__} directly")

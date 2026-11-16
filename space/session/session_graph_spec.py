@@ -16,11 +16,11 @@ from mamba import after, before, context, description, it
 
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 from harness.graph.explorer import ExplorerEntry
-from harness.guidance.practice_catalogue import PracticeCatalogue
+from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 from space.session import Sessions
 from space.session.throwaway_project import ExampleHome
 
-PracticeCatalogue.create_all()
+PRACTICE_CATALOGUE.create_all()
 
 # Seed: two files the session's root holds, each one class with one operation, as the Files app lists them from the
 # project: the ticket code the branch changed and the board code it did not.

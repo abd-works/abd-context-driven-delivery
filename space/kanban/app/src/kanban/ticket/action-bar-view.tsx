@@ -88,7 +88,7 @@ export function ActionBarView({ ticket, tile, onMouseEnter, onMouseLeave }: Acti
   const { page } = useBoard()
   const bar = page.tileActions.barOf(ticket, tile)
   return (
-    <div className="expansion" data-bar={tile.place} onClick={() => page.tiles.pin(tile.ticket.name, tile.place)} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
+    <div className="expansion" data-bar={tile.place} onClick={() => page.tiles.pin(tile.ticket, tile.place)} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
       <div className="bar-line bar-files">
         <FileViewsView ticket={ticket} progress={ticket.work.progressOn(tile.fidelities)} />
       </div>
