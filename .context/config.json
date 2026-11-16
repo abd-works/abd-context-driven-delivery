@@ -11,5 +11,10 @@
     "bdd": ".",
     "ddd": ".",
     "ux": "."
+  },
+  "default_formats": {
+    "*": ["default", "drawio", "whiteboard"],
+    "ux": ["default"],
+    "ux.mockup": ["claude_design"]
   }
 }

@@ -1023,6 +1023,24 @@ with description("a practice"):
             with it("should point that practice's folder at the workpath"):
                 expect(Path(self.opened.folder).resolve()).to(equal(self.work.resolve()))
 
+        with context("with config.json default_formats naming diagram formats for every fidelity"):
+            with before.each:
+                from harness.installation.context_config import ContextConfig
+
+                ContextConfig(self.repo).update(default_formats={"*": ["default", "drawio", "whiteboard"], "stories.scenarios": ["python"]})
+                Sessions(self.repo).switch("alpha")
+                self.stories = Sessions(self.called).current().practice("stories")
+
+            with it("should choose a fidelity's own default and the diagram formats it writes until the session chooses"):
+                expect(self.stories.fidelities["story_map"].session_output.chosen_formats).to(equal(["markdown", "drawio", "whiteboard"]))
+
+            with it("should choose what the project names for that one fidelity over its defaults for every fidelity"):
+                expect(self.stories.fidelities["scenarios"].session_output.chosen_formats).to(equal(["python"]))
+
+            with it("should keep what the session chooses over the project's defaults"):
+                chosen = self.stories.fidelities["story_map"].session_output.choose_format("whiteboard", False)
+                expect(chosen.chosen_formats).to(equal(["markdown", "drawio"]))
+
         with context("with a root a person chose for the practice"):
             with before.each:
                 self.custom = self.repo / "custom-bdd"
