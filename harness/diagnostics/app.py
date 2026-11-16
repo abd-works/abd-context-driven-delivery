@@ -20,6 +20,7 @@ from harness.graph.graph_app import GRAPH_APP_PORTS
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.json_file import JsonFile
 from harness.mcp.mcp_annotations import long_call, mcp
+from harness.mcp.server_lanes import ServerLane, ServerLanes
 from harness.process.process import ListeningPorts, ProcessNotStopped
 
 _HOST = "127.0.0.1"
@@ -31,6 +32,8 @@ NPM_SECONDS = 270
 REASON_LINES = 3
 # The loader node runs a TypeScript server with, from the server's own packages.
 TYPESCRIPT_LOADER = ("--import", "tsx")
+# What an app server's script reads, before its env variable and its ports file, as the port it listens on.
+PORT_ARGUMENT = "--port"
 # How long a restarted server has to answer on one of its ports, and how often it is asked.
 RESTART_SECONDS = 30
 RESTART_CHECK_SECONDS = 0.25
@@ -129,20 +132,27 @@ class NodeScript:
         loader = list(TYPESCRIPT_LOADER) if self.script.endswith(".ts") else []
         return ["node", *loader, self.script]
 
-    def start(self) -> None:
-        """Start it on its own, so it outlives whoever started it and opens no console window."""
-        subprocess.Popen(self.command, cwd=self.folder, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=_DETACHED, start_new_session=sys.platform != "win32")
+    def start(self, command: list[str]) -> None:
+        """Start command in its folder on its own, so it outlives whoever started it and opens no console window."""
+        subprocess.Popen(command, cwd=self.folder, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=_DETACHED, start_new_session=sys.platform != "win32")
 
 
 class AppServer:
-    """The server an app answers from: the script node runs in its folder, and the ports it tries in turn. The chat
-    that opens an app starts it, as long as that chat lasts, so this says how; two apps the same server serves, as the
-    board's server serves the Story UI editor, share one."""
+    """The server an app answers from: the script node runs in its folder, and the ports it tries in turn, which are its
+    ports file's in the stable lane and lie one offset above them in the dev lane, the lane the cdd server running here
+    serves. The chat that opens an app starts it, as long as that chat lasts, so this says how; two apps the same server
+    serves, as the board's server serves the Story UI editor, share one."""
 
-    def __init__(self, script: NodeScript, ports: tuple[int, ...], probe: PortProbe | None = None) -> None:
+    def __init__(self, script: NodeScript, ports: tuple[int, ...], probe: PortProbe | None = None, lane: ServerLane | None = None) -> None:
         self._script = script
-        self.ports = tuple(ports)
+        self._file_ports = tuple(ports)
         self._probe = probe or PortProbe()
+        self._lane = lane or ServerLanes.serving()
+
+    @property
+    def ports(self) -> tuple[int, ...]:
+        """The ports it tries in turn in the lane the cdd server running here serves."""
+        return self._lane.app_ports(self._file_ports)
 
     @property
     @data_field
@@ -153,8 +163,11 @@ class AppServer:
     @property
     @data_field
     def command(self) -> list[str]:
-        """What starts it, run in its folder: node on its script, through tsx for a TypeScript one."""
-        return self._script.command
+        """What starts it, run in its folder: node on its script, through tsx for a TypeScript one, naming the first of
+        its ports when they are not its ports file's, so it listens on its lane's port."""
+        if self.ports == self._file_ports:
+            return self._script.command
+        return [*self._script.command, PORT_ARGUMENT, str(self.ports[0])]
 
     @property
     def port(self) -> int | None:
@@ -169,7 +182,7 @@ class AppServer:
         if not self.stop():
             return False
         try:
-            self._script.start()
+            self._script.start(self.command)
         except OSError as failed:
             raise AppServerNotRestarted(self, f"{' '.join(self.command)} did not start: {failed}") from failed
         self._wait_until(lambda: self.port is not None, f"nothing answered on {', '.join(map(str, self.ports))} within {RESTART_SECONDS} s")

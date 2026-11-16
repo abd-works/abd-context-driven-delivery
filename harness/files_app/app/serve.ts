@@ -3,6 +3,8 @@ import { fileURLToPath } from 'node:url'
 
 import { CddConnection, ProjectConnections } from '@cdd/cdd-connection'
 
+import { servePort } from '@graph-app/serve-port'
+
 import { DrawioViewer } from './drawio-viewer'
 import { createFilesApp } from './files-server'
 // The app's port, written once for this server and for the Python that reports it to a chat.
@@ -13,7 +15,7 @@ const HOST = '127.0.0.1'
 const here = dirname(fileURLToPath(import.meta.url))
 // harness/files_app/app sits three folders below the repository's root.
 const repository = resolve(here, '..', '..', '..')
-const port = Number(process.env.FILES_PORT ?? ports.files[0])
+const port = servePort(process.argv, Number(process.env.FILES_PORT ?? ports.files[0]))
 // A call that names no project is about FILES_PROJECT, which defaults to the checkout cdd was installed from.
 const projects = new ProjectConnections(new CddConnection(process.env.FILES_PROJECT))
 const app = createFilesApp(projects, port, join(here, 'dist'), new DrawioViewer(repository))

@@ -65,6 +65,8 @@ Intended (requested 2026-11-16; `harness/mcp/.context/cdr/0003-two-lanes-main-st
 ### (S) Person --> [Serve A Feature Branch On The Dev Lane](../story_tests/register-and-install-toolsets/serve-cdd-code-in-lanes/serve-a-feature-branch-on-the-dev-lane/serve_a_feature_branch_on_the_dev_lane_story.test.py)
 ### (S:system) CDD Server --> [Send A Dev-Lane Chat's Calls To The Dev Lane](../story_tests/register-and-install-toolsets/serve-cdd-code-in-lanes/send-a-dev-lane-chats-calls-to-the-dev-lane/send_a_dev_lane_chats_calls_to_the_dev_lane_story.test.py)
 ### (S) Person --> Switch The Served Feature After Other Chats Agree
+### (S:system) CDD Server --> [Serve Dev Lane Apps On Their Own Ports](../story_tests/register-and-install-toolsets/serve-cdd-code-in-lanes/serve-dev-lane-apps-on-their-own-ports/serve_dev_lane_apps_on_their_own_ports_story.test.py)
+### (S:system) CDD Server --> [Keep A Lane's Server Running After Its Chat Ends](../story_tests/register-and-install-toolsets/serve-cdd-code-in-lanes/keep-a-lanes-server-running-after-its-chat-ends/keep_a_lanes_server_running_after_its_chat_ends_story.test.py)
 
 # (E) Deliver Work With Context Guidance
 

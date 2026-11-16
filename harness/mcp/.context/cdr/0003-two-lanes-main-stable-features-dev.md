@@ -32,4 +32,6 @@ Several CDD features are often in progress at once, each in its ticket's worktre
   - `ServedCode.keep_pinned_current` (`harness/mcp/mcp_daemon.py`) keeps the stable lane on main only. Today it pins the main checkout's commit into the single home.
   - A switch operation that checks the other dev-lane chats before it restarts. Today that check is done by hand.
   - `ticket.activate` may offer to serve the ticket's branch on the dev lane. It never switches without asking.
+- Both lanes register the same apps, so the dev lane's app servers answer `ServerLanes.DEV_APP_PORT_OFFSET` (1000) above the ports their ports files give them: `AppServer.ports` is the lane's, and `AppServer.command` names the first with `--port`, which every app's server reads before its env variable and its ports file (`harness/graph/app/serve-port.ts`). The lane is the one the server's home is (`ServerLanes.serving`). The chat bar's check-ins stay on the stable board.
+- A lane's server outlives the chat that started it: where the chat's Windows job refuses breakaway, `BackgroundStart` creates the process through WMI (`Win32_Process.Create`), outside every job.
 - The cdd-board mod is published from the code a server runs (`CddHome.write_board_plugin`). With two lanes, the published mod has to match the lane each chat talks to, or follow the stable lane until a feature changes the mod.

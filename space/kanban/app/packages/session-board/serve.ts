@@ -3,6 +3,9 @@ import { fileURLToPath } from 'node:url'
 
 import { CddConnection, ProjectConnections } from '@cdd/cdd-connection'
 
+// Every app's server reads its port the same way; the Graph app's folder holds how.
+import { servePort } from '../../../../../harness/graph/app/serve-port'
+
 import { createApp } from './app'
 // The board's port, written once for this server and for the Python that reports it to a chat.
 import ports from './ports.json'
@@ -11,7 +14,7 @@ const HOST = '127.0.0.1'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const appRoot = resolve(here, '..', '..')
-const port = Number(process.env.BOARD_PORT ?? ports.board[0])
+const port = servePort(process.argv, Number(process.env.BOARD_PORT ?? ports.board[0]))
 // A call that names no project is about BOARD_PROJECT, which defaults to the checkout cdd was installed from.
 const projects = new ProjectConnections(new CddConnection(process.env.BOARD_PROJECT))
 const app = createApp(projects, port, join(appRoot, 'dist'))
