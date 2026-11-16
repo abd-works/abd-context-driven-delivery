@@ -60,7 +60,7 @@ export function FilesGraphView({ page }: { page: FilesPage }) {
   const { graph } = useFilesState(page)
   if (graph.problem) return <p className="files-note">{graph.problem}</p>
   if (graph.isReading) return <LoadProgressView loadingLabel="Reading the session's graph…" loadingLog={graph.log} />
-  if (!graph.trees?.length) return <p className="files-note">The graph holds no node of these files.</p>
+  if (!Array.isArray(graph.trees) || !graph.trees.length) return <p className="files-note">The graph holds no node of these files.</p>
   return (
     <ul className="tree graph-tree" aria-label="Graph">
       {graph.trees.map(tree => (

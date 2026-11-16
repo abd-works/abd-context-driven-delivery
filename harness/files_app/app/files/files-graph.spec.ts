@@ -54,6 +54,10 @@ class FakeFilesServer implements CddApi {
   stages = ['discovery', 'implementation']
   practices = ['stories', 'clean_engineering']
   progress: string[] = []
+  // What graph_trees and graph_members answer in place of the seed's nodes, as a server lane that cannot run the call
+  // answers: a failure's text rather than a list.
+  treesAnswer: unknown = undefined
+  membersAnswer: unknown = undefined
   private readonly waiting: (() => void)[] = []
   private held: Promise<void> | null = null
   private release: () => void = () => {}
@@ -75,9 +79,10 @@ class FakeFilesServer implements CddApi {
     if (path.endsWith('/guidance-selection-after')) return (await this.after(Number(body.version))) as Result
     if (path.endsWith('/fidelity-files')) return {} as Result
     if (path.endsWith('/root-files')) return CHECKOUT_FLOW_FILES as Result
-    if (path.endsWith('/graph-trees')) return (await this.heldTrees(body.paths as string[])) as Result
+    if (path.endsWith('/graph-trees')) return (this.treesAnswer !== undefined ? this.treesAnswer : await this.heldTrees(body.paths as string[])) as Result
     if (path.endsWith('/graph-branch')) return this.entry(this.node(String(body.node_id)), body.paths as string[], true) as Result
     if (path.endsWith('/graph-node-ranges')) return this.ranges(this.node(String(body.node_id)), body.paths as string[]) as Result
+    if (path.endsWith('/graph-members') && this.membersAnswer !== undefined) return this.membersAnswer as Result
     if (path.endsWith('/graph-members')) return CHECKOUT_FLOW_NODES.filter(node => node.file).map(node => ({ node_id: node.id, name: node.name, type: node.type, file: node.file })) as Result
     if (path.endsWith('/cdd/progress')) return this.progress.map(message => ({ tool: 'session.graph_trees', message })) as Result
     if (path.endsWith('/file')) return { path: body.path, text: 'line\n'.repeat(700), language: 'python', comments: [], folds: [], violations: [], changes: [] } as Result
@@ -367,6 +372,39 @@ describe('Open Calls Across Files', () => {
       const { page, stop } = await showingGraph()
       stop()
       expect(page.state.graph.members.map(member => member.name)).toEqual(['Delete Ticket', 'Ticket', 'activate', 'close', 'Board', 'reread'])
+    })
+  })
+})
+
+describe('Show A Graph Read That Failed', () => {
+  // The text a server lane answers when it cannot run session.graph_trees, as an older lane does for a newer page's call.
+  const LANE_FAILURE = "TypeError: Session.graph_trees() got an unexpected keyword argument 'node_filter'"
+
+  describe("with session.graph_trees answering a failure's text instead of the trees", () => {
+    it('should hold no tree and show the failure in place of the graph', async () => {
+      const server = new FakeFilesServer()
+      server.treesAnswer = LANE_FAILURE
+      const { page, stop } = await showingGraph(server)
+      stop()
+      expect([page.state.graph.trees, page.state.graph.isReading, page.state.graph.problem]).toEqual([[], false, expect.stringContaining(LANE_FAILURE)])
+    })
+
+    it('should tell the failure as the page tells every failure', async () => {
+      const server = new FakeFilesServer()
+      server.treesAnswer = { error: LANE_FAILURE }
+      const { page, stop } = await showingGraph(server)
+      stop()
+      expect(page.state.graph.problem).toContain('session.graph_trees')
+    })
+  })
+
+  describe('with session.graph_members answering something other than a list', () => {
+    it('should keep the trees and hold no member', async () => {
+      const server = new FakeFilesServer()
+      server.membersAnswer = 'no members'
+      const { page, stop } = await showingGraph(server)
+      stop()
+      expect([treeNames(page), page.state.graph.members]).toEqual([['Stories', 'Clean Engineering'], []])
     })
   })
 })

@@ -1,5 +1,6 @@
 import type { CddApi, CddProgress } from '@cdd/cdd-shared'
-import type { ExplorerEntryData, SessionClientGenerated } from '@cdd/space/session/session'
+import type { NodeSourceData } from '@cdd/harness/graph/graph'
+import type { ExplorerEntryData, RangeData, SessionClientGenerated } from '@cdd/space/session/session'
 
 import type { FileBar } from './file-bar'
 import type { FilesNotices } from './files-notices'
@@ -10,6 +11,15 @@ const reasonOf = (failure: unknown): string => (failure instanceof Error ? failu
 // How often a read under way asks the cdd server what it is doing, in milliseconds.
 const PROGRESS_EVERY = 400
 const pause = (milliseconds: number) => new Promise(resolve => setTimeout(resolve, milliseconds))
+
+// The list a tool answered: none is an empty list, and anything else, such as the text or error a server lane answers
+// for a call it cannot run, is that tool's failure, so the page shows it rather than drawing it as a list.
+export function listAnswered<Item>(tool: string, answer: Item[] | null | undefined | unknown): Item[] {
+  if (answer === null || answer === undefined) return []
+  if (Array.isArray(answer)) return answer as Item[]
+  const said = typeof answer === 'string' ? answer : ((answer as { error?: unknown }).error ?? JSON.stringify(answer))
+  throw new Error(`${tool} answered no list: ${String(said)}`)
+}
 
 // An entry below another is a node's entry; the rules a node lists sit beside them and show with the violations.
 export const isEntry = (child: unknown): child is ExplorerEntryData => typeof child === 'object' && child !== null && 'children_left_out' in child
@@ -44,20 +54,27 @@ export class FilesGraph {
     return this.store.subscribe(readWhenStale)
   }
 
-  // Reads the trees, then every member the graph holds, following the cdd server's progress until the trees arrive.
+  // Reads the trees, then every member the graph holds, following the cdd server's progress until the trees arrive. A
+  // read that fails, or answers anything but a list, holds no tree and shows the failure in place of the graph.
   async read(): Promise<void> {
     const paths = this.paths
     const readFor = paths.join('\n')
     this.store.change(({ graph }) => ({ graph: { ...graph, readFor, isReading: true, log: [], problem: '' } }))
     void this.followProgress(readFor)
     try {
-      const trees = (await this.session.graphTrees(paths)) ?? []
+      const trees = listAnswered<ExplorerEntryData>('session.graph_trees', await this.session.graphTrees(paths))
       this.store.change(({ graph }) => (graph.readFor === readFor ? { graph: { ...graph, trees, branches: {}, isReading: false } } : {}))
-      const members = (await this.session.graphMembers()) ?? []
+    } catch (failure) {
+      this.store.change(({ graph }) => ({ graph: { ...graph, trees: [], isReading: false, problem: `The graph did not read: ${reasonOf(failure)}` } }))
+      this.notices.fail(`The Files app did not read the session's graph: ${reasonOf(failure)}`, 'Showing the graph view, calling session.graph_trees')
+      return
+    }
+    try {
+      const members = listAnswered<NodeSourceData>('session.graph_members', await this.session.graphMembers())
       this.store.change(({ graph }) => (graph.readFor === readFor ? { graph: { ...graph, members } } : {}))
     } catch (failure) {
-      this.store.change(({ graph }) => ({ graph: { ...graph, isReading: false, problem: `The graph did not read: ${reasonOf(failure)}` } }))
-      this.notices.fail(`The Files app did not read the session's graph: ${reasonOf(failure)}`, 'Showing the graph view, calling session.graph_trees')
+      this.store.change(({ graph }) => ({ graph: { ...graph, members: [] } }))
+      this.notices.fail(`The Files app did not read the graph's members: ${reasonOf(failure)}`, 'Showing the graph view, calling session.graph_members')
     }
   }
 
@@ -104,7 +121,7 @@ export class FilesGraph {
   // nothing.
   async select(entry: ExplorerEntryData, also: boolean = false): Promise<void> {
     try {
-      const ranges = (await this.session.graphNodeRanges(entry.node_id, this.paths)) ?? []
+      const ranges = listAnswered<RangeData>('session.graph_node_ranges', await this.session.graphNodeRanges(entry.node_id, this.paths))
       if (!ranges.length) return
       const kept = also ? this.store.state.graph.selected.filter(selected => selected.nodeId !== entry.node_id) : []
       const selected = [...kept, ...ranges.map(lines => ({ nodeId: entry.node_id, lines }))]
