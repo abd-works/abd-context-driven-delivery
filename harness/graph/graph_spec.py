@@ -502,11 +502,11 @@ with description("a graph"):
                         <= set(_rule_names(self.handle_request))
                     ).to(equal(True))
 
-                with it("should violate verb-noun format on Handle Request"):
+                with it("should list Handle Request's generic verb for the judgment to decide from its context"):
                     hit = rule_on(self.handle_request, "verb-noun-format")
                     expect(hit["status"]).to(equal("violating"))
                     expect(hit["violations"][0]["message"]).to(
-                        equal("Story 'Handle Request': name should start with a verb (got generic-verb).")
+                        equal("Story 'Handle Request': opens with a generic verb; judge from its context whether the action is plain.")
                     )
 
                 with it("should store the verb-noun span on Handle Request"):
