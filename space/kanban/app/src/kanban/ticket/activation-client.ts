@@ -32,12 +32,12 @@ export class ActivationClient {
   // The board then sends the person to the chat working in that worktree, or, with none working there yet, starts one
   // there, so the person is left with the ticket's chat either way.
   async activate(ticket: TicketClient): Promise<void> {
-    ticket.select()
+    ticket.selection.select()
     const activated = await ticket.activate()
     await this.page.reader.refresh()
     if (!activated) return
     const opened = this.page.ticket(activated.toJSON())
-    opened.choose()
+    opened.selection.choose()
     if (!opened.chat.found) return opened.chatOpening.open()
     this.page.store.toast(`${opened.title} is open in its worktree ${opened.worktree} · its chat is chosen`)
   }
@@ -45,7 +45,7 @@ export class ActivationClient {
   // Python says what closing the ticket can do with its work now, with those chosen at first. A read that failed
   // offers nothing, since the page has shown the failure.
   async startClosing(ticket: TicketClient): Promise<void> {
-    ticket.select()
+    ticket.selection.select()
     const choices = await ticket.closeChoices()
     this.show({ ticket, leaving: choices?.chosen ?? [], offeredLeaving: choices?.choices ?? [], leavingBranch: choices?.branch ?? '' })
   }
@@ -65,7 +65,7 @@ export class ActivationClient {
     const closed = await closing.ticket.close(closing.leaving)
     await this.page.reader.refresh()
     if (!closed) return
-    this.page.ticket(closed.toJSON()).select()
+    this.page.ticket(closed.toJSON()).selection.select()
     this.page.store.toast(closedReport(closing))
   }
 }

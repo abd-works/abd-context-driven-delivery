@@ -53,7 +53,7 @@ class SessionFolder:
     def remove(self) -> None:
         """Delete this session's folder, log, files, and all; its sessions no longer hold it."""
         shutil.rmtree(self._session.session_path)
-        self._session.sessions.removed(self._session)
+        self._session.sessions.held.removed(self._session)
         self._session.record.saved("removed")
 
     def _move_to(self, parent: Path) -> Session:
@@ -64,6 +64,6 @@ class SessionFolder:
         moved_from = session.session_path
         shutil.move(str(moved_from), str(parent / session.name))
         session.session_path = parent / session.name
-        session.sessions.moved(session, moved_from)
+        session.sessions.held.moved(session, moved_from)
         session.record.saved(f"moves to {parent.name}")
         return session

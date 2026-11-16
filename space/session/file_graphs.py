@@ -57,7 +57,7 @@ class FileGraphs:
         graph holds nothing of it (is_held false) or it changed since the graph last read it: since a viewer last showed
         it, or, before that, since the graph was opened or saved."""
         graph = self._session.graph
-        graph.hold_whole()
+        graph.reads.hold_whole()
         modified = path.stat().st_mtime if path.is_file() else -1.0
         with self._whole_lock:
             held, reads = self._whole_reads

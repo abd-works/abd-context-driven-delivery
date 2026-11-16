@@ -395,7 +395,7 @@ Sessions, a session, and its log
 - `GuidanceAction.run` logs through `SessionLog.guidance_action`, and a failure through `SessionLog.failure`; the MCP host logs each tool through `SessionLog.tool` and each failure through `SessionLog.failure`.
 - `Validate.validate` calls `session.log.validation` for each practice it checked. Generate and Satisfy call Validate, so their runs log the same line.
 - `RulesCollection.inject_rules` notes the rules it injected on the call's session through `SessionLog.injected_rules`.
-- The board reads a ticket's work through its session: `Session.practices`, `PracticeSessionOutput.fidelities`, and `FidelitySessionOutput.files`.
+- The board reads a ticket's work through its session: `Session.practices`, `PracticeSessionOutput.fidelities`, and `FidelitySessionOutput.written.files` (its *WrittenFiles*).
 
 ---
 

@@ -169,7 +169,7 @@ class PracticeSessionOutput:
         """Every folder this practice's fidelities write their declared outputs in, up to the first part a name or a
         pattern fills in, such as ``story_tests`` for ``story_tests/{epic}/{sub-epic}/...``: a viewer of the session's
         files reads each of them."""
-        paths = (path for fidelity in self.fidelities.entries.values() for paths in self.of_fidelity(fidelity).output_paths().values() for path in paths)
+        paths = (path for fidelity in self.fidelities.entries.values() for paths in self.of_fidelity(fidelity).written.output_paths().values() for path in paths)
         return {self._fixed_folder(path) for path in paths}
 
     @property
@@ -266,6 +266,8 @@ class FidelitySessionOutput:
         # The formats it uses from each group of the formats it writes, and its validation reports in the session.
         self.formats = FidelityFormats(self, fidelity)
         self.validation_reports = ValidationReports(self)
+        # The files it writes in the session: where each format goes, which are there, and which the branch changed.
+        self.written = WrittenFiles(self, fidelity)
 
     @classmethod
     @tool_subject
@@ -359,7 +361,7 @@ class FidelitySessionOutput:
         return self._session.reports_folder
 
     @property
-    def _chosen(self) -> dict:
+    def chosen_outputs(self) -> dict:
         """What session.json's ``outputs`` keeps for this fidelity: its own root, and a file name per format for a
         single-file output."""
         return dict(self._practice.chosen_outputs.get(self._fidelity.name, {}))
@@ -368,13 +370,26 @@ class FidelitySessionOutput:
     def root(self) -> Path:
         """The folder this fidelity writes under: its own root when session.json names one, else its practice's output
         root."""
-        chosen = self._chosen.get("root")
+        chosen = self.chosen_outputs.get("root")
         return self._session.paths.folder_under_root(chosen) if chosen else self._practice.output_root
+
+
+class WrittenFiles:
+    """The files one fidelity writes in a session: where it writes each format under its root, the files it declares
+    there, whether any is there yet, and which the session's branch changed, so a page can show only those."""
+
+    def __init__(self, output: FidelitySessionOutput, fidelity: FidelityGuidance) -> None:
+        self._output = output
+        self._fidelity = fidelity
+
+    @property
+    def _session(self) -> Session:
+        return self._output.practice.session
 
     def output_paths(self) -> dict[str, list[str]]:
         """Where this fidelity writes each format in the session: its declared paths under its root. session.json can
         name a file per format for a single-file output."""
-        chosen, root = self._chosen, self.root
+        chosen, root = self._output.chosen_outputs, self._output.root
         return {
             label: [self._under_root(name, root) for name in self._output_names(declared, chosen.get(label))]
             for label, declared in self._fidelity.outputs.items()
@@ -402,7 +417,7 @@ class FidelitySessionOutput:
 
     def _writes_code_to(self, file: Path) -> bool:
         """Whether file is production code in a format this fidelity writes as a folder per module, under its root."""
-        root = self.root.resolve()
+        root = self._output.root.resolve()
         if root not in file.resolve().parents or is_test_code(file.as_posix()):
             return False
         folders = [label for label, declared in self._fidelity.outputs.items() if str(declared).endswith("/") and Format(label).is_code]
@@ -450,7 +465,7 @@ class FidelitySessionOutput:
         in every ``.context`` folder and the folders inside it, such as ``harness/.context/stories/story-map.md``, as
         its patterns already find its tests anywhere."""
         from_top = PurePosixPath(self._session.repo.path_from_top(path))
-        if self.root.resolve() != self._session.repo.root.resolve() or from_top.parts[:1] != (CONTEXT_FOLDER,):
+        if self._output.root.resolve() != self._session.repo.root.resolve() or from_top.parts[:1] != (CONTEXT_FOLDER,):
             return DeclaredFile(from_top.as_posix())
         return DeclaredFile(PurePosixPath("**", CONTEXT_FOLDER, "**", *from_top.parts[1:]).as_posix())
 
@@ -475,7 +490,7 @@ class FidelitySessionOutput:
         files in that format under its root that the session's branch changed, the code the ticket worked on, not every
         file of that language in the repository. Specs, tests, and what only they use are the acceptance tests' and the
         development specs' files, not production code, so they are left out."""
-        root = self.root.resolve()
+        root = self._output.root.resolve()
         extensions = _CODE_EXTENSIONS.get(Format(label).name, (Format(label).extension,))
         worked_on = sorted(
             file for file in changed() if file.suffix in extensions and (file == root or root in file.parents) and not is_test_code(file.as_posix())

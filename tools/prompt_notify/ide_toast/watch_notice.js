@@ -95,19 +95,26 @@ class NoticeWatcher {
     if (this.seen.get(file) === raw) {
       return;
     }
-    let message;
-    try {
-      message = messageFromNotice(raw);
-    } catch (err) {
-      this.seen.set(file, raw);
-      this.onBroken(file, err);
-      return;
-    }
+    const message = this.messageOf(file, raw);
     if (!message) {
       return;
     }
     this.seen.set(file, raw);
     this.onMessage(message, file);
+  }
+
+  /**
+   * The message raw holds. A broken notice is reported through onBroken and remembered, so it is reported once; it
+   * holds no message to show.
+   */
+  messageOf(file, raw) {
+    try {
+      return messageFromNotice(raw);
+    } catch (err) {
+      this.seen.set(file, raw);
+      this.onBroken(file, err);
+    }
+    return "";
   }
 }
 

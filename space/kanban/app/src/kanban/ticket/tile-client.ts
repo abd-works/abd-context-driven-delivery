@@ -21,6 +21,9 @@ export type TileSpot = { ticket: TicketClient; stage: ColumnClient; place: strin
 // A bar is found by its ticket's name and its place, because each board read makes new ticket clients.
 export const isAt = (tile: Tile, ticket: TicketClient, place: string): boolean => tile.ticket.name === ticket.name && tile.place === place
 
+// What a change makes of one open bar.
+type TileChange = (tile: Tile) => Tile
+
 // Which action bars are open. A press keeps a bar open, and several can be kept at once; a hover only looks, so it
 // opens one bar that is not kept and closes it again when the pointer leaves.
 export class TileClient {
@@ -57,7 +60,7 @@ export class TileClient {
   }
 
   // Changes the one open bar on that ticket at that place, and leaves every other bar as it is.
-  change(ticket: TicketClient, place: string, changed: (tile: Tile) => Tile): void {
+  change(ticket: TicketClient, place: string, changed: TileChange): void {
     this.store.change(state => ({ tiles: state.tiles.map((tile: Tile) => (isAt(tile, ticket, place) ? changed(tile) : tile)) }))
   }
 
@@ -80,7 +83,7 @@ export class TileClient {
   // The first press on a tile a hover opened keeps it open; the next closes it.
   async toggle(ticket: TicketClient, spot: TileSpot): Promise<void> {
     clearTimeout(this.hoverOpenTimer)
-    ticket.select()
+    ticket.selection.select()
     const open = this.openOn(ticket, spot.place)
     if (!open) return this.open(spot, true)
     if (open.isPinned) this.close(ticket, spot.place)

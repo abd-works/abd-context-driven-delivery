@@ -92,8 +92,9 @@ class Sessions:
         self.root = self.repo.root
         # Where each session works, derived from one ``git worktree list`` read again after a moment.
         self.roots = SessionRoots(self)
-        self._held: dict[Path, Session] = {}
-        self._held_lock = threading.Lock()
+        # Which folders in ``.sessions`` hold a session, and the one Session held for each.
+        self.listing = SessionListing(self)
+        self.held = HeldSessions(self)
         # The answer the process gives from these sessions, while it serves calls from them (*CallSessions*).
         self.answers = ServedAnswers()
         # Which session each chat has open in this checkout, and switching a chat to another.
@@ -143,39 +144,19 @@ class Sessions:
     def all(self) -> list[Session]:
         """Every session the board shows: main first, the default session that works on the whole repository, then the
         work sessions, open ones before closed; never the folders the sessions share."""
-        return [self.load(self.folder_of(MAIN_SESSION_NAME)), *(self.load(folder) for folder in self._work_session_folders())]
-
-    def _work_session_folders(self) -> list[Path]:
-        if not self.folder.is_dir():
-            return []
-        open_folders = [folder for folder in sorted(self.folder.iterdir()) if self._is_open_session_folder(folder)]
-        closed = self.folder / COMPLETE_FOLDER
-        closed_folders = sorted(folder for folder in closed.iterdir() if folder.is_dir()) if closed.is_dir() else []
-        return open_folders + closed_folders
-
-    def _is_work_session(self, name: str) -> bool:
-        return bool(name) and name != MAIN_SESSION_NAME and not name.startswith(_SHARED_FOLDER_MARK)
-
-    def _is_open_session_folder(self, folder: Path) -> bool:
-        return folder.is_dir() and self._is_work_session(folder.name) and not self.is_left_behind(folder)
-
-    def is_left_behind(self, folder: Path) -> bool:
-        """Whether folder, among the open sessions, is only what a closed session of its name left there, such as a
-        progress cache written before its move or a folder Windows would not let go of: it holds no session.json, and
-        the session is kept among the closed ones. The board would otherwise list that session twice."""
-        return not (folder / SESSION_FILE).is_file() and (self.folder / COMPLETE_FOLDER / folder.name).is_dir()
+        return [self.held.load(self.folder_of(MAIN_SESSION_NAME)), *(self.held.load(folder) for folder in self.listing.work_folders())]
 
     def named(self, name: str) -> Session | None:
         """The session called name: the main session, or a work session, open before closed; none when there is none.
         Only that session's folder is read, so a tool that names one session does not load every other."""
         if name == MAIN_SESSION_NAME:
-            return self.load(self.folder_of(name))
-        if not self._is_work_session(name):
+            return self.held.load(self.folder_of(name))
+        if not self.listing.is_work_session(name):
             return None
         open_folder = self.folder / name
-        candidates = (open_folder, self.folder / COMPLETE_FOLDER / name) if self._is_open_session_folder(open_folder) else (self.folder / COMPLETE_FOLDER / name,)
+        candidates = (open_folder, self.folder / COMPLETE_FOLDER / name) if self.listing.is_open(open_folder) else (self.folder / COMPLETE_FOLDER / name,)
         found = next((folder for folder in candidates if folder.is_dir()), None)
-        return self.load(found) if found is not None else None
+        return self.held.load(found) if found is not None else None
 
     def with_file(self, session_file: str) -> Session:
         """The session whose session.json is session_file, a path from this checkout's top or an absolute one, read
@@ -187,46 +168,13 @@ class Sessions:
         is_main = found.name == SESSION_FILE and found.parent.resolve() == self.folder_of(MAIN_SESSION_NAME).resolve()
         if not session_file or not (found.is_file() or is_main):
             raise SessionNotFoundError(session_file)
-        return self.load(found.parent)
-
-    def load(self, folder: Path) -> Session:
-        """The session kept in folder, read without opening it: the one object these sessions hold for that folder,
-        working in the root ``root_of`` derives now, so a worktree opened or a workpath chosen since is seen."""
-        session = self._held_at(Path(folder))
-        session.repo_path = self.roots.checkout_of(session)
-        workpath = self.roots.root_of(session)
-        if session.workpath is None or session.work_root != workpath:
-            session.workpath = workpath
-        return session
-
-    def _held_at(self, folder: Path) -> Session:
-        """The one Session held for folder, made the first time it is asked for."""
-        key = folder.resolve()
-        with self._held_lock:
-            held = self._held.get(key)
-            if held is None:
-                held = self._held[key] = Session(self)
-                held.session_path = folder
-                held.name = folder.name
-            return held
-
-    def moved(self, session: Session, moved_from: Path) -> None:
-        """Hold session under the folder it moved to, such as ``.sessions/_complete/alpha``, so reading it there finds
-        the same object."""
-        with self._held_lock:
-            self._held.pop(Path(moved_from).resolve(), None)
-            self._held[session.session_path.resolve()] = session
-
-    def removed(self, session: Session) -> None:
-        """Hold session no more, its folder deleted."""
-        with self._held_lock:
-            self._held.pop(session.session_path.resolve(), None)
+        return self.held.load(found.parent)
 
     def create(self, name: str, workpath: Path | None = None, *, title: str = "", scope: str = "", parent: str = "") -> Session:
         """A new session called name, its name, title, scope, and parent written once in its ``session.json``. workpath
         is kept only when it is a folder chosen other than this checkout, since the root is otherwise derived. It is not
         opened, because a session made for later, such as a board ticket, is not the one being worked on."""
-        session = self._held_at(self.folder / Name(name).title_slug)
+        session = self.held.at(self.folder / Name(name).title_slug)
         chosen = Path(workpath).resolve() if workpath is not None else None
         kept = self.repo.path_from_top(chosen) if chosen is not None and chosen != self.root else ""
         fields = (("name", session.name), ("title", title), ("scope", scope), ("parent", parent), ("workpath", kept))
@@ -243,12 +191,6 @@ class Sessions:
         """The open session of this chat; the main session, which works on the whole repository, when none is named."""
         return self.opened.current(call.chat_id if call is not None else "")
 
-    def open_ticket_names(self) -> list[str]:
-        """The names of the open work sessions in the repository's own .sessions."""
-        if not self.folder.is_dir():
-            return []
-        return [folder.name for folder in self.folder.iterdir() if self._is_open_session_folder(folder)]
-
     @mcp
     @command(name="switch-session")
     @agent_tool
@@ -262,6 +204,83 @@ class Sessions:
         A chat in a ticket's own worktree always opens that ticket's session, whatever name it asks for, because the
         worktree holds only that ticket's work; the answer says so when it asked for another."""
         return self.opened.switch(name, workpath, call)
+
+
+class SessionListing:
+    """Which folders in a checkout's ``.sessions`` hold a session: main, the open work sessions, and the closed ones,
+    never the folders the sessions share or what a closed session left behind among the open ones."""
+
+    def __init__(self, sessions: Sessions) -> None:
+        self._sessions = sessions
+
+    def work_folders(self) -> list[Path]:
+        if not self._sessions.folder.is_dir():
+            return []
+        open_folders = [folder for folder in sorted(self._sessions.folder.iterdir()) if self.is_open(folder)]
+        closed = self._sessions.folder / COMPLETE_FOLDER
+        closed_folders = sorted(folder for folder in closed.iterdir() if folder.is_dir()) if closed.is_dir() else []
+        return open_folders + closed_folders
+
+    def is_work_session(self, name: str) -> bool:
+        return bool(name) and name != MAIN_SESSION_NAME and not name.startswith(_SHARED_FOLDER_MARK)
+
+    def is_open(self, folder: Path) -> bool:
+        return folder.is_dir() and self.is_work_session(folder.name) and not self.is_left_behind(folder)
+
+    def is_left_behind(self, folder: Path) -> bool:
+        """Whether folder, among the open sessions, is only what a closed session of its name left there, such as a
+        progress cache written before its move or a folder Windows would not let go of: it holds no session.json, and
+        the session is kept among the closed ones. The board would otherwise list that session twice."""
+        return not (folder / SESSION_FILE).is_file() and (self._sessions.folder / COMPLETE_FOLDER / folder.name).is_dir()
+
+    def open_names(self) -> list[str]:
+        """The names of the open work sessions in the repository's own .sessions."""
+        if not self._sessions.folder.is_dir():
+            return []
+        return [folder.name for folder in self._sessions.folder.iterdir() if self.is_open(folder)]
+
+
+class HeldSessions:
+    """The one *Session* a checkout's sessions hold for each session folder, made the first time it is read, so every
+    call in a session, from any chat, works on the same object, and held under the folder it moves to."""
+
+    def __init__(self, sessions: Sessions) -> None:
+        self._sessions = sessions
+        self._held: dict[Path, Session] = {}
+        self._held_lock = threading.Lock()
+
+    def load(self, folder: Path) -> Session:
+        """The session kept in folder, read without opening it: the one object these sessions hold for that folder,
+        working in the root ``root_of`` derives now, so a worktree opened or a workpath chosen since is seen."""
+        session = self.at(Path(folder))
+        session.repo_path = self._sessions.roots.checkout_of(session)
+        workpath = self._sessions.roots.root_of(session)
+        if session.workpath is None or session.work_root != workpath:
+            session.workpath = workpath
+        return session
+
+    def at(self, folder: Path) -> Session:
+        """The one Session held for folder, made the first time it is asked for."""
+        key = folder.resolve()
+        with self._held_lock:
+            held = self._held.get(key)
+            if held is None:
+                held = self._held[key] = Session(self._sessions)
+                held.session_path = folder
+                held.name = folder.name
+            return held
+
+    def moved(self, session: Session, moved_from: Path) -> None:
+        """Hold session under the folder it moved to, such as ``.sessions/_complete/alpha``, so reading it there finds
+        the same object."""
+        with self._held_lock:
+            self._held.pop(Path(moved_from).resolve(), None)
+            self._held[session.session_path.resolve()] = session
+
+    def removed(self, session: Session) -> None:
+        """Hold session no more, its folder deleted."""
+        with self._held_lock:
+            self._held.pop(session.session_path.resolve(), None)
 
 
 class CallSessions:

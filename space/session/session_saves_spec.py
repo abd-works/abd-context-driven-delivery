@@ -75,7 +75,7 @@ with description("the saves of a repository's session folders on main"):
             self.saves.later("sessions: checkout-flow move Specification")
 
         with it("should be committed on main"):
-            expect(_until(lambda: self.held.logs["main"][-1] == "sessions: checkout-flow move Specification")).to(equal(True))
+            expect(_until(lambda: self.held.branches.logs["main"][-1] == "sessions: checkout-flow move Specification")).to(equal(True))
 
     with context("that origin refuses the push"):
         with before.each:
@@ -101,5 +101,5 @@ with description("the saves of a repository's session folders on main"):
     with context("that work needs main saved before it goes on"):
         with it("should be committed before the save returns"):
             self.saves.now("sessions: open checkout-flow")
-            expect(self.held.logs["main"][-1]).to(equal("sessions: open checkout-flow"))
+            expect(self.held.branches.logs["main"][-1]).to(equal("sessions: open checkout-flow"))
 

@@ -2036,7 +2036,7 @@ it should bring the ticket back with its work
 it should list the file with whether it exists
 -> FidelityProgress.files(ticket=TICKET, fidelity=FIDELITY)
   -> FidelityGuidance.declared.files()
-    -> FidelitySessionOutput.output_paths()
+    -> WrittenFiles.output_paths()
       -> FidelityGuidance.outputs
       <- dict
     <- dict
@@ -2347,7 +2347,7 @@ it should open a ticket in Discovery
     <- Session
   <- Ticket
 <- Ticket
--> Board.ticket("returns-and-refunds")
+-> CardPlacement.ticket("returns-and-refunds")
 <- Ticket
 -> Ticket.column
 <- Column
@@ -2411,7 +2411,7 @@ it should keep its file in the ticket's session folder
 it should be in the Backlog
 -> Sessions.of_project(project).load(folder: Path)
 <- Session
--> Board.ticket("pet-visits")
+-> CardPlacement.ticket("pet-visits")
 <- Ticket
 -> Board.backlog_items
 <- list[BacklogItem]
@@ -2421,7 +2421,7 @@ it should be in the Backlog
 it should keep the ticket's whole folder, its history included
 -> Sessions.of_project(project).load(folder: Path)
 <- Session
--> Board.ticket("pet-visits")
+-> CardPlacement.ticket("pet-visits")
 <- Ticket
 ```
 
@@ -2429,7 +2429,7 @@ it should keep the ticket's whole folder, its history included
 it should show the ticket's own idea file as its text
 -> Sessions.of_project(project).load(folder: Path)
 <- Session
--> Board.ticket("pet-visits")
+-> CardPlacement.ticket("pet-visits")
 <- Ticket
 -> Board.backlog_items
 <- list[BacklogItem]
@@ -2439,7 +2439,7 @@ it should show the ticket's own idea file as its text
 it should be off the stages
 -> Sessions.of_project(project).load(folder: Path)
 <- Session
--> Board.ticket("pet-visits")
+-> CardPlacement.ticket("pet-visits")
 <- Ticket
 -> Ticket.progress
 <- list[FidelityProgress]
@@ -2541,7 +2541,7 @@ it should not count the review
 
 ```
 it should be done, waiting in its stage's done part
--> Board.ticket("pet-visits")
+-> CardPlacement.ticket("pet-visits")
 <- Ticket
 -> Board.column("Discovery")
 <- Column
@@ -2549,7 +2549,7 @@ it should be done, waiting in its stage's done part
 
 ```
 it should have no next
--> Board.ticket("pet-visits")
+-> CardPlacement.ticket("pet-visits")
 <- Ticket
 ```
 
@@ -2625,7 +2625,7 @@ it should be done in that stage
 
 ```
 it should be in progress in that stage
--> Board.ticket("pet-visits")
+-> CardPlacement.ticket("pet-visits")
 <- Ticket
 -> Ticket.move_to("Discovery")
   -> BacklogItem.from_ticket(ticket: Ticket, board: Board)
@@ -2641,7 +2641,7 @@ it should be in progress in that stage
 
 ```
 it should be open again, in progress in that stage
--> Board.ticket("pet-visits")
+-> CardPlacement.ticket("pet-visits")
 <- Ticket
 ```
 
@@ -2663,13 +2663,13 @@ it should be done with the one practice it works on
 
 ```
 it should be in Complete
--> Board.ticket("pet-visits")
+-> CardPlacement.ticket("pet-visits")
 <- Ticket
 ```
 
 ```
 it should have its folder in closed
--> Board.ticket("pet-visits")
+-> CardPlacement.ticket("pet-visits")
 <- Ticket
 ```
 
@@ -2677,7 +2677,7 @@ it should have its folder in closed
 
 ```
 it should be off the board
--> Board.ticket("pet-visits")
+-> CardPlacement.ticket("pet-visits")
 <- Ticket
 -> Ticket.archive()
   -> Session.close()
@@ -2690,7 +2690,7 @@ it should be off the board
 
 ```
 it should have its folder in the archive
--> Board.ticket("pet-visits")
+-> CardPlacement.ticket("pet-visits")
 <- Ticket
 -> Ticket.archive()
   -> Session.close()
@@ -2813,7 +2813,7 @@ it should write that practice's files there
 <- PracticeSessionOutput
 -> FidelityProgress.files(ticket="pet-visits", fidelity="stories-story-map")
   -> FidelityGuidance.declared.files()
-    -> FidelitySessionOutput.output_paths()
+    -> WrittenFiles.output_paths()
       -> FidelityGuidance.outputs
       <- dict
     <- dict
@@ -3402,7 +3402,7 @@ it should list the files a pattern finds there
 <- BacklogItem
 -> FidelityProgress.files(ticket="pet-visits", fidelity="bdd-behavior")
   -> FidelityGuidance.declared.files()
-    -> FidelitySessionOutput.output_paths()
+    -> WrittenFiles.output_paths()
       -> FidelityGuidance.outputs
       <- dict
     <- dict
@@ -3420,7 +3420,7 @@ it should list the files a named part of the path finds there, in folders at any
 <- BacklogItem
 -> FidelityProgress.files(ticket="pet-visits", fidelity="clean-engineering-model")
   -> FidelityGuidance.declared.files()
-    -> FidelitySessionOutput.output_paths()
+    -> WrittenFiles.output_paths()
       -> FidelityGuidance.outputs
       <- dict
     <- dict
@@ -3440,7 +3440,7 @@ it should list the file with whether it exists
 <- BacklogItem
 -> FidelityProgress.files(ticket="pet-visits", fidelity="stories-story-map")
   -> FidelityGuidance.declared.files()
-    -> FidelitySessionOutput.output_paths()
+    -> WrittenFiles.output_paths()
       -> FidelityGuidance.outputs
       <- dict
     <- dict
@@ -3458,7 +3458,7 @@ it should list only the fidelities asked for
 <- BacklogItem
 -> FidelityProgress.files(ticket="pet-visits", fidelity="stories-story-map")
   -> FidelityGuidance.declared.files()
-    -> FidelitySessionOutput.output_paths()
+    -> WrittenFiles.output_paths()
       -> FidelityGuidance.outputs
       <- dict
     <- dict
@@ -3841,7 +3841,7 @@ it should list only the files the ticket's branch changed
   -> SessionLog.guidance_action(action: str)
 -> FidelityProgress.files(ticket="pet-visits", fidelity="bdd-behavior")
   -> FidelityGuidance.declared.files()
-    -> FidelitySessionOutput.output_paths()
+    -> WrittenFiles.output_paths()
       -> FidelityGuidance.outputs
       <- dict
     <- dict

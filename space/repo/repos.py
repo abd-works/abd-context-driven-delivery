@@ -300,7 +300,7 @@ class Repos:
             return ".gitignore already ignores what the CDD checkout ignores."
         text = "\n".join([*have, *([""] if have else []), _GITIGNORE_HEADER, *wanted]) + "\n"
         target.write_text(text, encoding="utf-8")
-        Repo.of_project(root).commit([str(target)], "Ignore what the CDD checkout ignores", untracked=True)
+        Repo.of_project(root).working_tree.commit([str(target)], "Ignore what the CDD checkout ignores", untracked=True)
         return f"Added {len(wanted)} lines to .gitignore from the CDD checkout's, and committed them."
 
     def _publish(self, root: Path, visibility: str) -> str:

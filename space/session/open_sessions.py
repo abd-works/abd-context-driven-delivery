@@ -83,7 +83,7 @@ class OpenSessions:
     def _is_closed_since(self, name: str) -> bool:
         sessions = self._sessions
         open_folder = sessions.folder_of(name)
-        return (not open_folder.is_dir() or sessions.is_left_behind(open_folder)) and (sessions.folder / COMPLETE_FOLDER / name).is_dir()
+        return (not open_folder.is_dir() or sessions.listing.is_left_behind(open_folder)) and (sessions.folder / COMPLETE_FOLDER / name).is_dir()
 
     def open(self, session: Session, chat: str = "") -> Session:
         """Make session the one chat has open. Nothing is written in the checkout: the choice is kept under ``~/.cdd``."""
@@ -93,7 +93,7 @@ class OpenSessions:
     def current(self, chat: str = "") -> Session:
         """The session chat has open; main when none is."""
         sessions = self._sessions
-        return sessions.load(sessions.folder_of(self.name_for(chat)))
+        return sessions.held.load(sessions.folder_of(self.name_for(chat)))
 
     def close(self, session: Session) -> None:
         """Close session: when it is the one the call's chat has open, main becomes its open session."""
@@ -107,11 +107,11 @@ class OpenSessions:
         chose to open. None in the repository's own folder, and in a worktree whose branch names no ticket."""
         sessions = self._sessions
         repo = sessions.repo
-        if not repo.is_linked_worktree() or not repo.is_on_branch:
+        if not repo.is_linked_worktree or not repo.is_on_branch:
             # A worktree on no branch, such as one detached at a commit, names no ticket.
             return None
         branch = repo.current_branch.name
-        tickets = sessions.open_ticket_names()
+        tickets = sessions.listing.open_names()
         if branch in tickets:
             return sessions.named(branch)
         # The Claude desktop app names a branch around the ticket's name, such as claude/checkout-flow-cef4bc.
@@ -130,7 +130,7 @@ class OpenSessions:
         wanted = self._name_to_switch_to(name, chat)
         folder = sessions.folder_of(wanted)
         is_kept = (folder / SESSION_FILE).is_file() or wanted == MAIN_SESSION_NAME
-        session = sessions.load(folder) if is_kept else sessions.create(wanted, workpath)
+        session = sessions.held.load(folder) if is_kept else sessions.create(wanted, workpath)
         opened = self.open(session, chat)
         return self._outside_worktree_note(session, call) + self._default_roots_note(opened) + opened.log.instructions()
 

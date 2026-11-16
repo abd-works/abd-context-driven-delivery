@@ -20,11 +20,10 @@ from typing import Callable, ClassVar
 
 from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, agent_toolset
 from harness.annotations.name import Name
-from harness.installation.destination import noCatalog
+from harness.annotations.annotation import noCatalog
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
-from harness.annotations.annotation import Toast
 from harness.hooks.hook_server import HOOK_TOASTS, TOAST_ARROW, HookPayload, rules_toast
-from harness.hooks.hooks import hook
+from harness.hooks.hooks import Toast, hook
 from harness.installation.ide_layout import installed_guidance_kind
 from space.session.session_log import LogTimestamp
 
@@ -122,9 +121,9 @@ class PromptNotify:
         hook server's one notifier. A toolset that fails to load raises, so a broken toolset is seen rather than silently
         not toasting."""
         from harness.agent_tools.agent_tools import AgentToolSet
-        from harness.installation.repository_toolsets import RepositoryToolsets
+        from harness.installation.repository_toolsets import RUNNING_CHECKOUT, RepositoryToolsets
 
-        references = RepositoryToolsets.of_running_checkout().references()
+        references = RepositoryToolsets(RUNNING_CHECKOUT).references()
         return AgentToolSet.from_items([reference.toolset_class for reference in references])
 
     def show_toast(self, toast: str, workspace_roots: list[Path]) -> list[Path]:

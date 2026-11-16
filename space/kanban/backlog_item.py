@@ -9,6 +9,7 @@ from datetime import datetime
 from pathlib import Path
 
 from harness.agent_tools import agent_toolset
+from harness.annotations.annotation import hosted_only
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.annotations.name import Name
@@ -40,10 +41,37 @@ class BacklogNestingError(ValueError):
         super().__init__(f"{child} cannot be a child of {parent}: {reason}")
 
 
+@hosted_only
+class BacklogOrderTools:
+    """A backlog item's published moves within the Backlog's order: just above or just below another item, as dragging it
+    there does. The Backlog keeps that order, in .sessions/_board.json."""
+
+    column: Column
+    key: str
+    board: Board
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def move_before(self, other: BacklogItem) -> BacklogItem:
+        """Move the backlog item just above other in the Backlog, as dragging it there does; the Backlog keeps that order, in .sessions/_board.json. Committed on main and pushed."""
+        super().move_before(other)
+        return self
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def move_after(self, other: BacklogItem) -> BacklogItem:
+        """Move the backlog item just below other in the Backlog, as dragging it onto other's bottom edge does; the Backlog keeps that order, in .sessions/_board.json. Committed on main and pushed."""
+        column = self.column.place_after(self, other)
+        self.board.sessions.saves.later(f"sessions: move {self.key} after {other.key} in {column.name}")
+        return self
+
+
 @identity("title")
 @language_adapter(language="typescript")
 @agent_toolset
-class BacklogItem(Card):
+class BacklogItem(BacklogOrderTools, Card):
     """Hold an idea not yet started. Starting it opens a ticket for it."""
 
     def __init__(self, path: Path, board: Board) -> None:
@@ -56,7 +84,7 @@ class BacklogItem(Card):
     @tool_subject
     def load(cls, backlog_item: str, *, project: Path | str) -> BacklogItem:
         """The backlog item titled backlog_item on the board of project."""
-        return Board.load(project).backlog_item_called(backlog_item)
+        return Board.load(project).reads.backlog_item_called(backlog_item)
 
     @classmethod
     @mcp
@@ -73,14 +101,13 @@ class BacklogItem(Card):
     @classmethod
     def from_ticket(cls, ticket: Ticket) -> BacklogItem:
         """The item a ticket moved back into the Backlog becomes: its own folder, history and all, with its idea file
-        inside."""
+        inside, made holding its title when the ticket never had one."""
         board = ticket.board
-        return cls(board.sessions.backlog_folder / ticket.name / f"{ticket.name}.md", board)
-
-    def write_if_missing(self, title: str) -> None:
-        """Give an item whose ticket never had an idea file one holding title, so it shows in the Backlog."""
-        if not self._idea.exists():
-            self._idea.write(title, "")
+        item = cls(board.sessions.backlog_folder / ticket.name / f"{ticket.name}.md", board)
+        # A ticket that never had an idea file gets one holding its title, so it shows in the Backlog.
+        if not item._idea.exists():
+            item._idea.write(ticket.title, "")
+        return item
 
     @property
     def path(self) -> Path:
@@ -188,23 +215,6 @@ class BacklogItem(Card):
     @mcp
     @agent_tool
     @noSessionLog
-    def move_before(self, other: BacklogItem) -> BacklogItem:
-        """Move the backlog item just above other in the Backlog, as dragging it there does; the Backlog keeps that order, in .sessions/_board.json. Committed on main and pushed."""
-        super().move_before(other)
-        return self
-
-    @mcp
-    @agent_tool
-    @noSessionLog
-    def move_after(self, other: BacklogItem) -> BacklogItem:
-        """Move the backlog item just below other in the Backlog, as dragging it onto other's bottom edge does; the Backlog keeps that order, in .sessions/_board.json. Committed on main and pushed."""
-        column = self.column.place_after(self, other)
-        self._board.sessions.saves.later(f"sessions: move {self.key} after {other.key} in {column.name}")
-        return self
-
-    @mcp
-    @agent_tool
-    @noSessionLog
     def nest_under(self, parent: BacklogItem) -> BacklogItem:
         """Make the backlog item titled backlog_item a child of parent, as dragging it onto parent's card in the Backlog does: its file moves into parent's folder, beside the file of parent's own name that holds parent's text; a parent kept as one file becomes that folder first. The Backlog nests one level: an item with children of its own cannot become a child, a child cannot take one, and neither can an item kept with a ticket's work. Committed on main and pushed."""
         if parent.path != self._path and parent.path.parent == self._path.parent and parent._is_kept_in_own_folder:
@@ -220,14 +230,6 @@ class BacklogItem(Card):
         """Take the backlog item titled backlog_item out of its parent, as dragging it out of its parent's card onto the Backlog does: its file moves back to the Backlog folder, an item of its own again. Committed on main and pushed."""
         if self._parent_file is not None:
             self._move_file_into(self._board.sessions.backlog_folder, f"sessions: take {self.title} out of its parent in the Backlog")
-        return self
-
-    def move_next(self) -> Ticket:
-        """A person's move forward out of the Backlog: starting the item."""
-        return self.start()
-
-    def move_previous(self) -> BacklogItem:
-        """The Backlog is the first column, so an item has nowhere further back to go."""
         return self
 
     # The ticket folder an item holds: the folder it is kept in, or a folder of its name beside it.
@@ -282,7 +284,7 @@ class BacklogItem(Card):
         self._idea = IdeaFile(moved)
         if left != self._board.sessions.backlog_folder and not any(left.iterdir()):
             left.rmdir()
-        self._board.reread()
+        self._board.placement.reread()
         if saved_as:
             self._board.sessions.saves.later(saved_as)
 
@@ -290,12 +292,12 @@ class BacklogItem(Card):
         folder = self._held_ticket_folder
         if self._is_kept_in_own_folder and folder.is_dir() and not any(folder.iterdir()):
             folder.rmdir()
-        self._board.reread()
+        self._board.placement.reread()
 
     def _ticket_brought_back(self, kept_folder: Path) -> Ticket:
-        return self._board.placement.ticket_of(self._board.sessions.load(kept_folder).folder.reopen())
+        return self._board.placement.ticket_of(self._board.sessions.held.load(kept_folder).folder.reopen())
 
     def _ticket_opened(self, scope: str, path: str) -> Ticket:
-        ticket = self._board.open_ticket(self.title, scope, path)
+        ticket = self._board.placement.open_ticket(self.title, scope, path)
         ticket.work.record(f"backlog {self._path}")
         return ticket

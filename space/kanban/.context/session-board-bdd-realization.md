@@ -1937,7 +1937,7 @@ a backlog item
         <- Ticket
       <- Ticket
       -> BacklogItemHandle.start(scope: str, path: str)
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       it should open a ticket in Discovery
       ```
@@ -1998,7 +1998,7 @@ a backlog item
     -> Ticket.session
     <- Session
     -> BoardData.project
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     -> Ticket.move_to(stage: str, done: bool)
       -> BacklogItem.from_ticket(ticket: Ticket, board: Board)
@@ -2012,7 +2012,7 @@ a backlog item
     -> Ticket.session
     <- Session
     -> BoardData.project
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     -> Ticket.move_to(stage: str, done: bool)
       -> BacklogItem.from_ticket(ticket: Ticket, board: Board)
@@ -2024,7 +2024,7 @@ a backlog item
     -> Ticket.session
     <- Session
     -> BoardData.project
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     -> Ticket.move_to(stage: str, done: bool)
       -> BacklogItem.from_ticket(ticket: Ticket, board: Board)
@@ -2038,7 +2038,7 @@ a backlog item
     -> Ticket.session
     <- Session
     -> BoardData.project
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     -> Ticket.move_to(stage: str, done: bool)
       -> BacklogItem.from_ticket(ticket: Ticket, board: Board)
@@ -2127,23 +2127,23 @@ a ticket
       ```
   with every required fidelity in its stage done
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     it should be done, waiting in its stage's done part
     ```
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     it should have no next
     ```
     that a person has moved on
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       it should be in the next stage
       ```
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       it should write the stage it entered to its session log
       ```
@@ -2179,7 +2179,7 @@ a ticket
     ```
   that a person has dragged back into its own stage's in progress part
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     -> Ticket.move_to(stage: str, done: bool)
       -> BacklogItem.from_ticket(ticket: Ticket, board: Board)
@@ -2189,7 +2189,7 @@ a ticket
     ```
   that a person has dragged out of Complete
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     -> Ticket.move_to(stage: str, done: bool)
       -> BacklogItem.from_ticket(ticket: Ticket, board: Board)
@@ -2207,18 +2207,18 @@ a ticket
     ```
   that has been closed
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     it should be in Complete
     ```
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     it should have its folder in closed
     ```
   that has been archived
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     -> Ticket.archive()
       -> Session.close()
@@ -2228,7 +2228,7 @@ a ticket
     it should be off the board
     ```
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     -> Ticket.archive()
       -> Session.close()
@@ -2242,76 +2242,76 @@ a ticket
 the board tools
   with a project whose sessions folder holds a ticket and a backlog item
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     -> Board.show()
     <- Board
     it should return every column of the board
     ```
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     -> Board.show()
     <- Board
     it should name the project the board belongs to
     ```
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     it should say when a backlog item last changed
     ```
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     it should give a backlog item its text
     ```
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     it should say a ticket works on the whole repository until a person chooses a root
     ```
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     it should give every stage a limit of 3 tickets until a person sets one
     ```
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     it should show no handoff for a ticket that has none
     ```
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     it should show no report for a fidelity that has none
     ```
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     it should give each fidelity its default format
     ```
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     it should show each fidelity's Generate, Validate, and Review
     ```
     with folders in the repository
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       -> Board.folders(path: str)
       <- list[str]
       it should list the folders at the top of the repository a root can be chosen from
       ```
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       -> Board.folders(path: str)
       <- list[str]
       it should leave out installed packages and hidden folders
       ```
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       -> Board.folders(path: str)
       <- list[str]
@@ -2343,7 +2343,7 @@ the board tools
         <- PracticeSessionOutput
         -> FidelityProgress.files()
           -> FidelityGuidance.declared.files()
-            -> FidelitySessionOutput.output_paths()
+            -> WrittenFiles.output_paths()
               -> FidelityGuidance.outputs
               <- dict
             <- dict
@@ -2400,18 +2400,18 @@ the board tools
       ```
     with handoffs written for the ticket
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       it should show the latest handoff
       ```
     with validation reports saved for a fidelity
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       it should show that fidelity's latest report
       ```
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       -> FidelityProgress.report()
         -> ReportFile.report()
@@ -2420,7 +2420,7 @@ the board tools
       it should list each rule the report names with its violations
       ```
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       -> FidelityProgress.report()
         -> ReportFile.report()
@@ -2429,7 +2429,7 @@ the board tools
       it should give a violation the line it failed on
       ```
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       -> FidelityProgress.report()
         -> ReportFile.report()
@@ -2438,7 +2438,7 @@ the board tools
       it should show no source for a file that is not in the repository
       ```
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       -> FidelityProgress.report()
         -> ReportFile.report()
@@ -2447,7 +2447,7 @@ the board tools
       it should return exactly the fields ViolationData names
       ```
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       -> FidelityProgress.report()
         -> ReportFile.report()
@@ -2456,7 +2456,7 @@ the board tools
       it should return exactly the fields ReportRuleData names
       ```
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       -> FidelityProgress.report()
         -> ReportFile.report()
@@ -2465,7 +2465,7 @@ the board tools
       it should count the violations of each rule
       ```
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       -> FidelityProgress.report()
         -> ReportFile.report()
@@ -2474,7 +2474,7 @@ the board tools
       it should leave out the violations of other practices in the saved graph
       ```
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       -> FidelityProgress.report()
         -> ReportFile.report()
@@ -2484,7 +2484,7 @@ the board tools
       ```
       with the file a violation names in the repository
         ```
-        -> Board.ticket(name: str)
+        -> CardPlacement.ticket(name: str)
         <- Ticket
         -> FidelityProgress.report()
           -> ReportFile.report()
@@ -2494,7 +2494,7 @@ the board tools
         ```
       with a session whose root is a folder of the project
         ```
-        -> Board.ticket(name: str)
+        -> CardPlacement.ticket(name: str)
         <- Ticket
         -> FidelityProgress.report()
           -> ReportFile.report()
@@ -2503,7 +2503,7 @@ the board tools
         it should name the violation's file from the project's root
         ```
         ```
-        -> Board.ticket(name: str)
+        -> CardPlacement.ticket(name: str)
         <- Ticket
         -> FidelityProgress.report()
           -> ReportFile.report()
@@ -2513,7 +2513,7 @@ the board tools
         ```
     with a validation report saved without its graph
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       -> FidelityProgress.report()
         -> ReportFile.report()
@@ -2522,7 +2522,7 @@ the board tools
       it should say a report has no saved graph
       ```
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       -> FidelityProgress.report()
         -> ReportFile.report()
@@ -2788,11 +2788,11 @@ the board tools
       ```
     with a work folder outside the repository
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       -> FidelityProgress.files()
         -> FidelityGuidance.declared.files()
-          -> FidelitySessionOutput.output_paths()
+          -> WrittenFiles.output_paths()
             -> FidelityGuidance.outputs
             <- dict
           <- dict
@@ -2803,11 +2803,11 @@ the board tools
       it should list the files a pattern finds there
       ```
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       -> FidelityProgress.files()
         -> FidelityGuidance.declared.files()
-          -> FidelitySessionOutput.output_paths()
+          -> WrittenFiles.output_paths()
             -> FidelityGuidance.outputs
             <- dict
           <- dict
@@ -2819,11 +2819,11 @@ the board tools
       ```
     with a fidelity's markdown generated
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       -> FidelityProgress.files()
         -> FidelityGuidance.declared.files()
-          -> FidelitySessionOutput.output_paths()
+          -> WrittenFiles.output_paths()
             -> FidelityGuidance.outputs
             <- dict
           <- dict
@@ -2834,11 +2834,11 @@ the board tools
       it should list the file with whether it exists
       ```
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       -> FidelityProgress.files()
         -> FidelityGuidance.declared.files()
-          -> FidelitySessionOutput.output_paths()
+          -> WrittenFiles.output_paths()
             -> FidelityGuidance.outputs
             <- dict
           <- dict
@@ -2849,12 +2849,12 @@ the board tools
       it should list only the fidelities asked for
       ```
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       it should give the board the ticket's session.json
       ```
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       -> Session.read_file(path: str)
       <- dict
@@ -2862,14 +2862,14 @@ the board tools
       ```
     with files in its session folder
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       -> Session.folder_files()
       <- list[dict]
       it should list every file in the session folder
       ```
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       -> Session.folder_files()
       <- list[dict]
@@ -2877,12 +2877,12 @@ the board tools
       ```
   with a ticket in Discovery
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     it should name generate as the next action
     ```
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     it should allow only Generate before anything is generated
     ```
@@ -2914,7 +2914,7 @@ the board tools
         ```
   with a ticket whose story map has passed validate
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     it should name review as the next action
     ```
@@ -2948,7 +2948,7 @@ the board tools
       ```
     that a person names a fidelity the ticket does not have
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       -> FidelityProgress.finish_review()
         -> SessionLog.record(line: str)
@@ -2964,12 +2964,12 @@ the board tools
         ```
   with a ticket whose next fidelity has violations
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     it should name review as the next action
     ```
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     it should allow Validate and Review again on the same output
     ```
@@ -2991,7 +2991,7 @@ the board tools
       ```
   with violations left on two fidelities
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     -> FidelityProgress.report()
       -> ReportFile.report()
@@ -3002,7 +3002,7 @@ the board tools
     it should list the rules of every fidelity with violations
     ```
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     -> FidelityProgress.report()
       -> ReportFile.report()
@@ -3011,7 +3011,7 @@ the board tools
     it should name the fidelity a rule was broken on
     ```
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     -> FidelityProgress.report()
       -> ReportFile.report()
@@ -3023,7 +3023,7 @@ the board tools
     ```
   with violations left on a fidelity of a later stage
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     -> FidelityProgress.report()
       -> ReportFile.report()
@@ -3035,7 +3035,7 @@ the board tools
     ```
   with violations two fidelities of one practice share in their saved graphs
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     -> FidelityProgress.report()
       -> ReportFile.report()
@@ -3047,7 +3047,7 @@ the board tools
     ```
   with a scenarios report whose saved graph holds every stories rule's hits
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     -> FidelityProgress.report()
       -> ReportFile.report()
@@ -3056,7 +3056,7 @@ the board tools
     it should list the scenarios rules and the story map rules
     ```
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     -> FidelityProgress.report()
       -> ReportFile.report()
@@ -3066,7 +3066,7 @@ the board tools
     ```
     with a story map report newer than the scenarios report
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       -> FidelityProgress.report()
         -> ReportFile.report()
@@ -3075,7 +3075,7 @@ the board tools
       it should leave the story map rules to the story map report
       ```
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       -> FidelityProgress.report()
         -> ReportFile.report()
@@ -3085,7 +3085,7 @@ the board tools
       ```
   with a git repository and two tickets
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     -> Ticket.branch()
     <- dict
@@ -3117,14 +3117,14 @@ the board tools
       ```
     with the active ticket on no branch of its own
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       -> Ticket.branch()
       <- dict
       it should say the ticket being left has no branch yet
       ```
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       -> Ticket.activate(leaving: list[str], opening: list[str])
         <- str
@@ -3135,7 +3135,7 @@ the board tools
       it should commit nothing on a ticket that has no branch
       ```
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       -> Ticket.close(leaving: list[str])
         -> Session.close()
@@ -3146,14 +3146,14 @@ the board tools
       ```
     with the active ticket on its own branch
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       -> Ticket.branch()
       <- dict
       it should say the ticket being left is on its branch
       ```
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       -> Ticket.activate(leaving: list[str], opening: list[str])
         <- str
@@ -3165,11 +3165,11 @@ the board tools
       ```
     with specs in the repository and one changed on the ticket's branch
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       -> FidelityProgress.files()
         -> FidelityGuidance.declared.files()
-          -> FidelitySessionOutput.output_paths()
+          -> WrittenFiles.output_paths()
             -> FidelityGuidance.outputs
             <- dict
           <- dict
@@ -3181,7 +3181,7 @@ the board tools
       ```
     with the active ticket's branch not checked out
       ```
-      -> Board.ticket(name: str)
+      -> CardPlacement.ticket(name: str)
       <- Ticket
       -> Ticket.activate(leaving: list[str], opening: list[str])
         <- str
@@ -3213,24 +3213,24 @@ the board tools
     ```
   whose JSON is compared with the shapes in data.py
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     it should return exactly the fields TicketData names
     ```
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     -> Ticket.branch()
     <- dict
     it should return exactly the fields BranchData names
     ```
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     it should return exactly the fields BacklogItemData names
     ```
     ```
-    -> Board.ticket(name: str)
+    -> CardPlacement.ticket(name: str)
     <- Ticket
     it should return only the fields ColumnData names on a stage
     ```

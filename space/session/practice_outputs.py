@@ -59,7 +59,7 @@ class PracticeOutputs:
         session = self._session
         graph = Graph(self.every[key].guidance for key in self.every if key in working)
         graph.kept_in = session.session_path
-        graph.open_saved(session.work_root)
+        graph.reads.open_saved(session.work_root)
         if session.overlays:
             graph.overlays = session.overlays
         return graph

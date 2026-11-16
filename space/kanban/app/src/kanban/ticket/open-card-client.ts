@@ -19,7 +19,7 @@ export class OpenCardClient {
   // A card opens with its tiles only; each tile opens its own action bar when hovered or pressed. The card it replaces
   // takes its bars with it.
   toggle(ticket: TicketClient): void {
-    ticket.choose()
+    ticket.selection.choose()
     if (this.store.state.openCard === ticket.name) return this.closeCard()
     this.store.change(state => ({ openCard: ticket.name, tiles: withoutBarsOf(withoutBarsOf(state.tiles, state.openCard), ticket.name) }))
   }
@@ -27,7 +27,7 @@ export class OpenCardClient {
   // A press on an empty area of a card chooses its ticket and opens its card; pressing again leaves it open.
   open(ticket: TicketClient): void {
     if (this.store.state.openCard !== ticket.name) return this.toggle(ticket)
-    ticket.choose()
+    ticket.selection.choose()
   }
 
   // A parent shows its child rows until a person folds it to its own card.
@@ -54,7 +54,7 @@ export class OpenCardClient {
   // A ticket's address changes with its column, so the selection goes with it, and its open bars give way to one bar
   // on the tile the ticket works on next.
   async follow(moved: TicketClient): Promise<void> {
-    moved.select()
+    moved.selection.select()
     const stage = this.page.board.stageOf(moved)
     if (!stage) return
     if (this.store.state.tiles.some(tile => tile.ticket.name === moved.name)) await this.followBars(moved, stage)

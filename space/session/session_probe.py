@@ -37,9 +37,9 @@ class SessionProbe:
         """The probe's result for diagnostics.json: green when every check passed, else red with what failed. A probe's
         job is to report a failure, so a failure the program declares while probing is reported red with its trace; a
         built-in programming error is a bug, and raises."""
-        from harness.installation.repository_toolsets import RepositoryToolsets
+        from harness.installation.repository_toolsets import RUNNING_CHECKOUT, RepositoryToolsets
 
-        RepositoryToolsets.of_running_checkout().ensure_import_path()
+        RepositoryToolsets(RUNNING_CHECKOUT).ensure_import_path()
         try:
             return self._report(*self._run_actions())
         except Exception as failure:

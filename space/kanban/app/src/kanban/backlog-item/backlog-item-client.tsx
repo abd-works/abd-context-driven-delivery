@@ -80,7 +80,7 @@ export class BacklogItemClient extends BacklogItemClientGenerated {
     const ticket = await super.start(scope, path)
     await this.page.reader.refresh()
     if (!ticket) return null
-    this.page.ticket(ticket).select()
+    this.page.ticket(ticket).selection.select()
     this.page.store.toast(`${this.title} started in Discovery`)
     return ticket
   }

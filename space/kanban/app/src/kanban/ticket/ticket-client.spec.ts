@@ -288,7 +288,7 @@ describe('Open Ticket Chat', () => {
       await board.chat('ticket-chat', 'abd · first words', worktree).checkIn()
       await page.chat.refresh()
       await page.reader.refresh()
-      await ticketOn(page, ACTIVE).choose()
+      await ticketOn(page, ACTIVE).selection.choose()
       return page
     }
 
@@ -312,9 +312,9 @@ describe('Open Ticket Chat', () => {
       await board.chat('ticket-chat', 'abd · first words', worktree).checkIn()
       await page.chat.refresh()
       await page.reader.refresh()
-      await ticketOn(page, ACTIVE).choose()
+      await ticketOn(page, ACTIVE).selection.choose()
       await page.pickChat('other-chat')
-      await ticketOn(page, ACTIVE).choose()
+      await ticketOn(page, ACTIVE).selection.choose()
       return page
     }
 
@@ -359,7 +359,7 @@ describe('Open Ticket Chat', () => {
       await board.chat('ticket-chat', 'abd · first words', `${worktree}\\harness\\kanban`).checkIn()
       await page.chat.refresh()
       await page.reader.refresh()
-      await ticketOn(page, ACTIVE).choose()
+      await ticketOn(page, ACTIVE).selection.choose()
       expect(page.store.state.targetChat).toBe('ticket-chat')
     })
   })
@@ -373,7 +373,7 @@ describe('Open Ticket Chat', () => {
       await board.chat('ticket-chat', ACTIVE, '').checkIn()
       await page.chat.refresh()
       await page.reader.refresh()
-      await ticketOn(page, ACTIVE).choose()
+      await ticketOn(page, ACTIVE).selection.choose()
       return { page, opened: board.openedChats() }
     }
 
@@ -390,7 +390,7 @@ describe('Open Ticket Chat', () => {
   describe("with no chat working on the ticket and none picked", () => {
     it('should open no worktree and no chat on a press', async () => {
       const { page } = await board.page()
-      await ticketOn(page, ACTIVE).choose()
+      await ticketOn(page, ACTIVE).selection.choose()
       expect([ticketOn(page, ACTIVE).worktree, board.openedChats()]).toEqual(['', []])
     })
 

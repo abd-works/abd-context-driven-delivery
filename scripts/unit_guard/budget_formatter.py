@@ -17,6 +17,7 @@ from mamba.formatters import DocumentationFormatter, ProgressFormatter
 
 if TYPE_CHECKING:
     from mamba.example import Example
+    from mamba.settings import Settings
 
 MILLISECONDS_PER_SECOND = 1000
 
@@ -38,7 +39,7 @@ class UnitBudget:
         seconds = example.elapsed_time.total_seconds()
         if seconds <= self.seconds:
             return ""
-        return f"{_spec_file(example)}\t{round(seconds * MILLISECONDS_PER_SECOND)}\t{_example_path(example)}\n"
+        return f"{self._spec_file(example)}\t{round(seconds * MILLISECONDS_PER_SECOND)}\t{self._example_path(example)}\n"
 
     def record(self, example: Example) -> None:
         """Write an example that ran past the budget to the log; nothing when no log is named."""
@@ -48,29 +49,29 @@ class UnitBudget:
         with open(self.log, "a", encoding="utf-8") as log:
             log.write(line)
 
+    def _spec_file(self, example: Example) -> str:
+        """The spec file that declares the example."""
+        code = getattr(getattr(example, "test", None), "__code__", None)
+        return code.co_filename if code is not None else "<unknown spec>"
 
-def _spec_file(example: Example) -> str:
-    code = getattr(getattr(example, "test", None), "__code__", None)
-    return code.co_filename if code is not None else "<unknown spec>"
-
-
-def _example_path(example: Example) -> str:
-    names = []
-    node = example
-    while node is not None:
-        name = getattr(node, "name", "")
-        if name:
-            names.append(str(name))
-        node = getattr(node, "parent", None)
-    return " / ".join(reversed(names))
+    def _example_path(self, example: Example) -> str:
+        """The example's describe path, outermost first."""
+        names = []
+        node = example
+        while node is not None:
+            name = getattr(node, "name", "")
+            if name:
+                names.append(str(name))
+            node = getattr(node, "parent", None)
+        return " / ".join(reversed(names))
 
 
 class BudgetTiming:
     """A Mamba output format's part that times each finished example against the unit budget, mixed in ahead of the
     format it reports through."""
 
-    def __init__(self, settings: object) -> None:
-        super().__init__(settings)
+    def __init__(self, mamba_settings: Settings) -> None:
+        super().__init__(mamba_settings)
         self.budget = UnitBudget.from_environment()
 
     def example_passed(self, example: Example) -> None:

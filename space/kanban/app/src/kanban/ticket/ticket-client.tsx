@@ -12,6 +12,7 @@ import { TicketDrops } from './ticket-drops'
 import { TicketFace } from './ticket-face'
 import { TicketNextStep } from './ticket-next-step'
 import { TicketPractices } from './ticket-practices'
+import { TicketSelection } from './ticket-selection'
 import { TicketWork } from './ticket-work'
 
 // A ticket sends its fidelities' progress; a backlog item, which also names its column now, sends none.
@@ -34,6 +35,7 @@ export class TicketClient extends TicketClientGenerated {
     this.nextStep = new TicketNextStep(this, page)
     this.chatOpening = new TicketChatOpening(this, page)
     this.drops = new TicketDrops(this, page)
+    this.selection = new TicketSelection(this, page)
   }
 
   // The practices its session works on, each turned on or off from the ticket.
@@ -56,6 +58,9 @@ export class TicketClient extends TicketClientGenerated {
 
   // Where it can be dropped, and what a drop on the Backlog or Complete does.
   readonly drops: TicketDrops
+
+  // Choosing it on the page, which opens it in the details and puts its chat at the top of the board.
+  readonly selection: TicketSelection
 
   // Its children as tickets of the page: stacked inside its card, or pulled out and kept as dashed rows.
   get childTickets(): TicketClient[] {
@@ -86,19 +91,6 @@ export class TicketClient extends TicketClientGenerated {
   // The chat working on this ticket, which Python names, and every command the board sends for it goes to.
   get chat(): TicketChat {
     return new TicketChat(this.page.chat, this.name, this.workingChat)
-  }
-
-  select(): void {
-    this.page.store.change({ selected: this.address })
-  }
-
-  // A person clicking the ticket: it opens in the details, and the chat at the top of the board is its chat, the one
-  // working in its worktree; with none open, main's chat when main has one; else no chat, so the top never shows another
-  // ticket's chat. A press only selects: opening a worktree and a chat is the card's own button.
-  choose(): void {
-    this.select()
-    const chat = this.chat.found ?? this.page.board.mainTicket?.chat.found
-    this.page.chat.choose(chat?.id ?? '')
   }
 
   // Python says where Move next and Move previous put the ticket while it stays on a stage, so the card shows there at

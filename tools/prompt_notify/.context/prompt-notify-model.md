@@ -1,6 +1,6 @@
 # PromptNotify — class model (model fidelity)
 
-Markdown channel for *PromptNotify*. The module's purpose, seam, and dependencies are in [module-context.md](module-context.md); this document holds only its classes. *Toast* belongs to `harness/annotations`; *Hook*, *HookPayload*, and *HookServer* to `harness/hooks`; *PracticeCatalogue* and *ActionCatalogue* to `harness/guidance`; *GuidanceAction* to `harness/guidance_actions`. They appear here only as names this module uses.
+Markdown channel for *PromptNotify*. The module's purpose, seam, and dependencies are in [module-context.md](module-context.md); this document holds only its classes. *Toast*, *Hook*, *HookPayload*, and *HookServer* belong to `harness/hooks`; *PracticeCatalogue* and *ActionCatalogue* to `harness/guidance`; *GuidanceAction* to `harness/guidance_actions`. They appear here only as names this module uses.
 
 ---
 
@@ -67,3 +67,5 @@ NoticeWatcher(watching: {folders, onMessage, onBroken, seen, fs, intervalMs})
 deliver(file, raw)
 	// a half-written notice (its JSON object not yet closed) is no notice yet: the next poll reads it again
 	// a notice written whole that does not parse is broken: reported once through onBroken (the extension shows a warning), never read as "no notice"
+messageOf(file, raw): string
+	// the message raw holds; a broken notice is reported through onBroken and remembered, and shows nothing

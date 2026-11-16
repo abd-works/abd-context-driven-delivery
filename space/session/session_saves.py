@@ -103,7 +103,7 @@ class SessionSaves:
 
     def _save_queued(self) -> None:
         # A commit during a merge concludes the merge with everything staged, so the saves wait for it to finish.
-        if self._repository.is_merging:
+        if self._repository.working_tree.is_merging:
             return
         with self._saving:
             changes = self._taken()
@@ -127,8 +127,8 @@ class SessionSaves:
         if not repository.branch_named(repository.default_branch).is_checked_out or not self._folder.is_dir():
             return
         self._keep_caches_out()
-        if repository.is_dirty(self._folder):
-            repository.commit([str(self._folder)], "\n".join(changes), untracked=True)
+        if repository.working_tree.is_dirty(self._folder):
+            repository.working_tree.commit([str(self._folder)], "\n".join(changes), untracked=True)
             self._is_unpushed = True
         if self._is_unpushed and repository.has_origin:
             repository.origin.push_upstream()
