@@ -3,7 +3,8 @@ import type { EngineInterface } from 'claude-code'
 
 import type { OverlayChoiceJson, OverlayChoicesJson } from '../../types'
 import { shownAsFailure } from '../error-display/failure-client'
-import { callTool, type ChatBarClient } from './chat-bar-client'
+import { callTool } from '../shared/cdd-tool'
+import type { ChatBarClient } from './chat-bar-client'
 
 // The pattern overlays beside the fidelity dots: Python's ticket.overlay_choices answers every pattern with its icon and
 // whether the session chose it, and ticket.choose_overlays keeps a new choice in the session and applies it to its

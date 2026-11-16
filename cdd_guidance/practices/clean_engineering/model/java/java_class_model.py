@@ -59,10 +59,10 @@ class JavaClass(CodeClass):
     property_type = JavaProperty
     operation_type = JavaOperation
 
-    def interface_declaration(self) -> List[str]:
+    def _interface_declaration(self) -> List[str]:
         return [f"public interface {self.name} {{"]
 
-    def class_modifiers(self, implemented: List[str]) -> str:
+    def _class_modifiers(self, implemented: List[str]) -> str:
         return "public "
 
     def constructor_lines(self, constructor: Optional[Operation], body: List[str]) -> List[str]:

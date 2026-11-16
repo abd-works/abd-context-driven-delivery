@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Any, Callable, Generic, Mapping, TypeVar
 import yaml
 
 from cdd_guidance.practices.agent_bdd.cursor_cli import CursorCli
-from harness.agent_tools.tool_call import ToolCall
+from harness.agent_tools.tool_call import SESSION_OPENING
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
 from cdd_guidance.practices.agent_bdd.yaml_fence import YamlFence
 
@@ -552,9 +552,9 @@ class ToolsetRequest:
     def _session_in(self, project: Path) -> Any:
         """The project's session the request names, which the toolset is made for, so the run works in that session
         and not in whichever session the project has open."""
-        # The sessions are reached through the opener space/session registers with ToolCall, so agent BDD never imports
+        # The sessions are reached through the opener space/session registers with SESSION_OPENING, so agent BDD never imports
         # space, which imports the guidance back.
-        opened = ToolCall.session_in(project)
+        opened = SESSION_OPENING.saved_in(project)
         session = opened.sessions.named(self.session) if opened is not None else None
         if session is None:
             raise AgentHarnessError(f"request names session {self.session!r}, which the project does not have")

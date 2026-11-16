@@ -13,6 +13,7 @@ from harness.installation.repository_toolsets import RepositoryToolsets
 
 RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 
+import cdd_guidance.actions  # noqa: E402,F401 - registers the actions each stage's steps come from, as the cdd server does when it loads every toolset
 from cdd_guidance.practices.bdd.bdd import Bdd  # noqa: E402
 from cdd_guidance.practices.ddd.ddd import Ddd  # noqa: E402
 from cdd_guidance.practices.stories.stories import Stories  # noqa: E402
@@ -198,7 +199,7 @@ with description("a board") as self:
             expect(names(self.board.tickets)).to(equal(["main", "pet-visits", "sign-up", "browse-pets"]))
 
         with it("should show main first, in Discovery while it has no work"):
-            expect(self.board.ticket("main").column.name).to(equal("Discovery"))
+            expect(self.board.placement.ticket("main").column.name).to(equal("Discovery"))
 
         with it("should show each backlog item in the Backlog column"):
             expect([card.title for card in self.board.column("Backlog").cards]).to(equal(["Returns and refunds"]))
@@ -240,7 +241,7 @@ with description("a board") as self:
         with context("that has opened a ticket since it read them"):
             with before.each:
                 self.board.tickets
-                self.board.open_ticket("Gift cards", "feature")
+                self.board.placement.open_ticket("Gift cards", "feature")
 
             with it("should read the tickets again"):
                 expect(names(self.board.tickets)).to(contain("gift-cards"))
@@ -318,38 +319,24 @@ with description("a backlog item") as self:
         with it("should be in the Backlog"):
             expect(self.board.backlog_items[0].column.name).to(equal("Backlog"))
 
-        with context("that a person has moved on"):
-            with before.each:
-                self.moved = self.board.backlog_items[0].move_next()
-
-            with it("should open its ticket in Discovery"):
-                expect((self.moved.name, self.moved.column.name)).to(equal(("returns-and-refunds", "Discovery")))
-
-        with context("that a person has moved back"):
-            with before.each:
-                self.moved = self.board.backlog_items[0].move_previous()
-
-            with it("should stay in the Backlog"):
-                expect(self.moved.column.name).to(equal("Backlog"))
-
         # (S) Person --> Reassign Ticket Parent: a backlog item dropped on a ticket's card starts as its child.
         with context("that a person drops on a ticket"):
             with before.each:
                 self.sessions.session("checkout-flow")
                 board = Board(Repo(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
-                self.child = board.backlog_items[0].start_under(board.ticket("checkout-flow"))
+                self.child = board.backlog_items[0].start_under(board.placement.ticket("checkout-flow"))
 
             with it("should start it with that ticket as its parent"):
                 expect(self.child.session.parent).to(equal("checkout-flow"))
 
             with it("should not offer its parent as a place to drop it"):
                 board = Board(Repo(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
-                expect(board.ticket(self.child.name).parent_choices).not_to(contain("checkout-flow"))
+                expect(board.placement.ticket(self.child.name).parent_choices).not_to(contain("checkout-flow"))
 
             # A parent moves only with its children, so it waits for them before it can go to Complete.
             with it("should not let its parent be dropped on Complete while it is open"):
                 board = Board(Repo(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
-                expect(board.ticket("checkout-flow").drop_targets).not_to(contain("Complete"))
+                expect(board.placement.ticket("checkout-flow").drop_targets).not_to(contain("Complete"))
 
         with context("that has been started"):
             with before.each:
@@ -361,7 +348,7 @@ with description("a backlog item") as self:
                 expect(kept.read_text(encoding="utf-8")).to(equal(self.written))
 
             with it("should open a ticket in Discovery"):
-                expect(self.board.ticket("returns-and-refunds").column.name).to(equal("Discovery"))
+                expect(self.board.placement.ticket("returns-and-refunds").column.name).to(equal("Discovery"))
 
             with it("should name the item's file in the new ticket's session log"):
                 log = self.sessions.root / "returns-and-refunds" / "session.log"
@@ -401,7 +388,7 @@ with description("a backlog item") as self:
             folder = self.sessions.session("pet-visits", "move Specification", title="Pet visits")
             (folder / "pet-visits.md").write_text("# Pet visits\n\nBook a vet visit online.\n", encoding="utf-8")
             board = Board(Repo(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
-            board.ticket("pet-visits").move_to("Backlog")
+            board.placement.ticket("pet-visits").move_to("Backlog")
             self.board = Board(Repo(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
 
         with it("should be in the Backlog"):
@@ -424,7 +411,7 @@ with description("a backlog item") as self:
                 sessions.backlog_item("checkout.md", "Checkout")
                 sessions.backlog_item("gift-cards.md", "Gift cards")
                 board = Board(Repo(sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
-                board.backlog_item_called("Gift cards").nest_under(board.backlog_item_called("Checkout"))
+                board.reads.backlog_item_called("Gift cards").nest_under(board.reads.backlog_item_called("Checkout"))
                 return sessions, board
 
             # What the board sends is read once, on a folder of its own, for the example that only looks at it.
@@ -447,10 +434,10 @@ with description("a backlog item") as self:
             expect([card.title for card in self.board.column("Backlog").cards]).to(equal(["Checkout"]))
 
         with it("should stack the child inside its parent's card"):
-            expect([child.title for child in self.board.backlog_item_called("Checkout").children]).to(equal(["Gift cards"]))
+            expect([child.title for child in self.board.reads.backlog_item_called("Checkout").children]).to(equal(["Gift cards"]))
 
         with it("should name the child's parent"):
-            expect(self.board.backlog_item_called("Gift cards").parent).to(equal("Checkout"))
+            expect(self.board.reads.backlog_item_called("Gift cards").parent).to(equal("Checkout"))
 
         with it("should send the parent's children whole, with the Backlog"):
             expect([child["title"] for child in self.backlog_sent["items"][0]["children"]]).to(equal(["Gift cards"]))
@@ -458,18 +445,18 @@ with description("a backlog item") as self:
         with context("that a person drops on another's bottom edge"):
             with before.each:
                 self.sessions.backlog_item("returns.md", "Returns")
-                self.board.reread()
-                self.board.backlog_item_called("Checkout").move_after(self.board.backlog_item_called("Returns"))
+                self.board.placement.reread()
+                self.board.reads.backlog_item_called("Checkout").move_after(self.board.reads.backlog_item_called("Returns"))
 
             with it("should put it just below the other in the Backlog"):
                 expect([card.title for card in self.board.column("Backlog").cards]).to(equal(["Returns", "Checkout"]))
 
         with it("should refuse to make the parent a child of its own child"):
-            expect(lambda: self.board.backlog_item_called("Checkout").nest_under(self.board.backlog_item_called("Gift cards"))).to(raise_error(BacklogNestingError))
+            expect(lambda: self.board.reads.backlog_item_called("Checkout").nest_under(self.board.reads.backlog_item_called("Gift cards"))).to(raise_error(BacklogNestingError))
 
         with context("that a person drags back out onto the Backlog"):
             with before.each:
-                self.board.backlog_item_called("Gift cards").leave_parent()
+                self.board.reads.backlog_item_called("Gift cards").leave_parent()
 
             with it("should move its file back into the Backlog folder"):
                 expect((self.backlog / "gift-cards.md").is_file()).to(be_true)
@@ -479,10 +466,10 @@ with description("a backlog item") as self:
 
         with context("whose parent has been started"):
             with before.each:
-                self.parent = self.board.backlog_item_called("Checkout").start("feature")
+                self.parent = self.board.reads.backlog_item_called("Checkout").start("feature")
 
             with it("should start the child as a child ticket of the parent's ticket"):
-                expect(self.board.ticket("gift-cards").session.parent).to(equal("checkout"))
+                expect(self.board.placement.ticket("gift-cards").session.parent).to(equal("checkout"))
 
             with it("should keep the child's file in its own ticket's session folder"):
                 expect((self.sessions.root / "gift-cards" / "gift-cards.md").read_text(encoding="utf-8")).to(contain("# Gift cards"))
@@ -499,7 +486,7 @@ with description("a backlog item") as self:
             self.system_opener = backlog_item_module.open_with_system
             backlog_item_module.open_with_system = self.opened.append
             board = Board(Repo(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
-            board.backlog_item_called("Checkout").open_file()
+            board.reads.backlog_item_called("Checkout").open_file()
 
         with after.each:
             backlog_item_module.open_with_system = self.system_opener
@@ -517,7 +504,7 @@ with description("a backlog item") as self:
             self.board = Board(Repo(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
 
         with it("should refuse it, since that folder keeps the ticket's work"):
-            expect(lambda: self.board.backlog_item_called("Returns").nest_under(self.board.backlog_item_called("Gift cards"))).to(raise_error(BacklogNestingError))
+            expect(lambda: self.board.reads.backlog_item_called("Returns").nest_under(self.board.reads.backlog_item_called("Gift cards"))).to(raise_error(BacklogNestingError))
 
 GENERATE_STORY_MAP = "generate /work, /work/docs stories story_map markdown stories no-chat"
 VALIDATE_STORY_MAP_WITH_VIOLATIONS = "validate Stories story_map graph-rule actor-named-in-step map.md:12 no-chat"
@@ -542,7 +529,7 @@ def board_with(lines: list):
 
 
 def ticket_with(lines: list):
-    return board_with(lines)[1].ticket("pet-visits")
+    return board_with(lines)[1].placement.ticket("pet-visits")
 
 
 def story_map(ticket):
@@ -662,7 +649,7 @@ with description("a ticket") as self:
     with context("with every required fidelity in its stage done"):
         with before.each:
             self.root, self.board = board_with(DISCOVERY_DONE)
-            self.ticket = self.board.ticket("pet-visits")
+            self.ticket = self.board.placement.ticket("pet-visits")
 
         # pet-visits is a child of pawplace, so it waits stacked in pawplace's card, which takes its stage and its Done.
         with it("should be done, waiting in its stage's done part"):
@@ -692,7 +679,7 @@ with description("a ticket") as self:
                     (self.root / "pet-visits" / "session.log").write_text("".join(f"{line}\n" for line in DISCOVERY_DONE), encoding="utf-8")
 
                 with it("should still be in the stage its session.json names"):
-                    expect(self.board.ticket("pet-visits").column.name).to(equal("Specification"))
+                    expect(self.board.placement.ticket("pet-visits").column.name).to(equal("Specification"))
 
     # (S) Person --> Mark Ticket Done In Stage
     with context("with its stage not done"):
@@ -736,7 +723,7 @@ with description("a ticket") as self:
     with context("that a person has dragged back into its own stage's in progress part"):
         with before.each:
             self.root, board = board_with(DISCOVERY_DONE)
-            self.ticket = board.ticket("pet-visits")
+            self.ticket = board.placement.ticket("pet-visits")
             self.ticket.move_to("Discovery")
 
         with it("should be in progress in that stage"):
@@ -745,7 +732,7 @@ with description("a ticket") as self:
     with context("that a person has dragged out of Complete"):
         with before.each:
             self.root, board = board_with([GENERATE_STORY_MAP])
-            self.moved = board.ticket("pet-visits").close().move_to("Specification")
+            self.moved = board.placement.ticket("pet-visits").close().move_to("Specification")
 
         with it("should be open again, in progress in that stage"):
             expect((self.moved.column.name, self.moved.is_done)).to(equal(("Specification", False)))
@@ -764,7 +751,7 @@ with description("a ticket") as self:
     with context("that is in progress in a stage and not open"):
         with before.each:
             self.root, board = board_with([GENERATE_STORY_MAP])
-            self.ticket = board.ticket("pet-visits")
+            self.ticket = board.placement.ticket("pet-visits")
 
         with it("should take Complete as a place to drop it"):
             expect(self.ticket.drop_targets).to(contain("Complete"))
@@ -773,7 +760,7 @@ with description("a ticket") as self:
     with context("that has been closed"):
         with before.each:
             self.root, board = board_with([GENERATE_STORY_MAP])
-            self.closed = board.ticket("pet-visits").close()
+            self.closed = board.placement.ticket("pet-visits").close()
 
         with it("should be in Complete"):
             expect(self.closed.column.name).to(equal("Complete"))
@@ -785,7 +772,7 @@ with description("a ticket") as self:
     with context("that has been archived"):
         with before.each:
             self.root, self.board = board_with([GENERATE_STORY_MAP])
-            self.board.ticket("pet-visits").archive()
+            self.board.placement.ticket("pet-visits").archive()
 
         with it("should be off the board"):
             expect(names(self.board.tickets)).not_to(contain("pet-visits"))

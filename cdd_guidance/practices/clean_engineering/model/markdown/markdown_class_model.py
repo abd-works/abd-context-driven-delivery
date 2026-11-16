@@ -230,10 +230,10 @@ class MarkdownOoadClass(OoadClass):
         self.intent = intent
         self.properties = self._read_properties(props_text)
         for prop in self.properties:
-            prop.derive_relationship()
+            prop.arrow.derive()
         self.operations = self._constructors(constructor_line, constructor_notes) + self._read_operations(ops_text)
         for relationship in dependencies:
-            self.place_relationship(relationship)
+            self.arrows.place(relationship)
 
     def _split_once(self, separator: str, text: str) -> Tuple[str, str]:
         """The text before the first separator line and the text after it; all of it before when there is none."""

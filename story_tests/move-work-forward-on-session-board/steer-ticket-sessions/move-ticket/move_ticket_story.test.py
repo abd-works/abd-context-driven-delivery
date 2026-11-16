@@ -111,7 +111,7 @@ with story("Move Ticket"):
         with and_("billing-report is not the active ticket"):
             pass
         with when("the Person tries to move billing-report into Complete"):
-            # Person -> TicketClient.canDropOn('Complete') <- false
+            # Person -> TicketDrops.canDropOn('Complete') <- false
             pass
         with then("Complete does not take billing-report"):
             pass

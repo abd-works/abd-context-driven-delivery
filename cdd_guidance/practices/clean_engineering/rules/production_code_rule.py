@@ -18,8 +18,8 @@ if TYPE_CHECKING:
 class ProductionCodeRule(PracticeGraphRule):
     """A rule about production code: it passes every node read from a spec, a test, or test support. Every Clean
     Engineering rule that judges one node at a time derives from it; specs are the BDD practice's to judge. A rule that
-    judges the whole practice at once reads production code only through what it reads: ``ClassGraph``, the folders'
-    imports, and the operations it filters."""
+    judges the whole practice at once reads only the facts the build compared across the graph, which it records on
+    production code alone (``model/compared_facts.py``)."""
 
     def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         if is_test_code(node.source.file):

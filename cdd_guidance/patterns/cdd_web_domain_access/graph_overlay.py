@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from harness.graph.graph import Graph, Source
+from harness.graph.graph import Graph
 from harness.graph.pattern_overlays import GraphOverlay
 from harness.graph.skipped_folders import scanned_files
 
@@ -18,6 +18,7 @@ class WebDomainAccessOverlay(GraphOverlay):
         if not graph.folder or ddd is None:
             return
         root = Path(graph.folder)
+        ddd_nodes = graph.practices.part_of(ddd)
         from cdd_guidance.patterns.cdd_web_domain_access.access_facts import AccessFile
 
         for file in scanned_files(root):
@@ -25,8 +26,5 @@ class WebDomainAccessOverlay(GraphOverlay):
             if tier is None:
                 continue
             semantic, facts = tier
-            relative = file.relative_to(root).as_posix()
-            node = ddd.reading.in_graph.add_named(semantic, f"ddd:{semantic}:{relative}", file.name, Source.whole_file(relative, str(root)))
-            for key, value in facts.items():
-                node.set_fact(key, value)
+            ddd_nodes.add_file(semantic, file.relative_to(root).as_posix(), file.name).set_facts(facts)
 

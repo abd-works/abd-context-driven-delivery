@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from harness.process.git import RepoConnectError
+from harness.git.git import RepoConnectError
 
 if TYPE_CHECKING:
     from space.repo.repo import Branch, Repo
@@ -42,7 +42,7 @@ class Origin:
         nothing when origin has no copy yet or this branch already holds every commit of it."""
         repo = self._repo
         tracked = f"origin/{repo.current_branch.name}"
-        if not repo.has_ref(f"refs/remotes/{tracked}") or repo.git.succeeds("merge-base", "--is-ancestor", tracked, "HEAD"):
+        if not repo.refs.has(f"refs/remotes/{tracked}") or repo.git.succeeds("merge-base", "--is-ancestor", tracked, "HEAD"):
             return
         repo.merges.merge(tracked, "")
 
@@ -51,7 +51,7 @@ class Origin:
         not read as nothing to push, so a close never reports a branch pushed that was not."""
         repo = self._repo
         branch = repo.current_branch.name
-        if not repo.has_ref(f"refs/remotes/origin/{branch}"):
+        if not repo.refs.has(f"refs/remotes/origin/{branch}"):
             return True
         return int(repo.git.run("rev-list", f"origin/{branch}..HEAD", "--count") or "0") > 0
 

@@ -26,7 +26,7 @@ import cdd_guidance.actions  # noqa: F401 - registers the actions with the actio
 
 
 def _installer(tree: Path, payload: dict) -> Installer:
-    installer = Installer(ide="Cursor", path=tree, repo=_REPO_ROOT)
+    installer = Installer.create(ide="Cursor", path=tree, repo=_REPO_ROOT)
     log = installer.diagnostics.path
     log.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return installer
@@ -47,7 +47,7 @@ with description("guidance diagnostics"):
         expect(len(data["installs"])).to(equal(2))
 
     with it("should treat stories and clean engineering as the installed guidance filter"):
-        probe = GuidanceProbe(Installer(repo=_REPO_ROOT), ["stories", "clean-engineering-model"])
+        probe = GuidanceProbe(Installer.create(repo=_REPO_ROOT), ["stories", "clean-engineering-model"])
         expect(probe.matches("stories.instructions")).to(equal(True))
         expect(probe.matches("stories-story-map")).to(equal(True))
         expect(probe.matches("clean-engineering-model")).to(equal(True))
@@ -57,15 +57,15 @@ with description("guidance diagnostics"):
 
     with description("a filter that names a fidelity whose own name has a hyphen"):
         with it("should add the practice of that fidelity, so stories-story-map adds stories"):
-            probe = GuidanceProbe(Installer(repo=_REPO_ROOT), ["stories-story-map"])
+            probe = GuidanceProbe(Installer.create(repo=_REPO_ROOT), ["stories-story-map"])
             expect(probe.prefixes).to(equal(["stories-story-map", "stories"]))
 
         with it("should match the practice's own instructions"):
-            probe = GuidanceProbe(Installer(repo=_REPO_ROOT), ["stories-story-map"])
+            probe = GuidanceProbe(Installer.create(repo=_REPO_ROOT), ["stories-story-map"])
             expect(probe.matches("stories.instructions")).to(equal(True))
 
         with it("should probe the folder of that fidelity's practice"):
-            probe = GuidanceProbe(Installer(repo=_REPO_ROOT), ["stories-story-map"])
+            probe = GuidanceProbe(Installer.create(repo=_REPO_ROOT), ["stories-story-map"])
             expect(probe.arguments.content_paths).to(equal([str(_REPO_ROOT / "cdd_guidance" / "practices" / "stories")]))
 
     with it("should return stories instructions from the installed mcp list"):
@@ -91,7 +91,7 @@ with description("guidance diagnostics"):
     with it("should pass index_only mode when probing partition.partition"):
         from cdd_guidance.actions.partition.partition import Partition
 
-        probe = GuidanceProbe(Installer(repo=_REPO_ROOT), ["stories", "clean-engineering-model"])
+        probe = GuidanceProbe(Installer.create(repo=_REPO_ROOT), ["stories", "clean-engineering-model"])
         args, missing = probe.arguments.for_operation("partition.partition", Partition.partition)
         probe.arguments.cleanup()
         expect(missing).to(equal([]))
@@ -100,7 +100,7 @@ with description("guidance diagnostics"):
     with it("should treat an empty sketch list as a successful probe"):
         from cdd_guidance.actions.sketch.sketch import Sketch
 
-        probe = GuidanceProbe(Installer(repo=_REPO_ROOT), ["stories"])
+        probe = GuidanceProbe(Installer.create(repo=_REPO_ROOT), ["stories"])
         text = Sketch(session=probe.arguments.work_session()).list_sketches()
         probe.arguments.cleanup()
         expect(text).to(equal("no sketches"))

@@ -11,6 +11,7 @@ from mamba import before, context, description, it
 
 from harness.graph.edge import EdgeType
 from harness.graph.graph import Graph, Node, Source
+from harness.graph.saved_graph import NodeIdentity
 from harness.graph.pattern_overlays import PatternOverlays
 import cdd_guidance.patterns  # noqa: F401 - registers the patterns with the graph's overlays
 
@@ -33,19 +34,17 @@ with description("pattern overlays") as self:
 
     with it("should rebuild the tree from edges that still point at the practice root"):
         graph = Graph()
-        graph.open(Path("."))
+        graph.reads.open(Path("."))
         practice = graph.practice("ddd")
         root = practice.reading.in_graph.root
         child = Node(
             practice,
-            "Aggregate",
-            "ddd:Aggregate:src/account",
-            "account",
+            NodeIdentity(type="Aggregate", node_id="ddd:Aggregate:src/account", name="account"),
             Source("src/account.ts", 1, 10),
         )
         child.practice.reading.in_graph.hold(child)
         graph.edges.record(EdgeType("owns", 2, "direct"), root, child)
-        practice.reading.in_graph.rebuild_tree()
+        practice.reading.in_graph.root.tree.rebuild()
         expect(len(root.children)).to(equal(1))
         expect(root.children[0].node_id).to(equal(child.node_id))
 
@@ -72,7 +71,7 @@ with description("pattern overlays") as self:
             expect(len(node.source.text.splitlines()) > 1).to(equal(True))
 
         with it("should parent lern tier files on their aggregate in the explorer tree"):
-            ddd_tree = data_of(self.graph.practice("ddd").reading.in_graph.root.serialize())
+            ddd_tree = data_of(self.graph.practice("ddd").reading.in_graph.root.tree.serialize())
 
             def walk(node):
                 yield node

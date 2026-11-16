@@ -62,7 +62,7 @@ def _shop_model(extra_properties=None, extra_class=None, extra_relationship=None
         cart_props.append(Property(name=rel.target[:1].lower() + rel.target[1:], type_hint=rel.target))
     cart = _class_with(class_name, 1, cart_props, [Operation(name='place_order', return_type='Order')])
     for rel in cart_rels:
-        cart.place_relationship(rel)
+        cart.arrows.place(rel)
     module.classes.append(cart)
     module.classes.append(_class_with('Order', 2, [Property(name='total', type_hint='int')]))
     if extra_class is not None:

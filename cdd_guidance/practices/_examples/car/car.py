@@ -18,13 +18,15 @@ class Car(PracticeGuidance):
     plus vehicle tools agents invoke while narrating.
     """
 
+    first_fidelity = "road_story"
+
     def __init__(
         self,
         make: str = "Dodge",
         model: str = "Charger",
         year: int = 1969,
         personality: str = "loyal",
-        fidelity: str = "road_story",
+        fidelity: str | None = "",
     ) -> None:
         super().__init__(fidelity=fidelity)
         self._make = make

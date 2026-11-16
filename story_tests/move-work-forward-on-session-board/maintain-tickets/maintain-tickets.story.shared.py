@@ -82,7 +82,7 @@ def _(s):
 
     @s.when("the Person edits checkout-flow's text to Pay for the basket by card.")
     def _(world):
-        # Board.ticket("checkout-flow")
+        # CardPlacement.ticket("checkout-flow")
         #   <- checkout-flow
         # checkout-flow.edit_text("Pay for the basket by card.")
         #   -> self.session.keep_text("Pay for the basket by card.")
@@ -111,7 +111,7 @@ def _(s):
 
     @s.when("the Person edits pet-visits' text to Book a visit for a pet.")
     def _(world):
-        # Board.ticket("pet-visits")
+        # CardPlacement.ticket("pet-visits")
         #   <- pet-visits
         # pet-visits.edit_text("Book a visit for a pet.")
         #   -> self.session.keep_text("Book a visit for a pet.")
@@ -135,7 +135,7 @@ def _(s):
 
     @s.when("the Person edits Gift cards' text to Sell gift cards at the till.")
     def _(world):
-        # Board.backlog_item("Gift cards")
+        # BoardReads.backlog_item("Gift cards")
         #   <- Gift cards
         # Gift cards.edit_text("Sell gift cards at the till.")
         #   <- Gift cards with the text Sell gift cards at the till.
@@ -165,7 +165,7 @@ def _(s):
 
     @s.when("the Person edits confirm-order's text inside checkout-flow's card to Show the order, then take the payment.")
     def _(world):
-        # Board.ticket("confirm-order")
+        # CardPlacement.ticket("confirm-order")
         #   <- confirm-order
         # confirm-order.edit_text("Show the order, then take the payment.")
         #   -> self.session.keep_text("Show the order, then take the payment.")
@@ -191,7 +191,7 @@ def _(s):
 
     @s.when('the Person moves sign-up above pet-visits in Discovery')
     def _(world):
-        # Board.ticket("sign-up")
+        # CardPlacement.ticket("sign-up")
         #   <- sign-up
         # sign-up.move_before(pet-visits)
         #   <- Discovery with sign-up above pet-visits
@@ -217,7 +217,7 @@ def _(s):
 
     @s.when('the Person moves Returns and refunds above Gift cards')
     def _(world):
-        # Board.backlog_item("Returns and refunds")
+        # BoardReads.backlog_item("Returns and refunds")
         #   <- Returns and refunds
         # Returns and refunds.move_before(Gift cards)
         #   <- the Backlog with Returns and refunds above Gift cards
@@ -241,7 +241,7 @@ def _(s):
 
     @s.when('the Person deletes pet-visits')
     def _(world):
-        # Board.ticket("pet-visits")
+        # CardPlacement.ticket("pet-visits")
         #   <- pet-visits
         # pet-visits.delete()
         #   -> self.session.folder.remove()
@@ -266,7 +266,7 @@ def _(s):
 
     @s.when('the Person deletes no-such-ticket')
     def _(world):
-        # Board.ticket("no-such-ticket")
+        # CardPlacement.ticket("no-such-ticket")
         #   <- TicketNotFoundError: no ticket named 'no-such-ticket' on the board
         world.refusal = refusal_of(lambda: world.Ticket.load(NO_SUCH_TICKET).delete())
 
@@ -287,7 +287,7 @@ def _(s):
 
     @s.when("the Person tags pet-visits' session with billing")
     def _(world):
-        # Board.ticket("pet-visits")
+        # CardPlacement.ticket("pet-visits")
         #   <- pet-visits
         # pet-visits.tag("billing")
         #   -> self.session.add_tag("billing")
@@ -313,7 +313,7 @@ def _(s):
 
     @s.when("the Person tags pet-visits' session with urgent")
     def _(world):
-        # Board.ticket("pet-visits")
+        # CardPlacement.ticket("pet-visits")
         #   <- pet-visits
         # pet-visits.tag("urgent")
         #   -> self.session.add_tag("urgent")

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from harness.agent_tools.agent_tools import ToolsetReference
 from harness.diagnostics.probe_arguments import ProbeArguments
-from harness.guidance.action_catalogue import ActionCatalogue
+from harness.guidance.action_catalogue import ACTION_CATALOGUE
 from harness.diagnostics.probe_outcome import ProbeOutcome, ProbeSection, raised_by_a_bug
 
 if TYPE_CHECKING:
@@ -46,7 +46,7 @@ class GuidanceProbe:
         `stories`, so the practice's own instructions are probed with its fidelity's."""
         prefixes: list[str] = []
         for slug in self.slugs:
-            practice = self.arguments.practice_named(slug)
+            practice = self.arguments.practices.practice_answering(slug)
             for prefix in (slug, practice.slug if practice is not None else ""):
                 if prefix and prefix not in prefixes:
                     prefixes.append(prefix)
@@ -74,7 +74,7 @@ class GuidanceProbe:
         installed = set(self.installer.diagnostics.installed_items("toolset"))
         outcomes: list[ProbeOutcome] = []
         try:
-            for toolset_class in ActionCatalogue.toolsets():
+            for toolset_class in ACTION_CATALOGUE.toolsets:
                 if str(ToolsetReference.of(toolset_class)) in installed:
                     outcomes.extend(self._action_toolset(toolset_class, published))
         finally:
@@ -85,11 +85,11 @@ class GuidanceProbe:
 
     def _instructions_of(self, mcp_name: str) -> ProbeOutcome:
         slug = mcp_name[: -len(".instructions")] if mcp_name.endswith(".instructions") else mcp_name
-        practice = self.arguments.practice_named(slug)
-        if practice is None:
+        guidance = self.arguments.practices.answering(slug)
+        if guidance is None:
             return ProbeOutcome.from_refusal(mcp_name, "not a guidance slug")
         try:
-            text = practice.answers_to(slug).instructions
+            text = guidance.instructions
         except Exception as failure:
             if raised_by_a_bug(failure):
                 raise

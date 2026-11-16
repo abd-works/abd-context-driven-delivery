@@ -29,14 +29,17 @@ def _module(folder: str, files: dict[str, str]) -> dict[str, str]:
     return tree
 
 
-_CART_CLASSES = "".join(
-    f"class {name}:\n    def run(self) -> int:\n        return 1\n\n\n" for name in ("Cart", "Line", "Price", "Discount", "Tax")
-)
+def _class_of_methods(name: str, count: int) -> str:
+    """A class of count public methods."""
+    methods = "".join(f"    def step{index}(self) -> int:\n        return {index}\n\n" for index in range(count))
+    return f"class {name}:\n{methods}\n"
 
 
-def _shop_importing(*names: str) -> dict[str, str]:
-    tree = _module("cart", {"cart.py": _CART_CLASSES})
-    tree.update(_module("shop", {"checkout.py": f"from cart.cart import {', '.join(names)}\n"}))
+def _cart_of_methods(*imported: str) -> dict[str, str]:
+    """A cart module of 10 methods (Cart 4, Line 3, Price 3) and a shop module importing the classes named."""
+    classes = _class_of_methods("Cart", 4) + _class_of_methods("Line", 3) + _class_of_methods("Price", 3)
+    tree = _module("cart", {"cart.py": classes})
+    tree.update(_module("shop", {"checkout.py": f"from cart.cart import {', '.join(imported)}\n"}))
     return tree
 
 
@@ -117,64 +120,35 @@ with description("modules across the graph"):
 
     with context("deep-module"):
         with before.all:
-            self.mostly_imported = files_rule_pair(
-                "deep-module",
-                _shop_importing("Cart", "Line", "Price"),
-                _shop_importing("Cart"),
-            )
-            importing = _module("shop", {"checkout.py": "from sketch.outline import SketchOutline, DiscoveryDocument\n"})
-            classes = "class SketchOutline:\n    def lines(self) -> list:\n        return []\n\n\nclass DiscoveryDocument:\n    pass\n\n\n"
-            self.private_record = files_rule_pair(
-                "deep-module",
-                {**_module("sketch", {"outline.py": classes + "class Section:\n    pass\n"}), **importing},
-                {**_module("sketch", {"outline.py": classes + "class _Section:\n    pass\n"}), **importing},
-            )
-            tree = _module("cart", {"cart.py": "class Cart:\n    pass\n"})
-            tree["cart/pricing/pricing.py"] = "class Price:\n    pass\n\n\nclass Tax:\n    pass\n"
-            tree.update(_module("shop", {"checkout.py": "from cart.pricing.pricing import Price, Tax\n"}))
-            self.nested_folder = practice_from_files(tree)
-            tree = _module("cart", {"cart.py": _CART_CLASSES})
-            tree.update(_module("shop", {"checkout_spec.py": "from cart.cart import Cart, Line, Price, Discount, Tax\n"}))
-            self.test_imports = practice_from_files(tree)
-            tree = _module("cart", {"cart.py": "class Cart:\n    pass\n\n\nclass Line:\n    pass\n\n\nclass Price:\n    pass\n"})
-            tree["cart/fixtures.py"] = "".join(f"class Fake{name}:\n    pass\n\n\n" for name in ("Cart", "Line", "Price", "Tax"))
-            tree.update(_module("shop", {"checkout.py": "from cart.cart import Cart, Line\n"}))
-            self.test_fixture_classes = practice_from_files(tree)
-            names = [f"Part{index}" for index in range(109)]
-            tree = _module("cart", {"cart.py": "".join(f"class {name}:\n    pass\n\n\n" for name in names)})
-            tree.update(_module("shop", {"checkout.py": f"from cart.cart import {', '.join(names[:44])}\n"}))
-            self.just_over = practice_from_files(tree)
-            self.outside_scope = practice_from_files(_shop_importing("Cart", "Line", "Price"))
-            self.outside_scope.read_only(["cart"])
+            # cart holds 10 methods: Cart 4, Line 3, Price 3; shop imports the classes named.
+            self.over = practice_from_files(_cart_of_methods("Cart"))
+            self.at_limit = practice_from_files(_cart_of_methods("Line"))
+            small = _module("cart", {"cart.py": _class_of_methods("Cart", 5) + _class_of_methods("Line", 2) + _class_of_methods("Price", 2)})
+            small.update(_module("shop", {"checkout.py": "from cart.cart import Cart, Line, Price\n"}))
+            self.under_ten = practice_from_files(small)
+            classes = _class_of_methods("Cart", 1) + _class_of_methods("Line", 1) + _class_of_methods("Price", 10)
+            shallow_classes = _module("cart", {"cart.py": classes})
+            shallow_classes.update(_module("shop", {"checkout.py": "from cart.cart import Cart, Line\n"}))
+            self.class_ratio_over = practice_from_files(shallow_classes)
 
-        with it("should flag a module whose classes other modules mostly import, and accept one with one public class"):
-            self.mostly_imported.check()
-
-        with it("should flag a module of three classes with two public and accept two public classes beside a private record"):
-            self.private_record.check()
-
-        with it("should roll a nested folder without a card up into its module"):
-            expect(_hits("deep-module", self.nested_folder)).to(
-                equal(["Module 'cart' exposes 2 of 3 classes to other modules, more than the 1 that 40% allows: Price, Tax. Keep most classes behind a few public ones."])
+        with it("should fail a module whose seam methods are over 35% of its methods"):
+            expect(_hits("deep-module", self.over)).to(
+                equal(
+                    [
+                        "Module 'cart' exposes 4 of its 10 methods to other modules, more than the 3 that 35% allows; "
+                        "they are the public methods of its 1 public classes of 3: Cart. Hide more behind fewer public methods."
+                    ]
+                )
             )
 
-        with it("should not count imports from tests"):
-            expect(_hits("deep-module", self.test_imports)).to(equal([]))
+        with it("should pass a module whose seam methods are at the 35% limit, rounded down"):
+            expect(_hits("deep-module", self.at_limit)).to(equal([]))
 
-        with it("should not count a test fixture's classes among the module's classes"):
-            expect(_hits("deep-module", self.test_fixture_classes)).to(
-                equal(["Module 'cart' exposes 2 of 3 classes to other modules, more than the 1 that 40% allows: Cart, Line. Keep most classes behind a few public ones."])
-            )
+        with it("should not measure a module of fewer than 10 methods"):
+            expect(_hits("deep-module", self.under_ten)).to(equal([]))
 
-        with it("should name the allowed count when the share is just over 40%, which rounds to 40"):
-            expect(_hits("deep-module", self.just_over)[0].split(":")[0]).to(
-                equal("Module 'cart' exposes 44 of 109 classes to other modules, more than the 43 that 40% allows")
-            )
-
-        with it("should count a caller outside the validated scope"):
-            expect(_hits("deep-module", self.outside_scope)).to(
-                equal(["Module 'cart' exposes 3 of 5 classes to other modules, more than the 2 that 40% allows: Cart, Line, Price. Keep most classes behind a few public ones."])
-            )
+        with it("should not fail a module for its share of public classes"):
+            expect(_hits("deep-module", self.class_ratio_over)).to(equal([]))
 
     with context("source-parses"):
         with before.all:

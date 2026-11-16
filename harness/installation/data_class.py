@@ -8,10 +8,18 @@ import functools
 import inspect
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from collections.abc import Mapping, Sequence
+from typing import Any, Generic, TypeAlias, TypeVar, Union
 
 from harness.agent_tools.parameter_schema import is_built_in
 from harness.annotations.annotation import Annotatable, Annotation, NamesAnnotation
+
+# The class a *DataClass* describes: its instances are what it sends as data. Any class can annotate its data
+# (`@data_field`), so a DataClass is generic in the class it describes.
+Described = TypeVar("Described")
+# A value an answer sends as data: a plain value, a path, an enum, a mapping or sequence of them, or an object of a
+# class that describes its data.
+SentValue: TypeAlias = Union[str, int, float, bool, None, Enum, Path, Mapping[str, "SentValue"], Sequence["SentValue"], Described]
 
 
 class LanguageAdapter(Annotation):
@@ -109,7 +117,7 @@ class DataField(Annotation):
 data_field = DataField
 
 
-class DataClass:
+class DataClass(Generic[Described]):
     """What the annotations on one class declare about its objects' data: the properties that are its data (`@data_field`),
     the fields that name one object (`@identity`), and the languages its operations are typed in
     (`@language_adapter`). A language adapter types the data from it, and `data_of` sends an object's data by it. A class's
@@ -118,11 +126,11 @@ class DataClass:
 
     _HELD_AS = "_data_class"
 
-    def __init__(self, data_class: type) -> None:
+    def __init__(self, data_class: type[Described]) -> None:
         self.data_class = data_class
 
     @classmethod
-    def of(cls, data_class: type) -> DataClass:
+    def of(cls, data_class: type[Described]) -> DataClass[Described]:
         """The DataClass data_class holds, made and kept on data_class itself the first time it is asked for. A subclass
         holds its own, since it may annotate more fields."""
         if not isinstance(data_class, type):  # a generic alias such as list[str] holds nothing of its own
@@ -174,7 +182,7 @@ class DataClass:
         answer sends thousands of objects, so this is read once per class rather than once per object."""
         return tuple((key, field.fget, self.sends_by_identity(field)) for key, field in self.fields.items())
 
-    def data(self, instance: object) -> dict[str, Any]:
+    def data(self, instance: Described) -> dict[str, Any]:
         """instance's annotated fields as plain data."""
         sent: dict[str, Any] = {}
         for key, getter, by_identity in self._sent:
@@ -182,7 +190,7 @@ class DataClass:
             sent[key] = self._referenced(held) if by_identity else data_of(held)
         return sent
 
-    def reference(self, instance: object) -> dict[str, Any]:
+    def reference(self, instance: Described) -> dict[str, Any]:
         """instance by its identity alone, such as `{"name": "Discovery"}` for a stage, so data can name an object that is
         sent in full elsewhere without sending it again. An identity field that holds an object with an identity of its
         own sends that object by its reference too, so a fidelity's progress is `{ticket: {name}, fidelity: {slug}}`."""
@@ -191,13 +199,13 @@ class DataClass:
         fields = self.fields
         return {key: self._identity_data(fields[key].fget(instance)) for key in self.identity}
 
-    def _identity_data(self, held: object) -> Any:
+    def _identity_data(self, held: SentValue[Described]) -> Any:
         if held is None:
             return data_of(held)
         held_class = DataClass.of(type(held))
         return held_class.reference(held) if held_class.identity else data_of(held)
 
-    def _referenced(self, held: object) -> Any:
+    def _referenced(self, held: SentValue[Described]) -> Any:
         if held is None:
             return None
         if isinstance(held, (list, tuple)):
@@ -209,7 +217,7 @@ class DataClass:
 _PLAIN_TYPES = frozenset({str, int, float, bool, type(None)})
 
 
-def data_of(subject: object) -> Any:
+def data_of(subject: SentValue[Described]) -> Any:
     """subject as plain JSON data: an object with annotated properties as its fields, each object it holds as its own data.
 
     This is the one way a value of any type becomes data, for MCP results and every other JSON answer, so a path reads

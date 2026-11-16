@@ -5,7 +5,7 @@ from expects import be_true, contain, equal, expect, have_key
 from mamba import before, context, description, it
 
 from cdd_guidance.practices.clean_engineering.model.python.python_class_model import PythonCleanEngineeringModel
-from cdd_guidance.practices.clean_engineering.rules.class_graph import ClassGraph
+from cdd_guidance.practices.clean_engineering.model.class_graph import ClassGraph
 from cdd_guidance.practices.clean_engineering.rules.rule_examples import practice_from_files
 
 _CART = (
@@ -17,7 +17,7 @@ _CART = (
 
 def _targets(fixture, kind: str, source_name: str) -> list[str]:
     """The names of the nodes an edge of kind leads to from the node called source_name."""
-    return sorted(edge.child.name for edge in fixture.practice.reading.in_graph.edges(kind) if edge.parent.name == source_name)
+    return sorted(edge.child.name for edge in fixture.practice.reading.in_graph.edge_index.of(kind) if edge.parent.name == source_name)
 
 
 with description("Clean Engineering reading code into its graph"):
@@ -129,7 +129,7 @@ with description("Clean Engineering reading code into its graph"):
             expect(self.index.classes_named("Cart")).to(equal([self.cart]))
 
         with it("should be the index the class rules ask"):
-            expect(ClassGraph(self.fixture.context).named("Till")).to(equal(self.index.classes_named("Till")))
+            expect(ClassGraph(self.fixture.practice.reading).named("Till")).to(equal(self.index.classes_named("Till")))
 
     with context("with members that call and read another object's members"):
         with before.all:
@@ -153,11 +153,12 @@ with description("Clean Engineering reading code into its graph"):
                 }
             )
 
+        # `private board: Board` in the constructor is a field the client holds, so each operation also reads it.
         with it("should record that an operation invokes the member of its name it calls on another object"):
-            expect(_targets(self.fixture, "invokes", "select")).to(equal(["select"]))
+            expect(_targets(self.fixture, "invokes", "select")).to(equal(["board", "select"]))
 
         with it("should record that an operation invokes the property it reads"):
-            expect(_targets(self.fixture, "invokes", "opensLeft")).to(equal(["shown"]))
+            expect(_targets(self.fixture, "invokes", "opensLeft")).to(equal(["board", "shown"]))
 
     with context("with a class whose heritage clause holds braced type arguments"):
         with before.all:

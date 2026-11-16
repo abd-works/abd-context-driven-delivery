@@ -18,6 +18,13 @@ class CursorAgentNotFound(RuntimeError):
         super().__init__("cursor-agent not found on PATH")
 
 
+class CursorAgentNotAuthenticated(RuntimeError):
+    """``cursor-agent status`` refused: nobody has logged the command line in."""
+
+    def __init__(self) -> None:
+        super().__init__("cursor-agent not authenticated - run `cursor-agent login` first")
+
+
 class ChatNotCreated(RuntimeError):
     """``cursor-agent create-chat`` failed or printed no chat id."""
 

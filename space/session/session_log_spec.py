@@ -18,12 +18,12 @@ from space.session.session import Session
 from space.session.session_log import LogTimestamp
 from space.session.sessions import Sessions
 from space.session.throwaway_project import ExampleHome
-from harness.guidance.practice_catalogue import PracticeCatalogue
+from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 
 # The first practices a process makes read and parse their guidance for every later one; made once here, before any
 # example, so no example pays for that first read.
-PracticeCatalogue.create_all()
+PRACTICE_CATALOGUE.create_all()
 
 
 # (E) Record Session Log

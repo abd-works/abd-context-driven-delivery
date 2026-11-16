@@ -20,6 +20,7 @@ from cdd_guidance.practices.stories.rules.scenarios import (  # noqa: E402
 )
 from harness.graph.edge import EdgeType  # noqa: E402
 from harness.graph.graph import Graph, Node, Source  # noqa: E402
+from harness.graph.saved_graph import NodeIdentity
 from harness.graph.saved_graph import SavedGraph  # noqa: E402
 from harness.graph.rule_context import RuleCheckContext  # noqa: E402
 from harness.graph.rule_fixture import SchemaRuleRun  # noqa: E402
@@ -87,7 +88,7 @@ def _order_aggregate(graph: Graph) -> None:
     ddd = graph.practice("ddd")
 
     def add(kind: str, name: str) -> Node:
-        node = Node(ddd, kind, f"ddd:{kind}:order:{name}", name, Source("order", 1, 1))
+        node = Node(ddd, NodeIdentity(type=kind, node_id=f"ddd:{kind}:order:{name}", name=name), Source("order", 1, 1))
         node.practice.reading.in_graph.hold(node)
         return node
 

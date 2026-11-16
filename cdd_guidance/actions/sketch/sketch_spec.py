@@ -20,13 +20,13 @@ from space.session.throwaway_project import ThrowawayProject
 from cdd_guidance.actions.sketch.sketch import Sketch
 from harness.agent_tools.agent_tools import AgentToolSet
 from harness.agent_tools.tool_call import ToolCall
-from harness.guidance.practice_catalogue import PracticeCatalogue
+from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 
 
 def _import_format_adapters() -> None:
     """Import the format adapters of every practice, as the first graph read in a run does."""
-    for practice in PracticeCatalogue.create_all():
+    for practice in PRACTICE_CATALOGUE.create_all():
         practice.formats.suffixes
 
 

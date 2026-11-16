@@ -2,28 +2,20 @@
 
 from __future__ import annotations
 
-import re
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from harness.graph.saved_graph import SavedGraph, SavedGraphOutdated
-from harness.graph.location import Location
-from harness.graph.violation import NOWHERE, UNKNOWN_LOCATION, FoundBy, Violation
+from harness.graph.violation import UNKNOWN_LOCATION, Violation
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.guidance.rule import Rule
 from harness.installation.data_class import data_field
+from space.session.validation_judgment import JUDGMENT_SECTION, Judgment
 
 if TYPE_CHECKING:
     from space.repo.repo import Repo
     from space.session import Session
-
-# The judgment the validating agent adds to a report, in the shape validate.md gives it.
-JUDGMENT_HEADING = re.compile(r"^## Judgment — `(?P<file>[^`]+)`")
-# A judgment the agent wrote, as against the example the report quotes indented in its instructions.
-JUDGMENT_SECTION = re.compile(r"^#{1,2} Judgment\b", re.M)
-JUDGED_RULE_HEADING = re.compile(r"^### `(?P<rule>[^`]+)` — Fail\s*$")
-FINDING_LINE = re.compile(r"^- (?:(?P<file>[^\s:]+):(?P<line>\d+)\s+)?(?P<message>.+)$")
 
 
 class ReportRule:
@@ -136,8 +128,9 @@ class Report:
 
 
 class ReportFile:
-    """A validation report of one fidelity, saved in a session folder, with the graph the validation checked saved
-    beside it. It knows which of its practice's rules it answers for."""
+    """A validation report of one fidelity, saved in a session folder, with the violations of the graph the validation
+    checked saved beside it, each with the node it was found on. It knows which of its practice's rules it answers for,
+    and describes each from its practice, since the saved report points at a rule's text instead of copying it."""
 
     # The fidelity is the one its session holds, so it lists its own reports; the session its practice works in names
     # the folder the saved graph names its files from, and its repository names the report's files from its top.
@@ -256,8 +249,9 @@ class ReportFile:
 
     @cached_property
     def _checked_graph(self) -> SavedGraph:
-        """The graph the validation checked, read from beside the report once. SavedGraphOutdated when it was saved in
-        a shape the graph no longer writes."""
+        """The violations of the graph the validation checked, and the overlays it was loaded with, read from beside the
+        report once: all a report reads of it, so that is all Validate keeps there. SavedGraphOutdated when it was saved
+        in a shape the graph no longer writes."""
         return SavedGraph.from_file(self._graph)
 
     def _hits_by_rule(self) -> dict[str, list[Violation]]:
@@ -302,61 +296,3 @@ class ReportFile:
     def _changed_at(self, path: Path) -> int:
         """When path was last written, in nanoseconds; none while it is not there."""
         return path.stat().st_mtime_ns if path.exists() else 0
-
-
-class Judgment:
-    """One rule the judgment in a validation report fails, in one judged file, with its findings."""
-
-    def __init__(self, file: str, rule: str) -> None:
-        self._file = file
-        self._rule = rule
-        self._findings: list[Violation] = []
-
-    @classmethod
-    def from_report(cls, text: str) -> list[Judgment]:
-        """The rules a report's judgment fails; none when the report has no judgment."""
-        judgments: list[Judgment] = []
-        judged_file, current = "", None
-        for line in text.splitlines():
-            heading = JUDGMENT_HEADING.match(line)
-            if heading:
-                judged_file, current = heading["file"], None
-                continue
-            rule = JUDGED_RULE_HEADING.match(line)
-            if rule and judged_file:
-                current = cls(judged_file, rule["rule"])
-                judgments.append(current)
-                continue
-            if line.startswith("#"):
-                current = None
-                continue
-            if current and line.strip() and not current._add_finding_from(line.strip()):
-                current = None
-        return judgments
-
-    @property
-    def file(self) -> str:
-        return self._file
-
-    @property
-    def rule(self) -> str:
-        return self._rule
-
-    @property
-    def findings(self) -> list[Violation]:
-        """Each finding at the file and line it names, when it names them; its source is read by whoever shows it."""
-        return list(self._findings)
-
-    def _add_finding_from(self, line: str) -> bool:
-        """A bullet is a finding, and a paragraph under a rule with no bullets is its one finding. A paragraph after the
-        findings ends the rule, so a Passes list the agent adds after its judgment is not read as findings."""
-        bullet = FINDING_LINE.match(line)
-        if bullet is None and self._findings:
-            return False
-        located = bullet if bullet and bullet["line"] else None
-        self._findings.append(Violation(
-            FoundBy(self._rule),
-            bullet["message"] if bullet else line,
-            Location(located["file"], int(located["line"])) if located else NOWHERE,
-        ))
-        return True

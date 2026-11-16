@@ -1,14 +1,14 @@
 fidelity: model
-scope: PracticeGuidance.fidelities as @markdownCollection -> GuidanceCollection
+scope: PracticeGuidance.fidelities as @markdown_collection -> GuidanceCollection
 status: grill cycle — review before more questions
-// built differently in places: fidelities is @toolset_collection @markdownCollection, loaded by MarkdownCollection.from_markdown; no fidelityInstructions operation was added. Current classes: practice-guidance-model.md
+// built differently in places: fidelities is @toolset_collection @markdown_collection, loaded by MarkdownCollection.from_markdown; no fidelityInstructions operation was added. Current classes: practice-guidance-model.md
 
 =========
 theme: the practice holds the collection; selected stays on it; load is from_markdown
 ---------
 ce:
 PracticeGuidance : Guidance
-  @markdownCollection("fidelities") fidelities : GuidanceCollection
+  @markdown_collection("fidelities") fidelities : GuidanceCollection
        // first-class nested toolset — child_toolsets() walks this object
   instructions
        -> super.instructions
@@ -56,7 +56,7 @@ ce:
 //    fidelities.markdown is the raw ## Fidelities extract. Replacing the loop with
 //    + fidelities.markdown inlines raw section text and drops the tools() list.
 // 2. FidelityGuidance.instructions != collection.markdown (parent prose, templates, CE).
-// 3. @markdownCollection getter coerces, then collection.attach(instance) — later
+// 3. @markdown_collection getter coerces, then collection.attach(instance) — later
 //    reads return that same bag so current stays. No attach_fidelities.
 // 4. CE companion wiring is after load; not generic coerce.
 // 5. fidelityInstructions(name) still needed for MCP give-me-sketch; selected is activate.

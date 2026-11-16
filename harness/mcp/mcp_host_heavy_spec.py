@@ -458,7 +458,7 @@ with description("an MCP host") as self:
         with before.each:
             self._tmp = tempfile.mkdtemp()
             self.tree = Path(self._tmp)
-            Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install([SampleMcpOps()])
+            Installer.create(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install([SampleMcpOps()])
             self.host = McpHost.from_repo(_REPO_ROOT)
 
         with after.each:
@@ -535,7 +535,7 @@ with description("an MCP host tool ping") as self:
 
 
 def _user_level_installation(ide: str) -> McpInstallation:
-    installation = McpInstallation(IdeLayout(ide), _REPO_ROOT / ".cursor", repo=_REPO_ROOT)
+    installation = McpInstallation.create(IdeLayout(ide), _REPO_ROOT / ".cursor", repo=_REPO_ROOT)
     installation.is_temporary = False
     for tool in SampleMcpOps().tools.values():
         installation.write(tool)
@@ -613,7 +613,7 @@ with description("an MCP install that deploys to the IDE's user-level config") a
         with context("that is installed again from another checkout"):
             with before.each:
                 self.written = self.config.read_text(encoding="utf-8")
-                again = McpInstallation(IdeLayout("Claude"), self.root / "other" / ".claude", repo=self.root / "other")
+                again = McpInstallation.create(IdeLayout("Claude"), self.root / "other" / ".claude", repo=self.root / "other")
                 again.is_temporary = False
                 for tool in SampleMcpOps().tools.values():
                     again.write(tool)
@@ -627,7 +627,7 @@ with description("an MCP install that deploys to the IDE's user-level config") a
                 self.project = self.root / "project"
                 (self.project / ".claude").mkdir(parents=True)
                 self.project_config = self.project / ".mcp.json"
-                self.installation = McpInstallation(IdeLayout("Claude"), self.project / ".claude", repo=_REPO_ROOT)
+                self.installation = McpInstallation.create(IdeLayout("Claude"), self.project / ".claude", repo=_REPO_ROOT)
                 self.installation.is_temporary = False
                 for tool in SampleMcpOps().tools.values():
                     self.installation.write(tool)
@@ -679,7 +679,7 @@ with description("an MCP install that deploys to the IDE's user-level config") a
     with context("into a temp install tree"):
         with before.each:
             self.tree = Path(tempfile.mkdtemp())
-            self.installation = McpInstallation(IdeLayout("Cursor"), self.tree, repo=_REPO_ROOT)
+            self.installation = McpInstallation.create(IdeLayout("Cursor"), self.tree, repo=_REPO_ROOT)
             for tool in SampleMcpOps().tools.values():
                 self.installation.write(tool)
             self.installation.cdd_entry.write()

@@ -49,7 +49,7 @@ with description("mcp tools diagnostics"):
     with it("should install agent-tools-diagnostics as slash command with MCP invoke"):
         tree = Path(tempfile.mkdtemp())
         try:
-            mcp = Installer(ide="Cursor", path=tree, repo=_REPO_ROOT).install(
+            mcp = Installer.create(ide="Cursor", path=tree, repo=_REPO_ROOT).install(
                 [AgentToolsDiagnostics()]
             ).of(McpInstallation)
             path = tree / "commands" / "harness" / "diagnostics" / "agent-tools-diagnostics.md"

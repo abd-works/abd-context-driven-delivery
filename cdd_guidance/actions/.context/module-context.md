@@ -1,11 +1,11 @@
 # cdd_guidance/actions
 *Actions* are the shared verbs every practice is worked with: you pass one or more *Guidance* — a practice at its current fidelity, such as `stories-story-map` or `clean-engineering-modules` — and the action runs once for each, so no practice reimplements opening the session, reading its rules, or saving its reports. Each action is a toolset built on *GuidanceAction* from `harness/guidance_actions`.
 
-This module holds the core lifecycle verbs; their folders have no card of their own and roll up to this one:
+This module holds every action. Each sits in a package of its own and none has its own card, so all of them roll up to this one: the core lifecycle verbs first, then the actions that build on them.
 
 - *Generate* writes each listed Guidance's artifact at its current fidelity, with that fidelity's rules and the shared rules of each pattern the session overlays (`## Pattern overlay: <pattern>`), then has the result validated (`generate.generate`).
 - *Document* records what already exists for each listed Guidance without correcting it, so violations are flagged, not fixed (`document.document`).
-- *Validate* checks artifacts against each listed Guidance's rules and the shared rules of each pattern the session overlays (`## Pattern overlay: <pattern>`, as Generate gives them), adds the graph rules' hits for graph-backed practices, and saves a report in the session's `validation-reports/` folder (`validate.validate`); *CheckedGraph* is the graph one call checks and the files it is built from: it holds the fidelity each listed practice is checked at, reads each one's checked format once, and keeps the graph it builds so its violations are read from that graph, not from the file written for the report; asked for the session's saved graph, it reads the file the session's graph saves in (`Graph.saved_file`). *ReportFiles* are the reports the call saves, and *ValidationReport* writes one from the listed guidance it holds: the rules each guidance checks (`checked_rules()`), and for a graph hit of a rule it does not check, that rule as the guidance has it (`every_rule`). `Validate.create_rule` adds a named rule from a failed example and the behaviour wanted; it carries `@noDeploy`, so it is called from Python and is not an installed MCP operation or slash command.
+- *Validate* checks artifacts against each listed Guidance's rules and the shared rules of each pattern the session overlays (`## Pattern overlay: <pattern>`, as Generate gives them), adds the graph rules' hits for graph-backed practices, and saves a report in the session's `validation-reports/` folder (`validate.validate`); *CheckedGraph* is the graph one call checks and the files it is built from: it holds the fidelity each listed practice is checked at, reads each one's checked format once, and keeps the graph it builds so its violations are read from that graph, not from the file written for the report; asked for the session's saved graph, it reads the file the session's graph saves in (`Graph.saved_file`). *ReportFiles* are the reports the call saves, and *ValidationReport* writes one from the listed guidance and the *CheckedGraph* it holds: the rules each guidance checks (`checked_rules()`), and for a graph hit of a rule it does not check, that rule as the guidance has it (`every_rule`). The judge is answered with each rule's text and the judging instructions (`for_judge`); the saved report keeps, per rule, its heading, a link to the line of the practice's document its text is on (*RulePlaces*), and its hits (`for_saving`), so no saved report copies the rules or the instructions. The whole graph a call builds is written for its judge in the session's `.context/checked-graphs/<report>/graph.json` (ignored by git, only the latest of each fidelity kept); beside the report `CheckedGraph.save_at` keeps only the graph's violations and the nodes they were found on (`SavedGraph.violated`), all the board reads, a few kilobytes where the whole graph of a repository ran past a hundred megabytes. Saving a report records its run in the session's violation history (`session.folder.violation_history.record`, space/session), which also folds in the previous run's judgment and the hits it no longer finds. `Validate.create_rule` adds a named rule from a failed example and the behaviour wanted; it carries `@noDeploy`, so it is called from Python and is not an installed MCP operation or slash command.
 - *Satisfy* gives the listed Guidance's rules, lists `validate` as the tool the agent calls before and after its fixes, and names the fixes step of the Generate it starts (`Generate.generate_fixes_from_validate`) (`satisfy.satisfy`). Expanding it checks nothing, so it saves no report and logs no validate line.
 - *Render* converts content a practice already generated into another format, such as markdown into drawio (`render.render`). It only converts: it opens no session and commits nothing, and with `paths` it reads the files itself, once.
 
@@ -19,11 +19,91 @@ An action's instructions are its `@agent_instructions` recipe, which the MCP hos
 
 A recipe called as an ordinary Python method, such as `grill.grill_with_context()` inside a callback, gives the prompt only its return value. `fidelity_text_spec.py` expands each action that writes or fixes an artifact this way and checks that the fidelity's instructions, template, rules, and tools arrive; it also answers each recipe the way an MCP client calls it, with only its required arguments, and checks that the session log holds only the action's own lines.
 
-The other actions are separate modules with their own cards: `actions/diagnose`, `actions/grill_context`, `actions/improvement`, `actions/iterate`, `actions/partition`, and `actions/sketch`.
+## `actions/diagnose`
 
-- **Purpose:** Give every practice the same generate, document, validate, satisfy, and render steps, so a practice owns only its words, rules, and formats.
-- **Seam (terms):** Generate, Document, Validate, Satisfy, Render, `generate.generate`, `document.document`, `validate.validate`, `satisfy.satisfy`, `render.render`
-- **Dependencies (one-way):** `harness/guidance_actions` (*GuidanceAction*, *GuidanceArg*, `load_document`), `harness/guidance` (*PracticeGuidance*, *Rule*, *PracticeCatalogue*), `harness/graph` (graph rule checks, and *SavedGraph*, the saved graph a report reads), `harness/markdown` (*Format*), `harness/agent_tools`, `harness/installation`, `harness/mcp`
+*Diagnose* is a disciplined hunt for a hard bug or performance regression, run by a background sub-agent so the chat can keep working: build a fast pass/fail feedback loop, reproduce, minimise, form hypotheses, instrument, fix, and add a regression test. Calling `diagnose.diagnose(guidance)` (slash `/diagnose`) with no guidance runs the six phases alone; passing practice guidance, such as `bdd` or `clean-engineering`, applies that practice's rules while fixing and while writing the regression test.
+
+- **Purpose:** Find the root cause of a stubborn failure and prove the fix with a test, without blocking the conversation that hit it.
+- **Seam (terms):** Diagnose, `diagnose.diagnose`
+- **Uses:** `harness/guidance_actions` (*GuidanceAction*, *GuidanceArg*), `harness/agent_tools` (`@subAgent`), `harness/installation`, `harness/mcp`
+
+**Constraint.**
+
+Build the feedback loop before guessing at a cause; skip a phase only with a stated reason. Pass guidance only when the fix and its test should follow that practice. The work runs in a sub-agent, so do not wait on its result in the same turn.
+
+## `actions/grill_context`
+
+*Grill* is an interview about a plan that is grounded in the project's context files: every question names the files it was drawn from and frames the decision before offering options, and each resolved answer is written straight to the session root's `.context/grill-answers.md`, so the answers outlast the chat. `grill-context.grill(guidance)` (slash `/grill`) interviews the plan and then generates each listed Guidance; the `grill_with_context` instructions are the interview alone, and the grill ends with the instructions of a *Generate* it starts on the same guidance (`instructions(self._generate().generate)`). `actions/sketch` names `grill_with_context` and its own generate around its sketch cadence; `actions/iterate` names the whole `grill` for each cycle. The answers file is `SessionPaths.context_folder() / "grill-answers.md"`.
+
+The MCP tools `grill-context.explore_context_files(folder)`, `grill-context.read_context_file(path)`, and `grill-context.write_grill_answer(heading, body)` find context files under the session's root, confirm a file before it is read (the session's files refuse a path that is not there with *NamedPathNotFoundError*), and record an answer.
+
+- **Purpose:** Turn a vague plan into decisions grounded in what the codebase already says, one framed question at a time, with every answer kept.
+- **Seam (terms):** GrillContext, `grill-context.grill`, `grill_with_context`, `grill-context.explore_context_files`, `grill-context.read_context_file`, `grill-context.write_grill_answer`
+- **Uses:** `cdd_guidance/actions` (*Generate*), `harness/guidance_actions` (*GuidanceAction*, *GuidanceArg*), `harness/agent_tools`, `harness/installation`, `harness/mcp`
+
+**Constraint.**
+
+Read the cited context files before asking: a question must name the files read and use their terms, because a question from a skim or from memory asks the person to decide without the facts. Ask one framed question at a time and write each answer as soon as it is resolved; do not batch answers at the end.
+
+## `actions/improvement`
+
+*Improvement* repairs a practice's guidance when it produced the wrong artifact: `improvement.repair(guidance, asset, violation)` (slash `/repair`) opens a repair on each listed Guidance for the file that went wrong and the rule it broke, has the cause diagnosed with `actions/diagnose`, and asks for the change to the guidance before any test; `improvement.verify_fix(guidance, theme)` re-runs the regression check for one group of repairs after the fix. The repair loop itself is written in `repair.md` beside this module.
+
+- **Purpose:** Fix the guidance that caused a bad artifact, not just the artifact, and check the same mistake does not come back.
+- **Seam (terms):** Improvement, `improvement.repair`, `improvement.verify_fix`
+- **Uses:** `harness/guidance_actions` (*GuidanceAction*, *GuidanceArg*), `harness/markdown` (`@markdown`), `harness/agent_tools`, `harness/installation`, `harness/mcp`
+
+**Constraint.**
+
+Pass the file under repair and the violation (a rule name or a report path) by path; never paste the artifact's body. State the proposed change to the guidance before writing a failing test at that seam, and do not list one-off fixes to the artifact as the repair. `repair` gives the instructions and stops; the diagnosis, the failing test, and the fix follow in the same chat.
+
+## `actions/iterate`
+
+*Iterate* builds the formal artifacts in short cycles: a few grill questions, then only the slice of the deliverable those answers unlocked, validated, with one fix pass and the person's feedback before the next questions. `iterate.iterate(guidance)` (slash `/iterate`) runs the cycles for each listed Guidance; `iterate.mark_iterate_round` records that a round's generate-validate-fix step is due.
+
+- **Purpose:** Deliver a large artifact in small agreed slices instead of one unreviewed dump.
+- **Seam (terms):** Iterate, `iterate.iterate`, `iterate.mark_iterate_round`
+- **Uses:** `cdd_guidance/actions/grill_context` (*GrillContext*, which generates each slice), `harness/guidance_actions` (*GuidanceAction*, *GuidanceArg*), `harness/agent_tools`, `harness/installation`, `harness/mcp`
+
+**Constraint.**
+
+Generate only after two or three answers name one concrete slice, and stop after that slice's validation and fix pass for feedback. Never chain cycles or write output ahead of the questions. Iterate works on the formal artifacts; use `actions/sketch` for a rough draft.
+
+## `actions/partition`
+
+*Partition* splits a large source — a document set or a codebase — into an *index* and verbatim *segments*, converting documents that are not markdown or code with Context Setup's `convert` first and embedding the segments with Context Index's `embed` after, so later work reads exactly the part of the source it needs instead of a summary. The index, `{subject}-index.md`, names every segment and the entries each must hold; a segment, `*-segment.md`, is one verbatim chunk of source, and it is complete only when every entry the index named for it is present with a body. Each practice partitions through its own lens: `partition.partition(guidance, paths, out_root)` (slash `/partition`) runs once per listed Guidance, guided by the practice's `partition.md` or its Overview, and writes the index and segments under `out_root`, or under the session's root when the call names none.
+
+The MCP tools `partition.index`, `partition.segment`, `partition.segment_files`, and `partition.verify_segment_completeness` write the index, write the segments, list the segment files written, and fail a segment that drops a named entry. Where a segment goes under the partition's folder is said once, by `SEGMENT_FILE` in `segment.py`, and `SEGMENT_FILES` is the glob `segment_files` finds them with, so a later step, such as Context Setup's embed, reads the files `segment_files` lists rather than restating the location. *PartitionIndex* and *Segment* each read their own file (`PartitionIndex.at(path)`, `PartitionIndex.near(segment_path)` for the index a segment belongs to, `Segment.at(path, completeness)`), and a segment is checked with its index's completeness settings, or the defaults when it belongs to no index.
+
+- **Purpose:** Turn a large source into an index plus verbatim chunks that every later stage can cite, with a hard check that no named entry was lost.
+- **Seam (terms):** Partition, Segment, PartitionIndex, `partition.partition`, `partition.index`, `partition.segment`, `partition.segment_files`, `partition.verify_segment_completeness`
+- **Uses:** `cdd_guidance/context_setup` (*ContextSetup*'s `convert`, *ContextIndex*'s `embed`), `harness/guidance_actions` (*GuidanceAction*, *GuidanceArg*), `harness/markdown` (`@markdown`), `harness/agent_tools`, `harness/installation`, `harness/mcp`
+
+**Constraint.**
+
+Pass the source by path; never put the corpus on an MCP call. Index by the practice's lens, not by the source's own table of contents. Judge a segment complete by its named entries, never by its length. Put project-specific completeness settings in the index's `<!-- partition-config -->` block, not in code. A later practice adds its columns to the shared index and segments; it never wipes or re-chunks what an earlier practice wrote.
+
+## `actions/sketch`
+
+*Sketch* is a rough draft of the formal artifacts, kept in one file for the session — `{session root}/.context/{session name}-sketch.md`, with one section per practice — so the shape of the solution is agreed before anything formal is generated. `sketch.sketch(guidance)` (slash `/sketch`) writes a high-level shell, asks three or four questions per theme, sketches the answers into the same file, and pauses for review.
+
+The MCP tools `sketch.find_template`, `sketch.save_sketch`, `sketch.list_sketches`, and `sketch.review_sketch` find the practice's sketch template, save the sketch file, list sketch files, and stop for the person to confirm the sketch before the next question.
+
+Each practice reads its own section of the saved sketch with *SketchOutline*, which lives with the practices in `cdd_guidance/practices/sketch_document`, so the practices never import an action.
+
+- **Purpose:** Agree the rough shape of a solution in a saved file, reviewed after each theme, before formal generation.
+- **Seam (terms):** Sketch, `sketch.sketch`, `sketch.find_template`, `sketch.save_sketch`, `sketch.list_sketches`, `sketch.review_sketch`
+- **Uses:** `cdd_guidance/actions/grill_context` (*GrillContext*), `harness/guidance_actions` (*GuidanceAction*, *GuidanceArg*), `harness/guidance` (*PracticeGuidance*), `harness/agent_tools`, `harness/installation`, `harness/mcp`
+
+**Constraint.**
+
+Save the sketch in the same turn it is written and call `review_sketch` after every save; a sketch left only in chat is lost. Ask the next theme only after the person confirms the sketch, and carry every mistake they named into the next version. Pass the sketch to `save_sketch` by path, not as a body on the MCP call.
+
+## The module
+
+- **Purpose:** Give every practice the same verbs (generate, document, validate, satisfy, render, and the actions built on them: diagnose, grill, repair, iterate, partition, sketch), so a practice owns only its words, rules, and formats.
+- **Seam (terms):** Generate, Document, Validate, Satisfy, Render, Diagnose, GrillContext, Improvement, Iterate, Partition, Segment, PartitionIndex, Sketch, and each action's operations as its package's section names them
+- **Dependencies (one-way):** `harness/guidance_actions` (*GuidanceAction*, *GuidanceArg*, `load_document`), `harness/guidance` (*PracticeGuidance*, *Rule*, *PracticeCatalogue*), `harness/graph` (graph rule checks, and *SavedGraph*, the saved graph a report reads), `harness/markdown` (*Format*), `harness/agent_tools`, `harness/installation`, `harness/mcp`; Partition also uses `cdd_guidance/context_setup` (*ContextSetup*'s `convert`, *ContextIndex*'s `embed`). Inside the module, iterate and sketch build on grill, grill on generate, and improvement hands its diagnosis to diagnose.
 
 ## Constraint
 

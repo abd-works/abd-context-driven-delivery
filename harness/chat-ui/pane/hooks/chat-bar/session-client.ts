@@ -5,7 +5,8 @@ import type { LeaveChoicesData, TicketData } from '@cdd/space/kanban/ticket'
 import { shownAsFailure } from '../error-display/failure-client'
 import { reasonOf } from '../shared/reason'
 import { chosenFolder } from '../shared/folder-dialog'
-import { callTool, callToolText, currentChatBar, refreshChatBar, type ChatBarClient } from './chat-bar-client'
+import { callTool, callToolText } from '../shared/cdd-tool'
+import { currentChatBar, refreshChatBar, type ChatBarClient } from './chat-bar-client'
 import { whileBusy } from './busy-client'
 import { startedChatIn } from './chat-folder-client'
 import type { RepoRowJson } from '../../types'
@@ -24,21 +25,16 @@ export class CloseRefused {
 }
 
 // ticket.activate opens the ticket in its own worktree and leaves this chat on main; the ticket's chat, found or
-// started, does its work there.
+// started, does its work there. A ticket that did not open starts no chat, and its failure stays above the line.
 export async function activateTicket($: EngineInterface, ticketName: string): Promise<void> {
   await closeSessionList($)
-  const opened = await whileBusy($, `Opening ${ticketName}`, () => activatedTicket($, ticketName))
-  await refreshChatBar($)
-  if (opened) await startedChatIn($, opened)
-}
-
-// Null when the ticket did not open: the failure stays above the line.
-async function activatedTicket($: EngineInterface, ticketName: string): Promise<TicketData | null> {
   try {
-    return await callTool<TicketData>($, 'ticket.activate', { ticket: ticketName })
+    const opened = await whileBusy($, `Opening ${ticketName}`, () => callTool<TicketData>($, 'ticket.activate', { ticket: ticketName }))
+    await refreshChatBar($)
+    await startedChatIn($, opened)
   } catch (failure) {
     await shownAsFailure($, `${ticketName} did not open`, `Opening ${ticketName} from the session list, calling ticket.activate`)(failure)
-    return null
+    await refreshChatBar($)
   }
 }
 

@@ -50,7 +50,7 @@ class Brand:
         """The folder of the marks the catalog wears: the brand's, else the bundled one."""
         return self.folder if self.folder is not None else _BUNDLED_BRAND
 
-    def apply(self, commons: Path) -> Path:
+    def copy_marks(self, commons: Path) -> Path:
         """Copy the brand's marks into the catalog's ``commons/brand``."""
         destination = self._made_folder(Path(commons) / "brand")
         shutil.copytree(self.marks, destination, dirs_exist_ok=True)
@@ -65,7 +65,7 @@ class Brand:
         """Wear the brand ``name`` names and copy its marks onto the catalog's commons in ``out_root``."""
         commons = self._made_folder(Path(out_root) / "commons")
         self.wear(name)
-        return self.apply(commons)
+        return self.copy_marks(commons)
 
     def copy_commons(self, out_root: Path) -> Path:
         """Copy the shared styles and scripts into ``out_root/commons``, then the brand's marks over them."""
@@ -73,7 +73,7 @@ class Brand:
         shutil.copytree(_COMMONS, commons, dirs_exist_ok=True)
         for stylesheet in _STYLESHEETS:
             shutil.copy2(_TEMPLATES / stylesheet, commons / stylesheet)
-        self.apply(commons)
+        self.copy_marks(commons)
         return commons
 
     def _made_folder(self, folder: Path) -> Path:

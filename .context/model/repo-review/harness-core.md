@@ -202,7 +202,7 @@ Inbound uses were found with `git grep -w` over Python, TypeScript and markdown 
 | AssetLocation (markdown.py:260) | AssetLocator (markdown.py:462-607) | MarkdownFile, Format, Name | - | in use |
 | AssetLocator (markdown.py:378) | Markdown (markdown.py:862, :925) | AssetLocation, Format, Name | - | in use |
 | YamlFields (markdown.py:614) | MarkdownText (:90), MarkdownCollection (:772), Markdown (:867, :905, :909) | Name | - | in use |
-| MarkdownCollection (markdown.py:731) | ToolSetCollection.attach (agent_tools.py:92), `@markdownCollection` (markdown.py:992) used by guidance | Markdown, MarkdownText, YamlFields, MarkdownProperty | named in `HOSTED_ONLY_CLASS_NAMES` | in use |
+| MarkdownCollection (markdown.py:731) | ToolSetCollection.attach (agent_tools.py:92), `@markdown_collection` (markdown.py:992) used by guidance | Markdown, MarkdownText, YamlFields, MarkdownProperty | named in `HOSTED_ONLY_CLASS_NAMES` | in use |
 | MarkdownTypeUnresolved (markdown.py:838) | raised markdown.py:956 | - | - | in use |
 | Markdown (markdown.py:848) | AgentTool (agent_tools.py:879), MarkdownCollection (:813), `@markdown` (markdown.py:979) used by Installer (installer.py:352-366) and 27 files | AssetLocator, MarkdownText, YamlFields, HTML, ExtractedMarkdown, Format, MarkdownProperty | - | in use |
 | MarkdownProperty (markdown.py:960) | Markdown.as_property (:949), MarkdownCollection.as_property (:822) | AnnotationKinds | copies annotations so wrapped members install | in use |

@@ -22,6 +22,7 @@ from harness.graph.schema_conformance import EXEMPT_FACT
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.code_read import PRODUCTION_FACT, CodeRead
+from cdd_guidance.practices.clean_engineering.model.compared_facts import ComparedFacts
 from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
@@ -67,6 +68,7 @@ class GraphReading(PracticeReading):
             CodeRead(self).read()
             self.model_documents.read()
         CallLinks(self).link()
+        ComparedFacts(self).record()
         self._exempt_test_code()
 
     def _exempt_test_code(self) -> None:
@@ -74,11 +76,11 @@ class GraphReading(PracticeReading):
         either: none of its nodes, and no folder holding only them, is held to the relationships its type requires."""
         requirements = self.in_graph.rule_run.schema.requirements
         for node in self.in_graph.nodes():
-            if not is_test_code(node.source.file) and node.data.get(PRODUCTION_FACT, True):
+            if not is_test_code(node.source.file) and node.get_fact(PRODUCTION_FACT, True):
                 continue
             fields = {requirement.field for requirement in requirements if node.type in requirement.owner.node_types}
             if fields:
-                node.set_fact(EXEMPT_FACT, sorted(fields | set(node.data.get(EXEMPT_FACT) or [])))
+                node.merge_fact(EXEMPT_FACT, list(fields))
 
 
 class CallLinks:
@@ -211,11 +213,15 @@ class ModelDocuments:
         for file in self._files():
             relative = file.relative_to(self._root).as_posix()
             report_progress(f"clean_engineering · model · {relative}")
-            self._models[relative] = self._model_in(file)
+            self._models[relative] = self._model_described_by(self._text_of(file))
 
-    def _model_in(self, file: Path) -> CleanEngineeringModel:
-        """The class model one document describes, read in the practice's model document format."""
-        return self._format().parse(file.read_text(encoding="utf-8"))
+    def _text_of(self, file: Path) -> str:
+        """The text of one model document, as it is on disk now."""
+        return file.read_text(encoding="utf-8")
+
+    def _model_described_by(self, text: str) -> CleanEngineeringModel:
+        """The class model a document's text describes, read in the practice's model document format."""
+        return self._format().parse(text)
 
     def described_member(self, owner: str, name: str) -> Operation | Property | None:
         """The operation or property a document describes as owner.name; none when none does. A graph read back from a
@@ -244,9 +250,3 @@ class ModelDocuments:
             dirnames[:] = [name for name in dirnames if not skips_folder(name)]
             folders.add(Path(dirpath))
         return folders
-
-
-def parameters_of(operation: Node) -> list[Node]:
-    """The parameters an operation takes, in the order it declares them: the nodes its hasParameter edges lead to, which
-    a graph read back from its saved file keeps too."""
-    return [edge.child for edge in operation.graph.edges.from_parent("hasParameter", operation)]

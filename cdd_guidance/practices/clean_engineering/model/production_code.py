@@ -30,6 +30,10 @@ _SUPPORT_LAST_WORDS = frozenset({"test", "fixture", "fixtures", "examples", "tie
 # A spec's helpers: a first word naming the tests, and a last word naming help (`spec_helpers`, `testUtils`).
 _HELPED_FIRST_WORDS = frozenset({"spec", "test"})
 _HELPER_LAST_WORDS = frozenset({"helper", "helpers", "support", "utils"})
+# Folders of examples a reader studies, such as the catalog's, which no production code runs.
+_EXAMPLE_FOLDERS = frozenset({"examples"})
+# The first word of a test double's name: `mock_repo.py`, `fake_clock.py`.
+_DOUBLE_FIRST_WORDS = frozenset({"mock", "fake"})
 # Java names its tests by a camel-case last word: `OrderTest`, `OrderTests`.
 _JAVA_TEST = re.compile(r"[a-z0-9]Tests?$")
 _WORD = re.compile(r"[A-Z]?[a-z0-9]+|[A-Z]+(?![a-z])")
@@ -75,6 +79,13 @@ class TestFileName:
         return self.words[-1] in _SUPPORT_LAST_WORDS
 
 
+    @property
+    def is_example(self) -> bool:
+        """Code kept to show or stand in, not to run: a file in an examples folder (`catalog/examples/ddd/tactics.ts`),
+        or a test double (`mock_repo.py`). Production rules still judge it; it is no part of a module's seam."""
+        return bool(_EXAMPLE_FOLDERS.intersection(self.folders)) or bool(self.words and self.words[0] in _DOUBLE_FIRST_WORDS)
+
+
 def is_spec_file(file: str | None) -> bool:
     """True for a file named as a spec or a test."""
     return TestFileName(file).is_spec
@@ -83,3 +94,9 @@ def is_spec_file(file: str | None) -> bool:
 def is_test_code(file: str | None) -> bool:
     """True for a spec, a test, or test support (see the module's description for the names that mark each)."""
     return TestFileName(file).is_test_code
+
+
+def is_example_code(file: str | None) -> bool:
+    """True for test code, or for example code or a test double (see ``TestFileName.is_example``)."""
+    name = TestFileName(file)
+    return name.is_test_code or name.is_example

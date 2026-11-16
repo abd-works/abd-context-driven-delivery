@@ -24,7 +24,7 @@ export class TicketPractices {
     const saved = await this.client(practice).enable(isEnabled)
     await this.page.reader.refresh()
     if (!saved) return false
-    if (!isEnabled) this.page.cards.dropPractice(this.ticket.name, practice)
+    if (!isEnabled) this.page.cards.dropPractice(this.ticket, practice)
     const name = this.page.board.practiceNamed(practice)?.name ?? practice
     this.page.store.toast(`${name} ${isEnabled ? 'on' : 'off'} for ${this.ticket.title} · saved to ${this.ticket.session.session_file}`)
     return true

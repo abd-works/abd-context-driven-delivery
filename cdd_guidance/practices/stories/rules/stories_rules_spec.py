@@ -12,6 +12,7 @@ from mamba import before, context, description, it
 
 from harness.graph.edge import EdgeType
 from harness.graph.graph import Graph, Node, Source
+from harness.graph.saved_graph import NodeIdentity
 from harness.graph.location import Location
 from harness.graph.rule_context import RuleCheckContext
 from harness.graph.rule_fixture import SchemaRuleRun
@@ -21,7 +22,7 @@ from cdd_guidance.practices.stories.rules.scenarios import AndChaining, Scenario
 
 def _scenario(practice, name: str = "Display Create Account") -> Node:
     """A scenario the practice holds, as a read holds it, so the graph's check reaches it."""
-    scenario = Node(practice, "Scenario", f"stories:Scenario:story.ts:{name}", name, Source("story.ts", 1, 1))
+    scenario = Node(practice, NodeIdentity(type="Scenario", node_id=f"stories:Scenario:story.ts:{name}", name=name), Source("story.ts", 1, 1))
     practice.reading.in_graph.hold(scenario)
     return scenario
 

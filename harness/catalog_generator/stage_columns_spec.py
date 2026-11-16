@@ -10,8 +10,8 @@ with description("the catalog board's stage columns"):
     with it("should walk the approach's stages in order"):
         expect(STAGE_COLUMNS.stages).to(equal(("discovery", "specification", "implementation")))
 
-    with it("should give the specification column its key in the page markup"):
-        expect(STAGE_COLUMNS.of(STAGES.of("specification")).key).to(equal("spec"))
+    with it("should head the specification column with the stage's title"):
+        expect(STAGE_COLUMNS.of(STAGES.of("specification")).label).to(equal("specification"))
 
     with it("should have no column for no stage"):
         expect(STAGE_COLUMNS.of(STAGES.of("validate"))).to(be_none)

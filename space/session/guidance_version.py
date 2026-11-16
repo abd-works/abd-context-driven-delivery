@@ -7,7 +7,8 @@ import time
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Iterator
 
-from space.session.guidance_selection import GUIDANCE_FIELD
+from harness.guidance.stages import STAGES
+from space.session.guidance_selection import GUIDANCE_FIELD, GuidanceSelection
 
 if TYPE_CHECKING:
     from space.session.session import Session
@@ -52,6 +53,29 @@ class GuidanceVersion:
         finally:
             self._is_batched = False
         self.changed()
+
+    def select(self, stages: list[str] | None, practices: list[str] | None, formats: list[str] | None) -> None:
+        """Select exactly these stages, practices, and format groups, each list in place of what was selected and a list
+        left out unchanged, raising the version once for the whole update."""
+        with self.batch():
+            if practices is not None:
+                self._select_practices(practices)
+            if stages is not None:
+                self.save(stages=[stage for stage in STAGES.names if stage in stages])
+            if formats is not None:
+                self._select_format_groups(formats)
+
+    def _select_practices(self, practices: list[str]) -> None:
+        """Turn on exactly the practices named, each changed only when it differs, so an unchanged one writes nothing."""
+        for output in self._session.own_practices.values():
+            if output.enabled != (output.name in practices):
+                output.enable(output.name in practices)
+
+    def _select_format_groups(self, formats: list[str]) -> None:
+        """Choose exactly the format groups named for every selected fidelity offering them."""
+        for group in GuidanceSelection(self._session).formats:
+            if group.is_selected != (group.label in formats):
+                group.select(group.label in formats)
 
     def wait_past(self, version: int) -> None:
         """Return once the version is past version: at once when it already is, else as soon as a change raises it, else

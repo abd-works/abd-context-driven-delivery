@@ -9,7 +9,7 @@ if str(_REPO_ROOT) not in sys.path:
 from expects import equal, expect
 from mamba import context, description, it
 
-from harness.guidance.practice_catalogue import PracticeCatalogue
+from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 
@@ -27,28 +27,28 @@ def _node_fidelities(practice) -> dict[str, list[str]]:
 with description("a practice's schema"):
     with context("of every practice"):
         with it("should name only fidelities the practice has"):
-            errors = {key: _fidelity_errors(PracticeCatalogue.create(key)) for key in PracticeCatalogue.keys()}
-            expect(errors).to(equal({key: [] for key in PracticeCatalogue.keys()}))
+            errors = {key: _fidelity_errors(PRACTICE_CATALOGUE.create(key)) for key in PRACTICE_CATALOGUE.names}
+            expect(errors).to(equal({key: [] for key in PRACTICE_CATALOGUE.names}))
 
     with context("of stories"):
         with it("should give map-level nodes to the story map and every higher fidelity"):
-            mapping = _node_fidelities(PracticeCatalogue.create("stories"))
+            mapping = _node_fidelities(PRACTICE_CATALOGUE.create("stories"))
             expect(mapping["epic"][0]).to(equal("story_map"))
 
         with it("should give scenario nodes to scenarios first"):
-            mapping = _node_fidelities(PracticeCatalogue.create("stories"))
+            mapping = _node_fidelities(PRACTICE_CATALOGUE.create("stories"))
             expect([mapping[node][0] for node in ("scenario", "step", "example")]).to(equal(["scenarios"] * 3))
 
     with context("of ddd"):
         with it("should give an entity the fidelity that creates it and every higher one"):
-            expect(_node_fidelities(PracticeCatalogue.create("ddd"))["entity"]).to(equal(["model", "tactics"]))
+            expect(_node_fidelities(PRACTICE_CATALOGUE.create("ddd"))["entity"]).to(equal(["model", "tactics"]))
 
         with it("should give the types the model draws, nested under the aggregate, to the model first"):
-            mapping = _node_fidelities(PracticeCatalogue.create("ddd"))
+            mapping = _node_fidelities(PRACTICE_CATALOGUE.create("ddd"))
             drawn = {mapping[name][0] for name in ("entityRoot", "entity", "valueObject", "repository")}
             expect(drawn).to(equal({"model"}))
 
         with it("should give the types tactics adds to tactics only"):
-            mapping = _node_fidelities(PracticeCatalogue.create("ddd"))
+            mapping = _node_fidelities(PRACTICE_CATALOGUE.create("ddd"))
             added = {tuple(mapping[name]) for name in ("domainEvent", "domainService", "factory", "specification")}
             expect(added).to(equal({("tactics",)}))

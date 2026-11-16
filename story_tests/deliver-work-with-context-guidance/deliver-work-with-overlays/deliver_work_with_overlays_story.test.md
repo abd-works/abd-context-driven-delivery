@@ -14,7 +14,7 @@ Story map: [Deliver Work With Overlays](../../../.context/story-map.md#e-deliver
 ### Domain terms
 
 - ++overlay++ — guidance laid on top of the practices, chosen for a session; today every overlay is a stack pattern registered with `PatternOverlays`.
-- ++overlays word++ — the `overlays=` word a command names the overlays in, comma separated (`guidance_actions.py` `overlays_named`).
+- ++overlays word++ — the `overlays=` word a command names the overlays in, comma separated (`guidance_actions.py` `GuidanceCommand.from_guidance`).
 - ++decorated fidelity++ — a practice fidelity an overlay adds its guidance and rules to (Intended).
 - ++overlay shared rules++ — the `## Shared rules` section of an overlay's markdown, such as `lern_domain_driven.md`.
 
@@ -57,7 +57,7 @@ Story map: [Deliver Work With Overlays](../../../.context/story-map.md#e-deliver
 | Source | Note |
 |--------|------|
 | User, 2026-11-14 | "select pattern overlay(s) for session" |
-| `harness/guidance_actions/guidance_actions.py:66` | `overlays_named`: no word keeps the session's overlays; an empty word clears them |
+| `harness/guidance_actions/guidance_actions.py` | `GuidanceCommand.overlays`: no word keeps the session's overlays; an empty word clears them |
 | `harness/guidance_actions/guidance_actions.py:238` | an action run with the word chooses those overlays on the session first |
 
 #### Scenario: Choose the overlays a command names
@@ -161,7 +161,7 @@ Observed for every fidelity today.
 | Source | Note |
 |--------|------|
 | User, 2026-11-14 | "generate with overlay rules" |
-| `cdd_guidance/actions/generate/generate.py:28` | Generate adds `_overlay_rules()` to its instructions |
+| `cdd_guidance/actions/generate/generate.py:28` | Generate adds `brief.overlay_rules()` to its instructions |
 | `harness/guidance_actions/guidance_actions.py:465` | each overlay's rules open with `## Pattern overlay: {name}` and hold its shared rules |
 
 #### Scenario: Add each chosen overlay's shared rules when generating
@@ -183,7 +183,7 @@ Observed.
 
 #### Scenario: Add an overlay's rules only to a fidelity it decorates
 
-Intended. Evidence still missing: `_overlay_rules` adds every chosen overlay to every fidelity.
+Intended. Evidence still missing: `SessionBrief.overlay_rules` adds every chosen overlay to every fidelity.
 
 *Given* checkout-flow's session overlays ++tdd++
 *When* the Agent generates ++stories-story-map++

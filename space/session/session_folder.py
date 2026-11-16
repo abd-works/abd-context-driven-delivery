@@ -6,7 +6,9 @@ import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from space.repo.repo import Repo
 from space.session.session_log import HookLog
+from space.session.violation_history import VIOLATION_HISTORY_FILE, ViolationHistory
 
 if TYPE_CHECKING:
     from space.session.session import Session
@@ -27,6 +29,13 @@ class SessionFolder:
         """The log called filename that a hook appends to while this session is open, such as dispatch.debug, in the
         ``logs`` folder of the session's folder."""
         return HookLog(self._session.session_path / _HOOK_LOGS_FOLDER / filename)
+
+    @property
+    def violation_history(self) -> ViolationHistory:
+        """The history of every graph hit this session's validations found, judged, and fixed, kept in its folder and
+        tracked with it, stamped with the commits of the checkout the session works in. Made from wherever the folder is
+        now, since a session's folder moves when it closes."""
+        return ViolationHistory(self._session.session_path / VIOLATION_HISTORY_FILE, Repo.of_project(self._session.work_root))
 
     def keep_file(self, file: Path) -> Path:
         """Move ``file`` into this session's folder, where it stays with the session's work until it becomes lasting
@@ -53,7 +62,7 @@ class SessionFolder:
     def remove(self) -> None:
         """Delete this session's folder, log, files, and all; its sessions no longer hold it."""
         shutil.rmtree(self._session.session_path)
-        self._session.sessions.removed(self._session)
+        self._session.sessions.held.removed(self._session)
         self._session.record.saved("removed")
 
     def _move_to(self, parent: Path) -> Session:
@@ -64,6 +73,6 @@ class SessionFolder:
         moved_from = session.session_path
         shutil.move(str(moved_from), str(parent / session.name))
         session.session_path = parent / session.name
-        session.sessions.moved(session, moved_from)
+        session.sessions.held.moved(session, moved_from)
         session.record.saved(f"moves to {parent.name}")
         return session

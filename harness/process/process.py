@@ -50,10 +50,10 @@ class _TcpRowOwnerPid(ctypes.Structure):
     ]
 
 
-class ListeningPorts:
+class _ListeningPorts:
     """Which process on this computer listens on which TCP port, as Windows' TCP table or ``ss -ltnp`` (elsewhere)
-    reports it now. A server that finds its port held asks it for the holder, and the instances script asks
-    it which ports each of its processes listens on."""
+    reports it now. An *ExclusivePort* asks it for the process holding the port, and a *RunningProcess* for the ports
+    it listens on."""
 
     def by_process(self) -> dict[int, list[int]]:
         """Each listening process's id, with the ports it listens on."""
@@ -62,9 +62,9 @@ class ListeningPorts:
             heard.setdefault(pid, set()).add(port)
         return {pid: sorted(ports) for pid, ports in heard.items()}
 
-    def holder(self, port: int) -> StoppableProcess | None:
+    def holder(self, port: int) -> RunningProcess | None:
         """The process listening on port; none when no process does, or none this computer reports."""
-        return next((StoppableProcess(pid) for pid, heard in self._listeners() if heard == port), None)
+        return next((RunningProcess(pid) for pid, heard in self._listeners() if heard == port), None)
 
     def _listeners(self) -> list[tuple[int, int]]:
         if sys.platform == "win32":
@@ -113,9 +113,9 @@ class ExclusivePort:
         self.host = host
         self.port = port
 
-    def holder(self) -> StoppableProcess | None:
+    def holder(self) -> RunningProcess | None:
         """The process listening on this port now; none when none is."""
-        return ListeningPorts().holder(self.port)
+        return _ListeningPorts().holder(self.port)
 
     def connect(self, reply_seconds: float) -> socket.socket:
         """A connection to the server listening on this port, which then waits up to reply_seconds for each reply.
@@ -212,8 +212,9 @@ class BackgroundStart:
 
 
 class RunningProcess:
-    """A process by its id, to ask whether it is still running. A hook server's lock file, a daemon's address file,
-    and the instances script all name a process this way."""
+    """A process by its id, to ask whether it is still running and which ports it listens on, and to stop it. A hook
+    server's lock file, a daemon's address file, and the instances script all name a process this way. An id of 0 and
+    this process's own id are never signalled: a blank or stale file must not end the process that reads it."""
 
     def __init__(self, pid: int) -> None:
         self.pid = int(pid or 0)
@@ -248,20 +249,10 @@ class RunningProcess:
             kernel.CloseHandle(handle)
         return not answered or code.value == _STILL_ACTIVE
 
-
-class ProcessNotStopped(Exception):
-    """A process was asked to stop and is still running."""
-
-    def __init__(self, pid: int, cause: BaseException | None = None) -> None:
-        reason = f": {cause}" if cause is not None else ""
-        super().__init__(f"process {pid} is still running after it was asked to stop{reason}")
-        self.pid = pid
-        self.cause = cause
-
-
-class StoppableProcess(RunningProcess):
-    """A process by its id that this one may end, such as the server an address file names. An id of 0 and this
-    process's own id are never signalled: a blank or stale file must not end the process that reads it."""
+    @property
+    def listening_ports(self) -> list[int]:
+        """The TCP ports the process listens on now, in order."""
+        return _ListeningPorts().by_process().get(self.pid, [])
 
     def stop(self, wait_seconds: float) -> None:
         """End the process and wait up to ``wait_seconds`` for it to exit. A process already gone needs nothing."""
@@ -281,3 +272,14 @@ class StoppableProcess(RunningProcess):
             if time.monotonic() >= deadline:
                 raise ProcessNotStopped(self.pid)
             time.sleep(_POLL_SECONDS)
+
+
+class ProcessNotStopped(Exception):
+    """A process was asked to stop and is still running."""
+
+    def __init__(self, pid: int, cause: BaseException | None = None) -> None:
+        reason = f": {cause}" if cause is not None else ""
+        super().__init__(f"process {pid} is still running after it was asked to stop{reason}")
+        self.pid = pid
+        self.cause = cause
+

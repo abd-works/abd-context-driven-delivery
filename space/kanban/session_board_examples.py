@@ -24,7 +24,7 @@ from pathlib import Path
 
 import cdd_guidance.actions  # noqa: F401 - registers the actions and the practices, as the cdd server does when it loads every toolset
 import cdd_guidance.patterns  # noqa: F401 - registers the patterns with the graph's pattern overlays, as the cdd server does when it loads every toolset
-from harness.process.git import Git
+from harness.git.git import Git
 from harness.graph.saved_graph import SavedGraph, SavedNode, SavedPractice
 from harness.graph.location import Location
 from harness.graph.violation import FoundBy, FoundOn, Violation
@@ -512,7 +512,7 @@ class MockCheckout:
         self._project = project
         self.held = MockGit(project.root)
         # The board finds the project's repository where it finds every checkout's, so it works on the mock from now on.
-        self.held.serve(project.root)
+        self.repo = self.held.serve(project.root)
 
     def seed_git_checkout(self) -> None:
         self.held.make_clone()
@@ -521,7 +521,7 @@ class MockCheckout:
         self.held.origin.add()
 
     def seed_branch(self, name: str, checked_out: bool, pushed: bool) -> None:
-        self.held.add_branch(name)
+        self.held.branches.add(name)
         if checked_out:
             self.held.check_out(self.held.root, name)
         if pushed:
@@ -534,7 +534,7 @@ class MockCheckout:
         return self.held.branch_of(folder.resolve())
 
     def uncommitted(self, path: str) -> list[str]:
-        return self.held.uncommitted(self.held.root, self.held.root / path if path else None)
+        return self.repo.working_tree.uncommitted(self.held.root / path if path else None)
 
     def origin_log(self, branch: str) -> list[str]:
         return list(reversed(self.held.origin.logs.get(branch, [])))
@@ -543,10 +543,10 @@ class MockCheckout:
         return sorted(path for path in self.held.origin.trees.get(branch, {}) if path == under or path.startswith(f"{under}/"))
 
     def has_branch(self, name: str) -> bool:
-        return self.held.has_branch(name)
+        return self.held.branches.has(name)
 
     def origin_has_branch(self, name: str) -> bool:
-        return self.held.origin.has_branch(name)
+        return self.held.origin.has(name)
 
 
 def seed_surface_fixture(project: SessionsProject) -> None:

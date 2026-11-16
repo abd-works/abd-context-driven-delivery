@@ -12,7 +12,7 @@ import stat
 import time
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any, Callable, ClassVar, Literal, TypeAlias, TypeVar, get_args, get_origin, get_type_hints
+from typing import Any, Callable, ClassVar, Generic, Literal, TypeAlias, TypeVar, get_args, get_origin, get_type_hints
 
 from harness.annotations.class_folder import class_folder
 from harness.annotations.name import Name
@@ -31,13 +31,14 @@ __all__ = [
     "MarkdownTypeUnresolved",
     "SOURCE_STAMPS",
     "markdown",
-    "markdownCollection",
+    "markdown_collection",
 ]
 
 _F = TypeVar("_F", bound=Callable[..., Any])
-# The object a markdown section belongs to, such as a practice, a fidelity, or an action: its class's folder holds the
-# markdown, and it may hand over the scope it reads it in (``markdown_scope``).
-MarkdownOwner: TypeAlias = object
+# The class whose objects a markdown section belongs to, such as a practice, a fidelity, or an action: its folder holds
+# the markdown, and it may hand over the scope it reads it in (``markdown_scope``). Any class can own markdown, so the
+# markdown parts are generic in their owner's class.
+Owner = TypeVar("Owner")
 # What a markdown property's operation says it returns: a class, a generic such as ``list[Rule]``, or nothing written.
 ReturnAnnotation: TypeAlias = Any
 
@@ -505,7 +506,7 @@ class MarkdownScope:
         return cls(folder, declared if isinstance(declared, str) and declared else folder.name)
 
     @classmethod
-    def of(cls, owner: MarkdownOwner) -> MarkdownScope:
+    def of(cls, owner: Owner) -> MarkdownScope:
         """The scope owner hands its markdown; the markdown beside its class when it hands none."""
         handed = getattr(type(owner), "markdown_scope", None)
         if isinstance(handed, property):
@@ -725,13 +726,13 @@ class YamlFields:
 
 
 @hosted_only
-class MarkdownCollection:
+class MarkdownCollection(Generic[Owner]):
     """Listed or keyed extracts that keep the original markdown."""
 
     def __init__(
         self,
         entries: dict[str, Any] | list[Any] | None = None,
-        parent: MarkdownOwner | None = None,
+        parent: Owner | None = None,
     ) -> None:
         self.parent = parent
         self._markdown = ""
@@ -764,7 +765,7 @@ class MarkdownCollection:
         return None
 
     @classmethod
-    def from_markdown(cls, text: str, parent: MarkdownOwner | None = None) -> MarkdownCollection:
+    def from_markdown(cls, text: str, parent: Owner | None = None) -> MarkdownCollection:
         collection = cls(parent=parent)
         made = ((name, collection.child(name, body)) for name, body in MarkdownText(text).section_child_blocks())
         collection._adopt({name: entry for name, entry in made if entry is not None})
@@ -772,7 +773,7 @@ class MarkdownCollection:
         return collection
 
     @classmethod
-    def from_section(cls, markdown: Markdown, return_type: ReturnAnnotation, parent: MarkdownOwner | None = None) -> Any:
+    def from_section(cls, markdown: Markdown, return_type: ReturnAnnotation, parent: Owner | None = None) -> Any:
         """The collection a property's section holds, as return_type reads it: a list type as this collection's
         entries, a type with its own ``from_markdown`` through that, keeping the section's text."""
         text = markdown.document.text
@@ -786,7 +787,7 @@ class MarkdownCollection:
             result.markdown = text
         return result
 
-    def attach(self, instance: MarkdownOwner, name: str | None = None) -> None:
+    def attach(self, instance: Owner, name: str | None = None) -> None:
         self.parent = instance
         previous = vars(instance).get(name) if name else None
         if name is not None:
@@ -809,10 +810,10 @@ class MarkdownTypeUnresolved(TypeError):
         super().__init__(f"{self.property_name}: annotations {self.annotations!r} do not resolve: {cause}")
 
 
-class Markdown:
+class Markdown(Generic[Owner]):
     """One labelled section of an owner's markdown, located from the scope the owner hands over and read once."""
 
-    def __init__(self, instance: MarkdownOwner, label: str, scope: MarkdownScope) -> None:
+    def __init__(self, instance: Owner, label: str, scope: MarkdownScope) -> None:
         self._instance = instance
         self._label = label
         self._scope = scope
@@ -820,13 +821,13 @@ class Markdown:
     _HELD_AS = "_held_markdown"
 
     @classmethod
-    def from_label(cls, instance: MarkdownOwner, label: str, scope: MarkdownScope | None = None) -> Markdown:
+    def from_label(cls, instance: Owner, label: str, scope: MarkdownScope | None = None) -> Markdown:
         """Markdown for ``label`` on ``instance``, in scope when given (``MarkdownScope.of(instance).at(fidelity,
         format)`` reads another fidelity's or format's assets), else in the scope instance reads in now."""
         return cls(instance, label, scope if scope is not None else MarkdownScope.of(instance))
 
     @classmethod
-    def held_by(cls, owner: MarkdownOwner, label: str) -> Markdown:
+    def held_by(cls, owner: Owner, label: str) -> Markdown:
         """The Markdown of label on owner at the scope owner reads it in now, made the first time and kept on owner, so
         a second read answers from the text the first found. A scope owner moves to, such as another fidelity or
         format, has a Markdown of its own, made when it is first read."""
@@ -873,7 +874,7 @@ class Markdown:
         from_markdown = getattr(return_type, "from_markdown", None)
         return self.built_by(from_markdown, text, self._instance) if callable(from_markdown) else text
 
-    def built_by(self, from_markdown: Callable[..., Any], text: str, parent: MarkdownOwner) -> Any:
+    def built_by(self, from_markdown: Callable[..., Any], text: str, parent: Owner) -> Any:
         """What from_markdown makes of text. A type read with the object it belongs to, such as a practice's rules,
         takes that object as its parent."""
         if "parent" in inspect.signature(from_markdown).parameters:
@@ -914,24 +915,18 @@ class Markdown:
         return hints.get("return", default)
 
 
-class OperationProperty:
-    """A property made from an operation whose body is empty: its value comes from the reader it is given, such as the
-    operation's section of its owner's markdown or the same property of a collection's children, and it carries the
-    operation's name, docstring, annotations, and copied annotations, so it installs the way the operation would."""
+def operation_property(operation: Callable[..., Any], read: Callable[[Any], Any]) -> property:
+    """A property made from an operation whose body is empty: its value comes from read, such as the operation's
+    section of its owner's markdown or the same property of a collection's children, and it carries the operation's
+    name, docstring, annotations, and copied annotations, so it installs the way the operation would."""
+    def getter(owner: Any) -> Any:
+        return read(owner)
 
-    def __init__(self, operation: Callable[..., Any]) -> None:
-        self._operation = operation
-
-    def reading(self, read: Callable[[Any], Any]) -> property:
-        """A property whose getter is read, wrapped to look like the operation."""
-        def getter(owner: Any) -> Any:
-            return read(owner)
-
-        getter.__doc__ = self._operation.__doc__
-        getter.__name__ = self._operation.__name__
-        getter.__annotations__ = dict(getattr(self._operation, "__annotations__", {}))
-        annotation_kinds.copy_annotations(self._operation, getter)
-        return property(getter)
+    getter.__doc__ = operation.__doc__
+    getter.__name__ = operation.__name__
+    getter.__annotations__ = dict(getattr(operation, "__annotations__", {}))
+    annotation_kinds.copy_annotations(operation, getter)
+    return property(getter)
 
 
 def _section_text(operation: _F, label: str) -> property:
@@ -942,7 +937,7 @@ def _section_text(operation: _F, label: str) -> property:
         section = Markdown.held_by(owner, label)
         return section.read_for(operation, str)
 
-    return OperationProperty(operation).reading(read)
+    return operation_property(operation, read)
 
 
 def _section_collection(operation: _F, label: str) -> property:
@@ -962,7 +957,7 @@ def _section_collection(operation: _F, label: str) -> property:
             vars(owner)[operation.__name__] = result
         return result
 
-    return OperationProperty(operation).reading(read)
+    return operation_property(operation, read)
 
 
 def _labelled(build: Callable[[_F, str], property], operation_or_label: _F | str | None, label: str | None) -> property | Callable[[_F], property]:
@@ -977,7 +972,7 @@ def markdown(operation_or_label: _F | str | None = None, *, label: str | None = 
     return _labelled(_section_text, operation_or_label, label)
 
 
-def markdownCollection(operation_or_label: _F | str | None = None, *, label: str | None = None) -> property | Callable[[_F], property]:
-    """``@markdownCollection`` or ``@markdownCollection("label")``: the operation's value is its owner's section under
+def markdown_collection(operation_or_label: _F | str | None = None, *, label: str | None = None) -> property | Callable[[_F], property]:
+    """``@markdown_collection`` or ``@markdown_collection("label")``: the operation's value is its owner's section under
     that label, read as a collection and kept on the owner."""
     return _labelled(_section_collection, operation_or_label, label)

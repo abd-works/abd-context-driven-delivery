@@ -1,6 +1,6 @@
 import type { EngineInterface } from 'claude-code'
 
-import { SERVER } from '../health/server-health-client'
+import { callToolText } from '../shared/cdd-tool'
 
 // A page this chat opens names its repository, so one app server can serve every repository.
 export const PROJECT_QUERY = 'project'
@@ -44,10 +44,5 @@ export async function projectPageUrl($: EngineInterface, url: string, query: Rec
 // the chat bar and its pages show. A failed call is the server's own text.
 export async function post($: EngineInterface, { chat, operation, body }: ChatRequest): Promise<{ ok: boolean; text: string }> {
   const tool = `chat.${operation.replace('-', '_')}`
-  const result = await $.mcp.call(SERVER, tool, { chat, ...body })
-  const text = result.content[0]?.text ?? ''
-  if (result.isError) throw new ChatCallFailed(`${tool} failed: ${text || 'cdd sent back no reason'}`)
-  return { ok: true, text }
+  return { ok: true, text: await callToolText($, tool, { chat, ...body }) }
 }
-
-export class ChatCallFailed extends Error {}

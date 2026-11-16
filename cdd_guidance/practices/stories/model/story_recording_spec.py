@@ -34,7 +34,7 @@ with description("a story map recorded on a graph"):
         epic.stories.append(story)
         model.epics.append(epic)
         graph = Graph()
-        graph.open(Path(str(self.root)))
+        graph.reads.open(Path(str(self.root)))
         practice = graph.practice("stories")
         model.record(practice)
         self.practice = practice
@@ -52,7 +52,7 @@ with description("a story map recorded on a graph"):
         scenario = self.practice.reading.in_graph.nodes("Scenario")[0]
         steps = [
             edge.child
-            for edge in self.practice.reading.in_graph.edges("steps")
+            for edge in self.practice.reading.in_graph.edge_index.of("steps")
             if edge.parent is scenario
         ]
         expect(len(steps)).to(equal(3))
@@ -72,7 +72,7 @@ with description("a merged story map whose two maps each hold a story a story te
         read.scenarios = [Scenario("Happy path")]
         model.test_scenarios.take([read], "tests/submit_order_story.test.ts")
         graph = Graph()
-        graph.open(Path(self.tmp.name))
+        graph.reads.open(Path(self.tmp.name))
         self.practice = graph.practice("stories")
         model.record(self.practice)
 
@@ -81,7 +81,7 @@ with description("a merged story map whose two maps each hold a story a story te
 
     with it("should record the story test's scenario under both stories"):
         scenario = self.practice.reading.in_graph.nodes("Scenario")[0]
-        stories = [edge.parent for edge in self.practice.reading.in_graph.edges("scenarios") if edge.child is scenario]
+        stories = [edge.parent for edge in self.practice.reading.in_graph.edge_index.of("scenarios") if edge.child is scenario]
         expect(len(stories)).to(equal(2))
 
 
@@ -95,7 +95,7 @@ def _imports_of(root: Path, file: str, text: str) -> dict:
     model.epics.append(epic)
     model.sources.add(file, text)
     graph = Graph()
-    graph.open(Path(str(root)))
+    graph.reads.open(Path(str(root)))
     practice = graph.practice("stories")
     model.record(practice)
     return practice.reading.in_graph.nodes("Story")[0].get_fact("imported_modules")

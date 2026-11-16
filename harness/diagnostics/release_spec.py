@@ -13,7 +13,7 @@ from mamba import after, before, context, description, it
 from harness.diagnostics.cdd_version import CddVersion
 from harness.diagnostics.release import CddRelease, ReleaseAlreadyTagged, ReleaseOnRed
 from harness.diagnostics.test_runs import RunOutcome, TestRun, TestRunRecord, TestTier
-from harness.process.git import RepoConnectError
+from harness.git.git import RepoConnectError
 
 HEAD = "f00dfeed1234"
 STARTED = datetime(2026, 11, 15, 9, 0, tzinfo=timezone.utc)

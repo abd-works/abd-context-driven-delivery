@@ -149,19 +149,32 @@ project: Path | None
 chat: ChatPointer | None
 session: Session | None
 	// the session saved as open in the project's checkout, read once for this call; none when the call names no project or no opener is registered
-	-> SessionOpener.open_in(self)
+	-> SessionOpening.open_in(self)
 ----
 sent(arguments: dict | None, project: Path | None): ToolCall
 	// the chat named in the arguments is taken out and kept as the call's chat
 	-> ChatPointer.taken_from
-open_sessions_with(opener: SessionOpener): None
-	// space/session registers its opener when it is imported, so this module never imports space
-session_in(project: Path): Session | None
-	// the session saved as open in project's checkout, for work that serves no call, such as a hook event or a probe
-	-> SessionOpener.saved_in(project)
 session_named(session_file: str): Session
 	// the session a board command names by its session.json
-	-> SessionOpener.named_in(session_file, self)
+	-> SessionOpening.named_in(session_file, self)
+
+## SessionOpening                                                <!-- Md -->
+
+How the process's calls open their sessions: the one *SessionOpener* space/session registers when it is imported, so this module never imports space. The process keeps one, `SESSION_OPENING`.
+
+SessionOpening()
+------
+opener: SessionOpener | None
+----
+open_with(opener: SessionOpener): None
+	// space/session registers its opener when it is imported
+saved_in(project: Path): Session | None
+	// the session saved as open in project's checkout, for work that serves no call, such as a hook event or a probe
+	-> SessionOpener.saved_in(project)
+open_in(call: ToolCall): Session | None
+	-> SessionOpener.open_in(call)
+named_in(session_file: str, call: ToolCall): Session
+	-> SessionOpener.named_in(session_file, call)
 	// raises SessionsNotLoaded when no opener is registered
 
 ## SessionOpener                                                 <!-- Md -->

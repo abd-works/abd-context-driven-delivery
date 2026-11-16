@@ -15,3 +15,41 @@ That took `Ticket` from 48 methods and a total complexity of 143 to 33 methods a
 Each published method is one line that asks a part, or the few lines that decide a column or a move from what the parts answer. The one private method left, `_return_to_backlog`, is shared by `move_previous` and `move_to`.
 
 Revisit when the harness can publish a held part's tools under its owner's name: then the checkout's five tools can move onto `TicketCheckout` without renaming them, and `Ticket` drops under 30.
+
+## Version 1 refactoring: four more parts
+
+The Clean Engineering review of the version 1 refactoring found `Ticket` still changing for many reasons: its parent and child tree, its file listings and format and overlay choices, its stage moves, and closing, archiving, deleting, and shelving it. Each is now a part made once with the ticket, and each published tool or data field asks one of them in one line:
+
+- *TicketTree* (`ticket.tree`, `ticket_tree.py`, with `ParentMovesWithChildrenError`, `NotAChildError`, and `ParentLoopError`): its ancestors, the tickets it can become a child of, whether it is stacked, the stage of its child furthest back, refusing to move a parent, and `add_child`, `pull_out`, and `reassign_parent`.
+- *TicketChoices* (`ticket.choices`, `ticket_choices.py`): `fidelity_files`, `root_files`, `format_choices`, `choose_formats`, `overlay_choices`, and `choose_overlays`.
+- *TicketMoves* (`ticket.moves`): `move_next`, `move_previous`, `move_to`, and where Move next and Move previous put it (`next_place`, `previous_place`).
+- *TicketEnding* (`ticket.ending`): `close`, `archive`, `delete`, and `to_backlog`, each refusing main.
+
+The published names still sit on `Ticket`, for the reason above: a toolset publishes a tool under its own class's name, and the generated TypeScript `TicketData` reads its data fields by key. What changes when a tree rule, a choice, a move, or an ending changes is now the part, not the ticket.
+
+The same holds for `Board` (`board.folders`, `board.help`, `board.save_again`, `board.set_sends_fixes_directly`), `Repo` (`repo.push_commit`, `push_work`, `merge_to_main`, `push_to_main`, which ask its *Publishing*), `Session` (the graph tools, which ask its *SessionExplorer*; its graph and practices, which are its *PracticeOutputs*; a guidance selection's update, which its *GuidanceVersion* makes), and `Sessions` (`sessions.current` and `sessions.switch`, which ask its *OpenSessions*): each keeps its published names and asks the part that owns the reason to change.
+
+## Version 1 refactoring, round 2: tools declared by job on mixed-in bases
+
+The second Clean Engineering review still counted `Ticket` (28 public operations), `Session` (32), and `BacklogItem` (14) over the nine a class should expose, because every published tool was declared on the class itself. A toolset publishes every tool its class's bases declare, under its own name, so the declarations now sit by job on bases mixed in ahead of the class's own base. Each base is `@hosted_only`, so install and the hook server load no toolset of it on its own, and each tool on it is still one line that asks the part owning the work. Every published name, signature, and data field is unchanged.
+
+- `Ticket`: *TicketCheckoutTools* (`branch`, `work_branch`, `assign_chat`, `close_choices`, `activate`), *TicketChoiceTools* (`fidelity_files`, `root_files`, `format_choices`, `choose_formats`, `overlay_choices`, `choose_overlays`), *TicketMoveTools* (`move_next`, `move_previous`, `move_to`, `move_before`), *TicketTreeTools* (`add_child`, `pull_out`, `reassign_parent`), *TicketEndingTools* (`close`, `archive`, `delete`), and *TicketTextTools* (`edit_text`, `tag`). `ticket.violations` asks its *TicketWork* (`work.violations`).
+- `Session`: *SessionFileTools*, *SessionGraphTools*, *SessionGuidanceTools*, *SessionLogTools*, and *SessionDecisionTools*.
+- `BacklogItem`: *BacklogOrderTools* (`move_before`, `move_after`). Its `move_next` and `move_previous`, which only a spec called, are gone, with `Card`'s abstract pair; `from_ticket` writes the idea file a ticket never had, so `write_if_missing` is gone too.
+
+The operations that were not tools moved into parts instead:
+
+- `Board` keeps its six tools, its loader, `column`, and `stage`. Finding and opening tickets (`ticket`, `ticket_called`, `open_ticket`) and starting a new read (`reread`) are its *CardPlacement* (`board.placement`), which now holds the current read; finding a backlog item (`backlog_item`, `backlog_item_called`) is that read, its *BoardReads* (`board.reads`).
+- `Repo` keeps its five published tools, its `of_project` loader, `path_from_top`, and `branch_named`; its refs are its *Refs* (`repo.refs.has`), its uncommitted work and committing it are its *WorkingTree* (`repo.working_tree`: `is_dirty`, `is_merging`, `commit`), and the repository of another checkout is `repo.worktrees.repository_at(folder)`; `MockGit` keeps its branches in its *HeldBranches* (`held.branches`).
+- `Sessions` lists its sessions through its *SessionListing* (`sessions.listing`) and keeps the sessions this process holds in its *HeldSessions* (`sessions.held`); a fidelity's *FidelitySessionOutput* answers for the files it wrote through its *WrittenFiles* (`session_output.written`).
+
+## Version 1 refactoring, round 3: no tool base that only forwards
+
+The third Clean Engineering review found four of the round 2 bases only forwarding: *TicketChoiceTools* to *TicketChoices*, *TicketTreeTools* to *TicketTree*, *TicketEndingTools* to *TicketEnding*, and *SessionGraphTools* to *SessionExplorer*. Moving the declarations onto bases had only moved the forwarding layer; it had not removed it. The harness still publishes a tool only under the name of the class whose bases declare it, so a held part cannot publish under its owner's name, and the forwarding is folded into the part instead:
+
+- *TicketChoices* (`ticket_choices.py`) is the base mixed into `Ticket`, and its tools read the ticket's work and session themselves; `ticket.choices` is gone.
+- *TicketEnding* is the base mixed into `Ticket`, with `close`, `archive`, `delete`, and `to_backlog`; `ticket.ending` is gone, and *TicketMoves* asks the ticket (`ticket.close`, `ticket.to_backlog`).
+- *TicketTreeTools* makes the tree changes itself (`add_child`, `pull_out`, `reassign_parent`); *TicketTree* (`ticket.tree`) keeps where the ticket sits: its ancestors, the parents it may take, whether it is stacked, and its child furthest back.
+- *SessionExplorer* (`session_explorer.py`) is the base mixed into `Session`, whose graph tools read the session's graph themselves; `session.explorer` is gone.
+
+Every published name, argument, description, and data field is unchanged, checked by comparing the toolset's members and data fields before and after.

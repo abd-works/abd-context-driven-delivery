@@ -22,7 +22,7 @@ from mamba import after, before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentToolSet
 from harness.mcp.mcp_server import McpHost
-from harness.process.git import Git, RepoConnectError
+from harness.git.git import Git, RepoConnectError
 from space.repo.latest_release import LatestRelease
 from space.repo.repo import Repo
 
@@ -43,14 +43,14 @@ with description("a Repo"):
         with it("should commit work on the branch checked out"):
             self.repo.branch_named("session/demo").check_out()
             (self.clone / "a.py").write_text("work\n", encoding="utf-8")
-            self.repo.commit([str(self.clone / "a.py")], "demo turn", untracked=True)
+            self.repo.working_tree.commit([str(self.clone / "a.py")], "demo turn", untracked=True)
             expect(_git(self.clone, "log", "-1", "--pretty=%s", "session/demo")).to(equal("demo turn"))
 
         # (S) Repo --> Merge Branch
         with it("should merge another branch into the branch checked out"):
             self.repo.branch_named("session/demo").check_out()
             (self.clone / "a.py").write_text("work\n", encoding="utf-8")
-            self.repo.commit([str(self.clone / "a.py")], "demo turn", untracked=True)
+            self.repo.working_tree.commit([str(self.clone / "a.py")], "demo turn", untracked=True)
             self.repo.branch_named("main").check_out()
             self.repo.merges.merge_from(self.repo.branch_named("session/demo"), message="merge demo")
             expect(_git(self.clone, "ls-tree", "--name-only", "main")).to(contain("a.py"))
@@ -80,7 +80,7 @@ with description("a Repo"):
             with before.each:
                 self.repo.branch_named("session/demo").check_out()
                 (self.clone / "a.py").write_text("work\n", encoding="utf-8")
-                self.repo.commit([str(self.clone)], "first turn", untracked=True)
+                self.repo.working_tree.commit([str(self.clone)], "first turn", untracked=True)
                 self.repo.origin.push_upstream()
                 self.elsewhere = _clone_of(self.origin, Path(self.tmp.name) / "elsewhere", "session/demo")
                 (self.elsewhere / "b.py").write_text("from elsewhere\n", encoding="utf-8")
@@ -88,7 +88,7 @@ with description("a Repo"):
                 _git(self.elsewhere, "commit", "-m", "elsewhere turn")
                 _git(self.elsewhere, "push", "origin", "session/demo")
                 (self.clone / "a.py").write_text("more work\n", encoding="utf-8")
-                self.repo.commit([str(self.clone)], "second turn", untracked=True)
+                self.repo.working_tree.commit([str(self.clone)], "second turn", untracked=True)
 
             with it("should take that commit in when it pushes"):
                 self.repo.origin.push_upstream()
@@ -120,14 +120,14 @@ with description("a Repo"):
                 log = self.clone / ".sessions" / "main" / "session.log"
                 log.parent.mkdir(parents=True)
                 log.write_text("start\n", encoding="utf-8")
-                self.repo.commit([str(self.clone)], "log start", untracked=True)
+                self.repo.working_tree.commit([str(self.clone)], "log start", untracked=True)
                 self.repo.origin.push_upstream()
                 self.repo.branch_named("session/demo").check_out()
                 log.write_text("start\non the branch\n", encoding="utf-8")
-                self.repo.commit([str(self.clone)], "branch line", untracked=True)
+                self.repo.working_tree.commit([str(self.clone)], "branch line", untracked=True)
                 self.repo.branch_named("main").check_out()
                 log.write_text("start\non main\n", encoding="utf-8")
-                self.repo.commit([str(self.clone)], "main line", untracked=True)
+                self.repo.working_tree.commit([str(self.clone)], "main line", untracked=True)
                 self.repo.merges.merge_from(self.repo.branch_named("session/demo"), message="merge demo")
                 self.merged = log.read_text(encoding="utf-8")
 
@@ -143,11 +143,11 @@ with description("a Repo"):
                 log = self.clone / ".sessions" / "main" / "session.log"
                 log.parent.mkdir(parents=True)
                 log.write_text("start\n", encoding="utf-8")
-                self.repo.commit([str(self.clone)], "log start", untracked=True)
+                self.repo.working_tree.commit([str(self.clone)], "log start", untracked=True)
                 self.repo.origin.push_upstream()
                 self.repo.branch_named("session/demo").check_out()
                 log.write_text("start\non the branch\n", encoding="utf-8")
-                self.repo.commit([str(self.clone)], "branch line", untracked=True)
+                self.repo.working_tree.commit([str(self.clone)], "branch line", untracked=True)
                 self.repo.branch_named("main").check_out()
                 log.write_text("start\nnot committed\n", encoding="utf-8")
                 self.repo.branch_named("session/demo").switch_to()
@@ -238,9 +238,9 @@ with description("Repo dirty detection"):
         git.run("commit", "-m", "track log")
         log.write_text("more trail\n", encoding="utf-8")
         repo = Repo(tmp)
-        expect(repo.is_dirty()).to(equal(False))
+        expect(repo.working_tree.is_dirty()).to(equal(False))
         (tmp / "real.txt").write_text("keep", encoding="utf-8")
-        expect(repo.is_dirty()).to(equal(True))
+        expect(repo.working_tree.is_dirty()).to(equal(True))
 
 
 # (E) Open Work Session

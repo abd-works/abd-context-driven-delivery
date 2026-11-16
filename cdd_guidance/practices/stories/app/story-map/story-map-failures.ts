@@ -1,16 +1,10 @@
 import { ChatToldFailures } from '@cdd/cdd-page-failures'
 
-import { StoryMapApi, type Send } from './story-map-api'
-
 // What failed on the Story UI page: shown on the page until the person dismisses it, and sent to the chat that opened
-// the page, once each.
+// the page, once each, through the StoryMapApi the page makes for it (main.tsx).
 export class StoryMapFailures extends ChatToldFailures {
   private shownFailure: string | null = null
   private readonly listeners = new Set<() => void>()
-
-  constructor(chat: string, send?: Send) {
-    super(chat, notTold => new StoryMapApi(notTold, send))
-  }
 
   get shown(): string | null {
     return this.shownFailure

@@ -1,5 +1,7 @@
 # The catalogues are registries of the classes a package registers
 
+**Superseded** by `0005-the-catalogues-are-instances-of-one-registry.md`: the registries are now instances the process holds once, sharing one *ClassRegistry*.
+
 The round-6 review (harness core, row 3) flagged `PracticeCatalogue` and `ActionCatalogue` for answering through class operations, and asked for one catalogue instance that the MCP host holds and hands to its callers.
 
 The catalogues stay registries held by their classes. What they hold is a fact of the process, like a class definition: the package that defines the practices (`cdd_guidance/practices/__init__.py`) and the package that defines the actions (`cdd_guidance/actions/__init__.py`) register their classes when they are imported, and the framework never imports them.
@@ -7,7 +9,7 @@ The catalogues stay registries held by their classes. What they hold is a fact o
 ## Why the registry is held by the class
 
 - **Every process needs the same list, and only one of them is the MCP host.** The hook daemon (prompt notify), the catalog generator's command line, the installer, the diagnostics probes, the agent BDD harness and every spec read the practices and actions too. An instance held by the MCP host does not reach them; each would have to rebuild it from the same registration, which is a second owner of one list.
-- **The framework cannot import what it lists.** `harness/` imports nothing from `cdd_guidance/`, so the list arrives by registration at import time. A registration that the importing module makes has to land somewhere every later reader can find without being handed it; the class is that place, as `ToolCall.open_sessions_with` and `ActionCatalogue.run_actions_with` are for their seams.
+- **The framework cannot import what it lists.** `harness/` imports nothing from `cdd_guidance/`, so the list arrives by registration at import time. A registration that the importing module makes has to land somewhere every later reader can find without being handed it; the class is that place, as `ActionCatalogue.run_actions_with` is for its seam (the session opener now registers with one *SessionOpening* instance, `SESSION_OPENING.open_with`).
 - **Objects that hold state are made per set, not shared.** A session makes its own practices (`create_all`), which its graph and its actions share; a caller that works outside any session makes its own with `create(key)`, which now makes the practice's set with it (the practice it extends and its Clean Engineering companion). Every other reader makes its own set once and holds it: the board's through its checkout's `Sessions` (`board_practices`), a diagnostics probe through its `ProbeArguments`, the prompt notifier and the catalog command once per run.
 
 ## What round 6 changed

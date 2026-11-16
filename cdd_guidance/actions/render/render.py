@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from harness.guidance_actions import GuidanceArg, GuidanceAction, WorkedGuidance
+from harness.guidance.stages import TAKES_FORMATS, on_stage
 from harness.agent_tools.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
 from harness.installation.files import skill
 from harness.mcp.mcp_annotations import mcp
@@ -11,6 +12,7 @@ from harness.mcp.mcp_annotations import mcp
 class Render(GuidanceAction):
     """Render already-generated output for provided context tools."""
 
+    @on_stage(5, TAKES_FORMATS)
     @mcp
     @skill
     @agent_tool

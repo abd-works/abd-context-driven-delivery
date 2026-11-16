@@ -57,3 +57,15 @@ with description("an operation's parameters"):
 
         with it("should accept them"):
             expect(_hits(self.three)).to(equal([]))
+
+    with context("of Express's four-parameter error handler"):
+        with before.all:
+            self.pair = rule_pair(
+                "limit-operation-parameters",
+                "export function answerFailure(failure: Error, request: Request, response: Response, next: Session): void {\n  response.status(500)\n}\n",
+                "export function answerFailure(failure: Error, _request: Request, response: Response, _next: NextFunction): void {\n  response.status(500)\n}\n",
+                lang="typescript",
+            )
+
+        with it("should accept the four parameters Express knows the handler by, and only those"):
+            self.pair.check()

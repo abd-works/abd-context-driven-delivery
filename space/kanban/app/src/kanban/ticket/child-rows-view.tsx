@@ -13,7 +13,7 @@ function StackedRowView({ child }: { child: TicketClient }) {
   const { shownDrop, handlers } = useCardDrag(child)
   const shape = ['child-row', shownDrop === 'child' ? 'is-drop-over' : '', state.dragged === child.address ? 'is-dragged' : ''].filter(Boolean).join(' ')
   return (
-    <div className={shape} data-child={child.name} title={child.text} draggable {...handlers} onClick={withoutSelecting(() => child.choose())}>
+    <div className={shape} data-child={child.name} title={child.text} draggable {...handlers} onClick={withoutSelecting(() => child.selection.choose())}>
       <span className="child-row-title">{child.title}</span>
       <EditTextView ticket={child} />
     </div>
@@ -23,7 +23,7 @@ function StackedRowView({ child }: { child: TicketClient }) {
 // A child pulled out of its parent moves as a card of its own; its parent keeps a dashed row for it.
 function PulledOutRowView({ child }: { child: TicketClient }) {
   return (
-    <div className="child-row is-pulled-out" data-child={child.name} title={child.text} onClick={withoutSelecting(() => child.choose())}>
+    <div className="child-row is-pulled-out" data-child={child.name} title={child.text} onClick={withoutSelecting(() => child.selection.choose())}>
       <span className="child-row-title">{child.title}</span>
     </div>
   )

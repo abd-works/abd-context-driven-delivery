@@ -1,4 +1,4 @@
-"""The stack patterns CDD ships. Importing this package registers them with the graph's pattern overlays, so a graph
+"""The stack patterns CDD ships. Importing this package registers them with the graph's registry of patterns (``REGISTERED_PATTERNS``), so a graph
 applies a pattern by its name without the framework naming it.
 
 Each subfolder whose module of the same name defines a pattern class (one whose ``pattern`` is the folder's name)
@@ -8,7 +8,7 @@ registers itself, so a pattern folder added here is offered with no other change
 import importlib
 from pathlib import Path
 
-from harness.graph.pattern_overlays import PatternOverlays
+from harness.graph.pattern_overlays import REGISTERED_PATTERNS
 
 import cdd_guidance.practices  # noqa: F401 - the patterns build on the practices, so those are registered with them
 
@@ -25,4 +25,4 @@ def _patterns_in_this_folder() -> list[type]:
     return patterns
 
 
-PatternOverlays.register(*_patterns_in_this_folder())
+REGISTERED_PATTERNS.register(*_patterns_in_this_folder())

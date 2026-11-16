@@ -8,7 +8,7 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from harness.process.git import Git
+from harness.git.git import Git
 from space.session.file_manager import FileEntry, FileManager, FileText
 
 if TYPE_CHECKING:

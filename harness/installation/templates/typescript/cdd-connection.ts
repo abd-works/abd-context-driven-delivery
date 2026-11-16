@@ -255,7 +255,7 @@ export class CddConnection {
   }
 
   // The server marks a failed operation's answer as an error, read before this. A successful one is JSON, except an
-  // operation that answers a string, such as chat.open's link: the server sends that as the text itself.
+  // operation that answers a string, such as chats.open's link: the server sends that as the text itself.
   private parsed<Result>(text: string): Result {
     try {
       return JSON.parse(text) as Result

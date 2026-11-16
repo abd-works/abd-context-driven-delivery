@@ -6,8 +6,13 @@ import { SessionClientGenerated } from '@cdd/space/session/session'
 import type { BoardPage } from '../board/board-page'
 import { TicketMove, TicketNewParent, TicketPlacedBefore, TicketPulledOut, TicketTextEdit } from '../shared/pending-changes'
 import { TicketChat } from '../chat/chat-client'
+import { TicketChatOpening } from './ticket-chat-opening'
 import { TicketChatPrompts } from './ticket-chat-prompts'
+import { TicketDrops } from './ticket-drops'
+import { TicketFace } from './ticket-face'
+import { TicketNextStep } from './ticket-next-step'
 import { TicketPractices } from './ticket-practices'
+import { TicketSelection } from './ticket-selection'
 import { TicketWork } from './ticket-work'
 
 // A ticket sends its fidelities' progress; a backlog item, which also names its column now, sends none.
@@ -26,6 +31,11 @@ export class TicketClient extends TicketClientGenerated {
     this.prompts = new TicketChatPrompts(this, page)
     this.work = new TicketWork(this, page)
     this.practices = new TicketPractices(this, page)
+    this.face = new TicketFace(this)
+    this.nextStep = new TicketNextStep(this, page)
+    this.chatOpening = new TicketChatOpening(this, page)
+    this.drops = new TicketDrops(this, page)
+    this.selection = new TicketSelection(this, page)
   }
 
   // The practices its session works on, each turned on or off from the ticket.
@@ -36,6 +46,21 @@ export class TicketClient extends TicketClientGenerated {
 
   // What the ticket asks its chat to do for it.
   readonly prompts: TicketChatPrompts
+
+  // What its card, details, and panels write about it.
+  readonly face: TicketFace
+
+  // The step Run next takes on it.
+  readonly nextStep: TicketNextStep
+
+  // Opening its chat on its worktree.
+  readonly chatOpening: TicketChatOpening
+
+  // Where it can be dropped, and what a drop on the Backlog or Complete does.
+  readonly drops: TicketDrops
+
+  // Choosing it on the page, which opens it in the details and puts its chat at the top of the board.
+  readonly selection: TicketSelection
 
   // Its children as tickets of the page: stacked inside its card, or pulled out and kept as dashed rows.
   get childTickets(): TicketClient[] {
@@ -52,25 +77,6 @@ export class TicketClient extends TicketClientGenerated {
     return this.page.store.state.onlyActive && !this.isActive
   }
 
-  get standing(): string {
-    return this.isClosed ? '' : this.isDone ? 'done' : 'in progress'
-  }
-
-  // Where a split ticket came from: `story of epic`.
-  get origin(): string {
-    const { scope, parent } = this.session
-    return scope && parent ? `${scope} of ${parent}` : scope
-  }
-
-  get stagePlace(): string {
-    return [this.column.name, this.standing].filter(Boolean).join(' · ')
-  }
-
-  // The action Run next sends: the next fidelity's own next action.
-  get nextAction(): string {
-    return this.work.nextProgress?.nextAction ?? ''
-  }
-
   // The ticket's session, its practices, and its fidelities' progress each answer their own tools, built from the data
   // the ticket already holds.
   get sessionClient(): SessionClientGenerated {
@@ -85,76 +91,6 @@ export class TicketClient extends TicketClientGenerated {
   // The chat working on this ticket, which Python names, and every command the board sends for it goes to.
   get chat(): TicketChat {
     return new TicketChat(this.page.chat, this.name, this.workingChat)
-  }
-
-  get runNextLabel(): string {
-    return this.next ? `Run next: ${this.nextAction}` : 'Run next'
-  }
-
-  // The run-next icon's tooltip names the step and the fidelity it runs on, since the icon itself cannot.
-  get runNextHint(): string {
-    if (this.isLocked) return 'Activate this session to run its next step'
-    if (!this.next) return 'Nothing to run next'
-    return `${this.runNextLabel} on ${this.next.fidelity.slug}`
-  }
-
-  get nextNote(): string {
-    return this.next ? `Next: ${this.next.fidelity.slug}, ${this.nextAction}` : ''
-  }
-
-  get lockNote(): string {
-    return this.isLocked ? 'Activate this session to run actions' : ''
-  }
-
-  // Python says which columns besides the stages take the ticket: the Backlog always, Complete only as it allows.
-  canDropOn(edge: string): boolean {
-    return this.dropTargets.includes(edge)
-  }
-
-  // Complete closes it: an open ticket through its Close dialog, which asks what to do with its work, and one not opened,
-  // which has no worktree or chat to wind up, at once.
-  async dropOn(edge: string): Promise<void> {
-    if (this.page.board.columnNamed(edge)?.isBacklog) await this.moveTo(edge, false)
-    else if (this.isOpen) await this.page.activation.startClosing(this)
-    else await this.close()
-  }
-
-  // Python names the tickets another can be dropped on to become their child.
-  canTakeAsChild(other: TicketClient): boolean {
-    return other.parentChoices.includes(this.name)
-  }
-
-  select(): void {
-    this.page.store.change({ selected: this.address })
-  }
-
-  // A person clicking the ticket: it opens in the details, and the chat at the top of the board is its chat, the one
-  // working in its worktree; with none open, main's chat when main has one; else no chat, so the top never shows another
-  // ticket's chat. A press only selects: opening a worktree and a chat is the card's own button.
-  choose(): void {
-    this.select()
-    const chat = this.chat.found ?? this.page.board.mainTicket?.chat.found
-    this.page.chat.choose(chat?.id ?? '')
-  }
-
-  get canOpenChat(): boolean {
-    return !this.isClosed && !this.chat.found
-  }
-
-  // A new chat opens on the ticket's worktree, after activating opens one when the ticket has none. A ticket in Complete
-  // has closed its work, so it gets no new branch, worktree, or chat.
-  async openChat(): Promise<void> {
-    const chat = this.chat
-    if (!this.canOpenChat || !chat.beginOpening()) return
-    await chat.start(await this.worktreeOpened())
-  }
-
-  // The ticket's worktree, opened by activating when the ticket has none.
-  private async worktreeOpened(): Promise<string> {
-    if (this.worktree) return this.worktree
-    const opened = await this.activate()
-    await this.page.reader.refresh()
-    return opened?.worktree ?? ''
   }
 
   // Python says where Move next and Move previous put the ticket while it stays on a stage, so the card shows there at
@@ -219,8 +155,8 @@ export class TicketClient extends TicketClientGenerated {
   }
 
   private letGo(): void {
-    this.page.cards.releaseTicket(this.name)
-    this.page.panels.closeTicketPanels(this.name)
+    this.page.cards.releaseTicket(this)
+    this.page.panels.closeTicketPanels(this)
   }
 
   // Deleted, the ticket and its session folder are gone, so nothing stays open on it. Python answers nothing either way,
@@ -230,23 +166,5 @@ export class TicketClient extends TicketClientGenerated {
     this.letGo()
     await this.page.reader.refresh()
     return null
-  }
-
-  get canRunNext(): boolean {
-    if (!this.next || this.isLocked) return false
-    // Opening the report while violations hold the fidelity is done on the board, so it needs no chat.
-    return this.work.nextProgress?.state === 'violations' || this.page.chat.canSend
-  }
-
-  // Python gives the command for the next action, naming the session and no format. Generate is sent straight to the
-  // chat, in the format the fidelity keeps; the others fill the prompt. While violations hold the fidelity, Run next opens
-  // its report on the board, where the person reads them and sends the fix.
-  async runNext(): Promise<void> {
-    const next = this.work.nextProgress
-    if (!next) return
-    if (next.state === 'violations') return this.page.panels.openReport(this, next)
-    const command = next.commands[this.nextAction] ?? ''
-    if (this.nextAction !== 'generate') return this.chat.fill(command)
-    await this.chat.command(command)
   }
 }

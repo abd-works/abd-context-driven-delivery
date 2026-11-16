@@ -306,8 +306,8 @@ class WorkerBuild:
         for practice, record in changed.items():
             practice.reading.in_graph.restore.links(record)
         for practice in changed:
-            practice.reading.in_graph.put_in_source_order()
-            practice.reading.in_graph.rebuild_tree()
+            practice.reading.in_graph.loading.put_in_source_order()
+            practice.reading.in_graph.root.tree.rebuild()
 
     def _run(self, arguments: list[str], errors: IO[str]) -> int:
         process = subprocess.Popen(
@@ -449,10 +449,10 @@ class GraphBuild:
         opened = self.graph.practices.opened.values()
         dropped: set[int] = set()
         for practice in opened:
-            dropped |= practice.reading.in_graph.forget_files(files)
+            dropped |= practice.reading.in_graph.loading.forget_files(files)
         for practice in opened:
             practice.reading.in_graph.edge_index.drop(lambda edge: id(edge.parent) in dropped or id(edge.child) in dropped)
-            practice.reading.in_graph.renew_rules()
+            practice.reading.in_graph.rule_run.renew()
 
     def _in_reading_order(self) -> list[PracticeGuidance]:
         """The open practices, each after the practices it reads while it reads its own."""
@@ -476,7 +476,7 @@ class GraphBuild:
         that reports the first of two nodes then reports the same node whichever build read them."""
         opened = self.graph.practices.opened.values()
         for practice in opened:
-            practice.reading.in_graph.put_in_source_order()
+            practice.reading.in_graph.loading.put_in_source_order()
         for practice in opened:
             practice.reading.in_graph.rule_run.check()
 

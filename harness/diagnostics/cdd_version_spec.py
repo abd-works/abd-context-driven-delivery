@@ -10,7 +10,7 @@ from mamba import after, before, context, description, it
 
 from harness.mcp.mcp_annotations import LongCall
 from harness.diagnostics.cdd_version import CddVersion, VersionNotValid, VersionStanding
-from harness.process.git import RepoConnectError
+from harness.git.git import RepoConnectError
 
 
 def pyproject(version: str) -> str:

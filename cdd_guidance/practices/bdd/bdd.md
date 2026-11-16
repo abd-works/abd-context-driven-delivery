@@ -346,7 +346,7 @@ Scratch pad — mistakes people still make against this practice. Each entry: th
 with context("with fidelity artifacts assembled in one install pass"):
     with context("that has been deployed to Cursor"):
         with before.each:
-            Installer(ide="Cursor", path=self.tree).install([SamplePracticeWithFidelities()])
+            Installer.create(ide="Cursor", path=self.tree).install([SamplePracticeWithFidelities()])
 ```
 
 **What should have happened:** Install state first; outcome contexts nested under it:
@@ -354,7 +354,7 @@ with context("with fidelity artifacts assembled in one install pass"):
 ```python
 with context("that has been installed to Cursor from practice guidance with fidelity markdown sections"):
     with before.each:
-        Installer(ide="Cursor", path=self.tree).install([SamplePracticeWithFidelities()])
+        Installer.create(ide="Cursor", path=self.tree).install([SamplePracticeWithFidelities()])
     with context("with fidelity artifacts assembled in one install pass"):
         with it("should emit the practice skill, practice rules, fidelity skills, and fidelity rules in one pass"):
             ...

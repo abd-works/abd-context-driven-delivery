@@ -6,14 +6,31 @@ from dataclasses import dataclass
 import os
 import re
 from pathlib import Path
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination, InvokeLine
 from harness.annotations.name import Name
 from harness.installation.destination import Installation
-from harness.installation.ide_layout import IdeLayout
 from harness.markdown.front_matter import FrontMatter
-from harness.annotations.annotation import Destination, NamedDestination
+from harness.annotations.annotation import Annotatable, Destination
+
+if TYPE_CHECKING:
+    from harness.installation.install_target import InstallTarget
+
+
+class NamedDestination(Destination):
+    """A file destination whose annotation may name what it installs: ``@skill("name")``, ``@skill(name="name")``, or
+    bare ``@skill`` for the operation's own name."""
+
+    def __new__(cls, target: Annotatable | None = None, name: str | None = None):
+        annotation = object.__new__(cls)
+        if isinstance(target, str):
+            annotation.name = target
+            return annotation
+        annotation.name = name
+        if callable(target):
+            return annotation.annotate(target)
+        return annotation
 
 
 class Skill(NamedDestination):
@@ -97,8 +114,8 @@ class FileInstallation(Installation):
     # The channels a file installation writes, in the order a tool's files are written.
     CHANNELS = (InstallDestination.SKILL, InstallDestination.COMMAND, InstallDestination.RULE)
 
-    def __init__(self, layout: IdeLayout, path: Path | str, channel: FileChannel = FileChannel(), repo: Path | str | None = None) -> None:
-        super().__init__(layout, path, repo=repo)
+    def __init__(self, target: InstallTarget, channel: FileChannel = FileChannel(), repo: Path | str | None = None) -> None:
+        super().__init__(target.layout, target.path, repo=repo)
         self.channel = channel
 
     def relative_path(self, toolset: AgentToolSet, name: str) -> Path:

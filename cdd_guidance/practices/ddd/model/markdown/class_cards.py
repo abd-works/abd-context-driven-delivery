@@ -187,7 +187,7 @@ class ClassCard(MarkdownDomainNode):
         written.properties = [written.load_property(item) for item in self.plain_properties]
         written.operations = [written.load_operation(item) for item in self.operations]
         for prop in written.properties:
-            prop.derive_relationship()
+            prop.arrow.derive()
         module.classes.append(written)
         return written
 

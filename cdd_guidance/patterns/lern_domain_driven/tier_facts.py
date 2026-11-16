@@ -51,7 +51,6 @@ class TierFile:
     wrapped once however many facts are read from it."""
 
     def __init__(self, text: str, relative: str = "") -> None:
-        self.text = text
         # The file's path from the working copy's root, which a fact naming a file records.
         self.relative = relative
         self._source = SourceText(text)
@@ -63,7 +62,7 @@ class TierFile:
 
     def node_root_facts(self, setup_text: str) -> dict:
         """What a `-node.ts` file says about its store-reading repositories, posted-body reads, and errors."""
-        text = self.text
+        text = self._source.text
         store_readers = [
             (name, code)
             for name, body in self._node_repository_bodies()
@@ -89,12 +88,12 @@ class TierFile:
 
     def request_reads(self) -> list[list]:
         """[file, line, code] for each request read in this file."""
-        return [[self.relative, self._source.line_of(match.start()), match.group(0)] for match in _ANY_REQUEST_READ.finditer(self.text)]
+        return [[self.relative, self._source.line_of(match.start()), match.group(0)] for match in _ANY_REQUEST_READ.finditer(self._source.text)]
 
     def web_path_literals(self) -> list[list]:
         """[file, line, path] for each browser path this file writes as a literal: not in an import or a comment, and
         not an API path a route registers."""
-        text = self.text
+        text = self._source.text
         found: list[list] = []
         for match in _WEB_PATH.finditer(text):
             if self._in_import(match.start()) or self._in_comment(match.start()) or _ROUTE_REGISTRATION.search(text[max(0, match.start() - _ROUTE_CALL_REACH):match.start()]):
@@ -115,14 +114,14 @@ class TierFile:
         """What a LERN behavior file (shared or one tier) says about the tier it reaches and what it stubs."""
         return {
             "tier_reaches": self._source.hits(_TIER_REACH),
-            "runs_shared_behavior": bool(_RUNS_SHARED.search(self.text)),
+            "runs_shared_behavior": bool(_RUNS_SHARED.search(self._source.text)),
             "stubs": self._source.hits(_STUB),
             "stubbed_requests": self._source.hits(_STUBBED_REQUEST),
         }
 
     def story_facts(self) -> dict:
         """What a LERN story file (shared, server, domain, or playwright) says about its steps and helpers."""
-        text = self.text
+        text = self._source.text
         asserting = []
         for match in _GIVEN_START.finditer(text):
             body = self._callback_body(match.end())
@@ -141,7 +140,7 @@ class TierFile:
 
     def _domain_wrapping_helpers(self) -> list[list]:
         """[line, helper, repository calls] for each top-level helper that reaches the repositories."""
-        text = self.text
+        text = self._source.text
         found: list[list] = []
         for match in _TOP_LEVEL_HELPER.finditer(text):
             end = _TOP_LEVEL_END.search(text, match.end())
@@ -155,7 +154,7 @@ class TierFile:
 
         None when the class never touches a store, as with a wrapper that delegates to another repository.
         """
-        text = self.text
+        text = self._source.text
         path_names = _JSON_PATH_CONSTANT.findall(text)
         helpers = {
             match.group(1): body
@@ -169,7 +168,7 @@ class TierFile:
 
     def _inside_schema_parse(self, index: int) -> bool:
         """True when this `req.body` is an argument of a `.parse(` / `.safeParse(` call that is still open."""
-        text = self.text
+        text = self._source.text
         statement_start = max(text.rfind(";", 0, index), text.rfind("{\n", 0, index), text.rfind("=>", 0, index))
         before = text[statement_start + 1:index]
         call = _SCHEMA_PARSE.search(before)
@@ -180,7 +179,7 @@ class TierFile:
 
     def _node_repository_bodies(self) -> list[tuple[str, str]]:
         """Each `class …RepositoryNode { … }` in the file, with its body."""
-        text = self.text
+        text = self._source.text
         found: list[tuple[str, str]] = []
         for match in _NODE_REPOSITORY_CLASS.finditer(text):
             body = self._braced_body(match.end() - 1)
@@ -190,7 +189,7 @@ class TierFile:
 
     def _callback_body(self, start: int) -> str | None:
         """The `{ … }` body of the arrow function that starts at or after ``start``."""
-        text = self.text
+        text = self._source.text
         open_brace = text.find("{", start)
         arrow = text.find("=>", start)
         if open_brace == -1 or arrow == -1 or arrow > open_brace:
@@ -199,7 +198,7 @@ class TierFile:
 
     def _braced_body(self, open_brace: int) -> str | None:
         """The text between the brace at open_brace and the brace that closes it; none when it never closes."""
-        text = self.text
+        text = self._source.text
         if open_brace < 0:
             return None
         depth = 0
@@ -210,7 +209,7 @@ class TierFile:
         return None
 
     def _in_import(self, index: int) -> bool:
-        text = self.text
+        text = self._source.text
         line_start = text.rfind("\n", 0, index) + 1
         line_end = text.find("\n", index)
         line = text[line_start:line_end if line_end != -1 else len(text)]
@@ -218,7 +217,7 @@ class TierFile:
 
     def _in_comment(self, index: int) -> bool:
         """A path a doc or line comment names is prose, not a literal the code uses."""
-        text = self.text
+        text = self._source.text
         line_start = text.rfind("\n", 0, index) + 1
         if re.search(r"(?:^|\s)//", text[line_start:index]):
             return True
@@ -226,7 +225,7 @@ class TierFile:
         return opened != -1 and text.find("*/", opened, index) == -1
 
     def _exported_instance(self, class_name: str) -> str | None:
-        text = self.text
+        text = self._source.text
         for match in _EXPORTED_INSTANCE.finditer(text):
             if match.group(2) == class_name:
                 return match.group(1)

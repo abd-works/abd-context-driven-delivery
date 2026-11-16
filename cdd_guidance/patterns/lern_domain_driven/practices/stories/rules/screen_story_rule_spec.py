@@ -12,23 +12,20 @@ def _node(name: str, **facts) -> SimpleNamespace:
 
 
 class _Context:
-    def __init__(self, stories: list, specs: list) -> None:
-        self._by_type = {"Story": stories, "PlaywrightSpec": specs}
+    def __init__(self, stories: list) -> None:
+        self._stories = stories
 
     def nodes(self, type: str | None = None) -> list:
-        return self._by_type.get(type, [])
-
-
-SCREEN_SPEC = _node("organize-ticket-hierarchy.story.ui.spec.ts", screen_stories=["Add Child Ticket"])
+        return self._stories if type == "Story" else []
 
 
 with description("every story has a screen story"):
-    with context("with a story a screen story file describes"):
+    with context("with a story the overlay's read found a screen story file describing"):
         with it("should pass it"):
-            found = PlaywrightTestsBrowserInteraction().check_practice(_Context([_node("Add Child Ticket")], [SCREEN_SPEC]))
+            found = PlaywrightTestsBrowserInteraction().check_practice(_Context([_node("Add Child Ticket", has_screen_story=True)]))
             expect(found).to(equal([]))
 
     with context("with a story no screen story file describes"):
         with it("should fail it, saying it has no screen story"):
-            found = PlaywrightTestsBrowserInteraction().check_practice(_Context([_node("Reassign Ticket Parent")], [SCREEN_SPEC]))
+            found = PlaywrightTestsBrowserInteraction().check_practice(_Context([_node("Reassign Ticket Parent", has_screen_story=False)]))
             expect(found[0][1]).to(contain("has no screen story"))

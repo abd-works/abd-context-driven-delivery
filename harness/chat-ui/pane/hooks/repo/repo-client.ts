@@ -2,7 +2,8 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
 import type { ToMainJson } from '../../types'
-import { callTool, currentChatBar, refreshChatBar } from '../chat-bar/chat-bar-client'
+import { callTool } from '../shared/cdd-tool'
+import { currentChatBar, refreshChatBar } from '../chat-bar/chat-bar-client'
 import { shownAsFailure } from '../error-display/failure-client'
 
 // Where a push lands: the session's own branch, or merged into main on origin.

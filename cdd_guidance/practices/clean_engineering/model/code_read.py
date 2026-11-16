@@ -17,9 +17,9 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     Module,
     OoadClass,
     UnreadableSource,
-    class_names_imported_by,
 )
 from cdd_guidance.practices.clean_engineering.model.module_context_files import ModuleContext
+from cdd_guidance.practices.clean_engineering.model.script_imports import ScriptImports, imported_files
 from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 
 if TYPE_CHECKING:
@@ -28,14 +28,13 @@ if TYPE_CHECKING:
     from cdd_guidance.practices.clean_engineering.model.graph_reading import GraphReading
     from cdd_guidance.practices.clean_engineering.model.operation import Operation
     from cdd_guidance.practices.clean_engineering.model.property import Property
+    from cdd_guidance.practices.clean_engineering.model.script_imports import ClassReference
 
 # The fact a folder's module or package keeps: whether any of its source is production code.
 PRODUCTION_FACT = "holds_production_code"
 _CLASS_NAMES = re.compile(r"\bclass\s+(\w+)")
 # A run of the characters a class name is spelled with: a type hint names a class when the class's name is one whole run.
 _HINT_WORD = re.compile(r"[A-Za-z0-9_]+")
-# The file an import names, after the path its import reads as: a Python module or package, or a script file.
-_IMPORTED_FILE_ENDINGS = (".py", "/__init__.py", "", ".ts", ".tsx", ".js", ".jsx", "/index.ts", "/index.tsx", "/index.js")
 
 
 class CodeRead:
@@ -101,7 +100,7 @@ class CodeRead:
         except UnreadableSource as unreadable:
             self._unreadable[file] = str(unreadable)
             return None
-        module.load_source_facts(file, self._root)
+        module.source_facts.load(file, self._root)
         return module
 
     def _text_of(self, file: Path) -> str | None:
@@ -116,12 +115,13 @@ class CodeRead:
         """Give each folder the modules of its own public source files: each one this read parsed, and each one an
         edited-file scope left out, read now. A file that cannot be read counts as a file with no documentation."""
         for folder, paths in self._folders.public_files():
-            folder.take_public_sources([self._module_of(path) or Module(name=path.name, sequential_order=1) for path in paths])
+            folder.source_facts.take_public_sources([self._module_of(path) or Module(name=path.name, sequential_order=1) for path in paths])
 
 
 class OutsideScope:
     """The source files an edited-file scope leaves out, in folders the practice holds nothing read from: their class
-    names, which a type hint may still name, and the class names their production files import.
+    names, which a type hint may still name, and the classes their production files import, each with the module it
+    comes from.
 
     The scope's own files are parsed and their classes named by the parse. Names in the other files come from a text
     match, so reading the files the scope leaves out stays cheap. A refresh holds every other folder as it was read, its
@@ -139,12 +139,13 @@ class OutsideScope:
         self._owners: dict[Path, str] = {}
 
     def class_names(self) -> set[str]:
-        """The class names the files outside the scope declare. The practice's root keeps the class names each of their
-        production files imports, by the module that holds the file, so the deep-module rule sees the callers that make
-        a class public even when the scope leaves them out."""
+        """The class names the files outside the scope declare. The practice's root keeps, by file, the classes each of
+        their production files imports and the module that holds the file (``imported_classes_outside``), so the
+        deep-module rule sees the callers that make a class public, and the re-exports they pass through, even when the
+        scope leaves them out."""
         files = self._files()
         names: set[str] = set()
-        importers: dict[str, set[str]] = {}
+        importers: dict[str, dict] = {}
         for index, file in enumerate(files, start=1):
             report_progress(f"clean_engineering · class names · {index}/{len(files)} · {file.name}")
             try:
@@ -152,11 +153,11 @@ class OutsideScope:
             except (OSError, UnicodeDecodeError):
                 continue
             names.update(_CLASS_NAMES.findall(text))
-            if not is_test_code(file.relative_to(self._root).as_posix()):
-                owner = self._module_folder_of(file.parent)
-                for name in class_names_imported_by(text):
-                    importers.setdefault(name, set()).add(owner)
-        self._in_graph.root.set_fact("imported_names_outside", {name: sorted(held) for name, held in importers.items()})
+            relative = file.relative_to(self._root).as_posix()
+            if not is_test_code(relative):
+                references = ScriptImports(text).class_references(file, self._root)
+                importers[relative] = {"module": self._module_folder_of(file.parent), "classes": sorted(references)}
+        self._in_graph.root.set_fact("imported_classes_outside", importers)
         return names
 
     def _files(self) -> list[Path]:
@@ -191,7 +192,7 @@ class ClassNodes:
 
     def add(self, relative: str, folder: "Node", cls: OoadClass) -> None:
         """Add the class, its properties, and its operations; each is the object the parser built."""
-        cls.load_source_facts()
+        cls.source_facts.load()
         for member in [*cls.public_properties, *cls.operations]:
             member.keep_owner()
         node = self._in_graph.add(cls, f"clean_engineering:OoadClass:{relative}:{cls.name}", Location(relative, cls.line, cls.end_line))
@@ -210,7 +211,7 @@ class ClassNodes:
         ``return_type``): a refresh drops the edges to the classes of the files it reads again, and this links the
         members it did not read to the classes it read now."""
         self._class_names |= self._index.class_names()
-        for edge in self._in_graph.edges("properties"):
+        for edge in self._in_graph.edge_index.of("properties"):
             self._link_property(edge.parent, edge.child)
         for operation in self._in_graph.nodes("Operation"):
             for other in self._classes_named_in(operation.get_fact("return_type")):
@@ -226,7 +227,7 @@ class ClassNodes:
 
     def _operation(self, relative: str, cls: "Node", operation: "Operation") -> None:
         start, end = operation.source_lines
-        operation.load_span_facts()
+        operation.source_facts.load()
         node = self._in_graph.add(operation, f"clean_engineering:Operation:{relative}:{operation.name}:{cls.name}", Location(relative, start, end))
         self._graph.edges.link("owns", cls, node)
         for parameter in operation.parameters:
@@ -303,7 +304,7 @@ class CodeFolders:
             return self._in_graph.root
         if not is_test_code(relative):
             self._imports[owner].extend(module.dependencies)
-            self._nodes[owner].merge_fact("imported_names", module.imported_names)
+            self._record_imported_classes(self._nodes[owner], relative, module.imported_classes)
             self._record_sibling_imports(self._nodes[owner], relative, module.dependencies)
         return self._nodes[owner]
 
@@ -328,6 +329,13 @@ class CodeFolders:
             if self._modules[relative].type == "Package":
                 self._graph.edges.relate("belongsTo", folder, parent)
 
+    def _record_imported_classes(self, folder: "Node", relative: str, references: "list[ClassReference]") -> None:
+        """The classes a production file imports, re-exports, or qualifies, each with the module it names it from, kept
+        on its folder by the file's path, so a refresh that reads the file again replaces what it named before and
+        keeps what the folder's other files name."""
+        kept = folder.get_fact("imported_classes_by_file") if folder.has_fact("imported_classes_by_file") else {}
+        folder.set_fact("imported_classes_by_file", {**kept, relative: sorted(references)})
+
     def _record_sibling_imports(self, folder: "Node", relative: str, targets: list[str]) -> None:
         """The files of its own folder a production file imports, kept on the folder by file name, so the one-way-deps
         rule sees a cycle between the files of one folder; a refresh keeps the other files' imports."""
@@ -338,9 +346,7 @@ class CodeFolders:
 
     def _sibling_imported(self, path: Path, target: str) -> Path | None:
         """The file of path's own folder an import of target names; none for a file of another folder."""
-        # TypeScript names the compiled `./x.js` for its source `x.ts`.
-        bases = [target, target.removesuffix(".js")] if target.endswith(".js") else [target]
-        candidates = (Path(f"{base}{ending}") for base in bases for ending in _IMPORTED_FILE_ENDINGS)
+        candidates = (Path(item) for item in imported_files(target))
         own = path.parent.as_posix()
         return next((item for item in candidates if item.parent.as_posix() == own and item != path and (self._root / item).is_file()), None)
 
@@ -398,7 +404,7 @@ class CodeFolders:
         if not has_code and not (folder / ".context").is_dir():
             return None
         module = Module(name=folder.name, sequential_order=1)
-        module.load_folder_facts(folder)
+        module.source_facts.load_folder(folder)
         module.set_fact(PRODUCTION_FACT, any(not is_test_code(f"{relative}/{name}".lstrip("/")) for name in sources))
         if module.has_module_context:
             module.type = "Module"

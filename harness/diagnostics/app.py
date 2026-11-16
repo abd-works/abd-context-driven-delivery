@@ -20,7 +20,7 @@ from harness.graph.graph_app import GRAPH_APP_PORTS
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.json_file import JsonFile
 from harness.mcp.mcp_annotations import long_call, mcp
-from harness.process.process import ListeningPorts, ProcessNotStopped
+from harness.process.process import ExclusivePort, ProcessNotStopped
 
 _HOST = "127.0.0.1"
 # A server listening on this machine takes a connection at once: the system completes it, not the server.
@@ -181,7 +181,7 @@ class AppServer:
         port = self.port
         if port is None:
             return False
-        listening = ListeningPorts().holder(port)
+        listening = ExclusivePort(_HOST, port).holder()
         if listening is None:
             raise AppServerNotRestarted(self, f"nothing this machine lists is listening on port {port}")
         try:

@@ -28,6 +28,7 @@ const statusOf = (failure: unknown): number => {
 }
 
 // The one place a failure becomes a reply, so every route fails the same way and the page shows what went wrong.
+// Express knows an error handler by its four parameters, so it takes all four though it reads two.
 export function answerFailure(failure: Error, _request: Request, response: Response, _next: NextFunction): void {
   response.status(statusOf(failure)).json({ error: failure.message })
 }

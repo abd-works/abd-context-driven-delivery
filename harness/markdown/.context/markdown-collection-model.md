@@ -8,7 +8,7 @@ Not a second Markdown. Collection shape lives on *MarkdownCollection*. *Markdown
 
 ## Language companion
 
-*`@markdownCollection`* locates through *Markdown.from_label*, then *MarkdownCollection.from_section*. The collection keeps **markdown** as the original extract. One file is that file. Never rebuild from `formatted()`.
+*`@markdown_collection`* locates through *Markdown.from_label*, then *MarkdownCollection.from_section*. The collection keeps **markdown** as the original extract. One file is that file. Never rebuild from `formatted()`.
 
 *MarkdownCollection* owns list vs map. A **list** return type iterates section bullets or files in the folder. A **map** return type keys each entry by the bullet label or the file stem. A return type with *from_markdown* (including *RulesCollection*) is that builder, then **markdown** is stamped.
 
@@ -40,7 +40,7 @@ from_section(markdown: Markdown, return_type, parent: Any = None) -> Any
 	# else from_markdown
 attach(instance: Any, name: str | None = None) -> None
 	# the owner keeps this same collection, so later reads return it
-markdownCollection(fn | label: str | None) -> property
+markdown_collection(fn | label: str | None) -> property
 	# a module function, holding the label in the property it makes; no stand-in collection
 	# getter -> Markdown.held_by(owner, label)
 	# getter -> Markdown.read_into(return_type, MarkdownCollection.from_section)
@@ -50,7 +50,7 @@ markdownCollection(fn | label: str | None) -> property
 ## Guidance (caller)
 
 rules: RulesCollection
-	# @markdownCollection("shared rules")
+	# @markdown_collection("shared rules")
 	# @rules lives on this member
 	# glob and matches live on RulesCollection — not MarkdownCollection
 instructions

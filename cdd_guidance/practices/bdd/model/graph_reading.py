@@ -45,9 +45,18 @@ class BddGraphReading(PracticeReading):
                 relative = file.relative_to(root).as_posix()
                 report_progress(f"bdd · specs · {index}/{len(specs)} · {relative}")
                 self._add_spec(file, relative)
+        self._record_developed_specs()
         clean = self.clean_engineering_reading
         if clean is not None:
             ObservationLinks(self, clean).link()
+
+    def _record_developed_specs(self) -> None:
+        """Whether each description and observation sits in a finished spec (``in_developed_spec``), one whose every
+        signature has its test body, which the behavior fidelity's rules then leave alone."""
+        finished = {spec.source.file for spec in self.in_graph.nodes("Spec") if spec.get_fact("developed", False)}
+        for kind in ("Observation", "Context"):
+            for node in self.in_graph.nodes(kind):
+                node.set_fact("in_developed_spec", node.source.file in finished)
 
     @property
     def clean_engineering_reading(self) -> PracticeReading | None:

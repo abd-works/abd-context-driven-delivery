@@ -14,12 +14,16 @@ from dataclasses import dataclass
 import anyio
 
 from harness.agent_tools.tool_call import ToolCall
+from harness.installation.data_class import SentValue
 
 logger = logging.getLogger(__name__)
 # How long a result is kept for the caller who was told its call was still running; after that it is stale.
 _UNCOLLECTED_RESULT_SECONDS = 600
 
 Reporter = Callable[[str], None]
+# What answers a call on its worker thread, with a reporter for its progress: the value its operation returns, which the
+# server sends as data (a string as it is, anything else as JSON).
+ToolWork = Callable[[ToolCall, Reporter], SentValue]
 # The fewest seconds between two progress reports a caller hears; the reports in between are dropped.
 _REPORT_SECONDS = 0.25
 
@@ -67,15 +71,15 @@ class _StillRunning:
 
 
 class _RunningCall:
-    """One run of a tool on a worker thread, and its outcome once it ends."""
+    """One run of a tool on a worker thread, and its outcome once it ends: the value the run returned, or the failure it
+    raised, which a waiting caller hears raised as it was. A run the server stopped before it ended failed with
+    *ToolCallStopped*."""
 
     def __init__(self, call: ToolCall, reporter: Reporter | None) -> None:
         self.call = call
         self.callers_waiting = 0
         self.told_still_running = False
         self._ended = anyio.Event()
-        self._value: object = None
-        self._failure: BaseException | None = ToolCallStopped(call.request.tool)
         self._ended_at = 0.0
         self._reporter = reporter
         self._task: asyncio.Task | None = None
@@ -86,30 +90,31 @@ class _RunningCall:
         if reporter is not None:
             reporter(message)
 
-    def start(self, run: Callable[[_RunningCall], object]) -> None:
-        # The run is its own task, so a caller that stops waiting does not cancel it.
-        self._task = asyncio.get_running_loop().create_task(run(self))
-
-    def finish(self, answer: object) -> None:
-        """The run returned answer."""
-        self._value = answer
-        self._failure = None
-
-    def fail(self, failure: BaseException) -> None:
-        """The run raised failure."""
-        self._failure = failure
+    def start(self, work: ToolWork, on_end: Callable[[_RunningCall], None]) -> None:
+        """Run work on a worker thread; on_end hears when the run is over. The run is its own task, so a caller that
+        stops waiting does not cancel it."""
+        self._task = asyncio.get_running_loop().create_task(anyio.to_thread.run_sync(work, self.call, self.report))
+        self._task.add_done_callback(lambda _: on_end(self))
 
     def end(self) -> None:
         """The run is over, with whatever outcome it had; every caller waiting for it hears it now."""
         self._ended_at = time.monotonic()
         self._ended.set()
 
+    @property
+    def _failure(self) -> BaseException | None:
+        """What the run raised; none when it returned."""
+        task = self._task
+        if task is None or task.cancelled():
+            return ToolCallStopped(self.call.request.tool)
+        return task.exception()
+
     def log_unheard_failure(self) -> None:
         """Log the run's failure when no caller is left to hear it, so it is never lost."""
         if self._failure is not None:
             logger.error("MCP tool %s failed after its caller stopped waiting", self.call.request.tool, exc_info=self._failure)
 
-    async def answer(self, seconds: float) -> object:
+    async def answer(self, seconds: float) -> SentValue | _StillRunning:
         """The outcome, when the run ends within seconds; otherwise ``_StillRunning``."""
         self.callers_waiting += 1
         try:
@@ -121,9 +126,10 @@ class _RunningCall:
             self._reporter = None
             self.told_still_running = True
             return _StillRunning(self.call.request.tool, seconds)
-        if self._failure is not None:
-            raise self._failure
-        return self._value
+        failure = self._failure
+        if failure is not None:
+            raise failure
+        return self._task.result()
 
     @property
     def is_stale(self) -> bool:
@@ -134,13 +140,13 @@ class _ToolCalls:
     """Every tool call this server is running on a worker thread, by call identity, and the results kept for callers
     who were told their call was still running."""
 
-    def __init__(self, work: Callable[[ToolCall, Reporter], object]) -> None:
+    def __init__(self, work: ToolWork) -> None:
         # What answers a call on its worker thread, with a reporter for its progress.
         self._work = work
         self._running: dict[str, _RunningCall] = {}
         self._uncollected: dict[str, _RunningCall] = {}
 
-    async def run(self, call: ToolCall, seconds: float, reporter: Reporter | None) -> object:
+    async def run(self, call: ToolCall, seconds: float, reporter: Reporter | None) -> SentValue | _StillRunning:
         """The work's value for call, run on a worker thread with reporter for its progress, waiting up to seconds. An
         identical call already running is joined, and a kept result is collected, instead of starting the work again."""
         self._forget_stale_results()
@@ -152,16 +158,7 @@ class _ToolCalls:
     def _start(self, call: ToolCall, reporter: Reporter | None) -> _RunningCall:
         running = _RunningCall(call, reporter)
         self._running[call.identity] = running
-
-        async def run(started: _RunningCall) -> None:
-            try:
-                started.finish(await anyio.to_thread.run_sync(self._work, started.call, started.report))
-            except Exception as failure:
-                started.fail(failure)
-            finally:
-                self._end(started)
-
-        running.start(run)
+        running.start(self._work, self._end)
         return running
 
     def _end(self, running: _RunningCall) -> None:

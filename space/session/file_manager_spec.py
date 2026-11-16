@@ -56,7 +56,7 @@ with description("a session's file manager"):
 
         with before.each:
             sessions = Sessions(self.workpath)
-            sessions.open(sessions.create("orders", self.workpath / "src"))
+            sessions.opened.open(sessions.create("orders", self.workpath / "src"))
             self.other = Path(tempfile.mkdtemp()).resolve()
             (self.other / "notes.md").write_bytes(b"# Notes\n")
 

@@ -20,7 +20,7 @@ BDD and DDD keep no format folders; their fidelities’ Clean Engineering compan
 
 ### Fidelities is an annotated GuidanceCollection
 
-PracticeGuidance.fidelities is @markdownCollection("fidelities") -> GuidanceCollection. MarkdownCollection.coerce locates the Fidelities section (harness/markdown/markdown.py AssetLocator / fidelity_blocks) and GuidanceCollection.from_markdown builds FidelityGuidance children. The collection attaches itself to the practice (`MarkdownCollection.attach`) so later reads return that same collection; attach_fidelities is gone.
+PracticeGuidance.fidelities is @markdown_collection("fidelities") -> GuidanceCollection. MarkdownCollection.coerce locates the Fidelities section (harness/markdown/markdown.py AssetLocator / fidelity_blocks) and GuidanceCollection.from_markdown builds FidelityGuidance children. The collection attaches itself to the practice (`MarkdownCollection.attach`) so later reads return that same collection; attach_fidelities is gone.
 
 ### Selected lives on the collection
 

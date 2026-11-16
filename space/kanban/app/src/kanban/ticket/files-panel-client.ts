@@ -1,7 +1,7 @@
 import type { FileEntryData } from '@cdd/space/kanban/fidelity-progress'
 import type { SessionFileData } from '@cdd/space/session/session'
 
-import type { BoardStore, FilesPanel, FilesSource, SidePanel } from '../shared/board-store'
+import type { BoardStore, FilesPanel, FilesSource } from '../shared/board-store'
 import type { FidelityProgressClient } from './fidelity-progress-client'
 import { OpenFileComments } from './open-file-comments'
 import type { TicketClient } from './ticket-client'
@@ -47,15 +47,11 @@ export class FilesPanelClient {
   constructor(private readonly store: BoardStore) {}
 
   get panel(): FilesPanel | undefined {
-    return this.store.state.panels.find((panel: SidePanel): panel is FilesPanel => panel.kind === 'files')
-  }
-
-  private show(panel: FilesPanel): void {
-    this.store.change(state => ({ panels: [...state.panels.filter((entry: SidePanel) => entry.kind !== panel.kind), panel] }))
+    return this.store.panelOf('files')
   }
 
   private change(change: (panel: FilesPanel) => FilesPanel): void {
-    this.store.change(state => ({ panels: state.panels.map((panel: SidePanel) => (panel.kind === 'files' ? change(panel) : panel)) }))
+    this.store.changePanel('files', change)
   }
 
   private async read(ticket: TicketClient, { source, progress }: Pick<FilesChoice, 'source' | 'progress'>): Promise<FilesByFidelity | null> {
@@ -82,7 +78,7 @@ export class FilesPanelClient {
     const files = await this.read(ticket, choice)
     if (!files) return
     const panel: FilesPanel = { kind: 'files', ticket, ...choice, files, changedOnly: false, activeTab: '', shown: null, lines: {}, isExpanded: false }
-    this.show(panel)
+    this.store.showPanel(panel)
     await this.openTab(tab || (shownTabs(panel)[0]?.path ?? ''))
   }
 
