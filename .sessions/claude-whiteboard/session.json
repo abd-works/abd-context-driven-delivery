@@ -10,7 +10,7 @@
       "specification",
       "implementation"
     ],
-    "version": 21
+    "version": 22
   },
   "practices": {
     "ux": {
@@ -45,7 +45,7 @@
       "enabled": false
     },
     "bdd": {
-      "enabled": false
+      "enabled": true
     }
   }
 }
