@@ -330,6 +330,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("checkout")
     parser.add_argument("record", nargs="?", default="")
     arguments = parser.parse_args(argv)
+    # Run from a console, the output is echoed in its code page, such as cp1252, which cannot write every character a
+    # spec prints; one it cannot write is shown as ? rather than ending the run.
+    sys.stdout.reconfigure(errors="replace")
     checkout = Path(arguments.checkout).resolve()
     record = TestRunRecord(arguments.record or default_record_folder())
     run = TestCadence(checkout, record).run_now(TestTier(arguments.tier))
