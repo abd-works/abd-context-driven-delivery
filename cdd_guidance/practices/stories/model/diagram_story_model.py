@@ -245,6 +245,28 @@ class DiagramStoryModel(StoryModel):
                 story.actors = [actor]
             owner.node.append_story(story)
 
+    def thin_slice_columns(self) -> List[tuple]:
+        """The thin slice's columns: one per sub-epic, or per epic with none, with its top epic, in map order."""
+        return [(epic, sub) for epic in self.epics for sub in (epic.epics or [epic])]
+
+    def thin_slice_lanes(self, columns: List[tuple]) -> List[tuple]:
+        """Each increment with its stories under the column of the sub-epic that holds each, in the increment's order;
+        a story the map lacks goes under the last column."""
+        lanes = []
+        for increment in self.increments:
+            by_column: dict = {}
+            for story in increment.stories:
+                column = next((index for index, (_, sub) in enumerate(columns)
+                               if any(held.name == story.name for held in sub.every_story())), len(columns) - 1)
+                by_column.setdefault(column, []).append(story)
+            lanes.append((increment, by_column))
+        return lanes
+
+    def thin_slice_widths(self, columns: List[tuple], lanes: List[tuple], pitch: int, gap: int) -> List[int]:
+        """Each column widened to hold, side by side on one row, the most stories any one increment puts in it, so a
+        lane is a single row of cards and a sub-epic is as wide as its fullest lane."""
+        return [max([1] + [len(held.get(index, [])) for _, held in lanes]) * pitch + gap for index in range(len(columns))]
+
     @property
     def max_sub_epic_depth(self) -> int:
         deepest = 0

@@ -446,9 +446,9 @@ class DrawIOStoryModel(DiagramStoryModel):
         ET.SubElement(graph_root, "mxCell", attrib={"id": "0"})
         ET.SubElement(graph_root, "mxCell", attrib={"id": "1", "parent": "0"})
 
-        columns = self._thin_slice_columns()
-        lanes = [(inc, self._stories_by_column(inc, columns)) for inc in self.increments]
-        widths = self._column_widths(len(columns), [held for _, held in lanes])
+        columns = self.thin_slice_columns()
+        lanes = self.thin_slice_lanes(columns)
+        widths = self.thin_slice_widths(columns, lanes, DiagramStory.size + DrawIOIncrement.card_gap, DrawIOIncrement.card_gap)
         header_bottom = self._add_thin_slice_headers(graph_root, columns, widths)
         lane_y = DrawIOIncrement.lane_top_y(header_bottom)
         width = DrawIOIncrement.label_width + sum(widths)
@@ -457,23 +457,6 @@ class DrawIOStoryModel(DiagramStoryModel):
             lane_y += DrawIOIncrement.lane_height + DrawIOIncrement.lane_gap
         body = ET.tostring(mxfile, encoding="unicode")
         return "<?xml version='1.0' encoding='utf-8'?>\n" + body
-
-    def _thin_slice_columns(self) -> List[Tuple[Epic, Epic]]:
-        """One column per sub-epic, or per epic with none, under its top epic, in map order."""
-        return [(epic, sub) for epic in self.epics for sub in (epic.epics or [epic])]
-
-    def _stories_by_column(self, inc, columns: List[Tuple[Epic, Epic]]) -> Dict[int, List[Story]]:
-        """An increment's stories under the column of the sub-epic that holds each, in the increment's order."""
-        by_column: Dict[int, List[Story]] = {}
-        for story in inc.stories:
-            by_column.setdefault(self._column_of(story, columns), []).append(story)
-        return by_column
-
-    def _column_widths(self, count: int, lanes: List[Dict[int, List[Story]]]) -> List[int]:
-        """Each column widened to hold, side by side on one row, the most stories any one increment puts in it, so a
-        lane is a single row of cards and a sub-epic is as wide as its fullest lane."""
-        pitch = DiagramStory.size + DrawIOIncrement.card_gap
-        return [max(1, *(len(held.get(index, [])) for held in lanes)) * pitch + DrawIOIncrement.card_gap for index in range(count)]
 
     def _add_thin_slice_headers(self, graph_root, columns: List[Tuple[Epic, Epic]], widths: List[int]) -> int:
         """Each epic over the columns it spans, and each column's sub-epic under it; answers the headers' bottom."""
@@ -509,9 +492,6 @@ class DrawIOStoryModel(DiagramStoryModel):
                 y = lane_y + DrawIOIncrement.story_y_offset()
                 self._add_lane_cell(graph_root, cell_id, story.name, x, y, DiagramStory.size, DiagramStory.size, DrawIOIncrement.story_style)
 
-    def _column_of(self, story: Story, columns: List[Tuple[Epic, Epic]]) -> int:
-        """The column of the sub-epic that holds a story of this name; the last column for a story the map lacks."""
-        return next((index for index, (_, sub) in enumerate(columns) if any(held.name == story.name for held in sub.every_story())), len(columns) - 1)
     def _add_lane_cell(self, graph_root, cell_id: str, name: str, x: int, y: int, width: int, height: int, style: str) -> None:
         vertex = self._cell(cell_id, name)
         vertex.x, vertex.y, vertex.width, vertex.height, vertex.style = x, y, width, height, style
