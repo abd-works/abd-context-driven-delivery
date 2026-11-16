@@ -17,9 +17,9 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     Module,
     OoadClass,
     UnreadableSource,
-    class_names_imported_by,
 )
 from cdd_guidance.practices.clean_engineering.model.module_context_files import ModuleContext
+from cdd_guidance.practices.clean_engineering.model.script_imports import ScriptImports
 from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 
 if TYPE_CHECKING:
@@ -154,7 +154,7 @@ class OutsideScope:
             names.update(_CLASS_NAMES.findall(text))
             if not is_test_code(file.relative_to(self._root).as_posix()):
                 owner = self._module_folder_of(file.parent)
-                for name in class_names_imported_by(text):
+                for name in ScriptImports(text).class_names():
                     importers.setdefault(name, set()).add(owner)
         self._in_graph.root.set_fact("imported_names_outside", {name: sorted(held) for name, held in importers.items()})
         return names

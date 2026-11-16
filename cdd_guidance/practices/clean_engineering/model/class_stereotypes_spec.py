@@ -10,6 +10,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
+from cdd_guidance.practices.clean_engineering.model.class_stereotypes import DocComment  # noqa: E402
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass  # noqa: E402
 from cdd_guidance.practices.clean_engineering.model.javascript.javascript_class_model import (  # noqa: E402
     JavaScriptCleanEngineeringModel,
@@ -151,7 +152,7 @@ with description("a class's doc comment"):
             written.stereotypes = ["Aggregate Root"]
             written.module_path = ["Sales | custom", "Cart"]
             written.dependencies = [Relationship(target="Product", kind="dependency", label="Customer/Supplier", details={"direction": "downstream"})]
-            self.comment = written.doc_comment(marked=True)
+            self.comment = DocComment.from_class(written, marked=True)
             self.read = OoadClass("Cart", 1)
             self.comment.describe(self.read)
 

@@ -6,6 +6,7 @@ from pathlib import Path
 
 from harness.guidance.guidance import FidelityGuidance, Guidance, PracticeGuidance
 from harness.guidance_actions import GuidanceArg, GuidanceAction
+from harness.guidance.stages import OnStage
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
 from harness.installation.files import skill
 from harness.markdown.format import Format
@@ -17,6 +18,7 @@ from cdd_guidance.actions.validate.validate import Validate
 class Generate(GuidanceAction):
     """Generate artifacts for provided context tools."""
 
+    @OnStage(1, step=True, takes_formats=True)
     @mcp
     @skill
     @agent_instructions
@@ -25,7 +27,7 @@ class Generate(GuidanceAction):
         self._work_on(guidance)
         rules = self.work.rules_to_follow
         instructions(rules)
-        overlay_rules = self._overlay_rules()
+        overlay_rules = self.brief.overlay_rules()
         instructions(overlay_rules)
         tools(self._render().render)
         earlier = self._earlier_renders()

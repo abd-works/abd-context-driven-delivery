@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from harness.guidance_actions import ActionSession, GuidanceArg, GuidanceAction, WorkedGuidance, source_label
+from harness.guidance.stages import OnStage
 from cdd_guidance.actions.partition.partition_index import PartitionIndex
 from cdd_guidance.actions.partition.segment import (
     MIN_ENTRY_BODY_CHARS, SEGMENT_FILE, SEGMENT_FILES, Segment, SegmentCompletenessConfig,
@@ -122,6 +123,7 @@ class Partition(GuidanceAction):
         found = self._folder(out_root).glob(SEGMENT_FILES)
         return [path.resolve().as_posix() for path in sorted(found) if path.is_file()]
 
+    @OnStage(0)
     @mcp
     @skill
     @agent_instructions

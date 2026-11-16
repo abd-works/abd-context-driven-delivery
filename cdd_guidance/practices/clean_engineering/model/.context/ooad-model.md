@@ -29,7 +29,7 @@ A source file its language cannot read, such as Python that does not parse. Read
 
 ## OoadNode : ModelNode
 
-`model/ooad_node.py`, beside the members and the classes that build on it, so `base_class_model` imports `property` and `operation` and neither imports it back. The practice's module registers itself on it (`OoadNode.register_practice(CleanEngineering)`), so a node finds its practice without importing it.
+`model/ooad_node.py`, beside the members and the classes that build on it, so `base_class_model` imports `property` and `operation` and neither imports it back. The practice's module registers itself on it (`OoadNode.practice_class = CleanEngineering`), so a node finds its practice without importing it.
 
 
 + OoadNode(name: str, sequential_order: int, graph: Graph | None = None)
@@ -114,14 +114,18 @@ Raised when `translate_from` is given a node of another semantic type.
 + load_source_facts(file: Path, root: Path): None
 	// the graph facts the file it was read from gives: its imports, the class names it imports, and the classes that share it.
 	// The graph keeps each class apart from its module, so the module gives each class its peers' names
-	// root-relative paths of the relative script imports
+	-> ScriptImports.class_names
+- _import_targets(file: Path, root: Path): list[str]
+	// root-relative paths of the relative script imports; a PythonModule reads its own from its syntax tree
+	-> ScriptImports.targets
 + load_folder_facts(folder: Path): None
-	// the graph facts a code folder's context files give: what its module card says, read once, and whether it holds .context/bounded-context.md
-	-> ModuleContext.model_blocks
+	// keeps the graph facts a code folder's context files give as its own
+	-> ModuleContext.folder_facts
 	// production code whose name does not start with _
 + take_public_sources(sources: list[Module]): None
 	// how many public source files the folder holds, and whether their documentation carries internal design notes
 	-> Module.documentation
+	-> PublicSources.internal_notes
 + documentation: str
 	// the doc strings and comments of the file it was read from; only a Python module's is read, from the syntax tree it keeps
 + clone(): Module
@@ -155,15 +159,16 @@ Raised when `translate_from` is given a node of another semantic type.
 + module_helpers: list[list]
 	// the module's private functions only this class calls
 ----
-+ doc_comment(marked: bool): DocComment
-	// its doc comment as code writes it: its module path line, its intent, marked with its stereotypes for a language with no decorators, then the dependencies that name details
 + place_relationship(relationship: Relationship): None
 	// puts the relationship on every property whose type names its target. Inheritance is not a property relationship
 	-> Property.take_relationship
 + take_lines(lines: list[str]): None
 	// keeps the lines from its line to its end line, and each operation's
 + load_source_facts(): None
-	// the shape and source-span facts the graph reads: operation shapes, property names, what the constructor builds, prose comments
+	// keeps the shape and source-span facts the graph reads as its own
+	-> ClassSourceFacts.facts
++ held_fields: dict[str, str]
+	-> ClassSourceFacts.held_fields
 + declared_bases(known_names: list[str]): list[str]
 	// its bases, then the I{Class} contract it implements when known_names hold one
 + load_property(source: Property): Property
@@ -241,10 +246,10 @@ Raised when `translate_from` is given a node of another semantic type.
 + take_parameters(parameters: list): None
 	// each a `name: Type` line or a parameter to copy
 + take_body_fingerprint(body: str): None
-	// the hash another operation with the same whitespace-collapsed body shares; none for a body too short to count as a copy
+	-> BodyFingerprint.of_body
 + load_span_facts(): None
-	// the facts the operation rules read from its own source lines: private reach, I/O mixed with domain work, swallowed or empty-case exceptions, prose comments
-	-> SourceText
+	// keeps the facts the operation rules read from its own source lines as its own
+	-> OperationSpanFacts.facts
 + declares_types: bool
 	// the language it is written in has a syntax for a parameter's type; false for a JavaScriptOperation
 + save(): str
@@ -275,7 +280,7 @@ A rule that must stay true for one property or one operation. The text is the //
 
 ## SourceText
 
-A span of source in any language — an operation body, a class, a markdown card — and what the rules measure in it.
+A span of source in any language, an operation body or a class, and what the rules measure in its code. A markdown card's bullets are *CardBullets*' job.
 
 + SourceText(text: str)
 ------
@@ -297,7 +302,6 @@ A span of source in any language — an operation body, a class, a markdown card
 + mutates_without_record(): bool
 + has_prose_comment(hash_only: bool = False): bool
 + prototype_swap(start_line: int): dict
-+ markdown_bullet_lines(): dict
 + line_of(index: int): int
 	// the line, counted from 1, holding the character at index
 + hits(pattern: Pattern): list[list]
@@ -392,6 +396,71 @@ The module card, `.context/module-context.md`, of one code folder.
 + writes_child_parent_headings(): bool
 + model_blocks(): list[str]
 	// model-fidelity detail written into the card: a ------ member list, a Sources / context list, a Live instance list
++ folder_facts(): dict[str, object]
+	// every fact above by the name a Module keeps it under, with whether the folder holds .context/bounded-context.md
+
+## PublicSources
+
+<<Value Object>> The documentation of a folder's public source files (`module_context_files.py`).
+
++ PublicSources(documentation: list[str])
+----
++ count: int
++ internal_notes(): str
+	// 'heading' for an internal-design section heading, 'mixed' for internal notes inline, else ''
+
+## ScriptImports
+
+<<Value Object>> The imports of one source file's text (`script_imports.py`).
+
++ ScriptImports(source_text: str)
+----
++ class_names(): set[str]
+	// the names it imports (`from x import A`, `import { A } from`) or reaches as module.Class
++ targets(file: Path, root: Path): list[str]
+	// root-relative paths its relative script imports reach; a type-only import TypeScript erases is left out
+
+## ClassSourceFacts
+
+The facts a class's source gives the rules (`source_facts.py`), which the class keeps as its graph facts.
+
++ ClassSourceFacts(oclass: OoadClass)
+----
++ facts(): dict[str, object]
+	// operation shapes, property names, what the constructor builds, prose comments, a prototype swap, and its card bullets
+	-> CardBullets.lines
++ held_fields(): dict[str, str]
+	// its declared properties, then the fields its constructor assigns
+
+## OperationSpanFacts
+
+The facts the lines an operation spans give (`source_facts.py`), which the operation keeps as its graph facts.
+
++ OperationSpanFacts(operation: Operation)
+----
++ facts(): dict[str, object]
+	// its span's fingerprint when its parser took none, I/O mixed with domain work, empty-case and message-less exceptions, unrecorded state changes, prose comments, its card bullets
+	-> SourceText
+	-> BodyFingerprint.of_span
+	-> CardBullets.lines
+
+## BodyFingerprint
+
+<<Value Object>> The hash two operations share when their whitespace-collapsed text is the same (`source_facts.py`).
+
++ BodyFingerprint(text: str)
+----
++ of_body(): str
+	// none for a body too short for two copies of it to be a duplication
++ of_span(): str
+
+## CardBullets
+
+<<Value Object>> The bold Interaction and Invariant bullets of a span that is a markdown card (`operation_metrics.py`).
+
++ CardBullets(text: str)
+----
++ lines(): dict[str, list[int]]
 
 ## DocComment
 
@@ -400,6 +469,8 @@ The module card, `.context/module-context.md`, of one code folder.
 ------
 + stereotypes: list[str]
 ----
++ from_class(oclass: OoadClass, marked: bool): DocComment
+	// the comment code writes for oclass: its module path line, its intent, marked with its stereotypes for a language with no decorators, then the dependencies that name details
 + describe(oclass: OoadClass): None
 + text(): str
 

@@ -167,8 +167,8 @@ def names_call_io_and_domain(callees: list[str]) -> bool:
 
 
 class SourceText:
-    """A span of source in any language — an operation body, a class, a markdown card — and what the rules measure in
-    it. Brace-language measures count `{` blocks; Python measures count indentation."""
+    """A span of source in any language, an operation body or a class, and what the rules measure in its code.
+    Brace-language measures count `{` blocks; Python measures count indentation."""
 
     def __init__(self, text: str) -> None:
         self._text = text
@@ -318,23 +318,6 @@ class SourceText:
             return {}
         return {"code": found.group(0).strip(), "line": start_line + self._text.count("\n", 0, found.start())}
 
-    def markdown_bullet_lines(self) -> dict:
-        """Bold Interaction / Invariant bullets when the span is markdown; empty for code."""
-        if not self._text.strip() or not self._text.lstrip().startswith("#"):
-            return {}
-        interactions: list[int] = []
-        invariants: list[int] = []
-        in_language = False
-        for line_number, line in enumerate(self._text.splitlines(), start=1):
-            in_language = _LANGUAGE_HEADING.match(line) is not None or (in_language and not _ANY_HEADING.match(line))
-            if _META.search(line):
-                continue
-            if _BOLD_INTERACTION.search(line):
-                interactions.append(line_number)
-            if _BOLD_INVARIANT_BULLET.search(line) and not (in_language or _L_TAG.search(line)):
-                invariants.append(line_number)
-        return {"bold_interaction_lines": interactions, "bold_invariant_lines": invariants}
-
     def line_of(self, index: int) -> int:
         """The line, counted from 1, holding the character at index. Rules report a finding by its line, so a fact
         records the line its match starts on."""
@@ -385,6 +368,31 @@ class SourceText:
         """``this._field = receiver._field`` (or public ``field``) — an aggregate copying from a peer instance."""
         copy = rf"(?:this|self)\._?{re.escape(field)}\s*=\s*{re.escape(receiver)}\._?{re.escape(field)}\b"
         return bool(re.search(copy, self._text))
+
+
+class CardBullets:
+    """<<Value Object>> The bold Interaction and Invariant bullets of a span that is a markdown card, by line; a span
+    of code has none."""
+
+    def __init__(self, text: str) -> None:
+        self._text = text
+
+    def lines(self) -> dict[str, list[int]]:
+        """The lines, counted from 1, of each bold Interaction bullet and each bold Invariant bullet outside a
+        language section; none of either for a span that is not markdown."""
+        interactions: list[int] = []
+        invariants: list[int] = []
+        if self._text.strip() and self._text.lstrip().startswith("#"):
+            in_language = False
+            for line_number, line in enumerate(self._text.splitlines(), start=1):
+                in_language = _LANGUAGE_HEADING.match(line) is not None or (in_language and not _ANY_HEADING.match(line))
+                if _META.search(line):
+                    continue
+                if _BOLD_INTERACTION.search(line):
+                    interactions.append(line_number)
+                if _BOLD_INVARIANT_BULLET.search(line) and not (in_language or _L_TAG.search(line)):
+                    invariants.append(line_number)
+        return {"bold_interaction_lines": interactions, "bold_invariant_lines": invariants}
 
 
 class StatementCount:

@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 
 from harness.agent_tools.progress import report_progress
 from harness.graph.graph import Node, PracticeNodes
+from harness.graph.saved_graph import FactValue
 from harness.graph.location import Location
 from harness.guidance.practice_reading import PracticeReading
 from harness.graph.model_node import schema_sync_paused
@@ -119,7 +120,7 @@ class BuildingBlock(Node):
     def has_fact(self, key: str) -> bool:
         return super().has_fact(key) or self.ooad_class.has_fact(key)
 
-    def get_fact(self, key: str, default: object = None) -> object:
+    def get_fact(self, key: str, default: FactValue = None) -> FactValue:
         """This building block's fact, else the class's own, else the nearest DDD node around it."""
         if not super().has_fact(key) and self.ooad_class.has_fact(key):
             return self.ooad_class.get_fact(key, default)
@@ -145,7 +146,7 @@ class DddReading(PracticeReading):
 
     def own_graph_checks(self) -> dict:
         """DDD's own graph rules, then the rules of the practice it extends, whose part it holds."""
-        extended = self.practice.extended
+        extended = self.practice.working_set.extended
         return {**super().own_graph_checks(), **(extended.reading.graph_checks if extended is not None else {})}
 
     def read_working_copy(self) -> None:
@@ -163,7 +164,7 @@ class DddReading(PracticeReading):
     def _domain_classes(self) -> "_DomainClasses":
         """The classes the Clean Engineering practice DDD builds its building blocks from, when this graph holds it open;
         none in a graph without it, such as a session that works on DDD with Clean Engineering turned off."""
-        extended = self.practice.extended
+        extended = self.practice.working_set.extended
         clean = None if extended is None else self.graph.practices.loaded(type(extended))
         return _DomainClasses(clean.reading.in_graph if clean is not None else None)
 

@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Callable
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER
 from cdd_guidance.practices.clean_engineering.model.graph_reading import CodeIndex, GraphReading
-from cdd_guidance.practices.clean_engineering.model.operation import CONSTRUCTOR_NAMES
+from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUCTOR_NAMES
 from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 
 if TYPE_CHECKING:
@@ -123,7 +123,7 @@ class ClassGraph:
         """The code index of the Clean Engineering practice whose rules run: the practice itself, or the one a practice
         that holds its rules, such as DDD, extends."""
         reading = practice.reading
-        return reading.code_index if isinstance(reading, GraphReading) else practice.extended.reading.code_index
+        return reading.code_index if isinstance(reading, GraphReading) else practice.working_set.extended.reading.code_index
 
     def _is_production(self, node: "Node") -> bool:
         return node.name != MODULE_FUNCTION_HOLDER and not is_test_code(node.source.file)

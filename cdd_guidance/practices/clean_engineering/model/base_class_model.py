@@ -2,37 +2,25 @@
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 from typing import Iterable, List, Optional
 
 from harness.graph.model_node import ModelChildren
 from harness.graph.graph import Graph
 
-from cdd_guidance.practices.clean_engineering.model.class_stereotypes import MODULE_LINE, DocComment, joined_module_path, marked_intent
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
-from cdd_guidance.practices.clean_engineering.model.module_context_files import ModuleContext
+from cdd_guidance.practices.clean_engineering.model.module_context_files import ModuleContext, PublicSources
 from cdd_guidance.practices.clean_engineering.model.ooad_node import OoadNode
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
 from cdd_guidance.practices.clean_engineering.model.property import Property
+from cdd_guidance.practices.clean_engineering.model.script_imports import ScriptImports
+from cdd_guidance.practices.clean_engineering.model.source_facts import ClassSourceFacts
 from cdd_guidance.practices.clean_engineering.model.type_refs import domain_type_names
 
 
 _EXAMPLE_EXTENSION_PREFIXES = ("Fake", "Isolated", "Production")
-_SCRIPT_IMPORT = re.compile(r"""(?:\bfrom\s*|\brequire\s*\(\s*|\bimport\s*\(?\s*)['"](\.{1,2}/[^'"]+)['"]""")
-# An import or re-export TypeScript erases: `import type { A } from './x'`, or a braced list whose every name is
-# marked `type`. It names a type for an annotation and never runs, as Python's `if TYPE_CHECKING:` imports do.
-_TYPE_IMPORT_STATEMENT = re.compile(r"""\b(?:import|export)\s+type\b[^;'"]*?\bfrom\s*['"][^'"]+['"]""")
-_BRACED_IMPORT_STATEMENT = re.compile(r"""\b(?:import|export)\s*\{([^}]*)\}\s*from\s*['"][^'"]+['"]""")
-_PY_FROM_IMPORT = re.compile(r"^\s*from\s+[\w.]+\s+import\s+(\([^)]*\)|[^\n]+)", re.M)
-_JS_IMPORT = re.compile(r"\bimport\s+(?:type\s+)?([\w$]+)?\s*,?\s*(?:\{([^}]*)\})?\s*from\b")
-_QUALIFIED_CLASS = re.compile(r"\.([A-Z]\w*)\b")
-_IMPORT_ALIAS = re.compile(r"\s+as\s+\w+")
-# `self.column_name = ...` or `this.columnName: string = ...` in a constructor: a field the class holds.
-_ASSIGNED_FIELD = re.compile(r"(?:self|this)\.(\w+)\s*(?::\s*([^=\n]+?))?\s*=(?!=)")
-_INTERNAL_MARKDOWN = re.compile(r"^##\s+Internal\b", re.MULTILINE | re.IGNORECASE)
 # A class with one of these stereotypes owns the peers it builds, so building them is not a hidden dependency.
 _PEER_COMPOSING_STEREOTYPES = frozenset({"entity", "aggregate root"})
 
@@ -44,18 +32,6 @@ MODULE_FUNCTION_HOLDER = "_module"
 class UnreadableSource(ValueError):
     """A source file its language cannot read, such as Python that does not parse. Reading it as an empty or partial
     model would drop its classes from every check without saying so."""
-
-
-def class_names_imported_by(source_text: str) -> set:
-    """The names a source file imports (`from x import A`, `import { A } from`) or reaches as `module.Class`."""
-    names: set = set(_QUALIFIED_CLASS.findall(source_text))
-    for match in _PY_FROM_IMPORT.finditer(source_text):
-        names.update(_IMPORT_ALIAS.sub("", item).strip() for item in match.group(1).strip("()").split(","))
-    for default, braced in _JS_IMPORT.findall(source_text):
-        names.add(default)
-        names.update(_IMPORT_ALIAS.sub("", item).strip() for item in (braced or "").split(","))
-    names.discard("")
-    return names
 
 
 def path_parent(name: str) -> Optional[str]:
@@ -191,45 +167,16 @@ class OoadClass(OoadNode):
         for operation in self.operations:
             operation.take_lines(lines)
 
-    def doc_comment(self, marked: bool) -> DocComment:
-        """The class's doc comment: its module path line, its intent, marked with its stereotypes for a language that
-        has no decorators, then the dependencies that name details, since a plain dependency shows in code as the call
-        that makes it."""
-        lines = [f"{MODULE_LINE} {joined_module_path(self.module_path)}"] if self.module_path else []
-        intent = marked_intent(list(self.stereotypes) if marked else [], self.intent)
-        lines.extend([intent] if intent else [])
-        lines.extend(line.strip() for item in self.dependencies if item.details for line in item.lines())
-        return DocComment("\n".join(lines))
-
     @property
     def held_fields(self) -> dict[str, str]:
-        """Each field the class holds, with its type hint: its declared properties, then the fields its constructor
-        assigns (``self.name = ...``, ``this.name: Type = ...``). It saves with the graph, so a rule that compares the
+        """Each field the class holds, with its type hint. It saves with the graph, so a rule that compares the
         classes' fields reads them from a class read back from a saved graph too."""
-        found = {prop.name: prop.type_hint or "" for prop in self.properties}
-        for operation in self.operations:
-            if operation.is_constructor:
-                for name, hint in _ASSIGNED_FIELD.findall(operation.body.text):
-                    found.setdefault(name, (hint or "").strip())
-        return found
+        return ClassSourceFacts(self).held_fields()
 
     def load_source_facts(self) -> None:
-        """Fill the shape and source-span facts this class owns."""
-        operations = list(self.operations)
-        constructor = next((op for op in operations if op.name in {"__init__", "constructor"}), None)
-        self.method_count = len(operations)
-        self.operation_shapes = [
-            {"name": op.name, "is_property": op.is_property or op.is_setter, "is_private": op.is_private, "callees": [callee for callee in op.callees if callee]}
-            for op in operations
-        ]
-        self.property_names = sorted(prop.name for prop in self.properties)
-        self.constructs = [type_name for type_name, _line in constructor.constructed_types] if constructor else []
-        source = self.span
-        self.prose_comment = source.has_prose_comment(hash_only=True)
-        self.prototype_swap = source.prototype_swap(self.line or 1)
-        bullets = source.markdown_bullet_lines()
-        self.bold_interaction_lines = bullets.get("bold_interaction_lines", [])
-        self.bold_invariant_lines = bullets.get("bold_invariant_lines", [])
+        """Keep the shape and source-span facts its source gives, as its own graph facts."""
+        for name, fact in ClassSourceFacts(self).facts().items():
+            setattr(self, name, fact)
 
     def declared_bases(self, known_names: Iterable[str]) -> List[str]:
         """The bases its declaration names: its own, then the I{Class} contract it implements when one is known."""
@@ -465,54 +412,27 @@ class Module(OoadNode):
         """Fill the facts the file this module was read from owns: what it imports, the class names it imports, and
         which classes share it. The graph keeps each class apart from its module, so each class keeps its peers' names."""
         self.dependencies = self._import_targets(file, root)
-        self.imported_names = sorted(class_names_imported_by(self.source_text))
+        self.imported_names = sorted(ScriptImports(self.source_text).class_names())
         peer_names = [oclass.name for oclass in self.classes]
         for oclass in self.classes:
             oclass.peer_names = peer_names
 
     def _import_targets(self, file: Path, root: Path) -> List[str]:
-        """Root-relative paths named by relative script imports (`./x`, `../y`) that run. A type-only import is erased
-        by TypeScript, so it is no dependency and is left out."""
-        targets: List[str] = []
-        for specifier in _SCRIPT_IMPORT.findall(self._without_type_imports()):
-            resolved = (file.parent / specifier).resolve()
-            if resolved.is_relative_to(root.resolve()):
-                targets.append(resolved.relative_to(root.resolve()).as_posix())
-        return targets
-
-    def _without_type_imports(self) -> str:
-        """The source with every import TypeScript erases blanked: `import type ...`, and `import { type A, type B } ...`."""
-        text = _TYPE_IMPORT_STATEMENT.sub("", self.source_text)
-        return _BRACED_IMPORT_STATEMENT.sub(lambda match: "" if self._all_marked_type(match.group(1)) else match.group(0), text)
-
-    def _all_marked_type(self, braced_names: str) -> bool:
-        names = [item.strip() for item in braced_names.split(",") if item.strip()]
-        return bool(names) and all(name.startswith("type ") for name in names)
+        """Root-relative paths the relative script imports of its file reach; a language that reads its imports
+        another way, as Python reads its syntax tree, names its own."""
+        return ScriptImports(self.source_text).targets(file, root)
 
     def load_folder_facts(self, folder: Path) -> None:
-        """Fill the facts a code folder's context files give: what its module card says, read once."""
-        card = ModuleContext(folder)
-        self.has_module_context = card.exists()
-        self.has_bounded_context = (folder / ".context" / "bounded-context.md").is_file()
-        self.modules_heading = card.has_modules_heading()
-        self.names_seam = card.names_seam()
-        self.names_constraint = card.names_constraint()
-        self.model_blocks = card.model_blocks()
-        self.is_a_in_context = card.says_is_a_type_of()
-        self.child_parent_in_context = card.writes_child_parent_headings()
+        """Keep the facts a code folder's context files give, what its module card says, as its own graph facts."""
+        for name, fact in ModuleContext(folder).folder_facts().items():
+            setattr(self, name, fact)
 
     def take_public_sources(self, sources: List["Module"]) -> None:
-        """Fill the facts this folder's public source files give, each read into its module: how many there are, and
-        whether their documentation carries internal design notes: 'heading' for an internal-design section heading,
-        'mixed' for internal notes inline, else ''."""
-        self.public_source_files = len(sources)
-        text = "\n".join(source.documentation for source in sources)
-        if _INTERNAL_MARKDOWN.search(text):
-            self.public_source_internal = "heading"
-        elif "## Internal" in text or "_ holds " in text:
-            self.public_source_internal = "mixed"
-        else:
-            self.public_source_internal = ""
+        """Keep the facts this folder's public source files give, each read into its module: how many there are, and
+        whether their documentation carries internal design notes."""
+        public = PublicSources([source.documentation for source in sources])
+        self.public_source_files = public.count
+        self.public_source_internal = public.internal_notes()
 
     @property
     def documentation(self) -> str:

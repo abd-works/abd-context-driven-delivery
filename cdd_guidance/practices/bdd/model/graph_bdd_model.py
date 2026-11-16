@@ -42,7 +42,7 @@ class GraphBddModel(BddModel):
         graph = Graph()
         graph.restored_from(SavedGraph.from_text(text))
         self._graph = graph
-        bdd = graph.practices.of(self.practice_kind())
+        bdd = graph.practices.of(self.practice_kind)
         self._clean = bdd.reading.clean_engineering_reading
         for spec in sorted(bdd.reading.in_graph.nodes("Spec"), key=lambda node: node.source.file):
             for saved in self._in_file_order(graph.edges.from_parent("descriptions", spec)):

@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 from harness.graph.practice_rule import PracticeGraphRule
 
 from cdd_guidance.practices.clean_engineering.model.graph_reading import parameters_of
-from cdd_guidance.practices.clean_engineering.model.operation import CONSTRUCTOR_NAMES
+from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUCTOR_NAMES
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import StatementCount
 from cdd_guidance.practices.clean_engineering.rules.class_graph import ClassGraph
 from cdd_guidance.practices.clean_engineering.rules.near_copies import MIN_LINES, NearCopies

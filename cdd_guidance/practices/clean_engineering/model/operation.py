@@ -2,38 +2,20 @@
 
 from __future__ import annotations
 
-import hashlib
 import re
 from typing import List
-
-
-# A body shorter than this, once its whitespace is collapsed, is too small for two copies of it to be a duplication.
-_MIN_FINGERPRINTED_CHARACTERS = 40
-# How many hex digits of the hash a fingerprint keeps: enough that two different bodies never share one in practice.
-_FINGERPRINT_DIGITS = 24
-
 
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
 from harness.graph.model_node import ModelChildren
 
 from cdd_guidance.practices.clean_engineering.model.ooad_node import OoadNode
-from cdd_guidance.practices.clean_engineering.model.operation_metrics import (
-    MIN_DELEGATION_LINES,
-    SourceText,
-    names_call_io_and_domain,
-)
+from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
 from cdd_guidance.practices.clean_engineering.model.property import InvariantHolder
+from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUCTOR_NAMES, BodyFingerprint, OperationSpanFacts
 from cdd_guidance.practices.clean_engineering.model.type_refs import name_with_type, split_top_level
 
 # `save(cart: Cart, note: str = ""): Receipt` as a model line writes an operation.
 _SIGNATURE = re.compile(r"^(_?\w+)\s*\((.*)\)\s*(?::\s*(.+))?$")
-
-
-# The names a constructor goes by: Python's and the C-family languages'.
-CONSTRUCTOR_NAMES = frozenset({"__init__", "constructor"})
-# The operations that build their object, Python's `__new__` with the constructors. One can only build the object or
-# refuse the call; it has no quiet result to return instead.
-_BUILDING_NAMES = CONSTRUCTOR_NAMES | {"__new__"}
 
 
 class Parameter(OoadNode):
@@ -321,42 +303,15 @@ class Operation(InvariantHolder, OoadNode):
         self.span = SourceText("\n".join(lines[start - 1 : end]))
 
     def load_span_facts(self) -> None:
-        """Fill the facts this operation's own source span carries, beyond what the parser measured."""
-        span = self.span
-        if not self.body_fingerprint:
-            self.body_fingerprint = self._span_fingerprint()
-        self.io_and_domain_callees = self._delegates_io_and_domain()
-        self.io_and_domain = span.mixes_io_and_domain()
-        self.raises_on_empty = self.name not in _BUILDING_NAMES and span.raises_on_empty()
-        self.exception_without_message = span.exception_without_message()
-        self.generic_exception_message = span.generic_exception_message()
-        # A constructor sets up the object it builds and cannot return a record, so it is not a state change to report.
-        self.mutates_without_record = not self.is_constructor and span.mutates_without_record()
-        self.prose_comment = span.has_prose_comment()
-        bullets = span.markdown_bullet_lines()
-        self.bold_interaction_lines = bullets.get("bold_interaction_lines", [])
-        self.bold_invariant_lines = bullets.get("bold_invariant_lines", [])
-
-    def _span_fingerprint(self) -> str:
-        """The fingerprint of the whole source it spans, for a parser that took none of its body."""
-        normalized = re.sub(r"\s+", " ", self.span.text.strip())
-        return self._fingerprint(normalized) if normalized else ""
+        """Keep the facts this operation's own source span carries, beyond what the parser measured, as its own graph
+        facts."""
+        for name, fact in OperationSpanFacts(self).facts().items():
+            setattr(self, name, fact)
 
     def take_body_fingerprint(self, body: str) -> None:
         """Keep the fingerprint of its body text, which another operation with the same whitespace-collapsed body
         shares; none for a body too short for two copies of it to be a duplication."""
-        normalized = re.sub(r"\s+", " ", body.strip())
-        self.body_fingerprint = self._fingerprint(normalized) if len(normalized) >= _MIN_FINGERPRINTED_CHARACTERS else ""
-
-    def _fingerprint(self, normalized: str) -> str:
-        """The hash two operations share when their whitespace-collapsed text is the same."""
-        return hashlib.sha256(normalized.encode()).hexdigest()[:_FINGERPRINT_DIGITS]
-
-    def _delegates_io_and_domain(self) -> bool:
-        """A long operation that calls both I/O and domain calculations does two jobs, even when it only delegates."""
-        if (self.line_count or 0) < MIN_DELEGATION_LINES:
-            return False
-        return names_call_io_and_domain(self.callees)
+        self.body_fingerprint = BodyFingerprint(body).of_body()
 
     def save(self) -> str:
         params = ", ".join(parameter.save() for parameter in self.parameters)

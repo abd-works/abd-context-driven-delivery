@@ -74,11 +74,11 @@ class GraphReading(PracticeReading):
         either: none of its nodes, and no folder holding only them, is held to the relationships its type requires."""
         requirements = self.in_graph.rule_run.schema.requirements
         for node in self.in_graph.nodes():
-            if not is_test_code(node.source.file) and node.data.get(PRODUCTION_FACT, True):
+            if not is_test_code(node.source.file) and node.get_fact(PRODUCTION_FACT, True):
                 continue
             fields = {requirement.field for requirement in requirements if node.type in requirement.owner.node_types}
             if fields:
-                node.set_fact(EXEMPT_FACT, sorted(fields | set(node.data.get(EXEMPT_FACT) or [])))
+                node.merge_fact(EXEMPT_FACT, list(fields))
 
 
 class CallLinks:

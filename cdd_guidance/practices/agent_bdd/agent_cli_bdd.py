@@ -270,16 +270,21 @@ class _StreamBuckets:
         return None
 
 
+# The agent command line before any chat: whether it is installed, and the chats it starts. It holds no chat, so every
+# block shares it.
+CURSOR_AGENT = CursorCli()
+
+
 class CliAgentBlock(AgentBlock):
-    """One cursor-agent session: every instruct in the block resumes the same chat, and the judge runs in a fresh one."""
+    """One cursor-agent session: every instruct in the block resumes the same chat, and the judge runs in a fresh one.
+    It drives the agent command line it is given, the installed cursor-agent unless a caller gives another."""
 
     log_name = "agent_cli_bdd"
 
-    def __init__(self, workspace: Path, session_file: Path) -> None:
+    def __init__(self, workspace: Path, session_file: Path, cli: CursorCli = CURSOR_AGENT) -> None:
         super().__init__(workspace, session_file)
         self._session: AgentSession | None = None
-        # The agent command line before any chat: whether it is installed, and the chats it starts.
-        self._cli = CursorCli()
+        self._cli = cli
 
     def _open(self) -> None:
         if os.environ.get(AGENT_RUNS_OFF):

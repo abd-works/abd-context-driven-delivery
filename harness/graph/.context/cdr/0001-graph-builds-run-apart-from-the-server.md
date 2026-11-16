@@ -20,6 +20,6 @@ So a build that a chat's call asks for runs in a worker process. The graph write
 
 ## Kept as they are, and why
 
-- *PatternOverlays* keeps its registry of pattern classes on the class. The patterns register themselves when their package is imported, as the practices do with *PracticeCatalogue*, because the framework may not import them. The pattern objects are no longer process-wide: each graph's *PatternOverlays* makes its own.
+- The registry of pattern classes is the process's one `REGISTERED_PATTERNS` (a *ClassRegistry*, no longer state on the *PatternOverlays* class; `harness/guidance/.context/cdr/0005`), which each graph's *PatternOverlays* is made with. The patterns register themselves when their package is imported, as the practices do with `PRACTICE_CATALOGUE`, because the framework may not import them. The pattern objects are no longer process-wide: each graph's *PatternOverlays* makes its own.
 - *GraphOverlay.rules_for* names its rules package from the module of the pattern it holds, the way a practice reads its own rules (`rules_in(f"{package}.rules")`); nothing is looked up by a name a caller passed.
 - The graph's practices (`graph.practices`, since round 9) keep `loaded(kind)` beside `of(kind)`. `of` opens a practice the graph holds; `loaded` answers whether the last load reads it, which is what a practice linking its nodes to another's needs to know, and opens nothing. `practice(key)` is the one lookup by key, for calls that name a practice by the key they sent.

@@ -161,7 +161,7 @@ class PythonClass(CodeClass):
 
     def doc_intent(self) -> str:
         """Python marks the stereotypes as decorators, so its doc comment does not."""
-        return self.doc_comment(marked=False).text()
+        return DocComment.from_class(self, marked=False).text()
 
     def closing(self, has_members: bool) -> List[str]:
         return [] if has_members else ["    pass"]

@@ -9,9 +9,8 @@ import re
 from pathlib import Path
 
 from harness.graph.edge import EdgeType
-from harness.graph.graph import Graph, Node, Source
+from harness.graph.graph import Graph, Node
 from harness.graph.pattern_overlays import GraphOverlay
-from harness.graph.location import Location
 from harness.graph.skipped_folders import scanned_files
 
 from cdd_guidance.patterns.lern_domain_driven.tier_facts import TierFile
@@ -112,7 +111,7 @@ class _OssReading:
             slug = file.parent.name
             folder = file.parent.relative_to(self.root).as_posix()
             if file.name in (f"{slug}-service.ts", f"{slug}-bff.ts") and folder.startswith("src/") and not self.ddd.reading.in_graph.holds(f"ddd:Aggregate:{folder}"):
-                self.ddd.reading.in_graph.add_named("Aggregate", f"ddd:Aggregate:{folder}", slug, Source.from_root(self.ddd.reading.in_graph.source_root, Location(folder, 1, 1)))
+                self.ddd.reading.in_graph.add_file("Aggregate", folder, slug)
 
     def _aggregate(self, folder: str, aggregate: Node, service: Node | None) -> None:
         slug = Path(folder).name
@@ -190,9 +189,4 @@ class _OssReading:
 
     def _file_node(self, practice, relative: str, semantic: str, name: str = "") -> Node:
         """The node for one file or folder of practice, made the first time the overlay names it."""
-        graph = practice.reading.graph
-        node_id = f"{practice.key}:{semantic}:{relative}"
-        existing = graph.node(node_id)
-        if existing is not None:
-            return existing
-        return practice.reading.in_graph.add_named(semantic, node_id, name or Path(relative).stem, Source.whole_file(relative, practice.reading.in_graph.source_root))
+        return practice.reading.in_graph.add_file(semantic, relative, name)

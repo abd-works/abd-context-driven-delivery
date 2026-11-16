@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from harness.guidance.guidance import Guidance
 from harness.guidance_actions import GuidanceArg, GuidanceAction
+from harness.guidance.stages import OnStage
 from harness.agent_tools import agent_instructions, agent_toolset
 from harness.agent_tools.tool_call import ToolCall
 from harness.installation.destination import noDeploy
@@ -36,6 +37,7 @@ class Validate(GuidanceAction):
         self._graph: CheckedGraph | None = None
         self._reports: ReportFiles | None = None
 
+    @OnStage(2, step=True, checks=True)
     @mcp
     @skill
     @agent_instructions
@@ -109,7 +111,7 @@ class Validate(GuidanceAction):
 
     def _overlay_section(self) -> str:
         """The rules of the patterns the checked content was generated with; none when it names none."""
-        overlay_rules = self._overlay_rules(self._graph.edited or self._graph.prefixes)
+        overlay_rules = self.brief.overlay_rules(self._graph.edited or self._graph.prefixes)
         if not overlay_rules:
             return ""
         return f"Judge the work against these overlaid patterns' rules too, as you judge the practices' rules.\n\n{overlay_rules}"
@@ -120,7 +122,7 @@ class Validate(GuidanceAction):
         on, has none."""
         items = [item for item in self.listed() if not isinstance(item, str)]
         worked = [(item, self.fidelity_of(item)) for item in items]
-        return [fidelity for item, fidelity in worked if fidelity is not None and self._session_practice(item) is not None]
+        return [fidelity for item, fidelity in worked if fidelity is not None and self.session_practice(item) is not None]
 
     def _judging_instruction(self) -> str:
         """What the judge judges for each listed guidance: at a model or code fidelity with a graph, the graph validate

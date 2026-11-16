@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from harness.guidance_actions import GuidanceArg, GuidanceAction
+from harness.guidance.stages import OnStage
 from harness.agent_tools import agent_instructions, agent_toolset, tools
 from harness.installation.files import skill
 from harness.mcp.mcp_annotations import mcp
@@ -14,6 +15,7 @@ class Document(GuidanceAction):
     # Document records what is there without correcting it, so an edit it makes is no work the rules should steer.
     injects_rules = False
 
+    @OnStage(6)
     @mcp
     @skill
     @agent_instructions

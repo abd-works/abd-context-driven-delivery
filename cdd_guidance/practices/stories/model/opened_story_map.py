@@ -43,7 +43,7 @@ class OpenedStoryMap:
         self._path = Path(path).resolve()
         self._session = session
         # The session's own Stories practice, the one its graph holds, reads and writes the file.
-        self._stories = session.graph.practices.of(type(story_map).practice_kind())
+        self._stories = session.graph.practices.of(story_map.practice_kind)
         # The map as its own format writes it before any edit: a save writes the file only while the file still reads so.
         self._read_back = self._rendered(self.own_format)
 

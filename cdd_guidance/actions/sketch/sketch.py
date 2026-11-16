@@ -9,6 +9,7 @@ from pathlib import Path
 from cdd_guidance.actions.generate.generate import Generate
 from cdd_guidance.actions.grill_context.grill_context import GrillContext
 from harness.guidance_actions import ActionSession, GuidanceArg, GuidanceAction, WorkedGuidance
+from harness.guidance.stages import OnStage
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
 from harness.agent_tools.agent_tools import agent_tool
 from harness.agent_tools.tool_call import ToolCall
@@ -117,6 +118,7 @@ class Sketch(GuidanceAction):
         Grill must validate the sketch's thinking here — not run as a disconnected interview."""
         return "sketch-review"
 
+    @OnStage(4)
     @mcp
     @skill
     @agent_instructions

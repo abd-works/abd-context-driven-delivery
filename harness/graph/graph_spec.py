@@ -1216,7 +1216,7 @@ with description("a graph's practice"):
     with before.each:
         self.graph = Graph()
         self.practice = self.graph.practice("stories")
-        self.story = self.practice.reading.in_graph.add_named("Story", "stories:Story:Create account", "Create account", Source("story.md", 1, 1))
+        self.story = self.practice.reading.in_graph.add_file("Story", "Create account")
 
     with it("should be the practice's guidance itself"):
         expect(self.practice).to(be_a(PracticeGuidance))
@@ -1240,18 +1240,18 @@ with description("a graph's practice"):
 
     with context("that extends another practice"):
         with it("should hold the practice it extends, the one its graph holds"):
-            expect(self.graph.practice("ddd").extended).to(be(self.graph.practices.held["clean_engineering"]))
+            expect(self.graph.practice("ddd").working_set.extended).to(be(self.graph.practices.held["clean_engineering"]))
 
 
 with description("a graph given practices"):
     with before.each:
-        from harness.guidance.practice_catalogue import PracticeCatalogue
+        from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 
-        self.practices = PracticeCatalogue.create_all()
+        self.practices = PRACTICE_CATALOGUE.create_all()
         self.graph = Graph(self.practices)
 
     with it("should hold the very practices it was given"):
-        expect(list(self.graph.practices.held.values())).to(equal(self.practices))
+        expect(list(self.graph.practices.held.values())).to(equal(list(self.practices)))
 
     with it("should make itself the graph each of them holds"):
         expect({id(practice.reading.graph) for practice in self.practices}).to(equal({id(self.graph)}))

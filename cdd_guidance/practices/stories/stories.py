@@ -68,9 +68,11 @@ class Stories(PracticeGuidance):
         "spec_blurb": "Executable scenario-specifications with real-world examples",
     }
 
+    first_fidelity = "story_map"
+
     def __init__(
         self,
-        fidelity: str = "story_map",
+        fidelity: str | None = "",
         format: str | None = None,
         story_test_folder: str | None = None,
     ) -> None:
@@ -227,4 +229,4 @@ class Stories(PracticeGuidance):
         return sources
 
 
-StoryNode.register_practice(Stories)
+StoryNode.practice_class = Stories

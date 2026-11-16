@@ -1277,7 +1277,7 @@ class StoryModel(StoryNode):
         path = session.paths.path_named(file)
         files = session.session_files.file_manager
         files.read(os.path.relpath(path, files.workpath))
-        stories = session.graph.practices.of(cls.practice_kind())
+        stories = session.graph.practices.of(cls.practice_class)
         model = stories.open_file(path, session.repo_path)
         model.opened = OpenedStoryMap(model, path, session)
         return model
@@ -1288,7 +1288,7 @@ class StoryModel(StoryNode):
     def open_in_session(cls, *, call: ToolCall) -> "StoryModel":
         """Return the story map of the session open in the project: the first story map file its Stories practice
         declares there, so a page that follows the open session shows the ticket activated last."""
-        stories = call.session.graph.practices.of(cls.practice_kind())
+        stories = call.session.graph.practices.of(cls.practice_class)
         story_map = next(iter(stories.fidelities))
         made = [entry.path for entries in story_map.declared.files().values() for entry in entries if entry.exists]
         if not made:

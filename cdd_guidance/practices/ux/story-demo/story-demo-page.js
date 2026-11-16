@@ -13,15 +13,17 @@ import { ThenFeedback } from "./then-feedback.js";
 
 export class StoryDemoPage {
   /**
-   * @param {{ mode?: 'Play' | 'Interactive', storyDemoFrame?: StoryDemoFrame, explorerFrame?: ExplorerFrame }} [demoSetup]
+   * Every collaborator can be given; one left out is the page's own, made on the frames it holds.
+   * @param {{ mode?: 'Play' | 'Interactive', storyDemoFrame?: StoryDemoFrame, explorerFrame?: ExplorerFrame,
+   *   paintReflect?: PaintReflect, thenFeedback?: ThenFeedback, runner?: PlayDualRunner }} [demoSetup]
    */
-  constructor({ mode = "Play", storyDemoFrame, explorerFrame } = {}) {
+  constructor({ mode = "Play", storyDemoFrame, explorerFrame, paintReflect, thenFeedback, runner } = {}) {
     this.mode = mode;
     this.storyDemoFrame = storyDemoFrame ?? new StoryDemoFrame();
     this.explorerFrame = explorerFrame ?? new ExplorerFrame();
-    this.paintReflect = new PaintReflect(this.storyDemoFrame);
-    this.thenFeedback = new ThenFeedback(this.explorerFrame, this.storyDemoFrame);
-    this.runner = new PlayDualRunner({
+    this.paintReflect = paintReflect ?? new PaintReflect(this.storyDemoFrame);
+    this.thenFeedback = thenFeedback ?? new ThenFeedback(this.explorerFrame, this.storyDemoFrame);
+    this.runner = runner ?? new PlayDualRunner({
       paintReflect: this.paintReflect,
       thenFeedback: this.thenFeedback,
       storyDemoFrame: this.storyDemoFrame,
@@ -42,7 +44,8 @@ export class StoryDemoPage {
   /**
    * @param {(collectMode: string) => void} createStory
    * @param {string} collectMode — the mode the story function is collected in
-   * @param {{ mode?: 'Play' | 'Interactive', storyDemoFrame?: StoryDemoFrame, explorerFrame?: ExplorerFrame }} [demoSetup]
+   * @param {{ mode?: 'Play' | 'Interactive', storyDemoFrame?: StoryDemoFrame, explorerFrame?: ExplorerFrame,
+   *   paintReflect?: PaintReflect, thenFeedback?: ThenFeedback, runner?: PlayDualRunner }} [demoSetup]
    */
   static load(createStory, collectMode, demoSetup = {}) {
     const page = new StoryDemoPage(demoSetup);

@@ -4,7 +4,7 @@ practice works at, by its practice's schema and the schemas of the patterns its 
 from expects import be_empty, contain, equal, expect
 from mamba import before, description, it
 
-from harness.graph.graph import Graph, Source
+from harness.graph.graph import Graph
 from harness.graph.rule_context import RuleCheckContext
 from harness.graph.rule_fixture import RuleFixture
 from harness.graph.schema_conformance import ConformsToSchema
@@ -20,7 +20,7 @@ def _working_at(graph: Graph, key: str, fidelity: str):
 
 
 def _node(practice, type: str, name: str):
-    return practice.reading.in_graph.add_named(type, f"{practice.key}:{type}:{name}", name, Source(f"{name}.py", 1, 1))
+    return practice.reading.in_graph.add_file(type, f"{name}.py", name)
 
 
 _STORY_MAP = """\

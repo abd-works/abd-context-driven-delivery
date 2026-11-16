@@ -13,12 +13,12 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     is_interface_name,
 )
 from cdd_guidance.practices.clean_engineering.model.c_family_parse import CFamilyParse
+from cdd_guidance.practices.clean_engineering.model.class_stereotypes import DocComment
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
 from cdd_guidance.practices.clean_engineering.model.property import Property
-
-_CONSTRUCTOR_NAMES = frozenset({"constructor", "__init__"})
+from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUCTOR_NAMES
 
 
 class CodeProperty(Property):
@@ -94,11 +94,11 @@ class CodeOperation(Operation):
         raise NotImplementedError(f"{type(self).__name__} must spell its signature")
 
     def is_constructor_of(self, oclass: OoadClass) -> bool:
-        return self.name == oclass.name or self.name in _CONSTRUCTOR_NAMES
+        return self.name == oclass.name or self.name in CONSTRUCTOR_NAMES
 
     def answers_to(self, oclass: OoadClass, operation_name: str) -> bool:
         """True for its own name; "constructor" finds the constructor in any language."""
-        return self.name == operation_name or (operation_name in _CONSTRUCTOR_NAMES and self.is_constructor_of(oclass))
+        return self.name == operation_name or (operation_name in CONSTRUCTOR_NAMES and self.is_constructor_of(oclass))
 
 
 class CodeClass(OoadClass):
@@ -124,7 +124,7 @@ class CodeClass(OoadClass):
         interface, or a class with the bases it declares. An interface takes no decorators, so its stereotypes are
         marked in its doc comment."""
         if self.is_contract:
-            return [""] + self.doc(self.doc_comment(marked=True).text()) + self.interface_declaration()
+            return [""] + self.doc(DocComment.from_class(self, marked=True).text()) + self.interface_declaration()
         lines = [""] + self.doc(self.doc_intent()) + self.stereotype_decorators()
         return lines + self.class_declaration(self.declared_bases(known_names))
 
@@ -133,7 +133,7 @@ class CodeClass(OoadClass):
 
     def doc_intent(self) -> str:
         """What the class's doc comment says. A language with no decorators marks the stereotypes there."""
-        return self.doc_comment(marked=True).text()
+        return DocComment.from_class(self, marked=True).text()
 
     def stereotype_decorators(self) -> List[str]:
         """The decorator lines that carry the class's stereotypes; none for a language that marks them in the doc."""

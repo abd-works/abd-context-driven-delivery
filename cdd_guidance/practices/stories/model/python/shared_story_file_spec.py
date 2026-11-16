@@ -10,7 +10,7 @@ from mamba import after, before, description, it
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 from cdd_guidance.practices.stories.model.python.nodes import PythonStory
 from cdd_guidance.practices.stories.model.python.shared_story_file import SharedStoryFile
-from harness.guidance.practice_catalogue import PracticeCatalogue
+from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 
 _EXAMPLES = '''\
 from dataclasses import dataclass
@@ -115,7 +115,7 @@ with description("a Python shared story file"):
         with before.all:
             folder = _project()
             root = Path(folder.name)
-            practice = PracticeCatalogue.create("stories", fidelity="scenarios")
+            practice = PRACTICE_CATALOGUE.create("stories", fidelity="scenarios")
             paths = [str(root / "shop" / "edit-ticket-text.story.shared.py"), str(root / "story-map.md")]
             self.markdown = str(practice.fidelities.current.render_files("markdown", paths, "python")["content"])
             folder.cleanup()

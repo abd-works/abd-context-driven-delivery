@@ -55,6 +55,10 @@ INHERITANCE = "inheritance"
 GROUP_FILL_COLORS = ("#d6e4f5", "#d5e8d4", "#fff2cc", "#ffe6cc", "#e1d5e7", "#f8cecc", "#d0ece7", "#e6e6e6")
 
 _HEADINGS = {"top": (0, -1), "bottom": (0, 1), "right": (1, 0), "left": (-1, 0)}
+# Every step an arrow can take from a cell, in the order the search tries them.
+_STEPS = tuple(_HEADINGS.values())
+# The cost of a cell and heading no way has reached yet.
+_UNREACHED = float("inf")
 _VERTICAL_SIDES = ("bottom", "top")
 _HORIZONTAL_SIDES = ("right", "left")
 
@@ -464,69 +468,86 @@ class _ArrowSearch:
         self._attempt = attempt
         self._window = attempt.window if attempt.window is not None else (0, 0, grid.columns - 1, grid.lines - 1)
         self._came_from: Dict[Tuple[Point, Heading], Tuple[Point, Heading]] = {}
-
-    def run(self) -> Optional[List[Point]]:
-        """The search, written as one loop over local names: it visits hundreds of thousands of cells on a large page,
-        so each check is done here once rather than through a method call. It takes the same steps at the same prices
-        as `_steps` and `_price`, so it finds the same way they would."""
-        grid, arrow, end = self._grid, self._arrow, self._arrow.end
-        window_left, window_top, window_right, window_bottom = self._window
-        near_cards, inside_cards, horizontal, vertical = grid.blocked, grid.inside_cards, grid.horizontal, grid.vertical
-        held_vertical, held_horizontal = self._cells_held_against()
-        end_x, end_y = end
-        heading_in, came_from = arrow.heading_in, self._came_from
-        may_run_along = self._attempt.may_run_along
+        self._held_vertical, self._held_horizontal = self._cells_held_against()
         # A card a person placed right against the port leaves no cell to come straight in from, so the arrow may
         # come in from the side for its last step.
-        any_heading_in = (end[0] - heading_in[0], end[1] - heading_in[1]) in inside_cards
-        headings = tuple(_HEADINGS.values())
-        push, pop, infinity = heapq.heappush, heapq.heappop, float("inf")
-        best = {(arrow.begin, arrow.heading_out): 0}
-        frontier = [(0, 0, arrow.begin, arrow.heading_out)]
+        end, heading_in = arrow.end, arrow.heading_in
+        self._any_heading_in = (end[0] - heading_in[0], end[1] - heading_in[1]) in grid.inside_cards
+        self._best: Dict[Tuple[Point, Heading], int] = {(arrow.begin, arrow.heading_out): 0}
+        self._frontier: List[Tuple[int, int, Point, Heading]] = [(0, 0, arrow.begin, arrow.heading_out)]
         # The cost each cell and heading was searched from at. The estimate counts the distance left twice over, so a
         # cheaper way to a cell can turn up after it was searched from. It is searched from again only when the new way
         # saves a crossing: saving a turn or a few steps cost far more time than it gained.
-        expanded: Dict[Tuple[Point, Heading], int] = {}
+        self._expanded: Dict[Tuple[Point, Heading], int] = {}
+
+    def run(self) -> Optional[List[Point]]:
+        """The cheapest way from the arrow's begin to its end, searched from the cheapest cell and heading first; none
+        when no way is open."""
+        frontier, best, expanded = self._frontier, self._best, self._expanded
         while frontier:
-            _estimate, cost, cell, heading = pop(frontier)
-            if cost > best[(cell, heading)] or cost > expanded.get((cell, heading), infinity) - CROSSING_PRICE:
+            _estimate, cost, cell, heading = heapq.heappop(frontier)
+            here = (cell, heading)
+            if cost > best[here] or cost > expanded.get(here, _UNREACHED) - CROSSING_PRICE:
                 continue
-            expanded[(cell, heading)] = cost
-            if cell == end and (heading == heading_in or any_heading_in):
-                return self._walk_back((cell, heading))
-            x, y = cell
-            cell_in_horizontal, cell_in_vertical = cell in horizontal, cell in vertical
-            cell_carries_arrow = cell_in_horizontal or cell_in_vertical
-            for step in headings:
-                step_x, step_y = step
-                if step_x == -heading[0] and step_y == -heading[1]:
-                    continue
-                following = (x + step_x, y + step_y)
-                fx, fy = following
-                if not (window_left <= fx <= window_right and window_top <= fy <= window_bottom):
-                    continue
-                straight = step == heading
-                if following in inside_cards and following != end:
-                    continue
-                if following in (held_horizontal if step_x else held_vertical):
-                    continue
-                running_along = (
-                    ((following in horizontal or cell_in_horizontal) if step_x else (following in vertical or cell_in_vertical))
-                    or (not straight and cell_carries_arrow)
-                )
-                if running_along and not may_run_along:
-                    continue
-                crossing = following in (vertical if step_x else horizontal)
-                total = cost + 1 + (0 if straight else TURN_PRICE) + (CROSSING_PRICE if crossing or running_along else 0)
-                if following in near_cards and following != end:
-                    total += CLEARANCE_PRICE
-                key = (following, step)
-                if total < best.get(key, infinity) and total <= expanded.get(key, infinity) - CROSSING_PRICE:
-                    best[key] = total
-                    came_from[key] = (cell, heading)
-                    distance = abs(end_x - fx) + abs(end_y - fy)
-                    push(frontier, (total + ESTIMATE_WEIGHT * distance, total, following, step))
+            expanded[here] = cost
+            if self._arrives(cell, heading):
+                return self._walk_back(here)
+            self._expand(cell, heading, cost)
         return None
+
+    def _arrives(self, cell: Point, heading: Heading) -> bool:
+        return cell == self._arrow.end and (heading == self._arrow.heading_in or self._any_heading_in)
+
+    def _expand(self, cell: Point, heading: Heading, cost: int) -> None:
+        """Price each step out of cell but the one straight back, and offer each the arrow may take."""
+        grid = self._grid
+        carries = (cell in grid.horizontal, cell in grid.vertical)
+        for step in _STEPS:
+            if step[0] == -heading[0] and step[1] == -heading[1]:
+                continue
+            following = (cell[0] + step[0], cell[1] + step[1])
+            price = self._price(following, step, step == heading, carries)
+            if price is not None:
+                self._offer(following, step, cost + price, (cell, heading))
+
+    def _price(self, following: Point, step: Heading, straight: bool, carries: Tuple[bool, bool]) -> Optional[int]:
+        """What the step onto following costs: one, a turn's price, a crossing's for crossing or running along another
+        arrow, and the clearance price beside a card. None where the arrow may not go: outside the window, into a card
+        but its own end, onto a cell held for another arrow's port, or along another arrow while the attempt forbids it."""
+        grid, end = self._grid, self._arrow.end
+        left, top, right, bottom = self._window
+        if not (left <= following[0] <= right and top <= following[1] <= bottom):
+            return None
+        if following in grid.inside_cards and following != end:
+            return None
+        if following in (self._held_horizontal if step[0] else self._held_vertical):
+            return None
+        running_along = self._runs_along(following, step, straight, carries)
+        if running_along and not self._attempt.may_run_along:
+            return None
+        crossing = following in (grid.vertical if step[0] else grid.horizontal)
+        price = 1 + (0 if straight else TURN_PRICE) + (CROSSING_PRICE if crossing or running_along else 0)
+        return price + (CLEARANCE_PRICE if following in grid.blocked and following != end else 0)
+
+    def _runs_along(self, following: Point, step: Heading, straight: bool, carries: Tuple[bool, bool]) -> bool:
+        """Whether the step runs along an arrow already drawn, or turns on one."""
+        grid = self._grid
+        if step[0]:
+            along = following in grid.horizontal or carries[0]
+        else:
+            along = following in grid.vertical or carries[1]
+        return along or (not straight and (carries[0] or carries[1]))
+
+    def _offer(self, following: Point, step: Heading, total: int, came_from: Tuple[Point, Heading]) -> None:
+        """Keep the way to following at total when it is cheaper than any found before, to search from later."""
+        key = (following, step)
+        if total >= self._best.get(key, _UNREACHED) or total > self._expanded.get(key, _UNREACHED) - CROSSING_PRICE:
+            return
+        self._best[key] = total
+        self._came_from[key] = came_from
+        end = self._arrow.end
+        distance = abs(end[0] - following[0]) + abs(end[1] - following[1])
+        heapq.heappush(self._frontier, (total + ESTIMATE_WEIGHT * distance, total, following, step))
 
     def _cells_held_against(self) -> Tuple[Set[Point], Set[Point]]:
         """The cells `is_held_against` closes to this arrow, for a vertical step and for a horizontal one; none when

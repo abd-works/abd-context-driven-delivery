@@ -1,5 +1,5 @@
 """The graph rules a practice supplement adds to each practice it supplements, whatever overlays the session chose. The
-sample supplement (``harness/guidance/fixtures/sample_supplement``) shares one rule, ``sample-one-outcome``, across BDD
+graph-checked supplement (``harness/graph/fixtures/graph_checked_supplement``) shares one rule, ``sample-one-outcome``, across BDD
 observations and Clean Engineering operations."""
 
 from expects import be_none, equal, expect, have_key
@@ -7,19 +7,19 @@ from mamba import after, before, context, description, it
 
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 from harness.graph.pattern_overlays import PatternOverlays
-from harness.guidance.fixtures.sample_supplement.rules import SampleOneOutcome
-from harness.guidance.fixtures.sample_supplement.sample_supplement import SampleSupplement
-from harness.guidance.practice_catalogue import PracticeCatalogue
+from harness.graph.fixtures.graph_checked_supplement.graph_checked_supplement import GraphCheckedSupplement
+from harness.graph.fixtures.graph_checked_supplement.rules import SampleOneOutcome
+from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 
 
 with description("a rule a practice supplement shares across practices") as self:
     with before.all:
-        self.registered = PracticeCatalogue.supplement_classes()
-        PracticeCatalogue.register_supplements(SampleSupplement)
-        self.practices = {practice.key: practice for practice in PracticeCatalogue.create_all(fidelity=None)}
+        self.registered = PRACTICE_CATALOGUE.supplement_classes
+        PRACTICE_CATALOGUE.register_supplements(GraphCheckedSupplement)
+        self.practices = {practice.key: practice for practice in PRACTICE_CATALOGUE.create_all(fidelity=None)}
 
     with after.all:
-        PracticeCatalogue.register_supplements(*self.registered)
+        PRACTICE_CATALOGUE.register_supplements(*self.registered)
 
     with context("that is bound to a practice it names"):
         with it("should check that practice's own node types"):

@@ -23,10 +23,11 @@ if TYPE_CHECKING:
 if __name__ == "__main__":
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
-from harness.graph.graph import Graph, Source  # noqa: E402
+from harness.graph.graph import Graph  # noqa: E402
 from harness.graph.schema_rules import PracticeSchema  # noqa: E402
 from harness.installation.data_class import data_of  # noqa: E402
 from harness.installation.json_file import JsonFile  # noqa: E402
+from harness.installation.repository_toolsets import RepositoryToolsets  # noqa: E402
 
 FILE = JsonFile(Path(__file__).resolve().parent / "filter-choices.json")
 
@@ -62,7 +63,7 @@ class FixtureGraph:
     def _fill(self, practice: PracticeGuidance, held: dict[str, Any], edges_of_type: dict[str, list[str]]) -> None:
         part = practice.reading.in_graph
         part.rule_run.schema_with = lambda overlays, schema=FixtureSchema(practice, list(held["rules"])): schema
-        nodes = {node_type: part.add_named(node_type, f"{practice.key}:{node_type}", node_type.lower(), Source("fixture", 1, 1)) for node_type in held["node_types"]}
+        nodes = {node_type: part.add_file(node_type, node_type.lower()) for node_type in held["node_types"]}
         for kind in held["edge_types"]:
             for node_type, node in nodes.items():
                 if kind in edges_of_type.get(node_type, []):
@@ -84,6 +85,6 @@ def read() -> dict[str, Any]:
 
 
 if __name__ == "__main__":
-    import cdd_guidance.practices  # noqa: F401 - registers the practices the fixture names with the practice catalogue
-
+    # Loading the checkout's toolsets registers its practices, the ones the fixture names, with the practice catalogue.
+    RepositoryToolsets.of_running_checkout().classes()
     FILE.write(recorded(read()))

@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Callable, Iterable, Iterator, TypedDict
 
 from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.progress import report_progress
-from harness.guidance.practice_catalogue import PracticeCatalogue
+from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 from harness.installation.data_class import data_field, language_adapter
 from harness.installation.files import command, skill
 from harness.mcp.mcp_annotations import long_call, mcp
@@ -543,6 +543,11 @@ class Node:
         if self.practice is not None and self.practice.reading.in_graph is not None:
             self.graph.build.changed()
 
+    def set_facts(self, facts: NodeFacts) -> None:
+        """Record each of facts on this node, as ``set_fact`` records one."""
+        for key, fact in facts.items():
+            self.set_fact(key, fact)
+
     def get_fact(self, key: str, default: FactValue = None) -> FactValue:
         """This node's fact, else the nearest ancestor's: a fact a whole file owns lives once, on the file's top node. A
         node no practice holds yet has only the ancestors its parser gave it."""
@@ -987,10 +992,16 @@ class PracticeNodes:
         node.forget_rules()
         return node
 
-    def add_named(self, type: str, node_id: str, name: str, source: Source) -> Node:
-        """A node of the practice with no parsed object behind it, such as a story's example or a pattern's file, made
-        and added."""
-        node = Node(self.practice, type, node_id, name, source)
+    def add_file(self, type: str, relative: str, name: str = "") -> Node:
+        """The practice's node of type for the whole file or folder at relative, under its source root, such as a
+        pattern's tier file or an aggregate's folder: the one it holds, else one made and added with no parsed object
+        behind it. name defaults to the file's stem."""
+        node_id = f"{self.practice.key}:{type}:{relative}"
+        held = self._by_id.get(node_id)
+        if held is not None:
+            return held
+        source = Source.whole_file(relative, self.source_root)
+        node = Node(self.practice, type, node_id, name or Path(relative).stem, source)
         return self.add(node, node_id, Location(source.file, source.start_line, source.end_line))
 
     def hold(self, node: Node) -> None:
@@ -1303,7 +1314,7 @@ class Graph:
 
     def __init__(self, practices: Iterable[PracticeGuidance] | None = None) -> None:
         self.build = GraphBuild(self)
-        held = list(PracticeCatalogue.create_all(fidelity=None) if practices is None else practices)
+        held = list(PRACTICE_CATALOGUE.create_all(fidelity=None) if practices is None else practices)
         for practice in held:
             practice.reading.held_in(self, PracticeNodes(self, practice))
         self.practices = GraphPractices(self, held)
