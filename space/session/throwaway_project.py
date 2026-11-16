@@ -5,11 +5,46 @@ from __future__ import annotations
 
 import atexit
 import os
+import queue
 import shutil
 import tempfile
+import threading
 from pathlib import Path
 
 from harness.mcp.cdd_home import CDD_HOME_ENV
+
+
+class FolderSweeper:
+    """Removes the folders specs are done with on a thread of its own, so an example does not wait while its project is
+    deleted: deleting a project's folders took a tenth of a board spec's time. The run waits for every folder to go
+    before it ends, so none is left behind."""
+
+    _folders: queue.SimpleQueue[Path] = queue.SimpleQueue()
+    _thread: threading.Thread | None = None
+    _lock = threading.Lock()
+
+    @classmethod
+    def remove(cls, folder: Path) -> None:
+        """Remove folder soon, with all it holds."""
+        with cls._lock:
+            if cls._thread is None:
+                cls._thread = threading.Thread(target=cls._sweep, name="folder-sweeper", daemon=True)
+                cls._thread.start()
+                atexit.register(cls.finish)
+        cls._folders.put(folder)
+
+    @classmethod
+    def finish(cls) -> None:
+        """Wait until every folder handed over is removed."""
+        if cls._thread is not None:
+            cls._folders.put(None)
+            cls._thread.join()
+            cls._thread = None
+
+    @classmethod
+    def _sweep(cls) -> None:
+        while (folder := cls._folders.get()) is not None:
+            shutil.rmtree(folder, ignore_errors=True)
 
 
 class SpecRunHome:
@@ -93,4 +128,4 @@ class ThrowawayProject:
             os.environ.pop("CDD_PROJECT", None)
         else:
             os.environ["CDD_PROJECT"] = self._saved
-        shutil.rmtree(self._folder, ignore_errors=True)
+        FolderSweeper.remove(self._folder)
