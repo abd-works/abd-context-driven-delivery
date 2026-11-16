@@ -792,3 +792,8 @@
 2026-11-16T00:08:09Z tool repo.push_to_main 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-14249
 2026-11-16T00:10:24Z tool cdd-version.set_next 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-14279
 2026-11-16T00:11:01Z tool repo.push_to_main 987e838f-b76e-4c72-9ecf-e3ece234c48e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-2\987e838f-b76e-4c72-9ecf-e3ece234c48e.jsonl 1-14306
+2026-11-16T00:11:24Z tool graph.practice_names
+2026-11-16T00:11:24Z tool graph.load_practice_roots
+2026-11-16T00:11:41Z tool graph.inventory
+2026-11-16T00:11:41Z tool graph.filter_choices
+2026-11-16T00:11:43Z tool graph.explorer_trees
