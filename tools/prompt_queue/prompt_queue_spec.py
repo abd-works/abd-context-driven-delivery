@@ -63,10 +63,10 @@ with describe(PromptQueue):
         queue.clear()
         expect(len(list(session_archive.glob("*.json")))).to(equal(1))
 
-    with it("archives into its session's folder in the checkout the call works in, such as a ticket's worktree"):
+    with it("archives into its session's work folder, in the ticket's worktree"):
         from types import SimpleNamespace
         worktree = self.folder / "worktree"
-        call = SimpleNamespace(chat_id="chat-1", project=worktree, session=SimpleNamespace(name="simple-queue"))
+        call = SimpleNamespace(chat_id="chat-1", project=worktree, session=SimpleNamespace(work_folder=worktree / ".sessions" / "simple-queue"))
         queue = PromptQueue.load("chat-1", call=call)
         queue.add("Write the scenarios")
         queue.clear()

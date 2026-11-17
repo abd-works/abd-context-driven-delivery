@@ -30,8 +30,6 @@ ATTACHMENTS_FOLDER = "attachments"
 # The folder that keeps a JSON copy of every prompt clear or remove took off, so the work stays on record: in the session's
 # folder the queue's chat works in, else beside the chat's queue file.
 ARCHIVE_FOLDER = "queue-archive"
-# The folder of a checkout that holds its sessions, one folder each.
-SESSIONS_FOLDER = ".sessions"
 # What marks a step that came from a message the person sent: a correction or comment filed under the goal it belongs to.
 INTERRUPTION_MARK = "[interruption]"
 # The section of a handoff that holds the numbered steps the next agent takes (space/session/HANDOFF-FORMAT.md).
@@ -101,11 +99,11 @@ class PromptQueue:
     def load(cls, chat: str, *, call: ToolCall) -> PromptQueue:
         """The queue of chat; with chat empty, of the chat the call came from, so an agent queues work on its own
         chat's queue without knowing its id. Prompts taken off it are archived in the folder of the session the call
-        works in, in the checkout the call works in, such as the ticket's worktree, beside the rest of that session's work;
-        in no session, beside the queue in the chat's folder."""
+        works in: its work folder, in the ticket's worktree, beside the rest of that session's work; in no session,
+        beside the queue in the chat's folder."""
         chat = chat or call.chat_id
         session = call.session
-        archive = call.project / SESSIONS_FOLDER / session.name / ARCHIVE_FOLDER if session is not None and call.project is not None else None
+        archive = session.work_folder / ARCHIVE_FOLDER if session is not None and session.work_folder is not None else None
         return cls(chat, CHATS_FOLDER.path / chat / QUEUE_FILE, archive)
 
     @classmethod
