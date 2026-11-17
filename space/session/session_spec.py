@@ -325,9 +325,10 @@ with description("a session"):
                 with it("should write no session.json into its work folder"):
                     expect((self.worktree / ".sessions" / "alpha" / "session.json").exists()).to(equal(False))
 
-            with context("that closes"):
+            with context("that closes with its work in its worktree"):
                 with before.each:
                     self.session = Sessions(self.called).current()
+                    self.session.mark_loop(ToolCall())
                     self.session.folder.move_to_closed()
 
                 with it("should move its record among the closed sessions"):
@@ -335,6 +336,18 @@ with description("a session"):
 
                 with it("should leave its work in its worktree"):
                     expect(self.session.work_folder).to(equal(self.worktree / ".sessions" / "alpha"))
+
+            # Closing a ticket merges its branch first, which brings its work folder beside its record, then deletes the
+            # worktree; the record's move then takes that work along.
+            with context("that closes once its worktree is gone"):
+                with before.each:
+                    self.session = Sessions(self.called).current()
+                    self.session.mark_loop(ToolCall())
+                    shutil.rmtree(self.worktree)
+                    self.session.folder.move_to_closed()
+
+                with it("should keep its work beside its record among the closed sessions"):
+                    expect(self.session.work_folder).to(equal(self.repo.resolve() / ".sessions" / "_complete" / "alpha"))
 
             # The board and the chat bar name the active ticket by the open session's name, so it follows the worktree
             # as current does: the ticket's own chat shows the ticket, not main.

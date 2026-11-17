@@ -180,10 +180,18 @@ with description("a ticket's work through the cdd server") as self:
         with it("should leave main without that commit"):
             expect(self.clone.subjects("main")).not_to(contain("Add feature"))
 
-        # The ticket's record lives on main; its branch carries only the work.
-        with it("should carry no session files on the ticket's branch"):
+        # The ticket's record lives on main; its branch carries the session's work folder, its log and the rest.
+        with it("should carry its session's work folder on the ticket's branch"):
             changed = git(self.clone.work, "diff", "--name-only", "main...walk-worktree").splitlines()
-            expect([path for path in changed if path.startswith(".sessions/")]).to(equal([]))
+            expect(changed).to(contain(".sessions/walk-worktree/session.log"))
+
+        with it("should carry no session files but its work folder's on the ticket's branch"):
+            changed = git(self.clone.work, "diff", "--name-only", "main...walk-worktree").splitlines()
+            expect([path for path in changed if path.startswith(".sessions/") and not path.startswith(".sessions/walk-worktree/")]).to(equal([]))
+
+        with it("should carry no record on the ticket's branch"):
+            changed = git(self.clone.work, "diff", "--name-only", "main...walk-worktree").splitlines()
+            expect(changed).not_to(contain(".sessions/walk-worktree/session.json"))
 
     with context("that work was pushed to its branch from elsewhere"):
         with before.all:
@@ -225,6 +233,13 @@ with description("a ticket's work through the cdd server") as self:
 
         with it("should commit the closed ticket's record on main"):
             expect(self.clone.tracked("origin/main", ".sessions/_complete/walk-worktree")).to(contain(".sessions/_complete/walk-worktree/session.json"))
+
+        # The branch merges first, so its work folder lands beside the record and moves with it.
+        with it("should take its merged work along among the closed sessions on main"):
+            expect(self.clone.tracked("origin/main", ".sessions/_complete/walk-worktree")).to(contain(".sessions/_complete/walk-worktree/session.log"))
+
+        with it("should leave nothing of it among the open sessions on main"):
+            expect(self.clone.tracked("origin/main", ".sessions/walk-worktree")).to(equal([]))
 
     # Another ticket is another chat and worktree: nothing is left or moved.
     with context("that a person opens two tickets, each worked on in its own chat"):

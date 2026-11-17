@@ -72,12 +72,13 @@ class SessionFolder:
 
     def _move_to(self, parent: Path) -> Session:
         """Move this session's record folder under ``parent``, such as ``.sessions/_complete/``; the session, now kept
-        there, and still the one object its sessions hold for it. A work folder that is the record folder moves with it;
-        one in the ticket's worktree stays with the work."""
+        there, and still the one object its sessions hold for it. A work folder that is the record folder moves with it,
+        and so does one whose worktree is gone, its work merged beside the record when the ticket closed; one in a
+        worktree still there stays with the work."""
         session = self._session
         parent.mkdir(parents=True, exist_ok=True)
         moved_from = session.record_folder
-        works_beside_record = session.work_folder == moved_from
+        works_beside_record = session.work_folder == moved_from or not session.work_folder.is_dir()
         shutil.move(str(moved_from), str(parent / session.name))
         session.record_folder = parent / session.name
         if works_beside_record:

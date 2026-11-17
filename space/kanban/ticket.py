@@ -231,7 +231,7 @@ class TicketEnding:
     @agent_tool
     @noSessionLog
     def close(self, leaving: list[str] | None = None) -> Ticket:
-        """Close ticket: leaving names what to do with its work first (handoff, commit, push, merge, delete_branch, delete_worktree); then its session ends, its folder moves to _complete/, that move is committed on main and pushed, and it shows in Complete. The repository's own folder stays on main."""
+        """Close ticket: leaving names what to do with its work first (handoff, commit, push, merge, delete_branch, delete_worktree), its branch merged before anything moves; then its session ends, its record folder moves to _complete/ with the work the merge brought beside it, that move is committed on main and pushed, and it shows in Complete. The repository's own folder stays on main."""
         self._refuse_main("close")
         leaving = leaving or []
         checkout = self.checkout
@@ -240,9 +240,11 @@ class TicketEnding:
         checkout.free_worktree(leaving)
         checkout.keep_landing_release(leaving)
         self.session.close()
-        closed = self.board.placement.ticket_of(self.session.folder.move_to_closed())
-        # The work is saved after the folder moves, so the move is committed with it.
+        # The branch merges before the record moves: the session's work folder it carries lands beside the record in
+        # main's .sessions, and the move takes both among the closed sessions. Moved first, git would find the work
+        # folder added inside a folder main renamed, and refuse the merge.
         checkout.save_work(leaving)
+        closed = self.board.placement.ticket_of(self.session.folder.move_to_closed())
         checkout.return_to_default_branch()
         # The ticket's record is kept on main, so its move among the closed sessions is committed and pushed there.
         self.board.sessions.saves.now(f"sessions: close {self.name}")
