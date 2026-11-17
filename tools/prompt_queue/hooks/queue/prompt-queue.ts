@@ -20,11 +20,19 @@ const QUEUE_INSTRUCTIONS = [
   'prompt-queue.show reads the queue again. Mark a prompt done only once its work is done; never take one off that you have not done.',
   `A prompt whose text starts with ${'"[decision required]"'} waits for the person's answer; pass over it.`,
   'When you take a prompt, first call prompt-queue.set_steps with its id and the steps you plan for it, so the queue shows your work on the prompt you took.',
+  'Keep one card for each goal: when a message the person sends belongs to a goal already on the queue, make it a task of that goal with prompt-queue.set_steps',
+  'and take its own card off with prompt-queue.remove; gather related [interruption] cards under one goal card the same way, written as a short title of the goal.',
+  'Keep the order done, then being worked, then not started.',
 ].join(' ')
 // What marks a prompt put back on the queue to wait for the person's answer; play passes over it.
 const DECISION_FLAG = '[decision required]'
 // How long play waits for the person to answer a question the agent ended its turn with, before it moves on.
 const DECISION_WAIT_MS = 60_000
+// A notice the chat gives the agent, such as a background task finishing, which arrives as a prompt but is not the
+// person's: it is never queued.
+const SYSTEM_NOTICE = /^\s*<(task-notification|system-reminder)>/
+// What marks a step that came from a message the person sent while the agent worked.
+const INTERRUPTION_MARK = '[interruption]'
 // Until the mod has seen the agent's task list, the agent keeps a prompt's steps on the queue itself.
 const KEEP_STEPS_YOURSELF = 'Mark each step done with prompt-queue.step_done as you finish it.'
 
@@ -372,26 +380,66 @@ async function workOn($: EngineInterface, id: string): Promise<void> {
 /** A prompt sent straight to the chat, as the queue holds it: its id, and what the agent is told about it. */
 export type SentPrompt = { id: string; note: string }
 
-/** A prompt the person sent straight to the chat goes on the queue first, as the prompt being worked, so the steps the
- * agent plans for it sit under it; the agent is told its id, to mark it done when it is finished. */
+/** A prompt the person sent straight to the chat interrupts the queue: while a turn works a queued prompt it becomes a
+ * step of that prompt; otherwise it goes on the queue just above the next prompt to do, below the done ones, marked
+ * [interruption], as the prompt being worked, so the steps the agent plans for it sit under it. The agent is told its id,
+ * to mark it done when it is finished. */
 export async function queueSentPrompt($: EngineInterface, text: string): Promise<SentPrompt | undefined> {
-  if (text.trim() === '' || text.trim() === ASK_FOR_NEXT || !(await changeQueue($, 'add', { text }))) {
+  if (text.trim() === '' || text.trim() === ASK_FOR_NEXT || SYSTEM_NOTICE.test(text)) {
+    return undefined
+  }
+  const interrupted = await interruptedPrompt($)
+  if (interrupted) {
+    return addInterruption($, interrupted, text.trim())
+  }
+  const nextPlace = (await read($, queue)).prompts.findIndex(prompt => !prompt.is_done)
+  if (!(await changeQueue($, 'add', { text: `${INTERRUPTION_MARK} ${text.trim()}` }))) {
     return undefined
   }
   const sent = (await read($, queue)).prompts.at(-1)
   if (!sent) {
     return undefined
   }
-  await changeQueue($, 'move', { prompt: sent.id, to: 0 })
+  await changeQueue($, 'move', { prompt: sent.id, to: nextPlace < 0 ? (await read($, queue)).prompts.length - 1 : nextPlace })
   await workOn($, sent.id)
-  return { id: sent.id, note: `This prompt is first on this chat's prompt queue as [${sent.id}]. When its work is done, call prompt-queue.done with that id.` }
+  return {
+    id: sent.id,
+    note: `This prompt is on this chat's prompt queue as [${sent.id}]. If it belongs to a goal already on the queue, make it a task of that goal ` +
+      'with prompt-queue.set_steps and take this card off with prompt-queue.remove; otherwise, when its work is done, call prompt-queue.done with that id.',
+  }
+}
+
+/** The goal a message the person sends is filed under: the one last worked, if it is on the queue, done or not. */
+async function interruptedPrompt($: EngineInterface): Promise<QueuedPrompt | undefined> {
+  const working = await read($, askedAbout)
+  return (await read($, queue)).prompts.find(prompt => prompt.id === working)
+}
+
+/** A message the person sends, mid-turn or between turns, is filed by the cdd server under the goal last worked, as its
+ * step marked [interruption], opening it again if it was done; the agent is told so, and moves it to a card of its own
+ * when it is separate work. The task list carries on from the goal's filed steps. */
+async function addInterruption($: EngineInterface, prompt: QueuedPrompt, text: string): Promise<SentPrompt> {
+  await changeQueue($, 'add_interruption', { prompt: prompt.id, text })
+  const filed = (await read($, queue)).prompts.find(goal => goal.id === prompt.id)
+  await update($, plan, () => filed?.steps ?? [])
+  return {
+    id: '',
+    note: `The person sent this about the goal last worked; it is now a step of prompt [${prompt.id}] on the queue, marked ${INTERRUPTION_MARK}. ` +
+      'Fold it into that work, or, if it is separate work, queue it with prompt-queue.add and take the step off.',
+  }
 }
 
 /** One `update_plan` call: the agent's task list follows it and is copied whole onto the prompt being worked. */
 export async function followPlan($: EngineInterface, call: PlanCall): Promise<void> {
   await update($, isPlanSeen, () => true)
-  await update($, plan, steps => nextPlan(steps, call))
+  await update($, plan, steps => keptInterruptions(steps, nextPlan(steps, call)))
   await copyPlanOntoWorkingPrompt($)
+}
+
+/** A new task list keeps the person's interruptions it does not list, so a message sent mid-work is not lost. */
+function keptInterruptions(before: PromptStep[], after: PromptStep[]): PromptStep[] {
+  const listed = new Set(after.map(step => step.text))
+  return [...after, ...before.filter(step => step.text.startsWith(INTERRUPTION_MARK) && !listed.has(step.text))]
 }
 
 /** The agent gave a queued prompt its steps: that is the prompt it took, so it becomes the one being worked, and the
@@ -434,6 +482,41 @@ export async function sendNow($: EngineInterface, prompt: QueuedPrompt): Promise
 }
 
 /** The steps toggle on a card: its steps show under it, or fold away again. */
+/** + on a card: the prompt box's draft becomes the prompt's last step, not started, and the box empties; the steps open. */
+export async function addStep($: EngineInterface, prompt: QueuedPrompt): Promise<void> {
+  const { text } = await $.prompt.read()
+  if (text.trim() === '') {
+    return
+  }
+  await changeSteps($, prompt, [...(prompt.steps ?? []), { text: text.trim(), state: 'pending' }])
+  await $.prompt.fill({ text: '', mode: 'replace' })
+  await update($, openSteps, open => (open.includes(prompt.id) ? open : [...open, prompt.id]))
+}
+
+/** ✕ on a step: it comes off its prompt. */
+export async function removeStep($: EngineInterface, prompt: QueuedPrompt, index: number): Promise<void> {
+  await changeSteps($, prompt, (prompt.steps ?? []).filter((_, place) => place !== index))
+}
+
+/** ↑ or ↓ on a step: it moves one place among its prompt's steps. */
+export async function moveStep($: EngineInterface, prompt: QueuedPrompt, from: number, to: number): Promise<void> {
+  const steps = [...(prompt.steps ?? [])]
+  if (to < 0 || to >= steps.length) {
+    return
+  }
+  const [moving] = steps.splice(from, 1)
+  steps.splice(to, 0, moving!)
+  await changeSteps($, prompt, steps)
+}
+
+/** Gives a prompt its changed steps; for the prompt being worked the task list's next changes start from them. */
+async function changeSteps($: EngineInterface, prompt: QueuedPrompt, steps: PromptStep[]): Promise<void> {
+  if (prompt.id === (await read($, askedAbout))) {
+    await update($, plan, () => steps)
+  }
+  await changeQueue($, 'set_steps', { prompt: prompt.id, steps })
+}
+
 export async function toggleSteps($: EngineInterface, id: string): Promise<void> {
   await update($, openSteps, open => (open.includes(id) ? open.filter(shown => shown !== id) : [...open, id]))
 }
@@ -468,15 +551,33 @@ export async function groupIntoTasks($: EngineInterface): Promise<void> {
   await update($, notice, () => '')
 }
 
+/** Fun names a sub-agent goes by, one for each place in turn, until the person names it. */
+const AGENT_NAMES = ['Sparky', 'Bolt', 'Gizmo', 'Rivet', 'Pixel', 'Widget', 'Cog', 'Zap']
+
+/** The name a sub-agent goes by: what the person called it, else the fun name for its place. */
+export function agentNameOf(task: SubAgentTask, place: number): string {
+  return task.name ?? AGENT_NAMES[place % AGENT_NAMES.length]!
+}
+
+/** ✎ on a sub-agent's column: the prompt box's draft becomes its name, and the box empties. */
+export async function renameAgent($: EngineInterface, place: number): Promise<void> {
+  const { text } = await $.prompt.read()
+  if (text.trim() === '') {
+    return
+  }
+  await update($, tasks, grouped => grouped.map((task, index) => (index === place ? { ...task, name: text.trim() } : task)))
+  await $.prompt.fill({ text: '', mode: 'replace' })
+}
+
 export async function sendTasksToSubAgents($: EngineInterface): Promise<void> {
   if ((await read($, tasks)).length === 0) {
     await groupIntoTasks($)
   }
   const grouped = await read($, tasks)
-  for (const task of grouped) {
+  for (const [place, task] of grouped.entries()) {
     const started = await $.agent.spawn({
       prompt: task.prompts.join('\n\n'),
-      description: task.description,
+      description: `${agentNameOf(task, place)}: ${task.description}`,
       subagentType: 'general-purpose',
     })
     if (started.deny) {

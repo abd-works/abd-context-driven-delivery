@@ -1,3 +1,5 @@
+import json
+
 from mamba import describe, it, before
 from expects import expect, equal, raise_error
 
@@ -44,6 +46,30 @@ with describe(PromptQueue):
 
     with it("refuses to mark done a prompt the queue does not hold"):
         expect(lambda: self.queue.done("gone")).to(raise_error(PromptNotQueued))
+
+    with it("keeps a copy of the prompts clear takes off, as JSON in the chat's queue archive"):
+        self.queue.clear()
+        archived = [json.loads(saved.read_text(encoding="utf-8")) for saved in (self.folder / "queue-archive").glob("*.json")]
+        expect([[prompt["text"] for prompt in copy["prompts"]] for copy in archived]).to(equal([["Write the scenarios", "Run the unit tier"]]))
+
+    with it("keeps a copy of a prompt remove takes off, as JSON in the chat's queue archive"):
+        self.queue.remove(self.queue.prompts[1]["id"])
+        archived = [json.loads(saved.read_text(encoding="utf-8")) for saved in (self.folder / "queue-archive").glob("*.json")]
+        expect([[prompt["text"] for prompt in copy["prompts"]] for copy in archived]).to(equal([["Run the unit tier"]]))
+
+    with it("files a message under a goal as a step not started, marked as the person's interruption"):
+        goal = self.queue.prompts[0]["id"]
+        self.queue.add_interruption(goal, "cut the text with an ellipsis")
+        expect(self.queue.prompts[0]["steps"]).to(equal([{"text": "[interruption] cut the text with an ellipsis", "state": "pending"}]))
+
+    with it("reopens a done goal a message is filed under, since it has work again"):
+        goal = self.queue.prompts[0]["id"]
+        self.queue.done(goal)
+        self.queue.add_interruption(goal, "cut the text with an ellipsis")
+        expect(self.queue.prompts[0].get("is_done", False)).to(equal(False))
+
+    with it("refuses to file a message under a goal the queue does not hold"):
+        expect(lambda: self.queue.add_interruption("gone", "cut the text")).to(raise_error(PromptNotQueued))
 
     with it("queues a handoff's steps once, however often the chat switches to its session"):
         handoff = self.folder / "handoff-1.md"

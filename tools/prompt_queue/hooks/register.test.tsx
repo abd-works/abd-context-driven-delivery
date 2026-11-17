@@ -68,6 +68,12 @@ function promptQueueTools(prompts: Prompt[]) {
       prompts[at(args.prompt)]!.is_done = true
       return answer()
     },
+    add_interruption: args => {
+      const goal = prompts[at(args.prompt)]!
+      goal.steps = [...(goal.steps ?? []), { text: `[interruption] ${String(args.text).trim()}`, state: 'pending' }]
+      goal.is_done = false
+      return answer()
+    },
     set_steps: args => {
       prompts[at(args.prompt)]!.steps = args.steps as Step[]
       return answer()
@@ -433,9 +439,21 @@ test('a prompt sent straight to the chat goes first on the queue, as the prompt 
 
   await $.prompt.submit({ text: 'Fix the Files app', wait: false, origin: { kind: 'composer' } })
 
-  expect(seeded.prompts.map(prompt => prompt.text)).toEqual(['Fix the Files app', 'Write the scenarios', 'Run the unit tier'])
+  expect(seeded.prompts.map(prompt => prompt.text)).toEqual(['[interruption] Fix the Files app', 'Write the scenarios', 'Run the unit tier'])
   expect(seeded.stored.askedAbout?.value).toBe(seeded.prompts[0]!.id)
   expect(carried.join()).toContain(`as [${seeded.prompts[0]!.id}]`)
+})
+
+test('a prompt sent straight to the chat goes above the next prompt to do, below the done ones, marked as an interruption', async ($, on) => {
+  const seeded = seedQueue(on, false, '', [
+    { id: 'a', text: 'Write the scenarios', is_done: true },
+    { id: 'b', text: 'Run the unit tier' },
+  ] as Prompt[], true)
+  on('prompt.submit', (_, e) => ({ text: e.text }))
+
+  await $.prompt.submit({ text: 'Fix the Files app', wait: false, origin: { kind: 'composer' } })
+
+  expect(seeded.prompts.map(prompt => prompt.text)).toEqual(['Write the scenarios', '[interruption] Fix the Files app', 'Run the unit tier'])
 })
 
 for (const isPlanSeen of [false, true]) {
@@ -479,8 +497,9 @@ test("a card with steps shows how many are done, and opens them under it", async
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
 
   expect(progress?.props.label).toBe('1/2')
-  expect(await ui.find({ type: 'Button', key: 'steps-b' })).toBeUndefined()
-  expect((await ui.find({ type: 'Box', key: 'steps-of-a' }))?.text).toBe('✓ Read the epic▸ Write the stories')
+  expect((await ui.find({ type: 'Button', key: 'steps-b' }))?.props.label).toBe('+')
+  expect((await ui.find({ type: 'Box', key: 'step-row-a-1' }))?.text.startsWith('✓ Read the epic')).toBe(true)
+  expect((await ui.find({ type: 'Box', key: 'step-row-a-2' }))?.text.startsWith('▸ Write the stories')).toBe(true)
   await ui.unmount()
 })
 
@@ -697,4 +716,218 @@ test('the prompt the agent gives steps to becomes the one being worked, so its t
   expect(seeded.stored.askedAbout?.value).toBe('b')
   expect(seeded.prompts[1]!.steps!.map(step => step.state)).toEqual(['done', 'in_progress'])
   expect(seeded.prompts[0]!.steps).toBeUndefined()
+})
+
+
+const WITH_STEPS = [
+  { id: 'a', text: 'Write the scenarios', steps: [
+    { text: 'Read the epic', state: 'done' },
+    { text: 'Write the stories', state: 'in_progress' },
+    { text: 'Validate them', state: 'pending' },
+  ] },
+  { id: 'b', text: 'Run the unit tier' },
+] as Prompt[]
+
+/** The queue drawn again after a press, with prompt a's steps open, as its next render draws it. */
+async function stepsOpenAfter($: Parameters<Parameters<typeof test>[1]>[0], press: string) {
+  const opening = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await opening.press({ key: 'steps-a' })
+  await opening.unmount()
+  const pressing = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await pressing.press({ key: press })
+  await pressing.unmount()
+}
+
+test("+ on a card with no tasks adds the prompt box's draft as its first task, not started, and empties the box", async ($, on) => {
+  const seeded = seedQueue(on, true, '', WITH_STEPS.map(prompt => ({ ...prompt })))
+  on('prompt.read', () => ({ value: { text: 'Render the map', cursor: 14 } }))
+  const filled: string[] = []
+  on('prompt.fill', (_, e) => {
+    filled.push(e.text)
+    return { isFilled: true }
+  })
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'steps-b' })
+  await ui.unmount()
+
+  expect(seeded.prompts[1]!.steps).toEqual([{ text: 'Render the map', state: 'pending' }])
+  expect(filled).toEqual([''])
+})
+
+test('✕ on a step takes it off its prompt', async ($, on) => {
+  const seeded = seedQueue(on, true, '', WITH_STEPS.map(prompt => ({ ...prompt })))
+
+  await stepsOpenAfter($, 'remove-step-a-2')
+
+  expect(seeded.prompts[0]!.steps!.map(step => step.text)).toEqual(['Read the epic', 'Validate them'])
+})
+
+test("↑ on a step moves it one place up among its prompt's steps", async ($, on) => {
+  const seeded = seedQueue(on, true, '', WITH_STEPS.map(prompt => ({ ...prompt })))
+
+  await stepsOpenAfter($, 'up-step-a-3')
+
+  expect(seeded.prompts[0]!.steps!.map(step => step.text)).toEqual(['Read the epic', 'Validate them', 'Write the stories'])
+})
+
+test("↓ on a step moves it one place down among its prompt's steps", async ($, on) => {
+  const seeded = seedQueue(on, true, '', WITH_STEPS.map(prompt => ({ ...prompt })))
+
+  await stepsOpenAfter($, 'down-step-a-1')
+
+  expect(seeded.prompts[0]!.steps!.map(step => step.text)).toEqual(['Write the stories', 'Read the epic', 'Validate them'])
+})
+
+
+/** A turn is running on prompt a, the one being worked, when the person sends a message. */
+async function messageSentMidWork($: Parameters<Parameters<typeof test>[1]>[0], on: TestOn, text: string) {
+  const seeded = seedQueue(on, false, '', QUEUED.map(prompt => ({ ...prompt })), true, '', 'a')
+  planToolAnswers(on)
+  on('turn.start', (_, e) => e)
+  const carried: string[] = []
+  on('prompt.submit', (_, e) => {
+    carried.push(...(e.context ?? []))
+    return { text: e.text }
+  })
+  await $.turn.start({ text: 'Take the next prompt on the queue.', turnId: 't1' })
+  await $.prompt.submit({ text, wait: false, origin: { kind: 'composer' } })
+  return { seeded, carried }
+}
+
+test("a message sent while a prompt is worked becomes a step of that prompt, marked as the person's interruption", async ($, on) => {
+  const { seeded } = await messageSentMidWork($, on, 'cut the text with an ellipsis')
+
+  expect(seeded.prompts.map(prompt => prompt.text)).toEqual(['Write the scenarios', 'Run the unit tier'])
+  expect(seeded.prompts[0]!.steps).toEqual([{ text: '[interruption] cut the text with an ellipsis', state: 'pending' }])
+})
+
+test('the agent is told a message sent mid-work joined the prompt it works on', async ($, on) => {
+  const { carried } = await messageSentMidWork($, on, 'cut the text with an ellipsis')
+
+  expect(carried.join()).toContain('step of prompt [a]')
+})
+
+test("the agent's next task list keeps the person's interruption among the prompt's steps", async ($, on) => {
+  const { seeded } = await messageSentMidWork($, on, 'cut the text with an ellipsis')
+
+  await $.tool.call({ tool: PLAN_TOOL, items: PLANNED })
+
+  expect(seeded.prompts[0]!.steps!.map(step => step.text)).toContain('[interruption] cut the text with an ellipsis')
+})
+
+
+const GROUPED = [
+  { description: 'Write the story map', prompts: ['Write the scenarios', 'Validate them'] },
+  { description: 'Run the tests', prompts: ['Run the unit tier'] },
+]
+
+/** A queue in sub-agent mode whose prompts are grouped into GROUPED tasks, open. */
+function groupedQueue(on: TestOn, tasks: object[] = GROUPED) {
+  const seeded = seedQueue(on, true)
+  seeded.stored.isSubAgentMode = { value: true, version: 1 }
+  seeded.stored.tasks = { value: tasks, version: 1 }
+  return seeded
+}
+
+test('sub-agent mode draws one column for each sub-agent, named, with a robot on top', async ($, on) => {
+  groupedQueue(on)
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  const first = JSON.stringify(await ui.find({ type: 'Box', key: 'agent-column-1' }))
+  const second = JSON.stringify(await ui.find({ type: 'Box', key: 'agent-column-2' }))
+
+  expect(first).toContain('Sparky')
+  expect(first).toContain('<svg')
+  expect(first).toContain('Write the scenarios')
+  expect(second).toContain('Bolt')
+  expect(second).toContain('Run the unit tier')
+  await ui.unmount()
+})
+
+test("each sub-agent's robot differs from the others", async ($, on) => {
+  groupedQueue(on)
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  const robotOf = async (column: number) => {
+    const drawn = JSON.stringify(await ui.find({ type: 'Box', key: `agent-column-${column}` }))
+    return drawn.slice(drawn.indexOf('<svg'), drawn.indexOf('</svg>'))
+  }
+
+  expect(await robotOf(1)).toContain('<svg')
+  expect(await robotOf(1)).not.toEqual(await robotOf(2))
+  await ui.unmount()
+})
+
+test("✎ on a sub-agent's column names it from the prompt box's draft", async ($, on) => {
+  const seeded = groupedQueue(on)
+  on('prompt.read', () => ({ value: { text: 'Captain Tests', cursor: 13 } }))
+  on('prompt.fill', () => ({ isFilled: true }))
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'rename-agent-2' })
+  await ui.unmount()
+
+  expect((seeded.stored.tasks?.value as { name?: string }[]).map(task => task.name)).toEqual([undefined, 'Captain Tests'])
+})
+
+test("a sub-agent starts with its column's name", async ($, on) => {
+  const seeded = groupedQueue(on, [{ ...GROUPED[0], name: 'Captain Tests' }])
+  seeded.stored.isPlaying = { value: true, version: 1 }
+  const spawned: string[] = []
+  on('agent.spawn', (_, e) => {
+    spawned.push((e as { description: string }).description)
+    return { model: 'claude-sonnet-5-5' }
+  })
+  on('turn.complete', () => ({ text: 'Done.' }))
+
+  await $.turn.complete(FINISHED_TURN)
+  await unawaitedWorkSettled()
+
+  expect(spawned).toEqual(['Captain Tests: Write the story map'])
+})
+
+
+test("a background task's notice arriving in the chat is not queued as the person's prompt", async ($, on) => {
+  const seeded = seedQueue(on, false, '', QUEUED.map(prompt => ({ ...prompt })), true)
+  on('prompt.submit', (_, e) => ({ text: e.text }))
+
+  await $.prompt.submit({ text: ['<task-notification>', '<task-id>b1</task-id>', '<status>completed</status>', '</task-notification>'].join(' '), wait: false, origin: { kind: 'composer' } })
+
+  expect(seeded.prompts.map(prompt => prompt.text)).toEqual(['Write the scenarios', 'Run the unit tier'])
+})
+
+
+test('the queue beside a prompt tells the agent to keep one card for each goal, with related messages as its tasks', async ($, on) => {
+  seedQueue(on, false, '', QUEUED, true)
+  const carried: string[] = []
+  on('prompt.submit', (_, e) => {
+    carried.push(...(e.context ?? []))
+    return { text: e.text }
+  })
+
+  await $.prompt.submit({ text: 'Fix the Files app', wait: false, origin: { kind: 'composer' } })
+
+  expect(carried.join()).toContain('one card for each goal')
+  expect(carried.join()).toContain('make it a task of that goal')
+})
+
+
+test('a message sent between turns is filed under the goal last worked, opening it again, instead of a card of its own', async ($, on) => {
+  const seeded = seedQueue(on, false, '', [
+    { id: 'a', text: 'Write the scenarios', is_done: true },
+    { id: 'b', text: 'Run the unit tier' },
+  ] as Prompt[], true, '', 'a')
+  const carried: string[] = []
+  on('prompt.submit', (_, e) => {
+    carried.push(...(e.context ?? []))
+    return { text: e.text }
+  })
+
+  await $.prompt.submit({ text: 'cut the text with an ellipsis', wait: false, origin: { kind: 'composer' } })
+
+  expect(seeded.prompts.map(prompt => prompt.text)).toEqual(['Write the scenarios', 'Run the unit tier'])
+  expect(seeded.prompts[0]!.steps).toEqual([{ text: '[interruption] cut the text with an ellipsis', state: 'pending' }])
+  expect(seeded.prompts[0]!.is_done).toBe(false)
+  expect(carried.join()).toContain('step of prompt [a]')
 })

@@ -962,7 +962,7 @@ Built: the ↑ and ↓ on a card move its prompt one place (`movePrompt`). Inten
 
 ### (S) Person --> Remove Queued Prompts
 
-Built: the ✕ on a card takes its prompt off the queue (`removePrompt`); the bin clears the whole queue (`clearQueue`).
+Built: the ✕ on a card takes its prompt off the queue (`removePrompt`); the bin clears the whole queue (`clearQueue`). Built (2026-11-17), not seen (the person: "when deleting a queue (eg clear all) make sure we save a copy of the json so we have an archive of the work"): every prompt clear or remove takes off is kept as JSON in the chat's `queue-archive` folder, one file for each time, named for when they were taken off, with the prompts' steps and attachments.
 
 ### (S) Person --> Play Prompt Queue
 
@@ -978,7 +978,7 @@ Built (2026-11-16): pause stops finished turns from sending the next prompt; the
 
 ### (S) Person --> Send Queued Prompts To Sub-Agents
 
-Built, not seen: with sub-agent mode on, the model groups the queued prompts into tasks that can run side by side (`groupIntoTasks`), and sending starts one sub-agent per task (`sendTasksToSubAgents`).
+Built, not seen: with sub-agent mode on, the model groups the queued prompts into tasks that can run side by side (`groupIntoTasks`), and sending starts one sub-agent per task (`sendTasksToSubAgents`). Built (2026-11-17), not seen (the person: "visualize the use of sub agents: place tasks in columns, independent queues by sub agent name (allow naming, its fun!) with a robot on the top of each queue, claude orange, different robot per queue"): the open queue draws one column for each sub-agent side by side, each with its own Claude-orange robot on top (a different shade, eyes and antenna for each place), a fun name (Sparky, Bolt, Gizmo…), what it does, and its prompts in order; ✎ beside the name renames it from the prompt box's draft (`renameAgent`), and the sub-agent starts with that name in its description.
 
 ### (S) Person --> Plan Queue From Conversation
 
@@ -1036,6 +1036,14 @@ The file viewer is the Files app (`harness/files_app/`): a page of its own, open
 
 Requested (2026-11-15): the file viewer becomes where the graph is worked too. A toggle at its top switches between its files and the graph; the graph view does what the Graph app does, but on the files the Files app lists, opening every file a person selects and folding them to the nodes selected. The person: "the actual file viewer is going to have a toggle that can switch from folder files and graph ... we basically ingest all of the stories and functionality that the Graph application can do except for you're now selecting file(s), eg more than one file opens; expand and collapse in file viewer based on the nodes in the graph; graph filtered like file filter is". Once these stories work, the Graph app's own epics (Explore Graph In Graph App, Filter Graph In Graph App, Review Violations In Graph App) retire into them.
 
+
+### (S) Person --> Edit Prompt Steps
+
+Built (2026-11-17), not seen (the person: "i want to add steps sometimes ... 2/5 click opens + - up down just like queue"): with the pointer on a card, + adds the prompt box's draft as the card's last step, not started, empties the box and opens the steps (`addStep`); with the pointer on an open step, ↑ and ↓ move it one place (`moveStep`) and ✕ takes it off (`removeStep`). Each change gives the prompt its whole list through `prompt-queue.set_steps`; for the prompt being worked the agent's task list then carries on from the changed steps.
+
+### (S:system) Prompt Queue --> Add Interruption To Working Prompt
+
+Observed (2026-11-17): after /reload-plugins, the person's message "heavy test are written and run in a sub task tho", sent between turns, was filed by the cdd server under the goal last worked as an "[interruption]" step, and the agent was told so. Built (2026-11-17), not seen (the person: "YES and update backend for this", to filing a message sent between turns under the goal last worked): the cdd server files a message under a goal (`prompt-queue.add_interruption`): it becomes the goal's last step, not started, marked "[interruption]", and a done goal opens again; the mod calls it for every message the person sends while a goal last worked is on the queue, mid-turn or between turns, and a card of its own is made only when there is none. Built (2026-11-17), not seen (the person: "you should be putting these interruptions into one goal and adding tasks to them, add smarter organizing instructions"): the queue tells the agent to keep one card for each goal: a message that belongs to a goal already on the queue becomes a task of that goal and its own card comes off, related [interruption] cards gather under one goal card, and the order stays done, being worked, not started. Observed (2026-11-17): a message the person sent while the agent worked the sub-agent columns prompt joined it as an "[interruption]" step, and the agent was told so. Built (2026-11-17), not seen (the person: "a new chat message from the edit box doesnt go to top of queue it goes above the active or next item in queue as an interruption OR inside current queue item as a task"): a message sent when no turn runs goes on the queue just above the next prompt to do, below the done ones, its text starting "[interruption]". Built (2026-11-17), not seen (the person: "if its a simple correction or comment in flight pertaining to a current queue then add it to the queues list as a task in process, put a special annotation in front and save that it was a user interruption"): a message the person sends while a turn runs on a queued prompt becomes a step of that prompt, its text starting "[interruption]", instead of a new card (`addInterruption`); the agent is told which prompt it joined and may move it to a card of its own with `prompt-queue.add` when it is separate work. A new task list from the agent keeps interruption steps it does not list (`keptInterruptions`).
 ## (E) Open Files In Files App
 
 ### (S) Person --> [Open Stage Files From Chat Bar](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-open-stage-files-from-chat-bar)

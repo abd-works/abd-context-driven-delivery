@@ -11,9 +11,14 @@ import {
   toggleExpanded,
   toggleSubAgentMode,
   toggleSteps,
+  agentNameOf,
+  renameAgent,
+  addStep,
+  moveStep,
+  removeStep,
   type QueueState,
 } from './prompt-queue'
-import type { PromptStep, QueuedPrompt } from '../../types'
+import type { PromptStep, QueuedPrompt, SubAgentTask } from '../../types'
 import { progressOf } from './plan-steps'
 import {
   ADD_SVG,
@@ -31,6 +36,7 @@ import {
   SUB_AGENTS_SVG,
   type Icon,
   type KeyCap,
+  robotSvgOf,
 } from './icon-button-view'
 
 type AbovePromptEvent = RenderInput<'AbovePrompt'>
@@ -43,6 +49,9 @@ const ADD_COLUMNS = 3
 
 /** The columns kept at a card's right for its send, edit, move and remove buttons, shown when the pointer is on the card. */
 const CARD_BUTTON_COLUMNS = 15
+
+/** The columns kept before a card's text for its task button, 3/3 or +, so every card's text starts in one place. */
+const TASK_BUTTON_COLUMNS = 6
 
 /** The mark before a step for where it stands: done, being worked, or not started. */
 const STEP_MARK = { done: '✓', in_progress: '▸', pending: '○' } as const
@@ -62,9 +71,7 @@ export function QueueView($: EngineInterface, e: AbovePromptEvent, state: QueueS
     <Box key="prompt-queue" flexDirection="column" rowGap="sm" alignSelf="flex-start"
       paddingX={1} width={state.isExpanded ? '100%' : undefined}>
       {state.isExpanded && QueueListView($, e, state)}
-      {state.isExpanded && state.isSubAgentMode && state.tasks.map(task => (
-        <Text dimColor wrap="truncate-end">{`  ↳ ${task.description}: ${task.prompts.length} prompt(s)`}</Text>
-      ))}
+      {state.isExpanded && state.isSubAgentMode && state.tasks.length > 0 && AgentColumnsView($, e, state.tasks)}
       {state.notice !== '' && <Text color="warning">{state.notice}</Text>}
       <Box flexDirection="row" gap={1}>
         {IconButtonView(elements, stackIcon(state), () => toggleExpanded($))}
@@ -130,7 +137,7 @@ function QueueListView($: EngineInterface, e: AbovePromptEvent, state: QueueStat
       {queue.prompts.map((prompt, index) => (
         <Box key={`card-${prompt.id}`} flexDirection="column">
           {CardView($, e, state, prompt, index)}
-          {state.openSteps.includes(prompt.id) && StepsView($, e, prompt.id, prompt.steps ?? [])}
+          {state.openSteps.includes(prompt.id) && (prompt.steps ?? []).length > 0 && StepsView($, e, prompt)}
         </Box>
       ))}
     </Box>
@@ -146,7 +153,11 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
 
   return (
     <Box key={`card-row-${prompt.id}`} flexDirection="row" justifyContent="space-between" alignItems="center" gap={1} width="100%">
-      {progress !== '' && <Button key={`steps-${prompt.id}`} label={progress} onPress={() => toggleSteps($, prompt.id)} />}
+      <Box width={TASK_BUTTON_COLUMNS} flexShrink={0}>
+        {progress !== ''
+          ? <Button key={`steps-${prompt.id}`} label={progress} onPress={() => toggleSteps($, prompt.id)} />
+          : !isFinished && <Button key={`steps-${prompt.id}`} label="+" onPress={() => addStep($, prompt)} />}
+      </Box>
       {(prompt.attachments ?? []).length > 0 && <Text key={`attached-${prompt.id}`} color={LOOK.muted}>{`📎${prompt.attachments!.length}`}</Text>}
       <Box flexGrow={1} flexShrink={1} minWidth={0}>
         <Button key={`card-text-${prompt.id}`} dimColor={isEditing || isFinished} onPress={() => editPrompt($, prompt)}>
@@ -169,18 +180,76 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
   )
 }
 
-/** A card's steps under it, in order: done ones ticked and dim, the one being worked marked and bright. */
-function StepsView($: EngineInterface, e: AbovePromptEvent, id: string, steps: PromptStep[]) {
-  const { Box, Text } = $.ui.resolve(e)
+/** Sub-agent mode: one column for each sub-agent side by side, each its own queue of the prompts it will run. */
+function AgentColumnsView($: EngineInterface, e: AbovePromptEvent, grouped: SubAgentTask[]) {
+  const { Box } = $.ui.resolve(e)
 
   return (
-    <Box key={`steps-of-${id}`} flexDirection="column" paddingLeft={3}>
-      {steps.map((step, index) => (
-        <Text key={`step-${id}-${index + 1}`} wrap="truncate-end" dimColor={step.state === 'done'}
+    <Box key="agent-columns" flexDirection="row" gap={1} width="100%">
+      {grouped.map((task, place) => AgentColumnView($, e, task, place))}
+    </Box>
+  )
+}
+
+/** One sub-agent's column: its robot on top with its name and ✎ to rename it, what it does, and its prompts in order. */
+function AgentColumnView($: EngineInterface, e: AbovePromptEvent, task: SubAgentTask, place: number) {
+  const elements = $.ui.resolve(e)
+  const { Box, Button, Text } = elements
+  const number = place + 1
+  const name = agentNameOf(task, place)
+  const robot = 'Svg' in elements
+    ? <elements.Svg key={`robot-${number}`} source={robotSvgOf(place)} alt={`${name}, a robot`} width={ROBOT_PIXELS} height={ROBOT_PIXELS} />
+    : <Text key={`robot-${number}`} color={LOOK.accent}>🤖</Text>
+
+  return (
+    <Box key={`agent-column-${number}`} flexDirection="column" flexGrow={1} minWidth={0}
+      borderStyle="round" borderColor={LOOK.card} paddingX={1}>
+      <Box flexDirection="row" alignItems="center" gap={1}>
+        {robot}
+        <Text bold color={LOOK.accent}>{name}</Text>
+        <Button key={`rename-agent-${number}`} label="✎" onPress={() => renameAgent($, place)} />
+      </Box>
+      <Text dimColor wrap="wrap">{task.description}</Text>
+      {task.prompts.map((prompt, index) => <Text key={`agent-${number}-prompt-${index + 1}`} wrap="wrap">{`${index + 1}. ${prompt}`}</Text>)}
+    </Box>
+  )
+}
+
+/** About two lines tall, in the desktop's pixels: a robot stands out over its column. */
+const ROBOT_PIXELS = 28
+
+/** A card's steps under it, in order: done ones ticked and dim, the one being worked marked and bright. */
+function StepsView($: EngineInterface, e: AbovePromptEvent, prompt: QueuedPrompt) {
+  const { Box, Button } = $.ui.resolve(e)
+
+  return (
+    <Box key={`steps-of-${prompt.id}`} flexDirection="column" paddingLeft={TASK_BUTTON_COLUMNS + 1}>
+      {(prompt.steps ?? []).map((step, index) => StepView($, e, prompt, step, index))}
+      <Box flexDirection="row">
+        <Button key={`add-step-${prompt.id}`} label="+" onPress={() => addStep($, prompt)} />
+      </Box>
+    </Box>
+  )
+}
+
+/** One task under its card: its mark and text, and, with the pointer on it, ↑ ↓ to move it and ✕ to take it off. */
+function StepView($: EngineInterface, e: AbovePromptEvent, prompt: QueuedPrompt, step: PromptStep, index: number) {
+  const { Box, Button, Text } = $.ui.resolve(e)
+  const number = index + 1
+
+  return (
+    <Box key={`step-row-${prompt.id}-${number}`} flexDirection="row" justifyContent="space-between" gap={1}>
+      <Box flexGrow={1} flexShrink={1} minWidth={0}>
+        <Text key={`step-${prompt.id}-${number}`} wrap="wrap" dimColor={step.state === 'done'}
           color={step.state === 'in_progress' ? LOOK.accent : undefined}>
           {`${STEP_MARK[step.state]} ${step.text}`}
         </Text>
-      ))}
+      </Box>
+      <Box flexDirection="row" gap={1} display="none" hover={{ display: 'flex' }} backgroundColor={LOOK.keyCap} paddingX="xs">
+        <Button key={`up-step-${prompt.id}-${number}`} label="↑" onPress={() => moveStep($, prompt, index, index - 1)} />
+        <Button key={`down-step-${prompt.id}-${number}`} label="↓" onPress={() => moveStep($, prompt, index, index + 1)} />
+        <Button key={`remove-step-${prompt.id}-${number}`} label="✕" onPress={() => removeStep($, prompt, index)} />
+      </Box>
     </Box>
   )
 }
