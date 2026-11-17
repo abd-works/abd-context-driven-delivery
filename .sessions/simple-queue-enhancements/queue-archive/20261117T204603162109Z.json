@@ -1,0 +1,17 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-17T20:46:03.162109+00:00",
+  "prompts": [
+    {
+      "id": "b08dfb5fd0af",
+      "text": "[interruption] jsut a plus please",
+      "steps": [
+        {
+          "text": "[interruption] same",
+          "state": "pending"
+        }
+      ],
+      "is_done": true
+    }
+  ]
+}

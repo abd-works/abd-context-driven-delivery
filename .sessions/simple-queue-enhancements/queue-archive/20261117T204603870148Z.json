@@ -1,0 +1,20 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-17T20:46:03.870148+00:00",
+  "prompts": [
+    {
+      "id": "0c0ed27252d9",
+      "text": "[interruption] looka t what u doong align , cwhy extra buttons",
+      "steps": [
+        {
+          "text": "[interruption] you should be puttih these interruptiosnm into one gaol and asdding takss to them add smarrter organzing instrucitons",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] will you mfollow the tdd tsting order",
+          "state": "pending"
+        }
+      ]
+    }
+  ]
+}

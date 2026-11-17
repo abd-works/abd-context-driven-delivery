@@ -63,6 +63,15 @@ with describe(PromptQueue):
         queue.clear()
         expect(len(list(session_archive.glob("*.json")))).to(equal(1))
 
+    with it("archives into its session's folder in the checkout the call works in, such as a ticket's worktree"):
+        from types import SimpleNamespace
+        worktree = self.folder / "worktree"
+        call = SimpleNamespace(chat_id="chat-1", project=worktree, session=SimpleNamespace(name="simple-queue"))
+        queue = PromptQueue.load("chat-1", call=call)
+        queue.add("Write the scenarios")
+        queue.clear()
+        expect(len(list((worktree / ".sessions" / "simple-queue" / "queue-archive").glob("*.json")))).to(equal(1))
+
     with it("files a message under a goal as a step not started, marked as the person's interruption"):
         goal = self.queue.prompts[0]["id"]
         self.queue.add_interruption(goal, "cut the text with an ellipsis")
