@@ -64,7 +64,7 @@ export function QueueView($: EngineInterface, e: AbovePromptEvent, state: QueueS
   return (
     <Box key="prompt-queue" flexDirection="column" rowGap="sm" alignSelf="flex-start"
       paddingX={1} width={state.isExpanded ? '100%' : undefined}>
-      {state.isExpanded && (state.isSubAgentMode && state.tasks.length > 0 ? AgentColumnsView($, e, state.tasks) : QueueListView($, e, state))}
+      {state.isExpanded && (state.isSubAgentMode && state.tasks.length > 0 ? AgentColumnsView($, e, state) : QueueListView($, e, state))}
       {state.notice !== '' && <Text color="warning">{state.notice}</Text>}
       <Box flexDirection="row" gap={1}>
         {IconButtonView(elements, stackIcon(state), () => toggleExpanded($))}
@@ -110,17 +110,24 @@ const CLEAR_ICON: Icon = { key: 'queue-clear', svg: CLEAR_SVG, glyph: '✕', tip
  * steps shows how many are done, which opens them under it.
  */
 function QueueListView($: EngineInterface, e: AbovePromptEvent, state: QueueState) {
-  const { Box, Text } = $.ui.resolve(e)
-  const { queue } = state
-  if (queue.isEmpty) {
+  if (state.queue.isEmpty) {
     return null
   }
 
+  return CardsView($, e, state, state.queue.prompts)
+}
+
+/** A stack of the queue's cards, each with its steps open under it when they are opened. A card keeps its place in the
+ * whole queue, so its ↑ and ↓ move it there. */
+function CardsView($: EngineInterface, e: AbovePromptEvent, state: QueueState, prompts: QueuedPrompt[]) {
+  const { Box } = $.ui.resolve(e)
+  const all = state.queue.prompts
+
   return (
-    <Box flexDirection="column" rowGap="sm">
-      {queue.prompts.map((prompt, index) => (
+    <Box flexDirection="column" rowGap="sm" width="100%">
+      {prompts.map(prompt => (
         <Box key={`card-${prompt.id}`} flexDirection="column">
-          {CardView($, e, state, prompt, index)}
+          {CardView($, e, state, prompt, all.indexOf(prompt))}
           {state.openSteps.includes(prompt.id) && (prompt.steps ?? []).length > 0 && StepsView($, e, prompt)}
         </Box>
       ))}
@@ -165,19 +172,19 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
   )
 }
 
-/** Sub-agent mode: one queue for each sub-agent, side by side, in the place of the queue's list, each item one line. */
-function AgentColumnsView($: EngineInterface, e: AbovePromptEvent, grouped: SubAgentTask[]) {
+/** Sub-agent mode: one queue for each sub-agent, side by side, in the place of the queue's list, each the same cards. */
+function AgentColumnsView($: EngineInterface, e: AbovePromptEvent, state: QueueState) {
   const { Box } = $.ui.resolve(e)
 
   return (
     <Box key="agent-columns" flexDirection="row" gap={1} width="100%">
-      {grouped.map((task, place) => AgentColumnView($, e, task, place))}
+      {state.tasks.map((task, place) => AgentColumnView($, e, state, task, place))}
     </Box>
   )
 }
 
-/** One sub-agent's column: its robot on top with its name and ✎ to rename it, what it does, and its prompts in order. */
-function AgentColumnView($: EngineInterface, e: AbovePromptEvent, task: SubAgentTask, place: number) {
+/** One sub-agent's queue: its robot on top with its name and ✎ to rename it, then its prompts as the queue's cards. */
+function AgentColumnView($: EngineInterface, e: AbovePromptEvent, state: QueueState, task: SubAgentTask, place: number) {
   const elements = $.ui.resolve(e)
   const { Box, Button, Text } = elements
   const number = place + 1
@@ -187,17 +194,20 @@ function AgentColumnView($: EngineInterface, e: AbovePromptEvent, task: SubAgent
     : <Text key={`robot-${number}`} color={LOOK.accent}>🤖</Text>
 
   return (
-    <Box key={`agent-column-${number}`} flexDirection="column" flexGrow={1} minWidth={0}
-      borderStyle="round" borderColor={LOOK.card} paddingX={1}>
+    <Box key={`agent-column-${number}`} flexDirection="column" flexGrow={1} minWidth={0} rowGap="sm">
       <Box flexDirection="row" alignItems="center" gap={1}>
         {robot}
         <Text bold color={LOOK.accent}>{name}</Text>
         <Button key={`rename-agent-${number}`} label="✎" onPress={() => renameAgent($, place)} />
       </Box>
-      <Text dimColor wrap="truncate-end">{task.description}</Text>
-      {task.prompts.map((prompt, index) => <Text key={`agent-${number}-prompt-${index + 1}`} wrap="truncate-end">{`${index + 1}. ${prompt}`}</Text>)}
+      {CardsView($, e, state, promptsOf(state, task))}
     </Box>
   )
+}
+
+/** A sub-agent's prompts as they stand on the queue, in its order; a prompt no longer queued is left out. */
+function promptsOf(state: QueueState, task: SubAgentTask): QueuedPrompt[] {
+  return task.prompts.flatMap(text => state.queue.prompts.filter(prompt => prompt.text === text))
 }
 
 /** About two lines tall, in the desktop's pixels: a robot stands out over its column. */
