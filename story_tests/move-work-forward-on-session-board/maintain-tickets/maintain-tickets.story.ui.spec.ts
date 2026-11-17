@@ -150,8 +150,11 @@ test.describe('Edit Ticket Text', () => {
     await step(page, "Then confirm-order.md in confirm-order's session folder holds Show the order, then take the payment.", async () => {
       await expect.poll(() => textOf(sessionFile('confirm-order', 'confirm-order.md'))).toContain('Show the order, then take the payment.')
     })
-    await step(page, "And confirm-order's tooltip in checkout-flow's card shows Show the order, then take the payment.", async () => {
-      await expect(row).toHaveAttribute('title', 'Show the order, then take the payment.')
+    await step(page, "And opening confirm-order from checkout-flow's card shows Show the order, then take the payment.", async () => {
+      await row.getByRole('button', { name: 'Edit text' }).first().click()
+      const editor = page.getByRole('textbox', { name: 'Ticket text' })
+      await expect(editor).toHaveValue('Show the order, then take the payment.')
+      expect(await editor.evaluate(box => box.scrollWidth <= box.clientWidth && box.scrollHeight <= box.clientHeight)).toBe(true)
     })
   })
 })
