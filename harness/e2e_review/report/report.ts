@@ -77,6 +77,120 @@ export function writeStoryMapReport(root: string): string {
   return file;
 }
 
+export const COMPARE_FILE = 'compare.html';
+
+/** How a step's screen stands against the same step of the run it is compared with. */
+export type Change = 'same' | 'changed' | 'new' | 'gone';
+
+/** One step of this run beside the same step of the run it is compared with. */
+export type StepPair = { key: string; change: Change; changedPercent: number; ours?: StepRow; theirs?: StepRow };
+
+/**
+ * A pair changed when at least this many of its 8px blocks moved. pml-web gates on 1% of the page, tuned for two
+ * different systems; two runs of the same system match block for block (Maintain Tickets: 58 of 61 pairs moved no
+ * block), and a red failure toast on a 1600×1600 page is only 0.93% of it, so a share of the page hides small changes.
+ */
+const LOOK_GATE_BLOCKS = 4;
+const LOOK_BLOCK_PX = 8;
+const LOOK_BLOCK_LIMIT = 6;
+
+/**
+ * Pair each step of `runDir` with the same step of `againstDir` (an accepted walk, or the last accepted run) and say
+ * whether its screen changed, by pixels: the share of 8px blocks whose average grey moved by more than 6 levels.
+ */
+export function stepPairs(runDir: string, againstDir: string): StepPair[] {
+  const ours = new Map(readRows(runDir).map(row => [row.key, row]));
+  const theirs = new Map(readRows(againstDir).map(row => [row.key, row]));
+  const keys = [...new Set([...ours.keys(), ...theirs.keys()])];
+  return keys.map(key => {
+    const mine = ours.get(key);
+    const other = theirs.get(key);
+    if (!other) return { key, change: 'new', changedPercent: 100, ours: mine };
+    if (!mine) return { key, change: 'gone', changedPercent: 100, theirs: other };
+    const look = lookDifference(path.join(againstDir, other.screenshot), path.join(runDir, mine.screenshot));
+    return { key, change: look.changedBlocks >= LOOK_GATE_BLOCKS ? 'changed' : 'same', changedPercent: look.changedPercent, ours: mine, theirs: other };
+  });
+}
+
+/** Write `<runDir>/compare.html`: each step's screen in `againstDir` and in `runDir` side by side, and return its path. */
+export function writeCompareReport(runDir: string, againstDir: string): string {
+  const file = path.join(runDir, COMPARE_FILE);
+  writeFileSync(file, renderComparePage(runDir, againstDir, stepPairs(runDir, againstDir)));
+  return file;
+}
+
+/** How many 8px blocks' average grey moved, and their share in percent; screens of different sizes count as all changed. */
+function lookDifference(theirFile: string, ourFile: string): { changedBlocks: number; changedPercent: number } {
+  const everything = { changedBlocks: Number.POSITIVE_INFINITY, changedPercent: 100 };
+  if (!existsSync(theirFile) || !existsSync(ourFile)) return everything;
+  const one = PNG.sync.read(readFileSync(theirFile));
+  const two = PNG.sync.read(readFileSync(ourFile));
+  if (one.width !== two.width || one.height !== two.height) return everything;
+  let changed = 0;
+  let blocks = 0;
+  for (let by = 0; by + LOOK_BLOCK_PX <= one.height; by += LOOK_BLOCK_PX) {
+    for (let bx = 0; bx + LOOK_BLOCK_PX <= one.width; bx += LOOK_BLOCK_PX) {
+      blocks++;
+      if (Math.abs(blockGrey(one, bx, by) - blockGrey(two, bx, by)) > LOOK_BLOCK_LIMIT) changed++;
+    }
+  }
+  return { changedBlocks: changed, changedPercent: blocks ? (100 * changed) / blocks : 0 };
+}
+
+function blockGrey(image: PNG, left: number, top: number): number {
+  let sum = 0;
+  for (let y = top; y < top + LOOK_BLOCK_PX; y++) {
+    for (let x = left; x < left + LOOK_BLOCK_PX; x++) {
+      const at = (y * image.width + x) * 4;
+      sum += 0.299 * image.data[at] + 0.587 * image.data[at + 1] + 0.114 * image.data[at + 2];
+    }
+  }
+  return sum / (LOOK_BLOCK_PX * LOOK_BLOCK_PX);
+}
+
+function renderComparePage(runDir: string, againstDir: string, pairs: StepPair[]): string {
+  const run = path.basename(runDir);
+  const against = path.basename(againstDir);
+  const subEpic = subEpicOf([path.basename(path.dirname(path.dirname(runDir))), path.basename(path.dirname(runDir)), run].join('/'));
+  const shots = new EmbeddedShots(runDir);
+  const scenarios = new Map<string, StepPair[]>();
+  for (const pair of pairs) {
+    const { story, scenario } = keyParts(pair.key);
+    const id = `${story} › ${scenario}`;
+    scenarios.set(id, [...(scenarios.get(id) ?? []), pair]);
+  }
+  const reviewFile = path.join(runDir, 'review.json');
+  const review = existsSync(reviewFile) ? (JSON.parse(readFileSync(reviewFile, 'utf8')) as { against: string; pairs: Record<string, { verdict: string; reason: string; cites?: string }> }) : undefined;
+  const judged = review?.against === against ? review.pairs : {};
+  const counts = (list: StepPair[]) => (['same', 'changed', 'new', 'gone'] as Change[]).map(change => `${list.filter(pair => pair.change === change).length} ${change}`).join(' · ');
+  const cards = [...scenarios.entries()].map(([id, list]) => {
+    list.sort((a, b) => (Number.parseInt(keyParts(a.key).step, 10) || 0) - (Number.parseInt(keyParts(b.key).step, 10) || 0));
+    const differs = list.some(pair => pair.change !== 'same');
+    const steps = list.map(pair => {
+      const row = pair.ours ?? pair.theirs!;
+      const chip = `<span class="chip ${pair.change === 'same' ? 'pass' : 'fail'}">${pair.change}${pair.change === 'changed' ? ` ${pair.changedPercent.toFixed(2)}%` : ''}</span>`;
+      const judgement = judged[pair.key];
+      const verdict = judgement
+        ? `<span class="chip ${judgement.verdict === 'intended' ? 'pass' : 'fail'}">${escapeHtml(judgement.verdict)}</span>`
+        : pair.change !== 'same' ? '<span class="chip none">not judged</span>' : pair.ours?.verdict ? verdictChip(pair.ours) : '';
+      const why = judgement ? `${judgement.reason}${judgement.cites ? ` (${judgement.cites})` : ''}` : pair.ours?.reason ?? '';
+      const reason = why ? `<p class="reason">${escapeHtml(why)}</p>` : '';
+      const pictures = `<div class="shots">${pair.theirs ? renderShot(shots, pair.theirs.screenshot, againstDir, against) : `<div class="shot missing">${escapeHtml(against)}: no such step</div>`}${pair.ours ? renderShot(shots, pair.ours.screenshot, runDir, run) : `<div class="shot missing">${escapeHtml(run)}: no such step</div>`}</div>`;
+      return `<article class="step${pair.change !== 'same' ? ' failing' : ''}"><header><h4>${escapeHtml(keyParts(row.key).step)}</h4><div class="chips">${chip}${verdict}${pair.ours ? resultChip(pair.ours) : ''}</div></header>${reason}${pictures}</article>`;
+    });
+    return `<details class="scenario${differs ? ' failing' : ''}" id="${anchor(id)}"${differs ? ' open' : ''}><summary><span class="title">${escapeHtml(id)}</span><span class="counts">${counts(list)}</span></summary>${steps.join('')}</details>`;
+  });
+  return fillTemplate({
+    title: escapeHtml(`End-to-end compare — ${subEpic}`),
+    run: escapeHtml(`${run} against ${against}`),
+    totals: `${counts(pairs)} &nbsp;·&nbsp; ${escapeHtml(run)} against ${escapeHtml(against)} &nbsp;·&nbsp; written ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC`,
+    logo: logoImages(),
+    summary: '',
+    sections: `<section class="sub-epic-section" id="${anchor(subEpic)}">${sectionLabel(1, subEpic)}${cards.join('')}</section>`,
+    shotLoader: SHOT_LOADER.replace('{{shots}}', () => shots.json()),
+  });
+}
+
 /** One run's section of the history summary: counts per story, then every missed or failed step as text. */
 function renderSummaryMarkdown(run: string, scenarios: Scenario[]): string {
   const all = tally(scenarios.flatMap(scenario => scenario.steps));
@@ -185,12 +299,12 @@ class EmbeddedShots {
 
   constructor(readonly runDir: string, readonly withImages = true) {}
 
-  has(file: string): boolean {
-    return file !== '' && existsSync(path.join(this.runDir, file));
+  has(file: string, from = this.runDir): boolean {
+    return file !== '' && existsSync(path.join(from, file));
   }
 
-  embed(file: string): string {
-    const bytes = readFileSync(path.join(this.runDir, file));
+  embed(file: string, from = this.runDir): string {
+    const bytes = readFileSync(path.join(from, file));
     const hash = createHash('sha1').update(bytes).digest('hex');
     const known = this.idByHash.get(hash);
     if (known) return known;
@@ -223,11 +337,13 @@ function halfSize(image: PNG): PNG {
   return half;
 }
 
-function renderShot(shots: EmbeddedShots, file: string): string {
+/** `from` is the run folder holding the file; a caption names the run when two are shown side by side. */
+function renderShot(shots: EmbeddedShots, file: string, from = shots.runDir, caption = ''): string {
   if (!shots.withImages) return '';
-  if (!shots.has(file)) return '<div class="shot missing">no screenshot</div>';
-  const src = file.split('/').map(encodeURIComponent).join('/');
-  return `<figure class="shot"><a href="${src}" target="_blank" rel="noopener"><img data-shot="${shots.embed(file)}" alt="step screenshot"></a></figure>`;
+  const label = caption ? `<figcaption>${escapeHtml(caption)}</figcaption>` : '';
+  if (!shots.has(file, from)) return `<div class="shot missing">${caption ? `${escapeHtml(caption)}: ` : ''}no screenshot</div>`;
+  const src = [path.relative(shots.runDir, from).split(path.sep).join('/'), file].filter(Boolean).join('/').split('/').map(encodeURIComponent).join('/');
+  return `<figure class="shot"><a href="${src}" target="_blank" rel="noopener"><img data-shot="${shots.embed(file, from)}" alt="step screenshot"></a>${label}</figure>`;
 }
 
 function renderStep(step: Step, shots: EmbeddedShots): string {
@@ -453,6 +569,9 @@ details.scenario > summary .counts { font-family: var(--font-mono); font-size: v
 .chips { display: flex; gap: 6px; }
 .reason { font-size: var(--text-sm); color: var(--muted); overflow-wrap: anywhere; }
 .shot { min-width: 0; max-width: 720px; }
+.shots { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.shots .shot { max-width: none; }
+.shot figcaption { font-family: var(--font-mono); font-size: var(--text-xs); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
 .shot img { display: block; width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm); background: #fff; transition: border-color 150ms ease; }
 .shot a:hover img { border-color: var(--accent); }
 .shot.missing { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--muted); padding: 12px; border: 1px dashed var(--border); border-radius: var(--radius-sm); }
@@ -485,7 +604,7 @@ body.missed-only tbody tr:not(.failing):not(.sub-epic) { display: none; }
     </div>
   </div>
   <div class="filters">
-    <label class="primary"><input type="checkbox" id="missed-only"> Missed only</label>
+    <label class="primary"><input type="checkbox" id="missed-only"> Missed or changed only</label>
     <button type="button" class="btn-ghost" id="open-all">Open all</button>
     <button type="button" class="btn-ghost" id="close-all">Close all</button>
   </div>
@@ -536,12 +655,16 @@ body.missed-only tbody tr:not(.failing):not(.sub-epic) { display: none; }
 `;
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
-  const runDirs = process.argv.slice(2);
+  const args = process.argv.slice(2);
+  const againstAt = args.indexOf('--against');
+  const against = againstAt >= 0 ? args.splice(againstAt, 2)[1] : '';
+  const runDirs = args;
   if (!runDirs.length) {
-    console.error('Usage: npx tsx harness/e2e_review/report/report.ts .sessions/<release>/e2e-test-results/<epic>/<sub-epic>/<run> [more runs]');
+    console.error('Usage: npx tsx harness/e2e_review/report/report.ts <run folder> [more runs] [--against <accepted run folder>]');
     process.exit(1);
   }
   for (const runDir of runDirs) {
+    if (against) console.log(`Compare report: ${writeCompareReport(path.resolve(runDir), path.resolve(against))}`);
     const resolved = path.resolve(runDir);
     console.log(`Walk report: ${writeWalkReport(resolved)}`);
     console.log(`Story map: ${writeStoryMapReport(path.resolve(resolved, '..', '..', '..'))}`);

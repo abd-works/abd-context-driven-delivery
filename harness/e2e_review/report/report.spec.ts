@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { PNG } from 'pngjs';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { RESULTS_FILE, type StepRow, writeHistoryReport, writeStoryMapReport, writeWalkReport } from './report';
+import { RESULTS_FILE, type StepRow, stepPairs, writeCompareReport, writeHistoryReport, writeStoryMapReport, writeWalkReport } from './report';
 
 const STORY = 'Maintain Tickets';
 const SCENARIO = 'Rename a ticket';
@@ -11,7 +11,7 @@ const GIVEN_SHOT = 'screens/maintain-tickets-rename-a-ticket-1-given.png';
 const THEN_SHOT = 'screens/maintain-tickets-rename-a-ticket-2-then.png';
 
 function screenshot(grey: number): Buffer {
-  const image = new PNG({ width: 4, height: 4 });
+  const image = new PNG({ width: 16, height: 16 });
   image.data.fill(grey);
   return PNG.sync.write(image);
 }
@@ -135,6 +135,62 @@ describe('a walk report', () => {
 
     it('should add the missed step and its reason to the history summary', () => {
       expect(readFileSync(path.join(historyDir, 'summary.md'), 'utf8')).toContain('2 Then the card reads beta — misses the intent — The card still reads alpha');
+    });
+  });
+});
+
+describe('an end-to-end run compared with an accepted walk', () => {
+  let root: string;
+  let runDir: string;
+  let walkDir: string;
+  beforeEach(() => {
+    ({ root, runDir: walkDir } = runFolder([MEETS, MISSES], 'walk-1'));
+    const run = runFolder([{ ...MEETS, by: 'run by a test', result: 'pass', verdict: undefined }, { ...MISSES, by: 'run by a test', result: 'pass', verdict: undefined }], 'run-1', root);
+    runDir = run.runDir;
+  });
+
+  describe('with a step whose screen is the same in both', () => {
+    it('should mark the pair same', () => {
+      expect(stepPairs(runDir, walkDir).find(pair => pair.key === MEETS.key)?.change).toBe('same');
+    });
+  });
+
+  describe('with a step whose screen differs', () => {
+    it('should mark the pair changed', () => {
+      writeFileSync(path.join(runDir, THEN_SHOT), screenshot(255));
+      expect(stepPairs(runDir, walkDir).find(pair => pair.key === MISSES.key)?.change).toBe('changed');
+    });
+  });
+
+  describe('with a step the walk does not have', () => {
+    it('should mark the pair new', () => {
+      const extra: StepRow = { ...MEETS, key: `${STORY} › ${SCENARIO} › 3 And the card is still open`, step: 'And the card is still open' };
+      writeFileSync(path.join(runDir, RESULTS_FILE), JSON.stringify([MEETS, MISSES, extra]));
+      expect(stepPairs(runDir, walkDir).find(pair => pair.key === extra.key)?.change).toBe('new');
+    });
+  });
+
+  describe('that has its compare report written', () => {
+    let page: string;
+    beforeEach(() => {
+      writeFileSync(path.join(runDir, THEN_SHOT), screenshot(255));
+      page = readFileSync(writeCompareReport(runDir, walkDir), 'utf8');
+    });
+
+    it("should show each step's two screens side by side, captioned with their runs", () => {
+      expect(page).toContain('<figcaption>walk-1</figcaption>');
+    });
+
+    it("should link the walk's screen to its file in the walk's run folder", () => {
+      expect(page).toContain('href="../walk-1/screens/maintain-tickets-rename-a-ticket-1-given.png"');
+    });
+
+    it('should mark the changed step', () => {
+      expect(page).toMatch(/<span class="chip fail">changed \d/);
+    });
+
+    it('should count the pairs by how they changed', () => {
+      expect(page).toContain('1 same · 1 changed · 0 new · 0 gone');
     });
   });
 });
