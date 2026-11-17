@@ -179,8 +179,8 @@ function PointerArrowsView($: EngineInterface, e: AbovePromptEvent, upKey: strin
 
   return (
     <Box flexDirection="row" flexShrink={0} gap={1} backgroundColor={LOOK.popover} borderStyle="round" borderColor={LOOK.popover} paddingX="xs" display="none" hover={{ display: 'flex' }}>
-      {upKey !== '' && TipView(elements, upKey, 'Run again', 'opens the one above so it runs again', <Button key={upKey} label="▲" onPress={onUp} />)}
-      {downKey !== '' && TipView(elements, downKey, 'Skip', 'marks this one done and moves on', <Button key={downKey} label="▼" onPress={onDown} />)}
+      {upKey !== '' && TipView(elements, upKey, 'Set previous to current', '', <Button key={upKey} label="▲" onPress={onUp} />)}
+      {downKey !== '' && TipView(elements, downKey, 'Set next to current', '', <Button key={downKey} label="▼" onPress={onDown} />)}
     </Box>
   )
 }
