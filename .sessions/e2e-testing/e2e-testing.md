@@ -6,101 +6,119 @@ Taken from the backlog item `.sessions/_backlog/review-end-to-end-screens-agains
 
 TDD already sets the end-to-end phases:
 
-- **Flow A, steps 1–2:** run a new boundary end to end directly (the AI drives the real app, or the person does), iterate until it works, and a person verifies it.
+- **Flow A, steps 1–2:** run a new boundary end to end directly, iterate until it works, and a person verifies it.
 - **Flow A, step 3 / Flow B, step 4:** capture that path in an e2e or heavy test and see it pass against the real stack.
 - **Cadence:** e2e runs every day, before every release, and at the end of work that touches a browser or an agent (`e2e-run-within-the-day`, `release-follows-a-green-e2e`; the daily run is `harness/diagnostics/test_runs.py`).
 
-This ticket does not change those phases. It adds what they lack: a **screen record for every scenario step, and an AI review of those screens**, so each phase is checked against the one before it. The main gap is regression: today an e2e run only proves the assertions someone wrote, and a screen can break in ways no assertion checks (a field missing, a label changed, a layout collapsed, a notice no longer shown). A person sees that at once in the screenshot, so the AI looks at the screenshots too.
+This ticket does not change those phases. It adds what they lack: **a screenshot for every scenario step, a report of them, and an AI review of the screens**, so each phase is checked against the one before. The main gap is regression: an e2e run only proves the assertions someone wrote, and a screen can break in ways no assertion checks (a field missing, a label changed, a layout collapsed, a notice no longer shown).
 
-## What each phase gains
+## The steps
 
-Every step of every scenario records a screenshot and its result, keyed by story › scenario › step, whether the AI walked it by hand or a Playwright test ran it.
+New text is in **bold**; the rest is TDD as it stands.
 
-| TDD phase | Screens compared | Question the AI answers |
-|---|---|---|
-| Flow A 1–2: run it for real | The scenario text and the manual walk's screens | Does each screen show what its Given/When/Then means? |
-| Flow A 3 / Flow B 4: capture in e2e | The accepted manual walk and the new e2e run | Does the automated test reach the same screens the person accepted? |
-| Every later e2e run (the main gap) | The last accepted e2e run and this one | Did anything revert or change without a reason? |
+### Flow A: a new boundary
 
-### Run it for real: the walk gets a report
+1. **Run it end to end, directly.** Drive it through the real stack yourself, or ask the person to. Record every failure as it happens. **Screenshot each Given, When and Then as you go, keyed story › scenario › step.**
+2. **Iterate until it works for real.** **Judge each step's screenshot against its step text: the Given's state is visible, the When took effect, the Then shows the right values, labels and messages. Fix and walk again until every step meets it. Write the walk report (below).** A person verifies the result **by reviewing that report; accepting it makes this walk the reference.**
+3. **Capture it in an e2e or heavy test** and see it pass against the real stack. **The e2e test records the same step screenshots; compare each with the accepted walk. Where they differ, fix the test or the code; when it is unclear which is right, walk that step again. When they all match, this run is the first baseline.**
+4. **Then write the stubbed and mocked unit tests** (unchanged).
 
-While the AI walks a scenario by hand, it screenshots each Given, When and Then and judges it against the step text: the Given's state is visible, the When's action took effect, the Then's outcome is shown with the right values, labels and messages. Each step gets **meets the intent** or **misses the intent** with what is wrong. The walk ends in a report the person reviews, which is how Flow A's "a person verifies the result" is done. When the person accepts it, the walk is the reference for the e2e test.
+### Flow B: a known area
 
-### Capture in e2e: compare with the walk
+Steps 1–3 unchanged. Step 4 (heavy and e2e tests in a sub-task) **ends with a screen review of that e2e run against the baseline** (below).
 
-The new or extended e2e test records the same steps, and the AI compares each with the accepted walk. A different screen means the test sets up different data, takes a different path, or the code differs; the AI fixes the test or the code, and when it cannot tell which is right it walks that step by hand again. When every pair matches, or the person accepts the explained differences, this run is the first regression baseline.
+### Reviewing e2e screens: every e2e run (new; the regression part)
 
-### Regression: every later e2e run
+1. **Run the e2e tests.** Each step records its screenshot and result.
+2. **Compare each step with the last accepted run, by pixels** (pml-web's 8px block check). Only changed pairs go on.
+3. **Give each changed pair a verdict and a reason:**
+   - **intended:** cites the story or code change behind it (this ticket's changes, or for a scheduled run the commits on main since the baseline).
+   - **regression caught:** a test already fails, so fix the code.
+   - **missed by the tests:** go to step 4.
+   - **noise:** timing, animation, or a minted value; make the harness deterministic and rerun.
+4. **For each miss, write the failing test at the layer that owns it,** see it fail, fix the code, and rerun.
+5. **Repeat until every changed pair is intended.** The person reviews the report; accepting it makes this run the new baseline.
 
-Every later e2e run, during ticket work, by hand, or scheduled, compares each step with the last accepted e2e run. A run is not finished until its screens have been reviewed.
+**Cadence table, e2e row:** "Every day, before every release, and at the end of browser or agent work. **Its screens are reviewed against the last accepted run before its result counts.**"
 
-1. **Filter by pixels first.** Only pairs that changed go to the AI. A cheap block diff (pml-web's 8px block check) keeps the AI from reading hundreds of identical screens.
-2. **The AI judges each changed pair** using both screenshots, the step's Given/When/Then text, and the stories and code changed since the baseline (this ticket's changes, or for a scheduled run the commits on main since then). The verdict is one of:
-   - **intended:** the change follows from one of those story or code changes, and the AI cites which one.
-   - **regression caught:** a test already fails for it, so fix the code.
-   - **missed by the tests:** the screen is wrong and nothing failed.
-   - **noise:** timing, animation, or a value the system mints. The AI makes the harness deterministic instead of accepting the noise.
-3. **For each "missed by the tests":** add the test at the layer that owns the behaviour (story markdown and the domain story test for a rule or value, the screen story for a control or label, CSS only for pure look). See it fail, fix the code, and rerun.
-4. **Repeat** until every changed pair is "intended". The person reviews the report, and accepting it makes this run the new baseline.
+## Where the guidance goes
+
+TDD owns **when and in what order**; Stories acceptance tests owns **what a story test is and what a scenario means**. No new practice.
+
+### TDD supplement (`tdd.md`)
+
+| Addition | Where |
+|---|---|
+| The person verifies the walk by its screen report | Flow A step 2, and a clause in `flow-chosen-before-code` |
+| The e2e test is compared screen by screen with the accepted walk | Flow A step 3 |
+| Every e2e run is reviewed against the last accepted run before its result counts (`every-run-reviewed`) | The e2e row of the Cadence table, and a rule beside `e2e-run-within-the-day` |
+| The verdict loop (intended, regression caught, missed by the tests, noise) | A new "Reviewing e2e screens" subsection under Cadence |
+| A missed change gets a failing test before the fix (`missed-change-adds-a-test-first`) | That subsection |
+| Noise is fixed in the harness, never accepted (`noise-is-fixed-in-the-harness`) | Beside `no-wait-in-unit-test` |
+| Only the person moves the baseline (`person-accepts-the-baseline`) | Cadence rules, beside `release-follows-a-green-e2e` |
+
+### Stories acceptance tests (`stories.md` § acceptance_tests)
+
+| Addition | Where |
+|---|---|
+| The UI story test records a screenshot after each Given/When/Then, keyed story › scenario › step (`every-step-captured`) | A rule, plus the `story-test.ts` step helpers; the fidelity's `outputs` gains the `*.story.ui.spec.ts` line it is missing |
+| How to judge a screen against its step: the Given's state visible, the When took effect, the Then shows the right values | Guidance, "Develop the behaviour" |
+| Which layer gets a missed test (domain tier for a rule or value, UI tier for a control or label, CSS for pure look) | Beside `seed-state-at-its-real-owner` |
 
 ## Report
 
-One report shape for all three comparisons, one page per sub-epic plus a story map page over them all, laid out like pml-web's `compare.html`:
+### Walk report (Flow A steps 1–2): one run, no compare
 
-- Story › Scenario › each Given/When/Then step, with its two screens side by side.
-- The test result and the AI's verdict on each step, with its reason, and a filter that shows only changed or missed steps.
-- The pass, changed, and missed counts for each story and sub-epic.
-- A history of earlier runs, without images.
+Built from pml-web's legacy report writer, `test-utils/legacy-compare/report.ts`, with the legacy compare taken out.
 
-## Guidance
+**Kept:** the story › scenario › step grouping and step numbering; screenshots embedded at half size (one self-contained file that opens in Claude's file pane), linked to the full-size file; scenario sections that open by themselves when a step fails; the summary table of pass and fail per story and sub-epic; the story map page over every sub-epic; the no-image history page and `summary.md`; the abd.works styling and page template.
 
-Added to the TDD supplement (its Flow A, cadence and e2e sections), not a new practice, unless the rules grow too many for it. Rules:
+**Dropped:** the second system (`myRows` / `webRows`, the `pml-my` and `pml-web` folders, `REFERENCE_NAME` and its chips); two screenshots per step; the check kinds (reading, write, page text, fonts, look) and their tallies; `scopeToRun` and `uniqueRows`.
 
-- `every-step-captured`: every e2e step, walked by hand or run by a test, records a screenshot and result under its story › scenario › step key.
-- `walk-checks-the-intent`: each step of a manual walk is judged against its Given/When/Then, and the walk is the reference only when every step meets it and the person accepts it.
-- `e2e-matches-the-walk`: a new e2e test's screens are compared with the accepted walk, and a difference is fixed or walked again, never accepted unexplained.
-- `every-run-reviewed`: every e2e run, by ticket, by hand or scheduled, is compared with its baseline before its result counts.
-- `ai-judges-every-changed-pair`: every changed pair gets a verdict and a reason, and "intended" cites the story or code change behind it.
-- `missed-change-adds-a-test-first`: a change the tests missed gets a failing test at the owning layer before the code is fixed.
-- `noise-is-fixed-in-the-harness`: a pair is never accepted as timing noise.
-- `person-accepts-the-baseline`: only the person's acceptance makes a walk the reference or a run the baseline.
+**Each step shows:** its Given/When/Then text, its one screenshot, and the AI's verdict (**meets the intent** or **misses the intent**) with its reason.
 
-The tier table and the cadence table in `tdd.md` each get a line: e2e runs record step screenshots and are reviewed against the run before.
+Each run writes one row per step to its `results.json`: key, step text, verdict, reason, screenshot path, and whether the step was walked by hand or run by a test. That replaces pml-web's `rows-*.jsonl`.
+
+### Compare reports (Flow A step 3, and regression)
+
+The same page and step layout, with the second screenshot added back: filled from two runs (accepted walk vs e2e, or last accepted run vs this one) instead of two systems. Each step shows both screens side by side, the test result, and the AI's verdict and reason, with a filter for changed or missed steps and the pass, changed and missed counts per story and sub-epic.
 
 ## Code
 
 **CDD owns the general parts**, shipped for TypeScript Playwright story tests (CDD's own `*.story.ui.spec.ts` first, then pml-web's `*.story.playwright.ts`):
 
-- A walk recorder: when the AI drives the app by hand, each step's screenshot and verdict are written under the same key and folder layout the e2e tests use.
-- A step capture hook for e2e tests: after each Given/When/Then, wait until the page settles, take the screenshot, and write a row to that run's `results.json` (key, step text, result, screenshot path, walked or automated).
-- Run folders: `.sessions/<release>/e2e-test-results/<epic>/<sub-epic>/<run>/`, and choosing what to compare with: the accepted walk, or the last accepted e2e run (pml-web's `release-baseline.ts` and `end-to-end-paths.ts` already do the latter). Screenshots are git-ignored, and accepted baselines are kept on a branch, as pml-web does with `e2e-latest`.
-- The pixel prefilter, which lists the changed pairs between two runs.
-- The report writer, adapted from pml-web's `report.ts`.
-- A Python toolset with MCP tools `walk(target)`, `run(target)`, `changed_pairs(target, against)`, `record_verdict(step, verdict, reason)` and `accept(target)`. Long runs go to the background through `harness/process`. The AI reads the image pairs itself and writes its verdicts back through `record_verdict`.
-- The daily e2e run in `test_runs.py` captures screenshots too. When it ends, the cdd server starts the regression review in a background agent session and raises a toast for any step judged "missed by the tests". The fix happens in a ticket, because a scheduled run on main has no ticket to change.
-- A line in the server health report: the latest run, its changed and missed counts, and a link to the story map page.
+- **Walk report writer:** `report.ts` reduced to one run, as above. Comes first.
+- **Walk recorder:** when the AI drives the app by hand, each step's screenshot and verdict go into the run's `results.json` under the same key and folder layout the e2e tests use.
+- **Step capture hook** for e2e tests: after each Given/When/Then, wait until the page settles (pml-web's `story-legacy-compare.ts` settle waits), take the screenshot, and write the step's row.
+- **Run folders:** `.sessions/<release>/e2e-test-results/<epic>/<sub-epic>/<run>/`, and choosing what to compare with: the accepted walk, or the last accepted e2e run (pml-web's `release-baseline.ts` and `end-to-end-paths.ts` do the latter). Screenshots are git-ignored; accepted baselines are kept on a branch, as pml-web does with `e2e-latest`.
+- **Pixel prefilter:** lists the changed pairs between two runs (`lookDifference` in `story-legacy-compare.ts`).
+- **Compare report:** the walk report with the second screenshot added.
+- **Toolset** with MCP tools `walk(target)`, `run(target)`, `changed_pairs(target, against)`, `record_verdict(step, verdict, reason)` and `accept(target)`. Long runs go to the background through `harness/process`. The AI reads the screenshots itself and writes verdicts back through `record_verdict`.
+- **Daily run:** `test_runs.py` captures screenshots too; when it ends, the cdd server starts the regression review in a background agent session and raises a toast for any step judged "missed by the tests". The fix happens in a ticket.
+- **Health line** in the server health report: the latest run, its changed and missed counts, and a link to the story map page.
 
 **Each project keeps** starting its app, loading its examples, and its Playwright config.
 
 ## Order of work (Flow A: a new boundary)
 
-1. Add the step capture hook to CDD's own board UI story tests, run them, and check with the person that every step has its screenshot under the right key.
-2. Add the baseline choice, the pixel prefilter, the report, and the regression review. Rerun with one deliberate visual change, and check that only that pair shows up and gets the right verdict.
-3. Add the walk recorder, walk one sub-epic by hand, and compare it with that sub-epic's e2e run.
-4. Write the TDD additions and rules.
+1. Write the walk report from `report.ts`, minus the compare. Walk one sub-epic of CDD's own board UI by hand, screenshot every step, record verdicts, and build the report. Check it with the person.
+2. Add the step capture hook to that sub-epic's e2e story tests, and the compare report; compare with the accepted walk and fix until they match.
+3. Add the baseline choice, the pixel prefilter, and the regression review. Rerun with one deliberate visual change, and check that only that pair shows up and gets the right verdict.
+4. Write the TDD and Stories additions.
 5. Add the toolset, verdict recording, acceptance, and the health line.
-6. Point pml-web's end-to-end runs at the same hook, recorder and report.
+6. Point pml-web's end-to-end runs at the same recorder, hook and reports.
 
 ## Done means
 
-- Every e2e run shows, for every story step, the previous and current screens side by side, with a verdict on each changed one.
+- A Flow A walk ends in a walk report, a screenshot and verdict for every step, that the person accepts.
+- The e2e test that captures it is compared with that walk, side by side.
+- Every later e2e run shows the previous and current screens side by side, with a verdict on each changed one.
 - A visual change no test caught ends up as a new failing test, a fix, and a rerun, not as an accepted screenshot.
-- A Flow A walk ends in a screen report the person accepts, and the e2e test that captures it is compared with that walk.
 - The baseline moves only when the person accepts a run.
 
 ## Open questions
 
 - Baseline: the last run on main, or the last run the person accepted, whichever branch it was on?
 - Should the AI also look at unchanged pairs now and then, to catch a screen that has been wrong since before the baseline?
-- Should the report be published as an artifact for sharing, or only opened from the run folder?
-- Do the walk and walk-versus-e2e comparisons belong in this ticket, or should it ship regression first and add them later?
+- Should reports be published as an artifact for sharing, or only opened from the run folder?
+- Does the walk report writer live in CDD from the start, or first in pml-web beside `report.ts` and then move?
