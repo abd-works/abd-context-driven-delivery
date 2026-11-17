@@ -1,5 +1,6 @@
 import { useState, useSyncExternalStore, type MouseEvent } from 'react'
 
+import type { GraphRuleData } from '@cdd/harness/graph/graph'
 import type { ExplorerEntryData } from '@cdd/space/session/session'
 import { NodeFilterLists } from '@graph-app/filter/FilterView'
 import { LoadProgressView } from '@graph-app/graph/LoadProgressView'
@@ -29,7 +30,7 @@ function GraphRowView({ page, entry, hasBelow }: { page: FilesPage; entry: Explo
       ) : (
         <span className="tree-twist-spacer" />
       )}
-      <button className={`graph-node ${isSelected ? 'selected' : ''}`} aria-pressed={isSelected} title={`${kindLabel(entry.type, false)} ${entry.name}`} onClick={event => void page.graph.select(entry, isAlso(event))}>
+      <button className={['graph-node', isSelected ? 'selected' : '', page.graph.breaksARule(entry) ? 'tree-violating' : ''].filter(Boolean).join(' ')} aria-pressed={isSelected} title={`${kindLabel(entry.type, false)} ${entry.name}`} onClick={event => void page.graph.select(entry, isAlso(event))}>
         <KindMark kind={entry.type} isFile={false} />
         <span className="node-name">{entry.name}</span>
       </button>
@@ -41,12 +42,14 @@ function GraphRowView({ page, entry, hasBelow }: { page: FilesPage; entry: Explo
 function GraphEntryView({ page, entry }: { page: FilesPage; entry: ExplorerEntryData }) {
   useFilesState(page)
   const below = page.graph.childrenOf(entry)
+  const rules = page.graph.rulesOf(entry)
   const isOpen = page.graph.isOpen(entry)
   return (
     <li className="graph-entry" data-kind={entry.type}>
-      <GraphRowView page={page} entry={entry} hasBelow={below.length > 0 || entry.children_left_out > 0} />
-      {isOpen && below.length ? (
+      <GraphRowView page={page} entry={entry} hasBelow={below.length > 0 || rules.length > 0 || entry.children_left_out > 0} />
+      {isOpen && (below.length || rules.length) ? (
         <ul>
+          {rules.length ? <RulesView page={page} entry={entry} rules={rules} /> : null}
           {below.map(child => (
             <GraphEntryView key={child.node_id} page={page} entry={child} />
           ))}
@@ -54,6 +57,46 @@ function GraphEntryView({ page, entry }: { page: FilesPage; entry: ExplorerEntry
       ) : null}
     </li>
   )
+}
+
+// The rules a node is judged by, under it as the Graph app shows them: one closed rules group, then each rule marked
+// passing, broken or left to the agent's judgement. A broken rule's title carries its message, which a hover shows, and
+// selecting it opens the lines its violations name.
+function RulesView({ page, entry, rules }: { page: FilesPage; entry: ExplorerEntryData; rules: GraphRuleData[] }) {
+  const [isOpen, setOpen] = useState(false)
+  return (
+    <li className="graph-entry" data-kind="Rules">
+      <div className="tree-row">
+        <button className="tree-twist" aria-expanded={isOpen} aria-label={`${isOpen ? 'Close' : 'Open'} rules`} onClick={() => setOpen(!isOpen)}>
+          {isOpen ? '▼' : '▶'}
+        </button>
+        <span className="graph-node rules-group">
+          <KindMark kind="Rules" isFile={false} />
+          <span className="node-name">rules</span>
+        </span>
+      </div>
+      {isOpen ? (
+        <ul>
+          {rules.map(rule => (
+            <li key={rule.name} className="graph-entry" data-kind="Rule">
+              <div className="tree-row">
+                <span className="tree-twist-spacer" />
+                <button className={`graph-node rule-status ${rule.status}`} title={ruleTitle(rule)} onClick={() => void page.graph.selectRule(entry, rule)}>
+                  <KindMark kind="Rule" isFile={false} />
+                  <span className="node-name">{rule.name}</span>
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </li>
+  )
+}
+
+const ruleTitle = (rule: GraphRuleData): string => {
+  const messages = rule.status === 'violating' ? rule.violations.map(hit => hit.message).filter(Boolean) : []
+  return messages.length ? `Rule ${rule.name}: ${messages.join('\n')}` : `Rule ${rule.name}`
 }
 
 // The graph view's node filter, the Graph app's lists: node types, connectors, rules and the Violations switch, which

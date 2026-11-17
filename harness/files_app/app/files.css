@@ -181,3 +181,12 @@ a.file-entry.is-published:hover { text-decoration: underline; }
 .stage-toggles { display: flex; gap: var(--space-2xs); align-self: center; }
 .stage-toggle { padding: 1px 8px; border-radius: var(--radius-sm); color: var(--accent); border-color: var(--border); }
 .stage-toggle.is-shown { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* A node's rules in the graph view, marked as the Graph app marks them: passing, broken, or left to the agent's
+   judgement; a node that breaks one of them is marked in the tree. */
+.graph-tree .rule-status.passing { color: var(--success); }
+.graph-tree .rule-status.violating { color: var(--error); }
+.graph-tree .rule-status.prompt { color: var(--muted); }
+.graph-tree .graph-node.tree-violating,
+.graph-tree .graph-node.tree-violating .kind-mark { color: var(--error); }
+.graph-tree .rules-group { cursor: default; }

@@ -1,5 +1,5 @@
 import type { CddApi, CddProgress } from '@cdd/cdd-shared'
-import type { FilterData, NodeSourceData } from '@cdd/harness/graph/graph'
+import type { FilterData, GraphRuleData, GraphRulesCollectionData, NodeSourceData } from '@cdd/harness/graph/graph'
 import type { ExplorerEntryData, RangeData, SessionClientGenerated } from '@cdd/space/session/session'
 import { NO_CHOICES, chosen, nodeFilter, type FilterSelection } from '@graph-app/filter/filter-selection'
 
@@ -51,6 +51,10 @@ const EXAMPLE_TYPE = 'Example'
 const isConnector = (entry: ExplorerEntryData): boolean => entry.type === entry.name
 
 export const isEntry = (child: unknown): child is ExplorerEntryData => typeof child === 'object' && child !== null && 'children_left_out' in child
+// The group the graph sends first under every node, open or closed, holding the rules the node is judged by.
+const isRulesGroup = (child: unknown): child is GraphRulesCollectionData => typeof child === 'object' && child !== null && (child as { type?: string }).type === 'rules'
+// The lines a broken rule names: each place its violations point at.
+const violationRange = (hit: GraphRuleData['violations'][number]): RangeData => ({ path: hit.location, start_line: hit.line ?? 1, end_line: hit.end_line ?? hit.line ?? 1, content: '', anchor: '' })
 
 // The graph view of the Files app's file bar: the session's graph holding only the nodes of the files the bar lists, so
 // it is filtered as the file list is, read again whenever the bar lists other files, showing the cdd server's progress
@@ -210,6 +214,16 @@ export class FilesGraph {
     return null
   }
 
+  // The rules entry is judged by, passing, broken and left to the agent's judgement, as the graph sent them with it.
+  rulesOf(entry: ExplorerEntryData): GraphRuleData[] {
+    const group = (this.store.state.graph.branches[entry.node_id] ?? entry).children.find(isRulesGroup)
+    return group ? group.children : []
+  }
+
+  breaksARule(entry: ExplorerEntryData): boolean {
+    return this.rulesOf(entry).some(rule => rule.status === 'violating')
+  }
+
   isOpen(entry: ExplorerEntryData): boolean {
     return this.store.state.graph.openNodes.includes(entry.node_id)
   }
@@ -259,5 +273,15 @@ export class FilesGraph {
     } catch (failure) {
       this.notices.fail(`The Files app did not open ${entry.name}: ${reasonOf(failure)}`, 'Selecting a node in the graph view, calling session.graph_node_ranges')
     }
+  }
+
+  // Selects a rule entry carries: a broken rule opens the lines its violations name, unfolded, as a selected node opens
+  // its own; any other rule opens the node it sits under.
+  async selectRule(entry: ExplorerEntryData, rule: GraphRuleData): Promise<void> {
+    const named = rule.status === 'violating' ? rule.violations.filter(hit => hit.location && hit.line) : []
+    if (!named.length) return this.select(entry)
+    const selected = named.map(hit => ({ nodeId: entry.node_id, lines: violationRange(hit) }))
+    this.store.change(({ graph }) => ({ graph: { ...graph, selected, expanded: [] } }))
+    await this.showNodes(selected)
   }
 }
