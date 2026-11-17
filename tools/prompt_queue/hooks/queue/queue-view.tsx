@@ -11,7 +11,6 @@ import {
   toggleExpanded,
   toggleSubAgentMode,
   toggleSteps,
-  toggleOpenedCard,
   toggleCollapsedAgent,
   robotPromptsOf,
   agentNameOf,
@@ -61,8 +60,14 @@ const TASK_BUTTON_COLUMNS = 6
  * step's text moves when the pointer does. */
 const POINTER_COLUMNS = 11
 
-/** The invisible button's label: blank and wider than any card, so its press area covers the whole box it lies over. */
-const PRESS_AREA = ' '.repeat(400)
+/** A space the desktop never collapses: a label of ordinary spaces shrinks to nothing, so its button takes no press. */
+const NO_BREAK_SPACE = ' '
+
+/** The invisible button's label over a card: blank and wider than any card, so its press area covers the whole card. */
+const CARD_PRESS_AREA = NO_BREAK_SPACE.repeat(200)
+
+/** The invisible button's label over a task box: blank and as wide as the box. */
+const TASK_PRESS_AREA = NO_BREAK_SPACE.repeat(TASK_BUTTON_COLUMNS)
 
 /** The columns the card's ↵ ✎ ↑ ↓ ✕ bar takes: it floats over the card's right end, this far left of its right edge. */
 const CARD_BAR_COLUMNS = 23
@@ -139,7 +144,7 @@ function QueueListView($: EngineInterface, e: AbovePromptEvent, state: QueueStat
 
 /** A stack of the queue's cards, each with its steps open under it when they are opened. A card keeps its place in the
  * whole queue, so its ↑ and ↓ move it there. */
-function CardsView($: EngineInterface, e: AbovePromptEvent, state: QueueState, prompts: QueuedPrompt[], isInColumn = false) {
+function CardsView($: EngineInterface, e: AbovePromptEvent, state: QueueState, prompts: QueuedPrompt[]) {
   const { Box } = $.ui.resolve(e)
   const all = state.queue.prompts
   const pointer = pointerOf(prompts)
@@ -151,7 +156,7 @@ function CardsView($: EngineInterface, e: AbovePromptEvent, state: QueueState, p
     <Box flexDirection="column" rowGap="sm" width="100%">
       {prompts.map((prompt, place) => (
         <Box key={`card-${prompt.id}`} flexDirection="column">
-          {CardView($, e, state, prompt, all.indexOf(prompt), isInColumn, place === pointer ? arrowsOf(prompt) : null)}
+          {CardView($, e, state, prompt, all.indexOf(prompt), place === pointer ? arrowsOf(prompt) : null)}
           {state.openSteps.includes(prompt.id) && (prompt.steps ?? []).length > 0 && StepsView($, e, prompt)}
         </Box>
       ))}
@@ -185,17 +190,16 @@ function PointerArrowsView($: EngineInterface, e: AbovePromptEvent, upKey: strin
   )
 }
 
-/** One card. In a robot's narrow queue it shows no buttons of its own; pressing it opens it in place, its buttons on a
- * row beneath it, and pressing it again closes it. */
-function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, prompt: QueuedPrompt, index: number, isInColumn: boolean, pointer: ReturnType<typeof PointerArrowsView> | null) {
+/** One card, the same in the single queue and in a robot's queue: pressing it edits it, and the pointer over it shows
+ * its buttons over its right end. */
+function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, prompt: QueuedPrompt, index: number, pointer: ReturnType<typeof PointerArrowsView> | null) {
   const { Box, Text, Button } = $.ui.resolve(e)
   const isEditing = prompt.id === state.editingId
   const isWorking = pointer !== null
   const progress = progressOf(prompt.steps)
   const isFinished = Boolean(prompt.is_done)
 
-  const isOpened = isInColumn && prompt.id === state.openedId
-  const row = (
+  return (
     <Box key={`card-row-${prompt.id}`} flexDirection="row" justifyContent="space-between" alignItems="center" gap={1} width="100%">
       <Box width={TASK_BUTTON_COLUMNS} flexShrink={0}>
         {progress !== ''
@@ -211,31 +215,19 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
             {`${index + 1}. ${prompt.text.replace(/\s+/g, ' ')}${isEditing ? '  (editing)' : ''}`}
           </Text>
         </Box>
-        {PressAreaView($, e, `card-text-${prompt.id}`, () => (isInColumn ? toggleOpenedCard($, prompt.id) : editPrompt($, prompt)), isEditing || isFinished)}
+        {PressAreaView($, e, `card-text-${prompt.id}`, CARD_PRESS_AREA, () => editPrompt($, prompt), isEditing || isFinished)}
         {pointer && (
           <Box position="absolute" top={0} bottom={0} left={1} flexDirection="row" alignItems="center">{pointer}</Box>
         )}
-        {!isInColumn && (
-          <Box position="relative" width={0} height={0} flexShrink={0} alignSelf="center">
-            <Box position="absolute" top={0} bottom={0} left={-CARD_BAR_COLUMNS} flexDirection="row" alignItems="center">
-              <Box flexDirection="row" alignItems="center" gap={1}
-                display="none" hover={{ display: 'flex' }} backgroundColor={LOOK.popover} borderStyle="round" borderColor={LOOK.popover} paddingX="xs">
-                {CardButtonsView($, e, prompt, index)}
-              </Box>
+        <Box position="relative" width={0} height={0} flexShrink={0} alignSelf="center">
+          <Box position="absolute" top={0} bottom={0} left={-CARD_BAR_COLUMNS} flexDirection="row" alignItems="center">
+            <Box flexDirection="row" alignItems="center" gap={1}
+              display="none" hover={{ display: 'flex' }} backgroundColor={LOOK.popover} borderStyle="round" borderColor={LOOK.popover} paddingX="xs">
+              {CardButtonsView($, e, prompt, index)}
             </Box>
           </Box>
-        )}
+        </Box>
       </Box>
-    </Box>
-  )
-  if (!isOpened) {
-    return row
-  }
-
-  return (
-    <Box key={`card-opened-${prompt.id}`} flexDirection="column" width="100%">
-      {row}
-      <Box flexDirection="row" gap={1} paddingLeft={TASK_BUTTON_COLUMNS + 1}>{CardButtonsView($, e, prompt, index)}</Box>
     </Box>
   )
 }
@@ -250,7 +242,7 @@ function TaskButtonView($: EngineInterface, e: AbovePromptEvent, key: string, la
     <Box key={`${key}-box`} position="relative" width={TASK_BUTTON_COLUMNS} flexDirection="row" justifyContent="center" alignItems="center"
       backgroundColor={LOOK.keyCap} borderStyle="round" borderColor={LOOK.keyCap}>
       <Text>{label}</Text>
-      {PressAreaView($, e, key, onPress)}
+      {PressAreaView($, e, key, TASK_PRESS_AREA, onPress)}
       {TipLabelView(elements, words, detail)}
     </Box>
   )
@@ -258,12 +250,12 @@ function TaskButtonView($: EngineInterface, e: AbovePromptEvent, key: string, la
 
 /** An invisible button over the whole of a rounded box, so a press anywhere on the box lands: the box draws the shape
  * and the text, the button only takes the press. */
-function PressAreaView($: EngineInterface, e: AbovePromptEvent, key: string, onPress: () => void, dimColor = false) {
+function PressAreaView($: EngineInterface, e: AbovePromptEvent, key: string, area: string, onPress: () => void, dimColor = false) {
   const { Box, Button } = $.ui.resolve(e)
 
   return (
     <Box position="absolute" top={0} bottom={0} left={0} right={0}>
-      <Button key={key} plain label={PRESS_AREA} dimColor={dimColor} onPress={onPress} />
+      <Button key={key} plain label={area} dimColor={dimColor} onPress={onPress} />
     </Box>
   )
 }
@@ -328,7 +320,7 @@ function AgentColumnView($: EngineInterface, e: AbovePromptEvent, state: QueueSt
       </Box>
       {isCollapsed
         ? <Text key={`agent-progress-${number}`} color={LOOK.muted}>{`${items.filter(item => item.is_done).length}/${items.length}`}</Text>
-        : CardsView($, e, state, items, true)}
+        : CardsView($, e, state, items)}
     </Box>
   )
 }

@@ -1283,20 +1283,24 @@ test('sending the queue to sub-agents keeps their cards, so each can mark its ow
   expect(seeded.prompts.map(prompt => prompt.text)).toEqual(['Write the scenarios', 'Run the unit tier'])
 })
 
-test("an agent's card shows no buttons of its own; pressing it opens it in place, in its robot's queue, with its buttons beneath", async ($, on) => {
+test("a robot's card has the same buttons as a card in the single queue, shown on hover", async ($, on) => {
   groupedQueue(on)
 
-  const before = await $.ui.mount({ ...BAND, surface: 'desktop' })
-  const closed = JSON.stringify(await before.find({ type: 'Box', key: 'agent-column-1' }))
-  await before.press({ key: 'card-text-a' })
-  await before.unmount()
-  const after = await $.ui.mount({ ...BAND, surface: 'desktop' })
-  const opened = JSON.stringify(await after.find({ type: 'Box', key: 'agent-column-1' }))
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  const column = JSON.stringify(await ui.find({ type: 'Box', key: 'agent-column-1' }))
+  await ui.unmount()
 
-  expect(closed).not.toContain('"edit-a"')
-  expect(opened).toContain('"edit-a"')
-  expect(await after.find({ type: 'Box', key: 'opened-card' })).toBeUndefined()
-  await after.unmount()
+  expect(['"send-now-a"', '"edit-a"', '"up-a"', '"down-a"', '"remove-a"'].every(key => column.includes(key))).toBe(true)
+})
+
+test("the open robots' queues share the width evenly, however long their cards are", async ($, on) => {
+  groupedQueue(on)
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  const columns = [await ui.find({ type: 'Box', key: 'agent-column-1' }), await ui.find({ type: 'Box', key: 'agent-column-2' })]
+  await ui.unmount()
+
+  expect(columns.map(column => [column?.props.width, column?.props.flexGrow])).toEqual([[0, 1], [0, 1]])
 })
 
 test("work a robot finishes stays in that robot's queue, dimmed", async ($, on) => {

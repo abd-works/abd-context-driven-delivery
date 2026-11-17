@@ -70,7 +70,6 @@ const isPlanSeen = atom({ plugin: 'prompt-queue', key: 'isPlanSeen' } as const, 
 /** The cards whose steps are shown under them. */
 const openSteps = atom({ plugin: 'prompt-queue', key: 'openSteps' } as const, [] as string[])
 /** The card opened in its robot's queue, with its buttons beneath it; none when closed. */
-const openedCard = atom({ plugin: 'prompt-queue', key: 'openedCard' } as const, '')
 /** The places of the robots whose queues are collapsed to the robot alone, so the other queues take the room. */
 const collapsedAgents = atom({ plugin: 'prompt-queue', key: 'collapsedAgents' } as const, [] as number[])
 
@@ -81,7 +80,6 @@ export type QueueState = {
   isPlaying: boolean
   editingId: string
   openSteps: string[]
-  openedId: string
   collapsedAgents: number[]
   tasks: SubAgentTask[]
   notice: string
@@ -95,7 +93,6 @@ export async function currentQueue($: EngineInterface): Promise<QueueState> {
     isPlaying: await read($, isPlaying),
     editingId: await read($, editingId),
     openSteps: await read($, openSteps),
-    openedId: await read($, openedCard),
     collapsedAgents: await read($, collapsedAgents),
     tasks: robotsOf((await read($, queue)).prompts, await read($, tasks)),
     notice: await read($, notice),
@@ -620,11 +617,6 @@ async function changeSteps($: EngineInterface, prompt: QueuedPrompt, steps: Prom
     await update($, plan, () => steps)
   }
   await changeQueue($, 'set_steps', { prompt: prompt.id, steps })
-}
-
-/** Pressing a card in a robot's queue opens it in place with its buttons; pressing it again closes it. */
-export async function toggleOpenedCard($: EngineInterface, id: string): Promise<void> {
-  await update($, openedCard, opened => (opened === id ? '' : id))
 }
 
 /** Pressing a robot collapses its queue to the robot alone; pressing it again expands it. */
