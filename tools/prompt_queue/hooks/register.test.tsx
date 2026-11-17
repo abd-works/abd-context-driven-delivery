@@ -880,3 +880,13 @@ test("a sub-agent starts with its column's name", async ($, on) => {
 
   expect(spawned).toEqual(['Captain Tests: Write the story map'])
 })
+
+
+test("a background task's notice arriving in the chat is not queued as the person's prompt", async ($, on) => {
+  const seeded = seedQueue(on, false, '', QUEUED.map(prompt => ({ ...prompt })), true)
+  on('prompt.submit', (_, e) => ({ text: e.text }))
+
+  await $.prompt.submit({ text: ['<task-notification>', '<task-id>b1</task-id>', '<status>completed</status>', '</task-notification>'].join(' '), wait: false, origin: { kind: 'composer' } })
+
+  expect(seeded.prompts.map(prompt => prompt.text)).toEqual(['Write the scenarios', 'Run the unit tier'])
+})

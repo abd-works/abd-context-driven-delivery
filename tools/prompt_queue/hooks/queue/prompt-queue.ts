@@ -25,6 +25,9 @@ const QUEUE_INSTRUCTIONS = [
 const DECISION_FLAG = '[decision required]'
 // How long play waits for the person to answer a question the agent ended its turn with, before it moves on.
 const DECISION_WAIT_MS = 60_000
+// A notice the chat gives the agent, such as a background task finishing, which arrives as a prompt but is not the
+// person's: it is never queued.
+const SYSTEM_NOTICE = /^\s*<(task-notification|system-reminder)>/
 // What marks a step that came from a message the person sent while the agent worked.
 const INTERRUPTION_MARK = '[interruption]'
 // Until the mod has seen the agent's task list, the agent keeps a prompt's steps on the queue itself.
@@ -379,7 +382,7 @@ export type SentPrompt = { id: string; note: string }
  * [interruption], as the prompt being worked, so the steps the agent plans for it sit under it. The agent is told its id,
  * to mark it done when it is finished. */
 export async function queueSentPrompt($: EngineInterface, text: string): Promise<SentPrompt | undefined> {
-  if (text.trim() === '' || text.trim() === ASK_FOR_NEXT) {
+  if (text.trim() === '' || text.trim() === ASK_FOR_NEXT || SYSTEM_NOTICE.test(text)) {
     return undefined
   }
   const interrupted = await interruptedPrompt($)
