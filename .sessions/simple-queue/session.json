@@ -31,5 +31,7 @@
     "bdd": {
       "enabled": false
     }
-  }
+  },
+  "branch": "simple-queue",
+  "worktree": "C:\\dev\\abd-cdd-simple-queue"
 }
