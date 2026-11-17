@@ -10,7 +10,7 @@ import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from '
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { RESULTS_FILE, type StepPair, stepPairs } from './report';
+import { RESULTS_FILE, type StepPair, type StepRow, stepPairs, type Verdict } from './report';
 
 export const BASELINE_FILE = 'baseline.json';
 export const REVIEW_FILE = 'review.json';
@@ -65,6 +65,26 @@ export function recordVerdict(runDir: string, againstDir: string, key: string, r
   return kept;
 }
 
+const JUDGE_VERDICTS: Verdict[] = ['meets the intent', 'misses the intent'];
+
+/**
+ * The judge's verdict on one step a test ran: does its screen show what its Given, When or Then says. Kept on the step's
+ * row in `results.json`; judging it again replaces it.
+ */
+export function judgeStep(runDir: string, key: string, verdict: Verdict, reason: string): StepRow {
+  if (!JUDGE_VERDICTS.includes(verdict)) throw new ReviewRefused(`no judge verdict ${verdict}: give ${JUDGE_VERDICTS.join(' or ')}`);
+  if (reason.trim() === '') throw new ReviewRefused(`a judge verdict on ${key} needs its reason`);
+  const file = path.join(runDir, RESULTS_FILE);
+  const rows = JSON.parse(readFileSync(file, 'utf8')) as StepRow[];
+  const row = rows.find(each => each.key === key);
+  if (!row) throw new ReviewRefused(`no step ${key} in ${path.basename(runDir)}`);
+  row.verdict = verdict;
+  row.reason = reason;
+  writeFileSync(file, `${JSON.stringify(rows, null, 2)}
+`);
+  return row;
+}
+
 /** Each changed pair with no verdict yet, or with a verdict other than intended: what keeps the run from being accepted. */
 export function openPairs(runDir: string, againstDir: string): string[] {
   const review = reviewOf(runDir);
@@ -98,6 +118,7 @@ export function acceptRun(runDir: string, acceptedBy: string): string {
  * `npx tsx review.ts pairs <run> [--against <run>]`: the changed pairs as JSON.
  * `npx tsx review.ts verdict <run> <step key> <verdict> <reason> [--cites <change>] [--against <run>]`: record one verdict.
  * `npx tsx review.ts accept <run> --by <person>`: make the run its sub-epic's baseline.
+ * `npx tsx review.ts judge <run> <step key> <meets the intent|misses the intent> <reason>`: the judge's verdict on a step.
  */
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   const args = process.argv.slice(2);
@@ -120,10 +141,14 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
       if (!againstDir) throw new ReviewRefused('no run to compare with');
       recordVerdict(runDir, againstDir, key, { verdict: verdict as ReviewVerdict, reason, cites });
       console.log(`Recorded ${verdict} on ${key}`);
+    } else if (command === 'judge') {
+      const [key = '', verdict = '', reason = ''] = rest;
+      judgeStep(runDir, key, verdict as Verdict, reason);
+      console.log(`Judged ${verdict} on ${key}`);
     } else if (command === 'accept') {
       console.log(`Baseline: ${acceptRun(runDir, by ?? 'unknown')}`);
     } else {
-      console.error('Usage: review.ts pairs|verdict|accept <run folder> ...');
+      console.error('Usage: review.ts pairs|verdict|judge|accept <run folder> ...');
       process.exit(1);
     }
   } catch (refused) {

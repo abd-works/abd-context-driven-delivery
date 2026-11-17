@@ -128,6 +128,9 @@ class E2eRun:
         file = self.folder / REVIEW_FILE
         return json.loads(file.read_text(encoding="utf-8")).get("pairs", {}) if file.exists() else {}
 
+    def was_run_by_a_test(self, key: str) -> bool:
+        return any(row["key"] == key and row.get("by") == "run by a test" for row in self.rows)
+
     def add_walked_step(self, key: str, step: str, screenshot: str, verdict: str, reason: str) -> None:
         """A step of a walk by hand: its screenshot, saved in the run folder, and its verdict. Walking it again replaces it."""
         if not (self.folder / screenshot).is_file():
@@ -275,10 +278,13 @@ class E2eReview:
     def record_verdict(self, run: str, step: str, verdict: str, reason: str, cites: str = "", step_text: str = "",
                        screenshot: str = "", against: str = "") -> E2eRun:
         """Record one step's verdict with its reason. On a walk: meets the intent or misses the intent, with step_text and
-        screenshot (relative to the run folder). On a compared run: intended (cites the story or code change), regression
-        caught (cites the failing test), missed by the tests, or noise."""
+        screenshot (relative to the run folder). On a step a test ran, the same two are the judge's verdict: does its
+        screen show what the step says. On a compared run: intended (cites the story or code change), regression caught
+        (cites the failing test), missed by the tests, or noise."""
         found = self.run_of(run)
-        if verdict in WALK_VERDICTS:
+        if verdict in WALK_VERDICTS and found.was_run_by_a_test(step):
+            self._tool.run("review.ts", "judge", str(found.folder), step, verdict, reason)
+        elif verdict in WALK_VERDICTS:
             found.add_walked_step(step, step_text or step.split(" › ")[-1], screenshot, verdict, reason)
         elif verdict in REVIEW_VERDICTS:
             args = ["verdict", str(found.folder), step, verdict, reason] + (["--cites", cites] if cites else [])

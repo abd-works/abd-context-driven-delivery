@@ -63,8 +63,8 @@ describe('a walk report', () => {
       expect(page.indexOf('1 Given a ticket')).toBeLessThan(page.indexOf('2 Then the card reads beta'));
     });
 
-    it("should show each step's verdict", () => {
-      expect(page).toContain('<span class="chip fail">misses the intent</span>');
+    it("should show each step's judge verdict among its checks", () => {
+      expect(page).toContain('<div class="check fail"><span class="check-name">Judge</span><span class="check-value">misses the intent</span></div>');
     });
 
     it("should show each step's reason, escaped", () => {
@@ -102,14 +102,47 @@ describe('a walk report', () => {
   describe('that has been written for a step not judged yet', () => {
     it('should mark the step not judged', () => {
       const page = readFileSync(writeWalkReport(runFolder([{ ...MEETS, verdict: undefined, reason: undefined }]).runDir), 'utf8');
-      expect(page).toContain('<span class="chip none">not judged</span>');
+      expect(page).toContain('<span class="check-name">Judge</span><span class="check-value">not judged</span>');
     });
   });
 
   describe('that has been written for a step run by a test that failed', () => {
-    it("should show the test's failure beside the verdict", () => {
+    it("should show the test's failure among its checks", () => {
       const page = readFileSync(writeWalkReport(runFolder([{ ...MEETS, by: 'run by a test', result: 'fail' }]).runDir), 'utf8');
-      expect(page).toContain('<span class="chip fail">test failed</span>');
+      expect(page).toContain('<div class="check fail"><span class="check-name">Test</span><span class="check-value">failed</span></div>');
+    });
+  });
+
+  describe('that has been written for the first run of its sub-epic', () => {
+    it('should say there is no previous run to compare with', () => {
+      const page = readFileSync(writeWalkReport(runFolder([MEETS]).runDir), 'utf8');
+      expect(page).toContain('<span class="check-name">Previous</span><span class="check-value">no previous run</span>');
+    });
+  });
+
+  describe('that has been written for a run after a judged run', () => {
+    let page: string;
+    beforeEach(() => {
+      const { root } = runFolder([MEETS, MISSES], 'run-1');
+      const { runDir } = runFolder([{ ...MEETS, verdict: undefined, reason: undefined }, { ...MISSES, verdict: undefined, reason: undefined }], 'run-2', root);
+      writeFileSync(path.join(runDir, THEN_SHOT), screenshot(128));
+      page = readFileSync(writeWalkReport(runDir), 'utf8');
+    });
+
+    it("should mark a step whose screen is the previous run's as the same", () => {
+      expect(page).toContain('<span class="check-name">Previous</span><span class="check-value">same as run-1</span>');
+    });
+
+    it("should carry the previous run's verdict to a step whose screen has not changed", () => {
+      expect(page).toContain('<span class="check-value">meets the intent · from run-1</span>');
+    });
+
+    it('should mark a step whose screen changed', () => {
+      expect(page).toContain('<div class="check warn"><span class="check-name">Previous</span><span class="check-value">changed since run-1</span></div>');
+    });
+
+    it('should leave a changed step for the judge', () => {
+      expect(page).toContain('<span class="check-name">Judge</span><span class="check-value">not judged</span>');
     });
   });
 

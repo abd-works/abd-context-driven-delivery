@@ -4,7 +4,7 @@ import path from 'node:path';
 import { PNG } from 'pngjs';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { RESULTS_FILE, type StepRow } from './report';
-import { acceptRun, baselineOf, changedPairs, isReviewed, openPairs, recordVerdict, ReviewRefused } from './review';
+import { acceptRun, baselineOf, changedPairs, isReviewed, judgeStep, openPairs, recordVerdict, ReviewRefused } from './review';
 
 const GIVEN: StepRow = { key: 'Tag Ticket Session › Tag a ticket › 1 Given the ticket has no tags', step: 'Given the ticket has no tags', screenshot: 'screens/1.png', by: 'run by a test', result: 'pass' };
 const THEN: StepRow = { key: 'Tag Ticket Session › Tag a ticket › 2 Then the card shows the tag billing', step: 'Then the card shows the tag billing', screenshot: 'screens/2.png', by: 'run by a test', result: 'pass' };
@@ -134,5 +134,32 @@ describe('a run compared with the accepted run', () => {
 
   it('should keep the accepted run named in the sub-epic folder', () => {
     expect(existsSync(path.join(subEpicDir, 'baseline.json'))).toBe(true);
+  });
+});
+
+describe("a judge pass on a run's screens", () => {
+  let runDir: string;
+  const rows = () => JSON.parse(readFileSync(path.join(runDir, RESULTS_FILE), 'utf8')) as StepRow[];
+  beforeEach(() => {
+    runDir = run(newSubEpic(), 'run-1', 255);
+  });
+
+  it("should keep the judge's verdict and reason on the step's row", () => {
+    judgeStep(runDir, THEN.key, 'misses the intent', 'The card shows no tag.');
+    expect(rows()[1]).toMatchObject({ verdict: 'misses the intent', reason: 'The card shows no tag.', result: 'pass' });
+  });
+
+  it('should replace the verdict when the step is judged again', () => {
+    judgeStep(runDir, THEN.key, 'misses the intent', 'No tag.');
+    judgeStep(runDir, THEN.key, 'meets the intent', 'The card shows billing.');
+    expect(rows()[1].verdict).toBe('meets the intent');
+  });
+
+  it('should refuse a step the run does not have', () => {
+    expect(() => judgeStep(runDir, 'No › such › 1 step', 'meets the intent', 'Fine.')).toThrow(ReviewRefused);
+  });
+
+  it('should refuse a verdict with no reason', () => {
+    expect(() => judgeStep(runDir, THEN.key, 'meets the intent', ' ')).toThrow(ReviewRefused);
   });
 });

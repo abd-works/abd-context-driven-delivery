@@ -119,6 +119,11 @@ with description("the end-to-end screen review of a project") as self:
             self.review.changed_pairs(f"{TARGET}/run-2")
             expect(self.review.run_of(f"{TARGET}/run-2").changed_steps).to(equal([THEN]))
 
+        with it("should pass a judge verdict on a step a test ran to the review"):
+            self.run_folder("run-3", [{"key": THEN, "step": "Then", "screenshot": "screens/2.png", "by": "run by a test", "result": "pass"}])
+            self.review.record_verdict(f"{TARGET}/run-3", THEN, "misses the intent", "No tag shows.")
+            expect(self.tool.calls[-1]).to(equal(["review.ts", "judge", str(self.sub_epic / "run-3"), THEN, "misses the intent", "No tag shows."]))
+
         with it("should pass a review verdict, with what it cites, to the review"):
             self.review.record_verdict(f"{TARGET}/run-2", THEN, "intended", "Tags are dark now.", cites="commit abc123")
             expect(self.tool.calls[-1]).to(equal(["review.ts", "verdict", str(self.run2), THEN, "intended", "Tags are dark now.", "--cites", "commit abc123"]))

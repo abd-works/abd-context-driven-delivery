@@ -31,18 +31,24 @@ export type StepRow = {
   result?: StepResult;
   verdict?: Verdict;
   reason?: string;
+  /** Shown, never stored: the earlier run whose judge pass this step's verdict is carried from, its screen unchanged. */
+  judgedIn?: string;
+  /** Shown, never stored: how the step's screen stands against the same step of the previous run. */
+  change?: Change;
+  /** Shown, never stored: the previous run it is compared with. */
+  previous?: string;
 };
 
 type Step = StepRow & { title: string; number: number };
 type Scenario = { story: string; scenario: string; steps: Step[] };
-type Tally = { meets: number; misses: number; unjudged: number; failed: number };
+type Tally = { meets: number; misses: number; unjudged: number; failed: number; changed: number };
 
 const ASSETS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'assets');
 
 /** Write `<runDir>/report.html` and return its path. */
 export function writeWalkReport(runDir: string): string {
   const file = path.join(runDir, REPORT_FILE);
-  writeFileSync(file, renderPage(runDir, groupScenarios(readRows(runDir))));
+  writeFileSync(file, renderPage(runDir, groupScenarios(checkedRows(runDir))));
   return file;
 }
 
@@ -51,7 +57,7 @@ export function writeWalkReport(runDir: string): string {
  * add the run's counts and missed steps to `<historyDir>/summary.md`. Return the page's path. The history is never cleared.
  */
 export function writeHistoryReport(runDir: string, historyDir: string, run: string): string {
-  const scenarios = groupScenarios(readRows(runDir));
+  const scenarios = groupScenarios(checkedRows(runDir));
   const file = path.join(historyDir, `${run}.html`);
   mkdirSync(path.dirname(file), { recursive: true });
   writeFileSync(file, renderPage(runDir, scenarios, false));
@@ -69,7 +75,7 @@ export function writeStoryMapReport(root: string): string {
   const groups = new Map<string, Scenario[]>();
   const reportOf = new Map<string, string>();
   for (const [subEpic, run] of [...newest.entries()].sort(([a], [b]) => a.localeCompare(b))) {
-    groups.set(subEpic, groupScenarios(readRows(path.join(root, run))));
+    groups.set(subEpic, groupScenarios(checkedRows(path.join(root, run))));
     reportOf.set(subEpic, `${run}/${REPORT_FILE}`);
   }
   const file = path.join(root, 'story-map.html');
@@ -222,6 +228,45 @@ function subEpicOf(run: string): string {
   return parts.length ? parts.map(titleCase).join(' › ') : 'Other stories';
 }
 
+/**
+ * The run its own report compares a run's screens with: its sub-epic's accepted run (`baseline.json`) when that is
+ * another run, else the run before it by name, else none.
+ */
+export function previousRunOf(runDir: string): string | undefined {
+  const subEpicDir = path.dirname(runDir);
+  const run = path.basename(runDir);
+  const baselineFile = path.join(subEpicDir, 'baseline.json');
+  if (existsSync(baselineFile)) {
+    const accepted = (JSON.parse(readFileSync(baselineFile, 'utf8')) as { run: string }).run;
+    if (accepted !== run && existsSync(path.join(subEpicDir, accepted, RESULTS_FILE))) return path.join(subEpicDir, accepted);
+  }
+  const runs = existsSync(subEpicDir) ? readdirSync(subEpicDir).filter(entry => existsSync(path.join(subEpicDir, entry, RESULTS_FILE))).sort() : [];
+  const at = runs.indexOf(run);
+  return at > 0 ? path.join(subEpicDir, runs[at - 1]) : undefined;
+}
+
+/**
+ * The run's rows with their three checks: the test's result, the judge's verdict (does the screen show what the step
+ * says), and whether the screen is the same as the previous run's. A step the judge has not seen whose screen is the
+ * same as the previous run's takes that run's verdict: a judge pass is needed only for new or changed screens, or when
+ * the person asks for one.
+ */
+export function checkedRows(runDir: string): StepRow[] {
+  const rows = readRows(runDir);
+  const previousDir = previousRunOf(runDir);
+  if (!previousDir) return rows;
+  const previous = path.basename(previousDir);
+  const earlierRows = new Map(checkedRows(previousDir).map(row => [row.key, row]));
+  const pairs = new Map(stepPairs(runDir, previousDir).map(pair => [pair.key, pair]));
+  return rows.map(row => {
+    const pair = pairs.get(row.key);
+    const checked: StepRow = { ...row, change: pair?.change ?? 'new', previous };
+    const earlier = earlierRows.get(row.key);
+    if (!row.verdict && pair?.change === 'same' && earlier?.verdict) return { ...checked, verdict: earlier.verdict, reason: earlier.reason, judgedIn: earlier.judgedIn ?? previous };
+    return checked;
+  });
+}
+
 function readRows(runDir: string): StepRow[] {
   const file = path.join(runDir, RESULTS_FILE);
   if (!existsSync(file)) return [];
@@ -263,6 +308,7 @@ function tally(steps: StepRow[]): Tally {
     misses: steps.filter(step => step.verdict === 'misses the intent').length,
     unjudged: steps.filter(step => !step.verdict).length,
     failed: steps.filter(step => step.result === 'fail').length,
+    changed: steps.filter(step => step.change === 'changed' || step.change === 'new').length,
   };
 }
 
@@ -346,9 +392,26 @@ function renderShot(shots: EmbeddedShots, file: string, from = shots.runDir, cap
   return `<figure class="shot"><a href="${src}" target="_blank" rel="noopener"><img data-shot="${shots.embed(file, from)}" alt="step screenshot"></a>${label}</figure>`;
 }
 
+/** One of a step's three checks: its name above how it stands. */
+function check(name: string, value: string, state: 'pass' | 'fail' | 'warn' | 'none', title = ''): string {
+  return `<div class="check ${state}"${title ? ` title="${escapeHtml(title)}"` : ''}><span class="check-name">${name}</span><span class="check-value">${escapeHtml(value)}</span></div>`;
+}
+
+/** The step's three checks: did the test pass, does the screen show what the step says, is it the previous run's screen. */
+function renderChecks(step: StepRow): string {
+  const test = step.result ? check('Test', step.result === 'pass' ? 'passed' : 'failed', step.result) : check('Test', step.by === 'walked by hand' ? 'walked by hand' : 'no result', 'none');
+  const judge = step.verdict
+    ? check('Judge', `${step.verdict}${step.judgedIn ? ` · from ${step.judgedIn}` : ''}`, step.verdict === 'meets the intent' ? 'pass' : 'fail', step.judgedIn ? `Judged in ${step.judgedIn}; the screen has not changed since.` : '')
+    : check('Judge', 'not judged', 'none');
+  const previous = !step.change
+    ? check('Previous', 'no previous run', 'none')
+    : step.change === 'same' ? check('Previous', `same as ${step.previous}`, 'pass') : check('Previous', step.change === 'new' ? `new since ${step.previous}` : `changed since ${step.previous}`, 'warn');
+  return `<div class="checks">${test}${judge}${previous}</div>`;
+}
+
 function renderStep(step: Step, shots: EmbeddedShots): string {
-  const reason = step.reason ? `<p class="reason">${escapeHtml(step.reason)}</p>` : '';
-  return `<article class="step${isFailing(step) ? ' failing' : ''}"><header><h4>${escapeHtml(step.title)}</h4><div class="chips">${verdictChip(step)}${resultChip(step)}</div></header>${reason}${renderShot(shots, step.screenshot)}</article>`;
+  const reason = step.reason ? `<p class="reason">${step.judgedIn ? `<span class="muted">${escapeHtml(step.judgedIn)}: </span>` : ''}${escapeHtml(step.reason)}</p>` : '';
+  return `<article class="step${isFailing(step) ? ' failing' : ''}"><header><h4>${escapeHtml(step.title)}</h4></header>${renderChecks(step)}${reason}${renderShot(shots, step.screenshot)}</article>`;
 }
 
 function renderScenario(scenario: Scenario, shots: EmbeddedShots): string {
@@ -362,6 +425,7 @@ function countsText(counts: Tally): string {
   const parts = [`${counts.meets} meet`, counts.misses ? `<span class="n-fail">${counts.misses}</span> miss` : '0 miss'];
   if (counts.unjudged) parts.push(`${counts.unjudged} not judged`);
   if (counts.failed) parts.push(`<span class="n-fail">${counts.failed}</span> test failed`);
+  if (counts.changed) parts.push(`${counts.changed} new or changed`);
   return parts.join(' · ');
 }
 
@@ -382,13 +446,13 @@ function renderSummary(groups: Map<string, Scenario[]>, reportOf = new Map<strin
       const storyRows = storiesOf(scenarios).map(story => {
         const counts = tally(stepsOfStory(scenarios, story));
         const first = scenarios.find(scenario => scenario.story === story)!;
-        return `<tr class="${counts.misses + counts.failed ? 'failing' : ''}"><td class="story"><a href="${page}#${anchor(`${first.story} ${first.scenario}`)}">${escapeHtml(story)}</a></td>${countCell(counts.meets, false)}${countCell(counts.misses, true)}${countCell(counts.unjudged, false)}${countCell(counts.failed, true)}</tr>`;
+        return `<tr class="${counts.misses + counts.failed ? 'failing' : ''}"><td class="story"><a href="${page}#${anchor(`${first.story} ${first.scenario}`)}">${escapeHtml(story)}</a></td>${countCell(counts.meets, false)}${countCell(counts.misses, true)}${countCell(counts.unjudged, false)}${countCell(counts.failed, true)}${countCell(counts.changed, false)}</tr>`;
       });
       const all = tally(scenarios.flatMap(scenario => scenario.steps));
-      return `<tr class="sub-epic"><th colspan="5"><a href="${page}#${anchor(subEpic)}">${escapeHtml(subEpic)}</a> <span class="muted">${all.meets} meet · ${all.misses} miss</span></th></tr>${storyRows.join('')}`;
+      return `<tr class="sub-epic"><th colspan="6"><a href="${page}#${anchor(subEpic)}">${escapeHtml(subEpic)}</a> <span class="muted">${all.meets} meet · ${all.misses} miss</span></th></tr>${storyRows.join('')}`;
     })
     .join('');
-  return `<section>${sectionLabel(1, 'Summary')}<p class="muted small">Each step's screen judged against its Given, When or Then: steps that meet the intent, steps that miss it, steps not judged yet, and steps whose test failed.</p><div class="table-wrap"><table><thead><tr><th>Story</th><th class="num">meet</th><th class="num">miss</th><th class="num">not judged</th><th class="num">test failed</th></tr></thead><tbody>${body}</tbody></table></div></section>`;
+  return `<section>${sectionLabel(1, 'Summary')}<p class="muted small">Each step has three checks: its test passed, the judge found its screen shows what its Given, When or Then says, and its screen is the same as the previous run's. A same screen keeps the previous run's judgement; new or changed screens need a judge pass.</p><div class="table-wrap"><table><thead><tr><th>Story</th><th class="num">meet</th><th class="num">miss</th><th class="num">not judged</th><th class="num">test failed</th><th class="num">new or changed</th></tr></thead><tbody>${body}</tbody></table></div></section>`;
 }
 
 /** The abd.works wordmark (copied from abd-works-brand/logo), inlined so the page stays one file. */
@@ -407,7 +471,7 @@ function renderPage(runDir: string, scenarios: Scenario[], withImages = true): s
   const slots: Record<string, string> = {
     title: escapeHtml(`End-to-end walk — ${subEpic}`),
     run: escapeHtml(run),
-    totals: `${all.meets} meet · ${all.misses} miss · ${all.unjudged} not judged · ${all.failed} test failed &nbsp;·&nbsp; written ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC`,
+    totals: `${all.meets} meet · ${all.misses} miss · ${all.unjudged} not judged · ${all.failed} test failed · ${all.changed} new or changed &nbsp;·&nbsp; written ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC`,
     logo: withImages ? logoImages() : TEXT_LOGO,
     summary: renderSummary(groups),
     sections: `<section class="sub-epic-section" id="${anchor(subEpic)}">${sectionLabel(2, subEpic)}${scenarios.map(scenario => renderScenario(scenario, shots)).join('')}</section>`,
@@ -439,7 +503,7 @@ function renderStoryMap(groups: Map<string, Scenario[]>, reportOf: Map<string, s
   return fillTemplate({
     title: 'End-to-end story map',
     run: 'story map',
-    totals: `${all.meets} meet · ${all.misses} miss · ${all.unjudged} not judged · ${all.failed} test failed &nbsp;·&nbsp; written ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC`,
+    totals: `${all.meets} meet · ${all.misses} miss · ${all.unjudged} not judged · ${all.failed} test failed · ${all.changed} new or changed &nbsp;·&nbsp; written ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC`,
     logo: logoImages(),
     summary: renderSummary(groups, reportOf),
     shotLoader: '',
@@ -567,6 +631,16 @@ details.scenario > summary .counts { font-family: var(--font-mono); font-size: v
 .step > header { display: flex; flex-wrap: wrap; gap: 6px 12px; justify-content: space-between; align-items: baseline; }
 .step h4 { font-family: var(--font-mono); font-size: var(--text-sm); font-weight: 600; overflow-wrap: anywhere; }
 .chips { display: flex; gap: 6px; }
+.checks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; max-width: 720px; }
+.check { display: grid; gap: 2px; padding: 6px 10px; border: 1px solid var(--border); border-left-width: 4px; border-radius: var(--radius-sm); background: var(--surface); min-width: 0; }
+.check.pass { border-left-color: var(--success); }
+.check.fail { border-left-color: var(--error); }
+.check.warn { border-left-color: var(--warning); }
+.check.none { border-left-color: var(--border); }
+.check-name { font-family: var(--font-mono); font-size: var(--text-xs); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.check-value { font-size: var(--text-sm); font-weight: 600; overflow-wrap: anywhere; }
+.check.none .check-value { color: var(--muted); font-weight: 500; }
+@media (max-width: 600px) { .checks { grid-template-columns: 1fr; } }
 .reason { font-size: var(--text-sm); color: var(--muted); overflow-wrap: anywhere; }
 .shot { min-width: 0; max-width: 720px; }
 .shots { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
