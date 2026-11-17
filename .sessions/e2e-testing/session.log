@@ -1,1 +1,8 @@
 2026-11-17T05:52:34Z --- 1
+2026-11-17T05:54:08Z tool sessions.switch 11f6ae94-f184-4456-af6d-03607d46807d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-e2e-testing\11f6ae94-f184-4456-af6d-03607d46807d.jsonl 1-73
+2026-11-17T06:18:01Z tool generate.generate 11f6ae94-f184-4456-af6d-03607d46807d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-e2e-testing\11f6ae94-f184-4456-af6d-03607d46807d.jsonl 1-1010
+2026-11-17T06:18:01Z generate C:\dev\abd-cdd-e2e-testing stories, bdd story_map, behavior markdown, python 11f6ae94-f184-4456-af6d-03607d46807d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-e2e-testing\11f6ae94-f184-4456-af6d-03607d46807d.jsonl 1-1010
+2026-11-17T06:19:43Z tool validate.validate .context\story-map.md, harness\diagnostics\e2e_review_behavior_spec.py 11f6ae94-f184-4456-af6d-03607d46807d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-e2e-testing\11f6ae94-f184-4456-af6d-03607d46807d.jsonl 1-1129
+2026-11-17T06:20:45Z error validate.validate C:\dev\abd-context-driven-delivery\.sessions\e2e-testing\session.err 1 11f6ae94-f184-4456-af6d-03607d46807d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-e2e-testing\11f6ae94-f184-4456-af6d-03607d46807d.jsonl 1-1129
+2026-11-17T06:20:48Z tool validate.validate .context\story-map.md, harness\diagnostics\e2e_review_behavior_spec.py 11f6ae94-f184-4456-af6d-03607d46807d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-e2e-testing\11f6ae94-f184-4456-af6d-03607d46807d.jsonl 1-1158
+2026-11-17T06:20:56Z error validate.validate C:\dev\abd-context-driven-delivery\.sessions\e2e-testing\session.err 159 11f6ae94-f184-4456-af6d-03607d46807d C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-e2e-testing\11f6ae94-f184-4456-af6d-03607d46807d.jsonl 1-1158
