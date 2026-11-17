@@ -11,7 +11,7 @@
       "specification",
       "implementation"
     ],
-    "version": 108
+    "version": 109
   },
   "practices": {
     "stories": {
@@ -24,7 +24,7 @@
         ],
         "acceptance_tests": []
       },
-      "enabled": true
+      "enabled": false
     },
     "ux": {
       "formats": {
