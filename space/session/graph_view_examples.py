@@ -4,6 +4,8 @@ Graph and Explore Graph In Files App."""
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+
 from space.kanban.session_board_examples import SessionSeed
 
 # Seed: checkout-flow working in the whole project with Stories and Clean Engineering on, its Stories root the project's
@@ -200,15 +202,28 @@ def session_of(world):
     return world.Ticket.load(CHECKOUT_FLOW.name).session
 
 
+def opened_entries(world, paths: list[str], node_filter: dict | None = None) -> Iterator[tuple[dict, list[str]]]:
+    """Each entry of the trees answered for paths and node_filter, in tree order, as its branch answers it once the
+    page opens it, with the names of the entries above it from its tree's root down."""
+    session = session_of(world)
+    pending = [(entry, []) for entry in reversed(list(world.data_of(session.graph_trees(paths=paths, node_filter=node_filter))))]
+    while pending:
+        entry, above = pending.pop()
+        if entry["children_left_out"]:
+            entry = world.data_of(session.graph_branch(node_id=entry["node_id"], paths=paths, node_filter=node_filter)) or entry
+        yield entry, above
+        below = [child for child in entry["children"] if "children_left_out" in child]
+        pending.extend((child, [*above, entry["name"]]) for child in reversed(below))
+
+
+def opened_entry_named(world, name: str, paths: list[str]) -> tuple[dict, list[str]]:
+    """The first entry named name in the trees answered for paths, with the names above it."""
+    found = next(((entry, above) for entry, above in opened_entries(world, paths) if entry["name"] == name), None)
+    if found is None:
+        raise AssertionError(f"no node named {name} in the trees of {paths}")
+    return found
+
+
 def node_id_of(world, name: str, paths: list[str]) -> str:
     """The id of the node named name in the trees answered for paths, opening each branch as the page opens it."""
-    session = session_of(world)
-    found = list(world.data_of(session.graph_trees(paths=paths)))
-    while found:
-        entry = found.pop()
-        if entry["name"] == name:
-            return entry["node_id"]
-        if entry["children_left_out"]:
-            entry = world.data_of(session.graph_branch(node_id=entry["node_id"], paths=paths)) or entry
-        found.extend(child for child in entry["children"] if "children_left_out" in child)
-    raise AssertionError(f"no node named {name} in the trees of {paths}")
+    return opened_entry_named(world, name, paths)[0]["node_id"]

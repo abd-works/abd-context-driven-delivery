@@ -20,6 +20,8 @@ from expects import contain, equal, expect
 
 from space.kanban.story_test import SharedStories
 from space.session.graph_view_examples import (
+    opened_entries,
+    opened_entry_named,
     BOARD_CODE,
     CHECKOUT_FLOW_IN_SPACE,
     CHECKOUT_FLOW_READING_NO_CODE,
@@ -55,28 +57,12 @@ shared_stories = SharedStories("Switch Files App Between Files And Graph")
 
 def names_in(world, paths: list[str]) -> list[str]:
     """Every node's name in the trees answered for paths, each branch opened as the page opens it."""
-    session = session_of(world)
-    return [name for tree in world.data_of(session.graph_trees(paths=paths)) for name in opened_names(world, tree, paths)]
-
-
-def opened_names(world, entry: dict, paths: list[str]) -> list[str]:
-    if entry["children_left_out"]:
-        entry = world.data_of(session_of(world).graph_branch(node_id=entry["node_id"], paths=paths)) or entry
-    below = [child for child in entry["children"] if "children_left_out" in child]
-    return [entry["name"], *(name for child in below for name in opened_names(world, child, paths))]
+    return [entry["name"] for entry, _above in opened_entries(world, paths)]
 
 
 def names_above(world, name: str, paths: list[str]) -> list[str]:
     """The names of the nodes above the node named name in the trees answered for paths, from its tree's root down."""
-    found = [(entry, []) for entry in world.data_of(session_of(world).graph_trees(paths=paths))]
-    while found:
-        entry, above = found.pop()
-        if entry["name"] == name:
-            return above
-        if entry["children_left_out"]:
-            entry = world.data_of(session_of(world).graph_branch(node_id=entry["node_id"], paths=paths)) or entry
-        found.extend((child, [*above, entry["name"]]) for child in entry["children"] if "children_left_out" in child)
-    raise AssertionError(f"no node named {name} in the trees of {paths}")
+    return opened_entry_named(world, name, paths)[1]
 
 
 def lines_of(world, name: str) -> list[tuple[str, int, int]]:
