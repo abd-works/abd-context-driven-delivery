@@ -1,21 +1,26 @@
 """Spec support: a throwaway user home, and a real cdd server serving this checkout from a throwaway ``~/.cdd``."""
 from __future__ import annotations
 
+import asyncio
 import contextlib
+import json
 import os
 import shutil
 import socket
 import tempfile
+import uuid
 from collections.abc import AsyncIterator
 from datetime import timedelta
 from pathlib import Path
 
 from harness.mcp.cdd_home import CDD_HOME_ENV, CddHome
-from harness.mcp.mcp_address import PROJECT_HEADER, SERVER_PORT_ENV, McpAddress
+from harness.mcp.mcp_address import CHAT_HEADER, CHAT_PROCESS_HEADER, PROJECT_HEADER, SERVER_PORT_ENV, McpAddress
 from harness.mcp.mcp_daemon import CONNECT_SCRIPT, SERVER_OWNER_ENV, McpDaemon, RunningServer
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _TOOLSET_REFS_ENV = "MCP_TOOLSET_REFS"
+# How long a spec chat waits on one call: a ticket's first call builds its worktree.
+_CALL_SECONDS = 180
 
 
 class UserHome:
@@ -101,6 +106,42 @@ class SpecServer:
         with socket.socket() as probe:
             probe.bind(("127.0.0.1", 0))
             return probe.getsockname()[1]
+
+
+class SpecChat:
+    """A chat as the cdd server meets it: the folder it connected from, its id, and optionally its Claude Code process."""
+
+    def __init__(self, server: SpecServer, project: Path, chat_id: str = "", process: str = "") -> None:
+        self._server = server
+        self._headers = {PROJECT_HEADER: str(project), CHAT_HEADER: chat_id or str(uuid.uuid4())}
+        if process:
+            self._headers[CHAT_PROCESS_HEADER] = process
+
+    def call(self, tool: str, **arguments) -> tuple[object, str]:
+        """The tool's answer and an empty error, or no answer and the error the server gave."""
+        return asyncio.run(self._call(tool, arguments))
+
+    def answer(self, tool: str, **arguments) -> object:
+        value, error = self.call(tool, **arguments)
+        if error:
+            raise AssertionError(f"{tool} failed: {error}")
+        return value
+
+    async def _call(self, tool: str, arguments: dict) -> tuple[object, str]:
+        from mcp import ClientSession
+        from mcp.client.streamable_http import streamablehttp_client
+
+        async with streamablehttp_client(self._server.url, headers=self._headers, timeout=_CALL_SECONDS, sse_read_timeout=_CALL_SECONDS) as (read, write, _):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+                result = await session.call_tool(tool, arguments)
+        text = result.content[0].text if result.content else ""
+        if result.isError:
+            return None, text
+        try:
+            return json.loads(text), ""
+        except ValueError:
+            return text, ""
 
 
 class ThrowawayMachine:

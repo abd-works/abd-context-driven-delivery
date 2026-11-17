@@ -29,6 +29,7 @@ from harness.agent_tools.tool_call import SESSION_OPENING, ToolCall, ToolRequest
 from harness.mcp.mcp_server import McpServer
 from harness.whiteboard import BoardLinks
 from space.repo.mock_repo import MockGit
+from tools.prompt_queue.prompt_queue import PromptQueue
 from space.repo.repo import Repo
 from space.session import Session, Sessions
 from harness.agent_tools.chat_pointer import ChatPointer
@@ -43,6 +44,15 @@ from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 # The first practices a process makes read and parse their guidance for every later one; made once here, before any
 # example, so no example pays for that first read.
 PRACTICE_CATALOGUE.create_all()
+
+
+_HANDOFF_WITH_STEPS = """# Handoff
+
+## Approach for Next Agent
+
+1. Read the handoff
+2. Run the unit tier
+"""
 
 
 def _chat_in(session: Session, chat_id: str = "spec-chat") -> ChatPointer:
@@ -129,6 +139,28 @@ with description("a session"):
 
             with it("should be the one session its sessions hold, whichever call reads it"):
                 expect(ToolCall({}, self.repo).session is ToolCall({}, self.repo).session).to(equal(True))
+
+    # (S:system) Cdd Server --> Queue Handoff Steps On Session Start
+    with context("that a chat switches to it with a handoff written"):
+        with before.each:
+            self.repo = Path(tempfile.mkdtemp())
+            work = self.repo / "work"
+            work.mkdir()
+            Sessions(self.repo).switch("alpha", work)
+            Sessions(self.repo).current().handoffs.write(_HANDOFF_WITH_STEPS)
+            self.chat = f"queue-chat-{time.time_ns()}"
+            self.call = ToolCall.sent({}, self.repo, ToolRequest(ChatPointer.from_request(self.chat)))
+            self.instructions = Sessions(self.repo).switch("alpha", call=self.call)
+
+        with it("should queue the handoff's steps on the chat's prompt queue, in order"):
+            expect([prompt["text"] for prompt in PromptQueue.of_chat(self.chat).prompts]).to(equal(["Read the handoff", "Run the unit tier"]))
+
+        with it("should tell the agent to work through them, marking each one done"):
+            expect(self.instructions).to(contain("prompt-queue.done"))
+
+        with it("should queue them once, however often the chat switches to it again"):
+            Sessions(self.repo).switch("alpha", call=self.call)
+            expect(len(PromptQueue.of_chat(self.chat).prompts)).to(equal(2))
 
     # (E) Open Named Session
     # (S) Session --> Open New Session

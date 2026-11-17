@@ -2,7 +2,6 @@
 
 Opening, pushing, pulling, switching, and closing tickets on branches and in worktrees, each checked against git. The
 examples run in order, as one person's day of work: each context acts once, then its examples look at the result."""
-import asyncio
 import json
 import os
 import shutil
@@ -19,8 +18,7 @@ if str(_REPO_ROOT) not in sys.path:
 from expects import be_true, contain, equal, expect
 from mamba import after, before, context, description, it
 
-from harness.mcp.mcp_address import CHAT_HEADER, CHAT_PROCESS_HEADER, PROJECT_HEADER
-from harness.mcp.spec_support import SpecServer
+from harness.mcp.spec_support import SpecChat, SpecServer
 
 TOOLSETS = (
     "space.kanban.board:Board",
@@ -36,7 +34,6 @@ TOOLSETS = (
     # A stage's steps are the actions registered for it; importing one action registers them all.
     "cdd_guidance.actions.generate.generate:Generate",
 )
-CALL_SECONDS = 180
 # A process id no running Claude Code has, for a chat process this spec writes the session file of.
 MOVED_CHAT_PROCESS = "999999"
 
@@ -107,42 +104,6 @@ class TicketClone:
         shutil.rmtree(self.top, ignore_errors=True)
 
 
-class Chat:
-    """A chat as the cdd server meets it: the folder it connected from, its id, and optionally its Claude Code process."""
-
-    def __init__(self, server: SpecServer, project: Path, chat_id: str = "", process: str = "") -> None:
-        self._server = server
-        self._headers = {PROJECT_HEADER: str(project), CHAT_HEADER: chat_id or str(uuid.uuid4())}
-        if process:
-            self._headers[CHAT_PROCESS_HEADER] = process
-
-    def call(self, tool: str, **arguments) -> tuple[object, str]:
-        """The tool's answer and an empty error, or no answer and the error the server gave."""
-        return asyncio.run(self._call(tool, arguments))
-
-    def answer(self, tool: str, **arguments) -> object:
-        value, error = self.call(tool, **arguments)
-        if error:
-            raise AssertionError(f"{tool} failed: {error}")
-        return value
-
-    async def _call(self, tool: str, arguments: dict) -> tuple[object, str]:
-        from mcp import ClientSession
-        from mcp.client.streamable_http import streamablehttp_client
-
-        async with streamablehttp_client(self._server.url, headers=self._headers, timeout=CALL_SECONDS, sse_read_timeout=CALL_SECONDS) as (read, write, _):
-            async with ClientSession(read, write) as session:
-                await session.initialize()
-                result = await session.call_tool(tool, arguments)
-        text = result.content[0].text if result.content else ""
-        if result.isError:
-            return None, text
-        try:
-            return json.loads(text), ""
-        except ValueError:
-            return text, ""
-
-
 def board_tickets(board: dict) -> set[str]:
     return {ticket["name"] for column in board["columns"] for key in ("in_progress", "done", "tickets") for ticket in column.get(key, [])}
 
@@ -155,7 +116,7 @@ with description("a ticket's work through the cdd server") as self:
         self.server = SpecServer(TOOLSETS)
         self.server.start()
         self.clone = TicketClone()
-        self.chat = Chat(self.server, self.clone.work)
+        self.chat = SpecChat(self.server, self.clone.work)
 
     with after.all:
         self.server.stop()
@@ -186,7 +147,7 @@ with description("a ticket's work through the cdd server") as self:
         with before.all:
             self.chat.answer("ticket.activate", ticket="walk-worktree")
             self.worktree = self.clone.worktree_of("walk-worktree")
-            self.ticket_chat = Chat(self.server, self.worktree)
+            self.ticket_chat = SpecChat(self.server, self.worktree)
 
         with it("should make a worktree on its branch"):
             expect(self.worktree is not None and self.worktree.is_dir()).to(be_true)
@@ -208,7 +169,7 @@ with description("a ticket's work through the cdd server") as self:
         with before.all:
             self.worktree = self.clone.worktree_of("walk-worktree")
             (self.worktree / "feature.txt").write_text("first\n", encoding="utf-8")
-            Chat(self.server, self.worktree).answer("repo.push_commit", message="Add feature", untracked=True, sync_remote=True)
+            SpecChat(self.server, self.worktree).answer("repo.push_commit", message="Add feature", untracked=True, sync_remote=True)
 
         with it("should commit the work on the worktree's branch"):
             expect(self.clone.subject(folder=self.worktree)).to(equal("Add feature"))
@@ -229,7 +190,7 @@ with description("a ticket's work through the cdd server") as self:
             self.worktree = self.clone.worktree_of("walk-worktree")
             self.clone.push_from_elsewhere("walk-worktree", "elsewhere.txt", "from elsewhere\n", "Change from elsewhere")
             (self.worktree / "feature.txt").write_text("second\n", encoding="utf-8")
-            Chat(self.server, self.worktree).answer("repo.push_commit", message="Change feature", untracked=True, sync_remote=True)
+            SpecChat(self.server, self.worktree).answer("repo.push_commit", message="Change feature", untracked=True, sync_remote=True)
 
         with it("should bring that work in"):
             expect((self.worktree / "elsewhere.txt").is_file()).to(be_true)
@@ -273,9 +234,9 @@ with description("a ticket's work through the cdd server") as self:
             self.chat.answer("ticket.activate", ticket="walk-one")
             self.chat.answer("ticket.activate", ticket="walk-two")
             one, two = self.clone.worktree_of("walk-one"), self.clone.worktree_of("walk-two")
-            self.sessions_of = (Chat(self.server, one).answer("sessions.current")["name"], Chat(self.server, two).answer("sessions.current")["name"])
+            self.sessions_of = (SpecChat(self.server, one).answer("sessions.current")["name"], SpecChat(self.server, two).answer("sessions.current")["name"])
             (one / "one.txt").write_text("one\n", encoding="utf-8")
-            Chat(self.server, one).answer("repo.push_commit", message="Work on one", untracked=True, sync_remote=True)
+            SpecChat(self.server, one).answer("repo.push_commit", message="Work on one", untracked=True, sync_remote=True)
             self.board_with_both = board_tickets(self.chat.answer("board.show"))
             self.chat.answer("ticket.activate", ticket="walk-one")
             self.one_again = self.clone.worktree_of("walk-one")
@@ -309,7 +270,7 @@ with description("a ticket's work through the cdd server") as self:
             self.chat.answer("ticket.activate", ticket="walk-land")
             worktree = self.clone.worktree_of("walk-land")
             (worktree / "land.txt").write_text("land\n", encoding="utf-8")
-            Chat(self.server, worktree).answer("repo.push_commit", message="Land it", untracked=True, sync_remote=True)
+            SpecChat(self.server, worktree).answer("repo.push_commit", message="Land it", untracked=True, sync_remote=True)
             self.clone.push_from_elsewhere("main", "on-main.txt", "pushed to main elsewhere\n", "Main from elsewhere")
             self.chat.answer("ticket.close", ticket="walk-land", leaving=["commit", "push", "merge", "delete_branch"])
 
@@ -328,7 +289,7 @@ with description("a ticket's work through the cdd server") as self:
             self.chat.answer("ticket.create", title="Walk conflict")
             self.chat.answer("ticket.activate", ticket="walk-conflict")
             worktree = self.clone.worktree_of("walk-conflict")
-            ticket_chat = Chat(self.server, worktree)
+            ticket_chat = SpecChat(self.server, worktree)
             (worktree / "shared.txt").write_text("mine\n", encoding="utf-8")
             ticket_chat.answer("repo.push_commit", message="Mine", untracked=True, sync_remote=True)
             self.clone.push_from_elsewhere("walk-conflict", "shared.txt", "theirs\n", "Theirs")
@@ -367,8 +328,8 @@ with description("a ticket's work through the cdd server") as self:
 
     with context("with two chats in the same clone"):
         with before.all:
-            self.first = Chat(self.server, self.clone.work)
-            self.second = Chat(self.server, self.clone.work)
+            self.first = SpecChat(self.server, self.clone.work)
+            self.second = SpecChat(self.server, self.clone.work)
             self.first.answer("sessions.switch", name="walk-first")
 
         with it("should keep the second chat's own open session"):
@@ -385,7 +346,7 @@ with description("a ticket's work through the cdd server") as self:
             session_file = self.config / "sessions" / f"{MOVED_CHAT_PROCESS}.json"
             session_file.parent.mkdir(parents=True, exist_ok=True)
             session_file.write_text(json.dumps({"pid": int(MOVED_CHAT_PROCESS), "sessionId": str(uuid.uuid4()), "cwd": str(self.clone.work)}), encoding="utf-8")
-            moved = Chat(self.server, spare, "unnamed", MOVED_CHAT_PROCESS)
+            moved = SpecChat(self.server, spare, "unnamed", MOVED_CHAT_PROCESS)
             moved.answer("sessions.switch", name="walk-moved")
             (self.clone.work / "moved.txt").write_text("moved chat\n", encoding="utf-8")
             moved.answer("repo.push_commit", message="From a moved chat", untracked=True, sync_remote=False)
