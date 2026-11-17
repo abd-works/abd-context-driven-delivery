@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { NodeSourceData } from '@cdd/harness/graph/graph'
 import type { SessionFileData } from '@cdd/space/session/session'
 import { SourceView, type SourceEditorInstance } from '@source-view/SourceView'
+import type { SourceCallout } from '@source-view/source-callouts'
 import type { SourceLines } from '@source-view/source-folding'
 import type { Monaco } from '@monaco-editor/react'
 
@@ -26,6 +27,13 @@ function useSelectedMarks(editor: SourceEditorInstance | null, openAround: Sourc
     const marks = editor.createDecorationsCollection(selectedMarks(openAround, lineCount))
     return () => marks.clear()
   }, [editor, openAround, lineCount])
+}
+
+// The lines that use the expanded callouts, one each; none when no callout of the file is expanded, so the lines asked
+// for show instead.
+function linesUsing(callouts: SourceCallout[], expanded: string[]): SourceLines[] | null {
+  const lines = [...new Set(callouts.filter(callout => expanded.includes(callout.id)).map(callout => callout.line))]
+  return lines.length ? lines.map(line => ({ start: line, end: line })) : null
 }
 
 // A code file opened with no node selected opens as an outline: its classes open and their members folded. Only a
@@ -53,6 +61,7 @@ export function FileSourceView({
   actions,
   onAddToContext,
   openAround = [],
+  expanded = [],
   members = [],
   keys,
   fail,
@@ -61,6 +70,7 @@ export function FileSourceView({
   actions: FileCommentsActions
   onAddToContext: (lines: CommentLines) => void
   openAround?: SourceLines[]
+  expanded?: string[]
   members?: NodeSourceData[]
   keys: FilesFoldKeys
   fail: ThemeFailure
@@ -83,6 +93,8 @@ export function FileSourceView({
   }
   const source = useMemo(() => sourceOf(file, members), [file, members])
   const callouts = useMemo(() => calloutsOf(file), [file])
+  // A node selected through a connector shows on the line that uses it, which its fold-out opens under.
+  const shownAround = useMemo(() => linesUsing(callouts, expanded) ?? openAround, [callouts, expanded, openAround])
   const rules = useMemo(() => rulesOf(file), [file])
   const rule = rules.some(shown => shown.name === chosenRule) ? chosenRule : (rules[0]?.name ?? '')
   const compose = useCallback((lines: CommentLines) => {
@@ -97,9 +109,9 @@ export function FileSourceView({
   useAddToContextAction(editor, onAddToContext)
   useFileMarks(editor, file)
   useMarkerPresses(editor, held, open)
-  useSelectedMarks(editor, openAround, source.end_line)
-  useMembersFolded(editor, file.text, monacoLanguageOf(file), openAround)
-  const firstShown = openAround[0]?.start ?? 0
+  useSelectedMarks(editor, shownAround, source.end_line)
+  useMembersFolded(editor, file.text, monacoLanguageOf(file), shownAround)
+  const firstShown = shownAround[0]?.start ?? 0
   useEffect(() => {
     if (!editor || !firstShown) return
     const frame = requestAnimationFrame(() => {
@@ -123,11 +135,12 @@ export function FileSourceView({
         rules={rules}
         activeRule={rule}
         onSelectRule={setChosenRule}
-        openAround={openAround}
+        openAround={shownAround}
         language={monacoLanguageOf(file)}
         keepGlyphMargin
         wordWrap={wrap}
         callouts={callouts}
+        expandCallouts={expanded}
         opensCalls={!isStoryTest(file)}
         onEditor={onEditor}
       />

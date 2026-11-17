@@ -40,6 +40,12 @@ const saidBy = (answer: unknown): string => {
 }
 
 // An entry below another is a node's entry; the rules a node lists sit beside them and show with the violations.
+// The kind of node a story's example is, which a scenario's steps use from where it is declared.
+const EXAMPLE_TYPE = 'Example'
+
+// A connector, such as a step's invokes or observes, is an entry named for its own kind: it holds the nodes it reaches.
+const isConnector = (entry: ExplorerEntryData): boolean => entry.type === entry.name
+
 export const isEntry = (child: unknown): child is ExplorerEntryData => typeof child === 'object' && child !== null && 'children_left_out' in child
 
 // The graph view of the Files app's file bar: the session's graph holding only the nodes of the files the bar lists, so
@@ -166,6 +172,25 @@ export class FilesGraph {
     return (this.store.state.graph.branches[entry.node_id] ?? entry).children.filter(isEntry)
   }
 
+  // The node whose connector reaches entry, in the trees as they are open: the step above an invokes or observes
+  // connector entry sits under, or the scenario or step an example sits under; none for a node shown at its own home.
+  private connectorHolderOf(target: ExplorerEntryData): ExplorerEntryData | null {
+    const above = (this.store.state.graph.trees ?? []).map(tree => this.pathTo(target, tree, [])).find(Boolean) ?? []
+    const parent = above.at(-1)
+    if (parent && isConnector(parent)) return above.at(-2) ?? null
+    return parent && target.type === EXAMPLE_TYPE ? parent : null
+  }
+
+  // The entries from tree down to target, target left out; none when tree does not hold it.
+  private pathTo(target: ExplorerEntryData, entry: ExplorerEntryData, above: ExplorerEntryData[]): ExplorerEntryData[] | null {
+    if (entry === target) return above
+    for (const child of this.childrenOf(entry)) {
+      const found = this.pathTo(target, child, [...above, entry])
+      if (found) return found
+    }
+    return null
+  }
+
   isOpen(entry: ExplorerEntryData): boolean {
     return this.store.state.graph.openNodes.includes(entry.node_id)
   }
@@ -188,15 +213,19 @@ export class FilesGraph {
   }
 
   // Selects the node, alone or, with also, beside those already selected, then opens each file it covers at its lines: a
-  // member's own file, or every listed file below a folder such as a package. A node read from no lines of a file selects
-  // nothing.
+  // member's own file, or every listed file below a folder such as a package. A node reached through a connector, such as
+  // the operation a step invokes or an example a scenario uses, never opens its own file: the node holding the connector
+  // opens at its lines, and the node expands in place under the line that uses it. A node read from no lines of a file
+  // selects nothing.
   async select(entry: ExplorerEntryData, also: boolean = false): Promise<void> {
     try {
-      const ranges = listAnswered<RangeData>('session.graph_node_ranges', await this.session.graphNodeRanges(entry.node_id, this.paths))
+      const holder = this.connectorHolderOf(entry)
+      const ranges = listAnswered<RangeData>('session.graph_node_ranges', await this.session.graphNodeRanges((holder ?? entry).node_id, this.paths))
       if (!ranges.length) return
       const kept = also ? this.store.state.graph.selected.filter(selected => selected.nodeId !== entry.node_id) : []
       const selected = [...kept, ...ranges.map(lines => ({ nodeId: entry.node_id, lines }))]
-      this.store.change(({ graph }) => ({ graph: { ...graph, selected } }))
+      const expanded = [...(also ? this.store.state.graph.expanded.filter(id => id !== entry.node_id) : []), ...(holder ? [entry.node_id] : [])]
+      this.store.change(({ graph }) => ({ graph: { ...graph, selected, expanded } }))
       await this.showNodes(selected)
     } catch (failure) {
       this.notices.fail(`The Files app did not open ${entry.name}: ${reasonOf(failure)}`, 'Selecting a node in the graph view, calling session.graph_node_ranges')

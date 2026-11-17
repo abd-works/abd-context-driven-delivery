@@ -30,3 +30,45 @@ describe('Story Test Callouts', () => {
     })
   })
 })
+
+// The same story test with its text: its When on line 13 calls delete on line 15, its Then on line 17 observes the example
+// CHECKOUT_TICKET on line 19 (space/session/graph_view_examples.py, STEP_STORY_TEXT).
+const STEP_STORY_TEXT = [
+  '"""Delete Ticket: a Ticket leaves the board."""',
+  'from space.kanban.story_test import SharedStories',
+  'from space.kanban.ticket_story_examples import CHECKOUT_TICKET, ticket_on_board',
+  '',
+  'shared_stories = SharedStories("Remove Tickets")',
+  '',
+  '@shared_stories.scenario("Delete Ticket", "a ticket on the board is deleted")',
+  'def _(s):',
+  '    @s.given("a ticket on the board")',
+  '    def _(world):',
+  '        world.ticket = ticket_on_board(world)',
+  '',
+  '    @s.when("the Person deletes it")',
+  '    def _(world):',
+  '        world.ticket.delete(world.board)',
+  '',
+  '    @s.then("the checkout ticket is gone")',
+  '    def _(world):',
+  '        assert ticket_left(world) == CHECKOUT_TICKET',
+].join(String.fromCharCode(10))
+const CHECKOUT_TICKET = { node_id: 'CHECKOUT_TICKET', name: 'CHECKOUT_TICKET', type: 'Example', owner: '', file: 'space/kanban/ticket_story_examples.py', start_line: 5, end_line: 5, text: 'CHECKOUT_TICKET = "checkout"', members: [] } as unknown as NodeSourceData
+const storyTestWithText = {
+  ...storyTest,
+  text: STEP_STORY_TEXT,
+  steps: [{ line: 9, invokes: [TICKET_ON_BOARD], observes: [] }, { line: 13, invokes: [DELETE], observes: [] }, { line: 17, invokes: [], observes: [CHECKOUT_TICKET] }],
+} as unknown as SessionFileData
+
+describe('Connectors Fold Out Where They Are Used', () => {
+  describe("with Delete Ticket's story test and its text", () => {
+    it('should put each connector on the line of its step that uses it, collapsed until opened', () => {
+      expect(calloutsOf(storyTestWithText).map(callout => [callout.line, callout.title])).toEqual([
+        [11, 'ticket_on_board'],
+        [15, 'Ticket.delete'],
+        [19, 'CHECKOUT_TICKET'],
+      ])
+    })
+  })
+})

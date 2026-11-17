@@ -170,7 +170,7 @@ function bodyOf(member: FoldMember): Body {
 }
 
 // The owner the graph gives a module's own function (Clean Engineering's MODULE_FUNCTION_HOLDER), which no class is.
-const MODULE_OWNER = "_module";
+export const MODULE_OWNER = "_module";
 
 // Whether member is a function of its module, not of a class: owned by the module, or by nothing.
 function isModuleFunction(member: FoldMember): boolean {

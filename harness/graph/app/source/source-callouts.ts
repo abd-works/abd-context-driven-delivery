@@ -30,9 +30,14 @@ type CalloutEditor = Pick<monaco.IStandaloneCodeEditor, 'createDecorationsCollec
 // they open; a press on either opens them under the line and hides the label, and a press on the mark closes them and
 // brings the label back. An open callout shows only its lines, shaded once, its file and lines in its tooltip; a line
 // inside it that holds callouts of its own carries a mark that opens them inside it, one shade deeper. Each opens in a
-// view zone, which adds no line to the file, so comments, rules and folds stay on the file's own lines.
-export function useCallouts(editor: CalloutEditor | null, callouts: SourceCallout[], within: CalloutsWithin, editorLineOf: (fileLine: number) => number): void {
+// view zone, which adds no line to the file, so comments, rules and folds stay on the file's own lines. The callouts
+// expand names open as well, each with the others on its line, as the page asks.
+export function useCallouts(editor: CalloutEditor | null, callouts: SourceCallout[], within: CalloutsWithin, editorLineOf: (fileLine: number) => number, expand: string[] = []): void {
   const [open, setOpen] = useState<string[]>([]);
+  const expandedKeys = [...new Set(callouts.filter((callout) => expand.includes(callout.id)).map((callout) => lineKey(callout.line)))].join(' ');
+  useEffect(() => {
+    if (expandedKeys) setOpen((current) => [...new Set([...current, ...expandedKeys.split(' ')])]);
+  }, [expandedKeys]);
   const toggle = (key: string) => setOpen((current) => (current.includes(key) ? current.filter((held) => held !== key) : [...current, key]));
   const lines = [...new Set(callouts.map((callout) => callout.line))];
   useEffect(() => {

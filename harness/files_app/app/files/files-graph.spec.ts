@@ -37,10 +37,15 @@ const CHECKOUT_FLOW_FILES = [
 ]
 
 // Seed: checkout-flow's nodes, each in its file at its lines, under its practice's root.
-type SeedNode = { id: string; name: string; type: string; file: string; start: number; end: number; parent: string }
+// A node shown under a connector, such as the operation a step invokes, is its own node shown there: shows names it.
+type SeedNode = { id: string; name: string; type: string; file: string; start: number; end: number; parent: string; shows?: string }
 const CHECKOUT_FLOW_NODES: SeedNode[] = [
   { id: 'stories', name: 'Stories', type: 'Practice', file: '', start: 0, end: 0, parent: '' },
   { id: 'delete-ticket', name: 'Delete Ticket', type: 'Story', file: STORY_MAP, start: 315, end: 319, parent: 'stories' },
+  // Seed: Delete Ticket's When step, on lines 316 to 318, invoking Ticket.close, which its invokes connector shows.
+  { id: 'delete-ticket-when', name: 'when the Person deletes it', type: 'When', file: STORY_MAP, start: 316, end: 318, parent: 'delete-ticket' },
+  { id: 'delete-ticket-when-invokes', name: 'invokes', type: 'invokes', file: STORY_MAP, start: 316, end: 318, parent: 'delete-ticket-when' },
+  { id: 'delete-ticket-when-invokes-close', name: 'close', type: 'Operation', file: TICKET_CODE, start: 538, end: 555, parent: 'delete-ticket-when-invokes', shows: 'ticket-close' },
   { id: 'clean_engineering', name: 'Clean Engineering', type: 'Practice', file: '', start: 0, end: 0, parent: '' },
   { id: 'ticket', name: 'Ticket', type: 'OoadClass', file: TICKET_CODE, start: 106, end: 670, parent: 'clean_engineering' },
   { id: 'ticket-activate', name: 'activate', type: 'Operation', file: TICKET_CODE, start: 460, end: 465, parent: 'ticket' },
@@ -93,7 +98,7 @@ class FakeFilesServer implements CddApi {
     if (path.endsWith('/graph-filter-choices')) return this.choices(body.node_types as string[]) as Result
     if (path.endsWith('/graph-branch')) return this.entry(this.node(String(body.node_id)), body.paths as string[], true) as Result
     if (path.endsWith('/graph-node-ranges')) return this.ranges(this.node(String(body.node_id)), body.paths as string[]) as Result
-    if (path.endsWith('/graph-members')) return CHECKOUT_FLOW_NODES.filter(node => node.file).map(node => ({ node_id: node.id, name: node.name, type: node.type, file: node.file })) as Result
+    if (path.endsWith('/graph-members')) return CHECKOUT_FLOW_NODES.filter(node => node.file && !node.shows && node.type !== node.name && node.type !== 'When').map(node => ({ node_id: node.id, name: node.name, type: node.type, file: node.file })) as Result
     if (path.endsWith('/cdd/progress')) return this.progress.map(message => ({ tool: 'session.graph_trees', message })) as Result
     if (path.endsWith('/file')) return { path: body.path, text: 'line\n'.repeat(700), language: 'python', comments: [], folds: [], violations: [], changes: [] } as Result
     return null
@@ -135,8 +140,9 @@ class FakeFilesServer implements CddApi {
 
   private entry(node: SeedNode, paths: string[], isOpened: boolean): ExplorerEntryData {
     const below = CHECKOUT_FLOW_NODES.filter(child => child.parent === node.id && this.holds(child, paths))
-    if (!isOpened) return { node_id: node.id, name: node.name, type: node.type, children: [], children_left_out: below.length }
-    return { node_id: node.id, name: node.name, type: node.type, children: below.map(child => this.entry(child, paths, false)), children_left_out: 0 }
+    const node_id = node.shows ?? node.id
+    if (!isOpened) return { node_id, name: node.name, type: node.type, children: [], children_left_out: below.length }
+    return { node_id, name: node.name, type: node.type, children: below.map(child => this.entry(child, paths, false)), children_left_out: 0 }
   }
 
   private trees(paths: string[]): ExplorerEntryData[] {
@@ -590,6 +596,31 @@ describe('Show A Graph Read That Failed', () => {
     it('should draw its lists empty rather than throw', () => {
       const lists = { selection: NO_FILTER, nodeTypes: undefined, relationships: undefined, rules: undefined, onChange: () => {} }
       expect(() => render(createElement(NodeFilterLists, lists)).unmount()).not.toThrow()
+    })
+  })
+})
+
+describe('Open Connectors In Place', () => {
+  describe("with Delete Ticket's When step invoking Ticket.close, shown under its invokes connector", () => {
+    async function selectedInvokedClose() {
+      const shown = await showingGraph()
+      for (const name of ['Delete Ticket', 'when the Person deletes it', 'invokes']) await shown.page.graph.toggle(entryNamed(shown.page, name))
+      const invokes = entryNamed(shown.page, 'invokes')
+      await shown.page.graph.select(shown.page.graph.childrenOf(invokes)[0]!)
+      await settled()
+      return shown
+    }
+
+    it("should keep the step's file open at the step, never jumping to ticket.py, when the Person selects close there", async () => {
+      const { page, stop } = await selectedInvokedClose()
+      stop()
+      expect([page.state.openPath, page.selectedLinesIn(STORY_MAP)]).toEqual([STORY_MAP, [{ start: 316, end: 318 }]])
+    })
+
+    it("should expand close's fold-out under the step", async () => {
+      const { page, stop } = await selectedInvokedClose()
+      stop()
+      expect(page.state.graph.expanded).toEqual(['ticket-close'])
     })
   })
 })
