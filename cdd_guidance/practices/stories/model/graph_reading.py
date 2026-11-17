@@ -332,7 +332,16 @@ class StoryLinks:
         texts = [body]
         if step.get_fact("phase") == "then":
             texts.extend(self._step_body(given) for given in self._givens_of(step))
-        return [example for example in self.examples if any(re.search(rf"\b{re.escape(example.name)}\b", text) for text in texts)]
+        named = [example for example in self.examples if any(re.search(rf"\b{re.escape(example.name)}\b", text) for text in texts)]
+        return self._of_story_file(step, named)
+
+    def _of_story_file(self, step: "Node", examples: list["Node"]) -> list["Node"]:
+        """examples, keeping of those that share a name only the one recorded for step's own story file: each story file
+        records the examples it uses, so two files that each use a LISTED hold two nodes of that name, and a step means
+        its own file's. A name no example of its file has keeps every example of that name."""
+        own_id = lambda example: f"stories:Example:{step.source.file}:{example.name}"
+        own_names = {example.name for example in examples if example.node_id == own_id(example)}
+        return [example for example in examples if example.name not in own_names or example.node_id == own_id(example)]
 
     def _givens_of(self, step: "Node") -> list["Node"]:
         """The Given steps of the scenario step sits in, with the steps chained onto them."""
