@@ -668,7 +668,8 @@ export async function groupIntoTasks($: EngineInterface): Promise<void> {
   await update($, notice, () => '')
 }
 
-/** Each grouped task becomes a robot with a name no robot on the queue has, and each of its cards is given to it. */
+/** Each grouped task becomes a robot with a name no robot on the queue has, and each of its cards is given to it;
+ * every robot's queue then opens, so the work just handed out shows. */
 async function assignRobots($: EngineInterface, grouped: SubAgentTask[]): Promise<void> {
   const goals = (await read($, queue)).prompts
   const names = freeRobotNames(goals, grouped.length)
@@ -679,6 +680,7 @@ async function assignRobots($: EngineInterface, grouped: SubAgentTask[]): Promis
     }
   }
   await update($, tasks, described => [...described.filter(task => !named.some(robot => robot.name === task.name)), ...named])
+  await update($, collapsedAgents, () => [])
 }
 
 /** As many fun names as asked for, none of them a robot already on the queue. */

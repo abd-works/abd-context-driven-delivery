@@ -1053,6 +1053,18 @@ test('grouping the queue gives each card its robot on the queue', async ($, on) 
   expect(seeded.prompts.map(prompt => prompt.robot)).toEqual(['Sparky', 'Bolt'])
 })
 
+test("grouping the queue opens every robot's queue, so the work it filled them with shows", async ($, on) => {
+  const seeded = seedQueue(on, true)
+  seeded.stored.collapsedAgents = { value: [0, 1], version: 1 }
+  on('model.complete', () => ({ value: { isAnswered: true, text: JSON.stringify(GROUPED.map(({ description, prompts }) => ({ description, prompts }))), usage: NO_USAGE } }))
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'queue-sub-agents' })
+  await ui.unmount()
+
+  expect(seeded.stored.collapsedAgents?.value).toEqual([])
+})
+
 test('grouping new work names its robots apart from the robots already on the queue', async ($, on) => {
   const seeded = seedQueue(on, true, '', [{ id: 'a', text: 'Write the scenarios', is_done: true, robot: 'Sparky' }, { id: 'b', text: 'Run the unit tier' }])
   on('model.complete', () => ({ value: { isAnswered: true, text: JSON.stringify([{ description: 'Run the tests', prompts: ['Run the unit tier'] }]), usage: NO_USAGE } }))
