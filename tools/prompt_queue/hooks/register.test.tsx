@@ -700,6 +700,53 @@ test('send now on a card moves its prompt to the top and sends it to the chat at
   await ui.unmount()
 })
 
+test("send now on a step sends that step of its prompt to the chat at once", async ($, on) => {
+  const seeded = seedQueue(on, true, '', STEPPED.map(prompt => ({ ...prompt })))
+  seeded.stored.openSteps = { value: ['a'], version: 1 }
+  const submitted: string[] = []
+  on('prompt.submit', (_, e) => {
+    submitted.push(e.text)
+    return { text: e.text }
+  })
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'send-now-step-a-2' })
+  await unawaitedWorkSettled()
+  await ui.unmount()
+
+  expect(submitted).toEqual(['Take step 2 of prompt [a] on the queue now: Write them'])
+})
+
+test("✎ on a step with an empty prompt box puts the step's text in the box to change", async ($, on) => {
+  const seeded = seedQueue(on, true, '', STEPPED.map(prompt => ({ ...prompt })))
+  seeded.stored.openSteps = { value: ['a'], version: 1 }
+  const filled: string[] = []
+  on('prompt.read', () => ({ value: { text: '', cursor: 0 } }))
+  on('prompt.fill', (_, e) => {
+    filled.push((e as { text: string }).text)
+    return { isFilled: true }
+  })
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'edit-step-a-2' })
+  await ui.unmount()
+
+  expect(filled).toEqual(['Write them'])
+})
+
+test("✎ on a step with a draft in the prompt box makes the draft the step's text, and the box empties", async ($, on) => {
+  const seeded = seedQueue(on, true, '', STEPPED.map(prompt => ({ ...prompt })))
+  seeded.stored.openSteps = { value: ['a'], version: 1 }
+  on('prompt.read', () => ({ value: { text: 'Write them all', cursor: 14 } }))
+  on('prompt.fill', () => ({ isFilled: true }))
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'edit-step-a-2' })
+  await ui.unmount()
+
+  expect(seeded.prompts[0]!.steps!.map(step => step.text)).toEqual(['Read the epic', 'Write them all'])
+})
+
 test("a card's buttons sit on solid grey, so they read over the prompt's text", async ($, on) => {
   seedQueue(on, true)
 

@@ -20,6 +20,8 @@ import {
   moveStep,
   removeStep,
   pointerOf,
+  sendStepNow,
+  editStep,
   movePointerUp,
   movePointerDown,
   stepPointerOf,
@@ -309,7 +311,8 @@ function StepsView($: EngineInterface, e: AbovePromptEvent, prompt: QueuedPrompt
   )
 }
 
-/** One task under its card: its mark and text, and, with the pointer on it, ↑ ↓ to move it and ✕ to take it off. */
+/** One task under its card: its mark and text, and, with the pointer on it, the card's own buttons for it: ↵ to do it
+ * now, ✎ to change it, ↑ ↓ to move it and ✕ to take it off. */
 function StepView($: EngineInterface, e: AbovePromptEvent, prompt: QueuedPrompt, step: PromptStep, index: number, pointer: ReturnType<typeof PointerArrowsView> | null) {
   const { Box, Button, Text } = $.ui.resolve(e)
   const number = index + 1
@@ -324,6 +327,8 @@ function StepView($: EngineInterface, e: AbovePromptEvent, prompt: QueuedPrompt,
         </Text>
       </Box>
       <Box flexDirection="row" gap={1} display="none" hover={{ display: 'flex' }} backgroundColor={LOOK.keyCap} paddingX="xs">
+        <Button key={`send-now-step-${prompt.id}-${number}`} label="↵" onPress={() => sendStepNow($, prompt, index)} />
+        <Button key={`edit-step-${prompt.id}-${number}`} label="✎" onPress={() => editStep($, prompt, index)} />
         <Button key={`up-step-${prompt.id}-${number}`} label="↑" onPress={() => moveStep($, prompt, index, index - 1)} />
         <Button key={`down-step-${prompt.id}-${number}`} label="↓" onPress={() => moveStep($, prompt, index, index + 1)} />
         <Button key={`remove-step-${prompt.id}-${number}`} label="✕" onPress={() => removeStep($, prompt, index)} />

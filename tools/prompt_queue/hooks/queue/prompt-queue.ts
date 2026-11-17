@@ -873,3 +873,31 @@ function parseQueueAnswer(text: string): QueueJson | undefined {
     throw thrown
   }
 }
+
+/** ↵ on a step: that step of its prompt goes to the chat at once, the prompt being worked. */
+export async function sendStepNow($: EngineInterface, prompt: QueuedPrompt, index: number): Promise<void> {
+  const step = (prompt.steps ?? [])[index]
+  if (!step) {
+    return
+  }
+  await workOn($, prompt.id)
+  $.prompt.submit({ text: `Take step ${index + 1} of prompt [${prompt.id}] on the queue now: ${step.text}`, asUser: true }).catch(thrown =>
+    showFailure($, `Not sent: ${reasonOf(thrown)}`, `Pressing send now on the step "${step.text}"`))
+}
+
+/** ✎ on a step: with the prompt box empty, the step's text goes to the box to change; with a draft there, the draft
+ * becomes the step's text and the box empties. */
+export async function editStep($: EngineInterface, prompt: QueuedPrompt, index: number): Promise<void> {
+  const steps = prompt.steps ?? []
+  const step = steps[index]
+  if (!step) {
+    return
+  }
+  const { text } = await $.prompt.read()
+  if (text.trim() === '') {
+    await $.prompt.fill({ text: step.text, mode: 'replace' })
+    return
+  }
+  await changeSteps($, prompt, steps.map((held, place) => (place === index ? { ...held, text: text.trim() } : held)))
+  await $.prompt.fill({ text: '', mode: 'replace' })
+}
