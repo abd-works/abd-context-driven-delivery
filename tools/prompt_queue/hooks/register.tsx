@@ -6,11 +6,15 @@ import {
   queueFromCommand,
   queueByKey,
   queueContext,
+  queueSentPrompt,
+  followPlan,
+  finishPlan,
   refreshQueue,
   finishTurn,
   startTurn,
 } from './queue/prompt-queue'
 import { QueueView } from './queue/queue-view'
+import { PLAN_TOOL, WRAP_UP_TOOL } from './queue/plan-steps'
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
@@ -46,9 +50,23 @@ export const register: Register = on => {
     if (e.origin?.kind !== 'plugin' && (await isQueuedByKey($, e.text))) {
       return { drop: 'Queued for later' }
     }
-    const queued = e.command ? undefined : await queueContext($)
+    const sent = e.command || e.origin?.kind === 'plugin' ? undefined : await queueSentPrompt($, e.text)
+    const queued = e.command ? undefined : await queueContext($, sent?.id)
+    const added = [sent?.note, queued].filter((block): block is string => block !== undefined)
 
-    return next(queued ? { ...e, context: [...(e.context ?? []), queued] } : e)
+    return next(added.length > 0 ? { ...e, context: [...(e.context ?? []), ...added] } : e)
+  })
+
+  // The agent's task list in the chat is copied onto the prompt it works on, so the queue shows its steps.
+  on('tool.call', async ($, e, next) => {
+    const ran = await next(e)
+    if (e.agentId === undefined && PLAN_TOOL.test(e.tool)) {
+      await followPlan($, e as unknown as Record<string, unknown>)
+    } else if (e.agentId === undefined && WRAP_UP_TOOL.test(e.tool)) {
+      await finishPlan($)
+    }
+
+    return ran
   })
 
   on('turn.start', async ($, e, next) => {

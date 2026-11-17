@@ -1,7 +1,8 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, McpToolResult } from 'claude-code'
 
-import type { QueueFailure, QueueJson, QueuedPrompt, SubAgentTask } from '../../types'
+import type { PromptStep, QueueFailure, QueueJson, QueuedPrompt, SubAgentTask } from '../../types'
+import { finishedPlan, nextPlan, type PlanCall } from './plan-steps'
 import { PromptQueue, listedItems, parseJsonArray, slashCommandOf } from './queue-order'
 
 const GROUPING_MODEL = 'sonnet'
@@ -18,6 +19,9 @@ const QUEUE_INSTRUCTIONS = [
   "When it is done, call prompt-queue.done with its id, then take the next, until the queue is empty or the person stops you.",
   'prompt-queue.show reads the queue again. Mark a prompt done only once its work is done; never take one off that you have not done.',
 ].join(' ')
+// Until the mod has seen the agent's task list, the agent keeps a prompt's steps on the queue itself.
+const KEEP_STEPS_YOURSELF =
+  'Give the prompt you take its steps with prompt-queue.set_steps, and mark each one done with prompt-queue.step_done as you finish it.'
 
 /** The chat's queue as prompt-queue's tools last answered it: the cdd server keeps the queue, so the mod, the agent in
  * the chat and a session starting in it all change the same one, and the mod draws what the server answered. */
@@ -39,6 +43,12 @@ const queuedByKey = atom({ plugin: 'prompt-queue', key: 'queuedByKey' } as const
 const editingId = atom({ plugin: 'prompt-queue', key: 'editingId' } as const, '')
 /** The prompt the agent was last asked to take: still first on the queue after that turn, the agent left it, so play pauses. */
 const askedAbout = atom({ plugin: 'prompt-queue', key: 'askedAbout' } as const, '')
+/** The agent's task list for the prompt it works on, as its last `update_plan` call left it. */
+const plan = atom({ plugin: 'prompt-queue', key: 'plan' } as const, [] as PromptStep[])
+/** Whether the mod has seen the agent set its task list; until it has, the agent is told to keep the steps itself. */
+const isPlanSeen = atom({ plugin: 'prompt-queue', key: 'isPlanSeen' } as const, false)
+/** The cards whose steps are shown under them. */
+const openSteps = atom({ plugin: 'prompt-queue', key: 'openSteps' } as const, [] as string[])
 
 export type QueueState = {
   queue: PromptQueue
@@ -46,6 +56,8 @@ export type QueueState = {
   isSubAgentMode: boolean
   isPlaying: boolean
   editingId: string
+  workingId: string
+  openSteps: string[]
   tasks: SubAgentTask[]
   notice: string
   failure: QueueFailure | null
@@ -58,6 +70,8 @@ export async function currentQueue($: EngineInterface): Promise<QueueState> {
     isSubAgentMode: await read($, isSubAgentMode),
     isPlaying: await read($, isPlaying),
     editingId: await read($, editingId),
+    workingId: await read($, askedAbout),
+    openSteps: await read($, openSteps),
     tasks: await read($, tasks),
     notice: await read($, notice),
     failure: await read($, failure),
@@ -239,7 +253,7 @@ export async function sendNextPrompt($: EngineInterface): Promise<void> {
     await update($, notice, () => `Paused: the agent left "${next.text}" on the queue. Press play to ask again.`)
     return
   }
-  await update($, askedAbout, () => next.id)
+  await workOn($, next.id)
   const command = slashCommandOf(next.text)
   const sent = command ? $.command.run(command).then(() => changeQueue($, 'done', { prompt: next.id })) : $.prompt.submit({ text: ASK_FOR_NEXT, asUser: true })
   sent.catch(thrown => showFailure($, `Not sent: ${reasonOf(thrown)}`, command ? `Playing the queue, running /${command.command} from it` : 'Playing the queue, asking the agent to take the next prompt'))
@@ -257,15 +271,70 @@ async function nextToDo($: EngineInterface): Promise<QueuedPrompt | undefined> {
 
 /** What the agent reads beside each prompt while the queue plays: the queue, in order, and how to work through it; none
  * while paused or empty, so a paused queue never pulls the agent away from what the person asked. */
-export async function queueContext($: EngineInterface): Promise<string | undefined> {
+export async function queueContext($: EngineInterface, sentId = ''): Promise<string | undefined> {
   if (!(await read($, isPlaying))) {
     return undefined
   }
-  const prompts = await promptsToDo($)
+  const prompts = (await promptsToDo($)).filter(prompt => prompt.id !== sentId)
   if (prompts.length === 0) {
     return undefined
   }
-  return [QUEUE_INSTRUCTIONS, '', ...prompts.map((prompt, place) => `${place + 1}. [${prompt.id}] ${prompt.text}`)].join('\n')
+  const instructions = (await read($, isPlanSeen)) ? QUEUE_INSTRUCTIONS : `${QUEUE_INSTRUCTIONS} ${KEEP_STEPS_YOURSELF}`
+  return [instructions, '', ...prompts.map((prompt, place) => `${place + 1}. [${prompt.id}] ${prompt.text}`)].join('\n')
+}
+
+/** The prompt the agent works on now: the one play asked it to take, or one sent straight to the chat. Its task list
+ * starts empty. */
+async function workOn($: EngineInterface, id: string): Promise<void> {
+  await update($, askedAbout, () => id)
+  await update($, plan, () => [])
+}
+
+/** A prompt sent straight to the chat, as the queue holds it: its id, and what the agent is told about it. */
+export type SentPrompt = { id: string; note: string }
+
+/** A prompt the person sent straight to the chat goes on the queue first, as the prompt being worked, so the steps the
+ * agent plans for it sit under it; the agent is told its id, to mark it done when it is finished. */
+export async function queueSentPrompt($: EngineInterface, text: string): Promise<SentPrompt | undefined> {
+  if (text.trim() === '' || text.trim() === ASK_FOR_NEXT || !(await changeQueue($, 'add', { text }))) {
+    return undefined
+  }
+  const sent = (await read($, queue)).prompts.at(-1)
+  if (!sent) {
+    return undefined
+  }
+  await changeQueue($, 'move', { prompt: sent.id, to: 0 })
+  await workOn($, sent.id)
+  return { id: sent.id, note: `This prompt is first on this chat's prompt queue as [${sent.id}]. When its work is done, call prompt-queue.done with that id.` }
+}
+
+/** One `update_plan` call: the agent's task list follows it and is copied whole onto the prompt being worked. */
+export async function followPlan($: EngineInterface, call: PlanCall): Promise<void> {
+  await update($, isPlanSeen, () => true)
+  await update($, plan, steps => nextPlan(steps, call))
+  await copyPlanOntoWorkingPrompt($)
+}
+
+/** A wrapped-up turn finished its task list: every step of the prompt being worked is done. */
+export async function finishPlan($: EngineInterface): Promise<void> {
+  if ((await read($, plan)).length === 0) {
+    return
+  }
+  await update($, plan, finishedPlan)
+  await copyPlanOntoWorkingPrompt($)
+}
+
+async function copyPlanOntoWorkingPrompt($: EngineInterface): Promise<void> {
+  const working = await read($, askedAbout)
+  if (!(await read($, queue)).prompts.some(prompt => prompt.id === working)) {
+    return
+  }
+  await changeQueue($, 'set_steps', { prompt: working, steps: await read($, plan) })
+}
+
+/** The steps toggle on a card: its steps show under it, or fold away again. */
+export async function toggleSteps($: EngineInterface, id: string): Promise<void> {
+  await update($, openSteps, open => (open.includes(id) ? open.filter(shown => shown !== id) : [...open, id]))
 }
 
 /** What a finished turn sends: the next prompt, or every task to its own sub-agent. */

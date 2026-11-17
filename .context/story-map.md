@@ -998,23 +998,23 @@ Intended (2026-11-17, the person: "for each action you'll come up with a task li
 
 ### (S) Agent --> [Set Steps Of Queued Prompt](../story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/nest_prompt_steps_in_queue_story.test.md#story-set-steps-of-queued-prompt)
 
-Intended: the agent gives a queued prompt its steps, each pending, being worked, or done, through a new prompt-queue tool on the cdd server, and the queue answers the prompt with them.
+Built (2026-11-17), not seen: the agent gives a queued prompt its steps, each pending, being worked, or done, through a new prompt-queue tool on the cdd server, and the queue answers the prompt with them.
 
 ### (S) Agent --> [Tick Off Prompt Step](../story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/nest_prompt_steps_in_queue_story.test.md#story-tick-off-prompt-step)
 
-Intended: the agent marks one step of a prompt done; once every step is done the prompt is ready for `prompt-queue.done`, which still takes it off the queue.
+Built (2026-11-17), not seen: the agent marks one step of a prompt done (`prompt-queue.step_done`); once every step is done the prompt is ready for `prompt-queue.done`, which still takes it off the queue.
 
 ### (S:system) Prompt Queue --> [Copy Task List Onto Working Prompt](../story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/nest_prompt_steps_in_queue_story.test.md#story-copy-task-list-onto-working-prompt)
 
-Intended: each time the agent sets or advances its task list in the chat (`update_plan`), the queue mod copies the list onto the prompt being worked, so the agent ticks off in one place. Not yet known: whether a mod's tool-call hook sees `update_plan`; if it does not, the queue's instructions tell the agent to set and tick the steps itself.
+Built (2026-11-17), not seen: the queue mod's `tool.call` hook replays each `update_plan` call (a whole list, advance, done, start) and copies the list onto the prompt being worked with `prompt-queue.set_steps`; a `wrap_up` finishes every step. Not yet seen: whether the desktop app hands the mod's hook its own `update_plan` calls; until the mod has seen one, the queue beside a prompt tells the agent to set and tick the steps itself.
 
 ### (S:system) Prompt Queue --> [Queue Sent Prompt As Running](../story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/nest_prompt_steps_in_queue_story.test.md#story-queue-sent-prompt-as-running)
 
-Intended: a prompt the person sends straight to the chat, not from the queue, goes on the queue first, marked running, so its steps have a prompt to sit under.
+Built (2026-11-17), not seen: a prompt the person sends straight to the chat, not from the queue, goes on the queue first as the prompt being worked, and the agent is told its id to mark it done, so its steps have a prompt to sit under.
 
 ### (S) Person --> [Show Prompt Steps In Queue](../story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/nest_prompt_steps_in_queue_story.test.md#story-show-prompt-steps-in-queue)
 
-Intended: each card shows how many of its steps are done (3/7); opening the card shows its steps under it, done ones ticked and the one being worked marked.
+Built (2026-11-17), not seen: each card shows how many of its steps are done (3/7) as a button that opens its steps under it, done ones ticked and dim and the one being worked marked; the card being worked is bright and a card whose steps are all done dim.
 
 # (E) Review Generated Work In File Viewer
 

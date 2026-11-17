@@ -11,10 +11,11 @@ import {
   togglePlaying,
   toggleExpanded,
   toggleSubAgentMode,
+  toggleSteps,
   type QueueState,
 } from './prompt-queue'
-import type { QueueFailure } from '../../types'
-import type { PromptQueue } from './queue-order'
+import type { PromptStep, QueueFailure, QueuedPrompt } from '../../types'
+import { progressOf } from './plan-steps'
 import {
   ADD_SVG,
   CLEAR_SVG,
@@ -44,6 +45,9 @@ const ADD_COLUMNS = 3
 /** The columns kept at a card's right for its edit, move and remove buttons, shown when the pointer is on the card. */
 const CARD_BUTTON_COLUMNS = 12
 
+/** The mark before a step for where it stands: done, being worked, or not started. */
+const STEP_MARK = { done: '✓', in_progress: '▸', pending: '○' } as const
+
 /** A failure's red, as the chat bar draws its own. */
 const FAILURE_RED = '#EF4444'
 
@@ -60,7 +64,7 @@ export function QueueView($: EngineInterface, e: AbovePromptEvent, state: QueueS
   return (
     <Box key="prompt-queue" flexDirection="column" rowGap="sm" alignSelf="flex-start"
       paddingX={1} width={state.isExpanded ? e.props.bodyColumns : undefined}>
-      {state.isExpanded && QueueListView($, e, queue, state.editingId)}
+      {state.isExpanded && QueueListView($, e, state)}
       {state.isExpanded && state.isSubAgentMode && state.tasks.map(task => (
         <Text dimColor wrap="truncate-end">{`  ↳ ${task.description}: ${task.prompts.length} prompt(s)`}</Text>
       ))}
@@ -106,11 +110,12 @@ const CLEAR_ICON: Icon = { key: 'queue-clear', svg: CLEAR_SVG, glyph: '✕', tip
 /**
  * The open queue, one line per task, each drawn as the chat's own rounded buttons are, the session name's among them,
  * so a card is one line tall with round ends. Pressing a card edits it; the pointer over it reveals its edit, move
- * and remove buttons at its right. The text shrinks and truncates, so a long prompt never pushes them past the
- * chat's edge.
+ * and remove buttons. A card the agent is working on is drawn bright, one whose steps are all done dim, and a card with
+ * steps shows how many are done, which opens them under it.
  */
-function QueueListView($: EngineInterface, e: AbovePromptEvent, queue: PromptQueue, editingId: string) {
-  const { Box, Text, Button } = $.ui.resolve(e)
+function QueueListView($: EngineInterface, e: AbovePromptEvent, state: QueueState) {
+  const { Box, Text } = $.ui.resolve(e)
+  const { queue } = state
   if (queue.isEmpty) {
     return (
       <Box flexDirection="row" justifyContent="flex-end" alignItems="center" gap={2} borderStyle="round"
@@ -127,23 +132,56 @@ function QueueListView($: EngineInterface, e: AbovePromptEvent, queue: PromptQue
   return (
     <Box flexDirection="column" rowGap="sm">
       {queue.prompts.map((prompt, index) => (
-        <Box key={`card-${prompt.id}`} flexDirection="row" justifyContent="space-between" alignItems="center" gap={1}>
-          <Box flexGrow={1} flexShrink={1} minWidth={0}>
-            <Button key={`card-text-${prompt.id}`} dimColor={prompt.id === editingId} onPress={() => editPrompt($, prompt)}>
-              <Text wrap="truncate-end" color={prompt.id === editingId ? LOOK.placeholder : undefined} italic={prompt.id === editingId}>
-                {`${index + 1}. ${prompt.text.replace(/\s+/g, ' ')}${prompt.id === editingId ? '  (editing)' : ''}`}
-              </Text>
-            </Button>
-          </Box>
-          <Box width={CARD_BUTTON_COLUMNS} flexShrink={0} justifyContent="flex-end">
-            <Box flexDirection="row" gap={1} display="none" hover={{ display: 'flex' }}>
-              <Button key={`edit-${prompt.id}`} label="✎" onPress={() => editPrompt($, prompt)} />
-              <Button key={`up-${prompt.id}`} label="↑" onPress={() => movePrompt($, index, index - 1)} />
-              <Button key={`down-${prompt.id}`} label="↓" onPress={() => movePrompt($, index, index + 1)} />
-              <Button key={`remove-${prompt.id}`} label="✕" onPress={() => removePrompt($, prompt.id)} />
-            </Box>
-          </Box>
+        <Box key={`card-${prompt.id}`} flexDirection="column">
+          {CardView($, e, state, prompt, index)}
+          {state.openSteps.includes(prompt.id) && StepsView($, e, prompt.id, prompt.steps ?? [])}
         </Box>
+      ))}
+    </Box>
+  )
+}
+
+function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, prompt: QueuedPrompt, index: number) {
+  const { Box, Text, Button } = $.ui.resolve(e)
+  const isEditing = prompt.id === state.editingId
+  const isWorking = prompt.id === state.workingId
+  const progress = progressOf(prompt.steps)
+  const isFinished = progress !== '' && (prompt.steps ?? []).every(step => step.state === 'done')
+
+  return (
+    <Box flexDirection="row" justifyContent="space-between" alignItems="center" gap={1}>
+      <Box flexGrow={1} flexShrink={1}>
+        <Button key={`card-text-${prompt.id}`} dimColor={isEditing || isFinished} onPress={() => editPrompt($, prompt)}>
+          <Text wrap="truncate-end" color={isEditing ? LOOK.placeholder : isWorking ? LOOK.accent : undefined}
+            italic={isEditing} bold={isWorking} dimColor={isFinished}>
+            {`${index + 1}. ${prompt.text.replace(/\s+/g, ' ')}${isEditing ? '  (editing)' : ''}`}
+          </Text>
+        </Button>
+      </Box>
+      {progress !== '' && <Button key={`steps-${prompt.id}`} label={progress} onPress={() => toggleSteps($, prompt.id)} />}
+      <Box width={CARD_BUTTON_COLUMNS} justifyContent="flex-end">
+        <Box flexDirection="row" gap={1} display="none" hover={{ display: 'flex' }}>
+          <Button key={`edit-${prompt.id}`} label="✎" onPress={() => editPrompt($, prompt)} />
+          <Button key={`up-${prompt.id}`} label="↑" onPress={() => movePrompt($, index, index - 1)} />
+          <Button key={`down-${prompt.id}`} label="↓" onPress={() => movePrompt($, index, index + 1)} />
+          <Button key={`remove-${prompt.id}`} label="✕" onPress={() => removePrompt($, prompt.id)} />
+        </Box>
+      </Box>
+    </Box>
+  )
+}
+
+/** A card's steps under it, in order: done ones ticked and dim, the one being worked marked and bright. */
+function StepsView($: EngineInterface, e: AbovePromptEvent, id: string, steps: PromptStep[]) {
+  const { Box, Text } = $.ui.resolve(e)
+
+  return (
+    <Box key={`steps-of-${id}`} flexDirection="column" paddingLeft={3}>
+      {steps.map((step, index) => (
+        <Text key={`step-${id}-${index + 1}`} wrap="truncate-end" dimColor={step.state === 'done'}
+          color={step.state === 'in_progress' ? LOOK.accent : undefined}>
+          {`${STEP_MARK[step.state]} ${step.text}`}
+        </Text>
       ))}
     </Box>
   )

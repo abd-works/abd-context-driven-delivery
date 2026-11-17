@@ -16,6 +16,8 @@ const BAND = {
 } as const
 
 // What play sends when a turn ends: the queue rides beside it.
+// How the queue beside a prompt opens, which tells it from the note about the prompt just sent.
+const QUEUE_HEADING = "This chat's prompt queue"
 const ASK_FOR_NEXT = 'Take the next prompt on the queue.'
 
 const QUEUED = [
@@ -28,7 +30,8 @@ type TestOn = Parameters<Extract<Parameters<typeof test>[1], (...args: never[]) 
 // The chat the tests run in, as the engine names it.
 const CHAT = 'chat-1'
 
-type Prompt = { id: string; text: string }
+type Step = { text: string; state: 'pending' | 'in_progress' | 'done' }
+type Prompt = { id: string; text: string; steps?: Step[] }
 
 /** The cdd server's prompt-queue tools for one chat, in memory: the same operations as tools/prompt_queue's
  * PromptQueue, each answering the queue. */
@@ -62,6 +65,10 @@ function promptQueueTools(prompts: Prompt[]) {
     },
     done: args => {
       prompts.splice(at(args.prompt), 1)
+      return answer()
+    },
+    set_steps: args => {
+      prompts[at(args.prompt)]!.steps = args.steps as Step[]
       return answer()
     },
   }
@@ -193,7 +200,7 @@ for (const isPlaying of [true, false]) {
 
     await $.prompt.submit({ text: 'Fix the Files app', wait: false, origin: { kind: 'composer' } })
 
-    const queueBlock = carried[0]?.find(block => block.includes('prompt-queue.done'))
+    const queueBlock = carried[0]?.find(block => block.includes(QUEUE_HEADING))
     expect(queueBlock !== undefined).toBe(isPlaying)
     if (isPlaying) {
       expect(queueBlock).toContain('1. [a] Write the scenarios')
@@ -244,7 +251,7 @@ test('play pauses when the agent left the prompt it was asked to take on the que
 /** A turn's end submits the next prompt without awaiting it, as awaiting would hold the turn open; the submission's hooks
  * read the queue first, so the test lets that unawaited work run before it looks. */
 async function unawaitedWorkSettled(): Promise<void> {
-  for (let turn = 0; turn < 100; turn++) await Promise.resolve()
+  for (let turn = 0; turn < 1000; turn++) await Promise.resolve()
 }
 
 const FINISHED_TURN = { answer: 'Done.', durationMs: 1, isAborted: false, turnId: 't1', reason: 'answer' } as const
@@ -381,5 +388,102 @@ test('✕ on a queue failure dismisses it', async ($, on) => {
   await ui.press({ key: 'queue-dismiss-failure' })
 
   expect(seeded.stored.failure?.value).toBe(null)
+  await ui.unmount()
+})
+
+
+const PLAN_TOOL = 'mcp__ccd_turn__update_plan'
+const PLANNED = [
+  { content: 'Read the epic', status: 'in_progress' },
+  { content: 'Write the stories', status: 'pending' },
+]
+
+/** The desktop app's task list tool, answered as the engine answers a tool call that ran. */
+function planToolAnswers(on: TestOn): void {
+  on('tool.call', () => ({ result: { content: [{ type: 'text', text: 'Plan shown.' }] } }))
+}
+
+test('the task list the agent sets is copied onto the prompt it was asked to take', async ($, on) => {
+  const seeded = seedQueue(on, true, '', QUEUED, true, '', 'a')
+  planToolAnswers(on)
+
+  await $.tool.call({ tool: PLAN_TOOL, items: PLANNED })
+
+  expect(seeded.prompts[0]!.steps).toEqual([
+    { text: 'Read the epic', state: 'in_progress' },
+    { text: 'Write the stories', state: 'pending' },
+  ])
+})
+
+test('advancing the task list finishes the step being worked and starts the next on the prompt', async ($, on) => {
+  const seeded = seedQueue(on, true, '', QUEUED, true, '', 'a')
+  planToolAnswers(on)
+
+  await $.tool.call({ tool: PLAN_TOOL, items: PLANNED })
+  await $.tool.call({ tool: PLAN_TOOL, advance: true })
+
+  expect(seeded.prompts[0]!.steps).toEqual([
+    { text: 'Read the epic', state: 'done' },
+    { text: 'Write the stories', state: 'in_progress' },
+  ])
+})
+
+test('a prompt sent straight to the chat goes first on the queue, as the prompt being worked', async ($, on) => {
+  const seeded = seedQueue(on, false, '', QUEUED, true)
+  const carried: string[] = []
+  on('prompt.submit', (_, e) => {
+    carried.push(...(e.context ?? []))
+    return { text: e.text }
+  })
+
+  await $.prompt.submit({ text: 'Fix the Files app', wait: false, origin: { kind: 'composer' } })
+
+  expect(seeded.prompts.map(prompt => prompt.text)).toEqual(['Fix the Files app', 'Write the scenarios', 'Run the unit tier'])
+  expect(seeded.stored.askedAbout?.value).toBe(seeded.prompts[0]!.id)
+  expect(carried.join()).toContain(`as [${seeded.prompts[0]!.id}]`)
+})
+
+for (const isPlanSeen of [false, true]) {
+  test(`the queue beside a prompt ${isPlanSeen ? 'leaves the steps to the task list once one is seen' : 'tells the agent to keep its steps until a task list is seen'}`, async ($, on) => {
+    seedQueue(on, false, '', QUEUED, true, '', 'a')
+    planToolAnswers(on)
+    const carried: string[] = []
+    on('prompt.submit', (_, e) => {
+      carried.push(...(e.context ?? []))
+      return { text: e.text }
+    })
+    if (isPlanSeen) await $.tool.call({ tool: PLAN_TOOL, items: PLANNED })
+
+    await $.prompt.submit({ text: 'Fix the Files app', wait: false, origin: { kind: 'composer' } })
+
+    expect(carried.join().includes('prompt-queue.set_steps')).toBe(!isPlanSeen)
+  })
+}
+
+test('a wrapped-up turn finishes every step of the prompt being worked', async ($, on) => {
+  const seeded = seedQueue(on, true, '', QUEUED, true, '', 'a')
+  planToolAnswers(on)
+
+  await $.tool.call({ tool: PLAN_TOOL, items: PLANNED })
+  await $.tool.call({ tool: 'mcp__ccd_turn__wrap_up', recap: 'Done.' })
+
+  expect(seeded.prompts[0]!.steps!.map(step => step.state)).toEqual(['done', 'done'])
+})
+
+test("a card with steps shows how many are done, and opens them under it", async ($, on) => {
+  seedQueue(on, true, '', [
+    { id: 'a', text: 'Write the scenarios', steps: [{ text: 'Read the epic', state: 'done' }, { text: 'Write the stories', state: 'in_progress' }] },
+    { id: 'b', text: 'Run the unit tier' },
+  ] as Prompt[])
+
+  const pressed = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  const progress = await pressed.find({ type: 'Button', key: 'steps-a' })
+  await pressed.press({ key: 'steps-a' })
+  await pressed.unmount()
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+
+  expect(progress?.props.label).toBe('1/2')
+  expect(await ui.find({ type: 'Button', key: 'steps-b' })).toBeUndefined()
+  expect((await ui.find({ type: 'Box', key: 'steps-of-a' }))?.text).toBe('✓ Read the epic▸ Write the stories')
   await ui.unmount()
 })
