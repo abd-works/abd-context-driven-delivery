@@ -8,7 +8,7 @@ import type { SourceCallout } from '@source-view/source-callouts'
 import { FileSourceView } from './file-source-view'
 import { FilesGraphView } from './files-graph-view'
 import type { FilesPage } from './files-page'
-import { drawioPageOf, isDrawio, revealLabelOf } from './files-paths'
+import { drawioPageOf, isDrawio, missingNoteOf, revealLabelOf } from './files-paths'
 import { formatGlyphOf } from './format-chips'
 import { applyTheme, storedTheme, type FilesTheme } from './files-theme'
 
@@ -18,19 +18,19 @@ function useFilesState(page: FilesPage) {
   return useSyncExternalStore(page.store.subscribe, () => page.store.state)
 }
 
-// One file the link names: a file not there yet says so, and a file standing for something published in Claude, a
+// One file the link names: a file it cannot open says why, not generated yet or deleted on this branch, and a file standing for something published in Claude, a
 // design canvas or a whiteboard's board, opens that in a tab of its own; a .drawio file also offers its draw.io editor in
 // a tab of its own.
 function FileEntryView({ page, entry, isOpen }: { page: FilesPage; entry: FileEntryData; isOpen: boolean }) {
   const published = publishedOf(entry)
   if (published) return <PublishedFileView path={entry.path} published={published} />
   const classes = ['file-entry', isOpen ? 'is-open' : '', entry.exists ? '' : 'is-missing', entry.is_changed ? 'is-changed' : ''].filter(Boolean).join(' ')
-  const hint = entry.exists ? entry.path : `${entry.path}: not generated yet`
+  const hint = entry.exists ? entry.path : `${entry.path}: ${missingNoteOf(entry)}`
   return (
     <li className="file-entry-row">
       <button className={classes} title={hint} aria-current={isOpen ? 'true' : undefined} disabled={!entry.exists} onClick={() => void page.open(entry.path)} onContextMenu={menuOn(page, entry.path)}>
         {fileNameOf(entry.path)}
-        {entry.exists ? null : <span className="file-entry-note"> not generated yet</span>}
+        {entry.exists ? null : <span className="file-entry-note"> {missingNoteOf(entry)}</span>}
       </button>
       {isDrawio(entry.path) && entry.exists ? <DrawioTabLinkView page={page} path={entry.path} /> : null}
     </li>

@@ -31,8 +31,8 @@ with description("a fidelity's declared outputs") as self:
         with before.each:
             self.outputs = Stories().fidelities["acceptance_tests"].outputs
 
-        with it("should list every file pattern for that format"):
-            expect(len(self.outputs["python"])).to(equal(3))
+        with it("should list every file pattern for that format: the sub-epic's three tier files and a story's one runnable file"):
+            expect(len(self.outputs["python"])).to(equal(4))
 
     with context("with every practice loaded"):
         with before.each:
