@@ -7,7 +7,7 @@ from typing import Any
 
 from harness.agent_tools.tool_call import ToolCall
 from harness.mcp.cdd_home import CddHome
-from harness.mcp.mcp_address import McpAddress
+from harness.mcp.mcp_address import DEV_LANE_FOLDER, DEV_PORT_AFTER_STABLE, McpAddress
 from harness.mcp.mcp_daemon import McpDaemon, ServedCheckout
 
 # How long the stable lane waits for the dev lane to answer one tool call. The chat is told a call is still running at
@@ -97,10 +97,6 @@ class ServerLanes:
 
     STABLE = "stable"
     DEV = "dev"
-    # The dev lane's home sits inside the stable lane's, so one ``CDD_HOME`` names both.
-    DEV_FOLDER = "dev"
-    # The dev lane answers on the port after the stable lane's, so a throwaway pair from a spec stays a pair.
-    DEV_PORT_AFTER_STABLE = 1
     # The dev lane's app servers answer this far above the stable lane's, on ports no app's ports file names, so a
     # feature's Files, board, and Graph servers run beside main's.
     DEV_APP_PORT_OFFSET = 1000
@@ -111,8 +107,8 @@ class ServerLanes:
         self.stable = ServerLane(self.STABLE, stable_home, stable_address)
         self.dev = ServerLane(
             self.DEV,
-            CddHome(stable_home.folder / self.DEV_FOLDER),
-            dev_address or McpAddress(stable_address.port + self.DEV_PORT_AFTER_STABLE),
+            CddHome(stable_home.folder / DEV_LANE_FOLDER),
+            dev_address or McpAddress(stable_address.port + DEV_PORT_AFTER_STABLE),
             self.DEV_APP_PORT_OFFSET,
         )
 
@@ -120,9 +116,9 @@ class ServerLanes:
     def from_serving(cls, home: CddHome, address: McpAddress | None = None) -> ServerLanes:
         """The lanes as the server running from home on address sees them, whichever of the two it is; with no address,
         on the lanes' own ports."""
-        if home.folder.name != cls.DEV_FOLDER:
+        if home.folder.name != DEV_LANE_FOLDER:
             return cls(home, address)
-        stable_address = McpAddress(address.port - cls.DEV_PORT_AFTER_STABLE) if address is not None else None
+        stable_address = McpAddress(address.port - DEV_PORT_AFTER_STABLE) if address is not None else None
         return cls(CddHome(home.folder.parent), stable_address)
 
     def for_project(self, project: Path) -> ServerLane:

@@ -8,14 +8,14 @@ from __future__ import annotations
 from pathlib import Path
 
 from harness.mcp.cdd_home import CddHome
-from harness.mcp.mcp_address import LANE_CALL_PATH, McpAddress
+from harness.mcp.mcp_address import DEV_PORT_AFTER_STABLE, LANE_CALL_PATH, McpAddress
 from harness.mcp.mcp_server import McpHost
 from harness.mcp.server_lanes import ServerLanes
 
 # Seed: the port a throwaway stable lane answers on. Real lanes use 47800 and 47801; a spec takes its own pair so specs
 # can run side by side.
 STABLE_PORT = 48600
-DEV_PORT = STABLE_PORT + ServerLanes.DEV_PORT_AFTER_STABLE
+DEV_PORT = STABLE_PORT + DEV_PORT_AFTER_STABLE
 # Seed: the ticket whose worktree the dev lane serves, and the branch it has out.
 CHECKOUT_FLOW = "checkout-flow"
 MAIN_BRANCH = "main"

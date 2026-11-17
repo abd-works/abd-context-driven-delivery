@@ -7,9 +7,10 @@
   "worktree": "C:\\dev\\abd-cdd-file-manager",
   "guidance": {
     "stages": [
+      "discovery",
       "specification"
     ],
-    "version": 108
+    "version": 133
   },
   "practices": {
     "stories": {
@@ -48,8 +49,6 @@
         ],
         "code": [],
         "model": [
-          "drawio",
-          "whiteboard",
           "markdown"
         ]
       },

@@ -19,7 +19,7 @@ from mamba import after, before, description, it
 
 from harness.mcp.examples import server_lanes_examples as examples
 from harness.mcp.cdd_home import CddHome
-from harness.mcp.mcp_address import McpAddress
+from harness.mcp.mcp_address import DEV_LANE_FOLDER, McpAddress
 from harness.mcp.mcp_daemon import McpDaemon
 from harness.mcp.server_lanes import LaneCallFailed, ServerLanes
 
@@ -44,7 +44,7 @@ with description("Send A Dev-Lane Chat's Calls To The Dev Lane") as self:
     with before.all:
         self.root = Path(tempfile.mkdtemp())
         self.worktree = examples.seed_ticket_worktree(self.root, examples.seed_main_checkout(self.root / "dev-side"))
-        dev_home = CddHome(self.root / ".cdd" / ServerLanes.DEV_FOLDER)
+        dev_home = CddHome(self.root / ".cdd" / DEV_LANE_FOLDER)
         dev_address = _listening_dev_lane(dev_home, self.worktree)
         self.lanes = ServerLanes(CddHome(self.root / ".cdd"), McpAddress(examples.STABLE_PORT), dev_address)
         self.lanes.dev.home.serve_from(self.worktree)

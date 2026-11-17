@@ -5,6 +5,7 @@ from pathlib import Path
 
 from expects import equal, expect
 
+from harness.mcp.mcp_address import DEV_LANE_FOLDER
 from harness.mcp.server_lanes import ServerLanes
 from harness.mcp.examples.server_lanes_examples import (
     ADAPTER_FILE,
@@ -47,7 +48,7 @@ with story("Install Into The Lane Of The Checkout"):
             self.lane = self.lanes.for_project(self.worktree)
             self.served = self.lane.served_checkout(self.worktree)
         with then("the worktree is served from the dev lane's home, inside the stable lane's"):
-            expect(self.served.home.folder).to(equal(self.lanes.stable.home.folder / ServerLanes.DEV_FOLDER))
+            expect(self.served.home.folder).to(equal(self.lanes.stable.home.folder / DEV_LANE_FOLDER))
         with and_("the dev lane answers on DEV_PORT, the port after the stable lane's"):
             expect(self.lane.port).to(equal(DEV_PORT))
     with scenario("Copy the worktree's language adapters into the dev lane's runtime"):
