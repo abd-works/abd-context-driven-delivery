@@ -4,11 +4,11 @@
     "stages": [
       "discovery"
     ],
-    "version": 10
+    "version": 11
   },
   "practices": {
     "stories": {
-      "enabled": false
+      "enabled": true
     },
     "ddd": {
       "enabled": false
