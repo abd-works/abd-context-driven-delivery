@@ -37,7 +37,17 @@ export type StepRow = {
   change?: Change;
   /** Shown, never stored: the previous run it is compared with. */
   previous?: string;
+  /** Shown, never stored: the same step's screenshot in the previous run, relative to that run's folder. */
+  previousShot?: string;
+  /** Shown, never stored: how much of the screen changed since the previous run, in percent, and where. */
+  changedPercent?: number;
+  changedArea?: Area;
+  /** Shown, never stored: the regression review's verdict and reason on the change, when it has one. */
+  changeReview?: string;
 };
+
+/** Where a screen changed: the box round its changed blocks, each edge a share of the screen from 0 to 1. */
+export type Area = { left: number; top: number; width: number; height: number };
 
 type Step = StepRow & { title: string; number: number };
 type Scenario = { story: string; scenario: string; steps: Step[] };
@@ -89,7 +99,7 @@ export const COMPARE_FILE = 'compare.html';
 export type Change = 'same' | 'changed' | 'new' | 'gone';
 
 /** One step of this run beside the same step of the run it is compared with. */
-export type StepPair = { key: string; change: Change; changedPercent: number; ours?: StepRow; theirs?: StepRow };
+export type StepPair = { key: string; change: Change; changedPercent: number; changedArea?: Area; ours?: StepRow; theirs?: StepRow };
 
 /**
  * A pair changed when at least this many of its 8px blocks moved. pml-web gates on 1% of the page, tuned for two
@@ -114,7 +124,7 @@ export function stepPairs(runDir: string, againstDir: string): StepPair[] {
     if (!other) return { key, change: 'new', changedPercent: 100, ours: mine };
     if (!mine) return { key, change: 'gone', changedPercent: 100, theirs: other };
     const look = lookDifference(path.join(againstDir, other.screenshot), path.join(runDir, mine.screenshot));
-    return { key, change: look.changedBlocks >= LOOK_GATE_BLOCKS ? 'changed' : 'same', changedPercent: look.changedPercent, ours: mine, theirs: other };
+    return { key, change: look.changedBlocks >= LOOK_GATE_BLOCKS ? 'changed' : 'same', changedPercent: look.changedPercent, changedArea: look.area, ours: mine, theirs: other };
   });
 }
 
@@ -126,21 +136,28 @@ export function writeCompareReport(runDir: string, againstDir: string): string {
 }
 
 /** How many 8px blocks' average grey moved, and their share in percent; screens of different sizes count as all changed. */
-function lookDifference(theirFile: string, ourFile: string): { changedBlocks: number; changedPercent: number } {
-  const everything = { changedBlocks: Number.POSITIVE_INFINITY, changedPercent: 100 };
+function lookDifference(theirFile: string, ourFile: string): { changedBlocks: number; changedPercent: number; area?: Area } {
+  const everything = { changedBlocks: Number.POSITIVE_INFINITY, changedPercent: 100, area: { left: 0, top: 0, width: 1, height: 1 } };
   if (!existsSync(theirFile) || !existsSync(ourFile)) return everything;
   const one = PNG.sync.read(readFileSync(theirFile));
   const two = PNG.sync.read(readFileSync(ourFile));
   if (one.width !== two.width || one.height !== two.height) return everything;
   let changed = 0;
   let blocks = 0;
+  const box = { left: Number.POSITIVE_INFINITY, top: Number.POSITIVE_INFINITY, right: 0, bottom: 0 };
   for (let by = 0; by + LOOK_BLOCK_PX <= one.height; by += LOOK_BLOCK_PX) {
     for (let bx = 0; bx + LOOK_BLOCK_PX <= one.width; bx += LOOK_BLOCK_PX) {
       blocks++;
-      if (Math.abs(blockGrey(one, bx, by) - blockGrey(two, bx, by)) > LOOK_BLOCK_LIMIT) changed++;
+      if (Math.abs(blockGrey(one, bx, by) - blockGrey(two, bx, by)) <= LOOK_BLOCK_LIMIT) continue;
+      changed++;
+      box.left = Math.min(box.left, bx);
+      box.top = Math.min(box.top, by);
+      box.right = Math.max(box.right, bx + LOOK_BLOCK_PX);
+      box.bottom = Math.max(box.bottom, by + LOOK_BLOCK_PX);
     }
   }
-  return { changedBlocks: changed, changedPercent: blocks ? (100 * changed) / blocks : 0 };
+  const area = changed ? { left: box.left / one.width, top: box.top / one.height, width: (box.right - box.left) / one.width, height: (box.bottom - box.top) / one.height } : undefined;
+  return { changedBlocks: changed, changedPercent: blocks ? (100 * changed) / blocks : 0, area };
 }
 
 function blockGrey(image: PNG, left: number, top: number): number {
@@ -258,9 +275,16 @@ export function checkedRows(runDir: string): StepRow[] {
   const previous = path.basename(previousDir);
   const earlierRows = new Map(checkedRows(previousDir).map(row => [row.key, row]));
   const pairs = new Map(stepPairs(runDir, previousDir).map(pair => [pair.key, pair]));
+  const reviewFile = path.join(runDir, 'review.json');
+  const review = existsSync(reviewFile) ? (JSON.parse(readFileSync(reviewFile, 'utf8')) as { against: string; pairs: Record<string, { verdict: string; reason: string }> }) : undefined;
+  const reviewed = review?.against === previous ? review.pairs : {};
   return rows.map(row => {
     const pair = pairs.get(row.key);
     const checked: StepRow = { ...row, change: pair?.change ?? 'new', previous };
+    if (pair?.change === 'changed') {
+      const judged = reviewed[row.key];
+      Object.assign(checked, { previousShot: pair.theirs?.screenshot, changedPercent: pair.changedPercent, changedArea: pair.changedArea, changeReview: judged ? `${judged.verdict}: ${judged.reason}` : undefined });
+    }
     const earlier = earlierRows.get(row.key);
     if (!row.verdict && pair?.change === 'same' && earlier?.verdict) return { ...checked, verdict: earlier.verdict, reason: earlier.reason, judgedIn: earlier.judgedIn ?? previous };
     return checked;
@@ -384,12 +408,28 @@ function halfSize(image: PNG): PNG {
 }
 
 /** `from` is the run folder holding the file; a caption names the run when two are shown side by side. */
-function renderShot(shots: EmbeddedShots, file: string, from = shots.runDir, caption = ''): string {
+function renderShot(shots: EmbeddedShots, file: string, from = shots.runDir, caption = '', area?: Area): string {
   if (!shots.withImages) return '';
   const label = caption ? `<figcaption>${escapeHtml(caption)}</figcaption>` : '';
   if (!shots.has(file, from)) return `<div class="shot missing">${caption ? `${escapeHtml(caption)}: ` : ''}no screenshot</div>`;
   const src = [path.relative(shots.runDir, from).split(path.sep).join('/'), file].filter(Boolean).join('/').split('/').map(encodeURIComponent).join('/');
-  return `<figure class="shot"><a href="${src}" target="_blank" rel="noopener"><img data-shot="${shots.embed(file, from)}" alt="step screenshot"></a>${label}</figure>`;
+  const box = area ? `<span class="change-box" style="${areaStyle(area)}"></span>` : '';
+  return `<figure class="shot"><a href="${src}" target="_blank" rel="noopener"><img data-shot="${shots.embed(file, from)}" alt="step screenshot">${box}</a>${label}</figure>`;
+}
+
+function areaStyle(area: Area): string {
+  const percent = (share: number) => `${(100 * share).toFixed(2)}%`;
+  return `left:${percent(area.left)};top:${percent(area.top)};width:${percent(area.width)};height:${percent(area.height)}`;
+}
+
+/** Where on the screen an area is, in words: the top left, the middle, across the whole screen. */
+export function placeOf(area: Area): string {
+  if (area.width > 0.8 && area.height > 0.8) return 'across the whole screen';
+  const third = (share: number) => Math.min(2, Math.floor(3 * share));
+  const across = ['left', 'middle', 'right'][third(area.left + area.width / 2)];
+  const down = ['top', 'middle', 'bottom'][third(area.top + area.height / 2)];
+  if (down === 'middle') return across === 'middle' ? 'in the middle' : `on the ${across}`;
+  return `in the ${down} ${across}`;
 }
 
 /** One of a step's three checks: its name above how it stands. */
@@ -409,9 +449,21 @@ function renderChecks(step: StepRow): string {
   return `<div class="checks">${test}${judge}${previous}</div>`;
 }
 
+/** What changed since the previous run: how much of the screen and where, and the review's verdict when it has one. */
+function renderChange(step: StepRow): string {
+  if (step.change !== 'changed' || step.changedPercent === undefined) return '';
+  const where = step.changedArea ? ` ${placeOf(step.changedArea)}` : '';
+  const review = step.changeReview ? ` Review: ${escapeHtml(step.changeReview)}` : ' Not reviewed yet.';
+  return `<p class="change"><span class="change-label">What changed since ${escapeHtml(step.previous ?? '')}:</span> ${step.changedPercent.toFixed(2)}% of the screen${escapeHtml(where)}, boxed in both screens.${review}</p>`;
+}
+
 function renderStep(step: Step, shots: EmbeddedShots): string {
   const reason = step.reason ? `<p class="reason">${step.judgedIn ? `<span class="muted">${escapeHtml(step.judgedIn)}: </span>` : ''}${escapeHtml(step.reason)}</p>` : '';
-  return `<article class="step${isFailing(step) ? ' failing' : ''}"><header><h4>${escapeHtml(step.title)}</h4></header>${renderChecks(step)}${reason}${renderShot(shots, step.screenshot)}</article>`;
+  const previousDir = step.previous ? path.join(path.dirname(shots.runDir), step.previous) : '';
+  const pictures = step.previousShot && previousDir
+    ? `<div class="shots">${renderShot(shots, step.previousShot, previousDir, step.previous, step.changedArea)}${renderShot(shots, step.screenshot, shots.runDir, path.basename(shots.runDir), step.changedArea)}</div>`
+    : renderShot(shots, step.screenshot);
+  return `<article class="step${isFailing(step) ? ' failing' : ''}"><header><h4>${escapeHtml(step.title)}</h4></header>${renderChecks(step)}${reason}${renderChange(step)}${pictures}</article>`;
 }
 
 function renderScenario(scenario: Scenario, shots: EmbeddedShots): string {
@@ -645,6 +697,10 @@ details.scenario > summary .counts { font-family: var(--font-mono); font-size: v
 .shot { min-width: 0; max-width: 720px; }
 .shots { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .shots .shot { max-width: none; }
+.shot a { position: relative; display: block; overflow: hidden; border-radius: var(--radius-sm); }
+.change-box { position: absolute; border: 2px solid var(--warning); border-radius: 2px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.12); pointer-events: none; }
+.change { font-size: var(--text-sm); overflow-wrap: anywhere; }
+.change-label { font-family: var(--font-mono); font-size: var(--text-xs); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--warning); }
 .shot figcaption { font-family: var(--font-mono); font-size: var(--text-xs); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
 .shot img { display: block; width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm); background: #fff; transition: border-color 150ms ease; }
 .shot a:hover img { border-color: var(--accent); }
