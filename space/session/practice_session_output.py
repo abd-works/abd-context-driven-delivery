@@ -16,6 +16,7 @@ from harness.design_canvas.versions import CanvasVersions
 from harness.guidance.declared_outputs import DeclaredFile
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.mcp.mcp_annotations import mcp
+from harness.whiteboard import BoardLinks, Whiteboard
 from cdd_guidance.practices.stories.model.story_map_files import STORY_TESTS_FOLDER
 from harness.installation.context_config import CONTEXT_FOLDER, DEFAULT_FORMAT
 from harness.markdown.format import Format
@@ -244,7 +245,7 @@ class FormatNotOffered(ValueError):
     """A format was chosen for a fidelity that does not write it."""
 
     def __init__(self, fidelity: FidelityGuidance, format: str) -> None:
-        super().__init__(f"{fidelity.name} does not write {format}; it writes {', '.join(fidelity.outputs) or 'nothing'}")
+        super().__init__(f"{fidelity.name} does not write {format}; it writes {', '.join(fidelity.session_output.offered_formats) or 'nothing'}")
         self.fidelity = fidelity
         self.format = format
 
@@ -296,8 +297,9 @@ class FidelitySessionOutput:
     @property
     @data_field
     def offered_formats(self) -> list[str]:
-        """The formats this fidelity writes, in the order its practice declares them: what a person can choose."""
-        return list(self._fidelity.outputs)
+        """The formats this fidelity writes, in the order its practice declares them: what a person can choose. An output
+        named for what it holds, such as thin_slice, is files the fidelity writes, not a format, so it is not offered."""
+        return [name for name in self._fidelity.outputs if Format(name).is_offered]
 
     @property
     @data_field
@@ -482,10 +484,10 @@ class WrittenFiles:
         listed, declared = self._listed(path), self._declared(path)
         found = [] if listed.names_one_path else self._found(label, listed)
         if found:
-            return [FileEntry(repo.path_from_top(file), True, file.resolve() in changed()).linked(self._canvas_link(file)) for file in found]
+            return [FileEntry(repo.path_from_top(file), True, file.resolve() in changed()).linked(published_link(file)) for file in found]
         if declared.names_one_path:
             named = repo.root / declared.glob
-            return [FileEntry(declared.glob, named.exists(), named.exists() and named.resolve() in changed())]
+            return [FileEntry(declared.glob, named.exists(), named.exists() and named.resolve() in changed()).linked(published_link(named))]
         return []
 
     def _worked_on_code(self, label: str, changed: Callable[[], set[Path]]) -> list[FileEntry]:
@@ -546,13 +548,18 @@ class WrittenFiles:
         `.context`."""
         return Path(*root.parts[: root.parts.index(CONTEXT_FOLDER)])
 
-    def _canvas_link(self, file: Path) -> str:
-        """The link a design canvas's ``canvas.json`` is published at (``<design-canvas>/version-N/project/canvas.json``),
-        as its versions record it; none for any other file, or a version not yet published."""
-        if file.name != "canvas.json" or file.parent.name != "project":
-            return ""
-        version = file.parent.parent
-        return CanvasVersions(version.parent).published.of(version.name) or ""
+
+def published_link(file: Path) -> str:
+    """The link a file is published at, which a page opens instead of the file: a design canvas version's
+    ``canvas.json`` (``<design-canvas>/version-N/project/canvas.json``) at the link its versions record
+    (``versions.json``), and a ``.whiteboard`` file at the address of the board in Claude kept beside it
+    (``whiteboards.json``); none for any other file, or one not yet published."""
+    if file.suffix == Whiteboard.SUFFIX:
+        return BoardLinks.beside(file).of(file)
+    if file.name != "canvas.json" or file.parent.name != "project":
+        return ""
+    version = file.parent.parent
+    return CanvasVersions(version.parent).published.of(version.name) or ""
 
 
 class FidelityFormats:

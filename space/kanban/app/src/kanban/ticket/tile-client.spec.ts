@@ -83,7 +83,7 @@ describe('Choose Action And Formats', () => {
   it('should let a chip stand for a group', async () => {
     const { page } = await activeTicketPage()
     await page.tiles.open(spot(page, TWO_FIDELITIES, HEAD), true)
-    expect(barAt(page, HEAD)?.choices.map(choice => choice.label)).toEqual(['diagram', 'markdown', 'thin_slice'])
+    expect(barAt(page, HEAD)?.choices.map(choice => choice.label)).toEqual(['diagram', 'markdown'])
   })
 
   it('should give each fidelity its default format from a chip', async () => {
@@ -252,7 +252,7 @@ describe('Open Practice Tile', () => {
   it('should show the chips once the files are read', async () => {
     const { page } = await activeTicketPage({ isMarkdownMade: true })
     await page.tiles.open(spot(page), true)
-    expect(barAt(page)?.choices.map(choice => choice.label)).toEqual(['diagram', 'markdown', 'thin_slice'])
+    expect(barAt(page)?.choices.map(choice => choice.label)).toEqual(['diagram', 'markdown'])
   })
 
   it('should close it on leaving', async () => {
