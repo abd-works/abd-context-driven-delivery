@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from expects import equal, expect
 from mamba import after, before, context, description, it
 
-from files_app_browser import GRAPH_READ_MILLISECONDS, REVIEW_MAP, SHOWN_MILLISECONDS, STORY_REVIEW, FilesStack, graph_view, open_branches, settled
+from files_app_browser import GRAPH_READ_MILLISECONDS, REVIEW_MAP, SHOWN_MILLISECONDS, STORY_REVIEW, FilesStack, graph_view, line, open_branches, settled
 
 FIDELITIES = "stories-story-map"
 # Interaction: the stories the graph view keeps with the Violations switch on: the two that open with a generic verb.
@@ -49,9 +49,11 @@ with description("Review Graph Violations In Files App, in a real browser") as s
 
         with context("Story: Open Violation In Files App Source, Scenario: Selecting a broken rule opens its lines unfolded"):
             with before.all:
-                open_branches(self.page, "Process Ticket Archive", "rules")
-                self.page.locator("button.graph-node.rule-status.violating").first.click()
-                self.page.locator("section.open-file").first.wait_for(timeout=SHOWN_MILLISECONDS)
+                open_branches(self.page, "Process Ticket Archive")
+                story = self.page.locator('li.graph-entry:has(> .tree-row button.graph-node[title="Story Process Ticket Archive"])')
+                story.get_by_role("button", name="Open rules", exact=True).first.click()
+                story.locator('button.graph-node[title^="Rule verb-noun-format:"]').click()
+                line(self.page, "(S) Person --> Process Ticket Archive").wait_for(timeout=SHOWN_MILLISECONDS)
 
-            with it("Then the story map opens at the lines the broken rule names"):
+            with it("Then the story map opens at Process Ticket Archive's line"):
                 expect(self.page.locator("section.open-file").evaluate_all("files => files.map(file => file.getAttribute('aria-label'))")).to(equal([REVIEW_MAP]))

@@ -99,7 +99,7 @@ class ExplorerEntry(NodeAnswer):
         """This entry with only what the filter keeps below it: a node the filter matches keeps its rules, a practice's
         root always stays, and any other node stays, without its rules, only as the way to an entry kept below it."""
         entries = [kept for child in self._children if isinstance(child, ExplorerEntry) and (kept := child.kept_by(wanted)) is not None]
-        rules = [child for child in self._children if not isinstance(child, ExplorerEntry)]
+        rules = [child.kept_by(wanted) for child in self._children if isinstance(child, GraphRulesCollection)]
         if self._node.type == "Practice" or wanted.matches(self._node):
             return ExplorerEntry(self._node, [*entries, *rules])
         return ExplorerEntry(self._node, entries) if entries else None
