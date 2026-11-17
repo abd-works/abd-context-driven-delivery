@@ -155,7 +155,7 @@ export class CallCatalog {
     if (member.type === "Operation" || member.type === "Property") this.everyMember.push(body);
     if ((member.type !== "Operation" && member.type !== "Property") || isSimpleProperty(member.text)) return;
     const key = member.owner ? `${member.owner}.${member.name}` : member.name;
-    if (!member.owner && member.type === "Operation" && !this.functions.has(member.name)) this.functions.set(member.name, body);
+    if (isModuleFunction(member) && !this.functions.has(member.name)) this.functions.set(member.name, body);
     // A member of the class the text belongs to answers a bare name before any other class's.
     if (!this.bodies.has(key)) this.bodies.set(key, body);
     if (!this.bodies.has(member.name) || member.owner === owner) this.bodies.set(member.name, body);
@@ -165,8 +165,16 @@ export class CallCatalog {
 function bodyOf(member: FoldMember): Body {
   const text = member.text.replace(CALL_MARKER, "");
   const start = member.start_line || 1;
-  const label = member.owner ? `${member.owner}.${member.name}` : member.name;
+  const label = member.owner && !isModuleFunction(member) ? `${member.owner}.${member.name}` : member.name;
   return { id: member.node_id, name: member.name, label, text, file: member.file, start, end: member.end_line || start + text.split("\n").length - 1, owner: member.owner };
+}
+
+// The owner the graph gives a module's own function (Clean Engineering's MODULE_FUNCTION_HOLDER), which no class is.
+const MODULE_OWNER = "_module";
+
+// Whether member is a function of its module, not of a class: owned by the module, or by nothing.
+function isModuleFunction(member: FoldMember): boolean {
+  return member.type === "Operation" && (!member.owner || member.owner === MODULE_OWNER);
 }
 
 // A line of a file, from 1, which a callout is found on.

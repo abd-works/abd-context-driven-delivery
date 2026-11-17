@@ -10,6 +10,7 @@ server runs from a throwaway ``~/.cdd`` (*SpecServer*); and the project is a thr
 the live page loads it."""
 
 import json
+import re
 import shutil
 import socket
 import subprocess
@@ -173,7 +174,10 @@ def _select(page: Page, title: str) -> None:
 
 
 def _line(page: Page, text: str):
-    return page.locator(".view-lines .view-line", has_text=text).first
+    """The editor's line reading text and nothing else, its indent aside: Monaco keeps its lines' elements in no order,
+    so a line that only holds text, such as reread_all's definition holding reread_all(board), must never answer. Its
+    spaces are no-break spaces, which the page's whitespace class matches."""
+    return page.locator(".view-lines .view-line", has_text=re.compile(r"^\s*" + r"\s".join(re.escape(word) for word in text.split(" ")) + r"\s*$")).first
 
 
 def _shown_lines(page: Page) -> list[str]:

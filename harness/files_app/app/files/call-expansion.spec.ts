@@ -28,7 +28,9 @@ const MEMBERS: FoldMember[] = [
   { node_id: 'Ticket', name: 'Ticket', type: 'OoadClass', owner: '', text: lines(1, 9), file: 'space/kanban/ticket.py', start_line: 1, end_line: 9 },
   { node_id: 'Ticket.close', name: 'close', type: 'Operation', owner: 'Ticket', text: lines(2, 3), file: 'space/kanban/ticket.py', start_line: 2, end_line: 3 },
   { node_id: 'Ticket.delete', name: 'delete', type: 'Operation', owner: 'Ticket', text: lines(5, 9), file: 'space/kanban/ticket.py', start_line: 5, end_line: 9 },
-  { node_id: 'reread_all', name: 'reread_all', type: 'Operation', owner: '', text: lines(12, 13), file: 'space/kanban/ticket.py', start_line: 12, end_line: 13 },
+  // A module's function is owned by `_module`, as session.graph_members answers it (Clean Engineering's
+  // MODULE_FUNCTION_HOLDER, cdd_guidance/practices/clean_engineering/model/base_class_model.py).
+  { node_id: 'reread_all', name: 'reread_all', type: 'Operation', owner: '_module', text: lines(12, 13), file: 'space/kanban/ticket.py', start_line: 12, end_line: 13 },
   { node_id: 'Board', name: 'Board', type: 'OoadClass', owner: '', text: 'class Board:\n    def reread(self) -> None:\n        return None', file: 'space/kanban/board.py', start_line: 1, end_line: 3 },
   { node_id: 'Board.reread', name: 'reread', type: 'Operation', owner: 'Board', text: '    def reread(self) -> None:\n        return None', file: 'space/kanban/board.py', start_line: 2, end_line: 3 },
 ]
