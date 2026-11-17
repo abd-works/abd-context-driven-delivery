@@ -4,7 +4,7 @@ import type { EngineInterface } from 'claude-code'
 import type { AppData } from '@cdd/harness/diagnostics/app'
 import type { ServerHealthData } from '@cdd/harness/diagnostics/server-health'
 
-import type { HealthViewJson, InstallJson, ServerHealthJson, TestRunJson, ToastedRunsJson } from '../../types'
+import type { E2eReviewJson, HealthViewJson, InstallJson, ServerHealthJson, TestRunJson, ToastedRunsJson } from '../../types'
 import { showFailure, shownAsFailure } from '../error-display/failure-client'
 import { callTool, CddToolFailed } from '../shared/cdd-tool'
 
@@ -30,6 +30,8 @@ const healthView = atom({ plugin: 'cdd-board', key: 'healthView' } as const, { a
 const toastedRuns = atom({ plugin: 'cdd-board', key: 'toastedRuns' } as const, { runIds: [] } as ToastedRunsJson)
 // How many toasted runs the chat remembers; older ones have long since been replaced by newer runs.
 const TOASTED_RUNS_KEPT = 20
+// How many missed steps the chat remembers having raised.
+const TOASTED_MISSED_KEPT = 200
 const install = atom({ plugin: 'cdd-board', key: 'install' } as const, { state: 'idle', error: null } as InstallJson)
 
 type Answer = Pick<ServerHealthJson, 'connection' | 'report' | 'problem'>
@@ -59,6 +61,17 @@ export class ServerHealthClient {
   // A run that failed after its tier's run before passed: the chat raises a toast for it.
   get newFailures(): TestRunJson[] {
     return this.testRuns.filter(run => run.state === 'failed' && run.is_new_failure)
+  }
+
+  // The latest scheduled e2e run's screen review; none before a scheduled run captured its screens.
+  get e2eReview(): E2eReviewJson | null {
+    return ((this.json as { e2e_review?: E2eReviewJson | null } | null)?.e2e_review) ?? null
+  }
+
+  // Each step the review judged missed by the tests, named by its review so the chat raises its toast once.
+  get missedSteps(): string[] {
+    const review = this.e2eReview
+    return review ? review.missed_steps.map(step => `${review.review_id} ${step}`) : []
   }
 }
 
@@ -136,6 +149,7 @@ async function recordAnswer($: EngineInterface, answer: Answer): Promise<void> {
   const toolCount = tools.filter(tool => tool.name.startsWith(TOOL_PREFIX)).length
   await update($, serverHealth, () => ({ ...answer, toolCount, attempt: 0 }))
   await toastNewFailures($, new ServerHealthClient(answer.report))
+  await toastMissedSteps($, new ServerHealthClient(answer.report))
 }
 
 // Each new failure of a scheduled test run is raised once, in the chat that reads the report first after it ends.
@@ -144,7 +158,17 @@ async function toastNewFailures($: EngineInterface, health: ServerHealthClient):
   const fresh = health.newFailures.filter(run => !runIds.includes(run.run_id))
   if (fresh.length === 0) return
   for (const run of fresh) $.ui.toast(`The scheduled ${run.name} tests failed on main: ${lastLines(run.summary)}`)
-  await update($, toastedRuns, held => ({ runIds: [...held.runIds, ...fresh.map(run => run.run_id)].slice(-TOASTED_RUNS_KEPT) }))
+  await update($, toastedRuns, held => ({ ...held, runIds: [...held.runIds, ...fresh.map(run => run.run_id)].slice(-TOASTED_RUNS_KEPT) }))
+}
+
+// Each step the scheduled e2e run's screen review judged missed by the tests is raised once: a screen broke and no test
+// failed. The fix happens in a ticket.
+async function toastMissedSteps($: EngineInterface, health: ServerHealthClient): Promise<void> {
+  const { missedSteps = [] } = await read($, toastedRuns)
+  const fresh = health.missedSteps.filter(step => !missedSteps.includes(step))
+  if (fresh.length === 0) return
+  for (const step of fresh) $.ui.toast(`The scheduled e2e review found a screen no test caught: ${step.slice(step.indexOf(' ') + 1)}`)
+  await update($, toastedRuns, held => ({ ...held, missedSteps: [...(held.missedSteps ?? []), ...fresh].slice(-TOASTED_MISSED_KEPT) }))
 }
 
 // The cdd home publishes this mod with the command that installs for a chat's folder: the served checkout's install

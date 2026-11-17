@@ -15,7 +15,7 @@ section: body
 
 # Story Map — Context-Driven Delivery Framework
 
-**Sources / context:** `harness/.context/module-context.md`; `harness/agent_tools/.context/module-context.md`; `harness/agent_tools/.context/agent-tools-model.md`; `harness/markdown/.context/module-context.md`; `installation/.context/installer-deployed-model.md`; `harness/hooks/.context/module-context.md`; `harness/guidance/guidance.py`; `harness/.context/context-tool-resource-model-om-bdd.md`; `harness/mcp/.context/module-context.md`; `actions/.context/module-context.md`; `practices/.context/module-context.md`; user spine: register agent toolsets → install markdown files (skill, slash command, rules) and MCP → invoke those → use context guidance (install skills and .mdc, invoke instructions, generate under rules) → use practice guidance (register guidance and fidelities, invoke practice and fidelity, shared and fidelity rules constrain output) → hook dispatch → extract markdown → lifecycle actions. CDD Kanban and Chat Bar: the CDD Kanban map, once `space/kanban/.context/story-map.md`, now kept here; `harness/chat-ui/.context/story-map.md` and `story-map.drawio`; the ticket enhancements on the session-board branch (`.sessions/session-board/ticket-enhancements.md`, removed with that session in commit 8483f7a40 and read from commit b08bfe47e; its `space/kanban/.context/story-map.md`); `harness/chat-ui/.context/cdr/0001-stage-strip-band.md`; `space/kanban/app/src/session-board/board-update.ts`; the ticket drawing `harness/.context/ux/ticket-ui.drawio` (2026-11-11), which supplements the design canvas for parent and child tickets; `harness/chat-ui/pane/hooks/register.ts`. The map also takes in the backlog items `.sessions/_backlog/maintain-tickets-on-board.md`, `.sessions/_backlog/guard-work-and-recover-fast.md` and `.sessions/_backlog/guard-work-and-recover-fast.md` as Intended stories. The prompt queue epic: the simple-queue chat of 2026-11-16 and the `prompt-queue` mod.
+**Sources / context:** `harness/.context/module-context.md`; `harness/agent_tools/.context/module-context.md`; `harness/agent_tools/.context/agent-tools-model.md`; `harness/markdown/.context/module-context.md`; `installation/.context/installer-deployed-model.md`; `harness/hooks/.context/module-context.md`; `harness/guidance/guidance.py`; `harness/.context/context-tool-resource-model-om-bdd.md`; `harness/mcp/.context/module-context.md`; `actions/.context/module-context.md`; `practices/.context/module-context.md`; user spine: register agent toolsets → install markdown files (skill, slash command, rules) and MCP → invoke those → use context guidance (install skills and .mdc, invoke instructions, generate under rules) → use practice guidance (register guidance and fidelities, invoke practice and fidelity, shared and fidelity rules constrain output) → hook dispatch → extract markdown → lifecycle actions. CDD Kanban and Chat Bar: the CDD Kanban map, once `space/kanban/.context/story-map.md`, now kept here; `harness/chat-ui/.context/story-map.md` and `story-map.drawio`; the ticket enhancements on the session-board branch (`.sessions/session-board/ticket-enhancements.md`, removed with that session in commit 8483f7a40 and read from commit b08bfe47e; its `space/kanban/.context/story-map.md`); `harness/chat-ui/.context/cdr/0001-stage-strip-band.md`; `space/kanban/app/src/session-board/board-update.ts`; the ticket drawing `harness/.context/ux/ticket-ui.drawio` (2026-11-11), which supplements the design canvas for parent and child tickets; `harness/chat-ui/pane/hooks/register.ts`. The map also takes in the backlog items `.sessions/_backlog/maintain-tickets-on-board.md`, `.sessions/_backlog/guard-work-and-recover-fast.md` and `.sessions/_backlog/guard-work-and-recover-fast.md` as Intended stories. The prompt queue epic: the simple-queue chat of 2026-11-16 and the `prompt-queue` mod. The Review End-To-End Screens epic: the e2e-testing ticket (`.sessions/e2e-testing/e2e-testing.md`), `cdd_guidance/practices/tdd/tdd.md` (Flow A, Cadence), `harness/diagnostics/test_runs.py`, and pml-web's `test-utils/legacy-compare/` (`report.ts`, `story-legacy-compare.ts`, `release-baseline.ts`, `end-to-end-paths.ts`).
 
 **Evidence:** Observed behaviour is cited from those files. Intended: practice guidance and fidelity guidance declare real `@hook` events from `CURSOR_EVENTS`, and lifecycle actions use the same mark-and-install path as practice guidance. For the CDD Kanban and Chat Bar epics: **Observed** means the code and its specs or tests do it today, **Inferred** means the code does it but nothing presses it, **Intended** means a source asks for it and the code does not do it yet, and **Requested** means the person asked on 2026-11-06 for each channel to do what the other does. In `story-map.drawio`, a story whose evidence is only Intended or Requested is filled a lighter yellow than one the code does today.
 
@@ -2237,10 +2237,106 @@ Intended (integrate-stories-with-the-canvas-explorer.md slice 5): story-ui gains
 
 Intended (integrate-stories-with-the-canvas-explorer.md slice 6, after Phase 0 of the asset reuse plan): story-ui's `StoryHierarchyView` mounts in the canvas, with its drag and drop sent through a transport standing in for REST.
 
+# (E) Review End-To-End Screens
+
+Intended ([e2e-testing ticket](../.sessions/e2e-testing/e2e-testing.md)): every end-to-end step records a screenshot keyed story › scenario › step, and the agent checks each screen against the phase before it: a walk by hand against the scenario text (TDD Flow A steps 1–2), the e2e test against the accepted walk (Flow A step 3), and every later e2e run against the last accepted run (regression). The run folders and pixel check come from pml-web's `test-utils/legacy-compare/` (`report.ts`, `story-legacy-compare.ts`, `release-baseline.ts`). The daily e2e run is `harness/diagnostics/test_runs.py` today; packaging results for the canvas stays under Check Screens Against Their Scenarios.
+
+## (E) Walk Scenarios By Hand
+
+Intended (ticket, "Flow A: a new boundary", steps 1–2, and "Walk report"): the first run of a new boundary is the agent driving the real app through each scenario, as a person would.
+
+### (S) Agent --> Screenshot Each Step Of A Walk
+
+Intended (ticket, Flow A step 1): while walking a scenario in the running app, the agent takes a screenshot after each Given, When and Then and records it, with the step text, as one row of the walk's `results.json` under its story › scenario › step key, marked walked by hand.
+
+### (S) Agent --> Judge A Step's Screen Against Its Step Text
+
+Intended (ticket, Flow A step 2): the agent records **meets the intent** or **misses the intent** for each step, with its reason: the Given's state is visible, the When took effect, the Then shows the right values, labels and messages. A step that misses is fixed and walked again.
+
+### (S) Agent --> Write The Walk Report
+
+Intended (ticket, "Walk report"): `report.ts` reduced to one run writes one self-contained page per sub-epic and a story map page: for each step its Given/When/Then text, its one screenshot embedded at half size, and its verdict and reason; scenarios with a missed step open by themselves.
+
+### (S) Person --> Accept A Walk As The Reference
+
+Intended (ticket, Flow A step 2, `person-accepts-the-baseline`): the person reviews the walk report, and accepting it makes the walk the reference the sub-epic's e2e tests are compared with. A walk with a step that misses its intent is not accepted.
+
+## (E) Capture End-To-End Steps
+
+Intended (ticket, Flow A step 3 and "Compare reports"): the e2e test that captures a walked path records the same steps, and is compared with the accepted walk.
+
+### (S:system) Story Test --> Screenshot Each Step Of An E2E Run
+
+Intended (ticket, "Step capture hook", `every-step-captured`): after each Given, When and Then of a `*.story.ui.spec.ts` test, the step helper waits until the page settles (as `story-legacy-compare.ts` does), takes the screenshot, and writes the step's row to the run's `results.json`, marked run by a test, with its pass or fail.
+
+### (S) Agent --> Compare An E2E Run With The Accepted Walk
+
+Intended (ticket, Flow A step 3): each step's screen is paired with the same step of the accepted walk; where they differ the agent fixes the test or the code and reruns.
+
+### (S) Agent --> Walk A Disputed Step Again
+
+Intended (ticket, Flow A step 3): when it is unclear whether the walk or the test is right, the agent walks that step by hand again and compares once more.
+
+### (S) Person --> Accept An E2E Run As The First Baseline
+
+Intended (ticket, Flow A step 3): when every pair matches, or the person accepts the explained differences, the run becomes the sub-epic's first regression baseline.
+
+## (E) Review E2E Runs For Regressions
+
+Intended (ticket, "Reviewing e2e screens: every e2e run", `every-run-reviewed`): every later e2e run, by ticket, by hand or scheduled, is compared with the last accepted run before its result counts.
+
+### (S:system) E2E Review --> Choose The Baseline Run
+
+Intended (ticket, "Run folders"): the run to compare with is the last accepted run of the same sub-epic, as `release-baseline.ts` and `end-to-end-paths.ts` choose it in pml-web; accepted baselines are kept on a branch, as pml-web keeps `e2e-latest`.
+
+### (S:system) E2E Review --> List Changed Step Pairs By Pixels
+
+Intended (ticket, "Pixel prefilter"): each step is paired with the same step of the baseline, and only pairs whose 8px blocks differ (`lookDifference` in `story-legacy-compare.ts`) go to the agent; a step with no earlier screen is listed as new.
+
+### (S) Agent --> Judge A Changed Step Pair
+
+Intended (ticket, step 3 of the review, `ai-judges-every-changed-pair`): the agent reads both screens, the step text, and the stories and code changed since the baseline, and records one verdict with its reason through `record_verdict`: **intended**, citing the change behind it; **regression caught**, naming the failing test; **missed by the tests**; or **noise**.
+
+### (S) Agent --> Add A Failing Test For A Missed Change
+
+Intended (ticket, step 4 of the review, `missed-change-adds-a-test-first`): for each pair missed by the tests, the agent writes the test at the layer that owns the behaviour, sees it fail, fixes the code and reruns. Noise is fixed in the harness and rerun, never accepted (`noise-is-fixed-in-the-harness`).
+
+### (S) Person --> Accept A Reviewed Run As The Baseline
+
+Intended (ticket, step 5 of the review): once every changed pair is intended, the person reviews the report, and accepting it makes the run the new baseline. Nothing else moves the baseline.
+
+### (S:system) CDD Server --> Review The Daily E2E Run
+
+Intended (ticket, "Daily run"): when the daily e2e run ends, the cdd server starts the regression review in a background agent session and raises a toast for each step judged missed by the tests; the fix happens in a ticket.
+
+## (E) Read E2E Reports
+
+Intended (ticket, "Report"): one report shape for all three comparisons, from `report.ts`.
+
+### (S) Person --> Open A Sub-Epic's Step Report
+
+Intended (ticket, "Compare reports"): one page per sub-epic shows story › scenario › each step with its screen, or its two screens side by side, the test result, and the verdict with its reason.
+
+### (S) Person --> Filter A Report To Changed Or Missed Steps
+
+Intended (ticket, "Compare reports"): a filter on the page shows only the steps that changed or that missed.
+
+### (S) Person --> Open The E2E Story Map Report
+
+Intended (ticket, "Report"): a story map page over every sub-epic shows the pass, changed and missed counts per story and sub-epic, each linked to its sub-epic's page, as `writeStoryMapReport` does in pml-web.
+
+### (S) Person --> Read Earlier E2E Runs
+
+Intended (ticket, "Report"): each run also writes a page without images and a `summary.md` section into the run history, which is never cleared, as `writeHistoryReport` does in pml-web.
+
+### (S) Chat Bar --> Show The Latest E2E Review In Server Health
+
+Intended (ticket, "Health line"): the server health report shows the latest run, its changed and missed counts, and a link to the story map page.
+
 ---
 
 ## Scope boundary
 
-**In scope:** Authoring an Agent Toolset with `@agent_tool` and `@agent_instructions`. Installing that toolset as two writes — File Installation publishes skill, slash command, and rules as one story (same channel, same write) and Mcp Installation publishes `mcp.json` — then invoking the skill, slash command, and MCP tool and prompt. Installed rules are not invoked as a file check — they constrain valid output. Context Guidance is installed the same way (skill and `.mdc` rules), invoked so `instructions` come back, then used to generate content those rules constrain. Practice Guidance is that same Guidance plus registered fidelities — invoke at practice scope and at fidelity scope; shared rules and fidelity-specific rules each constrain the matching AI output. Hook dispatch; extracting co-located markdown via `@markdown`; the CDD Kanban and the Chat Bar as two channels that move a ticket's session through its practices, each with its own stories; the practice content editor apps those channels invoke (Story UI, design canvas, Graph app), with each app's own story map; Claude Whiteboard as a format that practices render to and load from, extending the shared diagram types as drawio and miro do; connecting sessions across the channels and apps, which joins the channels and apps on one ticket, and validation read from the latest graph; every host-action kit from `actions/.context/module-context.md` (`partition`, `grill`, `sketch`, `iterate`, `generate`, `document`, `render`, `satisfy`, `validate`, `scan`, `repair`, `createRule`).
+**In scope:** Authoring an Agent Toolset with `@agent_tool` and `@agent_instructions`. Installing that toolset as two writes — File Installation publishes skill, slash command, and rules as one story (same channel, same write) and Mcp Installation publishes `mcp.json` — then invoking the skill, slash command, and MCP tool and prompt. Installed rules are not invoked as a file check — they constrain valid output. Context Guidance is installed the same way (skill and `.mdc` rules), invoked so `instructions` come back, then used to generate content those rules constrain. Practice Guidance is that same Guidance plus registered fidelities — invoke at practice scope and at fidelity scope; shared rules and fidelity-specific rules each constrain the matching AI output. Hook dispatch; extracting co-located markdown via `@markdown`; the CDD Kanban and the Chat Bar as two channels that move a ticket's session through its practices, each with its own stories; the practice content editor apps those channels invoke (Story UI, design canvas, Graph app), with each app's own story map; Claude Whiteboard as a format that practices render to and load from, extending the shared diagram types as drawio and miro do; connecting sessions across the channels and apps, which joins the channels and apps on one ticket, and validation read from the latest graph; reviewing end-to-end screens step by step against a walk by hand and the last accepted run; every host-action kit from `actions/.context/module-context.md` (`partition`, `grill`, `sketch`, `iterate`, `generate`, `document`, `render`, `satisfy`, `validate`, `scan`, `repair`, `createRule`).
 
 **Out of scope:** Catalog HTML pages; on the Chat Bar, the board's whole-board views (columns, Backlog items, WIP limits, side panels, ticket hierarchy) and sending one action to a whole stage (CDR 0001); one-time renames and repository moves; YAML manifest CLI / `tools.ps1` invoke; inventing extra practices or product domains beyond this framework spine; scenario and acceptance-test text (later fidelities).

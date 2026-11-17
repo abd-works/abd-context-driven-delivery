@@ -15,8 +15,12 @@ export type HealthViewJson = { areDetailsOpen: boolean }
 // One run of a test tier the cdd server runs on a cadence, as server-health.report lists it under test_runs.
 export type TestRunJson = { name: string; state: 'running' | 'passed' | 'failed' | 'abandoned'; run_id: string; started: string; summary: string; is_new_failure: boolean }
 
-// The runs whose new failure the chat has raised a toast for, so each is raised once.
-export type ToastedRunsJson = { runIds: string[] }
+// The runs whose new failure the chat has raised a toast for, so each is raised once; and the steps a scheduled e2e
+// run's screen review judged missed by the tests, named `<review_id> <step>`, toasted once each the same way.
+export type ToastedRunsJson = { runIds: string[]; missedSteps?: string[] }
+
+// The latest scheduled e2e run's screen review, as server-health.report gives it under e2e_review.
+export type E2eReviewJson = { run: string; sub_epics: number; steps: number; changed_steps: string[]; unjudged_steps: string[]; missed_steps: string[]; report: string; review_id: string }
 
 export type InstallJson = { state: 'idle' | 'running' | 'installed' | 'failed'; error: string | null }
 

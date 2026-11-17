@@ -188,6 +188,7 @@ outputs:
     - "story_tests/{epic}/{sub-epic}/{sub_epic_slug}.story.domain.spec.ts"
     - "story_tests/{epic}/{sub-epic}/{sub_epic_slug}.story.server.spec.ts"
     - "story_tests/{epic}/{sub-epic}/{story}/{story_snake}_story.test.ts"
+    - "story_tests/{epic}/{sub-epic}/{sub_epic_slug}.story.ui.spec.ts"
 ```
 
 #### Overview
@@ -209,6 +210,8 @@ When scenario realizations exist (inline or `{scope}-scenario-realization.md`), 
 
 **Develop the behaviour, not only the test.** Acceptance-test work owns both the executable specification and the production code that satisfies it. Represent each named scenario example as one code fixture, and do not invent fixture values the scenario does not name. Take one Scenario at a time: write the failing acceptance test, invoke the Clean Engineering companion at `code` fidelity, implement the smallest production change that can pass, rerun the test, refactor when it is green, and then continue to the next behaviour. After two failed fix attempts, diagnose the failure before changing more code.
 
+**Judge each screen against its step.** A browser story test (`*.story.ui.spec.ts`) runs each Given, When and Then through `step(page, '<step text>', body)` (`space/kanban/app/tests/step-capture.ts`), which screenshots the settled page and writes the step's row to the run's `results.json`. Whether the AI walks a scenario by hand or reviews a run, it reads each screenshot against its step text and asks whether a person looking at the screen would agree the step happened: the Given's state is visible, the When's action took effect, the Then's outcome is shown with the right values, labels and messages. A Given about state the screen cannot show, such as a file's contents, is judged by what the next step shows of it. TDD's Reviewing e2e screens says when this happens and what follows a miss.
+
 Refer to [`cdd_guidance/references/language-tools.md`](../../references/language-tools.md) for language-specific test tools and idioms.
 
 #### Scaffold
@@ -221,7 +224,7 @@ Rough story-test index for a **partition** pass or first cut — for each story,
 
 ```yaml
 alwaysApply: false
-globs: "**/*.story.shared.*,**/*.story.domain.spec.*,**/*.story.server.spec.*,**/*_story.test.*,**/*story_test*,**/*story-test*,**/*-sketch.md"
+globs: "**/*.story.shared.*,**/*.story.domain.spec.*,**/*.story.server.spec.*,**/*.story.ui.spec.*,**/*_story.test.*,**/*story_test*,**/*story-test*,**/*-sketch.md"
 ```
 
 Whenever you create, alter, or delete Spec-by-Example / acceptance tests, or production code they support. Follow these rules.
@@ -232,6 +235,8 @@ If this change will not stay here, follow `practices/stories/stories-scenarios.m
 - **`examples-declare-seed-vs-interaction`** - Identify each fixture as **Seed** state owned by a system or **Interaction** data entered, displayed, or validated through the product. Use both when the Story needs both, because persisted records and user-facing data often represent the same concept differently.
 - **`shared-example-fixtures`** - Represent each named example as one reusable code fixture for its domain concept. Shape that fixture from the owning system: the external system's record shape at that boundary and the product's aggregate shape inside the domain, because a convenient mixed object conceals a mapping error and a copied value drifts from the Scenario.
 - **`seed-state-at-its-real-owner`** - Seed and inspect state through the component that owns it in the production architecture. When a rich domain layer integrates with an external system, seed the external test adapter and exercise production behaviour through the aggregates and repositories above it. When the repository is itself the storage boundary and no separate system exists, direct repository setup and loading are appropriate, because tests should reflect the architecture rather than create an extra layer.
+- **`missed-screen-change-tested-at-its-owner`** - When a screen changed and no test caught it, write the missing test at the layer that owns the behaviour: a rule or a value in the story markdown and its domain story test, a control or label in the browser story test, and pure look in CSS alone. A test written at the wrong layer catches the change where it shows rather than where it is decided, so the next screen that shows the same value breaks unseen.
+- **`every-step-captured`** - Run every Given, When and Then of a browser story test through `step`, so each records its screenshot and result under its story › scenario › step key, with the step text as the scenario writes it. A step that is not captured cannot be compared with the walk or the last accepted run, and a break on its screen goes unseen.
 - **`separate-test-controls-from-production-contracts`** - Keep seed, reset, and inspection operations off the production repository or adapter contract. Add them to a testable extension, test adapter, or stub when acceptance setup needs them, because test control is useful without becoming a production domain capability.
 - **`system-stubs-domain-real`** - Before creating an external-system stub, inspect the real integration contract again and identify the boundary that production code calls. Make the stub reproduce that boundary's operations, request and response structures, identifiers, state changes, and failure behaviour; do not invent a simpler test API. Keep domain aggregates, repositories, validation, mapping, and state transitions real, because an inaccurate stub, silent no-op, or test-only domain operation can make a test pass without implementing production behaviour.
 - **`assert-domain-behavior-not-seeded-state`** - Exercise the product's domain entry point after seeding its underlying state owner and assert the product result. Inspect that owner for stored data or outbound effects only after the product initiated them, because reading back data inserted during Given proves only that the fixture was stored.

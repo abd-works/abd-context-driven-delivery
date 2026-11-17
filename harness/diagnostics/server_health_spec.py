@@ -2,11 +2,12 @@
 every report that checks the registered apps' ports, are in server_health_heavy_spec.py.
 
 Each signature here has a test of the same name in `harness/chat-ui/pane/hooks/register.test.ts`."""
+import json
 import shutil
 import tempfile
 from pathlib import Path
 
-from expects import be_false, expect
+from expects import be_false, be_none, equal, expect
 from mamba import after, before, context, description, it
 
 from harness.installation.repository_toolsets import RepositoryToolsets
@@ -14,6 +15,10 @@ from harness.installation.repository_toolsets import RepositoryToolsets
 RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 
 from harness.mcp.mcp_server import McpServer  # noqa: E402
+from harness.diagnostics.server_health import ServerHealth  # noqa: E402
+from harness.diagnostics.test_runs import TestCadence, TestRunRecord  # noqa: E402
+
+STEP = "Delete Ticket › Refuse to delete a ticket the board does not have › 3 Then the board says no ticket named 'no-such-ticket' on the board"
 
 
 with description("server health") as self:
@@ -32,3 +37,25 @@ with description("server health") as self:
             self.server.invoke("server-health.report", {})
             logged = [log.read_text(encoding="utf-8") for log in self.root.glob(".sessions/**/session.log")]
             expect("server-health" in "".join(logged)).to(be_false)
+
+    with context("with no scheduled e2e run that captured its screens"):
+        with it("should report no e2e review"):
+            expect(ServerHealth(self.root, cadence=TestCadence(None, TestRunRecord(self.root / "home"))).e2e_review).to(be_none)
+
+    with context("with a scheduled e2e run whose screen review missed a step"):
+        with before.each:
+            run = self.root / ".sessions" / "scheduled" / "e2e-test-results" / "move-work-forward-on-session-board" / "maintain-tickets" / "run-2"
+            run.mkdir(parents=True)
+            (run / "results.json").write_text(json.dumps([{"key": STEP}]), encoding="utf-8")
+            (run / "changed.json").write_text(json.dumps([STEP]), encoding="utf-8")
+            (run / "review.json").write_text(json.dumps({"against": "run-1", "pairs": {STEP: {"verdict": "missed by the tests", "reason": "Red on red."}}}), encoding="utf-8")
+            self.health = ServerHealth(self.root, cadence=TestCadence(None, TestRunRecord(self.root / "home")))
+
+        with it("should report the run's name"):
+            expect(self.health.e2e_review.run).to(equal("run-2"))
+
+        with it("should report the missed step with its sub-epic"):
+            expect(self.health.e2e_review.missed_steps).to(equal([f"move-work-forward-on-session-board/maintain-tickets: {STEP}"]))
+
+        with it("should link the e2e story map report"):
+            expect(self.health.e2e_review.report.name).to(equal("story-map.html"))

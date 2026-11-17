@@ -216,11 +216,12 @@ class TestRunner:
             env = {**os.environ, "PYTHONPATH": str(Path(__file__).resolve().parents[2]), "PYTHONIOENCODING": "utf-8"}
             return BackgroundStart(log).run(command, checkout, env).pid
 
-    def run(self, tier: TestTier, checkout: Path) -> tuple[int, str]:
-        """Run the tier in checkout to its end, its output going to this process's output as well."""
+    def run(self, tier: TestTier, checkout: Path, env: dict[str, str] | None = None) -> tuple[int, str]:
+        """Run the tier in checkout to its end, its output going to this process's output as well; env adds variables."""
         command = ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(checkout / TEST_SCRIPT), "-Suite", tier.value]
         process = subprocess.Popen(command, cwd=checkout, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                   text=True, encoding="utf-8", errors="replace", creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                                   text=True, encoding="utf-8", errors="replace", creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                                   env={**os.environ, **env} if env else None)
         lines = []
         for line in process.stdout:
             sys.stdout.write(line)
@@ -248,6 +249,21 @@ def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+# The scheduled e2e run's screenshots sit under .sessions/scheduled/e2e-test-results/, apart from ticket and hand runs.
+SCHEDULED_RELEASE = "scheduled"
+
+
+def e2e_run_name(run: TestRun) -> str:
+    """The folder name the scheduled e2e run's screenshots are kept under: run- and when it started."""
+    return f"run-{run.started_at.strftime('%Y-%m-%d-%H-%M-%S')}"
+
+
+def _review_screens(checkout: Path, run_name: str) -> list[str]:
+    from harness.e2e_review.e2e_review import ScheduledReview
+
+    return ScheduledReview(checkout, run_name).start()
+
+
 class TestCadence:
     """Runs heavy every hour and e2e every day on main. Nothing keeps time: ``start_due`` is called whenever the health
     report is read, and starts the overdue tier, one run at a time, e2e first since it is the one that runs least."""
@@ -255,12 +271,13 @@ class TestCadence:
     __test__ = False
 
     def __init__(self, checkout: Path | None, record: TestRunRecord, runner: TestRunner | None = None, git: Git | None = None,
-                 clock: Callable[[], datetime] = _utc_now) -> None:
+                 clock: Callable[[], datetime] = _utc_now, review: Callable[[Path, str], list[str]] | None = None) -> None:
         self.checkout = checkout
         self.record = record
         self._runner = runner or TestRunner()
         self._git = git or (Git(checkout) if checkout else None)
         self._clock = clock
+        self._review = review or _review_screens
 
     @property
     def latest_runs(self) -> list[TestRun]:
@@ -303,10 +320,23 @@ class TestCadence:
         if started is None or not started.is_run_by_this_process or started.commit != head:
             started = TestRun(tier, head, self._clock(), pid=os.getpid())
             self.record.save(started)
-        exit_code, output = self._runner.run(tier, self.checkout)
+        if tier is TestTier.E2E:
+            # Each browser story step is screenshotted into this run's folder under .sessions/scheduled/, then reviewed.
+            run_name = e2e_run_name(started)
+            exit_code, output = self._runner.run(tier, self.checkout, {"E2E_RELEASE": SCHEDULED_RELEASE, "E2E_RUN": run_name})
+            output += "".join(f"\nscreen review: {line}" for line in self._reviewed(run_name))
+        else:
+            exit_code, output = self._runner.run(tier, self.checkout)
         finished = started.finished(exit_code, output, self.record.previous(tier), self._clock())
         self.record.save(finished)
         return finished
+
+    def _reviewed(self, run_name: str) -> list[str]:
+        """The screen review of the e2e run just ended; a review that cannot start says why and leaves the run's result."""
+        try:
+            return self._review(self.checkout, run_name)
+        except Exception as not_reviewed:  # the tests' result stands whatever the review does
+            return [f"not started: {not_reviewed}"]
 
     def _settled(self, run: TestRun) -> TestRun:
         if run.outcome is RunOutcome.RUNNING and not run.is_live:

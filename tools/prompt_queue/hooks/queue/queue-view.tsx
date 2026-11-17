@@ -106,7 +106,8 @@ const CLEAR_ICON: Icon = { key: 'queue-clear', svg: CLEAR_SVG, glyph: '✕', tip
 /**
  * The open queue, one line per task, each drawn as the chat's own rounded buttons are, the session name's among them,
  * so a card is one line tall with round ends. Pressing a card edits it; the pointer over it reveals its edit, move
- * and remove buttons.
+ * and remove buttons at its right. The text shrinks and truncates, so a long prompt never pushes them past the
+ * chat's edge.
  */
 function QueueListView($: EngineInterface, e: AbovePromptEvent, queue: PromptQueue, editingId: string) {
   const { Box, Text, Button } = $.ui.resolve(e)
@@ -127,14 +128,14 @@ function QueueListView($: EngineInterface, e: AbovePromptEvent, queue: PromptQue
     <Box flexDirection="column" rowGap="sm">
       {queue.prompts.map((prompt, index) => (
         <Box key={`card-${prompt.id}`} flexDirection="row" justifyContent="space-between" alignItems="center" gap={1}>
-          <Box flexGrow={1} flexShrink={1}>
+          <Box flexGrow={1} flexShrink={1} minWidth={0}>
             <Button key={`card-text-${prompt.id}`} onPress={() => editPrompt($, prompt)}>
               <Text wrap="truncate-end" color={prompt.id === editingId ? LOOK.placeholder : undefined} italic={prompt.id === editingId}>
                 {`${index + 1}. ${prompt.text.replace(/\s+/g, ' ')}${prompt.id === editingId ? '  (editing)' : ''}`}
               </Text>
             </Button>
           </Box>
-          <Box width={CARD_BUTTON_COLUMNS} justifyContent="flex-end">
+          <Box width={CARD_BUTTON_COLUMNS} flexShrink={0} justifyContent="flex-end">
             <Box flexDirection="row" gap={1} display="none" hover={{ display: 'flex' }}>
               <Button key={`edit-${prompt.id}`} label="✎" onPress={() => editPrompt($, prompt)} />
               <Button key={`up-${prompt.id}`} label="↑" onPress={() => movePrompt($, index, index - 1)} />

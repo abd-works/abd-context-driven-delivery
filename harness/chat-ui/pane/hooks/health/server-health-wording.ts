@@ -1,7 +1,7 @@
 import type { AppData } from '@cdd/harness/diagnostics/app'
 import type { ServerHealthData } from '@cdd/harness/diagnostics/server-health'
 
-import type { AppOpeningJson, InstallJson, ServerHealthJson, TestRunJson } from '../../types'
+import type { AppOpeningJson, E2eReviewJson, InstallJson, ServerHealthJson, TestRunJson } from '../../types'
 import { BRAND } from '../shared/brand'
 import { SERVER } from '../shared/cdd-tool'
 import { RECONNECT_TRIES, REPORT_TOOL, ServerHealthClient } from './server-health-client'
@@ -50,14 +50,24 @@ function testRunPartOf(run: TestRunJson): Part {
   return { icon: run.name === 'e2e' ? '◎' : '◉', label, value: `${run.state}, started ${run.started.slice(0, 16)}`, isUp: run.state === 'passed', isDown: run.state === 'failed' }
 }
 
+// The latest scheduled e2e run's screen review: E2e screens: run-2026-11-17-06-00-00, 3 changed, 1 missed, 0 not
+// judged. Green with nothing missed or unjudged, red once a step is missed by the tests, grey while steps await a verdict.
+function e2eReviewPartOf(review: E2eReviewJson): Part {
+  const missed = review.missed_steps.length
+  const unjudged = review.unjudged_steps.length
+  const value = `${review.run}, ${review.changed_steps.length} changed, ${missed} missed, ${unjudged} not judged`
+  return { icon: '⧉', label: 'E2e screens', value, isUp: missed === 0 && unjudged === 0, isDown: missed > 0 }
+}
+
 export function partsOf(health: ServerHealthJson): Part[] {
   const client = new ServerHealthClient(health.report as ServerHealthData | null)
-  const { apps, isHookServerRunning: isHookRunning } = client
+  const { apps, isHookServerRunning: isHookRunning, e2eReview } = client
   return [
     hostPartOf(health),
     ...apps.map(appPartOf),
     { icon: '↪', label: 'Hook server', value: isHookRunning ? 'running' : 'not installed', isUp: isHookRunning },
     ...client.testRuns.map(testRunPartOf),
+    ...(e2eReview ? [e2eReviewPartOf(e2eReview)] : []),
   ]
 }
 

@@ -14,6 +14,7 @@ export { expect, test } from '@playwright/test'
 export type { Locator, Page } from '@playwright/test'
 
 export * from './support'
+export { step } from './step-capture'
 export { STAMP, fixtureRoot, resetSessions, writeInto, writeSession } from '../test-utils/fixture-repo'
 
 const CHAT_GONE_MILLISECONDS = 12_000
