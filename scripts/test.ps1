@@ -170,8 +170,14 @@ function Read-SpecSeconds {
 
 function Save-SpecSeconds {
     param([hashtable]$Seconds)
-    New-Item -ItemType Directory -Force (Split-Path $timesFile) | Out-Null
-    $Seconds | ConvertTo-Json | Set-Content -Path $timesFile -Encoding utf8
+    # The seconds only order the next run, so a file another run holds open is passed over with a warning: an error here
+    # ended the whole run after its first spec file, which then exited 0 having counted nothing.
+    try {
+        New-Item -ItemType Directory -Force (Split-Path $timesFile) | Out-Null
+        $Seconds | ConvertTo-Json | Set-Content -Path $timesFile -Encoding utf8 -ErrorAction Stop
+    } catch [System.IO.IOException] {
+        Write-Host "Spec timings not saved: $($_.Exception.Message)"
+    }
 }
 
 function Get-ExpectedSeconds {
@@ -378,6 +384,13 @@ try {
     Pop-Location
 }
 
+# A run that stopped before counting its files proved nothing, so it fails.
+if (-not $total) {
+    Write-Host ""
+    Write-Host "0/ files passed"
+    Write-Host "FAILED the run stopped before it counted its spec files"
+    exit 1
+}
 $failed = @($failures | Where-Object { $_ })
 $passed = $total - $failed.Count
 Write-Host ""

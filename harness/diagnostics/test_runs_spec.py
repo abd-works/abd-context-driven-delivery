@@ -24,7 +24,7 @@ class RunnerStub:
     """scripts/test.ps1 as the cadence sees it: a start answers this process's id, so the run reads live, and a run
     ends with the exit code and output a spec gives it."""
 
-    def __init__(self, exit_code: int = 0, output: str = "4 examples ran") -> None:
+    def __init__(self, exit_code: int = 0, output: str = "4 examples ran\n\n3/3 files passed") -> None:
         self.exit_code = exit_code
         self.output = output
         self.started: list[TestTier] = []
@@ -201,6 +201,14 @@ with description("the test cadence") as self:
         with it("should not review screens"):
             self.cadence.run_now(TestTier.HEAVY)
             expect(self.reviewed).to(equal([]))
+
+    with context("that test.ps1 cut short before counting its files"):
+        with before.each:
+            # What test.ps1 printed when a held timing file ended its run after one spec, exiting 0.
+            self.runner.output = "End-to-end spec (1)\nSet-Content : The process cannot access the file\n\n0/ files passed"
+
+        with it("should record a failure, though the run exited 0"):
+            expect(self.cadence.run_now(TestTier.E2E).state).to(equal("failed"))
 
     with context("that fails after a run that passed"):
         with before.each:

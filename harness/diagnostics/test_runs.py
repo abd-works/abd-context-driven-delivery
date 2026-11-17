@@ -8,6 +8,7 @@ import argparse
 import contextlib
 import json
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -43,6 +44,20 @@ class TestTier(str, Enum):
     def interval(self) -> timedelta:
         """How long after a run starts the next one is due: heavy within the hour, e2e within the day."""
         return timedelta(hours=1) if self is TestTier.HEAVY else timedelta(days=1)
+
+
+# The line test.ps1 ends every whole run with: how many spec files passed of how many it ran.
+FILES_PASSED = re.compile(r"^(\d+)/(\d*) files passed\s*$", re.MULTILINE)
+
+
+def _counted_every_file_passed(output: str) -> bool:
+    """test.ps1 reached its count, and every file it counted passed. A run cut short prints no total ("0/ files
+    passed") and can still exit 0, so its exit code alone would record a pass for specs that never ran."""
+    counts = FILES_PASSED.findall(output)
+    if not counts:
+        return False
+    passed, total = counts[-1]
+    return bool(total) and int(total) > 0 and passed == total
 
 
 class RunOutcome(str, Enum):
@@ -84,7 +99,7 @@ class TestRun:
 
     def finished(self, exit_code: int, output: str, previous: TestRun | None, now: datetime) -> TestRun:
         """This run ended with exit_code, having printed output; previous is the tier's run before it."""
-        outcome = RunOutcome.PASSED if exit_code == 0 else RunOutcome.FAILED
+        outcome = RunOutcome.PASSED if exit_code == 0 and _counted_every_file_passed(output) else RunOutcome.FAILED
         is_new = outcome is RunOutcome.FAILED and (previous is None or previous.outcome is not RunOutcome.FAILED)
         last_lines = "\n".join(output.strip().splitlines()[-SUMMARY_LINES:])
         return TestRun(self.tier, self.commit, self.started_at, outcome, pid=self.pid, finished_at=now, summary=last_lines, is_new_failure=is_new)
