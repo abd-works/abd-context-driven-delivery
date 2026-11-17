@@ -99,11 +99,11 @@ export const keyCapSvgOf = (key: KeyCap) =>
   + `<rect width="${key.width}" height="${KEY_CAP_UNITS}" rx="7" fill="${LOOK.keyCap}"/>`
   + `<path d="${key.strokes}" fill="none" stroke="${LOOK.keyText}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
 
-/** Ctrl, its letters drawn as strokes: the desktop draws an Svg as an image, where text is not to be relied on. */
-export const CTRL_KEY: KeyCap = {
-  glyph: 'Ctrl',
-  width: 38,
-  strokes: 'M14.5 11.2A3.6 3.6 0 1 0 14.5 16.8M18 9.5v7.2a1 1 0 0 0 1.2 1M16.6 12h3M22.5 12v6M22.5 14a2.2 2.2 0 0 1 2.8-2M28 9.5v8.5',
+/** Alt, its letters drawn as strokes: the desktop draws an Svg as an image, where text is not to be relied on. */
+export const ALT_KEY: KeyCap = {
+  glyph: 'Alt',
+  width: 36,
+  strokes: 'M11 18l3-8.5 3 8.5M12.2 15h3.6M20 9.5v8.5M23.5 9.5v7.2a1 1 0 0 0 1.2 1M22.1 12h3',
 }
 
 export const ENTER_KEY: KeyCap = { glyph: '↵', width: KEY_CAP_UNITS, strokes: 'M19 9v4a2 2 0 0 1-2 2H9M12 12l-3 3 3 3' }

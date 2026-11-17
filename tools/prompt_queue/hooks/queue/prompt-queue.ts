@@ -12,7 +12,7 @@ const isExpanded = atom({ plugin: 'prompt-queue', key: 'isExpanded' } as const, 
 const isSubAgentMode = atom({ plugin: 'prompt-queue', key: 'isSubAgentMode' } as const, false)
 const tasks = atom({ plugin: 'prompt-queue', key: 'tasks' } as const, [] as SubAgentTask[])
 const notice = atom({ plugin: 'prompt-queue', key: 'notice' } as const, '')
-/** The draft Ctrl+Enter just queued: the desktop still submits it after the key, so that submission is dropped. */
+/** The draft Alt+Enter just queued: the desktop still submits it after the key, so that submission is dropped. */
 /** Playing, each finished turn sends the next prompt; paused, the queue waits. */
 const isPlaying = atom({ plugin: 'prompt-queue', key: 'isPlaying' } as const, false)
 /** Whether the main chat is in a turn, so play sends at once only when nothing is running. */
@@ -49,14 +49,14 @@ export async function queuePrompt($: EngineInterface, text: string): Promise<boo
   return true
 }
 
-/** Ctrl+Enter: the draft goes to the bottom of the queue instead of being sent. */
+/** Alt+Enter: the draft goes to the bottom of the queue instead of being sent. */
 export async function queueByKey($: EngineInterface, text: string): Promise<void> {
   if (await queuePrompt($, text)) {
     await update($, queuedByKey, () => text)
   }
 }
 
-/** Whether a submitted prompt is the draft Ctrl+Enter just queued, which is then no longer awaited. */
+/** Whether a submitted prompt is the draft Alt+Enter just queued, which is then no longer awaited. */
 export async function isQueuedByKey($: EngineInterface, text: string): Promise<boolean> {
   const queued = await read($, queuedByKey)
   if (queued === '' || queued !== text) {

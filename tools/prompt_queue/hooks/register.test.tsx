@@ -86,7 +86,7 @@ for (const surface of ['desktop', 'terminal'] as const) {
   })
 }
 
-test('the submission that follows Ctrl+Enter does not enter, as its draft is queued', async ($, on) => {
+test('the submission that follows Alt+Enter does not enter, as its draft is queued', async ($, on) => {
   seedQueue(on, false, 'Run the heavy tier')
   on('prompt.submit', (_, e) => ({ text: e.text }))
 

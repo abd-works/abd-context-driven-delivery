@@ -27,9 +27,10 @@ export const register: Register = on => {
     return { text: `Queued ${count} prompt(s) from this conversation.` }
   })
 
-  // Ctrl+Enter queues the draft instead of sending it, ahead of Claude's own queue.
+  // Alt+Enter queues the draft instead of sending it; the engine reports Alt as meta. Ctrl+Enter never reached a mod
+  // on the desktop.
   on('prompt.edit', async ($, e, next) => {
-    if (e.key?.key !== 'return' || !e.key.ctrl) {
+    if (e.key?.key !== 'return' || !(e.key.meta || e.key.ctrl)) {
       return next(e)
     }
     await queueByKey($, e.text)
@@ -37,7 +38,7 @@ export const register: Register = on => {
     return { text: '', cursor: 0 }
   })
 
-  // The desktop still submits the draft after Ctrl+Enter; it is queued, so it does not enter now.
+  // The desktop may still submit the draft after the key that queued it; it is queued, so it does not enter now.
   on('prompt.submit', async ($, e, next) => {
     if (e.origin?.kind === 'plugin' || !(await isQueuedByKey($, e.text))) {
       return next(e)

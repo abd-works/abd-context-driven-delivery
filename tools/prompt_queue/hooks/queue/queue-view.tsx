@@ -20,7 +20,7 @@ import {
   PAUSE_SVG,
   PLAY_SVG,
   stackSvgOf,
-  CTRL_KEY,
+  ALT_KEY,
   ENTER_KEY,
   KEY_CAP_PIXELS,
   keyCapSvgOf,
@@ -93,7 +93,7 @@ function subAgentsIcon(state: QueueState): Icon {
   return { key: 'queue-sub-agents', svg: SUB_AGENTS_SVG, glyph: '⑂', tip, isOn: state.isSubAgentMode }
 }
 
-const ADD_ICON: Icon = { key: 'queue-add', svg: ADD_SVG, glyph: '+', tip: 'Queue the draft (Ctrl+Enter)' }
+const ADD_ICON: Icon = { key: 'queue-add', svg: ADD_SVG, glyph: '+', tip: 'Queue the draft (Alt+Enter)' }
 const CLEAR_ICON: Icon = { key: 'queue-clear', svg: CLEAR_SVG, glyph: '✕', tip: 'Clear the queue' }
 
 /**
@@ -106,9 +106,9 @@ function QueueListView($: EngineInterface, e: AbovePromptEvent, queue: PromptQue
     return (
       <Box flexDirection="row" justifyContent="space-between" alignItems="center" gap={2} borderStyle="round"
         borderColor={LOOK.card} backgroundColor={LOOK.card} paddingX="xs">
-        <Text color={LOOK.placeholder}>Enter to send, Ctrl+Enter to queue for later</Text>
+        <Text color={LOOK.placeholder}>Enter to send, Alt+Enter to queue for later</Text>
         <Box flexDirection="row" gap="xs">
-          {KeyCapView($, e, CTRL_KEY)}
+          {KeyCapView($, e, ALT_KEY)}
           {KeyCapView($, e, ENTER_KEY)}
         </Box>
       </Box>

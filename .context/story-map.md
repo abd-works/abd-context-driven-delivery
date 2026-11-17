@@ -940,11 +940,11 @@ The prompt queue is its own Claude Code mod, `prompt-queue`, not part of the CDD
 
 ### (S) Person --> Queue Draft Prompt
 
-Observed (2026-11-16): Ctrl+Enter, or the `+` beside the stack, moves the prompt box's draft to the bottom of the queue and empties the box (`queueByKey`, `queueDraft`); the `+` shows when the pointer is on the stack. Observed too: the desktop still sent the draft after Ctrl+Enter. Built: the submission that follows Ctrl+Enter is dropped, "Queued for later" (`isQueuedByKey`).
+Observed (2026-11-16): the `+` beside the stack moves the prompt box's draft to the bottom of the queue and empties the box (`queueDraft`); the `+` shows when the pointer is on the stack. Ctrl+Enter did not work on the desktop, so the key is Alt+Enter. Built: Alt+Enter queues the draft (`queueByKey`), and a submission that follows it is dropped, "Queued for later" (`isQueuedByKey`).
 
 ### (S) Person --> Open Prompt Queue
 
-Observed (2026-11-16): pressing the stack image opens the queue upward: one rounded card per prompt, in the order they will be sent, with the controls staying where they were at the bottom; an empty queue shows "Enter to send, Ctrl+Enter to queue for later" with Ctrl and ↵ key caps. Pressing it again closes it.
+Observed (2026-11-16): pressing the stack image opens the queue upward: one rounded card per prompt, in the order they will be sent, with the controls staying where they were at the bottom; an empty queue shows "Enter to send, Alt+Enter to queue for later" with Alt and ↵ key caps. Pressing it again closes it.
 
 ### (S) Person --> Edit Queued Prompt
 
