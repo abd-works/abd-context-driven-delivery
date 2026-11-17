@@ -104,10 +104,10 @@ function QueueListView($: EngineInterface, e: AbovePromptEvent, queue: PromptQue
   const { Box, Text, Button } = $.ui.resolve(e)
   if (queue.isEmpty) {
     return (
-      <Box flexDirection="row" justifyContent="space-between" alignItems="center" gap={2} borderStyle="round"
+      <Box flexDirection="row" justifyContent="flex-end" alignItems="center" gap={2} borderStyle="round"
         borderColor={LOOK.card} backgroundColor={LOOK.card} paddingX="xs">
-        <Text color={LOOK.placeholder}>Enter to send, Alt+Enter to queue for later</Text>
-        <Box flexDirection="row" gap="xs">
+        <Box flexDirection="row" alignItems="center" gap="xs">
+          <Text color={LOOK.placeholder}>Add</Text>
           {KeyCapView($, e, ALT_KEY)}
           {KeyCapView($, e, ENTER_KEY)}
         </Box>

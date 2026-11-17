@@ -944,7 +944,7 @@ Observed (2026-11-16): the `+` beside the stack moves the prompt box's draft to 
 
 ### (S) Person --> Open Prompt Queue
 
-Observed (2026-11-16): pressing the stack image opens the queue upward: one rounded card per prompt, in the order they will be sent, with the controls staying where they were at the bottom; an empty queue shows "Enter to send, Alt+Enter to queue for later" with Alt and ↵ key caps. Pressing it again closes it.
+Observed (2026-11-16): pressing the stack image opens the queue upward: one rounded card per prompt, in the order they will be sent, with the controls staying where they were at the bottom; an empty queue shows "Add" beside Alt and ↵ key caps. Pressing it again closes it.
 
 ### (S) Person --> Edit Queued Prompt
 
