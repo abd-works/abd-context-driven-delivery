@@ -235,6 +235,15 @@ Requested by the person on 2026-11-16.
 *Then* the source view marks lines 538 to 560 as selected  
   *And* a node that covers the whole file marks no lines
 
+#### Scenario: A selected node is marked by one orange line beside its lines
+
+Requested 2026-11-16 by the person: "The selected node on text viewer - make it a single orange range line to the side; no shading of text required." Only the page marks lines: `harness/files_app/app/files/file-marks.spec.ts`.
+
+*Given* ticket.py is open at its first line  
+*When* the Person selects Ticket.close, which covers lines 538 to 560  
+*Then* one orange line runs beside lines 538 to 560, in the margin between the line numbers and the text  
+  *And* the text of lines 538 to 560 is not shaded
+
 ## Story: Open Story Scenarios Across Files
 
 ### Evidence

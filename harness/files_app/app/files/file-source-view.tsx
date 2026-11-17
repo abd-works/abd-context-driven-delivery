@@ -9,6 +9,7 @@ import type { Monaco } from '@monaco-editor/react'
 import { CommentCardView, CommentComposerView } from './comment-box-view'
 import { placeUnder, useAddCommentAction, useAddToContextAction, useFileMarks, useMarkerPresses } from './editor-comments'
 import type { CommentLines, FileCommentsActions } from './file-comments-actions'
+import { selectedMarks } from './file-marks'
 import { keepWrap, storedWrap, type ThemeFailure } from './files-theme'
 import type { FilesFoldKeys } from './files-fold-keys'
 import { calloutsOf, isStoryTest, monacoLanguageOf, rulesOf, sourceOf, violationFocusOf } from './source-of-file'
@@ -16,6 +17,15 @@ import { calloutsOf, isStoryTest, monacoLanguageOf, rulesOf, sourceOf, violation
 // How far down the window the first line asked to show sits once the page scrolls to it: near the top, so it is plain
 // where the page went, with a line or two above it for context.
 const SHOWN_FROM_TOP = 1 / 10
+
+// The nodes selected in the graph view, marked by one orange line beside their lines rather than by shading the text.
+function useSelectedMarks(editor: SourceEditorInstance | null, openAround: SourceLines[], lineCount: number): void {
+  useEffect(() => {
+    if (!editor) return
+    const marks = editor.createDecorationsCollection(selectedMarks(openAround, lineCount))
+    return () => marks.clear()
+  }, [editor, openAround, lineCount])
+}
 
 // The open file in the graph explorer's source view, folding as Monaco folds its language, with the project's fold keys:
 // its broken rules as chips with the chosen one marked, and the comments on it: Add comment and Add to context on the
@@ -74,6 +84,7 @@ export function FileSourceView({
   useAddToContextAction(editor, onAddToContext)
   useFileMarks(editor, file)
   useMarkerPresses(editor, held, open)
+  useSelectedMarks(editor, openAround, source.end_line)
   const firstShown = openAround[0]?.start ?? 0
   useEffect(() => {
     if (!editor || !firstShown) return

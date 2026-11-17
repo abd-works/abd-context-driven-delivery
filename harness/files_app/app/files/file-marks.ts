@@ -2,8 +2,10 @@ import type { editor as monaco } from 'monaco-editor'
 
 import type { FileChangeData, FileCommentData, FileViolationData, SessionFileData } from '@cdd/space/session/session'
 import { SOURCE_MARK } from '@source-view/SourceView'
+import type { SourceLines } from '@source-view/source-folding'
 
 export const COMMENT_MARKER = 'file-comment-marker'
+export const SELECTED_RANGE = 'file-selected-range'
 
 export const STATE_WORDS: Record<FileCommentData['state'], string> = { not_sent: 'not sent', sent: 'sent', processed: 'processed' }
 const CHANGE_WORDS: Record<FileChangeData['kind'], string> = { changed: 'Changed by the chat', added: 'Added by the chat', removed: 'Removed by the chat' }
@@ -39,6 +41,14 @@ function changeMarks(changes: FileChangeData[]): Decoration[] {
     const lines = change.kind === 'removed' ? wholeLines(change.range.start_line, change.range.start_line) : wholeLines(change.range.start_line, change.range.end_line)
     return { range: lines, options: { isWholeLine: true, linesDecorationsClassName: `file-change is-${change.kind}`, hoverMessage: { value: `${CHANGE_WORDS[change.kind]}${removed}` } } }
   })
+}
+
+// The nodes selected in the graph view: one orange line beside each node's lines, in the margin by the line numbers,
+// with the text itself left unshaded. A node that covers the whole file, such as the file's own, marks nothing.
+export function selectedMarks(selected: SourceLines[], lineCount: number): Decoration[] {
+  return selected
+    .filter(lines => lines.start >= 1 && (lines.start > 1 || lines.end < lineCount))
+    .map(lines => ({ range: wholeLines(lines.start, lines.end), options: { isWholeLine: true, linesDecorationsClassName: SELECTED_RANGE } }))
 }
 
 export function marksOf(file: SessionFileData): Decoration[] {

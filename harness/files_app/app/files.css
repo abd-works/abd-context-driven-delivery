@@ -136,6 +136,10 @@ button:disabled { cursor: default; opacity: 0.5; }
 .source-snippet .file-comment-marker.is-processed::after { background: var(--success); }
 .source-snippet .file-violation { background: color-mix(in srgb, var(--error) 8%, transparent); }
 .source-snippet .file-change { width: 3px !important; margin-left: 3px; }
+/* The nodes selected in the graph view: one orange line beside their lines (files/file-marks.ts), the text unshaded,
+   in place of the source view's own shaded selected lines. */
+.file-source .source-snippet .selected-lines { background-color: transparent; box-shadow: none; }
+.source-snippet .file-selected-range { width: 3px !important; margin-left: 0; background: var(--accent); }
 .source-snippet .file-change.is-changed { background: var(--select); }
 .source-snippet .file-change.is-added { background: var(--success); }
 .source-snippet .file-change.is-removed { border-top: 3px solid var(--error); }
