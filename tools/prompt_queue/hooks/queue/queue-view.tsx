@@ -19,6 +19,12 @@ import {
   addStep,
   moveStep,
   removeStep,
+  pointerOf,
+  movePointerUp,
+  movePointerDown,
+  stepPointerOf,
+  moveStepPointerUp,
+  moveStepPointerDown,
   type QueueState,
 } from './prompt-queue'
 import type { PromptStep, QueuedPrompt, SubAgentTask } from '../../types'
@@ -49,6 +55,9 @@ const CARD_BUTTON_COLUMNS = 15
 
 /** The columns kept before a card's text for its task button, 3/3 or +, so every card's text starts in one place. */
 const TASK_BUTTON_COLUMNS = 6
+
+/** The columns kept at a card's and a step's left for the queue's pointer, ▲ and ▼, drawn on the next to do. */
+const POINTER_COLUMNS = 4
 
 /** The mark before a step for where it stands: done, being worked, or not started. */
 const STEP_MARK = { done: '✓', in_progress: '▸', pending: '○' } as const
@@ -125,22 +134,42 @@ function QueueListView($: EngineInterface, e: AbovePromptEvent, state: QueueStat
 function CardsView($: EngineInterface, e: AbovePromptEvent, state: QueueState, prompts: QueuedPrompt[], isInColumn = false) {
   const { Box } = $.ui.resolve(e)
   const all = state.queue.prompts
+  const pointer = pointerOf(prompts)
+  const last = prompts.at(-1)
+  const arrowsOf = (prompt: QueuedPrompt, place: number) => (place === pointer
+    ? PointerView($, e, `pointer-up-${prompt.id}`, `pointer-down-${prompt.id}`, () => movePointerUp($, prompts), () => movePointerDown($, prompts))
+    : PointerView($, e))
 
   return (
     <Box flexDirection="column" rowGap="sm" width="100%">
-      {prompts.map(prompt => (
+      {prompts.map((prompt, place) => (
         <Box key={`card-${prompt.id}`} flexDirection="column">
-          {CardView($, e, state, prompt, all.indexOf(prompt), isInColumn)}
+          {CardView($, e, state, prompt, all.indexOf(prompt), isInColumn, arrowsOf(prompt, place))}
           {state.openSteps.includes(prompt.id) && (prompt.steps ?? []).length > 0 && StepsView($, e, prompt)}
         </Box>
       ))}
+      {last && pointer === prompts.length && PointerView($, e, `pointer-up-after-${last.id}`, '', () => movePointerUp($, prompts))}
+    </Box>
+  )
+}
+
+/** The queue's pointer, ▲ and ▼ in the accent colour at a card's or a step's left: ▲ opens the done one above again so
+ * it runs again, ▼ marks the one pointed at done. Without keys it is the empty room the pointer takes, so every card's
+ * text starts in one place. */
+function PointerView($: EngineInterface, e: AbovePromptEvent, upKey = '', downKey = '', onUp = () => {}, onDown = () => {}) {
+  const { Box, Button, Text } = $.ui.resolve(e)
+
+  return (
+    <Box width={POINTER_COLUMNS} flexShrink={0} flexDirection="row">
+      {upKey !== '' && <Button key={upKey} onPress={onUp}><Text color={LOOK.accent} bold>▲</Text></Button>}
+      {downKey !== '' && <Button key={downKey} onPress={onDown}><Text color={LOOK.accent} bold>▼</Text></Button>}
     </Box>
   )
 }
 
 /** One card. In a robot's narrow queue it shows no buttons of its own; pressing it opens it in place, its buttons on a
  * row beneath it, and pressing it again closes it. */
-function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, prompt: QueuedPrompt, index: number, isInColumn = false) {
+function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, prompt: QueuedPrompt, index: number, isInColumn: boolean, pointer: ReturnType<typeof PointerView>) {
   const { Box, Text, Button } = $.ui.resolve(e)
   const isEditing = prompt.id === state.editingId
   const isWorking = prompt.id === state.workingId
@@ -150,6 +179,7 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
   const isOpened = isInColumn && prompt.id === state.openedId
   const row = (
     <Box key={`card-row-${prompt.id}`} flexDirection="row" justifyContent="space-between" alignItems="center" gap={1} width="100%">
+      {pointer}
       <Box width={TASK_BUTTON_COLUMNS} flexShrink={0}>
         {progress !== ''
           ? <Button key={`steps-${prompt.id}`} label={progress} onPress={() => toggleSteps($, prompt.id)} />
@@ -179,7 +209,7 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
   return (
     <Box key={`card-opened-${prompt.id}`} flexDirection="column" width="100%">
       {row}
-      <Box flexDirection="row" gap={1} paddingLeft={TASK_BUTTON_COLUMNS + 1}>{CardButtonsView($, e, prompt, index)}</Box>
+      <Box flexDirection="row" gap={1} paddingLeft={POINTER_COLUMNS + TASK_BUTTON_COLUMNS + 2}>{CardButtonsView($, e, prompt, index)}</Box>
     </Box>
   )
 }
@@ -252,11 +282,17 @@ const ROBOT_PIXELS = 28
 /** A card's steps under it, in order: done ones ticked and dim, the one being worked marked and bright. */
 function StepsView($: EngineInterface, e: AbovePromptEvent, prompt: QueuedPrompt) {
   const { Box, Button } = $.ui.resolve(e)
+  const steps = prompt.steps ?? []
+  const pointer = stepPointerOf(steps)
+  const up = () => moveStepPointerUp($, prompt)
+  const down = () => moveStepPointerDown($, prompt)
 
   return (
     <Box key={`steps-of-${prompt.id}`} flexDirection="column" paddingLeft={TASK_BUTTON_COLUMNS + 1}>
-      {(prompt.steps ?? []).map((step, index) => StepView($, e, prompt, step, index))}
+      {steps.map((step, index) => StepView($, e, prompt, step, index,
+        index === pointer ? PointerView($, e, `step-pointer-up-${prompt.id}`, `step-pointer-down-${prompt.id}`, up, down) : PointerView($, e)))}
       <Box flexDirection="row">
+        {pointer === steps.length ? PointerView($, e, `step-pointer-up-${prompt.id}`, '', up) : PointerView($, e)}
         <Button key={`add-step-${prompt.id}`} label="+" onPress={() => addStep($, prompt)} />
       </Box>
     </Box>
@@ -264,12 +300,13 @@ function StepsView($: EngineInterface, e: AbovePromptEvent, prompt: QueuedPrompt
 }
 
 /** One task under its card: its mark and text, and, with the pointer on it, ↑ ↓ to move it and ✕ to take it off. */
-function StepView($: EngineInterface, e: AbovePromptEvent, prompt: QueuedPrompt, step: PromptStep, index: number) {
+function StepView($: EngineInterface, e: AbovePromptEvent, prompt: QueuedPrompt, step: PromptStep, index: number, pointer: ReturnType<typeof PointerView>) {
   const { Box, Button, Text } = $.ui.resolve(e)
   const number = index + 1
 
   return (
     <Box key={`step-row-${prompt.id}-${number}`} flexDirection="row" justifyContent="space-between" gap={1}>
+      {pointer}
       <Box flexGrow={1} flexShrink={1} minWidth={0}>
         <Text key={`step-${prompt.id}-${number}`} wrap="wrap" dimColor={step.state === 'done'}
           color={step.state === 'in_progress' ? LOOK.accent : undefined}>

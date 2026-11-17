@@ -75,6 +75,12 @@ function promptQueueTools(prompts: Prompt[]) {
       goal.is_done = false
       return answer()
     },
+    reopen: args => {
+      const prompt = prompts[at(args.prompt)]!
+      prompt.is_done = false
+      if (prompt.steps) prompt.steps = prompt.steps.map(step => ({ ...step, state: 'pending' }))
+      return answer()
+    },
     assign: args => {
       const prompt = prompts[at(args.prompt)]!
       if (String(args.robot).trim()) prompt.robot = String(args.robot).trim()
@@ -374,6 +380,69 @@ test('+ keeps the draft in the prompt box when the model cannot place it', async
   expect([filled, seeded.prompts.length]).toEqual([[], 2])
 })
 
+/** The open queue with prompts, pressing the given keys in turn, each on a fresh mount as the next render draws it. */
+async function pressedQueue($: TestEngine, on: TestOn, prompts: Prompt[], keys: string[], isSubAgentMode = false) {
+  const seeded = seedQueue(on, true, '', prompts)
+  seeded.stored.openSteps = { value: prompts.map(prompt => prompt.id), version: 1 }
+  if (isSubAgentMode) seeded.stored.isSubAgentMode = { value: true, version: 1 }
+  for (const key of keys) {
+    const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+    await ui.press({ key })
+    await ui.unmount()
+  }
+  return seeded
+}
+
+test("the queue's pointer stands on the left of the next card to do, and on no other", async ($, on) => {
+  seedQueue(on, true, '', ONE_DONE)
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+
+  expect([Boolean(await ui.find({ type: 'Button', key: 'pointer-up-b' })), Boolean(await ui.find({ type: 'Button', key: 'pointer-up-a' }))]).toEqual([true, false])
+  await ui.unmount()
+})
+
+test("▲ on the pointer opens the done card above it again, so it runs again", async ($, on) => {
+  const seeded = await pressedQueue($, on, ONE_DONE.map(prompt => ({ ...prompt })), ['pointer-up-b'])
+
+  expect(seeded.prompts[0]!.is_done).toBe(false)
+})
+
+test('▼ on the pointer marks its card done, so play moves past it', async ($, on) => {
+  const seeded = await pressedQueue($, on, ONE_DONE.map(prompt => ({ ...prompt })), ['pointer-down-b'])
+
+  expect(seeded.prompts[1]!.is_done).toBe(true)
+})
+
+test('with every card done, the pointer stands under the last card, and ▲ opens it again', async ($, on) => {
+  const seeded = await pressedQueue($, on, QUEUED.map(prompt => ({ ...prompt, is_done: true })), ['pointer-up-after-b'])
+
+  expect(seeded.prompts.map(prompt => Boolean(prompt.is_done))).toEqual([true, false])
+})
+
+const STEPPED = [{ id: 'a', text: 'Write the scenarios', steps: [{ text: 'Read the epic', state: 'done' }, { text: 'Write them', state: 'in_progress' }] }] as Prompt[]
+
+test("▲ on a card's step pointer opens the done step above it again", async ($, on) => {
+  const seeded = await pressedQueue($, on, STEPPED.map(prompt => ({ ...prompt })), ['step-pointer-up-a'])
+
+  expect(seeded.prompts[0]!.steps!.map(step => step.state)).toEqual(['in_progress', 'pending'])
+})
+
+test("▼ on a card's step pointer marks its step done and points at the next", async ($, on) => {
+  const seeded = await pressedQueue($, on, [{ ...STEPPED[0]!, steps: [...STEPPED[0]!.steps!, { text: 'Validate them', state: 'pending' }] }], ['step-pointer-down-a'])
+
+  expect(seeded.prompts[0]!.steps!.map(step => step.state)).toEqual(['done', 'done', 'in_progress'])
+})
+
+test("in sub-agent mode each robot's queue has its own pointer", async ($, on) => {
+  groupedQueue(on)
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+
+  expect([Boolean(await ui.find({ type: 'Button', key: 'pointer-up-a' })), Boolean(await ui.find({ type: 'Button', key: 'pointer-up-b' }))]).toEqual([true, true])
+  await ui.unmount()
+})
+
 // What a model call cost and where a command ran, which the queue's tests do not read.
 const NO_USAGE = { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 }
 const TERMINAL = { isFullscreen: false, columns: 80 }
@@ -565,8 +634,8 @@ test("a card with steps shows how many are done, and opens them under it", async
 
   expect(progress?.props.label).toBe('1/2')
   expect((await ui.find({ type: 'Button', key: 'steps-b' }))?.props.label).toBe('+')
-  expect((await ui.find({ type: 'Box', key: 'step-row-a-1' }))?.text.startsWith('✓ Read the epic')).toBe(true)
-  expect((await ui.find({ type: 'Box', key: 'step-row-a-2' }))?.text.startsWith('▸ Write the stories')).toBe(true)
+  expect((await ui.find({ type: 'Box', key: 'step-row-a-1' }))?.text.includes('✓ Read the epic')).toBe(true)
+  expect((await ui.find({ type: 'Box', key: 'step-row-a-2' }))?.text.includes('▸ Write the stories')).toBe(true)
   await ui.unmount()
 })
 

@@ -185,6 +185,12 @@ class PromptQueue:
 
     @mcp
     @agent_tool
+    def reopen(self, prompt: str) -> PromptQueue:
+        """Open the done prompt whose id is prompt again so it runs again: it is no longer done, and its steps are not started. The person moves the queue's pointer back onto it to rerun its work."""
+        return self._keep([_reopened(held) if held["id"] == prompt else held for held in self._holding(prompt)])
+
+    @mcp
+    @agent_tool
     def assign(self, prompt: str, robot: str) -> PromptQueue:
         """Give the queued prompt whose id is prompt to the robot named robot, the sub-agent that works it in sub-agent mode: the queue keeps it, so each robot's queue comes back after a reload. An empty robot takes the prompt off its robot."""
         return self._keep([_assigned(held, robot.strip()) if held["id"] == prompt else held for held in self._holding(prompt)])
@@ -276,6 +282,12 @@ class PromptQueue:
         self._file.path.parent.mkdir(parents=True, exist_ok=True)
         self._file.write({**self._held(), "prompts": prompts})
         return self
+
+
+def _reopened(prompt: QueuedPrompt) -> QueuedPrompt:
+    """The prompt not done, each of its steps not started."""
+    steps = {"steps": [{**step, "state": "pending"} for step in prompt["steps"]]} if "steps" in prompt else {}
+    return {**prompt, "is_done": False, **steps}
 
 
 def _assigned(prompt: QueuedPrompt, robot: str) -> QueuedPrompt:

@@ -797,3 +797,54 @@ async function showFailure($: EngineInterface, failed: string, context: string):
 function reasonOf(thrown: unknown): string {
   return thrown instanceof Error ? thrown.message : String(thrown)
 }
+
+/** The queue's pointer in a stack of cards: the place of the next card to do, past the last card when every card is
+ * done. Play takes the card it points at. */
+export function pointerOf(prompts: QueuedPrompt[]): number {
+  const next = prompts.findIndex(prompt => !prompt.is_done && !prompt.text.startsWith(DECISION_FLAG))
+  return next === -1 ? prompts.length : next
+}
+
+/** ▲ on the pointer: the nearest done card above it opens again, its steps not started, so play runs it again. */
+export async function movePointerUp($: EngineInterface, prompts: QueuedPrompt[]): Promise<void> {
+  const above = prompts.slice(0, pointerOf(prompts)).filter(prompt => prompt.is_done).at(-1)
+  if (!above) {
+    return
+  }
+  await changeQueue($, 'reopen', { prompt: above.id })
+  await update($, askedAbout, working => (working === above.id ? '' : working))
+}
+
+/** ▼ on the pointer: the card it points at is marked done, so play moves past it. */
+export async function movePointerDown($: EngineInterface, prompts: QueuedPrompt[]): Promise<void> {
+  const pointed = prompts[pointerOf(prompts)]
+  if (pointed) {
+    await changeQueue($, 'done', { prompt: pointed.id })
+  }
+}
+
+/** A card's step pointer: the place of its first step not done, past the last step when every step is done. */
+export function stepPointerOf(steps: PromptStep[]): number {
+  const next = steps.findIndex(step => step.state !== 'done')
+  return next === -1 ? steps.length : next
+}
+
+/** ▲ on a card's step pointer: the done step above it is worked again, and every step after it is not started. */
+export async function moveStepPointerUp($: EngineInterface, prompt: QueuedPrompt): Promise<void> {
+  const steps = prompt.steps ?? []
+  const above = stepPointerOf(steps) - 1
+  if (above < 0) {
+    return
+  }
+  await changeSteps($, prompt, steps.map((step, place) => (place < above ? step : { ...step, state: place === above ? 'in_progress' : 'pending' })))
+}
+
+/** ▼ on a card's step pointer: its step is done and the next step is the one worked. */
+export async function moveStepPointerDown($: EngineInterface, prompt: QueuedPrompt): Promise<void> {
+  const steps = prompt.steps ?? []
+  const pointed = stepPointerOf(steps)
+  if (pointed >= steps.length) {
+    return
+  }
+  await changeSteps($, prompt, steps.map((step, place) => (place === pointed ? { ...step, state: 'done' } : place === pointed + 1 ? { ...step, state: 'in_progress' } : step)))
+}

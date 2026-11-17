@@ -54,6 +54,13 @@ with describe(PromptQueue):
         self.queue.assign(first, "")
         expect("robot" in self.queue.prompts[0]).to(equal(False))
 
+    with it("reopens a done prompt so it runs again, its steps not started"):
+        first = self.queue.prompts[0]["id"]
+        self.queue.set_steps(first, [{"text": "Write them", "state": "done"}])
+        self.queue.done(first)
+        self.queue.reopen(first)
+        expect((self.queue.prompts[0].get("is_done", False), self.queue.prompts[0]["steps"])).to(equal((False, [{"text": "Write them", "state": "pending"}])))
+
     with it("refuses to mark done a prompt the queue does not hold"):
         expect(lambda: self.queue.done("gone")).to(raise_error(PromptNotQueued))
 
