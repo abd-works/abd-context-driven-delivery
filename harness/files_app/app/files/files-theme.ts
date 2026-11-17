@@ -11,51 +11,98 @@ export type ThemeFailure = (failure: string) => void
 const STORED_THEME = 'files-theme'
 const STORED_WRAP = 'files-wrap-lines'
 
-// The abd.works brand's accent, the bundled brand's (harness/catalog_generator/templates/commons/site.css).
+// The abd.works brand's accent, the bundled brand's (harness/catalog_generator/templates/commons/site.css): the
+// cursor and the current line number, beside the orange line a selected node's lines carry (files.css).
 export const ABD_WORKS_ORANGE = '#E5531A'
 
-// One look of the abd.works brand as the source view draws code: the page behind the text, the text, the quiet
-// colours of line numbers and comments, and the colours its strings, numbers and types take beside the orange.
-type BrandColours = { surface: string; text: string; muted: string; border: string; strings: string; numbers: string; types: string }
+// One of Cursor's default looks as the source view draws code, with Cursor's own values (Cursor's theme-cursor
+// extension, themes/cursor-dark-color-theme.json and cursor-light-color-theme.json): the page behind the text, the
+// text, line numbers, selection, and the colours its comments, keywords, strings, numbers, types and functions take.
+// Folded lines take no tint, as in Cursor.
+type CursorColours = {
+  surface: string
+  text: string
+  lineNumbers: string
+  selection: string
+  inactiveSelection: string
+  lineHighlight: string
+  indentGuide: string
+  comments: string
+  keywords: string
+  strings: string
+  numbers: string
+  types: string
+  functions: string
+}
 
-const EXECUTIVE: BrandColours = { surface: '#FFFFFF', text: '#111113', muted: '#595A61', border: '#DDD8CF', strings: '#0B6E99', numbers: '#B45309', types: '#C64514' }
-const ENGINEERING: BrandColours = { surface: '#111113', text: '#E8E8ED', muted: '#9B9BA8', border: '#2A2A2A', strings: '#4FC3F7', numbers: '#F59E0B', types: '#F2A07A' }
+const CURSOR_LIGHT: CursorColours = {
+  surface: '#FCFCFC',
+  text: '#141414',
+  lineNumbers: '#1414145C',
+  selection: '#14141414',
+  inactiveSelection: '#14141414',
+  lineHighlight: '#EAEAEA',
+  indentGuide: '#14141414',
+  comments: '#14141499',
+  keywords: '#A30034',
+  strings: '#7565CC',
+  numbers: '#92156A',
+  types: '#005293',
+  functions: '#CD4500',
+}
+const CURSOR_DARK: CursorColours = {
+  surface: '#181818',
+  text: '#F0F0F0',
+  lineNumbers: '#F0F0F05C',
+  selection: '#40404099',
+  inactiveSelection: '#40404077',
+  lineHighlight: '#262626',
+  indentGuide: '#F0F0F013',
+  comments: '#F0F0F099',
+  keywords: '#82D2CE',
+  strings: '#E394DC',
+  numbers: '#EBC88D',
+  types: '#EFB080',
+  functions: '#EFB080',
+}
+// No tint behind a folded line.
+const UNTINTED = '#00000000'
 
 const hexOf = (colour: string) => colour.slice(1)
 
-function brandLook(base: 'vs' | 'vs-dark', colours: BrandColours): editor.IStandaloneThemeData {
+function cursorLook(base: 'vs' | 'vs-dark', colours: CursorColours): editor.IStandaloneThemeData {
   return {
     base,
     inherit: true,
     rules: [
-      { token: 'comment', foreground: hexOf(colours.muted), fontStyle: 'italic' },
-      { token: 'keyword', foreground: hexOf(ABD_WORKS_ORANGE) },
+      { token: 'comment', foreground: hexOf(colours.comments), fontStyle: 'italic' },
+      { token: 'keyword', foreground: hexOf(colours.keywords) },
       { token: 'string', foreground: hexOf(colours.strings) },
       { token: 'number', foreground: hexOf(colours.numbers) },
       { token: 'type', foreground: hexOf(colours.types) },
+      { token: 'function', foreground: hexOf(colours.functions) },
     ],
     colors: {
       'editor.background': colours.surface,
       'editor.foreground': colours.text,
       'editorGutter.background': colours.surface,
-      'editorLineNumber.foreground': colours.muted,
+      'editorLineNumber.foreground': colours.lineNumbers,
       'editorLineNumber.activeForeground': ABD_WORKS_ORANGE,
       'editorCursor.foreground': ABD_WORKS_ORANGE,
-      'editor.selectionBackground': `${ABD_WORKS_ORANGE}2E`,
-      'editor.inactiveSelectionBackground': `${ABD_WORKS_ORANGE}1A`,
-      'editor.lineHighlightBorder': colours.border,
-      'editor.foldBackground': `${ABD_WORKS_ORANGE}14`,
-      'editorIndentGuide.background1': colours.border,
-      'editorBracketMatch.border': ABD_WORKS_ORANGE,
+      'editor.selectionBackground': colours.selection,
+      'editor.inactiveSelectionBackground': colours.inactiveSelection,
+      'editor.lineHighlightBackground': colours.lineHighlight,
+      'editor.foldBackground': UNTINTED,
+      'editorIndentGuide.background1': colours.indentGuide,
     },
   }
 }
 
-// Gives the source view the abd.works look. The source view names Monaco's own looks, vs and vs-dark, so the brand's
-// light and dark looks take those names in the Monaco this page loads, which Monaco allows for its built-in looks.
-export function wearBrand(monacoApi: { editor: Pick<typeof editor, 'defineTheme'> }): void {
-  monacoApi.editor.defineTheme('vs', brandLook('vs', EXECUTIVE))
-  monacoApi.editor.defineTheme('vs-dark', brandLook('vs-dark', ENGINEERING))
+// Gives the source view Cursor's default looks. The source view names Monaco's own looks, vs and vs-dark, so Cursor
+// Light and Cursor Dark take those names in the Monaco this page loads, which Monaco allows for its built-in looks.
+export function wearCursorLooks(monacoApi: { editor: Pick<typeof editor, 'defineTheme'> }): void {
+  monacoApi.editor.defineTheme('vs', cursorLook('vs', CURSOR_LIGHT))
+  monacoApi.editor.defineTheme('vs-dark', cursorLook('vs-dark', CURSOR_DARK))
 }
 
 const reasonOf = (failure: unknown): string => (failure instanceof Error ? failure.message : String(failure))
@@ -84,7 +131,7 @@ export function applyTheme(theme: FilesTheme, fail: ThemeFailure): void {
   loader
     .init()
     .then(monaco => {
-      wearBrand(monaco)
+      wearCursorLooks(monaco)
       monaco.editor.setTheme(theme === 'engineering' ? 'vs-dark' : 'vs')
     })
     .catch(failure => fail(`The source view did not change its look: ${reasonOf(failure)}`))

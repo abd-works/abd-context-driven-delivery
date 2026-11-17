@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { editor } from 'monaco-editor'
 
-import { ABD_WORKS_ORANGE, keepWrap, storedWrap, wearBrand } from './files-theme'
+import { ABD_WORKS_ORANGE, keepWrap, storedWrap, wearCursorLooks } from './files-theme'
 
 // The Monaco the page loads, keeping each look it is given by name.
 class FakeMonaco {
@@ -12,37 +12,57 @@ class FakeMonaco {
 
 const tokenColour = (look: editor.IStandaloneThemeData | undefined, token: string) => look?.rules.find(rule => rule.token === token)?.foreground
 
-// The source view in the abd.works look: the brand's executive light look and its engineering dark look, orange its
-// accent in both (harness/catalog_generator/templates/commons/site.css).
-describe('Source view in the abd.works look', () => {
+// The source view in Cursor's default looks, Cursor Dark and Cursor Light (Cursor's theme-cursor extension), so code
+// reads here as it does in Cursor; the only orange is the line beside a selected node's lines (file-marks.spec.ts).
+describe("Source view in Cursor's default looks", () => {
   let monaco: FakeMonaco
 
   beforeEach(() => {
     monaco = new FakeMonaco()
-    wearBrand(monaco)
+    wearCursorLooks(monaco)
   })
 
-  describe('with the dark engineering look', () => {
-    it("should draw the source in abd.works' engineering colours, near-black behind light text", () => {
+  describe('with the dark look', () => {
+    it("should draw the source in Cursor Dark's colours, #181818 behind #F0F0F0 text", () => {
       const look = monaco.looks.get('vs-dark')
-      expect([look?.colors['editor.background'], look?.colors['editor.foreground']]).toEqual(['#111113', '#E8E8ED'])
+      expect([look?.colors['editor.background'], look?.colors['editor.foreground']]).toEqual(['#181818', '#F0F0F0'])
     })
 
-    it('should draw keywords, the cursor and the current line number in abd.works orange', () => {
+    it('should draw the cursor and the current line number in abd.works orange', () => {
       const look = monaco.looks.get('vs-dark')
-      expect([tokenColour(look, 'keyword'), look?.colors['editorCursor.foreground'], look?.colors['editorLineNumber.activeForeground']]).toEqual([ABD_WORKS_ORANGE.slice(1), ABD_WORKS_ORANGE, ABD_WORKS_ORANGE])
+      expect([look?.colors['editorCursor.foreground'], look?.colors['editorLineNumber.activeForeground']]).toEqual([ABD_WORKS_ORANGE, ABD_WORKS_ORANGE])
+    })
+
+    it("should draw keywords, strings and numbers in Cursor Dark's token colours", () => {
+      const look = monaco.looks.get('vs-dark')
+      expect([tokenColour(look, 'keyword'), tokenColour(look, 'string'), tokenColour(look, 'number')]).toEqual(['82D2CE', 'E394DC', 'EBC88D'])
+    })
+
+    it("should draw selected text on Cursor Dark's grey and folded lines untinted, no brown band behind the text", () => {
+      const look = monaco.looks.get('vs-dark')
+      expect([look?.colors['editor.selectionBackground'], look?.colors['editor.foldBackground']]).toEqual(['#40404099', '#00000000'])
     })
   })
 
   describe('with the light look', () => {
-    it("should draw the source in abd.works' executive colours, white behind near-black text", () => {
+    it("should draw the source in Cursor Light's colours, #FCFCFC behind #141414 text", () => {
       const look = monaco.looks.get('vs')
-      expect([look?.colors['editor.background'], look?.colors['editor.foreground']]).toEqual(['#FFFFFF', '#111113'])
+      expect([look?.colors['editor.background'], look?.colors['editor.foreground']]).toEqual(['#FCFCFC', '#141414'])
     })
 
-    it('should draw keywords, the cursor and the current line number in abd.works orange', () => {
+    it('should draw the cursor and the current line number in abd.works orange', () => {
       const look = monaco.looks.get('vs')
-      expect([tokenColour(look, 'keyword'), look?.colors['editorCursor.foreground'], look?.colors['editorLineNumber.activeForeground']]).toEqual([ABD_WORKS_ORANGE.slice(1), ABD_WORKS_ORANGE, ABD_WORKS_ORANGE])
+      expect([look?.colors['editorCursor.foreground'], look?.colors['editorLineNumber.activeForeground']]).toEqual([ABD_WORKS_ORANGE, ABD_WORKS_ORANGE])
+    })
+
+    it("should draw keywords, strings and numbers in Cursor Light's token colours", () => {
+      const look = monaco.looks.get('vs')
+      expect([tokenColour(look, 'keyword'), tokenColour(look, 'string'), tokenColour(look, 'number')]).toEqual(['A30034', '7565CC', '92156A'])
+    })
+
+    it("should draw selected text on Cursor Light's grey and folded lines untinted", () => {
+      const look = monaco.looks.get('vs')
+      expect([look?.colors['editor.selectionBackground'], look?.colors['editor.foldBackground']]).toEqual(['#14141414', '#00000000'])
     })
   })
 })

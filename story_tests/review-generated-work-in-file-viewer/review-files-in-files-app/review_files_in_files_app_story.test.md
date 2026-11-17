@@ -312,15 +312,17 @@ Requested by the person on 2026-11-16.
 *Then* the [source view](../../../harness/graph/app/source/SourceView.tsx) wraps line 14 onto the lines below it, and grows as tall as the wrapped file
 *And* the Files app keeps Wrap lines on for the next file the Person opens
 
-#### Scenario: Show the source view in the abd.works look
+#### Scenario: Show the source view in Cursor's default colours with an orange cursor
 
-Requested 2026-11-16 by the person: "Format the viewer using ABD branding." The brand is the bundled abd-works one (`harness/catalog_generator/templates/commons/site.css`), its executive light look and its engineering dark look, with orange as its accent. Only the page draws it: `harness/files_app/app/files/files-theme.spec.ts`.
+Requested 2026-11-16 by the person: "Format the viewer using ABD branding", then, on seeing it, "ugly", "use default Cursor coloring", and orange only for the selected node's line, the line number and the cursor. The code takes Cursor's default looks, Cursor Dark and Cursor Light (Cursor's theme-cursor extension); abd.works orange (`harness/catalog_generator/templates/commons/site.css`) marks only the cursor, the current line number and the selected node's line. Only the page draws it: `harness/files_app/app/files/files-theme.spec.ts`.
 
-*Given* the Files app shows *order.py* in its dark engineering look
+*Given* the Files app shows *order.py* in its dark look
 *When* the Person views *order.py*
-*Then* the source view draws *order.py* in abd.works' engineering colours, near-black behind light text in JetBrains Mono, its keywords, cursor and current line number in abd.works orange
+*Then* the source view draws *order.py* in Cursor Dark's colours, #181818 behind #F0F0F0 text, its keywords, strings and numbers in Cursor Dark's token colours
+  *And* the cursor and the current line number are abd.works orange
+  *And* selected text sits on Cursor Dark's grey and folded lines carry no tint
 *When* the Person turns the dark look off
-*Then* the source view draws *order.py* in abd.works' executive colours, white behind near-black text, with the same orange accent
+*Then* the source view draws *order.py* in Cursor Light's colours, #FCFCFC behind #141414 text, with the same orange cursor and current line number
 
 #### Scenario: A file from an older server lane opens without callouts
 
