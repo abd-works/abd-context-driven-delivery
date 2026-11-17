@@ -5,6 +5,7 @@ import {
   isQueuedByKey,
   queueFromCommand,
   queueByKey,
+  queueContext,
   refreshQueue,
   finishTurn,
   startTurn,
@@ -40,12 +41,14 @@ export const register: Register = on => {
   })
 
   // The desktop may still submit the draft after the key that queued it; it is queued, so it does not enter now.
+  // Every other prompt carries the queue beside it while the queue plays, so the agent takes its work in order.
   on('prompt.submit', async ($, e, next) => {
-    if (e.origin?.kind === 'plugin' || !(await isQueuedByKey($, e.text))) {
-      return next(e)
+    if (e.origin?.kind !== 'plugin' && (await isQueuedByKey($, e.text))) {
+      return { drop: 'Queued for later' }
     }
+    const queued = e.command ? undefined : await queueContext($)
 
-    return { drop: 'Queued for later' }
+    return next(queued ? { ...e, context: [...(e.context ?? []), queued] } : e)
   })
 
   on('turn.start', async ($, e, next) => {
@@ -56,7 +59,7 @@ export const register: Register = on => {
     return next(e)
   })
 
-  // Playing, the queue sends its next prompt as soon as a main-chat turn finishes, ahead of Claude's own queue.
+  // Playing, a finished main-chat turn asks the agent to take the next prompt, ahead of Claude's own queue.
   on('turn.complete', async ($, e, next) => {
     const result = await next(e)
     if (e.agentId === undefined) {

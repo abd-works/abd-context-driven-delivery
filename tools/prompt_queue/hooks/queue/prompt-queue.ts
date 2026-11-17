@@ -8,6 +8,14 @@ const GROUPING_MODEL = 'sonnet'
 const GROUPING_TOKENS = 4096
 // The cdd plugin declares the server, and Claude Code names a plugin's server plugin:{plugin}:{server}.
 const SERVER = 'plugin:cdd:cdd'
+// What play sends when a turn ends: the queue itself rides beside it, in queueContext.
+const ASK_FOR_NEXT = 'Take the next prompt on the queue.'
+const QUEUE_INSTRUCTIONS = [
+  "This chat's prompt queue: work the person queued for you, in order.",
+  'Finish what you are doing now, then take the first prompt below and do it as if the person had just sent it.',
+  "When it is done, call prompt-queue.done with its id, then take the next, until the queue is empty or the person stops you.",
+  'prompt-queue.show reads the queue again. Mark a prompt done only once its work is done; never take one off that you have not done.',
+].join(' ')
 
 /** The chat's queue as prompt-queue's tools last answered it: the cdd server keeps the queue, so the mod, the agent in
  * the chat and a session starting in it all change the same one, and the mod draws what the server answered. */
@@ -16,7 +24,7 @@ const isExpanded = atom({ plugin: 'prompt-queue', key: 'isExpanded' } as const, 
 const isSubAgentMode = atom({ plugin: 'prompt-queue', key: 'isSubAgentMode' } as const, false)
 const tasks = atom({ plugin: 'prompt-queue', key: 'tasks' } as const, [] as SubAgentTask[])
 const notice = atom({ plugin: 'prompt-queue', key: 'notice' } as const, '')
-/** Playing, each finished turn sends the next prompt; paused, the queue waits. */
+/** Playing, the agent sees the queue and each finished turn asks it to take the next prompt; paused, the queue waits. */
 const isPlaying = atom({ plugin: 'prompt-queue', key: 'isPlaying' } as const, false)
 /** Whether the main chat is in a turn, so play sends at once only when nothing is running. */
 const isTurnRunning = atom({ plugin: 'prompt-queue', key: 'isTurnRunning' } as const, false)
@@ -24,6 +32,8 @@ const isTurnRunning = atom({ plugin: 'prompt-queue', key: 'isTurnRunning' } as c
 const queuedByKey = atom({ plugin: 'prompt-queue', key: 'queuedByKey' } as const, '')
 /** The prompt being edited in the prompt box: it keeps its place, shaded, and the next add puts the draft back there. */
 const editingId = atom({ plugin: 'prompt-queue', key: 'editingId' } as const, '')
+/** The prompt the agent was last asked to take: still first on the queue after that turn, the agent left it, so play pauses. */
+const askedAbout = atom({ plugin: 'prompt-queue', key: 'askedAbout' } as const, '')
 
 export type QueueState = {
   queue: PromptQueue
@@ -170,6 +180,7 @@ export async function toggleSubAgentMode($: EngineInterface): Promise<void> {
 /** The play and pause button: playing starts with the next prompt at once when no turn is running. */
 export async function togglePlaying($: EngineInterface): Promise<void> {
   await update($, isPlaying, playing => !playing)
+  await update($, askedAbout, () => '')
   if ((await read($, isPlaying)) && !(await read($, isTurnRunning))) {
     await sendNext($)
   }
@@ -180,8 +191,8 @@ export async function startTurn($: EngineInterface): Promise<void> {
   await update($, isTurnRunning, () => true)
 }
 
-/** A main-chat turn ended: the queue is read again, since the agent may have queued work in the turn, and, playing,
- * the next prompt goes now, unless the turn was stopped or failed. */
+/** A main-chat turn ended: the queue is read again, since the agent may have queued or finished work in the turn, and,
+ * playing, the agent is asked to take the next prompt, unless the turn was stopped or failed. */
 export async function finishTurn($: EngineInterface, isAnswered: boolean): Promise<void> {
   await update($, isTurnRunning, () => false)
   await refreshQueue($)
@@ -190,33 +201,46 @@ export async function finishTurn($: EngineInterface, isAnswered: boolean): Promi
   }
 }
 
-/** Sends the prompt at the top of the queue as the person's next prompt, passing over one being edited. */
+/** Asks the agent to take the next prompt on the queue: the agent does it and marks it done itself, so nothing leaves
+ * the queue here. A queued slash command, which the agent cannot type, runs as the command and is marked done. When the
+ * agent left the prompt it was last asked about on the queue, play pauses rather than asking again and again. */
 export async function sendNextPrompt($: EngineInterface): Promise<void> {
-  let next: QueuedPrompt | null
-  try {
-    next = await callQueue<QueuedPrompt | null>($, 'take_next', { passing_over: await read($, editingId) })
-  } catch (failure) {
-    await update($, notice, () => `Not sent: ${failure instanceof Error ? failure.message : String(failure)}`)
-    return
-  }
+  const next = await nextToDo($)
   if (!next) {
     return
   }
-  await refreshQueue($)
+  if (next.id === (await read($, askedAbout))) {
+    await update($, isPlaying, () => false)
+    await update($, notice, () => `Paused: the agent left "${next.text}" on the queue. Press play to ask again.`)
+    return
+  }
+  await update($, askedAbout, () => next.id)
   const command = slashCommandOf(next.text)
-  const sent = command ? $.command.run(command) : $.prompt.submit({ text: next.text, asUser: true })
-  sent.catch(failure => putBackUnsent($, next, failure))
+  const sent = command ? $.command.run(command).then(() => changeQueue($, 'done', { prompt: next.id })) : $.prompt.submit({ text: ASK_FOR_NEXT, asUser: true })
+  sent.catch(failure => update($, notice, () => `Not sent: ${failure instanceof Error ? failure.message : String(failure)}`))
 }
 
-/** A prompt the engine would not submit goes back to the top of the queue, and the box says why. */
-async function putBackUnsent($: EngineInterface, unsent: QueuedPrompt, failure: unknown): Promise<void> {
-  if (await changeQueue($, 'add', { text: unsent.text })) {
-    const back = (await read($, queue)).prompts.at(-1)
-    if (back) {
-      await changeQueue($, 'move', { prompt: back.id, to: 0 })
-    }
+/** The prompts the agent is to do, in order: every queued prompt but one the person is editing, which waits in its place. */
+async function promptsToDo($: EngineInterface): Promise<QueuedPrompt[]> {
+  const edited = await read($, editingId)
+  return (await read($, queue)).prompts.filter(prompt => prompt.id !== edited)
+}
+
+async function nextToDo($: EngineInterface): Promise<QueuedPrompt | undefined> {
+  return (await promptsToDo($))[0]
+}
+
+/** What the agent reads beside each prompt while the queue plays: the queue, in order, and how to work through it; none
+ * while paused or empty, so a paused queue never pulls the agent away from what the person asked. */
+export async function queueContext($: EngineInterface): Promise<string | undefined> {
+  if (!(await read($, isPlaying))) {
+    return undefined
   }
-  await update($, notice, () => `Not sent: ${failure instanceof Error ? failure.message : String(failure)}`)
+  const prompts = await promptsToDo($)
+  if (prompts.length === 0) {
+    return undefined
+  }
+  return [QUEUE_INSTRUCTIONS, '', ...prompts.map((prompt, place) => `${place + 1}. [${prompt.id}] ${prompt.text}`)].join('\n')
 }
 
 /** What a finished turn sends: the next prompt, or every task to its own sub-agent. */

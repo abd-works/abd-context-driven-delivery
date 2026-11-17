@@ -46,9 +46,9 @@ class PromptNotQueued(LookupError):
 @language_adapter(language="typescript")
 @agent_toolset
 class PromptQueue:
-    """The prompts one chat has queued, in the order they will be sent. The chat's prompt-queue mod shows it and sends
-    the next one as each turn ends; an agent in the chat queues work on it the same way; switching the chat to a session
-    queues that session's handoff steps on it."""
+    """The prompts one chat has queued, in the order they will be done. The chat's prompt-queue mod draws it and shows
+    it to the agent while it plays; the agent does the prompts in order and marks each one done; an agent in the chat
+    queues work on it the same way; switching the chat to a session queues that session's handoff steps on it."""
 
     def __init__(self, chat: str, file: Path) -> None:
         self._chat = chat
@@ -127,14 +127,9 @@ class PromptQueue:
 
     @mcp
     @agent_tool
-    def take_next(self, passing_over: str = "") -> QueuedPrompt | None:
-        """Take the first prompt off the queue to send it now, as the mod does when a turn ends while the queue plays, passing over the prompt whose id is passing_over, one the person is editing, which waits in its place until it is queued again; none when no prompt may be sent."""
-        held = self.prompts
-        sent = next((item for item in held if item["id"] != passing_over), None)
-        if sent is None:
-            return None
-        self._keep([item for item in held if item is not sent])
-        return sent
+    def done(self, prompt: str) -> PromptQueue:
+        """Take the prompt whose id is prompt off this chat's queue once its work is done. An agent working through the queue does each prompt in order, first to last, and calls this as it finishes each one, so the queue always shows the work still to do."""
+        return self.remove(prompt)
 
     def queue_handoff(self, handoff: Path) -> int:
         """Queue the numbered steps of handoff's Approach for Next Agent, in order, one prompt each, so a chat opening a

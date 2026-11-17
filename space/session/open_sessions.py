@@ -25,8 +25,8 @@ _OUTSIDE_WORKTREE_NOTE = (
 )
 _HANDOFF_QUEUED_NOTE = (
     "**Handoff queued.** The {count} steps of {handoff}'s Approach for Next Agent are on this chat's prompt queue, in "
-    "order: the prompt-queue mod sends the next one as each turn ends while it plays, and prompt-queue.show lists "
-    "them.\n\n"
+    "order: work through them first to last, calling prompt-queue.done with each prompt's id as you finish it; "
+    "prompt-queue.show lists them.\n\n"
 )
 _DEFAULT_ROOTS_NOTE = (
     "**Output roots.** These practices write under their default folders, which nobody has checked: {roots}. Before "

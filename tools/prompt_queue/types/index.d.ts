@@ -1,4 +1,4 @@
-/** One prompt waiting in the queue, sent as if the person typed it, as prompt-queue's tools answer it. */
+/** One prompt waiting in the queue, for the agent to do as if the person typed it, as prompt-queue's tools answer it. */
 export type QueuedPrompt = { id: string; text: string }
 
 /** The chat's queue as prompt-queue's tools answer it, PromptQueueData in the language adapter, its prompts typed: the
@@ -20,6 +20,7 @@ declare module 'claude-code' {
       isPlaying: boolean
       isTurnRunning: boolean
       editingId: string
+      askedAbout: string
     }
   }
 }
