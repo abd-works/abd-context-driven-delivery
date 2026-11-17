@@ -9,7 +9,7 @@
       "specification",
       "implementation"
     ],
-    "version": 18
+    "version": 24
   },
   "practices": {
     "ddd": {
@@ -38,7 +38,9 @@
           "python"
         ],
         "story_map": [
-          "markdown"
+          "markdown",
+          "drawio",
+          "whiteboard"
         ]
       },
       "enabled": true
