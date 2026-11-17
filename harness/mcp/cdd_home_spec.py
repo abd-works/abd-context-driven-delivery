@@ -1,4 +1,5 @@
-"""The Claude Code plugins a cdd home publishes: the cdd plugin, and the board mod from the code the server runs."""
+"""The Claude Code plugins a cdd home publishes: the cdd plugin, and the board and prompt queue mods from the code the
+server runs."""
 
 import json
 import shutil
@@ -17,6 +18,7 @@ from harness.installation.repository_toolsets import RepositoryToolsets
 from harness.mcp.cdd_home import CddHome, RuntimeRecordUnreadable
 
 BOARD_MOD = Path("harness") / "chat-ui" / "pane"
+QUEUE_MOD = Path("tools") / "prompt_queue"
 
 
 def _checkout_with_board_mod(root: Path) -> Path:
@@ -32,6 +34,11 @@ def _checkout_with_board_mod(root: Path) -> Path:
     viewer = root / "checkout" / "tools" / "drawio_viewer"
     viewer.mkdir(parents=True)
     (viewer / "drawio_viewer.py").write_text("# the viewer", encoding="utf-8")
+    queue = root / "checkout" / QUEUE_MOD
+    (queue / ".claude-plugin").mkdir(parents=True)
+    (queue / "hooks").mkdir()
+    (queue / ".claude-plugin" / "plugin.json").write_text(json.dumps({"name": "prompt-queue", "version": "0.1.0", "description": "A prompt queue"}), encoding="utf-8")
+    (queue / "hooks" / "register.tsx").write_text("export default { queue: true }\n", encoding="utf-8")
     return root / "checkout"
 
 
@@ -74,8 +81,17 @@ with description("a cdd home's Claude Code plugins") as self:
             self.home.serve_from(self.checkout)
             self.board = self.home.claude_plugins / "cdd-board"
 
-        with it("should list the board mod beside the cdd plugin"):
-            expect(_plugin_names(self.home)).to(equal(["cdd", "cdd-board"]))
+        with it("should list the board and prompt queue mods beside the cdd plugin"):
+            expect(_plugin_names(self.home)).to(equal(["cdd", "cdd-board", "prompt-queue"]))
+
+        # The prompt queue is a mod beside the chat bar, so every chat gets it from the code the server runs.
+        with it("should publish that checkout's prompt queue mod"):
+            queue = self.home.claude_plugins / "prompt-queue"
+            expect((queue / "hooks" / "register.tsx").read_text(encoding="utf-8")).to(equal("export default { queue: true }\n"))
+
+        with it("should keep the prompt queue's own version as the start of the published one"):
+            manifest = json.loads((self.home.claude_plugins / "prompt-queue" / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+            expect(manifest["version"].startswith("0.1.0-")).to(equal(True))
 
         with it("should publish that checkout's board mod"):
             expect((self.board / "hooks" / "register.ts").read_text(encoding="utf-8")).to(equal("export default {}\n"))

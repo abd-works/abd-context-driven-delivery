@@ -1332,7 +1332,7 @@ The user's cdd folder: which checkout the one server runs, the pinned copy of it
 + server_environment: dict[str, str]
 ----
 + write_claude_plugin(server: dict[str, object]): list[Path]
-+ write_board_plugin(): None
++ write_mod_plugins(): None
 + is_pinned_to(checkout: Path | str): bool
 + install(checkout: Path | str, connect_script: Path | str): None
 + pin(checkout: Path | str): str

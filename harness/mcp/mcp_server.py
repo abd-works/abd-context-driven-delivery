@@ -292,6 +292,7 @@ class McpInstallation(ServerInstallation):
         if self.layout.is_claude_code:
             status["cdd plugin"] = self.claude_plugins.install_cdd()
             status["board"] = self.claude_plugins.install_board()
+            status["prompt queue"] = self.claude_plugins.install_queue()
         return status
 
     def status(self) -> list[str]:
@@ -904,15 +905,15 @@ class McpHost:
             self._checkout_server = self._checkout_server.restarted()
             with self._servers_lock:
                 self._servers = {self._checkout_server.project: self._checkout_server}
-        self._publish_board()
+        self._publish_mods()
         tools = self._checkout_server.tools
         return {"is_restarted": True, "tools": len(tools) + len(self._checkout_server.prompts), "exceptions": self._checkout_server.skipped.as_data}
 
-    def _publish_board(self) -> None:
-        """Publish the chat bar from the code the server now runs, so a chat watching the published copy reloads it
-        with the server's restart rather than at the next install."""
+    def _publish_mods(self) -> None:
+        """Publish the chat bar and the prompt queue from the code the server now runs, so a chat watching the published
+        copy reloads it with the server's restart rather than at the next install."""
         if self._home is not None and self._home.is_installed:
-            self._home.write_board_plugin()
+            self._home.write_mod_plugins()
 
     def diagnose(self) -> dict[str, Any]:
         """What this host publishes: the ping's answer, every tool name, and what start-up skipped."""
