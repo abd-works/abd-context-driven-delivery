@@ -245,18 +245,20 @@ class StoryRecording:
             story_object.name = story_object.recorded_name
             story_object.type = story_object.recorded_type
         node = self.practice.reading.in_graph.add(story_object, node_id, Location(lines.file or ".", lines.start_line, lines.end_line or lines.start_line))
-        self._align(node)
+        self._align(node, story_object)
         return node
 
-    def _align(self, node: Node) -> None:
-        """Move node onto the lines that declare it, since the map read it by a nearby line: a step sits on its label's
-        line; a scenario, story, or background runs to the close of its call; an example sits on its export."""
+    def _align(self, node: Node, story_object: "StoryNode") -> None:
+        """Move node, story_object's node, onto the lines that declare it, since the map read it by a nearby line: a
+        step sits on its label's line; a scenario, story, or background runs to the close of its call; an example sits
+        on its export. Where an example is declared is the story object's to say: the graph may answer with a node it
+        already held, such as one added for its file, which knows nothing of the example."""
         if node.type in {"Step", "Given", "When", "Then"}:
             node.source.align_to_label(node.name)
         elif node.type in {"Scenario", "Story", "Background"}:
             node.source.widen_to_call_close()
-        elif node.type == "Example" and node.declaration is not None:
-            node.source.align_to_declaration(self.practice.reading.in_graph.source_root, *node.declaration)
+        elif node.type == "Example" and story_object.declaration is not None:
+            node.source.align_to_declaration(self.practice.reading.in_graph.source_root, *story_object.declaration)
         elif node.type == "Example":
             node.source.align_to_example_export(self.practice.reading.in_graph.source_root, node.name, self._example_files)
 
