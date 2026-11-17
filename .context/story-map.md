@@ -1040,6 +1040,10 @@ Requested (2026-11-15): the file viewer becomes where the graph is worked too. A
 ### (S) Person --> Edit Prompt Steps
 
 Built (2026-11-17), not seen (the person: "i want to add steps sometimes ... 2/5 click opens + - up down just like queue"): with the pointer on a card, + adds the prompt box's draft as the card's last step, not started, empties the box and opens the steps (`addStep`); with the pointer on an open step, ↑ and ↓ move it one place (`moveStep`) and ✕ takes it off (`removeStep`). Each change gives the prompt its whole list through `prompt-queue.set_steps`; for the prompt being worked the agent's task list then carries on from the changed steps.
+
+### (S:system) Prompt Queue --> Add Interruption To Working Prompt
+
+Built (2026-11-17), not seen (the person: "if its a simple correction or comment in flight pertaining to a current queue then add it to the queues list as a task in process, put a special annotation in front and save that it was a user interruption"): a message the person sends while a turn runs on a queued prompt becomes a step of that prompt, its text starting "[interruption]", instead of a new card (`addInterruption`); the agent is told which prompt it joined and may move it to a card of its own with `prompt-queue.add` when it is separate work. A new task list from the agent keeps interruption steps it does not list (`keptInterruptions`).
 ## (E) Open Files In Files App
 
 ### (S) Person --> [Open Stage Files From Chat Bar](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-open-stage-files-from-chat-bar)

@@ -760,3 +760,40 @@ test("↓ on a step moves it one place down among its prompt's steps", async ($,
 
   expect(seeded.prompts[0]!.steps!.map(step => step.text)).toEqual(['Write the stories', 'Read the epic', 'Validate them'])
 })
+
+
+/** A turn is running on prompt a, the one being worked, when the person sends a message. */
+async function messageSentMidWork($: Parameters<Parameters<typeof test>[1]>[0], on: TestOn, text: string) {
+  const seeded = seedQueue(on, false, '', QUEUED.map(prompt => ({ ...prompt })), true, '', 'a')
+  planToolAnswers(on)
+  on('turn.start', (_, e) => e)
+  const carried: string[] = []
+  on('prompt.submit', (_, e) => {
+    carried.push(...(e.context ?? []))
+    return { text: e.text }
+  })
+  await $.turn.start({ text: 'Take the next prompt on the queue.', turnId: 't1' })
+  await $.prompt.submit({ text, wait: false, origin: { kind: 'composer' } })
+  return { seeded, carried }
+}
+
+test("a message sent while a prompt is worked becomes a step of that prompt, marked as the person's interruption", async ($, on) => {
+  const { seeded } = await messageSentMidWork($, on, 'cut the text with an ellipsis')
+
+  expect(seeded.prompts.map(prompt => prompt.text)).toEqual(['Write the scenarios', 'Run the unit tier'])
+  expect(seeded.prompts[0]!.steps).toEqual([{ text: '[interruption] cut the text with an ellipsis', state: 'pending' }])
+})
+
+test('the agent is told a message sent mid-work joined the prompt it works on', async ($, on) => {
+  const { carried } = await messageSentMidWork($, on, 'cut the text with an ellipsis')
+
+  expect(carried.join()).toContain('step of prompt [a]')
+})
+
+test("the agent's next task list keeps the person's interruption among the prompt's steps", async ($, on) => {
+  const { seeded } = await messageSentMidWork($, on, 'cut the text with an ellipsis')
+
+  await $.tool.call({ tool: PLAN_TOOL, items: PLANNED })
+
+  expect(seeded.prompts[0]!.steps!.map(step => step.text)).toContain('[interruption] cut the text with an ellipsis')
+})

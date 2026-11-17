@@ -25,6 +25,8 @@ const QUEUE_INSTRUCTIONS = [
 const DECISION_FLAG = '[decision required]'
 // How long play waits for the person to answer a question the agent ended its turn with, before it moves on.
 const DECISION_WAIT_MS = 60_000
+// What marks a step that came from a message the person sent while the agent worked.
+const INTERRUPTION_MARK = '[interruption]'
 // Until the mod has seen the agent's task list, the agent keeps a prompt's steps on the queue itself.
 const KEEP_STEPS_YOURSELF = 'Mark each step done with prompt-queue.step_done as you finish it.'
 
@@ -375,7 +377,14 @@ export type SentPrompt = { id: string; note: string }
 /** A prompt the person sent straight to the chat goes on the queue first, as the prompt being worked, so the steps the
  * agent plans for it sit under it; the agent is told its id, to mark it done when it is finished. */
 export async function queueSentPrompt($: EngineInterface, text: string): Promise<SentPrompt | undefined> {
-  if (text.trim() === '' || text.trim() === ASK_FOR_NEXT || !(await changeQueue($, 'add', { text }))) {
+  if (text.trim() === '' || text.trim() === ASK_FOR_NEXT) {
+    return undefined
+  }
+  const interrupted = await interruptedPrompt($)
+  if (interrupted) {
+    return addInterruption($, interrupted, text.trim())
+  }
+  if (!(await changeQueue($, 'add', { text }))) {
     return undefined
   }
   const sent = (await read($, queue)).prompts.at(-1)
@@ -387,11 +396,37 @@ export async function queueSentPrompt($: EngineInterface, text: string): Promise
   return { id: sent.id, note: `This prompt is first on this chat's prompt queue as [${sent.id}]. When its work is done, call prompt-queue.done with that id.` }
 }
 
+/** The prompt a message interrupts: the one being worked while a turn runs, if it is on the queue and not done. */
+async function interruptedPrompt($: EngineInterface): Promise<QueuedPrompt | undefined> {
+  if (!(await read($, isTurnRunning))) {
+    return undefined
+  }
+  const working = await read($, askedAbout)
+  return (await read($, queue)).prompts.find(prompt => prompt.id === working && !prompt.is_done)
+}
+
+/** A message sent mid-work joins the prompt being worked as a step, marked as the person's interruption, and the agent
+ * is told so; it may move it to a card of its own when it is separate work. */
+async function addInterruption($: EngineInterface, prompt: QueuedPrompt, text: string): Promise<SentPrompt> {
+  await changeSteps($, prompt, [...(prompt.steps ?? []), { text: `${INTERRUPTION_MARK} ${text}`, state: 'pending' }])
+  return {
+    id: '',
+    note: `The person sent this while you worked; it is now a step of prompt [${prompt.id}] on the queue, marked ${INTERRUPTION_MARK}. ` +
+      'Fold it into that work, or, if it is separate work, queue it with prompt-queue.add and take the step off.',
+  }
+}
+
 /** One `update_plan` call: the agent's task list follows it and is copied whole onto the prompt being worked. */
 export async function followPlan($: EngineInterface, call: PlanCall): Promise<void> {
   await update($, isPlanSeen, () => true)
-  await update($, plan, steps => nextPlan(steps, call))
+  await update($, plan, steps => keptInterruptions(steps, nextPlan(steps, call)))
   await copyPlanOntoWorkingPrompt($)
+}
+
+/** A new task list keeps the person's interruptions it does not list, so a message sent mid-work is not lost. */
+function keptInterruptions(before: PromptStep[], after: PromptStep[]): PromptStep[] {
+  const listed = new Set(after.map(step => step.text))
+  return [...after, ...before.filter(step => step.text.startsWith(INTERRUPTION_MARK) && !listed.has(step.text))]
 }
 
 /** The agent gave a queued prompt its steps: that is the prompt it took, so it becomes the one being worked, and the
