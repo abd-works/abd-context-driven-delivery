@@ -256,10 +256,11 @@ export async function sendNextPrompt($: EngineInterface): Promise<void> {
   sent.catch(thrown => showFailure($, `Not sent: ${reasonOf(thrown)}`, command ? `Playing the queue, running /${command.command} from it` : 'Playing the queue, asking the agent to take the next prompt'))
 }
 
-/** The prompts the agent is to do, in order: every queued prompt but one the person is editing, which waits in its place. */
+/** The prompts the agent is to do, in order: every queued prompt not done but one the person is editing, which waits in
+ * its place. */
 async function promptsToDo($: EngineInterface): Promise<QueuedPrompt[]> {
   const edited = await read($, editingId)
-  return (await read($, queue)).prompts.filter(prompt => prompt.id !== edited)
+  return (await read($, queue)).prompts.filter(prompt => prompt.id !== edited && !prompt.is_done)
 }
 
 async function nextToDo($: EngineInterface): Promise<QueuedPrompt | undefined> {

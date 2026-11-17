@@ -142,7 +142,7 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
   const isEditing = prompt.id === state.editingId
   const isWorking = prompt.id === state.workingId
   const progress = progressOf(prompt.steps)
-  const isFinished = progress !== '' && (prompt.steps ?? []).every(step => step.state === 'done')
+  const isFinished = Boolean(prompt.is_done)
 
   return (
     <Box key={`card-row-${prompt.id}`} flexDirection="row" justifyContent="space-between" alignItems="center" gap={1} width="100%">

@@ -31,7 +31,7 @@ type TestOn = Parameters<Extract<Parameters<typeof test>[1], (...args: never[]) 
 const CHAT = 'chat-1'
 
 type Step = { text: string; state: 'pending' | 'in_progress' | 'done' }
-type Prompt = { id: string; text: string; steps?: Step[]; attachments?: string[] }
+type Prompt = { id: string; text: string; steps?: Step[]; attachments?: string[]; is_done?: boolean }
 
 /** The cdd server's prompt-queue tools for one chat, in memory: the same operations as tools/prompt_queue's
  * PromptQueue, each answering the queue. */
@@ -60,11 +60,12 @@ function promptQueueTools(prompts: Prompt[]) {
       return answer()
     },
     clear: () => {
-      prompts.splice(0)
+      const unfinished = prompts.filter(prompt => !prompt.is_done)
+      prompts.splice(0, prompts.length, ...(unfinished.length === prompts.length ? [] : unfinished))
       return answer()
     },
     done: args => {
-      prompts.splice(at(args.prompt), 1)
+      prompts[at(args.prompt)]!.is_done = true
       return answer()
     },
     set_steps: args => {
@@ -560,4 +561,49 @@ test('the open queue and each card fill the width of the chat box', async ($, on
   expect((await ui.find({ type: 'Box', key: 'prompt-queue' }))?.props.width).toBe('100%')
   expect((await ui.find({ type: 'Box', key: 'card-row-a' }))?.props.width).toBe('100%')
   await ui.unmount()
+})
+
+
+const ONE_DONE = [
+  { id: 'a', text: 'Write the scenarios', is_done: true },
+  { id: 'b', text: 'Run the unit tier' },
+] as Prompt[]
+
+test('a done prompt keeps its card, drawn dim, so the person sees it finish', async ($, on) => {
+  seedQueue(on, true, '', ONE_DONE)
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+
+  expect((await ui.find({ type: 'Button', key: 'card-text-a' }))?.props.dimColor).toBe(true)
+  expect((await ui.find({ type: 'Button', key: 'card-text-b' }))?.props.dimColor).toBe(false)
+  await ui.unmount()
+})
+
+test('play takes the next prompt not done, passing over done ones', async ($, on) => {
+  seedQueue(on, false, '', ONE_DONE, true, '', 'a')
+  const submitted: string[] = []
+  on('prompt.submit', (_, e) => {
+    submitted.push(e.text)
+    return { text: e.text }
+  })
+  on('turn.complete', () => ({ text: 'Done.' }))
+
+  await $.turn.complete(FINISHED_TURN)
+  await unawaitedWorkSettled()
+
+  expect(submitted).toEqual([ASK_FOR_NEXT])
+})
+
+test('the queue beside a prompt leaves out the prompts already done', async ($, on) => {
+  seedQueue(on, false, '', ONE_DONE, true)
+  const carried: string[] = []
+  on('prompt.submit', (_, e) => {
+    carried.push(...(e.context ?? []))
+    return { text: e.text }
+  })
+
+  await $.prompt.submit({ text: 'Fix the Files app', wait: false, origin: { kind: 'composer' } })
+
+  expect(carried.join()).not.toContain('Write the scenarios')
+  expect(carried.join()).toContain('Run the unit tier')
 })

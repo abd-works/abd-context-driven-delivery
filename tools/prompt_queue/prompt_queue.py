@@ -44,13 +44,15 @@ class PromptStep(TypedDict):
 
 
 class QueuedPrompt(TypedDict):
-    """One prompt on the queue: its own id, which stays when the prompt moves or is edited, its text, and the steps the
-    agent planned for it, none until it plans them."""
+    """One prompt on the queue: its own id, which stays when the prompt moves or is edited, its text, the steps the
+    agent planned for it, none until it plans them, and whether its work is done; a finished prompt stays on the queue,
+    drawn dim, until the queue is cleared."""
 
     id: str
     text: str
     steps: NotRequired[list[PromptStep]]
     attachments: NotRequired[list[str]]
+    is_done: NotRequired[bool]
 
 
 class StepNotPlanned(LookupError):
@@ -152,14 +154,15 @@ class PromptQueue:
     @mcp
     @agent_tool
     def clear(self) -> PromptQueue:
-        """Take every prompt off the queue."""
-        return self._keep([])
+        """Take the finished prompts off the queue, leaving the work still to do; with none finished, take every prompt off."""
+        unfinished = [item for item in self.prompts if not item.get("is_done", False)]
+        return self._keep([] if len(unfinished) == len(self.prompts) else unfinished)
 
     @mcp
     @agent_tool
     def done(self, prompt: str) -> PromptQueue:
-        """Take the prompt whose id is prompt off this chat's queue once its work is done. An agent working through the queue does each prompt in order, first to last, and calls this as it finishes each one, so the queue always shows the work still to do."""
-        return self.remove(prompt)
+        """Mark the prompt whose id is prompt done once its work is done: it stays in its place, drawn dim, so the person sees it finish, and the next prompt not done is the next to do. An agent working through the queue does each prompt in order, first to last, and calls this as it finishes each one."""
+        return self._keep([{**held, "is_done": True} if held["id"] == prompt else held for held in self._holding(prompt)])
 
     @mcp
     @agent_tool

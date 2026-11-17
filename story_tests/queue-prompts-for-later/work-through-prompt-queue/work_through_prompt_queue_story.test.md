@@ -10,7 +10,7 @@ section: body
 ### Domain terms
 
 - ++prompt queue++ — the prompts one chat has queued, in order, kept by the cdd server in that chat's own folder (`tools/prompt_queue/prompt_queue.py`).
-- ++done++ — the agent has finished a prompt's work and taken it off the queue with prompt-queue.done.
+- ++done++ — the agent has finished a prompt's work and marked it with prompt-queue.done; it stays in its place, drawn dim, until the queue is cleared, and play skips it.
 
 ## Story: Queue Prompts Through The Cdd Server
 
@@ -24,7 +24,8 @@ section: body
 
 *Given* the agent's chat queue holds Write the scenarios, then Run the unit tier
 *When* the agent calls prompt-queue.done with the id of Write the scenarios
-*Then* its chat's prompt queue holds only Run the unit tier
+*Then* its chat's prompt queue still holds Write the scenarios, marked done, then Run the unit tier
+*And* clearing the queue takes off Write the scenarios and leaves Run the unit tier
 
 #### Scenario: Keep each chat's queue apart
 
