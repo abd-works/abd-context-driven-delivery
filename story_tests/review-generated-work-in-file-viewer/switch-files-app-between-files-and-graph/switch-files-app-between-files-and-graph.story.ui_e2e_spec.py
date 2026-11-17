@@ -12,8 +12,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from expects import equal, expect
 from mamba import after, before, context, description, it
 
-from files_app_browser import SHOWN_MILLISECONDS, TICKET_CODE, FilesStack, graph_view, line, lines_in_order, open_branches, select, settled, shown_lines
-from space.session.graph_view_examples import CHECKOUT_FLOW
+from files_app_browser import SHOWN_MILLISECONDS, TICKET_CODE, FilesStack, graph_view, line, lines_in_order, mark_on, open_branches, select, settled, shown_lines
+from space.session.graph_view_examples import BOARD_CODE, CHECKOUT_FLOW, STEP_STORY
 
 FIDELITIES = "stories-acceptance-tests,clean-engineering-code"
 GIVEN_STEP_LINES = ['    @s.given("a ticket on the board")', "    def _(world):", "        world.ticket = ticket_on_board(world)"]
@@ -25,6 +25,21 @@ DELETE_LINES = ["        self.close()", "        reread_all(board)", "        Bo
 TICKET_FIRST_LINE = "class Ticket:"
 # Interaction: the operations of the project's class Ticket, as its graph holds them.
 TICKET_OPERATIONS = ["Operation close", "Operation delete"]
+# Interaction: the editor lines of Ticket.delete in ticket.py, 5 to 9, which a selected node's orange line runs beside.
+DELETE_LINE_COUNT = 5
+
+
+def open_files(page) -> list[str]:
+    return page.locator("section.open-file").evaluate_all("files => files.map(file => file.getAttribute('aria-label'))")
+
+
+def heads_expanded(page) -> list[str]:
+    return page.locator(".open-file-head").evaluate_all("heads => heads.map(head => head.getAttribute('aria-expanded'))")
+
+
+def callout_state(page) -> tuple[int, int]:
+    """How many fold-outs are open, and how many closed labels show."""
+    return (page.locator(".callout-block").count(), page.locator(".callout-label").count())
 
 
 with description("Switch Files App Between Files And Graph, in a real browser") as self:
@@ -85,6 +100,112 @@ with description("Switch Files App Between Files And Graph, in a real browser") 
         with it("And the scenario's other step functions stay folded"):
             others = lambda: [shown for shown in shown_lines(self.page) if "world.ticket.delete(world.board)" in shown or "assert ticket_left(world)" in shown]
             expect(settled(others, lambda shown: shown == [])).to(equal([]))
+
+
+with description("Fold Open Files To Selected Nodes and Open Several Files From Graph Nodes, in a real browser, more") as self:
+    with before.all:
+        self.stack = FilesStack()
+
+    with after.all:
+        self.stack.close()
+
+    with context("Story: Fold Open Files To Selected Nodes, Scenario: A code file opens with its classes open and their members folded"):
+        with before.all:
+            self.page = self.stack.open(CHECKOUT_FLOW.name, FIDELITIES)
+            self.page.get_by_role("button", name="List", exact=True).click()
+            self.page.locator(f'button.file-entry[title="{TICKET_CODE}"]').click()
+            line(self.page, "class Ticket:").wait_for(timeout=SHOWN_MILLISECONDS)
+
+        with after.all:
+            self.page.close()
+
+        with it("Then Ticket is unfolded, showing the first lines of its operations"):
+            expect([shown for shown in shown_lines(self.page) if shown.strip().startswith("def ")][:2]).to(equal(["    def close(self) -> None:", "    def delete(self, board: Board) -> None:"]))
+
+        with it("And Ticket.close and Ticket.delete are folded to their first lines"):
+            bodies = lambda: [shown for shown in shown_lines(self.page) if shown in ("        return None", *DELETE_LINES)]
+            expect(settled(bodies, lambda shown: shown == [])).to(equal([]))
+
+    with context("Story: Fold Open Files To Selected Nodes, Scenario: A selected node is marked by one orange line beside its lines"):
+        with before.all:
+            self.page = self.stack.open(CHECKOUT_FLOW.name, FIDELITIES)
+            graph_view(self.page)
+            open_branches(self.page, "clean_engineering", "kanban", "Ticket")
+            select(self.page, "Operation delete")
+            self.page.locator(".file-selected-range").first.wait_for(timeout=SHOWN_MILLISECONDS)
+
+        with after.all:
+            self.page.close()
+
+        with it("Then one orange line runs beside the lines of Ticket.delete, in the margin between the line numbers and the text"):
+            lefts = self.page.locator(".file-selected-range").evaluate_all("marks => marks.map(mark => Math.round(mark.getBoundingClientRect().left))")
+            expect((len(lefts), len(set(lefts)))).to(equal((DELETE_LINE_COUNT, 1)))
+
+        with it("And the text of those lines is not shaded"):
+            expect(self.page.locator(".view-overlays .file-selected-range").count()).to(equal(0))
+
+    with context("Story: Open Several Files From Graph Nodes, Scenario: Selecting a scenario opens only its own lines, not the examples module its example comes from"):
+        with before.all:
+            self.page = self.stack.open(CHECKOUT_FLOW.name, FIDELITIES)
+            graph_view(self.page)
+            open_branches(self.page, "stories", "Manage Tickets", "Remove Tickets", "Delete Ticket", "Delete Ticket")
+            select(self.page, "Scenario a ticket on the board is deleted")
+            self.page.locator("section.open-file").first.wait_for(timeout=SHOWN_MILLISECONDS)
+
+        with after.all:
+            self.page.close()
+
+        with it("Then only the story test opens"):
+            expect(settled(lambda: open_files(self.page), lambda shown: shown == [STEP_STORY])).to(equal([STEP_STORY]))
+
+    with context("Story: Open Several Files From Graph Nodes, Scenario: Collapse one open file, then every open file"):
+        with before.all:
+            self.page = self.stack.open(CHECKOUT_FLOW.name, FIDELITIES)
+            graph_view(self.page)
+            open_branches(self.page, "clean_engineering", "kanban", "Ticket", "Board")
+            select(self.page, "Operation delete")
+            self.page.locator('button.graph-node[title="Operation reread"]').first.click(modifiers=["Control"])
+            self.page.locator(f'section.open-file[aria-label="{BOARD_CODE}"]').wait_for(timeout=SHOWN_MILLISECONDS)
+
+        with after.all:
+            self.page.close()
+
+        with it("Then board.py shows only its name once the Person collapses it, and ticket.py stays whole"):
+            self.page.get_by_title(f"Collapse {BOARD_CODE} to its name").click()
+            expect(settled(lambda: heads_expanded(self.page), lambda shown: shown == ["true", "false"])).to(equal(["true", "false"]))
+
+        with it("And every open file shows only its name once the Person presses Collapse all"):
+            self.page.get_by_role("button", name="Collapse all").click()
+            expect(settled(lambda: heads_expanded(self.page), lambda shown: shown == ["false", "false"])).to(equal(["false", "false"]))
+
+        with it("And every open file shows whole again once the Person presses Expand all"):
+            self.page.get_by_role("button", name="Expand all").click()
+            expect(settled(lambda: heads_expanded(self.page), lambda shown: shown == ["true", "true"])).to(equal(["true", "true"]))
+
+    # The seed's checkout-flow has no story map, so the callout here is a call's, which the same mark opens and closes; a
+    # call carries no label, so the label hidden and brought back is left to the Graph app's own spec (harness/graph/app/app.test.tsx).
+    with context("Story: Open Linked Sections In Place, Scenario: A callout opens and closes from its mark beside the line"):
+        with before.all:
+            self.page = self.stack.open(CHECKOUT_FLOW.name, FIDELITIES)
+            graph_view(self.page)
+            open_branches(self.page, "clean_engineering", "kanban", "Ticket")
+            select(self.page, "Operation delete")
+            line(self.page, "self.close()").wait_for(timeout=SHOWN_MILLISECONDS)
+            self.page.locator(".callout-mark").first.wait_for(timeout=SHOWN_MILLISECONDS)
+            self.closed = callout_state(self.page)
+            mark_on(self.page, "self.close()").click()
+            self.opened = settled(lambda: callout_state(self.page), lambda shown: shown[0] == 1)
+            mark_on(self.page, "self.close()").click()
+            self.closed_again = settled(lambda: callout_state(self.page), lambda shown: shown == self.closed)
+
+        with after.all:
+            self.page.close()
+
+        with it("Then the call's lines show under it"):
+            expect(self.opened[0]).to(equal(1))
+
+        with it("And a second press closes them again"):
+            expect(self.closed_again).to(equal(self.closed))
 
 
 with description("Switch Files App Between Files And Graph, in a real browser, opened on another project") as self:

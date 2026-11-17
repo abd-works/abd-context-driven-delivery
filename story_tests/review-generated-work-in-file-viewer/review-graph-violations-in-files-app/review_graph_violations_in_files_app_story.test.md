@@ -52,7 +52,8 @@ section: body
 
 *Given* the Files app shows checkout-flow's graph with Stories and Clean Engineering on  
 *When* the Person turns on Violations  
-*Then* the graph view holds only the nodes of Process Ticket Archive name, Handle Ticket Deletion name and Activate Ticket name
+*Then* the graph view holds only the nodes of Process Ticket Archive name, Handle Ticket Deletion name and Activate Ticket name  
+  *And* each of them lists only the rules it breaks
 
 #### Scenario: Choosing a rule keeps only the nodes that break it
 

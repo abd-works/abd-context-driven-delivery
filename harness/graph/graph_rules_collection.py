@@ -12,7 +12,7 @@ from harness.graph.violation import NodeViolation, Violation
 from harness.installation.data_class import data_field
 
 if TYPE_CHECKING:
-    from harness.graph.graph import Node
+    from harness.graph.graph import Filter, Node
     from harness.graph.rule_context import RuleCheckContext
 
 
@@ -99,9 +99,11 @@ class GraphRule(Rule):
 class GraphRulesCollection(RulesCollection):
     """Schema rules for one node. Violations live on each GraphRule entry."""
 
-    def __init__(self, node: Node, entries: dict[str, GraphRule] | None = None) -> None:
+    def __init__(self, node: Node, entries: dict[str, GraphRule] | None = None, kept: list[GraphRule] | None = None) -> None:
         super().__init__(entries)
         self.node = node
+        # The rules a node filter kept under the node, when one did; otherwise the graph's own filter decides.
+        self._kept = kept
 
     @classmethod
     def from_node(cls, node: Node) -> GraphRulesCollection:
@@ -134,11 +136,19 @@ class GraphRulesCollection(RulesCollection):
 
     @property
     def shown(self) -> list[GraphRule]:
-        """Every rule, or only the violating ones of the chosen rules when the graph's filter asks for violations."""
+        """Every rule, or only the violating ones of the chosen rules when the graph's filter, or the node filter that
+        kept these rules, asks for violations."""
+        if self._kept is not None:
+            return list(self._kept)
         graph = self.node.graph
         if graph is None:
             return self.chosen(False, [])
         return self.chosen(graph.explorer.filter.violations, list(graph.explorer.filter.rules))
+
+    def kept_by(self, wanted: Filter) -> GraphRulesCollection:
+        """These rules as the node filter wanted shows them under a node it keeps: only the broken ones of its chosen
+        rules when it asks for violations, so the rules a person opens say why the node was kept."""
+        return GraphRulesCollection(self.node, self.entries, self.chosen(wanted.violations, list(wanted.rules)))
 
     def chosen(self, violations_only: bool, selected: list[str]) -> list[GraphRule]:
         """Every rule; with violations_only, the violating ones, and of those only the selected slugs when any are."""

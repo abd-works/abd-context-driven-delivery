@@ -6,6 +6,7 @@ import { createElement } from 'react'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import type { CddApi } from '@cdd/cdd-shared'
+import type { GraphRuleData, ViolationData } from '@cdd/harness/graph/graph'
 import type { ExplorerEntryData, GuidanceSelectionData } from '@cdd/space/session/session'
 
 import { NodeFilterLists } from '@graph-app/filter/FilterView'
@@ -41,7 +42,14 @@ const BROKEN_RULE = { range: { path: TICKET_CODE, start_line: 460, end_line: 465
 
 // Seed: checkout-flow's nodes, each in its file at its lines, under its practice's root.
 // A node shown under a connector, such as the operation a step invokes, is its own node shown there: shows names it.
-type SeedNode = { id: string; name: string; type: string; file: string; start: number; end: number; parent: string; shows?: string }
+type SeedNode = { id: string; name: string; type: string; file: string; start: number; end: number; parent: string; shows?: string; rules?: GraphRuleData[] }
+
+// Seed: a rule a node carries, as the graph answers it in the node's rules group.
+const ruleOf = (name: string, status: string, violations: ViolationData[] = []): GraphRuleData => ({ slug: name, body: '', type: 'Rule', name, node_id: `ticket-activate:rules:${name}`, children: [], status, violations })
+// Seed: Ticket.activate breaks keep-operations-small-focused on lines 460 to 465, passes use-intention-revealing-names,
+// and leaves hide-inner-details to the agent's judgement.
+const ACTIVATE_TOO_LONG: ViolationData = { rule: 'keep-operations-small-focused', practice: 'clean_engineering', node_id: 'ticket-activate', subject: 'activate', location: TICKET_CODE, line: 460, end_line: 465, message: 'activate runs 24 statements', severity: 'error', source: [] }
+const ACTIVATE_RULES = [ruleOf('keep-operations-small-focused', 'violating', [ACTIVATE_TOO_LONG]), ruleOf('use-intention-revealing-names', 'passing'), ruleOf('hide-inner-details', 'prompt')]
 const CHECKOUT_FLOW_NODES: SeedNode[] = [
   { id: 'stories', name: 'Stories', type: 'Practice', file: '', start: 0, end: 0, parent: '' },
   { id: 'delete-ticket', name: 'Delete Ticket', type: 'Story', file: STORY_MAP, start: 315, end: 319, parent: 'stories' },
@@ -51,7 +59,7 @@ const CHECKOUT_FLOW_NODES: SeedNode[] = [
   { id: 'delete-ticket-when-invokes-close', name: 'close', type: 'Operation', file: TICKET_CODE, start: 538, end: 555, parent: 'delete-ticket-when-invokes', shows: 'ticket-close' },
   { id: 'clean_engineering', name: 'Clean Engineering', type: 'Practice', file: '', start: 0, end: 0, parent: '' },
   { id: 'ticket', name: 'Ticket', type: 'OoadClass', file: TICKET_CODE, start: 106, end: 670, parent: 'clean_engineering' },
-  { id: 'ticket-activate', name: 'activate', type: 'Operation', file: TICKET_CODE, start: 460, end: 465, parent: 'ticket' },
+  { id: 'ticket-activate', name: 'activate', type: 'Operation', file: TICKET_CODE, start: 460, end: 465, parent: 'ticket', rules: ACTIVATE_RULES },
   { id: 'ticket-close', name: 'close', type: 'Operation', file: TICKET_CODE, start: 538, end: 555, parent: 'ticket' },
   { id: 'board', name: 'Board', type: 'OoadClass', file: BOARD_CODE, start: 104, end: 397, parent: 'clean_engineering' },
   { id: 'board-reread', name: 'reread', type: 'Operation', file: BOARD_CODE, start: 286, end: 289, parent: 'board' },
@@ -144,8 +152,10 @@ class FakeFilesServer implements CddApi {
   private entry(node: SeedNode, paths: string[], isOpened: boolean): ExplorerEntryData {
     const below = CHECKOUT_FLOW_NODES.filter(child => child.parent === node.id && this.holds(child, paths))
     const node_id = node.shows ?? node.id
-    if (!isOpened) return { node_id, name: node.name, type: node.type, children: [], children_left_out: below.length }
-    return { node_id, name: node.name, type: node.type, children: below.map(child => this.entry(child, paths, false)), children_left_out: 0 }
+    // Every entry keeps its rules, open or closed, in a rules group the graph puts first.
+    const rules = node.rules ? [{ type: 'rules', name: 'rules', node_id: `${node_id}:rules`, children: node.rules }] : []
+    if (!isOpened) return { node_id, name: node.name, type: node.type, children: rules as never[], children_left_out: below.length }
+    return { node_id, name: node.name, type: node.type, children: [...rules, ...below.map(child => this.entry(child, paths, false))] as never[], children_left_out: 0 }
   }
 
   private trees(paths: string[]): ExplorerEntryData[] {
@@ -555,6 +565,20 @@ describe('Show A Graph Read That Failed', () => {
       expect([page.state.graph.trees, page.state.graph.isReading, page.state.graph.problem]).toEqual([[], false, expect.stringContaining(LANE_FAILURE)])
     })
 
+    it('should copy the failure for the chat when the Person presses Copy for AI', async () => {
+      const server = new FakeFilesServer()
+      server.treesAnswer = LANE_FAILURE
+      const { page, stop } = await showingGraph(server)
+      stop()
+      const copied: string[] = []
+      Object.defineProperty(navigator, 'clipboard', { value: { writeText: async (text: string) => void copied.push(text) }, configurable: true })
+      const view = render(createElement(FilesGraphView, { page }))
+      fireEvent.click(view.getByRole('button', { name: 'Copy for AI' }))
+      await settled()
+      view.unmount()
+      expect(copied).toEqual([page.state.graph.problem])
+    })
+
     it('should name session.graph_trees in the failure when it answers an error', async () => {
       const server = new FakeFilesServer()
       server.treesAnswer = { error: LANE_FAILURE }
@@ -680,6 +704,67 @@ describe('Go To A Fold-out File', () => {
       await settled()
       stop()
       expect([page.state.openPath, page.selectedLinesIn(STORY_MAP)]).toEqual([STORY_MAP, [{ start: 315, end: 319 }]])
+    })
+  })
+})
+
+describe('See Rules Under Node', () => {
+  describe("with Ticket open in checkout-flow's graph", () => {
+    async function ticketOpen() {
+      const shown = await showingGraph()
+      await shown.page.graph.toggle(entryNamed(shown.page, 'Clean Engineering'))
+      await shown.page.graph.toggle(entryNamed(shown.page, 'Ticket'))
+      shown.stop()
+      return shown
+    }
+    const rulesView = (page: FilesPage) => render(createElement(FilesGraphView, { page }))
+
+    it("should offer to open activate, which holds nothing below it but its rules", async () => {
+      const { page } = await ticketOpen()
+      const view = rulesView(page)
+      expect(view.queryByRole('button', { name: 'Open activate' })).not.toBeNull()
+      view.unmount()
+    })
+
+    it('should list the passing, broken and prompt rules of activate once the Person opens them', async () => {
+      const { page } = await ticketOpen()
+      const view = rulesView(page)
+      fireEvent.click(view.getByRole('button', { name: 'Open activate' }))
+      fireEvent.click(view.getByRole('button', { name: 'Open rules' }))
+      const shown = view.getAllByTitle(/^Rule /).map(rule => [rule.querySelector('.node-name')?.textContent, rule.className.includes('violating') ? 'violating' : rule.className.includes('passing') ? 'passing' : 'prompt'])
+      expect(shown).toEqual([['keep-operations-small-focused', 'violating'], ['use-intention-revealing-names', 'passing'], ['hide-inner-details', 'prompt']])
+      view.unmount()
+    })
+
+    it('should mark activate in the tree as breaking a rule, and close as not', async () => {
+      const { page } = await ticketOpen()
+      const view = rulesView(page)
+      const marked = view.getAllByTitle(/^Operation /).map(node => [node.querySelector('.node-name')?.textContent, node.className.includes('tree-violating')])
+      expect(marked).toEqual([['activate', true], ['close', false]])
+      view.unmount()
+    })
+
+    it("should show the broken rule's message when the Person hovers over it", async () => {
+      const { page } = await ticketOpen()
+      const view = rulesView(page)
+      fireEvent.click(view.getByRole('button', { name: 'Open activate' }))
+      fireEvent.click(view.getByRole('button', { name: 'Open rules' }))
+      expect(view.getByTitle(/^Rule keep-operations-small-focused/).getAttribute('title')).toBe('Rule keep-operations-small-focused: activate runs 24 statements')
+      view.unmount()
+    })
+  })
+})
+
+describe('Open Violation In Files App Source', () => {
+  describe("with activate's rules open in checkout-flow's graph", () => {
+    it('should open ticket.py at lines 460 to 465 when the Person selects the broken rule', async () => {
+      const { page, stop } = await showingGraph()
+      await page.graph.toggle(entryNamed(page, 'Clean Engineering'))
+      await page.graph.toggle(entryNamed(page, 'Ticket'))
+      await page.graph.selectRule(entryNamed(page, 'activate'), ACTIVATE_RULES[0]!)
+      await settled()
+      stop()
+      expect([page.state.openPath, page.selectedLinesIn(TICKET_CODE)]).toEqual([TICKET_CODE, [{ start: 460, end: 465 }]])
     })
   })
 })

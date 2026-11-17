@@ -18,6 +18,7 @@ from space.session.graph_view_rule_examples import (
     LISTED_WITH_TICKET,
     VERB_NOUN_FORMAT,
     VIOLATIONS,
+    entries_in,
     names_of,
     seed_checkout_flow_with_violating_stories,
     seed_checkout_flow_with_violations_in_two_practices,
@@ -44,6 +45,12 @@ def _(s):
     @s.then("the graph view holds only the nodes of Process Ticket Archive name, Handle Ticket Deletion name and Activate Ticket name")
     def _(world):
         expect(world.violating).to(equal({"Story": {"Process Ticket Archive", "Handle Ticket Deletion"}, "Parameter": {"x"}}))
+
+    @s.and_("each of them lists only the rules it breaks")
+    def _(world):
+        kept = [entry for entry in entries_in(world, LISTED_WITH_TICKET, VIOLATIONS) if entry["type"] in ("Story", "Parameter")]
+        statuses = {rule["status"] for entry in kept for rules in entry["children"] if rules.get("type") == "rules" for rule in rules["children"]}
+        expect(statuses).to(equal({"violating"}))
 
 
 @shared_stories.scenario("Show Only Violating Nodes In Files App", "Choosing a rule keeps only the nodes that break it")
