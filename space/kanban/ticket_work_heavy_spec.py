@@ -33,6 +33,8 @@ TOOLSETS = (
     "space.repo.repo:Repo",
     # The board lists every practice's fidelities; importing one practice registers them all.
     "cdd_guidance.practices.stories.stories:Stories",
+    # A stage's steps are the actions registered for it; importing one action registers them all.
+    "cdd_guidance.actions.generate.generate:Generate",
 )
 CALL_SECONDS = 180
 # A process id no running Claude Code has, for a chat process this spec writes the session file of.
