@@ -17,16 +17,18 @@ const byName = (one: string, other: string): number => one.localeCompare(other, 
 
 const emptyFolder = (path: string): FileFolder => ({ path, name: nameOf(path), folders: [], files: [] })
 
-// A file that stands for something published in Claude, which pressing it opens instead of the file: a design canvas
-// version's `canvas.json` its canvas. Named as the person knows it, kept in the folder
+// A file that stands for something published in Claude, which pressing it opens instead of the file: a `.whiteboard`
+// file its board, and a design canvas version's `canvas.json` its canvas. Named as the person knows it, kept in the folder
 // it lives in, and at the link the session answers for it, none while it is not published yet.
-export type PublishedFile = { kind: 'design canvas'; name: string; folder: string; link: string }
+export type PublishedFile = { kind: 'whiteboard' | 'design canvas'; name: string; folder: string; link: string }
 
+const WHITEBOARD_SUFFIX = '.whiteboard'
 // A design canvas version as the UX mockup writes it: `<design-canvas>/version-N/project/canvas.json`, its versions'
 // links kept in `<design-canvas>/versions.json` (harness/design_canvas/versions.py).
 const CANVAS_VERSION = /^(?:(.*)\/)?design-canvas\/([^/]+)\/project\/canvas\.json$/
 
 export function publishedOf(entry: FileEntryData): PublishedFile | null {
+  if (entry.path.endsWith(WHITEBOARD_SUFFIX)) return { kind: 'whiteboard', name: nameOf(entry.path).slice(0, -WHITEBOARD_SUFFIX.length), folder: folderOf(entry.path), link: entry.link }
   const canvas = CANVAS_VERSION.exec(entry.path)
   if (canvas) return { kind: 'design canvas', name: canvas[2] ?? '', folder: canvas[1] ? `${canvas[1]}/design-canvas` : 'design-canvas', link: entry.link }
   if (entry.link) return { kind: 'design canvas', name: nameOf(entry.path), folder: folderOf(entry.path), link: entry.link }

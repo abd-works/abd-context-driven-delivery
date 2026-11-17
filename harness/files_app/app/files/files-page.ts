@@ -3,7 +3,7 @@ import { TicketClientGenerated } from '@cdd/space/kanban/ticket'
 import { SessionClientGenerated, type FileEntryData, type GuidanceSelectionData, type SessionFileData } from '@cdd/space/session/session'
 
 import { ChatContext } from './chat-context'
-import { FileBar } from './file-bar'
+import { FileBar, publishedOf } from './file-bar'
 import { FileBrowser } from './file-browser'
 import { FileCommentsActions } from './file-comments-actions'
 import { FileMenu } from './file-menu'
@@ -146,7 +146,7 @@ export class FilesPage {
       const byFidelity = await this.filesByFidelity(this.listed)
       this.store.change(state => ({ byFidelity, isListing: false, entries: this.shownFrom({ ...state, byFidelity }) }))
       const entries = this.state.entries
-      const first = this.link.file || entries.find(entry => entry.exists && !isDrawio(entry.path))?.path || ''
+      const first = this.link.file || entries.find(entry => entry.exists && !isDrawio(entry.path) && !publishedOf(entry))?.path || ''
       if (first) await this.open(first)
     } catch (failure) {
       this.store.change(() => ({ isListing: false, problem: `The files did not list: ${reasonOf(failure)}` }))
