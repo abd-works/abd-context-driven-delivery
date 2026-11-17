@@ -79,7 +79,6 @@ Each term links to its class in the model, [editor-apps-model.md](../../../harne
 | violation | rule | file | lines | story |
 | --- | --- | --- | --- | --- |
 | ++Ticket Archive name++ | verb-noun-format | .context/story-map.md | 86 to 88 | Ticket Archive |
-| ++Move Ticket size++ | right-size-story-nodes | .context/story-map.md | 148 to 150 | Move Ticket |
 
 ## Story: Open Story UI Side Panel From Chat Bar
 
@@ -437,5 +436,4 @@ Deferred (still Intended on the map, 2026-11-06): the story explorer opening bel
 | violation | file | lines | story |
 | --- | --- | --- | --- |
 | Ticket Archive name | .context/story-map.md | 86 to 88 | Ticket Archive |
-| Move Ticket size | .context/story-map.md | 148 to 150 | Move Ticket |
 | Activate Ticket name | space/kanban/ticket.py | 212 to 213 | Activate Ticket |

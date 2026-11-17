@@ -24,7 +24,6 @@ section: body
 | --- | --- | --- | --- | --- |
 | ++Ticket Archive name++ | Stories | verb-noun-format | .context/story-map.md | 86 to 88 |
 | ++Delete Ticket name++ | Stories | verb-noun-format | .context/story-map.md | 90 to 92 |
-| ++Move Ticket size++ | Stories | right-size-story-nodes | .context/story-map.md | 148 to 150 |
 | ++Ticket details budget++ | UX | screen-story-budget | harness/.context/information-architecture.drawio | 8 to 10 |
 | ++Activate Ticket name++ | Clean Engineering | use-intention-revealing-names | space/kanban/ticket.py | 212 to 213 |
 
@@ -43,7 +42,7 @@ section: body
   *But* no change has been generated yet  
 *When* the Person generates checkout-flow's files  
 *Then* the graph reloads from the changed files  
-  *And* the band says the latest graph holds 5 violations
+  *And* the band says the latest graph holds 4 violations
 
 #### Scenario: Generate with no practice picked is refused
 
@@ -113,7 +112,7 @@ section: body
 
 #### Scenario: Fix with nothing picked fixes every violation
 
-*Given* checkout-flow's latest graph holds the 5 ++checkout-flow violations++  
+*Given* checkout-flow's latest graph holds the 4 ++checkout-flow violations++  
   *And* fix is the band's action  
 *When* the Person runs fix  
 *Then* `/actions-fix` runs on every violation  
@@ -121,7 +120,7 @@ section: body
 
 #### Scenario Outline: Fix runs on the scope the Person picks
 
-*Given* checkout-flow's latest graph holds the 5 ++checkout-flow violations++  
+*Given* checkout-flow's latest graph holds the 4 ++checkout-flow violations++  
 *When* the Person fixes ${scope}  
 *Then* `/actions-fix` runs on ${fixed}  
   *And* ${left} violations stay on the latest graph
@@ -130,9 +129,8 @@ section: body
 
 | scope | fixed | left |
 | --- | --- | --- |
-| the rule verb-noun-format | Ticket Archive name and Delete Ticket name | 3 |
-| the file space/kanban/ticket.py | Activate Ticket name | 4 |
-| the Move Ticket size violation | Move Ticket size | 4 |
+| the rule verb-noun-format | Ticket Archive name and Delete Ticket name | 2 |
+| the file space/kanban/ticket.py | Activate Ticket name | 3 |
 
 #### Scenario: Fix with no violations does nothing
 
