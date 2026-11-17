@@ -45,10 +45,22 @@ class ProposedRoots:
     def holding(self, files: Iterable[Path]) -> list[str]:
         """The narrowest folder holding the piece of each of files this fidelity writes, each once; none for a file it
         does not write."""
-        practice = self._output.fidelity.practice_guidance
-        claimed = (file for file in files if practice is None or practice.claims(Path(file)))
+        claimed = (file for file in files if self._is_own(Path(file)))
         folders = (self._piece_folder(self._session.repo.path_from_top(file)) for file in claimed)
         return sorted({folder for folder in folders if folder is not None})
+
+    def _is_own(self, file: Path) -> bool:
+        """Whether file is a piece of this fidelity's: one its practice claims, and, for a practice that claims all code,
+        one no other practice the session works on claims as its narrower piece, such as DDD an aggregate's code."""
+        practice = self._output.fidelity.practice_guidance
+        if practice is None:
+            return True
+        if not practice.claims(file):
+            return False
+        if practice.claims_some_code:
+            return True
+        narrower = (output.guidance for output in self._session.own_practices.values() if output.enabled and output.guidance is not practice)
+        return not any(other.claims_some_code and other.claims(file) for other in narrower)
 
     def named(self, names: list[str]) -> list[str]:
         """The folders of the pieces this fidelity holds in the project whose own name holds one of names, as text
