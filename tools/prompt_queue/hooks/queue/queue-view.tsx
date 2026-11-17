@@ -43,6 +43,12 @@ const ADD_COLUMNS = 3
 
 /** The columns kept at a card's right for its send, edit, move and remove buttons, shown when the pointer is on the card. */
 const CARD_BUTTON_COLUMNS = 15
+/** The columns around a card's text: the queue box's border and padding, the button's rounded ends, and the gaps. */
+const CARD_CHROME_COLUMNS = 10
+/** The columns of a button's rounded ends and padding, around its label. */
+const BUTTON_END_COLUMNS = 4
+/** The columns of the attachment count, a paperclip and a digit or two. */
+const ATTACHED_COLUMNS = 4
 
 /** The mark before a step for where it stands: done, being worked, or not started. */
 const STEP_MARK = { done: '✓', in_progress: '▸', pending: '○' } as const
@@ -148,11 +154,11 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
     <Box key={`card-row-${prompt.id}`} flexDirection="row" justifyContent="space-between" alignItems="center" gap={1} width="100%">
       {progress !== '' && <Box flexShrink={0}><Button key={`steps-${prompt.id}`} label={progress} onPress={() => toggleSteps($, prompt.id)} /></Box>}
       {(prompt.attachments ?? []).length > 0 && <Box flexShrink={0}><Text key={`attached-${prompt.id}`} color={LOOK.muted}>{`📎${prompt.attachments!.length}`}</Text></Box>}
-      <Box flexGrow={1} flexShrink={1} minWidth={0} overflow="hidden">
+      <Box flexGrow={1} flexShrink={1}>
         <Button key={`card-text-${prompt.id}`} dimColor={isEditing || isFinished} onPress={() => editPrompt($, prompt)}>
           <Text wrap="truncate-end" color={isEditing ? LOOK.placeholder : isWorking ? LOOK.accent : undefined}
             italic={isEditing} bold={isWorking} dimColor={isFinished}>
-            {`${index + 1}. ${prompt.text.replace(/\s+/g, ' ')}${isEditing ? '  (editing)' : ''}`}
+            {cutToFit(`${index + 1}. ${prompt.text.replace(/\s+/g, ' ')}${isEditing ? '  (editing)' : ''}`, textColumnsOf(e, prompt, progress))}
           </Text>
         </Button>
       </Box>
@@ -167,6 +173,19 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
       </Box>
     </Box>
   )
+}
+
+/** The columns a card's text may take: the chat box's width less the card's rounded ends, the gaps, the hover buttons,
+ * and the progress and attachment count drawn before it. A button draws its whole label, so the text is cut here. */
+function textColumnsOf(e: AbovePromptEvent, prompt: QueuedPrompt, progress: string): number {
+  const progressColumns = progress === '' ? 0 : progress.length + BUTTON_END_COLUMNS + 1
+  const attachedColumns = (prompt.attachments ?? []).length === 0 ? 0 : ATTACHED_COLUMNS + 1
+  return e.props.bodyColumns - CARD_CHROME_COLUMNS - CARD_BUTTON_COLUMNS - progressColumns - attachedColumns
+}
+
+/** Text cut to a width, ending in an ellipsis when it did not fit. */
+function cutToFit(text: string, columns: number): string {
+  return text.length <= columns ? text : `${text.slice(0, Math.max(0, columns - 1)).trimEnd()}…`
 }
 
 /** A card's steps under it, in order: done ones ticked and dim, the one being worked marked and bright. */
