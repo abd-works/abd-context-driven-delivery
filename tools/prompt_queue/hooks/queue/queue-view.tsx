@@ -52,15 +52,15 @@ type AbovePromptEvent = RenderInput<'AbovePrompt'>
  */
 const ADD_COLUMNS = 3
 
-/** The columns kept at a card's right for its send, edit, move and remove buttons, shown when the pointer is on the card. */
-const CARD_BUTTON_COLUMNS = 15
-
 /** The columns kept before a card's text for its task button, 3/3 or +, so every card's text starts in one place. */
 const TASK_BUTTON_COLUMNS = 6
 
 /** The columns every step keeps before its text for the step pointer's ▲ and ▼, empty where the pointer is not, so no
  * step's text moves when the pointer does. */
 const POINTER_COLUMNS = 11
+
+/** The invisible button's label: blank and wider than any card, so its press area covers the whole box it lies over. */
+const PRESS_AREA = ' '.repeat(400)
 
 /** The mark before a step for where it stands: done, being worked, or not started. */
 const STEP_MARK = { done: '✓', in_progress: '▸', pending: '○' } as const
@@ -198,23 +198,23 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
           : !isFinished && !isPointer && TaskButtonView($, e, `steps-${prompt.id}`, '+', () => addStep($, prompt))}
       </Box>
       {(prompt.attachments ?? []).length > 0 && <Text key={`attached-${prompt.id}`} color={LOOK.muted}>{`📎${prompt.attachments!.length}`}</Text>}
-      <Box flexGrow={1} flexShrink={1} minWidth={0} flexDirection="row" alignItems="center"
-        borderStyle={isWorking ? 'round' : undefined} borderColor={isWorking ? LOOK.accent : undefined}>
-        <Button key={`card-text-${prompt.id}`} dimColor={isEditing || isFinished} onPress={() => (isInColumn ? toggleOpenedCard($, prompt.id) : editPrompt($, prompt))}>
-          <Text wrap="wrap" color={isEditing ? LOOK.placeholder : isWorking ? LOOK.accent : undefined}
-            italic={isEditing} bold={isWorking} underline={isWorking} dimColor={isFinished}>
-            {`${index + 1}. ${prompt.text.replace(/\s+/g, ' ')}${isEditing ? '  (editing)' : ''}`}
-          </Text>
-        </Button>
+      <Box flexGrow={1} flexShrink={1} minWidth={0} flexDirection="row" alignItems="center" paddingX={1}
+        backgroundColor={LOOK.card} borderStyle="round" borderColor={isWorking ? LOOK.accent : LOOK.card}>
+        <Text wrap="truncate-end" color={isEditing ? LOOK.placeholder : isWorking ? LOOK.accent : undefined}
+          italic={isEditing} bold={isWorking} underline={isWorking} dimColor={isEditing || isFinished}>
+          {`${index + 1}. ${prompt.text.replace(/\s+/g, ' ')}${isEditing ? '  (editing)' : ''}`}
+        </Text>
+        {PressAreaView($, e, `card-text-${prompt.id}`, () => (isInColumn ? toggleOpenedCard($, prompt.id) : editPrompt($, prompt)), isEditing || isFinished)}
+        {pointer && (
+          <Box position="absolute" top={0} bottom={0} left={1} flexDirection="row" alignItems="center">{pointer}</Box>
+        )}
+        {!isInColumn && (
+          <Box position="absolute" top={0} bottom={0} right={1} flexDirection="row" alignItems="center" gap={1}
+            display="none" hover={{ display: 'flex' }} backgroundColor={LOOK.keyCap} paddingX="xs">
+            {CardButtonsView($, e, prompt, index)}
+          </Box>
+        )}
       </Box>
-      {!isInColumn && <Box width={CARD_BUTTON_COLUMNS} justifyContent="flex-end">
-        <Box flexDirection="row" gap={1} display="none" hover={{ display: 'flex' }} backgroundColor={LOOK.keyCap} paddingX="xs">
-          {CardButtonsView($, e, prompt, index)}
-        </Box>
-      </Box>}
-      {pointer && (
-        <Box position="absolute" top={0} bottom={0} left={TASK_BUTTON_COLUMNS + 2} flexDirection="row" alignItems="center">{pointer}</Box>
-      )}
     </Box>
   )
   if (!isOpened) {
@@ -232,12 +232,25 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
 /** A card's task button, 3/5 or +, centred on a solid grey box the task column's width, so every card's task button
  * is one width whatever its label. */
 function TaskButtonView($: EngineInterface, e: AbovePromptEvent, key: string, label: string, onPress: () => void) {
-  const { Box, Button } = $.ui.resolve(e)
+  const { Box, Text } = $.ui.resolve(e)
 
   return (
     <Box key={`${key}-box`} width={TASK_BUTTON_COLUMNS} flexDirection="row" justifyContent="center" alignItems="center"
-      backgroundColor={LOOK.keyCap}>
-      <Button key={key} label={label} onPress={onPress} />
+      backgroundColor={LOOK.keyCap} borderStyle="round" borderColor={LOOK.keyCap}>
+      <Text>{label}</Text>
+      {PressAreaView($, e, key, onPress)}
+    </Box>
+  )
+}
+
+/** An invisible button over the whole of a rounded box, so a press anywhere on the box lands: the box draws the shape
+ * and the text, the button only takes the press. */
+function PressAreaView($: EngineInterface, e: AbovePromptEvent, key: string, onPress: () => void, dimColor = false) {
+  const { Box, Button } = $.ui.resolve(e)
+
+  return (
+    <Box position="absolute" top={0} bottom={0} left={0} right={0}>
+      <Button key={key} plain label={PRESS_AREA} dimColor={dimColor} onPress={onPress} />
     </Box>
   )
 }

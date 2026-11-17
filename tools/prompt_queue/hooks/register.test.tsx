@@ -632,8 +632,9 @@ test("a card with steps shows how many are done, and opens them under it", async
   await pressed.unmount()
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
 
-  expect(progress?.props.label).toBe('1/2')
-  expect((await ui.find({ type: 'Button', key: 'steps-b' }))?.props.label).toBe('+')
+  expect(progress).toBeDefined()
+  expect((await ui.find({ type: 'Box', key: 'steps-a-box' }))?.text).toContain('1/2')
+  expect((await ui.find({ type: 'Box', key: 'steps-b-box' }))?.text).toContain('+')
   expect((await ui.find({ type: 'Box', key: 'step-row-a-1' }))?.text.includes('✓ Read the epic')).toBe(true)
   expect((await ui.find({ type: 'Box', key: 'step-row-a-2' }))?.text.includes('▸ Write the stories')).toBe(true)
   await ui.unmount()
@@ -1202,7 +1203,7 @@ test("the orange working mark stands on the pointer's card, whichever card the a
   const below = JSON.stringify(await ui.find({ type: 'Box', key: 'card-row-b' }))
   await ui.unmount()
 
-  expect([pointed.includes('"borderStyle":"round"'), below.includes('"borderStyle":"round"')]).toEqual([true, false])
+  expect([pointed.includes('"borderColor":"#E5531A"'), below.includes('"borderColor":"#E5531A"')]).toEqual([true, false])
 })
 
 test('a set_steps call the server refused leaves the prompt being worked as it was', async ($, on) => {
