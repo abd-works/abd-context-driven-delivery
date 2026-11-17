@@ -66,7 +66,7 @@ const POINTER_COLUMNS = 11
 const TASK_LABEL_CHARACTERS = 5
 
 /** A figure space: as wide as a digit, so padding a label with it keeps every task button one width. */
-const FIGURE_SPACE = '2007'
+const FIGURE_SPACE = ' '
 
 /** A task button's label centred in TASK_LABEL_CHARACTERS with figure spaces: a button is as wide as its label. */
 function taskLabelOf(label: string): string {
