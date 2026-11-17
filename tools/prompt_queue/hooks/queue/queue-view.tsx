@@ -150,7 +150,7 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
 
   return (
     <Box key={`card-row-${prompt.id}`} flexDirection="row" justifyContent="space-between" alignItems="center" gap={1} width="100%">
-      <Button key={`steps-${prompt.id}`} label={progress === '' ? '+task' : progress} onPress={() => toggleSteps($, prompt.id)} />
+      <Button key={`steps-${prompt.id}`} label={progress === '' ? '+' : progress} onPress={() => toggleSteps($, prompt.id)} />
       {(prompt.attachments ?? []).length > 0 && <Text key={`attached-${prompt.id}`} color={LOOK.muted}>{`📎${prompt.attachments!.length}`}</Text>}
       <Box flexGrow={1} flexShrink={1} minWidth={0}>
         <Button key={`card-text-${prompt.id}`} dimColor={isEditing || isFinished} onPress={() => editPrompt($, prompt)}>
