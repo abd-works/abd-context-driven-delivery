@@ -206,15 +206,15 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
             {`${index + 1}. ${prompt.text.replace(/\s+/g, ' ')}${isEditing ? '  (editing)' : ''}`}
           </Text>
         </Button>
-        {pointer && (
-          <Box position="absolute" top={0} bottom={0} left={1} flexDirection="row" alignItems="center">{pointer}</Box>
-        )}
       </Box>
       {!isInColumn && <Box width={CARD_BUTTON_COLUMNS} justifyContent="flex-end">
         <Box flexDirection="row" gap={1} display="none" hover={{ display: 'flex' }} backgroundColor={LOOK.keyCap} paddingX="xs">
           {CardButtonsView($, e, prompt, index)}
         </Box>
       </Box>}
+      {pointer && (
+        <Box position="absolute" top={0} bottom={0} left={TASK_BUTTON_COLUMNS + 2} flexDirection="row" alignItems="center">{pointer}</Box>
+      )}
     </Box>
   )
   if (!isOpened) {
