@@ -962,7 +962,7 @@ Built: the ↑ and ↓ on a card move its prompt one place (`movePrompt`). Inten
 
 ### (S) Person --> Remove Queued Prompts
 
-Built: the ✕ on a card takes its prompt off the queue (`removePrompt`); the bin clears the whole queue (`clearQueue`).
+Built: the ✕ on a card takes its prompt off the queue (`removePrompt`); the bin clears the whole queue (`clearQueue`). Built (2026-11-17), not seen (the person: "when deleting a queue (eg clear all) make sure we save a copy of the json so we have an archive of the work"): every prompt clear or remove takes off is kept as JSON in the chat's `queue-archive` folder, one file for each time, named for when they were taken off, with the prompts' steps and attachments.
 
 ### (S) Person --> Play Prompt Queue
 

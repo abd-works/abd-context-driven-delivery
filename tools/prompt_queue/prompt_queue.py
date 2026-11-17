@@ -4,6 +4,8 @@ prompt-queue mod, the agent working in the chat, and a session starting in it al
 from __future__ import annotations
 
 import base64
+import json
+from datetime import datetime, timezone
 import mimetypes
 import re
 import uuid
@@ -25,6 +27,8 @@ QUEUE_FILE = "prompt-queue.json"
 _PROMPT_ID_LENGTH = 12
 # The folder beside a chat's queue file that holds the images and documents queued with its prompts.
 ATTACHMENTS_FOLDER = "attachments"
+# The folder beside a chat's queue file that keeps a JSON copy of every prompt clear or remove took off, so the work stays on record.
+ARCHIVE_FOLDER = "queue-archive"
 # The section of a handoff that holds the numbered steps the next agent takes (space/session/HANDOFF-FORMAT.md).
 _APPROACH_HEADING = re.compile(r"^##\s+Approach for Next Agent\s*$", re.IGNORECASE)
 _NEXT_SECTION = re.compile(r"^##\s")
@@ -148,15 +152,20 @@ class PromptQueue:
     @mcp
     @agent_tool
     def remove(self, prompt: str) -> PromptQueue:
-        """Take the queued prompt whose id is prompt off the queue."""
-        return self._keep([item for item in self._holding(prompt) if item["id"] != prompt])
+        """Take the queued prompt whose id is prompt off the queue, keeping a copy of it in the chat's queue archive."""
+        held = self._holding(prompt)
+        self._archive([item for item in held if item["id"] == prompt])
+        return self._keep([item for item in held if item["id"] != prompt])
 
     @mcp
     @agent_tool
     def clear(self) -> PromptQueue:
         """Take the finished prompts off the queue, leaving the work still to do; with none finished, take every prompt off."""
-        unfinished = [item for item in self.prompts if not item.get("is_done", False)]
-        return self._keep([] if len(unfinished) == len(self.prompts) else unfinished)
+        held = self.prompts
+        unfinished = [item for item in held if not item.get("is_done", False)]
+        kept = [] if len(unfinished) == len(held) else unfinished
+        self._archive([item for item in held if item not in kept])
+        return self._keep(kept)
 
     @mcp
     @agent_tool
@@ -211,6 +220,17 @@ class PromptQueue:
         saved.parent.mkdir(parents=True, exist_ok=True)
         saved.write_bytes(base64.b64decode(data))
         return saved
+
+    def _archive(self, prompts: list[QueuedPrompt]) -> None:
+        """Keeps a JSON copy of prompts taken off the queue in the chat's queue archive, one file for each time, named
+        for when they were taken off; nothing taken off writes nothing."""
+        if not prompts:
+            return
+        taken_off = datetime.now(timezone.utc)
+        archive = self._file.path.parent / ARCHIVE_FOLDER
+        archive.mkdir(parents=True, exist_ok=True)
+        saved = archive / f"{taken_off.strftime('%Y%m%dT%H%M%S%fZ')}.json"
+        saved.write_text(json.dumps({"chat": self._chat, "taken_off": taken_off.isoformat(), "prompts": prompts}, indent=2), encoding="utf-8")
 
     def _holding(self, prompt: str) -> list[QueuedPrompt]:
         """The prompts queued, refusing a prompt id the queue does not hold."""
