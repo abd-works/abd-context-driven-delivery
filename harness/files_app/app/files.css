@@ -140,6 +140,12 @@ button:disabled { cursor: default; opacity: 0.5; }
    in place of the source view's own shaded selected lines. */
 .file-source .source-snippet .selected-lines { background-color: transparent; box-shadow: none; }
 .source-snippet .file-selected-range { width: 3px !important; margin-left: 0; background: var(--accent); }
+/* The code in Cursor's default looks (files/files-theme.ts): the editor shows its theme's own background, which
+   Monaco sets as --vscode-editor-background, not the page's raised colour the shared source view paints it with. */
+.file-source .source-snippet,
+.file-source .source-snippet .monaco-editor,
+.file-source .source-snippet .monaco-editor-background,
+.file-source .source-snippet .margin { background: var(--vscode-editor-background) !important; }
 .source-snippet .file-change.is-changed { background: var(--select); }
 .source-snippet .file-change.is-added { background: var(--success); }
 .source-snippet .file-change.is-removed { border-top: 3px solid var(--error); }
