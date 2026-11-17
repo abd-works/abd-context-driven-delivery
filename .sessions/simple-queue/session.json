@@ -4,11 +4,11 @@
     "stages": [
       "implementation"
     ],
-    "version": 63
+    "version": 64
   },
   "practices": {
     "stories": {
-      "enabled": false,
+      "enabled": true,
       "formats": {
         "story_map": [
           "drawio",
