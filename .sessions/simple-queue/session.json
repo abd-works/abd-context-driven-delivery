@@ -2,9 +2,9 @@
   "name": "simple-queue",
   "guidance": {
     "stages": [
-      "discovery"
+      "specification"
     ],
-    "version": 35
+    "version": 37
   },
   "practices": {
     "stories": {
