@@ -35,9 +35,9 @@ from space.session.graph_view_examples import (
     SHARED_STORY,
     STEP_LISTED,
     STEP_STORY,
-    STEP_STORY_GIVEN_LINE,
     STEP_STORY_WHEN_LINE,
     TICKET_EXAMPLES,
+    TICKET_EXAMPLES_CONSTANT_LINE,
     STORY_MAP_DELETE_LINE,
     STORY_TEST,
     TICKET_CODE,
@@ -421,41 +421,59 @@ def related_under(world, step: str, group: str, paths: list[str] = STEP_LISTED) 
     return [child["name"] for child in branch["children"] if "children_left_out" in child]
 
 
-@shared_stories.scenario("Follow Story Steps To Code", "A step in a Python story test invokes the functions and operations it calls")
+@shared_stories.scenario("Follow Story Steps To Code", "A step in a Python story test invokes only the code it tests, never the test's own functions")
 def _(s):
-    @s.given("the Files app shows the Stories tree of Delete Ticket's Python shared story test, whose Given calls the function ticket_on_board and whose When calls Ticket.delete")
+    @s.given("the Files app shows the Stories tree of Delete Ticket's Python shared story test, whose Given calls its seed ticket_on_board, whose When calls Ticket.delete, and whose Then calls the file's own helper ticket_left")
     def _(world):
         seed_checkout_flow_with_graph_files(world)
 
-    @s.when("the Person opens the Given and the When")
+    @s.when("the Person opens the Given, the When and the Then")
     def _(world):
         world.given = related_under(world, "given a ticket on the board", "invokes")
         world.when = related_under(world, "when the Person deletes it", "invokes")
+        world.then = related_under(world, "then the checkout ticket is gone", "invokes")
 
-    @s.then("the Given shows an invokes group holding ticket_on_board")
-    def _(world):
-        expect(world.given).to(equal(["ticket_on_board"]))
-
-    @s.then("the When shows an invokes group holding delete")
+    @s.then("the When shows an invokes group holding delete, Ticket's operation in Clean Engineering")
     def _(world):
         expect(world.when).to(equal(["delete"]))
+
+    @s.then("the Given and the Then show no invokes group, since the seed and the helper are the story test's own code")
+    def _(world):
+        expect((world.given, world.then)).to(equal(([], [])))
 
 
 @shared_stories.scenario("Follow Story Steps To Code", "Selecting an operation a step invokes opens just that operation")
 def _(s):
-    @s.given("the Files app shows the Stories tree of Delete Ticket's Python shared story test, its Given opened to the invokes group holding ticket_on_board")
+    @s.given("the Files app shows the Stories tree of Delete Ticket's Python shared story test, its When opened to the invokes group holding delete")
     def _(world):
         seed_checkout_flow_with_graph_files(world)
-        expect(related_under(world, "given a ticket on the board", "invokes")).to(equal(["ticket_on_board"]))
+        expect(related_under(world, "when the Person deletes it", "invokes")).to(equal(["delete"]))
 
-    @s.when("the Person selects ticket_on_board")
+    @s.when("the Person selects delete")
     def _(world):
-        ranges = world.data_of(session_of(world).graph_node_ranges(node_id=node_id_of(world, "ticket_on_board", STEP_LISTED), paths=STEP_LISTED))
+        ranges = world.data_of(session_of(world).graph_node_ranges(node_id=node_id_of(world, "delete", STEP_LISTED), paths=STEP_LISTED))
         world.lines = [(found["path"], found["start_line"], found["end_line"]) for found in ranges]
 
-    @s.then("ticket_story_examples.py opens at lines 1 to 2, ticket_on_board's own lines, and the shared story test, whose Given invokes it, does not open")
+    @s.then("ticket.py opens at lines 8 to 9, delete's own lines, and the shared story test, whose When invokes it, does not open")
     def _(world):
-        expect(world.lines).to(equal([(TICKET_EXAMPLES, 1, 2)]))
+        expect(world.lines).to(equal([(TICKET_CODE, 8, 9)]))
+
+
+@shared_stories.scenario("Follow Story Steps To Code", "Selecting an example a step observes opens its definition")
+def _(s):
+    @s.given("the Files app shows the Stories tree of Delete Ticket's Python shared story test, whose Then observes CHECKOUT_TICKET, imported from ticket_story_examples.py")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+        expect(related_under(world, "then the checkout ticket is gone", "observes")).to(equal(["CHECKOUT_TICKET"]))
+
+    @s.when("the Person selects CHECKOUT_TICKET in the Then's observes group")
+    def _(world):
+        ranges = world.data_of(session_of(world).graph_node_ranges(node_id=node_id_of(world, "CHECKOUT_TICKET", STEP_LISTED), paths=STEP_LISTED))
+        world.lines = [(found["path"], found["start_line"], found["end_line"]) for found in ranges]
+
+    @s.then("ticket_story_examples.py opens at line 5, where CHECKOUT_TICKET is defined, and the shared story test, whose Then observes it, does not open")
+    def _(world):
+        expect(world.lines).to(equal([(TICKET_EXAMPLES, TICKET_EXAMPLES_CONSTANT_LINE, TICKET_EXAMPLES_CONSTANT_LINE)]))
 
 
 @shared_stories.scenario("Follow Story Steps To Code", "A story test's callouts sit on the step that invokes them")
@@ -469,10 +487,10 @@ def _(s):
     def _(world):
         world.steps = world.data_of(session_of(world).file(path=STEP_STORY, rules=True))["steps"]
 
-    @s.then("the When's line carries a callout to Ticket.delete, and the Given's line a callout to ticket_on_board, but the docstring's line carries none")
+    @s.then("the When's line carries a callout to Ticket.delete, but the Given's line, calling only its seed, and the docstring's line carry none")
     def _(world):
-        found = [(step["line"], [target["name"] for target in step["invokes"]], [target["file"] for target in step["invokes"]]) for step in world.steps]
-        expect(found).to(equal([(STEP_STORY_GIVEN_LINE, ["ticket_on_board"], [TICKET_EXAMPLES]), (STEP_STORY_WHEN_LINE, ["delete"], [TICKET_CODE])]))
+        found = [(step["line"], [target["name"] for target in step["invokes"]], [target["file"] for target in step["invokes"]]) for step in world.steps if step["invokes"]]
+        expect(found).to(equal([(STEP_STORY_WHEN_LINE, ["delete"], [TICKET_CODE])]))
 
 
 @shared_stories.scenario("Follow Story Steps To Code", "A step in a with-block Python story test invokes the operation its block calls")

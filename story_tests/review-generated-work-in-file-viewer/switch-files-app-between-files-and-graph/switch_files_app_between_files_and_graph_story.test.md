@@ -340,29 +340,39 @@ Changed by the person on 2026-11-16 ("only shade once; on expand, hide the callo
 | probe of the file-manager worktree, 2026-11-16 | a Python step invoked the operations it called on an object (`session_of(world).graph_branch(...)` reached Session.graph_branch) but none of the functions it called by name (`session_of`, `node_id_of`), which the graph holds as operations of their module |
 | main session's validation report, 2026-11-16 (`stories-acceptance-tests-20261116T173912.md`) | 11 When steps of the serve-cdd-code-in-lanes story tests, written as `with when("..."):` blocks calling `self.lanes.for_project(...)`, were reported with no invokes relationship to Operation or Property; the main session has Clean Engineering off, so its graph holds no operation for any step to invoke |
 
-#### Scenario: A step in a Python story test invokes the functions and operations it calls
+#### Scenario: A step in a Python story test invokes only the code it tests, never the test's own functions
 
-*Given* the Files app shows the Stories tree of Delete Ticket's Python shared story test, whose Given calls the function ticket_on_board and whose When calls Ticket.delete  
-*When* the Person opens the Given and the When  
-*Then* the Given shows an invokes group holding ticket_on_board  
-  *And* the When shows an invokes group holding delete
+Requested 2026-11-16: "internal functions in the test don't count for invokes; you have to cross to the methods that exist in the CE part of the graph". A step listed names_in and opened_names, helpers of its own story test, as code it invokes.
+
+*Given* the Files app shows the Stories tree of Delete Ticket's Python shared story test, whose Given calls its seed ticket_on_board, whose When calls Ticket.delete, and whose Then calls the file's own helper ticket_left  
+*When* the Person opens the Given, the When and the Then  
+*Then* the When shows an invokes group holding delete, Ticket's operation in Clean Engineering  
+  *But* the Given and the Then show no invokes group, since the seed and the helper are the story test's own code
 
 #### Scenario: Selecting an operation a step invokes opens just that operation
 
 Requested 2026-11-16: selecting `data_of` in a step's invokes group, with every session file listed, answered "maximum recursion depth exceeded", because the lines were gathered through every step that invokes it and every operation those steps invoke.
 
-*Given* the Files app shows the Stories tree of Delete Ticket's Python shared story test, its Given opened to the invokes group holding ticket_on_board  
-*When* the Person selects ticket_on_board  
-*Then* ticket_story_examples.py opens at lines 1 to 2, ticket_on_board's own lines  
-  *But* the shared story test, whose Given invokes ticket_on_board, does not open
+*Given* the Files app shows the Stories tree of Delete Ticket's Python shared story test, its When opened to the invokes group holding delete  
+*When* the Person selects delete  
+*Then* ticket.py opens at lines 8 to 9, delete's own lines  
+  *But* the shared story test, whose When invokes delete, does not open
+
+#### Scenario: Selecting an example a step observes opens its definition
+
+Requested 2026-11-16: selecting STORY_MAP in a step's observes group opened the shared story test at the first scenario that uses it, not the examples module that defines it.
+
+*Given* the Files app shows the Stories tree of Delete Ticket's Python shared story test, whose Then observes CHECKOUT_TICKET, imported from ticket_story_examples.py  
+*When* the Person selects CHECKOUT_TICKET in the Then's observes group  
+*Then* ticket_story_examples.py opens at line 5, where CHECKOUT_TICKET is defined  
+  *But* the shared story test, whose Then observes it, does not open
 
 #### Scenario: A story test's callouts sit on the step that invokes them
 
 *Given* the Files app shows checkout-flow's graph of Delete Ticket's Python shared story test, whose docstring names the class Ticket  
 *When* the Person views the shared story test  
 *Then* the When's line carries a callout to Ticket.delete, the operation it invokes  
-  *And* the Given's line a callout to ticket_on_board  
-  *But* the docstring's line carries none
+  *But* the Given's line, calling only its seed, and the docstring's line carry none
 
 #### Scenario: A step in a with-block Python story test invokes the operation its block calls
 

@@ -255,6 +255,8 @@ class StoryRecording:
             node.source.align_to_label(node.name)
         elif node.type in {"Scenario", "Story", "Background"}:
             node.source.widen_to_call_close()
+        elif node.type == "Example" and node.declaration is not None:
+            node.source.align_to_declaration(self.practice.reading.in_graph.source_root, *node.declaration)
         elif node.type == "Example":
             node.source.align_to_example_export(self.practice.reading.in_graph.source_root, node.name, self._example_files)
 

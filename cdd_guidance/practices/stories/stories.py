@@ -165,7 +165,7 @@ class Stories(PracticeGuidance):
         under story_tests."""
         merged = StoryModel()
         for reader, texts in self._texts_by_reader(tests, project).items():
-            read = type(reader)(tests_root=STORY_TESTS_FOLDER).parse(texts, on_file=on_file)
+            read = type(reader)(tests_root=STORY_TESTS_FOLDER).parse(texts, on_file=on_file, project=project)
             merged.sources.take(read.sources)
             held = {epic.name for epic in merged.epics}
             for epic in [epic for epic in read.epics if epic.name not in held]:

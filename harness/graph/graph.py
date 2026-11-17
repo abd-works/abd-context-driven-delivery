@@ -211,6 +211,18 @@ class Source:
                     self._point_at(root, Location(path.relative_to(root_path).as_posix(), index + 1, end))
                     return
 
+    def align_to_declaration(self, root: str, declared_in: Path, start_line: int, end_line: int) -> None:
+        """Point this slice at lines start_line to end_line of declared_in, a file under root its reader already read,
+        such as the examples module a Python story test imports a fixture from; a file outside root leaves it where it
+        is, since a node names its file from root."""
+        if not root:
+            return
+        try:
+            relative = Path(declared_in).resolve().relative_to(Path(root).resolve())
+        except ValueError:
+            return
+        self._point_at(root, Location(relative.as_posix(), start_line, end_line))
+
     def _point_at(self, root: str, location: Location) -> None:
         """Point this slice at the lines location names, in its file under root."""
         self.file = location.file
