@@ -163,3 +163,47 @@ Rule text: [clean_engineering/clean_engineering.md:258](C:\Users\jeffa\.cdd\runt
 - [X] **ERROR** **[graph rule]** - [tools/prompt_queue/hooks/queue/queue-view.tsx](C:\dev\abd-cdd-simple-queue\tools\prompt_queue\hooks\queue\queue-view.tsx#L49): Parameter `e`: Parameter 'e' does not reveal intent.
 - [X] **ERROR** **[graph rule]** - [tools/prompt_queue/hooks/queue/queue-view.tsx](C:\dev\abd-cdd-simple-queue\tools\prompt_queue\hooks\queue\queue-view.tsx#L103): Parameter `e`: Parameter 'e' does not reveal intent.
 - [X] **ERROR** **[graph rule]** - [tools/prompt_queue/hooks/queue/queue-view.tsx](C:\dev\abd-cdd-simple-queue\tools\prompt_queue\hooks\queue\queue-view.tsx#L141): Parameter `e`: Parameter 'e' does not reveal intent.
+
+## Judgment — `tools/.context/module-context.md`
+
+### `do-not-invent-terms` — Fail
+- module-context.md:16 `PromptQueue`: the card's *PromptQueue* is the whole mod, while the class `PromptQueue` in `tools/prompt_queue/hooks/queue/queue-order.ts` is only the queued prompts in their order; one italic term with two meanings, so a reader of the card and the code cannot tell which is meant.
+
+## Judgment — `tools/prompt_queue`
+
+### `use-intention-revealing-names` — Fail
+- icon-button-view.tsx:59 `x`: the left edge a digit is drawn from; `left` says so.
+- prompt-queue.ts:78 `to`: the place a prompt moves to, an index; `toIndex` beside `fromIndex`.
+- prompt-queue.ts:83 `id`: the id of the prompt to remove; `promptId`.
+- queue-order.ts:27 `to`: as above, `toIndex`.
+- queue-order.ts:39 `id`: as above, `promptId`.
+
+| Rule | Verdict | Evidence |
+|---|---|---|
+| vocabulary-traces-to-source | Pass | Queue, prompt, play, pause and sub-agent are the brief's and the person's words. |
+| do-not-invent-parallel-object-models | Pass | The mod keeps one queue, in its own state; nothing copies another module's data. |
+| domain-nouns-only | Pass | tools/prompt_queue is a domain noun. |
+| named-seam-and-constraint | Pass | Seam terms and the Constraint name PromptQueue. |
+| high-cohesion | Pass | Each tool stays one package; the shared card is the tools module's own convention. |
+| no-module-per-class | Pass | prompt_queue is a package of the tools module, not a module per class. |
+| single-boundary | Pass | Nothing else holds the queue. |
+| deep-module | Pass | No graph hit. |
+| abstraction-focus | Pass | The entry says what a person uses it for. |
+| purpose-before-mechanism | Pass | The entry opens with the job: lining up prompts while Claude is busy. |
+| public-seam-only | Pass | Only what a person types and the state contract another mod reads. |
+| use-typed-signatures | Pass | The state is declared in types/index.d.ts. |
+| general-purpose-surface | Pass | The state contract serves any reader. |
+| temporal-independence | Pass | Play, pause and queue work in any order. |
+| seam-names-current-code | Pass | Ctrl+Enter, /queue, PluginState['prompt-queue'] and types/index.d.ts all exist. |
+| one-way-deps | Pass | prompt_queue imports only claude-code; nothing imports it. |
+| extensions-live-with-the-domain | Pass | Nothing extends the framework. |
+| low-coupling | Pass | No sibling imports. |
+| layer-separation | Pass | No pass-through module. |
+
+## Graph hits judged noise
+
+| File:line | Rule | Why it is noise |
+|---|---|---|
+| tools/prompt_queue/hooks/queue/queue-view.tsx:49 | use-intention-revealing-names | `e` is the Claude Code engine's own name for a hook's event, `($, e, next)`, in every mod. |
+| tools/prompt_queue/hooks/queue/queue-view.tsx:103 | use-intention-revealing-names | `e` is the engine's event, as above. |
+| tools/prompt_queue/hooks/queue/queue-view.tsx:141 | use-intention-revealing-names | `e` is the engine's event, as above. |
