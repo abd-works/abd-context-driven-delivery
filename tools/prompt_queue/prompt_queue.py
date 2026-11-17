@@ -27,7 +27,8 @@ QUEUE_FILE = "prompt-queue.json"
 _PROMPT_ID_LENGTH = 12
 # The folder beside a chat's queue file that holds the images and documents queued with its prompts.
 ATTACHMENTS_FOLDER = "attachments"
-# The folder beside a chat's queue file that keeps a JSON copy of every prompt clear or remove took off, so the work stays on record.
+# The folder that keeps a JSON copy of every prompt clear or remove took off, so the work stays on record: in the session's
+# folder the queue's chat works in, else beside the chat's queue file.
 ARCHIVE_FOLDER = "queue-archive"
 # What marks a step that came from a message the person sent: a correction or comment filed under the goal it belongs to.
 INTERRUPTION_MARK = "[interruption]"
@@ -88,16 +89,21 @@ class PromptQueue:
     it to the agent while it plays; the agent does the prompts in order and marks each one done; an agent in the chat
     queues work on it the same way; switching the chat to a session queues that session's handoff steps on it."""
 
-    def __init__(self, chat: str, file: Path) -> None:
+    def __init__(self, chat: str, file: Path, archive: Path | None = None) -> None:
         self._chat = chat
         self._file = JsonFile(file)
+        self._archive_folder = archive or file.parent / ARCHIVE_FOLDER
 
     @classmethod
     @tool_subject
     def load(cls, chat: str, *, call: ToolCall) -> PromptQueue:
         """The queue of chat; with chat empty, of the chat the call came from, so an agent queues work on its own
-        chat's queue without knowing its id."""
-        return cls.of_chat(chat or call.chat_id)
+        chat's queue without knowing its id. Prompts taken off it are archived in the folder of the session the call
+        works in, beside the rest of that session's work; in no session, beside the queue in the chat's folder."""
+        chat = chat or call.chat_id
+        session = call.session
+        archive = Path(session.session_path) / ARCHIVE_FOLDER if session is not None else None
+        return cls(chat, CHATS_FOLDER.path / chat / QUEUE_FILE, archive)
 
     @classmethod
     def of_chat(cls, chat: str) -> PromptQueue:
@@ -238,9 +244,8 @@ class PromptQueue:
         if not prompts:
             return
         taken_off = datetime.now(timezone.utc)
-        archive = self._file.path.parent / ARCHIVE_FOLDER
-        archive.mkdir(parents=True, exist_ok=True)
-        saved = archive / f"{taken_off.strftime('%Y%m%dT%H%M%S%fZ')}.json"
+        self._archive_folder.mkdir(parents=True, exist_ok=True)
+        saved = self._archive_folder / f"{taken_off.strftime('%Y%m%dT%H%M%S%fZ')}.json"
         saved.write_text(json.dumps({"chat": self._chat, "taken_off": taken_off.isoformat(), "prompts": prompts}, indent=2), encoding="utf-8")
 
     def _holding(self, prompt: str) -> list[QueuedPrompt]:

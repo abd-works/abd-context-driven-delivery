@@ -57,6 +57,12 @@ with describe(PromptQueue):
         archived = [json.loads(saved.read_text(encoding="utf-8")) for saved in (self.folder / "queue-archive").glob("*.json")]
         expect([[prompt["text"] for prompt in copy["prompts"]] for copy in archived]).to(equal([["Run the unit tier"]]))
 
+    with it("keeps its archive in the folder it is given, such as its session's folder"):
+        session_archive = self.folder / ".sessions" / "simple-queue" / "queue-archive"
+        queue = PromptQueue("chat-1", self.folder / "prompt-queue.json", session_archive)
+        queue.clear()
+        expect(len(list(session_archive.glob("*.json")))).to(equal(1))
+
     with it("files a message under a goal as a step not started, marked as the person's interruption"):
         goal = self.queue.prompts[0]["id"]
         self.queue.add_interruption(goal, "cut the text with an ellipsis")
