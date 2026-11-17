@@ -6,10 +6,8 @@
   "branch": "file-manager",
   "worktree": "C:\\dev\\abd-cdd-file-manager",
   "guidance": {
-    "stages": [
-      "implementation"
-    ],
-    "version": 112
+    "stages": [],
+    "version": 113
   },
   "practices": {
     "stories": {
