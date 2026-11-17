@@ -141,10 +141,10 @@ function useSourceCallouts(source: NodeSourceData, language: string, callouts: S
   const catalog = useMemo(() => new CallCatalog(members, owner), [members, owner]);
   const isCode = !PROSE_LANGUAGES.has(language);
   const shown = useMemo(() => {
-    const own = opensCalls && isCode ? catalog.calloutsIn(source.text ?? '', source.start_line || 1, language, [source.node_id]) : [];
+    const own = opensCalls && isCode ? catalog.calloutsIn(source.text ?? '', source.start_line || 1, language, [source.node_id], source.file) : [];
     return [...callouts, ...own];
   }, [catalog, callouts, opensCalls, isCode, source, language]);
-  const within = useCallback<CalloutsWithin>((callout, stack) => (callout.kind === 'section' ? [] : catalog.calloutsIn(callout.text, callout.startLine, languageFor(callout.path), stack)), [catalog]);
+  const within = useCallback<CalloutsWithin>((callout, stack) => (callout.kind === 'section' ? [] : catalog.calloutsIn(callout.text, callout.startLine, languageFor(callout.path), stack, callout.path)), [catalog]);
   return { shown, within };
 }
 

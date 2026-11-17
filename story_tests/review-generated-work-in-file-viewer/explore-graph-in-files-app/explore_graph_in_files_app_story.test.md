@@ -218,6 +218,24 @@ section: body
 *Then* the lines of Board.reread, from board.py, show in place below the call  
   *And* ticket.py stays open where it was
 
+#### Scenario: A class never opens itself in place
+
+Requested 2026-11-16 by the person: "don't code fold yourself! a class doesn't fold to itself; it folds across classes or methods". The line `class AppNotRegistered(KeyError):` opened a copy of AppNotRegistered inside AppNotRegistered. Only the page finds callouts: `harness/files_app/app/files/call-expansion.spec.ts`.
+
+*Given* the Files app shows ticket.py, which defines the class Ticket, and the graph is read  
+*When* the Person views the line `class Ticket:` and the lines of Ticket's own operations  
+*Then* no line inside Ticket opens Ticket in place  
+  *But* a line inside Ticket that names the class Board still opens Board
+
+#### Scenario: A method's call to another method of its class opens in place
+
+Requested 2026-11-16 by the person: "I can't find a single instance of code folding where it's supposed to happen, e.g. nesting methods and other classes". A Python call on `self` (`self.close()`) was skipped, and a call to a module function by its bare name (`reread_all(board)`) was not looked for.
+
+*Given* the Files app shows ticket.py, whose Ticket.delete calls `self.close()` and the module function `reread_all(board)`, and the graph is read  
+*When* the Person views Ticket.delete  
+*Then* the call `self.close()` opens Ticket.close in place below it  
+  *And* the call `reread_all(board)` opens the function reread_all in place below it
+
 #### Scenario: Calls open in place only once the graph is read
 
 *Given* the Files app lists checkout-flow's files and the graph view was never shown  

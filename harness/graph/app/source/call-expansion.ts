@@ -51,6 +51,10 @@ const CLASS_KINDS = new Set([
 // The marker the graph puts after a line for each call on it, `/* call:isinstance */`, which is no code and never shows.
 const CALL_MARKER = /[ \t]*\/\* call:[^*]*\*\//g;
 const MEMBER_CALL = /\b([A-Za-z_][A-Za-z0-9_]*)\??\.([A-Za-z_][A-Za-z0-9_]*)\s*\(/g;
+// A call by a bare name, `reread_all(board)`, which a module's own function answers; never a member call, `a.b(`.
+const BARE_CALL = /(?<![\w.$])([A-Za-z_][A-Za-z0-9_]*)\s*\(/g;
+// The receivers that name the object a method runs on: a call on them opens a member of the class around the line.
+const OWN_OBJECT = new Set(["self", "this"]);
 const QUOTED = /'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|`(?:\\.|[^`\\])*`/g;
 
 // A class, operation or property the session's graph holds, with its text, from which a callout opens it in place.
@@ -66,7 +70,7 @@ export type FoldMember = {
   classes?: string[];
 };
 
-type Body = { id: string; name: string; label: string; text: string; file: string; start: number; end: number };
+type Body = { id: string; name: string; label: string; text: string; file: string; start: number; end: number; owner: string };
 
 // The members of a graph a source view opens calls and classes from: each class by its name, each operation and property
 // by its class and name. calloutsIn finds, line by line, the calls and classes the code of a text reaches; a name in a
@@ -74,34 +78,48 @@ type Body = { id: string; name: string; label: string; text: string; file: strin
 export class CallCatalog {
   private readonly classes = new Map<string, Body>();
   private readonly bodies = new Map<string, Body>();
+  // The module functions a call by a bare name opens, by name.
+  private readonly functions = new Map<string, Body>();
 
   constructor(members: FoldMember[], owner = "") {
     for (const member of members) this.hold(member, owner);
   }
 
-  // The callouts of each line of text, which starts at file line origin: each call, then each class the line names in
-  // code, a class once per text. stack holds the members already open around it, which never open again inside.
-  calloutsIn(text: string, origin: number, language: string, stack: string[] = []): SourceCallout[] {
+  // The callouts of each line of text, which starts at file line origin of file: each call, then each class the line
+  // names in code, a class once per text. stack holds the members already open around it, which never open again
+  // inside, and no line opens a class or member whose own lines of file hold it: a definition never opens itself.
+  calloutsIn(text: string, origin: number, language: string, stack: string[] = [], file = ""): SourceCallout[] {
     const code = codeOf(text, language).split("\n");
     const bindings = variableTypes(code.join("\n"));
     const seen = new Set<string>(stack);
-    return code.flatMap((line, index) => this.calloutsOn(line, origin + index, bindings, stack, seen));
+    return code.flatMap((line, index) => this.calloutsOn(line, { file, line: origin + index }, bindings, stack, seen));
   }
 
-  private calloutsOn(line: string, fileLine: number, bindings: Map<string, string>, stack: string[], seen: Set<string>): SourceCallout[] {
-    const calls = this.callsOn(line, bindings).filter((call) => !stack.includes(call.id));
-    const types = [...this.classes.values()].filter((type) => !seen.has(type.id) && (namesType(line, type.name) || boundOn(line, bindings, type.name)));
+  private calloutsOn(line: string, at: FileLine, bindings: Map<string, string>, stack: string[], seen: Set<string>): SourceCallout[] {
+    const outside = (body: Body) => !holds(body, at);
+    const calls = this.callsOn(line, bindings, at).filter((call) => !stack.includes(call.id) && outside(call));
+    const types = [...this.classes.values()].filter((type) => !seen.has(type.id) && outside(type) && (namesType(line, type.name) || boundOn(line, bindings, type.name)));
     types.forEach((type) => seen.add(type.id));
-    return [...calls.map((call) => calloutOf(call, fileLine, "call")), ...types.map((type) => calloutOf(type, fileLine, "class"))];
+    return [...calls.map((call) => calloutOf(call, at.line, "call")), ...types.map((type) => calloutOf(type, at.line, "class"))];
   }
 
-  private callsOn(line: string, bindings: Map<string, string>): Body[] {
+  private callsOn(line: string, bindings: Map<string, string>, at: FileLine): Body[] {
     const found: Body[] = [];
-    for (const match of line.matchAll(MEMBER_CALL)) {
-      const body = SKIP_TYPES.has(match[1]) ? undefined : this.resolve(match[1], match[2], bindings.get(match[1]));
+    const add = (body: Body | undefined) => {
       if (body && !found.includes(body)) found.push(body);
+    };
+    for (const match of line.matchAll(MEMBER_CALL)) {
+      if (OWN_OBJECT.has(match[1])) add(this.ownMember(match[2], at));
+      else add(SKIP_TYPES.has(match[1]) ? undefined : this.resolve(match[1], match[2], bindings.get(match[1])));
     }
+    for (const match of line.matchAll(BARE_CALL)) add(this.functions.get(match[1]));
     return found;
+  }
+
+  // The member called method of the class whose lines of the file hold the call, as `self.close()` calls it.
+  private ownMember(method: string, at: FileLine): Body | undefined {
+    const around = [...this.classes.values()].find((type) => holds(type, at));
+    return around ? this.bodies.get(`${around.name}.${method}`) : undefined;
   }
 
   private resolve(receiver: string, method: string, typeName?: string): Body | undefined {
@@ -122,6 +140,7 @@ export class CallCatalog {
     }
     if ((member.type !== "Operation" && member.type !== "Property") || isSimpleProperty(member.text)) return;
     const key = member.owner ? `${member.owner}.${member.name}` : member.name;
+    if (!member.owner && member.type === "Operation" && !this.functions.has(member.name)) this.functions.set(member.name, body);
     // A member of the class the text belongs to answers a bare name before any other class's.
     if (!this.bodies.has(key)) this.bodies.set(key, body);
     if (!this.bodies.has(member.name) || member.owner === owner) this.bodies.set(member.name, body);
@@ -132,7 +151,23 @@ function bodyOf(member: FoldMember): Body {
   const text = member.text.replace(CALL_MARKER, "");
   const start = member.start_line || 1;
   const label = member.owner ? `${member.owner}.${member.name}` : member.name;
-  return { id: member.node_id, name: member.name, label, text, file: member.file, start, end: member.end_line || start + text.split("\n").length - 1 };
+  return { id: member.node_id, name: member.name, label, text, file: member.file, start, end: member.end_line || start + text.split("\n").length - 1, owner: member.owner };
+}
+
+// A line of a file, from 1, which a callout is found on.
+type FileLine = { file: string; line: number };
+
+// Whether body's own lines of its file hold the line at: its definition, and every line inside it.
+function holds(body: Body, at: FileLine): boolean {
+  return sameFile(body.file, at.file) && body.start <= at.line && at.line <= body.end;
+}
+
+// Whether two names of a file name the same file: one may be named from the project and the other from its practice's
+// root below it, as harness/diagnostics/app.py and diagnostics/app.py are.
+function sameFile(one: string, other: string): boolean {
+  if (!one || !other) return false;
+  const [shorter, longer] = one.length <= other.length ? [one, other] : [other, one];
+  return longer === shorter || longer.endsWith(`/${shorter}`);
 }
 
 function calloutOf(body: Body, line: number, kind: SourceCallout["kind"]): SourceCallout {
