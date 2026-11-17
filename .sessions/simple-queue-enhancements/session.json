@@ -9,7 +9,7 @@
       "discovery",
       "specification"
     ],
-    "version": 9
+    "version": 10
   },
   "practices": {
     "ddd": {
@@ -27,7 +27,8 @@
     "stories": {
       "formats": {
         "scenarios": []
-      }
+      },
+      "enabled": false
     }
   }
 }
