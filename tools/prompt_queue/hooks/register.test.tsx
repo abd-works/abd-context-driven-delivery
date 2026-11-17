@@ -1101,3 +1101,15 @@ test("pressing a collapsed robot expands its queue again", async ($, on) => {
   expect(JSON.stringify(await after.find({ type: 'Box', key: 'agent-column-1' }))).toContain('"card-row-a"')
   await after.unmount()
 })
+
+
+test("a collapsed robot shows how many of its items are done under it, such as 1/2", async ($, on) => {
+  const seeded = groupedQueue(on, [{ description: 'Write the story map', prompts: ['Write the scenarios', 'Run the unit tier'] }])
+  seeded.stored.collapsedAgents = { value: [0], version: 1 }
+  seeded.stored.queue = { value: { chat: CHAT, prompts: [{ ...QUEUED[0], is_done: true }, QUEUED[1]] }, version: 2 }
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+
+  expect((await ui.find({ type: 'Box', key: 'agent-column-1' }))?.text).toContain('1/2')
+  await ui.unmount()
+})

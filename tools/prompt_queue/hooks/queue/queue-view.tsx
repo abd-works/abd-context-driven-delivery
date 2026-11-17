@@ -209,13 +209,15 @@ function AgentColumnsView($: EngineInterface, e: AbovePromptEvent, state: QueueS
 }
 
 /** One robot's queue: its robot on top, which collapses the queue to the robot alone and expands it again, its name and
- * ✎ to rename it, then its prompts as the queue's cards. A collapsed queue takes no room the others could use. */
+ * ✎ to rename it, then its prompts as the queue's cards. A collapsed queue takes no room the others could use, and shows
+ * under its robot how many of its items are done, such as 3/5. */
 function AgentColumnView($: EngineInterface, e: AbovePromptEvent, state: QueueState, task: SubAgentTask, place: number) {
   const elements = $.ui.resolve(e)
   const { Box, Button, Text } = elements
   const number = place + 1
   const name = agentNameOf(task, place)
   const isCollapsed = state.collapsedAgents.includes(place)
+  const items = robotPromptsOf(state.queue.prompts, task, place)
   const picture = 'Svg' in elements
     ? <elements.Svg key={`robot-${number}`} source={robotSvgOf(place)} alt={`${name}, a robot`} width={ROBOT_PIXELS} height={ROBOT_PIXELS} />
     : <Text key={`robot-${number}`} color={LOOK.accent}>🤖</Text>
@@ -235,7 +237,9 @@ function AgentColumnView($: EngineInterface, e: AbovePromptEvent, state: QueueSt
         {!isCollapsed && <Text bold color={LOOK.accent}>{name}</Text>}
         {!isCollapsed && <Button key={`rename-agent-${number}`} label="✎" onPress={() => renameAgent($, place)} />}
       </Box>
-      {!isCollapsed && CardsView($, e, state, robotPromptsOf(state.queue.prompts, task, place), true)}
+      {isCollapsed
+        ? <Text key={`agent-progress-${number}`} color={LOOK.muted}>{`${items.filter(item => item.is_done).length}/${items.length}`}</Text>
+        : CardsView($, e, state, items, true)}
     </Box>
   )
 }
