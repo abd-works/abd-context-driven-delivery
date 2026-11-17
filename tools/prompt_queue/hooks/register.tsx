@@ -3,7 +3,7 @@ import type { Register } from 'claude-code'
 import {
   currentQueue,
   isQueuedByKey,
-  planFromConversation,
+  queueFromCommand,
   queueByKey,
   finishTurn,
   startTurn,
@@ -14,17 +14,15 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({
       name: 'queue',
-      description: 'Turn this conversation into ordered prompts on the prompt queue',
-      argumentHint: '[what to focus on]',
+      description: 'Queue a pasted list, one prompt per item, or turn this conversation into ordered prompts',
+      argumentHint: '[a list to queue, or what to focus on]',
     })
 
     return next(e)
   })
 
   on('command.run', { command: 'queue' }, async ($, e) => {
-    const count = await planFromConversation($, e.args)
-
-    return { text: `Queued ${count} prompt(s) from this conversation.` }
+    return { text: await queueFromCommand($, e.args) }
   })
 
   // Alt+Enter queues the draft instead of sending it; the engine reports Alt as meta. Ctrl+Enter never reached a mod

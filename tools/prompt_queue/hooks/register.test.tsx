@@ -157,3 +157,43 @@ test('adding while a prompt is being edited puts the draft back in its place', a
   expect(written.prompts).toEqual([{ id: 'a', text: 'Write the scenarios again' }, QUEUED[1]])
   await ui.unmount()
 })
+
+// Seen 2026-11-17: /queue with a pasted list of outstanding items answered "Queued 0 prompt(s)".
+const PASTED_LIST = [
+  '2. Right-click Go to file on a fold-out.',
+  '3. Files e2e not re-run since the connector fold-outs.',
+  '',
+  'Session roots setup',
+  '7. No story tests for the three Choose Session And Practice Roots scenarios.',
+].join(String.fromCharCode(10))
+
+test('/queue given a pasted list queues each item in order, without asking the model', async ($, on) => {
+  const store = seedQueue(on, false, '', [])
+  let isModelAsked = false
+  on('model.fork', () => {
+    isModelAsked = true
+    return { value: { isAnswered: true, text: '[]' } }
+  })
+
+  const ran = await $.command.run({ command: 'queue', args: PASTED_LIST })
+  const queued = store.prompts as { text: string }[]
+
+  expect([ran.text, queued.map(prompt => prompt.text), isModelAsked]).toEqual([
+    'Queued 3 prompt(s).',
+    [
+      'Right-click Go to file on a fold-out.',
+      'Files e2e not re-run since the connector fold-outs.',
+      'No story tests for the three Choose Session And Practice Roots scenarios.',
+    ],
+    false,
+  ])
+})
+
+test('/queue whose plan holds no prompt says why', async ($, on) => {
+  seedQueue(on, false, '', [])
+  on('model.fork', () => ({ value: { isAnswered: true, text: 'Nothing is left to do.' } }))
+
+  const ran = await $.command.run({ command: 'queue', args: '' })
+
+  expect(ran.text).toBe('Queued 0 prompt(s): the model proposed none. It answered: Nothing is left to do.')
+})

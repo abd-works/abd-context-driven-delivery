@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
 import type { QueuedPrompt, SubAgentTask } from '../../types'
-import { PromptQueue, parseJsonArray, slashCommandOf } from './queue-order'
+import { PromptQueue, listedItems, parseJsonArray, slashCommandOf } from './queue-order'
 
 const GROUPING_MODEL = 'sonnet'
 const GROUPING_TOKENS = 4096
@@ -207,20 +207,41 @@ export async function sendTasksToSubAgents($: EngineInterface): Promise<void> {
   await update($, notice, () => `Sent ${grouped.length} task(s) to sub-agents.`)
 }
 
-/** `/queue`: the model reads this conversation and proposes the ordered prompts to queue. */
-export async function planFromConversation($: EngineInterface, focus: string): Promise<number> {
+/**
+ * `/queue [list or focus]`: a pasted list queues each of its items in order; otherwise the model reads this
+ * conversation and proposes the ordered prompts to queue, with the focus given. Answers what it queued, and why it
+ * queued nothing when it did not.
+ */
+export async function queueFromCommand($: EngineInterface, args: string): Promise<string> {
+  const listed = listedItems(args)
+  if (listed.length > 0) {
+    await queueAll($, listed)
+    return `Queued ${listed.length} prompt(s).`
+  }
+
+  return planFromConversation($, args)
+}
+
+async function planFromConversation($: EngineInterface, focus: string): Promise<string> {
   const reply = await $.model.fork({ prompt: planningPrompt(focus) })
   if (!reply.isAnswered) {
     await update($, notice, () => `/queue could not read the conversation: ${reply.reason}`)
-    return 0
+    return `Queued 0 prompt(s): the conversation could not be read. ${reply.reason}`
   }
   const planned = parseJsonArray(reply.text).filter((one): one is string => typeof one === 'string')
-  for (const text of planned) {
+  if (planned.length === 0) {
+    return `Queued 0 prompt(s): the model proposed none. It answered: ${reply.text.trim()}`
+  }
+  await queueAll($, planned)
+
+  return `Queued ${planned.length} prompt(s) from this conversation.`
+}
+
+async function queueAll($: EngineInterface, texts: string[]): Promise<void> {
+  for (const text of texts) {
     await queuePrompt($, text)
   }
   await update($, isExpanded, () => true)
-
-  return planned.length
 }
 
 function planningPrompt(focus: string): string {

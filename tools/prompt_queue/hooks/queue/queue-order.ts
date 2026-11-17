@@ -71,6 +71,24 @@ export function parseJsonArray(reply: string): unknown[] {
   return Array.isArray(parsed) ? parsed : []
 }
 
+// A list item's marker: `1.`, `2)`, `-`, `*` or `•`, with the space after it.
+const LIST_MARKER = /^(?:\d+[.)]|[-*•])\s+/
+
+/**
+ * The items of a list pasted after `/queue`, in order, each one prompt: the lines that carry a list marker, the marker
+ * left off, or every line when none does. A heading among marked items, such as `Session roots setup`, is no item. One
+ * line is a focus for planning, not a list, so it answers none.
+ */
+export function listedItems(text: string): string[] {
+  const lines = text.split(/\r?\n/).map(line => line.trim()).filter(line => line !== '')
+  if (lines.length < 2) {
+    return []
+  }
+  const marked = lines.filter(line => LIST_MARKER.test(line))
+
+  return (marked.length > 0 ? marked : lines).map(line => line.replace(LIST_MARKER, ''))
+}
+
 /** A queued prompt that is a slash command, `/name args`, split as the engine runs it; none for any other text. */
 export function slashCommandOf(text: string): { command: string; args: string } | undefined {
   const typed = text.trim()
