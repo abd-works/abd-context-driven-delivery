@@ -147,19 +147,29 @@ class CddHome:
         return [self._write_marketplace(), *files]
 
     def write_mod_plugins(self) -> None:
-        """Publish the mods from the code the server runs: the cdd-board mod, with the draw.io viewer its chat bar opens
-        diagrams in and the install command it runs, and the prompt queue mod; then list them in the marketplace."""
-        board = self._publish_mod(BOARD_MOD_FOLDER, BOARD_PLUGIN)
+        """Publish the mods from the code the server runs."""
+        self._publish_mods(self.source)
+
+    def publish_mods_of(self, lane: CddHome) -> None:
+        """Publish the mods of the code lane's server runs into this home's marketplace. Every chat installs its mods
+        from the stable lane's home, so a dev lane's install publishes there too, or the person keeps the stable lane's
+        mods while the feature changes them."""
+        self._publish_mods(lane.source)
+
+    def _publish_mods(self, code: Path) -> None:
+        """Publish the mods of code: the cdd-board mod, with the draw.io viewer its chat bar opens diagrams in and the
+        install command it runs, and the prompt queue mod; then list them in the marketplace."""
+        board = self._publish_mod(code, BOARD_MOD_FOLDER, BOARD_PLUGIN)
         if board is not None:
-            self._add_board_extras(board)
-        self._publish_mod(QUEUE_MOD_FOLDER, QUEUE_PLUGIN)
+            self._add_board_extras(code, board)
+        self._publish_mod(code, QUEUE_MOD_FOLDER, QUEUE_PLUGIN)
         self._write_marketplace()
 
-    def _publish_mod(self, folder: Path, name: str) -> Path | None:
-        """Copy the mod in folder of the code the server runs to the plugin called name; none when the code has no such
-        mod. Its version gains a hash of the mod's files: Claude Code keeps a plugin it has already seen at the same
-        version, so a changed mod needs a new one."""
-        source = self.source / folder
+    def _publish_mod(self, code: Path, folder: Path, name: str) -> Path | None:
+        """Copy the mod in folder of code to the plugin called name; none when the code has no such mod. Its version
+        gains a hash of the mod's files: Claude Code keeps a plugin it has already seen at the same version, so a
+        changed mod needs a new one."""
+        source = code / folder
         if not (source / ".claude-plugin" / "plugin.json").is_file():
             return None
         target = self.claude_plugins / name
@@ -172,15 +182,15 @@ class CddHome:
         manifest_file.write(manifest)
         return target
 
-    def _add_board_extras(self, target: Path) -> None:
+    def _add_board_extras(self, code: Path, target: Path) -> None:
         """The install command the chat bar runs, read from its own folder since it runs while the server is broken, and
         the draw.io viewer it opens diagrams in."""
         JsonFile(target / self.INSTALL_COMMAND).write({"command": self.install_command})
         if self.mode == self.CHECKOUT:
             JsonFile(self.source / BOARD_MOD_FOLDER / self.INSTALL_COMMAND).write({"command": self.install_command})
-        if (self.source / DRAWIO_VIEWER).is_file():
+        if (code / DRAWIO_VIEWER).is_file():
             (target / BOARD_DRAWIO_VIEWER).parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(self.source / DRAWIO_VIEWER, target / BOARD_DRAWIO_VIEWER)
+            shutil.copy2(code / DRAWIO_VIEWER, target / BOARD_DRAWIO_VIEWER)
 
     def _copy_mod(self, source: Path, target: Path) -> None:
         """Copy the mod's parts, without their tests."""

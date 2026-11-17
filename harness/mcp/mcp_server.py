@@ -304,9 +304,15 @@ class McpInstallation(ServerInstallation):
         status = {"mcp": self.served.ensure()}
         if self.layout.is_claude_code:
             status["cdd plugin"] = self.claude_plugins.install_cdd()
-            status["board"] = self.claude_plugins.install_board()
-            status["prompt queue"] = self.claude_plugins.install_queue()
+            status.update(self.install_mods())
         return status
+
+    def install_mods(self) -> dict[str, str]:
+        """Install the board and prompt queue mods of the code the served lane runs. Chats install mods from the stable
+        lane's marketplace, so a dev lane's mods are published there first."""
+        if self.served.home.is_dev_lane:
+            self.daemon.home.publish_mods_of(self.served.home)
+        return {"board": self.claude_plugins.install_board(), "prompt queue": self.claude_plugins.install_queue()}
 
     def status(self) -> list[str]:
         return [f"cdd server: {'running' if self.daemon.is_running() else 'not running'}"]
