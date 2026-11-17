@@ -1,0 +1,73 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-17T21:58:16.090468+00:00",
+  "prompts": [
+    {
+      "id": "502b16c28c56",
+      "text": "Sub-agent mode replaces the queue with one queue per agent: the columns take the list's place, no extra area, each item one line cut with an ellipsis",
+      "steps": [
+        {
+          "text": "[interruption] replace the queue with multiple queues, one per agent; shorten items with ...; no extra area",
+          "state": "done"
+        },
+        {
+          "text": "Tests first: sub-agent mode draws the columns in place of the list",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] it needs to look like the original queue, more than one side by side: each column is the queue's own cards",
+          "state": "done"
+        },
+        {
+          "text": "Commit, push, repin dev",
+          "state": "done"
+        },
+        {
+          "text": "The person checks it live",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] wasntr there three agents?",
+          "state": "pending"
+        }
+      ],
+      "is_done": false
+    },
+    {
+      "id": "c28668f35e63",
+      "text": "Turn on sub-agent mode on this chat's prompt queue in C:\\dev\\abd-cdd-simple-queue-enhancement, and queue the demo items below so they group into three sub-agent columns. None of them may change any tracked file in the repository: each writes only inside a scratch folder under the session's work folder, .sessions/simple-queue-enhancements/demo/<agent-name>/."
+    },
+    {
+      "id": "512fa2ec6333",
+      "text": "Demo task for sub-agent Sparky: create .sessions/simple-queue-enhancements/demo/sparky/, give your queue card the steps 'count files', 'write report', 'mark done' with prompt-queue.set_steps, then count the .py files under tools/prompt_queue (read only) and write the count and file list to demo/sparky/report.md, ticking each step done with prompt-queue.step_done as you finish it, then mark the card done."
+    },
+    {
+      "id": "82c9469951ed",
+      "text": "Demo task for sub-agent Bolt: create .sessions/simple-queue-enhancements/demo/bolt/, give your queue card three steps with prompt-queue.set_steps, read .context/story-map.md (read only) and write the titles of every story under the Queue Prompts For Later epic to demo/bolt/stories.md, ticking each step done as you go, then mark the card done."
+    },
+    {
+      "id": "5771bcf0179a",
+      "text": "Demo task for sub-agent Gizmo: create .sessions/simple-queue-enhancements/demo/gizmo/, give your queue card four steps with prompt-queue.set_steps, wait about 20 seconds between steps so its progress can be watched moving on the card, write one line per step to demo/gizmo/progress.log, tick each step done as you go, then mark the card done."
+    },
+    {
+      "id": "5665fb7fca4e",
+      "text": "Demo task for sub-agent Rivet, to show a decision being parked: create .sessions/simple-queue-enhancements/demo/rivet/, give your card two steps, finish the first by writing demo/rivet/note.md, then end your turn asking the person 'Keep note.md or delete it?'; if no answer comes within a minute, put the card back with prompt-queue.edit starting '[decision required]' and move on, as the queue's never-go-idle rule says."
+    },
+    {
+      "id": "3d76bd248ca8",
+      "text": "While the demo sub-agents run, send two short messages to this chat: one about Bolt's task ('also list the story count') and one unrelated ('what time is it'). Check that the first is filed under Bolt's goal as an [interruption] step and the second gets a card of its own, and report where each landed."
+    },
+    {
+      "id": "2a0758238a3d",
+      "text": "Check the demo run: read the queue with prompt-queue.show and report, for each demo card, its sub-agent name, its steps and their states, and whether it is done; confirm each sub-agent wrote only inside its own .sessions/simple-queue-enhancements/demo/<name>/ folder and that git status shows no change to any tracked file outside .sessions."
+    },
+    {
+      "id": "1b0e8d8710b7",
+      "text": "Clear the queue and confirm the demo cards were archived as JSON in .sessions/simple-queue-enhancements/queue-archive/, then list what the newest archive file holds."
+    },
+    {
+      "id": "dc895d245c4b",
+      "text": "Delete the .sessions/simple-queue-enhancements/demo/ folder so the demo leaves nothing behind, confirm git status is clean apart from session files, and record on the story map what the multi-agent demo showed working and what did not."
+    }
+  ]
+}

@@ -67,6 +67,8 @@ const plan = atom({ plugin: 'prompt-queue', key: 'plan' } as const, [] as Prompt
 const isPlanSeen = atom({ plugin: 'prompt-queue', key: 'isPlanSeen' } as const, false)
 /** The cards whose steps are shown under them. */
 const openSteps = atom({ plugin: 'prompt-queue', key: 'openSteps' } as const, [] as string[])
+/** The agent's card opened full width under the agents' queues, with its complete text and buttons; none when closed. */
+const openedCard = atom({ plugin: 'prompt-queue', key: 'openedCard' } as const, '')
 
 export type QueueState = {
   queue: PromptQueue
@@ -76,6 +78,7 @@ export type QueueState = {
   editingId: string
   workingId: string
   openSteps: string[]
+  openedId: string
   tasks: SubAgentTask[]
   notice: string
 }
@@ -89,6 +92,7 @@ export async function currentQueue($: EngineInterface): Promise<QueueState> {
     editingId: await read($, editingId),
     workingId: await read($, askedAbout),
     openSteps: await read($, openSteps),
+    openedId: await read($, openedCard),
     tasks: await read($, tasks),
     notice: await read($, notice),
   }
@@ -531,6 +535,11 @@ async function changeSteps($: EngineInterface, prompt: QueuedPrompt, steps: Prom
   await changeQueue($, 'set_steps', { prompt: prompt.id, steps })
 }
 
+/** Pressing an agent's card opens it full width under the agents' queues; pressing it again closes it. */
+export async function toggleOpenedCard($: EngineInterface, id: string): Promise<void> {
+  await update($, openedCard, opened => (opened === id ? '' : id))
+}
+
 export async function toggleSteps($: EngineInterface, id: string): Promise<void> {
   await update($, openSteps, open => (open.includes(id) ? open.filter(shown => shown !== id) : [...open, id]))
 }
@@ -545,7 +554,7 @@ export async function sendNext($: EngineInterface): Promise<void> {
 }
 
 export async function groupIntoTasks($: EngineInterface): Promise<void> {
-  const queued = new PromptQueue((await read($, queue)).prompts)
+  const queued = new PromptQueue((await read($, queue)).prompts.filter(prompt => !prompt.is_done))
   if (queued.isEmpty) {
     return
   }
@@ -599,7 +608,6 @@ export async function sendTasksToSubAgents($: EngineInterface): Promise<void> {
       return
     }
   }
-  await clearQueue($)
   await update($, notice, () => `Sent ${grouped.length} task(s) to sub-agents.`)
 }
 

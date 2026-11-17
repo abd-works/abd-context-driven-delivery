@@ -983,8 +983,65 @@ test("sub-agent mode draws one queue per agent in the list's place, each made of
   const second = JSON.stringify(await ui.find({ type: 'Box', key: 'agent-column-2' }))
 
   expect(first).toContain('"card-row-a"')
-  expect(first).toContain('"edit-a"')
   expect(second).toContain('"card-row-b"')
   expect(first).not.toContain('"card-row-b"')
+  await ui.unmount()
+})
+
+
+test('switching sub-agent mode on groups only the work not done yet', async ($, on) => {
+  seedQueue(on, true, '', ONE_DONE)
+  const asked: string[] = []
+  on('model.complete', (_, e) => {
+    asked.push((e as { prompt: string }).prompt)
+    return { value: { isAnswered: true, text: '[]', usage: NO_USAGE } }
+  })
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'queue-sub-agents' })
+  await ui.unmount()
+
+  expect(asked).toEqual([JSON.stringify(['Run the unit tier'])])
+})
+
+test('sending the queue to sub-agents keeps their cards, so each can mark its own card done', async ($, on) => {
+  const seeded = groupedQueue(on, [{ description: 'Run the tests', prompts: ['Run the unit tier'] }])
+  seeded.stored.isPlaying = { value: true, version: 1 }
+  on('agent.spawn', () => ({ model: 'claude-sonnet-5-5' }))
+  on('turn.complete', () => ({ text: 'Done.' }))
+
+  await $.turn.complete(FINISHED_TURN)
+  await unawaitedWorkSettled()
+
+  expect(seeded.prompts.map(prompt => prompt.text)).toEqual(['Write the scenarios', 'Run the unit tier'])
+})
+
+test("an agent's card shows no buttons of its own; pressing it opens it full width under the queues, with its text and buttons", async ($, on) => {
+  groupedQueue(on)
+
+  const before = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  const column = JSON.stringify(await before.find({ type: 'Box', key: 'agent-column-1' }))
+  await before.press({ key: 'card-text-a' })
+  await before.unmount()
+  const after = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  const opened = JSON.stringify(await after.find({ type: 'Box', key: 'opened-card' }))
+
+  expect(column).not.toContain('"edit-a"')
+  expect(opened).toContain('"edit-a"')
+  expect(opened).toContain('Write the scenarios')
+  await after.unmount()
+})
+
+
+test("work a robot finishes stays in that robot's queue, dimmed", async ($, on) => {
+  const seeded = groupedQueue(on)
+  seeded.prompts[0]!.is_done = true
+  seeded.stored.queue = { value: { chat: CHAT, prompts: seeded.prompts.map(prompt => ({ ...prompt })) }, version: 2 }
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  const card = await ui.find({ type: 'Button', key: 'card-text-a' })
+
+  expect(JSON.stringify(await ui.find({ type: 'Box', key: 'agent-column-1' }))).toContain('"card-row-a"')
+  expect(card?.props.dimColor).toBe(true)
   await ui.unmount()
 })
