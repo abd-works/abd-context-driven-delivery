@@ -12,6 +12,7 @@ import {
   toggleSubAgentMode,
   toggleSteps,
   toggleOpenedCard,
+  robotPromptsOf,
   agentNameOf,
   renameAgent,
   addStep,
@@ -207,14 +208,9 @@ function AgentColumnView($: EngineInterface, e: AbovePromptEvent, state: QueueSt
         <Text bold color={LOOK.accent}>{name}</Text>
         <Button key={`rename-agent-${number}`} label="✎" onPress={() => renameAgent($, place)} />
       </Box>
-      {CardsView($, e, state, promptsOf(state, task), true)}
+      {CardsView($, e, state, robotPromptsOf(state.queue.prompts, task, place), true)}
     </Box>
   )
-}
-
-/** A sub-agent's prompts as they stand on the queue, in its order; a prompt no longer queued is left out. */
-function promptsOf(state: QueueState, task: SubAgentTask): QueuedPrompt[] {
-  return task.prompts.flatMap(text => state.queue.prompts.filter(prompt => prompt.text === text))
 }
 
 /** About two lines tall, in the desktop's pixels: a robot stands out over its column. */

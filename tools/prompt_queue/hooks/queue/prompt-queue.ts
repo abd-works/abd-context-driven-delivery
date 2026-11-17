@@ -33,6 +33,8 @@ const DECISION_WAIT_MS = 60_000
 const SYSTEM_NOTICE = /^\s*<(task-notification|system-reminder)>/
 // How much of each goal's text the note on a filed message lists, enough to tell the goals apart.
 const GOAL_TITLE_COLUMNS = 100
+// How a card queued for a robot by name starts: [for Bolt] ...
+const ROBOT_MARK_OPEN = '[for '
 // What marks a step that came from a message the person sent while the agent worked.
 const INTERRUPTION_MARK = '[interruption]'
 // Until the mod has seen the agent's task list, the agent keeps a prompt's steps on the queue itself.
@@ -430,7 +432,8 @@ async function addInterruption($: EngineInterface, prompt: QueuedPrompt, text: s
   await changeQueue($, 'add_interruption', { prompt: prompt.id, text })
   const goals = (await read($, queue)).prompts
   await update($, plan, () => goals.find(goal => goal.id === prompt.id)?.steps ?? [])
-  return { id: '', note: filingNoteOf(prompt.id, goals) }
+  const robots = (await read($, isSubAgentMode)) ? await read($, tasks) : []
+  return { id: '', note: [filingNoteOf(prompt.id, goals), ...robotsNoteOf(robots, goals)].join('\n') }
 }
 
 /** What the agent is told about a message filed under the goal last worked: decide where it belongs before any other
@@ -445,6 +448,29 @@ function filingNoteOf(filedUnder: string, goals: QueuedPrompt[]): string {
     'A question or a yes/no answer belongs to the goal it is about. The goals on the queue:',
     ...goals.map(goal => `- [${goal.id}] ${goal.text.replace(/\s+/g, ' ').slice(0, GOAL_TITLE_COLUMNS)}${goal.is_done ? ' (done)' : ''}`),
   ].join('\n')
+}
+
+/** In sub-agent mode, what the agent reads beside a new message: each robot's queue, and that the agent decides whether
+ * to do the message itself, make it a task of a robot's item, or give it to a robot as a new item. */
+function robotsNoteOf(robots: SubAgentTask[], goals: QueuedPrompt[]): string[] {
+  if (robots.length === 0) {
+    return []
+  }
+  return [
+    "Sub-agent mode is on. You decide where this message goes: do it yourself; make it a task of an item in a robot's queue with prompt-queue.add_interruption;",
+    "or give it to a robot as a new item with prompt-queue.add, its text starting [for <robot name>]. Take its step off this goal when it goes elsewhere. The robots' queues:",
+    ...robots.map((robot, place) => `${agentNameOf(robot, place)}: ${robotPromptsOf(goals, robot, place).map(goal => `[${goal.id}] ${goal.text.slice(0, GOAL_TITLE_COLUMNS)}`).join('; ')}`),
+  ]
+}
+
+/** A robot's items as they stand on the queue: the prompts grouped to it, in its order, and any card queued for it by
+ * name, its text starting [for <robot name>]; a prompt no longer queued is left out. */
+export function robotPromptsOf(goals: QueuedPrompt[], robot: SubAgentTask, place: number): QueuedPrompt[] {
+  const forRobot = `${ROBOT_MARK_OPEN}${agentNameOf(robot, place)}]`
+  return [
+    ...robot.prompts.flatMap(text => goals.filter(goal => goal.text === text)),
+    ...goals.filter(goal => goal.text.startsWith(forRobot)),
+  ]
 }
 
 /** One `update_plan` call: the agent's task list follows it and is copied whole onto the prompt being worked. */

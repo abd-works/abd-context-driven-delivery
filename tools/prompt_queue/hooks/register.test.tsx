@@ -1045,3 +1045,30 @@ test("work a robot finishes stays in that robot's queue, dimmed", async ($, on) 
   expect(card?.props.dimColor).toBe(true)
   await ui.unmount()
 })
+
+
+test("in sub-agent mode the note on a new message shows the robots' queues and lets the agent decide where it goes", async ($, on) => {
+  const seeded = groupedQueue(on)
+  seeded.stored.askedAbout = { value: 'a', version: 1 }
+  const carried: string[] = []
+  on('prompt.submit', (_, e) => {
+    carried.push(...(e.context ?? []))
+    return { text: e.text }
+  })
+
+  await $.prompt.submit({ text: 'also run the heavy tier', wait: false, origin: { kind: 'composer' } })
+
+  expect(carried.join()).toContain('Bolt: [b] Run the unit tier')
+  expect(carried.join()).toContain('[for <robot name>]')
+  expect(carried.join()).toContain('do it yourself')
+})
+
+test("a card queued for a robot by name shows in that robot's queue", async ($, on) => {
+  const seeded = groupedQueue(on)
+  seeded.stored.queue = { value: { chat: CHAT, prompts: [...QUEUED, { id: 'c', text: '[for Bolt] Run the heavy tier' }] }, version: 2 }
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+
+  expect(JSON.stringify(await ui.find({ type: 'Box', key: 'agent-column-2' }))).toContain('"card-row-c"')
+  await ui.unmount()
+})
