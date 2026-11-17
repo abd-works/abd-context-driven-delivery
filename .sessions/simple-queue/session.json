@@ -4,7 +4,7 @@
     "stages": [
       "implementation"
     ],
-    "version": 71
+    "version": 73
   },
   "practices": {
     "stories": {
@@ -29,7 +29,9 @@
     "clean_engineering": {
       "enabled": true,
       "formats": {
-        "code": []
+        "code": [
+          "python"
+        ]
       }
     },
     "bdd": {
