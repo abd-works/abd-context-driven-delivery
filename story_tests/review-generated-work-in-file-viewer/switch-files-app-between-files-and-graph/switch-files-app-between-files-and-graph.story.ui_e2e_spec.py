@@ -12,21 +12,58 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from expects import equal, expect
 from mamba import after, before, context, description, it
 
-from files_app_browser import SHOWN_MILLISECONDS, FilesStack, graph_view, line, open_branches, select, settled, shown_lines
+from files_app_browser import SHOWN_MILLISECONDS, TICKET_CODE, FilesStack, graph_view, line, open_branches, select, settled, shown_lines
 from space.session.graph_view_examples import CHECKOUT_FLOW
 
 FIDELITIES = "stories-acceptance-tests,clean-engineering-code"
 GIVEN_STEP_LINES = ['    @s.given("a ticket on the board")', "    def _(world):", "        world.ticket = ticket_on_board(world)"]
+# Interaction: the practice trees the graph view draws for checkout-flow's Stories and Clean Engineering files.
+PRACTICE_TREES = ["Practice clean_engineering", "Practice stories"]
+DELETE_LINES = ["        self.close()", "        reread_all(board)", "        Board.reread(board)"]
 
 
-with description("Story: Fold Open Files To Selected Nodes") as self:
+with description("Switch Files App Between Files And Graph, in a real browser") as self:
     with before.all:
         self.stack = FilesStack()
 
     with after.all:
         self.stack.close()
 
-    with context("Scenario: Selecting a step in a Python story test unfolds its function"):
+    with context("Given the Files app lists checkout-flow's Stories and Clean Engineering files"):
+        with before.all:
+            self.page = self.stack.open(CHECKOUT_FLOW.name, FIDELITIES)
+
+        with after.all:
+            self.page.close()
+
+        with context("Story: Switch Files App To Graph View"):
+            with context("Scenario: The graph view shows the practice trees of the listed files"):
+                with before.all:
+                    graph_view(self.page)
+
+                with it("Then the file bar shows the Stories and Clean Engineering practice trees"):
+                    expect(sorted(self.page.locator('button.graph-node[title^="Practice "]').evaluate_all("nodes => nodes.map(node => node.title)"))).to(equal(PRACTICE_TREES))
+
+        with context("Story: Open Several Files From Graph Nodes"):
+            with context("Scenario: Selecting a node opens its file"):
+                with before.all:
+                    open_branches(self.page, "clean_engineering", "kanban", "Ticket")
+                    select(self.page, "Operation delete")
+                    line(self.page, "self.close()").wait_for(timeout=SHOWN_MILLISECONDS)
+
+                with it("Then ticket.py opens beside the file bar"):
+                    expect(self.page.locator("section.open-file").evaluate_all("files => files.map(file => file.getAttribute('aria-label'))")).to(equal([TICKET_CODE]))
+
+        with context("Story: Fold Open Files To Selected Nodes"):
+            with context("Scenario: An open file unfolds only the selected node"):
+                with it("Then the lines of Ticket.delete are unfolded"):
+                    expect([shown for shown in shown_lines(self.page) if shown in DELETE_LINES]).to(equal(DELETE_LINES))
+
+                with it("And Ticket.close is folded to its first line"):
+                    hidden = lambda: [shown for shown in shown_lines(self.page) if shown == "        return None"]
+                    expect(settled(hidden, lambda shown: len(shown) == 1)).to(equal(["        return None"]))
+
+    with context("Story: Fold Open Files To Selected Nodes, Scenario: Selecting a step in a Python story test unfolds its function"):
         with before.all:
             self.page = self.stack.open(CHECKOUT_FLOW.name, FIDELITIES)
             graph_view(self.page)
