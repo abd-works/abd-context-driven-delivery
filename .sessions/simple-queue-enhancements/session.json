@@ -7,9 +7,10 @@
   "guidance": {
     "stages": [
       "discovery",
-      "specification"
+      "specification",
+      "implementation"
     ],
-    "version": 6
+    "version": 7
   },
   "practices": {
     "ddd": {
