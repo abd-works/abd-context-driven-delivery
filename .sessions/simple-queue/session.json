@@ -4,11 +4,11 @@
     "stages": [
       "discovery"
     ],
-    "version": 25
+    "version": 27
   },
   "practices": {
     "stories": {
-      "enabled": true,
+      "enabled": false,
       "formats": {
         "story_map": [
           "drawio",
@@ -23,7 +23,7 @@
       "enabled": false
     },
     "clean_engineering": {
-      "enabled": false
+      "enabled": true
     },
     "bdd": {
       "enabled": false
