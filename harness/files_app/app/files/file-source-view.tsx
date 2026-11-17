@@ -18,6 +18,8 @@ import { calloutsOf, expandedLines, isStoryTest, monacoLanguageOf, rulesOf, sour
 // How far down the window the first line asked to show sits once the page scrolls to it: near the top, so it is plain
 // where the page went, with a line or two above it for context.
 const SHOWN_FROM_TOP = 1 / 10
+// How long a file's folds take to close after it opens, during which the page keeps the line asked for in view.
+const FOLDS_SETTLE_MILLISECONDS = 1500
 
 // The nodes selected in the graph view, marked by one orange line beside their lines rather than by shading the text.
 function useSelectedMarks(editor: SourceEditorInstance | null, openAround: SourceLines[], lineCount: number): void {
@@ -107,12 +109,24 @@ export function FileSourceView({
   const firstShown = shownAround[0]?.start ?? 0
   useEffect(() => {
     if (!editor || !firstShown) return
-    const frame = requestAnimationFrame(() => {
-      const top = wrapper.current?.getBoundingClientRect().top
-      if (top === undefined) return
-      window.scrollTo({ top: window.scrollY + top + editor.getTopForLineNumber(firstShown) - window.innerHeight * SHOWN_FROM_TOP, behavior: 'smooth' })
-    })
-    return () => cancelAnimationFrame(frame)
+    let frame = 0
+    const scrollToShown = () => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => {
+        const top = wrapper.current?.getBoundingClientRect().top
+        if (top === undefined) return
+        window.scrollTo({ top: window.scrollY + top + editor.getTopForLineNumber(firstShown) - window.innerHeight * SHOWN_FROM_TOP, behavior: 'smooth' })
+      })
+    }
+    scrollToShown()
+    // A file just opened folds after it draws, which moves the line up: while the folds settle, the page follows it.
+    const resizing = editor.onDidContentSizeChange(scrollToShown)
+    const settled = setTimeout(() => resizing.dispose(), FOLDS_SETTLE_MILLISECONDS)
+    return () => {
+      cancelAnimationFrame(frame)
+      clearTimeout(settled)
+      resizing.dispose()
+    }
   }, [editor, firstShown])
   const openedComment = file.comments.find(comment => comment.anchor === opened)
   return (
