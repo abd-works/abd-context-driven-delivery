@@ -182,10 +182,12 @@ outputs:
     - "story_tests/{epic}/{sub-epic}/{sub_epic_slug}.story.shared.py"
     - "story_tests/{epic}/{sub-epic}/{sub_epic_slug}.story.domain.spec.py"
     - "story_tests/{epic}/{sub-epic}/{sub_epic_slug}.story.server.spec.py"
+    - "story_tests/{epic}/{sub-epic}/{story}/{story_snake}_story.test.py"
   typescript:
     - "story_tests/{epic}/{sub-epic}/{sub_epic_slug}.story.shared.ts"
     - "story_tests/{epic}/{sub-epic}/{sub_epic_slug}.story.domain.spec.ts"
     - "story_tests/{epic}/{sub-epic}/{sub_epic_slug}.story.server.spec.ts"
+    - "story_tests/{epic}/{sub-epic}/{story}/{story_snake}_story.test.ts"
 ```
 
 #### Overview
@@ -197,7 +199,7 @@ Make specifications executable by transforming them into automated tests that va
 
 Ask which concrete case proves the outcome, which system already holds the starting state, and what a person can check when the action finishes. Write the examples from those answers.
 
-**Produce:** per lowest sub-epic, `{sub_epic_slug}.story.shared.{lang}` registers shared scenarios; `{sub_epic_slug}.story.domain.spec.{lang}` replays them at domain tier (domain is the only tier with one layer in the filename); `{sub_epic_slug}.story.server.spec.{lang}` and other tier specs name the tier explicitly before `spec`. Markdown scenarios stay `{story_snake}_story.test.md`. Shared Given/When/Then helpers stay `story_test.py` / `story-test.ts`.
+**Produce:** a story whose scenarios are written as one runnable file, `{story_snake}_story.test.{lang}` with its steps' bodies filled in, is its own acceptance test. Otherwise, per lowest sub-epic, `{sub_epic_slug}.story.shared.{lang}` registers shared scenarios; `{sub_epic_slug}.story.domain.spec.{lang}` replays them at domain tier (domain is the only tier with one layer in the filename); `{sub_epic_slug}.story.server.spec.{lang}` and other tier specs name the tier explicitly before `spec`. Markdown scenarios stay `{story_snake}_story.test.md`. Shared Given/When/Then helpers stay `story_test.py` / `story-test.ts`.
 
 #### Guidance
 
