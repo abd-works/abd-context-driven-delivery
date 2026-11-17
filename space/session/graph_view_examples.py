@@ -147,7 +147,17 @@ STEP_STORY_TEXT = (
     "\n"
     "def ticket_left(world) -> str:\n"
     "    return world.ticket\n"
+    "\n"
+    "\n"
+    '@shared_stories.scenario("Delete Ticket", "a deleted ticket is looked up")\n'
+    "def _(s):\n"
+    '    @s.when("the Person looks up the deleted ticket")\n'
+    "    def _(world):\n"
+    "        world.found = ticket_left(world)\n"
 )
+# Seed: that story test's second scenario, its When on line 28 calling only the file's own helper ticket_left, so it
+# invokes no code it tests.
+STEP_STORY_HELPER_WHEN = "when the Person looks up the deleted ticket"
 STEP_STORY_DOCSTRING_LINE = 1
 STEP_STORY_GIVEN_LINE = 9
 STEP_STORY_WHEN_LINE = 13

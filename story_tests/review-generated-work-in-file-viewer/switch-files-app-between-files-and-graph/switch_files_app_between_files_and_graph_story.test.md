@@ -305,6 +305,21 @@ Reported by the person on 2026-11-16: a selected sub-epic's lines in its scenari
 *When* the Person selects the scenario a ticket is deleted  
 *Then* the scenarios file opens at lines 5 to 9, its heading through its Then
 
+#### Scenario: A markdown When is not asked to invoke code before a realization names it
+
+Requested 2026-11-16 by the person: steps in markdown scenario files "would only have [invokes] if realizations are generated", so require invokes only on code-backed steps; linking markdown steps through realizations is in the Backlog.
+
+*Given* checkout-flow's Delete Ticket scenarios in markdown, whose When the Person deletes the ticket's card names no code, and Clean Engineering read  
+*When* the Person views the scenarios file with the rules the whole working copy breaks  
+*Then* the When carries no finding that it invokes nothing, since only a step backed by code can name the code it invokes
+
+#### Scenario: A When in a story test that calls none of the code it tests is flagged
+
+*Given* Delete Ticket's Python shared story test, whose When the Person looks up the deleted ticket calls only the file's own helper ticket_left  
+*When* the Person views the shared story test with its own rules  
+*Then* that When carries the code-steps-invoke-code finding  
+  *But* the When that calls Ticket.delete carries none
+
 #### Scenario: Selecting a markdown step spans its own line, whatever its prose holds
 
 Reported by the person on 2026-11-16: a scenario selected in markdown ran past its last step, because a step's apostrophe (*checkout-flow's*) was read as code's quote.

@@ -30,6 +30,14 @@ _STEP_TYPES = frozenset({"Step", "Given", "When", "Then"})
 # An examples module a story test imports its seeds and fixtures from, such as ticket_story_examples.py or
 # customers-examples.ts: test code, which a step never invokes.
 _EXAMPLES_MODULE_FILE = re.compile(r"examples\.\w+$")
+# The module an examples file is imported as, its path without an extension: ./examples/account-credentials.examples.
+_EXAMPLES_MODULE = re.compile(r"examples$")
+# What a step's calls reach (its calls_reach fact): nothing, only the story test's own code, the code it tests, or code
+# the graph has not read.
+CALLS_REACH_NONE = "none"
+CALLS_REACH_TEST = "test"
+CALLS_REACH_TESTED = "tested"
+CALLS_REACH_UNREAD = "unread"
 # A story map's epic is recorded as an Epic, or as a SubEpic under another epic; a map built on a graph without being
 # recorded calls every epic an Epic.
 _EPIC_TYPES = frozenset({"Epic", "SubEpic"})
@@ -266,11 +274,26 @@ class StoryLinks:
         file = member.source.file if member.source is not None else ""
         return bool(file) and file not in self.story_files and not _EXAMPLES_MODULE_FILE.search(file)
 
+    def _calls_reach(self, step: "Node", called: set, matched: list) -> str:
+        """What a step's calls reach, recorded as its ``calls_reach`` fact for the rule code-steps-invoke-code: ``none``
+        when it calls nothing, ``tested`` when one call reaches the code under test, ``test`` when every call is a story
+        test's own helper or a seed its examples module exports (whether or not that module was read), and ``unread``
+        when a call names code the graph has not read."""
+        if not called:
+            return CALLS_REACH_NONE
+        if any(self._is_tested_code(member) for member in matched):
+            return CALLS_REACH_TESTED
+        imported = step.get_fact("imported_modules") or {}
+        seeds = {name for name, module in imported.items() if _EXAMPLES_MODULE.search(str(module))}
+        resolved = {member.name for member in matched}
+        return CALLS_REACH_UNREAD if called - resolved - seeds else CALLS_REACH_TEST
+
     def _link_step(self, step: "Node") -> None:
         body = self._step_body(step)
         called = set(step.get_fact("callees") or []) | set(_MEMBER_CALL.findall(body))
         matched = [member for name in sorted(called) for member in self.clean.code_index.members_named(name)]
         matched += [function for function in self._functions_called(body) if function not in matched]
+        step.set_fact("calls_reach", self._calls_reach(step, called | set(_FUNCTION_CALL.findall(body)), matched))
         matched = [member for member in matched if self._is_tested_code(member)]
         epic = self.tree.epic_of(step) if matched else None
         for operation in matched:

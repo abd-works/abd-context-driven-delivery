@@ -1,6 +1,7 @@
 """Story graph rules, one module per fidelity."""
 
 from cdd_guidance.practices.stories.rules.acceptance_tests import (
+    CodeStepsInvokeCode,
     DomainFixtureExampleFiles,
     ExampleRoleNames,
     ExamplesExportDataNotRepository,
@@ -43,6 +44,7 @@ RULES: tuple = (
     ExamplesExportDataNotRepository(),
     GwtStepsTraceToDomainOperations(),
     DomainFixtureExampleFiles(),
+    CodeStepsInvokeCode(),
     ExampleRoleNames(),
     AndChaining(),
     ButMarksMissingState(),

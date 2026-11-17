@@ -36,6 +36,7 @@ from space.session.graph_view_examples import (
     SHARED_STORY,
     STEP_LISTED,
     STEP_STORY,
+    STEP_STORY_HELPER_WHEN,
     STEP_STORY_WHEN_LINE,
     TICKET_EXAMPLES,
     TICKET_EXAMPLES_CONSTANT_LINE,
@@ -565,6 +566,38 @@ def _(s):
     def _(world):
         found = [found["violation"]["message"] for found in world.violations if found["violation"]["rule"] == "conforms-to-schema"]
         expect([message for message in found if "'when the Person archives it'" in message]).to(equal([]))
+
+
+@shared_stories.scenario("Follow Story Steps To Code", "A markdown When is not asked to invoke code before a realization names it")
+def _(s):
+    @s.given("checkout-flow's Delete Ticket scenarios in markdown, whose When the Person deletes the ticket's card names no code, and Clean Engineering read")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+
+    @s.when("the Person views the scenarios file with the rules the whole working copy breaks")
+    def _(world):
+        world.violations = world.data_of(session_of(world).file(path=SCENARIOS, cross_file=True))["violations"]
+
+    @s.then("the When carries no finding that it invokes nothing, since only a step backed by code can name the code it invokes")
+    def _(world):
+        found = [found["violation"]["message"] for found in world.violations if "invokes" in found["violation"]["message"]]
+        expect(found).to(equal([]))
+
+
+@shared_stories.scenario("Follow Story Steps To Code", "A When in a story test that calls none of the code it tests is flagged")
+def _(s):
+    @s.given("Delete Ticket's Python shared story test, whose When the Person looks up the deleted ticket calls only the file's own helper ticket_left")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+
+    @s.when("the Person views the shared story test with its own rules")
+    def _(world):
+        world.violations = world.data_of(session_of(world).file(path=STEP_STORY, rules=True))["violations"]
+
+    @s.then("that When carries the code-steps-invoke-code finding, and the When that calls Ticket.delete carries none")
+    def _(world):
+        flagged = [found["violation"]["message"] for found in world.violations if found["violation"]["rule"] == "code-steps-invoke-code"]
+        expect((len(flagged), any(STEP_STORY_HELPER_WHEN in message for message in flagged))).to(equal((1, True)))
 
 
 @shared_stories.scenario("Open Story Scenarios Across Files", "Selecting a markdown step spans its own line, whatever its prose holds")
