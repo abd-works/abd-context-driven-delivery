@@ -14,7 +14,7 @@
 import { existsSync, readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { card, dragCard, expect, fixtureRoot, openWholeBoard, openCardOf, resetSessions, step, test, toast, writeInto, writeSession } from '../../../space/kanban/app/tests/story-ui'
+import { card, dragCard, expect, fixtureRoot, openWholeBoard, openCardOf, readBoardAgain, resetSessions, step, test, toast, writeInto, writeSession } from '../../../space/kanban/app/tests/story-ui'
 import type { Locator, Page } from '../../../space/kanban/app/tests/story-ui'
 
 const sessions = join(fixtureRoot, '.sessions')
@@ -172,7 +172,7 @@ test.describe('Reorder Tickets In Column', () => {
       await expect.poll(() => orderOf(inProgressOf(page, 'Discovery'), names)).toEqual(['sign-up', 'pet-visits'])
     })
     await step(page, 'And Discovery still shows sign-up above pet-visits when the board is read again', async () => {
-      await page.reload()
+      await readBoardAgain(page)
       await expect.poll(() => orderOf(inProgressOf(page, 'Discovery'), names)).toEqual(['sign-up', 'pet-visits'])
     })
   })
@@ -192,7 +192,7 @@ test.describe('Reorder Tickets In Column', () => {
       await expect.poll(() => itemOrderOf(page, titles)).toEqual(['Returns and refunds', 'Gift cards'])
     })
     await step(page, 'And the Backlog still shows Returns and refunds above Gift cards when the board is read again', async () => {
-      await page.reload()
+      await readBoardAgain(page)
       await expect.poll(() => itemOrderOf(page, titles)).toEqual(['Returns and refunds', 'Gift cards'])
     })
   })
@@ -279,7 +279,7 @@ test.describe('Delete Ticket', () => {
   // still, so Delete is pressed on a ticket the board no longer has.
   test('Refuse to delete a ticket the board does not have', async ({ page }) => {
     let opened: Locator
-    await step(page, 'Given the board shows no ticket named no-such-ticket', async () => {
+    await step(page, "Given the board still shows no-such-ticket's card, but its session folder is gone", async () => {
       writeSession(fixtureRoot, { name: 'no-such-ticket', title: 'No such ticket' })
       await page.clock.install()
       await openWholeBoard(page)
@@ -293,7 +293,7 @@ test.describe('Delete Ticket', () => {
     await step(page, "Then the board says no ticket named 'no-such-ticket' on the board", async () => {
       await expect(toast(page, "no ticket named 'no-such-ticket' on the board").first()).toBeVisible()
     })
-    await step(page, 'And deleting no-such-ticket removes no session folder', () => {
+    await step(page, "And deleting no-such-ticket removes no other ticket's session folder", () => {
       expect([existsSync(join(sessions, 'checkout-flow')), existsSync(join(sessions, 'billing-report'))]).toEqual([true, true])
     })
   })
