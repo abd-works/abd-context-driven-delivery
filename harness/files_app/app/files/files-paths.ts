@@ -28,10 +28,11 @@ export const drawioPageOf = (path: string, chat: string, project = ''): string =
 const isWholePath = (path: string): boolean => /^([a-zA-Z]:)?[\\/]/.test(path)
 
 // The draw.io editor on a file named from its project's root. One viewer serves every project, rooted at whichever
-// started it, so a file of a named project is sent as its whole path (.claude/rules/drawio-viewer.md).
-export const drawioEditorUrl = (path: string, project = ''): string => {
+// started it, so a file of a named project is sent as its whole path (.claude/rules/drawio-viewer.md). The viewer
+// answers on DRAWIO_PORT, unless it was started on a port of its own, as a spec's viewer is.
+export const drawioEditorUrl = (path: string, project = '', port = DRAWIO_PORT): string => {
   const file = project && !isWholePath(path) ? `${project.replace(/[\\/]+$/, '')}/${path}` : path
-  return `http://127.0.0.1:${DRAWIO_PORT}/edit?f=${encodeURIComponent(file)}`
+  return `http://127.0.0.1:${port}/edit?f=${encodeURIComponent(file)}`
 }
 
 // What the menu calls showing a file in the system's file browser, by the platform the page runs on, as
