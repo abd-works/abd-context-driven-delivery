@@ -56,9 +56,6 @@ const CARD_BUTTON_COLUMNS = 15
 /** The columns kept before a card's text for its task button, 3/3 or +, so every card's text starts in one place. */
 const TASK_BUTTON_COLUMNS = 6
 
-/** The columns kept at a step's left for the step pointer, ▲ and ▼, drawn on the next step to do. */
-const POINTER_COLUMNS = 8
-
 /** The mark before a step for where it stands: done, being worked, or not started. */
 const STEP_MARK = { done: '✓', in_progress: '▸', pending: '○' } as const
 
@@ -156,17 +153,12 @@ function CardsView($: EngineInterface, e: AbovePromptEvent, state: QueueState, p
   )
 }
 
-/** The queue's pointer, ▲ and ▼ in the accent colour at a card's or a step's left: ▲ opens the done one above again so
- * it runs again, ▼ marks the one pointed at done. Without keys it is the empty room the pointer takes, so every card's
- * text starts in one place. */
-function PointerView($: EngineInterface, e: AbovePromptEvent, upKey = '', downKey = '', onUp = () => {}, onDown = () => {}) {
+/** The pointer laid over the left end of a card or a step, on its line, so showing it moves no text, as the card's
+ * own buttons lie over its right end. */
+function PointerOverlayView($: EngineInterface, e: AbovePromptEvent, arrows: ReturnType<typeof PointerArrowsView>) {
   const { Box } = $.ui.resolve(e)
 
-  return (
-    <Box width={POINTER_COLUMNS} flexShrink={0} flexDirection="row" justifyContent="flex-end">
-      {(upKey !== '' || downKey !== '') && PointerArrowsView($, e, upKey, downKey, onUp, onDown)}
-    </Box>
-  )
+  return <Box position="absolute" top={0} bottom={0} left={1} flexDirection="row" alignItems="center">{arrows}</Box>
 }
 
 /** The pointer's ▲ and ▼, solid buttons on no bar of their own, over the left end of the card as the card's buttons are at its
@@ -203,7 +195,7 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
       {(prompt.attachments ?? []).length > 0 && <Text key={`attached-${prompt.id}`} color={LOOK.muted}>{`📎${prompt.attachments!.length}`}</Text>}
       <Box flexGrow={1} flexShrink={1} minWidth={0} flexDirection="row" alignItems="center"
         borderStyle={isWorking ? 'round' : undefined} borderColor={isWorking ? LOOK.accent : undefined}>
-        {pointer && <Box position="absolute" top={0} bottom={0} left={1} flexDirection="row" alignItems="center">{pointer}</Box>}
+        {pointer && PointerOverlayView($, e, pointer)}
         <Button key={`card-text-${prompt.id}`} dimColor={isEditing || isFinished} onPress={() => (isInColumn ? toggleOpenedCard($, prompt.id) : editPrompt($, prompt))}>
           <Text wrap="wrap" color={isEditing ? LOOK.placeholder : isWorking ? LOOK.accent : undefined}
             italic={isEditing} bold={isWorking} underline={isWorking} dimColor={isFinished}>
@@ -306,24 +298,24 @@ function StepsView($: EngineInterface, e: AbovePromptEvent, prompt: QueuedPrompt
   return (
     <Box key={`steps-of-${prompt.id}`} flexDirection="column" paddingLeft={TASK_BUTTON_COLUMNS + 1}>
       {steps.map((step, index) => StepView($, e, prompt, step, index,
-        index === pointer ? PointerView($, e, `step-pointer-up-${prompt.id}`, `step-pointer-down-${prompt.id}`, up, down) : PointerView($, e)))}
-      <Box flexDirection="row">
-        {pointer === steps.length ? PointerView($, e, `step-pointer-up-${prompt.id}`, '', up) : PointerView($, e)}
+        index === pointer ? PointerArrowsView($, e, `step-pointer-up-${prompt.id}`, `step-pointer-down-${prompt.id}`, up, down) : null))}
+      <Box flexDirection="row" gap={1}>
         <Button key={`add-step-${prompt.id}`} label="+" onPress={() => addStep($, prompt)} />
+        {pointer === steps.length && PointerArrowsView($, e, `step-pointer-up-${prompt.id}`, '', up)}
       </Box>
     </Box>
   )
 }
 
 /** One task under its card: its mark and text, and, with the pointer on it, ↑ ↓ to move it and ✕ to take it off. */
-function StepView($: EngineInterface, e: AbovePromptEvent, prompt: QueuedPrompt, step: PromptStep, index: number, pointer: ReturnType<typeof PointerView>) {
+function StepView($: EngineInterface, e: AbovePromptEvent, prompt: QueuedPrompt, step: PromptStep, index: number, pointer: ReturnType<typeof PointerArrowsView> | null) {
   const { Box, Button, Text } = $.ui.resolve(e)
   const number = index + 1
 
   return (
     <Box key={`step-row-${prompt.id}-${number}`} flexDirection="row" justifyContent="space-between" gap={1}>
-      {pointer}
       <Box flexGrow={1} flexShrink={1} minWidth={0}>
+        {pointer && PointerOverlayView($, e, pointer)}
         <Text key={`step-${prompt.id}-${number}`} wrap="wrap" dimColor={step.state === 'done'}
           color={step.state === 'in_progress' ? LOOK.accent : undefined}>
           {`${STEP_MARK[step.state]} ${step.text}`}
