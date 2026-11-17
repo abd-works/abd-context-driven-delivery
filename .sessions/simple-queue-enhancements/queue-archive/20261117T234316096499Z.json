@@ -1,0 +1,12 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-17T23:43:16.096499+00:00",
+  "prompts": [
+    {
+      "id": "bde1d2bf048b",
+      "text": "Count the .ts and .tsx files under tools/prompt_queue/hooks (read only, change no tracked file) and write the count to .sessions/simple-queue-enhancements/demo/run2/code/report.md. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done.",
+      "is_done": true,
+      "robot": "Bolt"
+    }
+  ]
+}
