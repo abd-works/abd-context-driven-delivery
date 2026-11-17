@@ -47,6 +47,18 @@ with description("a chat's prompt queue through the cdd server") as self:
             with it("should keep the prompt in its place, marked done"):
                 expect([(prompt["text"], prompt.get("is_done", False)) for prompt in self.left["prompts"]]).to(equal([("Write the scenarios", True), ("Run the unit tier", False)]))
 
+            with context("that the person sends a message about the done goal"):
+                with before.all:
+                    first = self.queued["prompts"][0]["id"]
+                    self.filed = self.chat.answer("prompt-queue.add_interruption", chat="", prompt=first, text="cut the text with an ellipsis")
+
+                with it("should file it under that goal as a step not started, marked as the person's interruption, and open the goal again"):
+                    goal = self.filed["prompts"][0]
+                    expect([goal["steps"], goal.get("is_done", False)]).to(equal([[{"text": "[interruption] cut the text with an ellipsis", "state": "pending"}], False]))
+
+                with after.all:
+                    self.chat.answer("prompt-queue.done", chat="", prompt=self.queued["prompts"][0]["id"])
+
             with context("that the agent clears the queue"):
                 with before.all:
                     self.cleared = self.chat.answer("prompt-queue.clear", chat="")

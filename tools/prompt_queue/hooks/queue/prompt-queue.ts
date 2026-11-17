@@ -409,22 +409,22 @@ export async function queueSentPrompt($: EngineInterface, text: string): Promise
   }
 }
 
-/** The prompt a message interrupts: the one being worked while a turn runs, if it is on the queue and not done. */
+/** The goal a message the person sends is filed under: the one last worked, if it is on the queue, done or not. */
 async function interruptedPrompt($: EngineInterface): Promise<QueuedPrompt | undefined> {
-  if (!(await read($, isTurnRunning))) {
-    return undefined
-  }
   const working = await read($, askedAbout)
-  return (await read($, queue)).prompts.find(prompt => prompt.id === working && !prompt.is_done)
+  return (await read($, queue)).prompts.find(prompt => prompt.id === working)
 }
 
-/** A message sent mid-work joins the prompt being worked as a step, marked as the person's interruption, and the agent
- * is told so; it may move it to a card of its own when it is separate work. */
+/** A message the person sends, mid-turn or between turns, is filed by the cdd server under the goal last worked, as its
+ * step marked [interruption], opening it again if it was done; the agent is told so, and moves it to a card of its own
+ * when it is separate work. The task list carries on from the goal's filed steps. */
 async function addInterruption($: EngineInterface, prompt: QueuedPrompt, text: string): Promise<SentPrompt> {
-  await changeSteps($, prompt, [...(prompt.steps ?? []), { text: `${INTERRUPTION_MARK} ${text}`, state: 'pending' }])
+  await changeQueue($, 'add_interruption', { prompt: prompt.id, text })
+  const filed = (await read($, queue)).prompts.find(goal => goal.id === prompt.id)
+  await update($, plan, () => filed?.steps ?? [])
   return {
     id: '',
-    note: `The person sent this while you worked; it is now a step of prompt [${prompt.id}] on the queue, marked ${INTERRUPTION_MARK}. ` +
+    note: `The person sent this about the goal last worked; it is now a step of prompt [${prompt.id}] on the queue, marked ${INTERRUPTION_MARK}. ` +
       'Fold it into that work, or, if it is separate work, queue it with prompt-queue.add and take the step off.',
   }
 }

@@ -29,6 +29,8 @@ _PROMPT_ID_LENGTH = 12
 ATTACHMENTS_FOLDER = "attachments"
 # The folder beside a chat's queue file that keeps a JSON copy of every prompt clear or remove took off, so the work stays on record.
 ARCHIVE_FOLDER = "queue-archive"
+# What marks a step that came from a message the person sent: a correction or comment filed under the goal it belongs to.
+INTERRUPTION_MARK = "[interruption]"
 # The section of a handoff that holds the numbered steps the next agent takes (space/session/HANDOFF-FORMAT.md).
 _APPROACH_HEADING = re.compile(r"^##\s+Approach for Next Agent\s*$", re.IGNORECASE)
 _NEXT_SECTION = re.compile(r"^##\s")
@@ -179,6 +181,15 @@ class PromptQueue:
         """Give the queued prompt whose id is prompt the steps planned for it, in order, each its text and its state: pending, in_progress, or done. They replace any steps it had, so the agent's task list for the prompt is copied whole each time it changes."""
         planned = [{"text": step["text"].strip(), "state": step["state"]} for step in steps]
         return self._keep([{**held, "steps": planned} if held["id"] == prompt else held for held in self._holding(prompt)])
+
+    @mcp
+    @agent_tool
+    def add_interruption(self, prompt: str, text: str) -> PromptQueue:
+        """File a message the person sent under the goal whose id is prompt: it becomes that goal's last step, not started, its text starting [interruption], and a done goal opens again, since it has work again. The agent moves it to a card of its own with add when it is separate work."""
+        held = self._holding(prompt)
+        goal = next(item for item in held if item["id"] == prompt)
+        filed = [*goal.get("steps", []), {"text": f"{INTERRUPTION_MARK} {text.strip()}", "state": "pending"}]
+        return self._keep([{**item, "steps": filed, "is_done": False} if item["id"] == prompt else item for item in held])
 
     @mcp
     @agent_tool

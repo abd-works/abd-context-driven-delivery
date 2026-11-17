@@ -68,6 +68,12 @@ function promptQueueTools(prompts: Prompt[]) {
       prompts[at(args.prompt)]!.is_done = true
       return answer()
     },
+    add_interruption: args => {
+      const goal = prompts[at(args.prompt)]!
+      goal.steps = [...(goal.steps ?? []), { text: `[interruption] ${String(args.text).trim()}`, state: 'pending' }]
+      goal.is_done = false
+      return answer()
+    },
     set_steps: args => {
       prompts[at(args.prompt)]!.steps = args.steps as Step[]
       return answer()
@@ -904,4 +910,24 @@ test('the queue beside a prompt tells the agent to keep one card for each goal, 
 
   expect(carried.join()).toContain('one card for each goal')
   expect(carried.join()).toContain('make it a task of that goal')
+})
+
+
+test('a message sent between turns is filed under the goal last worked, opening it again, instead of a card of its own', async ($, on) => {
+  const seeded = seedQueue(on, false, '', [
+    { id: 'a', text: 'Write the scenarios', is_done: true },
+    { id: 'b', text: 'Run the unit tier' },
+  ] as Prompt[], true, '', 'a')
+  const carried: string[] = []
+  on('prompt.submit', (_, e) => {
+    carried.push(...(e.context ?? []))
+    return { text: e.text }
+  })
+
+  await $.prompt.submit({ text: 'cut the text with an ellipsis', wait: false, origin: { kind: 'composer' } })
+
+  expect(seeded.prompts.map(prompt => prompt.text)).toEqual(['Write the scenarios', 'Run the unit tier'])
+  expect(seeded.prompts[0]!.steps).toEqual([{ text: '[interruption] cut the text with an ellipsis', state: 'pending' }])
+  expect(seeded.prompts[0]!.is_done).toBe(false)
+  expect(carried.join()).toContain('step of prompt [a]')
 })
