@@ -58,8 +58,8 @@ const CARD_BUTTON_COLUMNS = 15
 /** The columns kept before a card's text for its task button, 3/3 or +, so every card's text starts in one place. */
 const TASK_BUTTON_COLUMNS = 6
 
-/** The columns every card and step keeps before its text for the pointer's ▲ and ▼, empty where the pointer is not,
- * so the arrows are full-size buttons beside the text and no text moves when the pointer does. */
+/** The columns every step keeps before its text for the step pointer's ▲ and ▼, empty where the pointer is not, so no
+ * step's text moves when the pointer does. */
 const POINTER_COLUMNS = 11
 
 /** The mark before a step for where it stands: done, being worked, or not started. */
@@ -159,8 +159,8 @@ function CardsView($: EngineInterface, e: AbovePromptEvent, state: QueueState, p
   )
 }
 
-/** The pointer's column at the start of a card, inside it, or before a step's text: its ▲ and ▼ where the pointer is,
- * set against the text, else the same room empty, so no text moves. */
+/** The pointer's column before a step's text: its ▲ and ▼ where the step pointer is, else the same room empty, so no
+ * step's text moves. A card's pointer lies over the card's left end instead, as its buttons lie over its right end. */
 function PointerColumnView($: EngineInterface, e: AbovePromptEvent, arrows: ReturnType<typeof PointerArrowsView> | null) {
   const { Box } = $.ui.resolve(e)
 
@@ -200,13 +200,15 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
       {(prompt.attachments ?? []).length > 0 && <Text key={`attached-${prompt.id}`} color={LOOK.muted}>{`📎${prompt.attachments!.length}`}</Text>}
       <Box flexGrow={1} flexShrink={1} minWidth={0} flexDirection="row" alignItems="center"
         borderStyle={isWorking ? 'round' : undefined} borderColor={isWorking ? LOOK.accent : undefined}>
-        {PointerColumnView($, e, pointer)}
         <Button key={`card-text-${prompt.id}`} dimColor={isEditing || isFinished} onPress={() => (isInColumn ? toggleOpenedCard($, prompt.id) : editPrompt($, prompt))}>
           <Text wrap="wrap" color={isEditing ? LOOK.placeholder : isWorking ? LOOK.accent : undefined}
             italic={isEditing} bold={isWorking} underline={isWorking} dimColor={isFinished}>
             {`${index + 1}. ${prompt.text.replace(/\s+/g, ' ')}${isEditing ? '  (editing)' : ''}`}
           </Text>
         </Button>
+        {pointer && (
+          <Box position="absolute" top={0} bottom={0} left={1} flexDirection="row" alignItems="center">{pointer}</Box>
+        )}
       </Box>
       {!isInColumn && <Box width={CARD_BUTTON_COLUMNS} justifyContent="flex-end">
         <Box flexDirection="row" gap={1} display="none" hover={{ display: 'flex' }} backgroundColor={LOOK.keyCap} paddingX="xs">
@@ -222,7 +224,7 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
   return (
     <Box key={`card-opened-${prompt.id}`} flexDirection="column" width="100%">
       {row}
-      <Box flexDirection="row" gap={1} paddingLeft={TASK_BUTTON_COLUMNS + POINTER_COLUMNS + 2}>{CardButtonsView($, e, prompt, index)}</Box>
+      <Box flexDirection="row" gap={1} paddingLeft={TASK_BUTTON_COLUMNS + 1}>{CardButtonsView($, e, prompt, index)}</Box>
     </Box>
   )
 }
