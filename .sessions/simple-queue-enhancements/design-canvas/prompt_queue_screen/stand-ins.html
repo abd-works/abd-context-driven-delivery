@@ -1,0 +1,11 @@
+<!-- What this prototype fakes. The prompt-queue mod's own TypeScript runs unchanged (tools/prompt_queue/hooks/queue:
+prompt-queue.ts, plan-steps.ts, queue-order.ts, the icons of icon-button-view.tsx and the icon choices of queue-view.tsx).
+Stood in for, in canvas_engine.js:
+- Claude Code's plugin state (atom, read, update): values held in the page, lost on reload.
+- The cdd server's prompt-queue tools: a copy in the page of prompt_queue.py's add, edit, move, remove, clear, done,
+  reopen, assign, set_steps and add_interruption; nothing is archived or written to disk.
+- The prompt box: the text field under the queue. Alt+Enter queues its draft; nothing is sent to a real chat.
+- The chat: what the queue sends to it (send now, play) is listed above the queue.
+- The model: + on the band places the whole draft as one card; sub-agent mode gives the cards to robots two at a time.
+- Pasted images: the canvas cannot paste, so no card gains an attachment here.
+The markup is a port of queue-view.tsx's JSX into this artboard. -->

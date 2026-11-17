@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Prompt queue</title>
+<script src="./support.js"></script>
+<script src="../fixtures/canvas-fixtures.js"></script>
+<!-- What this prototype fakes. The prompt-queue mod's own TypeScript runs unchanged (tools/prompt_queue/hooks/queue:
+prompt-queue.ts, plan-steps.ts, queue-order.ts, the icons of icon-button-view.tsx and the icon choices of queue-view.tsx).
+Stood in for, in canvas_engine.js:
+- Claude Code's plugin state (atom, read, update): values held in the page, lost on reload.
+- The cdd server's prompt-queue tools: a copy in the page of prompt_queue.py's add, edit, move, remove, clear, done,
+  reopen, assign, set_steps and add_interruption; nothing is archived or written to disk.
+- The prompt box: the text field under the queue. Alt+Enter queues its draft; nothing is sent to a real chat.
+- The chat: what the queue sends to it (send now, play) is listed above the queue.
+- The model: + on the band places the whole draft as one card; sub-agent mode gives the cards to robots two at a time.
+- Pasted images: the canvas cannot paste, so no card gains an attachment here.
+The markup is a port of queue-view.tsx's JSX into this artboard. -->
+
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a.button-primary{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+</style>
+</helmet>
+<div class="pq-root">
+<div style="position: absolute; top: 12px; left: 12px; display: flex; gap: 8px; align-items: center; font: 600 12px/1 ui-monospace, Consolas, monospace; z-index: 5">
+<a href="/Main.dc.html" aria-label="Back to the story map" style="padding: 6px 10px; border: 1px solid #2A2A2A; border-radius: 4px; background: #0B0B0B; color: #E8E8ED; text-decoration: none">← Story map</a>
+<select aria-label="Scenario" value="{{scenario}}" onChange="{{pickScenario}}" style="max-width: 520px; padding: 6px 8px; border: 1px solid #E5531A; border-radius: 4px; background: #0B0B0B; color: #E8E8ED">
+<sc-for list="{{scenarioOptions}}" as="o" hint-placeholder-count="3"><option value="{{o.value}}">{{o.label}}</option></sc-for>
+</select>
+<sc-if value="{{inExplorer}}" hint-placeholder-val="{{ false }}"><a href="/screens/prompt-queue.dc.html" title="Edit this screen on its own artboard" style="padding: 6px 10px; border: 1px solid #E5531A; border-radius: 4px; background: #E5531A; color: #0B0B0B; text-decoration: none">Edit</a></sc-if>
+</div>
+<style>.pq-root { position: relative; min-height: 900px; box-sizing: border-box; padding: 64px 24px 24px; background: #262624; color: #E8E8E8; font: 14px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif; display: flex; justify-content: center; }
+.pq-root button { font: inherit; color: inherit; cursor: pointer; }
+.pq-chat { width: 760px; display: flex; flex-direction: column; justify-content: flex-end; gap: 12px; min-height: 780px; }
+.pq-sent { display: flex; flex-direction: column; gap: 6px; }
+.pq-sent-line { align-self: flex-end; max-width: 80%; background: var(--pq-card); border-radius: 10px; padding: 6px 12px; color: #E8E8E8; }
+.pq-sent-title { color: var(--pq-muted); font-size: 12px; }
+.pq-box { display: flex; flex-direction: column; gap: 6px; padding: 0 1ch; align-self: flex-start; }
+.pq-box.pq-open { width: 100%; box-sizing: border-box; }
+.pq-band { display: flex; flex-direction: row; gap: 1ch; align-items: center; }
+.pq-icon { width: 16px; height: 16px; padding: 0; border: 0; background: transparent; display: block; }
+.pq-icon img { width: 16px; height: 16px; display: block; }
+.pq-add-room { width: calc(var(--pq-add-columns) * 1ch); }
+.pq-add-room .pq-reveal { display: none; }
+.pq-band:hover .pq-add-room .pq-reveal, .pq-open .pq-add-room .pq-reveal { display: block; }
+.pq-notice { color: #E5A50A; }
+.pq-failure { color: #EF4444; font-size: 13px; }
+.pq-groups { display: flex; flex-direction: row; gap: 1ch; width: 100%; }
+.pq-group { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1 1 0; }
+.pq-group.pq-collapsed { flex: 0 0 auto; }
+.pq-robot-head { display: flex; flex-direction: row; align-items: center; gap: 1ch; }
+.pq-robot { padding: 0; border: 0; background: transparent; }
+.pq-robot img { display: block; }
+.pq-robot-name { color: var(--pq-accent); font-weight: 700; }
+.pq-robot-progress { color: var(--pq-muted); }
+.pq-card { display: flex; flex-direction: column; }
+.pq-row { display: flex; flex-direction: row; align-items: center; gap: 1ch; width: 100%; }
+.pq-task { width: calc(var(--pq-task-columns) * 1ch); flex-shrink: 0; display: flex; }
+.pq-chip { border: 0; border-radius: 8px; background: var(--pq-card); padding: 2px 8px; }
+.pq-attached { color: var(--pq-muted); }
+.pq-textbox { position: relative; flex: 1 1 auto; min-width: 0; display: flex; align-items: center; border: 1px solid transparent; border-radius: 12px; }
+.pq-textbox.pq-pointed { border-color: var(--pq-accent); }
+.pq-pill { display: block; width: 100%; min-width: 0; text-align: left; border: 0; border-radius: 10px; background: var(--pq-card); padding: 4px 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pq-pill.pq-working { color: var(--pq-accent); font-weight: 700; text-decoration: underline; }
+.pq-pill.pq-finished { opacity: .45; }
+.pq-pill.pq-editing { opacity: .6; font-style: italic; color: var(--pq-placeholder); }
+.pq-bar { display: flex; flex-direction: row; align-items: center; gap: 1ch; background: var(--pq-key-cap); padding: 0 4px; }
+.pq-bar button { border: 0; background: transparent; padding: 0 2px; }
+.pq-pointer { position: absolute; top: 0; bottom: 0; left: 1ch; }
+.pq-hover { display: none; position: absolute; top: 0; bottom: 0; right: 0; }
+.pq-row:hover .pq-hover { display: flex; }
+.pq-opened-buttons { padding-left: calc((var(--pq-task-columns) + 1) * 1ch); display: flex; }
+.pq-after { padding-left: calc((var(--pq-task-columns) + 2) * 1ch); display: flex; }
+.pq-steps { display: flex; flex-direction: column; padding-left: calc((var(--pq-task-columns) + 1) * 1ch); }
+.pq-step { display: flex; flex-direction: row; align-items: center; gap: 1ch; justify-content: space-between; }
+.pq-step-pointer { width: calc(var(--pq-pointer-columns) * 1ch); flex-shrink: 0; display: flex; flex-direction: row; justify-content: flex-end; align-items: center; }
+.pq-step-text { flex: 1 1 auto; min-width: 0; }
+.pq-step-text.pq-done { opacity: .45; }
+.pq-step-text.pq-in-progress { color: var(--pq-accent); }
+.pq-step .pq-step-buttons { display: none; }
+.pq-step:hover .pq-step-buttons { display: flex; }
+.pq-step-add { display: flex; flex-direction: row; gap: 1ch; align-items: center; }
+.pq-step-add .pq-plus { border: 0; background: transparent; padding: 0 2px; }
+.pq-prompt { border: 1px solid #3A3A38; border-radius: 16px; background: #30302E; padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; }
+.pq-prompt textarea { width: 100%; box-sizing: border-box; min-height: 52px; resize: none; border: 0; outline: 0; background: transparent; color: #E8E8E8; font: inherit; }
+.pq-prompt-hint { color: var(--pq-muted); font-size: 12px; }
+</style>
+<div class="pq-chat" style="--pq-card: {{look.card}}; --pq-accent: {{look.accent}}; --pq-muted: {{look.muted}}; --pq-placeholder: {{look.placeholder}}; --pq-key-cap: {{look.keyCap}}; --pq-task-columns: {{taskColumns}}; --pq-pointer-columns: {{pointerColumns}}; --pq-add-columns: {{addColumns}}">
+<div class="pq-sent">
+<sc-if value="{{hasSent}}" hint-placeholder-val="{{ false }}"><div class="pq-sent-title">Sent to the chat</div></sc-if>
+<sc-for list="{{sent}}" as="line" hint-placeholder-count="0"><div class="pq-sent-line">{{line}}</div></sc-for>
+</div>
+<div class="{{boxClass}}">
+<sc-if value="{{isExpanded}}" hint-placeholder-val="{{ true }}">
+<div class="pq-groups">
+<sc-for list="{{groups}}" as="group" hint-placeholder-count="1">
+<div class="{{group.cls}}">
+<sc-if value="{{group.hasRobot}}" hint-placeholder-val="{{ false }}">
+<div class="pq-robot-head">
+<button class="pq-robot" title="{{group.robotTip}}" onClick="{{group.toggle}}"><img src="{{group.robotSrc}}" alt="{{group.robotTip}}" width="{{robotPixels}}" height="{{robotPixels}}"></button>
+<sc-if value="{{group.isOpen}}" hint-placeholder-val="{{ true }}"><span class="pq-robot-name">{{group.name}}</span><button class="pq-chip" title="Rename from the prompt box's draft" onClick="{{group.rename}}">✎</button></sc-if>
+</div>
+</sc-if>
+<sc-if value="{{group.isCollapsed}}" hint-placeholder-val="{{ false }}"><span class="pq-robot-progress">{{group.progress}}</span></sc-if>
+<sc-for list="{{group.cards}}" as="card" hint-placeholder-count="3">
+<div class="pq-card">
+<div class="pq-row">
+<div class="pq-task">
+<sc-if value="{{card.showProgress}}" hint-placeholder-val="{{ false }}"><button class="pq-chip" title="Open or fold this card's steps" onClick="{{card.toggleSteps}}">{{card.progress}}</button></sc-if>
+<sc-if value="{{card.showAddTask}}" hint-placeholder-val="{{ true }}"><button class="pq-chip" title="Add the prompt box's draft as a step" onClick="{{card.addTask}}">+</button></sc-if>
+</div>
+<sc-if value="{{card.hasAttachments}}" hint-placeholder-val="{{ false }}"><span class="pq-attached">{{card.attached}}</span></sc-if>
+<div class="{{card.boxClass}}">
+<button class="{{card.pillClass}}" title="{{card.text}}" onClick="{{card.press}}">{{card.label}}</button>
+<sc-if value="{{card.isPointer}}" hint-placeholder-val="{{ false }}"><div class="pq-bar pq-pointer"><sc-for list="{{card.arrows}}" as="arrow" hint-placeholder-count="2"><button title="{{arrow.tip}}" onClick="{{arrow.press}}">{{arrow.label}}</button></sc-for></div></sc-if>
+<sc-if value="{{card.hasHoverButtons}}" hint-placeholder-val="{{ true }}"><div class="pq-bar pq-hover"><sc-for list="{{card.buttons}}" as="button" hint-placeholder-count="5"><button title="{{button.tip}}" onClick="{{button.press}}">{{button.label}}</button></sc-for></div></sc-if>
+</div>
+</div>
+<sc-if value="{{card.isOpened}}" hint-placeholder-val="{{ false }}"><div class="pq-opened-buttons"><div class="pq-bar"><sc-for list="{{card.buttons}}" as="button" hint-placeholder-count="5"><button title="{{button.tip}}" onClick="{{button.press}}">{{button.label}}</button></sc-for></div></div></sc-if>
+<sc-if value="{{card.showSteps}}" hint-placeholder-val="{{ false }}">
+<div class="pq-steps">
+<sc-for list="{{card.steps}}" as="step" hint-placeholder-count="3">
+<div class="pq-step">
+<div class="pq-step-pointer"><sc-if value="{{step.isPointer}}" hint-placeholder-val="{{ false }}"><div class="pq-bar"><sc-for list="{{step.arrows}}" as="arrow" hint-placeholder-count="2"><button title="{{arrow.tip}}" onClick="{{arrow.press}}">{{arrow.label}}</button></sc-for></div></sc-if></div>
+<div class="{{step.cls}}">{{step.label}}</div>
+<div class="pq-bar pq-step-buttons"><sc-for list="{{step.buttons}}" as="button" hint-placeholder-count="5"><button title="{{button.tip}}" onClick="{{button.press}}">{{button.label}}</button></sc-for></div>
+</div>
+</sc-for>
+<div class="pq-step-add">
+<div class="pq-step-pointer"><sc-if value="{{card.isStepPointerAfter}}" hint-placeholder-val="{{ false }}"><div class="pq-bar"><sc-for list="{{card.stepArrowsAfter}}" as="arrow" hint-placeholder-count="1"><button title="{{arrow.tip}}" onClick="{{arrow.press}}">{{arrow.label}}</button></sc-for></div></sc-if></div>
+<button class="pq-plus" title="Add the prompt box's draft as the last step" onClick="{{card.addTask}}">+</button>
+</div>
+</div>
+</sc-if>
+</div>
+</sc-for>
+<sc-if value="{{group.isPointerAfter}}" hint-placeholder-val="{{ false }}"><div class="pq-after"><div class="pq-bar"><sc-for list="{{group.arrowsAfter}}" as="arrow" hint-placeholder-count="1"><button title="{{arrow.tip}}" onClick="{{arrow.press}}">{{arrow.label}}</button></sc-for></div></div></sc-if>
+</div>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{hasNotice}}" hint-placeholder-val="{{ false }}"><div class="pq-notice">{{notice}}</div></sc-if>
+<div class="pq-band">
+<button class="pq-icon" title="{{stack.tip}}" onClick="{{stack.press}}"><img src="{{stack.src}}" alt="{{stack.tip}}"></button>
+<div class="pq-add-room"><button class="pq-icon pq-reveal" title="{{add.tip}}" onClick="{{add.press}}"><img src="{{add.src}}" alt="{{add.tip}}"></button></div>
+<sc-for list="{{openIcons}}" as="icon" hint-placeholder-count="3"><button class="pq-icon" title="{{icon.tip}}" onClick="{{icon.press}}"><img src="{{icon.src}}" alt="{{icon.tip}}"></button></sc-for>
+</div>
+</div>
+<sc-if value="{{hasFailure}}" hint-placeholder-val="{{ false }}"><div class="pq-failure">{{failure}}</div></sc-if>
+<div class="pq-prompt">
+<textarea aria-label="Prompt box" placeholder="Reply to Claude…" value="{{draft}}" onChange="{{typeDraft}}" onKeyDown="{{draftKey}}"></textarea>
+<div class="pq-prompt-hint">Alt+Enter queues the draft as it is · + on a card adds it as a step · ✎ puts a card's text here</div>
+</div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"story":{"editor":null},"scenario":{"editor":null},"go":{"editor":null},"$preview":{"width":1280,"height":900}}'>
+class Component extends DCLogic {
+fixtures() {
+return typeof CanvasFixtures !== 'undefined' ? CanvasFixtures : null;
+}
+whenFixtures(then) {
+let tries = 0;
+const wait = () => { if (this.fixtures() || tries++ >= 50) { then(this.fixtures()); return; } setTimeout(wait, 100); };
+wait();
+}
+componentDidMount() {
+this.whenFixtures(() => this.forceUpdate());
+if (this.props.scenario) this.followExplorer();
+}
+componentDidUpdate(previous) {
+if (this.props.scenario && previous.scenario !== this.props.scenario) {
+this.setState({ scenario: this.props.scenario });
+this.followExplorer();
+}
+}
+followExplorer() {
+const scenario = this.props.scenario;
+this.whenFixtures((fixtures) => { if (fixtures) this.loadFromFixture(scenario); });
+}
+storyName() {
+return this.props.story || 'Tick Off Prompt Step';
+}
+scenarioName() {
+return (this.state && this.state.scenario) || this.props.scenario || 'Mark one step done';
+}
+loadFromFixture(chosen) {
+const fixtures = this.fixtures();
+const story = this.storyName();
+const scenario = chosen || this.scenarioName();
+if (!fixtures) { this.setState({ source: 'fixtures not loaded' }); return; }
+fixtures.load(story, scenario)
+.then((repositories) => Promise.resolve(this.fromFixture(repositories, scenario, fixtures.examples)))
+.then((state) => this.setState(Object.assign({}, state, state && state.entered, { source: story + ' › ' + scenario })))
+.catch((problem) => this.setState({ source: String(problem && problem.message || problem) }));
+}
+pasteSeedData() {
+const paste = this.fixtures() && this.fixtures().pasteFor('/');
+if (!paste) return;
+const state = { source: 'pasted: ' + paste.title };
+paste.fields.forEach((field) => Object.assign(state, this.paste(field)));
+this.setState(state);
+}
+pickScenario(choice) {
+if (!choice) return;
+if (choice === 'dev-seed') { this.pasteSeedData(); return; }
+this.setState({ scenario: choice });
+this.loadFromFixture(choice);
+if (this.props.go) this.props.go(this.storyName(), choice);
+}
+follow(event, story) {
+if (!this.props.go) return;
+if (event && event.preventDefault) event.preventDefault();
+this.props.go(story);
+}
+barVals() {
+const fixtures = this.fixtures();
+const names = (fixtures && fixtures.scenarios(this.storyName())) || [];
+const paste = fixtures && fixtures.pasteFor('/');
+const options = (names.length ? names : [this.scenarioName()]).map((name) => ({ value: name, label: name }));
+return {
+inExplorer: Boolean(this.props.scenario),
+scenario: (this.state && this.state.scenario) || this.props.scenario || '',
+scenarioOptions: [{ value: '', label: 'Load a scenario…' }].concat(options, paste ? [{ value: 'dev-seed', label: 'Dev seed: ' + paste.title }] : []),
+pickScenario: (event) => this.pickScenario(event.target.value),
+source: (this.state && this.state.source) || 'no fixture loaded'
+};
+}
+domain() {
+return typeof QueueCanvas !== 'undefined' ? QueueCanvas.mod : null;
+}
+queueEngine() {
+if (!this.engine) {
+this.engine = QueueCanvas.engine(() => this.redraw());
+this.redraw();
+}
+return this.engine;
+}
+redraw() {
+if (this.redrawing) return;
+this.redrawing = true;
+Promise.resolve().then(() => {
+this.redrawing = false;
+return this.domain().currentQueue(this.engine);
+}).then((queueState) => this.setState({ queueState: queueState }));
+}
+fromFixture(repositories) {
+const engine = this.queueEngine();
+engine.load(repositories);
+return this.domain().currentQueue(engine).then((queueState) => ({ queueState: queueState }));
+}
+act(run) {
+return () => { run(this.domain(), this.queueEngine()); };
+}
+svgSource(svg) {
+return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+}
+iconOf(icon, press) {
+const look = this.domain().LOOK;
+return { src: this.svgSource(icon.svg(icon.isOn ? look.accent : look.muted)), tip: icon.tip, press: press };
+}
+bandVals(queueState) {
+const mod = this.domain();
+const open = queueState.isExpanded;
+return {
+stack: this.iconOf(mod.stackIcon(queueState), this.act((m, $) => m.toggleExpanded($))),
+add: this.iconOf(mod.ADD_ICON, this.act((m, $) => m.queueDraft($))),
+openIcons: open ? [
+this.iconOf(mod.playIcon(queueState), this.act((m, $) => m.togglePlaying($))),
+this.iconOf(mod.subAgentsIcon(queueState), this.act((m, $) => m.toggleSubAgentMode($))),
+this.iconOf(mod.CLEAR_ICON, this.act((m, $) => m.clearQueue($))),
+] : [],
+};
+}
+groupsOf(queueState) {
+const mod = this.domain();
+const prompts = queueState.queue.prompts;
+if (!queueState.isExpanded || queueState.queue.isEmpty) return [];
+if (!(queueState.isSubAgentMode && queueState.tasks.length > 0)) return [this.groupOf(queueState, prompts, null)];
+return queueState.tasks.map((task, place) => this.groupOf(queueState, mod.robotPromptsOf(prompts, task, place), { task: task, place: place }));
+}
+groupOf(queueState, items, robot) {
+const mod = this.domain();
+const pointer = mod.pointerOf(items);
+const isCollapsed = robot !== null && queueState.collapsedAgents.includes(robot.place);
+const group = {
+cls: 'pq-group' + (isCollapsed ? ' pq-collapsed' : ''),
+hasRobot: robot !== null,
+isCollapsed: isCollapsed,
+isOpen: !isCollapsed,
+cards: isCollapsed ? [] : items.map((prompt, place) => this.cardOf(queueState, prompt, place === pointer, items, robot !== null)),
+isPointerAfter: !isCollapsed && items.length > 0 && pointer === items.length,
+arrowsAfter: [this.control('▲', 'Open the done card above again', (m, $) => m.movePointerUp($, items))],
+};
+return robot === null ? group : Object.assign(group, this.robotOf(robot, items));
+}
+robotOf(robot, items) {
+const mod = this.domain();
+const name = mod.agentNameOf(robot.task, robot.place);
+return {
+name: name,
+robotTip: name + ', a robot: press to fold or open its queue',
+robotSrc: this.svgSource(mod.robotSvgOf(robot.place)),
+toggle: this.act((m, $) => m.toggleCollapsedAgent($, robot.place)),
+rename: this.act((m, $) => m.renameAgent($, robot.place)),
+progress: items.filter((item) => item.is_done).length + '/' + items.length,
+};
+}
+control(label, tip, run) {
+return { label: label, tip: tip, press: this.act(run) };
+}
+cardOf(queueState, prompt, isPointer, items, isInColumn) {
+const mod = this.domain();
+const index = queueState.queue.prompts.indexOf(prompt);
+const isEditing = prompt.id === queueState.editingId;
+const isFinished = Boolean(prompt.is_done);
+const progress = mod.progressOf(prompt.steps);
+const steps = prompt.steps || [];
+const stepPointer = mod.stepPointerOf(steps);
+const attachments = prompt.attachments || [];
+return {
+showProgress: progress !== '',
+progress: progress,
+showAddTask: progress === '' && !isFinished && !isPointer,
+toggleSteps: this.act((m, $) => m.toggleSteps($, prompt.id)),
+addTask: this.act((m, $) => m.addStep($, prompt)),
+hasAttachments: attachments.length > 0,
+attached: '📎' + attachments.length,
+boxClass: 'pq-textbox' + (isPointer ? ' pq-pointed' : ''),
+pillClass: 'pq-pill' + (isEditing ? ' pq-editing' : isPointer ? ' pq-working' : '') + (isFinished ? ' pq-finished' : ''),
+text: prompt.text,
+label: (index + 1) + '. ' + prompt.text.replace(/\s+/g, ' ') + (isEditing ? '  (editing)' : ''),
+press: this.act((m, $) => (isInColumn ? m.toggleOpenedCard($, prompt.id) : m.editPrompt($, prompt))),
+isPointer: isPointer,
+arrows: [this.control('▲', 'Open the done card above again', (m, $) => m.movePointerUp($, items)),
+this.control('▼', 'Mark this card done', (m, $) => m.movePointerDown($, items))],
+hasHoverButtons: !isInColumn,
+isOpened: isInColumn && prompt.id === queueState.openedId,
+buttons: this.cardButtons(prompt, index),
+showSteps: queueState.openSteps.includes(prompt.id) && steps.length > 0,
+steps: steps.map((step, place) => this.stepOf(prompt, step, place, place === stepPointer)),
+isStepPointerAfter: steps.length > 0 && stepPointer === steps.length,
+stepArrowsAfter: [this.control('▲', 'Work the done step above again', (m, $) => m.moveStepPointerUp($, prompt))],
+};
+}
+cardButtons(prompt, index) {
+return [
+this.control('↵', 'Send this prompt to the chat now', (m, $) => m.sendNow($, prompt)),
+this.control('✎', 'Edit this prompt in the prompt box', (m, $) => m.editPrompt($, prompt)),
+this.control('↑', 'Move up one place', (m, $) => m.movePrompt($, index, index - 1)),
+this.control('↓', 'Move down one place', (m, $) => m.movePrompt($, index, index + 1)),
+this.control('✕', 'Take this prompt off the queue', (m, $) => m.removePrompt($, prompt.id)),
+];
+}
+stepOf(prompt, step, place, isPointer) {
+const mod = this.domain();
+return {
+label: mod.STEP_MARK[step.state] + ' ' + step.text,
+cls: 'pq-step-text' + (step.state === 'done' ? ' pq-done' : step.state === 'in_progress' ? ' pq-in-progress' : ''),
+isPointer: isPointer,
+arrows: [this.control('▲', 'Work the done step above again', (m, $) => m.moveStepPointerUp($, prompt)),
+this.control('▼', 'Mark this step done', (m, $) => m.moveStepPointerDown($, prompt))],
+buttons: [
+this.control('↵', 'Send this step to the chat now', (m, $) => m.sendStepNow($, prompt, place)),
+this.control('✎', 'Edit this step: an empty prompt box takes its text, a draft replaces it', (m, $) => m.editStep($, prompt, place)),
+this.control('↑', 'Move up one place', (m, $) => m.moveStep($, prompt, place, place - 1)),
+this.control('↓', 'Move down one place', (m, $) => m.moveStep($, prompt, place, place + 1)),
+this.control('✕', 'Take this step off', (m, $) => m.removeStep($, prompt, place)),
+],
+};
+}
+typeDraft(event) {
+this.queueEngine().draft = event.target.value;
+this.forceUpdate();
+}
+draftKey(event) {
+if (event.key !== 'Enter' || !event.altKey) return;
+event.preventDefault();
+const $ = this.queueEngine();
+const text = $.draft;
+this.domain().queueByKey($, text).then(() => $.prompt.fill({ text: '', mode: 'replace' }));
+}
+queueVals() {
+const mod = this.domain();
+const queueState = this.state && this.state.queueState;
+if (!mod || !queueState) {
+if (mod) this.queueEngine();
+return { isExpanded: false, groups: [], boxClass: 'pq-box', hasNotice: false, stack: {}, add: {}, openIcons: [], look: {}, sent: [], hasSent: false, hasFailure: false, draft: '' };
+}
+const $ = this.engine;
+const failure = $.store.held('failure');
+return Object.assign(this.bandVals(queueState), {
+look: mod.LOOK,
+taskColumns: mod.TASK_BUTTON_COLUMNS,
+pointerColumns: mod.POINTER_COLUMNS,
+addColumns: mod.ADD_COLUMNS,
+robotPixels: mod.ROBOT_PIXELS,
+isExpanded: queueState.isExpanded,
+boxClass: 'pq-box' + (queueState.isExpanded ? ' pq-open' : ''),
+groups: this.groupsOf(queueState),
+hasNotice: queueState.notice !== '',
+notice: queueState.notice,
+sent: $.sent,
+hasSent: $.sent.length > 0,
+hasFailure: Boolean(failure),
+failure: failure ? failure.failure : '',
+draft: $.draft,
+typeDraft: (event) => this.typeDraft(event),
+draftKey: (event) => this.draftKey(event),
+});
+}
+renderVals() {
+const st = this.state || {};
+return Object.assign(this.barVals(), {
+...this.queueVals()
+});
+}
+}
+</script>
+</body>
+</html>

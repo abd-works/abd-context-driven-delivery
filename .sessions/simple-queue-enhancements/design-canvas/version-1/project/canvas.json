@@ -1,0 +1,73 @@
+{
+ "v": 3,
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-10-28T18:00:00Z"
+ },
+ "title": "Story Map",
+ "launch": {
+  "view": "canvas",
+  "page": "story-map"
+ },
+ "pages": [
+  {
+   "id": "story-map",
+   "name": "Story map"
+  },
+  {
+   "id": "screens",
+   "name": "Story explorer"
+  },
+  {
+   "id": "screen-prompt-queue",
+   "name": "Prompt queue"
+  }
+ ],
+ "boards": {
+  "Main.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 3668,
+   "h": 490,
+   "page": "story-map",
+   "title": "Story map",
+   "is_interactive": true,
+   "expand": "fill"
+  },
+  "screens/explorer.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1880,
+   "h": 948,
+   "page": "screens",
+   "title": "Story explorer",
+   "is_interactive": true,
+   "expand": "fill"
+  },
+  "screens/prompt-queue.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1600,
+   "h": 1100,
+   "page": "screen-prompt-queue",
+   "title": "Prompt queue",
+   "is_interactive": true
+  },
+  "context/prompt-queue.dc.html": {
+   "x": 1680,
+   "y": 0,
+   "w": 560,
+   "h": 1100,
+   "page": "screen-prompt-queue",
+   "title": "Stories"
+  }
+ },
+ "order": [
+  "Main.dc.html",
+  "screens/explorer.dc.html",
+  "screens/prompt-queue.dc.html",
+  "context/prompt-queue.dc.html"
+ ],
+ "notes": {},
+ "designSystems": []
+}
