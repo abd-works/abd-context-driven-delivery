@@ -196,9 +196,8 @@ function sameDraft(text: string): string {
   return text.split(/\r?\n/).map(line => line.trimEnd()).join('\n').trim()
 }
 
-/** The `+` button, a smart add: an edited prompt goes back in its place; otherwise the model, reading this
- * conversation and the queue, files the draft where it belongs, as a task of a goal or as new cards, given to a robot
- * in sub-agent mode. Alt+Enter is the plain add. The box empties once the draft is filed, and keeps it when the model
+/** The `+` button runs /queue on the prompt box's draft, which places it into the plan; an edited prompt goes back in
+ * its place instead. Alt+Enter is the plain add. The box empties once the draft is placed, and keeps it when the model
  * could not place it. */
 export async function queueDraft($: EngineInterface): Promise<void> {
   const { text } = await $.prompt.read()
@@ -207,58 +206,56 @@ export async function queueDraft($: EngineInterface): Promise<void> {
   }
   const edited = await read($, editingId)
   const isEditing = (await read($, queue)).prompts.some(prompt => prompt.id === edited)
-  const isFiled = isEditing ? await queuePrompt($, text) : await fileDraft($, text)
-  if (isFiled) {
+  const isPlaced = isEditing ? await queuePrompt($, text) : (await runQueueCommand($, text)).isPlaced
+  if (isPlaced) {
     await $.prompt.fill({ text: '', mode: 'replace' })
   }
 }
 
-/** Where the model put one piece of a draft: a task of the goal whose id it names, or a new card, for a robot when it
- * names one. */
-type DraftPlace = { goal?: string; card?: string; robot?: string; text?: string }
+/** Where the model put one piece of a draft: a task of the goal whose id it names, or a card of its own. */
+type DraftPlace = { goal?: string; card?: string; text?: string }
 
-async function fileDraft($: EngineInterface, draft: string): Promise<boolean> {
+/** What /queue did with what it was given: whether the work is on the queue, and what it says about it. */
+type QueueCommandResult = { isPlaced: boolean; said: string }
+
+/** The model reads this conversation and the queue and places each piece of the draft into the plan: a task of the goal
+ * it is about, or a card of its own. It gives no card a robot; the agents button groups the work into robots. */
+async function placeDraft($: EngineInterface, draft: string): Promise<QueueCommandResult> {
   const goals = (await read($, queue)).prompts
-  const reply = await $.model.fork({ prompt: filingPrompt(draft, goals, robotsOf(goals, await read($, tasks))) })
+  const reply = await $.model.fork({ prompt: placingPrompt(draft, goals) })
   if (!reply.isAnswered) {
-    await showFailure($, `+ could not place the draft: ${reply.reason}`, 'Pressing + to file the draft on the queue')
-    return false
+    await showFailure($, `The draft was not placed on the queue: ${reply.reason}`, 'Running /queue on a draft, asking the model where it belongs')
+    return { isPlaced: false, said: `Placed nothing: ${reply.reason}` }
   }
   const places = parseJsonArray(reply.text) as DraftPlace[]
   for (const place of places) {
-    await fileDraftPiece($, goals, place)
+    await placeDraftPiece($, goals, place)
   }
-  return true
+  await update($, isExpanded, () => true)
+  return { isPlaced: true, said: `Placed ${places.length} piece(s) of the draft on the queue.` }
 }
 
-async function fileDraftPiece($: EngineInterface, goals: QueuedPrompt[], place: DraftPlace): Promise<void> {
+async function placeDraftPiece($: EngineInterface, goals: QueuedPrompt[], place: DraftPlace): Promise<void> {
   if (place.goal && place.text && goals.some(goal => goal.id === place.goal)) {
     await changeQueue($, 'add_interruption', { prompt: place.goal, text: place.text })
     return
   }
-  if (!place.card) {
-    return
-  }
-  const before = new Set((await read($, queue)).prompts.map(prompt => prompt.id))
-  await changeQueue($, 'add', { text: place.card })
-  const added = (await read($, queue)).prompts.find(prompt => !before.has(prompt.id))
-  if (added && place.robot) {
-    await changeQueue($, 'assign', { prompt: added.id, robot: place.robot })
+  if (place.card) {
+    await changeQueue($, 'add', { text: place.card })
   }
 }
 
-function filingPrompt(draft: string, goals: QueuedPrompt[], robots: SubAgentTask[]): string {
+function placingPrompt(draft: string, goals: QueuedPrompt[]): string {
   return [
-    'Do not answer or do any of the work. The person pressed + to put this draft on the prompt queue:',
+    'Do not answer or do any of the work. The person wants this draft placed into the plan on the prompt queue:',
     draft.trim(),
     'Decide where it belongs, reading this conversation. It may hold several pieces of work; place each one.',
     'A piece about a goal on the queue becomes a task of that goal: {"goal": "<id>", "text": "<the task, short>"}.',
     'A piece no goal covers becomes a card of its own, a short title of the goal: {"card": "<text>"}.',
-    robots.length > 0 ? `Sub-agent mode is on: give a new card to the robot whose queue it fits by adding "robot": "<name>". The robots: ${robots.map(robot => robot.name).join(', ')}.` : '',
     'The goals on the queue:',
-    ...goals.map(goal => `- [${goal.id}] ${goal.text.replace(/\s+/g, ' ').slice(0, GOAL_TITLE_COLUMNS)}${goal.is_done ? ' (done)' : ''}${goal.robot ? ` (${goal.robot})` : ''}`),
+    ...goals.map(goal => `- [${goal.id}] ${goal.text.replace(/\s+/g, ' ').slice(0, GOAL_TITLE_COLUMNS)}${goal.is_done ? ' (done)' : ''}`),
     'Answer with only a JSON array of those objects.',
-  ].filter(line => line !== '').join('\n')
+  ].join('\n')
 }
 
 export async function movePrompt($: EngineInterface, from: number, to: number): Promise<void> {
@@ -738,22 +735,28 @@ export async function sendTasksToSubAgents($: EngineInterface): Promise<void> {
 }
 
 /**
- * `/queue [list or focus]`: a pasted list queues each of its items in order; otherwise the model reads this
- * conversation and proposes the ordered prompts to queue, with the focus given. Answers what it queued, and why it
- * queued nothing when it did not.
+ * `/queue [list or draft]`: a pasted list queues each of its items in order; a draft is placed into the plan, as a
+ * task of a goal or a card of its own, as the `+` button does; with nothing given, the model reads this conversation
+ * and proposes the ordered prompts to queue. Answers what it queued, and why it queued nothing when it did not.
  */
 export async function queueFromCommand($: EngineInterface, args: string): Promise<string> {
+  return (await runQueueCommand($, args)).said
+}
+
+async function runQueueCommand($: EngineInterface, args: string): Promise<QueueCommandResult> {
   const listed = listedItems(args)
   if (listed.length > 0) {
     await queueAll($, listed)
-    return `Queued ${listed.length} prompt(s).`
+    return { isPlaced: true, said: `Queued ${listed.length} prompt(s).` }
   }
-
-  return planFromConversation($, args)
+  if (args.trim() !== '') {
+    return placeDraft($, args)
+  }
+  return { isPlaced: true, said: await planFromConversation($) }
 }
 
-async function planFromConversation($: EngineInterface, focus: string): Promise<string> {
-  const reply = await $.model.fork({ prompt: planningPrompt(focus) })
+async function planFromConversation($: EngineInterface): Promise<string> {
+  const reply = await $.model.fork({ prompt: PLANNING_INSTRUCTIONS })
   if (!reply.isAnswered) {
     await showFailure($, `/queue could not read the conversation: ${reply.reason}`, 'Running /queue, asking the model to plan prompts from this conversation')
     return `Queued 0 prompt(s): the conversation could not be read. ${reply.reason}`
@@ -770,11 +773,6 @@ async function planFromConversation($: EngineInterface, focus: string): Promise<
 async function queueAll($: EngineInterface, texts: string[]): Promise<void> {
   await changeQueue($, 'add_all', { texts })
   await update($, isExpanded, () => true)
-}
-
-function planningPrompt(focus: string): string {
-  const about = focus.trim() === '' ? '' : `Focus on: ${focus.trim()}\n`
-  return `${about}${PLANNING_INSTRUCTIONS}`
 }
 
 const PLANNING_INSTRUCTIONS =

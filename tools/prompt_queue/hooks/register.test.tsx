@@ -347,10 +347,19 @@ test('+ files the draft as a task of the goal the model picks', async ($, on) =>
   expect(seeded.prompts[1]!.steps!.map(step => step.text)).toEqual(['[interruption] Run the heavy tier too'])
 })
 
-test("+ queues the draft as a new card in the robot's queue the model picks", async ($, on) => {
-  const { seeded } = await smartAdd($, on, [{ card: 'Run the heavy tier', robot: 'Bolt' }])
+test('+ queues new work as a card of its own, given to no robot: the agents button groups robots', async ($, on) => {
+  const { seeded, asked } = await smartAdd($, on, [{ card: 'Run the heavy tier', robot: 'Bolt' }])
 
-  expect(seeded.prompts.map(prompt => [prompt.text, prompt.robot])).toContainEqual(['Run the heavy tier', 'Bolt'])
+  expect([seeded.prompts.map(prompt => [prompt.text, prompt.robot]).at(-1), asked.join().includes('robot')]).toEqual([['Run the heavy tier', undefined], false])
+})
+
+test('/queue with a draft places it into the plan the way + does', async ($, on) => {
+  const seeded = seedQueue(on, false)
+  on('model.fork', () => ({ value: { isAnswered: true, text: JSON.stringify([{ goal: 'b', text: 'Run the heavy tier too' }]), usage: NO_USAGE } }))
+
+  const ran = await $.command.run({ command: 'queue', args: 'also run the heavy tier', origin: { kind: 'composer' }, presentation: TERMINAL })
+
+  expect([ran.text, seeded.prompts[1]!.steps!.map(step => step.text)]).toEqual(['Placed 1 piece(s) of the draft on the queue.', ['[interruption] Run the heavy tier too']])
 })
 
 test('+ empties the prompt box once the draft is filed', async ($, on) => {

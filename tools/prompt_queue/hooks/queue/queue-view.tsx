@@ -103,7 +103,7 @@ function subAgentsIcon(state: QueueState): Icon {
   return { key: 'queue-sub-agents', svg: SUB_AGENTS_SVG, glyph: '⑂', tip, isOn: state.isSubAgentMode }
 }
 
-const ADD_ICON: Icon = { key: 'queue-add', svg: ADD_SVG, glyph: '+', tip: 'Smart add: the agent files the draft where it belongs (Alt+Enter queues it as it is)' }
+const ADD_ICON: Icon = { key: 'queue-add', svg: ADD_SVG, glyph: '+', tip: 'Run /queue on the draft: place it into the plan (Alt+Enter queues it as it is)' }
 const CLEAR_ICON: Icon = { key: 'queue-clear', svg: CLEAR_SVG, glyph: '✕', tip: 'Clear the queue' }
 
 /**
