@@ -55,10 +55,12 @@ class SessionFiles:
 
     @property
     def _from_project(self) -> FileManager:
-        """A file manager named from the project's top that reads the repository and the session's roots, such as its
-        ticket's worktree beside the repository; held, and a new one when the session's roots change."""
+        """A file manager named from the project's top that reads the repository, the session's roots, such as its
+        ticket's worktree beside the repository, and the session's own folder, which a ticket's session keeps in the
+        main checkout's ``.sessions`` outside its worktree; held, and a new one when those change."""
         repo_root = self._session.repo.root
-        roots = (repo_root, *self.file_manager.roots)
+        own_folder = self._session.session_path
+        roots = (repo_root, *self.file_manager.roots, *((own_folder,) if own_folder is not None else ()))
         if self._project_files is None or self._project_files.roots != tuple(Path(root).resolve() for root in roots):
             self._project_files = FileManager(repo_root, roots)
         return self._project_files

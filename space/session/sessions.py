@@ -162,13 +162,25 @@ class Sessions:
         """The session whose session.json is session_file, a path from this checkout's top or an absolute one, read
         without opening it. A board command names its ticket's session this way, because it runs in whichever chat it
         is sent to, and that chat's open session can be another. The main session always exists, as ``named`` and
-        ``switch`` treat it, so its own session.json path finds it before anything has written that file."""
+        ``switch`` treat it, so its own session.json path finds it before anything has written that file. A bare name,
+        such as ``checkout-flow``, finds the session ``named`` finds, as ``switch`` opens it by that name."""
+        if self._is_bare_name(session_file):
+            return self._by_name(session_file)
         named = Path(session_file)
         found = named if named.is_absolute() else self.root / named
         is_main = found.name == SESSION_FILE and found.parent.resolve() == self.folder_of(MAIN_SESSION_NAME).resolve()
         if not session_file or not (found.is_file() or is_main):
             raise SessionNotFoundError(session_file)
         return self.held.load(found.parent)
+
+    def _is_bare_name(self, session_file: str) -> bool:
+        return bool(session_file) and Path(session_file).name == session_file and session_file != SESSION_FILE
+
+    def _by_name(self, name: str) -> Session:
+        found = self.named(name)
+        if found is None:
+            raise SessionNotFoundError(name)
+        return found
 
     def create(self, name: str, workpath: Path | None = None, *, title: str = "", scope: str = "", parent: str = "") -> Session:
         """A new session called name, its name, title, scope, and parent written once in its ``session.json``. workpath

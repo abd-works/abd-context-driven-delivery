@@ -448,6 +448,15 @@ Intended in the Files app: the board's files panel does it, the Files app is rea
 *Then* *order.py* on disk reads that line 14
 *And* the source view is read-only again, showing the saved text
 
+#### Scenario: Save a file into the session's own folder, naming the session by its name
+
+Requested 2026-11-16: a chat in checkout-flow's worktree ran the debug skill, which writes its report as *debug/debug-{time}.md* in the session's folder with session.write_file. The tool refused the session's name, which sessions.switch had opened it by, and then refused the session's folder, which sits in the main checkout's *.sessions*, outside the worktree and its practices' folders. Only the session's own folder is added: a path outside it and outside the session's roots is still refused. Realized by `space/session/session_files_spec.py`.
+
+*Given* checkout-flow works in its ticket's worktree, its session folder *.sessions/checkout-flow* in the main checkout
+*When* an agent saves *debug/debug-20261116T225500.md* in checkout-flow's folder with session.write_file, naming the session *checkout-flow*
+*Then* the report is on disk in *.sessions/checkout-flow/debug*
+*But* a file named outside the session's folder and its roots is still refused
+
 ---
 
 ## Sub-epic: Review Files With Comments
