@@ -9,14 +9,14 @@
     "stages": [
       "specification"
     ],
-    "version": 122
+    "version": 124
   },
   "practices": {
     "stories": {
       "formats": {
         "story_map": [],
         "scenarios": [
-          "python"
+          "markdown"
         ],
         "acceptance_tests": [
           "python"
