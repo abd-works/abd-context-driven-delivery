@@ -438,9 +438,11 @@ Observed: the arrow takes an In progress ticket to Done without crossing a colum
 
 Observed: `Board.help`; the ? on a tile or practice name opens the overview, guidance and rules in a side panel, with a link to the Forge page.
 
-### (S) Person --> Choose Session And Practice Roots
+### (S) Person --> [Choose Session And Practice Roots](../story_tests/move-work-forward-on-session-board/guide-work-through-practices-on-board/guide_work_through_practices_on_board_story.test.md#story-choose-session-and-practice-roots)
 
 Observed (checked 2026-11-10): Roots of <ticket> lists the session's root and each practice's root, marked default until a person chooses another; Change browses the folders and Use sets the session's workpath (`chooseWorkpath`) or that practice's root (`root-choice-client.ts`, `root-choice-view.tsx`).
+
+Requested (2026-11-16, "we need better instructions on session setup to scan for all relevant folders to set up roots correctly across product, tests, domain etc."): setting up or switching to a session, the agent proposes each practice's and fidelity's roots from what the ticket names and what its branch changed, digging down to the narrowest folder that holds each piece (an aggregate's folder, a package, a sub-epic's folder in story_tests), confirms them with the person, then sets them; a folder found later is added beside the roots a fidelity has (`session.set_up_roots`, `fidelity-session-output.propose_roots`).
 
 ## (E) Customize Board Workflow
 
