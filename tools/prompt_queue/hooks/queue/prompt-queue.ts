@@ -848,3 +848,30 @@ export async function moveStepPointerDown($: EngineInterface, prompt: QueuedProm
   }
   await changeSteps($, prompt, steps.map((step, place) => (place === pointed ? { ...step, state: 'done' } : place === pointed + 1 ? { ...step, state: 'in_progress' } : step)))
 }
+
+/** The answer of a prompt-queue call the agent or a sub-agent made: the queue as the server now holds it, drawn at once,
+ * so the cards, the pointer and the working mark keep up with the agent instead of waiting for the mod's next read. */
+export async function followQueueAnswer($: EngineInterface, ran: unknown): Promise<void> {
+  const text = (ran as { result?: { content?: { text?: string }[] } } | undefined)?.result?.content?.[0]?.text ?? ''
+  const answered = parseQueueAnswer(text)
+  if (!answered) {
+    return
+  }
+  const held = await read($, queue)
+  if (held.chat !== '' && answered.chat !== held.chat) {
+    return
+  }
+  await update($, queue, () => answered)
+}
+
+function parseQueueAnswer(text: string): QueueJson | undefined {
+  try {
+    const parsed = JSON.parse(text) as Partial<QueueJson>
+    return typeof parsed.chat === 'string' && Array.isArray(parsed.prompts) ? (parsed as QueueJson) : undefined
+  } catch (thrown) {
+    if (thrown instanceof SyntaxError) {
+      return undefined
+    }
+    throw thrown
+  }
+}

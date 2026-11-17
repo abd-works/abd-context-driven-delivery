@@ -1137,6 +1137,26 @@ test("the first message of a chat is placed from the queue as the server holds i
   expect(seeded.prompts.map(prompt => prompt.text)).toEqual(['Write the scenarios', '[interruption] Fix the Files app', 'Run the unit tier'])
 })
 
+test("the queue is drawn from the answer of the agent's own prompt-queue call at once, without waiting for the next read", async ($, on) => {
+  const seeded = seedQueue(on, true)
+  const answered = { chat: CHAT, prompts: [{ ...QUEUED[0], is_done: true }, QUEUED[1]] }
+  on('tool.call', () => ({ result: { content: [{ type: 'text', text: JSON.stringify(answered) }], isError: false } }))
+
+  await $.tool.call({ tool: 'mcp__cdd__prompt-queue_done', prompt: 'a' })
+
+  expect((seeded.stored.queue?.value as { prompts: Prompt[] }).prompts[0]!.is_done).toBe(true)
+})
+
+test("the orange working mark stands only on the pointer's card, so moving the pointer up takes it off the card below", async ($, on) => {
+  seedQueue(on, true, '', QUEUED, false, '', 'b')
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  const below = JSON.stringify(await ui.find({ type: 'Box', key: 'card-row-b' }))
+  await ui.unmount()
+
+  expect(below).not.toContain('"borderStyle":"round"')
+})
+
 test('a set_steps call the server refused leaves the prompt being worked as it was', async ($, on) => {
   const seeded = seedQueue(on, true, '', QUEUED, true, '', 'a')
   on('tool.call', () => ({ result: { content: [{ type: 'text', text: "PromptNotQueued: no prompt 'b' is on the queue" }], isError: true } }))

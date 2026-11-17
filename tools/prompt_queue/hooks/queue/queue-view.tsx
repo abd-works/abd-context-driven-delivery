@@ -57,7 +57,7 @@ const CARD_BUTTON_COLUMNS = 15
 const TASK_BUTTON_COLUMNS = 6
 
 /** The columns kept at a card's and a step's left for the queue's pointer, ▲ and ▼, drawn on the next to do. */
-const POINTER_COLUMNS = 4
+const POINTER_COLUMNS = 10
 
 /** The mark before a step for where it stands: done, being worked, or not started. */
 const STEP_MARK = { done: '✓', in_progress: '▸', pending: '○' } as const
@@ -144,7 +144,7 @@ function CardsView($: EngineInterface, e: AbovePromptEvent, state: QueueState, p
     <Box flexDirection="column" rowGap="sm" width="100%">
       {prompts.map((prompt, place) => (
         <Box key={`card-${prompt.id}`} flexDirection="column">
-          {CardView($, e, state, prompt, all.indexOf(prompt), isInColumn, arrowsOf(prompt, place))}
+          {CardView($, e, state, prompt, all.indexOf(prompt), isInColumn, place === pointer, arrowsOf(prompt, place))}
           {state.openSteps.includes(prompt.id) && (prompt.steps ?? []).length > 0 && StepsView($, e, prompt)}
         </Box>
       ))}
@@ -159,8 +159,10 @@ function CardsView($: EngineInterface, e: AbovePromptEvent, state: QueueState, p
 function PointerView($: EngineInterface, e: AbovePromptEvent, upKey = '', downKey = '', onUp = () => {}, onDown = () => {}) {
   const { Box, Button, Text } = $.ui.resolve(e)
 
+  const isDrawn = upKey !== '' || downKey !== ''
   return (
-    <Box width={POINTER_COLUMNS} flexShrink={0} flexDirection="row">
+    <Box width={POINTER_COLUMNS} flexShrink={0} flexDirection="row" gap={1}
+      borderStyle={isDrawn ? 'round' : undefined} borderColor={isDrawn ? LOOK.accent : undefined}>
       {upKey !== '' && <Button key={upKey} onPress={onUp}><Text color={LOOK.accent} bold>▲</Text></Button>}
       {downKey !== '' && <Button key={downKey} onPress={onDown}><Text color={LOOK.accent} bold>▼</Text></Button>}
     </Box>
@@ -169,10 +171,10 @@ function PointerView($: EngineInterface, e: AbovePromptEvent, upKey = '', downKe
 
 /** One card. In a robot's narrow queue it shows no buttons of its own; pressing it opens it in place, its buttons on a
  * row beneath it, and pressing it again closes it. */
-function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, prompt: QueuedPrompt, index: number, isInColumn: boolean, pointer: ReturnType<typeof PointerView>) {
+function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, prompt: QueuedPrompt, index: number, isInColumn: boolean, isPointer: boolean, pointer: ReturnType<typeof PointerView>) {
   const { Box, Text, Button } = $.ui.resolve(e)
   const isEditing = prompt.id === state.editingId
-  const isWorking = prompt.id === state.workingId
+  const isWorking = isPointer && prompt.id === state.workingId
   const progress = progressOf(prompt.steps)
   const isFinished = Boolean(prompt.is_done)
 

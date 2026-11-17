@@ -15,9 +15,10 @@ import {
   refreshQueue,
   finishTurn,
   startTurn,
+  followQueueAnswer,
 } from './queue/prompt-queue'
 import { QueueView } from './queue/queue-view'
-import { PLAN_TOOL, SET_STEPS_TOOL, WRAP_UP_TOOL } from './queue/plan-steps'
+import { PLAN_TOOL, PROMPT_QUEUE_TOOL, SET_STEPS_TOOL, WRAP_UP_TOOL } from './queue/plan-steps'
 
 /** Whether a tool call's answer says the call failed, such as the server refusing a prompt it does not hold. */
 function isRefused(ran: unknown): boolean {
@@ -69,6 +70,9 @@ export const register: Register = on => {
   // The agent's task list in the chat is copied onto the prompt it works on, so the queue shows its steps.
   on('tool.call', async ($, e, next) => {
     const ran = await next(e)
+    if (PROMPT_QUEUE_TOOL.test(e.tool) && !isRefused(ran)) {
+      await followQueueAnswer($, ran)
+    }
     if (e.agentId === undefined && PLAN_TOOL.test(e.tool)) {
       await followPlan($, e as unknown as Record<string, unknown>)
     } else if (e.agentId === undefined && SET_STEPS_TOOL.test(e.tool) && !isRefused(ran)) {
