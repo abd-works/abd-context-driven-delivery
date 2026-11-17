@@ -517,3 +517,7 @@
 2026-11-17T18:14:54Z tool hosting-demo.increment
 2026-11-17T18:15:10Z tool prompt-queue.show c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-15573
 2026-11-17T19:16:39Z tool repo.push_to_main c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-15659
+2026-11-17T19:16:42Z error repo.push_to_main C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 4978 c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-15659
+2026-11-17T19:17:17Z tool prompt-queue.show c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-15728
+2026-11-17T19:21:25Z tool prompt-queue.show c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-15780
+2026-11-17T19:21:39Z tool repo.push_to_main c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-15795
