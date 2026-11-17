@@ -151,6 +151,7 @@ def _switch_server_only(args: argparse.Namespace, installer: Installer, server: 
         Repo.of_project(_REPO).origin.catch_up()
     print(f"cdd server: {_switch_server(args, server)}")
     if installer.layout.is_claude_code:
+        server.cdd_entry.point_chats_at_served_lane()
         for mod, outcome in server.install_mods().items():
             print(f"{mod}: {outcome}")
     print(f"language adapters: {len(installer.deployment.write_language_adapters())} written")
