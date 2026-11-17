@@ -1,13 +1,17 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
-import type { QueuedPrompt, SubAgentTask } from '../../types'
+import type { QueueJson, QueuedPrompt, SubAgentTask } from '../../types'
 import { PromptQueue, listedItems, parseJsonArray, slashCommandOf } from './queue-order'
 
 const GROUPING_MODEL = 'sonnet'
 const GROUPING_TOKENS = 4096
+// The cdd plugin declares the server, and Claude Code names a plugin's server plugin:{plugin}:{server}.
+const SERVER = 'plugin:cdd:cdd'
 
-const prompts = atom({ plugin: 'prompt-queue', key: 'prompts' } as const, [] as QueuedPrompt[])
+/** The chat's queue as prompt-queue's tools last answered it: the cdd server keeps the queue, so the mod, the agent in
+ * the chat and a session starting in it all change the same one, and the mod draws what the server answered. */
+const queue = atom({ plugin: 'prompt-queue', key: 'queue' } as const, { chat: '', prompts: [] } as QueueJson)
 const isExpanded = atom({ plugin: 'prompt-queue', key: 'isExpanded' } as const, false)
 const isSubAgentMode = atom({ plugin: 'prompt-queue', key: 'isSubAgentMode' } as const, false)
 const tasks = atom({ plugin: 'prompt-queue', key: 'tasks' } as const, [] as SubAgentTask[])
@@ -33,7 +37,7 @@ export type QueueState = {
 
 export async function currentQueue($: EngineInterface): Promise<QueueState> {
   return {
-    queue: new PromptQueue(await read($, prompts)),
+    queue: new PromptQueue((await read($, queue)).prompts),
     isExpanded: await read($, isExpanded),
     isSubAgentMode: await read($, isSubAgentMode),
     isPlaying: await read($, isPlaying),
@@ -43,19 +47,55 @@ export async function currentQueue($: EngineInterface): Promise<QueueState> {
   }
 }
 
+/** A prompt-queue tool the queue failed on; the message is the server's own text. */
+class QueueCallFailed extends Error {}
+
+/** The one place the mod calls the cdd server: a prompt-queue operation on this chat's queue, its answer read as JSON.
+ * A reply flagged isError, or one that is not JSON, is a QueueCallFailed carrying the server's own text. */
+async function callQueue<T>($: EngineInterface, operation: string, args: Record<string, unknown> = {}): Promise<T> {
+  const chat = await $.session.id()
+  const result = await $.mcp.call(SERVER, `prompt-queue.${operation}`, { chat, ...args, chat_folder: await $.session.root(), conversation_id: chat })
+  const text = result.content[0]?.text ?? ''
+  if (result.isError) {
+    throw new QueueCallFailed(text || `prompt-queue.${operation} failed`)
+  }
+  try {
+    return JSON.parse(text) as T
+  } catch {
+    throw new QueueCallFailed(text || `prompt-queue.${operation} sent back nothing`)
+  }
+}
+
+/** Run an operation that answers the queue and draw what it answered; a failure shows in the queue box, and the queue
+ * stays as the server last answered it. */
+async function changeQueue($: EngineInterface, operation: string, args: Record<string, unknown> = {}): Promise<boolean> {
+  try {
+    const answered = await callQueue<QueueJson>($, operation, args)
+    await update($, queue, () => answered)
+    await update($, notice, () => '')
+    return true
+  } catch (failure) {
+    await update($, notice, () => `The queue did not change: ${failure instanceof Error ? failure.message : String(failure)}`)
+    return false
+  }
+}
+
+/** Read the queue again, as the agent or a starting session may have queued prompts the mod has not drawn yet. */
+export async function refreshQueue($: EngineInterface): Promise<void> {
+  await changeQueue($, 'show')
+}
+
 export async function queuePrompt($: EngineInterface, text: string): Promise<boolean> {
   if (text.trim() === '') {
     return false
   }
   const edited = await read($, editingId)
-  await update($, prompts, list => {
-    const queue = new PromptQueue(list)
-    return (queue.has(edited) ? queue.withText(edited, text) : queue.withAdded(text)).prompts
-  })
+  const isEditing = (await read($, queue)).prompts.some(prompt => prompt.id === edited)
+  const isChanged = await changeQueue($, isEditing ? 'edit' : 'add', isEditing ? { prompt: edited, text } : { text })
   await update($, editingId, () => '')
   await update($, tasks, () => [])
 
-  return true
+  return isChanged
 }
 
 /** Alt+Enter: the draft goes to the bottom of the queue instead of being sent, or back in its place when edited. */
@@ -91,12 +131,16 @@ export async function queueDraft($: EngineInterface): Promise<void> {
 }
 
 export async function movePrompt($: EngineInterface, from: number, to: number): Promise<void> {
-  await update($, prompts, list => new PromptQueue(list).withMoved(from, to).prompts)
+  const moving = (await read($, queue)).prompts[from]
+  if (!moving || from === to) {
+    return
+  }
+  await changeQueue($, 'move', { prompt: moving.id, to })
   await update($, tasks, () => [])
 }
 
 export async function removePrompt($: EngineInterface, id: string): Promise<void> {
-  await update($, prompts, list => new PromptQueue(list).without(id).prompts)
+  await changeQueue($, 'remove', { prompt: id })
   await update($, tasks, () => [])
 }
 
@@ -108,7 +152,7 @@ export async function editPrompt($: EngineInterface, prompt: QueuedPrompt): Prom
 }
 
 export async function clearQueue($: EngineInterface): Promise<void> {
-  await update($, prompts, () => [])
+  await changeQueue($, 'clear')
   await update($, tasks, () => [])
 }
 
@@ -136,9 +180,11 @@ export async function startTurn($: EngineInterface): Promise<void> {
   await update($, isTurnRunning, () => true)
 }
 
-/** A main-chat turn ended: playing, the next prompt goes now, unless the turn was stopped or failed. */
+/** A main-chat turn ended: the queue is read again, since the agent may have queued work in the turn, and, playing,
+ * the next prompt goes now, unless the turn was stopped or failed. */
 export async function finishTurn($: EngineInterface, isAnswered: boolean): Promise<void> {
   await update($, isTurnRunning, () => false)
+  await refreshQueue($)
   if (isAnswered && (await read($, isPlaying))) {
     await sendNext($)
   }
@@ -146,13 +192,17 @@ export async function finishTurn($: EngineInterface, isAnswered: boolean): Promi
 
 /** Sends the prompt at the top of the queue as the person's next prompt, passing over one being edited. */
 export async function sendNextPrompt($: EngineInterface): Promise<void> {
-  const queue = new PromptQueue(await read($, prompts))
-  const next = queue.firstExcept(await read($, editingId))
+  let next: QueuedPrompt | null
+  try {
+    next = await callQueue<QueuedPrompt | null>($, 'take_next', { passing_over: await read($, editingId) })
+  } catch (failure) {
+    await update($, notice, () => `Not sent: ${failure instanceof Error ? failure.message : String(failure)}`)
+    return
+  }
   if (!next) {
     return
   }
-  await update($, prompts, list => new PromptQueue(list).without(next.id).prompts)
-  await update($, notice, () => '')
+  await refreshQueue($)
   const command = slashCommandOf(next.text)
   const sent = command ? $.command.run(command) : $.prompt.submit({ text: next.text, asUser: true })
   sent.catch(failure => putBackUnsent($, next, failure))
@@ -160,7 +210,12 @@ export async function sendNextPrompt($: EngineInterface): Promise<void> {
 
 /** A prompt the engine would not submit goes back to the top of the queue, and the box says why. */
 async function putBackUnsent($: EngineInterface, unsent: QueuedPrompt, failure: unknown): Promise<void> {
-  await update($, prompts, list => [unsent, ...list])
+  if (await changeQueue($, 'add', { text: unsent.text })) {
+    const back = (await read($, queue)).prompts.at(-1)
+    if (back) {
+      await changeQueue($, 'move', { prompt: back.id, to: 0 })
+    }
+  }
   await update($, notice, () => `Not sent: ${failure instanceof Error ? failure.message : String(failure)}`)
 }
 
@@ -174,8 +229,8 @@ export async function sendNext($: EngineInterface): Promise<void> {
 }
 
 export async function groupIntoTasks($: EngineInterface): Promise<void> {
-  const queue = new PromptQueue(await read($, prompts))
-  if (queue.isEmpty) {
+  const queued = new PromptQueue((await read($, queue)).prompts)
+  if (queued.isEmpty) {
     return
   }
   await update($, notice, () => 'Grouping the queue into sub-agent tasks…')
@@ -183,7 +238,7 @@ export async function groupIntoTasks($: EngineInterface): Promise<void> {
     model: GROUPING_MODEL,
     maxTokens: GROUPING_TOKENS,
     system: GROUPING_INSTRUCTIONS,
-    prompt: JSON.stringify(queue.texts),
+    prompt: JSON.stringify(queued.texts),
   })
   if (!reply.isAnswered) {
     await update($, notice, () => `Grouping failed: ${reply.reason}`)
@@ -244,9 +299,7 @@ async function planFromConversation($: EngineInterface, focus: string): Promise<
 }
 
 async function queueAll($: EngineInterface, texts: string[]): Promise<void> {
-  for (const text of texts) {
-    await queuePrompt($, text)
-  }
+  await changeQueue($, 'add_all', { texts })
   await update($, isExpanded, () => true)
 }
 

@@ -3,6 +3,7 @@ prompt-queue mod, the agent working in the chat, and a session starting in it al
 
 from __future__ import annotations
 
+import re
 import uuid
 from pathlib import Path
 from typing import TypedDict
@@ -18,6 +19,11 @@ from harness.mcp.mcp_annotations import mcp
 
 # The file in a chat's own folder that holds its queue.
 QUEUE_FILE = "prompt-queue.json"
+# The section of a handoff that holds the numbered steps the next agent takes (space/session/HANDOFF-FORMAT.md).
+_APPROACH_HEADING = re.compile(r"^##\s+Approach for Next Agent\s*$", re.IGNORECASE)
+_NEXT_SECTION = re.compile(r"^##\s")
+# A numbered step: `1. Read this handoff`, `2) Run the unit tier`.
+_NUMBERED_STEP = re.compile(r"^\s*\d+[.)]\s+(.*)$")
 
 
 class QueuedPrompt(TypedDict):
@@ -74,6 +80,12 @@ class PromptQueue:
 
     @mcp
     @agent_tool
+    def show(self) -> PromptQueue:
+        """Answer this chat's prompt queue: the prompts queued, first to be sent first."""
+        return self
+
+    @mcp
+    @agent_tool
     def add(self, text: str) -> PromptQueue:
         """Queue text at the bottom of this chat's prompt queue, to be sent after every prompt already on it. A slash command queued runs as that command. Text that is only spaces queues nothing."""
         return self.add_all([text])
@@ -115,13 +127,26 @@ class PromptQueue:
 
     @mcp
     @agent_tool
-    def take_next(self) -> QueuedPrompt | None:
-        """Take the first prompt off the queue to send it now, as the mod does when a turn ends while the queue plays; none when the queue is empty."""
+    def take_next(self, passing_over: str = "") -> QueuedPrompt | None:
+        """Take the first prompt off the queue to send it now, as the mod does when a turn ends while the queue plays, passing over the prompt whose id is passing_over, one the person is editing, which waits in its place until it is queued again; none when no prompt may be sent."""
         held = self.prompts
-        if not held:
+        sent = next((item for item in held if item["id"] != passing_over), None)
+        if sent is None:
             return None
-        self._keep(held[1:])
-        return held[0]
+        self._keep([item for item in held if item is not sent])
+        return sent
+
+    def queue_handoff(self, handoff: Path) -> int:
+        """Queue the numbered steps of handoff's Approach for Next Agent, in order, one prompt each, so a chat opening a
+        session has its next work lined up; a handoff already queued on this chat queues nothing again. Answers how many
+        steps it queued."""
+        held = self._held()
+        if handoff.name in held.get("handoffs", []):
+            return 0
+        steps = handoff_steps(handoff.read_text(encoding="utf-8")) if handoff.is_file() else []
+        self.add_all(steps)
+        self._file.write({**self._held(), "handoffs": [*held.get("handoffs", []), handoff.name]})
+        return len(steps)
 
     def _holding(self, prompt: str) -> list[QueuedPrompt]:
         """The prompts queued, refusing a prompt id the queue does not hold."""
@@ -143,3 +168,24 @@ class PromptQueue:
         self._file.path.parent.mkdir(parents=True, exist_ok=True)
         self._file.write({**self._held(), "prompts": prompts})
         return self
+
+
+def handoff_steps(text: str) -> list[str]:
+    """The numbered steps of a handoff's Approach for Next Agent, each with the lines that continue it; none when it has
+    no such section."""
+    steps: list[str] = []
+    is_inside = False
+    for line in text.splitlines():
+        if _APPROACH_HEADING.match(line):
+            is_inside = True
+            continue
+        if not is_inside:
+            continue
+        if _NEXT_SECTION.match(line):
+            break
+        step = _NUMBERED_STEP.match(line)
+        if step:
+            steps.append(step.group(1).strip())
+        elif steps and line.strip() and line.startswith((" ", "\t")):
+            steps[-1] = f"{steps[-1]} {line.strip()}"
+    return steps

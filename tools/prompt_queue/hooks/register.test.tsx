@@ -22,10 +22,61 @@ const QUEUED = [
 
 type TestOn = Parameters<Extract<Parameters<typeof test>[1], (...args: never[]) => unknown>>[1]
 
-/** The mod's stored values, kept in memory as the engine keeps them: each write raises the value's version. */
+// The chat the tests run in, as the engine names it.
+const CHAT = 'chat-1'
+
+type Prompt = { id: string; text: string }
+
+/** The cdd server's prompt-queue tools for one chat, in memory: the same operations as tools/prompt_queue's
+ * PromptQueue, each answering the queue, or take_next the prompt taken. */
+function promptQueueTools(prompts: Prompt[]) {
+  let added = 0
+  const answer = () => ({ chat: CHAT, prompts })
+  const at = (id: unknown) => prompts.findIndex(prompt => prompt.id === id)
+  const operations: Record<string, (args: Record<string, unknown>) => unknown> = {
+    show: () => answer(),
+    add: args => operations.add_all!({ texts: [args.text] }),
+    add_all: args => {
+      for (const text of (args.texts as string[]).filter(text => text.trim())) prompts.push({ id: `added-${++added}`, text: text.trim() })
+      return answer()
+    },
+    edit: args => {
+      prompts[at(args.prompt)]!.text = String(args.text)
+      return answer()
+    },
+    move: args => {
+      const [moving] = prompts.splice(at(args.prompt), 1)
+      prompts.splice(Math.max(0, Math.min(Number(args.to), prompts.length)), 0, moving!)
+      return answer()
+    },
+    remove: args => {
+      prompts.splice(at(args.prompt), 1)
+      return answer()
+    },
+    clear: () => {
+      prompts.splice(0)
+      return answer()
+    },
+    take_next: args => {
+      const index = prompts.findIndex(prompt => prompt.id !== args.passing_over)
+      return index < 0 ? null : prompts.splice(index, 1)[0]
+    },
+  }
+  return { prompts, call: (tool: string, args: Record<string, unknown>) => operations[tool.replace('prompt-queue.', '')]!(args) }
+}
+
+/** The mod's stored values, kept in memory as the engine keeps them: each write raises the value's version; the queue
+ * itself is the cdd server's, through prompt-queue's tools. */
 function seedQueue(on: TestOn, isExpanded: boolean, queuedByKey = '', queued = QUEUED, isPlaying = false, editingId = '') {
+  const server = promptQueueTools(queued.map(prompt => ({ ...prompt })))
+  on('session.id', () => ({ value: CHAT }))
+  on('session.root', () => ({ value: 'C:/work' }))
+  on('mcp.call', (_, e) => {
+    const { tool, args } = e as { tool: string; args: Record<string, unknown> }
+    return { value: { content: [{ type: 'text', text: JSON.stringify(server.call(tool, args)) }], isError: false } }
+  })
   const stored: Record<string, { value: unknown; version: number }> = {
-    prompts: { value: queued, version: 1 },
+    queue: { value: { chat: CHAT, prompts: [...server.prompts] }, version: 1 },
     isExpanded: { value: isExpanded, version: 1 },
     queuedByKey: { value: queuedByKey, version: 1 },
     isPlaying: { value: isPlaying, version: 1 },
@@ -42,7 +93,7 @@ function seedQueue(on: TestOn, isExpanded: boolean, queuedByKey = '', queued = Q
     return { value: { isSet: true, version } }
   })
 
-  return { get prompts() { return stored.prompts?.value } }
+  return { get prompts() { return server.prompts } }
 }
 
 for (const surface of ['desktop', 'terminal'] as const) {
@@ -168,6 +219,10 @@ test('adding while a prompt is being edited puts the draft back in its place', a
   await ui.unmount()
 })
 
+// What a model call cost and where a command ran, which the queue's tests do not read.
+const NO_USAGE = { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 }
+const TERMINAL = { isFullscreen: false, columns: 80 }
+
 // Seen 2026-11-17: /queue with a pasted list of outstanding items answered "Queued 0 prompt(s)".
 const PASTED_LIST = [
   '2. Right-click Go to file on a fold-out.',
@@ -182,10 +237,10 @@ test('/queue given a pasted list queues each item in order, without asking the m
   let isModelAsked = false
   on('model.fork', () => {
     isModelAsked = true
-    return { value: { isAnswered: true, text: '[]' } }
+    return { value: { isAnswered: true, text: '[]', usage: NO_USAGE } }
   })
 
-  const ran = await $.command.run({ command: 'queue', args: PASTED_LIST })
+  const ran = await $.command.run({ command: 'queue', args: PASTED_LIST, origin: { kind: 'composer' }, presentation: TERMINAL })
   const queued = store.prompts as { text: string }[]
 
   expect([ran.text, queued.map(prompt => prompt.text), isModelAsked]).toEqual([
@@ -201,9 +256,9 @@ test('/queue given a pasted list queues each item in order, without asking the m
 
 test('/queue whose plan holds no prompt says why', async ($, on) => {
   seedQueue(on, false, '', [])
-  on('model.fork', () => ({ value: { isAnswered: true, text: 'Nothing is left to do.' } }))
+  on('model.fork', () => ({ value: { isAnswered: true, text: 'Nothing is left to do.', usage: NO_USAGE } }))
 
-  const ran = await $.command.run({ command: 'queue', args: '' })
+  const ran = await $.command.run({ command: 'queue', args: '', origin: { kind: 'composer' }, presentation: TERMINAL })
 
   expect(ran.text).toBe('Queued 0 prompt(s): the model proposed none. It answered: Nothing is left to do.')
 })

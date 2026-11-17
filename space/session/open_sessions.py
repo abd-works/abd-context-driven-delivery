@@ -12,6 +12,7 @@ from space.session.session import MAIN_SESSION_NAME, Session
 from space.session.session_folder import COMPLETE_FOLDER
 from space.session.session_record import SESSION_FILE
 from space.work_state import WorkState
+from tools.prompt_queue.prompt_queue import PromptQueue
 
 if TYPE_CHECKING:
     from space.session.sessions import Sessions
@@ -21,6 +22,11 @@ if TYPE_CHECKING:
 _OUTSIDE_WORKTREE_NOTE = (
     "This chat works in {chat}, but {session}'s worktree is {worktree}. Do this session's work in a chat started there "
     "(start_session with cwd {worktree}), not in this chat.\n\n"
+)
+_HANDOFF_QUEUED_NOTE = (
+    "**Handoff queued.** The {count} steps of {handoff}'s Approach for Next Agent are on this chat's prompt queue, in "
+    "order: the prompt-queue mod sends the next one as each turn ends while it plays, and prompt-queue.show lists "
+    "them.\n\n"
 )
 _DEFAULT_ROOTS_NOTE = (
     "**Output roots.** These practices write under their default folders, which nobody has checked: {roots}. Before "
@@ -129,13 +135,22 @@ class OpenSessions:
         ticket = self.ticket_of_worktree()
         if ticket is not None:
             opened = self.open(ticket, chat)
-            return self._worktree_ticket_note(ticket, name) + self._default_roots_note(opened) + opened.log.instructions()
+            return self._worktree_ticket_note(ticket, name) + self._handoff_queued_note(opened, chat) + self._default_roots_note(opened) + opened.log.instructions()
         wanted = self._name_to_switch_to(name, chat)
         folder = sessions.folder_of(wanted)
         is_kept = (folder / SESSION_FILE).is_file() or wanted == MAIN_SESSION_NAME
         session = sessions.held.load(folder) if is_kept else sessions.create(wanted, workpath)
         opened = self.open(session, chat)
-        return self._outside_worktree_note(session, call) + self._default_roots_note(opened) + opened.log.instructions()
+        return self._outside_worktree_note(session, call) + self._handoff_queued_note(opened, chat) + self._default_roots_note(opened) + opened.log.instructions()
+
+    def _handoff_queued_note(self, session: Session, chat: str) -> str:
+        """Queue the steps of session's latest handoff on chat's prompt queue, once per handoff, and say so; nothing for
+        a call from no chat, or a session with no handoff."""
+        handoff = session.handoffs.latest
+        if not chat or handoff is None:
+            return ""
+        queued = PromptQueue.of_chat(chat).queue_handoff(handoff)
+        return _HANDOFF_QUEUED_NOTE.format(count=queued, handoff=handoff.name) if queued else ""
 
     def _default_roots_note(self, session: Session) -> str:
         """What a chat opening session is told about the practices it works on whose roots nobody set, so it points each
