@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest'
 import type { NodeSourceData } from '@cdd/harness/graph/graph'
 import type { SessionFileData } from '@cdd/space/session/session'
 
-import { calloutsOf, isStoryTest } from './source-of-file'
+import { calloutsOf, expandedLines, isStoryTest } from './source-of-file'
 
 const STEP_STORY = 'story_tests/manage-tickets/remove-tickets/delete-ticket.story.shared.py'
 const node = (node_id: string, name: string, owner: string, file: string, start_line: number, text: string): NodeSourceData =>
@@ -69,6 +69,17 @@ describe('Connectors Fold Out Where They Are Used', () => {
         [15, 'Ticket.delete'],
         [19, 'CHECKOUT_TICKET'],
       ])
+    })
+  })
+})
+
+describe('Expand A Connector Inside Its Holder Only', () => {
+  describe('with CHECKOUT_TICKET observed by the Then on line 17, and the Person selecting it under the scenario on lines 7 to 19', () => {
+    const callouts = calloutsOf(storyTestWithText)
+    const elsewhere = { ...callouts[2]!, line: 40 }
+
+    it('should open it on line 19, where the scenario uses it, and nowhere else in the file', () => {
+      expect(expandedLines([...callouts, elsewhere], ['CHECKOUT_TICKET'], [{ start: 7, end: 19 }])).toEqual([19])
     })
   })
 })

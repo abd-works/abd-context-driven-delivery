@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { NodeSourceData } from '@cdd/harness/graph/graph'
 import type { SessionFileData } from '@cdd/space/session/session'
 import { SourceView, type SourceEditorInstance } from '@source-view/SourceView'
-import type { SourceCallout } from '@source-view/source-callouts'
 import type { SourceLines } from '@source-view/source-folding'
 import type { Monaco } from '@monaco-editor/react'
 
@@ -14,7 +13,7 @@ import type { CommentLines, FileCommentsActions } from './file-comments-actions'
 import { selectedMarks } from './file-marks'
 import { keepWrap, storedWrap, type ThemeFailure } from './files-theme'
 import type { FilesFoldKeys } from './files-fold-keys'
-import { calloutsOf, isStoryTest, monacoLanguageOf, rulesOf, sourceOf, violationFocusOf } from './source-of-file'
+import { calloutsOf, expandedLines, isStoryTest, monacoLanguageOf, rulesOf, sourceOf, violationFocusOf } from './source-of-file'
 
 // How far down the window the first line asked to show sits once the page scrolls to it: near the top, so it is plain
 // where the page went, with a line or two above it for context.
@@ -27,13 +26,6 @@ function useSelectedMarks(editor: SourceEditorInstance | null, openAround: Sourc
     const marks = editor.createDecorationsCollection(selectedMarks(openAround, lineCount))
     return () => marks.clear()
   }, [editor, openAround, lineCount])
-}
-
-// The lines that use the expanded callouts, one each; none when no callout of the file is expanded, so the lines asked
-// for show instead.
-function linesUsing(callouts: SourceCallout[], expanded: string[]): SourceLines[] | null {
-  const lines = [...new Set(callouts.filter(callout => expanded.includes(callout.id)).map(callout => callout.line))]
-  return lines.length ? lines.map(line => ({ start: line, end: line })) : null
 }
 
 // A code file opened with no node selected opens as an outline: its classes open and their members folded. Only a
@@ -93,8 +85,9 @@ export function FileSourceView({
   }
   const source = useMemo(() => sourceOf(file, members), [file, members])
   const callouts = useMemo(() => calloutsOf(file), [file])
-  // A node selected through a connector shows on the line that uses it, which its fold-out opens under.
-  const shownAround = useMemo(() => linesUsing(callouts, expanded) ?? openAround, [callouts, expanded, openAround])
+  // A node selected through a connector shows on the line of its holder that uses it, which its fold-out opens under.
+  const expandLines = useMemo(() => expandedLines(callouts, expanded, openAround), [callouts, expanded, openAround])
+  const shownAround = useMemo(() => (expandLines.length ? expandLines.map(line => ({ start: line, end: line })) : openAround), [expandLines, openAround])
   const rules = useMemo(() => rulesOf(file), [file])
   const rule = rules.some(shown => shown.name === chosenRule) ? chosenRule : (rules[0]?.name ?? '')
   const compose = useCallback((lines: CommentLines) => {
@@ -140,7 +133,7 @@ export function FileSourceView({
         keepGlyphMargin
         wordWrap={wrap}
         callouts={callouts}
-        expandCallouts={expanded}
+        expandLines={expandLines}
         opensCalls={!isStoryTest(file)}
         onEditor={onEditor}
       />

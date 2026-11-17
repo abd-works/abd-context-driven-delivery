@@ -31,15 +31,15 @@ export type SourceEditorInstance = Parameters<OnMount>[0];
 // whether long lines wrap, or scroll sideways (shift+wheel or a sideways swipe, since the page, not the editor, scrolls
 // up and down); and the editor and its Monaco once made, so the page can add its own gutter marks (each with the class
 // SOURCE_MARK) and menu actions, such as the Files app's comments, and bind its shortcuts. The file folds as Monaco folds
-// its language, by its classes, functions and blocks, and markdown by its headings. The callouts expandCallouts names open
-// as the page asks, such as a node selected in the graph through a connector.
+// its language, by its classes, functions and blocks, and markdown by its headings. The callouts on the lines expandLines
+// names open as the page asks, such as a node selected in the graph through a connector.
 export type SourceHostProps = {
   openAround?: SourceLines[];
   language?: string;
   keepGlyphMargin?: boolean;
   wordWrap?: boolean;
   callouts?: SourceCallout[];
-  expandCallouts?: string[];
+  expandLines?: number[];
   opensCalls?: boolean;
   onEditor?: (editor: SourceEditorInstance, monacoApi: Monaco) => void;
 };
@@ -48,7 +48,7 @@ export const SOURCE_MARK = 'source-mark';
 
 const NO_LINES: SourceLines[] = [];
 const NO_CALLOUTS: SourceCallout[] = [];
-const NO_IDS: string[] = [];
+const NO_LINE_NUMBERS: number[] = [];
 const NO_MEMBERS: NodeSourceData[] = [];
 // A text in no language Monaco reads as code holds no calls.
 const PROSE_LANGUAGES = new Set(['markdown', 'plaintext']);
@@ -83,7 +83,7 @@ type SourceEditorProps = SourceHostProps & {
   onSelectRule?: (name: string) => void;
 };
 
-function SourceEditor({ source, violation, rules, activeRule, onSelectRule, openAround = NO_LINES, language = '', keepGlyphMargin = false, wordWrap = false, callouts = NO_CALLOUTS, expandCallouts = NO_IDS, opensCalls = true, onEditor }: SourceEditorProps) {
+function SourceEditor({ source, violation, rules, activeRule, onSelectRule, openAround = NO_LINES, language = '', keepGlyphMargin = false, wordWrap = false, callouts = NO_CALLOUTS, expandLines = NO_LINE_NUMBERS, opensCalls = true, onEditor }: SourceEditorProps) {
   const file = source.file ?? '';
   const text = source.text ?? '';
   const origin = source.start_line || 1;
@@ -92,7 +92,7 @@ function SourceEditor({ source, violation, rules, activeRule, onSelectRule, open
   const [contentHeight, setContentHeight] = useState(0);
   const { shown, within } = useSourceCallouts(source, shownLanguage, callouts, opensCalls);
   const editorLineOf = useCallback((fileLine: number) => fileLine - origin + 1, [origin]);
-  useCallouts(editor, shown, within, editorLineOf, expandCallouts);
+  useCallouts(editor, shown, within, editorLineOf, expandLines);
   useOpenAround(editor, openAround, text);
   useLineMarks(editor, origin, text, violation, openAround);
   const onMount: OnMount = (made, monacoApi) => {
