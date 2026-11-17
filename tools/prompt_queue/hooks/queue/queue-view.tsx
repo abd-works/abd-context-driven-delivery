@@ -225,7 +225,7 @@ function StepsView($: EngineInterface, e: AbovePromptEvent, prompt: QueuedPrompt
   )
 }
 
-/** One task under its card: its mark and text, with ↑ ↓ to move it and ✕ to take it off always shown beside it. */
+/** One task under its card: its mark and text, and, with the pointer on it, ↑ ↓ to move it and ✕ to take it off. */
 function StepView($: EngineInterface, e: AbovePromptEvent, prompt: QueuedPrompt, step: PromptStep, index: number) {
   const { Box, Button, Text } = $.ui.resolve(e)
   const number = index + 1
@@ -238,7 +238,7 @@ function StepView($: EngineInterface, e: AbovePromptEvent, prompt: QueuedPrompt,
           {`${STEP_MARK[step.state]} ${step.text}`}
         </Text>
       </Box>
-      <Box flexDirection="row" gap={1} backgroundColor={LOOK.keyCap} paddingX="xs">
+      <Box flexDirection="row" gap={1} display="none" hover={{ display: 'flex' }} backgroundColor={LOOK.keyCap} paddingX="xs">
         <Button key={`up-step-${prompt.id}-${number}`} label="↑" onPress={() => moveStep($, prompt, index, index - 1)} />
         <Button key={`down-step-${prompt.id}-${number}`} label="↓" onPress={() => moveStep($, prompt, index, index + 1)} />
         <Button key={`remove-step-${prompt.id}-${number}`} label="✕" onPress={() => removeStep($, prompt, index)} />
