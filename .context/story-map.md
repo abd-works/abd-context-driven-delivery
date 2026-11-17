@@ -948,7 +948,7 @@ Observed (2026-11-16): pressing the stack image opens the queue upward: one roun
 
 ### (S) Person --> Edit Queued Prompt
 
-Built (2026-11-16, the person: "right side of every queue item so we can edit before the arrows"): the pencil on a card puts its prompt in the prompt box and takes it off the queue, to be changed and queued or sent again (`editPrompt`).
+Built (2026-11-16, the person: "right side of every queue item so we can edit before the arrows"; then "we should not lose positioning when we edit an item, keep it in list but shaded; adding to queue adds to the edited option"): the pencil on a card puts its prompt in the prompt box; the card keeps its place, shaded and marked editing, and is not sent while it waits; the next add, Alt+Enter or `+`, puts the changed text back in that place (`editPrompt`).
 
 ### (S) Person --> Reorder Queued Prompts
 

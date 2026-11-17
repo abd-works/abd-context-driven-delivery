@@ -15,6 +15,7 @@ declare module 'claude-code' {
       queuedByKey: string
       isPlaying: boolean
       isTurnRunning: boolean
+      editingId: string
     }
   }
 }

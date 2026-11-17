@@ -23,12 +23,13 @@ const QUEUED = [
 type TestOn = Parameters<Extract<Parameters<typeof test>[1], (...args: never[]) => unknown>>[1]
 
 /** The mod's stored values, kept in memory as the engine keeps them: each write raises the value's version. */
-function seedQueue(on: TestOn, isExpanded: boolean, queuedByKey = '', queued = QUEUED, isPlaying = false) {
+function seedQueue(on: TestOn, isExpanded: boolean, queuedByKey = '', queued = QUEUED, isPlaying = false, editingId = '') {
   const stored: Record<string, { value: unknown; version: number }> = {
     prompts: { value: queued, version: 1 },
     isExpanded: { value: isExpanded, version: 1 },
     queuedByKey: { value: queuedByKey, version: 1 },
     isPlaying: { value: isPlaying, version: 1 },
+    editingId: { value: editingId, version: 1 },
   }
   on('state.get', (_, e) => {
     const key = (e as { key: string }).key
@@ -40,6 +41,8 @@ function seedQueue(on: TestOn, isExpanded: boolean, queuedByKey = '', queued = Q
     stored[key] = { value, version }
     return { value: { isSet: true, version } }
   })
+
+  return { get prompts() { return stored.prompts?.value } }
 }
 
 for (const surface of ['desktop', 'terminal'] as const) {
@@ -128,7 +131,7 @@ for (const isPlaying of [true, false]) {
   })
 }
 
-test('the pencil on a card moves its prompt into the prompt box to be edited', async ($, on) => {
+test('the pencil on a card puts its prompt in the prompt box to be edited', async ($, on) => {
   seedQueue(on, true)
   const filled: string[] = []
   on('prompt.fill', (_, e) => {
@@ -140,5 +143,17 @@ test('the pencil on a card moves its prompt into the prompt box to be edited', a
   await ui.press({ key: 'edit-b' })
 
   expect(filled).toEqual(['Run the unit tier'])
+  await ui.unmount()
+})
+
+test('adding while a prompt is being edited puts the draft back in its place', async ($, on) => {
+  const written = seedQueue(on, true, '', QUEUED, false, 'a')
+  on('prompt.read', () => ({ value: { text: 'Write the scenarios again', cursor: 25 } }))
+  on('prompt.fill', () => ({ isFilled: true }))
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'queue-add' })
+
+  expect(written.prompts).toEqual([{ id: 'a', text: 'Write the scenarios again' }, QUEUED[1]])
   await ui.unmount()
 })

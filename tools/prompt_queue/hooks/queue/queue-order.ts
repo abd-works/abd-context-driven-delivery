@@ -36,6 +36,20 @@ export class PromptQueue {
     return new PromptQueue(reordered)
   }
 
+  /** The queue with promptId's text changed in its place, so editing a prompt never moves it. */
+  withText(promptId: string, text: string): PromptQueue {
+    return new PromptQueue(this.prompts.map(prompt => (prompt.id === promptId ? { ...prompt, text } : prompt)))
+  }
+
+  /** The first prompt that may be sent: one being edited waits in its place until it is queued again. */
+  firstExcept(promptId: string): QueuedPrompt | undefined {
+    return this.prompts.find(prompt => prompt.id !== promptId)
+  }
+
+  has(promptId: string): boolean {
+    return this.prompts.some(prompt => prompt.id === promptId)
+  }
+
   without(id: string): PromptQueue {
     return new PromptQueue(this.prompts.filter(prompt => prompt.id !== id))
   }

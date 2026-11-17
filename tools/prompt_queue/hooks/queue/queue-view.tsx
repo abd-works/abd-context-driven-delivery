@@ -54,7 +54,7 @@ export function QueueView($: EngineInterface, e: AbovePromptEvent, state: QueueS
   return (
     <Box key="prompt-queue" flexDirection="column" rowGap="sm" alignSelf="flex-start"
       paddingX={1} width={state.isExpanded ? e.props.bodyColumns : undefined}>
-      {state.isExpanded && QueueListView($, e, queue)}
+      {state.isExpanded && QueueListView($, e, queue, state.editingId)}
       {state.isExpanded && state.isSubAgentMode && state.tasks.map(task => (
         <Text dimColor wrap="truncate-end">{`  ↳ ${task.description}: ${task.prompts.length} prompt(s)`}</Text>
       ))}
@@ -100,7 +100,7 @@ const CLEAR_ICON: Icon = { key: 'queue-clear', svg: CLEAR_SVG, glyph: '✕', tip
  * The open queue, a stack of task cards that grows downward, one bordered card per task. The pointer over a card
  * reveals its move and remove buttons.
  */
-function QueueListView($: EngineInterface, e: AbovePromptEvent, queue: PromptQueue) {
+function QueueListView($: EngineInterface, e: AbovePromptEvent, queue: PromptQueue, editingId: string) {
   const { Box, Text, Button } = $.ui.resolve(e)
   if (queue.isEmpty) {
     return (
@@ -121,7 +121,9 @@ function QueueListView($: EngineInterface, e: AbovePromptEvent, queue: PromptQue
         <Box key={`card-${prompt.id}`} flexDirection="row" justifyContent="space-between" gap={1} borderStyle="round"
           borderColor={LOOK.card} backgroundColor={LOOK.card} paddingX="xs">
           <Box flexGrow={1} flexShrink={1}>
-            <Text wrap="truncate-end">{`${index + 1}. ${prompt.text.replace(/\s+/g, ' ')}`}</Text>
+            <Text wrap="truncate-end" dimColor={prompt.id === editingId} italic={prompt.id === editingId}>
+              {`${index + 1}. ${prompt.text.replace(/\s+/g, ' ')}${prompt.id === editingId ? '  (editing)' : ''}`}
+            </Text>
           </Box>
           <Box width={CARD_BUTTON_COLUMNS} justifyContent="flex-end">
             <Box flexDirection="row" gap={1} display="none" hover={{ display: 'flex' }}>

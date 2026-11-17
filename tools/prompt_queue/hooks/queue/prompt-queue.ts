@@ -12,18 +12,21 @@ const isExpanded = atom({ plugin: 'prompt-queue', key: 'isExpanded' } as const, 
 const isSubAgentMode = atom({ plugin: 'prompt-queue', key: 'isSubAgentMode' } as const, false)
 const tasks = atom({ plugin: 'prompt-queue', key: 'tasks' } as const, [] as SubAgentTask[])
 const notice = atom({ plugin: 'prompt-queue', key: 'notice' } as const, '')
-/** The draft Alt+Enter just queued: the desktop still submits it after the key, so that submission is dropped. */
 /** Playing, each finished turn sends the next prompt; paused, the queue waits. */
 const isPlaying = atom({ plugin: 'prompt-queue', key: 'isPlaying' } as const, false)
 /** Whether the main chat is in a turn, so play sends at once only when nothing is running. */
 const isTurnRunning = atom({ plugin: 'prompt-queue', key: 'isTurnRunning' } as const, false)
+/** The draft Alt+Enter just queued: the desktop still submits it after the key, so that submission is dropped. */
 const queuedByKey = atom({ plugin: 'prompt-queue', key: 'queuedByKey' } as const, '')
+/** The prompt being edited in the prompt box: it keeps its place, shaded, and the next add puts the draft back there. */
+const editingId = atom({ plugin: 'prompt-queue', key: 'editingId' } as const, '')
 
 export type QueueState = {
   queue: PromptQueue
   isExpanded: boolean
   isSubAgentMode: boolean
   isPlaying: boolean
+  editingId: string
   tasks: SubAgentTask[]
   notice: string
 }
@@ -34,6 +37,7 @@ export async function currentQueue($: EngineInterface): Promise<QueueState> {
     isExpanded: await read($, isExpanded),
     isSubAgentMode: await read($, isSubAgentMode),
     isPlaying: await read($, isPlaying),
+    editingId: await read($, editingId),
     tasks: await read($, tasks),
     notice: await read($, notice),
   }
@@ -43,13 +47,18 @@ export async function queuePrompt($: EngineInterface, text: string): Promise<boo
   if (text.trim() === '') {
     return false
   }
-  await update($, prompts, list => new PromptQueue(list).withAdded(text).prompts)
+  const edited = await read($, editingId)
+  await update($, prompts, list => {
+    const queue = new PromptQueue(list)
+    return (queue.has(edited) ? queue.withText(edited, text) : queue.withAdded(text)).prompts
+  })
+  await update($, editingId, () => '')
   await update($, tasks, () => [])
 
   return true
 }
 
-/** Alt+Enter: the draft goes to the bottom of the queue instead of being sent. */
+/** Alt+Enter: the draft goes to the bottom of the queue instead of being sent, or back in its place when edited. */
 export async function queueByKey($: EngineInterface, text: string): Promise<void> {
   if (await queuePrompt($, text)) {
     await update($, queuedByKey, () => text)
@@ -67,7 +76,7 @@ export async function isQueuedByKey($: EngineInterface, text: string): Promise<b
   return true
 }
 
-/** The `+` button: what the person typed so far moves to the bottom of the queue. */
+/** The `+` button: what the person typed so far moves to the bottom of the queue, or back in its place when edited. */
 export async function queueDraft($: EngineInterface): Promise<void> {
   const { text } = await $.prompt.read()
   if (await queuePrompt($, text)) {
@@ -85,10 +94,11 @@ export async function removePrompt($: EngineInterface, id: string): Promise<void
   await update($, tasks, () => [])
 }
 
-/** The pencil on a card: the prompt leaves the queue for the prompt box, to be changed and queued or sent again. */
+/** The pencil on a card: the prompt goes to the prompt box to be changed, and keeps its place in the queue, shaded,
+ * until the next add puts the changed text back there. */
 export async function editPrompt($: EngineInterface, prompt: QueuedPrompt): Promise<void> {
   await $.prompt.fill({ text: prompt.text, mode: 'replace' })
-  await removePrompt($, prompt.id)
+  await update($, editingId, () => prompt.id)
 }
 
 export async function clearQueue($: EngineInterface): Promise<void> {
@@ -128,10 +138,10 @@ export async function finishTurn($: EngineInterface, isAnswered: boolean): Promi
   }
 }
 
-/** Sends the prompt at the top of the queue as the person's next prompt. */
+/** Sends the prompt at the top of the queue as the person's next prompt, passing over one being edited. */
 export async function sendNextPrompt($: EngineInterface): Promise<void> {
   const queue = new PromptQueue(await read($, prompts))
-  const next = queue.first
+  const next = queue.firstExcept(await read($, editingId))
   if (!next) {
     return
   }
