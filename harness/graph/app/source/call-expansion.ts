@@ -80,6 +80,10 @@ export class CallCatalog {
   private readonly bodies = new Map<string, Body>();
   // The module functions a call by a bare name opens, by name.
   private readonly functions = new Map<string, Body>();
+  // Every class and every member the graph holds, however many files define one of the same name, so the open file's
+  // own answers a name before another file's.
+  private readonly everyClass: Body[] = [];
+  private readonly everyMember: Body[] = [];
 
   constructor(members: FoldMember[], owner = "") {
     for (const member of members) this.hold(member, owner);
@@ -98,7 +102,7 @@ export class CallCatalog {
   private calloutsOn(line: string, at: FileLine, bindings: Map<string, string>, stack: string[], seen: Set<string>): SourceCallout[] {
     const outside = (body: Body) => !holds(body, at);
     const calls = this.callsOn(line, bindings, at).filter((call) => !stack.includes(call.id) && outside(call));
-    const types = [...this.classes.values()].filter((type) => !seen.has(type.id) && outside(type) && (namesType(line, type.name) || boundOn(line, bindings, type.name)));
+    const types = [...this.classes.values()].map((type) => this.classNamed(type.name, at)).filter((type) => !seen.has(type.id) && outside(type) && (namesType(line, type.name) || boundOn(line, bindings, type.name)));
     types.forEach((type) => seen.add(type.id));
     return [...calls.map((call) => calloutOf(call, at.line, "call")), ...types.map((type) => calloutOf(type, at.line, "class"))];
   }
@@ -118,8 +122,17 @@ export class CallCatalog {
 
   // The member called method of the class whose lines of the file hold the call, as `self.close()` calls it.
   private ownMember(method: string, at: FileLine): Body | undefined {
-    const around = [...this.classes.values()].find((type) => holds(type, at));
-    return around ? this.bodies.get(`${around.name}.${method}`) : undefined;
+    const around = this.everyClass.find((type) => holds(type, at));
+    if (!around) return undefined;
+    const named = this.everyMember.filter((member) => member.owner === around.name && member.name === method);
+    return named.find((member) => sameFile(member.file, around.file)) ?? named[0];
+  }
+
+  // The class called name that a line of the open file means: the open file's own when it defines one, else the
+  // first the graph holds.
+  private classNamed(name: string, at: FileLine): Body {
+    const own = this.everyClass.find((type) => type.name === name && sameFile(type.file, at.file));
+    return own ?? (this.classes.get(name) as Body);
   }
 
   private resolve(receiver: string, method: string, typeName?: string): Body | undefined {
@@ -135,9 +148,11 @@ export class CallCatalog {
     if (!member.text) return;
     const body = bodyOf(member);
     if (CLASS_KINDS.has(member.type)) {
+      this.everyClass.push(body);
       if (!this.classes.has(member.name)) this.classes.set(member.name, body);
       return;
     }
+    if (member.type === "Operation" || member.type === "Property") this.everyMember.push(body);
     if ((member.type !== "Operation" && member.type !== "Property") || isSimpleProperty(member.text)) return;
     const key = member.owner ? `${member.owner}.${member.name}` : member.name;
     if (!member.owner && member.type === "Operation" && !this.functions.has(member.name)) this.functions.set(member.name, body);

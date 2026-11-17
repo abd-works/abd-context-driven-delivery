@@ -54,6 +54,24 @@ describe('Calls and classes a line opens in place', () => {
     })
   })
 
+  describe('with another file defining a class of the same name, read first', () => {
+    // Seen live 2026-11-16: `class AppServer:` in harness/diagnostics/app.py opened another file's AppServer.
+    const OTHER_TICKET: FoldMember[] = [
+      { node_id: 'old/Ticket', name: 'Ticket', type: 'OoadClass', owner: '', text: 'class Ticket:\n    def close(self):\n        pass', file: 'old/ticket.py', start_line: 1, end_line: 3 },
+      { node_id: 'old/Ticket.close', name: 'close', type: 'Operation', owner: 'Ticket', text: '    def close(self):\n        pass', file: 'old/ticket.py', start_line: 2, end_line: 3 },
+    ]
+    const both = new CallCatalog([...OTHER_TICKET, ...MEMBERS])
+    const at = (line: number) => calloutsOf(both).filter(callout => callout.line === line).map(callout => callout.id)
+
+    it('should open neither Ticket on the lines of the open file\'s own Ticket', () => {
+      expect(calloutsOf(both).filter(callout => callout.id === 'Ticket' || callout.id === 'old/Ticket')).toEqual([])
+    })
+
+    it("should open the open file's own Ticket.close for a call on self", () => {
+      expect(at(6)).toEqual(['Ticket.close'])
+    })
+  })
+
   describe("with a method's call on self", () => {
     it('should open the method of the class around it', () => {
       expect(opened(6)).toEqual(['Ticket.close'])
