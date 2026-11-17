@@ -53,11 +53,12 @@ const ADD_COLUMNS = 3
 /** The columns kept at a card's right for its send, edit, move and remove buttons, shown when the pointer is on the card. */
 const CARD_BUTTON_COLUMNS = 15
 
-/** The columns kept before a card's text for its task button, 3/3 or +, so every card's text starts in one place. */
-const TASK_BUTTON_COLUMNS = 6
+/** The columns kept before a card's text for its task button, 3/3 or +, and the queue's pointer on the next card to
+ * do, set against the text, so every card's text starts in one place and the pointer sits on its card's line. */
+const TASK_BUTTON_COLUMNS = 13
 
-/** The columns kept at a card's and a step's left for the queue's pointer, ▲ and ▼, drawn on the next to do. */
-const POINTER_COLUMNS = 10
+/** The columns kept at a step's left for the step pointer, ▲ and ▼, drawn on the next step to do. */
+const POINTER_COLUMNS = 8
 
 /** The mark before a step for where it stands: done, being worked, or not started. */
 const STEP_MARK = { done: '✓', in_progress: '▸', pending: '○' } as const
@@ -136,19 +137,22 @@ function CardsView($: EngineInterface, e: AbovePromptEvent, state: QueueState, p
   const all = state.queue.prompts
   const pointer = pointerOf(prompts)
   const last = prompts.at(-1)
-  const arrowsOf = (prompt: QueuedPrompt, place: number) => (place === pointer
-    ? PointerView($, e, `pointer-up-${prompt.id}`, `pointer-down-${prompt.id}`, () => movePointerUp($, prompts), () => movePointerDown($, prompts))
-    : PointerView($, e))
+  const arrowsOf = (prompt: QueuedPrompt) =>
+    PointerArrowsView($, e, `pointer-up-${prompt.id}`, `pointer-down-${prompt.id}`, () => movePointerUp($, prompts), () => movePointerDown($, prompts))
 
   return (
     <Box flexDirection="column" rowGap="sm" width="100%">
       {prompts.map((prompt, place) => (
         <Box key={`card-${prompt.id}`} flexDirection="column">
-          {CardView($, e, state, prompt, all.indexOf(prompt), isInColumn, place === pointer, arrowsOf(prompt, place))}
+          {CardView($, e, state, prompt, all.indexOf(prompt), isInColumn, place === pointer ? arrowsOf(prompt) : null)}
           {state.openSteps.includes(prompt.id) && (prompt.steps ?? []).length > 0 && StepsView($, e, prompt)}
         </Box>
       ))}
-      {last && pointer === prompts.length && PointerView($, e, `pointer-up-after-${last.id}`, '', () => movePointerUp($, prompts))}
+      {last && pointer === prompts.length && (
+        <Box flexDirection="row" width={TASK_BUTTON_COLUMNS} justifyContent="flex-end">
+          {PointerArrowsView($, e, `pointer-up-after-${last.id}`, '', () => movePointerUp($, prompts))}
+        </Box>
+      )}
     </Box>
   )
 }
@@ -157,12 +161,21 @@ function CardsView($: EngineInterface, e: AbovePromptEvent, state: QueueState, p
  * it runs again, ▼ marks the one pointed at done. Without keys it is the empty room the pointer takes, so every card's
  * text starts in one place. */
 function PointerView($: EngineInterface, e: AbovePromptEvent, upKey = '', downKey = '', onUp = () => {}, onDown = () => {}) {
+  const { Box } = $.ui.resolve(e)
+
+  return (
+    <Box width={POINTER_COLUMNS} flexShrink={0} flexDirection="row" justifyContent="flex-end">
+      {(upKey !== '' || downKey !== '') && PointerArrowsView($, e, upKey, downKey, onUp, onDown)}
+    </Box>
+  )
+}
+
+/** The pointer's ▲ and ▼ together on one solid background, sized to the arrows alone. */
+function PointerArrowsView($: EngineInterface, e: AbovePromptEvent, upKey: string, downKey: string, onUp: () => void, onDown: () => void = () => {}) {
   const { Box, Button, Text } = $.ui.resolve(e)
 
-  const isDrawn = upKey !== '' || downKey !== ''
   return (
-    <Box width={POINTER_COLUMNS} flexShrink={0} flexDirection="row" gap={1}
-      backgroundColor={isDrawn ? LOOK.keyCap : undefined} paddingX={isDrawn ? 'xs' : undefined}>
+    <Box flexDirection="row" flexShrink={0} backgroundColor={LOOK.keyCap}>
       {upKey !== '' && <Button key={upKey} onPress={onUp}><Text color={LOOK.accent} bold>▲</Text></Button>}
       {downKey !== '' && <Button key={downKey} onPress={onDown}><Text color={LOOK.accent} bold>▼</Text></Button>}
     </Box>
@@ -171,9 +184,10 @@ function PointerView($: EngineInterface, e: AbovePromptEvent, upKey = '', downKe
 
 /** One card. In a robot's narrow queue it shows no buttons of its own; pressing it opens it in place, its buttons on a
  * row beneath it, and pressing it again closes it. */
-function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, prompt: QueuedPrompt, index: number, isInColumn: boolean, isPointer: boolean, pointer: ReturnType<typeof PointerView>) {
+function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, prompt: QueuedPrompt, index: number, isInColumn: boolean, pointer: ReturnType<typeof PointerArrowsView> | null) {
   const { Box, Text, Button } = $.ui.resolve(e)
   const isEditing = prompt.id === state.editingId
+  const isPointer = pointer !== null
   const isWorking = isPointer && prompt.id === state.workingId
   const progress = progressOf(prompt.steps)
   const isFinished = Boolean(prompt.is_done)
@@ -181,8 +195,8 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
   const isOpened = isInColumn && prompt.id === state.openedId
   const row = (
     <Box key={`card-row-${prompt.id}`} flexDirection="row" justifyContent="space-between" alignItems="center" gap={1} width="100%">
-      {pointer}
-      <Box width={TASK_BUTTON_COLUMNS} flexShrink={0}>
+      <Box width={TASK_BUTTON_COLUMNS} flexShrink={0} flexDirection="row" justifyContent="flex-end" alignItems="center" gap={1}>
+        {pointer}
         {progress !== ''
           ? <Button key={`steps-${prompt.id}`} label={progress} onPress={() => toggleSteps($, prompt.id)} />
           : !isFinished && !isPointer && <Button key={`steps-${prompt.id}`} label="+" onPress={() => addStep($, prompt)} />}
@@ -211,7 +225,7 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
   return (
     <Box key={`card-opened-${prompt.id}`} flexDirection="column" width="100%">
       {row}
-      <Box flexDirection="row" gap={1} paddingLeft={POINTER_COLUMNS + TASK_BUTTON_COLUMNS + 2}>{CardButtonsView($, e, prompt, index)}</Box>
+      <Box flexDirection="row" gap={1} paddingLeft={TASK_BUTTON_COLUMNS + 1}>{CardButtonsView($, e, prompt, index)}</Box>
     </Box>
   )
 }

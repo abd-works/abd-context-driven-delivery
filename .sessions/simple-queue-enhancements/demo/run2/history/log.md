@@ -1,12 +1,10 @@
-Summary: these commits made the robots' queues in sub-agent mode usable (cards open in place, robots collapse with a done count and keep their order on expand) and recorded on the story map what was seen working live, including four robots running in parallel.
-
+- The pointer's card hides its + task button, and the pointer's ▲ ▼ sit on a solid background instead of an outline
+- The queue keeps up with the agent: every prompt-queue answer, the agent's or a sub-agent's, is drawn at once; the orange working mark stands only on the pointer's card, so moving the pointer up takes it off; the pointer's ▲ ▼ get room beside the task button and an orange outline
+- Session log after the pointer reran Rivet's and Gizmo's demo cards
+- Session log after the pointer reran Pixel's demo card
+- The queue's pointer: orange ▲ ▼ at the left of the next card to do, and of the next step in a card, in the list and in each robot's queue; ▲ opens the done one above again so it reruns (prompt-queue.reopen), ▼ marks the one pointed at done
+- /queue's description names placing a draft into the plan
+- The queue's + runs /queue on the prompt box's draft, and /queue given a draft places it into the plan as a task of a goal or a card of its own; neither picks robots, which the agents button groups
+- The queue's + is a smart add: the model reads the conversation and the queue and files the draft as a task of a goal or as new cards, given to a robot in sub-agent mode; Alt+Enter stays the plain add
+- Each queued card keeps its robot on the queue (prompt-queue.assign), so the robots' queues come back after a reload; grouping gives new work fresh robot names and leaves robots already on the queue as they are
 - Story map: four robots observed running in parallel and marking their own cards done; the run2 demo's outputs kept in the session's work folder
-- A robot's header keeps the same children in the same order when its queue collapses and expands, hiding only the name and ✎, so the robot stays first after an expand
-- A collapsed robot shows under it how many of its items are done, such as 3/5
-- Story map: the robots' queues observed working with the AI grouping eight demo prompts into four robots
-- Story map: the one-minute decision wait observed live, parking an unanswered card as [decision required]
-- Pressing a robot collapses its queue to the robot alone, and the other robots' queues widen to take the room; pressing it again expands it
-- Pressing a card in a robot's queue opens it in place, with its buttons on a row beneath it, instead of a copy under the queues that looked like a new item; pressing it again closes it
-- In sub-agent mode the note on a new message shows each robot's queue and lets the agent decide: do it itself, make it a task of a robot's item, or give it to a robot as a new item, its text starting [for <robot name>]; a card so marked shows in that robot's queue
-- The agents' queues are usable: grouping hands out only work not yet done; sending to sub-agents keeps their cards so each marks its own done and it stays in its robot's queue, dimmed; an agent's card shows no buttons of its own, and pressing it opens it full width under the queues with its complete text and buttons
-- Each sub-agent's queue looks like the original queue: its robot and name on top, then its prompts as the queue's own cards, side by side with the others in the list's place
