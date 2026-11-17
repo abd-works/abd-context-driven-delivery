@@ -3,7 +3,7 @@ import { TicketClientGenerated } from '@cdd/space/kanban/ticket'
 import { SessionClientGenerated, type FileEntryData, type GuidanceSelectionData, type SessionFileData } from '@cdd/space/session/session'
 
 import { ChatContext } from './chat-context'
-import { FileBar } from './file-bar'
+import { FileBar, publishedOf } from './file-bar'
 import { FileBrowser } from './file-browser'
 import { FileCommentsActions } from './file-comments-actions'
 import { FileMenu } from './file-menu'
@@ -146,7 +146,7 @@ export class FilesPage {
       const byFidelity = await this.filesByFidelity(this.listed)
       this.store.change(state => ({ byFidelity, isListing: false, entries: this.shownFrom({ ...state, byFidelity }) }))
       const entries = this.state.entries
-      const first = this.link.file || entries.find(entry => entry.exists && !isDrawio(entry.path))?.path || ''
+      const first = this.link.file || entries.find(entry => entry.exists && !isDrawio(entry.path) && !publishedOf(entry))?.path || ''
       if (first) await this.open(first)
     } catch (failure) {
       this.store.change(() => ({ isListing: false, problem: `The files did not list: ${reasonOf(failure)}` }))
@@ -257,7 +257,7 @@ export class FilesPage {
   // A file opened below the first: one that does not read, or answers no file, is shown and told, and the others open.
   private async readBeside(path: string): Promise<SessionFileData | null> {
     try {
-      return fileAnswered(await this.session.file(path, true, this.state.reads.crossFile))
+      return this.withRulesAsked(fileAnswered(await this.session.file(path, true, this.state.reads.crossFile)))
     } catch (failure) {
       this.notices.fail(`The Files app did not open ${path}: ${reasonOf(failure)}`, `Opening ${path} in the Files app`)
       return null
@@ -284,7 +284,7 @@ export class FilesPage {
     try {
       const { rules, crossFile } = this.state.reads
       // A file opened from the graph view needs the folds its graph places, which only a read with rules answers.
-      const file = fileAnswered(await this.session.file(path, rules || this.state.graph.selected.length > 0, crossFile))
+      const file = this.withRulesAsked(fileAnswered(await this.session.file(path, rules || this.state.graph.selected.length > 0, crossFile)))
       if (this.state.openPath !== path) return
       this.store.change(() => ({ file, problem: '' }))
       if (file?.comments.some(comment => comment.state === 'sent')) this.refreshTimer = setTimeout(() => void this.refreshOpen(), SENT_REFRESH_MILLISECONDS)
@@ -292,6 +292,13 @@ export class FilesPage {
       this.store.change(() => ({ problem: `${path} did not open: ${reasonOf(failure)}` }))
       this.notices.fail(`The Files app did not open ${path}: ${reasonOf(failure)}`, `Opening ${path} in the Files app`, { isShownOnPage: true })
     }
+  }
+
+  // The file as the page shows it: a file opened from the graph is read with its rules for the folds the graph places,
+  // and its broken rules show only while Rules or Cross-file is on.
+  private withRulesAsked(file: SessionFileData | null): SessionFileData | null {
+    const { rules, crossFile } = this.state.reads
+    return file && !rules && !crossFile ? { ...file, violations: [] } : file
   }
 
   private stopRefreshing(): void {

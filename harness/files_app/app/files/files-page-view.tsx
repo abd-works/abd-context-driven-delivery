@@ -2,33 +2,35 @@ import { Component, useCallback, useEffect, useState, useSyncExternalStore, type
 
 import type { FileEntryData, SessionFileData } from '@cdd/space/session/session'
 
-import type { FileFolder } from './file-bar'
+import { publishedOf, type FileFolder, type PublishedFile } from './file-bar'
+import type { SourceCallout } from '@source-view/source-callouts'
+
 import { FileSourceView } from './file-source-view'
 import { FilesGraphView } from './files-graph-view'
 import type { FilesPage } from './files-page'
-import { drawioPageOf, isDrawio, revealLabelOf } from './files-paths'
+import { drawioPageOf, isDrawio, missingNoteOf, revealLabelOf } from './files-paths'
 import { formatGlyphOf } from './format-chips'
 import { applyTheme, storedTheme, type FilesTheme } from './files-theme'
 
 const fileNameOf = (path: string): string => path.split('/').at(-1) ?? path
-// A design canvas's canvas.json is named by its version's folder: `design-canvas/version-2/project/canvas.json` is version-2.
-const canvasNameOf = (path: string): string => path.split('/').at(-3) ?? path
 
 function useFilesState(page: FilesPage) {
   return useSyncExternalStore(page.store.subscribe, () => page.store.state)
 }
 
-// One file the link names: a file not there yet says so, and a file published at a link, such as a design canvas, opens
-// there, in Claude Design, in a tab of its own; a .drawio file also offers its draw.io editor in a tab of its own.
+// One file the link names: a file it cannot open says why, not generated yet or deleted on this branch, and a file standing for something published in Claude, a
+// design canvas or a whiteboard's board, opens that in a tab of its own; a .drawio file also offers its draw.io editor in
+// a tab of its own.
 function FileEntryView({ page, entry, isOpen }: { page: FilesPage; entry: FileEntryData; isOpen: boolean }) {
-  if (entry.link) return <PublishedFileView entry={entry} />
+  const published = publishedOf(entry)
+  if (published) return <PublishedFileView path={entry.path} published={published} />
   const classes = ['file-entry', isOpen ? 'is-open' : '', entry.exists ? '' : 'is-missing', entry.is_changed ? 'is-changed' : ''].filter(Boolean).join(' ')
-  const hint = entry.exists ? entry.path : `${entry.path}: not generated yet`
+  const hint = entry.exists ? entry.path : `${entry.path}: ${missingNoteOf(entry)}`
   return (
     <li className="file-entry-row">
       <button className={classes} title={hint} aria-current={isOpen ? 'true' : undefined} disabled={!entry.exists} onClick={() => void page.open(entry.path)} onContextMenu={menuOn(page, entry.path)}>
         {fileNameOf(entry.path)}
-        {entry.exists ? null : <span className="file-entry-note"> not generated yet</span>}
+        {entry.exists ? null : <span className="file-entry-note"> {missingNoteOf(entry)}</span>}
       </button>
       {isDrawio(entry.path) && entry.exists ? <DrawioTabLinkView page={page} path={entry.path} /> : null}
     </li>
@@ -46,13 +48,24 @@ function DrawioTabLinkView({ page, path }: { page: FilesPage; path: string }) {
   )
 }
 
-// A design canvas: its version's folder names it, and it opens at the link it is published at.
-function PublishedFileView({ entry }: { entry: FileEntryData }) {
+// A design canvas or a whiteboard: it opens at the link it is published at, never as the file's text; one not published
+// yet says so and opens nothing.
+function PublishedFileView({ path, published }: { path: string; published: PublishedFile }) {
+  if (!published.link) {
+    return (
+      <li>
+        <button className="file-entry is-missing" title={`${path}: no ${published.kind} published in Claude yet`} disabled>
+          {published.name}
+          <span className="file-entry-note"> {published.kind}, not published yet</span>
+        </button>
+      </li>
+    )
+  }
   return (
     <li>
-      <a className="file-entry is-published" href={entry.link} target="_blank" rel="noreferrer" title={`${entry.path}: opens the design canvas at ${entry.link}`}>
-        {canvasNameOf(entry.path)}
-        <span className="file-entry-note"> ↗ design canvas</span>
+      <a className="file-entry is-published" href={published.link} target="_blank" rel="noreferrer" title={`${path}: opens the ${published.kind} at ${published.link}`}>
+        {published.name}
+        <span className="file-entry-note"> ↗ {published.kind}</span>
       </a>
     </li>
   )
@@ -252,6 +265,8 @@ function OpenFileView({ page }: { page: FilesPage }) {
   const path = state.file?.path ?? ''
   // The open file's selected lines, added to the chat's context; made once per file, so the editor keeps its action.
   const addLines = useCallback((lines: { start: number; end: number }) => void page.chatContext.add(path, lines), [page, path])
+  // Go to file on a fold-out opens what it shows in its own file; made once, so the open fold-outs stay as they are.
+  const goToFile = useCallback((foldOut: SourceCallout) => void page.graph.goToFile(foldOut), [page])
   if (!state.openPath) return <p className="files-note">Choose a file.</p>
   if (isDrawio(state.openPath)) return <DrawioFileView page={page} path={state.openPath} />
   if (!state.file) return <p className="files-note">Opening {state.openPath}…</p>
@@ -262,7 +277,7 @@ function OpenFileView({ page }: { page: FilesPage }) {
       {isOneOfSeveral ? <OpenFilesBarView page={page} /> : null}
       {isOneOfSeveral ? <OpenFileHeadView page={page} path={state.file.path} /> : null}
       {page.openFiles.isCollapsed(state.file.path) ? null : (
-        <FileSourceView key={state.file.path} file={state.file} actions={page.comments} onAddToContext={addLines} openAround={page.selectedLinesIn(state.file.path)} members={state.graph.members} keys={page.foldKeys} fail={wrapFailed(page)} />
+        <FileSourceView key={state.file.path} file={state.file} actions={page.comments} onAddToContext={addLines} openAround={page.selectedLinesIn(state.file.path)} expanded={state.graph.expanded} onGoToFile={goToFile} members={state.graph.members} keys={page.foldKeys} fail={wrapFailed(page)} />
       )}
       {state.moreFiles.map(file => (
         <MoreFileView key={file.path} page={page} file={file} />
@@ -298,11 +313,12 @@ function OpenFileHeadView({ page, path }: { page: FilesPage; path: string }) {
 // A file open beside the first, holding a node selected in the graph view.
 function MoreFileView({ page, file }: { page: FilesPage; file: SessionFileData }) {
   const addLines = useCallback((lines: { start: number; end: number }) => void page.chatContext.add(file.path, lines), [page, file.path])
+  const goToFile = useCallback((foldOut: SourceCallout) => void page.graph.goToFile(foldOut), [page])
   return (
     <section className="open-file more-file" aria-label={file.path}>
       <OpenFileHeadView page={page} path={file.path} />
       {page.openFiles.isCollapsed(file.path) ? null : (
-        <FileSourceView file={file} actions={page.comments} onAddToContext={addLines} openAround={page.selectedLinesIn(file.path)} members={page.state.graph.members} keys={page.foldKeys} fail={wrapFailed(page)} />
+        <FileSourceView file={file} actions={page.comments} onAddToContext={addLines} openAround={page.selectedLinesIn(file.path)} expanded={page.state.graph.expanded} onGoToFile={goToFile} members={page.state.graph.members} keys={page.foldKeys} fail={wrapFailed(page)} />
       )}
     </section>
   )

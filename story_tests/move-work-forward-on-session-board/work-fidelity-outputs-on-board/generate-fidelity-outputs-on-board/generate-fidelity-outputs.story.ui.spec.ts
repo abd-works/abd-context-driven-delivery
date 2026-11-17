@@ -91,12 +91,11 @@ test.describe('with no chat connected', () => {
         await details(page).getByRole('button', { name: 'Actions for Discovery' }).click()
       })
 
-      test('Then the bar shows a diagram chip, a markdown chip and a thin_slice chip', async ({ page }) => {
+      test('Then the bar shows a diagram chip and a markdown chip', async ({ page }) => {
         const bar = details(page).locator('.expansion').first()
-        await expect(bar.locator('.format-icon')).toHaveCount(3)
+        await expect(bar.locator('.format-icon')).toHaveCount(2)
         await expect(chip(bar, 'diagram')).toBeVisible()
         await expect(chip(bar, 'markdown')).toBeVisible()
-        await expect(chip(bar, 'thin_slice')).toBeVisible()
       })
 
       test('And the markdown chip reads 1 of 2 with the hint markdown: 1 of 2 done, selected', async ({ page }) => {

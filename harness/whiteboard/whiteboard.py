@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import math
 import re
+from pathlib import Path
 from dataclasses import dataclass, field, fields, replace
 from typing import ClassVar, Collection, Dict, Iterable, List, Optional
 
@@ -453,3 +454,35 @@ class Whiteboard:
             StoreWrite("delete", "elements", element.id, None, before.versions.get(element.id)) for element in before.elements
             if self.element(element.id) is None and not isinstance(element, OtherElement)
         ]
+
+
+class BoardLinks:
+    """The address of the board in Claude each ``.whiteboard`` file in one folder was published to, by the file's name,
+    kept beside the files in the folder's ``whiteboards.json``, as a design canvas keeps its versions' links in
+    ``versions.json``: the next render updates the same board, and a page opens the board instead of the file."""
+
+    RECORD = "whiteboards.json"
+
+    def __init__(self, folder: Path) -> None:
+        self._record = folder / self.RECORD
+
+    @classmethod
+    def beside(cls, file: Path) -> "BoardLinks":
+        """The addresses kept in the folder file is in."""
+        return cls(file.parent)
+
+    def of(self, file: Path) -> str:
+        """The address of the board file was published to; none while it was never published."""
+        return self._all().get(file.name, "")
+
+    def record(self, file: Path, url: str) -> None:
+        """Keep url as the address of the board file was published to."""
+        self._record.write_text(json.dumps({**self._all(), file.name: url}, indent=2), encoding="utf-8")
+
+    def _all(self) -> Dict[str, str]:
+        """Every address kept; none when the folder keeps none, or keeps something that is no record of them."""
+        try:
+            kept = json.loads(self._record.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return {}
+        return {str(name): str(url) for name, url in kept.items()} if isinstance(kept, dict) else {}

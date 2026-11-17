@@ -405,6 +405,7 @@ class CodeStoryModel(StoryModel):
         if isinstance(source, str):
             tests_root = source
             source = None
+        self._project: Optional[Path] = None
         super().__init__(source)
         self._tests_root = ("tests" if tests_root is None else tests_root).strip("/")
 
@@ -543,13 +544,15 @@ class CodeStoryModel(StoryModel):
         for step in flat_steps(node.steps):
             step.body = step.body.in_language_of(bodies.get(step.text, CodeBody()), language)
 
-    def load(self, external: Dict[str, str], *, on_file: Optional[Callable[[str], None]] = None) -> "CodeStoryModel":
+    def load(self, external: Dict[str, str], *, on_file: Optional[Callable[[str], None]] = None, project: Optional[Path] = None) -> "CodeStoryModel":
         """This story map's epics and stories from the story files in external, path to text, under the tests root:
-        each file one sub-epic, in the order its header gives. on_file hears each file as it is read."""
+        each file one sub-epic, in the order its header gives. on_file hears each file as it is read. A story file that
+        reads other files of project, such as its examples module, finds them there."""
         if not isinstance(external, dict):
             raise CodeStoryModelError(f"{type(self).__name__} reads a path-to-content dict of story files")
         self.epics.clear()
         self.sources = StorySources()
+        self._project = project
         for path, text in external.items():
             self.sources.add(path, text)
         paths = [path for path in self._ordered_paths(external) if self.is_story_file(path)]
@@ -560,9 +563,10 @@ class CodeStoryModel(StoryModel):
                 self._read_story_file(path, external[path])
         return self
 
-    def parse(self, external: Dict[str, str], *, on_file: Optional[Callable[[str], None]] = None) -> "CodeStoryModel":
-        """A new map read from the story files in external, with this model's settings."""
-        return self.copy_of(None).load(external, on_file=on_file)
+    def parse(self, external: Dict[str, str], *, on_file: Optional[Callable[[str], None]] = None, project: Optional[Path] = None) -> "CodeStoryModel":
+        """A new map read from the story files in external, with this model's settings, the files they read found in
+        project."""
+        return self.copy_of(None).load(external, on_file=on_file, project=project)
 
     def _ordered_paths(self, external: Dict[str, str]) -> List[str]:
         def key(path: str) -> tuple:
@@ -600,7 +604,7 @@ class CodeStoryModel(StoryModel):
 
     def _take_stories(self, holder: Epic, content: str, source_file: str) -> None:
         """The file's stories onto the sub-epic that holds them, each with where it is and the code it was written with."""
-        stories, written = self.stories_of(content, source_file)
+        stories, written = self.stories_of(content, source_file, self._project)
         for story in stories:
             if source_file and not story.has_source_file:
                 line = self._quoted_name_line(content, story.name)
@@ -646,7 +650,7 @@ class CodeStoryModel(StoryModel):
         and the file's own code around them; none of that code when this language does not read a file's blocks. A
         story file that reads other files of project, such as an examples module, finds them there."""
         code = self.story_file(content)
-        read = code.stories(self.story_type, source_file) if code is not None else None
+        read = code.stories(self.story_type, source_file, project) if code is not None else None
         return read if read is not None else (self.story_type.load_file(content, project), None)
 
     def _sub_epic_for(self, epic: Epic, slugs: List[str]) -> Epic:

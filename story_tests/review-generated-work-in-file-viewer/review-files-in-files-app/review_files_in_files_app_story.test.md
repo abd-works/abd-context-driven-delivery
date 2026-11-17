@@ -312,6 +312,18 @@ Requested by the person on 2026-11-16.
 *Then* the [source view](../../../harness/graph/app/source/SourceView.tsx) wraps line 14 onto the lines below it, and grows as tall as the wrapped file
 *And* the Files app keeps Wrap lines on for the next file the Person opens
 
+#### Scenario: Show the source view in Cursor's default colours with an orange cursor
+
+Requested 2026-11-16 by the person: "Format the viewer using ABD branding", then, on seeing it, "ugly", "use default Cursor coloring", and orange only for the selected node's line, the line number and the cursor. The code takes Cursor's default looks, Cursor Dark and Cursor Light (Cursor's theme-cursor extension); abd.works orange (`harness/catalog_generator/templates/commons/site.css`) marks only the cursor, the current line number and the selected node's line. Only the page draws it: `harness/files_app/app/files/files-theme.spec.ts`.
+
+*Given* the Files app shows *order.py* in its dark look
+*When* the Person views *order.py*
+*Then* the source view draws *order.py* in Cursor Dark's colours, #181818 behind #F0F0F0 text, its keywords, strings and numbers in Cursor Dark's token colours
+  *And* the cursor and the current line number are abd.works orange
+  *And* selected text sits on Cursor Dark's grey and folded lines carry no tint
+*When* the Person turns the dark look off
+*Then* the source view draws *order.py* in Cursor Light's colours, #FCFCFC behind #141414 text, with the same orange cursor and current line number
+
 #### Scenario: A file from an older server lane opens without callouts
 
 Found on 2026-11-16 (debug report `debug-20261116T225500.md`): a page reaching a cdd server lane older than the page (the pinned stable lane, whose `session.file` answers no callouts) stopped with "Cannot read properties of undefined (reading 'map')".
@@ -344,13 +356,19 @@ Inherited from the graph's Unfold Calls And Classes In Source: the Files app reu
 
 Requested by the person on 2026-11-16: "Cursor-equivalent keyboard shortcuts (or VS Code, configurable in a context config json), e.g. Ctrl+K Ctrl+0, Ctrl+M etc." The project's keys sit in `.context/files-app-keybindings.json`, written as VS Code's and Cursor's keybindings.json writes them. Only the page binds keys: `harness/files_app/app/files/files-fold-keys.spec.ts`.
 
-#### Scenario: Fold with VS Code's chords
+Changed 2026-11-16 by the person: "Expand/collapse folds keyboard shortcuts use Cursor defaults." Cursor ships VS Code's fold keys with its chord leader moved off Ctrl+K, which Cursor keeps for inline edit, to Ctrl+M on Windows and Linux (Cmd+R on a Mac): Ctrl+Shift+[ and ] fold and unfold the region, Ctrl+M Ctrl+0 folds all, Ctrl+M Ctrl+J unfolds all, Ctrl+M Ctrl+[ and ] fold and unfold recursively, Ctrl+M Ctrl+L toggles a fold, Ctrl+M Ctrl+1 to 7 fold that level. These are the keys a project with no keybindings file gets.
+
+#### Scenario: Fold with Cursor's chords
+
+Requested 2026-11-16 by the person, in place of VS Code's Ctrl+K chords.
 
 *Given* the project has no *.context/files-app-keybindings.json*
-*When* the Person presses Ctrl+K Ctrl+0 in *order.py*
+*When* the Person presses Ctrl+M Ctrl+0 in *order.py*
 *Then* every fold of *order.py* closes
-*When* the Person presses Ctrl+K Ctrl+J
+*When* the Person presses Ctrl+M Ctrl+J
 *Then* every fold opens again
+*When* the Person presses Ctrl+Shift+[ on line 12
+*Then* the fold of *place* closes
 
 #### Scenario: Fold with the keys the project's keybindings file gives
 
@@ -358,14 +376,14 @@ Requested by the person on 2026-11-16: "Cursor-equivalent keyboard shortcuts (or
 *When* the Person presses Ctrl+M Ctrl+M on line 12 of *order.py*
 *Then* the fold of *place* closes
 
-#### Scenario: Keep VS Code's chords when the keybindings file is wrong
+#### Scenario: Keep Cursor's chords when the keybindings file is wrong
 
-Required by the cdd_web_domain_access rule `fail-loud-on-mcp` this session overlays.
+Required by the cdd_web_domain_access rule `fail-loud-on-mcp` this session overlays. Changed 2026-11-16 by the person: the keys kept are Cursor's.
 
 *Given* *.context/files-app-keybindings.json* is not a list of keys and fold commands
 *When* the Files app opens
 *Then* a toast says the file is not used, with why
-*And* Ctrl+K Ctrl+0 still folds every fold
+*And* Ctrl+M Ctrl+0 still folds every fold
 
 ## Story: Open Calls And Classes In Place
 
@@ -429,6 +447,15 @@ Intended in the Files app: the board's files panel does it, the Files app is rea
 *When* the Person saves the file
 *Then* *order.py* on disk reads that line 14
 *And* the source view is read-only again, showing the saved text
+
+#### Scenario: Save a file into the session's own folder, naming the session by its name
+
+Requested 2026-11-16: a chat in checkout-flow's worktree ran the debug skill, which writes its report as *debug/debug-{time}.md* in the session's folder with session.write_file. The tool refused the session's name, which sessions.switch had opened it by, and then refused the session's folder, which sits in the main checkout's *.sessions*, outside the worktree and its practices' folders. Only the session's own folder is added: a path outside it and outside the session's roots is still refused. Realized by `space/session/session_files_spec.py`.
+
+*Given* checkout-flow works in its ticket's worktree, its session folder *.sessions/checkout-flow* in the main checkout
+*When* an agent saves *debug/debug-20261116T225500.md* in checkout-flow's folder with session.write_file, naming the session *checkout-flow*
+*Then* the report is on disk in *.sessions/checkout-flow/debug*
+*But* a file named outside the session's folder and its roots is still refused
 
 ---
 

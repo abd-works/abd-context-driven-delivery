@@ -20,10 +20,14 @@ from expects import contain, equal, expect
 
 from space.kanban.story_test import SharedStories
 from space.session.graph_view_examples import (
+    opened_entries,
+    opened_entry_named,
     BOARD_CODE,
+    CHECKOUT_FLOW_IN_SPACE,
     CHECKOUT_FLOW_READING_NO_CODE,
     LISTED,
     STORY_MAP,
+    STORY_MAP_TEXT,
     RESTORE_TEST,
     SCENARIOS,
     SCENARIOS_GIVEN_LINE,
@@ -35,9 +39,10 @@ from space.session.graph_view_examples import (
     SHARED_STORY,
     STEP_LISTED,
     STEP_STORY,
-    STEP_STORY_GIVEN_LINE,
+    STEP_STORY_HELPER_WHEN,
     STEP_STORY_WHEN_LINE,
     TICKET_EXAMPLES,
+    TICKET_EXAMPLES_CONSTANT_LINE,
     STORY_MAP_DELETE_LINE,
     STORY_TEST,
     TICKET_CODE,
@@ -52,15 +57,12 @@ shared_stories = SharedStories("Switch Files App Between Files And Graph")
 
 def names_in(world, paths: list[str]) -> list[str]:
     """Every node's name in the trees answered for paths, each branch opened as the page opens it."""
-    session = session_of(world)
-    return [name for tree in world.data_of(session.graph_trees(paths=paths)) for name in opened_names(world, tree, paths)]
+    return [entry["name"] for entry, _above in opened_entries(world, paths)]
 
 
-def opened_names(world, entry: dict, paths: list[str]) -> list[str]:
-    if entry["children_left_out"]:
-        entry = world.data_of(session_of(world).graph_branch(node_id=entry["node_id"], paths=paths)) or entry
-    below = [child for child in entry["children"] if "children_left_out" in child]
-    return [entry["name"], *(name for child in below for name in opened_names(world, child, paths))]
+def names_above(world, name: str, paths: list[str]) -> list[str]:
+    """The names of the nodes above the node named name in the trees answered for paths, from its tree's root down."""
+    return opened_entry_named(world, name, paths)[1]
 
 
 def lines_of(world, name: str) -> list[tuple[str, int, int]]:
@@ -120,6 +122,35 @@ def _(s):
         expect("Restore Ticket" in world.names).to(equal(True))
 
 
+@shared_stories.scenario("Switch Files App To Graph View", "A story map listed with a code story test keeps every epic of the map")
+def _(s):
+    @s.given("checkout-flow's story map holds Manage Tickets and Plan Releases, with Plan Releases' story Cut Release")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+        world.project.seed_file(STORY_MAP, STORY_MAP_TEXT + "(E) Plan Releases\n    (S) Person --> Cut Release\n")
+
+    @s.and_("the Files app lists the story map with Delete Ticket's and Restore Ticket's story tests")
+    def _(world):
+        world.listed = [STORY_MAP, STORY_TEST, RESTORE_TEST]
+
+    @s.when("the Person switches the file bar to the graph view")
+    def _(world):
+        world.names = names_in(world, world.listed)
+
+    @s.then("the Stories tree holds Manage Tickets and Plan Releases, with Cut Release, read from the story map")
+    def _(world):
+        expect(world.names).to(contain("Manage Tickets", "Plan Releases", "Cut Release"))
+
+    @s.then("Delete Ticket is the story map's story, holding the scenario its story test holds")
+    def _(world):
+        ranges = world.data_of(session_of(world).graph_node_ranges(node_id=node_id_of(world, "Delete Ticket", world.listed), paths=world.listed))
+        expect([found["path"] for found in ranges]).to(equal([STORY_MAP, STORY_TEST]))
+
+    @s.then("Restore Ticket, which only its story test holds, sits under Manage Tickets and Remove Tickets")
+    def _(world):
+        expect((names_above(world, "Restore Ticket", world.listed), world.names.count("Restore Ticket"))).to(equal((["stories", "Manage Tickets", "Remove Tickets"], 1)))
+
+
 @shared_stories.scenario("Switch Files App To Graph View", "A story map listed in markdown and drawio is read once, from its markdown")
 def _(s):
     @s.given("the Files app lists checkout-flow's story map in markdown and in drawio")
@@ -147,6 +178,25 @@ def _(s):
         world.names = names_in(world, [STORY_MAP, SCENARIOS])
 
     @s.then("Delete Ticket holds its scenario and its steps from the scenarios file")
+    def _(world):
+        expect(world.names).to(contain("Delete Ticket", "a ticket is deleted", "given a ticket on the board"))
+
+
+@shared_stories.scenario("Switch Files App To Graph View", "A story listed only by its story map holds its scenarios")
+def _(s):
+    @s.given("the Files app lists only checkout-flow's story map, .context/story-map.md")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+
+    @s.but_("not Delete Ticket's scenarios file under story_tests")
+    def _(world):
+        pass
+
+    @s.when("the Person switches the file bar to the graph view")
+    def _(world):
+        world.names = names_in(world, [STORY_MAP])
+
+    @s.then("Delete Ticket holds its scenario and its steps, read from its scenarios file")
     def _(world):
         expect(world.names).to(contain("Delete Ticket", "a ticket is deleted", "given a ticket on the board"))
 
@@ -235,6 +285,22 @@ def _(s):
     @s.then("the shared story test opens at lines 9 to 11, the Given's decorator through its function")
     def _(world):
         expect(world.lines).to(equal([(SHARED_STORY, 9, 11)]))
+
+
+@shared_stories.scenario("Open Several Files From Graph Nodes", "Selecting a scenario opens only its own lines, not the examples module its example comes from")
+def _(s):
+    @s.given("the Files app shows the Stories tree of Delete Ticket's story test, whose Then observes CHECKOUT_TICKET from the examples module")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+
+    @s.when("the Person selects the scenario a ticket on the board is deleted")
+    def _(world):
+        ranges = world.data_of(session_of(world).graph_node_ranges(node_id=node_id_of(world, "a ticket on the board is deleted", STEP_LISTED), paths=STEP_LISTED))
+        world.lines = [(found["path"], found["start_line"], found["end_line"]) for found in ranges]
+
+    @s.then("only the story test opens, at lines 7 to 19, its decorator through its Then")
+    def _(world):
+        expect(world.lines).to(equal([(STEP_STORY, 7, 19)]))
 
 
 @shared_stories.scenario("Open Several Files From Graph Nodes", "Selecting a story in a Python story test spans its scenarios")
@@ -402,24 +468,59 @@ def related_under(world, step: str, group: str, paths: list[str] = STEP_LISTED) 
     return [child["name"] for child in branch["children"] if "children_left_out" in child]
 
 
-@shared_stories.scenario("Follow Story Steps To Code", "A step in a Python story test invokes the functions and operations it calls")
+@shared_stories.scenario("Follow Story Steps To Code", "A step in a Python story test invokes only the code it tests, never the test's own functions")
 def _(s):
-    @s.given("the Files app shows the Stories tree of Delete Ticket's Python shared story test, whose Given calls the function ticket_on_board and whose When calls Ticket.delete")
+    @s.given("the Files app shows the Stories tree of Delete Ticket's Python shared story test, whose Given calls its seed ticket_on_board, whose When calls Ticket.delete, and whose Then calls the file's own helper ticket_left")
     def _(world):
         seed_checkout_flow_with_graph_files(world)
 
-    @s.when("the Person opens the Given and the When")
+    @s.when("the Person opens the Given, the When and the Then")
     def _(world):
         world.given = related_under(world, "given a ticket on the board", "invokes")
         world.when = related_under(world, "when the Person deletes it", "invokes")
+        world.then = related_under(world, "then the checkout ticket is gone", "invokes")
 
-    @s.then("the Given shows an invokes group holding ticket_on_board")
-    def _(world):
-        expect(world.given).to(equal(["ticket_on_board"]))
-
-    @s.then("the When shows an invokes group holding delete")
+    @s.then("the When shows an invokes group holding delete, Ticket's operation in Clean Engineering")
     def _(world):
         expect(world.when).to(equal(["delete"]))
+
+    @s.then("the Given and the Then show no invokes group, since the seed and the helper are the story test's own code")
+    def _(world):
+        expect((world.given, world.then)).to(equal(([], [])))
+
+
+@shared_stories.scenario("Follow Story Steps To Code", "Selecting an operation a step invokes opens just that operation")
+def _(s):
+    @s.given("the Files app shows the Stories tree of Delete Ticket's Python shared story test, its When opened to the invokes group holding delete")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+        expect(related_under(world, "when the Person deletes it", "invokes")).to(equal(["delete"]))
+
+    @s.when("the Person selects delete")
+    def _(world):
+        ranges = world.data_of(session_of(world).graph_node_ranges(node_id=node_id_of(world, "delete", STEP_LISTED), paths=STEP_LISTED))
+        world.lines = [(found["path"], found["start_line"], found["end_line"]) for found in ranges]
+
+    @s.then("ticket.py opens at lines 8 to 9, delete's own lines, and the shared story test, whose When invokes it, does not open")
+    def _(world):
+        expect(world.lines).to(equal([(TICKET_CODE, 8, 9)]))
+
+
+@shared_stories.scenario("Follow Story Steps To Code", "Selecting an example a step observes opens its definition")
+def _(s):
+    @s.given("the Files app shows the Stories tree of Delete Ticket's Python shared story test, whose Then observes CHECKOUT_TICKET, imported from ticket_story_examples.py")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+        expect(related_under(world, "then the checkout ticket is gone", "observes")).to(equal(["CHECKOUT_TICKET"]))
+
+    @s.when("the Person selects CHECKOUT_TICKET in the Then's observes group")
+    def _(world):
+        ranges = world.data_of(session_of(world).graph_node_ranges(node_id=node_id_of(world, "CHECKOUT_TICKET", STEP_LISTED), paths=STEP_LISTED))
+        world.lines = [(found["path"], found["start_line"], found["end_line"]) for found in ranges]
+
+    @s.then("ticket_story_examples.py opens at line 5, where CHECKOUT_TICKET is defined, and the shared story test, whose Then observes it, does not open")
+    def _(world):
+        expect(world.lines).to(equal([(TICKET_EXAMPLES, TICKET_EXAMPLES_CONSTANT_LINE, TICKET_EXAMPLES_CONSTANT_LINE)]))
 
 
 @shared_stories.scenario("Follow Story Steps To Code", "A story test's callouts sit on the step that invokes them")
@@ -433,10 +534,10 @@ def _(s):
     def _(world):
         world.steps = world.data_of(session_of(world).file(path=STEP_STORY, rules=True))["steps"]
 
-    @s.then("the When's line carries a callout to Ticket.delete, and the Given's line a callout to ticket_on_board, but the docstring's line carries none")
+    @s.then("the When's line carries a callout to Ticket.delete, but the Given's line, calling only its seed, and the docstring's line carry none")
     def _(world):
-        found = [(step["line"], [target["name"] for target in step["invokes"]], [target["file"] for target in step["invokes"]]) for step in world.steps]
-        expect(found).to(equal([(STEP_STORY_GIVEN_LINE, ["ticket_on_board"], [TICKET_EXAMPLES]), (STEP_STORY_WHEN_LINE, ["delete"], [TICKET_CODE])]))
+        found = [(step["line"], [target["name"] for target in step["invokes"]], [target["file"] for target in step["invokes"]]) for step in world.steps if step["invokes"]]
+        expect(found).to(equal([(STEP_STORY_WHEN_LINE, ["delete"], [TICKET_CODE])]))
 
 
 @shared_stories.scenario("Follow Story Steps To Code", "A step in a with-block Python story test invokes the operation its block calls")
@@ -468,6 +569,54 @@ def _(s):
     def _(world):
         found = [found["violation"]["message"] for found in world.violations if found["violation"]["rule"] == "conforms-to-schema"]
         expect([message for message in found if "'when the Person archives it'" in message]).to(equal([]))
+
+
+@shared_stories.scenario("Follow Story Steps To Code", "A markdown When is not asked to invoke code before a realization names it")
+def _(s):
+    @s.given("checkout-flow's Delete Ticket scenarios in markdown, whose When the Person deletes the ticket's card names no code, and Clean Engineering read")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+
+    @s.when("the Person views the scenarios file with the rules the whole working copy breaks")
+    def _(world):
+        world.violations = world.data_of(session_of(world).file(path=SCENARIOS, cross_file=True))["violations"]
+
+    @s.then("the When carries no finding that it invokes nothing, since only a step backed by code can name the code it invokes")
+    def _(world):
+        found = [found["violation"]["message"] for found in world.violations if "invokes" in found["violation"]["message"]]
+        expect(found).to(equal([]))
+
+
+@shared_stories.scenario("Follow Story Steps To Code", "A When in a story test that calls none of the code it tests is flagged")
+def _(s):
+    @s.given("Delete Ticket's Python shared story test, whose When the Person looks up the deleted ticket calls only the file's own helper ticket_left")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+
+    @s.when("the Person views the shared story test with its own rules")
+    def _(world):
+        world.violations = world.data_of(session_of(world).file(path=STEP_STORY, rules=True))["violations"]
+
+    @s.then("that When carries the code-steps-invoke-code finding, and the When that calls Ticket.delete carries none")
+    def _(world):
+        flagged = [found["violation"]["message"] for found in world.violations if found["violation"]["rule"] == "code-steps-invoke-code"]
+        expect((len(flagged), any(STEP_STORY_HELPER_WHEN in message for message in flagged))).to(equal((1, True)))
+
+
+@shared_stories.scenario("Follow Story Steps To Code", "A story test outside the session's folder shows the rules it breaks")
+def _(s):
+    @s.given("checkout-flow works in the folder space, and Delete Ticket's Python shared story test, under story_tests outside it, has a When that calls only the file's own helper ticket_left")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world, CHECKOUT_FLOW_IN_SPACE)
+
+    @s.when("the Person views the shared story test with its own rules")
+    def _(world):
+        world.opened = world.data_of(session_of(world).file(path=STEP_STORY, rules=True))
+
+    @s.then("the story test's steps are read, and that When carries the code-steps-invoke-code finding")
+    def _(world):
+        flagged = [found["violation"]["message"] for found in world.opened["violations"] if found["violation"]["rule"] == "code-steps-invoke-code"]
+        expect((bool(world.opened["folds"]), any(STEP_STORY_HELPER_WHEN in message for message in flagged))).to(equal((True, True)))
 
 
 @shared_stories.scenario("Open Story Scenarios Across Files", "Selecting a markdown step spans its own line, whatever its prose holds")

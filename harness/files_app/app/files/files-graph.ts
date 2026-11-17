@@ -6,8 +6,12 @@ import { NO_CHOICES, chosen, nodeFilter, type FilterSelection } from '@graph-app
 import type { FileBar } from './file-bar'
 import type { FilesNotices } from './files-notices'
 import type { FilesStore, SelectedNode } from './files-state'
+import type { SourceCallout } from '@source-view/source-callouts'
 
 const reasonOf = (failure: unknown): string => (failure instanceof Error ? failure.message : String(failure))
+
+// Where this browser remembers whether the person opened the graph view's node filter.
+const STORED_FILTERS_SHOWN = 'cdd-files-graph-filters-shown'
 
 // How often a read under way asks the cdd server what it is doing, in milliseconds.
 const PROGRESS_EVERY = 400
@@ -37,6 +41,15 @@ const saidBy = (answer: unknown): string => {
 }
 
 // An entry below another is a node's entry; the rules a node lists sit beside them and show with the violations.
+// The lines a section fold-out names, in the file it names, as a range of that file.
+const sectionRange = (foldOut: SourceCallout): RangeData => ({ path: foldOut.path, start_line: foldOut.startLine, end_line: foldOut.endLine, content: foldOut.text, anchor: '' }) as RangeData
+
+// The kind of node a story's example is, which a scenario's steps use from where it is declared.
+const EXAMPLE_TYPE = 'Example'
+
+// A connector, such as a step's invokes or observes, is an entry named for its own kind: it holds the nodes it reaches.
+const isConnector = (entry: ExplorerEntryData): boolean => entry.type === entry.name
+
 export const isEntry = (child: unknown): child is ExplorerEntryData => typeof child === 'object' && child !== null && 'children_left_out' in child
 
 // The graph view of the Files app's file bar: the session's graph holding only the nodes of the files the bar lists, so
@@ -91,6 +104,7 @@ export class FilesGraph {
     try {
       const trees = listAnswered<ExplorerEntryData>('session.graph_trees', await this.session.graphTrees(paths, this.nodeFilter))
       this.store.change(({ graph }) => (graph.readFor === readFor ? { graph: { ...graph, trees, branches: {}, isReading: false } } : {}))
+      await this.readOpenBranches(readFor)
     } catch (failure) {
       this.store.change(({ graph }) => ({ graph: { ...graph, trees: [], isReading: false, problem: `The graph did not read: ${reasonOf(failure)}` } }))
       this.notices.fail(`The Files app did not read the session's graph: ${reasonOf(failure)}`, 'Showing the graph view, calling session.graph_trees')
@@ -138,9 +152,62 @@ export class FilesGraph {
     }
   }
 
+  // Whether the node filter shows above the trees: closed until the person opens it, then as this browser remembers. A
+  // browser that keeps nothing, such as a private window, refuses with a DOMException and the filter stays closed.
+  get areFiltersShown(): boolean {
+    try {
+      return window.localStorage.getItem(STORED_FILTERS_SHOWN) === 'shown'
+    } catch (refusal) {
+      if (!(refusal instanceof DOMException)) throw refusal
+      return false
+    }
+  }
+
+  // Remembers in this browser whether the person opened or closed the node filter; a browser that keeps nothing forgets.
+  showFilters(isShown: boolean): void {
+    try {
+      window.localStorage.setItem(STORED_FILTERS_SHOWN, isShown ? 'shown' : 'closed')
+    } catch (refusal) {
+      if (!(refusal instanceof DOMException)) throw refusal
+    }
+  }
+
   // The entries below entry, as read with it or, once a person opened it, as its branch was read.
   childrenOf(entry: ExplorerEntryData): ExplorerEntryData[] {
     return (this.store.state.graph.branches[entry.node_id] ?? entry).children.filter(isEntry)
+  }
+
+  // Go to file on a fold-out: the node it shows opens in its own file at its lines, as selecting it at its home in the
+  // tree opens it; a section a markdown link opens is no node, so its file opens at the lines it names.
+  async goToFile(foldOut: SourceCallout): Promise<void> {
+    try {
+      const ranges = foldOut.kind === 'section' ? [sectionRange(foldOut)] : listAnswered<RangeData>('session.graph_node_ranges', await this.session.graphNodeRanges(foldOut.id, this.paths))
+      if (!ranges.length) return
+      const selected = ranges.map(lines => ({ nodeId: foldOut.id, lines }))
+      this.store.change(({ graph }) => ({ graph: { ...graph, selected, expanded: [] } }))
+      await this.showNodes(selected)
+    } catch (failure) {
+      this.notices.fail(`The Files app did not open the file of ${foldOut.title}: ${reasonOf(failure)}`, 'Go to file on a fold-out, calling session.graph_node_ranges')
+    }
+  }
+
+  // The node whose connector reaches entry, in the trees as they are open: the step above an invokes or observes
+  // connector entry sits under, or the scenario or step an example sits under; none for a node shown at its own home.
+  private connectorHolderOf(target: ExplorerEntryData): ExplorerEntryData | null {
+    const above = (this.store.state.graph.trees ?? []).map(tree => this.pathTo(target, tree, [])).find(Boolean) ?? []
+    const parent = above.at(-1)
+    if (parent && isConnector(parent)) return above.at(-2) ?? null
+    return parent && target.type === EXAMPLE_TYPE ? parent : null
+  }
+
+  // The entries from tree down to target, target left out; none when tree does not hold it.
+  private pathTo(target: ExplorerEntryData, entry: ExplorerEntryData, above: ExplorerEntryData[]): ExplorerEntryData[] | null {
+    if (entry === target) return above
+    for (const child of this.childrenOf(entry)) {
+      const found = this.pathTo(target, child, [...above, entry])
+      if (found) return found
+    }
+    return null
   }
 
   isOpen(entry: ExplorerEntryData): boolean {
@@ -149,6 +216,16 @@ export class FilesGraph {
 
   isSelected(entry: ExplorerEntryData): boolean {
     return this.store.state.graph.selected.some(selected => selected.nodeId === entry.node_id)
+  }
+
+  // Reads each node the person has open again, for the files and node filter the trees were just read for: a branch
+  // read for the old list holds the old list's nodes, so an open node would go on showing them.
+  private async readOpenBranches(readFor: string): Promise<void> {
+    const paths = this.paths
+    const filter = this.nodeFilter
+    const read = await Promise.all(this.store.state.graph.openNodes.map(async nodeId => [nodeId, await this.session.graphBranch(nodeId, paths, filter)] as const))
+    const branches = Object.fromEntries(read.filter((each): each is readonly [string, ExplorerEntryData] => each[1] !== null))
+    this.store.change(({ graph }) => (graph.readFor === readFor ? { graph: { ...graph, branches: { ...graph.branches, ...branches } } } : {}))
   }
 
   // Opens or closes an entry, reading the entries its answer left out the first time it opens.
@@ -165,15 +242,19 @@ export class FilesGraph {
   }
 
   // Selects the node, alone or, with also, beside those already selected, then opens each file it covers at its lines: a
-  // member's own file, or every listed file below a folder such as a package. A node read from no lines of a file selects
-  // nothing.
+  // member's own file, or every listed file below a folder such as a package. A node reached through a connector, such as
+  // the operation a step invokes or an example a scenario uses, never opens its own file: the node holding the connector
+  // opens at its lines, and the node expands in place under the line that uses it. A node read from no lines of a file
+  // selects nothing.
   async select(entry: ExplorerEntryData, also: boolean = false): Promise<void> {
     try {
-      const ranges = listAnswered<RangeData>('session.graph_node_ranges', await this.session.graphNodeRanges(entry.node_id, this.paths))
+      const holder = this.connectorHolderOf(entry)
+      const ranges = listAnswered<RangeData>('session.graph_node_ranges', await this.session.graphNodeRanges((holder ?? entry).node_id, this.paths))
       if (!ranges.length) return
       const kept = also ? this.store.state.graph.selected.filter(selected => selected.nodeId !== entry.node_id) : []
       const selected = [...kept, ...ranges.map(lines => ({ nodeId: entry.node_id, lines }))]
-      this.store.change(({ graph }) => ({ graph: { ...graph, selected } }))
+      const expanded = [...(also ? this.store.state.graph.expanded.filter(id => id !== entry.node_id) : []), ...(holder ? [entry.node_id] : [])]
+      this.store.change(({ graph }) => ({ graph: { ...graph, selected, expanded } }))
       await this.showNodes(selected)
     } catch (failure) {
       this.notices.fail(`The Files app did not open ${entry.name}: ${reasonOf(failure)}`, 'Selecting a node in the graph view, calling session.graph_node_ranges')

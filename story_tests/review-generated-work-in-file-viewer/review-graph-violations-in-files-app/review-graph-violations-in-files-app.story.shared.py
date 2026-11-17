@@ -5,8 +5,7 @@ review_graph_violations_in_files_app_story.test.md. Map: .context/story-map.md, 
 
 Steps reach the session only through the namespace a tier hands them (`world.Ticket`), so the domain spec and the cdd
 tools spec replay the same steps. Only the scenarios built so far are here: Show Only Violating Nodes In Files App's
-Choosing a rule keeps only the nodes that break it. Its Violations switch scenario waits for checkout-flow examples that
-really break screen-story-budget, right-size-story-nodes and use-intention-revealing-names.
+two scenarios.
 """
 
 from __future__ import annotations
@@ -15,7 +14,14 @@ from expects import equal, expect
 
 from space.kanban.story_test import SharedStories
 from space.session.graph_view_examples import STORY_MAP
-from space.session.graph_view_rule_examples import VERB_NOUN_FORMAT, VIOLATIONS, names_of, seed_checkout_flow_with_violating_stories
+from space.session.graph_view_rule_examples import (
+    LISTED_WITH_TICKET,
+    VERB_NOUN_FORMAT,
+    VIOLATIONS,
+    names_of,
+    seed_checkout_flow_with_violating_stories,
+    seed_checkout_flow_with_violations_in_two_practices,
+)
 
 shared_stories = SharedStories("Review Graph Violations In Files App")
 
@@ -23,6 +29,21 @@ LISTED = [STORY_MAP]
 
 
 # --- Show Only Violating Nodes In Files App -----------------------------------------------------------------------
+
+
+@shared_stories.scenario("Show Only Violating Nodes In Files App", "The Violations switch keeps only nodes that break a rule")
+def _(s):
+    @s.given("the Files app shows checkout-flow's graph with Stories and Clean Engineering on")
+    def _(world):
+        seed_checkout_flow_with_violations_in_two_practices(world)
+
+    @s.when("the Person turns on Violations")
+    def _(world):
+        world.violating = {node_type: names_of(world, node_type, LISTED_WITH_TICKET, VIOLATIONS) for node_type in ("Story", "Parameter")}
+
+    @s.then("the graph view holds only the nodes of Process Ticket Archive name, Handle Ticket Deletion name and Activate Ticket name")
+    def _(world):
+        expect(world.violating).to(equal({"Story": {"Process Ticket Archive", "Handle Ticket Deletion"}, "Parameter": {"x"}}))
 
 
 @shared_stories.scenario("Show Only Violating Nodes In Files App", "Choosing a rule keeps only the nodes that break it")

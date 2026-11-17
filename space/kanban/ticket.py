@@ -561,7 +561,8 @@ class Ticket(TicketCheckoutTools, TicketChoices, TicketMoveTools, TicketTreeTool
         prompt = (
             f'Title this session "{self.name}". You are the chat of the session board\'s ticket {self.name}; work on that '
             f"ticket. First call sessions.switch with name {self.name}, so every tool works on its session, then read the "
-            "session's latest handoff."
+            "session's latest handoff. When the switch says the session's roots are unchecked, set them up with "
+            "session.set_up_roots before generating anything, so they cover exactly the pieces the ticket works on."
         )
         return links_of_run().link_to_new(self.worktree, prompt)
 

@@ -6,7 +6,7 @@ the story tests of Explore Graph In Files App and Review Graph Violations In Fil
 from __future__ import annotations
 
 from space.kanban.session_board_examples import SessionSeed
-from space.session.graph_view_examples import CHECKOUT_FLOW, STORY_MAP, STORY_MAP_TEXT, TICKET_CODE, TICKET_TEXT, session_of
+from space.session.graph_view_examples import CHECKOUT_FLOW, STORY_MAP, STORY_MAP_TEXT, TICKET_CODE, TICKET_TEXT, opened_entries, session_of
 
 # Seed: checkout-flow working in the whole project with Stories, DDD and Clean Engineering on, so a class stereotyped as
 # an aggregate root is a DDD entity root, the node LERN's Domain tier rules sit on.
@@ -64,6 +64,22 @@ def seed_checkout_flow_with_both_tickets(world) -> None:
         world.project.seed_file(path, text)
 
 
+# Seed: Ticket whose activate takes a parameter named x, which use-intention-revealing-names breaks: the name says
+# nothing of what the parameter is for.
+VAGUE_PARAMETER_TICKET_TEXT = (
+    "class Ticket:\n"
+    "    def activate(self, x: str) -> None:\n"
+    "        return None\n"
+)
+LISTED_WITH_TICKET = [STORY_MAP, TICKET_CODE]
+
+
+def seed_checkout_flow_with_violations_in_two_practices(world) -> None:
+    """checkout-flow with its two verb-noun-format stories and Ticket.activate's vague parameter x."""
+    seed_checkout_flow_with_violating_stories(world)
+    world.project.seed_file(TICKET_CODE, VAGUE_PARAMETER_TICKET_TEXT)
+
+
 def seed_checkout_flow_with_violating_stories(world) -> None:
     world.project.seed_session(CHECKOUT_FLOW)
     world.project.seed_file(STORY_MAP, VIOLATING_MAP_TEXT)
@@ -72,15 +88,7 @@ def seed_checkout_flow_with_violating_stories(world) -> None:
 def entries_in(world, paths: list[str], node_filter: dict | None = None) -> list[dict]:
     """Every entry in the trees answered for paths and node_filter, each as its branch answers it, opening each branch
     as the page opens it."""
-    session = session_of(world)
-    found, opened = list(world.data_of(session.graph_trees(paths=paths, node_filter=node_filter))), []
-    while found:
-        entry = found.pop()
-        if entry["children_left_out"]:
-            entry = world.data_of(session.graph_branch(node_id=entry["node_id"], paths=paths, node_filter=node_filter)) or entry
-        opened.append(entry)
-        found.extend(child for child in entry["children"] if "children_left_out" in child)
-    return opened
+    return [entry for entry, _above in opened_entries(world, paths, node_filter)]
 
 
 def names_of(world, node_type: str, paths: list[str], node_filter: dict | None = None) -> set[str]:

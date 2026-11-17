@@ -1,9 +1,9 @@
 // The Files app's acceptance tests for its graph view, story by story as
 // story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md
 // writes them; what the session's graph answers is proved by the sub-epic's story tests in story_tests/review-generated-work-in-file-viewer/.
-import { render } from '@testing-library/react'
+import { fireEvent, render } from '@testing-library/react'
 import { createElement } from 'react'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 
 import type { CddApi } from '@cdd/cdd-shared'
 import type { ExplorerEntryData, GuidanceSelectionData } from '@cdd/space/session/session'
@@ -36,11 +36,19 @@ const CHECKOUT_FLOW_FILES = [
   rootFile(BOARD_CODE, 'python', 'clean-engineering-code', false),
 ]
 
+// Seed: a rule the file breaks, which session.file answers whenever it reads the file's rules.
+const BROKEN_RULE = { range: { path: TICKET_CODE, start_line: 460, end_line: 465, content: '', anchor: '' }, violation: { rule: 'keep-operations-small-focused', message: 'activate runs 24 statements' } }
+
 // Seed: checkout-flow's nodes, each in its file at its lines, under its practice's root.
-type SeedNode = { id: string; name: string; type: string; file: string; start: number; end: number; parent: string }
+// A node shown under a connector, such as the operation a step invokes, is its own node shown there: shows names it.
+type SeedNode = { id: string; name: string; type: string; file: string; start: number; end: number; parent: string; shows?: string }
 const CHECKOUT_FLOW_NODES: SeedNode[] = [
   { id: 'stories', name: 'Stories', type: 'Practice', file: '', start: 0, end: 0, parent: '' },
   { id: 'delete-ticket', name: 'Delete Ticket', type: 'Story', file: STORY_MAP, start: 315, end: 319, parent: 'stories' },
+  // Seed: Delete Ticket's When step, on lines 316 to 318, invoking Ticket.close, which its invokes connector shows.
+  { id: 'delete-ticket-when', name: 'when the Person deletes it', type: 'When', file: STORY_MAP, start: 316, end: 318, parent: 'delete-ticket' },
+  { id: 'delete-ticket-when-invokes', name: 'invokes', type: 'invokes', file: STORY_MAP, start: 316, end: 318, parent: 'delete-ticket-when' },
+  { id: 'delete-ticket-when-invokes-close', name: 'close', type: 'Operation', file: TICKET_CODE, start: 538, end: 555, parent: 'delete-ticket-when-invokes', shows: 'ticket-close' },
   { id: 'clean_engineering', name: 'Clean Engineering', type: 'Practice', file: '', start: 0, end: 0, parent: '' },
   { id: 'ticket', name: 'Ticket', type: 'OoadClass', file: TICKET_CODE, start: 106, end: 670, parent: 'clean_engineering' },
   { id: 'ticket-activate', name: 'activate', type: 'Operation', file: TICKET_CODE, start: 460, end: 465, parent: 'ticket' },
@@ -93,9 +101,9 @@ class FakeFilesServer implements CddApi {
     if (path.endsWith('/graph-filter-choices')) return this.choices(body.node_types as string[]) as Result
     if (path.endsWith('/graph-branch')) return this.entry(this.node(String(body.node_id)), body.paths as string[], true) as Result
     if (path.endsWith('/graph-node-ranges')) return this.ranges(this.node(String(body.node_id)), body.paths as string[]) as Result
-    if (path.endsWith('/graph-members')) return CHECKOUT_FLOW_NODES.filter(node => node.file).map(node => ({ node_id: node.id, name: node.name, type: node.type, file: node.file })) as Result
+    if (path.endsWith('/graph-members')) return CHECKOUT_FLOW_NODES.filter(node => node.file && !node.shows && node.type !== node.name && node.type !== 'When').map(node => ({ node_id: node.id, name: node.name, type: node.type, file: node.file })) as Result
     if (path.endsWith('/cdd/progress')) return this.progress.map(message => ({ tool: 'session.graph_trees', message })) as Result
-    if (path.endsWith('/file')) return { path: body.path, text: 'line\n'.repeat(700), language: 'python', comments: [], folds: [], violations: [], changes: [] } as Result
+    if (path.endsWith('/file')) return { path: body.path, text: 'line\n'.repeat(700), language: 'python', comments: [], folds: [], violations: body.rules ? [BROKEN_RULE] : [], changes: [] } as Result
     return null
   }
 
@@ -135,8 +143,9 @@ class FakeFilesServer implements CddApi {
 
   private entry(node: SeedNode, paths: string[], isOpened: boolean): ExplorerEntryData {
     const below = CHECKOUT_FLOW_NODES.filter(child => child.parent === node.id && this.holds(child, paths))
-    if (!isOpened) return { node_id: node.id, name: node.name, type: node.type, children: [], children_left_out: below.length }
-    return { node_id: node.id, name: node.name, type: node.type, children: below.map(child => this.entry(child, paths, false)), children_left_out: 0 }
+    const node_id = node.shows ?? node.id
+    if (!isOpened) return { node_id, name: node.name, type: node.type, children: [], children_left_out: below.length }
+    return { node_id, name: node.name, type: node.type, children: below.map(child => this.entry(child, paths, false)), children_left_out: 0 }
   }
 
   private trees(paths: string[]): ExplorerEntryData[] {
@@ -364,6 +373,80 @@ describe('Filter Graph By Node Type And Connector', () => {
   })
 })
 
+describe('Read Open Nodes Again For A Switched Scope', () => {
+  describe("with Clean Engineering and Ticket open in checkout-flow's graph", () => {
+    it('should read each open node again for the changed files once the Person switches the file list to them', async () => {
+      const { page, server, stop } = await showingGraph()
+      await page.graph.toggle(entryNamed(page, 'Clean Engineering'))
+      await page.graph.toggle(entryNamed(page, 'Ticket'))
+      const ticket = entryNamed(page, 'Ticket').node_id
+      page.showScope('session')
+      await settled()
+      stop()
+      const readForChanged = server.posted('/graph-branch').filter(post => (post.body.paths as string[]).join() === [STORY_MAP, TICKET_CODE].join())
+      expect(readForChanged.map(post => post.body.node_id)).toContain(ticket)
+    })
+  })
+})
+
+describe('Collapse The Graph Node Filter', () => {
+  beforeEach(() => window.localStorage.clear())
+
+  const shownView = (page: FilesPage) => render(createElement(FilesGraphView, { page }))
+  const filtersToggle = (view: ReturnType<typeof render>) => view.getByRole('button', { name: 'Filters' })
+  const nodeFilterShown = (view: ReturnType<typeof render>) => view.queryByLabelText('Node filter') !== null
+
+  describe('with the Person never having opened the filters in this browser', () => {
+    it('should show one closed Filters toggle above the trees', async () => {
+      const { page, stop } = await showingGraph()
+      stop()
+      const view = shownView(page)
+      expect(filtersToggle(view).getAttribute('aria-expanded')).toBe('false')
+      view.unmount()
+    })
+
+    it('should not show the node type, connector and rule lists', async () => {
+      const { page, stop } = await showingGraph()
+      stop()
+      const view = shownView(page)
+      expect(nodeFilterShown(view)).toBe(false)
+      view.unmount()
+    })
+  })
+
+  describe('with the Person pressing Filters', () => {
+    it('should show the node filter above the trees', async () => {
+      const { page, stop } = await showingGraph()
+      stop()
+      const view = shownView(page)
+      fireEvent.click(filtersToggle(view))
+      expect(nodeFilterShown(view)).toBe(true)
+      view.unmount()
+    })
+
+    it('should open the next graph view in this browser with the node filter shown', async () => {
+      const { page, stop } = await showingGraph()
+      stop()
+      const first = shownView(page)
+      fireEvent.click(filtersToggle(first))
+      first.unmount()
+      const next = shownView(page)
+      expect(nodeFilterShown(next)).toBe(true)
+      next.unmount()
+    })
+
+    it('should close the node filter again once the Person presses Filters a second time', async () => {
+      const { page, stop } = await showingGraph()
+      stop()
+      const view = shownView(page)
+      fireEvent.click(filtersToggle(view))
+      fireEvent.click(filtersToggle(view))
+      expect(nodeFilterShown(view)).toBe(false)
+      view.unmount()
+    })
+  })
+})
+
 describe('Open Several Files From Graph Nodes', () => {
   describe('with checkout-flow\'s graph shown', () => {
     async function selectedActivate() {
@@ -532,6 +615,71 @@ describe('Show A Graph Read That Failed', () => {
     it('should draw its lists empty rather than throw', () => {
       const lists = { selection: NO_FILTER, nodeTypes: undefined, relationships: undefined, rules: undefined, onChange: () => {} }
       expect(() => render(createElement(NodeFilterLists, lists)).unmount()).not.toThrow()
+    })
+  })
+})
+
+describe('Open Connectors In Place', () => {
+  describe("with Delete Ticket's When step invoking Ticket.close, shown under its invokes connector", () => {
+    async function selectedInvokedClose() {
+      const shown = await showingGraph()
+      for (const name of ['Delete Ticket', 'when the Person deletes it', 'invokes']) await shown.page.graph.toggle(entryNamed(shown.page, name))
+      const invokes = entryNamed(shown.page, 'invokes')
+      await shown.page.graph.select(shown.page.graph.childrenOf(invokes)[0]!)
+      await settled()
+      return shown
+    }
+
+    it("should keep the step's file open at the step, never jumping to ticket.py, when the Person selects close there", async () => {
+      const { page, stop } = await selectedInvokedClose()
+      stop()
+      expect([page.state.openPath, page.selectedLinesIn(STORY_MAP)]).toEqual([STORY_MAP, [{ start: 316, end: 318 }]])
+    })
+
+    it("should expand close's fold-out under the step", async () => {
+      const { page, stop } = await selectedInvokedClose()
+      stop()
+      expect(page.state.graph.expanded).toEqual(['ticket-close'])
+    })
+  })
+})
+
+describe('Show Rules Only When Asked', () => {
+  describe('with Rules off and Ticket.activate selected in the graph, which reads ticket.py with its rules for its folds', () => {
+    it('should show no broken rule in ticket.py', async () => {
+      const { page, stop } = await showingGraph()
+      await page.graph.toggle(entryNamed(page, 'Clean Engineering'))
+      await page.graph.toggle(entryNamed(page, 'Ticket'))
+      await page.graph.select(entryNamed(page, 'activate'))
+      await settled()
+      stop()
+      expect([page.state.reads.rules, page.state.file?.violations]).toEqual([false, []])
+    })
+  })
+})
+
+describe('Go To A Fold-out File', () => {
+  describe("with close's fold-out open under Delete Ticket's When step", () => {
+    const CLOSE_FOLD_OUT = { id: 'ticket-close', kind: 'call', line: 317, title: 'Ticket.close', path: 'kanban/ticket.py', startLine: 538, endLine: 555, text: '' } as const
+
+    it('should open ticket.py at the lines close covers when the Person chooses Go to file on it', async () => {
+      const { page, stop } = await showingGraph()
+      await page.graph.goToFile(CLOSE_FOLD_OUT)
+      await settled()
+      stop()
+      expect([page.state.openPath, page.selectedLinesIn(TICKET_CODE), page.state.graph.expanded]).toEqual([TICKET_CODE, [{ start: 538, end: 555 }], []])
+    })
+  })
+
+  describe("with a story map story's scenarios section open under its line", () => {
+    const SECTION_FOLD_OUT = { id: `${STORY_MAP}:315`, kind: 'section', line: 4, title: 'Delete Ticket', path: STORY_MAP, startLine: 315, endLine: 319, text: '' } as const
+
+    it('should open the file the section is in, at its lines', async () => {
+      const { page, stop } = await showingGraph()
+      await page.graph.goToFile(SECTION_FOLD_OUT)
+      await settled()
+      stop()
+      expect([page.state.openPath, page.selectedLinesIn(STORY_MAP)]).toEqual([STORY_MAP, [{ start: 315, end: 319 }]])
     })
   })
 })

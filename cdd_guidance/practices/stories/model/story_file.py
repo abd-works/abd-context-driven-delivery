@@ -49,16 +49,17 @@ class StoryFile:
         """Each story block in the file, in order; None when the file cannot be read."""
         raise NotImplementedError(f"{type(self).__name__} must find its story blocks")
 
-    def stories(self, story_type: type, path: str) -> Optional[Tuple[List, WrittenBlock]]:
+    def stories(self, story_type: type, path: str, project: Optional[Path] = None) -> Optional[Tuple[List, WrittenBlock]]:
         """The file's stories, each made from the block written for it and placed on its lines of path, and the file's
         own code around them; None when the file cannot be read, so the story type reads its text and its stories are
-        written generically. A file with no story block is one story read from its text."""
+        written generically. A file with no story block is one story read from its text, which finds the files it
+        reads, such as its examples module, in project first, not in the folders this process runs from."""
         blocks = self.story_blocks()
         if blocks is None:
             return None
         written, leads = self._written_around(blocks, path)
         if not blocks:
-            return story_type.load_all(self.text), written
+            return story_type.load_file(self.text, project), written
         imports = story_type.syntax.example_imports(self.text)
         stories = []
         for block, lead in zip(blocks, leads):

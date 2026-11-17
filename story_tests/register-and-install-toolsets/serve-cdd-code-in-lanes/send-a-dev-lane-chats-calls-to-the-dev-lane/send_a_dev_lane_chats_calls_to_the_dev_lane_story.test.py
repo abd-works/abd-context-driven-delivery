@@ -6,7 +6,7 @@ from pathlib import Path
 from expects import be_empty, contain, equal, expect, have_len, raise_error
 
 from harness.mcp.server_lanes import LaneCallFailed
-from harness.mcp.examples.server_lanes_examples import DevLaneInProcess, LEDGER_FOLDER_TOOL, LEDGER_IS_LOCKED, LOCKED_LEDGER_TOOL, seed_host, seed_main_checkout, seed_stable_lane_routing, seed_ticket_worktree
+from harness.mcp.examples.server_lanes_examples import DevLaneInProcess, FEATURE_TOOL, LEDGER_FOLDER_TOOL, LEDGER_IS_LOCKED, LOCKED_LEDGER_TOOL, seed_feature_host, seed_host, seed_main_checkout, seed_stable_lane_routing, seed_ticket_worktree
 from story_test import and_, but_, given, scenario, story, then, when
 
 # Epic: Register And Install Toolsets
@@ -72,3 +72,20 @@ with story("Send A Dev-Lane Chat's Calls To The Dev Lane"):
             self.calling = lambda: self.stable_host.dispatch(LOCKED_LEDGER_TOOL, {}, self.worktree)
         with then("the chat sees LEDGER_IS_LOCKED from the dev lane"):
             expect(self.calling).to(raise_error(LaneCallFailed, contain(LEDGER_IS_LOCKED)))
+    # Seen 2026-11-17: a dev-lane chat could not call fidelity-session-output.add_root, which only the served feature
+    # has, because the stable lane listed its own tools to every chat.
+    with scenario("List the served feature's tools to a dev-lane chat"):
+        with given("the dev lane serves checkout-flow's worktree seed_ticket_worktree on a feature that adds FEATURE_TOOL"):
+            root = Path(tempfile.mkdtemp())
+            self.worktree = seed_ticket_worktree(root, seed_main_checkout(root / "dev-side"))
+            self.dev_lane = DevLaneInProcess(seed_feature_host(self.worktree))
+            self.lanes, self.stable_host = seed_stable_lane_routing(root, self.dev_lane)
+            self.lanes.dev.home.serve_from(self.worktree)
+            self.main = root / "abd-context-driven-delivery"
+        with when("a chat in checkout-flow's worktree asks the stable lane for its tools"):
+            # McpHost.tools_listed_for(worktree) -> ServerLane.tools -> dev McpHost.answer(cdd.list_tools)
+            self.listed = [tool["name"] for tool in self.stable_host.tools_listed_for(self.worktree)]
+        with then("the list holds FEATURE_TOOL, which only the dev lane serves"):
+            expect(self.listed).to(contain(FEATURE_TOOL))
+        with but_("a chat in the main checkout seed_main_checkout is listed no FEATURE_TOOL"):
+            expect([tool["name"] for tool in self.stable_host.tools_listed_for(self.main)]).not_to(contain(FEATURE_TOOL))

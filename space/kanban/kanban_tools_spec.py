@@ -700,6 +700,10 @@ with description("the board tools") as self:
                         "src/carts/cart.py": "@aggregate_root\nclass Cart:\n    pass\n",
                         "src/carts/carts.py": "class CartRepository:\n    pass\n",
                         "lib/billing/billing.py": "class Billing:\n    pass\n",
+                        "old/design-canvas/version-1/project/canvas.json": "{}\n",
+                        "old/design-canvas/versions.json": '{"version-1": "https://claude.ai/artifact/old-canvas"}\n',
+                        "notes/flow.whiteboard": "{}\n",
+                        "notes/whiteboards.json": '{"flow.whiteboard": "https://claude.ai/artifact/flow-board"}\n',
                     }
                     for path, text in written.items():
                         (project.root / path).parent.mkdir(parents=True, exist_ok=True)
@@ -714,6 +718,13 @@ with description("the board tools") as self:
 
             with it("should name no fidelity for a file none declares"):
                 expect(self.root_files["notes/plain.txt"]["fidelities"]).to(equal([]))
+
+            # Requested 2026-11-16: a design canvas and a whiteboard open where they are published, wherever they lie.
+            with it("should list a design canvas the root holds at the link it is published at"):
+                expect(self.root_files["old/design-canvas/version-1/project/canvas.json"]["link"]).to(equal("https://claude.ai/artifact/old-canvas"))
+
+            with it("should list a whiteboard file at its board's address"):
+                expect(self.root_files["notes/flow.whiteboard"]["link"]).to(equal("https://claude.ai/artifact/flow-board"))
 
             with context("with code the session did not change"):
                 with it("should name Clean Engineering code for it"):
@@ -743,7 +754,14 @@ with description("the board tools") as self:
                 self.chips = self.project.call("ticket.format_choices", ticket="sign-up", fidelities=["stories-story-map"])
 
             with it("should offer a chip for each group of formats the story map writes, diagram first"):
-                expect([chip["label"] for chip in self.chips]).to(equal(["diagram", "markdown", "thin_slice"]))
+                expect([chip["label"] for chip in self.chips]).to(equal(["diagram", "markdown"]))
+
+            # Requested 2026-11-16: the thin slice is a file the story map writes, not a format a person picks.
+            with it("should offer no thin_slice chip"):
+                expect([chip["label"] for chip in self.chips if chip["label"] == "thin_slice"]).to(equal([]))
+
+            with it("should refuse thin_slice as a format of the story map"):
+                expect(lambda: self.project.call("fidelity-session-output.choose_format", session=session_file_of("sign-up"), practice="stories", fidelity="story_map", format="thin_slice", is_chosen=True)).to(raise_error(Exception, contain("does not write thin_slice")))
 
             with it("should show the chip of its default format chosen until a person chooses"):
                 expect([chip["label"] for chip in self.chips if chip["is_chosen"]]).to(equal(["markdown"]))
@@ -804,11 +822,19 @@ with description("the board tools") as self:
 
             with it("should refuse a chip label the story map does not offer, naming the labels it offers"):
                 expect(lambda: self.project.call("ticket.choose_formats", ticket="sign-up", fidelities=["stories-story-map"], label="drawio", is_chosen=True)).to(
-                    raise_error(Exception, contain("offers diagram, markdown, thin_slice"))
+                    raise_error(Exception, contain("offers diagram, markdown"))
                 )
 
             with it("should refuse a format the story map does not write"):
                 expect(lambda: self.project.call("fidelity-session-output.choose_format", session=session_file_of("sign-up"), practice="stories", fidelity="story_map", format="python", is_chosen=True)).to(raise_error(Exception, contain("does not write python")))
+
+        # Requested 2026-11-16: the realization is a file the scenarios write, not a format a person picks.
+        with context("with an action bar opened on its scenarios"):
+            with before.each:
+                self.chips = self.project.call("ticket.format_choices", ticket="sign-up", fidelities=["stories-scenarios"])
+
+            with it("should offer no realization chip"):
+                expect([chip["label"] for chip in self.chips]).to(equal(["markdown", "code"]))
 
         with context("with an action bar opened on its UX mockup"):
             with before.each:
@@ -1087,7 +1113,7 @@ with description("the board tools") as self:
                 "session.choose_workpath", "session.folder_files", "session.workpath_files", "session.read_file", "session.write_file", "session.file", "session.graph_trees", "session.graph_branch", "session.graph_filter_choices", "session.graph_node_ranges", "session.graph_members", "session.add_to_chat_context", "session.show",
                 "session.guidance_selection", "session.update_guidance_selection", "session.guidance_selection_after",
                 "session.write_handoff", "session.read_handoff_format", "session.read_cdr_format", "session.list_cdrs", "session.write_cdr",
-                "practice-session-output.enable", "practice-session-output.choose_root", "practice-session-output.use_default_root", "fidelity-session-output.choose_root", "fidelity-session-output.choose_format",
+                "practice-session-output.enable", "practice-session-output.choose_root", "practice-session-output.use_default_root", "fidelity-session-output.choose_root", "fidelity-session-output.add_root", "fidelity-session-output.propose_roots", "fidelity-session-output.choose_format",
                 "backlog-item.create", "backlog-item.start", "backlog-item.start_under", "backlog-item.edit_text", "backlog-item.move_before",
                 "backlog-item.move_after", "backlog-item.nest_under", "backlog-item.leave_parent", "backlog-item.open_file",
             }))

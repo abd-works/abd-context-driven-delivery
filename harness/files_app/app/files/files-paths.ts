@@ -34,3 +34,7 @@ export const revealLabelOf = (platform: string): string => {
   if (/^mac/i.test(platform)) return 'Reveal in Finder'
   return 'Open in file manager'
 }
+
+// What the list says of a file it names but cannot open: one the branch changed and is not there was deleted on the
+// branch, such as a file main still has; any other is a file the fidelity declares that nothing has written yet.
+export const missingNoteOf = (entry: { is_changed: boolean }): string => (entry.is_changed ? 'deleted on this branch' : 'not generated yet')

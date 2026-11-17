@@ -8,7 +8,7 @@ import type { GuidanceSelectionData } from '@cdd/space/session/session'
 
 import { FilesLink } from './files-link'
 import { FilesPage, filesShown } from './files-page'
-import { drawioPageOf, revealLabelOf } from './files-paths'
+import { drawioPageOf, missingNoteOf, revealLabelOf } from './files-paths'
 import { calloutsOf, rulesOf } from './source-of-file'
 
 // Each stage's fidelities by practice, as the session's practices declare them.
@@ -402,6 +402,13 @@ describe('Open File In File Browser', () => {
 
   it("should name the menu's choice for the system the page runs on", () => {
     expect(['Win32', 'MacIntel', 'Linux x86_64'].map(revealLabelOf)).toEqual(['Open in Explorer', 'Reveal in Finder', 'Open in file manager'])
+  })
+})
+
+describe('Name A File The List Cannot Open', () => {
+  it('should say a file the branch deleted is deleted on this branch, and one not there yet is not generated yet', () => {
+    const missing = (is_changed: boolean) => ({ path: 'harness/process/git.py', exists: false, is_changed, link: '', format: 'python', fidelities: [] })
+    expect([missingNoteOf(missing(true)), missingNoteOf(missing(false))]).toEqual(['deleted on this branch', 'not generated yet'])
   })
 })
 

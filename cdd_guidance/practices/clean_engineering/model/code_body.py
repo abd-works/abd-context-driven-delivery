@@ -9,6 +9,9 @@ from typing import Dict, List, Optional, Tuple, Union
 from cdd_guidance.practices.clean_engineering.model.bracket_structure import BracketStructure
 
 _IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+# An interaction the model writes as a whole call, `CredentialsRepository.create(this)`, up to its closing parenthesis,
+# so a note after it stays out of the code.
+_WHOLE_CALL = re.compile(r"^[A-Za-z_][\w.]*\([^()]*\)")
 _PROSE = re.compile(
     r"\b(the|and|is|are|a|an|of|to|for|that|this|with|from|into|each|same|only|like)\b",
     re.I,
@@ -62,11 +65,14 @@ class CodeLanguage:
         return self.type_names.get(hint.strip(), hint.strip())
 
     def interaction(self, callee: str) -> str:
+        end = self.spelling.statement_end
+        written = _WHOLE_CALL.match(callee.strip())
+        if written and not written.group(0).startswith("super"):
+            return f"{written.group(0)}{end}"
         tokens = callee.strip().split()
         if not tokens or (len(tokens) >= _PROSE_TOKENS and _PROSE.search(callee)):
             return ""
         head, arguments = tokens[0], ", ".join(tokens[1:])
-        end = self.spelling.statement_end
         if head == "super" or head.startswith("super."):
             return self._super_call(head[len("super."):], arguments) + end
         if "." not in head and head[0].isupper() and _IDENTIFIER.match(head):

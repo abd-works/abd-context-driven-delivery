@@ -438,9 +438,11 @@ Observed: the arrow takes an In progress ticket to Done without crossing a colum
 
 Observed: `Board.help`; the ? on a tile or practice name opens the overview, guidance and rules in a side panel, with a link to the Forge page.
 
-### (S) Person --> Choose Session And Practice Roots
+### (S) Person --> [Choose Session And Practice Roots](../story_tests/move-work-forward-on-session-board/guide-work-through-practices-on-board/guide_work_through_practices_on_board_story.test.md#story-choose-session-and-practice-roots)
 
 Observed (checked 2026-11-10): Roots of <ticket> lists the session's root and each practice's root, marked default until a person chooses another; Change browses the folders and Use sets the session's workpath (`chooseWorkpath`) or that practice's root (`root-choice-client.ts`, `root-choice-view.tsx`).
+
+Requested (2026-11-16, "we need better instructions on session setup to scan for all relevant folders to set up roots correctly across product, tests, domain etc."): setting up or switching to a session, the agent proposes each practice's and fidelity's roots from what the ticket names and what its branch changed, digging down to the narrowest folder that holds each piece (an aggregate's folder, a package, a sub-epic's folder in story_tests), confirms them with the person, then sets them; a folder found later is added beside the roots a fidelity has (`session.set_up_roots`, `fidelity-session-output.propose_roots`).
 
 ## (E) Customize Board Workflow
 
@@ -936,7 +938,7 @@ Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "Branch guard"): a
 
 # (E) Queue Prompts For Later
 
-The prompt queue is its own Claude Code mod, `prompt-queue`, not part of the CDD chat bar: it sits above the chat bar, at rest only a stack image with the count drawn on it (the person, 2026-11-16: "this shouldnt be part of the cdd chat bar / it should be above it with some separation / a separate mod from chat ui"). Sources: the brief that started the simple-queue chat on 2026-11-16 (stack above the prompt, a `+` button, Ctrl+Enter, reordering, a sub-agent mode, sending on `turn.complete` ahead of Claude's own queue, a `/queue` command) and the person's directions in that chat. The mod is in the session's dev-mods folder, `prompt-queue/hooks/`, with its `claude plugin test` specs in `register.test.tsx`. Evidence words as on the chat bar epics: **Observed** seen working in the desktop chat, **Built** in code and plugin tests but not seen, **Intended** asked for and not done.
+The prompt queue is its own Claude Code mod, `prompt-queue`, not part of the CDD chat bar: it sits above the chat bar, at rest only a stack image with the count drawn on it (the person, 2026-11-16: "this shouldnt be part of the cdd chat bar / it should be above it with some separation / a separate mod from chat ui"). Sources: the brief that started the simple-queue chat on 2026-11-16 (stack above the prompt, a `+` button, Ctrl+Enter, reordering, a sub-agent mode, sending on `turn.complete` ahead of Claude's own queue, a `/queue` command) and the person's directions in that chat. The mod is `tools/prompt_queue/hooks/`, published by the installer, with its `claude plugin test` specs in `register.test.tsx`. Evidence words as on the chat bar epics: **Observed** seen working in the desktop chat, **Built** in code and plugin tests but not seen, **Intended** asked for and not done.
 
 ### (S) Person --> Queue Draft Prompt
 
@@ -960,7 +962,7 @@ Built: the ✕ on a card takes its prompt off the queue (`removePrompt`); the bi
 
 ### (S) Person --> Play Prompt Queue
 
-Built (2026-11-16, the person: "should be a toggle play / pause; on play you take the next action as soon as you are done the last one"): play sends the next prompt at once when no turn is running, and after every finished turn from then on (`togglePlaying`, `finishTurn`). A queued slash command runs as that command (`$.command.run`) rather than as a prompt, which the engine refuses; a prompt the engine will not send goes back to the top with "Not sent" and the reason. Observed earlier the same day, before play existed: queued prompts arrived one per finished turn.
+Observed (2026-11-17, the person: "an agentic instruction with prompts to ai that they are responsible for taking the next item rather than it being forced on them ... don't remove it from the queue, have that be an operation the ai does"): while play is on, a finished turn asks the agent to take the next prompt ("Take the next prompt on the queue."), and the queue stays as it is until the agent marks a prompt done (`sendNextPrompt`). Play pauses when the agent left the prompt it was asked to take. A queued slash command runs as that command (`$.command.run`), which the agent cannot type, and the mod marks it done. Until 2026-11-17 play sent the next prompt itself and took it off the queue.
 
 ### (S) Person --> Pause Prompt Queue
 
@@ -973,6 +975,22 @@ Built, not seen: with sub-agent mode on, the model groups the queued prompts int
 ### (S) Person --> Plan Queue From Conversation
 
 Built, not seen: `/queue [what to focus on]` has the model read the conversation and adds the next prompts it lists to the queue, in order (`planFromConversation`).
+
+## (E) [Work Through Prompt Queue](../story_tests/queue-prompts-for-later/work-through-prompt-queue/work_through_prompt_queue_story.test.md)
+
+The queue is kept by the cdd server, so the mod, the agent in the chat and a session starting in it change one queue (`tools/prompt_queue/prompt_queue.py`, MCP tools `prompt-queue.*`). The agent works through it: it reads the queue, does each prompt in order, and marks each one done.
+
+### (S) Agent --> [Queue Prompts Through The Cdd Server](../story_tests/queue-prompts-for-later/work-through-prompt-queue/work_through_prompt_queue_story.test.md#story-queue-prompts-through-the-cdd-server)
+
+Observed (2026-11-17): this chat queued its unfinished items with `prompt-queue.add_all` and took each off with `prompt-queue.done` as it finished it; `prompt_queue_heavy_spec.py` runs them on a real cdd server.
+
+### (S:system) Cdd Server --> [Queue Handoff Steps On Session Start](../story_tests/queue-prompts-for-later/work-through-prompt-queue/work_through_prompt_queue_story.test.md#story-queue-handoff-steps-on-session-start)
+
+Built (2026-11-17): switching a chat to a session queues the numbered steps of its latest handoff's Approach for Next Agent on that chat's queue, once per handoff, and the switch says so (`OpenSessions._handoff_queued_note`, `PromptQueue.queue_handoff`); `session_spec.py` checks it.
+
+### (S) Prompt Queue --> [Show Prompt Queue To Agent](../story_tests/queue-prompts-for-later/work-through-prompt-queue/work_through_prompt_queue_story.test.md#story-show-prompt-queue-to-agent)
+
+Observed (2026-11-17): while play is on, every prompt carries the queue, in order with each prompt's id, and how to work through it (`queueContext`); a paused queue carries nothing, and a prompt the person is editing is left out.
 
 # (E) Review Generated Work In File Viewer
 

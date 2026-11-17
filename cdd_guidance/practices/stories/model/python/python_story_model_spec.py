@@ -16,7 +16,7 @@ for _candidate in _HERE.parents:
 from mamba import description, context, it, before
 from expects import equal, have_len, be_true, contain, expect, raise_error
 
-from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryType, Epic
+from cdd_guidance.practices.stories.model.story_model import Epic, Step, StepType, Story, StoryType
 from cdd_guidance.practices.stories.model.story_model import Scenario
 from cdd_guidance.practices.stories.model.story_model import StoryModel
 from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModelError
@@ -39,6 +39,46 @@ def _story_map_with_stories() -> StoryModel:
         sub.stories.append(story)
         first.epics.append(sub)
     return story_map
+
+
+def _story_map_with_a_but_step() -> StoryModel:
+    """One epic, one story, one scenario whose last step is a But, as markdown scenarios often end."""
+    story_map = StoryModel()
+    epic = Epic("Remove Tickets", 1)
+    story = Story("Delete Ticket", 1, StoryType.USER)
+    scenario = Scenario(name="a ticket is deleted", sequential_order=1)
+    for order, (keyword, text, step_type) in enumerate(
+        [("Given", "a ticket on the board", StepType.GIVEN), ("When", "the Person deletes it", StepType.WHEN), ("Then", "the board no longer shows it", StepType.THEN), ("But", "the ticket's work is kept", StepType.THEN)], 1
+    ):
+        step = Step(text, step_type, order)
+        step.keyword = keyword
+        scenario.steps.append(step)
+    story.scenarios.append(scenario)
+    epic.stories.append(story)
+    story_map.epics.append(epic)
+    return story_map
+
+
+def _imported_from_story_test(content: str) -> set:
+    return {alias.name for node in ast.walk(ast.parse(content)) if isinstance(node, ast.ImportFrom) and node.module == "story_test" for alias in node.names}
+
+
+def _step_verbs_used(content: str) -> set:
+    return {item.context_expr.func.id for node in ast.walk(ast.parse(content)) if isinstance(node, ast.With) for item in node.items if isinstance(item.context_expr, ast.Call) and isinstance(item.context_expr.func, ast.Name)}
+
+
+# Seen 2026-11-17: scenarios rendered from markdown to Python used but_ without importing it, so the file failed to run.
+with description("a Python story test rendered from scenarios whose last step is a But"):
+    with before.each:
+        py = PythonStoryModel()
+        tree = py.render(_story_map_with_a_but_step())
+        self.content = next(text for path, text in tree.items() if py.is_story_file(path))
+
+    with it("should import every step verb it uses"):
+        expect(_step_verbs_used(self.content) - _imported_from_story_test(self.content)).to(equal(set()))
+
+    with it("should open each scenario one indent inside its story, as the repository's story tests are written"):
+        expect(self.content).to(contain('\nwith story("Delete Ticket"):\n    with scenario("a ticket is deleted"):\n        with given("a ticket on the board"):'))
 
 
 with description("a Python runnable-story Story Map") as self:

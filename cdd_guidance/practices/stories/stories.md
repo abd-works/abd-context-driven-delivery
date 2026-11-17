@@ -182,10 +182,12 @@ outputs:
     - "story_tests/{epic}/{sub-epic}/{sub_epic_slug}.story.shared.py"
     - "story_tests/{epic}/{sub-epic}/{sub_epic_slug}.story.domain.spec.py"
     - "story_tests/{epic}/{sub-epic}/{sub_epic_slug}.story.server.spec.py"
+    - "story_tests/{epic}/{sub-epic}/{story}/{story_snake}_story.test.py"
   typescript:
     - "story_tests/{epic}/{sub-epic}/{sub_epic_slug}.story.shared.ts"
     - "story_tests/{epic}/{sub-epic}/{sub_epic_slug}.story.domain.spec.ts"
     - "story_tests/{epic}/{sub-epic}/{sub_epic_slug}.story.server.spec.ts"
+    - "story_tests/{epic}/{sub-epic}/{story}/{story_snake}_story.test.ts"
     - "story_tests/{epic}/{sub-epic}/{sub_epic_slug}.story.ui.spec.ts"
 ```
 
@@ -198,7 +200,7 @@ Make specifications executable by transforming them into automated tests that va
 
 Ask which concrete case proves the outcome, which system already holds the starting state, and what a person can check when the action finishes. Write the examples from those answers.
 
-**Produce:** per lowest sub-epic, `{sub_epic_slug}.story.shared.{lang}` registers shared scenarios; `{sub_epic_slug}.story.domain.spec.{lang}` replays them at domain tier (domain is the only tier with one layer in the filename); `{sub_epic_slug}.story.server.spec.{lang}` and other tier specs name the tier explicitly before `spec`. Markdown scenarios stay `{story_snake}_story.test.md`. Shared Given/When/Then helpers stay `story_test.py` / `story-test.ts`.
+**Produce:** a story whose scenarios are written as one runnable file, `{story_snake}_story.test.{lang}` with its steps' bodies filled in, is its own acceptance test. Otherwise, per lowest sub-epic, `{sub_epic_slug}.story.shared.{lang}` registers shared scenarios; `{sub_epic_slug}.story.domain.spec.{lang}` replays them at domain tier (domain is the only tier with one layer in the filename); `{sub_epic_slug}.story.server.spec.{lang}` and other tier specs name the tier explicitly before `spec`. Markdown scenarios stay `{story_snake}_story.test.md`. Shared Given/When/Then helpers stay `story_test.py` / `story-test.ts`.
 
 #### Guidance
 
@@ -241,6 +243,7 @@ If this change will not stay here, follow `practices/stories/stories-scenarios.m
 - **`infrastructure-in-lifecycle-hooks`** - Put browser startup, application wiring, and shutdown in lifecycle hooks; keep Given for domain state. Load an aggregate once at the highest Given that needs it and reach owned entities through their aggregate root, because infrastructure and shortcut lookups obscure the behaviour's real state.
 - **`inline-simple-gwt-bodies`** - Keep simple Given, When, and Then bodies inline and use example exports directly. Extract a helper only for repeated interaction that is not a domain operation, such as a screen gesture or application wiring, because pass-through helpers add names without adding meaning.
 - **`domain-operations-inline-in-steps`** - Call each domain operation — a repository load with the identity in hand, an aggregate command, the refusal it raises — directly in the Given, When, or Then that relies on it. Do not wrap domain calls in story-file helpers such as `signIn` or `reloadAccount`. When several steps need the same prior state, seed it with a `seed…` fixture in the examples file, because the acceptance test exists to show which domain operation each step runs and what it proves.
+- **`code-steps-invoke-code`** - Make each When of a story test in code call the domain operation it tests, so the graph links the step to that operation in Clean Engineering. A When that calls only the test's own helpers or its examples' seeds tests nothing, and a When in markdown is not asked until a realization names its code.
 - **`extract-assertion-helper`** - Extract the same assertion shape after it appears more than twice and pass its concrete values as data, because copied assertions become inconsistent when behaviour changes.
 
 ---

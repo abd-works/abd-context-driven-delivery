@@ -1,4 +1,4 @@
-import { useSyncExternalStore, type MouseEvent } from 'react'
+import { useState, useSyncExternalStore, type MouseEvent } from 'react'
 
 import type { ExplorerEntryData } from '@cdd/space/session/session'
 import { NodeFilterLists } from '@graph-app/filter/FilterView'
@@ -57,24 +57,37 @@ function GraphEntryView({ page, entry }: { page: FilesPage; entry: ExplorerEntry
 }
 
 // The graph view's node filter, the Graph app's lists: node types, connectors, rules and the Violations switch, which
-// narrow the nodes of the files the bar lists.
+// narrow the nodes of the files the bar lists. They sit closed behind one Filters toggle, so the trees get the space,
+// until the person opens them; this browser remembers the choice.
 function GraphNodeFilterView({ page }: { page: FilesPage }) {
   const { graph } = useFilesState(page)
+  const [isShown, setShown] = useState(() => page.graph.areFiltersShown)
+  const toggle = () => {
+    page.graph.showFilters(!isShown)
+    setShown(!isShown)
+  }
   return (
-    <div className="filters graph-node-filter" aria-label="Node filter">
-      <NodeFilterLists
-        selection={graph.filter}
-        nodeTypes={graph.choices.offered_node_types}
-        relationships={graph.choices.relationships}
-        rules={graph.choices.rules}
-        onChange={next => void page.graph.filterTo(next)}
-      />
+    <div className="graph-node-filter-bar">
+      <button className="graph-filters-toggle" aria-expanded={isShown} onClick={toggle}>
+        <span aria-hidden="true">{isShown ? '▼' : '▶'}</span> Filters
+      </button>
+      {isShown ? (
+        <div className="filters graph-node-filter" aria-label="Node filter">
+          <NodeFilterLists
+            selection={graph.filter}
+            nodeTypes={graph.choices.offered_node_types}
+            relationships={graph.choices.relationships}
+            rules={graph.choices.rules}
+            onChange={next => void page.graph.filterTo(next)}
+          />
+        </div>
+      ) : null}
     </div>
   )
 }
 
-// The file bar's graph view: its node filter, then the practice trees of the session's graph holding only the nodes of
-// the files the bar lists that the filter keeps, each collapsed until a person opens it.
+// The file bar's graph view: its node filter, closed until a person opens it, then the practice trees of the session's
+// graph holding only the nodes of the files the bar lists that the filter keeps, each collapsed until a person opens it.
 export function FilesGraphView({ page }: { page: FilesPage }) {
   const { graph } = useFilesState(page)
   return (

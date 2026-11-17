@@ -86,9 +86,9 @@ class FormatGroup:
     def every(cls, fidelities: list[FidelityGuidance]) -> list[FormatGroup]:
         """A group for each group of formats the fidelities offer, in the order the groups come, each with the
         fidelities that offer it."""
-        offered = [Format(name) for fidelity in fidelities for name in fidelity.outputs]
+        offered = [Format(name) for fidelity in fidelities for name in fidelity.session_output.offered_formats]
         labels = [label for label, _ in sorted(dict.fromkeys((each.group, each.group_order) for each in offered), key=lambda group: group[1])]
-        return [cls(label, [fidelity for fidelity in fidelities if any(Format(name).group == label for name in fidelity.outputs)]) for label in labels]
+        return [cls(label, [fidelity for fidelity in fidelities if any(Format(name).group == label for name in fidelity.session_output.offered_formats)]) for label in labels]
 
     @property
     def label(self) -> str:
@@ -115,7 +115,7 @@ class FormatGroup:
 
     def in_group(self, fidelity: FidelityGuidance) -> list[str]:
         """The formats fidelity offers in the group."""
-        return [name for name in fidelity.outputs if Format(name).group == self._label]
+        return [name for name in fidelity.session_output.offered_formats if Format(name).group == self._label]
 
 
 class FormatSelection:

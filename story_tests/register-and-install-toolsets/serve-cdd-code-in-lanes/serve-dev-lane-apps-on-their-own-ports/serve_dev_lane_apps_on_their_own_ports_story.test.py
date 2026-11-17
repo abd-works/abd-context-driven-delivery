@@ -23,14 +23,17 @@ from story_test import and_, given, scenario, story, then, when
 with story("Serve Dev Lane Apps On Their Own Ports"):
     with scenario("Start the dev lane's Files app on a port of its own"):
         with given("the Files app's server seed_files_server, whose ports file gives it 8783, made by the dev lane"):
-            self.server = seed_files_server(seed_lanes(Path(tempfile.mkdtemp())).dev)
+            dev_lane = seed_lanes(Path(tempfile.mkdtemp())).dev
+            self.server = seed_files_server(dev_lane)
+            self.server_lane_home = dev_lane.home.folder.as_posix()
         with when("a chat opening the Files app asks the server's ports"):
             # App.open -> AppServer.ports -> ServerLane.app_ports((8783,)) <- (9783,)
             self.ports = self.server.ports
         with then("the server answers on 9783, which no stable-lane app takes"):
             expect(self.ports).to(equal((9783,)))
-        with and_("the command the chat starts it with names that port"):
-            expect(self.server.command).to(equal(["node", "--import", "tsx", "serve.ts", "--port", "9783"]))
+        with and_("the command the chat starts it with names that port and the dev lane's home, so the app's calls reach the dev lane's server whatever environment starts it"):
+            # AppServer.command <- [..., PORT_ARGUMENT, "9783", CDD_HOME_ARGUMENT, ServerLane.home.folder]
+            expect(self.server.command).to(equal(["node", "--import", "tsx", "serve.ts", "--port", "9783", "--cdd-home", self.server_lane_home]))
     with scenario("Start the stable lane's Files app as before"):
         with given("the Files app's server seed_files_server made by the stable lane"):
             self.server = seed_files_server(seed_lanes(Path(tempfile.mkdtemp())).stable)
@@ -42,7 +45,7 @@ with story("Serve Dev Lane Apps On Their Own Ports"):
         with and_("the command the chat starts it with names no port, so the server reads its ports file"):
             expect(self.server.command).to(equal(["node", "--import", "tsx", "serve.ts"]))
     with scenario("Know the dev lane from the home the server runs from"):
-        with given("the dev lane's home, the folder ServerLanes.DEV_FOLDER inside the stable lane's"):
+        with given("the dev lane's home, the folder DEV_LANE_FOLDER inside the stable lane's"):
             self.lanes = seed_lanes(Path(tempfile.mkdtemp()))
             self.home = CddHome(self.lanes.dev.home.folder)
         with when("the server running from that home asks which lane it serves"):

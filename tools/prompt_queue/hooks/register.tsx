@@ -3,8 +3,10 @@ import type { Register } from 'claude-code'
 import {
   currentQueue,
   isQueuedByKey,
-  planFromConversation,
+  queueFromCommand,
   queueByKey,
+  queueContext,
+  refreshQueue,
   finishTurn,
   startTurn,
 } from './queue/prompt-queue'
@@ -14,17 +16,17 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({
       name: 'queue',
-      description: 'Turn this conversation into ordered prompts on the prompt queue',
-      argumentHint: '[what to focus on]',
+      description: 'Queue a pasted list, one prompt per item, or turn this conversation into ordered prompts',
+      argumentHint: '[a list to queue, or what to focus on]',
     })
+    // The queue lives on the cdd server: the agent or a session starting in this chat may already have queued prompts.
+    await refreshQueue($)
 
     return next(e)
   })
 
   on('command.run', { command: 'queue' }, async ($, e) => {
-    const count = await planFromConversation($, e.args)
-
-    return { text: `Queued ${count} prompt(s) from this conversation.` }
+    return { text: await queueFromCommand($, e.args) }
   })
 
   // Alt+Enter queues the draft instead of sending it; the engine reports Alt as meta. Ctrl+Enter never reached a mod
@@ -39,12 +41,14 @@ export const register: Register = on => {
   })
 
   // The desktop may still submit the draft after the key that queued it; it is queued, so it does not enter now.
+  // Every other prompt carries the queue beside it while the queue plays, so the agent takes its work in order.
   on('prompt.submit', async ($, e, next) => {
-    if (e.origin?.kind === 'plugin' || !(await isQueuedByKey($, e.text))) {
-      return next(e)
+    if (e.origin?.kind !== 'plugin' && (await isQueuedByKey($, e.text))) {
+      return { drop: 'Queued for later' }
     }
+    const queued = e.command ? undefined : await queueContext($)
 
-    return { drop: 'Queued for later' }
+    return next(queued ? { ...e, context: [...(e.context ?? []), queued] } : e)
   })
 
   on('turn.start', async ($, e, next) => {
@@ -55,7 +59,7 @@ export const register: Register = on => {
     return next(e)
   })
 
-  // Playing, the queue sends its next prompt as soon as a main-chat turn finishes, ahead of Claude's own queue.
+  // Playing, a finished main-chat turn asks the agent to take the next prompt, ahead of Claude's own queue.
   on('turn.complete', async ($, e, next) => {
     const result = await next(e)
     if (e.agentId === undefined) {

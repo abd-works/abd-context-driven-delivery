@@ -27,7 +27,9 @@ from harness.guidance_actions import GuidanceAction
 from harness.hooks.hook_server import HookPayload
 from harness.agent_tools.tool_call import SESSION_OPENING, ToolCall, ToolRequest
 from harness.mcp.mcp_server import McpServer
+from harness.whiteboard import BoardLinks
 from space.repo.mock_repo import MockGit
+from tools.prompt_queue.prompt_queue import PromptQueue
 from space.repo.repo import Repo
 from space.session import Session, Sessions
 from harness.agent_tools.chat_pointer import ChatPointer
@@ -42,6 +44,15 @@ from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 # The first practices a process makes read and parse their guidance for every later one; made once here, before any
 # example, so no example pays for that first read.
 PRACTICE_CATALOGUE.create_all()
+
+
+_HANDOFF_WITH_STEPS = """# Handoff
+
+## Approach for Next Agent
+
+1. Read the handoff
+2. Run the unit tier
+"""
 
 
 def _chat_in(session: Session, chat_id: str = "spec-chat") -> ChatPointer:
@@ -128,6 +139,28 @@ with description("a session"):
 
             with it("should be the one session its sessions hold, whichever call reads it"):
                 expect(ToolCall({}, self.repo).session is ToolCall({}, self.repo).session).to(equal(True))
+
+    # (S:system) Cdd Server --> Queue Handoff Steps On Session Start
+    with context("that a chat switches to it with a handoff written"):
+        with before.each:
+            self.repo = Path(tempfile.mkdtemp())
+            work = self.repo / "work"
+            work.mkdir()
+            Sessions(self.repo).switch("alpha", work)
+            Sessions(self.repo).current().handoffs.write(_HANDOFF_WITH_STEPS)
+            self.chat = f"queue-chat-{time.time_ns()}"
+            self.call = ToolCall.sent({}, self.repo, ToolRequest(ChatPointer.from_request(self.chat)))
+            self.instructions = Sessions(self.repo).switch("alpha", call=self.call)
+
+        with it("should queue the handoff's steps on the chat's prompt queue, in order"):
+            expect([prompt["text"] for prompt in PromptQueue.of_chat(self.chat).prompts]).to(equal(["Read the handoff", "Run the unit tier"]))
+
+        with it("should tell the agent to work through them, marking each one done"):
+            expect(self.instructions).to(contain("prompt-queue.done"))
+
+        with it("should queue them once, however often the chat switches to it again"):
+            Sessions(self.repo).switch("alpha", call=self.call)
+            expect(len(PromptQueue.of_chat(self.chat).prompts)).to(equal(2))
 
     # (E) Open Named Session
     # (S) Session --> Open New Session
@@ -1002,6 +1035,33 @@ with description("a practice"):
                             [(self.work / ".context" / "stories" / "story-map.md").resolve().as_posix()],
                         )))
 
+                with context("and the scenarios' roots the folders of the sub-epics the session works on"):
+                    with before.each:
+                        self.write_overrides({"stories": {"root": ".context/stories", "scenarios": {"roots": ["story_tests/manage-orders/place-order", "story_tests/ship-orders/track-parcel"]}}})
+
+                    with it("should write the scenarios under each sub-epic's folder, and nowhere else in story_tests"):
+                        outputs = self.stories.fidelities["scenarios"].declared.output_paths()
+                        expect(outputs["markdown"]).to(equal([
+                            (self.work / "story_tests" / "manage-orders" / "place-order" / "{story_snake}_story.test.md").resolve().as_posix(),
+                            (self.work / "story_tests" / "ship-orders" / "track-parcel" / "{story_snake}_story.test.md").resolve().as_posix(),
+                        ]))
+
+                    with it("should let the session's file manager read a story test in the second sub-epic"):
+                        story_test = self.work / "story_tests" / "ship-orders" / "track-parcel" / "track-parcel.story.shared.py"
+                        story_test.parent.mkdir(parents=True)
+                        story_test.write_text("shared_stories = None\n", encoding="utf-8")
+                        expect(self.session.session_files.in_root(story_test.resolve())).to(equal(True))
+
+                with context("and a person adds a second sub-epic's folder to the scenarios' roots"):
+                    with it("should write the scenarios under both folders"):
+                        scenarios = self.stories.of_fidelity(self.stories.fidelities.entries["scenarios"])
+                        scenarios.choose_root("work/story_tests/manage-orders/place-order")
+                        scenarios.add_root("work/story_tests/ship-orders/track-parcel")
+                        expect(self.stories.fidelities["scenarios"].declared.output_paths()["markdown"]).to(equal([
+                            (self.work / "story_tests" / "manage-orders" / "place-order" / "{story_snake}_story.test.md").resolve().as_posix(),
+                            (self.work / "story_tests" / "ship-orders" / "track-parcel" / "{story_snake}_story.test.md").resolve().as_posix(),
+                        ]))
+
                 with it("should let the session's file manager read the story tests in that story_tests"):
                     story_test = self.work / "story_tests" / "manage-orders" / "place-order" / "place-order.story.shared.py"
                     story_test.parent.mkdir(parents=True)
@@ -1270,6 +1330,37 @@ with description("a session whose UX work has an information architecture, a pub
         expect(reviewed).not_to(contain("work/checkout/OrderView.tsx"))
 
 
+# A whiteboard file opens the board in Claude it was published to, whose address is kept beside it (whiteboards.json);
+# requested 2026-11-16: "whiteboard file entries don't open those files, they open the actual whiteboard".
+with description("a session whose story map is drawn on a whiteboard") as self:
+    with before.each:
+        self.home = ExampleHome()
+        self.repo = Path(tempfile.mkdtemp(prefix="session-whiteboard-")).resolve()
+        (self.repo / ".git").mkdir()
+        self.work = self.repo / "work"
+        (self.work / ".context").mkdir(parents=True)
+        (self.work / ".context" / "story-map.whiteboard").write_text("{}", encoding="utf-8")
+        Sessions(self.repo).switch("alpha", self.work)
+        self.story_map = Sessions(self.repo).current().practice("stories").fidelities["story_map"]
+
+    with after.each:
+        shutil.rmtree(self.repo, ignore_errors=True)
+        self.home.close()
+
+    with context("that was published to a board"):
+        with before.each:
+            BoardLinks.beside(self.work / ".context" / "story-map.whiteboard").record(self.work / ".context" / "story-map.whiteboard", "https://claude.ai/artifact/story-board")
+
+        with it("should list the whiteboard file at its board's address"):
+            expect([(entry.path, entry.link) for entry in self.story_map.declared.files()["whiteboard"]]).to(
+                equal([("work/.context/story-map.whiteboard", "https://claude.ai/artifact/story-board")])
+            )
+
+    with context("that was never published"):
+        with it("should list the whiteboard file at no address"):
+            expect([entry.link for entry in self.story_map.declared.files()["whiteboard"]]).to(equal([""]))
+
+
 # The chat bar's stage buttons, practice dots, and format chips, and the Files app's toggles, are one selection the
 # session holds; every change raises its version, which a page waits on.
 with description("a session's guidance selection") as self:
@@ -1294,6 +1385,12 @@ with description("a session's guidance selection") as self:
 
         with it("should have every practice selected, as the session works on each until one is turned off"):
             expect(all(practice.is_selected for practice in self.session.guidance_selection().practices)).to(equal(True))
+
+    # Requested 2026-11-16: "make sure design canvas is a filter option for UX".
+    with context("that has Specification and UX selected"):
+        with it("should offer the canvas format, the design canvas the UX mockup writes"):
+            selected = self.session.update_guidance_selection(stages=["specification"], practices=["ux"])
+            expect([(format.label, format.formats) for format in selected.formats if format.label == "canvas"]).to(equal([("canvas", ["claude_design"])]))
 
     with context("that has Discovery and Stories selected"):
         with before.each:

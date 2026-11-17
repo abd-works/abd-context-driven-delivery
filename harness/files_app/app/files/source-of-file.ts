@@ -2,7 +2,9 @@ import type { NodeSourceData } from '@cdd/harness/graph/graph'
 import type { FileViolationData, SessionFileData } from '@cdd/space/session/session'
 import type { SourceRule } from '@source-view/SourceView'
 import type { SourceCallout } from '@source-view/source-callouts'
+import type { SourceLines } from '@source-view/source-folding'
 import type { ViolationFocus } from '@graph-app/graph/graph-selection'
+import { MODULE_OWNER, codeOf, withoutCallMarkers } from '@source-view/call-expansion'
 
 // The node type the source view is handed for a whole file, which it opens with every fold open.
 const FILE_NODE = 'File'
@@ -48,15 +50,38 @@ export function sourceOf(file: SessionFileData, members: NodeSourceData[] = []):
 }
 
 // What the file opens in place itself: each link to a heading in another file, that heading's section under its line;
-// and in a story test, what each step invokes and observes, under the step's first line.
+// and in a story test, each connector of a step, what it invokes and observes, collapsed under the line of the step that
+// uses it, so the code it reaches opens where the step reaches it.
 export function calloutsOf(file: SessionFileData): SourceCallout[] {
   const sections = file.callouts.map((callout): SourceCallout => ({ id: `${callout.section.path}:${callout.section.start_line}`, kind: 'section', line: callout.line, title: callout.title, path: callout.section.path, startLine: callout.section.start_line, endLine: callout.section.end_line, text: callout.section.content }))
-  const steps = file.steps.flatMap(step => [...step.invokes.map(target => stepCallout(step.line, target, 'call')), ...step.observes.map(target => stepCallout(step.line, target, 'example'))])
+  const code = typeof file.text === 'string' ? codeOf(file.text, monacoLanguageOf(file)).split(String.fromCharCode(10)) : []
+  const starts = file.steps.map(step => step.line).sort((one, other) => one - other)
+  const steps = file.steps.flatMap(step => {
+    const using = (target: NodeSourceData) => lineUsing(code, step.line, starts.find(start => start > step.line), target.name)
+    return [...step.invokes.map(target => stepCallout(using(target), target, 'call')), ...step.observes.map(target => stepCallout(using(target), target, 'example'))]
+  })
   return [...sections, ...steps]
 }
 
+// The first line from the step's own line, before the next step starts, whose code names name; the step's own line when
+// none does, as for a file read with no text.
+function lineUsing(code: string[], stepLine: number, nextStep: number | undefined, name: string): number {
+  const named = new RegExp(`\\b${name.replace(/[^A-Za-z0-9_]/g, '')}\\b`)
+  const last = Math.min(code.length, (nextStep ?? code.length + 1) - 1)
+  for (let line = stepLine; line <= last; line += 1) if (named.test(code[line - 1] ?? '')) return line
+  return stepLine
+}
+
 function stepCallout(line: number, target: NodeSourceData, kind: SourceCallout['kind']): SourceCallout {
-  return { id: target.node_id, kind, line, title: target.owner ? `${target.owner}.${target.name}` : target.name, path: target.file, startLine: target.start_line, endLine: target.end_line, text: target.text }
+  return { id: target.node_id, kind, line, title: target.owner && target.owner !== MODULE_OWNER ? `${target.owner}.${target.name}` : target.name, path: target.file, startLine: target.start_line, endLine: target.end_line, text: withoutCallMarkers(target.text) }
+}
+
+// The lines whose fold-outs open for the nodes expanded, such as one selected in the graph through a connector: each
+// line of a callout reaching one of them inside the lines around, the node that holds the connector; anywhere in the file
+// when nothing is around.
+export function expandedLines(callouts: SourceCallout[], expanded: string[], around: SourceLines[]): number[] {
+  const inside = (line: number) => !around.length || around.some(lines => lines.start <= line && line <= lines.end)
+  return [...new Set(callouts.filter(callout => expanded.includes(callout.id) && inside(callout.line)).map(callout => callout.line))]
 }
 
 // Whether the file is a story test whose steps reach code: its callouts are its steps' own, so a class it names, in a

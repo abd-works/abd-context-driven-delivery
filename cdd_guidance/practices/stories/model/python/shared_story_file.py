@@ -38,15 +38,21 @@ class FixtureExample(Example):
     """An example a shared story file takes from its examples module: its fixture's fields as its value, and the facts
     the statements that use it give, which it records with in place of the facts a story file's own example reads."""
 
-    def __init__(self, name: str, example_value: ExampleValue = None, facts: dict | None = None) -> None:
+    def __init__(self, name: str, example_value: ExampleValue = None, facts: dict | None = None, declared: tuple | None = None) -> None:
         super().__init__(name, example_value)
         self.fixture_facts = dict(facts or {})
+        self._declared = declared
 
     def recorded_facts(self, recording: "StoryRecording", file: str) -> dict:
         return dict(self.fixture_facts)
 
+    @property
+    def declaration(self) -> tuple | None:
+        """The examples module the fixture is defined in, and its definition's first and last line."""
+        return self._declared
+
     def clone(self) -> "FixtureExample":
-        cloned = type(self)(self.name, dict(self.value) if isinstance(self.value, dict) else self.value, self.fixture_facts)
+        cloned = type(self)(self.name, dict(self.value) if isinstance(self.value, dict) else self.value, self.fixture_facts, self._declared)
         cloned.sequential_order, cloned.scope = self.sequential_order, self.scope
         return cloned
 
@@ -63,10 +69,12 @@ class StepCode:
 
 @dataclass(frozen=True)
 class Fixture:
-    """One fixture of an examples module: the fields it is built with, and the names its definition holds."""
+    """One fixture of an examples module: the fields it is built with, the names its definition holds, and the first and
+    last line of its definition."""
 
     cells: dict
     names: tuple[str, ...]
+    lines: tuple[int, int] = (0, 0)
 
 
 class FixtureModule:
@@ -84,7 +92,7 @@ class FixtureModule:
         for node in self._tree.body:
             if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
                 definition = ast.get_source_segment(self._text, node) or ""
-                found[node.targets[0].id] = Fixture(self._cells(node.value), tuple(dict.fromkeys(_IDENTIFIER.findall(definition))))
+                found[node.targets[0].id] = Fixture(self._cells(node.value), tuple(dict.fromkeys(_IDENTIFIER.findall(definition))), (node.lineno, node.end_lineno or node.lineno))
         return found
 
     @cached_property
@@ -190,9 +198,11 @@ class SharedStoryFile:
         function the module offers is no fixture."""
         found: dict[str, FixtureExample] = {}
         for module, names in self._imports():
-            fixtures = FixtureModule(self._module_text(module)).fixtures
+            path = self._module_path(module)
+            fixtures = FixtureModule(path.read_text(encoding="utf-8") if path is not None else "").fixtures
             for name in (imported for imported in names if imported in fixtures):
-                found[name] = FixtureExample(name, fixtures[name].cells, facts=self._facts_of(name, fixtures[name]))
+                declared = (path, *fixtures[name].lines)
+                found[name] = FixtureExample(name, fixtures[name].cells, facts=self._facts_of(name, fixtures[name]), declared=declared)
         return found
 
     def _imports(self) -> list[tuple[str, list[str]]]:
@@ -202,11 +212,10 @@ class SharedStoryFile:
             if isinstance(node, ast.ImportFrom) and node.module and _EXAMPLES_MODULE.search(node.module)
         ]
 
-    def _module_text(self, module: str) -> str:
-        """The examples module's text, from the first folder searched that holds it; empty when none does."""
+    def _module_path(self, module: str) -> Path | None:
+        """The examples module's file, in the first folder searched that holds it; none when none does."""
         relative = Path(*module.split(".")).with_suffix(".py")
-        found = next((folder / relative for folder in self._search if (folder / relative).is_file()), None)
-        return found.read_text(encoding="utf-8") if found is not None else ""
+        return next((folder / relative for folder in self._search if (folder / relative).is_file()), None)
 
     def _facts_of(self, name: str, fixture: Fixture) -> dict:
         """The names an example shows and the members read off it: the names of its definition and of every statement

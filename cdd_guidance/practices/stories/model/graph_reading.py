@@ -27,6 +27,17 @@ _MEMBER_CALL = re.compile(r"\.([\w$]+)\s*\(")
 # A call by name alone, with no object before it: `seed_ticket(world)`, not `board.reread()` or `def seed_ticket(`.
 _FUNCTION_CALL = re.compile(r"(?<![\w$.])(?<!def )(?<!function )([A-Za-z_$][\w$]*)\s*\(")
 _STEP_TYPES = frozenset({"Step", "Given", "When", "Then"})
+# An examples module a story test imports its seeds and fixtures from, such as ticket_story_examples.py or
+# customers-examples.ts: test code, which a step never invokes.
+_EXAMPLES_MODULE_FILE = re.compile(r"examples\.\w+$")
+# The module an examples file is imported as, its path without an extension: ./examples/account-credentials.examples.
+_EXAMPLES_MODULE = re.compile(r"examples$")
+# What a step's calls reach (its calls_reach fact): nothing, only the story test's own code, the code it tests, or code
+# the graph has not read.
+CALLS_REACH_NONE = "none"
+CALLS_REACH_TEST = "test"
+CALLS_REACH_TESTED = "tested"
+CALLS_REACH_UNREAD = "unread"
 # A story map's epic is recorded as an Epic, or as a SubEpic under another epic; a map built on a graph without being
 # recorded calls every epic an Epic.
 _EPIC_TYPES = frozenset({"Epic", "SubEpic"})
@@ -252,11 +263,38 @@ class StoryLinks:
             report_progress(f"stories · examples · {index}/{len(self.examples)} · {example.name}")
             self._link_example(example)
 
+    @cached_property
+    def story_files(self) -> set[str]:
+        """The files the Stories practice read its story map and story tests from, read once: test code."""
+        return {node.source.file for node in self.stories.in_graph.nodes() if node.source is not None and node.source.file}
+
+    def _is_tested_code(self, member: "Node") -> bool:
+        """True for Clean Engineering code a step can invoke: never a function of a story test, such as a helper
+        its steps call, nor of the examples module it takes its seeds from."""
+        file = member.source.file if member.source is not None else ""
+        return bool(file) and file not in self.story_files and not _EXAMPLES_MODULE_FILE.search(file)
+
+    def _calls_reach(self, step: "Node", called: set, matched: list) -> str:
+        """What a step's calls reach, recorded as its ``calls_reach`` fact for the rule code-steps-invoke-code: ``none``
+        when it calls nothing, ``tested`` when one call reaches the code under test, ``test`` when every call is a story
+        test's own helper or a seed its examples module exports (whether or not that module was read), and ``unread``
+        when a call names code the graph has not read."""
+        if not called:
+            return CALLS_REACH_NONE
+        if any(self._is_tested_code(member) for member in matched):
+            return CALLS_REACH_TESTED
+        imported = step.get_fact("imported_modules") or {}
+        seeds = {name for name, module in imported.items() if _EXAMPLES_MODULE.search(str(module))}
+        resolved = {member.name for member in matched}
+        return CALLS_REACH_UNREAD if called - resolved - seeds else CALLS_REACH_TEST
+
     def _link_step(self, step: "Node") -> None:
         body = self._step_body(step)
         called = set(step.get_fact("callees") or []) | set(_MEMBER_CALL.findall(body))
         matched = [member for name in sorted(called) for member in self.clean.code_index.members_named(name)]
         matched += [function for function in self._functions_called(body) if function not in matched]
+        step.set_fact("calls_reach", self._calls_reach(step, called | set(_FUNCTION_CALL.findall(body)), matched))
+        matched = [member for member in matched if self._is_tested_code(member)]
         epic = self.tree.epic_of(step) if matched else None
         for operation in matched:
             self.graph.edges.relate("invokes", step, operation)
@@ -294,7 +332,16 @@ class StoryLinks:
         texts = [body]
         if step.get_fact("phase") == "then":
             texts.extend(self._step_body(given) for given in self._givens_of(step))
-        return [example for example in self.examples if any(re.search(rf"\b{re.escape(example.name)}\b", text) for text in texts)]
+        named = [example for example in self.examples if any(re.search(rf"\b{re.escape(example.name)}\b", text) for text in texts)]
+        return self._of_story_file(step, named)
+
+    def _of_story_file(self, step: "Node", examples: list["Node"]) -> list["Node"]:
+        """examples, keeping of those that share a name only the one recorded for step's own story file: each story file
+        records the examples it uses, so two files that each use a LISTED hold two nodes of that name, and a step means
+        its own file's. A name no example of its file has keeps every example of that name."""
+        own_id = lambda example: f"stories:Example:{step.source.file}:{example.name}"
+        own_names = {example.name for example in examples if example.node_id == own_id(example)}
+        return [example for example in examples if example.name not in own_names or example.node_id == own_id(example)]
 
     def _givens_of(self, step: "Node") -> list["Node"]:
         """The Given steps of the scenario step sits in, with the steps chained onto them."""

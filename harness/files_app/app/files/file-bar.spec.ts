@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import type { CddApi } from '@cdd/cdd-shared'
 import type { FileEntryData } from '@cdd/space/session/session'
 
-import { treeOf, type FileFolder } from './file-bar'
+import { publishedOf, treeOf, type FileFolder } from './file-bar'
 import { FilesLink } from './files-link'
 import { FilesPage } from './files-page'
 import { FILE_BAR_WIDTH } from './files-state'
@@ -212,6 +212,85 @@ describe('folder tree of the files', () => {
     page.fileBar.toggleFolder('src/checkout')
     page.fileBar.show('folders')
     expect(page.state.fileBar.closedFolders).toEqual([])
+  })
+})
+
+// Filter Files By Format In Files App and Open Whiteboard In Files App, requested 2026-11-16, as
+// story_tests/review-generated-work-in-file-viewer/filter-files-in-files-app/filter_files_in_files_app_story.test.md and
+// .../open-files-in-files-app/open_files_in_files_app_story.test.md write them: the session answers each file's link; only
+// the page decides where it sits in the tree and what pressing it opens.
+const linked = (path: string, link: string): FileEntryData => ({ ...entry(path), link })
+
+describe('a design canvas in the file bar', () => {
+  const CANVAS = 'work/design-canvas/version-2/project/canvas.json'
+
+  describe('with version-2 published at its link', () => {
+    const canvas = linked(CANVAS, 'https://claude.ai/artifact/checkout-canvas')
+
+    it('should sit in its design-canvas folder, beside versions.json', () => {
+      const tree = treeOf([canvas, entry('work/design-canvas/versions.json')])
+      expect(named(tree.folders[0])).toEqual([CANVAS, 'work/design-canvas/versions.json'])
+    })
+
+    it('should be named by its version', () => {
+      expect(publishedOf(canvas)?.name).toBe('version-2')
+    })
+
+    it('should open the design canvas at its link', () => {
+      expect(publishedOf(canvas)?.link).toBe('https://claude.ai/artifact/checkout-canvas')
+    })
+  })
+
+  describe('with version-2 not published yet', () => {
+    it('should still be a design canvas, opening nothing rather than its canvas.json', () => {
+      expect([publishedOf(entry(CANVAS))?.kind, publishedOf(entry(CANVAS))?.link]).toEqual(['design canvas', ''])
+    })
+  })
+
+  it('should leave any other file to open as a file', () => {
+    expect(publishedOf(entry('work/design-canvas/versions.json'))).toBeNull()
+  })
+})
+
+describe('a whiteboard file in the file bar', () => {
+  const WHITEBOARD = '.context/story-map.whiteboard'
+
+  describe('with its board in Claude', () => {
+    const whiteboard = linked(WHITEBOARD, 'https://claude.ai/artifact/story-board')
+
+    it('should be named story-map, marked as a whiteboard', () => {
+      expect([publishedOf(whiteboard)?.name, publishedOf(whiteboard)?.kind]).toEqual(['story-map', 'whiteboard'])
+    })
+
+    it('should open its board', () => {
+      expect(publishedOf(whiteboard)?.link).toBe('https://claude.ai/artifact/story-board')
+    })
+
+    it('should sit in the folder the file is in', () => {
+      expect(treeOf([whiteboard]).folders.map(folder => folder.path)).toEqual(['.context'])
+    })
+  })
+
+  describe('with no board yet', () => {
+    it('should open nothing rather than the file', () => {
+      expect([publishedOf(entry(WHITEBOARD))?.kind, publishedOf(entry(WHITEBOARD))?.link]).toEqual(['whiteboard', ''])
+    })
+  })
+})
+
+describe('a page whose first file is a whiteboard', () => {
+  it('should open the first file that is not published in Claude, not the whiteboard', async () => {
+    const server: CddApi = {
+      async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
+        if (path.endsWith('/show')) return { practices: {} } as Result
+        if (path.endsWith('/fidelity-files')) return byFidelity(body, { whiteboard: [entry('.context/story-map.whiteboard', true)], markdown: [entry(STORY_MAP, true)] }) as Result
+        return null
+      },
+    }
+    const page = new FilesPage(server, new FilesLink('?files=checkout-flow&fidelity=stories-story-map'))
+    page.start()()
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(page.state.openPath).toBe(STORY_MAP)
   })
 })
 

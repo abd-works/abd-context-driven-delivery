@@ -40,6 +40,11 @@ export class TicketChatPrompts {
     return this.ticket.chat.fill(this.inSession(`Write a handoff for ticket ${this.ticket.name} with /space-session-handoff-session`))
   }
 
+  // The chat proposes roots for the pieces the ticket works on, in every practice, and sets them once the person confirms.
+  fillSetUpRoots(): Promise<void> {
+    return this.ticket.chat.fill(this.inSession(`Set up the roots of ticket ${this.ticket.name}'s session with session.set_up_roots`))
+  }
+
   // A report whose saved graph is out of date has lost its graph's rules, so its fidelity is validated again to find them.
   validateAgain(progress: FidelityProgressClient): Promise<void> {
     return this.ticket.chat.command(progress.commands.validate ?? '')

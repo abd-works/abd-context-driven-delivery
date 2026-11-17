@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from harness.graph.practice_rule import PracticeGraphRule
 from harness.markdown.format import Format
 
+from cdd_guidance.practices.stories.model.graph_reading import CALLS_REACH_NONE, CALLS_REACH_TEST
 from cdd_guidance.practices.stories.model.story_recording import example_source_file
 
 if TYPE_CHECKING:
@@ -69,4 +70,24 @@ class ExamplesExportDataNotRepository(PracticeGraphRule):
         relative = node.source.file or ""
         if "repository" in relative.lower() and "examples" in relative.lower():
             return [f"Example file '{relative}' looks like a repository; export data fixtures instead."]
+        return []
+
+
+class CodeStepsInvokeCode(PracticeGraphRule):
+    """A When read from a story test in code invokes code it tests. A When in markdown names no code until a realization
+    links it, so only a step backed by code is asked. The read records what the step's calls reach (its calls_reach
+    fact, cdd_guidance/practices/stories/model/graph_reading.py): a When that calls nothing, or only the story test's
+    own helpers and seeds, fails; one whose calls name code the graph has not read is left unjudged."""
+
+    slug = "code-steps-invoke-code"
+    node_types = ("When",)
+
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+        if not Format.from_extension(PurePosixPath(node.source.file or "").suffix).is_code:
+            return []
+        reach = node.get_fact("calls_reach")
+        if reach == CALLS_REACH_NONE:
+            return [f"When {node.name!r} calls nothing: call the domain operation it tests in the step."]
+        if reach == CALLS_REACH_TEST:
+            return [f"When {node.name!r} calls only the story test's own helpers or seeds: call the domain operation it tests in the step."]
         return []

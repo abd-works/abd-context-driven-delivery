@@ -21,10 +21,10 @@ class PythonStoryWriting(StoryWriting):
     scenarios back to back, and the story's description and background as comments."""
 
     file_name_template = "{snake}_story.test.py"
-    scenario_indent = "        "
+    scenario_indent = "    "
     scenario_gap: List[str] = []
     quote_mark = '"'
-    no_scenarios = ["        pass"]
+    no_scenarios = ["    pass"]
     empty_block = ["pass"]
     placeholder = "pass"
     scenario_opening = "{indent}with scenario({name}):"
@@ -38,7 +38,7 @@ class PythonStoryWriting(StoryWriting):
         names = example_names_of(list(epic.stories))
         example_import = [f"from examples import {', '.join(names)}", ""] if names else []
         heading = [self.language.comment(f"Epic: {epic.name}"), self.language.comment(f"Orders: {epic.order_path()}"), ""]
-        return ["from __future__ import annotations", "", "from story_test import and_, background, given, scenario, story, then, when", *example_import, "", *heading]
+        return ["from __future__ import annotations", "", "from story_test import and_, background, but_, given, scenario, story, then, when", *example_import, "", *heading]
 
     def story_open(self, story: "Story") -> List[str]:
         lines = [self.language.comment(f"Story: {story.name}"), *story_description(story, "# ")]

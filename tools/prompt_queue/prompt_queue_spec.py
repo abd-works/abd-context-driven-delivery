@@ -1,0 +1,49 @@
+from mamba import describe, it, before
+from expects import expect, equal, raise_error
+
+from tools.prompt_queue.prompt_queue import PromptNotQueued, PromptQueue, handoff_steps
+
+HANDOFF = """# Handoff
+
+## Approach for Next Agent
+
+1. Read this handoff
+2) Run the unit tier
+   in the background
+3. Fix what it finds
+
+## Outstanding
+
+1. Not a step
+"""
+
+
+with describe(PromptQueue):
+    with before.each:
+        import tempfile
+        from pathlib import Path
+
+        self.folder = Path(tempfile.mkdtemp())
+        self.queue = PromptQueue("chat-1", self.folder / "prompt-queue.json")
+        self.queue.add_all(["Write the scenarios", "  ", "Run the unit tier"])
+
+    with it("queues each text in order, leaving out texts that are only spaces"):
+        expect([prompt["text"] for prompt in self.queue.prompts]).to(equal(["Write the scenarios", "Run the unit tier"]))
+
+    with it("keeps a prompt on the queue until the agent marks it done"):
+        first = self.queue.prompts[0]
+        self.queue.done(first["id"])
+        expect([prompt["text"] for prompt in self.queue.prompts]).to(equal(["Run the unit tier"]))
+
+    with it("refuses to mark done a prompt the queue does not hold"):
+        expect(lambda: self.queue.done("gone")).to(raise_error(PromptNotQueued))
+
+    with it("queues a handoff's steps once, however often the chat switches to its session"):
+        handoff = self.folder / "handoff-1.md"
+        handoff.write_text(HANDOFF, encoding="utf-8")
+        expect([self.queue.queue_handoff(handoff), self.queue.queue_handoff(handoff)]).to(equal([3, 0]))
+
+
+with describe(handoff_steps):
+    with it("reads the numbered steps of Approach for Next Agent, each with the lines that continue it"):
+        expect(handoff_steps(HANDOFF)).to(equal(["Read this handoff", "Run the unit tier in the background", "Fix what it finds"]))

@@ -259,6 +259,16 @@ describe('Write Ticket Handoff', () => {
   })
 })
 
+// Requested 2026-11-17: the roots dialog offers to have the chat set up the session's roots, as activation asks it to.
+describe('Set Up Session Roots With The Chat', () => {
+  it("should fill the prompt asking the ticket's chat to set up its session's roots", async () => {
+    const { page } = await board.page()
+    const chat = await board.connectChat(page)
+    await ticketOn(page, ACTIVE).prompts.fillSetUpRoots()
+    expect(await chat.checkIn()).toEqual([{ kind: 'fill', text: "Set up the roots of ticket checkout-flow's session with session.set_up_roots session=.sessions/checkout-flow/session.json" }])
+  })
+})
+
 describe('Close Active Session', () => {
   async function closed() {
     const { page } = await board.page()

@@ -299,12 +299,14 @@ class SessionFile:
 
     def _nodes(self) -> list:
         """This file's nodes as its own read found them, else as the session's last validate saved them."""
-        return self._in_this_file(self._alone) or self._in_this_file(self._last_validate)
+        return self._in_this_file(self._alone, self._alone_folder) or self._in_this_file(self._last_validate)
 
     def _own_violations(self) -> list[Violation]:
         """What reading the file on its own finds broken, and what the session's last validate saved, which can hold a
         rule a validating agent judged."""
-        return [violation for violation in [*self._alone.violations(), *(self._last_validate.violations() if self._last_validate else [])] if self._is_this_file(violation.location)]
+        alone = [violation for violation in self._alone.violations() if self._is_this_file(violation.location, self._alone_folder)]
+        validated = [violation for violation in (self._last_validate.violations() if self._last_validate else []) if self._is_this_file(violation.location)]
+        return [*alone, *validated]
 
     def _cross_file_violations(self) -> list[Violation]:
         """What the whole working copy finds broken in this file that reading it alone does not."""
@@ -324,8 +326,13 @@ class SessionFile:
     def _key(self, violation: Violation) -> tuple:
         return (violation.rule, violation.line, violation.end_line, violation.message)
 
-    def _in_this_file(self, graph: SavedGraph | None) -> list:
-        return [node for practice in graph.practices.values() for node in practice.nodes if self._is_this_file(node.file)] if graph else []
+    def _in_this_file(self, graph: SavedGraph | None, folder: Path | None = None) -> list:
+        return [node for practice in graph.practices.values() for node in practice.nodes if self._is_this_file(node.file, folder)] if graph else []
+
+    @property
+    def _alone_folder(self) -> Path:
+        """The folder the file read on its own names its nodes' files from: the project's root."""
+        return self._session.file_graphs.alone_folder
 
     @cached_property
     def _alone(self) -> SavedGraph:
@@ -348,10 +355,11 @@ class SessionFile:
         except SavedGraphOutdated:
             return None
 
-    def _is_this_file(self, named: str) -> bool:
-        """Whether named, as the graph names a file (from the session's root, or absolute), is this file."""
+    def _is_this_file(self, named: str, folder: Path | None = None) -> bool:
+        """Whether named, as a graph names a file (from folder, the session's root by default, or absolute), is this
+        file."""
         if not named:
             return False
         path = Path(named)
-        located = path if path.is_absolute() else Path(self._session.work_root) / path
+        located = path if path.is_absolute() else Path(folder or self._session.work_root) / path
         return located.resolve() == self._session.paths.path_named(self._path)

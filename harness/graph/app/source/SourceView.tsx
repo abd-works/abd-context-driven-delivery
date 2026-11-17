@@ -2,7 +2,7 @@ import Editor, { type Monaco, type OnMount } from '@monaco-editor/react';
 import type { editor as monaco } from 'monaco-editor';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CallCatalog, type FoldMember } from './call-expansion';
-import { useCallouts, type CalloutsWithin, type SourceCallout } from './source-callouts';
+import { useCallouts, type CalloutsWithin, type GoToFile, type SourceCallout } from './source-callouts';
 import { foldMarkdownHeadings, useOpenAround, type SourceLines } from './source-folding';
 import type { NodeSourceData } from '@cdd/harness/graph/graph';
 import { buildViolationCorrectPrompt } from './violation-prompt';
@@ -31,13 +31,16 @@ export type SourceEditorInstance = Parameters<OnMount>[0];
 // whether long lines wrap, or scroll sideways (shift+wheel or a sideways swipe, since the page, not the editor, scrolls
 // up and down); and the editor and its Monaco once made, so the page can add its own gutter marks (each with the class
 // SOURCE_MARK) and menu actions, such as the Files app's comments, and bind its shortcuts. The file folds as Monaco folds
-// its language, by its classes, functions and blocks, and markdown by its headings.
+// its language, by its classes, functions and blocks, and markdown by its headings. The callouts on the lines expandLines
+// names open as the page asks, such as a node selected in the graph through a connector.
 export type SourceHostProps = {
   openAround?: SourceLines[];
   language?: string;
   keepGlyphMargin?: boolean;
   wordWrap?: boolean;
   callouts?: SourceCallout[];
+  expandLines?: number[];
+  onGoToFile?: GoToFile;
   opensCalls?: boolean;
   onEditor?: (editor: SourceEditorInstance, monacoApi: Monaco) => void;
 };
@@ -46,6 +49,7 @@ export const SOURCE_MARK = 'source-mark';
 
 const NO_LINES: SourceLines[] = [];
 const NO_CALLOUTS: SourceCallout[] = [];
+const NO_LINE_NUMBERS: number[] = [];
 const NO_MEMBERS: NodeSourceData[] = [];
 // A text in no language Monaco reads as code holds no calls.
 const PROSE_LANGUAGES = new Set(['markdown', 'plaintext']);
@@ -80,7 +84,7 @@ type SourceEditorProps = SourceHostProps & {
   onSelectRule?: (name: string) => void;
 };
 
-function SourceEditor({ source, violation, rules, activeRule, onSelectRule, openAround = NO_LINES, language = '', keepGlyphMargin = false, wordWrap = false, callouts = NO_CALLOUTS, opensCalls = true, onEditor }: SourceEditorProps) {
+function SourceEditor({ source, violation, rules, activeRule, onSelectRule, openAround = NO_LINES, language = '', keepGlyphMargin = false, wordWrap = false, callouts = NO_CALLOUTS, expandLines = NO_LINE_NUMBERS, onGoToFile, opensCalls = true, onEditor }: SourceEditorProps) {
   const file = source.file ?? '';
   const text = source.text ?? '';
   const origin = source.start_line || 1;
@@ -89,7 +93,7 @@ function SourceEditor({ source, violation, rules, activeRule, onSelectRule, open
   const [contentHeight, setContentHeight] = useState(0);
   const { shown, within } = useSourceCallouts(source, shownLanguage, callouts, opensCalls);
   const editorLineOf = useCallback((fileLine: number) => fileLine - origin + 1, [origin]);
-  useCallouts(editor, shown, within, editorLineOf);
+  useCallouts(editor, shown, within, editorLineOf, expandLines, onGoToFile);
   useOpenAround(editor, openAround, text);
   useLineMarks(editor, origin, text, violation, openAround);
   const onMount: OnMount = (made, monacoApi) => {
@@ -141,10 +145,10 @@ function useSourceCallouts(source: NodeSourceData, language: string, callouts: S
   const catalog = useMemo(() => new CallCatalog(members, owner), [members, owner]);
   const isCode = !PROSE_LANGUAGES.has(language);
   const shown = useMemo(() => {
-    const own = opensCalls && isCode ? catalog.calloutsIn(source.text ?? '', source.start_line || 1, language, [source.node_id]) : [];
+    const own = opensCalls && isCode ? catalog.calloutsIn(source.text ?? '', source.start_line || 1, language, [source.node_id], source.file) : [];
     return [...callouts, ...own];
   }, [catalog, callouts, opensCalls, isCode, source, language]);
-  const within = useCallback<CalloutsWithin>((callout, stack) => (callout.kind === 'section' ? [] : catalog.calloutsIn(callout.text, callout.startLine, languageFor(callout.path), stack)), [catalog]);
+  const within = useCallback<CalloutsWithin>((callout, stack) => (callout.kind === 'section' ? [] : catalog.calloutsIn(callout.text, callout.startLine, languageFor(callout.path), stack, callout.path)), [catalog]);
   return { shown, within };
 }
 

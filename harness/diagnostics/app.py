@@ -34,6 +34,8 @@ REASON_LINES = 3
 TYPESCRIPT_LOADER = ("--import", "tsx")
 # What an app server's script reads, before its env variable and its ports file, as the port it listens on.
 PORT_ARGUMENT = "--port"
+# The cdd home a dev-lane app server talks to (harness/graph/app/serve-port.ts reads both).
+CDD_HOME_ARGUMENT = "--cdd-home"
 # How long a restarted server has to answer on one of its ports, and how often it is asked.
 RESTART_SECONDS = 30
 RESTART_CHECK_SECONDS = 0.25
@@ -160,10 +162,11 @@ class AppServer:
     @data_field
     def command(self) -> list[str]:
         """What starts it, run in its folder: node on its script, through tsx for a TypeScript one, naming the first of
-        its ports when they are not its ports file's, so it listens on its lane's port."""
+        its ports and its lane's home when they are not its ports file's, so it listens on its lane's port and talks to
+        its lane's server whatever environment starts it."""
         if self.ports == self._file_ports:
             return self._script.command
-        return [*self._script.command, PORT_ARGUMENT, str(self.ports[0])]
+        return [*self._script.command, PORT_ARGUMENT, str(self.ports[0]), CDD_HOME_ARGUMENT, self._lane.home.folder.as_posix()]
 
     @property
     def port(self) -> int | None:
@@ -311,8 +314,10 @@ class Apps:
         return list(self._apps)
 
     def named(self, label: str) -> App:
-        """The registered app whose label is label; one no module registered is refused."""
-        found = next((app for app in self._apps if app.label == label), None)
+        """The registered app whose label is label, whatever its case and the spaces around it; one no module
+        registered is refused."""
+        wanted = label.strip().casefold()
+        found = next((app for app in self._apps if app.label.casefold() == wanted), None)
         if found is None:
             raise AppNotRegistered(label)
         return found

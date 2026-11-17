@@ -35,7 +35,7 @@ class _ScriptedClaude(ClaudePlugins):
         return self.board_watched
 
     def published_version(self, plugin: str) -> str:
-        return {"cdd-board": "0.6.3-abc", "cdd": "1.0.0-abc"}.get(plugin, "")
+        return {"cdd-board": "0.6.3-abc", "cdd": "1.0.0-abc", "prompt-queue": "0.1.0-abc"}.get(plugin, "")
 
     @property
     def claude_cli(self) -> str | None:
@@ -1457,6 +1457,20 @@ with description("toolsets installed for Claude Code") as self:
         with it("should say the plugin is missing when there is no claude command"):
             self.plugins.cli = None
             expect(self.plugins.install_board()).to(equal("missing"))
+
+    with context("installing the prompt queue plugin"):
+        with before.each:
+            self.plugins = _ScriptedClaude(listed="prompt-queue@cdd-home")
+
+        with it("should install the prompt queue mod the cdd home publishes, at user scope"):
+            expect(self.plugins.install_queue()).to(equal("installed"))
+            expect(("plugin", "install", "prompt-queue@cdd-home", "--scope", "user") in self.plugins.calls).to(equal(True))
+
+        with context("with the prompt queue mod the cdd home publishes already installed"):
+            with it("should run no claude command"):
+                self.plugins.plugins_installed = {"prompt-queue@cdd-home": "0.1.0-abc"}
+                self.plugins.install_queue()
+                expect(self.plugins.calls).to(equal([]))
 
     with context("installing the cdd plugin"):
         with before.each:

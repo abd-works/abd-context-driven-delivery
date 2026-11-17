@@ -25,8 +25,19 @@ section: body
 
 *Given* billing-report's story map is generated in markdown and its bounded context is not
 *When* the Person opens the Discovery stage head on story_map and bounded_context
-*Then* the bar shows a diagram chip, a markdown chip and a thin_slice chip
+*Then* the bar shows a diagram chip and a markdown chip
 *And* the markdown chip reads 1 of 2 with the hint markdown: 1 of 2 done, selected
+
+#### Scenario: Offer no chip for a fidelity output that is not a format
+
+> Requested 2026-11-16 ("make sure thin_slice and realization are NOT format options"), not walked. The story map's thin slice and the scenarios' realization are files their fidelity writes, not formats a person picks.
+
+*Given* billing-report's story_map writes a thin slice beside its markdown, drawio and whiteboard
+*And* its scenarios write a realization beside their markdown, python and typescript
+*When* the Person opens the story_map and scenarios bars, the chat bar's format chips or the Files app's header
+*Then* each shows only the diagram, markdown and code chips its fidelities offer
+*But* no thin_slice or realization chip, and choosing thin_slice or realization as a format is refused
+*And* the thin slice and realization files still belong to story_map and scenarios
 
 #### Scenario: Keep Run off with no format picked
 
