@@ -107,3 +107,30 @@ export const ALT_KEY: KeyCap = {
 }
 
 export const ENTER_KEY: KeyCap = { glyph: '↵', width: KEY_CAP_UNITS, strokes: 'M19 9v4a2 2 0 0 1-2 2H9M12 12l-3 3 3 3' }
+
+
+/** Claude-orange shades, one for each sub-agent's robot in turn. */
+const ROBOT_ORANGES = ['#D97757', '#E5531A', '#F0883E', '#C2410C', '#FB923C', '#EA580C']
+/** Robot eyes, one look for each sub-agent in turn: round, square, a visor, winking. */
+const ROBOT_EYES = [
+  '<circle cx="6" cy="8" r="1" fill="#1F1F1F"/><circle cx="10" cy="8" r="1" fill="#1F1F1F"/>',
+  '<rect x="5" y="7" width="2" height="2" fill="#1F1F1F"/><rect x="9" y="7" width="2" height="2" fill="#1F1F1F"/>',
+  '<rect x="4.5" y="7.2" width="7" height="1.6" rx="0.8" fill="#1F1F1F"/>',
+  '<circle cx="6" cy="8" r="1" fill="#1F1F1F"/><path d="M9 8h2" stroke="#1F1F1F" stroke-width="1"/>',
+]
+/** Robot antennas, one for each sub-agent in turn: a ball, two prongs, a bolt. */
+const ROBOT_ANTENNAS = [
+  '<path d="M8 4V2" stroke="ORANGE"/><circle cx="8" cy="1.6" r="1" fill="ORANGE"/>',
+  '<path d="M6 4L5 1.5M10 4l1-2.5" stroke="ORANGE"/>',
+  '<path d="M8.5 1L7 3h2l-1.5 2" stroke="ORANGE"/>',
+]
+
+/** The robot on top of a sub-agent's column: Claude orange, with its own shade, eyes and antenna for its place. */
+export function robotSvgOf(place: number): string {
+  const orange = ROBOT_ORANGES[place % ROBOT_ORANGES.length]!
+  const eyes = ROBOT_EYES[place % ROBOT_EYES.length]!
+  const antenna = ROBOT_ANTENNAS[place % ROBOT_ANTENNAS.length]!.replaceAll('ORANGE', orange)
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" stroke-width="1.2" stroke-linecap="round">'
+    + `${antenna}<rect x="3" y="4" width="10" height="8" rx="2" fill="${orange}"/>${eyes}`
+    + `<path d="M6.5 10.5h3" stroke="#1F1F1F" stroke-width="0.9"/><rect x="5" y="12.5" width="6" height="2.5" rx="0.8" fill="${orange}"/></svg>`
+}

@@ -541,15 +541,33 @@ export async function groupIntoTasks($: EngineInterface): Promise<void> {
   await update($, notice, () => '')
 }
 
+/** Fun names a sub-agent goes by, one for each place in turn, until the person names it. */
+const AGENT_NAMES = ['Sparky', 'Bolt', 'Gizmo', 'Rivet', 'Pixel', 'Widget', 'Cog', 'Zap']
+
+/** The name a sub-agent goes by: what the person called it, else the fun name for its place. */
+export function agentNameOf(task: SubAgentTask, place: number): string {
+  return task.name ?? AGENT_NAMES[place % AGENT_NAMES.length]!
+}
+
+/** ✎ on a sub-agent's column: the prompt box's draft becomes its name, and the box empties. */
+export async function renameAgent($: EngineInterface, place: number): Promise<void> {
+  const { text } = await $.prompt.read()
+  if (text.trim() === '') {
+    return
+  }
+  await update($, tasks, grouped => grouped.map((task, index) => (index === place ? { ...task, name: text.trim() } : task)))
+  await $.prompt.fill({ text: '', mode: 'replace' })
+}
+
 export async function sendTasksToSubAgents($: EngineInterface): Promise<void> {
   if ((await read($, tasks)).length === 0) {
     await groupIntoTasks($)
   }
   const grouped = await read($, tasks)
-  for (const task of grouped) {
+  for (const [place, task] of grouped.entries()) {
     const started = await $.agent.spawn({
       prompt: task.prompts.join('\n\n'),
-      description: task.description,
+      description: `${agentNameOf(task, place)}: ${task.description}`,
       subagentType: 'general-purpose',
     })
     if (started.deny) {

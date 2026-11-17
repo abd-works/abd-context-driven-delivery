@@ -809,3 +809,74 @@ test("the agent's next task list keeps the person's interruption among the promp
 
   expect(seeded.prompts[0]!.steps!.map(step => step.text)).toContain('[interruption] cut the text with an ellipsis')
 })
+
+
+const GROUPED = [
+  { description: 'Write the story map', prompts: ['Write the scenarios', 'Validate them'] },
+  { description: 'Run the tests', prompts: ['Run the unit tier'] },
+]
+
+/** A queue in sub-agent mode whose prompts are grouped into GROUPED tasks, open. */
+function groupedQueue(on: TestOn, tasks: object[] = GROUPED) {
+  const seeded = seedQueue(on, true)
+  seeded.stored.isSubAgentMode = { value: true, version: 1 }
+  seeded.stored.tasks = { value: tasks, version: 1 }
+  return seeded
+}
+
+test('sub-agent mode draws one column for each sub-agent, named, with a robot on top', async ($, on) => {
+  groupedQueue(on)
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  const first = JSON.stringify(await ui.find({ type: 'Box', key: 'agent-column-1' }))
+  const second = JSON.stringify(await ui.find({ type: 'Box', key: 'agent-column-2' }))
+
+  expect(first).toContain('Sparky')
+  expect(first).toContain('<svg')
+  expect(first).toContain('Write the scenarios')
+  expect(second).toContain('Bolt')
+  expect(second).toContain('Run the unit tier')
+  await ui.unmount()
+})
+
+test("each sub-agent's robot differs from the others", async ($, on) => {
+  groupedQueue(on)
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  const robotOf = async (column: number) => {
+    const drawn = JSON.stringify(await ui.find({ type: 'Box', key: `agent-column-${column}` }))
+    return drawn.slice(drawn.indexOf('<svg'), drawn.indexOf('</svg>'))
+  }
+
+  expect(await robotOf(1)).toContain('<svg')
+  expect(await robotOf(1)).not.toEqual(await robotOf(2))
+  await ui.unmount()
+})
+
+test("✎ on a sub-agent's column names it from the prompt box's draft", async ($, on) => {
+  const seeded = groupedQueue(on)
+  on('prompt.read', () => ({ value: { text: 'Captain Tests', cursor: 13 } }))
+  on('prompt.fill', () => ({ isFilled: true }))
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'rename-agent-2' })
+  await ui.unmount()
+
+  expect((seeded.stored.tasks?.value as { name?: string }[]).map(task => task.name)).toEqual([undefined, 'Captain Tests'])
+})
+
+test("a sub-agent starts with its column's name", async ($, on) => {
+  const seeded = groupedQueue(on, [{ ...GROUPED[0], name: 'Captain Tests' }])
+  seeded.stored.isPlaying = { value: true, version: 1 }
+  const spawned: string[] = []
+  on('agent.spawn', (_, e) => {
+    spawned.push((e as { description: string }).description)
+    return { model: 'claude-sonnet-5-5' }
+  })
+  on('turn.complete', () => ({ text: 'Done.' }))
+
+  await $.turn.complete(FINISHED_TURN)
+  await unawaitedWorkSettled()
+
+  expect(spawned).toEqual(['Captain Tests: Write the story map'])
+})

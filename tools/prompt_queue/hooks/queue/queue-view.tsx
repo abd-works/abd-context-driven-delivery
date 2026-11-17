@@ -11,12 +11,14 @@ import {
   toggleExpanded,
   toggleSubAgentMode,
   toggleSteps,
+  agentNameOf,
+  renameAgent,
   addStep,
   moveStep,
   removeStep,
   type QueueState,
 } from './prompt-queue'
-import type { PromptStep, QueuedPrompt } from '../../types'
+import type { PromptStep, QueuedPrompt, SubAgentTask } from '../../types'
 import { progressOf } from './plan-steps'
 import {
   ADD_SVG,
@@ -34,6 +36,7 @@ import {
   SUB_AGENTS_SVG,
   type Icon,
   type KeyCap,
+  robotSvgOf,
 } from './icon-button-view'
 
 type AbovePromptEvent = RenderInput<'AbovePrompt'>
@@ -65,9 +68,7 @@ export function QueueView($: EngineInterface, e: AbovePromptEvent, state: QueueS
     <Box key="prompt-queue" flexDirection="column" rowGap="sm" alignSelf="flex-start"
       paddingX={1} width={state.isExpanded ? '100%' : undefined}>
       {state.isExpanded && QueueListView($, e, state)}
-      {state.isExpanded && state.isSubAgentMode && state.tasks.map(task => (
-        <Text dimColor wrap="truncate-end">{`  ↳ ${task.description}: ${task.prompts.length} prompt(s)`}</Text>
-      ))}
+      {state.isExpanded && state.isSubAgentMode && state.tasks.length > 0 && AgentColumnsView($, e, state.tasks)}
       {state.notice !== '' && <Text color="warning">{state.notice}</Text>}
       <Box flexDirection="row" gap={1}>
         {IconButtonView(elements, stackIcon(state), () => toggleExpanded($))}
@@ -172,6 +173,44 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
     </Box>
   )
 }
+
+/** Sub-agent mode: one column for each sub-agent side by side, each its own queue of the prompts it will run. */
+function AgentColumnsView($: EngineInterface, e: AbovePromptEvent, grouped: SubAgentTask[]) {
+  const { Box } = $.ui.resolve(e)
+
+  return (
+    <Box key="agent-columns" flexDirection="row" gap={1} width="100%">
+      {grouped.map((task, place) => AgentColumnView($, e, task, place))}
+    </Box>
+  )
+}
+
+/** One sub-agent's column: its robot on top with its name and ✎ to rename it, what it does, and its prompts in order. */
+function AgentColumnView($: EngineInterface, e: AbovePromptEvent, task: SubAgentTask, place: number) {
+  const elements = $.ui.resolve(e)
+  const { Box, Button, Text } = elements
+  const number = place + 1
+  const name = agentNameOf(task, place)
+  const robot = 'Svg' in elements
+    ? <elements.Svg key={`robot-${number}`} source={robotSvgOf(place)} alt={`${name}, a robot`} width={ROBOT_PIXELS} height={ROBOT_PIXELS} />
+    : <Text key={`robot-${number}`} color={LOOK.accent}>🤖</Text>
+
+  return (
+    <Box key={`agent-column-${number}`} flexDirection="column" flexGrow={1} minWidth={0}
+      borderStyle="round" borderColor={LOOK.card} paddingX={1}>
+      <Box flexDirection="row" alignItems="center" gap={1}>
+        {robot}
+        <Text bold color={LOOK.accent}>{name}</Text>
+        <Button key={`rename-agent-${number}`} label="✎" onPress={() => renameAgent($, place)} />
+      </Box>
+      <Text dimColor wrap="wrap">{task.description}</Text>
+      {task.prompts.map((prompt, index) => <Text key={`agent-${number}-prompt-${index + 1}`} wrap="wrap">{`${index + 1}. ${prompt}`}</Text>)}
+    </Box>
+  )
+}
+
+/** About two lines tall, in the desktop's pixels: a robot stands out over its column. */
+const ROBOT_PIXELS = 28
 
 /** A card's steps under it, in order: done ones ticked and dim, the one being worked marked and bright. */
 function StepsView($: EngineInterface, e: AbovePromptEvent, prompt: QueuedPrompt) {

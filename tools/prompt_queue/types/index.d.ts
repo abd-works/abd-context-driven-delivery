@@ -17,7 +17,8 @@ export type QueueJson = { chat: string; prompts: QueuedPrompt[] }
 export type QueueFailure = { id: number; failure: string; context: string }
 
 /** One task a sub-agent runs: the queued prompts the model grouped together. */
-export type SubAgentTask = { description: string; prompts: string[] }
+/** name: what the person called the sub-agent; until then it goes by a fun name for its place. */
+export type SubAgentTask = { description: string; prompts: string[]; name?: string }
 
 declare module 'claude-code' {
   interface PluginState {
