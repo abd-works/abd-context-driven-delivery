@@ -3,5 +3,11 @@
   "title": "simple-queue-enhancements",
   "scope": "feature",
   "branch": "simple-queue-enhancements",
-  "worktree": "C:\\dev\\abd-cdd-simple-queue-enhancement"
+  "worktree": "C:\\dev\\abd-cdd-simple-queue-enhancement",
+  "guidance": {
+    "stages": [
+      "discovery"
+    ],
+    "version": 1
+  }
 }
