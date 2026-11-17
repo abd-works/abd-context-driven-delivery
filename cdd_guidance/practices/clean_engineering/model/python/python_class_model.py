@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import ast
 import io
+import re
 import tokenize
 from pathlib import Path
 from typing import Iterator, List, Optional
@@ -47,9 +48,16 @@ Function = ast.FunctionDef | ast.AsyncFunctionDef
 
 
 def python_type(hint: str) -> str:
-    """A type written the way Python writes generics: `Collection<Root>` from another language is `Collection[Root]`,
-    so the file reads back as Python."""
-    return (hint or "").replace("<", "[").replace(">", "]")
+    """A type written the way Python writes generics and arrays: `Collection<Root>` from another language is
+    `Collection[Root]`, and `Root[]` is `list[Root]`, so the file reads back as Python."""
+    generic = (hint or "").replace("<", "[").replace(">", "]")
+    while _ARRAY.search(generic):
+        generic = _ARRAY.sub(r"list[\1]", generic)
+    return generic
+
+
+# An array as another language writes one, `Root[]` or `list[Root][]`: the type before an empty pair of brackets.
+_ARRAY = re.compile(r"([\w.]+(?:\[[^\[\]]*\])?)\[\]")
 
 
 class PythonProperty(CodeProperty):
