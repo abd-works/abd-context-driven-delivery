@@ -219,7 +219,7 @@ function StepsView($: EngineInterface, e: AbovePromptEvent, prompt: QueuedPrompt
     <Box key={`steps-of-${prompt.id}`} flexDirection="column" paddingLeft={3}>
       {(prompt.steps ?? []).map((step, index) => StepView($, e, prompt, step, index))}
       <Box flexDirection="row">
-        <Button key={`add-step-${prompt.id}`} label="+ Add task (from the prompt box)" onPress={() => addStep($, prompt)} />
+        <Button key={`add-step-${prompt.id}`} label="+" onPress={() => addStep($, prompt)} />
       </Box>
     </Box>
   )
