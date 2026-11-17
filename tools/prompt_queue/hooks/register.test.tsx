@@ -491,7 +491,7 @@ test("a card with steps shows how many are done, and opens them under it", async
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
 
   expect(progress?.props.label).toBe('1/2')
-  expect(await ui.find({ type: 'Button', key: 'steps-b' })).toBeUndefined()
+  expect((await ui.find({ type: 'Button', key: 'steps-b' }))?.props.label).toBe('+task')
   expect((await ui.find({ type: 'Box', key: 'step-row-a-1' }))?.text.startsWith('✓ Read the epic')).toBe(true)
   expect((await ui.find({ type: 'Box', key: 'step-row-a-2' }))?.text.startsWith('▸ Write the stories')).toBe(true)
   await ui.unmount()
@@ -741,6 +741,9 @@ test("+ on a card adds the prompt box's draft as the card's last step, not start
     return { isFilled: true }
   })
 
+  const opening = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await opening.press({ key: 'steps-b' })
+  await opening.unmount()
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
   await ui.press({ key: 'add-step-b' })
   await ui.unmount()
