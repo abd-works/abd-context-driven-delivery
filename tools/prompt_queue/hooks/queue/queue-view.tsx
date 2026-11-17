@@ -172,12 +172,12 @@ function PointerView($: EngineInterface, e: AbovePromptEvent, upKey = '', downKe
 /** The pointer's ▲ and ▼ on a bar of their own over the left end of the card, drawn as the card's buttons are at its
  * right end. */
 function PointerArrowsView($: EngineInterface, e: AbovePromptEvent, upKey: string, downKey: string, onUp: () => void, onDown: () => void = () => {}) {
-  const { Box, Button, Text } = $.ui.resolve(e)
+  const { Box, Button } = $.ui.resolve(e)
 
   return (
     <Box flexDirection="row" flexShrink={0} gap={1} backgroundColor={LOOK.keyCap} paddingX="xs">
-      {upKey !== '' && <Button key={upKey} onPress={onUp}><Text color={LOOK.accent} bold>▲</Text></Button>}
-      {downKey !== '' && <Button key={downKey} onPress={onDown}><Text color={LOOK.accent} bold>▼</Text></Button>}
+      {upKey !== '' && <Button key={upKey} label="▲" onPress={onUp} />}
+      {downKey !== '' && <Button key={downKey} label="▼" onPress={onDown} />}
     </Box>
   )
 }
@@ -203,7 +203,7 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
       {(prompt.attachments ?? []).length > 0 && <Text key={`attached-${prompt.id}`} color={LOOK.muted}>{`📎${prompt.attachments!.length}`}</Text>}
       <Box flexGrow={1} flexShrink={1} minWidth={0} flexDirection="row" alignItems="center"
         borderStyle={isWorking ? 'round' : undefined} borderColor={isWorking ? LOOK.accent : undefined}>
-        {pointer && <Box position="absolute" top={0} left={0}>{pointer}</Box>}
+        {pointer && <Box position="absolute" top={0} bottom={0} left={1} flexDirection="row" alignItems="center">{pointer}</Box>}
         <Button key={`card-text-${prompt.id}`} dimColor={isEditing || isFinished} onPress={() => (isInColumn ? toggleOpenedCard($, prompt.id) : editPrompt($, prompt))}>
           <Text wrap="wrap" color={isEditing ? LOOK.placeholder : isWorking ? LOOK.accent : undefined}
             italic={isEditing} bold={isWorking} underline={isWorking} dimColor={isFinished}>
