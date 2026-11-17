@@ -9,7 +9,7 @@
     "stages": [
       "implementation"
     ],
-    "version": 118
+    "version": 119
   },
   "practices": {
     "stories": {
@@ -51,7 +51,7 @@
           "python"
         ]
       },
-      "enabled": true
+      "enabled": false
     },
     "bdd": {
       "formats": {

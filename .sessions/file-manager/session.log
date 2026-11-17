@@ -388,3 +388,73 @@
 2026-11-17T06:13:11Z tool hosting-demo.increment
 2026-11-17T06:16:06Z tool session.read_handoff_format c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-10020
 2026-11-17T06:16:55Z tool session.write_handoff c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-10060
+2026-11-17T06:17:29Z tool sketch.sketch
+2026-11-17T06:17:29Z tool sketch.sketch
+2026-11-17T06:17:40Z render C:\dev\abd-cdd-file-manager\harness, C:\dev\abd-cdd-file-manager\.context stories scenarios python c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-10138
+2026-11-17T06:19:16Z render C:\dev\abd-cdd-file-manager\harness clean_engineering model python c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-10237
+2026-11-17T06:19:32Z render C:\dev\abd-cdd-file-manager\harness clean_engineering model python c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-10255
+2026-11-17T06:24:50Z render C:\dev\abd-cdd-file-manager\harness clean_engineering model python c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-10574
+2026-11-17T06:24:51Z render C:\dev\abd-cdd-file-manager\harness clean_engineering model python c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-10574
+2026-11-17T06:26:39Z tool call-outcomes.close_month
+2026-11-17T06:26:39Z tool call-outcomes.close_month
+2026-11-17T06:30:11Z error generate.generate C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 4823 c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-10874
+2026-11-17T06:30:17Z error generate.generate C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 4848 c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-10893
+2026-11-17T06:30:21Z tool generate.generate c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-10897
+2026-11-17T06:30:21Z generate C:\dev\abd-cdd-file-manager\harness, C:\dev\abd-cdd-file-manager\.context stories, clean_engineering, bdd acceptance_tests, code, development python, python, python c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-10897
+2026-11-17T06:33:41Z tool prompt-queue.add_all
+2026-11-17T06:33:41Z tool prompt-queue.take_next
+2026-11-17T06:33:41Z tool prompt-queue.clear
+2026-11-17T06:37:57Z tool prompt-queue.add_all c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-11240
+2026-11-17T06:38:01Z tool sessions.switch c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-11248
+2026-11-17T06:52:27Z tool prompt-queue.show
+2026-11-17T06:52:47Z tool prompt-queue.clear
+2026-11-17T06:52:47Z tool prompt-queue.add_all
+2026-11-17T06:55:07Z tool prompt-queue.show
+2026-11-17T06:55:07Z tool prompt-queue.edit
+2026-11-17T06:55:53Z tool prompt-queue.show
+2026-11-17T06:58:45Z tool prompt-queue.done
+2026-11-17T06:59:04Z tool sketch.sketch
+2026-11-17T06:59:05Z tool sketch.sketch
+2026-11-17T06:59:12Z tool prompt-queue.show c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-11913
+2026-11-17T07:00:12Z tool prompt-queue.done c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-11982
+2026-11-17T07:00:25Z tool prompt-queue.show c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-11997
+2026-11-17T07:01:28Z tool prompt-queue.done c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-12057
+2026-11-17T07:02:22Z tool prompt-queue.done c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-12100
+2026-11-17T07:04:35Z tool prompt-queue.done c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-12205
+2026-11-17T07:06:59Z tool prompt-queue.done c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-12315
+2026-11-17T07:08:02Z tool prompt-queue.done c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-12394
+2026-11-17T07:09:19Z tool prompt-queue.edit c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-12520
+2026-11-17T07:11:30Z tool prompt-queue.done c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-12638
+2026-11-17T07:15:22Z tool app.open c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-12739
+2026-11-17T07:15:26Z tool prompt-queue.done c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-12744
+2026-11-17T07:16:30Z error session.file C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 4873 c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-12842
+2026-11-17T07:18:17Z tool prompt-queue.done c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-12917
+2026-11-17T07:18:32Z tool prompt-queue.done c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-12936
+2026-11-17T07:21:15Z tool prompt-queue.done c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-13057
+2026-11-17T07:21:26Z tool sketch.sketch
+2026-11-17T07:21:27Z tool sketch.sketch
+2026-11-17T07:21:32Z tool prompt-queue.show c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-13078
+2026-11-17T07:21:39Z tool prompt-queue.show c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-13093
+2026-11-17T07:28:24Z tool session.read_handoff_format c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-13118
+2026-11-17T07:28:51Z tool session.write_handoff c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-13127
+2026-11-17T07:28:59Z tool prompt-queue.done c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-13147
+2026-11-17T07:29:05Z tool prompt-queue.show c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-13160
+2026-11-17T08:09:42Z tool app.open c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-13369
+2026-11-17T08:10:45Z tool prompt-queue.done c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-13434
+2026-11-17T08:10:55Z tool prompt-queue.show c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-13448
+2026-11-17T08:11:30Z tool prompt-queue.show c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-13460
+2026-11-17T08:13:29Z tool prompt-queue.done c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-13477
+2026-11-17T08:13:29Z tool prompt-queue.remove c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-13478
+2026-11-17T08:14:45Z tool prompt-queue.edit c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-13574
+2026-11-17T08:14:54Z tool prompt-queue.show c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-13587
+2026-11-17T08:16:57Z tool prompt-queue.done c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-13644
+2026-11-17T08:17:06Z tool prompt-queue.show c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-13652
+2026-11-17T08:17:29Z tool prompt-queue.show c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-13666
+2026-11-17T08:17:44Z tool prompt-queue.show c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-13679
+2026-11-17T08:18:48Z tool call-outcomes.close_month
+2026-11-17T08:18:48Z tool call-outcomes.close_month
+2026-11-17T08:20:09Z tool app.open c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-13801
+2026-11-17T08:20:39Z tool prompt-queue.show c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-13820
+2026-11-17T16:42:23Z tool prompt-queue.show c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-13934
+2026-11-17T16:45:13Z tool prompt-queue.add c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-13934
+2026-11-17T16:45:18Z tool prompt-queue.add c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-13934
