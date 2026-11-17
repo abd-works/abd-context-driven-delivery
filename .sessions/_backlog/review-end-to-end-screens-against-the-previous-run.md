@@ -4,13 +4,15 @@ Add guidance and code so every end-to-end run records a screenshot for each stor
 
 The end-to-end tests are expected to pass. Passing only proves the assertions someone wrote, and a screen can break in ways no assertion checks: a field missing, a label changed, a layout collapsed, a notice no longer shown. A person sees that at once in the screenshot, so the AI looks at the screenshots too. When the AI sees a change the tests did not catch, it adds the assertion that would have caught it, reruns the tests, and fixes the code until that assertion passes.
 
+This review happens on **every** end-to-end run, not just some: a run during ticket work, a run someone starts by hand, and the daily e2e run the cdd server schedules (`harness/diagnostics/test_runs.py`). An end-to-end run is not finished until its screens have been reviewed.
+
 ## The loop
 
 1. **Run the end-to-end tests** for the area changed (a sub-epic, an epic, or all). Each step of each scenario records a screenshot and its result, keyed by story › scenario › step.
 2. **Find the baseline:** the same step's screenshot from the previous good run (the last run on main, or the previous release).
 3. **Filter the pairs by pixels first.** Only pairs that changed go to the AI. A cheap block diff (pml-web's 8px block check) keeps the AI from reading hundreds of identical screens.
-4. **The AI judges each changed pair** using both screenshots, the step's Given/When/Then text, and the stories and code this ticket changed. The verdict is one of:
-   - **intended:** the change follows from a story or code change in this ticket, and the AI cites which one.
+4. **The AI judges each changed pair** using both screenshots, the step's Given/When/Then text, and the stories and code changed since the baseline (this ticket's changes, or for a scheduled run the commits on main since then). The verdict is one of:
+   - **intended:** the change follows from one of those story or code changes, and the AI cites which one.
    - **regression caught:** a test already fails for it, so fix the code.
    - **missed by the tests:** the screen is wrong and nothing failed.
    - **noise:** timing, animation, or a value the system mints. The AI makes the harness deterministic instead of accepting the noise.
@@ -30,6 +32,7 @@ One page per sub-epic, plus a story map page over them all. It is laid out like 
 
 A supplement to Stories acceptance tests and the TDD end-to-end tier, for example `cdd_guidance/practices/visual_review/visual_review.md` (name to decide). It holds the loop above as its process, plus these rules:
 
+- `every-run-reviewed`: every end-to-end run, by ticket, by hand or scheduled, is reviewed against its baseline before its result counts.
 - `every-step-captured`: every story test step in the end-to-end tier records a screenshot and result under its story › scenario › step key.
 - `baseline-is-previous-good-run`: compare with the last accepted run of the same system.
 - `ai-judges-every-changed-pair`: every changed pair gets a verdict and a reason, and "intended" cites the story or code change behind it.
@@ -48,6 +51,7 @@ The TDD tier table in `tdd.md` gets one line: end-to-end runs record step screen
 - The pixel prefilter, which lists the changed pairs.
 - The report writer, adapted from pml-web's `report.ts` (story tree, side-by-side screenshots, filters, history).
 - A Python toolset with MCP tools `run(target)`, `changed_pairs(target)`, `record_verdict(step, verdict, reason)` and `accept_baseline(target)`. Long runs go to the background through `harness/process`. The AI reads the image pairs itself and writes its verdicts back through `record_verdict`.
+- The scheduled daily e2e run in `test_runs.py` captures screenshots too. When it ends, the cdd server starts the review in a background agent session and raises a toast for any step judged "missed by the tests". The fix happens in a ticket, because a scheduled run on main has no ticket to change.
 - A line in the server health report: the latest run, its changed and missed counts, and a link to the story map page.
 
 **Each project keeps** starting its app, loading its examples, and its Playwright config.
