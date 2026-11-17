@@ -9,7 +9,7 @@
     "stages": [
       "implementation"
     ],
-    "version": 119
+    "version": 120
   },
   "practices": {
     "stories": {
@@ -65,7 +65,7 @@
           "python"
         ]
       },
-      "enabled": true
+      "enabled": false
     },
     "ddd": {
       "enabled": false,
