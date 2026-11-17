@@ -57,7 +57,7 @@ export function ActionButtonView($: EngineInterface, elements: ElementTable, dra
       <Box key="action" flexDirection="row" gap={0} paddingX={1} backgroundColor={BRAND.accent}>
         {GlyphButtonView(elements, 'next-action', iconOf(action), BRAND.onAccent, () => pressAction($, draw, action))}
         {GlyphButtonView(elements, 'action-picker', '▾', BRAND.onAccent, () => toggleActionPicker($))}
-        <Box position="absolute" top={-1} left={0} paddingX={1} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
+        <Box position="absolute" bottom={1} left={0} paddingX={1} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
           <Text color={BRAND.text}>{target}</Text>
         </Box>
       </Box>

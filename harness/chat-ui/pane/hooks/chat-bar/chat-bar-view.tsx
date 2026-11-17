@@ -65,7 +65,7 @@ export function PracticeDotView($: EngineInterface, elements: ElementTable, dot:
 // The practice's fidelities above its dot on hover, each a button that opens its help.
 function PracticeTipView($: EngineInterface, { Box, Button, Text }: ElementTable, dot: PracticeDotClient) {
   return (
-    <Box position="absolute" top={-1} left={0} paddingX={1} gap={1} flexDirection="row" backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
+    <Box position="absolute" bottom={1} left={0} paddingX={1} gap={1} flexDirection="row" backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
       {dot.fidelities.map(fidelity => (
         <Button key={`help-${fidelity.slug}`} plain onPress={() => openHelp($, fidelity)}>
           <Text color={BRAND.text}>{fidelity.slug}</Text>

@@ -1,0 +1,19 @@
+<mxfile host="CleanEngineering.diagram.drawio">
+  <diagram name="Modules Context" id="modules-context">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="System - Modules Context" style="text;html=1;align=center;verticalAlign=middle;fontSize=18;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="40" y="20" width="1520" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle" value="Independent modules with one-way dependencies. Arrows point toward the depended-on module (build before). Path nesting = containment; shared base terms live on the parent." style="text;html=1;align=center;verticalAlign=middle;fontSize=11;fontStyle=2;" parent="1" vertex="1">
+          <mxGeometry x="40" y="55" width="1520" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="tools" value="&lt;b style=&quot;font-size: 14px;&quot;&gt;tools&lt;/b&gt;&lt;br&gt;&lt;i&gt;Hold the toolsets that are useful on their own, outside any one practice or action: deleg...&lt;/i&gt;&lt;hr&gt;• SubAgent&lt;br&gt;• Echo&lt;br&gt;• Failure&lt;br&gt;• Granola&lt;br&gt;• PromptLog&lt;br&gt;• PromptNotify&lt;br&gt;• ..." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a3a6e;strokeColor=#0e2547;fontColor=#ffffff;fontSize=12;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="40" y="100" width="280" height="184" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

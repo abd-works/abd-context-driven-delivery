@@ -1,0 +1,21 @@
+2026-11-16 — prompt-queue band
+Mistake: the queue was drawn as a plain text row of the band, reading as part of the CDD chat bar, with text buttons ("▸ 3 queued", "Sub-agent mode: off").
+Correction: the queue is its own bordered box above the chat bar with a gap below it; the expand control is a stack image, sub-agent mode and the other controls are images, and their words are hover tooltips.
+
+2026-11-16 — The stack image (the one control that opens the queue) never showed in the desktop chat bar once its
+count was drawn as SVG <text>; I redrew the image twice without checking that it showed at all.
+Correction: the count is drawn as seven-segment line paths inside the SVG, with no <text>. When the person says
+an image is wrong, first check that it is drawn at all.
+
+2026-11-16 — Asked to make the queue look like a stack of task boxes, I changed the collapsed view, which the
+person had not asked to change. Correction: the collapsed view is back as it was (stack image, controls and the
+next prompt on hover); the expanded queue is the stack, each task a bordered card, each card under it a little
+narrower, like a pile.
+
+2026-11-16 — Revealing the controls on hover made the stack image vanish on the desktop, so the person could not
+click it to open the queue; I guessed at its size instead of removing the cause. Correction: no hover reveal. At
+rest the box shows the stack image and the next prompt; the controls show only in the open queue.
+
+2026-11-16 — Asked to use the prompt box's wording for the empty queue, I deleted the Ctrl and Enter key caps, which
+the person still wanted. Correction: the wording is on the left and the key caps, drawn like the chat's mic button,
+are back on the right. A request to change one part of a view is not a request to remove the rest.

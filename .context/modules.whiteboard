@@ -1,0 +1,38 @@
+{
+ "v": 1,
+ "title": "System - Modules Context",
+ "order": [
+  "title",
+  "subtitle",
+  "module.0284c6ac58cb"
+ ],
+ "elements": {
+  "title": {
+   "type": "text",
+   "x": 40,
+   "y": -36,
+   "text": "System - Modules Context",
+   "size": "large"
+  },
+  "subtitle": {
+   "type": "text",
+   "x": 40,
+   "y": 20,
+   "text": "Independent modules with one-way dependencies. Arrows point toward the depended-on module (build before). Path nesting = containment; shared base terms live on the parent.",
+   "size": "small",
+   "wrap": 600
+  },
+  "module.0284c6ac58cb": {
+   "type": "shape",
+   "color": "blue",
+   "text": "**tools**\n*Hold the toolsets that are useful on their own, outside any one practice or action: deleg...*\n- SubAgent\n- Echo\n- Failure\n- Granola\n- PromptLog\n- PromptNotify\n- ...",
+   "kind": "rounded",
+   "size": "small",
+   "textAlign": "left",
+   "x": 40.0,
+   "y": 100.0,
+   "w": 740.0,
+   "h": 213.0
+  }
+ }
+}

@@ -15,7 +15,7 @@ section: body
 
 # Story Map — Context-Driven Delivery Framework
 
-**Sources / context:** `harness/.context/module-context.md`; `harness/agent_tools/.context/module-context.md`; `harness/agent_tools/.context/agent-tools-model.md`; `harness/markdown/.context/module-context.md`; `installation/.context/installer-deployed-model.md`; `harness/hooks/.context/module-context.md`; `harness/guidance/guidance.py`; `harness/.context/context-tool-resource-model-om-bdd.md`; `harness/mcp/.context/module-context.md`; `actions/.context/module-context.md`; `practices/.context/module-context.md`; user spine: register agent toolsets → install markdown files (skill, slash command, rules) and MCP → invoke those → use context guidance (install skills and .mdc, invoke instructions, generate under rules) → use practice guidance (register guidance and fidelities, invoke practice and fidelity, shared and fidelity rules constrain output) → hook dispatch → extract markdown → lifecycle actions. CDD Kanban and Chat Bar: the CDD Kanban map, once `space/kanban/.context/story-map.md`, now kept here; `harness/chat-ui/.context/story-map.md` and `story-map.drawio`; the ticket enhancements on the session-board branch (`.sessions/session-board/ticket-enhancements.md`, removed with that session in commit 8483f7a40 and read from commit b08bfe47e; its `space/kanban/.context/story-map.md`); `harness/chat-ui/.context/cdr/0001-stage-strip-band.md`; `space/kanban/app/src/session-board/board-update.ts`; the ticket drawing `harness/.context/ux/ticket-ui.drawio` (2026-11-11), which supplements the design canvas for parent and child tickets; `harness/chat-ui/pane/hooks/register.ts`. The map also takes in the backlog items `.sessions/_backlog/maintain-tickets-on-board.md`, `.sessions/_backlog/guard-work-and-recover-fast.md` and `.sessions/_backlog/guard-work-and-recover-fast.md` as Intended stories.
+**Sources / context:** `harness/.context/module-context.md`; `harness/agent_tools/.context/module-context.md`; `harness/agent_tools/.context/agent-tools-model.md`; `harness/markdown/.context/module-context.md`; `installation/.context/installer-deployed-model.md`; `harness/hooks/.context/module-context.md`; `harness/guidance/guidance.py`; `harness/.context/context-tool-resource-model-om-bdd.md`; `harness/mcp/.context/module-context.md`; `actions/.context/module-context.md`; `practices/.context/module-context.md`; user spine: register agent toolsets → install markdown files (skill, slash command, rules) and MCP → invoke those → use context guidance (install skills and .mdc, invoke instructions, generate under rules) → use practice guidance (register guidance and fidelities, invoke practice and fidelity, shared and fidelity rules constrain output) → hook dispatch → extract markdown → lifecycle actions. CDD Kanban and Chat Bar: the CDD Kanban map, once `space/kanban/.context/story-map.md`, now kept here; `harness/chat-ui/.context/story-map.md` and `story-map.drawio`; the ticket enhancements on the session-board branch (`.sessions/session-board/ticket-enhancements.md`, removed with that session in commit 8483f7a40 and read from commit b08bfe47e; its `space/kanban/.context/story-map.md`); `harness/chat-ui/.context/cdr/0001-stage-strip-band.md`; `space/kanban/app/src/session-board/board-update.ts`; the ticket drawing `harness/.context/ux/ticket-ui.drawio` (2026-11-11), which supplements the design canvas for parent and child tickets; `harness/chat-ui/pane/hooks/register.ts`. The map also takes in the backlog items `.sessions/_backlog/maintain-tickets-on-board.md`, `.sessions/_backlog/guard-work-and-recover-fast.md` and `.sessions/_backlog/guard-work-and-recover-fast.md` as Intended stories. The prompt queue epic: the simple-queue chat of 2026-11-16 and the `prompt-queue` mod.
 
 **Evidence:** Observed behaviour is cited from those files. Intended: practice guidance and fidelity guidance declare real `@hook` events from `CURSOR_EVENTS`, and lifecycle actions use the same mark-and-install path as practice guidance. For the CDD Kanban and Chat Bar epics: **Observed** means the code and its specs or tests do it today, **Inferred** means the code does it but nothing presses it, **Intended** means a source asks for it and the code does not do it yet, and **Requested** means the person asked on 2026-11-06 for each channel to do what the other does. In `story-map.drawio`, a story whose evidence is only Intended or Requested is filled a lighter yellow than one the code does today.
 
@@ -935,6 +935,46 @@ Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "Banned word check
 ### (S) Claude Code --> Warn On Branch Mismatch
 
 Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "Branch guard"): a warning shows before a commit when the branch does not match the active ticket's session.
+
+# (E) Queue Prompts For Later
+
+The prompt queue is its own Claude Code mod, `prompt-queue`, not part of the CDD chat bar: it sits above the chat bar, at rest only a stack image with the count drawn on it (the person, 2026-11-16: "this shouldnt be part of the cdd chat bar / it should be above it with some separation / a separate mod from chat ui"). Sources: the brief that started the simple-queue chat on 2026-11-16 (stack above the prompt, a `+` button, Ctrl+Enter, reordering, a sub-agent mode, sending on `turn.complete` ahead of Claude's own queue, a `/queue` command) and the person's directions in that chat. The mod is in the session's dev-mods folder, `prompt-queue/hooks/`, with its `claude plugin test` specs in `register.test.tsx`. Evidence words as on the chat bar epics: **Observed** seen working in the desktop chat, **Built** in code and plugin tests but not seen, **Intended** asked for and not done.
+
+### (S) Person --> Queue Draft Prompt
+
+Observed (2026-11-16): the `+` beside the stack moves the prompt box's draft to the bottom of the queue and empties the box (`queueDraft`); the `+` shows when the pointer is on the stack. Ctrl+Enter did not work on the desktop, so the key is Alt+Enter. Built: Alt+Enter queues the draft (`queueByKey`), and a submission that follows it is dropped, "Queued for later" (`isQueuedByKey`).
+
+### (S) Person --> Open Prompt Queue
+
+Observed (2026-11-16): pressing the stack image opens the queue upward: one rounded card per prompt, in the order they will be sent, with the controls staying where they were at the bottom; an empty queue shows "Add" beside Alt and ↵ key caps. Pressing it again closes it.
+
+### (S) Person --> Edit Queued Prompt
+
+Built (2026-11-16, the person: "right side of every queue item so we can edit before the arrows"; then "we should not lose positioning when we edit an item, keep it in list but shaded; adding to queue adds to the edited option"): the pencil on a card puts its prompt in the prompt box; the card keeps its place, shaded and marked editing, and is not sent while it waits; the next add, Alt+Enter or `+`, puts the changed text back in that place (`editPrompt`).
+
+### (S) Person --> Reorder Queued Prompts
+
+Built: the ↑ and ↓ on a card move its prompt one place (`movePrompt`). Intended (the brief): drag a card to its new place; a drag list was built and taken out on 2026-11-16, as the desktop never drew it.
+
+### (S) Person --> Remove Queued Prompts
+
+Built: the ✕ on a card takes its prompt off the queue (`removePrompt`); the bin clears the whole queue (`clearQueue`).
+
+### (S) Person --> Play Prompt Queue
+
+Built (2026-11-16, the person: "should be a toggle play / pause; on play you take the next action as soon as you are done the last one"): play sends the next prompt at once when no turn is running, and after every finished turn from then on (`togglePlaying`, `finishTurn`). A queued slash command runs as that command (`$.command.run`) rather than as a prompt, which the engine refuses; a prompt the engine will not send goes back to the top with "Not sent" and the reason. Observed earlier the same day, before play existed: queued prompts arrived one per finished turn.
+
+### (S) Person --> Pause Prompt Queue
+
+Built (2026-11-16): pause stops finished turns from sending the next prompt; the queue keeps its prompts until play is pressed again.
+
+### (S) Person --> Send Queued Prompts To Sub-Agents
+
+Built, not seen: with sub-agent mode on, the model groups the queued prompts into tasks that can run side by side (`groupIntoTasks`), and sending starts one sub-agent per task (`sendTasksToSubAgents`).
+
+### (S) Person --> Plan Queue From Conversation
+
+Built, not seen: `/queue [what to focus on]` has the model read the conversation and adds the next prompts it lists to the queue, in order (`planFromConversation`).
 
 # (E) Review Generated Work In File Viewer
 

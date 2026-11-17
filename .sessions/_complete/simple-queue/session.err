@@ -1,0 +1,32 @@
+2026-11-17T04:04:09Z session.guidance_selection SessionNotFoundError: no session at 'simple-queue': name the session.json of the session to work on
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 811, in _answer_between_restarts
+    return server.answer(call.request.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\mcp\mcp_server.py", line 462, in answer
+    return published.answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 1058, in answer
+    return tool.callable(**self.parameter_schema.coerced(call.arguments), **tool._from_the_call(call))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 866, in on_subject
+    found = self._load(**{name: arguments.pop(name) for name in self._identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\agent_tools.py", line 803, in on_the_call
+    return function(owner, *arguments, **named)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\space\session\session.py", line 364, in from_file
+    return call.session_named(session)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\tool_call.py", line 205, in session_named
+    return SESSION_OPENING.named_in(session_file, self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\harness\agent_tools\tool_call.py", line 134, in named_in
+    return self._opener.named_in(session_file, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\space\session\sessions.py", line 322, in named_in
+    return self.of_project(project).with_file(session_file)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\runtime\space\session\sessions.py", line 170, in with_file
+    raise SessionNotFoundError(session_file)
+space.session.session.SessionNotFoundError: no session at 'simple-queue': name the session.json of the session to work on

@@ -7,21 +7,20 @@
   "worktree": "C:\\dev\\abd-cdd-file-manager",
   "guidance": {
     "stages": [
-      "discovery",
-      "specification"
+      "implementation"
     ],
-    "version": 133
+    "version": 116
   },
   "practices": {
     "stories": {
       "formats": {
-        "story_map": [
-          "markdown"
-        ],
+        "story_map": [],
         "scenarios": [
-          "markdown"
+          "python"
         ],
-        "acceptance_tests": []
+        "acceptance_tests": [
+          "python"
+        ]
       },
       "enabled": true
     },
@@ -44,12 +43,12 @@
     },
     "clean_engineering": {
       "formats": {
-        "modules": [
-          "markdown"
+        "modules": [],
+        "code": [
+          "python"
         ],
-        "code": [],
         "model": [
-          "markdown"
+          "python"
         ]
       },
       "enabled": true
@@ -60,14 +59,13 @@
           "python"
         ],
         "realization": [
-          "markdown",
           "python"
         ],
         "development": [
           "python"
         ]
       },
-      "enabled": false
+      "enabled": true
     },
     "ddd": {
       "enabled": false,
@@ -92,10 +90,20 @@
     "stories": {
       "root": "../.context",
       "scenarios": {
-        "root": "../story_tests/review-generated-work-in-file-viewer"
+        "roots": [
+          "../story_tests/review-generated-work-in-file-viewer",
+          "../story_tests/register-and-install-toolsets/serve-cdd-code-in-lanes",
+          "../story_tests/move-work-forward-from-chat-bar/check-cdd-server-health-in-chat-bar",
+          "../story_tests/draw-practice-models-on-claude-whiteboard/publish-board-to-claude"
+        ]
       },
       "acceptance_tests": {
-        "root": "../story_tests/review-generated-work-in-file-viewer"
+        "roots": [
+          "../story_tests/review-generated-work-in-file-viewer",
+          "../story_tests/register-and-install-toolsets/serve-cdd-code-in-lanes",
+          "../story_tests/move-work-forward-from-chat-bar/check-cdd-server-health-in-chat-bar",
+          "../story_tests/draw-practice-models-on-claude-whiteboard/publish-board-to-claude"
+        ]
       }
     }
   }

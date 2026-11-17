@@ -190,3 +190,148 @@
 2026-11-16T20:34:16Z tool session.handoff_session 5731abe5-a4c7-449c-9703-c87f3bda7c50 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\5731abe5-a4c7-449c-9703-c87f3bda7c50.jsonl 1-4017
 2026-11-16T20:34:19Z tool session.read_handoff_format 5731abe5-a4c7-449c-9703-c87f3bda7c50 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\5731abe5-a4c7-449c-9703-c87f3bda7c50.jsonl 1-4019
 2026-11-16T20:34:47Z tool session.write_handoff 5731abe5-a4c7-449c-9703-c87f3bda7c50 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\5731abe5-a4c7-449c-9703-c87f3bda7c50.jsonl 1-4020
+2026-11-16T22:46:23Z tool app.open c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-212
+2026-11-16T22:46:49Z tool call-outcomes.close_month
+2026-11-16T22:46:49Z tool call-outcomes.close_month
+2026-11-16T22:47:02Z tool app.open c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-217
+2026-11-16T22:47:02Z error app.open C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1372 c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-217
+2026-11-16T22:47:29Z tool call-outcomes.close_month
+2026-11-16T22:47:29Z tool call-outcomes.close_month
+2026-11-16T22:47:55Z tool app.open c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-218
+2026-11-16T22:48:47Z tool call-outcomes.close_month
+2026-11-16T22:48:47Z tool call-outcomes.close_month
+2026-11-16T22:50:21Z tool app.open c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-287
+2026-11-16T22:50:27Z tool app.open c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-287
+2026-11-16T22:50:31Z tool app.open c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-287
+2026-11-16T22:50:46Z tool session.debug_session c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-314
+2026-11-16T22:51:33Z error session.write_file C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1395 c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-396
+2026-11-16T22:51:46Z error session.write_file C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1424 c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-404
+2026-11-16T22:56:39Z tool app.open c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-538
+2026-11-16T22:56:56Z tool app.open c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-560
+2026-11-16T23:00:39Z tool app.open c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-732
+2026-11-16T23:01:10Z error session.graph_trees C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1450 c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-790
+2026-11-16T23:03:13Z tool validate.validate story_tests\register-and-install-toolsets\serve-cdd-code-in-lanes\serve-dev-lane-apps-on-their-own-ports\serve_dev_lane_apps_on_their_own_ports_story.test.py, harness\diagnostics\app.py, harness\graph\app\serve-port.ts, harness\graph\app\serve-port.spec.ts, harness\files_app\app\serve.ts, harness\graph\app\start.ts, harness\chat-ui\pane\hooks\board-chat\board.ts c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-1028
+2026-11-16T23:03:13Z error validate.validate C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1479 c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-1028
+2026-11-16T23:03:16Z tool validate.validate harness\diagnostics\app.py, harness\graph\app\serve-port.ts, harness\graph\app\serve-port.spec.ts, harness\files_app\app\serve.ts, harness\graph\app\start.ts, harness\chat-ui\pane\hooks\board-chat\board.ts c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-1033
+2026-11-16T23:04:18Z validate CleanEngineering code c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-1033
+2026-11-16T23:10:01Z tool session.read_handoff_format c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-1107
+2026-11-16T23:17:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1541 no-chat
+2026-11-16T23:18:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1549 no-chat
+2026-11-16T23:19:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1557 no-chat
+2026-11-16T23:20:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1565 no-chat
+2026-11-16T23:21:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1573 no-chat
+2026-11-16T23:22:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1581 no-chat
+2026-11-16T23:23:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1589 no-chat
+2026-11-16T23:24:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1597 no-chat
+2026-11-16T23:25:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1605 no-chat
+2026-11-16T23:26:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1613 no-chat
+2026-11-16T23:27:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1621 no-chat
+2026-11-16T23:28:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1629 no-chat
+2026-11-16T23:29:01Z tool validate.validate harness\graph\graph.py c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-1265
+2026-11-16T23:29:22Z validate CleanEngineering code graph-rule prefer-class-operations graph/graph.py:57 graph-rule keep-classes-single-responsibility graph/graph.py:934 graph-rule keep-classes-single-responsibility graph/graph.py:1445 c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-1265
+2026-11-16T23:29:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1637 no-chat
+2026-11-16T23:30:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1645 no-chat
+2026-11-16T23:31:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1653 no-chat
+2026-11-16T23:32:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1661 no-chat
+2026-11-16T23:33:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1669 no-chat
+2026-11-16T23:34:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1677 no-chat
+2026-11-16T23:35:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1685 no-chat
+2026-11-16T23:36:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1693 no-chat
+2026-11-16T23:37:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1701 no-chat
+2026-11-16T23:38:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1709 no-chat
+2026-11-16T23:39:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1717 no-chat
+2026-11-16T23:40:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1725 no-chat
+2026-11-16T23:41:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1733 no-chat
+2026-11-16T23:42:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1741 no-chat
+2026-11-16T23:43:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1749 no-chat
+2026-11-16T23:44:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1757 no-chat
+2026-11-16T23:45:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1765 no-chat
+2026-11-16T23:46:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1773 no-chat
+2026-11-16T23:47:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1781 no-chat
+2026-11-16T23:47:32Z tool session.read_handoff_format c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-1313
+2026-11-16T23:48:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1789 no-chat
+2026-11-16T23:49:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1797 no-chat
+2026-11-16T23:50:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1805 no-chat
+2026-11-16T23:51:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1813 no-chat
+2026-11-16T23:52:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1821 no-chat
+2026-11-16T23:53:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1829 no-chat
+2026-11-16T23:54:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1837 no-chat
+2026-11-16T23:55:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1845 no-chat
+2026-11-16T23:56:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1853 no-chat
+2026-11-16T23:57:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1861 no-chat
+2026-11-16T23:58:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1869 no-chat
+2026-11-16T23:59:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1877 no-chat
+2026-11-17T00:00:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1885 no-chat
+2026-11-17T00:01:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1893 no-chat
+2026-11-17T00:02:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1901 no-chat
+2026-11-17T00:03:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1909 no-chat
+2026-11-17T00:04:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1917 no-chat
+2026-11-17T00:05:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1925 no-chat
+2026-11-17T00:06:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1933 no-chat
+2026-11-17T00:07:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1941 no-chat
+2026-11-17T00:08:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1949 no-chat
+2026-11-17T00:09:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1957 no-chat
+2026-11-17T00:10:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1965 no-chat
+2026-11-17T00:11:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1973 no-chat
+2026-11-17T00:12:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1981 no-chat
+2026-11-17T00:13:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1989 no-chat
+2026-11-17T00:14:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 1997 no-chat
+2026-11-17T00:15:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 2005 no-chat
+2026-11-17T00:16:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 2013 no-chat
+2026-11-17T00:17:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 2021 no-chat
+2026-11-17T00:18:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 2029 no-chat
+2026-11-17T00:19:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 2037 no-chat
+2026-11-17T00:19:56Z tool call-outcomes.close_month
+2026-11-17T00:19:56Z tool call-outcomes.close_month
+2026-11-17T00:20:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 2045 no-chat
+2026-11-17T00:21:24Z error chat.list C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 2053 no-chat
+2026-11-17T00:22:07Z tool app.open c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-1521
+2026-11-17T00:22:17Z tool app.open c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-1540
+2026-11-17T00:22:20Z tool app.open c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-1544
+2026-11-17T00:24:23Z tool graph.practice_names
+2026-11-17T00:24:23Z tool graph.load_practice_roots
+2026-11-17T00:24:43Z tool graph.inventory
+2026-11-17T00:24:43Z tool graph.filter_choices
+2026-11-17T00:24:44Z tool graph.explorer_trees
+2026-11-17T00:40:54Z error session.graph_node_ranges C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 2061 no-chat
+2026-11-17T00:46:31Z tool app.open c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-2047
+2026-11-17T00:47:00Z tool call-outcomes.close_month
+2026-11-17T00:47:00Z tool call-outcomes.close_month
+2026-11-17T00:50:12Z tool app.open c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-2359
+2026-11-17T00:50:55Z tool app.open c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-2433
+2026-11-17T00:58:40Z tool graph.return_nodes c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-2712
+2026-11-17T00:58:42Z tool graph.return_nodes c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-2717
+2026-11-17T01:07:17Z tool call-outcomes.close_month
+2026-11-17T01:07:17Z tool call-outcomes.close_month
+2026-11-17T01:20:03Z error chat.send C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 4560 no-chat
+2026-11-17T01:20:03Z error chat.send C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 4560 no-chat
+2026-11-17T01:20:03Z error chat.send C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 4560 no-chat
+2026-11-17T01:20:10Z tool app.open c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-4088
+2026-11-17T01:20:29Z tool call-outcomes.close_month
+2026-11-17T01:20:29Z tool call-outcomes.close_month
+2026-11-17T01:25:57Z tool app.open c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-4386
+2026-11-17T01:27:40Z tool generate.generate 369ce55a-b607-4516-8c90-cb08f761c86e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\369ce55a-b607-4516-8c90-cb08f761c86e.jsonl 1-133
+2026-11-17T01:27:41Z generate C:\dev\abd-cdd-file-manager\harness clean_engineering, bdd code, development python, python 369ce55a-b607-4516-8c90-cb08f761c86e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\369ce55a-b607-4516-8c90-cb08f761c86e.jsonl 1-133
+2026-11-17T01:28:13Z tool sessions.switch 369ce55a-b607-4516-8c90-cb08f761c86e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\369ce55a-b607-4516-8c90-cb08f761c86e.jsonl 1-180
+2026-11-17T01:36:03Z tool app.open c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-4687
+2026-11-17T01:41:53Z tool session.debug_session c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-4935
+2026-11-17T01:47:30Z tool validate.validate story_tests\register-and-install-toolsets\serve-cdd-code-in-lanes\serve-dev-lane-apps-on-their-own-ports\serve_dev_lane_apps_on_their_own_ports_story.test.py c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-5283
+2026-11-17T01:47:47Z validate Stories acceptance_tests c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-5283
+2026-11-17T01:54:54Z tool validate.validate story_tests\move-work-forward-on-session-board\see-work-on-session-board\open-board\open_board_story.test.py c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-5656
+2026-11-17T01:54:54Z error validate.validate C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 4617 c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-5656
+2026-11-17T01:54:58Z tool validate.validate story_tests\draw-practice-models-on-claude-whiteboard\publish-board-to-claude\publish_board_to_claude_story.test.md c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-5666
+2026-11-17T01:55:15Z validate Stories scenarios graph-rule conforms-to-schema ../story_tests/draw-practice-models-on-claude-whiteboard/publish-board-to-claude/publish_board_to_claude_story.test.md:27 graph-rule conforms-to-schema ../story_tests/draw-practice-models-on-claude-whiteboard/publish-board-to-claude/publish_board_to_claude_story.test.md:28 graph-rule conforms-to-schema ../story_tests/draw-practice-models-on-claude-whiteboard/publish-board-to-claude/publish_board_to_claude_story.test.md:34 graph-rule conforms-to-schema ../story_tests/draw-practice-models-on-claude-whiteboard/publish-board-to-claude/publish_board_to_claude_story.test.md:40 graph-rule conforms-to-schema ../story_tests/draw-practice-models-on-claude-whiteboard/publish-board-to-claude/publish_board_to_claude_story.test.md:45 graph-rule conforms-to-schema ../story_tests/draw-practice-models-on-claude-whiteboard/publish-board-to-claude/publish_board_to_claude_story.test.md:46 c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-5666
+2026-11-17T01:55:15Z error validate C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 4679 c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-5666
+2026-11-17T01:55:15Z error validate.validate C:\dev\abd-context-driven-delivery\.sessions\file-manager\session.err 4694 c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-5666
+2026-11-17T02:21:14Z tool app.open c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-5865
+2026-11-17T02:21:20Z tool call-outcomes.close_month
+2026-11-17T02:21:20Z tool call-outcomes.close_month
+2026-11-17T04:57:59Z tool app.open c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-6000
+2026-11-17T05:03:35Z tool app.open c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-6366
+2026-11-17T05:09:43Z tool app.open c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-6682
+2026-11-17T05:09:51Z tool app.open c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-6698
+2026-11-17T05:10:04Z tool app.open c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-6704
+2026-11-17T05:13:37Z tool call-outcomes.close_month
+2026-11-17T05:13:37Z tool call-outcomes.close_month
+2026-11-17T05:14:29Z tool hosting-demo.read_count
+2026-11-17T05:14:29Z tool hosting-demo.increment

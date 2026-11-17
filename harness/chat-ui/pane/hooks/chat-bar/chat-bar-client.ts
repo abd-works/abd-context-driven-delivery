@@ -139,12 +139,13 @@ export class ChatBarClient {
     return practice ? practice.is_selected : (this.ticket?.progress.find(progress => progress.practice.key === key)?.is_enabled ?? true)
   }
 
-  // The fidelities the session's guidance selection translates its stages and practices to, no practice selected meaning
-  // every practice: what the dots stand for and every action runs on, in the order the stages require them. Before the
-  // selection is read, those of the practices the board shows on.
+  // The fidelities of the stages shown whose practice dot is on, no dot on meaning every practice: what every action
+  // runs on, in the order the stages require them. They follow the dots as drawn, so a command never names a practice
+  // whose dot is off, even while a press is drawn ahead of the session's answer, whose fidelity list is not yet updated.
   get fidelities(): FidelityProgressClient[] {
-    const listed = this.guidance?.fidelities
-    return this.fidelitiesOfShownStages.filter(fidelity => (listed ? listed.includes(fidelity.slug) : fidelity.isSelected))
+    const shown = this.fidelitiesOfShownStages
+    const selected = shown.filter(fidelity => fidelity.isSelected)
+    return selected.length ? selected : shown
   }
 
   // One dot per practice with fidelities in the stages shown, on or off: a press turns the practice on or off for the
