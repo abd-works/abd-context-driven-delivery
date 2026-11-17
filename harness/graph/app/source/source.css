@@ -191,6 +191,6 @@
 
 /* The menu a right-click on an open callout shows: Go to file. */
 .callout-menu-backdrop { position: fixed; inset: 0; z-index: 30; }
-.callout-menu { position: fixed; z-index: 31; display: grid; padding: var(--space-2xs, 4px); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm, 4px); box-shadow: 0 4px 16px #00000059; }
+.callout-menu { position: fixed; z-index: 31; display: grid; padding: var(--space-2xs, 4px); background: var(--raised, var(--surface)); border: 1px solid var(--select); border-radius: var(--radius-sm, 4px); box-shadow: 0 4px 16px #00000059; }
 .callout-menu button { text-align: left; border: 1px solid transparent; background: transparent; color: var(--text); white-space: nowrap; padding: 2px var(--space-xs, 8px); cursor: pointer; }
 .callout-menu button:hover { border-color: var(--select); color: var(--select); }
