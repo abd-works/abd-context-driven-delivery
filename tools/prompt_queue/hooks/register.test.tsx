@@ -1016,22 +1016,21 @@ test('sending the queue to sub-agents keeps their cards, so each can mark its ow
   expect(seeded.prompts.map(prompt => prompt.text)).toEqual(['Write the scenarios', 'Run the unit tier'])
 })
 
-test("an agent's card shows no buttons of its own; pressing it opens it full width under the queues, with its text and buttons", async ($, on) => {
+test("an agent's card shows no buttons of its own; pressing it opens it in place, in its robot's queue, with its buttons beneath", async ($, on) => {
   groupedQueue(on)
 
   const before = await $.ui.mount({ ...BAND, surface: 'desktop' })
-  const column = JSON.stringify(await before.find({ type: 'Box', key: 'agent-column-1' }))
+  const closed = JSON.stringify(await before.find({ type: 'Box', key: 'agent-column-1' }))
   await before.press({ key: 'card-text-a' })
   await before.unmount()
   const after = await $.ui.mount({ ...BAND, surface: 'desktop' })
-  const opened = JSON.stringify(await after.find({ type: 'Box', key: 'opened-card' }))
+  const opened = JSON.stringify(await after.find({ type: 'Box', key: 'agent-column-1' }))
 
-  expect(column).not.toContain('"edit-a"')
+  expect(closed).not.toContain('"edit-a"')
   expect(opened).toContain('"edit-a"')
-  expect(opened).toContain('Write the scenarios')
+  expect(await after.find({ type: 'Box', key: 'opened-card' })).toBeUndefined()
   await after.unmount()
 })
-
 
 test("work a robot finishes stays in that robot's queue, dimmed", async ($, on) => {
   const seeded = groupedQueue(on)

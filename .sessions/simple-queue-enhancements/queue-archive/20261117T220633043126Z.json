@@ -1,0 +1,11 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-17T22:06:33.043126+00:00",
+  "prompts": [
+    {
+      "id": "24b31c12f0a5",
+      "text": "After the .py files are counted in demo/files/report.md, add the list of those file names under the count in the same report (read only elsewhere). Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856 the same way: prompt-queue.show, find this card, prompt-queue.done.",
+      "is_done": true
+    }
+  ]
+}

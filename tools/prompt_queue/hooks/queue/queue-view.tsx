@@ -137,7 +137,8 @@ function CardsView($: EngineInterface, e: AbovePromptEvent, state: QueueState, p
   )
 }
 
-/** One card. In an agent's narrow queue it shows no buttons of its own, and pressing it opens it full width below. */
+/** One card. In a robot's narrow queue it shows no buttons of its own; pressing it opens it in place, its buttons on a
+ * row beneath it, and pressing it again closes it. */
 function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, prompt: QueuedPrompt, index: number, isInColumn = false) {
   const { Box, Text, Button } = $.ui.resolve(e)
   const isEditing = prompt.id === state.editingId
@@ -145,7 +146,8 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
   const progress = progressOf(prompt.steps)
   const isFinished = Boolean(prompt.is_done)
 
-  return (
+  const isOpened = isInColumn && prompt.id === state.openedId
+  const row = (
     <Box key={`card-row-${prompt.id}`} flexDirection="row" justifyContent="space-between" alignItems="center" gap={1} width="100%">
       <Box width={TASK_BUTTON_COLUMNS} flexShrink={0}>
         {progress !== ''
@@ -164,29 +166,43 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
       </Box>
       {!isInColumn && <Box width={CARD_BUTTON_COLUMNS} justifyContent="flex-end">
         <Box flexDirection="row" gap={1} display="none" hover={{ display: 'flex' }} backgroundColor={LOOK.keyCap} paddingX="xs">
-          <Button key={`send-now-${prompt.id}`} label="↵" onPress={() => sendNow($, prompt)} />
-          <Button key={`edit-${prompt.id}`} label="✎" onPress={() => editPrompt($, prompt)} />
-          <Button key={`up-${prompt.id}`} label="↑" onPress={() => movePrompt($, index, index - 1)} />
-          <Button key={`down-${prompt.id}`} label="↓" onPress={() => movePrompt($, index, index + 1)} />
-          <Button key={`remove-${prompt.id}`} label="✕" onPress={() => removePrompt($, prompt.id)} />
+          {CardButtonsView($, e, prompt, index)}
         </Box>
       </Box>}
     </Box>
   )
+  if (!isOpened) {
+    return row
+  }
+
+  return (
+    <Box key={`card-opened-${prompt.id}`} flexDirection="column" width="100%">
+      {row}
+      <Box flexDirection="row" gap={1} paddingLeft={TASK_BUTTON_COLUMNS + 1}>{CardButtonsView($, e, prompt, index)}</Box>
+    </Box>
+  )
+}
+
+/** A card's own buttons: send now, edit, move up and down, and remove. */
+function CardButtonsView($: EngineInterface, e: AbovePromptEvent, prompt: QueuedPrompt, index: number) {
+  const { Button } = $.ui.resolve(e)
+
+  return [
+    <Button key={`send-now-${prompt.id}`} label="↵" onPress={() => sendNow($, prompt)} />,
+    <Button key={`edit-${prompt.id}`} label="✎" onPress={() => editPrompt($, prompt)} />,
+    <Button key={`up-${prompt.id}`} label="↑" onPress={() => movePrompt($, index, index - 1)} />,
+    <Button key={`down-${prompt.id}`} label="↓" onPress={() => movePrompt($, index, index + 1)} />,
+    <Button key={`remove-${prompt.id}`} label="✕" onPress={() => removePrompt($, prompt.id)} />,
+  ]
 }
 
 /** Sub-agent mode: one queue for each sub-agent, side by side, in the place of the queue's list, each the same cards. */
 function AgentColumnsView($: EngineInterface, e: AbovePromptEvent, state: QueueState) {
   const { Box } = $.ui.resolve(e)
 
-  const opened = state.queue.prompts.find(prompt => prompt.id === state.openedId)
-
   return (
-    <Box key="agent-queues" flexDirection="column" rowGap="sm" width="100%">
-      <Box key="agent-columns" flexDirection="row" gap={1} width="100%">
-        {state.tasks.map((task, place) => AgentColumnView($, e, state, task, place))}
-      </Box>
-      {opened && <Box key="opened-card" width="100%">{CardsView($, e, state, [opened])}</Box>}
+    <Box key="agent-columns" flexDirection="row" gap={1} width="100%">
+      {state.tasks.map((task, place) => AgentColumnView($, e, state, task, place))}
     </Box>
   )
 }

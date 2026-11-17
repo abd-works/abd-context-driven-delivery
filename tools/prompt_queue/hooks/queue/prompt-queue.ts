@@ -69,7 +69,7 @@ const plan = atom({ plugin: 'prompt-queue', key: 'plan' } as const, [] as Prompt
 const isPlanSeen = atom({ plugin: 'prompt-queue', key: 'isPlanSeen' } as const, false)
 /** The cards whose steps are shown under them. */
 const openSteps = atom({ plugin: 'prompt-queue', key: 'openSteps' } as const, [] as string[])
-/** The agent's card opened full width under the agents' queues, with its complete text and buttons; none when closed. */
+/** The card opened in its robot's queue, with its buttons beneath it; none when closed. */
 const openedCard = atom({ plugin: 'prompt-queue', key: 'openedCard' } as const, '')
 
 export type QueueState = {
@@ -561,7 +561,7 @@ async function changeSteps($: EngineInterface, prompt: QueuedPrompt, steps: Prom
   await changeQueue($, 'set_steps', { prompt: prompt.id, steps })
 }
 
-/** Pressing an agent's card opens it full width under the agents' queues; pressing it again closes it. */
+/** Pressing a card in a robot's queue opens it in place with its buttons; pressing it again closes it. */
 export async function toggleOpenedCard($: EngineInterface, id: string): Promise<void> {
   await update($, openedCard, opened => (opened === id ? '' : id))
 }
