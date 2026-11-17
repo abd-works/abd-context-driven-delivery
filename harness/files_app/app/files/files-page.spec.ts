@@ -8,7 +8,7 @@ import type { GuidanceSelectionData } from '@cdd/space/session/session'
 
 import { FilesLink } from './files-link'
 import { FilesPage, filesShown } from './files-page'
-import { drawioPageOf, missingNoteOf, revealLabelOf } from './files-paths'
+import { drawioEditorUrl, drawioPageOf, missingNoteOf, revealLabelOf } from './files-paths'
 import { calloutsOf, rulesOf } from './source-of-file'
 
 // Each stage's fidelities by practice, as the session's practices declare them.
@@ -320,6 +320,27 @@ describe('Open Diagram In Files App', () => {
   describe('with a .drawio file listed', () => {
     it("should show it at the Files server's draw.io page, which starts the viewer on it", () => {
       expect(drawioPageOf('C:/dev/work/.context/a.drawio', 'chat-1')).toBe('/api/drawio/page?path=C%3A%2Fdev%2Fwork%2F.context%2Fa.drawio&chat=chat-1')
+    })
+
+    it("should name the page's project, so the viewer opens that project's file whichever project started it", () => {
+      expect(drawioPageOf('src/.context/a.drawio', 'chat-1', 'C:/dev/shop')).toBe('/api/drawio/page?path=src%2F.context%2Fa.drawio&chat=chat-1&project=C%3A%2Fdev%2Fshop')
+    })
+
+    it('should take the project its link names', () => {
+      expect(new FilesLink('?project=C%3A%2Fdev%2Fshop&files=main').project).toBe('C:/dev/shop')
+    })
+
+    it("should open the viewer on the file's whole path in the page's project", () => {
+      expect(drawioEditorUrl('src/.context/a.drawio', 'C:\\dev\\shop\\')).toBe(`http://127.0.0.1:8791/edit?f=${encodeURIComponent('C:\\dev\\shop/src/.context/a.drawio')}`)
+    })
+
+    it('should open the viewer on the port it answers on, when that is not its usual one', () => {
+      expect(drawioEditorUrl('src/a.drawio', 'C:/dev/shop', 9123)).toBe(`http://127.0.0.1:9123/edit?f=${encodeURIComponent('C:/dev/shop/src/a.drawio')}`)
+    })
+
+    it('should leave a whole path, or a path with no project, as it is', () => {
+      expect(drawioEditorUrl('C:/dev/work/a.drawio', 'C:/dev/shop')).toBe(`http://127.0.0.1:8791/edit?f=${encodeURIComponent('C:/dev/work/a.drawio')}`)
+      expect(drawioEditorUrl('src/a.drawio', '')).toBe(`http://127.0.0.1:8791/edit?f=${encodeURIComponent('src/a.drawio')}`)
     })
 
     describe('that the Person opens', () => {

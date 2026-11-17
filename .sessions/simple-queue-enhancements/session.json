@@ -1,0 +1,49 @@
+{
+  "name": "simple-queue-enhancements",
+  "title": "simple-queue-enhancements",
+  "scope": "feature",
+  "branch": "simple-queue-enhancements",
+  "worktree": "C:\\dev\\abd-cdd-simple-queue-enhancement",
+  "guidance": {
+    "stages": [
+      "specification",
+      "implementation"
+    ],
+    "version": 24
+  },
+  "practices": {
+    "ddd": {
+      "enabled": false
+    },
+    "ux": {
+      "enabled": false
+    },
+    "clean_engineering": {
+      "enabled": true,
+      "formats": {
+        "modules": [
+          "markdown"
+        ],
+        "model": [
+          "python"
+        ]
+      }
+    },
+    "bdd": {
+      "enabled": false
+    },
+    "stories": {
+      "formats": {
+        "scenarios": [
+          "python"
+        ],
+        "story_map": [
+          "markdown",
+          "drawio",
+          "whiteboard"
+        ]
+      },
+      "enabled": true
+    }
+  }
+}

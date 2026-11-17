@@ -19,9 +19,9 @@ The order of work depends on whether the story crosses an architectural boundary
 
 **Flow A — a new feature or story that crosses an architectural boundary for the first time.** Run it for real first: the danger here is an AI that believes its own stubs.
 
-1. **Run it end to end, directly.** Drive it through the real stack yourself (browser, server, store, agent), or ask the person to. Record every failure as it happens.
-2. **Iterate until it works for real.** A person verifies the result. A human seeing the real thing work is the only way to rule out hallucination.
-3. **Capture it in an e2e or heavy test.** Write the test that runs the same path end to end, and see it pass against the real stack, so the success cannot be hallucinated later.
+1. **Run it end to end, directly.** Drive it through the real stack yourself (browser, server, store, agent), or ask the person to. Record every failure as it happens. On a screen, screenshot each Given, When and Then as you go, keyed story › scenario › step.
+2. **Iterate until it works for real.** Judge each step's screenshot against its step text, as Stories acceptance tests says: the Given's state is visible, the When took effect, the Then shows the right values, labels and messages. Fix and walk again until every step meets it, then write the walk report (`harness/e2e_review/report/report.ts`). A person verifies the result by reviewing that report; accepting it makes the walk the reference. A human seeing the real thing work is the only way to rule out hallucination.
+3. **Capture it in an e2e or heavy test.** Write the test that runs the same path end to end, and see it pass against the real stack, so the success cannot be hallucinated later. An e2e test records the same step screenshots; compare each with the accepted walk. Where they differ, fix the test or the code; when it is unclear which is right, walk that step again. When they all match, this run is the first baseline.
 4. **Then write the stubbed and mocked unit tests,** only where a stub or mock was actually used, each checked against the real seam you just ran. An AI tends to stub critical functionality, or to put the stub at the wrong seam and fake what should be real.
 
 **Flow B — another story or feature on a known area.** The seams are proven, so the order reverses:
@@ -29,7 +29,7 @@ The order of work depends on whether the story crosses an architectural boundary
 1. **Write the unit tests** on the seams that already exist, and see them fail for the right reason.
 2. **Write the code and run only the tests for the change** — the specs of the files it touched — until they pass. Not the whole tier.
 3. **Hand it to the person to try,** and while they test it, run the whole unit tier in a sub-task off the person's thread; report its result when it comes back.
-4. **Write the heavy and/or e2e tests in a sub-task:** hand them to a background agent so the person is not kept waiting, and tell the person when they are done.
+4. **Write the heavy and/or e2e tests in a sub-task:** hand them to a background agent so the person is not kept waiting, and tell the person when they are done. An e2e run ends with a review of its screens against the baseline (Reviewing e2e screens, below).
 
 ### Red, green, refactor
 
@@ -77,9 +77,23 @@ Stay off the person's thread. In the foreground run only what proves the change 
 | unit, for the change | After every change | The agent, in the foreground: only the specs of the files the change touched, so the answer comes in seconds |
 | unit, whole tier | While the person tries the change, and before a push | A sub-task off the person's thread (about 20 s); nobody waits on it |
 | heavy | Every hour, and once at the end of multi-pass work | A background process; push without waiting, report its result when it comes back |
-| e2e | Every day, before every release, and at the end of work that touches a browser or an agent | The daily scheduled run and the release command |
+| e2e | Every day, before every release, and at the end of work that touches a browser or an agent; its screens are reviewed against the last accepted run before its result counts | The daily scheduled run and the release command |
 
 Read the runner's slow list after every whole-tier unit run and fix each example in the same pass, optimizing first. Keep the runner's timings (`.pycache/spec-seconds.json`): they order the next run's batches, longest first.
+
+### Reviewing e2e screens
+
+Passing e2e tests prove only the assertions someone wrote; a screen can break where no assertion looks (a field missing, a label changed, a layout collapsed, a notice no longer shown). So every e2e run, by ticket, by hand or scheduled, is reviewed screen by screen against the last run the person accepted. Each step of a browser story test records its screenshot and result in the run's `results.json` (Stories acceptance tests, `every-step-captured`); the review is `harness/e2e_review/report/review.ts`.
+
+1. **Run the e2e tests.** Each step records its screenshot and result under `.sessions/<release>/e2e-test-results/<epic>/<sub-epic>/<run>/`.
+2. **Compare each step with the last accepted run, by pixels.** A pair changed when more than 1% of its 8px blocks moved; only changed pairs go on.
+3. **Give each changed pair a verdict and a reason:**
+   - **intended:** cites the story or code change behind it (this ticket's changes, or for a scheduled run the commits on main since the baseline).
+   - **regression caught:** a test already fails for it, named; fix the code.
+   - **missed by the tests:** the screen is wrong and nothing failed; go to step 4.
+   - **noise:** timing, animation, or a value the system mints; make the harness deterministic and rerun.
+4. **For each miss, write the failing test at the layer that owns it** (Stories acceptance tests says which), see it fail, fix the code, and rerun.
+5. **Repeat until every changed pair is intended.** The person reviews the compare report; accepting it makes the run the new baseline.
 
 ### When stuck
 
@@ -93,7 +107,7 @@ alwaysApply: true
 
 Whenever you are about to write production code or a test for it. Follow these rules.
 
-- **`flow-chosen-before-code`** — Before writing production code or a test, say which flow each boundary the change touches is in, and work in that flow's order. **Flow A** is a boundary crossed for the first time, such as a new module seam, a new external system, a new process, or a new tier: run it for real end to end, have the person verify it, capture it in a heavy or e2e test, and only then write the stubbed unit tests. **Flow B** is a known area, where a heavy or e2e test already runs every boundary the change touches: write the unit test, see it fail for the right reason, then write the code. Tests written after the code, which pass on their first run, prove nothing they were not shaped to pass, and stubs written before a real run fake the very boundary nobody has seen work.
+- **`flow-chosen-before-code`** — Before writing production code or a test, say which flow each boundary the change touches is in, and work in that flow's order. **Flow A** is a boundary crossed for the first time, such as a new module seam, a new external system, a new process, or a new tier: run it for real end to end, have the person verify it, capture it in a heavy or e2e test, and only then write the stubbed unit tests. On a screen, the person verifies it by the walk report's screen for each step, and the e2e test is compared with that walk. **Flow B** is a known area, where a heavy or e2e test already runs every boundary the change touches: write the unit test, see it fail for the right reason, then write the code. Tests written after the code, which pass on their first run, prove nothing they were not shaped to pass, and stubs written before a real run fake the very boundary nobody has seen work.
 
 ## stories-acceptance-tests, bdd-development
 
@@ -124,6 +138,7 @@ Whenever you create, alter, or delete acceptance tests or BDD specs. Follow thes
 - **`heavy-spec-owns-its-resources`** — A heavy spec makes its own throwaway resources (repository, server port, `CDD_HOME`), so heavy specs can run in parallel too.
 - **`expensive-fixture-built-once`** — A read-only fixture that is slow to build is built once per file and shared, not once per example.
 - **`no-wait-in-unit-test`** — A unit test never sleeps or polls; time, retries, and timeouts come from a fake clock.
+- **`noise-is-fixed-in-the-harness`** — A screen that changes between e2e runs only by timing, animation, or a value the system mints is made deterministic in the harness (a fixed clock, a fixed value, a settled page), never accepted as noise, because accepted noise hides the next real change behind it.
 - **`budget-never-raised`** — The 100 ms, 2 s, and 25 s budgets are never raised to make a slow test pass; the test gets fast or moves tier.
 
 **Stubs and heavy coverage**
@@ -133,7 +148,10 @@ Whenever you create, alter, or delete acceptance tests or BDD specs. Follow thes
 **Cadence**
 - **`heavy-run-within-the-hour`** — The newest heavy run on main is under an hour old and passed, or its failure is open on the board.
 - **`e2e-run-within-the-day`** — The newest e2e run on main is under a day old and passed, or its failure is open on the board.
+- **`every-run-reviewed`** — Every e2e run, by ticket, by hand or scheduled, is compared screen by screen with the last accepted run, and every changed pair has a verdict with its reason, before the run's result counts; an intended change cites the story or code change behind it. A passing run nobody looked at can still show a broken screen.
+- **`missed-change-adds-a-test-first`** — A screen change no test caught gets a failing test at the layer that owns the behaviour before the code is fixed, so the same break is caught by a test next time and not only by a screenshot.
 - **`release-follows-a-green-e2e`** — A release tag points at a commit whose e2e and heavy runs passed.
+- **`person-accepts-the-baseline`** — Only the person's acceptance makes a walk by hand the reference or an e2e run the baseline, and only once every changed pair is judged intended, because a baseline the agent moves on its own accepts whatever the agent got wrong.
 
 ## clean-engineering-code
 

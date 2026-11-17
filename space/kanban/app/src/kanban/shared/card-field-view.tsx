@@ -9,8 +9,11 @@ export const withoutSelecting = (press: () => unknown) => (event: MouseEvent) =>
   void press()
 }
 
-// What a field on a card writes: its icon, the button that opens it, and the field itself.
-export type CardField = { action: string; label: string; hint: string; field: string; placeholder: string }
+// What a field on a card writes: its icon, the button that opens it, and the field itself. A text field is a box of
+// several lines that wraps what is typed, so the whole text shows while it is edited.
+export type CardField = { action: string; label: string; hint: string; field: string; placeholder: string; isText?: boolean }
+
+const TEXT_FIELD_LINES = 3
 
 type CardFieldProps = { shape: CardField; isOff: boolean; typedAtFirst?: string; onEnter: (typed: string) => unknown }
 
@@ -33,6 +36,10 @@ export function useTypedField(onEnter: (typed: string) => unknown) {
 // A field opened from an icon on a card; leaving the field puts it away.
 export function CardFieldView({ shape, isOff, typedAtFirst = '', onEnter }: CardFieldProps) {
   const { typed, setTyped, pressed } = useTypedField(onEnter)
+  if (typed !== null && shape.isText) {
+    const rows = Math.max(typed.split('\n').length, TEXT_FIELD_LINES)
+    return <textarea className="card-field item-text-editor" aria-label={shape.field} placeholder={shape.placeholder} rows={rows} value={typed} autoFocus onClick={event => event.stopPropagation()} onChange={event => setTyped(event.target.value)} onKeyDown={pressed} onBlur={() => setTyped(null)} />
+  }
   if (typed !== null) {
     return <input className="child-title card-field" aria-label={shape.field} placeholder={shape.placeholder} value={typed} autoFocus onClick={event => event.stopPropagation()} onChange={event => setTyped(event.target.value)} onKeyDown={pressed} onBlur={() => setTyped(null)} />
   }

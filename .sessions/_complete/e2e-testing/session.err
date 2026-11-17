@@ -1,0 +1,316 @@
+2026-11-17T06:20:45Z validate.validate RecipeLineFailed: Validate.validate recipe line C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\actions\validate\validate.py:63 `self._check(NamedToCheck(paths, graph, self.call))` failed: GraphBuildFailed: the graph build's worker process exited with 1:
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_worker.py", line 39, in <module>
+    main(sys.argv[1:])
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_worker.py", line 31, in main
+    built = Graph().build.carry_out(order)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_build.py", line 409, in carry_out
+    self._carry_out(task.step)
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_build.py", line 443, in _carry_out
+    self._read_working_copy()
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_build.py", line 491, in _read_working_copy
+    practice.reading.read()
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\guidance\practice_reading.py", line 109, in read
+    self.read_working_copy()
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\practices\clean_engineering\model\graph_reading.py", line 68, in read_working_copy
+    CodeRead(self).read()
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\practices\clean_engineering\model\code_read.py", line 60, in read
+    self._record_public_sources()
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\practices\clean_engineering\model\code_read.py", line 123, in _record_public_sources
+    folder.source_facts.take_public_sources([self._module_of(path) or Module(name=path.name, sequential_order=1) for path in paths])
+                                             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\practices\clean_engineering\model\code_read.py", line 90, in _module_of
+    self._tried[resolved] = self._parsed(file)
+                            ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\practices\clean_engineering\model\code_read.py", line 102, in _parsed
+    module = self._reading.practice.formats.for_file(file).parse(text).file_module()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'WhiteboardCleanEngineeringModel' object has no attribute 'file_module'. Did you mean: 'load_module'?
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\agent_tools\recipe.py", line 539, in _ran
+    return line()
+           ^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\agent_tools\recipe.py", line 527, in <lambda>
+    value = self._ran(lambda: eval(code, environment, environment), node)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<agent_instructions>", line 22, in <module>
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\actions\validate\validate.py", line 79, in _check
+    self._graph.check_beside(self._reports)
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\actions\validate\checked_graph.py", line 70, in check_beside
+    self.files = self._files(reports)
+                 ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\actions\validate\checked_graph.py", line 127, in _files
+    return [self._built_at(reports.graph_file())]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\actions\validate\checked_graph.py", line 162, in _built_at
+    self.session.graph.reads.refreshed(self.prefixes, destination, self._call)
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_reads.py", line 137, in refreshed
+    self._graph.build.refresh(paths, call, CheckedFiles(paths, checked))
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_build.py", line 374, in refresh
+    self.run(BuildTask(BuildStep.REFRESH, checked=checked), call)
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_build.py", line 387, in run
+    WorkerBuild(self.graph).carry_out(lambda: self._order(task, state), answer)
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_build.py", line 287, in carry_out
+    raise GraphBuildFailed(exit_code, errors_file.read_text(encoding="utf-8", errors="replace"))
+harness.graph.graph_build.GraphBuildFailed: the graph build's worker process exited with 1:
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_worker.py", line 39, in <module>
+    main(sys.argv[1:])
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_worker.py", line 31, in main
+    built = Graph().build.carry_out(order)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_build.py", line 409, in carry_out
+    self._carry_out(task.step)
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_build.py", line 443, in _carry_out
+    self._read_working_copy()
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_build.py", line 491, in _read_working_copy
+    practice.reading.read()
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\guidance\practice_reading.py", line 109, in read
+    self.read_working_copy()
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\practices\clean_engineering\model\graph_reading.py", line 68, in read_working_copy
+    CodeRead(self).read()
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\practices\clean_engineering\model\code_read.py", line 60, in read
+    self._record_public_sources()
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\practices\clean_engineering\model\code_read.py", line 123, in _record_public_sources
+    folder.source_facts.take_public_sources([self._module_of(path) or Module(name=path.name, sequential_order=1) for path in paths])
+                                             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\practices\clean_engineering\model\code_read.py", line 90, in _module_of
+    self._tried[resolved] = self._parsed(file)
+                            ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\practices\clean_engineering\model\code_read.py", line 102, in _parsed
+    module = self._reading.practice.formats.for_file(file).parse(text).file_module()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'WhiteboardCleanEngineeringModel' object has no attribute 'file_module'. Did you mean: 'load_module'?
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\mcp\mcp_server.py", line 834, in _answer_between_restarts
+    return server.answer(call.request.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\mcp\mcp_server.py", line 463, in answer
+    return published.answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\agent_tools\agent_tools.py", line 1197, in answer
+    return tool._expanded_reply(call.arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\agent_tools\agent_tools.py", line 1201, in _expanded_reply
+    expanded = self.expand(arguments)
+               ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\agent_tools\agent_tools.py", line 1219, in expand
+    expansion = RecipeExpansion(self, arguments).run()
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\agent_tools\recipe.py", line 314, in run
+    self._walk_body_statement(statement)
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\agent_tools\recipe.py", line 331, in _walk_body_statement
+    self._walk(statement)
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\agent_tools\recipe.py", line 566, in _walk
+    self._walk_expression(statement.value)
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\agent_tools\recipe.py", line 606, in _walk_expression
+    self._walk_member_call(expression)
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\agent_tools\recipe.py", line 630, in _walk_member_call
+    self._add_evaluated(call)
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\agent_tools\recipe.py", line 546, in _add_evaluated
+    value = self._evaluated(node)
+            ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\agent_tools\recipe.py", line 527, in _evaluated
+    value = self._ran(lambda: eval(code, environment, environment), node)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\agent_tools\recipe.py", line 543, in _ran
+    raise RecipeLineFailed(self._recipe, node, exc) from exc
+harness.agent_tools.recipe.RecipeLineFailed: Validate.validate recipe line C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\actions\validate\validate.py:63 `self._check(NamedToCheck(paths, graph, self.call))` failed: GraphBuildFailed: the graph build's worker process exited with 1:
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_worker.py", line 39, in <module>
+    main(sys.argv[1:])
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_worker.py", line 31, in main
+    built = Graph().build.carry_out(order)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_build.py", line 409, in carry_out
+    self._carry_out(task.step)
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_build.py", line 443, in _carry_out
+    self._read_working_copy()
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_build.py", line 491, in _read_working_copy
+    practice.reading.read()
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\guidance\practice_reading.py", line 109, in read
+    self.read_working_copy()
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\practices\clean_engineering\model\graph_reading.py", line 68, in read_working_copy
+    CodeRead(self).read()
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\practices\clean_engineering\model\code_read.py", line 60, in read
+    self._record_public_sources()
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\practices\clean_engineering\model\code_read.py", line 123, in _record_public_sources
+    folder.source_facts.take_public_sources([self._module_of(path) or Module(name=path.name, sequential_order=1) for path in paths])
+                                             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\practices\clean_engineering\model\code_read.py", line 90, in _module_of
+    self._tried[resolved] = self._parsed(file)
+                            ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\practices\clean_engineering\model\code_read.py", line 102, in _parsed
+    module = self._reading.practice.formats.for_file(file).parse(text).file_module()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'WhiteboardCleanEngineeringModel' object has no attribute 'file_module'. Did you mean: 'load_module'?
+
+2026-11-17T06:20:56Z validate.validate RecipeLineFailed: Validate.validate recipe line C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\actions\validate\validate.py:63 `self._check(NamedToCheck(paths, graph, self.call))` failed: GraphBuildFailed: the graph build's worker process exited with 1:
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_worker.py", line 39, in <module>
+    main(sys.argv[1:])
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_worker.py", line 31, in main
+    built = Graph().build.carry_out(order)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_build.py", line 409, in carry_out
+    self._carry_out(task.step)
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_build.py", line 443, in _carry_out
+    self._read_working_copy()
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_build.py", line 491, in _read_working_copy
+    practice.reading.read()
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\guidance\practice_reading.py", line 109, in read
+    self.read_working_copy()
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\practices\clean_engineering\model\graph_reading.py", line 68, in read_working_copy
+    CodeRead(self).read()
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\practices\clean_engineering\model\code_read.py", line 60, in read
+    self._record_public_sources()
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\practices\clean_engineering\model\code_read.py", line 123, in _record_public_sources
+    folder.source_facts.take_public_sources([self._module_of(path) or Module(name=path.name, sequential_order=1) for path in paths])
+                                             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\practices\clean_engineering\model\code_read.py", line 90, in _module_of
+    self._tried[resolved] = self._parsed(file)
+                            ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\practices\clean_engineering\model\code_read.py", line 102, in _parsed
+    module = self._reading.practice.formats.for_file(file).parse(text).file_module()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'WhiteboardCleanEngineeringModel' object has no attribute 'file_module'. Did you mean: 'load_module'?
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\agent_tools\recipe.py", line 539, in _ran
+    return line()
+           ^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\agent_tools\recipe.py", line 527, in <lambda>
+    value = self._ran(lambda: eval(code, environment, environment), node)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<agent_instructions>", line 22, in <module>
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\actions\validate\validate.py", line 79, in _check
+    self._graph.check_beside(self._reports)
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\actions\validate\checked_graph.py", line 70, in check_beside
+    self.files = self._files(reports)
+                 ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\actions\validate\checked_graph.py", line 127, in _files
+    return [self._built_at(reports.graph_file())]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\actions\validate\checked_graph.py", line 162, in _built_at
+    self.session.graph.reads.refreshed(self.prefixes, destination, self._call)
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_reads.py", line 137, in refreshed
+    self._graph.build.refresh(paths, call, CheckedFiles(paths, checked))
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_build.py", line 374, in refresh
+    self.run(BuildTask(BuildStep.REFRESH, checked=checked), call)
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_build.py", line 387, in run
+    WorkerBuild(self.graph).carry_out(lambda: self._order(task, state), answer)
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_build.py", line 287, in carry_out
+    raise GraphBuildFailed(exit_code, errors_file.read_text(encoding="utf-8", errors="replace"))
+harness.graph.graph_build.GraphBuildFailed: the graph build's worker process exited with 1:
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_worker.py", line 39, in <module>
+    main(sys.argv[1:])
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_worker.py", line 31, in main
+    built = Graph().build.carry_out(order)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_build.py", line 409, in carry_out
+    self._carry_out(task.step)
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_build.py", line 443, in _carry_out
+    self._read_working_copy()
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_build.py", line 491, in _read_working_copy
+    practice.reading.read()
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\guidance\practice_reading.py", line 109, in read
+    self.read_working_copy()
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\practices\clean_engineering\model\graph_reading.py", line 68, in read_working_copy
+    CodeRead(self).read()
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\practices\clean_engineering\model\code_read.py", line 60, in read
+    self._record_public_sources()
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\practices\clean_engineering\model\code_read.py", line 123, in _record_public_sources
+    folder.source_facts.take_public_sources([self._module_of(path) or Module(name=path.name, sequential_order=1) for path in paths])
+                                             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\practices\clean_engineering\model\code_read.py", line 90, in _module_of
+    self._tried[resolved] = self._parsed(file)
+                            ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\practices\clean_engineering\model\code_read.py", line 102, in _parsed
+    module = self._reading.practice.formats.for_file(file).parse(text).file_module()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'WhiteboardCleanEngineeringModel' object has no attribute 'file_module'. Did you mean: 'load_module'?
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\mcp\mcp_server.py", line 834, in _answer_between_restarts
+    return server.answer(call.request.tool, call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\mcp\mcp_server.py", line 463, in answer
+    return published.answer(call)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\agent_tools\agent_tools.py", line 1197, in answer
+    return tool._expanded_reply(call.arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\agent_tools\agent_tools.py", line 1201, in _expanded_reply
+    expanded = self.expand(arguments)
+               ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\agent_tools\agent_tools.py", line 1219, in expand
+    expansion = RecipeExpansion(self, arguments).run()
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\agent_tools\recipe.py", line 314, in run
+    self._walk_body_statement(statement)
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\agent_tools\recipe.py", line 331, in _walk_body_statement
+    self._walk(statement)
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\agent_tools\recipe.py", line 566, in _walk
+    self._walk_expression(statement.value)
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\agent_tools\recipe.py", line 606, in _walk_expression
+    self._walk_member_call(expression)
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\agent_tools\recipe.py", line 630, in _walk_member_call
+    self._add_evaluated(call)
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\agent_tools\recipe.py", line 546, in _add_evaluated
+    value = self._evaluated(node)
+            ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\agent_tools\recipe.py", line 527, in _evaluated
+    value = self._ran(lambda: eval(code, environment, environment), node)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\agent_tools\recipe.py", line 543, in _ran
+    raise RecipeLineFailed(self._recipe, node, exc) from exc
+harness.agent_tools.recipe.RecipeLineFailed: Validate.validate recipe line C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\actions\validate\validate.py:63 `self._check(NamedToCheck(paths, graph, self.call))` failed: GraphBuildFailed: the graph build's worker process exited with 1:
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_worker.py", line 39, in <module>
+    main(sys.argv[1:])
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_worker.py", line 31, in main
+    built = Graph().build.carry_out(order)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_build.py", line 409, in carry_out
+    self._carry_out(task.step)
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_build.py", line 443, in _carry_out
+    self._read_working_copy()
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\graph\graph_build.py", line 491, in _read_working_copy
+    practice.reading.read()
+  File "C:\Users\jeffa\.cdd\dev\runtime\harness\guidance\practice_reading.py", line 109, in read
+    self.read_working_copy()
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\practices\clean_engineering\model\graph_reading.py", line 68, in read_working_copy
+    CodeRead(self).read()
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\practices\clean_engineering\model\code_read.py", line 60, in read
+    self._record_public_sources()
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\practices\clean_engineering\model\code_read.py", line 123, in _record_public_sources
+    folder.source_facts.take_public_sources([self._module_of(path) or Module(name=path.name, sequential_order=1) for path in paths])
+                                             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\practices\clean_engineering\model\code_read.py", line 90, in _module_of
+    self._tried[resolved] = self._parsed(file)
+                            ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\practices\clean_engineering\model\code_read.py", line 102, in _parsed
+    module = self._reading.practice.formats.for_file(file).parse(text).file_module()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'WhiteboardCleanEngineeringModel' object has no attribute 'file_module'. Did you mean: 'load_module'?
+

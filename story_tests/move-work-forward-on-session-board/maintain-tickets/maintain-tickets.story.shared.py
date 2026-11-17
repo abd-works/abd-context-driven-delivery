@@ -176,7 +176,7 @@ def _(s):
     def _(world):
         expect(idea_file(world, CONFIRM_ORDER_CHILD)).to(equal(idea_file_text(CONFIRM_ORDER_CHILD.title, EDITED_CONFIRM_ORDER_TEXT)))
 
-    @s.and_("confirm-order's tooltip in checkout-flow's card shows Show the order, then take the payment.")
+    @s.and_("opening confirm-order from checkout-flow's card shows Show the order, then take the payment.")
     def _(world):
         children = ticket_in(board_of(world), CHECKOUT_FLOW.name)["children"]
         expect([(child["name"], child["text"]) for child in children]).to(equal([(CONFIRM_ORDER_CHILD.name, EDITED_CONFIRM_ORDER_TEXT)]))
@@ -259,7 +259,7 @@ def _(s):
 
 @shared_stories.scenario("Delete Ticket", "Refuse to delete a ticket the board does not have")
 def _(s):
-    @s.given('the board shows no ticket named no-such-ticket')
+    @s.given("the board still shows no-such-ticket's card, but its session folder is gone")
     def _(world):
         world.project.seed_session(PET_VISITS)
         world.folders = sorted(path.name for path in world.project.sessions.iterdir())
@@ -274,7 +274,7 @@ def _(s):
     def _(world):
         expect_refused(world.refusal, TicketNotFoundError, "no ticket named 'no-such-ticket' on the board")
 
-    @s.and_('deleting no-such-ticket removes no session folder')
+    @s.and_("deleting no-such-ticket removes no other ticket's session folder")
     def _(world):
         expect(sorted(path.name for path in world.project.sessions.iterdir())).to(equal(world.folders))
 

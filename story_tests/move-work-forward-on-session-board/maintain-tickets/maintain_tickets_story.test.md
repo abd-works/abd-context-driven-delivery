@@ -178,7 +178,7 @@ confirm-order.edit_text("Show the order, then take the payment.")
 ```
 
 *Then* confirm-order.md in confirm-order's [session](../../../space/kanban/.context/kanban-model.md#session) folder holds Show the order, then take the payment.
-*And* confirm-order's tooltip in checkout-flow's card shows Show the order, then take the payment.
+*And* opening confirm-order from checkout-flow's card shows Show the order, then take the payment.
 
 ## Story: Reorder Tickets In Column
 
@@ -268,7 +268,7 @@ pet-visits.delete()
 
 #### Scenario: Refuse to delete a ticket the board does not have
 
-*Given* the [board](../../../space/kanban/.context/kanban-model.md#board) shows no [ticket](../../../space/kanban/.context/kanban-model.md#ticket--card) named no-such-ticket
+*Given* the [board](../../../space/kanban/.context/kanban-model.md#board) still shows no-such-ticket's card, but its session folder is gone
 *When* the Person deletes no-such-ticket
 
 ```realization
@@ -277,7 +277,7 @@ CardPlacement.ticket("no-such-ticket")
 ```
 
 *Then* the board says no ticket named 'no-such-ticket' on the board
-*And* deleting no-such-ticket removes no session folder
+*And* deleting no-such-ticket removes no other ticket's session folder
 
 ## Story: Tag Ticket Session
 

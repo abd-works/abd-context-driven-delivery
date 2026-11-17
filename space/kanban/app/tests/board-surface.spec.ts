@@ -57,6 +57,26 @@ test.describe('the session board on the page', () => {
       expect(await region.evaluate(element => element.scrollLeft)).toBe(300)
     })
 
+    // Found by the e2e judge pass: Checkout flow's title wrapped as 'Checkou' / 't flow'.
+    test("should break a card's title only between words", async ({ page }) => {
+      const broken = await page.locator('.ticket-title').evaluateAll(titles =>
+        titles.flatMap(title => {
+          const text = title.firstChild
+          if (!text || text.nodeType !== Node.TEXT_NODE) return []
+          const words = [...(text.textContent ?? '').matchAll(/\S+/g)]
+          return words
+            .filter(word => {
+              const range = document.createRange()
+              range.setStart(text, word.index!)
+              range.setEnd(text, word.index! + word[0].length)
+              return new Set([...range.getClientRects()].map(line => Math.round(line.top))).size > 1
+            })
+            .map(word => word[0])
+        }),
+      )
+      expect(broken).toEqual([])
+    })
+
     test('should draw a card at the canvas width', async ({ page }) => {
       const stage = await page.locator('.board-column[data-column="Discovery"]').boundingBox()
       const shown = await card(page, 'checkout-flow').boundingBox()
@@ -79,6 +99,14 @@ test.describe('the session board on the page', () => {
         const bar = await openTileBarOf(openCard(page, 'checkout-flow'))
         await expect(bar.getByRole('combobox', { name: 'Action' })).toBeVisible()
       })
+    })
+
+    // Found by the e2e judge pass: an opened card ran past its column's right edge.
+    test('should keep the opened card inside its column', async ({ page }) => {
+      const opened = await page.locator('.card-open').boundingBox()
+      const lanes = await page.locator('.board-column[data-column="Discovery"] .card-lists').boundingBox()
+      expect(opened!.x).toBeGreaterThanOrEqual(lanes!.x)
+      expect(opened!.x + opened!.width).toBeLessThanOrEqual(lanes!.x + lanes!.width)
     })
 
     test('should show the whole opened card', async ({ page }) => {

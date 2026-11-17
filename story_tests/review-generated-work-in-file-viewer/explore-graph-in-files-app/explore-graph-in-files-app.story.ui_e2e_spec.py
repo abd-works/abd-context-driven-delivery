@@ -183,3 +183,27 @@ with description("Story: Show Graph Load Steps In Files App") as self:
 
         with it("And offers a copy of it for the chat"):
             expect(self.page.get_by_role("button", name="Copy for AI").count()).to(equal(1))
+
+
+with description("Story: Open Calls Across Files In Files App, opened on another project") as self:
+    with before.all:
+        self.stack = FilesStack.on_another_project()
+
+    with after.all:
+        self.stack.close()
+
+    with context("Scenario: A method's call to another method of its class opens in place, Example: another project"):
+        with before.all:
+            self.page = self.stack.open(CHECKOUT_FLOW.name, FIDELITIES)
+            graph_view(self.page)
+            open_branches(self.page, "clean_engineering", "kanban", "Ticket")
+            select(self.page, "Operation delete")
+            line(self.page, "self.close()").wait_for(timeout=SHOWN_MILLISECONDS)
+            self.page.locator(".callout-mark").first.wait_for(timeout=SHOWN_MILLISECONDS)
+
+        with after.all:
+            self.page.close()
+
+        with it("Then the call self.close() opens that project's Ticket.close in place below it, not the CDD checkout's"):
+            open_callout_on(self.page, "self.close()")
+            expect(callout_texts(self.page)).to(equal([CLOSE_LINES]))

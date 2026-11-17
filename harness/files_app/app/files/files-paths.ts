@@ -18,14 +18,22 @@ export const FIDELITY_QUERY = 'fidelity'
 export const isDrawio = (path: string): boolean => path.toLowerCase().endsWith('.drawio')
 
 // The address a .drawio file's link opens: the Files server's draw.io page on the file, naming the chat that opened the
-// page so a viewer that does not start is told to that chat, as every failure of the page is.
-export const drawioPageOf = (path: string, chat: string): string => {
-  const query = new URLSearchParams({ path, ...(chat ? { chat } : {}) })
+// page so a viewer that does not start is told to that chat, as every failure of the page is, and the page's project,
+// whose file it is.
+export const drawioPageOf = (path: string, chat: string, project = ''): string => {
+  const query = new URLSearchParams({ path, ...(chat ? { chat } : {}), ...(project ? { project } : {}) })
   return `${API_ROOT}${DRAWIO_PAGE}?${query.toString()}`
 }
 
-// The draw.io editor on a file named from the repository's root (.claude/rules/drawio-viewer.md).
-export const drawioEditorUrl = (path: string): string => `http://127.0.0.1:${DRAWIO_PORT}/edit?f=${encodeURIComponent(path)}`
+const isWholePath = (path: string): boolean => /^([a-zA-Z]:)?[\\/]/.test(path)
+
+// The draw.io editor on a file named from its project's root. One viewer serves every project, rooted at whichever
+// started it, so a file of a named project is sent as its whole path (.claude/rules/drawio-viewer.md). The viewer
+// answers on DRAWIO_PORT, unless it was started on a port of its own, as a spec's viewer is.
+export const drawioEditorUrl = (path: string, project = '', port = DRAWIO_PORT): string => {
+  const file = project && !isWholePath(path) ? `${project.replace(/[\\/]+$/, '')}/${path}` : path
+  return `http://127.0.0.1:${port}/edit?f=${encodeURIComponent(file)}`
+}
 
 // What the menu calls showing a file in the system's file browser, by the platform the page runs on, as
 // navigator.platform names it: Windows Explorer, the Mac's Finder, or a desktop's file manager.

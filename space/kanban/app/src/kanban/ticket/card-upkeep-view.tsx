@@ -6,7 +6,7 @@ import type { CardField } from '../shared/card-field-view'
 import type { TicketClient } from './ticket-client'
 
 const ADD_CHILD: CardField = { action: 'child', label: 'Add child', hint: 'Add a child ticket', field: 'Child title', placeholder: 'Child title, then Enter' }
-const EDIT_TEXT: CardField = { action: 'text', label: 'Edit text', hint: 'Edit what this ticket is about', field: 'Ticket text', placeholder: 'Text, then Enter' }
+const EDIT_TEXT: CardField = { action: 'text', label: 'Edit text', hint: 'Edit what this ticket is about', field: 'Ticket text', placeholder: 'Text; Enter saves, Shift+Enter adds a line', isText: true }
 const TAG: CardField = { action: 'tag', label: 'Tag', hint: "Tag this ticket's session", field: 'Tag', placeholder: 'Tag, then Enter' }
 
 // A child added by hand: the plus opens a title field on the card, Enter adds the child, Escape leaves it.

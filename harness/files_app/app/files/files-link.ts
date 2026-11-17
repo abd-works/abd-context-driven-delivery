@@ -1,4 +1,4 @@
-import { chatOfPage } from '@cdd/cdd-shared'
+import { chatOfPage, projectOfPage } from '@cdd/cdd-shared'
 
 import { FIDELITY_QUERY, FILE_QUERY, FILES_QUERY, SESSION_FOLDER_QUERY, SESSION_QUERY } from './files-paths'
 
@@ -11,6 +11,7 @@ export class FilesLink {
   readonly sessionFile: string
   readonly file: string
   readonly chat: string
+  readonly project: string
 
   constructor(search: string) {
     const query = new URLSearchParams(search)
@@ -21,6 +22,7 @@ export class FilesLink {
     this.sessionFile = query.get(SESSION_QUERY) || (this.ticket ? `.sessions/${this.ticket}/session.json` : '')
     this.file = query.get(FILE_QUERY) ?? ''
     this.chat = chatOfPage(search)
+    this.project = projectOfPage(search)
   }
 
   get namesFiles(): boolean {

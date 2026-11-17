@@ -336,3 +336,50 @@ test('/queue whose plan holds no prompt says why', async ($, on) => {
 
   expect(ran.text).toBe('Queued 0 prompt(s): the model proposed none. It answered: Nothing is left to do.')
 })
+
+const NO_SERVER_FAILURE = 'The queue did not change: prompt-queue: $.mcp.call: no MCP server plugin:cdd:cdd'
+
+/** A chat no cdd server answers, where pressing clear fails: the box drawn again after the press, as its next render
+ * draws it, with the failure the press stored. */
+async function boxAfterFailedClear($: Parameters<Parameters<typeof test>[1]>[0], on: TestOn) {
+  const seeded = seedQueue(on, true, '', QUEUED, false, '', '', [])
+  const pressed = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await pressed.press({ key: 'queue-clear' })
+  await pressed.unmount()
+
+  return { seeded, ui: await $.ui.mount({ ...BAND, surface: 'desktop' }) }
+}
+
+test('a queue call no cdd server answers shows its failure in red with Fix', async ($, on) => {
+  const { seeded, ui } = await boxAfterFailedClear($, on)
+
+  expect(await ui.find({ type: 'Button', key: 'queue-fix' })).toBeDefined()
+  expect((seeded.stored.failure?.value as { failure: string }).failure).toBe(NO_SERVER_FAILURE)
+  await ui.unmount()
+})
+
+test("Fix on a queue failure runs the debug command with the failure and its context, as the chat bar's Fix does", async ($, on) => {
+  const ran: { command: string; args: string }[] = []
+  on('command.run', (_, e) => {
+    ran.push({ command: e.command, args: e.args })
+    return {}
+  })
+  const { seeded, ui } = await boxAfterFailedClear($, on)
+
+  await ui.press({ key: 'queue-fix' })
+
+  const details = `The prompt queue above the chat bar shows this failure. Failure: ${NO_SERVER_FAILURE} ` +
+    'Context: Calling prompt-queue.clear on the cdd server, tried as cdd then plugin:cdd:cdd'
+  expect(ran).toEqual([{ command: 'space-session-debug-session', args: `choice=fix details=${JSON.stringify(details)}` }])
+  expect(seeded.stored.failure?.value).toBe(null)
+  await ui.unmount()
+})
+
+test('✕ on a queue failure dismisses it', async ($, on) => {
+  const { seeded, ui } = await boxAfterFailedClear($, on)
+
+  await ui.press({ key: 'queue-dismiss-failure' })
+
+  expect(seeded.stored.failure?.value).toBe(null)
+  await ui.unmount()
+})

@@ -34,8 +34,9 @@ class RunnerStub:
         self.started.append(tier)
         return os.getpid()
 
-    def run(self, tier, checkout) -> tuple[int, str]:
+    def run(self, tier, checkout, env=None) -> tuple[int, str]:
         self.ran.append(tier)
+        self.env = env or {}
         return self.exit_code, self.output
 
 
@@ -66,10 +67,18 @@ with description("the test cadence") as self:
         self.record = TestRunRecord(self.folder / "home")
         self.runner = RunnerStub()
         self.clock = Clock(NOON)
-        self.cadence = TestCadence(self.folder, self.record, self.runner, GitStub(), self.clock)
+        self.reviewed = []
+        self.review_lines = ["move-work-forward-on-session-board/maintain-tickets: 3 changed step(s)", "review agent started on 1 run(s)"]
+        self.cadence = TestCadence(self.folder, self.record, self.runner, GitStub(), self.clock, review=self.review)
 
     with after.each:
         shutil.rmtree(self.folder, ignore_errors=True)
+
+    def review(self, checkout: Path, run_name: str) -> list[str]:
+        self.reviewed.append(run_name)
+        if isinstance(self.review_lines, Exception):
+            raise self.review_lines
+        return self.review_lines
 
     def ran_at(self, tier: TestTier, started: datetime, outcome: RunOutcome = RunOutcome.PASSED) -> None:
         self.record.save(TestRun(tier, "old", started, outcome, pid=GONE))
@@ -162,6 +171,36 @@ with description("the test cadence") as self:
         with it("should keep the last lines the run printed"):
             self.runner.output = "\n".join(f"line {number}" for number in range(40))
             expect(self.cadence.run_now(TestTier.HEAVY).summary.splitlines()).to(have_len(12))
+
+    with context("of the e2e tier"):
+        with it("should screenshot its steps under the scheduled release"):
+            self.cadence.run_now(TestTier.E2E)
+            expect(self.runner.env["E2E_RELEASE"]).to(equal("scheduled"))
+
+        with it("should name the run's screenshot folder after when it started"):
+            self.cadence.run_now(TestTier.E2E)
+            expect(self.runner.env["E2E_RUN"]).to(equal("run-2026-11-15-12-00-00"))
+
+        with it("should review the run's screens once its tests end"):
+            self.cadence.run_now(TestTier.E2E)
+            expect(self.reviewed).to(equal(["run-2026-11-15-12-00-00"]))
+
+        with it("should keep what the screen review did in the run's summary"):
+            expect(self.cadence.run_now(TestTier.E2E).summary).to(contain("screen review: review agent started on 1 run(s)"))
+
+        with context("with a screen review that cannot start"):
+            with it("should keep the tests' result"):
+                self.review_lines = RuntimeError("npx is not on PATH")
+                expect(self.cadence.run_now(TestTier.E2E).state).to(equal("passed"))
+
+            with it("should say in the run's summary why the review did not start"):
+                self.review_lines = RuntimeError("npx is not on PATH")
+                expect(self.cadence.run_now(TestTier.E2E).summary).to(contain("screen review: not started: npx is not on PATH"))
+
+    with context("of the heavy tier"):
+        with it("should not review screens"):
+            self.cadence.run_now(TestTier.HEAVY)
+            expect(self.reviewed).to(equal([]))
 
     with context("that fails after a run that passed"):
         with before.each:

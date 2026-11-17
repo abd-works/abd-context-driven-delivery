@@ -6,9 +6,15 @@ source, served by the Files server (``harness/files_app/app/spec-files-server.ts
 Chromium, while the session's files, graph and members come from a cdd server of the spec's own.
 
 Everything is the spec's own, so it runs beside anything else: the page is built into a temporary folder, never the
-app's ``dist``; the Files server and the cdd server answer on free ports, never 8783 or the person's cdd server; the cdd
-server runs from a throwaway ``~/.cdd`` (*SpecServer*); and the project is a throwaway git repository. Monaco loads as
-the live page loads it."""
+app's ``dist``; the Files server, the cdd server and the draw.io viewer answer on free ports, never 8783, 8791 or the
+person's cdd server; the cdd server runs from a throwaway ``~/.cdd`` (*SpecServer*); the draw.io viewer is already
+running, from a throwaway folder of its own, as the person's shared viewer runs from whichever project started it; and
+the project is a throwaway git repository. Monaco loads as the live page loads it, and draw.io from embed.diagrams.net
+as the viewer loads it.
+
+``FilesStack.on_another_project`` starts the Files server for this CDD checkout, as ``serve.ts`` starts it for
+FILES_PROJECT, and opens the page on the throwaway project, as a chat working in another project opens it: every file,
+graph and diagram the page shows must then come from the project its link names."""
 
 import json
 import re
@@ -77,6 +83,23 @@ BOARD_LINK = "https://claude.ai/artifact/story-board"
 STORY_REVIEW = "story-review"
 REVIEW_MAP = "review/.context/story-map.md"
 
+# Seed, on another project only: design-review's story map drawn in draw.io, one page named Checkout Story Map holding
+# one cell labelled Place Order. The draw.io viewer's own folder holds no such file, so a viewer sent the path from the
+# project's root opens a blank Page-1 instead.
+DIAGRAM = "design/.context/story-map.drawio"
+DIAGRAM_PAGE = "Checkout Story Map"
+DIAGRAM_CELL = "Place Order"
+DIAGRAM_TEXT = (
+    '<mxfile><diagram id="checkout-map" name="Checkout Story Map"><mxGraphModel><root>'
+    '<mxCell id="0"/><mxCell id="1" parent="0"/>'
+    '<mxCell id="place-order" value="Place Order" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">'
+    '<mxGeometry x="40" y="40" width="160" height="60" as="geometry"/></mxCell>'
+    "</root></mxGraphModel></diagram></mxfile>\n"
+)
+# draw.io loads from embed.diagrams.net before it draws the diagram it is sent.
+DRAWIO_LOADS_MILLISECONDS = 60_000
+_DRAWIO_VIEWER = _REPO_ROOT / "tools" / "drawio_viewer" / "drawio_viewer.py"
+
 
 def _free_port() -> int:
     with socket.socket() as probe:
@@ -128,7 +151,9 @@ class FilesStack:
     """The Files app as a person meets it, every part of it the spec's own: the page built from this checkout, the Files
     server serving it, the cdd server it asks, a git project, and Chromium. ``close`` stops and removes all of them."""
 
-    def __init__(self) -> None:
+    def __init__(self, started_for: Path | None = None) -> None:
+        """started_for is the project the Files server is started for, the one a call naming no project is about; the
+        seeded project when none is given."""
         self.top = Path(tempfile.mkdtemp(prefix="cdd-files-e2e-")).resolve()
         self.project = self.top / "project"
         self.project.mkdir()
@@ -136,28 +161,53 @@ class FilesStack:
         self._build_page()
         self.cdd = SpecServer()
         self.cdd.start()
+        self.drawio_root = self.top / "drawio-viewer"
+        self.drawio_root.mkdir()
+        self.drawio_port = _free_port()
+        self._drawio = subprocess.Popen([sys.executable, str(_DRAWIO_VIEWER), str(self.drawio_root), str(self.drawio_port)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self._wait_for(self.drawio_port, "the draw.io viewer")
         self.port = _free_port()
-        self._files = subprocess.Popen(["node", str(_NODE_TSX), "spec-files-server.ts", str(self.top / "dist"), str(self.port), str(self.project)], cwd=_APP, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        self._wait_for_files_server()
+        started = str(started_for or self.project)
+        self._files = subprocess.Popen(["node", str(_NODE_TSX), "spec-files-server.ts", str(self.top / "dist"), str(self.port), started, str(self.drawio_port)], cwd=_APP, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self._wait_for(self.port, "the Files server")
         self._playwright = sync_playwright().start()
         self.browser = self._playwright.chromium.launch()
+        self._user_agent = self._browser_user_agent()
+
+    @classmethod
+    def on_another_project(cls) -> "FilesStack":
+        """The Files app opened on a project other than the CDD checkout: its server started for this checkout, the
+        draw.io viewer running from a folder of its own, and the page on the seeded project, which also holds
+        design-review's story map diagram."""
+        stack = cls(started_for=_REPO_ROOT)
+        _write(stack.project, DIAGRAM, DIAGRAM_TEXT)
+        return stack
 
     def _build_page(self) -> None:
         subprocess.run(["node", str(_NODE_VITE), "build", "--outDir", str(self.top / "dist"), "--emptyOutDir"], cwd=_APP, capture_output=True, text=True, check=True)
 
-    def _wait_for_files_server(self) -> None:
+    def _wait_for(self, port: int, server: str) -> None:
         deadline = time.monotonic() + _SERVER_STARTS_WITHIN_SECONDS
         while time.monotonic() < deadline:
             try:
-                with urlopen(f"http://127.0.0.1:{self.port}/", timeout=2):
+                with urlopen(f"http://127.0.0.1:{port}/", timeout=2):
                     return
             except (urllib.error.URLError, OSError):
                 time.sleep(0.25)
-        raise TimeoutError(f"the Files server did not answer on port {self.port} within {_SERVER_STARTS_WITHIN_SECONDS} s")
+        raise TimeoutError(f"{server} did not answer on port {port} within {_SERVER_STARTS_WITHIN_SECONDS} s")
+
+    def _browser_user_agent(self) -> str:
+        """Chromium's own user agent, named as the browser a person runs: embed.diagrams.net refuses a headless one, so
+        draw.io would never load in the viewer's page."""
+        page = self.browser.new_page()
+        try:
+            return page.evaluate("navigator.userAgent").replace("HeadlessChrome", "Chrome")
+        finally:
+            page.close()
 
     def open(self, ticket: str, fidelities: str) -> Page:
         """A new page on the files of ticket's fidelities, as the chat bar's files button opens it."""
-        page = self.browser.new_page(viewport={"width": 1600, "height": 900})
+        page = self.browser.new_page(viewport={"width": 1600, "height": 900}, user_agent=self._user_agent)
         query = urllib.parse.urlencode({"files": ticket, "fidelity": fidelities, "project": str(self.project)})
         page.goto(f"http://127.0.0.1:{self.port}/?{query}")
         return page
@@ -167,14 +217,26 @@ class FilesStack:
         self._playwright.stop()
         subprocess.run(["taskkill", "/F", "/T", "/PID", str(self._files.pid)], capture_output=True) if sys.platform == "win32" else self._files.kill()
         self._files.wait()
+        self._drawio.kill()
+        self._drawio.wait()
         self.cdd.stop()
         shutil.rmtree(self.top, ignore_errors=True)
 
 
-def graph_view(page: Page) -> None:
-    """Every file under the session's root listed, shown as the session's graph, read for real."""
+def drawio_editor(page: Page):
+    """The draw.io editor the file view shows: the viewer's page in the Files app's frame, and draw.io in the viewer's."""
+    return page.frame_locator("iframe.drawio-frame").frame_locator("iframe#drawio")
+
+
+def all_session_files(page: Page) -> None:
+    """Every file under the session's root listed, not only the files the session's branch changed."""
     page.get_by_role("button", name="All session files").click()
     page.locator(".file-list, .file-tree").first.wait_for(timeout=SHOWN_MILLISECONDS)
+
+
+def graph_view(page: Page) -> None:
+    """Every file under the session's root listed, shown as the session's graph, read for real."""
+    all_session_files(page)
     page.get_by_role("button", name="Graph", exact=True).click()
     page.locator("ul.graph-tree").wait_for(timeout=GRAPH_READ_MILLISECONDS)
 
@@ -198,6 +260,13 @@ def line(page: Page, text: str):
 
 def shown_lines(page: Page) -> list[str]:
     return [line.replace(NBSP, " ") for line in page.locator(".view-lines .view-line").all_inner_texts()]
+
+
+def lines_in_order(page: Page, path: str) -> list[str]:
+    """The lines the open file path shows, top to bottom: Monaco keeps their elements in no order, so they are read by
+    where each sits."""
+    tops = page.locator(f'section.open-file[aria-label="{path}"] .view-lines .view-line').evaluate_all("lines => lines.map(line => [line.offsetTop, line.innerText])")
+    return [text.replace(NBSP, " ") for _, text in sorted(tops)]
 
 
 def mark_on(page: Page, text: str):

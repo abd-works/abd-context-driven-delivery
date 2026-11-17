@@ -146,3 +146,6 @@ sandbox/
 harness/chat-ui/pane/install.json
 harness/chat-ui/pane/tsconfig.json
 harness/chat-ui/pane/.claude-plugin/types/
+
+# End-to-end step screenshots and reports: kept per run, never committed (accepted baselines go on their own branch).
+.sessions/**/e2e-test-results/

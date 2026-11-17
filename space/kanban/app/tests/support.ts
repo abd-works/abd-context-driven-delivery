@@ -42,6 +42,14 @@ export async function openWholeBoard(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Expand board' }).click()
 }
 
+// A reload reads the board from its files again, and draws it as it opens, with the details below it; the whole board
+// is expanded again so the step's screen shows the cards it reads.
+export async function readBoardAgain(page: Page): Promise<void> {
+  await page.reload()
+  await expect(page.locator('.board-column').first()).toBeVisible({ timeout: 20_000 })
+  await page.getByRole('button', { name: 'Expand board' }).click()
+}
+
 export const card = (page: Page, ticket: string): Locator => page.locator(`.ticket-card[data-ticket="${ticket}"]`)
 
 // A person grabs a card by its title; a drag cannot start on the buttons further down it.

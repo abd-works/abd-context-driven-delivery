@@ -140,13 +140,20 @@ class CddEntry:
 
     def _write_claude_plugin(self) -> None:
         self._allow_cdd_tools(self._layout.user_settings_folder / "settings.json")
+        self.point_chats_at_served_lane()
+        self._drop_cdd_entry(self._layout.user_mcp_config, "user's", remove_when_empty=False)
+        for written in self._installation.daemon.home.write_claude_plugin(self._claude_plugin_server()):
+            self._installation.track_write(written)
+
+    def point_chats_at_served_lane(self) -> None:
+        """Point the Claude Code chats working in this checkout at the server of the lane it is served on: the dev
+        lane's through a ``cdd`` entry in the project's ``.mcp.json``, the stable lane's through the cdd plugin alone.
+        A full install does this, and so does every switch of the server onto this checkout's code, so a ticket's
+        worktree pinned on the dev lane is not left talking to the stable lane."""
         if self._installation.served.daemon.home.is_dev_lane:
             self._write_dev_lane_entry()
         else:
             self._drop_cdd_entry(self._project_root / ".mcp.json", "project's", remove_when_empty=True)
-        self._drop_cdd_entry(self._layout.user_mcp_config, "user's", remove_when_empty=False)
-        for written in self._installation.daemon.home.write_claude_plugin(self._claude_plugin_server()):
-            self._installation.track_write(written)
 
     def _write_dev_lane_entry(self) -> None:
         """Point the chats working in this checkout at the dev lane's server. The cdd plugin names the stable lane's
