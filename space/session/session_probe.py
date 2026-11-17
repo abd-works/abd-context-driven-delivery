@@ -68,7 +68,7 @@ class SessionProbe:
 
     def _probe_transcript(self, session: Session) -> Path:
         """A transcript file for the probe's chat, so the chat pointer on each log line names a file that is there."""
-        transcript = session.session_path / "chats" / "guidance-probe.md"
+        transcript = session.work_folder / "chats" / "guidance-probe.md"
         transcript.parent.mkdir(parents=True, exist_ok=True)
         transcript.write_text("guidance diagnostics probe\n", encoding="utf-8")
         return transcript

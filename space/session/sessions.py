@@ -191,8 +191,7 @@ class Sessions:
         kept = self.repo.path_from_top(chosen) if chosen is not None and chosen != self.root else ""
         fields = (("name", session.name), ("title", title), ("scope", scope), ("parent", parent), ("workpath", kept))
         session.record.save_fields(**{key: value for key, value in fields if value})
-        session.repo_path = self.roots.checkout_of(session)
-        session.workpath = self.roots.root_of(session)
+        self.held.placed(session)
         session.log.seed_first_loop()
         return session
 
@@ -253,8 +252,8 @@ class SessionListing:
 
 
 class HeldSessions:
-    """The one *Session* a checkout's sessions hold for each session folder, made the first time it is read, so every
-    call in a session, from any chat, works on the same object, and held under the folder it moves to."""
+    """The one *Session* a checkout's sessions hold for each record folder, made the first time it is read, so every
+    call in a session, from any chat, works on the same object, and held under the record folder it moves to."""
 
     def __init__(self, sessions: Sessions) -> None:
         self._sessions = sessions
@@ -262,37 +261,46 @@ class HeldSessions:
         self._held_lock = threading.Lock()
 
     def load(self, folder: Path) -> Session:
-        """The session kept in folder, read without opening it: the one object these sessions hold for that folder,
-        working in the root ``root_of`` derives now, so a worktree opened or a workpath chosen since is seen."""
-        session = self.at(Path(folder))
-        session.repo_path = self._sessions.roots.checkout_of(session)
-        workpath = self._sessions.roots.root_of(session)
+        """The session whose record folder is folder, read without opening it: the one object these sessions hold for
+        that folder, placed where its roots derive now, so a worktree opened or a workpath chosen since is seen."""
+        return self.placed(self.at(Path(folder)))
+
+    def placed(self, session: Session) -> Session:
+        """session working where its roots derive now: in its checkout, at its root, and writing its work in its work
+        folder, its worktree's when it has one. The work folder is set before the root, so a graph made again for a new
+        root is kept in the new work folder."""
+        roots = self._sessions.roots
+        session.repo_path = roots.checkout_of(session)
+        session.work_folder = roots.work_folder_of(session)
+        workpath = roots.root_of(session)
         if session.workpath is None or session.work_root != workpath:
             session.workpath = workpath
         return session
 
     def at(self, folder: Path) -> Session:
-        """The one Session held for folder, made the first time it is asked for."""
+        """The one Session held for the record folder folder, made the first time it is asked for, its work kept beside
+        its record until it is placed."""
         key = folder.resolve()
         with self._held_lock:
             held = self._held.get(key)
             if held is None:
                 held = self._held[key] = Session(self._sessions)
-                held.session_path = folder
+                held.record_folder = folder
+                held.work_folder = folder
                 held.name = folder.name
             return held
 
     def moved(self, session: Session, moved_from: Path) -> None:
-        """Hold session under the folder it moved to, such as ``.sessions/_complete/alpha``, so reading it there finds
-        the same object."""
+        """Hold session under the record folder it moved to, such as ``.sessions/_complete/alpha``, so reading it there
+        finds the same object."""
         with self._held_lock:
             self._held.pop(Path(moved_from).resolve(), None)
-            self._held[session.session_path.resolve()] = session
+            self._held[session.record_folder.resolve()] = session
 
     def removed(self, session: Session) -> None:
-        """Hold session no more, its folder deleted."""
+        """Hold session no more, its folders deleted."""
         with self._held_lock:
-            self._held.pop(session.session_path.resolve(), None)
+            self._held.pop(session.record_folder.resolve(), None)
 
 
 class CallSessions:

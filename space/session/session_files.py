@@ -57,11 +57,11 @@ class SessionFiles:
     def _from_project(self) -> FileManager:
         """A file manager named from the project's top that reads the repository, the checkout the session works in,
         such as its ticket's worktree beside the repository, whose graph reads files outside the session's roots, like
-        the examples module a story test imports; the session's roots; and the session's own folder, which a ticket's
-        session keeps in the main checkout's ``.sessions`` outside its worktree; held, and a new one when those change."""
+        the examples module a story test imports; the session's roots; and the session's own folders, its record folder,
+        which a ticket's session keeps in the main checkout's ``.sessions`` outside its worktree, and its work folder;
+        held, and a new one when those change."""
         repo_root = self._session.repo.root
-        own_folder = self._session.session_path
-        roots = (repo_root, Path(self._session.repo_path), *self.file_manager.roots, *((own_folder,) if own_folder is not None else ()))
+        roots = (repo_root, Path(self._session.repo_path), *self.file_manager.roots, *self._own_folders)
         if self._project_files is None or self._project_files.roots != tuple(Path(root).resolve() for root in roots):
             self._project_files = FileManager(repo_root, roots)
         return self._project_files
@@ -71,10 +71,16 @@ class SessionFiles:
         file manager named from the project's top searches it."""
         return self._from_project.find(pattern)
 
+    @property
+    def _own_folders(self) -> tuple[Path, ...]:
+        """The session's record folder and its work folder, once when they are the same folder."""
+        folders = (self._session.record_folder, self._session.work_folder)
+        return tuple(dict.fromkeys(folder for folder in folders if folder is not None))
+
     def in_folder(self) -> list[FileEntry]:
-        """Every file in the session's folder, each with its path from the project."""
+        """Every file in the session's record folder and its work folder, each with its path from the project."""
         repo = self._session.repo
-        files = sorted(path for path in self._session.session_path.rglob("*") if path.is_file())
+        files = sorted(path for folder in self._own_folders if folder.is_dir() for path in folder.rglob("*") if path.is_file())
         return [FileEntry(repo.path_from_top(path), True) for path in files]
 
     def in_workpath(self) -> list[FileEntry]:

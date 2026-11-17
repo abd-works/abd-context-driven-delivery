@@ -21,7 +21,7 @@ ERROR_FILE = "session.err"
 # How an agent keeps the log: the text sessions.switch answers with.
 _INSTRUCTIONS_FILE = Path(__file__).parent / "SESSION-LOG.md"
 # The rules a hook gave the agent since the last log line. The hook server notes them and the cdd server writes the next
-# line, so they wait in the session's folder rather than in either process.
+# line, so they wait in the session's work folder rather than in either process.
 _INJECTED_RULES_FILE = "injected-rules.txt"
 _TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 # The verb of the line a tool call writes first, naming the tool: every line that call writes follows it.
@@ -59,7 +59,7 @@ class LogTimestamp:
 
 class HookLog:
     """A log a hook appends to while a session is open, such as ``dispatch.debug`` or the prompt log, in the ``logs``
-    folder of the session's folder: the one place that writes such a log, so its entries are appended one way."""
+    folder of the session's work folder: the one place that writes such a log, so its entries are appended one way."""
 
     def __init__(self, path: Path) -> None:
         self.path = Path(path)
@@ -161,7 +161,7 @@ class InjectedRules:
 
     @property
     def _path(self) -> Path | None:
-        """``injected-rules.txt`` beside the log, wherever the session's folder is now; none before it has one."""
+        """``injected-rules.txt`` beside the log, wherever the session's work folder is now; none before it has one."""
         log_path = self._log.path
         return log_path.with_name(_INJECTED_RULES_FILE) if log_path is not None else None
 
@@ -208,13 +208,13 @@ class SessionLog:
     @property
     def path(self) -> Path | None:
         """The session's session.log; none before the session has a folder."""
-        folder = self._session.session_path
+        folder = self._session.work_folder
         return folder / LOG_FILE if folder is not None else None
 
     @property
     def error_path(self) -> Path | None:
         """The session's session.err, which keeps the full trace of each failure that session.log points at."""
-        folder = self._session.session_path
+        folder = self._session.work_folder
         return folder / ERROR_FILE if folder is not None else None
 
     @property

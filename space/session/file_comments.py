@@ -1,4 +1,4 @@
-"""A session's file comments: what a person wrote on lines of a file in the viewer, kept in the session's folder, and
+"""A session's file comments: what a person wrote on lines of a file in the viewer, kept in the session's work folder, and
 sent to a chat for the agent to act on. A comment is not sent, then sent, then processed once the chat's turn that
 worked on it has ended."""
 
@@ -152,7 +152,7 @@ class FileComment:
 @agent_toolset
 class FileComments:
     """Comment on lines of a session's files, send the comments to a chat, and clear the ones the chat has processed.
-    The comments are kept in the session's folder, so they stay when a page reloads."""
+    The comments are kept in the session's work folder, so they stay when a page reloads."""
 
     def __init__(self, session: Session) -> None:
         self._session = session
@@ -254,4 +254,4 @@ class FileComments:
 
     @property
     def _file(self) -> JsonFile:
-        return JsonFile(Path(self._session.session_path) / COMMENTS_FILE)
+        return JsonFile(Path(self._session.work_folder) / COMMENTS_FILE)

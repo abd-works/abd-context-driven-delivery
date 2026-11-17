@@ -63,23 +63,23 @@ with description("SessionFiles") as self:
         with it("should refuse a path that is not there"):
             expect(lambda: self.files.from_root("board/missing.md")).to(raise_error(NamedPathNotFoundError))
 
-    with context("that writes into the session's own folder, kept outside the folder it works in"):
-        # A ticket's session works in its worktree, while its folder is in the main checkout's .sessions.
+    with context("that writes into the session's record folder, kept outside the folder it works in"):
+        # A ticket's session works in its worktree, while its record folder is in the main checkout's .sessions.
         with before.each:
             self.main_checkout = tempfile.TemporaryDirectory()
             self.session_folder = Path(self.main_checkout.name).resolve() / ".sessions" / "checkout-flow"
             session = _working_in(self.project, self.project / "board")
-            session.session_path = self.session_folder
+            session.record_folder = self.session_folder
             self.files = session.session_files
 
         with after.each:
             self.main_checkout.cleanup()
 
-        with it("should save the file in the session's folder"):
+        with it("should save the file in the session's record folder"):
             self.files.write(str(self.session_folder / DEBUG_REPORT), DEBUG_TEXT)
             expect((self.session_folder / DEBUG_REPORT).read_text(encoding="utf-8")).to(equal(DEBUG_TEXT))
 
-        with it("should still refuse a file outside the session's folder and its roots"):
+        with it("should still refuse a file outside the session's folders and its roots"):
             outside = self.session_folder.parent / "other-session" / DEBUG_REPORT
             expect(lambda: self.files.write(str(outside), DEBUG_TEXT)).to(raise_error(PathOutsideRootsError))
 

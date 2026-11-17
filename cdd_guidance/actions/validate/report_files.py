@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from cdd_guidance.actions.validate.checked_graph import CheckedGraph
     from space.session.session import Session
 
-# Where, in the session's folder, the whole graph a call builds is written for its judge to read: a graph of its own for
+# Where, in the session's work folder, the whole graph a call builds is written for its judge to read: a graph of its own for
 # each report, ignored by git as every saved graph is (``graph.json``), and only the latest of each fidelity kept.
 _CONTEXT_FOLDER = ".context"
 _CHECKED_GRAPHS_FOLDER = "checked-graphs"
@@ -35,7 +35,7 @@ class ReportFiles:
     def graph_file(self) -> Path:
         """Where the whole graph the call builds is written, for its judge to read: a file of its first report's own in
         the session's checked graphs, else a file of its own in the session, for a validate that saves no report."""
-        folder = Path(self._session.session_path)
+        folder = Path(self._session.work_folder)
         if self.paths:
             graph = self._checked_graphs / self.paths[0].stem / GRAPH_FILE_NAME
             graph.parent.mkdir(parents=True, exist_ok=True)
@@ -56,12 +56,12 @@ class ReportFiles:
             self._drop_older_checked_graphs(path)
 
     def where(self) -> str:
-        """The saved reports, or the session's folder when the call claimed none."""
-        return ", ".join(str(path) for path in self.paths) if self.paths else str(Path(self._session.session_path))
+        """The saved reports, or the session's work folder when the call claimed none."""
+        return ", ".join(str(path) for path in self.paths) if self.paths else str(Path(self._session.work_folder))
 
     @property
     def _checked_graphs(self) -> Path:
-        return Path(self._session.session_path) / _CONTEXT_FOLDER / _CHECKED_GRAPHS_FOLDER
+        return Path(self._session.work_folder) / _CONTEXT_FOLDER / _CHECKED_GRAPHS_FOLDER
 
     def _drop_older_checked_graphs(self, report: Path) -> None:
         """Remove the whole graphs built for the earlier reports of report's fidelity: their judges have judged them, and

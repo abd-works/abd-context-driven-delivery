@@ -1226,9 +1226,9 @@ No class of this module acts on another class of the model at run time.
 ## SessionLog
 
 - `SessionLog.path`
-  - `-> Session.session_path` reads session path of · space/session/session_log.py:184
+  - `-> Session.work_folder` reads work folder of · space/session/session_log.py:184
 - `SessionLog.error_path`
-  - `-> Session.session_path` reads session path of · space/session/session_log.py:190
+  - `-> Session.work_folder` reads work folder of · space/session/session_log.py:190
 - `SessionLog.entries`
   - `-> LogEntry()` creates · space/session/session_log.py:196
   - `<- list[LogEntry]`

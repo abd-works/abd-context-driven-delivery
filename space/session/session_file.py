@@ -347,7 +347,7 @@ class SessionFile:
     def _last_validate(self) -> SavedGraph | None:
         """What the session's last validate saved; none before it saved a graph, or one in a shape the graph no longer
         writes, which the next validate writes again."""
-        saved = Path(self._session.session_path) / GRAPH_FILE_NAME
+        saved = Path(self._session.work_folder) / GRAPH_FILE_NAME
         if not saved.is_file():
             return None
         try:

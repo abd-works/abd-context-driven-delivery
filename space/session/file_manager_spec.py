@@ -44,7 +44,7 @@ with description("a session's file manager"):
             (folder / "session.json").write_text(json.dumps({"name": "orders", "outputs": {"stories": {"root": "src"}}}), encoding="utf-8")
             self.session = Session(Sessions(self.workpath))
             self.session.workpath = self.workpath
-            self.session.session_path = folder
+            self.session.record_folder = folder
 
         with it("should read under the root session.json records for a practice"):
             expect(self.session.session_files.file_manager.roots).to(contain(self.workpath / "src"))

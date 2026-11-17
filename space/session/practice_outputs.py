@@ -54,11 +54,11 @@ class PracticeOutputs:
             return self._graph
 
     def _graph_of(self, working: frozenset[str]) -> Graph:
-        """A graph of only the practices the session works on, created for it and saved in its own folder: a practice
+        """A graph of only the practices the session works on, created for it and saved in its work folder: a practice
         turned off for it is never read into it, and a graph saved anywhere else is not the session's."""
         session = self._session
         graph = Graph(self.every[key].guidance for key in self.every if key in working)
-        graph.kept_in = session.session_path
+        graph.kept_in = session.work_folder
         graph.reads.open_saved(session.work_root)
         if session.overlays:
             graph.overlays = session.overlays

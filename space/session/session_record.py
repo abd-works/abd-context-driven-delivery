@@ -68,7 +68,7 @@ class SessionRecord:
         """Save the session's name, workpath, and repository, creating its folder, and keep the fields others store
         there, such as a board ticket's title, scope, and parent."""
         session = self._session
-        if session.session_path is None:
+        if session.record_folder is None:
             return
         self.save_fields(name=session.name, workpath=session.workpath_from_checkout, repo_path=str(session.repo_path))
 

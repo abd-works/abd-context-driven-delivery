@@ -57,7 +57,7 @@ _HANDOFF_WITH_STEPS = """# Handoff
 
 def _chat_in(session: Session, chat_id: str = "spec-chat") -> ChatPointer:
     """A chat called chat_id whose transcript sits in session's folder: the chat a call from it names."""
-    chats = session.session_path / "chats"
+    chats = session.work_folder / "chats"
     chats.mkdir(parents=True, exist_ok=True)
     transcript = chats / f"{chat_id}.md"
     transcript.write_text("spec transcript\n", encoding="utf-8")
@@ -120,10 +120,10 @@ with description("a session"):
             expect(ToolCall({}, self.repo).session.name).to(equal("main"))
 
         with it("should agree with a hook event on the same repo"):
-            expect(ToolCall({}, self.repo).session.session_path).to(equal(HookPayload({"cwd": str(self.repo)}).session.session_path))
+            expect(ToolCall({}, self.repo).session.record_folder).to(equal(HookPayload({"cwd": str(self.repo)}).session.record_folder))
 
         with it("should agree with the session opened for the project without a call"):
-            expect(ToolCall({}, self.repo).session.session_path).to(equal(SESSION_OPENING.saved_in(self.repo).session_path))
+            expect(ToolCall({}, self.repo).session.record_folder).to(equal(SESSION_OPENING.saved_in(self.repo).record_folder))
 
         with context("with a named session open"):
             with before.each:
@@ -132,7 +132,7 @@ with description("a session"):
                 Sessions(self.repo).switch("alpha", self.work)
 
             with it("should be that session"):
-                expect(ToolCall({}, self.repo).session.session_path).to(equal(self.repo.resolve() / ".sessions" / "alpha"))
+                expect(ToolCall({}, self.repo).session.record_folder).to(equal(self.repo.resolve() / ".sessions" / "alpha"))
 
             with it("should be that session when the call's project is the workpath folder"):
                 expect(ToolCall({}, self.work).session.name).to(equal("alpha"))
@@ -180,10 +180,10 @@ with description("a session"):
             expect(session.name).to(equal("alpha"))
             expect(session.workpath).to(equal(self.work))
             expect(session.repo_path).to(equal(self.repo.resolve()))
-            expect(session.session_path).to(equal(self.repo.resolve() / ".sessions" / "alpha"))
+            expect(session.record_folder).to(equal(self.repo.resolve() / ".sessions" / "alpha"))
 
         with it("should write --- 1 as the first line of a new session.log"):
-            first = (Sessions(self.called).current().session_path / "session.log").read_text(encoding="utf-8").splitlines()[0]
+            first = (Sessions(self.called).current().work_folder / "session.log").read_text(encoding="utf-8").splitlines()[0]
             expect("--- 1" in first).to(equal(True))
 
         with it("should keep the name as the open session under the cdd home"):
@@ -247,7 +247,7 @@ with description("a session"):
                 session = Sessions(self.called).current()
                 expect(session.name).to(equal("alpha"))
                 expect(session.repo_path).to(equal(self.repo.resolve()))
-                expect(session.session_path).to(equal(self.repo.resolve() / ".sessions" / "alpha"))
+                expect(session.record_folder).to(equal(self.repo.resolve() / ".sessions" / "alpha"))
 
             with it("should use the workpath stored on that session"):
                 expect(Sessions(self.called).current().workpath).to(equal(self.work.resolve()))
@@ -294,8 +294,47 @@ with description("a session"):
             with it("should work on that ticket's session"):
                 expect(Sessions(self.called).current().name).to(equal("alpha"))
 
-            with it("should log into the ticket's folder in the repository's own .sessions"):
-                expect(Sessions(self.called).current().session_path).to(equal(self.repo.resolve() / ".sessions" / "alpha"))
+            # The board lists the ticket and tracks where it stands from its record, which stays on main; everything
+            # else the session writes goes with its work, in the ticket's worktree.
+            with it("should keep its record in the ticket's folder in the repository's own .sessions"):
+                expect(Sessions(self.called).current().record_folder).to(equal(self.repo.resolve() / ".sessions" / "alpha"))
+
+            with it("should keep its work in the ticket's folder in its worktree's .sessions"):
+                expect(Sessions(self.called).current().work_folder).to(equal(self.worktree / ".sessions" / "alpha"))
+
+            with context("that works"):
+                with before.each:
+                    self.session = Sessions(self.called).current()
+                    self.session.mark_loop(ToolCall())
+                    self.handoff = Path(self.session.write_handoff("Next steps"))
+                    self.session.record.save_fields(stage="Specification")
+
+                with it("should log into its work folder"):
+                    expect((self.worktree / ".sessions" / "alpha" / "session.log").read_text(encoding="utf-8")).to(contain("--- 1"))
+
+                with it("should write its handoffs into its work folder"):
+                    expect(self.handoff.parent).to(equal(self.worktree / ".sessions" / "alpha"))
+
+                with it("should keep its validation reports in its work folder"):
+                    expect(self.session.reports_folder).to(equal(self.worktree / ".sessions" / "alpha" / "validation-reports"))
+
+                with it("should save its session.json in its record folder"):
+                    saved = json.loads((self.repo / ".sessions" / "alpha" / "session.json").read_text(encoding="utf-8"))
+                    expect(saved["stage"]).to(equal("Specification"))
+
+                with it("should write no session.json into its work folder"):
+                    expect((self.worktree / ".sessions" / "alpha" / "session.json").exists()).to(equal(False))
+
+            with context("that closes"):
+                with before.each:
+                    self.session = Sessions(self.called).current()
+                    self.session.folder.move_to_closed()
+
+                with it("should move its record among the closed sessions"):
+                    expect(self.session.record_folder).to(equal(self.repo.resolve() / ".sessions" / "_complete" / "alpha"))
+
+                with it("should leave its work in its worktree"):
+                    expect(self.session.work_folder).to(equal(self.worktree / ".sessions" / "alpha"))
 
             # The board and the chat bar name the active ticket by the open session's name, so it follows the worktree
             # as current does: the ticket's own chat shows the ticket, not main.
@@ -381,10 +420,12 @@ with description("a session"):
             with before.each:
                 self.instructions = Sessions(self.repo).switch("alpha")
 
-            with it("should keep logging under that repo at sessions and the name"):
-                expect(Sessions(self.called).current().session_path).to(
-                    equal(self.repo.resolve() / ".sessions" / "alpha")
-                )
+            with it("should keep its record under that repo at sessions and the name"):
+                expect(Sessions(self.called).current().record_folder).to(equal(self.repo.resolve() / ".sessions" / "alpha"))
+
+            # A session with no worktree of its own keeps its work beside its record.
+            with it("should keep its work in its record folder"):
+                expect(Sessions(self.called).current().work_folder).to(equal(self.repo.resolve() / ".sessions" / "alpha"))
 
             with it("should read the workpath from that session"):
                 expect(Sessions(self.called).current().workpath).to(equal(self.work.resolve()))
@@ -407,7 +448,7 @@ with description("a session"):
             Sessions(self.repo).switch("alpha", self.work)
 
         with it("should seed loop 1 in session.log when the session is new"):
-            log = (Sessions(self.called).current().session_path / "session.log").read_text(encoding="utf-8")
+            log = (Sessions(self.called).current().work_folder / "session.log").read_text(encoding="utf-8")
             expect("--- 1" in log).to(equal(True))
 
         with it("should mark loops via mark_loop when a session is current"):
@@ -457,19 +498,19 @@ with description("a session"):
 
         with it("should write the trace to session.err"):
             Sessions(self.called).current().log.by(None).failure(self.failure)
-            err = (Sessions(self.called).current().session_path / "session.err").read_text(encoding="utf-8")
+            err = (Sessions(self.called).current().work_folder / "session.err").read_text(encoding="utf-8")
             expect("boom" in err).to(equal(True))
 
         with it("should point the session.log line at that session.err file"):
             Sessions(self.called).current().log.by(None).failure(self.failure)
-            log = (Sessions(self.called).current().session_path / "session.log").read_text(encoding="utf-8")
+            log = (Sessions(self.called).current().work_folder / "session.log").read_text(encoding="utf-8")
             expect("session.err" in log).to(equal(True))
 
         with it("should append a second failure without overwriting session.err"):
             session = Sessions(self.called).current()
             session.log.by(None).failure(RuntimeError("first"))
             session.log.by(None).failure(RuntimeError("second"))
-            err = (session.session_path / "session.err").read_text(encoding="utf-8")
+            err = (session.work_folder / "session.err").read_text(encoding="utf-8")
             expect("first" in err and "second" in err).to(equal(True))
 
     with context("that records MCP tool failures on dispatch"):
@@ -493,8 +534,8 @@ with description("a session"):
                 host.dispatch("session.append_log", {"session": self.session.session_file_from_project, "note": "late", "loop": 99}, self.called)
             except LookupError:
                 pass
-            log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
-            err = (self.session.session_path / "session.err").read_text(encoding="utf-8")
+            log = (self.session.work_folder / "session.log").read_text(encoding="utf-8")
+            err = (self.session.work_folder / "session.err").read_text(encoding="utf-8")
             expect(
                 "error" in log
                 and "session.append_log" in log
@@ -521,7 +562,7 @@ with description("a session"):
                 project=str(self.repo),
             )
             host.dispatch("session.mark_loop", {"session": self.session.session_file_from_project, **_chat_arguments("mcp-dispatch-chat", self.transcript)}, self.called)
-            log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
+            log = (self.session.work_folder / "session.log").read_text(encoding="utf-8")
             expect("tool session.mark_loop" in log and "mcp-dispatch-chat" in log).to(equal(True))
 
     with context("that records a loop correction note"):
@@ -537,7 +578,7 @@ with description("a session"):
         with it("should append a note line with message paths and chat pointer"):
             touched = self.work / "repo.py"
             self.chat_log.note("close_branch must push merge checkout main", [touched])
-            log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
+            log = (self.session.work_folder / "session.log").read_text(encoding="utf-8")
             expect(
                 "note close_branch must push merge checkout main" in log
                 and str(touched) in log
@@ -547,7 +588,7 @@ with description("a session"):
         with it("should append via append_log with loop number and chat fields"):
             call = ToolCall(request=ToolRequest(_chat_in(self.session, "append-chat")))
             result = self.session.append_log(call, "correction recorded", loop=1, paths=[str(self.work / "session.py")])
-            log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
+            log = (self.session.work_folder / "session.log").read_text(encoding="utf-8")
             expect(
                 "appended note" in result
                 and "loop 1: correction recorded" in log
@@ -578,11 +619,11 @@ with description("a session"):
                 self.bare_session.log.by(None).action("sketch", [work / "x.py"])
 
             with it("should log the action as from no chat"):
-                log = (self.bare_session.session_path / "session.log").read_text(encoding="utf-8")
+                log = (self.bare_session.work_folder / "session.log").read_text(encoding="utf-8")
                 expect(log.rstrip().endswith("x.py no-chat")).to(equal(True))
 
             with it("should write nothing to session.err"):
-                expect((self.bare_session.session_path / "session.err").exists()).to(equal(False))
+                expect((self.bare_session.work_folder / "session.err").exists()).to(equal(False))
 
             with context("with the server's environment naming a chat"):
                 with before.each:
@@ -596,19 +637,19 @@ with description("a session"):
                     os.environ.pop("CDD_TRANSCRIPT_PATH", None)
 
                 with it("should still log the action as from no chat, not the chat the environment names"):
-                    log = (self.bare_session.session_path / "session.log").read_text(encoding="utf-8")
+                    log = (self.bare_session.work_folder / "session.log").read_text(encoding="utf-8")
                     expect(log.rstrip().endswith("y.py no-chat")).to(equal(True))
 
         with context("with paths passed in"):
             with it("should append a timestamped line that names the action and the path"):
                 self.chat_log.action("sketch", [self.edited])
-                log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
+                log = (self.session.work_folder / "session.log").read_text(encoding="utf-8")
                 expect("sketch" in log and str(self.edited) in log and "T" in log).to(equal(True))
 
         with context("with the practice it worked on"):
             with it("should name the practice graph root"):
                 self.chat_log.action("sketch", [self.edited], [self.session.practice("bdd").fidelities["behavior"].session_output])
-                log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
+                log = (self.session.work_folder / "session.log").read_text(encoding="utf-8")
                 expect("bdd" in log).to(equal(True))
 
         with context("with rules injected from a inject rules hook"):
@@ -618,14 +659,14 @@ with description("a session"):
 
             with it("should log that practice, fidelity, rule, and matched file"):
                 self.chat_log.action("sketch", [self.edited])
-                log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
+                log = (self.session.work_folder / "session.log").read_text(encoding="utf-8")
                 expect(
                     "bdd development hierarchy-preservation" in log and str(self.edited) in log
                 ).to(equal(True))
 
             with it("should omit a rule that was not injected"):
                 self.chat_log.action("sketch", [self.edited])
-                log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
+                log = (self.session.work_folder / "session.log").read_text(encoding="utf-8")
                 expect("stories-story-map" in log).to(equal(False))
 
         with context("with a chat transcript"):
@@ -633,7 +674,7 @@ with description("a session"):
                 transcript = self.work / "chat.md"
                 transcript.write_text("hello\n", encoding="utf-8")
                 self.session.log.by(ChatPointer("chat-1", transcript, "1-2")).action("sketch", [self.edited])
-                log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
+                log = (self.session.work_folder / "session.log").read_text(encoding="utf-8")
                 expect("chat-1" in log and str(transcript) in log and "1-2" in log).to(equal(True))
 
     # (S) Session --> Select Existing Session
@@ -645,10 +686,10 @@ with description("a session"):
             self.work = self.repo / "work"
             self.work.mkdir()
             Sessions(self.repo).switch("alpha", self.work)
-            self.session_path = Sessions(self.called).current().session_path
+            self.record_folder = Sessions(self.called).current().record_folder
 
         with it("should read the repo path and the workpath from that session"):
-            session = Sessions(self.repo).held.load(self.session_path)
+            session = Sessions(self.repo).held.load(self.record_folder)
             expect(session.repo_path).to(equal(self.repo.resolve()))
             expect(session.workpath).to(equal(self.work.resolve()))
 
@@ -693,7 +734,7 @@ with description("a loop"):
             expect(self.second.number).to(equal(self.first.number + 1))
 
         with it("should append the loop marker to session.log"):
-            log = (Sessions(self.called).current().session_path / "session.log").read_text(encoding="utf-8")
+            log = (Sessions(self.called).current().work_folder / "session.log").read_text(encoding="utf-8")
             expect(f"--- {self.second.number}" in log).to(equal(True))
 
     with context("that has log entries"):
@@ -756,7 +797,7 @@ with description("an action"):
         with context("with a practice and a fidelity"):
             with it("should log that practice and that fidelity"):
                 self.chat_log.validation(self.practice, [])
-                log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
+                log = (self.session.work_folder / "session.log").read_text(encoding="utf-8")
                 expect("Bdd" in log and "behavior" in log).to(equal(True))
 
         with context("with a violation"):
@@ -764,7 +805,7 @@ with description("an action"):
                 self.chat_log.validation(self.practice, 
                     ["hierarchy-preservation synopsis: flattened tree correction: keep the nesting"],
                 )
-                log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
+                log = (self.session.work_folder / "session.log").read_text(encoding="utf-8")
                 expect("hierarchy-preservation" in log and "synopsis" in log and "correction" in log).to(
                     equal(True)
                 )
@@ -775,7 +816,7 @@ with description("an action"):
             action = GuidanceAction(self.session)
             action._work_on("a note")
             action.run(lambda item: None, action="sketch")
-            log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
+            log = (self.session.work_folder / "session.log").read_text(encoding="utf-8")
             expect("sketch" in log).to(equal(True))
 
         with it("should log workpath and practice context for listed guidance"):
@@ -784,7 +825,7 @@ with description("an action"):
             action = GuidanceAction(self.session)
             action._work_on(["bdd"])
             action.run(lambda item: None, action="generate")
-            log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
+            log = (self.session.work_folder / "session.log").read_text(encoding="utf-8")
             expect("generate" in log and str(self.work) in log and "bdd" in log).to(equal(True))
 
         with context("with MCP host session binding like session.switch"):
@@ -802,7 +843,7 @@ with description("an action"):
                 action._work_on(["bdd"])
                 action.run(lambda _item: None, action="generate")
                 Validate(self.session).validate(["bdd"])
-                log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
+                log = (self.session.work_folder / "session.log").read_text(encoding="utf-8")
                 expect(
                     "generate" in log
                     and "bdd" in log
@@ -828,12 +869,12 @@ with description("an action"):
                     })
                 )
                 self.chat_log.action("sketch", [edited])
-                log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
+                log = (self.session.work_folder / "session.log").read_text(encoding="utf-8")
                 expect("sample-rule-one" in log and str(edited) in log).to(equal(True))
 
     with context("that names no action"):
         with it("should leave session.log unchanged"):
-            log_path = self.session.session_path / "session.log"
+            log_path = self.session.work_folder / "session.log"
             before = log_path.read_text(encoding="utf-8") if log_path.is_file() else ""
             action = GuidanceAction(self.session)
             action._work_on("a note")
@@ -911,11 +952,11 @@ with description("a practice"):
                 self.session.practice("ddd").enable(False)
 
             with it("should save it in the session's session.json"):
-                saved = json.loads((self.session.session_path / "session.json").read_text(encoding="utf-8"))
+                saved = json.loads((self.session.record_folder / "session.json").read_text(encoding="utf-8"))
                 expect(saved["practices"]["ddd"]["enabled"]).to(equal(False))
 
             with it("should read as turned off from the same folder later"):
-                later = Sessions(self.repo).held.load(self.session.session_path)
+                later = Sessions(self.repo).held.load(self.session.record_folder)
                 expect(later.practice("ddd").enabled).to(equal(False))
 
             with it("should be left out of the practices the session works on"):
@@ -947,7 +988,7 @@ with description("a practice"):
                 self.fidelity = self.stories.fidelities["story_map"]
                 # Written by hand, as another process would, and read by the next call, which begins an answer of its own.
                 self.write_overrides = lambda overrides: (
-                    (self.session.session_path / "session.json").write_text(
+                    (self.session.record_folder / "session.json").write_text(
                         json.dumps({"name": "alpha", "outputs": overrides}), encoding="utf-8"
                     ),
                     Sessions.of_project(self.called),
@@ -1468,11 +1509,11 @@ with description("a session on an MCP host whose CDD_REPO is the CDD checkout, n
         with it("should bind the project's session, not the CDD checkout's"):
             session = Sessions(self.project).current()
             expect(session.name).to(equal("beta"))
-            expect(session.session_path).to(equal(self.project.resolve() / ".sessions" / "beta"))
+            expect(session.record_folder).to(equal(self.project.resolve() / ".sessions" / "beta"))
             expect(session.workpath).to(equal(self.project.resolve()))
 
         with it("should give the project's session folder"):
-            expect(Sessions(self.project).current().session_path).to(equal(self.project.resolve() / ".sessions" / "beta"))
+            expect(Sessions(self.project).current().record_folder).to(equal(self.project.resolve() / ".sessions" / "beta"))
 
         with it("should append log notes to the project's session log"):
             session = Sessions(self.project).current()
@@ -1512,13 +1553,13 @@ with description("a session on an MCP host whose CDD_REPO is the CDD checkout, n
             expect(Sessions(self.project).current().name).to(equal("main"))
 
         with it("should keep the main session in the project's main session folder"):
-            expect(Sessions(self.project).current().session_path).to(equal(self.project.resolve() / ".sessions" / "main"))
+            expect(Sessions(self.project).current().record_folder).to(equal(self.project.resolve() / ".sessions" / "main"))
 
         with it("should work on the whole repository"):
             expect(Sessions(self.project).current().workpath).to(equal(self.project.resolve()))
 
         with it("should give the project's main session folder"):
-            expect(Sessions(self.project).current().session_path).to(equal(self.project.resolve() / ".sessions" / "main"))
+            expect(Sessions(self.project).current().record_folder).to(equal(self.project.resolve() / ".sessions" / "main"))
 
         with it("should leave the session unnamed in .sessions/session.json"):
             Sessions(self.project).current()
@@ -1593,10 +1634,10 @@ with description("a session read for a board") as self:
             expect(self.moved).to(be(self.beta))
 
         with it("should be kept in the closed sessions' folder"):
-            expect(self.beta.session_path).to(equal(self.repo.resolve() / ".sessions" / "_complete" / "beta"))
+            expect(self.beta.record_folder).to(equal(self.repo.resolve() / ".sessions" / "_complete" / "beta"))
 
         with it("should write its handoffs into that folder"):
-            expect(Path(self.beta.write_handoff("moved")).parent).to(equal(self.beta.session_path))
+            expect(Path(self.beta.write_handoff("moved")).parent).to(equal(self.beta.work_folder))
 
         # A cache written for it before the move, or a folder Windows would not let go of, can leave its old folder behind.
         with context("with its old folder left among the open sessions"):
@@ -1606,7 +1647,7 @@ with description("a session read for a board") as self:
                 (left / "progress-cache.json").write_text("{}", encoding="utf-8")
 
             with it("should be listed once, among the closed sessions"):
-                listed = [session.session_path for session in Sessions(self.repo).all() if session.name == "beta"]
+                listed = [session.record_folder for session in Sessions(self.repo).all() if session.name == "beta"]
                 expect(listed).to(equal([self.repo.resolve() / ".sessions" / "_complete" / "beta"]))
 
     with context("that its sessions loaded"):
@@ -1641,7 +1682,7 @@ with description("a session read for a board") as self:
             self.kept = self.beta.folder.keep_file(self.idea)
 
         with it("should hold the file in its session folder"):
-            expect(self.kept).to(equal(self.beta.session_path / "gift-cards.md"))
+            expect(self.kept).to(equal(self.beta.record_folder / "gift-cards.md"))
 
         with it("should leave nothing where the file was"):
             expect(self.idea.exists()).to(equal(False))

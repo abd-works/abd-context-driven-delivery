@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from space.session.session import MAIN_SESSION_NAME, Session
+from space.work_state import SESSIONS_FOLDER
 
 if TYPE_CHECKING:
     from space.session.sessions import Sessions
@@ -39,15 +40,27 @@ class SessionRoots:
         return checkout
 
     def checkout_of(self, session: Session) -> Path:
-        """The checkout session works in: its own worktree, the one its ticket opened or the one git lists for its
-        branch, else this checkout."""
+        """The checkout session works in: its own worktree, else this checkout."""
+        worktree = self.own_worktree_of(session)
+        return worktree if worktree is not None else self._sessions.root
+
+    def own_worktree_of(self, session: Session) -> Path | None:
+        """The worktree of session's own: the one its ticket opened, else the one git lists for its branch; none for
+        main or a session with no worktree."""
         if not session.name or session.name == MAIN_SESSION_NAME:
-            return self._sessions.root
+            return None
         kept = str(session.record.fields.get("worktree", "") or "").strip()
         if kept and Path(kept).is_dir():
             return Path(kept).resolve()
-        worktree = self.worktree_of(session.name)
-        return worktree if worktree is not None else self._sessions.root
+        return self.worktree_of(session.name)
+
+    def work_folder_of(self, session: Session) -> Path | None:
+        """Where session writes everything but its record: its own folder in its worktree's ``.sessions``, so the work
+        goes with the ticket's branch; for a session with no worktree of its own, its record folder."""
+        worktree = self.own_worktree_of(session)
+        if worktree is None or worktree == self._sessions.repo.main_clone.root.resolve():
+            return session.record_folder
+        return worktree / SESSIONS_FOLDER / session.name
 
     def in_checkout(self, checkout: Path, path: Path | str) -> Path:
         """path, resolved, moved into checkout when it lies in another checkout of this repository, its main clone or

@@ -84,7 +84,7 @@ class SessionFileTools:
     @agent_tool
     @noSessionLog
     def folder_files(self) -> list[FileEntry]:
-        """List every file in this session's folder, each with its path from the project: its log, handoffs, kept notes, and validation reports."""
+        """List every file in this session's record folder and work folder, each with its path from the project: its session.json, log, handoffs, kept notes, and validation reports."""
         return self.session_files.in_folder()
 
     @mcp
@@ -219,7 +219,8 @@ class SessionLogTools:
         Do not edit ``session.log`` by hand.
 
         **Session artifacts:** write large or temporary outputs (MCP ``graph_return_nodes`` JSON, diagnostics dumps,
-        probe results) under the session's folder (``.sessions/{name}/``), not only under Cursor
+        probe results) under the session's work folder (``.sessions/{name}/``, in its ticket's worktree when it has one),
+        not only under Cursor
         ``.cursor/projects/.../agent-tools``. Reference those files in ``paths`` on this call."""
         return self.log.by(call.request.chat).append_note(note, loop, paths)
 
@@ -227,7 +228,7 @@ class SessionLogTools:
     @skill
     @agent_tool
     def write_handoff(self, content: str = "", paths: list[str] | str | None = None) -> str:
-        """Write a handoff into this session's folder, .sessions/{session}/handoff-{timestamp}.md (.sessions/main/ for the main session).
+        """Write a handoff into this session's work folder, .sessions/{session}/handoff-{timestamp}.md in its ticket's worktree when it has one, else in the main checkout (.sessions/main/ for the main session).
         Returns the absolute path of the written file.
         paths: a file, a list of files, or a folder. Pass paths. This action reads them locally. Do not pass the handoff body in content.
         content: in-process text. Leave this empty on an MCP call."""
@@ -264,7 +265,7 @@ class SessionLogTools:
     def debug_session(self, choice: str = "", details: str = "") -> str:
         """Debug what went wrong in this session: capture as much context as can be found, ask the person for more, then fix the bug or request help. The chat bar's debug button starts this with no choice; its Fix buttons start it with {{choice}} set to fix and {{details}} naming the failure. Pass the same session argument to every session tool this calls."""
         """Step 1 - Capture the context. Gather, as fully as can be found: {{details}} when given; every failure and stack trace this chat met (tool errors, tracebacks, failed commands with their output), quoted whole; the failures the CDD chat bar shows; the latest lines of this session's session.log; server-health.report; the diagnostics.json of the install folder; the session's name, branch, and git status; cdd-version.read; and the operating system. Say what could not be read rather than leaving it out."""
-        """Step 2 - Write it as markdown with session.write_file to debug/debug-{time}.md in this session's folder (time as YYYYMMDDTHHMMSS): a one-line summary first, then each part under its own heading, stack traces in fences. Tell the person its path."""
+        """Step 2 - Write it as markdown with session.write_file to debug/debug-{time}.md in this session's work folder (time as YYYYMMDDTHHMMSS): a one-line summary first, then each part under its own heading, stack traces in fences. Tell the person its path."""
         """Step 3 - Unless {{choice}} is fix or help, ask the person with AskUserQuestion, one question: what to do, with the options "Fix the bug" (a sub-agent fixes it on this branch and serves it on the dev lane; on main, it pushes to main and serves it on the stable lane; with CDD installed in another project, it opens a pull request to the CDD repository) and "Request help" (an email to the CDD maintainer). Its notes and Other take more detail: add what the person writes to the report with session.write_file before going on."""
         """Step 4 - Request help: draft an email to the CDD maintainer for the person to send; never send it yourself. Build a mailto:jeff.anderson@abdworks.com link, subject "CDD debug: " and the summary, body the summary, the person's details, the report's path, and the first stack trace, URL-encoded and kept under 1800 characters, and open it with the system's opener: `start "" "<link>"` on Windows, `open "<link>"` on a Mac, `xdg-open "<link>"` elsewhere. Ask the person to attach the report and send it."""
         """Step 5 - Fix the bug: start a background sub-agent with the Agent tool and run_in_background, so this chat stays free, and tell the person it is running. Hand it the report's path and these steps: (a) Find where to work: when this project is the CDD checkout and the chat works in a ticket's worktree (any branch but main), work in that worktree on that branch; when it is the CDD checkout's main, work in the main checkout on main; else CDD is installed in another project, so work on a new branch in a worktree of the clone at the origin of `git -C ~/.cdd/runtime remote get-url origin`. (b) Fix the cause with the diagnose action's discipline: a failing spec first, then the fix, then the unit tier. (c) Send it where it goes live. On a ticket's branch: commit and push to that branch with repo.push_commit, then repin the dev lane with `python scripts/install.py --ide Claude --pin-runtime` from the worktree, and run `app.open` for each app the fix changed (Files, Kanban, Story UI) so it rebuilds on the dev lane; never merge it to main unless the person asked for that in their own words. On main: commit and push to main with repo.push_commit, message the chats that use the stable lane, then repin the stable lane with the same command from the main checkout. With CDD installed in another project: never push to its main; fork with `gh repo fork --remote`, push the branch, and open a pull request with `gh pr create --repo <owner>/<repo>`, its body the report's summary and what was changed. (d) Report the cause, the change, and the commit pushed with the lane it was served on, or the pull request's link."""
@@ -332,7 +333,9 @@ class SessionDecisionTools:
 @language_adapter(language="typescript")
 @agent_toolset
 class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionLogTools, SessionDecisionTools):
-    """One named piece of work in a project, kept in ``.sessions/{name}/``. It holds where it works, the practices it
+    """One named piece of work in a project. Its record, the session.json the board reads, is kept on main in
+    ``.sessions/{name}/`` (``record_folder``); everything else it writes goes to its work folder, the same folder in its
+    ticket's worktree when it has one (``work_folder``). It holds where it works, the practices it
     uses, and its title; its log, files, handoffs, decision records, and chat injections are objects of their own, made
     with it. It holds the *Sessions* that loaded it and their repository, which keep one Session for each session
     folder, so every call made in the session, from any chat, works on this one object: its graph and its one instance
@@ -348,7 +351,8 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionLo
         # The project's ``.context/config.json``, which names the folder each practice writes in.
         self.context_config = ContextConfig(self.repo_path)
         self._workpath: Path | None = None
-        self._session_path: Path | None = None
+        self._record_folder: Path | None = None
+        self._work_folder: Path | None = None
         self._make_parts()
 
     def _make_parts(self) -> None:
@@ -407,25 +411,46 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionLo
         self.practice_outputs.forget()
 
     @property
-    def session_path(self) -> Path | None:
-        """The session's folder, such as ``.sessions/alpha``; none for a session not yet kept in one."""
-        return self._session_path
+    def record_folder(self) -> Path | None:
+        """The folder of the session's record on main, ``<main clone>/.sessions/{name}/`` (``_complete``, ``_archive``
+        or ``_backlog`` once it moves there): its session.json, from which the board lists its ticket and tracks where it
+        stands, and its idea file. Every checkout of the repository reads the same record. None for a session not yet
+        kept in one."""
+        return self._record_folder
 
-    @session_path.setter
-    def session_path(self, folder: Path | None) -> None:
-        self._session_path = folder
+    @record_folder.setter
+    def record_folder(self, folder: Path | None) -> None:
+        self._record_folder = folder
         self.record.kept_in(folder)
+
+    @property
+    def work_folder(self) -> Path | None:
+        """The folder everything else the session writes goes to: its log, hook logs, handoffs, validation reports,
+        graph, progress cache, violation history, comments, and chat injections. For a ticket with its own worktree it
+        is ``<worktree>/.sessions/{name}/``, so the work stays on the ticket's branch; for a session with none, such as
+        main, it is the record folder. None for a session not yet kept in one."""
+        return self._work_folder
+
+    @work_folder.setter
+    def work_folder(self, folder: Path | None) -> None:
+        """Write the session's work in folder from now on. Its handoffs, progress cache, and graph were kept in the old
+        one, so they are made again in the new one."""
+        if folder == self._work_folder:
+            return
+        self._work_folder = folder
         self.handoffs = Handoffs(folder) if folder is not None else None
         self.progress_cache = ProgressCache(folder)
+        self.practice_outputs.forget()
 
     @property
     def is_closed(self) -> bool:
-        return self.session_path is not None and self.session_path.parent.name == COMPLETE_FOLDER
+        return self.record_folder is not None and self.record_folder.parent.name == COMPLETE_FOLDER
 
     @property
     def session_file(self) -> Path:
-        """The ``session.json`` in this session's folder, which holds its title, workpath, practice roots, and practices."""
-        return self.session_path / SESSION_FILE
+        """The ``session.json`` in this session's record folder, which holds its title, workpath, practice roots, and
+        practices."""
+        return self.record_folder / SESSION_FILE
 
     @property
     @data_field(key="session_file")
@@ -499,8 +524,9 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionLo
 
     @property
     def idea_file(self) -> IdeaFile:
-        """``<name>.md`` in this session's folder: what its work is about, the backlog item's file when it was started from one."""
-        return IdeaFile(self.session_path / f"{self.name}.md")
+        """``<name>.md`` in this session's record folder: what its work is about, the backlog item's file when it was
+        started from one. The board shows its text on the ticket's card, so it stays with the record on main."""
+        return IdeaFile(self.record_folder / f"{self.name}.md")
 
     @property
     def text(self) -> str:
@@ -557,7 +583,7 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionLo
     @property
     def reports_folder(self) -> Path:
         """Where Validate saves its reports in this session, each with the graph it checked beside it."""
-        return self.session_path / _REPORT_FOLDER
+        return self.work_folder / _REPORT_FOLDER
 
     def practice(self, name: str) -> PracticeSessionOutput:
         """The practice called name in this session, on or off for it: the session's one instance of it, so a practice

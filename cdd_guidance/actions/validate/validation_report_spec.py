@@ -55,7 +55,7 @@ with description("a validation report"):
         with it("should link each finding to its file by absolute path and line"):
             session = Session(Sessions(self.root))
             session.workpath = self.root
-            session.session_path = self.session_dir
+            session.work_folder = self.session_dir
             report_md = ValidationReport(session, [], _CheckedGraph(self.violations)).for_judge()
             report_path = self.session_dir / "validate-clean-engineering-code-src.md"
             report_path.write_text(report_md, encoding="utf-8")

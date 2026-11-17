@@ -1,4 +1,4 @@
-"""What a board read costs most to work out for one session, kept in its folder between reads."""
+"""What a board read costs most to work out for one session, kept in its work folder between reads."""
 from __future__ import annotations
 
 import logging
@@ -34,7 +34,7 @@ class ProgressCache:
     and the latest report with its saved graph. A move changes none of them, so moving a ticket never works them out
     again.
 
-    The session holds one for its folder, as ``progress-cache.json`` there, so a closed session takes it along; the session
+    The session holds one for its work folder, as ``progress-cache.json`` there, so a closed session takes it along; the session
     lasts as long as the cdd server, so its answers are held between reads and the file serves the next server. It is a
     cache: a missing or unreadable file, or one another reader holds open while it is written, only means the answers
     are worked out again."""

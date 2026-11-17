@@ -3069,7 +3069,7 @@ The sessions of every project this process serves, each made once and held while
 
 ## Session
 
-One named piece of work in a project, kept in `.sessions/{name}/`. It holds where it works, the practices it uses, and its title; its log, files, handoffs, decision records, and chat injections are objects of their own, made with it. It holds no chat: a line a call logs points at that call's chat.
+One named piece of work in a project, its record (session.json, idea file) kept in the main clone's `.sessions/{name}/` and everything else it writes in its work folder, the same folder in its ticket's worktree when it has one. It holds where it works, the practices it uses, and its title; its log, files, handoffs, decision records, and chat injections are objects of their own, made with it. It holds no chat: a line a call logs points at that call's chat.
 
 + Session(sessions: Sessions)
 ------
@@ -3079,7 +3079,8 @@ One named piece of work in a project, kept in `.sessions/{name}/`. It holds wher
 + repo_path: Path
 + << composition >> context_config: ContextConfig
 + workpath: Path | None
-+ session_path: Path | None
++ record_folder: Path | None
++ work_folder: Path | None
 + is_closed: bool
 + session_file: Path
 + session_file_from_project: str
@@ -3299,7 +3300,7 @@ The time a session log line, a hook log entry, or a toast is stamped with: a mom
 
 ## HookLog
 
-A log a hook appends to while a session is open, such as `dispatch.debug` or the prompt log, in the `logs` folder of the session's folder.
+A log a hook appends to while a session is open, such as `dispatch.debug` or the prompt log, in the `logs` folder of the session's work folder.
 
 + HookLog(path: Path)
 ------

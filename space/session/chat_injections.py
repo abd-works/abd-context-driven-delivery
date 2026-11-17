@@ -1,4 +1,4 @@
-"""ChatInjections - the rules a hook gave each chat of one session, kept in its folder for that chat's next prompt."""
+"""ChatInjections - the rules a hook gave each chat of one session, kept in its work folder for that chat's next prompt."""
 
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ class ChatInjections:
     def path_for(self, chat_id: str) -> Path:
         """The file that keeps chat_id's injection."""
         safe = "".join(ch if ch.isalnum() or ch in "._-" else "-" for ch in chat_id)
-        return self._session.session_path / _FOLDER / f"{safe.strip('-') or 'unknown'}.md"
+        return self._session.work_folder / _FOLDER / f"{safe.strip('-') or 'unknown'}.md"
 
     def keep(self, result: HookResult, payload: HookPayload) -> None:
         """Remember result's rules for the chat the event came from, and the last rules sent in the session."""
@@ -52,7 +52,7 @@ class ChatInjections:
             dest = self.path_for(payload.chat_id)
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_text(body, encoding="utf-8")
-        folder = self._session.session_path
+        folder = self._session.work_folder
         folder.mkdir(parents=True, exist_ok=True)
         (folder / _LAST_RULES_FILE).write_text(result.additional_context or "", encoding="utf-8")
 

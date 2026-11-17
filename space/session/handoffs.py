@@ -1,4 +1,4 @@
-"""Handoffs - the compact accounts a session keeps in its folder, so the next agent can continue its work."""
+"""Handoffs - the compact accounts a session keeps in its work folder, so the next agent can continue its work."""
 
 from __future__ import annotations
 

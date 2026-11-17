@@ -89,7 +89,7 @@ class _StoryMapFolder:
         if drawio:
             _write(self.folder, "board/.context/story-map.drawio", _EMPTY_DRAWIO)
         self.action = Validate(session=working_in(self.project, self.folder, self.folder / root))
-        self.session = Path(self.action.session.session_path)
+        self.session = Path(self.action.session.work_folder)
         if declared:
             outputs = {"markdown": [str(self.folder / self._MAP)], "drawio": [str(self.folder / "board/.context/story-map.drawio")]}
             self.action.session.practice("stories").guidance.fidelities.entries["story_map"].declared.output_paths = lambda: outputs
@@ -193,7 +193,7 @@ with description("a validate action on practice guidance") as self:
         with before.each:
             self.folder = Path(__file__).with_name("fixtures") / "saved-graph"
             self.action = Validate(session=working_in(self.project, self.folder, self.folder))
-            self.session = Path(self.action.session.session_path)
+            self.session = Path(self.action.session.work_folder)
             # A session's graph is the one created for it in its own folder, so the fixture's graph is put there.
             self.session.mkdir(parents=True, exist_ok=True)
             shutil.copy(self.folder / ".context" / "graph.json", self.session / "graph.json")
@@ -216,7 +216,7 @@ with description("a validate action on practice guidance") as self:
         with before.each:
             self.folder = Path(tempfile.mkdtemp(prefix="cdd-validate-"))
             self.action = Validate(session=working_in(self.project, self.folder, self.folder))
-            self.session = Path(self.action.session.session_path)
+            self.session = Path(self.action.session.work_folder)
             self.session.mkdir(parents=True, exist_ok=True)
             shutil.copy(Path(__file__).with_name("fixtures") / "sample-graph-violations.json", self.session / "clean-engineering-violations.json")
 

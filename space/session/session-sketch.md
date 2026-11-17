@@ -10,7 +10,7 @@ format: md
 
 **Module:** `space/session`
 
-A session is one named piece of work in a project, kept in `.sessions/{name}/`. `Sessions` knows every session of one checkout and which one is open; `Session` holds where one session works, the practices it uses, and its title. Its log, its files, its handoffs, and its decision records are objects of their own, each reached through the session, so each has one reason to change.
+A session is one named piece of work in a project, its record kept in the main clone's `.sessions/{name}/` and its work in the same folder of its ticket's worktree. `Sessions` knows every session of one checkout and which one is open; `Session` holds where one session works, the practices it uses, and its title. Its log, its files, its handoffs, and its decision records are objects of their own, each reached through the session, so each has one reason to change.
 
 Every tool on a session acts on the session whose `session.json` its `session` argument names. The process keeps one Session per session folder between calls, so every call from any chat works on the same object: a `ToolCall` (`harness/agent_tools/tool_call.py`) opens the session each call works in, through `CallSessions`, which holds the sessions of each checkout by its top, and the open session's name is read from `.sessions/session.json` each time it is asked for, so a switch or a close made by another chat or by the hook server is seen at once.
 
@@ -48,7 +48,7 @@ Sessions, a session, and its log
 + named(name: str): Session | None
 	// only that session's folder is read
 + folder_of(name: str): Path
-	// a ticket's session lives in the main checkout's `.sessions`, so a chat in the ticket's linked worktree logs there too
+	// a ticket's record lives in the main checkout's `.sessions`, where the board reads it; its work folder is in its worktree
 	-> Worktrees.primary_root
 + load(folder: Path): Session
 	// read without opening it
@@ -107,8 +107,10 @@ Sessions, a session, and its log
 + workpath: Path | None
 	// the folder chosen for the session's work; none means the whole repository
 + repo_path: Path
-+ session_path: Path | None
-	// `.sessions/{name}/`; none before the session has a folder
++ record_folder: Path | None
+	// `.sessions/{name}/` in the main clone: session.json and the idea file, what the board reads; none before the session has a folder
++ work_folder: Path | None
+	// `.sessions/{name}/` in its ticket's worktree, else the record folder: log, handoffs, reports, graph, and every other file it writes
 + chat: ChatPointer | None
 	// the chat of the tool call the session was opened for
 + << composition >> log: SessionLog
@@ -118,7 +120,7 @@ Sessions, a session, and its log
 + work_root: Path
 	// workpath, or the whole repository
 + session_file: Path
-	// `session.json` in the session's folder: title, workpath, practice roots, practices
+	// `session.json` in the session's record folder: title, workpath, practice roots, practices
 + session_file_from_project: str
 	// data field `session_file`: the name every board command gives this session
 + workpath_from_checkout: str
@@ -131,7 +133,7 @@ Sessions, a session, and its log
 	// data field: the session this one was split from
 + is_closed: bool
 + reports_folder: Path
-	// `validation-reports/` in the session's folder
+	// `validation-reports/` in the session's work folder
 + << composition >> practices: dict[str, PracticeSessionOutput]
 	// data field; every practice CDD has, made once with its graph; one Session per folder, which its Sessions hold
 + handoffs: Handoffs
@@ -151,9 +153,9 @@ Sessions, a session, and its log
 	// name, workpath, and repo path into session.json, keeping the fields others store there
 + save_fields(values: dict): None
 + hook_log(filename: str): Path
-	// a hook's own log in the session's `logs/` folder
+	// a hook's own log in the `logs/` folder of the session's work folder
 + keep_file(file: Path): Path
-	// moves a person's file, such as a started backlog item's idea, into the session's folder
+	// moves a person's file, such as a started backlog item's idea, into the session's record folder
 + move_to_closed(): Session
 + move_to_archive(): Session
 + move_to_backlog(): Session
@@ -417,7 +419,7 @@ Sessions, a session, and its log
 
 The session writes its own handoffs and decision records; Sketch and GrillContext take their paths from the session. None of them opens a folder of its own.
 
-- `Session.write_handoff` writes `handoff-{timestamp}.md` in the session's folder (`.sessions/{session}/`, or `.sessions/main/` for the main session).
+- `Session.write_handoff` writes `handoff-{timestamp}.md` in the session's work folder (`.sessions/{session}/` in its ticket's worktree when it has one, else in the main clone; `.sessions/main/` for the main session).
 - `Session.write_cdr` writes `{NNNN}-{slug}.md` under `session.work_root / .context / cdr`.
 - Sketch writes `{slug}-sketch.md` under the session's root, in that folder's `.context` folder.
 - GrillContext writes `grill-answers.md` in that same `.context` folder.
@@ -477,8 +479,10 @@ it should name the session by its slug
 ##### from a linked worktree of the checkout whose board holds it
 
 ```
-it should log into the ticket's folder on the board
-  -> expect(session.session_path).to equal the main checkout's .sessions / name
+it should keep its record in the ticket's folder on the board
+  -> expect(session.record_folder).to equal the main checkout's .sessions / name
+it should keep its work in the ticket's folder in its worktree
+  -> expect(session.work_folder).to equal the worktree's .sessions / name
 ```
 
 #### that a tool call reads
@@ -617,7 +621,7 @@ it should keep that folder in the session's session.json and nowhere else
 
 ```
 -> session.write_handoff(paths=[draft])
-it should write a file named handoff-{timestamp}.md in that session's folder
+it should write a file named handoff-{timestamp}.md in that session's work folder
   -> expect(session.handoffs.latest).to exist
 it should show the handoff as its latest handoff
   -> expect(session.latest_handoff).to equal that file from the project

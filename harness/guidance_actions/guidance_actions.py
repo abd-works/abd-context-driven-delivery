@@ -56,7 +56,7 @@ class ActionSession(Protocol):
     graph: Any
     work_root: Path
     repo_path: Path
-    session_path: Path | None
+    record_folder: Path | None
     session_file: Path
 
     def choose_overlays(self, overlays: list[str]) -> None: ...
@@ -564,7 +564,7 @@ class SessionBrief:
         are named from, the session's root, and where each listed practice writes. The agent works from the project's
         checkout, so every path it sees starts there; told nothing, it guesses where files go under a moved root."""
         session = self._action.works_in
-        if session is None or session.session_path is None:
+        if session is None or session.record_folder is None:
             return ""
         writes = self._practice_folders()
         return "\n".join([

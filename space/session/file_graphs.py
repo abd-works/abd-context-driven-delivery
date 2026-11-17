@@ -82,5 +82,5 @@ class FileGraphs:
     def _read_at(self) -> float:
         """When the session's graph read the files it holds, for one no viewer has shown since: when it was opened, or
         when the graph it opened was saved, whichever is earlier."""
-        saved = Path(self._session.session_path) / GRAPH_FILE_NAME
+        saved = Path(self._session.work_folder) / GRAPH_FILE_NAME
         return min(self._opened_at, saved.stat().st_mtime) if saved.is_file() else self._opened_at

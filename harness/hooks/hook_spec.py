@@ -797,7 +797,7 @@ with description("a hook handler"):
             expect(HookPayload({"cwd": str(self.root)}).project).to(equal(self.root))
 
     with it("should be handed the session open in the project the event happened in"):
-        expect(_PayloadReader.seen[0].session.session_path).to(equal(self.root.resolve() / ".sessions" / "main"))
+        expect(_PayloadReader.seen[0].session.record_folder).to(equal(self.root.resolve() / ".sessions" / "main"))
 
     with it("should be handed one session for the whole event"):
         expect(_PayloadReader.seen[0].session).to(be(_PayloadReader.seen[0].session))
@@ -805,7 +805,7 @@ with description("a hook handler"):
     with context("with an event that names no project"):
         with it("should work in the session open in the checkout of the hook server that received it"):
             received = HookPayload({"hook_event_name": "stop"}).received_in(self.root)
-            expect(received.session.session_path).to(equal(self.root.resolve() / ".sessions" / "main"))
+            expect(received.session.record_folder).to(equal(self.root.resolve() / ".sessions" / "main"))
 
 
 @agent_toolset

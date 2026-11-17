@@ -21,7 +21,7 @@ SPEC_FILE = f"{_STORY_FOLDER}/authenticate_user.story.server.spec.ts"
 def working_in(throwaway: ThrowawayProject, project: Path, root: Path) -> Session:
     """The main session of the spec's own project, where its logs and reports go, made to work in root, a folder of the
     project checked out at project."""
-    kept_in = ToolCall(project=throwaway.root).session.session_path
+    kept_in = ToolCall(project=throwaway.root).session.work_folder
     session = Sessions(Path(project).resolve()).held.load(kept_in)
     session.workpath = Path(root).resolve()
     return session
@@ -35,4 +35,4 @@ class SampleWorkingCopy:
         folder = Path(tempfile.mkdtemp()) / "input"
         shutil.copytree(_SAMPLE, folder)
         self.action = Validate(session=working_in(throwaway, folder, folder))
-        self.session = Path(self.action.session.session_path)
+        self.session = Path(self.action.session.work_folder)

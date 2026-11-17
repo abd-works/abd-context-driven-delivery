@@ -349,6 +349,6 @@ The file a daemon publishes its address in: `read()`, `write(address)`, `remove(
   hooks.json                      HooksManifest — event → hook_daemon.py command
   hook-handlers.json              HookHandlersFile
 .hook-server/                    HookDaemon.folder — address.json, server.log, spawn.lock
-.sessions/{name}/logs/            dispatch.debug, prompt-log.txt
+.sessions/{name}/logs/            dispatch.debug, prompt-log.txt (in the session's work folder)
 .sessions/{name}/chat-injections/ ChatInjections (space/session)
 ```
