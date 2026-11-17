@@ -458,3 +458,6 @@
 2026-11-17T16:42:23Z tool prompt-queue.show c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-13934
 2026-11-17T16:45:13Z tool prompt-queue.add c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-13934
 2026-11-17T16:45:18Z tool prompt-queue.add c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-13934
+2026-11-17T16:47:20Z tool prompt-queue.add c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-13934
+2026-11-17T16:47:43Z tool prompt-queue.show c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-13952
+2026-11-17T16:47:51Z tool prompt-queue.add_all c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-13956
