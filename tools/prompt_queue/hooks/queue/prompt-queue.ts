@@ -31,6 +31,8 @@ const DECISION_WAIT_MS = 60_000
 // A notice the chat gives the agent, such as a background task finishing, which arrives as a prompt but is not the
 // person's: it is never queued.
 const SYSTEM_NOTICE = /^\s*<(task-notification|system-reminder)>/
+// How much of each goal's text the note on a filed message lists, enough to tell the goals apart.
+const GOAL_TITLE_COLUMNS = 100
 // What marks a step that came from a message the person sent while the agent worked.
 const INTERRUPTION_MARK = '[interruption]'
 // Until the mod has seen the agent's task list, the agent keeps a prompt's steps on the queue itself.
@@ -388,6 +390,8 @@ export async function queueSentPrompt($: EngineInterface, text: string): Promise
   if (text.trim() === '' || text.trim() === ASK_FOR_NEXT || SYSTEM_NOTICE.test(text)) {
     return undefined
   }
+  // The queue as the server holds it now: the chat's start may have read it before the cdd server connected.
+  await refreshQueue($)
   const interrupted = await interruptedPrompt($)
   if (interrupted) {
     return addInterruption($, interrupted, text.trim())
@@ -420,13 +424,23 @@ async function interruptedPrompt($: EngineInterface): Promise<QueuedPrompt | und
  * when it is separate work. The task list carries on from the goal's filed steps. */
 async function addInterruption($: EngineInterface, prompt: QueuedPrompt, text: string): Promise<SentPrompt> {
   await changeQueue($, 'add_interruption', { prompt: prompt.id, text })
-  const filed = (await read($, queue)).prompts.find(goal => goal.id === prompt.id)
-  await update($, plan, () => filed?.steps ?? [])
-  return {
-    id: '',
-    note: `The person sent this about the goal last worked; it is now a step of prompt [${prompt.id}] on the queue, marked ${INTERRUPTION_MARK}. ` +
-      'Fold it into that work, or, if it is separate work, queue it with prompt-queue.add and take the step off.',
-  }
+  const goals = (await read($, queue)).prompts
+  await update($, plan, () => goals.find(goal => goal.id === prompt.id)?.steps ?? [])
+  return { id: '', note: filingNoteOf(prompt.id, goals) }
+}
+
+/** What the agent is told about a message filed under the goal last worked: decide where it belongs before any other
+ * work, with every goal on the queue to choose from, so a message about other work never stays on the wrong card. */
+function filingNoteOf(filedUnder: string, goals: QueuedPrompt[]): string {
+  return [
+    `The person sent this; the queue filed it under the goal last worked, [${filedUnder}], as a step marked ${INTERRUPTION_MARK}.`,
+    'Before any other work, decide where this message belongs, then make the queue say so:',
+    `1. It is about [${filedUnder}]: leave it there and do it as part of that goal.`,
+    '2. It is about another goal below: file it there with prompt-queue.add_interruption and take its step off this goal with prompt-queue.set_steps.',
+    '3. It is new work no goal covers, even a small one: queue it as its own card with prompt-queue.add, written as a short title of the goal, and take its step off this goal.',
+    'A question or a yes/no answer belongs to the goal it is about. The goals on the queue:',
+    ...goals.map(goal => `- [${goal.id}] ${goal.text.replace(/\s+/g, ' ').slice(0, GOAL_TITLE_COLUMNS)}${goal.is_done ? ' (done)' : ''}`),
+  ].join('\n')
 }
 
 /** One `update_plan` call: the agent's task list follows it and is copied whole onto the prompt being worked. */

@@ -1,0 +1,107 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-17T21:10:38.946131+00:00",
+  "prompts": [
+    {
+      "id": "109795e2fec5",
+      "text": "Follow the TDD flow rule properly ya",
+      "steps": [
+        {
+          "text": "Read the testing memory and the repo's TDD rule; say where the work fell short",
+          "state": "done"
+        },
+        {
+          "text": "Flow A also covers first-time features and already-corrected tweaks (rule and memory)",
+          "state": "done"
+        },
+        {
+          "text": "Archive on clear: heavy example against a real cdd server",
+          "state": "done"
+        },
+        {
+          "text": "Filing under a goal: spec first, heavy example against a real cdd server",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] heavy tests are written and run in a sub-task: handed to a background agent, headless harness (option A)",
+          "state": "done"
+        },
+        {
+          "text": "Plugin heavy tests, headless, by the background agent: 5 of 6 pass, 1 finds a bug",
+          "state": "done"
+        },
+        {
+          "text": "Fix: read the queue again on the first message when the start-of-chat read failed",
+          "state": "done"
+        },
+        {
+          "text": "Fix: a refused set_steps does not change the prompt being worked",
+          "state": "done"
+        },
+        {
+          "text": "Name the spec _e2e_spec (it starts an agent); commit, push, repin",
+          "state": "done"
+        },
+        {
+          "text": "Heavy spec keeps chat folders out of ~/.claude/cdd-chats",
+          "state": "done"
+        },
+        {
+          "text": "Run the e2e spec against the fix: 6 of 6 pass",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "33b2acdeaf8f",
+      "text": "Show where the queue archive is after clearing",
+      "steps": [
+        {
+          "text": "[interruption] where is the archived queue - hit delete, want to see the archive",
+          "state": "done"
+        },
+        {
+          "text": "Find it",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] that's wrong: store the queue archive in the session folder",
+          "state": "done"
+        },
+        {
+          "text": "Spec first: the queue archives into the session's folder",
+          "state": "done"
+        },
+        {
+          "text": "Build it, move today's archive there, commit, push, repin",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "afa5be008c66",
+      "text": "Highlight the queue item being worked the way the task being worked is highlighted",
+      "steps": [
+        {
+          "text": "[interruption] current queue item highlight like current task in queue, same way",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] looks horrible: bright and underlined text instead of the \u25b8",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] put a border around the button: orange rounded border",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] looks great: seen live, recorded on the story map",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    }
+  ]
+}

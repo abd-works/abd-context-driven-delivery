@@ -1,0 +1,32 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-17T20:52:11.758960+00:00",
+  "prompts": [
+    {
+      "id": "e1e45c693f32",
+      "text": "[interruption] <pasted_content id=\"66c9\">\nWhat I\u2019ve fixed on the queue:\n\n* \u201cRead the actual testing memory\u201d and \u201cupdate Flow A\u201d are now one goal card, Follow the TDD flow rule properly. It has three tasks: two done, and writing the missing heavy tests still in progress.\n* Your \u201cwhy didn\u2019t you group\u201d message is now a step on the Organize messages into one card for each goal card, not a card of its own.\n\nTo stop relying on my memory, the queue could do the filing itself. A message you send between turns would join the goal I last worked on, as a new step. If it\u2019s really separate work, I\u2019d move it out to its own card.\n</pasted_content id=\"66c9\">\n\n YES and upfdfate backe nd for thios",
+      "steps": [
+        {
+          "text": "Spec first: server files a message under a goal",
+          "state": "done"
+        },
+        {
+          "text": "Build add_interruption on the server",
+          "state": "done"
+        },
+        {
+          "text": "Heavy example against a real cdd server",
+          "state": "done"
+        },
+        {
+          "text": "Plugin test first, then file between-turn messages",
+          "state": "in_progress"
+        },
+        {
+          "text": "Story map, commit, push, repin dev",
+          "state": "pending"
+        }
+      ]
+    }
+  ]
+}

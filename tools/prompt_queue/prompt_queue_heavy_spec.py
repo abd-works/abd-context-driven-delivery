@@ -1,5 +1,6 @@
 """Heavy spec: an agent's chat queues and works through its prompts with the prompt-queue tools of a real cdd server."""
 import json
+import os
 import sys
 import tempfile
 from pathlib import Path
@@ -24,6 +25,9 @@ def texts(queue: dict) -> list[str]:
 # (S) Agent --> Queue Prompts Through The Cdd Server
 with description("a chat's prompt queue through the cdd server") as self:
     with before.all:
+        # Chat folders go to a throwaway folder, never the person's own ~/.claude/cdd-chats.
+        self.prior_chats = os.environ.get("CDD_CHATS_FOLDER")
+        os.environ["CDD_CHATS_FOLDER"] = tempfile.mkdtemp(prefix="queue-chats-")
         self.server = SpecServer(TOOLSETS)
         self.server.start()
         self.project = Path(tempfile.mkdtemp(prefix="queue-project-"))
@@ -31,6 +35,10 @@ with description("a chat's prompt queue through the cdd server") as self:
 
     with after.all:
         self.server.stop()
+        if self.prior_chats is None:
+            os.environ.pop("CDD_CHATS_FOLDER", None)
+        else:
+            os.environ["CDD_CHATS_FOLDER"] = self.prior_chats
 
     with context("that the agent queues a list of work naming no chat"):
         with before.all:

@@ -1,7 +1,7 @@
 import type { ElementTable } from 'claude-code'
 
-/** The desktop's own greys, sampled from its prompt box: the card, its placeholder text, a key cap, and the key's glyph. */
-export const LOOK = { muted: '#9B9BA8', accent: '#E5531A', card: '#303030', placeholder: '#8C8C8C', keyCap: '#3F3F3F', keyText: '#F1F1F1' }
+/** The desktop's own greys, sampled from its prompt box: the card, its placeholder text, and a key cap's grey behind buttons. */
+export const LOOK = { muted: '#9B9BA8', accent: '#E5531A', card: '#303030', placeholder: '#8C8C8C', keyCap: '#3F3F3F' }
 
 /** About one line of text tall, in the desktop's pixels. */
 const ICON_PIXELS = 16
@@ -85,29 +85,6 @@ export const SUB_AGENTS_SVG = (colour: string) =>
 
 export const CLEAR_SVG = (colour: string) =>
   svgOf(colour, '<path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.7 9h5.6l.7-9M7 7v4M9 7v4"/>')
-
-/** A key cap as the chat's own image buttons draw: a rounded grey square, its glyph in near-white strokes. */
-export type KeyCap = { glyph: string; width: number; strokes: string }
-
-/** The key caps are drawn on a 28-unit square, the chat's button, and shown a little smaller beside a line of text. */
-const KEY_CAP_UNITS = 28
-export const KEY_CAP_PIXELS = 22
-export const keyCapWidthOf = (key: KeyCap) => Math.round(key.width * KEY_CAP_PIXELS / KEY_CAP_UNITS)
-
-export const keyCapSvgOf = (key: KeyCap) =>
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${key.width} ${KEY_CAP_UNITS}">`
-  + `<rect width="${key.width}" height="${KEY_CAP_UNITS}" rx="7" fill="${LOOK.keyCap}"/>`
-  + `<path d="${key.strokes}" fill="none" stroke="${LOOK.keyText}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
-
-/** Alt, its letters drawn as strokes: the desktop draws an Svg as an image, where text is not to be relied on. */
-export const ALT_KEY: KeyCap = {
-  glyph: 'Alt',
-  width: 36,
-  strokes: 'M11 18l3-8.5 3 8.5M12.2 15h3.6M20 9.5v8.5M23.5 9.5v7.2a1 1 0 0 0 1.2 1M22.1 12h3',
-}
-
-export const ENTER_KEY: KeyCap = { glyph: '↵', width: KEY_CAP_UNITS, strokes: 'M19 9v4a2 2 0 0 1-2 2H9M12 12l-3 3 3 3' }
-
 
 /** Claude-orange shades, one for each sub-agent's robot in turn. */
 const ROBOT_ORANGES = ['#D97757', '#E5531A', '#F0883E', '#C2410C', '#FB923C', '#EA580C']

@@ -1,0 +1,17 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-17T20:45:59.552871+00:00",
+  "prompts": [
+    {
+      "id": "41a5467415f1",
+      "text": "[interruption] <task-notification>\n<task-id>bigfvumeu</task-id>\n<tool-use-id>toolu_01Eye5LwfUcsCaoNtZ58x1xd</tool-use-id>\n<output-file>C:\\Users\\jeffa\\AppData\\Local\\Temp\\claude\\0dd1267bee10eb10\\60be2cd0-d264-44b3-8635-0cebd8d9c856\\tasks\\bigfvumeu.output</output-file>\n<status>completed</status>\n<summary>Background command \"Run the unit test tier in the background\" completed (exit code 0)</summary>\n</task-notification>",
+      "is_done": true,
+      "steps": [
+        {
+          "text": "[interruption] <task-notification>\n<task-id>b7n7tamta</task-id>\n<tool-use-id>toolu_01XEvVyHVdnxbbm7LYaYoxwa</tool-use-id>\n<output-file>C:\\Users\\jeffa\\AppData\\Local\\Temp\\claude\\0dd1267bee10eb10\\60be2cd0-d264-44b3-8635-0cebd8d9c856\\tasks\\b7n7tamta.output</output-file>\n<status>failed</status>\n<summary>Background command \"Run the prompt queue heavy spec in the background\" failed with exit code 1</summary>\n</task-notification>",
+          "state": "pending"
+        }
+      ]
+    }
+  ]
+}
