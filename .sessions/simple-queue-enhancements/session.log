@@ -893,3 +893,10 @@
 2026-11-17T23:02:57Z tool prompt-queue.set_steps 60be2cd0-d264-44b3-8635-0cebd8d9c856 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-simple-queue-enhancement\60be2cd0-d264-44b3-8635-0cebd8d9c856.jsonl 1-8135
 2026-11-17T23:02:59Z tool prompt-queue.set_steps 60be2cd0-d264-44b3-8635-0cebd8d9c856 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-simple-queue-enhancement\60be2cd0-d264-44b3-8635-0cebd8d9c856.jsonl 1-8135
 2026-11-17T23:02:59Z tool prompt-queue.set_steps 60be2cd0-d264-44b3-8635-0cebd8d9c856 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-simple-queue-enhancement\60be2cd0-d264-44b3-8635-0cebd8d9c856.jsonl 1-8142
+2026-11-17T23:03:51Z tool prompt-queue.set_steps 60be2cd0-d264-44b3-8635-0cebd8d9c856 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-simple-queue-enhancement\60be2cd0-d264-44b3-8635-0cebd8d9c856.jsonl 1-8169
+2026-11-17T23:03:51Z tool prompt-queue.show 60be2cd0-d264-44b3-8635-0cebd8d9c856 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-simple-queue-enhancement\60be2cd0-d264-44b3-8635-0cebd8d9c856.jsonl 1-8170
+2026-11-17T23:03:54Z tool prompt-queue.set_steps 60be2cd0-d264-44b3-8635-0cebd8d9c856 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-simple-queue-enhancement\60be2cd0-d264-44b3-8635-0cebd8d9c856.jsonl 1-8170
+2026-11-17T23:03:55Z tool prompt-queue.show 60be2cd0-d264-44b3-8635-0cebd8d9c856 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-simple-queue-enhancement\60be2cd0-d264-44b3-8635-0cebd8d9c856.jsonl 1-8170
+2026-11-17T23:03:56Z tool prompt-queue.set_steps 60be2cd0-d264-44b3-8635-0cebd8d9c856 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-simple-queue-enhancement\60be2cd0-d264-44b3-8635-0cebd8d9c856.jsonl 1-8170
+2026-11-17T23:03:56Z tool prompt-queue.show 60be2cd0-d264-44b3-8635-0cebd8d9c856 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-simple-queue-enhancement\60be2cd0-d264-44b3-8635-0cebd8d9c856.jsonl 1-8182
+2026-11-17T23:03:57Z tool prompt-queue.add_interruption 60be2cd0-d264-44b3-8635-0cebd8d9c856 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-simple-queue-enhancement\60be2cd0-d264-44b3-8635-0cebd8d9c856.jsonl 1-8183

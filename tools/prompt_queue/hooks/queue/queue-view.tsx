@@ -162,7 +162,7 @@ function PointerView($: EngineInterface, e: AbovePromptEvent, upKey = '', downKe
   const isDrawn = upKey !== '' || downKey !== ''
   return (
     <Box width={POINTER_COLUMNS} flexShrink={0} flexDirection="row" gap={1}
-      borderStyle={isDrawn ? 'round' : undefined} borderColor={isDrawn ? LOOK.accent : undefined}>
+      backgroundColor={isDrawn ? LOOK.keyCap : undefined} paddingX={isDrawn ? 'xs' : undefined}>
       {upKey !== '' && <Button key={upKey} onPress={onUp}><Text color={LOOK.accent} bold>▲</Text></Button>}
       {downKey !== '' && <Button key={downKey} onPress={onDown}><Text color={LOOK.accent} bold>▼</Text></Button>}
     </Box>
@@ -185,7 +185,7 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
       <Box width={TASK_BUTTON_COLUMNS} flexShrink={0}>
         {progress !== ''
           ? <Button key={`steps-${prompt.id}`} label={progress} onPress={() => toggleSteps($, prompt.id)} />
-          : !isFinished && <Button key={`steps-${prompt.id}`} label="+" onPress={() => addStep($, prompt)} />}
+          : !isFinished && !isPointer && <Button key={`steps-${prompt.id}`} label="+" onPress={() => addStep($, prompt)} />}
       </Box>
       {(prompt.attachments ?? []).length > 0 && <Text key={`attached-${prompt.id}`} color={LOOK.muted}>{`📎${prompt.attachments!.length}`}</Text>}
       <Box flexGrow={1} flexShrink={1} minWidth={0}
