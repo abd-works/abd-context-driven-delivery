@@ -1,0 +1,6 @@
+{
+  "name": "prompt-queue",
+  "version": "0.1.0",
+  "description": "A prompt queue above the chat bar: + or Ctrl+Enter queues the draft, the queue sends its next prompt when a turn ends, and sub-agent mode hands grouped tasks to sub-agents.",
+  "types": "./types/index.d.ts"
+}
