@@ -2,11 +2,11 @@
   "name": "simple-queue",
   "guidance": {
     "stages": [],
-    "version": 74
+    "version": 75
   },
   "practices": {
     "stories": {
-      "enabled": false,
+      "enabled": true,
       "formats": {
         "story_map": [
           "drawio",
