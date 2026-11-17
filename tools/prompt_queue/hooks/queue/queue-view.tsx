@@ -38,9 +38,6 @@ type AbovePromptEvent = RenderInput<'AbovePrompt'>
  */
 const ADD_COLUMNS = 3
 
-/** The columns kept at a card's right for its edit, move and remove buttons, shown when the pointer is on the card. */
-const CARD_BUTTON_COLUMNS = 12
-
 /**
  * Its own box above the chat bar. At rest it shows only the stack image, the count drawn on it, and the pointer over
  * the box reveals + beside it; the stack image opens the queue as a stack of task cards with the other controls. The
@@ -98,8 +95,8 @@ const CLEAR_ICON: Icon = { key: 'queue-clear', svg: CLEAR_SVG, glyph: '✕', tip
 
 /**
  * The open queue, one line per task, each drawn as the chat's own rounded buttons are, the session name's among them,
- * so a card is one line tall with round ends. Pressing a card edits it; the pointer over it reveals its edit, move
- * and remove buttons.
+ * so a card is one line tall with round ends. Pressing a card edits it; its edit, move and remove buttons
+ * always show at its left edge, before the text, so a long prompt can never push them past the chat's edge.
  */
 function QueueListView($: EngineInterface, e: AbovePromptEvent, queue: PromptQueue, editingId: string) {
   const { Box, Text, Button } = $.ui.resolve(e)
@@ -119,21 +116,19 @@ function QueueListView($: EngineInterface, e: AbovePromptEvent, queue: PromptQue
   return (
     <Box flexDirection="column" rowGap="sm">
       {queue.prompts.map((prompt, index) => (
-        <Box key={`card-${prompt.id}`} flexDirection="row" justifyContent="space-between" alignItems="center" gap={1}>
-          <Box flexGrow={1} flexShrink={1}>
+        <Box key={`card-${prompt.id}`} flexDirection="row" alignItems="center" gap={1}>
+          <Box flexDirection="row" gap={1} flexShrink={0}>
+            <Button key={`edit-${prompt.id}`} label="✎" onPress={() => editPrompt($, prompt)} />
+            <Button key={`up-${prompt.id}`} label="↑" onPress={() => movePrompt($, index, index - 1)} />
+            <Button key={`down-${prompt.id}`} label="↓" onPress={() => movePrompt($, index, index + 1)} />
+            <Button key={`remove-${prompt.id}`} label="✕" onPress={() => removePrompt($, prompt.id)} />
+          </Box>
+          <Box flexGrow={1} flexShrink={1} minWidth={0}>
             <Button key={`card-text-${prompt.id}`} onPress={() => editPrompt($, prompt)}>
               <Text wrap="truncate-end" color={prompt.id === editingId ? LOOK.placeholder : undefined} italic={prompt.id === editingId}>
                 {`${index + 1}. ${prompt.text.replace(/\s+/g, ' ')}${prompt.id === editingId ? '  (editing)' : ''}`}
               </Text>
             </Button>
-          </Box>
-          <Box width={CARD_BUTTON_COLUMNS} justifyContent="flex-end">
-            <Box flexDirection="row" gap={1} display="none" hover={{ display: 'flex' }}>
-              <Button key={`edit-${prompt.id}`} label="✎" onPress={() => editPrompt($, prompt)} />
-              <Button key={`up-${prompt.id}`} label="↑" onPress={() => movePrompt($, index, index - 1)} />
-              <Button key={`down-${prompt.id}`} label="↓" onPress={() => movePrompt($, index, index + 1)} />
-              <Button key={`remove-${prompt.id}`} label="✕" onPress={() => removePrompt($, prompt.id)} />
-            </Box>
           </Box>
         </Box>
       ))}
