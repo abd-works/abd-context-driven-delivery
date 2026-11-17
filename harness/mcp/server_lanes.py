@@ -7,7 +7,7 @@ from typing import Any
 
 from harness.agent_tools.tool_call import ToolCall
 from harness.mcp.cdd_home import CddHome
-from harness.mcp.mcp_address import DEV_LANE_FOLDER, DEV_PORT_AFTER_STABLE, McpAddress
+from harness.mcp.mcp_address import BUILTIN_LIST_TOOLS, DEV_LANE_FOLDER, DEV_PORT_AFTER_STABLE, McpAddress
 from harness.mcp.mcp_daemon import McpDaemon, ServedCheckout
 
 # How long the stable lane waits for the dev lane to answer one tool call. The chat is told a call is still running at
@@ -80,6 +80,15 @@ class ServerLane:
     def served_checkout(self, checkout: Path) -> ServedCheckout:
         """``checkout`` as this lane installs and serves it."""
         return ServedCheckout(self.daemon, checkout)
+
+    def tools_for(self, project: Path) -> list[dict[str, Any]]:
+        """The tools this lane's server serves, as data, listed for a chat working on project, starting the server first
+        when none answers."""
+        self.daemon.ensure()
+        reply = self.daemon.address.send_lane_call(LaneCall(BUILTIN_LIST_TOOLS, {}, str(project), "").as_data, LANE_CALL_SECONDS)
+        if reply.get("failure"):
+            raise LaneCallFailed(self.name, BUILTIN_LIST_TOOLS, reply["failure"])
+        return list(reply.get("answer") or [])
 
     def answer(self, call: ToolCall) -> object:
         """Have this lane's server answer call, starting it first when none answers."""

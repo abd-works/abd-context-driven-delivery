@@ -21,6 +21,8 @@ PING_PATH = "/ping"
 MCP_PATH = "/mcp"
 # Where the stable lane's server sends a dev-lane chat's tool call for the dev lane's server to answer.
 LANE_CALL_PATH = "/lane-call"
+# What one lane's server asks the other for when a chat of the other's lists its tools: the tools it serves, as data.
+BUILTIN_LIST_TOOLS = "cdd.list_tools"
 # The dev lane's home sits inside the stable lane's, in this folder, so one ``CDD_HOME`` names both.
 DEV_LANE_FOLDER = "dev"
 # The dev lane answers on the port after the stable lane's, so a throwaway pair from a spec stays a pair.

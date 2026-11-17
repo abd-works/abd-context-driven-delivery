@@ -26,6 +26,9 @@ CHECKOUT_REPO = Path(__file__).resolve().parents[3]
 LEDGER_FOLDER_TOOL = "call-outcomes.ledger_folder"
 LOCKED_LEDGER_TOOL = "call-outcomes.post_entry"
 LEDGER_IS_LOCKED = "LedgerIsLocked"
+# Seed: a toolset the feature served on the dev lane adds, which main does not have yet, and one tool of it.
+FEATURE_TOOLSET = "harness.mcp._examples.hosting_demo.hosting_demo:HostingDemo"
+FEATURE_TOOL = "hosting-demo.increment"
 
 
 # Seed: the IDE folder an install writes the language adapters under, and one adapter it wrote there.
@@ -77,6 +80,11 @@ def seed_folder_outside_any_checkout(root: Path) -> Path:
 def seed_host(project: Path) -> McpHost:
     """A cdd server's MCP side serving the ledger toolset, its chats working on project."""
     return McpHost.from_refs((CALL_OUTCOMES,), repo=str(CHECKOUT_REPO), project=str(project))
+
+
+def seed_feature_host(project: Path) -> McpHost:
+    """The dev lane's MCP side on a feature that adds FEATURE_TOOLSET beside the ledger, its chats working on project."""
+    return McpHost.from_refs((CALL_OUTCOMES, FEATURE_TOOLSET), repo=str(CHECKOUT_REPO), project=str(project))
 
 
 class DevLaneInProcess(McpAddress):

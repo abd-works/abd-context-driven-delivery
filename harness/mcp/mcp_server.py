@@ -37,7 +37,7 @@ from harness.installation.repository_toolsets import RUNNING_CHECKOUT, Repositor
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_annotations import LongCall, Mcp  # noqa: F401 - importing the server defines Mcp, the channel install reads
 from harness.mcp.claude_plugins import ClaudePlugins
-from harness.mcp.mcp_address import CHAT_HEADER, CHAT_PROCESS_HEADER, LANE_CALL_PATH, MCP_PATH, PING_PATH, PROJECT_HEADER
+from harness.mcp.mcp_address import BUILTIN_LIST_TOOLS, CHAT_HEADER, CHAT_PROCESS_HEADER, LANE_CALL_PATH, MCP_PATH, PING_PATH, PROJECT_HEADER
 from harness.mcp.mcp_daemon import McpDaemon
 from harness.mcp.server_lanes import LaneCall, ServerLane, ServerLanes
 from harness.mcp.server_hooks import CddServerHooks
@@ -575,7 +575,11 @@ class McpHost:
 
         @self._protocol.list_tools()
         async def handle_list_tools() -> list[types.Tool]:
-            return self._tool_list()
+            import anyio.to_thread
+
+            project = self._listing_project()
+            listed = await anyio.to_thread.run_sync(self.tools_listed_for, project)
+            return [types.Tool(**tool) for tool in listed]
 
         @self._protocol.call_tool()
         async def handle_call_tool(name: str, arguments: dict[str, object] | None) -> types.CallToolResult:
@@ -607,6 +611,22 @@ class McpHost:
             text = prompt.description or ""
             message = types.PromptMessage(role="user", content=types.TextContent(type="text", text=text))
             return types.GetPromptResult(description=prompt.description or None, messages=[message])
+
+    def tools_listed_for(self, project: Path | None) -> list[dict[str, Any]]:
+        """The tools a chat working on project is listed, as data: the other lane's when that lane answers project's
+        calls, as the dev lane does a ticket's worktree while it serves a feature, so the chat can call every tool the
+        feature adds; else this server's own."""
+        other_lane = self._other_lane_answering(ToolCall.sent({}, project, ToolRequest(tool=BUILTIN_LIST_TOOLS, mcp_host=self))) if project else None
+        if other_lane is not None:
+            return other_lane.tools_for(project)
+        return [tool.model_dump(exclude_none=True) for tool in self._tool_list()]
+
+    def _listing_project(self) -> Path | None:
+        """The project the chat listing its tools works on; none when it names none, which lists this server's own."""
+        try:
+            return self._requested_project(BUILTIN_LIST_TOOLS)
+        except (ProjectNotNamed, ProjectIsClaudeSettings):
+            return None
 
     def _tool_list(self) -> list[types.Tool]:
         types = self._mcp_types()
@@ -784,6 +804,8 @@ class McpHost:
             return other_lane.answer(call)
         if call.request.tool == BUILTIN_RESTART_TOOL:
             return self.restart()
+        if call.request.tool == BUILTIN_LIST_TOOLS:
+            return self.tools_listed_for(None)
         with self._restart_gate.running_call():
             return self._answer_between_restarts(call)
 
