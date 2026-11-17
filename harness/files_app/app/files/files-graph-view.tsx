@@ -129,6 +129,26 @@ function GraphNodeFilterView({ page }: { page: FilesPage }) {
   )
 }
 
+// A graph read that failed: the server's reason in place of the trees, and Copy for AI, which puts it on the clipboard
+// for the person to paste to the chat, as the Graph app offers.
+function GraphProblemView({ page, problem }: { page: FilesPage; problem: string }) {
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(problem)
+    } catch (cause) {
+      page.notices.fail(`The failure was not copied: ${cause instanceof Error ? cause.message : String(cause)}`, 'Copy for AI in the Files app graph view')
+    }
+  }
+  return (
+    <div className="files-note graph-problem">
+      <button type="button" className="copy-diagnosis" onClick={() => void copy()}>
+        Copy for AI
+      </button>
+      <pre>{problem}</pre>
+    </div>
+  )
+}
+
 // The file bar's graph view: its node filter, closed until a person opens it, then the practice trees of the session's
 // graph holding only the nodes of the files the bar lists that the filter keeps, each collapsed until a person opens it.
 export function FilesGraphView({ page }: { page: FilesPage }) {
@@ -142,7 +162,7 @@ export function FilesGraphView({ page }: { page: FilesPage }) {
 }
 
 function GraphTreesView({ page, graph }: { page: FilesPage; graph: FilesGraphState }) {
-  if (graph.problem) return <p className="files-note">{graph.problem}</p>
+  if (graph.problem) return <GraphProblemView page={page} problem={graph.problem} />
   if (graph.isReading) return <LoadProgressView loadingLabel="Reading the session's graph…" loadingLog={graph.log} />
   if (!Array.isArray(graph.trees) || !graph.trees.length) return <p className="files-note">The graph holds no node of these files.</p>
   return (

@@ -102,7 +102,13 @@ def _seed_project(root: Path) -> None:
     _write(root, "README.md", "project\n")
     _git(root, "add", "README.md")
     _git(root, "commit", "-m", "start")
-    for path, text in ((STEP_STORY, STEP_STORY_TEXT), (TICKET_CODE, TICKET_TEXT), (BOARD_CODE, BOARD_TEXT), (TICKET_EXAMPLES, TICKET_EXAMPLES_TEXT)):
+    # board.py is on main already and checkout-flow's work is on its own branch, so This session lists the files the
+    # branch changed without board.py and All session files adds it.
+    _write(root, BOARD_CODE, BOARD_TEXT)
+    _git(root, "add", BOARD_CODE)
+    _git(root, "commit", "-m", "board")
+    _git(root, "checkout", "-b", CHECKOUT_FLOW.name)
+    for path, text in ((STEP_STORY, STEP_STORY_TEXT), (TICKET_CODE, TICKET_TEXT), (TICKET_EXAMPLES, TICKET_EXAMPLES_TEXT)):
         _write(root, path, text)
     _write(root, ".sessions/checkout-flow/session.json", json.dumps({"name": CHECKOUT_FLOW.name, "title": CHECKOUT_FLOW.title, **CHECKOUT_FLOW.fields}))
     _write(root, ".sessions/checkout-flow/session.log", "")

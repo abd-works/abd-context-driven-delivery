@@ -565,6 +565,20 @@ describe('Show A Graph Read That Failed', () => {
       expect([page.state.graph.trees, page.state.graph.isReading, page.state.graph.problem]).toEqual([[], false, expect.stringContaining(LANE_FAILURE)])
     })
 
+    it('should copy the failure for the chat when the Person presses Copy for AI', async () => {
+      const server = new FakeFilesServer()
+      server.treesAnswer = LANE_FAILURE
+      const { page, stop } = await showingGraph(server)
+      stop()
+      const copied: string[] = []
+      Object.defineProperty(navigator, 'clipboard', { value: { writeText: async (text: string) => void copied.push(text) }, configurable: true })
+      const view = render(createElement(FilesGraphView, { page }))
+      fireEvent.click(view.getByRole('button', { name: 'Copy for AI' }))
+      await settled()
+      view.unmount()
+      expect(copied).toEqual([page.state.graph.problem])
+    })
+
     it('should name session.graph_trees in the failure when it answers an error', async () => {
       const server = new FakeFilesServer()
       server.treesAnswer = { error: LANE_FAILURE }
