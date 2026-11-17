@@ -13,6 +13,7 @@ from harness.installation.ide_layout import IdeLayout
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
 from harness.installation.repository_toolsets import RepositoryToolsets
 from harness.git.git import Git, RepoConnectError
+from harness.mcp.mcp_address import DEV_LANE_FOLDER
 from harness.process.process import PythonInterpreter
 
 CDD_HOME_ENV = "CDD_HOME"
@@ -95,6 +96,11 @@ class CddHome:
         self._runtime_file = JsonFile(self.folder / "runtime.json", RuntimeRecordUnreadable)
         # Where the running server publishes its address and pid, for tools that look for it without calling it.
         self.state_file = JsonFile(self.folder / "server.json", ServerStateUnreadable)
+
+    @property
+    def is_dev_lane(self) -> bool:
+        """Whether this is the dev lane's home, whose server serves a feature branch beside the stable lane's."""
+        return self.folder.name == DEV_LANE_FOLDER
 
     @property
     def state_path(self) -> Path:

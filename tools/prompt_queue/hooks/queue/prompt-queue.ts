@@ -1,13 +1,15 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface } from 'claude-code'
+import type { EngineInterface, McpToolResult } from 'claude-code'
 
 import type { QueueJson, QueuedPrompt, SubAgentTask } from '../../types'
 import { PromptQueue, listedItems, parseJsonArray, slashCommandOf } from './queue-order'
 
 const GROUPING_MODEL = 'sonnet'
 const GROUPING_TOKENS = 4096
-// The cdd plugin declares the server, and Claude Code names a plugin's server plugin:{plugin}:{server}.
-const SERVER = 'plugin:cdd:cdd'
+// The cdd servers a chat may hold, first choice first: a dev-lane worktree's own .mcp.json names cdd, the dev lane's
+// server, which outranks the cdd plugin's; elsewhere the plugin declares it, and Claude Code names a plugin's server
+// plugin:{plugin}:{server}.
+const SERVERS = ['cdd', 'plugin:cdd:cdd']
 // What play sends when a turn ends: the queue itself rides beside it, in queueContext.
 const ASK_FOR_NEXT = 'Take the next prompt on the queue.'
 const QUEUE_INSTRUCTIONS = [
@@ -64,7 +66,7 @@ class QueueCallFailed extends Error {}
  * A reply flagged isError, or one that is not JSON, is a QueueCallFailed carrying the server's own text. */
 async function callQueue<T>($: EngineInterface, operation: string, args: Record<string, unknown> = {}): Promise<T> {
   const chat = await $.session.id()
-  const result = await $.mcp.call(SERVER, `prompt-queue.${operation}`, { chat, ...args, chat_folder: await $.session.root(), conversation_id: chat })
+  const result = await callCddServer($, `prompt-queue.${operation}`, { chat, ...args, chat_folder: await $.session.root(), conversation_id: chat })
   const text = result.content[0]?.text ?? ''
   if (result.isError) {
     throw new QueueCallFailed(text || `prompt-queue.${operation} failed`)
@@ -74,6 +76,24 @@ async function callQueue<T>($: EngineInterface, operation: string, args: Record<
   } catch {
     throw new QueueCallFailed(text || `prompt-queue.${operation} sent back nothing`)
   }
+}
+
+// The cdd server that answered last, asked first next time; a reload starts over.
+let answeringServer: string | undefined
+
+/** Call tool on the first cdd server the chat holds that answers, the one that answered last first. */
+async function callCddServer($: EngineInterface, tool: string, args: Record<string, unknown>): Promise<McpToolResult> {
+  let failure: unknown = new QueueCallFailed('this chat holds no cdd server')
+  for (const server of answeringServer ? [answeringServer, ...SERVERS.filter(other => other !== answeringServer)] : SERVERS) {
+    try {
+      const result = await $.mcp.call(server, tool, args)
+      answeringServer = server
+      return result
+    } catch (unreached) {
+      failure = unreached
+    }
+  }
+  throw failure
 }
 
 /** Run an operation that answers the queue and draw what it answered; a failure shows in the queue box, and the queue

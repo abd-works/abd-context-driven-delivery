@@ -70,12 +70,15 @@ function promptQueueTools(prompts: Prompt[]) {
 
 /** The mod's stored values, kept in memory as the engine keeps them: each write raises the value's version; the queue
  * itself is the cdd server's, through prompt-queue's tools. */
-function seedQueue(on: TestOn, isExpanded: boolean, queuedByKey = '', queued = QUEUED, isPlaying = false, editingId = '', askedAbout = '') {
+function seedQueue(on: TestOn, isExpanded: boolean, queuedByKey = '', queued = QUEUED, isPlaying = false, editingId = '', askedAbout = '', servers = ['cdd']) {
   const server = promptQueueTools(queued.map(prompt => ({ ...prompt })))
   on('session.id', () => ({ value: CHAT }))
   on('session.root', () => ({ value: 'C:/work' }))
   on('mcp.call', (_, e) => {
-    const { tool, args } = e as { tool: string; args: Record<string, unknown> }
+    const { server: called, tool, args } = e as { server: string; tool: string; args: Record<string, unknown> }
+    if (!servers.includes(called)) {
+      return { deny: `no MCP server ${called}` }
+    }
     return { value: { content: [{ type: 'text', text: JSON.stringify(server.call(tool, args)) }], isError: false } }
   })
   const stored: Record<string, { value: unknown; version: number }> = {
@@ -198,6 +201,16 @@ for (const isPlaying of [true, false]) {
     }
   })
 }
+
+test("the queue is read from the cdd plugin's server in a chat whose project names no cdd server of its own", async ($, on) => {
+  const seeded = seedQueue(on, true, '', QUEUED, false, '', '', ['plugin:cdd:cdd'])
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'queue-clear' })
+
+  expect(seeded.prompts).toEqual([])
+  await ui.unmount()
+})
 
 test('a prompt being edited is left out of the queue the agent sees', async ($, on) => {
   seedQueue(on, false, '', QUEUED, true, 'a')
