@@ -28,7 +28,7 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({
       name: 'queue',
-      description: 'Queue a pasted list, one prompt per item, or turn this conversation into ordered prompts',
+      description: 'Queue a pasted list, one prompt per item; place a draft into the plan; or, with nothing given, turn this conversation into ordered prompts',
       argumentHint: '[a list to queue, or a draft to place into the plan]',
     })
     // The queue lives on the cdd server: the agent or a session starting in this chat may already have queued prompts.
