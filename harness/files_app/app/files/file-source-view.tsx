@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { NodeSourceData } from '@cdd/harness/graph/graph'
 import type { SessionFileData } from '@cdd/space/session/session'
 import { SourceView, type SourceEditorInstance } from '@source-view/SourceView'
+import type { GoToFile } from '@source-view/source-callouts'
 import type { SourceLines } from '@source-view/source-folding'
 import type { Monaco } from '@monaco-editor/react'
 
@@ -56,6 +57,7 @@ export function FileSourceView({
   onAddToContext,
   openAround = [],
   expanded = [],
+  onGoToFile,
   members = [],
   keys,
   fail,
@@ -65,6 +67,7 @@ export function FileSourceView({
   onAddToContext: (lines: CommentLines) => void
   openAround?: SourceLines[]
   expanded?: string[]
+  onGoToFile?: GoToFile
   members?: NodeSourceData[]
   keys: FilesFoldKeys
   fail: ThemeFailure
@@ -148,6 +151,7 @@ export function FileSourceView({
         wordWrap={wrap}
         callouts={callouts}
         expandLines={expandLines}
+        onGoToFile={onGoToFile}
         opensCalls={!isStoryTest(file)}
         onEditor={onEditor}
       />

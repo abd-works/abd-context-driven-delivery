@@ -641,3 +641,29 @@ describe('Show Rules Only When Asked', () => {
     })
   })
 })
+
+describe('Go To A Fold-out File', () => {
+  describe("with close's fold-out open under Delete Ticket's When step", () => {
+    const CLOSE_FOLD_OUT = { id: 'ticket-close', kind: 'call', line: 317, title: 'Ticket.close', path: 'kanban/ticket.py', startLine: 538, endLine: 555, text: '' } as const
+
+    it('should open ticket.py at the lines close covers when the Person chooses Go to file on it', async () => {
+      const { page, stop } = await showingGraph()
+      await page.graph.goToFile(CLOSE_FOLD_OUT)
+      await settled()
+      stop()
+      expect([page.state.openPath, page.selectedLinesIn(TICKET_CODE), page.state.graph.expanded]).toEqual([TICKET_CODE, [{ start: 538, end: 555 }], []])
+    })
+  })
+
+  describe("with a story map story's scenarios section open under its line", () => {
+    const SECTION_FOLD_OUT = { id: `${STORY_MAP}:315`, kind: 'section', line: 4, title: 'Delete Ticket', path: STORY_MAP, startLine: 315, endLine: 319, text: '' } as const
+
+    it('should open the file the section is in, at its lines', async () => {
+      const { page, stop } = await showingGraph()
+      await page.graph.goToFile(SECTION_FOLD_OUT)
+      await settled()
+      stop()
+      expect([page.state.openPath, page.selectedLinesIn(STORY_MAP)]).toEqual([STORY_MAP, [{ start: 315, end: 319 }]])
+    })
+  })
+})

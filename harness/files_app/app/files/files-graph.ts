@@ -6,6 +6,7 @@ import { NO_CHOICES, chosen, nodeFilter, type FilterSelection } from '@graph-app
 import type { FileBar } from './file-bar'
 import type { FilesNotices } from './files-notices'
 import type { FilesStore, SelectedNode } from './files-state'
+import type { SourceCallout } from '@source-view/source-callouts'
 
 const reasonOf = (failure: unknown): string => (failure instanceof Error ? failure.message : String(failure))
 
@@ -40,6 +41,9 @@ const saidBy = (answer: unknown): string => {
 }
 
 // An entry below another is a node's entry; the rules a node lists sit beside them and show with the violations.
+// The lines a section fold-out names, in the file it names, as a range of that file.
+const sectionRange = (foldOut: SourceCallout): RangeData => ({ path: foldOut.path, start_line: foldOut.startLine, end_line: foldOut.endLine, content: foldOut.text, anchor: '' }) as RangeData
+
 // The kind of node a story's example is, which a scenario's steps use from where it is declared.
 const EXAMPLE_TYPE = 'Example'
 
@@ -170,6 +174,20 @@ export class FilesGraph {
   // The entries below entry, as read with it or, once a person opened it, as its branch was read.
   childrenOf(entry: ExplorerEntryData): ExplorerEntryData[] {
     return (this.store.state.graph.branches[entry.node_id] ?? entry).children.filter(isEntry)
+  }
+
+  // Go to file on a fold-out: the node it shows opens in its own file at its lines, as selecting it at its home in the
+  // tree opens it; a section a markdown link opens is no node, so its file opens at the lines it names.
+  async goToFile(foldOut: SourceCallout): Promise<void> {
+    try {
+      const ranges = foldOut.kind === 'section' ? [sectionRange(foldOut)] : listAnswered<RangeData>('session.graph_node_ranges', await this.session.graphNodeRanges(foldOut.id, this.paths))
+      if (!ranges.length) return
+      const selected = ranges.map(lines => ({ nodeId: foldOut.id, lines }))
+      this.store.change(({ graph }) => ({ graph: { ...graph, selected, expanded: [] } }))
+      await this.showNodes(selected)
+    } catch (failure) {
+      this.notices.fail(`The Files app did not open the file of ${foldOut.title}: ${reasonOf(failure)}`, 'Go to file on a fold-out, calling session.graph_node_ranges')
+    }
   }
 
   // The node whose connector reaches entry, in the trees as they are open: the step above an invokes or observes

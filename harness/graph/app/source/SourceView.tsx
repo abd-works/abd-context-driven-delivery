@@ -2,7 +2,7 @@ import Editor, { type Monaco, type OnMount } from '@monaco-editor/react';
 import type { editor as monaco } from 'monaco-editor';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CallCatalog, type FoldMember } from './call-expansion';
-import { useCallouts, type CalloutsWithin, type SourceCallout } from './source-callouts';
+import { useCallouts, type CalloutsWithin, type GoToFile, type SourceCallout } from './source-callouts';
 import { foldMarkdownHeadings, useOpenAround, type SourceLines } from './source-folding';
 import type { NodeSourceData } from '@cdd/harness/graph/graph';
 import { buildViolationCorrectPrompt } from './violation-prompt';
@@ -40,6 +40,7 @@ export type SourceHostProps = {
   wordWrap?: boolean;
   callouts?: SourceCallout[];
   expandLines?: number[];
+  onGoToFile?: GoToFile;
   opensCalls?: boolean;
   onEditor?: (editor: SourceEditorInstance, monacoApi: Monaco) => void;
 };
@@ -83,7 +84,7 @@ type SourceEditorProps = SourceHostProps & {
   onSelectRule?: (name: string) => void;
 };
 
-function SourceEditor({ source, violation, rules, activeRule, onSelectRule, openAround = NO_LINES, language = '', keepGlyphMargin = false, wordWrap = false, callouts = NO_CALLOUTS, expandLines = NO_LINE_NUMBERS, opensCalls = true, onEditor }: SourceEditorProps) {
+function SourceEditor({ source, violation, rules, activeRule, onSelectRule, openAround = NO_LINES, language = '', keepGlyphMargin = false, wordWrap = false, callouts = NO_CALLOUTS, expandLines = NO_LINE_NUMBERS, onGoToFile, opensCalls = true, onEditor }: SourceEditorProps) {
   const file = source.file ?? '';
   const text = source.text ?? '';
   const origin = source.start_line || 1;
@@ -92,7 +93,7 @@ function SourceEditor({ source, violation, rules, activeRule, onSelectRule, open
   const [contentHeight, setContentHeight] = useState(0);
   const { shown, within } = useSourceCallouts(source, shownLanguage, callouts, opensCalls);
   const editorLineOf = useCallback((fileLine: number) => fileLine - origin + 1, [origin]);
-  useCallouts(editor, shown, within, editorLineOf, expandLines);
+  useCallouts(editor, shown, within, editorLineOf, expandLines, onGoToFile);
   useOpenAround(editor, openAround, text);
   useLineMarks(editor, origin, text, violation, openAround);
   const onMount: OnMount = (made, monacoApi) => {

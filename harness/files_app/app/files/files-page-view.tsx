@@ -3,6 +3,8 @@ import { Component, useCallback, useEffect, useState, useSyncExternalStore, type
 import type { FileEntryData, SessionFileData } from '@cdd/space/session/session'
 
 import { publishedOf, type FileFolder, type PublishedFile } from './file-bar'
+import type { SourceCallout } from '@source-view/source-callouts'
+
 import { FileSourceView } from './file-source-view'
 import { FilesGraphView } from './files-graph-view'
 import type { FilesPage } from './files-page'
@@ -263,6 +265,8 @@ function OpenFileView({ page }: { page: FilesPage }) {
   const path = state.file?.path ?? ''
   // The open file's selected lines, added to the chat's context; made once per file, so the editor keeps its action.
   const addLines = useCallback((lines: { start: number; end: number }) => void page.chatContext.add(path, lines), [page, path])
+  // Go to file on a fold-out opens what it shows in its own file; made once, so the open fold-outs stay as they are.
+  const goToFile = useCallback((foldOut: SourceCallout) => void page.graph.goToFile(foldOut), [page])
   if (!state.openPath) return <p className="files-note">Choose a file.</p>
   if (isDrawio(state.openPath)) return <DrawioFileView page={page} path={state.openPath} />
   if (!state.file) return <p className="files-note">Opening {state.openPath}…</p>
@@ -273,7 +277,7 @@ function OpenFileView({ page }: { page: FilesPage }) {
       {isOneOfSeveral ? <OpenFilesBarView page={page} /> : null}
       {isOneOfSeveral ? <OpenFileHeadView page={page} path={state.file.path} /> : null}
       {page.openFiles.isCollapsed(state.file.path) ? null : (
-        <FileSourceView key={state.file.path} file={state.file} actions={page.comments} onAddToContext={addLines} openAround={page.selectedLinesIn(state.file.path)} expanded={state.graph.expanded} members={state.graph.members} keys={page.foldKeys} fail={wrapFailed(page)} />
+        <FileSourceView key={state.file.path} file={state.file} actions={page.comments} onAddToContext={addLines} openAround={page.selectedLinesIn(state.file.path)} expanded={state.graph.expanded} onGoToFile={goToFile} members={state.graph.members} keys={page.foldKeys} fail={wrapFailed(page)} />
       )}
       {state.moreFiles.map(file => (
         <MoreFileView key={file.path} page={page} file={file} />
@@ -309,11 +313,12 @@ function OpenFileHeadView({ page, path }: { page: FilesPage; path: string }) {
 // A file open beside the first, holding a node selected in the graph view.
 function MoreFileView({ page, file }: { page: FilesPage; file: SessionFileData }) {
   const addLines = useCallback((lines: { start: number; end: number }) => void page.chatContext.add(file.path, lines), [page, file.path])
+  const goToFile = useCallback((foldOut: SourceCallout) => void page.graph.goToFile(foldOut), [page])
   return (
     <section className="open-file more-file" aria-label={file.path}>
       <OpenFileHeadView page={page} path={file.path} />
       {page.openFiles.isCollapsed(file.path) ? null : (
-        <FileSourceView file={file} actions={page.comments} onAddToContext={addLines} openAround={page.selectedLinesIn(file.path)} expanded={page.state.graph.expanded} members={page.state.graph.members} keys={page.foldKeys} fail={wrapFailed(page)} />
+        <FileSourceView file={file} actions={page.comments} onAddToContext={addLines} openAround={page.selectedLinesIn(file.path)} expanded={page.state.graph.expanded} onGoToFile={goToFile} members={page.state.graph.members} keys={page.foldKeys} fail={wrapFailed(page)} />
       )}
     </section>
   )
