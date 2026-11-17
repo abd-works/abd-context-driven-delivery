@@ -106,5 +106,8 @@
         ]
       }
     }
-  }
+  },
+  "overlays": [
+    "cdd_claude_mod"
+  ]
 }
