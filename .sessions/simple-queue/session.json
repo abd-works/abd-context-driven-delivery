@@ -4,13 +4,16 @@
     "stages": [
       "discovery"
     ],
-    "version": 31
+    "version": 33
   },
   "practices": {
     "stories": {
       "enabled": true,
       "formats": {
-        "story_map": []
+        "story_map": [
+          "drawio",
+          "whiteboard"
+        ]
       }
     },
     "ddd": {
