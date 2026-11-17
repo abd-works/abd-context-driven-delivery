@@ -60,7 +60,7 @@ const TASK_BUTTON_COLUMNS = 6
 
 /** The columns every card and step keeps before its text for the pointer's ▲ and ▼, empty where the pointer is not,
  * so the arrows are full-size buttons beside the text and no text moves when the pointer does. */
-const POINTER_COLUMNS = 8
+const POINTER_COLUMNS = 11
 
 /** The mark before a step for where it stands: done, being worked, or not started. */
 const STEP_MARK = { done: '✓', in_progress: '▸', pending: '○' } as const
