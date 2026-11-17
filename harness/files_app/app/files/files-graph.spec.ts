@@ -36,6 +36,9 @@ const CHECKOUT_FLOW_FILES = [
   rootFile(BOARD_CODE, 'python', 'clean-engineering-code', false),
 ]
 
+// Seed: a rule the file breaks, which session.file answers whenever it reads the file's rules.
+const BROKEN_RULE = { range: { path: TICKET_CODE, start_line: 460, end_line: 465, content: '', anchor: '' }, violation: { rule: 'keep-operations-small-focused', message: 'activate runs 24 statements' } }
+
 // Seed: checkout-flow's nodes, each in its file at its lines, under its practice's root.
 // A node shown under a connector, such as the operation a step invokes, is its own node shown there: shows names it.
 type SeedNode = { id: string; name: string; type: string; file: string; start: number; end: number; parent: string; shows?: string }
@@ -100,7 +103,7 @@ class FakeFilesServer implements CddApi {
     if (path.endsWith('/graph-node-ranges')) return this.ranges(this.node(String(body.node_id)), body.paths as string[]) as Result
     if (path.endsWith('/graph-members')) return CHECKOUT_FLOW_NODES.filter(node => node.file && !node.shows && node.type !== node.name && node.type !== 'When').map(node => ({ node_id: node.id, name: node.name, type: node.type, file: node.file })) as Result
     if (path.endsWith('/cdd/progress')) return this.progress.map(message => ({ tool: 'session.graph_trees', message })) as Result
-    if (path.endsWith('/file')) return { path: body.path, text: 'line\n'.repeat(700), language: 'python', comments: [], folds: [], violations: [], changes: [] } as Result
+    if (path.endsWith('/file')) return { path: body.path, text: 'line\n'.repeat(700), language: 'python', comments: [], folds: [], violations: body.rules ? [BROKEN_RULE] : [], changes: [] } as Result
     return null
   }
 
@@ -621,6 +624,20 @@ describe('Open Connectors In Place', () => {
       const { page, stop } = await selectedInvokedClose()
       stop()
       expect(page.state.graph.expanded).toEqual(['ticket-close'])
+    })
+  })
+})
+
+describe('Show Rules Only When Asked', () => {
+  describe('with Rules off and Ticket.activate selected in the graph, which reads ticket.py with its rules for its folds', () => {
+    it('should show no broken rule in ticket.py', async () => {
+      const { page, stop } = await showingGraph()
+      await page.graph.toggle(entryNamed(page, 'Clean Engineering'))
+      await page.graph.toggle(entryNamed(page, 'Ticket'))
+      await page.graph.select(entryNamed(page, 'activate'))
+      await settled()
+      stop()
+      expect([page.state.reads.rules, page.state.file?.violations]).toEqual([false, []])
     })
   })
 })
