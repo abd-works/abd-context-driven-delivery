@@ -1003,6 +1003,33 @@ with description("a practice"):
                             [(self.work / ".context" / "stories" / "story-map.md").resolve().as_posix()],
                         )))
 
+                with context("and the scenarios' roots the folders of the sub-epics the session works on"):
+                    with before.each:
+                        self.write_overrides({"stories": {"root": ".context/stories", "scenarios": {"roots": ["story_tests/manage-orders/place-order", "story_tests/ship-orders/track-parcel"]}}})
+
+                    with it("should write the scenarios under each sub-epic's folder, and nowhere else in story_tests"):
+                        outputs = self.stories.fidelities["scenarios"].declared.output_paths()
+                        expect(outputs["markdown"]).to(equal([
+                            (self.work / "story_tests" / "manage-orders" / "place-order" / "{story_snake}_story.test.md").resolve().as_posix(),
+                            (self.work / "story_tests" / "ship-orders" / "track-parcel" / "{story_snake}_story.test.md").resolve().as_posix(),
+                        ]))
+
+                    with it("should let the session's file manager read a story test in the second sub-epic"):
+                        story_test = self.work / "story_tests" / "ship-orders" / "track-parcel" / "track-parcel.story.shared.py"
+                        story_test.parent.mkdir(parents=True)
+                        story_test.write_text("shared_stories = None\n", encoding="utf-8")
+                        expect(self.session.session_files.in_root(story_test.resolve())).to(equal(True))
+
+                with context("and a person adds a second sub-epic's folder to the scenarios' roots"):
+                    with it("should write the scenarios under both folders"):
+                        scenarios = self.stories.of_fidelity(self.stories.fidelities.entries["scenarios"])
+                        scenarios.choose_root("work/story_tests/manage-orders/place-order")
+                        scenarios.add_root("work/story_tests/ship-orders/track-parcel")
+                        expect(self.stories.fidelities["scenarios"].declared.output_paths()["markdown"]).to(equal([
+                            (self.work / "story_tests" / "manage-orders" / "place-order" / "{story_snake}_story.test.md").resolve().as_posix(),
+                            (self.work / "story_tests" / "ship-orders" / "track-parcel" / "{story_snake}_story.test.md").resolve().as_posix(),
+                        ]))
+
                 with it("should let the session's file manager read the story tests in that story_tests"):
                     story_test = self.work / "story_tests" / "manage-orders" / "place-order" / "place-order.story.shared.py"
                     story_test.parent.mkdir(parents=True)
