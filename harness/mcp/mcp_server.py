@@ -140,7 +140,7 @@ class CddEntry:
 
     def _write_claude_plugin(self) -> None:
         self._allow_cdd_tools(self._layout.user_settings_folder / "settings.json")
-        if self._installation.daemon.home.is_dev_lane:
+        if self._installation.served.daemon.home.is_dev_lane:
             self._write_dev_lane_entry()
         else:
             self._drop_cdd_entry(self._project_root / ".mcp.json", "project's", remove_when_empty=True)
@@ -153,7 +153,7 @@ class CddEntry:
         server, which runs main and so lists none of the tools the feature adds; a ``cdd`` entry in the project's
         ``.mcp.json`` outranks the plugin, so a chat started in the worktree lists and calls the feature's own tools."""
         config_path = self._project_root / ".mcp.json"
-        server = {"type": "http", "url": self._installation.daemon.url, "headers": {PROJECT_HEADER: str(self._project_root.resolve())}}
+        server = {"type": "http", "url": self._installation.served.daemon.url, "headers": {PROJECT_HEADER: str(self._project_root.resolve())}}
         manifest = self._merged_with_other_servers(config_path, {self._layout.mcp_servers_key: {"cdd": server}})
         self._ide_config(config_path).write(manifest)
         self._installation.track_write(config_path)
