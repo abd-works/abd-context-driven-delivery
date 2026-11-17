@@ -4,7 +4,7 @@ import type { SourceRule } from '@source-view/SourceView'
 import type { SourceCallout } from '@source-view/source-callouts'
 import type { SourceLines } from '@source-view/source-folding'
 import type { ViolationFocus } from '@graph-app/graph/graph-selection'
-import { MODULE_OWNER, codeOf } from '@source-view/call-expansion'
+import { MODULE_OWNER, codeOf, withoutCallMarkers } from '@source-view/call-expansion'
 
 // The node type the source view is handed for a whole file, which it opens with every fold open.
 const FILE_NODE = 'File'
@@ -73,7 +73,7 @@ function lineUsing(code: string[], stepLine: number, nextStep: number | undefine
 }
 
 function stepCallout(line: number, target: NodeSourceData, kind: SourceCallout['kind']): SourceCallout {
-  return { id: target.node_id, kind, line, title: target.owner && target.owner !== MODULE_OWNER ? `${target.owner}.${target.name}` : target.name, path: target.file, startLine: target.start_line, endLine: target.end_line, text: target.text }
+  return { id: target.node_id, kind, line, title: target.owner && target.owner !== MODULE_OWNER ? `${target.owner}.${target.name}` : target.name, path: target.file, startLine: target.start_line, endLine: target.end_line, text: withoutCallMarkers(target.text) }
 }
 
 // The lines whose fold-outs open for the nodes expanded, such as one selected in the graph through a connector: each

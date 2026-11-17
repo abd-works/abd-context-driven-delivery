@@ -73,6 +73,16 @@ describe('Connectors Fold Out Where They Are Used', () => {
   })
 })
 
+describe('Connector Fold-outs Show Only Code', () => {
+  describe("with a step invoking an operation whose text the graph marks with its calls", () => {
+    it('should show the operation without the call markers', () => {
+      const marked = { ...DELETE, text: `${DELETE.text} /* call:reread */` } as NodeSourceData
+      const file = { ...storyTestWithText, steps: [{ line: 13, invokes: [marked], observes: [] }] } as unknown as SessionFileData
+      expect(calloutsOf(file)[0]!.text).toBe(DELETE.text)
+    })
+  })
+})
+
 describe('Expand A Connector Inside Its Holder Only', () => {
   describe('with CHECKOUT_TICKET observed by the Then on line 17, and the Person selecting it under the scenario on lines 7 to 19', () => {
     const callouts = calloutsOf(storyTestWithText)

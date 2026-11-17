@@ -162,8 +162,13 @@ export class CallCatalog {
   }
 }
 
+// The text without the marker the graph puts after a line for each call on it, which is no code.
+export function withoutCallMarkers(text: string): string {
+  return text.replace(CALL_MARKER, "");
+}
+
 function bodyOf(member: FoldMember): Body {
-  const text = member.text.replace(CALL_MARKER, "");
+  const text = withoutCallMarkers(member.text);
   const start = member.start_line || 1;
   const label = member.owner && !isModuleFunction(member) ? `${member.owner}.${member.name}` : member.name;
   return { id: member.node_id, name: member.name, label, text, file: member.file, start, end: member.end_line || start + text.split("\n").length - 1, owner: member.owner };
