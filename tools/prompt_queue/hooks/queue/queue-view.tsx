@@ -294,8 +294,9 @@ function AgentColumnsView($: EngineInterface, e: AbovePromptEvent, state: QueueS
 }
 
 /** One robot's queue: its robot on top, which collapses the queue to the robot alone and expands it again, its name and
- * ✎ to rename it, then its prompts as the queue's cards. A collapsed queue takes no room the others could use, and shows
- * under its robot how many of its items are done, such as 3/5. */
+ * ✎ to rename it, then its prompts as the queue's cards. The open queues share the width evenly, whatever their cards
+ * hold (each starts from no width and grows by the same share); a collapsed queue takes no room the others could use,
+ * and shows under its robot how many of its items are done, such as 3/5. */
 function AgentColumnView($: EngineInterface, e: AbovePromptEvent, state: QueueState, task: SubAgentTask, place: number) {
   const elements = $.ui.resolve(e)
   const { Box, Button, Text } = elements
@@ -307,7 +308,7 @@ function AgentColumnView($: EngineInterface, e: AbovePromptEvent, state: QueueSt
     ? <elements.Svg key={`robot-${number}`} source={robotSvgOf(place)} alt={`${name}, a robot`} width={ROBOT_PIXELS} height={ROBOT_PIXELS} />
     : <Text key={`robot-${number}`} color={LOOK.accent}>🤖</Text>
   const robot = (
-    <Box key={`robot-box-${number}`}>
+    <Box key={`robot-box-${number}`} flexShrink={0}>
       {picture}
       <Box position="absolute" top={0} left={0}>
         <Button key={`collapse-agent-${number}`} plain label=" " onPress={() => toggleCollapsedAgent($, place)} />
@@ -316,7 +317,8 @@ function AgentColumnView($: EngineInterface, e: AbovePromptEvent, state: QueueSt
   )
 
   return (
-    <Box key={`agent-column-${number}`} flexDirection="column" flexGrow={isCollapsed ? 0 : 1} flexShrink={isCollapsed ? 0 : 1} minWidth={0} rowGap="sm">
+    <Box key={`agent-column-${number}`} flexDirection="column" flexGrow={isCollapsed ? 0 : 1} flexShrink={isCollapsed ? 0 : 1}
+      width={isCollapsed ? undefined : 0} minWidth={0} rowGap="sm">
       <Box key={`agent-header-${number}`} flexDirection="row" alignItems="center" gap={1}>
         {robot}
         <Box key={`agent-label-${number}`} flexDirection="row" alignItems="center" gap={1} display={isCollapsed ? 'none' : 'flex'}>
