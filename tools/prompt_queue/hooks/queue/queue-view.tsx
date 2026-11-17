@@ -62,6 +62,9 @@ const POINTER_COLUMNS = 11
 /** The invisible button's label: blank and wider than any card, so its press area covers the whole box it lies over. */
 const PRESS_AREA = ' '.repeat(400)
 
+/** The columns the card's ↵ ✎ ↑ ↓ ✕ bar takes: it floats over the card's right end, this far left of its right edge. */
+const CARD_BAR_COLUMNS = 23
+
 /** The mark before a step for where it stands: done, being worked, or not started. */
 const STEP_MARK = { done: '✓', in_progress: '▸', pending: '○' } as const
 
@@ -211,9 +214,13 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
           <Box position="absolute" top={0} bottom={0} left={1} flexDirection="row" alignItems="center">{pointer}</Box>
         )}
         {!isInColumn && (
-          <Box flexShrink={0} flexDirection="row" alignItems="center" gap={1}
-            display="none" hover={{ display: 'flex' }} backgroundColor={LOOK.keyCap} paddingX="xs">
-            {CardButtonsView($, e, prompt, index)}
+          <Box position="relative" width={0} height={0} flexShrink={0} alignSelf="center">
+            <Box position="absolute" top={0} bottom={0} left={-CARD_BAR_COLUMNS} flexDirection="row" alignItems="center">
+              <Box flexDirection="row" alignItems="center" gap={1}
+                display="none" hover={{ display: 'flex' }} backgroundColor={LOOK.keyCap} paddingX="xs">
+                {CardButtonsView($, e, prompt, index)}
+              </Box>
+            </Box>
           </Box>
         )}
       </Box>

@@ -748,7 +748,7 @@ test("✎ on a step with a draft in the prompt box makes the draft the step's te
   expect(seeded.prompts[0]!.steps!.map(step => step.text)).toEqual(['Read the epic', 'Write them all'])
 })
 
-test("a card's button bar is the last thing in the card, after its text, laid out in the row and not placed absolutely, so it shows at the card's right end", async ($, on) => {
+test("a card's button bar hangs from the last thing in the card, an anchor at its right end laid out in the row, so the bar floats over the card's right end", async ($, on) => {
   seedQueue(on, true)
 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
@@ -759,7 +759,7 @@ test("a card's button bar is the last thing in the card, after its text, laid ou
   const parts = (card.children ?? []).filter((child): child is Node => typeof child === 'object' && child !== null)
   const bar = parts.at(-1)!
 
-  expect([JSON.stringify(bar).includes('"send-now-a"'), bar.props.position]).toEqual([true, undefined])
+  expect([JSON.stringify(bar).includes('"send-now-a"'), bar.props.position === 'absolute']).toEqual([true, false])
 })
 
 test("a card's buttons sit on solid grey, so they read over the prompt's text", async ($, on) => {
