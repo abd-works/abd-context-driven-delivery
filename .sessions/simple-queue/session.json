@@ -4,7 +4,7 @@
     "stages": [
       "discovery"
     ],
-    "version": 67
+    "version": 68
   },
   "practices": {
     "stories": {
@@ -27,7 +27,7 @@
       "enabled": false
     },
     "clean_engineering": {
-      "enabled": false,
+      "enabled": true,
       "formats": {
         "code": []
       }
