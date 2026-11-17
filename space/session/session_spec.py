@@ -27,6 +27,7 @@ from harness.guidance_actions import GuidanceAction
 from harness.hooks.hook_server import HookPayload
 from harness.agent_tools.tool_call import SESSION_OPENING, ToolCall, ToolRequest
 from harness.mcp.mcp_server import McpServer
+from harness.whiteboard import BoardLinks
 from space.repo.mock_repo import MockGit
 from space.repo.repo import Repo
 from space.session import Session, Sessions
@@ -1270,6 +1271,37 @@ with description("a session whose UX work has an information architecture, a pub
         expect(reviewed).not_to(contain("work/checkout/OrderView.tsx"))
 
 
+# A whiteboard file opens the board in Claude it was published to, whose address is kept beside it (whiteboards.json);
+# requested 2026-11-16: "whiteboard file entries don't open those files, they open the actual whiteboard".
+with description("a session whose story map is drawn on a whiteboard") as self:
+    with before.each:
+        self.home = ExampleHome()
+        self.repo = Path(tempfile.mkdtemp(prefix="session-whiteboard-")).resolve()
+        (self.repo / ".git").mkdir()
+        self.work = self.repo / "work"
+        (self.work / ".context").mkdir(parents=True)
+        (self.work / ".context" / "story-map.whiteboard").write_text("{}", encoding="utf-8")
+        Sessions(self.repo).switch("alpha", self.work)
+        self.story_map = Sessions(self.repo).current().practice("stories").fidelities["story_map"]
+
+    with after.each:
+        shutil.rmtree(self.repo, ignore_errors=True)
+        self.home.close()
+
+    with context("that was published to a board"):
+        with before.each:
+            BoardLinks.beside(self.work / ".context" / "story-map.whiteboard").record(self.work / ".context" / "story-map.whiteboard", "https://claude.ai/artifact/story-board")
+
+        with it("should list the whiteboard file at its board's address"):
+            expect([(entry.path, entry.link) for entry in self.story_map.declared.files()["whiteboard"]]).to(
+                equal([("work/.context/story-map.whiteboard", "https://claude.ai/artifact/story-board")])
+            )
+
+    with context("that was never published"):
+        with it("should list the whiteboard file at no address"):
+            expect([entry.link for entry in self.story_map.declared.files()["whiteboard"]]).to(equal([""]))
+
+
 # The chat bar's stage buttons, practice dots, and format chips, and the Files app's toggles, are one selection the
 # session holds; every change raises its version, which a page waits on.
 with description("a session's guidance selection") as self:
@@ -1294,6 +1326,12 @@ with description("a session's guidance selection") as self:
 
         with it("should have every practice selected, as the session works on each until one is turned off"):
             expect(all(practice.is_selected for practice in self.session.guidance_selection().practices)).to(equal(True))
+
+    # Requested 2026-11-16: "make sure design canvas is a filter option for UX".
+    with context("that has Specification and UX selected"):
+        with it("should offer the canvas format, the design canvas the UX mockup writes"):
+            selected = self.session.update_guidance_selection(stages=["specification"], practices=["ux"])
+            expect([(format.label, format.formats) for format in selected.formats if format.label == "canvas"]).to(equal([("canvas", ["claude_design"])]))
 
     with context("that has Discovery and Stories selected"):
         with before.each:

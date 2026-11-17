@@ -12,6 +12,7 @@ from harness.mcp.mcp_annotations import long_call, mcp
 from space.kanban.format_choice import FormatChoice
 from space.kanban.overlay_choice import OverlayChoice
 from space.session.file_manager import FileEntry
+from space.session.practice_session_output import published_link
 
 if TYPE_CHECKING:
     from space.kanban.ticket import TicketWork
@@ -48,11 +49,11 @@ class TicketChoices:
     @agent_tool
     @noSessionLog
     def root_files(self) -> list[FileEntry]:
-        """Return every file under the folder ticket's session works in, each with its path from the project, whether the branch changed it, its format, and the fidelities whose files it is, so a page narrows it by the stages, practices, and formats selected; a file no fidelity declares names none."""
+        """Return every file under the folder ticket's session works in, each with its path from the project, whether the branch changed it, its format, and the fidelities whose files it is, and the link a design canvas or a whiteboard is published at, so a page narrows it by the stages, practices, and formats selected; a file no fidelity declares names none."""
         session = self.session
         progress = self.work.progress
         repo = session.repo.root
-        return [entry.belonging_to([each.fidelity.slug for each in progress if each.holds(repo / entry.path)]) for entry in session.session_files.under_root()]
+        return [entry.belonging_to([each.fidelity.slug for each in progress if each.holds(repo / entry.path)]).linked(published_link(repo / entry.path)) for entry in session.session_files.under_root()]
 
     @mcp
     @agent_tool

@@ -3,7 +3,10 @@
 from expects import be_below, equal, expect, raise_error
 from mamba import before, context, description, it
 
-from harness.whiteboard import BoardElement, Box, Whiteboard, WhiteboardNode
+import tempfile
+from pathlib import Path
+
+from harness.whiteboard import BoardElement, BoardLinks, Box, Whiteboard, WhiteboardNode
 from harness.whiteboard.whiteboard import StoreWrite, UnreadableBoard
 
 
@@ -194,3 +197,26 @@ with description("a whiteboard") as self:
         with it("should refuse it"):
             board = Whiteboard("Orders")
             expect(lambda: board.add(BoardElement.shape("lane.l1", Box(0, 0, 100, 9000)))).to(raise_error(ValueError))
+
+
+with description("a whiteboard file's board in Claude") as self:
+    with before.each:
+        self.folder = Path(tempfile.mkdtemp())
+        self.file = self.folder / "story-map.whiteboard"
+        self.file.write_text(Whiteboard("Story Map").save(), encoding="utf-8")
+
+    with context("that was published"):
+        with before.each:
+            BoardLinks.beside(self.file).record(self.file, "https://claude.ai/artifact/StoryMapBoard")
+
+        with it("should answer the board's address, kept beside the file by its name"):
+            expect(BoardLinks.beside(self.file).of(self.file)).to(equal("https://claude.ai/artifact/StoryMapBoard"))
+
+    with context("that was never published"):
+        with it("should answer no address"):
+            expect(BoardLinks.beside(self.file).of(self.file)).to(equal(""))
+
+    with context("with a record in the folder that is not one"):
+        with it("should answer no address"):
+            (self.folder / BoardLinks.RECORD).write_text("not json", encoding="utf-8")
+            expect(BoardLinks.beside(self.file).of(self.file)).to(equal(""))
