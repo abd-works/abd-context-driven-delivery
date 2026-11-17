@@ -27,6 +27,9 @@ _MEMBER_CALL = re.compile(r"\.([\w$]+)\s*\(")
 # A call by name alone, with no object before it: `seed_ticket(world)`, not `board.reread()` or `def seed_ticket(`.
 _FUNCTION_CALL = re.compile(r"(?<![\w$.])(?<!def )(?<!function )([A-Za-z_$][\w$]*)\s*\(")
 _STEP_TYPES = frozenset({"Step", "Given", "When", "Then"})
+# An examples module a story test imports its seeds and fixtures from, such as ticket_story_examples.py or
+# customers-examples.ts: test code, which a step never invokes.
+_EXAMPLES_MODULE_FILE = re.compile(r"examples\.\w+$")
 # A story map's epic is recorded as an Epic, or as a SubEpic under another epic; a map built on a graph without being
 # recorded calls every epic an Epic.
 _EPIC_TYPES = frozenset({"Epic", "SubEpic"})
@@ -252,11 +255,23 @@ class StoryLinks:
             report_progress(f"stories · examples · {index}/{len(self.examples)} · {example.name}")
             self._link_example(example)
 
+    @cached_property
+    def story_files(self) -> set[str]:
+        """The files the Stories practice read its story map and story tests from, read once: test code."""
+        return {node.source.file for node in self.stories.in_graph.nodes() if node.source is not None and node.source.file}
+
+    def _is_tested_code(self, member: "Node") -> bool:
+        """True for Clean Engineering code a step can invoke: never a function of a story test, such as a helper
+        its steps call, nor of the examples module it takes its seeds from."""
+        file = member.source.file if member.source is not None else ""
+        return bool(file) and file not in self.story_files and not _EXAMPLES_MODULE_FILE.search(file)
+
     def _link_step(self, step: "Node") -> None:
         body = self._step_body(step)
         called = set(step.get_fact("callees") or []) | set(_MEMBER_CALL.findall(body))
         matched = [member for name in sorted(called) for member in self.clean.code_index.members_named(name)]
         matched += [function for function in self._functions_called(body) if function not in matched]
+        matched = [member for member in matched if self._is_tested_code(member)]
         epic = self.tree.epic_of(step) if matched else None
         for operation in matched:
             self.graph.edges.relate("invokes", step, operation)
