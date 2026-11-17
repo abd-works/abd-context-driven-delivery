@@ -9,7 +9,7 @@ This review happens on **every** end-to-end run, not just some: a run during tic
 ## The loop
 
 1. **Run the end-to-end tests** for the area changed (a sub-epic, an epic, or all). Each step of each scenario records a screenshot and its result, keyed by story › scenario › step.
-2. **Find the baseline:** the same step's screenshot from the previous good run (the last run on main, or the previous release).
+2. **Find the baseline:** the same step's screenshot from the previous good run (the last run on main, or the previous release). **On the first run there is no baseline**, so the AI checks every step's screenshot against the scenario itself: does the screen actually do what the scenario means? It reads the Given/When/Then text and asks whether a person looking at this screen would agree the step happened (the Given's state is visible, the When's action took effect, the Then's outcome is shown, with the right values, labels and messages). Each step gets a verdict: **meets the intent**, or **misses the intent** with what is wrong, handled like "missed by the tests" in step 5. A step's screenshot becomes part of the first baseline only when it meets the intent and the person accepts the run. A step added to a scenario later gets the same check on its first run.
 3. **Filter the pairs by pixels first.** Only pairs that changed go to the AI. A cheap block diff (pml-web's 8px block check) keeps the AI from reading hundreds of identical screens.
 4. **The AI judges each changed pair** using both screenshots, the step's Given/When/Then text, and the stories and code changed since the baseline (this ticket's changes, or for a scheduled run the commits on main since then). The verdict is one of:
    - **intended:** the change follows from one of those story or code changes, and the AI cites which one.
@@ -34,6 +34,7 @@ A supplement to Stories acceptance tests and the TDD end-to-end tier, for exampl
 
 - `every-run-reviewed`: every end-to-end run, by ticket, by hand or scheduled, is reviewed against its baseline before its result counts.
 - `every-step-captured`: every story test step in the end-to-end tier records a screenshot and result under its story › scenario › step key.
+- `first-run-checks-the-intent`: a step with no baseline is judged against its scenario's intent from the screenshot alone, and it joins the baseline only when it meets that intent.
 - `baseline-is-previous-good-run`: compare with the last accepted run of the same system.
 - `ai-judges-every-changed-pair`: every changed pair gets a verdict and a reason, and "intended" cites the story or code change behind it.
 - `missed-change-adds-a-test-first`: a change the tests missed gets a failing test at the owning layer before the code is fixed.
