@@ -373,6 +373,22 @@ describe('Filter Graph By Node Type And Connector', () => {
   })
 })
 
+describe('Read Open Nodes Again For A Switched Scope', () => {
+  describe("with Clean Engineering and Ticket open in checkout-flow's graph", () => {
+    it('should read each open node again for the changed files once the Person switches the file list to them', async () => {
+      const { page, server, stop } = await showingGraph()
+      await page.graph.toggle(entryNamed(page, 'Clean Engineering'))
+      await page.graph.toggle(entryNamed(page, 'Ticket'))
+      const ticket = entryNamed(page, 'Ticket').node_id
+      page.showScope('session')
+      await settled()
+      stop()
+      const readForChanged = server.posted('/graph-branch').filter(post => (post.body.paths as string[]).join() === [STORY_MAP, TICKET_CODE].join())
+      expect(readForChanged.map(post => post.body.node_id)).toContain(ticket)
+    })
+  })
+})
+
 describe('Collapse The Graph Node Filter', () => {
   beforeEach(() => window.localStorage.clear())
 

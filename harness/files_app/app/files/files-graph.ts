@@ -104,6 +104,7 @@ export class FilesGraph {
     try {
       const trees = listAnswered<ExplorerEntryData>('session.graph_trees', await this.session.graphTrees(paths, this.nodeFilter))
       this.store.change(({ graph }) => (graph.readFor === readFor ? { graph: { ...graph, trees, branches: {}, isReading: false } } : {}))
+      await this.readOpenBranches(readFor)
     } catch (failure) {
       this.store.change(({ graph }) => ({ graph: { ...graph, trees: [], isReading: false, problem: `The graph did not read: ${reasonOf(failure)}` } }))
       this.notices.fail(`The Files app did not read the session's graph: ${reasonOf(failure)}`, 'Showing the graph view, calling session.graph_trees')
@@ -215,6 +216,16 @@ export class FilesGraph {
 
   isSelected(entry: ExplorerEntryData): boolean {
     return this.store.state.graph.selected.some(selected => selected.nodeId === entry.node_id)
+  }
+
+  // Reads each node the person has open again, for the files and node filter the trees were just read for: a branch
+  // read for the old list holds the old list's nodes, so an open node would go on showing them.
+  private async readOpenBranches(readFor: string): Promise<void> {
+    const paths = this.paths
+    const filter = this.nodeFilter
+    const read = await Promise.all(this.store.state.graph.openNodes.map(async nodeId => [nodeId, await this.session.graphBranch(nodeId, paths, filter)] as const))
+    const branches = Object.fromEntries(read.filter((each): each is readonly [string, ExplorerEntryData] => each[1] !== null))
+    this.store.change(({ graph }) => (graph.readFor === readFor ? { graph: { ...graph, branches: { ...graph.branches, ...branches } } } : {}))
   }
 
   // Opens or closes an entry, reading the entries its answer left out the first time it opens.
