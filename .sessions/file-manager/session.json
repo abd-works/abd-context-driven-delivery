@@ -7,9 +7,10 @@
   "worktree": "C:\\dev\\abd-cdd-file-manager",
   "guidance": {
     "stages": [
-      "specification"
+      "specification",
+      "implementation"
     ],
-    "version": 125
+    "version": 126
   },
   "practices": {
     "stories": {
