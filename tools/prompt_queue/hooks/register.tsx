@@ -9,6 +9,7 @@ import {
   queueContext,
   queueSentPrompt,
   followPlan,
+  followTakenPrompt,
   finishPlan,
   noteDecisionAsked,
   refreshQueue,
@@ -16,7 +17,7 @@ import {
   startTurn,
 } from './queue/prompt-queue'
 import { QueueView } from './queue/queue-view'
-import { PLAN_TOOL, WRAP_UP_TOOL } from './queue/plan-steps'
+import { PLAN_TOOL, SET_STEPS_TOOL, WRAP_UP_TOOL } from './queue/plan-steps'
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
@@ -65,6 +66,8 @@ export const register: Register = on => {
     const ran = await next(e)
     if (e.agentId === undefined && PLAN_TOOL.test(e.tool)) {
       await followPlan($, e as unknown as Record<string, unknown>)
+    } else if (e.agentId === undefined && SET_STEPS_TOOL.test(e.tool)) {
+      await followTakenPrompt($, e as unknown as Record<string, unknown>)
     } else if (e.agentId === undefined && WRAP_UP_TOOL.test(e.tool)) {
       await finishPlan($)
       await noteDecisionAsked($, e as unknown as Record<string, unknown>)

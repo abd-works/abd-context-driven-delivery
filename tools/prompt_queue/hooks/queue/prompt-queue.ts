@@ -19,14 +19,14 @@ const QUEUE_INSTRUCTIONS = [
   "When it is done, call prompt-queue.done with its id, then take the next, until the queue is empty or the person stops you.",
   'prompt-queue.show reads the queue again. Mark a prompt done only once its work is done; never take one off that you have not done.',
   `A prompt whose text starts with ${'"[decision required]"'} waits for the person's answer; pass over it.`,
+  'When you take a prompt, first call prompt-queue.set_steps with its id and the steps you plan for it, so the queue shows your work on the prompt you took.',
 ].join(' ')
 // What marks a prompt put back on the queue to wait for the person's answer; play passes over it.
 const DECISION_FLAG = '[decision required]'
 // How long play waits for the person to answer a question the agent ended its turn with, before it moves on.
 const DECISION_WAIT_MS = 60_000
 // Until the mod has seen the agent's task list, the agent keeps a prompt's steps on the queue itself.
-const KEEP_STEPS_YOURSELF =
-  'Give the prompt you take its steps with prompt-queue.set_steps, and mark each one done with prompt-queue.step_done as you finish it.'
+const KEEP_STEPS_YOURSELF = 'Mark each step done with prompt-queue.step_done as you finish it.'
 
 /** The chat's queue as prompt-queue's tools last answered it: the cdd server keeps the queue, so the mod, the agent in
  * the chat and a session starting in it all change the same one, and the mod draws what the server answered. */
@@ -392,6 +392,18 @@ export async function followPlan($: EngineInterface, call: PlanCall): Promise<vo
   await update($, isPlanSeen, () => true)
   await update($, plan, steps => nextPlan(steps, call))
   await copyPlanOntoWorkingPrompt($)
+}
+
+/** The agent gave a queued prompt its steps: that is the prompt it took, so it becomes the one being worked, and the
+ * task list's next changes follow onto it from those steps. */
+export async function followTakenPrompt($: EngineInterface, call: { prompt?: unknown; steps?: unknown }): Promise<void> {
+  if (typeof call.prompt !== 'string' || call.prompt === '') {
+    return
+  }
+  const steps = Array.isArray(call.steps) ? (call.steps as PromptStep[]) : []
+  await update($, askedAbout, () => call.prompt as string)
+  await update($, plan, () => steps)
+  await refreshQueue($)
 }
 
 /** A wrapped-up turn finished its task list: every step of the prompt being worked is done. */

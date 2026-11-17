@@ -10,6 +10,8 @@ export type PlanCall = { items?: unknown; advance?: unknown; done?: unknown; sta
 export const PLAN_TOOL = /^mcp__.*__update_plan$/
 /** The tool that closes a turn's task list: every step it held is finished. */
 export const WRAP_UP_TOOL = /^mcp__.*__wrap_up$/
+/** The cdd server's tool the agent gives a queued prompt its steps with, which names the prompt it takes. */
+export const SET_STEPS_TOOL = /^mcp__.*__prompt-queue_set_steps$/
 
 /** The agent's steps after one `update_plan` call: a call with items replaces the list; advance finishes the step being
  * worked and starts the next pending one; done finishes the steps it numbers, from 1; start works the step it numbers. */

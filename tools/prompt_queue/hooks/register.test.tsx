@@ -439,7 +439,7 @@ test('a prompt sent straight to the chat goes first on the queue, as the prompt 
 })
 
 for (const isPlanSeen of [false, true]) {
-  test(`the queue beside a prompt ${isPlanSeen ? 'leaves the steps to the task list once one is seen' : 'tells the agent to keep its steps until a task list is seen'}`, async ($, on) => {
+  test(`the queue beside a prompt ${isPlanSeen ? 'leaves ticking steps to the task list once one is seen' : 'tells the agent to tick its steps itself until a task list is seen'}`, async ($, on) => {
     seedQueue(on, false, '', QUEUED, true, '', 'a')
     planToolAnswers(on)
     const carried: string[] = []
@@ -451,7 +451,8 @@ for (const isPlanSeen of [false, true]) {
 
     await $.prompt.submit({ text: 'Fix the Files app', wait: false, origin: { kind: 'composer' } })
 
-    expect(carried.join().includes('prompt-queue.set_steps')).toBe(!isPlanSeen)
+    expect(carried.join().includes('prompt-queue.step_done')).toBe(!isPlanSeen)
+    expect(carried.join()).toContain('call prompt-queue.set_steps with its id')
   })
 }
 
@@ -680,4 +681,20 @@ test('play passes over a prompt put back as needing a decision', async ($, on) =
   await unawaitedWorkSettled()
 
   expect(submitted).toEqual([])
+})
+
+
+test('the prompt the agent gives steps to becomes the one being worked, so its task list follows onto it', async ($, on) => {
+  const seeded = seedQueue(on, true, '', QUEUED, true, '', 'a')
+  planToolAnswers(on)
+
+  await $.tool.call({ tool: 'mcp__cdd__prompt-queue_set_steps', prompt: 'b', steps: [
+    { text: 'Read the epic', state: 'in_progress' },
+    { text: 'Write the stories', state: 'pending' },
+  ] })
+  await $.tool.call({ tool: PLAN_TOOL, advance: true })
+
+  expect(seeded.stored.askedAbout?.value).toBe('b')
+  expect(seeded.prompts[1]!.steps!.map(step => step.state)).toEqual(['done', 'in_progress'])
+  expect(seeded.prompts[0]!.steps).toBeUndefined()
 })
