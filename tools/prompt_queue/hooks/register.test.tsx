@@ -890,3 +890,18 @@ test("a background task's notice arriving in the chat is not queued as the perso
 
   expect(seeded.prompts.map(prompt => prompt.text)).toEqual(['Write the scenarios', 'Run the unit tier'])
 })
+
+
+test('the queue beside a prompt tells the agent to keep one card for each goal, with related messages as its tasks', async ($, on) => {
+  seedQueue(on, false, '', QUEUED, true)
+  const carried: string[] = []
+  on('prompt.submit', (_, e) => {
+    carried.push(...(e.context ?? []))
+    return { text: e.text }
+  })
+
+  await $.prompt.submit({ text: 'Fix the Files app', wait: false, origin: { kind: 'composer' } })
+
+  expect(carried.join()).toContain('one card for each goal')
+  expect(carried.join()).toContain('make it a task of that goal')
+})

@@ -20,6 +20,9 @@ const QUEUE_INSTRUCTIONS = [
   'prompt-queue.show reads the queue again. Mark a prompt done only once its work is done; never take one off that you have not done.',
   `A prompt whose text starts with ${'"[decision required]"'} waits for the person's answer; pass over it.`,
   'When you take a prompt, first call prompt-queue.set_steps with its id and the steps you plan for it, so the queue shows your work on the prompt you took.',
+  'Keep one card for each goal: when a message the person sends belongs to a goal already on the queue, make it a task of that goal with prompt-queue.set_steps',
+  'and take its own card off with prompt-queue.remove; gather related [interruption] cards under one goal card the same way, written as a short title of the goal.',
+  'Keep the order done, then being worked, then not started.',
 ].join(' ')
 // What marks a prompt put back on the queue to wait for the person's answer; play passes over it.
 const DECISION_FLAG = '[decision required]'
@@ -399,7 +402,11 @@ export async function queueSentPrompt($: EngineInterface, text: string): Promise
   }
   await changeQueue($, 'move', { prompt: sent.id, to: nextPlace < 0 ? (await read($, queue)).prompts.length - 1 : nextPlace })
   await workOn($, sent.id)
-  return { id: sent.id, note: `This prompt is first on this chat's prompt queue as [${sent.id}]. When its work is done, call prompt-queue.done with that id.` }
+  return {
+    id: sent.id,
+    note: `This prompt is on this chat's prompt queue as [${sent.id}]. If it belongs to a goal already on the queue, make it a task of that goal ` +
+      'with prompt-queue.set_steps and take this card off with prompt-queue.remove; otherwise, when its work is done, call prompt-queue.done with that id.',
+  }
 }
 
 /** The prompt a message interrupts: the one being worked while a turn runs, if it is on the queue and not done. */
