@@ -50,6 +50,9 @@ const ADD_COLUMNS = 3
 /** The columns kept at a card's right for its send, edit, move and remove buttons, shown when the pointer is on the card. */
 const CARD_BUTTON_COLUMNS = 15
 
+/** The columns kept before a card's text for its task button, 3/3 or +, so every card's text starts in one place. */
+const TASK_BUTTON_COLUMNS = 6
+
 /** The mark before a step for where it stands: done, being worked, or not started. */
 const STEP_MARK = { done: '✓', in_progress: '▸', pending: '○' } as const
 
@@ -134,7 +137,7 @@ function QueueListView($: EngineInterface, e: AbovePromptEvent, state: QueueStat
       {queue.prompts.map((prompt, index) => (
         <Box key={`card-${prompt.id}`} flexDirection="column">
           {CardView($, e, state, prompt, index)}
-          {state.openSteps.includes(prompt.id) && StepsView($, e, prompt)}
+          {state.openSteps.includes(prompt.id) && (prompt.steps ?? []).length > 0 && StepsView($, e, prompt)}
         </Box>
       ))}
     </Box>
@@ -150,7 +153,11 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
 
   return (
     <Box key={`card-row-${prompt.id}`} flexDirection="row" justifyContent="space-between" alignItems="center" gap={1} width="100%">
-      <Button key={`steps-${prompt.id}`} label={progress === '' ? '+' : progress} onPress={() => toggleSteps($, prompt.id)} />
+      <Box width={TASK_BUTTON_COLUMNS} flexShrink={0}>
+        {progress !== ''
+          ? <Button key={`steps-${prompt.id}`} label={progress} onPress={() => toggleSteps($, prompt.id)} />
+          : !isFinished && <Button key={`steps-${prompt.id}`} label="+" onPress={() => addStep($, prompt)} />}
+      </Box>
       {(prompt.attachments ?? []).length > 0 && <Text key={`attached-${prompt.id}`} color={LOOK.muted}>{`📎${prompt.attachments!.length}`}</Text>}
       <Box flexGrow={1} flexShrink={1} minWidth={0}>
         <Button key={`card-text-${prompt.id}`} dimColor={isEditing || isFinished} onPress={() => editPrompt($, prompt)}>
@@ -216,7 +223,7 @@ function StepsView($: EngineInterface, e: AbovePromptEvent, prompt: QueuedPrompt
   const { Box, Button } = $.ui.resolve(e)
 
   return (
-    <Box key={`steps-of-${prompt.id}`} flexDirection="column" paddingLeft={3}>
+    <Box key={`steps-of-${prompt.id}`} flexDirection="column" paddingLeft={TASK_BUTTON_COLUMNS + 1}>
       {(prompt.steps ?? []).map((step, index) => StepView($, e, prompt, step, index))}
       <Box flexDirection="row">
         <Button key={`add-step-${prompt.id}`} label="+" onPress={() => addStep($, prompt)} />

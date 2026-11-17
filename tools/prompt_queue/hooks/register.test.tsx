@@ -732,7 +732,7 @@ async function stepsOpenAfter($: Parameters<Parameters<typeof test>[1]>[0], pres
   await pressing.unmount()
 }
 
-test("+ on a card adds the prompt box's draft as the card's last step, not started, and empties the box", async ($, on) => {
+test("+ on a card with no tasks adds the prompt box's draft as its first task, not started, and empties the box", async ($, on) => {
   const seeded = seedQueue(on, true, '', WITH_STEPS.map(prompt => ({ ...prompt })))
   on('prompt.read', () => ({ value: { text: 'Render the map', cursor: 14 } }))
   const filled: string[] = []
@@ -741,11 +741,8 @@ test("+ on a card adds the prompt box's draft as the card's last step, not start
     return { isFilled: true }
   })
 
-  const opening = await $.ui.mount({ ...BAND, surface: 'desktop' })
-  await opening.press({ key: 'steps-b' })
-  await opening.unmount()
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
-  await ui.press({ key: 'add-step-b' })
+  await ui.press({ key: 'steps-b' })
   await ui.unmount()
 
   expect(seeded.prompts[1]!.steps).toEqual([{ text: 'Render the map', state: 'pending' }])
