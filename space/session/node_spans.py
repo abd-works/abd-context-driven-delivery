@@ -8,6 +8,9 @@ from harness.graph.explorer import ExplorerEntry
 from harness.graph.graph import MARKDOWN_SUFFIXES, FilterRequest, Graph, Node
 from harness.markdown.markdown import MarkdownText
 
+# The kind of node a story's example is: a fixture a scenario uses, declared in the story test or in an examples module.
+EXAMPLE_TYPE = "Example"
+
 
 class NodeSpans:
     """The lines a node covers, one span for each file: a node read from lines of a file covers those; a node read from
@@ -63,9 +66,17 @@ class NodeSpans:
         if not self._seen:
             self._name = node.name
         self._seen.add(node_id)
+        if below_lines and self._used_from_elsewhere(node):
+            return []
         if not self._widen_with(node):
             return [] if below_lines else self._below(node, below_lines=False)
         return self._below(node, below_lines=True)
+
+    def _used_from_elsewhere(self, node: Node) -> bool:
+        """True for an example declared in a file none of the spans covers yet, such as the examples module a story
+        test imports its fixtures from: the scenario uses it, but it is no part of the scenario, so the scenario's
+        lines open alone."""
+        return node.type == EXAMPLE_TYPE and self._lines_file(node) not in self._spans
 
     def _widen_with(self, node: Node) -> bool:
         """Widen the spans with the lines node was read from; whether it was read from any."""

@@ -16,6 +16,8 @@ from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 # Seed: the report the debug skill writes in a session's folder, named as it names it.
 DEBUG_REPORT = "debug/debug-20261116T225500.md"
 DEBUG_TEXT = "# debug" + chr(10)
+# Seed: an examples module a story test imports its fixtures from.
+EXAMPLES_TEXT = "LISTED = []" + chr(10)
 
 
 def _working_in(project: Path, root: Path) -> Session:
@@ -80,6 +82,26 @@ with description("SessionFiles") as self:
         with it("should still refuse a file outside the session's folder and its roots"):
             outside = self.session_folder.parent / "other-session" / DEBUG_REPORT
             expect(lambda: self.files.write(str(outside), DEBUG_TEXT)).to(raise_error(PathOutsideRootsError))
+
+
+    with context("of a ticket that works in a worktree beside the main checkout, which holds the session"):
+        # Seen live 2026-11-17: the Files app opened a scenario whose example is declared in an examples module of the
+        # worktree, outside the session's roots, and its range was refused.
+        with before.each:
+            self.worktree_folder = tempfile.TemporaryDirectory()
+            self.worktree = Path(self.worktree_folder.name).resolve()
+            (self.worktree / "board").mkdir()
+            (self.worktree / "space").mkdir()
+            (self.worktree / "space" / "examples.py").write_text(EXAMPLES_TEXT, encoding="utf-8")
+            session = _working_in(self.project, self.worktree / "board")
+            session.repo_path = self.worktree
+            self.files = session.session_files
+
+        with after.each:
+            self.worktree_folder.cleanup()
+
+        with it("should read a file anywhere in the worktree, such as an examples module outside its roots"):
+            expect(self.files.read(str(self.worktree / "space" / "examples.py")).text).to(equal(EXAMPLES_TEXT))
 
 
 with description("session.write_file") as self:

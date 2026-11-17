@@ -301,6 +301,22 @@ def _(s):
         expect(world.lines).to(equal([(SHARED_STORY, 9, 11)]))
 
 
+@shared_stories.scenario("Open Several Files From Graph Nodes", "Selecting a scenario opens only its own lines, not the examples module its example comes from")
+def _(s):
+    @s.given("the Files app shows the Stories tree of Delete Ticket's story test, whose Then observes CHECKOUT_TICKET from the examples module")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+
+    @s.when("the Person selects the scenario a ticket on the board is deleted")
+    def _(world):
+        ranges = world.data_of(session_of(world).graph_node_ranges(node_id=node_id_of(world, "a ticket on the board is deleted", STEP_LISTED), paths=STEP_LISTED))
+        world.lines = [(found["path"], found["start_line"], found["end_line"]) for found in ranges]
+
+    @s.then("only the story test opens, at lines 7 to 19, its decorator through its Then")
+    def _(world):
+        expect(world.lines).to(equal([(STEP_STORY, 7, 19)]))
+
+
 @shared_stories.scenario("Open Several Files From Graph Nodes", "Selecting a story in a Python story test spans its scenarios")
 def _(s):
     @s.given("the Files app shows the Stories tree of Remove Tickets' shared story test")

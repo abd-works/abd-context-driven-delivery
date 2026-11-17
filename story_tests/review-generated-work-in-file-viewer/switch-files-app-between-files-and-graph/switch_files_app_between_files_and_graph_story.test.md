@@ -200,6 +200,14 @@ Requested by the person on 2026-11-16: a scenario or step selected in code opene
 *When* the Person selects the Given step a ticket on the board  
 *Then* the shared story test opens at lines 9 to 11, the Given's decorator through its function
 
+#### Scenario: Selecting a scenario opens only its own lines, not the examples module its example comes from
+
+Seen by the person on 2026-11-17: selecting a scenario marked lines far outside it.
+
+*Given* the Files app shows the Stories tree of Delete Ticket's story test, whose Then observes CHECKOUT_TICKET from the examples module  
+*When* the Person selects the scenario a ticket on the board is deleted  
+*Then* only the story test opens, at lines 7 to 19, its decorator through its Then
+
 #### Scenario: Selecting a story in a Python story test spans its scenarios
 
 Requested by the person on 2026-11-16: a story or sub-epic selected in code opened on one line, so it looked like the wrong file.
