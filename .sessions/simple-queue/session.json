@@ -2,9 +2,10 @@
   "name": "simple-queue",
   "guidance": {
     "stages": [
+      "discovery",
       "specification",
       "implementation"
     ],
-    "version": 2
+    "version": 3
   }
 }
