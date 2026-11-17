@@ -318,7 +318,7 @@ function StepView($: EngineInterface, e: AbovePromptEvent, prompt: QueuedPrompt,
   const number = index + 1
 
   return (
-    <Box key={`step-row-${prompt.id}-${number}`} flexDirection="row" justifyContent="space-between" gap={1}>
+    <Box key={`step-row-${prompt.id}-${number}`} flexDirection="row" justifyContent="space-between" alignItems="center" gap={1}>
       {PointerColumnView($, e, pointer)}
       <Box flexGrow={1} flexShrink={1} minWidth={0}>
         <Text key={`step-${prompt.id}-${number}`} wrap="wrap" dimColor={step.state === 'done'}
