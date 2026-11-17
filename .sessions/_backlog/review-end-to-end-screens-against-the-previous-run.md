@@ -1,0 +1,73 @@
+# Review End-To-End Screens Against The Previous Run
+
+Add guidance and code so every end-to-end run records a screenshot for each story test step, and the AI compares it with the same step's screenshot from the previous run. This is **visual regression testing**: the run checks that what the screens show has not changed without a reason. The baseline is the last good run of the same system, not another system.
+
+The end-to-end tests are expected to pass. Passing only proves the assertions someone wrote, and a screen can break in ways no assertion checks: a field missing, a label changed, a layout collapsed, a notice no longer shown. A person sees that at once in the screenshot, so the AI looks at the screenshots too. When the AI sees a change the tests did not catch, it adds the assertion that would have caught it, reruns the tests, and fixes the code until that assertion passes.
+
+## The loop
+
+1. **Run the end-to-end tests** for the area changed (a sub-epic, an epic, or all). Each step of each scenario records a screenshot and its result, keyed by story › scenario › step.
+2. **Find the baseline:** the same step's screenshot from the previous good run (the last run on main, or the previous release).
+3. **Filter the pairs by pixels first.** Only pairs that changed go to the AI. A cheap block diff (pml-web's 8px block check) keeps the AI from reading hundreds of identical screens.
+4. **The AI judges each changed pair** using both screenshots, the step's Given/When/Then text, and the stories and code this ticket changed. The verdict is one of:
+   - **intended:** the change follows from a story or code change in this ticket, and the AI cites which one.
+   - **regression caught:** a test already fails for it, so fix the code.
+   - **missed by the tests:** the screen is wrong and nothing failed.
+   - **noise:** timing, animation, or a value the system mints. The AI makes the harness deterministic instead of accepting the noise.
+5. **For each "missed by the tests":** add the test at the layer that owns the behaviour (story markdown and the domain story test for a rule or value, the screen story for a control or label, CSS only for pure look). See it fail, fix the code, and rerun.
+6. **Repeat** until every changed pair is "intended". Then the person reviews the report, and accepting it makes this run the new baseline.
+
+## Report
+
+One page per sub-epic, plus a story map page over them all. It is laid out like pml-web's `compare.html`, but compares previous with current:
+
+- Story › Scenario › each Given/When/Then step, with its previous and current screenshots side by side.
+- The test result and the AI's verdict on each step, with the AI's reason, and a filter that shows only changed or missed steps.
+- The pass, changed, and missed counts for each story and sub-epic.
+- A history of earlier runs, without images.
+
+## Guidance
+
+A supplement to Stories acceptance tests and the TDD end-to-end tier, for example `cdd_guidance/practices/visual_review/visual_review.md` (name to decide). It holds the loop above as its process, plus these rules:
+
+- `every-step-captured`: every story test step in the end-to-end tier records a screenshot and result under its story › scenario › step key.
+- `baseline-is-previous-good-run`: compare with the last accepted run of the same system.
+- `ai-judges-every-changed-pair`: every changed pair gets a verdict and a reason, and "intended" cites the story or code change behind it.
+- `missed-change-adds-a-test-first`: a change the tests missed gets a failing test at the owning layer before the code is fixed.
+- `noise-is-fixed-in-the-harness`: a pair is never accepted as timing noise.
+- `person-accepts-the-baseline`: only the person's acceptance moves the baseline.
+
+The TDD tier table in `tdd.md` gets one line: end-to-end runs record step screenshots and are reviewed against the previous run.
+
+## Code
+
+**CDD owns the general parts**, shipped for TypeScript Playwright story tests (CDD's own `*.story.ui.spec.ts` first, then pml-web's `*.story.playwright.ts`):
+
+- A step capture hook: after each Given/When/Then, wait until the page settles, then take the screenshot and write a row to that run's `results.json` (key, step text, result, screenshot path).
+- Run folders: `.sessions/<release>/e2e-test-results/<epic>/<sub-epic>/`, and picking the baseline run (pml-web's `release-baseline.ts` and `end-to-end-paths.ts` already do this). Screenshots are git-ignored, and accepted baselines are kept on a branch, as pml-web does with `e2e-latest`.
+- The pixel prefilter, which lists the changed pairs.
+- The report writer, adapted from pml-web's `report.ts` (story tree, side-by-side screenshots, filters, history).
+- A Python toolset with MCP tools `run(target)`, `changed_pairs(target)`, `record_verdict(step, verdict, reason)` and `accept_baseline(target)`. Long runs go to the background through `harness/process`. The AI reads the image pairs itself and writes its verdicts back through `record_verdict`.
+- A line in the server health report: the latest run, its changed and missed counts, and a link to the story map page.
+
+**Each project keeps** starting its app, loading its examples, and its Playwright config.
+
+## Order of work (Flow A: a new boundary)
+
+1. Add the step capture hook to CDD's own board UI story tests, run them, and check with the person that every step has its screenshot under the right key.
+2. Add the baseline choice, the pixel prefilter, and the report. Rerun with one deliberate visual change, and check that only that pair shows up.
+3. Write the guidance and rules, and run the AI judging loop on that change.
+4. Add the toolset, verdict recording, baseline acceptance, and the health line.
+5. Point pml-web's end-to-end runs at the same hook and report.
+
+## Done means
+
+- An end-to-end run shows, for every story step, the previous and current screens side by side with a verdict on each changed one.
+- A visual change no test caught ends up as a new failing test, a fix, and a rerun, not as an accepted screenshot.
+- The baseline moves only when the person accepts the run.
+
+## Open questions
+
+- Baseline: the last run on main, or the last run the person accepted, whichever branch it was on?
+- Should the AI also look at unchanged pairs now and then, to catch a screen that has been wrong since before the baseline?
+- Should the report be published as an artifact for sharing, or only opened from the run folder?
