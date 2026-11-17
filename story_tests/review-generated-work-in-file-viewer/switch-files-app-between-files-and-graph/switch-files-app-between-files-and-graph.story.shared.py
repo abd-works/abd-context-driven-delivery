@@ -441,6 +441,23 @@ def _(s):
         expect(world.when).to(equal(["delete"]))
 
 
+@shared_stories.scenario("Follow Story Steps To Code", "Selecting an operation a step invokes opens just that operation")
+def _(s):
+    @s.given("the Files app shows the Stories tree of Delete Ticket's Python shared story test, its Given opened to the invokes group holding ticket_on_board")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+        expect(related_under(world, "given a ticket on the board", "invokes")).to(equal(["ticket_on_board"]))
+
+    @s.when("the Person selects ticket_on_board")
+    def _(world):
+        ranges = world.data_of(session_of(world).graph_node_ranges(node_id=node_id_of(world, "ticket_on_board", STEP_LISTED), paths=STEP_LISTED))
+        world.lines = [(found["path"], found["start_line"], found["end_line"]) for found in ranges]
+
+    @s.then("ticket_story_examples.py opens at lines 1 to 2, ticket_on_board's own lines, and the shared story test, whose Given invokes it, does not open")
+    def _(world):
+        expect(world.lines).to(equal([(TICKET_EXAMPLES, 1, 2)]))
+
+
 @shared_stories.scenario("Follow Story Steps To Code", "A story test's callouts sit on the step that invokes them")
 def _(s):
     @s.given("the Files app shows checkout-flow's graph of Delete Ticket's Python shared story test, whose docstring names the class Ticket")

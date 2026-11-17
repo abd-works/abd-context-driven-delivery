@@ -347,6 +347,15 @@ Changed by the person on 2026-11-16 ("only shade once; on expand, hide the callo
 *Then* the Given shows an invokes group holding ticket_on_board  
   *And* the When shows an invokes group holding delete
 
+#### Scenario: Selecting an operation a step invokes opens just that operation
+
+Requested 2026-11-16: selecting `data_of` in a step's invokes group, with every session file listed, answered "maximum recursion depth exceeded", because the lines were gathered through every step that invokes it and every operation those steps invoke.
+
+*Given* the Files app shows the Stories tree of Delete Ticket's Python shared story test, its Given opened to the invokes group holding ticket_on_board  
+*When* the Person selects ticket_on_board  
+*Then* ticket_story_examples.py opens at lines 1 to 2, ticket_on_board's own lines  
+  *But* the shared story test, whose Given invokes ticket_on_board, does not open
+
 #### Scenario: A story test's callouts sit on the step that invokes them
 
 *Given* the Files app shows checkout-flow's graph of Delete Ticket's Python shared story test, whose docstring names the class Ticket  
