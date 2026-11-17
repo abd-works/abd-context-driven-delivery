@@ -24,7 +24,10 @@ const CALLOUT_INNER_MARK = 'callout-inner-mark';
 const LINE_HEIGHT = 20;
 const LINE_END = Number.MAX_SAFE_INTEGER;
 
-type CalloutEditor = Pick<monaco.IStandaloneCodeEditor, 'createDecorationsCollection' | 'onMouseDown' | 'changeViewZones' | 'getModel'>;
+type CalloutEditor = Pick<monaco.IStandaloneCodeEditor, 'createDecorationsCollection' | 'onMouseDown' | 'changeViewZones' | 'getModel' | 'getDomNode'>;
+
+// The callout each open section shows, so a right-click over one finds it.
+const calloutOfSection = new WeakMap<Element, SourceCallout>();
 
 // The callouts of the open file. While a line's callouts are closed, a mark beside it and a label after it name what
 // they open; a press on either opens them under the line and hides the label, and a press on the mark closes them and
@@ -69,6 +72,7 @@ export function useCallouts(editor: CalloutEditor | null, callouts: SourceCallou
     });
     return () => editor.changeViewZones((accessor) => zones.forEach((zone) => accessor.removeZone(zone)));
   }, [editor, callouts, open, within, editorLineOf, goTo]);
+  useGoToMenu(editor, goTo);
 }
 
 const lineKey = (line: number): string => `L${line}`;
@@ -117,15 +121,7 @@ function calloutSection(callout: SourceCallout, key: string, opening: Opening, s
   const section = document.createElement('div');
   section.className = `callout-section callout-${callout.kind}`;
   section.title = `${callout.title}: ${callout.path} lines ${callout.startLine} to ${callout.endLine}`;
-  const goTo = opening.goTo;
-  if (goTo) {
-    // The innermost callout under the pointer answers, and the editor's own menu stays shut.
-    section.addEventListener('contextmenu', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      showGoToMenu(event.clientX, event.clientY, () => goTo(callout));
-    });
-  }
+  calloutOfSection.set(section, callout);
   const inner = opening.within(callout, stack);
   let rows = 0;
   callout.text.split('\n').forEach((text, index) => {
@@ -142,6 +138,26 @@ function calloutSection(callout: SourceCallout, key: string, opening: Opening, s
 }
 
 export const CALLOUT_MENU = 'callout-menu';
+
+// A right-click over an open callout shows Go to file for the innermost one under the pointer. The editor's text layer
+// lies over the callouts, so the click reaches the editor, not the callout: the editor's own node hears it first, before
+// Monaco's menu does, and finds the callout beneath the pointer.
+function useGoToMenu(editor: CalloutEditor | null, goTo: GoToFile | undefined): void {
+  useEffect(() => {
+    const root = editor?.getDomNode();
+    if (!root || !goTo) return;
+    const onContextMenu = (event: MouseEvent) => {
+      const under = document.elementsFromPoint(event.clientX, event.clientY).find((element) => calloutOfSection.has(element));
+      const callout = under ? calloutOfSection.get(under) : undefined;
+      if (!callout) return;
+      event.preventDefault();
+      event.stopPropagation();
+      showGoToMenu(event.clientX, event.clientY, () => goTo(callout));
+    };
+    root.addEventListener('contextmenu', onContextMenu, true);
+    return () => root.removeEventListener('contextmenu', onContextMenu, true);
+  }, [editor, goTo]);
+}
 
 // The menu a right-click on a callout opens where the pointer is: Go to file, which closes it, as a press anywhere else
 // or Escape does.
