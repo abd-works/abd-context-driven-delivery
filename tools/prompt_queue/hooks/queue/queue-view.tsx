@@ -144,11 +144,10 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
           : !isFinished && <Button key={`steps-${prompt.id}`} label="+" onPress={() => addStep($, prompt)} />}
       </Box>
       {(prompt.attachments ?? []).length > 0 && <Text key={`attached-${prompt.id}`} color={LOOK.muted}>{`📎${prompt.attachments!.length}`}</Text>}
-      {isWorking && <Text key={`working-${prompt.id}`} color={LOOK.accent} bold>{STEP_MARK.in_progress}</Text>}
       <Box flexGrow={1} flexShrink={1} minWidth={0}>
         <Button key={`card-text-${prompt.id}`} dimColor={isEditing || isFinished} onPress={() => editPrompt($, prompt)}>
           <Text wrap="wrap" color={isEditing ? LOOK.placeholder : isWorking ? LOOK.accent : undefined}
-            italic={isEditing} bold={isWorking} dimColor={isFinished}>
+            italic={isEditing} bold={isWorking} underline={isWorking} dimColor={isFinished}>
             {`${index + 1}. ${prompt.text.replace(/\s+/g, ' ')}${isEditing ? '  (editing)' : ''}`}
           </Text>
         </Button>
