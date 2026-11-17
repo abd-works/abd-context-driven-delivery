@@ -169,13 +169,13 @@ function PointerView($: EngineInterface, e: AbovePromptEvent, upKey = '', downKe
   )
 }
 
-/** The pointer's ▲ and ▼ on a bar of their own over the left end of the card, drawn as the card's buttons are at its
+/** The pointer's ▲ and ▼, solid buttons on no bar of their own, over the left end of the card as the card's buttons are at its
  * right end. */
 function PointerArrowsView($: EngineInterface, e: AbovePromptEvent, upKey: string, downKey: string, onUp: () => void, onDown: () => void = () => {}) {
   const { Box, Button } = $.ui.resolve(e)
 
   return (
-    <Box flexDirection="row" flexShrink={0} gap={1} backgroundColor={LOOK.keyCap} paddingX="xs">
+    <Box flexDirection="row" flexShrink={0} gap={1}>
       {upKey !== '' && <Button key={upKey} label="▲" onPress={onUp} />}
       {downKey !== '' && <Button key={downKey} label="▼" onPress={onDown} />}
     </Box>
