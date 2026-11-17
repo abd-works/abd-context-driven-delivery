@@ -1,3 +1,9 @@
 {
-  "name": "simple-queue"
+  "name": "simple-queue",
+  "guidance": {
+    "stages": [
+      "implementation"
+    ],
+    "version": 1
+  }
 }
