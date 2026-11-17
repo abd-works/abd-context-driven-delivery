@@ -164,6 +164,15 @@ Requested 2026-11-16: a chat in file-manager's worktree opened the Files page na
 *Then* the Files page's link names the main checkout as its project  
   *And* every call the page makes is answered by the stable lane's server
 
+#### Scenario: Open an app named in any case
+
+Requested 2026-11-16: a chat asked to open the app "files" and was refused, since no app is registered as files; the registered app is Files.
+
+*Given* the apps registered are Graph, Files, Kanban and Story UI  
+*When* a chat opens the app "files", "FILES" or " story ui "  
+*Then* the registered app of that name opens, Files or Story UI, whatever the case of its letters or the spaces around it  
+  *And* a name no app is registered as, such as "Nowhere", is still refused, naming the apps there are
+
 #### Scenario: Open the Graph app while it runs
 
 *Given* the Graph app is running on port 5173  

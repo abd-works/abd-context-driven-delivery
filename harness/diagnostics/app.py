@@ -314,8 +314,10 @@ class Apps:
         return list(self._apps)
 
     def named(self, label: str) -> App:
-        """The registered app whose label is label; one no module registered is refused."""
-        found = next((app for app in self._apps if app.label == label), None)
+        """The registered app whose label is label, whatever its case and the spaces around it; one no module
+        registered is refused."""
+        wanted = label.strip().casefold()
+        found = next((app for app in self._apps if app.label.casefold() == wanted), None)
         if found is None:
             raise AppNotRegistered(label)
         return found
