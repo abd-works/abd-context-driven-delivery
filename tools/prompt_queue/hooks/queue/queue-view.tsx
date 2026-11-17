@@ -166,14 +166,14 @@ function PointerColumnView($: EngineInterface, e: AbovePromptEvent, arrows: Retu
   return <Box width={POINTER_COLUMNS} flexShrink={0} flexDirection="row" alignItems="center">{arrows}</Box>
 }
 
-/** The pointer's ▲ and ▼, solid primary buttons, so they stand out as the pointer. */
+/** The pointer's ▲ and ▼, each a button on its own solid grey, as the card's buttons are at its right end. */
 function PointerArrowsView($: EngineInterface, e: AbovePromptEvent, upKey: string, downKey: string, onUp: () => void, onDown: () => void = () => {}) {
   const { Box, Button } = $.ui.resolve(e)
 
   return (
     <Box flexDirection="row" flexShrink={0} gap={1}>
-      {upKey !== '' && <Button key={upKey} variant="primary" label="▲" onPress={onUp} />}
-      {downKey !== '' && <Button key={downKey} variant="primary" label="▼" onPress={onDown} />}
+      {upKey !== '' && <Box backgroundColor={LOOK.keyCap}><Button key={upKey} label="▲" onPress={onUp} /></Box>}
+      {downKey !== '' && <Box backgroundColor={LOOK.keyCap}><Button key={downKey} label="▼" onPress={onDown} /></Box>}
     </Box>
   )
 }
