@@ -10,13 +10,15 @@
       "specification",
       "implementation"
     ],
-    "version": 126
+    "version": 127
   },
   "practices": {
     "stories": {
       "formats": {
         "story_map": [],
-        "scenarios": [],
+        "scenarios": [
+          "python"
+        ],
         "acceptance_tests": [
           "python"
         ]
