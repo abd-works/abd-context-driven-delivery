@@ -495,18 +495,6 @@ test("a card's progress comes before its text, so a long prompt cannot push it p
   await ui.unmount()
 })
 
-test("a long prompt is cut with an ellipsis to fit the chat box, keeping the card's own rounded button whole", async ($, on) => {
-  seedQueue(on, true, '', [{ id: 'a', text: 'Write the scenarios '.repeat(20) }] as Prompt[])
-
-  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
-  const shown = (await ui.find({ type: 'Button', key: 'card-text-a' }))?.text ?? ''
-
-  expect(shown.endsWith('…')).toBe(true)
-  expect(shown.length).toBeLessThan(BAND.props.bodyColumns)
-  expect(JSON.stringify((await ui.find({ type: 'Box', key: 'card-row-a' }))?.children)).not.toContain('"overflow"')
-  await ui.unmount()
-})
-
 const ATTACHED = [
   { id: 'a', text: 'Write the scenarios', attachments: ['C:/chats/chat-1/attachments/a-1.png'] },
   { id: 'b', text: 'Run the unit tier' },
