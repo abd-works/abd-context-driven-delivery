@@ -1147,14 +1147,15 @@ test("the queue is drawn from the answer of the agent's own prompt-queue call at
   expect((seeded.stored.queue?.value as { prompts: Prompt[] }).prompts[0]!.is_done).toBe(true)
 })
 
-test("the orange working mark stands only on the pointer's card, so moving the pointer up takes it off the card below", async ($, on) => {
+test("the orange working mark stands on the pointer's card, whichever card the agent last touched, so it moves with the pointer", async ($, on) => {
   seedQueue(on, true, '', QUEUED, false, '', 'b')
 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  const pointed = JSON.stringify(await ui.find({ type: 'Box', key: 'card-row-a' }))
   const below = JSON.stringify(await ui.find({ type: 'Box', key: 'card-row-b' }))
   await ui.unmount()
 
-  expect(below).not.toContain('"borderStyle":"round"')
+  expect([pointed.includes('"borderStyle":"round"'), below.includes('"borderStyle":"round"')]).toEqual([true, false])
 })
 
 test('a set_steps call the server refused leaves the prompt being worked as it was', async ($, on) => {

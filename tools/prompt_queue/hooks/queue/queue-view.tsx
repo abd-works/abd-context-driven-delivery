@@ -187,7 +187,7 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
   const { Box, Text, Button } = $.ui.resolve(e)
   const isEditing = prompt.id === state.editingId
   const isPointer = pointer !== null
-  const isWorking = isPointer && prompt.id === state.workingId
+  const isWorking = isPointer
   const progress = progressOf(prompt.steps)
   const isFinished = Boolean(prompt.is_done)
 

@@ -936,3 +936,12 @@
 2026-11-17T23:07:36Z tool prompt-queue.show 60be2cd0-d264-44b3-8635-0cebd8d9c856 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-simple-queue-enhancement\60be2cd0-d264-44b3-8635-0cebd8d9c856.jsonl 1-8409
 2026-11-17T23:07:36Z tool prompt-queue.add 60be2cd0-d264-44b3-8635-0cebd8d9c856 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-simple-queue-enhancement\60be2cd0-d264-44b3-8635-0cebd8d9c856.jsonl 1-8411
 2026-11-17T23:07:36Z tool prompt-queue.move 60be2cd0-d264-44b3-8635-0cebd8d9c856 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-simple-queue-enhancement\60be2cd0-d264-44b3-8635-0cebd8d9c856.jsonl 1-8411
+2026-11-17T23:08:20Z tool prompt-queue.remove 60be2cd0-d264-44b3-8635-0cebd8d9c856 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-simple-queue-enhancement\60be2cd0-d264-44b3-8635-0cebd8d9c856.jsonl 1-8445
+2026-11-17T23:08:21Z tool prompt-queue.set_steps 60be2cd0-d264-44b3-8635-0cebd8d9c856 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-simple-queue-enhancement\60be2cd0-d264-44b3-8635-0cebd8d9c856.jsonl 1-8446
+2026-11-17T23:08:21Z tool prompt-queue.show 60be2cd0-d264-44b3-8635-0cebd8d9c856 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-simple-queue-enhancement\60be2cd0-d264-44b3-8635-0cebd8d9c856.jsonl 1-8446
+2026-11-17T23:08:27Z tool prompt-queue.show 60be2cd0-d264-44b3-8635-0cebd8d9c856 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-simple-queue-enhancement\60be2cd0-d264-44b3-8635-0cebd8d9c856.jsonl 1-8459
+2026-11-17T23:08:38Z tool prompt-queue.reopen 60be2cd0-d264-44b3-8635-0cebd8d9c856 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-simple-queue-enhancement\60be2cd0-d264-44b3-8635-0cebd8d9c856.jsonl 1-8459
+2026-11-17T23:08:48Z tool prompt-queue.show 60be2cd0-d264-44b3-8635-0cebd8d9c856 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-simple-queue-enhancement\60be2cd0-d264-44b3-8635-0cebd8d9c856.jsonl 1-8459
+2026-11-17T23:08:49Z tool prompt-queue.add_interruption 60be2cd0-d264-44b3-8635-0cebd8d9c856 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-simple-queue-enhancement\60be2cd0-d264-44b3-8635-0cebd8d9c856.jsonl 1-8461
+2026-11-17T23:09:05Z tool prompt-queue.reopen 60be2cd0-d264-44b3-8635-0cebd8d9c856 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-simple-queue-enhancement\60be2cd0-d264-44b3-8635-0cebd8d9c856.jsonl 1-8478
+2026-11-17T23:09:07Z tool prompt-queue.reopen 60be2cd0-d264-44b3-8635-0cebd8d9c856 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-simple-queue-enhancement\60be2cd0-d264-44b3-8635-0cebd8d9c856.jsonl 1-8479

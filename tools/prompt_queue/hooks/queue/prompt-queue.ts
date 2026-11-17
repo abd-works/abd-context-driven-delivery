@@ -80,7 +80,6 @@ export type QueueState = {
   isSubAgentMode: boolean
   isPlaying: boolean
   editingId: string
-  workingId: string
   openSteps: string[]
   openedId: string
   collapsedAgents: number[]
@@ -95,7 +94,6 @@ export async function currentQueue($: EngineInterface): Promise<QueueState> {
     isSubAgentMode: await read($, isSubAgentMode),
     isPlaying: await read($, isPlaying),
     editingId: await read($, editingId),
-    workingId: await read($, askedAbout),
     openSteps: await read($, openSteps),
     openedId: await read($, openedCard),
     collapsedAgents: await read($, collapsedAgents),
