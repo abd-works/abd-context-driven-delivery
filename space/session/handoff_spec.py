@@ -55,6 +55,15 @@ with description("a session's handoff tools"):
         prompt = "\n".join(AgentToolSet.instantiate(Session).tools["handoff_session"].prompt)
         expect(prompt).to(contain("repo.push_commit"))
 
+    with context("with the next agent's steps for where the work goes live"):
+        with it("should send a ticket branch's finished work to the dev lane by repinning it from the worktree"):
+            format_text = Session.read_handoff_format(None)
+            expect(format_text).to(contain("## Where The Work Goes Live", "dev lane", "--pin-runtime", "app.open"))
+
+        with it("should never offer a merge to main unless the person asked for one"):
+            format_text = Session.read_handoff_format(None)
+            expect(format_text).to(contain("Never list a merge to main"))
+
 
 with description("a session writing a handoff"):
     with context("with a project whose current session is named"):

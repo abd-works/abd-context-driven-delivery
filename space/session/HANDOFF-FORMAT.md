@@ -44,5 +44,12 @@ Include:
 - A start-at pointer for the next agent.
 - Corrections CLI commands if a `corrections-cli` exists in the project.
 
+## Where The Work Goes Live
+Say how the next agent puts finished work in front of the person. Pick the steps from the session's branch, not from habit:
+- **A ticket's branch, in its own worktree** (any branch but main): commit and push each finished step to that branch, then repin the dev lane to the branch tip with `python scripts/install.py --ide Claude --pin-runtime` from the worktree, and run `app.open` for each app the step changed (Files, Kanban, Story UI), so its server rebuilds and restarts on the dev lane. Message only the sessions that use the dev lane before the repin; skip the message when none runs.
+- **main, in the main checkout**: commit and push to main, then repin the stable lane with the same command from the main checkout, after messaging the sessions that use the stable lane.
+
+Never list a merge to main as a next step, a question to ask, or an outstanding item for a ticket's branch: the dev lane is where a ticket's work runs. Merge a ticket's branch to main only when the person asked for that merge in their own words, and say so with their words when the handoff carries it.
+
 ## Correction trend
 Include this section only if the corrections document was found. Compare this session's correction count (from the session block / conversation) to the previous session's count. State the trend in 1–2 sentences (e.g. "Session 2026-09-14 needed 5 corrections across 2 epics — roughly 2–3 per story. The previous session needed ~12. Trend is sharply down."). Optionally append the Corrections CLI cheat sheet (`list`, `add-correction`, `new-session`). If corrections cannot be found after the search order above, omit this section.
