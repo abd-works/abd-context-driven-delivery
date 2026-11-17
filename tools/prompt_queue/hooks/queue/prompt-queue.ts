@@ -374,8 +374,10 @@ async function workOn($: EngineInterface, id: string): Promise<void> {
 /** A prompt sent straight to the chat, as the queue holds it: its id, and what the agent is told about it. */
 export type SentPrompt = { id: string; note: string }
 
-/** A prompt the person sent straight to the chat goes on the queue first, as the prompt being worked, so the steps the
- * agent plans for it sit under it; the agent is told its id, to mark it done when it is finished. */
+/** A prompt the person sent straight to the chat interrupts the queue: while a turn works a queued prompt it becomes a
+ * step of that prompt; otherwise it goes on the queue just above the next prompt to do, below the done ones, marked
+ * [interruption], as the prompt being worked, so the steps the agent plans for it sit under it. The agent is told its id,
+ * to mark it done when it is finished. */
 export async function queueSentPrompt($: EngineInterface, text: string): Promise<SentPrompt | undefined> {
   if (text.trim() === '' || text.trim() === ASK_FOR_NEXT) {
     return undefined
@@ -384,14 +386,15 @@ export async function queueSentPrompt($: EngineInterface, text: string): Promise
   if (interrupted) {
     return addInterruption($, interrupted, text.trim())
   }
-  if (!(await changeQueue($, 'add', { text }))) {
+  const nextPlace = (await read($, queue)).prompts.findIndex(prompt => !prompt.is_done)
+  if (!(await changeQueue($, 'add', { text: `${INTERRUPTION_MARK} ${text.trim()}` }))) {
     return undefined
   }
   const sent = (await read($, queue)).prompts.at(-1)
   if (!sent) {
     return undefined
   }
-  await changeQueue($, 'move', { prompt: sent.id, to: 0 })
+  await changeQueue($, 'move', { prompt: sent.id, to: nextPlace < 0 ? (await read($, queue)).prompts.length - 1 : nextPlace })
   await workOn($, sent.id)
   return { id: sent.id, note: `This prompt is first on this chat's prompt queue as [${sent.id}]. When its work is done, call prompt-queue.done with that id.` }
 }

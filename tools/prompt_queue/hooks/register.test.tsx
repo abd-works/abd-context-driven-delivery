@@ -433,9 +433,21 @@ test('a prompt sent straight to the chat goes first on the queue, as the prompt 
 
   await $.prompt.submit({ text: 'Fix the Files app', wait: false, origin: { kind: 'composer' } })
 
-  expect(seeded.prompts.map(prompt => prompt.text)).toEqual(['Fix the Files app', 'Write the scenarios', 'Run the unit tier'])
+  expect(seeded.prompts.map(prompt => prompt.text)).toEqual(['[interruption] Fix the Files app', 'Write the scenarios', 'Run the unit tier'])
   expect(seeded.stored.askedAbout?.value).toBe(seeded.prompts[0]!.id)
   expect(carried.join()).toContain(`as [${seeded.prompts[0]!.id}]`)
+})
+
+test('a prompt sent straight to the chat goes above the next prompt to do, below the done ones, marked as an interruption', async ($, on) => {
+  const seeded = seedQueue(on, false, '', [
+    { id: 'a', text: 'Write the scenarios', is_done: true },
+    { id: 'b', text: 'Run the unit tier' },
+  ] as Prompt[], true)
+  on('prompt.submit', (_, e) => ({ text: e.text }))
+
+  await $.prompt.submit({ text: 'Fix the Files app', wait: false, origin: { kind: 'composer' } })
+
+  expect(seeded.prompts.map(prompt => prompt.text)).toEqual(['Write the scenarios', '[interruption] Fix the Files app', 'Run the unit tier'])
 })
 
 for (const isPlanSeen of [false, true]) {
