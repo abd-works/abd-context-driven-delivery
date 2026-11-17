@@ -21,6 +21,9 @@ NOTED_MODEL = "\n".join([
     "email: string — identity",
     "----",
     "register(): AccountCredentials — *Access Selfcare*",
+    "	-> CredentialsRepository.create(this)",
+    "	-> validation.emailValidationCode()",
+    "	-> passwordReset.matches(password) — *Access Selfcare*: a temporary password asks for a new one",
     "missingRequirements(): AccountCredentialRequirement[]",
     "",
     "## NoticeWatcher (ide_toast, JavaScript)",
@@ -62,3 +65,9 @@ with description("a markdown class model whose types and headings carry notes, r
     # A model written with another language's types, as the Clean Engineering fixture's TypeScript-style arrays.
     with it("should write an array another language writes as Type[] as a list of that type"):
         expect(self.python).to(contain("def missingRequirements(self) -> list[AccountCredentialRequirement]:"))
+
+    with it("should write an interaction the model writes as a whole call as that call, with no second argument list"):
+        expect([self.python.count("CredentialsRepository.create(this)()"), self.python.count("validation.emailValidationCode()()")]).to(equal([0, 0]))
+
+    with it("should leave a note written after an interaction's call out of the code"):
+        expect(self.python).to(contain("passwordReset.matches(password)" + chr(10)))
