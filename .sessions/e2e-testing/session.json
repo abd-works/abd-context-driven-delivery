@@ -3,5 +3,11 @@
   "title": "e2e-testing",
   "scope": "feature",
   "branch": "e2e-testing",
-  "worktree": "C:\\dev\\abd-cdd-e2e-testing"
+  "worktree": "C:\\dev\\abd-cdd-e2e-testing",
+  "guidance": {
+    "stages": [
+      "discovery"
+    ],
+    "version": 1
+  }
 }
