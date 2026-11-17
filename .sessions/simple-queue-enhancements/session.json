@@ -9,7 +9,7 @@
       "discovery",
       "specification"
     ],
-    "version": 13
+    "version": 14
   },
   "practices": {
     "ddd": {
@@ -34,7 +34,9 @@
     },
     "stories": {
       "formats": {
-        "scenarios": [],
+        "scenarios": [
+          "python"
+        ],
         "story_map": [
           "markdown"
         ]
