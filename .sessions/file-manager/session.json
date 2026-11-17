@@ -91,10 +91,20 @@
     "stories": {
       "root": "../.context",
       "scenarios": {
-        "root": "../story_tests"
+        "roots": [
+          "../story_tests/review-generated-work-in-file-viewer",
+          "../story_tests/register-and-install-toolsets/serve-cdd-code-in-lanes",
+          "../story_tests/move-work-forward-from-chat-bar/check-cdd-server-health-in-chat-bar",
+          "../story_tests/draw-practice-models-on-claude-whiteboard/publish-board-to-claude"
+        ]
       },
       "acceptance_tests": {
-        "root": "../story_tests"
+        "roots": [
+          "../story_tests/review-generated-work-in-file-viewer",
+          "../story_tests/register-and-install-toolsets/serve-cdd-code-in-lanes",
+          "../story_tests/move-work-forward-from-chat-bar/check-cdd-server-health-in-chat-bar",
+          "../story_tests/draw-practice-models-on-claude-whiteboard/publish-board-to-claude"
+        ]
       }
     }
   }
