@@ -314,3 +314,4 @@
 2026-11-17T01:27:41Z generate C:\dev\abd-cdd-file-manager\harness clean_engineering, bdd code, development python, python 369ce55a-b607-4516-8c90-cb08f761c86e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\369ce55a-b607-4516-8c90-cb08f761c86e.jsonl 1-133
 2026-11-17T01:28:13Z tool sessions.switch 369ce55a-b607-4516-8c90-cb08f761c86e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\369ce55a-b607-4516-8c90-cb08f761c86e.jsonl 1-180
 2026-11-17T01:36:03Z tool app.open c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-4687
+2026-11-17T01:41:53Z tool session.debug_session c553be27-d126-46b8-881e-4d6e4bf7e2b8 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-file-manager\c553be27-d126-46b8-881e-4d6e4bf7e2b8.jsonl 1-4935
