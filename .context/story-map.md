@@ -992,6 +992,30 @@ Built (2026-11-17): switching a chat to a session queues the numbered steps of i
 
 Observed (2026-11-17): while play is on, every prompt carries the queue, in order with each prompt's id, and how to work through it (`queueContext`); a paused queue carries nothing, and a prompt the person is editing is left out.
 
+## (E) [Nest Prompt Steps In Queue](../story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/nest_prompt_steps_in_queue_story.test.md)
+
+Intended (2026-11-17, the person: "for each action you'll come up with a task list ... I want these to be synchronized ... you nest six or seven tasks in them and check those off in a nested way"; the plan they agreed in the simple-queue-enhancements chat): the queue holds both levels, the prompts the person queued and, under each, the steps the agent planned for it, so the queue box and the agent's task list show one plan. Decided with it: the cdd server stays the one owner of the queue and its steps. The queue does not move to Claude Code's own task store, `~/.claude/tasks` (TaskCreate, TaskUpdate): those tools are undocumented, hold flat lists linked only by blockedBy, their tool-call hooks were reported not to fire, and in the desktop app the agent's task list is the app's own `update_plan`, not TaskCreate.
+
+### (S) Agent --> [Set Steps Of Queued Prompt](../story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/nest_prompt_steps_in_queue_story.test.md#story-set-steps-of-queued-prompt)
+
+Intended: the agent gives a queued prompt its steps, each pending, being worked, or done, through a new prompt-queue tool on the cdd server, and the queue answers the prompt with them.
+
+### (S) Agent --> [Tick Off Prompt Step](../story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/nest_prompt_steps_in_queue_story.test.md#story-tick-off-prompt-step)
+
+Intended: the agent marks one step of a prompt done; once every step is done the prompt is ready for `prompt-queue.done`, which still takes it off the queue.
+
+### (S:system) Prompt Queue --> [Copy Task List Onto Working Prompt](../story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/nest_prompt_steps_in_queue_story.test.md#story-copy-task-list-onto-working-prompt)
+
+Intended: each time the agent sets or advances its task list in the chat (`update_plan`), the queue mod copies the list onto the prompt being worked, so the agent ticks off in one place. Not yet known: whether a mod's tool-call hook sees `update_plan`; if it does not, the queue's instructions tell the agent to set and tick the steps itself.
+
+### (S:system) Prompt Queue --> [Queue Sent Prompt As Running](../story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/nest_prompt_steps_in_queue_story.test.md#story-queue-sent-prompt-as-running)
+
+Intended: a prompt the person sends straight to the chat, not from the queue, goes on the queue first, marked running, so its steps have a prompt to sit under.
+
+### (S) Person --> [Show Prompt Steps In Queue](../story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/nest_prompt_steps_in_queue_story.test.md#story-show-prompt-steps-in-queue)
+
+Intended: each card shows how many of its steps are done (3/7); opening the card shows its steps under it, done ones ticked and the one being worked marked.
+
 # (E) Review Generated Work In File Viewer
 
 The file viewer is the Files app (`harness/files_app/`): a page of its own, opened beside the chat, where a person reads, filters and comments on the files a session generated, and, once its graph view is built, works the session's graph on those same files. Moved back (2026-11-15) from the Files app's own map, where release-2 had gathered every story about viewing a session's files on 2026-11-14 (commit 5aa8569f3); the person: "move the file viewer stories back to the main map under its own epic". Scenarios: [review_files_in_files_app_story.test.md](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md). Evidence words as there: **Observed** walked in the browser pane on 2026-11-14, **Built** in code and specs but not walked, **Intended** asked for and not done yet.
