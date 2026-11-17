@@ -9,7 +9,7 @@
       "discovery",
       "specification"
     ],
-    "version": 11
+    "version": 13
   },
   "practices": {
     "ddd": {
@@ -19,14 +19,25 @@
       "enabled": false
     },
     "clean_engineering": {
-      "enabled": false
+      "enabled": true,
+      "formats": {
+        "modules": [
+          "markdown"
+        ],
+        "model": [
+          "python"
+        ]
+      }
     },
     "bdd": {
       "enabled": false
     },
     "stories": {
       "formats": {
-        "scenarios": []
+        "scenarios": [],
+        "story_map": [
+          "markdown"
+        ]
       },
       "enabled": true
     }
