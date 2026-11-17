@@ -148,7 +148,7 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
         <Button key={`card-text-${prompt.id}`} dimColor={isEditing || isFinished} onPress={() => editPrompt($, prompt)}>
           <Text wrap="wrap" color={isEditing ? LOOK.placeholder : isWorking ? LOOK.accent : undefined}
             italic={isEditing} bold={isWorking} dimColor={isFinished}>
-            {`${index + 1}. ${prompt.text.replace(/\s+/g, ' ')}${isEditing ? '  (editing)' : ''}`}
+            {`${isWorking ? `${STEP_MARK.in_progress} ` : ''}${index + 1}. ${prompt.text.replace(/\s+/g, ' ')}${isEditing ? '  (editing)' : ''}`}
           </Text>
         </Button>
       </Box>
