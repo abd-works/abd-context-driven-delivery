@@ -44,6 +44,16 @@ Include:
 - A start-at pointer for the next agent.
 - Corrections CLI commands if a `corrections-cli` exists in the project.
 
+## Guidance To Read First
+List the practice guidance the next agent reads, and applies, before generating anything: a scenario, a test, code, a model, or a document. Name each file by its path. Take them from the session: every practice and fidelity it has on (its `session.json` practices and the board's active fidelities), the supplements that apply to them, and any pattern overlay the session uses.
+
+- Each practice's guidance at the fidelities the work touches: `cdd_guidance/practices/{practice}/{practice}.md` (its shared rules and that fidelity's section), such as `stories/stories.md` for scenarios and acceptance tests, and `clean_engineering/clean_engineering.md` for code.
+- The TDD supplement, `cdd_guidance/practices/tdd/tdd.md`, whenever the work writes tests or code: say which flow each change is in (Flow A, a boundary crossed for the first time: run it for real end to end and have the person verify it before the stubbed unit tests; Flow B, a known area: a failing unit test first, then the code, then heavy and e2e tests handed to a background agent), and the tiers and budgets the tests go in.
+- The pattern overlays the session applies (`.context/patterns.md` where the work writes) and the module's own `.context/module-context.md`.
+- The person's corrections from this session that change how the guidance is applied.
+
+Write it as an instruction, not a reading list for later: the next agent reads these and says which flow and which rules apply before it writes the first scenario, test, or line of code, because work generated before reading them has to be redone.
+
 ## Where The Work Goes Live
 Say how the next agent puts finished work in front of the person. Pick the steps from the session's branch, not from habit:
 - **A ticket's branch, in its own worktree** (any branch but main): commit and push each finished step to that branch, then repin the dev lane to the branch tip with `python scripts/install.py --ide Claude --pin-runtime` from the worktree, and run `app.open` for each app the step changed (Files, Kanban, Story UI), so its server rebuilds and restarts on the dev lane. Message only the sessions that use the dev lane before the repin; skip the message when none runs.

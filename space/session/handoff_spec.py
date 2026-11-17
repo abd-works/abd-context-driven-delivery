@@ -60,6 +60,10 @@ with description("a session's handoff tools"):
             format_text = Session.read_handoff_format(None)
             expect(format_text).to(contain("## Where The Work Goes Live", "dev lane", "--pin-runtime", "app.open"))
 
+        with it("should have the next agent read the session's practice guidance before it generates anything"):
+            format_text = Session.read_handoff_format(None)
+            expect(format_text).to(contain("## Guidance To Read First", "before generating", "tdd.md"))
+
         with it("should never offer a merge to main unless the person asked for one"):
             format_text = Session.read_handoff_format(None)
             expect(format_text).to(contain("Never list a merge to main"))
