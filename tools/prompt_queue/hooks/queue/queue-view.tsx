@@ -198,7 +198,7 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
           : !isFinished && !isPointer && TaskButtonView($, e, `steps-${prompt.id}`, '+', () => addStep($, prompt))}
       </Box>
       {(prompt.attachments ?? []).length > 0 && <Text key={`attached-${prompt.id}`} color={LOOK.muted}>{`📎${prompt.attachments!.length}`}</Text>}
-      <Box flexGrow={1} flexShrink={1} minWidth={0} flexDirection="row" alignItems="center" paddingX={1}
+      <Box position="relative" flexGrow={1} flexShrink={1} minWidth={0} flexDirection="row" alignItems="center" paddingX={1}
         backgroundColor={LOOK.card} borderStyle="round" borderColor={isWorking ? LOOK.accent : LOOK.card}>
         <Text wrap="truncate-end" color={isEditing ? LOOK.placeholder : isWorking ? LOOK.accent : undefined}
           italic={isEditing} bold={isWorking} underline={isWorking} dimColor={isEditing || isFinished}>
@@ -235,7 +235,7 @@ function TaskButtonView($: EngineInterface, e: AbovePromptEvent, key: string, la
   const { Box, Text } = $.ui.resolve(e)
 
   return (
-    <Box key={`${key}-box`} width={TASK_BUTTON_COLUMNS} flexDirection="row" justifyContent="center" alignItems="center"
+    <Box key={`${key}-box`} position="relative" width={TASK_BUTTON_COLUMNS} flexDirection="row" justifyContent="center" alignItems="center"
       backgroundColor={LOOK.keyCap} borderStyle="round" borderColor={LOOK.keyCap}>
       <Text>{label}</Text>
       {PressAreaView($, e, key, onPress)}
