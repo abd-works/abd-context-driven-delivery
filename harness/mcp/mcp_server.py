@@ -37,7 +37,7 @@ from harness.installation.repository_toolsets import RUNNING_CHECKOUT, Repositor
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_annotations import LongCall, Mcp  # noqa: F401 - importing the server defines Mcp, the channel install reads
 from harness.mcp.claude_plugins import ClaudePlugins
-from harness.mcp.mcp_address import BUILTIN_LIST_TOOLS, CHAT_HEADER, CHAT_PROCESS_HEADER, LANE_CALL_PATH, MCP_PATH, PING_PATH, PROJECT_HEADER
+from harness.mcp.mcp_address import BUILTIN_LIST_TOOLS, CHAT_HEADER, McpAddress, CHAT_PROCESS_HEADER, LANE_CALL_PATH, MCP_PATH, PING_PATH, PROJECT_HEADER
 from harness.mcp.mcp_daemon import McpDaemon
 from harness.mcp.server_lanes import LaneCall, ServerLane, ServerLanes
 from harness.mcp.server_hooks import CddServerHooks
@@ -954,7 +954,14 @@ class McpHost:
         """Publish the chat bar and the prompt queue from the code the server now runs, so a chat watching the published
         copy reloads it with the server's restart rather than at the next install."""
         if self._home is not None and self._home.is_installed:
-            self._home.write_mod_plugins()
+            self._home.publish_mods_for_chats(is_dev_lane_running=self._dev_lane_runs())
+
+    def _dev_lane_runs(self) -> bool:
+        """Whether the dev lane's server answers beside this stable one; a dev lane's own server never asks."""
+        if self._home.is_dev_lane:
+            return True
+        dev = self._home.dev_lane
+        return dev.is_installed and McpDaemon(dev, McpAddress.of_home(dev.folder)).is_running()
 
     def diagnose(self) -> dict[str, Any]:
         """What this host publishes: the ping's answer, every tool name, and what start-up skipped."""

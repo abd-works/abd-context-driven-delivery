@@ -156,6 +156,24 @@ class CddHome:
         mods while the feature changes them."""
         self._publish_mods(lane.source)
 
+    def publish_mods_for_chats(self, is_dev_lane_running: bool) -> None:
+        """Publish this lane's mods when its server restarts, then the mods every chat installs, which come from the
+        stable lane's marketplace: a dev lane's own, and, on the stable lane, the dev lane's after its own while the dev
+        lane's server runs, so a restart of either server leaves the feature's mods in the chats."""
+        self.write_mod_plugins()
+        if self.is_dev_lane or is_dev_lane_running:
+            self.stable_lane.publish_mods_of(self.stable_lane.dev_lane)
+
+    @property
+    def stable_lane(self) -> CddHome:
+        """The stable lane's home: this one, or the one a dev lane's home sits in."""
+        return CddHome(self.folder.parent) if self.is_dev_lane else self
+
+    @property
+    def dev_lane(self) -> CddHome:
+        """The dev lane's home inside this stable lane's home."""
+        return CddHome(self.folder / DEV_LANE_FOLDER)
+
     def _publish_mods(self, code: Path) -> None:
         """Publish the mods of code: the cdd-board mod, with the draw.io viewer its chat bar opens diagrams in and the
         install command it runs, and the prompt queue mod; then list them in the marketplace."""
