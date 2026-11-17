@@ -104,6 +104,23 @@ section: body
 | user request, 2026-11-15 | "graph filtered like file filter is" |
 | Graph app, Filter By Node Type, Filter By Connector, Select All Or No Filter Choices (Observed) | `Graph.filter_choices`, `Filter._on_relationship`, `FilterView.tsx` |
 | person's decision, 2026-11-16 | The file list stays the one file filter. A node filter is a different filter, on the graph's nodes, and it extends the file filter rather than replacing it: both apply, the node filter only narrows the nodes of the files listed and never brings back a file the list leaves out. |
+| user request, 2026-11-16 | "Collapse the graph filters by default — let users expand if they want them." |
+
+#### Scenario: The node filter starts collapsed behind one Filters toggle
+
+> Requested 2026-11-16, not walked.
+
+*Given* the Person never opened the graph view's filters in this browser  
+*When* the Person switches the file bar to the graph view  
+*Then* the graph view shows one closed Filters toggle above the practice trees  
+  *But* not the node type, connector and rule lists or the Violations switch, so the trees get the space
+
+#### Scenario: Pressing Filters opens the node filter, and the browser remembers it
+
+*Given* the graph view shows its Filters toggle closed  
+*When* the Person presses Filters  
+*Then* the node type, connector and rule lists and the Violations switch show above the trees  
+  *And* the graph view opens with them shown the next time this browser opens it, until the Person presses Filters again
 
 #### Scenario: Choosing a node type keeps only those nodes
 

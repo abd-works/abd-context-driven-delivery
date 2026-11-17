@@ -1,9 +1,9 @@
 // The Files app's acceptance tests for its graph view, story by story as
 // story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md
 // writes them; what the session's graph answers is proved by the sub-epic's story tests in story_tests/review-generated-work-in-file-viewer/.
-import { render } from '@testing-library/react'
+import { fireEvent, render } from '@testing-library/react'
 import { createElement } from 'react'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 
 import type { CddApi } from '@cdd/cdd-shared'
 import type { ExplorerEntryData, GuidanceSelectionData } from '@cdd/space/session/session'
@@ -360,6 +360,64 @@ describe('Filter Graph By Node Type And Connector', () => {
         violations: true,
         rules: ['clean_engineering.Operation.keep-operations-small-focused'],
       })
+    })
+  })
+})
+
+describe('Collapse The Graph Node Filter', () => {
+  beforeEach(() => window.localStorage.clear())
+
+  const shownView = (page: FilesPage) => render(createElement(FilesGraphView, { page }))
+  const filtersToggle = (view: ReturnType<typeof render>) => view.getByRole('button', { name: 'Filters' })
+  const nodeFilterShown = (view: ReturnType<typeof render>) => view.queryByLabelText('Node filter') !== null
+
+  describe('with the Person never having opened the filters in this browser', () => {
+    it('should show one closed Filters toggle above the trees', async () => {
+      const { page, stop } = await showingGraph()
+      stop()
+      const view = shownView(page)
+      expect(filtersToggle(view).getAttribute('aria-expanded')).toBe('false')
+      view.unmount()
+    })
+
+    it('should not show the node type, connector and rule lists', async () => {
+      const { page, stop } = await showingGraph()
+      stop()
+      const view = shownView(page)
+      expect(nodeFilterShown(view)).toBe(false)
+      view.unmount()
+    })
+  })
+
+  describe('with the Person pressing Filters', () => {
+    it('should show the node filter above the trees', async () => {
+      const { page, stop } = await showingGraph()
+      stop()
+      const view = shownView(page)
+      fireEvent.click(filtersToggle(view))
+      expect(nodeFilterShown(view)).toBe(true)
+      view.unmount()
+    })
+
+    it('should open the next graph view in this browser with the node filter shown', async () => {
+      const { page, stop } = await showingGraph()
+      stop()
+      const first = shownView(page)
+      fireEvent.click(filtersToggle(first))
+      first.unmount()
+      const next = shownView(page)
+      expect(nodeFilterShown(next)).toBe(true)
+      next.unmount()
+    })
+
+    it('should close the node filter again once the Person presses Filters a second time', async () => {
+      const { page, stop } = await showingGraph()
+      stop()
+      const view = shownView(page)
+      fireEvent.click(filtersToggle(view))
+      fireEvent.click(filtersToggle(view))
+      expect(nodeFilterShown(view)).toBe(false)
+      view.unmount()
     })
   })
 })

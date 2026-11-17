@@ -9,6 +9,9 @@ import type { FilesStore, SelectedNode } from './files-state'
 
 const reasonOf = (failure: unknown): string => (failure instanceof Error ? failure.message : String(failure))
 
+// Where this browser remembers whether the person opened the graph view's node filter.
+const STORED_FILTERS_SHOWN = 'cdd-files-graph-filters-shown'
+
 // How often a read under way asks the cdd server what it is doing, in milliseconds.
 const PROGRESS_EVERY = 400
 const pause = (milliseconds: number) => new Promise(resolve => setTimeout(resolve, milliseconds))
@@ -135,6 +138,26 @@ export class FilesGraph {
       this.store.change(({ graph }) => ({ graph: { ...graph, filter, choices } }))
     } catch (failure) {
       this.notices.fail(`The Files app did not filter the graph: ${reasonOf(failure)}`, 'Filtering the graph view, calling session.graph_filter_choices')
+    }
+  }
+
+  // Whether the node filter shows above the trees: closed until the person opens it, then as this browser remembers. A
+  // browser that keeps nothing, such as a private window, refuses with a DOMException and the filter stays closed.
+  get areFiltersShown(): boolean {
+    try {
+      return window.localStorage.getItem(STORED_FILTERS_SHOWN) === 'shown'
+    } catch (refusal) {
+      if (!(refusal instanceof DOMException)) throw refusal
+      return false
+    }
+  }
+
+  // Remembers in this browser whether the person opened or closed the node filter; a browser that keeps nothing forgets.
+  showFilters(isShown: boolean): void {
+    try {
+      window.localStorage.setItem(STORED_FILTERS_SHOWN, isShown ? 'shown' : 'closed')
+    } catch (refusal) {
+      if (!(refusal instanceof DOMException)) throw refusal
     }
   }
 
