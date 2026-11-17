@@ -9,12 +9,23 @@ from cdd_guidance.practices.clean_engineering.model.class_graph import ClassGrap
 from cdd_guidance.practices.clean_engineering.rules.rule_examples import practice_from_files
 from cdd_guidance.practices.stories.model.fixtures.round_trip_story_map import round_trip_story_map
 from cdd_guidance.practices.stories.model.whiteboard.nodes import WhiteboardStoryModel
+from cdd_guidance.practices.clean_engineering.model.whiteboard.whiteboard_class_model import WhiteboardCleanEngineeringModel
+from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module
 
 _CART = (
     "class Cart:\n"
     "    def __init__(self) -> None:\n"
     "        self.lines = []\n"
 )
+
+
+def _modules_board() -> str:
+    """A Clean Engineering modules view saved as a whiteboard: one module, shop, drawn as its card."""
+    model = CleanEngineeringModel("shop")
+    shop = Module("shop", 1)
+    shop.description = "Sell what is in the cart."
+    model.modules.append(shop)
+    return WhiteboardCleanEngineeringModel().render(model)
 
 
 def _targets(fixture, kind: str, source_name: str) -> list[str]:
@@ -135,6 +146,27 @@ with description("Clean Engineering reading code into its graph"):
             self.shop = next(node for node in self.in_graph.nodes("Module") if node.name == "shop")
 
         with it("should read the code, and no class from the board"):
+            expect([node.name for node in self.in_graph.nodes("OoadClass")]).to(equal(["Cart"]))
+
+        with it("should not keep the board as a source that does not parse"):
+            expect(self.shop.get_fact("unreadable_sources") or []).to(equal([]))
+
+    with context("with a Clean Engineering modules board beside the code"):
+        with before.all:
+            board = _modules_board()
+            self.fixture = practice_from_files(
+                {
+                    ".context/modules.whiteboard": board,
+                    "shop/.context/module-context.md": "# Shop\n",
+                    "shop/modules.whiteboard": board,
+                    "shop/cart.py": _CART,
+                }
+            )
+            self.fixture.read_only([".context/modules.whiteboard", "shop/cart.py"])
+            self.in_graph = self.fixture.practice.reading.in_graph
+            self.shop = next(node for node in self.in_graph.nodes("Module") if node.name == "shop")
+
+        with it("should read the code, and no class from the board, as the board draws the design and is not source"):
             expect([node.name for node in self.in_graph.nodes("OoadClass")]).to(equal(["Cart"]))
 
         with it("should not keep the board as a source that does not parse"):

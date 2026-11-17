@@ -6,35 +6,34 @@
   "worktree": "C:\\dev\\abd-cdd-simple-queue-enhancement",
   "guidance": {
     "stages": [
+      "discovery",
       "specification",
       "implementation"
     ],
-    "version": 24
+    "version": 5
   },
   "practices": {
-    "ddd": {
-      "enabled": false
-    },
-    "ux": {
-      "enabled": false
-    },
-    "clean_engineering": {
-      "enabled": true,
+    "bdd": {
       "formats": {
-        "modules": [
-          "markdown"
+        "behavior": [
+          "python"
         ],
-        "model": [
+        "realization": [
+          "markdown",
+          "python"
+        ],
+        "development": [
           "python"
         ]
       }
     },
-    "bdd": {
-      "enabled": false
-    },
     "stories": {
       "formats": {
         "scenarios": [
+          "python",
+          "markdown"
+        ],
+        "acceptance_tests": [
           "python"
         ],
         "story_map": [
@@ -42,8 +41,59 @@
           "drawio",
           "whiteboard"
         ]
-      },
-      "enabled": true
+      }
+    },
+    "ddd": {
+      "formats": {
+        "model": [
+          "markdown",
+          "drawio",
+          "whiteboard",
+          "python"
+        ],
+        "tactics": [
+          "python"
+        ],
+        "bounded_context": [
+          "markdown",
+          "drawio",
+          "whiteboard"
+        ]
+      }
+    },
+    "ux": {
+      "formats": {
+        "mockup": [
+          "claude_design",
+          "html"
+        ],
+        "front_end_code": [
+          "html",
+          "typescript"
+        ],
+        "ia": [
+          "drawio",
+          "markdown"
+        ]
+      }
+    },
+    "clean_engineering": {
+      "formats": {
+        "model": [
+          "python",
+          "drawio",
+          "whiteboard",
+          "markdown"
+        ],
+        "code": [
+          "python"
+        ],
+        "modules": [
+          "markdown",
+          "drawio",
+          "whiteboard"
+        ]
+      }
     }
   }
 }

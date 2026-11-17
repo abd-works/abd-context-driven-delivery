@@ -19,3 +19,5 @@ rest the box shows the stack image and the next prompt; the controls show only i
 2026-11-16 — Asked to use the prompt box's wording for the empty queue, I deleted the Ctrl and Enter key caps, which
 the person still wanted. Correction: the wording is on the left and the key caps, drawn like the chat's mic button,
 are back on the right. A request to change one part of a view is not a request to remove the rest.
+2026-11-17 — Generated: card text box with minWidth=0 overflow=hidden to truncate long prompts. Mistake: clipping the box cut the card button's rounded ends and height (cards looked square and short). Correction: keep the rounded button unwrapped and cut the text to the columns left (cutToFit/textColumnsOf in queue-view.tsx).
+2026-11-17 — Generated: cut and padded card text to computed columns and drew hover buttons absolutely to make cards fill the chat box. Mistake: cards had filled the whole width before (c0fbbff0d); my layout changes broke it. Correction: restore the c0fbbff0d card row exactly, only moving progress and attachment count before the text.

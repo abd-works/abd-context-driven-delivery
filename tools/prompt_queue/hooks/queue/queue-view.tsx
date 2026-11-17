@@ -2,19 +2,19 @@ import type { EngineInterface, RenderInput } from 'claude-code'
 
 import {
   clearQueue,
-  dismissFailure,
-  fixFailure,
   editPrompt,
   movePrompt,
   removePrompt,
+  sendNow,
   queueDraft,
   togglePlaying,
   toggleExpanded,
   toggleSubAgentMode,
+  toggleSteps,
   type QueueState,
 } from './prompt-queue'
-import type { QueueFailure } from '../../types'
-import type { PromptQueue } from './queue-order'
+import type { PromptStep, QueuedPrompt } from '../../types'
+import { progressOf } from './plan-steps'
 import {
   ADD_SVG,
   CLEAR_SVG,
@@ -41,11 +41,12 @@ type AbovePromptEvent = RenderInput<'AbovePrompt'>
  */
 const ADD_COLUMNS = 3
 
-/** The columns kept at a card's right for its edit, move and remove buttons, shown when the pointer is on the card. */
-const CARD_BUTTON_COLUMNS = 12
+/** The columns kept at a card's right for its send, edit, move and remove buttons, shown when the pointer is on the card. */
+const CARD_BUTTON_COLUMNS = 15
 
-/** A failure's red, as the chat bar draws its own. */
-const FAILURE_RED = '#EF4444'
+/** The mark before a step for where it stands: done, being worked, or not started. */
+const STEP_MARK = { done: '✓', in_progress: '▸', pending: '○' } as const
+
 
 /**
  * Its own box above the chat bar. At rest it shows only the stack image, the count drawn on it, and the pointer over
@@ -59,13 +60,12 @@ export function QueueView($: EngineInterface, e: AbovePromptEvent, state: QueueS
 
   return (
     <Box key="prompt-queue" flexDirection="column" rowGap="sm" alignSelf="flex-start"
-      paddingX={1} width={state.isExpanded ? e.props.bodyColumns : undefined}>
-      {state.isExpanded && QueueListView($, e, queue, state.editingId)}
+      paddingX={1} width={state.isExpanded ? '100%' : undefined}>
+      {state.isExpanded && QueueListView($, e, state)}
       {state.isExpanded && state.isSubAgentMode && state.tasks.map(task => (
         <Text dimColor wrap="truncate-end">{`  ↳ ${task.description}: ${task.prompts.length} prompt(s)`}</Text>
       ))}
       {state.notice !== '' && <Text color="warning">{state.notice}</Text>}
-      {state.failure && FailureView($, e, state.failure)}
       <Box flexDirection="row" gap={1}>
         {IconButtonView(elements, stackIcon(state), () => toggleExpanded($))}
         <Box width={ADD_COLUMNS}>
@@ -106,11 +106,12 @@ const CLEAR_ICON: Icon = { key: 'queue-clear', svg: CLEAR_SVG, glyph: '✕', tip
 /**
  * The open queue, one line per task, each drawn as the chat's own rounded buttons are, the session name's among them,
  * so a card is one line tall with round ends. Pressing a card edits it; the pointer over it reveals its edit, move
- * and remove buttons at its right. The text shrinks and truncates, so a long prompt never pushes them past the
- * chat's edge.
+ * and remove buttons. A card the agent is working on is drawn bright, one whose steps are all done dim, and a card with
+ * steps shows how many are done, which opens them under it.
  */
-function QueueListView($: EngineInterface, e: AbovePromptEvent, queue: PromptQueue, editingId: string) {
-  const { Box, Text, Button } = $.ui.resolve(e)
+function QueueListView($: EngineInterface, e: AbovePromptEvent, state: QueueState) {
+  const { Box, Text } = $.ui.resolve(e)
+  const { queue } = state
   if (queue.isEmpty) {
     return (
       <Box flexDirection="row" justifyContent="flex-end" alignItems="center" gap={2} borderStyle="round"
@@ -127,23 +128,58 @@ function QueueListView($: EngineInterface, e: AbovePromptEvent, queue: PromptQue
   return (
     <Box flexDirection="column" rowGap="sm">
       {queue.prompts.map((prompt, index) => (
-        <Box key={`card-${prompt.id}`} flexDirection="row" justifyContent="space-between" alignItems="center" gap={1}>
-          <Box flexGrow={1} flexShrink={1} minWidth={0}>
-            <Button key={`card-text-${prompt.id}`} dimColor={prompt.id === editingId} onPress={() => editPrompt($, prompt)}>
-              <Text wrap="truncate-end" color={prompt.id === editingId ? LOOK.placeholder : undefined} italic={prompt.id === editingId}>
-                {`${index + 1}. ${prompt.text.replace(/\s+/g, ' ')}${prompt.id === editingId ? '  (editing)' : ''}`}
-              </Text>
-            </Button>
-          </Box>
-          <Box width={CARD_BUTTON_COLUMNS} flexShrink={0} justifyContent="flex-end">
-            <Box flexDirection="row" gap={1} display="none" hover={{ display: 'flex' }}>
-              <Button key={`edit-${prompt.id}`} label="✎" onPress={() => editPrompt($, prompt)} />
-              <Button key={`up-${prompt.id}`} label="↑" onPress={() => movePrompt($, index, index - 1)} />
-              <Button key={`down-${prompt.id}`} label="↓" onPress={() => movePrompt($, index, index + 1)} />
-              <Button key={`remove-${prompt.id}`} label="✕" onPress={() => removePrompt($, prompt.id)} />
-            </Box>
-          </Box>
+        <Box key={`card-${prompt.id}`} flexDirection="column">
+          {CardView($, e, state, prompt, index)}
+          {state.openSteps.includes(prompt.id) && StepsView($, e, prompt.id, prompt.steps ?? [])}
         </Box>
+      ))}
+    </Box>
+  )
+}
+
+function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, prompt: QueuedPrompt, index: number) {
+  const { Box, Text, Button } = $.ui.resolve(e)
+  const isEditing = prompt.id === state.editingId
+  const isWorking = prompt.id === state.workingId
+  const progress = progressOf(prompt.steps)
+  const isFinished = Boolean(prompt.is_done)
+
+  return (
+    <Box key={`card-row-${prompt.id}`} flexDirection="row" justifyContent="space-between" alignItems="center" gap={1} width="100%">
+      {progress !== '' && <Button key={`steps-${prompt.id}`} label={progress} onPress={() => toggleSteps($, prompt.id)} />}
+      {(prompt.attachments ?? []).length > 0 && <Text key={`attached-${prompt.id}`} color={LOOK.muted}>{`📎${prompt.attachments!.length}`}</Text>}
+      <Box flexGrow={1} flexShrink={1} minWidth={0}>
+        <Button key={`card-text-${prompt.id}`} dimColor={isEditing || isFinished} onPress={() => editPrompt($, prompt)}>
+          <Text wrap="wrap" color={isEditing ? LOOK.placeholder : isWorking ? LOOK.accent : undefined}
+            italic={isEditing} bold={isWorking} dimColor={isFinished}>
+            {`${index + 1}. ${prompt.text.replace(/\s+/g, ' ')}${isEditing ? '  (editing)' : ''}`}
+          </Text>
+        </Button>
+      </Box>
+      <Box width={CARD_BUTTON_COLUMNS} justifyContent="flex-end">
+        <Box flexDirection="row" gap={1} display="none" hover={{ display: 'flex' }} backgroundColor={LOOK.keyCap} paddingX="xs">
+          <Button key={`send-now-${prompt.id}`} label="↵" onPress={() => sendNow($, prompt)} />
+          <Button key={`edit-${prompt.id}`} label="✎" onPress={() => editPrompt($, prompt)} />
+          <Button key={`up-${prompt.id}`} label="↑" onPress={() => movePrompt($, index, index - 1)} />
+          <Button key={`down-${prompt.id}`} label="↓" onPress={() => movePrompt($, index, index + 1)} />
+          <Button key={`remove-${prompt.id}`} label="✕" onPress={() => removePrompt($, prompt.id)} />
+        </Box>
+      </Box>
+    </Box>
+  )
+}
+
+/** A card's steps under it, in order: done ones ticked and dim, the one being worked marked and bright. */
+function StepsView($: EngineInterface, e: AbovePromptEvent, id: string, steps: PromptStep[]) {
+  const { Box, Text } = $.ui.resolve(e)
+
+  return (
+    <Box key={`steps-of-${id}`} flexDirection="column" paddingLeft={3}>
+      {steps.map((step, index) => (
+        <Text key={`step-${id}-${index + 1}`} wrap="truncate-end" dimColor={step.state === 'done'}
+          color={step.state === 'in_progress' ? LOOK.accent : undefined}>
+          {`${STEP_MARK[step.state]} ${step.text}`}
+        </Text>
       ))}
     </Box>
   )
@@ -160,27 +196,6 @@ function KeyCapView($: EngineInterface, e: AbovePromptEvent, key: KeyCap) {
   return (
     <Box backgroundColor={LOOK.keyCap} paddingX={1}>
       <Text color={LOOK.keyText}>{key.glyph}</Text>
-    </Box>
-  )
-}
-
-/**
- * A failure the queue met, drawn as the chat bar draws its own: what failed in red, Fix to send it to this chat to be
- * fixed, ✕ to dismiss it, and the context it failed in beneath. Once Fix is pressed, a running bar stands in its place.
- */
-function FailureView($: EngineInterface, e: AbovePromptEvent, failure: QueueFailure) {
-  const { Box, Button, Progress, Text } = $.ui.resolve(e)
-
-  return (
-    <Box key="queue-failure" flexDirection="column">
-      <Box flexDirection="row" gap={1} alignItems="center">
-        <Text color={FAILURE_RED}>{failure.failure}</Text>
-        {failure.isFixing
-          ? <Progress key="queue-fixing" label="Sending the fix to Claude" />
-          : <Button key="queue-fix" label="Fix" variant="primary" onPress={() => fixFailure($)} />}
-        <Button key="queue-dismiss-failure" label="✕" onPress={() => dismissFailure($)} />
-      </Box>
-      <Text color={LOOK.muted}>{failure.context}</Text>
     </Box>
   )
 }

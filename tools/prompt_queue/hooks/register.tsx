@@ -3,14 +3,21 @@ import type { Register } from 'claude-code'
 import {
   currentQueue,
   isQueuedByKey,
+  keepQueuedAttachments,
   queueFromCommand,
   queueByKey,
   queueContext,
+  queueSentPrompt,
+  followPlan,
+  followTakenPrompt,
+  finishPlan,
+  noteDecisionAsked,
   refreshQueue,
   finishTurn,
   startTurn,
 } from './queue/prompt-queue'
 import { QueueView } from './queue/queue-view'
+import { PLAN_TOOL, SET_STEPS_TOOL, WRAP_UP_TOOL } from './queue/plan-steps'
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
@@ -44,11 +51,29 @@ export const register: Register = on => {
   // Every other prompt carries the queue beside it while the queue plays, so the agent takes its work in order.
   on('prompt.submit', async ($, e, next) => {
     if (e.origin?.kind !== 'plugin' && (await isQueuedByKey($, e.text))) {
+      await keepQueuedAttachments($, e.text, e.attachments ?? [])
       return { drop: 'Queued for later' }
     }
-    const queued = e.command ? undefined : await queueContext($)
+    const sent = e.command || e.origin?.kind === 'plugin' ? undefined : await queueSentPrompt($, e.text)
+    const queued = e.command ? undefined : await queueContext($, sent?.id)
+    const added = [sent?.note, queued].filter((block): block is string => block !== undefined)
 
-    return next(queued ? { ...e, context: [...(e.context ?? []), queued] } : e)
+    return next(added.length > 0 ? { ...e, context: [...(e.context ?? []), ...added] } : e)
+  })
+
+  // The agent's task list in the chat is copied onto the prompt it works on, so the queue shows its steps.
+  on('tool.call', async ($, e, next) => {
+    const ran = await next(e)
+    if (e.agentId === undefined && PLAN_TOOL.test(e.tool)) {
+      await followPlan($, e as unknown as Record<string, unknown>)
+    } else if (e.agentId === undefined && SET_STEPS_TOOL.test(e.tool)) {
+      await followTakenPrompt($, e as unknown as Record<string, unknown>)
+    } else if (e.agentId === undefined && WRAP_UP_TOOL.test(e.tool)) {
+      await finishPlan($)
+      await noteDecisionAsked($, e as unknown as Record<string, unknown>)
+    }
+
+    return ran
   })
 
   on('turn.start', async ($, e, next) => {

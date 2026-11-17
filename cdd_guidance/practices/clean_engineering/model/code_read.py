@@ -19,6 +19,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     OoadClass,
     UnreadableSource,
 )
+from cdd_guidance.practices.clean_engineering.model.code_class_model import CodeCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.module_context_files import ModuleContext
 from cdd_guidance.practices.clean_engineering.model.script_imports import ScriptImports, imported_files
 from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
@@ -93,18 +94,22 @@ class CodeRead:
     def _parsed(self, file: Path) -> Module | None:
         """The file's module, read by its language's class model from the practice's formats, with its source facts
         loaded. A file that does not parse is kept with the reason, so the source-parses rule reports it. A saved board
-        that draws no module and no class, such as a Stories story map, is another practice's drawing, not Clean
-        Engineering source, so it holds no module and is not kept."""
+        is a drawing, not source: one that draws no module and no class, such as a Stories story map, is another
+        practice's, and one that draws Clean Engineering's modules or classes draws the design the code is read for, so
+        neither holds a module and neither is kept."""
         text = self._text_of(file)
         if text is None:
             return None
         try:
-            module = self._reading.practice.formats.for_file(file).parse(text).file_module()
+            parsed = self._reading.practice.formats.for_file(file).parse(text)
         except UnreadableSource as unreadable:
             self._unreadable[file] = str(unreadable)
             return None
         except UnreadableBoard:
             return None
+        if not isinstance(parsed, CodeCleanEngineeringModel):
+            return None
+        module = parsed.file_module()
         module.source_facts.load(file, self._root)
         return module
 

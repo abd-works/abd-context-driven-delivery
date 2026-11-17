@@ -1,7 +1,8 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, McpToolResult } from 'claude-code'
+import type { EngineInterface, McpToolResult, PromptSubmitAttachment } from 'claude-code'
 
-import type { QueueFailure, QueueJson, QueuedPrompt, SubAgentTask } from '../../types'
+import type { PromptStep, QueueFailure, QueueJson, QueuedPrompt, SubAgentTask } from '../../types'
+import { finishedPlan, nextPlan, type PlanCall } from './plan-steps'
 import { PromptQueue, listedItems, parseJsonArray, slashCommandOf } from './queue-order'
 
 const GROUPING_MODEL = 'sonnet'
@@ -17,7 +18,15 @@ const QUEUE_INSTRUCTIONS = [
   'Finish what you are doing now, then take the first prompt below and do it as if the person had just sent it.',
   "When it is done, call prompt-queue.done with its id, then take the next, until the queue is empty or the person stops you.",
   'prompt-queue.show reads the queue again. Mark a prompt done only once its work is done; never take one off that you have not done.',
+  `A prompt whose text starts with ${'"[decision required]"'} waits for the person's answer; pass over it.`,
+  'When you take a prompt, first call prompt-queue.set_steps with its id and the steps you plan for it, so the queue shows your work on the prompt you took.',
 ].join(' ')
+// What marks a prompt put back on the queue to wait for the person's answer; play passes over it.
+const DECISION_FLAG = '[decision required]'
+// How long play waits for the person to answer a question the agent ended its turn with, before it moves on.
+const DECISION_WAIT_MS = 60_000
+// Until the mod has seen the agent's task list, the agent keeps a prompt's steps on the queue itself.
+const KEEP_STEPS_YOURSELF = 'Mark each step done with prompt-queue.step_done as you finish it.'
 
 /** The chat's queue as prompt-queue's tools last answered it: the cdd server keeps the queue, so the mod, the agent in
  * the chat and a session starting in it all change the same one, and the mod draws what the server answered. */
@@ -26,8 +35,7 @@ const isExpanded = atom({ plugin: 'prompt-queue', key: 'isExpanded' } as const, 
 const isSubAgentMode = atom({ plugin: 'prompt-queue', key: 'isSubAgentMode' } as const, false)
 const tasks = atom({ plugin: 'prompt-queue', key: 'tasks' } as const, [] as SubAgentTask[])
 const notice = atom({ plugin: 'prompt-queue', key: 'notice' } as const, '')
-/** A failure the queue met, shown in red with Fix and ✕ until the person fixes or dismisses it, as the chat bar shows
- * its own: what failed with the reason it gave, and what the queue was doing when it failed. */
+/** The queue's latest failure, which CDD's shared failure line above the chat bar shows with its Fix and ✕. */
 const failure = atom({ plugin: 'prompt-queue', key: 'failure' } as const, null as QueueFailure | null)
 /** Playing, the agent sees the queue and each finished turn asks it to take the next prompt; paused, the queue waits. */
 const isPlaying = atom({ plugin: 'prompt-queue', key: 'isPlaying' } as const, false)
@@ -39,6 +47,16 @@ const queuedByKey = atom({ plugin: 'prompt-queue', key: 'queuedByKey' } as const
 const editingId = atom({ plugin: 'prompt-queue', key: 'editingId' } as const, '')
 /** The prompt the agent was last asked to take: still first on the queue after that turn, the agent left it, so play pauses. */
 const askedAbout = atom({ plugin: 'prompt-queue', key: 'askedAbout' } as const, '')
+/** Whether the agent ended its turn asking the person something, so play waits a minute for the answer. */
+const isAwaitingDecision = atom({ plugin: 'prompt-queue', key: 'isAwaitingDecision' } as const, false)
+/** Which wait for an answer is the current one: each turn and each new wait moves it on, so an older wait ends quietly. */
+const decisionWait = atom({ plugin: 'prompt-queue', key: 'decisionWait' } as const, 0)
+/** The agent's task list for the prompt it works on, as its last `update_plan` call left it. */
+const plan = atom({ plugin: 'prompt-queue', key: 'plan' } as const, [] as PromptStep[])
+/** Whether the mod has seen the agent set its task list; until it has, the agent is told to keep the steps itself. */
+const isPlanSeen = atom({ plugin: 'prompt-queue', key: 'isPlanSeen' } as const, false)
+/** The cards whose steps are shown under them. */
+const openSteps = atom({ plugin: 'prompt-queue', key: 'openSteps' } as const, [] as string[])
 
 export type QueueState = {
   queue: PromptQueue
@@ -46,9 +64,10 @@ export type QueueState = {
   isSubAgentMode: boolean
   isPlaying: boolean
   editingId: string
+  workingId: string
+  openSteps: string[]
   tasks: SubAgentTask[]
   notice: string
-  failure: QueueFailure | null
 }
 
 export async function currentQueue($: EngineInterface): Promise<QueueState> {
@@ -58,9 +77,10 @@ export async function currentQueue($: EngineInterface): Promise<QueueState> {
     isSubAgentMode: await read($, isSubAgentMode),
     isPlaying: await read($, isPlaying),
     editingId: await read($, editingId),
+    workingId: await read($, askedAbout),
+    openSteps: await read($, openSteps),
     tasks: await read($, tasks),
     notice: await read($, notice),
-    failure: await read($, failure),
   }
 }
 
@@ -214,6 +234,8 @@ export async function togglePlaying($: EngineInterface): Promise<void> {
 /** A main-chat turn started: play waits for it to finish. */
 export async function startTurn($: EngineInterface): Promise<void> {
   await update($, isTurnRunning, () => true)
+  await update($, isAwaitingDecision, () => false)
+  await update($, decisionWait, wait => wait + 1)
 }
 
 /** A main-chat turn ended: the queue is read again, since the agent may have queued or finished work in the turn, and,
@@ -221,9 +243,40 @@ export async function startTurn($: EngineInterface): Promise<void> {
 export async function finishTurn($: EngineInterface, isAnswered: boolean): Promise<void> {
   await update($, isTurnRunning, () => false)
   await refreshQueue($)
-  if (isAnswered && (await read($, isPlaying))) {
-    await sendNext($)
+  if (!isAnswered || !(await read($, isPlaying))) {
+    return
   }
+  if (await read($, isAwaitingDecision)) {
+    await waitForDecision($)
+    return
+  }
+  await sendNext($)
+}
+
+/** The agent's wrap-up asked the person something: play waits for the answer before it moves on. */
+export async function noteDecisionAsked($: EngineInterface, wrapUp: Record<string, unknown>): Promise<void> {
+  const isAsking = wrapUp.blocked === true || (typeof wrapUp.ask === 'string' && wrapUp.ask.trim() !== '')
+  await update($, isAwaitingDecision, () => isAsking)
+}
+
+/** Waits a minute for the person's answer; a turn starting meanwhile, the answer, ends the wait. */
+async function waitForDecision($: EngineInterface): Promise<void> {
+  const wait = (await read($, decisionWait)) + 1
+  await update($, decisionWait, () => wait)
+  $.clock.after(DECISION_WAIT_MS, () => void decisionTimedOut($, wait))
+}
+
+/** No answer came within the minute: the agent puts the prompt back as needing a decision and takes the next. */
+async function decisionTimedOut($: EngineInterface, wait: number): Promise<void> {
+  if (wait !== (await read($, decisionWait)) || (await read($, isTurnRunning)) || !(await read($, isPlaying))) {
+    return
+  }
+  await update($, isAwaitingDecision, () => false)
+  const asked = await read($, askedAbout)
+  const text = `No answer came within a minute. Put prompt [${asked}] back on the queue as unfinished: give it with ` +
+    `prompt-queue.edit a text that starts with "${DECISION_FLAG}", then the question and your recommendation. Then take the next prompt on the queue.`
+  $.prompt.submit({ text, asUser: true }).catch(thrown =>
+    showFailure($, `Not sent: ${reasonOf(thrown)}`, 'Waiting a minute for an answer, then moving play on'))
 }
 
 /** Asks the agent to take the next prompt on the queue: the agent does it and marks it done itself, so nothing leaves
@@ -239,16 +292,17 @@ export async function sendNextPrompt($: EngineInterface): Promise<void> {
     await update($, notice, () => `Paused: the agent left "${next.text}" on the queue. Press play to ask again.`)
     return
   }
-  await update($, askedAbout, () => next.id)
+  await workOn($, next.id)
   const command = slashCommandOf(next.text)
   const sent = command ? $.command.run(command).then(() => changeQueue($, 'done', { prompt: next.id })) : $.prompt.submit({ text: ASK_FOR_NEXT, asUser: true })
   sent.catch(thrown => showFailure($, `Not sent: ${reasonOf(thrown)}`, command ? `Playing the queue, running /${command.command} from it` : 'Playing the queue, asking the agent to take the next prompt'))
 }
 
-/** The prompts the agent is to do, in order: every queued prompt but one the person is editing, which waits in its place. */
+/** The prompts the agent is to do, in order: every queued prompt not done but one the person is editing, which waits in
+ * its place. */
 async function promptsToDo($: EngineInterface): Promise<QueuedPrompt[]> {
   const edited = await read($, editingId)
-  return (await read($, queue)).prompts.filter(prompt => prompt.id !== edited)
+  return (await read($, queue)).prompts.filter(prompt => prompt.id !== edited && !prompt.is_done && !prompt.text.startsWith(DECISION_FLAG))
 }
 
 async function nextToDo($: EngineInterface): Promise<QueuedPrompt | undefined> {
@@ -257,15 +311,131 @@ async function nextToDo($: EngineInterface): Promise<QueuedPrompt | undefined> {
 
 /** What the agent reads beside each prompt while the queue plays: the queue, in order, and how to work through it; none
  * while paused or empty, so a paused queue never pulls the agent away from what the person asked. */
-export async function queueContext($: EngineInterface): Promise<string | undefined> {
+export async function queueContext($: EngineInterface, sentId = ''): Promise<string | undefined> {
   if (!(await read($, isPlaying))) {
     return undefined
   }
-  const prompts = await promptsToDo($)
+  const prompts = (await promptsToDo($)).filter(prompt => prompt.id !== sentId)
   if (prompts.length === 0) {
     return undefined
   }
-  return [QUEUE_INSTRUCTIONS, '', ...prompts.map((prompt, place) => `${place + 1}. [${prompt.id}] ${prompt.text}`)].join('\n')
+  const instructions = (await read($, isPlanSeen)) ? QUEUE_INSTRUCTIONS : `${QUEUE_INSTRUCTIONS} ${KEEP_STEPS_YOURSELF}`
+  return [instructions, '', ...prompts.map((prompt, place) => `${place + 1}. [${prompt.id}] ${prompt.text}${attachedNote(prompt)}`)].join('\n')
+}
+
+/** The files queued with a prompt, as the agent reads them beside it, to open when it takes the prompt. */
+function attachedNote(prompt: QueuedPrompt): string {
+  const attached = prompt.attachments ?? []
+  return attached.length === 0 ? '' : ` (attached, open each: ${attached.join(', ')})`
+}
+
+/** The images and documents pasted in a draft Alt+Enter queued: the engine sends them with the submission it drops, and
+ * a plugin cannot send them with a prompt later, so each is kept as a file beside the queued prompt. */
+export async function keepQueuedAttachments($: EngineInterface, text: string, attachments: readonly PromptSubmitAttachment[]): Promise<void> {
+  const queued = (await read($, queue)).prompts.filter(prompt => sameDraft(prompt.text) === sameDraft(text)).at(-1)
+  if (!queued) {
+    return
+  }
+  for (const attachment of attachments) {
+    const data = attachment.id ? await mediaOf($, attachment.id) : undefined
+    if (data) {
+      await changeQueue($, 'attach', { prompt: queued.id, filename: attachment.filename ?? '', media_type: data.mediaType, data: data.base64 })
+    }
+  }
+}
+
+/** One attached item's bytes, base64, read slice by slice; none for an item the engine will not give. */
+async function mediaOf($: EngineInterface, id: string): Promise<{ mediaType: string; base64: string } | undefined> {
+  const slices: string[] = []
+  let mediaType = ''
+  let offset: number | undefined = 0
+  while (offset !== undefined) {
+    const slice = await $.prompt.media({ id, offset })
+    if (slice.base64 === undefined) {
+      await showFailure($, `An attachment was not queued: ${slice.unreadable ?? slice.deny}`, 'Queuing a draft with Alt+Enter, reading its pasted item')
+      return undefined
+    }
+    slices.push(slice.base64)
+    mediaType = slice.mediaType
+    offset = slice.next
+  }
+  return { mediaType, base64: slices.join('') }
+}
+
+/** The prompt the agent works on now: the one play asked it to take, or one sent straight to the chat. Its task list
+ * starts empty. */
+async function workOn($: EngineInterface, id: string): Promise<void> {
+  await update($, askedAbout, () => id)
+  await update($, plan, () => [])
+}
+
+/** A prompt sent straight to the chat, as the queue holds it: its id, and what the agent is told about it. */
+export type SentPrompt = { id: string; note: string }
+
+/** A prompt the person sent straight to the chat goes on the queue first, as the prompt being worked, so the steps the
+ * agent plans for it sit under it; the agent is told its id, to mark it done when it is finished. */
+export async function queueSentPrompt($: EngineInterface, text: string): Promise<SentPrompt | undefined> {
+  if (text.trim() === '' || text.trim() === ASK_FOR_NEXT || !(await changeQueue($, 'add', { text }))) {
+    return undefined
+  }
+  const sent = (await read($, queue)).prompts.at(-1)
+  if (!sent) {
+    return undefined
+  }
+  await changeQueue($, 'move', { prompt: sent.id, to: 0 })
+  await workOn($, sent.id)
+  return { id: sent.id, note: `This prompt is first on this chat's prompt queue as [${sent.id}]. When its work is done, call prompt-queue.done with that id.` }
+}
+
+/** One `update_plan` call: the agent's task list follows it and is copied whole onto the prompt being worked. */
+export async function followPlan($: EngineInterface, call: PlanCall): Promise<void> {
+  await update($, isPlanSeen, () => true)
+  await update($, plan, steps => nextPlan(steps, call))
+  await copyPlanOntoWorkingPrompt($)
+}
+
+/** The agent gave a queued prompt its steps: that is the prompt it took, so it becomes the one being worked, and the
+ * task list's next changes follow onto it from those steps. */
+export async function followTakenPrompt($: EngineInterface, call: { prompt?: unknown; steps?: unknown }): Promise<void> {
+  if (typeof call.prompt !== 'string' || call.prompt === '') {
+    return
+  }
+  const steps = Array.isArray(call.steps) ? (call.steps as PromptStep[]) : []
+  await update($, askedAbout, () => call.prompt as string)
+  await update($, plan, () => steps)
+  await refreshQueue($)
+}
+
+/** A wrapped-up turn finished its task list: every step of the prompt being worked is done. */
+export async function finishPlan($: EngineInterface): Promise<void> {
+  if ((await read($, plan)).length === 0) {
+    return
+  }
+  await update($, plan, finishedPlan)
+  await copyPlanOntoWorkingPrompt($)
+}
+
+async function copyPlanOntoWorkingPrompt($: EngineInterface): Promise<void> {
+  const working = await read($, askedAbout)
+  if (!(await read($, queue)).prompts.some(prompt => prompt.id === working)) {
+    return
+  }
+  await changeQueue($, 'set_steps', { prompt: working, steps: await read($, plan) })
+}
+
+/** The send-now button on a card: the prompt moves to the top of the queue and goes to the chat at once, as the prompt
+ * being worked, whether the queue plays or not. The message names its id, since a plugin's own prompt carries no
+ * context, so the agent can mark it done. */
+export async function sendNow($: EngineInterface, prompt: QueuedPrompt): Promise<void> {
+  await changeQueue($, 'move', { prompt: prompt.id, to: 0 })
+  await workOn($, prompt.id)
+  $.prompt.submit({ text: `Take prompt [${prompt.id}] on the queue now: ${prompt.text}`, asUser: true }).catch(thrown =>
+    showFailure($, `Not sent: ${reasonOf(thrown)}`, `Pressing send now on "${prompt.text}"`))
+}
+
+/** The steps toggle on a card: its steps show under it, or fold away again. */
+export async function toggleSteps($: EngineInterface, id: string): Promise<void> {
+  await update($, openSteps, open => (open.includes(id) ? open.filter(shown => shown !== id) : [...open, id]))
 }
 
 /** What a finished turn sends: the next prompt, or every task to its own sub-agent. */
@@ -369,40 +539,11 @@ const GROUPING_INSTRUCTIONS =
   'work go in one task, kept in their order. Answer with only a JSON array of ' +
   '{"description": "<3 to 5 words>", "prompts": ["<prompt>", ...]}, using every prompt exactly once.'
 
-/** What the debug skill takes to fix a failure, as the chat bar's Fix sends it: choice=fix with the failure as details. */
-const DEBUG_COMMAND = 'space-session-debug-session'
-
-/** Shows a failure in the queue's box: what failed with the reason it gave, and what the queue was doing. */
+/** Keeps the queue's latest failure, what failed with the reason it gave and what the queue was doing, for CDD's shared
+ * failure line above the chat bar to show with its Fix and ✕. Only a value's owner writes it, so the board reads it from
+ * here; each failure takes the next id, so a newer one shows again after Fix or ✕ handled an older one. */
 async function showFailure($: EngineInterface, failed: string, context: string): Promise<void> {
-  await update($, failure, () => ({ failure: failed, context }))
-}
-
-/** ✕ beside a failure: it goes from the box. */
-export async function dismissFailure($: EngineInterface): Promise<void> {
-  await update($, failure, () => null)
-}
-
-/** Fix beside a failure sends it and its context to this chat to find the cause and fix it, through the same debug
- * command the chat bar's Fix runs. Until the command is in the chat the box shows it on its way, so a second press
- * cannot send it twice; a command the chat did not take is shown as a failure of its own. */
-export async function fixFailure($: EngineInterface): Promise<void> {
-  const shown = await read($, failure)
-  if (!shown || shown.isFixing) {
-    return
-  }
-  await update($, failure, () => ({ ...shown, isFixing: true }))
-  try {
-    await $.command.run({ command: DEBUG_COMMAND, args: fixArgumentsOf(shown) })
-  } catch (thrown) {
-    await showFailure($, `The fix did not reach the chat: ${reasonOf(thrown)}`, `Pressing Fix on: ${shown.failure}`)
-    return
-  }
-  await dismissFailure($)
-}
-
-function fixArgumentsOf(shown: QueueFailure): string {
-  const details = `The prompt queue above the chat bar shows this failure. Failure: ${shown.failure} Context: ${shown.context}`
-  return `choice=fix details=${JSON.stringify(details)}`
+  await update($, failure, kept => ({ id: (kept?.id ?? 0) + 1, failure: failed, context }))
 }
 
 /** The words a failure carries: a thrown error's message, or the value itself. */

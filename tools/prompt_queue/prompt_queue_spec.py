@@ -30,10 +30,17 @@ with describe(PromptQueue):
     with it("queues each text in order, leaving out texts that are only spaces"):
         expect([prompt["text"] for prompt in self.queue.prompts]).to(equal(["Write the scenarios", "Run the unit tier"]))
 
-    with it("keeps a prompt on the queue until the agent marks it done"):
+    with it("keeps a prompt the agent marks done in its place, marked done, so the person sees it finish"):
         first = self.queue.prompts[0]
         self.queue.done(first["id"])
-        expect([prompt["text"] for prompt in self.queue.prompts]).to(equal(["Run the unit tier"]))
+        expect([(prompt["text"], prompt.get("is_done", False)) for prompt in self.queue.prompts]).to(equal([("Write the scenarios", True), ("Run the unit tier", False)]))
+
+    with it("clears the finished prompts first, leaving the work still to do"):
+        self.queue.done(self.queue.prompts[0]["id"])
+        expect([prompt["text"] for prompt in self.queue.clear().prompts]).to(equal(["Run the unit tier"]))
+
+    with it("clears every prompt when none is finished"):
+        expect(self.queue.clear().prompts).to(equal([]))
 
     with it("refuses to mark done a prompt the queue does not hold"):
         expect(lambda: self.queue.done("gone")).to(raise_error(PromptNotQueued))

@@ -46,6 +46,11 @@ export type ChatBarJson = { board: object | null; problem: string | null }
 // or dismisses it, so a refresh never hides it.
 export type FailureJson = object | null
 
+// The prompt queue's latest failure, as the prompt-queue plugin keeps it: the queue is a plugin of its own and only its
+// owner writes a value, so the board reads it and shows it on this one failure line. id grows with each failure, so a
+// newer failure shows again after an older one was fixed or dismissed.
+export type QueueFailureJson = { id: number; failure: string; context: string } | null
+
 // Which of the chat bar's boxes is open above the line. closing holds the branch the active session's work is on,
 // checked out, whose work the close dialog offers to commit and push, or null. leaveChoices is what the Python Ticket
 // offers the close dialog, in its order; leaving is what the dialog has chosen of them, as ticket.close takes them.
@@ -98,12 +103,17 @@ declare module 'claude-code' {
       appOpening: AppOpeningJson
       chatBar: ChatBarJson
       failure: FailureJson
+      // The id of the prompt queue's failure that Fix or ✕ last handled, which the line no longer shows.
+      handledQueueFailure: number
       chatBarView: ChatBarViewJson
       actionPicker: ActionPickerJson
       fidelityHelp: FidelityHelpJson
       guidance: object | null
       overlayChoices: OverlayChoicesJson
       busy: BusyJson
+    }
+    'prompt-queue': {
+      failure: QueueFailureJson
     }
   }
 }

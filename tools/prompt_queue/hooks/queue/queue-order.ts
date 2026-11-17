@@ -8,8 +8,9 @@ export class PromptQueue {
     return this.prompts.length === 0
   }
 
+  /** The prompts still to do, which the stack's count shows: a done prompt stays on the queue, drawn dim, but is not counted. */
   get size(): number {
-    return this.prompts.length
+    return this.prompts.filter(prompt => !prompt.is_done).length
   }
 
   get texts(): string[] {

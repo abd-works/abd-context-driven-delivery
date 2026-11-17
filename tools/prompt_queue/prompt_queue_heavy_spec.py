@@ -42,8 +42,8 @@ with description("a chat's prompt queue through the cdd server") as self:
                 first = self.queued["prompts"][0]["id"]
                 self.left = self.chat.answer("prompt-queue.done", chat="", prompt=first)
 
-            with it("should keep only the work still to do"):
-                expect(texts(self.left)).to(equal(["Run the unit tier"]))
+            with it("should keep the prompt in its place, marked done"):
+                expect([(prompt["text"], prompt.get("is_done", False)) for prompt in self.left["prompts"]]).to(equal([("Write the scenarios", True), ("Run the unit tier", False)]))
 
         with context("that another chat reads its own queue"):
             with it("should hold none of this chat's work"):
