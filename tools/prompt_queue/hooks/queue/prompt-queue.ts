@@ -390,6 +390,8 @@ export async function queueSentPrompt($: EngineInterface, text: string): Promise
   if (text.trim() === '' || text.trim() === ASK_FOR_NEXT || SYSTEM_NOTICE.test(text)) {
     return undefined
   }
+  // The queue as the server holds it now: the chat's start may have read it before the cdd server connected.
+  await refreshQueue($)
   const interrupted = await interruptedPrompt($)
   if (interrupted) {
     return addInterruption($, interrupted, text.trim())

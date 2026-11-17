@@ -19,6 +19,11 @@ import {
 import { QueueView } from './queue/queue-view'
 import { PLAN_TOOL, SET_STEPS_TOOL, WRAP_UP_TOOL } from './queue/plan-steps'
 
+/** Whether a tool call's answer says the call failed, such as the server refusing a prompt it does not hold. */
+function isRefused(ran: unknown): boolean {
+  return Boolean((ran as { result?: { isError?: boolean } } | undefined)?.result?.isError)
+}
+
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({
@@ -66,7 +71,7 @@ export const register: Register = on => {
     const ran = await next(e)
     if (e.agentId === undefined && PLAN_TOOL.test(e.tool)) {
       await followPlan($, e as unknown as Record<string, unknown>)
-    } else if (e.agentId === undefined && SET_STEPS_TOOL.test(e.tool)) {
+    } else if (e.agentId === undefined && SET_STEPS_TOOL.test(e.tool) && !isRefused(ran)) {
       await followTakenPrompt($, e as unknown as Record<string, unknown>)
     } else if (e.agentId === undefined && WRAP_UP_TOOL.test(e.tool)) {
       await finishPlan($)

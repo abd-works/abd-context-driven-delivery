@@ -950,3 +950,26 @@ test("the note on a filed message tells the agent to decide first where it belon
   expect(carried.join()).toContain('[b] Run the unit tier')
   expect(carried.join()).toContain('prompt-queue.add_interruption')
 })
+
+
+test("the first message of a chat is placed from the queue as the server holds it, even when the chat's start could not read it", async ($, on) => {
+  const seeded = seedQueue(on, false, '', [
+    { id: 'a', text: 'Write the scenarios', is_done: true },
+    { id: 'b', text: 'Run the unit tier' },
+  ] as Prompt[], true)
+  seeded.stored.queue = { value: { chat: CHAT, prompts: [] }, version: 1 }
+  on('prompt.submit', (_, e) => ({ text: e.text }))
+
+  await $.prompt.submit({ text: 'Fix the Files app', wait: false, origin: { kind: 'composer' } })
+
+  expect(seeded.prompts.map(prompt => prompt.text)).toEqual(['Write the scenarios', '[interruption] Fix the Files app', 'Run the unit tier'])
+})
+
+test('a set_steps call the server refused leaves the prompt being worked as it was', async ($, on) => {
+  const seeded = seedQueue(on, true, '', QUEUED, true, '', 'a')
+  on('tool.call', () => ({ result: { content: [{ type: 'text', text: "PromptNotQueued: no prompt 'b' is on the queue" }], isError: true } }))
+
+  await $.tool.call({ tool: 'mcp__cdd__prompt-queue_set_steps', prompt: 'b', steps: [{ text: 'Read the epic', state: 'in_progress' }] })
+
+  expect(seeded.stored.askedAbout?.value).toBe('a')
+})
