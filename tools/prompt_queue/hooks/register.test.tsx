@@ -482,6 +482,19 @@ test("a card with steps shows how many are done, and opens them under it", async
   await ui.unmount()
 })
 
+test("a card's progress comes before its text, so a long prompt cannot push it past the card's right edge", async ($, on) => {
+  seedQueue(on, true, '', [
+    { id: 'a', text: 'Write the scenarios '.repeat(20), steps: [{ text: 'Read the epic', state: 'done' }, { text: 'Write the stories', state: 'pending' }] },
+  ] as Prompt[])
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  const row = JSON.stringify((await ui.find({ type: 'Box', key: 'card-row-a' }))?.children)
+
+  expect(row.indexOf('"steps-a"')).toBeGreaterThan(-1)
+  expect(row.indexOf('"steps-a"')).toBeLessThan(row.indexOf('"card-text-a"'))
+  await ui.unmount()
+})
+
 const ATTACHED = [
   { id: 'a', text: 'Write the scenarios', attachments: ['C:/chats/chat-1/attachments/a-1.png'] },
   { id: 'b', text: 'Run the unit tier' },

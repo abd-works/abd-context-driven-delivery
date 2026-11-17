@@ -146,7 +146,9 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
 
   return (
     <Box key={`card-row-${prompt.id}`} flexDirection="row" justifyContent="space-between" alignItems="center" gap={1} width="100%">
-      <Box flexGrow={1} flexShrink={1}>
+      {progress !== '' && <Box flexShrink={0}><Button key={`steps-${prompt.id}`} label={progress} onPress={() => toggleSteps($, prompt.id)} /></Box>}
+      {(prompt.attachments ?? []).length > 0 && <Box flexShrink={0}><Text key={`attached-${prompt.id}`} color={LOOK.muted}>{`📎${prompt.attachments!.length}`}</Text></Box>}
+      <Box flexGrow={1} flexShrink={1} minWidth={0} overflow="hidden">
         <Button key={`card-text-${prompt.id}`} dimColor={isEditing || isFinished} onPress={() => editPrompt($, prompt)}>
           <Text wrap="truncate-end" color={isEditing ? LOOK.placeholder : isWorking ? LOOK.accent : undefined}
             italic={isEditing} bold={isWorking} dimColor={isFinished}>
@@ -154,9 +156,7 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
           </Text>
         </Button>
       </Box>
-      {(prompt.attachments ?? []).length > 0 && <Text key={`attached-${prompt.id}`} color={LOOK.muted}>{`📎${prompt.attachments!.length}`}</Text>}
-      {progress !== '' && <Button key={`steps-${prompt.id}`} label={progress} onPress={() => toggleSteps($, prompt.id)} />}
-      <Box width={CARD_BUTTON_COLUMNS} justifyContent="flex-end">
+      <Box width={CARD_BUTTON_COLUMNS} flexShrink={0} justifyContent="flex-end">
         <Box flexDirection="row" gap={1} display="none" hover={{ display: 'flex' }} backgroundColor={LOOK.keyCap} paddingX="xs">
           <Button key={`send-now-${prompt.id}`} label="↵" onPress={() => sendNow($, prompt)} />
           <Button key={`edit-${prompt.id}`} label="✎" onPress={() => editPrompt($, prompt)} />
