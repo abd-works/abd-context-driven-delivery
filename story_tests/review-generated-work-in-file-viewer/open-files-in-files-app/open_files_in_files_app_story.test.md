@@ -14,6 +14,8 @@ Map: [story-map.md](../../../.context/story-map.md#e-open-files-in-files-app). A
 - whiteboard file: a `.whiteboard` file a practice renders its diagram to, such as `.context/story-map.whiteboard` (`harness/whiteboard/whiteboard.py` *Whiteboard*).
 - board: the Claude Whiteboard artifact the whiteboard file was published to. Its address is kept beside the file, in the folder's `whiteboards.json`, by the file's name, as a design canvas keeps its links in `versions.json` (`harness/whiteboard/whiteboard.py` *BoardLinks*).
 
+> The example ++another project++ is the Files app opened on a project other than the CDD checkout, its server started for the CDD checkout, as [review_files_in_files_app_story.test.md](../review-files-in-files-app/review_files_in_files_app_story.test.md#example-another-project) names it.
+
 ## Story: Open Whiteboard In Files App
 
 Requested 2026-11-16, the person: "Same with whiteboard — if the diagram filter is on, we need a link to Claude whiteboard where we see a whiteboard file; whiteboard file entries don't open those files, they open the actual whiteboard."
@@ -25,6 +27,14 @@ Requested 2026-11-16, the person: "Same with whiteboard — if the diagram filte
 *When* the file bar lists the Stories story map's files
 *Then* the whiteboard is listed as story-map, marked as a whiteboard, at its board's address
 *And* pressing it opens the board in Claude in a tab of its own, not the text of the file
+
+##### Example: another project
+
+*Given* the Files app is opened on ++another project++, whose design-review session holds `design/.context/story-map.whiteboard`, and `design/.context/whiteboards.json` keeps its board's address
+*And* the diagram chip ◇ is selected
+*When* the file bar lists the Stories story map's files
+*Then* the whiteboard is listed as story-map, marked as a whiteboard
+*And* pressing it opens the board at the address that project keeps, not one the CDD checkout keeps
 
 #### Scenario: A whiteboard not on a board yet
 

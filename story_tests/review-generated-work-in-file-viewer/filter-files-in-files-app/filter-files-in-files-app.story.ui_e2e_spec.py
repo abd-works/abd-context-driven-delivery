@@ -36,3 +36,26 @@ with description("Story: Filter Files By Format In Files App") as self:
 
         with it("And pressing it opens the design canvas at its link, not the text of canvas.json"):
             expect(self.entry.get_attribute("href")).to(equal(CANVAS_LINK))
+
+
+with description("Story: Filter Files By Format In Files App, opened on another project") as self:
+    with before.all:
+        self.stack = FilesStack.on_another_project()
+
+    with after.all:
+        self.stack.close()
+
+    with context("Scenario: Show a design canvas in its design-canvas folder, Example: another project"):
+        with before.all:
+            self.page = self.stack.open(DESIGN_REVIEW, FIDELITIES)
+            self.entry = self.page.locator(f'a.file-entry.is-published[title^="{CANVAS}"]')
+            self.entry.wait_for(timeout=SHOWN_MILLISECONDS)
+
+        with after.all:
+            self.page.close()
+
+        with it("Then the design canvas version-1 is listed, marked as a design canvas"):
+            expect(self.entry.inner_text().replace(NBSP, " ").strip()).to(equal("version-1 ↗ design canvas"))
+
+        with it("And pressing it opens the design canvas at the link that project keeps, not the text of canvas.json"):
+            expect(self.entry.get_attribute("href")).to(equal(CANVAS_LINK))

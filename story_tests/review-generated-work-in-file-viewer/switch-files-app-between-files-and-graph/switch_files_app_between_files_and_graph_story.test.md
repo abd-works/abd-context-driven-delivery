@@ -17,6 +17,8 @@ section: body
 
 > In steps: ++example++ names a row of a table below; ${field} is a column of the scenario's Examples.
 
+> The example ++another project++ is the Files app opened on a project other than the CDD checkout, its server started for the CDD checkout, as [review_files_in_files_app_story.test.md](../review-files-in-files-app/review_files_in_files_app_story.test.md#example-another-project) names it.
+
 > Evidence: every scenario here was requested on 2026-11-15 and is Built on the file-manager branch (the Stories root, folder and scroll scenarios on 2026-11-15, from "why is story graph empty", "module would show multiple files" and "we should scroll to line of member if it's below the fold"), held by `harness/files_app/app/files/files-graph.spec.ts` (the page), `story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch-files-app-between-files-and-graph.story.shared.py` replayed by its `.story.domain.spec.py` and `.story.server.spec.py` (the session's answers), and `space/session/session_graph_spec.py` (the edges of the session's graph operations); none is walked in the browser yet.
 
 ## Examples
@@ -56,6 +58,13 @@ section: body
 *When* the Person switches the file bar to the graph view  
 *Then* the file bar shows the Stories and Clean Engineering practice trees, each collapsed  
   *And* the open file stays open in the source view
+
+##### Example: another project
+
+*Given* the Files app is opened on ++another project++ and lists checkout-flow's Stories and Clean Engineering files  
+*When* the Person switches the file bar to the graph view  
+*Then* the file bar shows the Stories and Clean Engineering practice trees  
+  *And* they are that project's graph, whose class Ticket holds close and delete alone, not the CDD checkout's Ticket
 
 #### Scenario: Switching back shows the files again
 
@@ -154,6 +163,12 @@ Requested 2026-11-16: "scenarios not rendering in graph". The Files app listed f
   *But* no file is open  
 *When* the Person selects Ticket.activate  
 *Then* ticket.py opens in the source view at lines 460 to 465
+
+##### Example: another project
+
+*Given* the Files app is opened on ++another project++ and shows checkout-flow's graph, whose class Ticket defines delete  
+*When* the Person selects Ticket.delete  
+*Then* that project's ticket.py opens in the source view, not the CDD checkout's
 
 #### Scenario: Selecting nodes in two files opens both files
 

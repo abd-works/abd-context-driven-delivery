@@ -334,6 +334,10 @@ describe('Open Diagram In Files App', () => {
       expect(drawioEditorUrl('src/.context/a.drawio', 'C:\\dev\\shop\\')).toBe(`http://127.0.0.1:8791/edit?f=${encodeURIComponent('C:\\dev\\shop/src/.context/a.drawio')}`)
     })
 
+    it('should open the viewer on the port it answers on, when that is not its usual one', () => {
+      expect(drawioEditorUrl('src/a.drawio', 'C:/dev/shop', 9123)).toBe(`http://127.0.0.1:9123/edit?f=${encodeURIComponent('C:/dev/shop/src/a.drawio')}`)
+    })
+
     it('should leave a whole path, or a path with no project, as it is', () => {
       expect(drawioEditorUrl('C:/dev/work/a.drawio', 'C:/dev/shop')).toBe(`http://127.0.0.1:8791/edit?f=${encodeURIComponent('C:/dev/work/a.drawio')}`)
       expect(drawioEditorUrl('src/a.drawio', '')).toBe(`http://127.0.0.1:8791/edit?f=${encodeURIComponent('src/a.drawio')}`)

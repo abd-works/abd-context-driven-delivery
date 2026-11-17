@@ -7,7 +7,7 @@ section: body
 
 # Epic: Review Files In Files App
 
-Map: [story-map.md](../../../.context/story-map.md#e-review-generated-work-in-file-viewer). Acceptance tests: `story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review-files-in-files-app.story.shared.py`, replayed by `.story.domain.spec.py` and `.story.server.spec.py` beside it, for what the session answers; `harness/files_app/app/files/*.spec.ts` for what only the page shows.
+Map: [story-map.md](../../../.context/story-map.md#e-review-generated-work-in-file-viewer). Acceptance tests: `story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review-files-in-files-app.story.shared.py`, replayed by `.story.domain.spec.py` and `.story.server.spec.py` beside it, for what the session answers; `harness/files_app/app/files/*.spec.ts` for what only the page shows; `review-files-in-files-app.story.ui_e2e_spec.py` beside it runs the examples named ++another project++ in a real browser.
 
 Consolidated on 2026-11-14 from the board's Review Files In Viewer scenarios (this file, moved from `story_tests/move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/`), the chat bar's View Fidelity Files scenarios (`story_tests/move-work-forward-from-chat-bar/guide-work-through-practices/guide_work_through_practices_story.test.md`), the Story UI's acceptance-test link (`.../integrate_practice_content_editor_apps_in_chat_bar_story.test.md`), and the graph's source view stories (`harness/graph/.context/story-map.md`, Open Node Source, Unfold Calls And Classes In Source, Open Violation In Source). Scenario names kept from those sources are unchanged, so the shared steps still find them.
 
@@ -33,6 +33,7 @@ Consolidated on 2026-11-14 from the board's Review Files In Viewer scenarios (th
 | The person, 2026-11-14 | "clicking on drawio --> open in new tab works but orig tab also getting moved to drawio; leave it on file explorer" |
 | Walk of the Files app in the browser pane, 2026-11-14 | Observed: a file opens in the source view; Add comment, its marker, edit, delete and Send all work; a sent comment lands in the chat's prompt box; a `.drawio` file opens in the draw.io viewer. |
 | `harness/chat/chat.py` `send`, `check_in` | `send(kind, text)` queues a command; a chat that has not checked in raises `ChatNotConnectedError`; a shown message moves to done when the chat's turn that worked on it ends. |
+| The person, 2026-11-17, fixed in 331cdab19 | The Files app opened on *pml-web* showed *src/.context/domain-model.drawio* as a blank *Page-1*: the one draw.io viewer on 8791 had been started from `~/.cdd/runtime`, and was sent the file's path from *pml-web*'s root, which it looked for under its own. |
 
 In every scenario, the [session](../../../space/kanban/.context/kanban-model.md#session) of [ticket](../../../space/kanban/.context/kanban-model.md#ticket--card) checkout-flow works in *src/checkout*, in its Discovery stage, with Stories on and DDD off. Its *order.py* reads, at lines 12 to 14:
 
@@ -41,6 +42,14 @@ In every scenario, the [session](../../../space/kanban/.context/kanban-model.md#
 13 |         if not cart.items:
 14 |             raise EmptyCartError(cart.id)
 ```
+
+### Example: another project
+
+A chat working in a repository other than the CDD checkout opens the Files app on that repository, while the Files app's server was started for the CDD checkout, and the one draw.io viewer every project shares runs from whichever project started it. A scenario's example named ++another project++ runs it that way, and everything the page shows must come from the project its link names.
+
+| example | the Files app's server started for | the draw.io viewer started from | the page opened on |
+| --- | --- | --- | --- |
+| ++another project++ | the CDD checkout | a folder of its own, holding no diagram | a project other than the CDD checkout, whose checkout-flow session holds *space/kanban/ticket.py* (the class Ticket, its close and delete) and whose design-review session, working in *design*, holds *design/.context/story-map.drawio*, one page named *Checkout Story Map* with one cell, *Place Order* |
 
 ---
 
@@ -106,6 +115,14 @@ Requested (the person, 2026-11-15): the app's browser pane opens no tab of its o
 *And* the file list still shows beside it
 *And* a ↗ link beside it opens *story-map.drawio* in the draw.io editor in a tab of its own, where the browser opens one
 *And* nothing is sent to the chat
+
+##### Example: another project
+
+*Given* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) is opened on ++another project++ and lists design-review's *story-map.drawio*
+*And* the draw.io viewer is already running from a folder of its own, which holds no *story-map.drawio*
+*When* the Person opens *story-map.drawio*
+*Then* the draw.io editor shows the cell *Place Order*, from the project the Files app is opened on
+*And* its page is named *Checkout Story Map*, not a blank *Page-1*
 
 #### Scenario: Say so when the draw.io viewer does not start
 
@@ -210,6 +227,12 @@ Requested (the person, 2026-11-15): two buttons. All session files lists every f
 *When* the Person lists This session
 *Then* the file bar lists *order.py* alone
 
+##### Example: another project
+
+*Given* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) is opened on ++another project++, its link naming design-review's stories-story-map
+*When* the Person lists All session files
+*Then* the file bar lists that project's *story-map.drawio* as the one story map file on disk, not a file of the CDD checkout
+
 #### Scenario: List all session files in the formats selected
 
 *Given* the Files app has Discovery and the markdown format selected
@@ -285,6 +308,12 @@ Requested (the person, 2026-11-15): two buttons. All session files lists every f
 *Then* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows *order.py* in the source view as Python, with line 12 reading *def place(self, cart: Cart) -> Order:*
 *And* the source view is read-only
 *And* the Person can Add Comment To File Selection from there
+
+##### Example: another project
+
+*Given* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) is opened on ++another project++, whose checkout-flow session holds *space/kanban/ticket.py*, as the CDD checkout also does
+*When* the Person views *ticket.py*
+*Then* the source view shows that project's *ticket.py*, its first line reading *class Ticket:*, not the CDD checkout's
 
 #### Scenario: Render a markdown file as the page it describes
 
