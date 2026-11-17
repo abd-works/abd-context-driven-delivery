@@ -5,8 +5,11 @@
   "branch": "simple-queue-enhancements",
   "worktree": "C:\\dev\\abd-cdd-simple-queue-enhancement",
   "guidance": {
-    "stages": [],
-    "version": 16
+    "stages": [
+      "specification",
+      "implementation"
+    ],
+    "version": 18
   },
   "practices": {
     "ddd": {
