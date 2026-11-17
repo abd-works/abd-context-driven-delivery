@@ -1071,3 +1071,33 @@ test("a card queued for a robot by name shows in that robot's queue", async ($, 
   expect(JSON.stringify(await ui.find({ type: 'Box', key: 'agent-column-2' }))).toContain('"card-row-c"')
   await ui.unmount()
 })
+
+
+test("pressing a robot collapses its queue to the robot alone, and the other queues take the room", async ($, on) => {
+  groupedQueue(on)
+
+  const before = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await before.press({ key: 'collapse-agent-1' })
+  await before.unmount()
+  const after = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  const first = await after.find({ type: 'Box', key: 'agent-column-1' })
+  const second = await after.find({ type: 'Box', key: 'agent-column-2' })
+
+  expect(JSON.stringify(first)).not.toContain('"card-row-a"')
+  expect(first?.props.flexGrow).toBe(0)
+  expect(second?.props.flexGrow).toBe(1)
+  await after.unmount()
+})
+
+test("pressing a collapsed robot expands its queue again", async ($, on) => {
+  const seeded = groupedQueue(on)
+  seeded.stored.collapsedAgents = { value: [0], version: 1 }
+
+  const before = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await before.press({ key: 'collapse-agent-1' })
+  await before.unmount()
+  const after = await $.ui.mount({ ...BAND, surface: 'desktop' })
+
+  expect(JSON.stringify(await after.find({ type: 'Box', key: 'agent-column-1' }))).toContain('"card-row-a"')
+  await after.unmount()
+})

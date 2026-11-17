@@ -12,6 +12,7 @@ import {
   toggleSubAgentMode,
   toggleSteps,
   toggleOpenedCard,
+  toggleCollapsedAgent,
   robotPromptsOf,
   agentNameOf,
   renameAgent,
@@ -207,24 +208,34 @@ function AgentColumnsView($: EngineInterface, e: AbovePromptEvent, state: QueueS
   )
 }
 
-/** One sub-agent's queue: its robot on top with its name and ✎ to rename it, then its prompts as the queue's cards. */
+/** One robot's queue: its robot on top, which collapses the queue to the robot alone and expands it again, its name and
+ * ✎ to rename it, then its prompts as the queue's cards. A collapsed queue takes no room the others could use. */
 function AgentColumnView($: EngineInterface, e: AbovePromptEvent, state: QueueState, task: SubAgentTask, place: number) {
   const elements = $.ui.resolve(e)
   const { Box, Button, Text } = elements
   const number = place + 1
   const name = agentNameOf(task, place)
-  const robot = 'Svg' in elements
+  const isCollapsed = state.collapsedAgents.includes(place)
+  const picture = 'Svg' in elements
     ? <elements.Svg key={`robot-${number}`} source={robotSvgOf(place)} alt={`${name}, a robot`} width={ROBOT_PIXELS} height={ROBOT_PIXELS} />
     : <Text key={`robot-${number}`} color={LOOK.accent}>🤖</Text>
+  const robot = (
+    <Box key={`robot-box-${number}`}>
+      {picture}
+      <Box position="absolute" top={0} left={0}>
+        <Button key={`collapse-agent-${number}`} plain label=" " onPress={() => toggleCollapsedAgent($, place)} />
+      </Box>
+    </Box>
+  )
 
   return (
-    <Box key={`agent-column-${number}`} flexDirection="column" flexGrow={1} minWidth={0} rowGap="sm">
+    <Box key={`agent-column-${number}`} flexDirection="column" flexGrow={isCollapsed ? 0 : 1} flexShrink={isCollapsed ? 0 : 1} minWidth={0} rowGap="sm">
       <Box flexDirection="row" alignItems="center" gap={1}>
         {robot}
-        <Text bold color={LOOK.accent}>{name}</Text>
-        <Button key={`rename-agent-${number}`} label="✎" onPress={() => renameAgent($, place)} />
+        {!isCollapsed && <Text bold color={LOOK.accent}>{name}</Text>}
+        {!isCollapsed && <Button key={`rename-agent-${number}`} label="✎" onPress={() => renameAgent($, place)} />}
       </Box>
-      {CardsView($, e, state, robotPromptsOf(state.queue.prompts, task, place), true)}
+      {!isCollapsed && CardsView($, e, state, robotPromptsOf(state.queue.prompts, task, place), true)}
     </Box>
   )
 }
