@@ -4,7 +4,7 @@
     "stages": [
       "specification"
     ],
-    "version": 37
+    "version": 38
   },
   "practices": {
     "stories": {
@@ -17,7 +17,10 @@
       }
     },
     "ddd": {
-      "enabled": true
+      "enabled": true,
+      "formats": {
+        "model": []
+      }
     },
     "ux": {
       "enabled": false
