@@ -28,14 +28,8 @@ import {
   PAUSE_SVG,
   PLAY_SVG,
   stackSvgOf,
-  ALT_KEY,
-  ENTER_KEY,
-  KEY_CAP_PIXELS,
-  keyCapSvgOf,
-  keyCapWidthOf,
   SUB_AGENTS_SVG,
   type Icon,
-  type KeyCap,
   robotSvgOf,
 } from './icon-button-view'
 
@@ -120,16 +114,7 @@ function QueueListView($: EngineInterface, e: AbovePromptEvent, state: QueueStat
   const { Box, Text } = $.ui.resolve(e)
   const { queue } = state
   if (queue.isEmpty) {
-    return (
-      <Box flexDirection="row" justifyContent="flex-end" alignItems="center" gap={2} borderStyle="round"
-        borderColor={LOOK.card} backgroundColor={LOOK.card} paddingX="xs">
-        <Box flexDirection="row" alignItems="center" gap="xs">
-          <Text color={LOOK.placeholder}>Add</Text>
-          {KeyCapView($, e, ALT_KEY)}
-          {KeyCapView($, e, ENTER_KEY)}
-        </Box>
-      </Box>
-    )
+    return null
   }
 
   return (
@@ -250,21 +235,6 @@ function StepView($: EngineInterface, e: AbovePromptEvent, prompt: QueuedPrompt,
         <Button key={`down-step-${prompt.id}-${number}`} label="↓" onPress={() => moveStep($, prompt, index, index + 1)} />
         <Button key={`remove-step-${prompt.id}-${number}`} label="✕" onPress={() => removeStep($, prompt, index)} />
       </Box>
-    </Box>
-  )
-}
-
-/** A key the person presses, drawn as the chat's image buttons are; a surface with no Svg shows its glyph on grey. */
-function KeyCapView($: EngineInterface, e: AbovePromptEvent, key: KeyCap) {
-  const elements = $.ui.resolve(e)
-  if ('Svg' in elements) {
-    return <elements.Svg source={keyCapSvgOf(key)} alt={key.glyph} width={keyCapWidthOf(key)} height={KEY_CAP_PIXELS} />
-  }
-  const { Box, Text } = elements
-
-  return (
-    <Box backgroundColor={LOOK.keyCap} paddingX={1}>
-      <Text color={LOOK.keyText}>{key.glyph}</Text>
     </Box>
   )
 }
