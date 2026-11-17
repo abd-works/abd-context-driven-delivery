@@ -47,9 +47,15 @@ class FileGraphs:
                 self._alone = (working, Graph(practices), None)
             _working, graph, read = self._alone
             if read != (path, modified):
-                graph.load_files(str(self._session.work_root), working, [str(path)])
+                graph.load_files(str(self.alone_folder), working, [str(path)])
                 self._alone = (working, graph, (path, modified))
             return SavedGraph.from_graph(graph)
+
+    @property
+    def alone_folder(self) -> Path:
+        """The folder a file read on its own is read from, and its nodes' files are named from: the project's root, so a
+        file outside the session's own folder, such as a story test in the project's story_tests, is read too."""
+        return Path(self._session.repo_path).resolve()
 
     def file_in_whole(self, path: Path, is_held: bool) -> SavedGraph:
         """The file at path in the session's knowledge graph holding the whole working copy, so the rules that link files

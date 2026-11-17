@@ -320,6 +320,14 @@ Requested 2026-11-16 by the person: steps in markdown scenario files "would only
 *Then* that When carries the code-steps-invoke-code finding  
   *But* the When that calls Ticket.delete carries none
 
+#### Scenario: A story test outside the session's folder shows the rules it breaks
+
+Requested 2026-11-16 by the person: "fix the session to include relevant test epics and stories". file-manager works in harness, its story tests sit in the project's story_tests, and a story test read on its own for its rules read nothing: no folds, no steps, no findings.
+
+*Given* checkout-flow works in the folder space, and Delete Ticket's Python shared story test, under story_tests outside it, has a When that calls only the file's own helper ticket_left  
+*When* the Person views the shared story test with its own rules  
+*Then* the story test's steps are read, and that When carries the code-steps-invoke-code finding
+
 #### Scenario: Selecting a markdown step spans its own line, whatever its prose holds
 
 Reported by the person on 2026-11-16: a scenario selected in markdown ran past its last step, because a step's apostrophe (*checkout-flow's*) was read as code's quote.

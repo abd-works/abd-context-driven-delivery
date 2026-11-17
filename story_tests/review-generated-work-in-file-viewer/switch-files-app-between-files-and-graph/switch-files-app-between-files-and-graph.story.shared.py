@@ -21,6 +21,7 @@ from expects import contain, equal, expect
 from space.kanban.story_test import SharedStories
 from space.session.graph_view_examples import (
     BOARD_CODE,
+    CHECKOUT_FLOW_IN_SPACE,
     CHECKOUT_FLOW_READING_NO_CODE,
     LISTED,
     STORY_MAP,
@@ -598,6 +599,22 @@ def _(s):
     def _(world):
         flagged = [found["violation"]["message"] for found in world.violations if found["violation"]["rule"] == "code-steps-invoke-code"]
         expect((len(flagged), any(STEP_STORY_HELPER_WHEN in message for message in flagged))).to(equal((1, True)))
+
+
+@shared_stories.scenario("Follow Story Steps To Code", "A story test outside the session's folder shows the rules it breaks")
+def _(s):
+    @s.given("checkout-flow works in the folder space, and Delete Ticket's Python shared story test, under story_tests outside it, has a When that calls only the file's own helper ticket_left")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world, CHECKOUT_FLOW_IN_SPACE)
+
+    @s.when("the Person views the shared story test with its own rules")
+    def _(world):
+        world.opened = world.data_of(session_of(world).file(path=STEP_STORY, rules=True))
+
+    @s.then("the story test's steps are read, and that When carries the code-steps-invoke-code finding")
+    def _(world):
+        flagged = [found["violation"]["message"] for found in world.opened["violations"] if found["violation"]["rule"] == "code-steps-invoke-code"]
+        expect((bool(world.opened["folds"]), any(STEP_STORY_HELPER_WHEN in message for message in flagged))).to(equal((True, True)))
 
 
 @shared_stories.scenario("Open Story Scenarios Across Files", "Selecting a markdown step spans its own line, whatever its prose holds")

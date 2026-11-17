@@ -16,6 +16,17 @@ CHECKOUT_FLOW = SessionSeed(
         "outputs": {"stories": {"root": ".context"}},
     },
 )
+# Seed: checkout-flow as above, working in the folder space, so its story tests under story_tests sit outside the
+# session's folder, as a ticket working in harness keeps its story tests in the project's story_tests.
+CHECKOUT_FLOW_IN_SPACE = SessionSeed(
+    "checkout-flow",
+    "Checkout flow",
+    workpath="space",
+    fields={
+        "practices": {key: {"enabled": False} for key in ("ux", "ddd", "bdd")},
+        "outputs": {"stories": {"root": "../.context"}},
+    },
+)
 # Seed: checkout-flow as above with Clean Engineering off as well, so its graph reads Stories alone and holds no
 # operation a step can invoke, as the main session reads it.
 CHECKOUT_FLOW_READING_NO_CODE = SessionSeed(
