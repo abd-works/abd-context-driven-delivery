@@ -10,6 +10,9 @@ from harness.markdown.format import Format
 from harness.mcp.mcp_annotations import mcp
 from harness.whiteboard import BoardLinks, Whiteboard
 
+# The format a whiteboard file is written in, which goes on its board in Claude once written.
+WHITEBOARD = "whiteboard"
+
 @agent_toolset
 class Render(GuidanceAction):
     """Render already-generated output for provided context tools."""
@@ -36,7 +39,7 @@ class Render(GuidanceAction):
         converted = self.work.each(on)
         tools(self.act_quickly)
         tools(self.place_rendered)
-        if Format(format).name == "whiteboard":
+        if Format(format).name == WHITEBOARD:
             tools(self.publish_board)
             tools(self.record_board)
         if self._session is not None:

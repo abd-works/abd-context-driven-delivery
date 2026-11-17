@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from harness.guidance.guidance import FidelityGuidance, Guidance, PracticeGuidance
@@ -11,8 +12,12 @@ from harness.agent_tools import agent_instructions, agent_toolset, instructions,
 from harness.installation.files import skill
 from harness.markdown.format import Format
 from harness.mcp.mcp_annotations import mcp
-from cdd_guidance.actions.render.render import Render
+from cdd_guidance.actions.render.render import WHITEBOARD, Render
 from cdd_guidance.actions.validate.validate import Validate
+
+# A path that names no one folder: a template to fill, or a wildcard.
+_NOT_ONE_FOLDER = re.compile(r"[{*?]")
+
 
 @agent_toolset
 class Generate(GuidanceAction):
@@ -37,6 +42,9 @@ class Generate(GuidanceAction):
         self.run(self._generate_item, action="generate")
         places = self._where_outputs_go()
         instructions(places)
+        if self._writes_whiteboard():
+            tools(self._render().publish_board)
+            tools(self._render().record_board)
         patterns = self.graph.applied_patterns.record_content(self._output_folders()) if self._session is not None else ""
         instructions(patterns)
         "After the artifact is written, call validate with this same guidance and paths set to the files you wrote: validate refreshes the session's graph with exactly those files, so the graph rules run on them as they are now."
@@ -112,10 +120,16 @@ class Generate(GuidanceAction):
 
     def _output_folders(self) -> list[Path]:
         """The folder of each file a listed fidelity writes, once each; the pattern overlays record their patterns at
-        the root of each. A templated path's folder is left to the agent."""
+        the root of each. A templated path's folder, or one a wildcard names, such as harness/**/.context, is no one
+        folder, so it is left to the agent."""
         worked = [self.work.fidelity_of(item) for item in self.listed() if isinstance(item, PracticeGuidance)]
         paths = [path for fidelity in worked if fidelity is not None for listed in fidelity.declared.output_paths().values() for path in listed]
-        return list(dict.fromkeys(self.session.paths.path_named(path).parent for path in paths if "{" not in path))
+        return list(dict.fromkeys(self.session.paths.path_named(path).parent for path in paths if not _NOT_ONE_FOLDER.search(path)))
+
+    def _writes_whiteboard(self) -> bool:
+        """Whether a listed fidelity writes a whiteboard, which goes on its board in Claude once written."""
+        worked = [self.work.fidelity_of(item) for item in self.listed() if isinstance(item, PracticeGuidance)]
+        return any(Format(label).name == WHITEBOARD for fidelity in worked if fidelity is not None for label in fidelity.declared.output_paths())
 
     @agent_instructions
     def generate_fixes_from_validate(self) -> str:
