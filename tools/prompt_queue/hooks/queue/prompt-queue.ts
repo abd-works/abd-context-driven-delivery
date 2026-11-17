@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, McpToolResult } from 'claude-code'
 
-import type { QueueJson, QueuedPrompt, SubAgentTask } from '../../types'
+import type { QueueFailure, QueueJson, QueuedPrompt, SubAgentTask } from '../../types'
 import { PromptQueue, listedItems, parseJsonArray, slashCommandOf } from './queue-order'
 
 const GROUPING_MODEL = 'sonnet'
@@ -26,6 +26,9 @@ const isExpanded = atom({ plugin: 'prompt-queue', key: 'isExpanded' } as const, 
 const isSubAgentMode = atom({ plugin: 'prompt-queue', key: 'isSubAgentMode' } as const, false)
 const tasks = atom({ plugin: 'prompt-queue', key: 'tasks' } as const, [] as SubAgentTask[])
 const notice = atom({ plugin: 'prompt-queue', key: 'notice' } as const, '')
+/** A failure the queue met, shown in red with Fix and ✕ until the person fixes or dismisses it, as the chat bar shows
+ * its own: what failed with the reason it gave, and what the queue was doing when it failed. */
+const failure = atom({ plugin: 'prompt-queue', key: 'failure' } as const, null as QueueFailure | null)
 /** Playing, the agent sees the queue and each finished turn asks it to take the next prompt; paused, the queue waits. */
 const isPlaying = atom({ plugin: 'prompt-queue', key: 'isPlaying' } as const, false)
 /** Whether the main chat is in a turn, so play sends at once only when nothing is running. */
@@ -45,6 +48,7 @@ export type QueueState = {
   editingId: string
   tasks: SubAgentTask[]
   notice: string
+  failure: QueueFailure | null
 }
 
 export async function currentQueue($: EngineInterface): Promise<QueueState> {
@@ -56,6 +60,7 @@ export async function currentQueue($: EngineInterface): Promise<QueueState> {
     editingId: await read($, editingId),
     tasks: await read($, tasks),
     notice: await read($, notice),
+    failure: await read($, failure),
   }
 }
 
@@ -104,8 +109,8 @@ async function changeQueue($: EngineInterface, operation: string, args: Record<s
     await update($, queue, () => answered)
     await update($, notice, () => '')
     return true
-  } catch (failure) {
-    await update($, notice, () => `The queue did not change: ${failure instanceof Error ? failure.message : String(failure)}`)
+  } catch (thrown) {
+    await showFailure($, `The queue did not change: ${reasonOf(thrown)}`, `Calling prompt-queue.${operation} on the cdd server, tried as ${SERVERS.join(' then ')}`)
     return false
   }
 }
@@ -237,7 +242,7 @@ export async function sendNextPrompt($: EngineInterface): Promise<void> {
   await update($, askedAbout, () => next.id)
   const command = slashCommandOf(next.text)
   const sent = command ? $.command.run(command).then(() => changeQueue($, 'done', { prompt: next.id })) : $.prompt.submit({ text: ASK_FOR_NEXT, asUser: true })
-  sent.catch(failure => update($, notice, () => `Not sent: ${failure instanceof Error ? failure.message : String(failure)}`))
+  sent.catch(thrown => showFailure($, `Not sent: ${reasonOf(thrown)}`, command ? `Playing the queue, running /${command.command} from it` : 'Playing the queue, asking the agent to take the next prompt'))
 }
 
 /** The prompts the agent is to do, in order: every queued prompt but one the person is editing, which waits in its place. */
@@ -285,7 +290,8 @@ export async function groupIntoTasks($: EngineInterface): Promise<void> {
     prompt: JSON.stringify(queued.texts),
   })
   if (!reply.isAnswered) {
-    await update($, notice, () => `Grouping failed: ${reply.reason}`)
+    await update($, notice, () => '')
+    await showFailure($, `Grouping failed: ${reply.reason}`, `Grouping the queue into sub-agent tasks with ${GROUPING_MODEL}`)
     return
   }
   await update($, tasks, () => parseJsonArray(reply.text) as SubAgentTask[])
@@ -304,7 +310,7 @@ export async function sendTasksToSubAgents($: EngineInterface): Promise<void> {
       subagentType: 'general-purpose',
     })
     if (started.deny) {
-      await update($, notice, () => `Sub-agent refused: ${started.deny}`)
+      await showFailure($, `Sub-agent refused: ${started.deny}`, `Sending the task "${task.description}" to a sub-agent`)
       return
     }
   }
@@ -330,7 +336,7 @@ export async function queueFromCommand($: EngineInterface, args: string): Promis
 async function planFromConversation($: EngineInterface, focus: string): Promise<string> {
   const reply = await $.model.fork({ prompt: planningPrompt(focus) })
   if (!reply.isAnswered) {
-    await update($, notice, () => `/queue could not read the conversation: ${reply.reason}`)
+    await showFailure($, `/queue could not read the conversation: ${reply.reason}`, 'Running /queue, asking the model to plan prompts from this conversation')
     return `Queued 0 prompt(s): the conversation could not be read. ${reply.reason}`
   }
   const planned = parseJsonArray(reply.text).filter((one): one is string => typeof one === 'string')
@@ -362,3 +368,44 @@ const GROUPING_INSTRUCTIONS =
   'independent sub-agents can run at the same time: prompts that depend on each other or touch the same ' +
   'work go in one task, kept in their order. Answer with only a JSON array of ' +
   '{"description": "<3 to 5 words>", "prompts": ["<prompt>", ...]}, using every prompt exactly once.'
+
+/** What the debug skill takes to fix a failure, as the chat bar's Fix sends it: choice=fix with the failure as details. */
+const DEBUG_COMMAND = 'space-session-debug-session'
+
+/** Shows a failure in the queue's box: what failed with the reason it gave, and what the queue was doing. */
+async function showFailure($: EngineInterface, failed: string, context: string): Promise<void> {
+  await update($, failure, () => ({ failure: failed, context }))
+}
+
+/** ✕ beside a failure: it goes from the box. */
+export async function dismissFailure($: EngineInterface): Promise<void> {
+  await update($, failure, () => null)
+}
+
+/** Fix beside a failure sends it and its context to this chat to find the cause and fix it, through the same debug
+ * command the chat bar's Fix runs. Until the command is in the chat the box shows it on its way, so a second press
+ * cannot send it twice; a command the chat did not take is shown as a failure of its own. */
+export async function fixFailure($: EngineInterface): Promise<void> {
+  const shown = await read($, failure)
+  if (!shown || shown.isFixing) {
+    return
+  }
+  await update($, failure, () => ({ ...shown, isFixing: true }))
+  try {
+    await $.command.run({ command: DEBUG_COMMAND, args: fixArgumentsOf(shown) })
+  } catch (thrown) {
+    await showFailure($, `The fix did not reach the chat: ${reasonOf(thrown)}`, `Pressing Fix on: ${shown.failure}`)
+    return
+  }
+  await dismissFailure($)
+}
+
+function fixArgumentsOf(shown: QueueFailure): string {
+  const details = `The prompt queue above the chat bar shows this failure. Failure: ${shown.failure} Context: ${shown.context}`
+  return `choice=fix details=${JSON.stringify(details)}`
+}
+
+/** The words a failure carries: a thrown error's message, or the value itself. */
+function reasonOf(thrown: unknown): string {
+  return thrown instanceof Error ? thrown.message : String(thrown)
+}
