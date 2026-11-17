@@ -91,10 +91,10 @@
     "stories": {
       "root": "../.context",
       "scenarios": {
-        "root": "../story_tests/review-generated-work-in-file-viewer"
+        "root": "../story_tests"
       },
       "acceptance_tests": {
-        "root": "../story_tests/review-generated-work-in-file-viewer"
+        "root": "../story_tests"
       }
     }
   }
