@@ -22,15 +22,13 @@ from harness.installation.context_config import CONTEXT_FOLDER, DEFAULT_FORMAT
 from harness.markdown.format import Format
 from space.session.answer_reads import HeldForAnswer
 from space.session.file_manager import FileEntry
+from space.session.proposed_roots import ProposedRoots, code_extensions
 
 if TYPE_CHECKING:
     from harness.guidance.guidance import FidelityGuidance, GuidanceCollection, PracticeGuidance
     from space.session.session import Session
 
 _OUTPUT_PATTERN_MARKS = {"*", "{"}
-# A code format whose files also carry a second extension, such as React components in TypeScript; any other code format
-# is its own extension alone.
-_CODE_EXTENSIONS = {"typescript": (".ts", ".tsx"), "javascript": (".js", ".jsx")}
 # Report and handoff names end with the time they were made, written so names sort by time.
 ChosenOutputs = dict[str, object]
 """What session.json keeps for one practice under `outputs`: the root a person chose, and each fidelity's own choices."""
@@ -276,6 +274,8 @@ class FidelitySessionOutput:
         self.validation_reports = ValidationReports(self)
         # The files it writes in the session: where each format goes, which are there, and which the branch changed.
         self.written = WrittenFiles(self)
+        # The folders it proposes for the pieces the session's ticket works on, before a person confirms them as roots.
+        self.proposed_roots = ProposedRoots(self)
 
     @classmethod
     @tool_subject
@@ -336,6 +336,13 @@ class FidelitySessionOutput:
         roots = [*self.roots, self._session.repo_path / path]
         self._practice.keep_fidelity_roots(self._fidelity.name, roots)
         return self
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def propose_roots(self, names: list[str]) -> list[str]:
+        """Return the folders this fidelity proposes to write under, each a path from the project as choose_root and add_root take it: the narrowest folder holding each piece the session's branch changed, and each piece names name, such as the aggregate or the story a ticket's text names (an aggregate's folder, a package, a sub-epic's folder in story_tests). Show them to the person and set only those confirmed."""
+        return self.proposed_roots.proposed(names)
 
     @mcp
     @agent_tool
@@ -448,7 +455,7 @@ class WrittenFiles:
         if not any(root in file.resolve().parents for root in roots) or is_test_code(file.as_posix()):
             return False
         folders = [label for label, declared in self._fidelity.outputs.items() if str(declared).endswith("/") and Format(label).is_code]
-        return any(file.suffix in _CODE_EXTENSIONS.get(Format(label).name, (Format(label).extension,)) for label in folders)
+        return any(file.suffix in code_extensions(label) for label in folders)
 
     def every_file(self) -> list[Path]:
         """Every file this fidelity declares that is in the session's checkout, worked on by the session or not: what a
@@ -518,7 +525,7 @@ class WrittenFiles:
         file of that language in the repository. Specs, tests, and what only they use are the acceptance tests' and the
         development specs' files, not production code, so they are left out."""
         roots = [root.resolve() for root in self._output.roots]
-        extensions = _CODE_EXTENSIONS.get(Format(label).name, (Format(label).extension,))
+        extensions = code_extensions(label)
         worked_on = sorted(
             file for file in changed() if file.suffix in extensions and any(file == root or root in file.parents for root in roots) and not is_test_code(file.as_posix())
         )
