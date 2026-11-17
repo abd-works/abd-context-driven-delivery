@@ -2,3 +2,4 @@
 2026-11-17T01:29:02Z tool generate.generate 2be1f298-543e-4731-8049-2bef72112a28 C:\Users\jeffa\.claude\projects\C--dev-abd-context-driven-delivery\2be1f298-543e-4731-8049-2bef72112a28.jsonl 1-77
 2026-11-17T01:29:02Z generate C:\dev\abd-context-driven-delivery clean_engineering, bdd code, development python, python 2be1f298-543e-4731-8049-2bef72112a28 C:\Users\jeffa\.claude\projects\C--dev-abd-context-driven-delivery\2be1f298-543e-4731-8049-2bef72112a28.jsonl 1-77
 2026-11-17T01:29:07Z tool cdd-claude-mod.instructions 2be1f298-543e-4731-8049-2bef72112a28 C:\Users\jeffa\.claude\projects\C--dev-abd-context-driven-delivery\2be1f298-543e-4731-8049-2bef72112a28.jsonl 1-103
+2026-11-17T04:04:09Z error session.guidance_selection C:\dev\abd-context-driven-delivery\.sessions\simple-queue\session.err 1 2be1f298-543e-4731-8049-2bef72112a28 C:\Users\jeffa\.claude\projects\C--dev-abd-context-driven-delivery\2be1f298-543e-4731-8049-2bef72112a28.jsonl 1-1106
