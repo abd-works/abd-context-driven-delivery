@@ -64,7 +64,7 @@ Intended, every scenario: agreed with the person on 2026-11-17 and not built. Th
 *Given* the chat's prompt queue holds ++Write the scenarios++ (a)
 *But* it holds no prompt with id z
 *When* the agent sets the steps of z
-*Then* the agent is told the queue holds no prompt z, only ++Write the scenarios++
+*Then* the agent is told no prompt z is on the queue
 *And* the queue still holds ++Write the scenarios++ with no steps
 
 ## Story: Tick Off Prompt Step

@@ -6,7 +6,7 @@ from __future__ import annotations
 import re
 import uuid
 from pathlib import Path
-from typing import TypedDict
+from typing import Literal, NotRequired, TypedDict
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, tool_subject
@@ -19,6 +19,8 @@ from harness.mcp.mcp_annotations import mcp
 
 # The file in a chat's own folder that holds its queue.
 QUEUE_FILE = "prompt-queue.json"
+# How many hex characters of a random id name a queued prompt: short enough to read in the queue, enough not to repeat.
+_PROMPT_ID_LENGTH = 12
 # The section of a handoff that holds the numbered steps the next agent takes (space/session/HANDOFF-FORMAT.md).
 _APPROACH_HEADING = re.compile(r"^##\s+Approach for Next Agent\s*$", re.IGNORECASE)
 _NEXT_SECTION = re.compile(r"^##\s")
@@ -26,11 +28,34 @@ _NEXT_SECTION = re.compile(r"^##\s")
 _NUMBERED_STEP = re.compile(r"^\s*\d+[.)]\s+(.*)$")
 
 
+# Where a step stands: not started, the one being worked, or finished.
+StepState = Literal["pending", "in_progress", "done"]
+
+
+class PromptStep(TypedDict):
+    """One thing the agent plans to do for a queued prompt: its text and where it stands."""
+
+    text: str
+    state: StepState
+
+
 class QueuedPrompt(TypedDict):
-    """One prompt on the queue: its own id, which stays when the prompt moves or is edited, and its text."""
+    """One prompt on the queue: its own id, which stays when the prompt moves or is edited, its text, and the steps the
+    agent planned for it, none until it plans them."""
 
     id: str
     text: str
+    steps: NotRequired[list[PromptStep]]
+
+
+class StepNotPlanned(LookupError):
+    """A call named a step of a queued prompt that the prompt's steps do not reach."""
+
+    def __init__(self, prompt: str, step: int, planned: int) -> None:
+        super().__init__(f"prompt {prompt!r} has {planned} steps, so it has no step {step}")
+        self.prompt = prompt
+        self.step = step
+        self.planned = planned
 
 
 class PromptNotQueued(LookupError):
@@ -94,7 +119,7 @@ class PromptQueue:
     @agent_tool
     def add_all(self, texts: list[str]) -> PromptQueue:
         """Queue each of texts at the bottom of this chat's prompt queue, in order, one prompt each: a list of work for the chat to do next. Texts that are only spaces queue nothing."""
-        added = [{"id": uuid.uuid4().hex[:12], "text": text.strip()} for text in texts if text.strip()]
+        added = [{"id": uuid.uuid4().hex[:_PROMPT_ID_LENGTH], "text": text.strip()} for text in texts if text.strip()]
         return self._keep([*self.prompts, *added])
 
     @mcp
@@ -130,6 +155,24 @@ class PromptQueue:
     def done(self, prompt: str) -> PromptQueue:
         """Take the prompt whose id is prompt off this chat's queue once its work is done. An agent working through the queue does each prompt in order, first to last, and calls this as it finishes each one, so the queue always shows the work still to do."""
         return self.remove(prompt)
+
+    @mcp
+    @agent_tool
+    def set_steps(self, prompt: str, steps: list[PromptStep]) -> PromptQueue:
+        """Give the queued prompt whose id is prompt the steps planned for it, in order, each its text and its state: pending, in_progress, or done. They replace any steps it had, so the agent's task list for the prompt is copied whole each time it changes."""
+        planned = [{"text": step["text"].strip(), "state": step["state"]} for step in steps]
+        return self._keep([{**held, "steps": planned} if held["id"] == prompt else held for held in self._holding(prompt)])
+
+    @mcp
+    @agent_tool
+    def step_done(self, prompt: str, step: int) -> PromptQueue:
+        """Mark step number step, counted from 1, of the queued prompt whose id is prompt done. The prompt stays on the queue until it is marked done with done, even once every step is done."""
+        held = self._holding(prompt)
+        planned = next(item for item in held if item["id"] == prompt).get("steps", [])
+        if not 1 <= step <= len(planned):
+            raise StepNotPlanned(prompt, step, len(planned))
+        ticked = [{**planned_step, "state": "done"} if number == step else planned_step for number, planned_step in enumerate(planned, start=1)]
+        return self._keep([{**item, "steps": ticked} if item["id"] == prompt else item for item in held])
 
     def queue_handoff(self, handoff: Path) -> int:
         """Queue the numbered steps of handoff's Approach for Next Agent, in order, one prompt each, so a chat opening a
