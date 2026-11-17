@@ -354,13 +354,19 @@ Inherited from the graph's Unfold Calls And Classes In Source: the Files app reu
 
 Requested by the person on 2026-11-16: "Cursor-equivalent keyboard shortcuts (or VS Code, configurable in a context config json), e.g. Ctrl+K Ctrl+0, Ctrl+M etc." The project's keys sit in `.context/files-app-keybindings.json`, written as VS Code's and Cursor's keybindings.json writes them. Only the page binds keys: `harness/files_app/app/files/files-fold-keys.spec.ts`.
 
-#### Scenario: Fold with VS Code's chords
+Changed 2026-11-16 by the person: "Expand/collapse folds keyboard shortcuts use Cursor defaults." Cursor ships VS Code's fold keys with its chord leader moved off Ctrl+K, which Cursor keeps for inline edit, to Ctrl+M on Windows and Linux (Cmd+R on a Mac): Ctrl+Shift+[ and ] fold and unfold the region, Ctrl+M Ctrl+0 folds all, Ctrl+M Ctrl+J unfolds all, Ctrl+M Ctrl+[ and ] fold and unfold recursively, Ctrl+M Ctrl+L toggles a fold, Ctrl+M Ctrl+1 to 7 fold that level. These are the keys a project with no keybindings file gets.
+
+#### Scenario: Fold with Cursor's chords
+
+Requested 2026-11-16 by the person, in place of VS Code's Ctrl+K chords.
 
 *Given* the project has no *.context/files-app-keybindings.json*
-*When* the Person presses Ctrl+K Ctrl+0 in *order.py*
+*When* the Person presses Ctrl+M Ctrl+0 in *order.py*
 *Then* every fold of *order.py* closes
-*When* the Person presses Ctrl+K Ctrl+J
+*When* the Person presses Ctrl+M Ctrl+J
 *Then* every fold opens again
+*When* the Person presses Ctrl+Shift+[ on line 12
+*Then* the fold of *place* closes
 
 #### Scenario: Fold with the keys the project's keybindings file gives
 
@@ -368,14 +374,14 @@ Requested by the person on 2026-11-16: "Cursor-equivalent keyboard shortcuts (or
 *When* the Person presses Ctrl+M Ctrl+M on line 12 of *order.py*
 *Then* the fold of *place* closes
 
-#### Scenario: Keep VS Code's chords when the keybindings file is wrong
+#### Scenario: Keep Cursor's chords when the keybindings file is wrong
 
-Required by the cdd_web_domain_access rule `fail-loud-on-mcp` this session overlays.
+Required by the cdd_web_domain_access rule `fail-loud-on-mcp` this session overlays. Changed 2026-11-16 by the person: the keys kept are Cursor's.
 
 *Given* *.context/files-app-keybindings.json* is not a list of keys and fold commands
 *When* the Files app opens
 *Then* a toast says the file is not used, with why
-*And* Ctrl+K Ctrl+0 still folds every fold
+*And* Ctrl+M Ctrl+0 still folds every fold
 
 ## Story: Open Calls And Classes In Place
 

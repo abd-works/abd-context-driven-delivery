@@ -13,8 +13,11 @@ import { FilesStore } from './files-state'
 
 const CTRL = 2048
 const KEY_K = 41
+const SHIFT = 1024
 const KEY_M = 43
+const KEY_J = 40
 const DIGIT_0 = 21
+const BRACKET_LEFT = 92
 const chord = (first: number, second: number) => first * 65536 + second
 
 // The Monaco a source view loads, keeping the rules it is given; its key codes are plain numbers.
@@ -48,10 +51,33 @@ describe('Files Fold Keys', () => {
     return monaco.rules.filter(rule => rule.command === 'editor.toggleFold' || rule.command === 'editor.foldAll').slice(-2)
   }
 
+  // The key last bound to a command, the one Monaco answers.
+  const boundTo = (command: string) => monaco.rules.filter(rule => rule.command === command).at(-1)?.keybinding
+
   describe('with no keybindings file in the project', () => {
-    it("should bind VS Code's Ctrl+K Ctrl+0 to fold all, telling the Person nothing", async () => {
-      const bound = await keysReading('')
-      expect([bound.find(rule => rule.command === 'editor.foldAll')?.keybinding, store.state.toasts]).toEqual([chord(CTRL | KEY_K, CTRL | DIGIT_0), []])
+    it("should bind Cursor's Ctrl+M Ctrl+0 to fold all, telling the Person nothing", async () => {
+      await keysReading('')
+      expect([boundTo('editor.foldAll'), store.state.toasts]).toEqual([chord(CTRL | KEY_M, CTRL | DIGIT_0), []])
+    })
+
+    it("should bind Cursor's Ctrl+M Ctrl+J to unfold all", async () => {
+      await keysReading('')
+      expect(boundTo('editor.unfoldAll')).toBe(chord(CTRL | KEY_M, CTRL | KEY_J))
+    })
+
+    it("should bind Cursor's Ctrl+M Ctrl+1 to fold level 1", async () => {
+      await keysReading('')
+      expect(boundTo('editor.foldLevel1')).toBe(chord(CTRL | KEY_M, CTRL | 22))
+    })
+
+    it("should bind Cursor's Ctrl+Shift+[ to fold the region", async () => {
+      await keysReading('')
+      expect(boundTo('editor.fold')).toBe(CTRL | SHIFT | BRACKET_LEFT)
+    })
+
+    it("should bind no VS Code Ctrl+K chord, Cursor keeping Ctrl+K for inline edit", async () => {
+      await keysReading('')
+      expect(monaco.rules.filter(rule => Math.floor(rule.keybinding / 65536) === (CTRL | KEY_K))).toEqual([])
     })
   })
 
@@ -63,9 +89,14 @@ describe('Files Fold Keys', () => {
   })
 
   describe('with a keybindings file that is not a list of fold commands', () => {
-    it("should keep VS Code's keys and say on the page that the file is not used, and why", async () => {
+    it("should say on the page that the file is not used, Cursor's keys are, and why", async () => {
       await keysReading('{ "editor.foldAll": "ctrl+m" }')
-      expect(store.state.toasts).toEqual([`${KEYBINDINGS_FILE} is not used, VS Code's fold keys are: it is not a list of { "key", "command" }`])
+      expect(store.state.toasts).toEqual([`${KEYBINDINGS_FILE} is not used, Cursor's fold keys are: it is not a list of { "key", "command" }`])
+    })
+
+    it("should keep Cursor's Ctrl+M Ctrl+0 to fold all", async () => {
+      await keysReading('{ "editor.foldAll": "ctrl+m" }')
+      expect(boundTo('editor.foldAll')).toBe(chord(CTRL | KEY_M, CTRL | DIGIT_0))
     })
   })
 })
