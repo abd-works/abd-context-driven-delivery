@@ -159,21 +159,22 @@ function CardsView($: EngineInterface, e: AbovePromptEvent, state: QueueState, p
   )
 }
 
-/** The pointer's column before a card's or a step's text: its ▲ and ▼ where the pointer is, else the same room empty. */
+/** The pointer's column at the start of a card, inside it, or before a step's text: its ▲ and ▼ where the pointer is,
+ * set against the text, else the same room empty, so no text moves. */
 function PointerColumnView($: EngineInterface, e: AbovePromptEvent, arrows: ReturnType<typeof PointerArrowsView> | null) {
   const { Box } = $.ui.resolve(e)
 
-  return <Box width={POINTER_COLUMNS} flexShrink={0} flexDirection="row" alignItems="center">{arrows}</Box>
+  return <Box width={POINTER_COLUMNS} flexShrink={0} flexDirection="row" justifyContent="flex-end" alignItems="center">{arrows}</Box>
 }
 
-/** The pointer's ▲ and ▼, each a button on its own solid grey, as the card's buttons are at its right end. */
+/** The pointer's ▲ and ▼ on the card's own grey, running into its text, as ↵ ✎ ↑ ↓ ✕ do at the card's right end. */
 function PointerArrowsView($: EngineInterface, e: AbovePromptEvent, upKey: string, downKey: string, onUp: () => void, onDown: () => void = () => {}) {
   const { Box, Button } = $.ui.resolve(e)
 
   return (
-    <Box flexDirection="row" flexShrink={0} gap={1}>
-      {upKey !== '' && <Box backgroundColor={LOOK.keyCap}><Button key={upKey} label="▲" onPress={onUp} /></Box>}
-      {downKey !== '' && <Box backgroundColor={LOOK.keyCap}><Button key={downKey} label="▼" onPress={onDown} /></Box>}
+    <Box flexDirection="row" flexShrink={0} gap={1} backgroundColor={LOOK.keyCap} paddingX="xs">
+      {upKey !== '' && <Button key={upKey} label="▲" onPress={onUp} />}
+      {downKey !== '' && <Button key={downKey} label="▼" onPress={onDown} />}
     </Box>
   )
 }
@@ -196,10 +197,10 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
           ? <Button key={`steps-${prompt.id}`} label={progress} onPress={() => toggleSteps($, prompt.id)} />
           : !isFinished && !isPointer && <Button key={`steps-${prompt.id}`} label="+" onPress={() => addStep($, prompt)} />}
       </Box>
-      {PointerColumnView($, e, pointer)}
       {(prompt.attachments ?? []).length > 0 && <Text key={`attached-${prompt.id}`} color={LOOK.muted}>{`📎${prompt.attachments!.length}`}</Text>}
       <Box flexGrow={1} flexShrink={1} minWidth={0} flexDirection="row" alignItems="center"
         borderStyle={isWorking ? 'round' : undefined} borderColor={isWorking ? LOOK.accent : undefined}>
+        {PointerColumnView($, e, pointer)}
         <Button key={`card-text-${prompt.id}`} dimColor={isEditing || isFinished} onPress={() => (isInColumn ? toggleOpenedCard($, prompt.id) : editPrompt($, prompt))}>
           <Text wrap="wrap" color={isEditing ? LOOK.placeholder : isWorking ? LOOK.accent : undefined}
             italic={isEditing} bold={isWorking} underline={isWorking} dimColor={isFinished}>
