@@ -9,7 +9,7 @@
     "stages": [
       "implementation"
     ],
-    "version": 111
+    "version": 112
   },
   "practices": {
     "stories": {
@@ -22,7 +22,7 @@
         ],
         "acceptance_tests": []
       },
-      "enabled": false
+      "enabled": true
     },
     "ux": {
       "formats": {
