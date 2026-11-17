@@ -30,6 +30,7 @@ if str(_REPO_ROOT) not in sys.path:
 from playwright.sync_api import Page, sync_playwright
 
 from harness.mcp.spec_support import SpecServer
+from space.session.graph_view_rule_examples import VIOLATING_MAP_TEXT
 from space.session.graph_view_examples import BOARD_CODE, BOARD_TEXT, CHECKOUT_FLOW, STEP_STORY, STEP_STORY_TEXT, TICKET_EXAMPLES, TICKET_EXAMPLES_TEXT
 
 _APP = _REPO_ROOT / "harness" / "files_app" / "app"
@@ -71,6 +72,11 @@ CANVAS_LINK = "https://claude.ai/artifact/checkout-canvas"
 WHITEBOARD = "design/.context/story-map.whiteboard"
 BOARD_LINK = "https://claude.ai/artifact/story-board"
 
+# Seed: story-review, a session working in the project's review folder with Stories alone on, whose story map holds two
+# stories that open with a generic verb, which verb-noun-format breaks, beside Delete Ticket, which passes it.
+STORY_REVIEW = "story-review"
+REVIEW_MAP = "review/.context/story-map.md"
+
 
 def _free_port() -> int:
     with socket.socket() as probe:
@@ -88,7 +94,8 @@ def _write(root: Path, path: str, text: str) -> None:
 
 
 def _seed_project(root: Path) -> None:
-    """A git project holding checkout-flow's story test and ticket code, and design-review's canvas and whiteboard."""
+    """A git project holding checkout-flow's story test and ticket code, design-review's canvas and whiteboard, and
+    story-review's story map."""
     _git(root, "init", "-b", "main")
     _git(root, "config", "user.email", "files@example.com")
     _git(root, "config", "user.name", "Files")
@@ -105,6 +112,10 @@ def _seed_project(root: Path) -> None:
     _write(root, "design/.context/whiteboards.json", json.dumps({"story-map.whiteboard": BOARD_LINK}))
     _write(root, f".sessions/{DESIGN_REVIEW}/session.json", json.dumps({"name": DESIGN_REVIEW, "title": "Design review", "workpath": str(root / "design")}))
     _write(root, f".sessions/{DESIGN_REVIEW}/session.log", "")
+    _write(root, REVIEW_MAP, VIOLATING_MAP_TEXT)
+    review = {"practices": {key: {"enabled": False} for key in ("ux", "ddd", "bdd", "clean_engineering")}, "outputs": {"stories": {"root": ".context"}}}
+    _write(root, f".sessions/{STORY_REVIEW}/session.json", json.dumps({"name": STORY_REVIEW, "title": "Story review", "workpath": str(root / "review"), **review}))
+    _write(root, f".sessions/{STORY_REVIEW}/session.log", "")
 
 
 class FilesStack:
