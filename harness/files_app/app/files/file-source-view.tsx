@@ -6,6 +6,7 @@ import { SourceView, type SourceEditorInstance } from '@source-view/SourceView'
 import type { SourceLines } from '@source-view/source-folding'
 import type { Monaco } from '@monaco-editor/react'
 
+import { memberLines } from './code-outline'
 import { CommentCardView, CommentComposerView } from './comment-box-view'
 import { placeUnder, useAddCommentAction, useAddToContextAction, useFileMarks, useMarkerPresses } from './editor-comments'
 import type { CommentLines, FileCommentsActions } from './file-comments-actions'
@@ -27,12 +28,24 @@ function useSelectedMarks(editor: SourceEditorInstance | null, openAround: Sourc
   }, [editor, openAround, lineCount])
 }
 
+// A code file opened with no node selected opens as an outline: its classes open and their members folded. Only a
+// newly opened text folds so; a node selected opens its own folds instead, as useOpenAround does.
+function useMembersFolded(editor: SourceEditorInstance | null, text: string, language: string, openAround: SourceLines[]): void {
+  const selected = useRef(openAround)
+  selected.current = openAround
+  useEffect(() => {
+    const members = memberLines(text, language)
+    if (!editor || selected.current.length || !members.length) return
+    editor.trigger('files-outline', 'editor.fold', { selectionLines: members.map(line => line - 1), levels: 1 })
+  }, [editor, text, language])
+}
+
 // The open file in the graph explorer's source view, folding as Monaco folds its language, with the project's fold keys:
 // its broken rules as chips with the chosen one marked, and the comments on it: Add comment and Add to context on the
 // right-click menu, a marker beside each comment's first line, and the box a marker opens.
 // Lines asked to show, such as the nodes selected in the graph view, unfold and the page scrolls the first into view: the
-// editor is as tall as the file, so the page scrolls, not the editor. Every other fold closes; with none asked, every
-// fold starts open. Long lines scroll sideways, or wrap once the reader turns on Wrap lines. With the graph's members,
+// editor is as tall as the file, so the page scrolls, not the editor. Every other fold closes; with none asked, a code
+// file opens with its classes open and their members folded, and any other file with every fold open. Long lines scroll sideways, or wrap once the reader turns on Wrap lines. With the graph's members,
 // once the graph view read them, a call opens in place even when it reaches another file; in a story test, what each
 // step invokes and observes opens on the step's line instead.
 export function FileSourceView({
@@ -85,6 +98,7 @@ export function FileSourceView({
   useFileMarks(editor, file)
   useMarkerPresses(editor, held, open)
   useSelectedMarks(editor, openAround, source.end_line)
+  useMembersFolded(editor, file.text, monacoLanguageOf(file), openAround)
   const firstShown = openAround[0]?.start ?? 0
   useEffect(() => {
     if (!editor || !firstShown) return

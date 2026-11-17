@@ -213,6 +213,18 @@ Requested by the person on 2026-11-16: a story or sub-epic selected in code open
 *Then* the lines of Ticket.activate are unfolded  
   *And* Ticket.close and Ticket's other operations are folded
 
+#### Scenario: A code file opens with its classes open and their members folded
+
+Requested 2026-11-16 by the person: "Default on open for code is classes opened and members collapsed." Only the page folds: `harness/files_app/app/files/code-outline.spec.ts`.
+
+*Given* no node is selected, and ticket.py holds the class Ticket with its operations activate and close  
+*When* the Person views ticket.py  
+*Then* Ticket is unfolded  
+  *And* Ticket.activate, Ticket.close and Ticket's other operations are folded to their first lines  
+  *And* a TypeScript file opens the same way, files-graph.ts with the class FilesGraph unfolded and its operations folded  
+*When* the Person then selects Ticket.close  
+*Then* the lines of Ticket.close are unfolded, as a selected node's are
+
 #### Scenario: Selecting another node in the same file unfolds it too
 
 *Given* Ticket.activate is selected and unfolded in ticket.py  
