@@ -150,6 +150,34 @@ with description("a generate action on practice guidance") as self:
             with it("should render it from the earlier fidelity's file in the format it has"):
                 expect(self.prose).to(contain("source drawio, and paths .context/story-map.drawio"))
 
+        # Requested 2026-11-17: a whiteboard written by Generate goes on its board in Claude, as one Render writes does.
+        with context("that generates the story map to a whiteboard"):
+            with before.each:
+                self.expanded = _expanded_generate(self.action, {"guidance": "stories-story-map format=whiteboard"})
+
+            with it("should say to publish each whiteboard file to its board in Claude"):
+                expect(self.expanded.instructions).to(contain("put each .whiteboard file you wrote on its board in Claude"))
+
+            with it("should list record_board, which keeps the address of a board it created"):
+                expect("record_board" in self.expanded.tools).to(equal(True))
+
+        with context("that generates a fidelity that writes no whiteboard"):
+            with it("should say nothing of publishing to a board"):
+                prose = _expanded_generate(self.action, {"guidance": "stories-scenarios"}).instructions
+                expect(prose).not_to(contain("on its board in Claude"))
+
+        # Seen 2026-11-17: a session overlaying a pattern, whose roots name harness/**/.context, failed Generate while
+        # recording the pattern in that path taken as a folder.
+        with context("that overlays a pattern, its fidelity writing under a folder pattern with a wildcard"):
+            with before.each:
+                session = Sessions(self.project).current()
+                session.choose_overlays(["lern_domain_driven"])
+                session.practice("stories").choose_root("harness/**/.context")
+
+            with it("should still answer, leaving the patterns of that folder to the agent"):
+                prose = _expanded_generate(_made_for(self.project), {"guidance": ["stories-story-map"]}).instructions
+                expect(prose).to(contain("story-map.md"))
+
         with context("that generates a fidelity in a format its earlier fidelity already has a file in"):
             with before.each:
                 (self.project / ".context").mkdir(exist_ok=True)

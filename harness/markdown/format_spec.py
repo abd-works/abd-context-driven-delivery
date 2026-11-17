@@ -67,6 +67,15 @@ with description("a format") as self:
         with it("should be a group of its own, after the others"):
             expect((Format("sub").group, Format("sub").group_order)).to(equal(("sub", 4)))
 
+    # Requested 2026-11-16: thin_slice and realization are files a fidelity writes, not formats a person picks.
+    with description("that is a fidelity output named for what it holds, such as thin_slice"):
+        with it("should not be offered for a person to pick"):
+            expect([Format("thin_slice").is_offered, Format("realization").is_offered]).to(equal([False, False]))
+
+    with description("that is in a group a person picks by"):
+        with it("should be offered for a person to pick"):
+            expect([Format(name).is_offered for name in ("markdown", "drawio", "whiteboard", "python", "html", "claude_design")]).to(equal([True] * 6))
+
     with description("that was not given"):
         with it("should have no name"):
             expect(Format(None).name).to(equal(""))

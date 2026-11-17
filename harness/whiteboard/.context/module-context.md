@@ -5,11 +5,13 @@
 
 *WhiteboardNode* is what a practice's diagram node mixes in to be drawn on a board: it answers the elements it draws, placed at the box the diagram already gave it, as `DrawioVertex` does for a draw.io cell. A node drawn on the previous board keeps the place a person moved it to (`Whiteboard.keep_places(previous)`).
 
+*BoardLinks* keeps the address of the board each `.whiteboard` file in a folder was published to, in the folder's `whiteboards.json`, by the file's name: the Render action's `record_board` writes it once the agent has created the board in Claude, and the session's file list reads it, so the Files app opens the board instead of the file.
+
 *StoreWrite* is one write to the artifact's store: set a record, update its changed fields, or delete it; an agent sends them as the entries `Whiteboard.batches(previous)` answers.
 
 - **Purpose:** Let any practice draw its diagram on a Claude Whiteboard and read it back, with one board format and one way of updating a board in Claude.
-- **Seam (terms):** Whiteboard (`sections`, `shapes`, `labels`, `arrows`, `holding`, `writes`, `batches`), BoardElement (`shape`, `section`, `words`, `arrow`), WhiteboardNode, Box
-- **Dependencies (one-way):** none. The practices' whiteboard packages (`cdd_guidance/practices/stories/model/whiteboard`, `cdd_guidance/practices/clean_engineering/model/whiteboard`) depend on it; it names no practice and no diagram type, so a *WhiteboardNode* is handed the box it is drawn in.
+- **Seam (terms):** Whiteboard (`sections`, `shapes`, `labels`, `arrows`, `holding`, `writes`, `batches`), BoardElement (`shape`, `section`, `words`, `arrow`), WhiteboardNode, Box, BoardLinks (`beside`, `of`, `record`)
+- **Dependencies (one-way):** none. The practices' whiteboard packages (`cdd_guidance/practices/stories/model/whiteboard`, `cdd_guidance/practices/clean_engineering/model/whiteboard`), the Render action (`cdd_guidance/actions/render`) and the session's file list depend on it; it names no practice and no diagram type, so a *WhiteboardNode* is handed the box it is drawn in.
 
 ## Constraint
 

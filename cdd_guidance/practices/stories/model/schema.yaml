@@ -125,11 +125,13 @@ when:
   is: step
   id: dotPath
   order: number
-  invokes: [operation | property]
+  invokes?: [operation | property]
   where:
     - id is the text slugs from the root to this node, joined by dots
+    - invokes is required only of a When backed by code, a story test's or a realization's (code-steps-invoke-code)
   rules:
     - when-holds-the-operation
+    - code-steps-invoke-code
     - when-names-intent-not-interface-gesture
     - expressive-system-interactions
 

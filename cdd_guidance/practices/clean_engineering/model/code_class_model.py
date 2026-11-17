@@ -37,6 +37,16 @@ class CodeProperty(Property):
         raise NotImplementedError(f"{type(self).__name__} must spell its lines")
 
 
+# The dash a markdown model writes between a type and the note after it: `email: string — identity`.
+_NOTE_DASH = " — "
+
+
+def _without_note(written: str) -> tuple:
+    """(the type written before a note's dash, the note after it); the note is empty when there is none."""
+    type_hint, _dash, note = (written or "").partition(_NOTE_DASH)
+    return type_hint.strip(), note.strip()
+
+
 class CodeOperation(Operation):
     """An operation as one language writes it. A brace-language parser gives it the statements inside its braces, and
     it measures them itself once its class holds it, so it reads its own class, body, and parameters."""
@@ -212,17 +222,54 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
         return self._file_module
 
     def render(self, canonical: CleanEngineeringModel, previous: Optional[str] = None) -> str:
-        """Become the canonical model once, then write this model as code, keeping the bodies the previous file had."""
+        """Write canonical as code, keeping the bodies the previous file had. A practice keeps one channel per format
+        and renders every model through it, so another model is written from a model of its own, never translated into
+        this one, whose classes would keep the names of the model rendered before."""
+        if canonical is not self:
+            written = type(self)(name="", sequential_order=1)
+            written.translate_from(canonical)
+            written.keep_notes_out_of_code()
+            return written.render(written, previous)
         kept = type(self)(name="", sequential_order=1)
         if previous:
             kept.parse(previous)
-        if canonical is not self:
-            self.translate_from(canonical)
         known_names = [oclass.name for oclass in self.every_class()]
         lines = self.file_header(self._preamble(kept))
         for module in self.modules:
             lines.extend(self._render_module(module, known_names, kept))
         return "\n".join(lines).strip("\n") + "\n"
+
+    def keep_notes_out_of_code(self) -> None:
+        """Move what a markdown model writes beside a name or type into comments, so the code parses: the words a class
+        heading writes after the class's name go into its description, and a note written after a type with a dash
+        (`email: string — identity`) becomes the member's note."""
+        for oclass in self.every_class():
+            self._keep_class_name_alone(oclass)
+            for prop in oclass.properties:
+                prop.type_hint = self._type_alone(prop, prop.type_hint)
+            for operation in oclass.operations:
+                operation.return_type = self._type_alone(operation, operation.return_type)
+                for parameter in operation.parameters:
+                    parameter.type_hint = _without_note(parameter.type_hint)[0]
+
+    def _keep_class_name_alone(self, oclass: OoadClass) -> None:
+        """Name oclass by the identifier its heading starts with, keeping the rest in its description, and its
+        constructor, named after the class, by that name too."""
+        named = re.match(r"\w+", oclass.name or "")
+        if named is None or named.group(0) == oclass.name:
+            return
+        written, oclass.name = oclass.name, named.group(0)
+        oclass.intent = " ".join(part for part in (oclass.intent, written[named.end():].strip()) if part)
+        for operation in oclass.operations:
+            if operation.name == written:
+                operation.name = oclass.name
+
+    def _type_alone(self, member, written: str) -> str:
+        """written without the note after its dash, which member keeps as a note."""
+        type_hint, note = _without_note(written)
+        if note:
+            member.add_invariant(note)
+        return type_hint
 
     def operation_body(self, class_name: str, operation_name: str) -> CodeBody:
         """The body this model read for one operation; "constructor" finds the constructor in any language."""

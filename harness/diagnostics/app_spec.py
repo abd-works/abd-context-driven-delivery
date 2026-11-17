@@ -217,5 +217,9 @@ with description("the registry of apps") as self:
         again = App("Graph", AppPackage(self.folder), AppPage(AppServer(NodeScript(self.folder, "serve.js"), (free_port(),)))).register()
         expect([app for app in APPS.registered if app.label == "Graph"]).to(equal([again]))
 
+    with it("should load a registered app by its label in any case"):
+        registered = App("Graph", AppPackage(self.folder), AppPage(AppServer(NodeScript(self.folder, "serve.js"), (free_port(),)))).register()
+        expect([App.load(label, project=self.folder) for label in ("graph", "GRAPH", " Graph ")]).to(equal([registered] * 3))
+
     with it("should refuse a label no module registered"):
         expect(lambda: App.load("Nowhere", project=self.folder)).to(raise_error(AppNotRegistered))

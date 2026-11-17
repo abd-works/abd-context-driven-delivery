@@ -13,6 +13,7 @@ from harness.installation.ide_layout import IdeLayout
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
 from harness.installation.repository_toolsets import RepositoryToolsets
 from harness.git.git import Git, RepoConnectError
+from harness.mcp.mcp_address import DEV_LANE_FOLDER
 from harness.process.process import PythonInterpreter
 
 CDD_HOME_ENV = "CDD_HOME"
@@ -26,7 +27,11 @@ VERSION_HASH_CHARS = 12
 # The cdd-board mod is published from the code the server runs, so every chat's mod matches the server it talks to.
 BOARD_PLUGIN = "cdd-board"
 BOARD_MOD_FOLDER = Path("harness") / "chat-ui" / "pane"
-BOARD_MOD_PARTS = (".claude-plugin", "hooks", "types")
+# The prompt queue is a mod beside the chat bar, published the same way, so every chat can queue prompts.
+QUEUE_PLUGIN = "prompt-queue"
+QUEUE_MOD_FOLDER = Path("tools") / "prompt_queue"
+# The parts of a mod Claude Code loads; its tests and the rest of its folder stay in the checkout.
+MOD_PARTS = (".claude-plugin", "hooks", "types")
 # The chat bar opens a diagram in the draw.io viewer, so the viewer is published inside the mod: a chat in any project
 # finds it there, not only one in a CDD checkout. It is copied as a file; the harness does not import it.
 DRAWIO_VIEWER = Path("tools") / "drawio_viewer" / "drawio_viewer.py"
@@ -93,6 +98,11 @@ class CddHome:
         self.state_file = JsonFile(self.folder / "server.json", ServerStateUnreadable)
 
     @property
+    def is_dev_lane(self) -> bool:
+        """Whether this is the dev lane's home, whose server serves a feature branch beside the stable lane's."""
+        return self.folder.name == DEV_LANE_FOLDER
+
+    @property
     def state_path(self) -> Path:
         """Where the running server publishes its address and pid."""
         return self.state_file.path
@@ -133,39 +143,62 @@ class CddHome:
         for path, content in files.items():
             JsonFile(path).write(content)
         if self.is_installed:
-            self.write_board_plugin()
+            self.write_mod_plugins()
         return [self._write_marketplace(), *files]
 
-    def write_board_plugin(self) -> None:
-        """Publish the cdd-board mod from the code the server runs, with the draw.io viewer its chat bar opens diagrams
-        in. Its version gains a hash of the mod's files:
-        Claude Code keeps a plugin it has already seen at the same version, so a changed mod needs a new one."""
-        source = self.source / BOARD_MOD_FOLDER
+    def write_mod_plugins(self) -> None:
+        """Publish the mods from the code the server runs."""
+        self._publish_mods(self.source)
+
+    def publish_mods_of(self, lane: CddHome) -> None:
+        """Publish the mods of the code lane's server runs into this home's marketplace. Every chat installs its mods
+        from the stable lane's home, so a dev lane's install publishes there too, or the person keeps the stable lane's
+        mods while the feature changes them."""
+        self._publish_mods(lane.source)
+
+    def _publish_mods(self, code: Path) -> None:
+        """Publish the mods of code: the cdd-board mod, with the draw.io viewer its chat bar opens diagrams in and the
+        install command it runs, and the prompt queue mod; then list them in the marketplace."""
+        board = self._publish_mod(code, BOARD_MOD_FOLDER, BOARD_PLUGIN)
+        if board is not None:
+            self._add_board_extras(code, board)
+        self._publish_mod(code, QUEUE_MOD_FOLDER, QUEUE_PLUGIN)
+        self._write_marketplace()
+
+    def _publish_mod(self, code: Path, folder: Path, name: str) -> Path | None:
+        """Copy the mod in folder of code to the plugin called name; none when the code has no such mod. Its version
+        gains a hash of the mod's files: Claude Code keeps a plugin it has already seen at the same version, so a
+        changed mod needs a new one."""
+        source = code / folder
         if not (source / ".claude-plugin" / "plugin.json").is_file():
-            return
-        target = self.claude_plugins / BOARD_PLUGIN
-        self._copy_board_mod(source, target)
-        JsonFile(target / self.INSTALL_COMMAND).write({"command": self.install_command})
-        if self.mode == self.CHECKOUT:
-            JsonFile(source / self.INSTALL_COMMAND).write({"command": self.install_command})
+            return None
+        target = self.claude_plugins / name
+        self._copy_mod(source, target)
         manifest_file = JsonFile(target / ".claude-plugin" / "plugin.json")
         manifest = manifest_file.read()
         # The source is hashed, not the copy: with the board folder watched, Claude Code writes type files into the copy
         # while it is read, and a file it renames away mid-read failed the install.
         manifest["version"] = f"{manifest.get('version', '0.0.0')}-{self._content_hash(source)}"
         manifest_file.write(manifest)
-        self._write_marketplace()
+        return target
 
-    def _copy_board_mod(self, source: Path, target: Path) -> None:
-        """Copy the mod's parts, without their tests, and the draw.io viewer its chat bar opens diagrams in."""
+    def _add_board_extras(self, code: Path, target: Path) -> None:
+        """The install command the chat bar runs, read from its own folder since it runs while the server is broken, and
+        the draw.io viewer it opens diagrams in."""
+        JsonFile(target / self.INSTALL_COMMAND).write({"command": self.install_command})
+        if self.mode == self.CHECKOUT:
+            JsonFile(self.source / BOARD_MOD_FOLDER / self.INSTALL_COMMAND).write({"command": self.install_command})
+        if (code / DRAWIO_VIEWER).is_file():
+            (target / BOARD_DRAWIO_VIEWER).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(code / DRAWIO_VIEWER, target / BOARD_DRAWIO_VIEWER)
+
+    def _copy_mod(self, source: Path, target: Path) -> None:
+        """Copy the mod's parts, without their tests."""
         # A file the running app holds open can survive the delete on Windows, so the copy writes over what is left.
         shutil.rmtree(target, ignore_errors=True)
-        for part in BOARD_MOD_PARTS:
+        for part in MOD_PARTS:
             if (source / part).is_dir():
                 shutil.copytree(source / part, target / part, ignore=shutil.ignore_patterns("*.test.*"), dirs_exist_ok=True)
-        if (self.source / DRAWIO_VIEWER).is_file():
-            (target / BOARD_DRAWIO_VIEWER).parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(self.source / DRAWIO_VIEWER, target / BOARD_DRAWIO_VIEWER)
 
     def _content_hash(self, folder: Path) -> str:
         digest = hashlib.sha256()
@@ -177,7 +210,7 @@ class CddHome:
     def _write_marketplace(self) -> Path:
         """List every plugin published here; a marketplace naming a missing folder fails to load."""
         plugins = []
-        for name in (CLAUDE_PLUGIN, BOARD_PLUGIN):
+        for name in (CLAUDE_PLUGIN, BOARD_PLUGIN, QUEUE_PLUGIN):
             manifest = JsonFile(self.claude_plugins / name / ".claude-plugin" / "plugin.json")
             if manifest.exists():
                 description = manifest.read().get("description", "")
@@ -292,7 +325,7 @@ class CddHome:
             raise PinFailed(source, f"commit {commit[:8]} has no {SERVER_MODULE}; commit the one-server code before pinning")
         self._mirror_origin(source, source_git)
         self._save_runtime(source, self.PINNED, commit=commit)
-        self.write_board_plugin()
+        self.write_mod_plugins()
         return commit
 
     def _mirror_origin(self, source: Path, source_git: Git) -> None:
@@ -314,7 +347,7 @@ class CddHome:
     def serve_from(self, checkout: Path | str) -> None:
         """Run the server on ``checkout`` as it is on disk, so a ``cdd.restart`` picks up its edits."""
         self._save_runtime(Path(checkout).resolve(), self.CHECKOUT)
-        self.write_board_plugin()
+        self.write_mod_plugins()
 
     def _branch_of(self, checkout: Path) -> str:
         """The branch the checkout has out; none for a detached checkout or a folder that is not a git checkout. It reads

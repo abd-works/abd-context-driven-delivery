@@ -12,7 +12,7 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
         sys.path.insert(0, _p)
 
 from expects import contain, equal, expect
-from mamba import before, description, it
+from mamba import before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentToolSet, SubAgentAnnotation
 from space.session.session import Session
@@ -46,8 +46,29 @@ with description("a session's debug instructions, which the chat bar's debug but
     with it("should hand a fix to a background sub-agent"):
         expect(self.prompt).to(contain("run_in_background"))
 
-    with it("should push the fix to main where the person can push there"):
-        expect(self.prompt).to(contain(".permissions.push"))
+    with it("should tell the person the fix goes to this branch and is served on the dev lane"):
+        expect(self.prompt).to(contain("fixes it on this branch and serves it on the dev lane"))
 
-    with it("should open a pull request to the CDD repository where the person cannot"):
-        expect(self.prompt).to(contain("gh pr create"))
+    with it("should never merge the fix to main"):
+        expect(self.prompt).not_to(contain("merge to main"))
+
+    with it("should never push the fix with push_to_main"):
+        expect(self.prompt).not_to(contain("push_to_main"))
+
+    with context("with the chat working in a ticket's worktree of the CDD checkout"):
+        with it("should fix it in that worktree, on that branch, and push it to the branch"):
+            expect(self.prompt).to(contain("work in that worktree on that branch"))
+
+        with it("should serve the fix by repinning the dev lane from the worktree"):
+            expect(self.prompt).to(contain("repin the dev lane with `python scripts/install.py --ide Claude --pin-runtime`"))
+
+        with it("should open each app the fix changed"):
+            expect(self.prompt).to(contain("app.open"))
+
+    with context("with the chat working in the CDD checkout's main"):
+        with it("should push the fix to main and repin the stable lane after messaging its sessions"):
+            expect(self.prompt).to(contain("repin the stable lane"))
+
+    with context("with CDD installed in another project"):
+        with it("should open a pull request to the CDD repository from a fork"):
+            expect(self.prompt).to(contain("gh pr create"))

@@ -1,7 +1,7 @@
 """Content conforms to its schema: every node has each relationship its schema type requires, up to the fidelity its
 practice works at, by its practice's schema and the schemas of the patterns its graph applies."""
 
-from expects import be_empty, contain, equal, expect
+from expects import have_len, be_empty, contain, equal, expect
 from mamba import before, description, it
 
 from harness.graph.graph import Graph
@@ -112,22 +112,28 @@ with description("conforms to schema"):
                     "Scenario 'Pay later' has no steps relationship to Step | Given | When | Then | Background, which the stories practice schema requires."
                 ))
 
-    with description("a when step invoking nothing"):
+    with description("an example demonstrating no class"):
         with before.each:
             self.graph = Graph()
             self.practice = _working_at(self.graph, "stories", "acceptance_tests")
-            _node(self.practice, "When", "the Shopper pays")
+            _node(self.practice, "Example", "a card payment")
 
         with description("on a graph that reads no Clean Engineering"):
-            with it("should not judge the invokes it has no operation to lead to"):
-                expect([gap for gap in _gaps(self.practice) if "invokes" in gap]).to(be_empty)
+            with it("should not judge the demonstrates it has no class to lead to"):
+                expect([gap for gap in _gaps(self.practice) if "demonstrates" in gap]).to(be_empty)
 
         with description("on a graph that reads Clean Engineering beside it"):
-            with it("should fail for the invokes it lacks"):
+            with it("should fail for the demonstrates it lacks"):
                 self.graph.practice("clean_engineering")
-                expect(_gaps(self.practice)).to(contain(
-                    "When 'the Shopper pays' has no invokes relationship to Operation | Property, which the stories practice schema requires."
-                ))
+                expect([gap for gap in _gaps(self.practice) if "demonstrates" in gap]).to(have_len(1))
+
+    with description("a when step invoking nothing, on a graph that reads Clean Engineering beside it"):
+        with it("should not require invokes, which only a step backed by code can name (code-steps-invoke-code)"):
+            graph = Graph()
+            practice = _working_at(graph, "stories", "acceptance_tests")
+            _node(practice, "When", "the Shopper pays")
+            graph.practice("clean_engineering")
+            expect([gap for gap in _gaps(practice) if "invokes" in gap]).to(be_empty)
 
     with description("a story with no scenarios"):
         with before.each:

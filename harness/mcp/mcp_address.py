@@ -7,6 +7,7 @@ import http.client
 import json
 import os
 import socket
+from pathlib import Path
 
 SERVER_PORT_ENV = "CDD_SERVER_PORT"
 DEFAULT_SERVER_PORT = 47800
@@ -20,6 +21,12 @@ PING_PATH = "/ping"
 MCP_PATH = "/mcp"
 # Where the stable lane's server sends a dev-lane chat's tool call for the dev lane's server to answer.
 LANE_CALL_PATH = "/lane-call"
+# What one lane's server asks the other for when a chat of the other's lists its tools: the tools it serves, as data.
+BUILTIN_LIST_TOOLS = "cdd.list_tools"
+# The dev lane's home sits inside the stable lane's, in this folder, so one ``CDD_HOME`` names both.
+DEV_LANE_FOLDER = "dev"
+# The dev lane answers on the port after the stable lane's, so a throwaway pair from a spec stays a pair.
+DEV_PORT_AFTER_STABLE = 1
 # How long a connection to the loopback port may take before nothing is taken to listen there.
 _CONNECT_SECONDS = 0.5
 
@@ -40,6 +47,13 @@ class McpAddress:
 
     def __init__(self, port: int | None = None) -> None:
         self.port = port or int(os.environ.get(SERVER_PORT_ENV) or DEFAULT_SERVER_PORT)
+
+    @classmethod
+    def of_home(cls, folder: Path) -> McpAddress:
+        """The address of the server that runs from the cdd home in folder: the dev lane's, on the port after the
+        stable lane's, when folder is the dev lane's home; else the stable lane's."""
+        stable = cls()
+        return cls(stable.port + DEV_PORT_AFTER_STABLE) if Path(folder).name == DEV_LANE_FOLDER else stable
 
     @property
     def url(self) -> str:

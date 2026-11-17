@@ -12,10 +12,12 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import contain, equal, expect
-from mamba import description, it
+from expects import contain, equal, expect, raise_error
+from mamba import before, context, description, it
 
 from cdd_guidance.actions.render.render import Render
+from harness.agent_tools.agent_tools import AgentInstructions
+from harness.whiteboard import BoardLinks, Whiteboard
 
 _REF = "cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering"
 _STORIES = "cdd_guidance.practices.stories.stories:Stories"
@@ -147,3 +149,57 @@ with description("Render"):
             source="markdown",
         )
         expect(str(results[0]["content"])).to(contain('link="orders/browse_product_catalog_story.test.md"'))
+
+
+with description("Render publishing a whiteboard file to its board in Claude") as self:
+    with before.each:
+        self.folder = Path(tempfile.mkdtemp(prefix="render-board-"))
+        self.file = self.folder / "story-map.whiteboard"
+        self.file.write_text(Whiteboard("Story Map").save(), encoding="utf-8")
+
+    with context("that the agent created a board for"):
+        with it("should keep the board's address beside the file, so the Files app opens the board"):
+            Render().record_board(str(self.file), "https://claude.ai/artifact/StoryMapBoard")
+            expect(BoardLinks.beside(self.file).of(self.file)).to(equal("https://claude.ai/artifact/StoryMapBoard"))
+
+    with context("that was published before"):
+        with before.each:
+            self.other = self.folder / "modules.whiteboard"
+            BoardLinks.beside(self.file).record(self.other, "https://claude.ai/artifact/ModulesBoard")
+            BoardLinks.beside(self.file).record(self.file, "https://claude.ai/artifact/OldBoard")
+
+        with it("should keep only the new address"):
+            Render().record_board(str(self.file), "https://claude.ai/artifact/NewBoard")
+            expect(BoardLinks.beside(self.file).of(self.file)).to(equal("https://claude.ai/artifact/NewBoard"))
+
+        with it("should leave the other files' addresses as they were"):
+            Render().record_board(str(self.file), "https://claude.ai/artifact/NewBoard")
+            expect(BoardLinks.beside(self.other).of(self.other)).to(equal("https://claude.ai/artifact/ModulesBoard"))
+
+    with context("that is not a whiteboard file"):
+        with before.each:
+            self.drawio = self.folder / "story-map.drawio"
+            self.drawio.write_text("<mxfile/>", encoding="utf-8")
+
+        with it("should refuse to record a board for it"):
+            expect(lambda: Render().record_board(str(self.drawio), "https://claude.ai/artifact/X")).to(raise_error(ValueError, contain(".whiteboard")))
+
+        with it("should keep no address"):
+            try:
+                Render().record_board(str(self.drawio), "https://claude.ai/artifact/X")
+            except ValueError:
+                pass
+            expect((self.folder / BoardLinks.RECORD).exists()).to(equal(False))
+
+    with context("rendered to the whiteboard format"):
+        with it("should tell the agent to publish the board after the conversion returns"):
+            expect(Render.render.__doc__).to(contain("publish_board"))
+
+        with it("should tell the agent to create a Whiteboard artifact when no address is kept, and record its address"):
+            text = AgentInstructions.for_callable(Render.publish_board, Render()).expand({}).instructions
+            expect(text).to(contain("Whiteboard artifact"))
+            expect(text).to(contain("record_board"))
+
+        with it("should tell the agent to write only the changed elements to a board already kept"):
+            text = AgentInstructions.for_callable(Render.publish_board, Render()).expand({}).instructions
+            expect(text).to(contain("batches"))

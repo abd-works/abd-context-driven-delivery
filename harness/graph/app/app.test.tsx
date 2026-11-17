@@ -23,6 +23,8 @@ const foldMarks = vi.hoisted(() => ({
   // The folding range providers and keybinding rules given to Monaco.
   providers: [] as { language: string; provider: { provideFoldingRanges: (model: { getLinesContent: () => string[] }) => unknown } }[],
   keybindings: [] as { keybinding: number; command: string }[],
+  // The lines a closed fold hides, as Monaco keeps them while the page shows the file.
+  hidden: [] as number[],
 }));
 
 // Monaco's own keys, as a chord of two parts and modifiers: the fake keeps each code as a plain number.
@@ -50,7 +52,7 @@ vi.mock('@monaco-editor/react', () => ({
     onMount?: (editor: {
       getValue: () => string;
       setValue: (next: string) => void;
-      getModel: () => { getLineCount: () => number };
+      getModel: () => { getLineCount: () => number; getLineMaxColumn: (line: number) => number };
       getDomNode: () => HTMLElement;
       getTargetAtClientPoint: () => null;
       createDecorationsCollection: (next: FakeMark[]) => {
@@ -64,7 +66,7 @@ vi.mock('@monaco-editor/react', () => ({
       setScrollLeft: (left: number) => void;
       onMouseDown: (listener: (event: { target: { element: Element | null; position: { lineNumber: number } | null } }) => void) => { dispose: () => void };
       changeViewZones: (
-        change: (accessor: { addZone: (zone: { afterLineNumber: number; domNode: HTMLElement }) => string; removeZone: (id: string) => void }) => void,
+        change: (accessor: { addZone: (zone: FakeZone) => string; removeZone: (id: string) => void }) => void,
       ) => void;
     }, monaco: typeof fakeMonaco) => void;
   }) => {
@@ -74,7 +76,7 @@ vi.mock('@monaco-editor/react', () => ({
     // Each decorations collection the editor made keeps its own marks, as Monaco's do; every one paints.
     const collections = useRef<Mark[][]>([]);
     const marks = { get current(): Mark[] { return collections.current.flat(); } };
-    const zones = useRef<Map<string, { afterLineNumber: number; domNode: HTMLElement }>>(new Map());
+    const zones = useRef<Map<string, FakeZone>>(new Map());
     const presses = useRef<((event: { target: { element: Element | null; position: { lineNumber: number } | null } }) => void)[]>([]);
     foldMarks.scrollbar = options?.scrollbar;
     foldMarks.wordWrap = options?.wordWrap;
@@ -116,6 +118,7 @@ vi.mock('@monaco-editor/react', () => ({
         editor.appendChild(row);
         for (const zone of zones.current.values()) {
           if (zone.afterLineNumber === lineNumber) {
+            zone.domNode.style.height = `${shownHeightOf(zone, text)}px`;
             editor.appendChild(zone.domNode);
           }
         }
@@ -134,7 +137,7 @@ vi.mock('@monaco-editor/react', () => ({
       mounting.current?.({
         getValue: () => text,
         setValue: () => undefined,
-        getModel: () => ({ getLineCount: () => text.split('\n').length }),
+        getModel: () => ({ getLineCount: () => text.split('\n').length, getLineMaxColumn: (line) => (text.split('\n')[line - 1] ?? '').length + 1 }),
         getDomNode: () => host.current ?? document.body,
         getTargetAtClientPoint: () => null,
         createDecorationsCollection: (next) => {
@@ -179,6 +182,17 @@ vi.mock('@monaco-editor/react', () => ({
     return <div ref={host} data-testid="source-editor" onMouseDown={(event) => pressed(event.nativeEvent)} />;
   },
 }));
+
+type FakeZone = { afterLineNumber: number; afterColumn?: number; heightInPx?: number; domNode: HTMLElement };
+
+// The height Monaco lays a view zone out at: none while the position just after it is hidden by a closed fold. A zone
+// after a line's end is followed by the next line, so a fold closed under that line hides it; a zone after a column
+// before the end is followed by the rest of its own line.
+function shownHeightOf(zone: FakeZone, text: string): number {
+  const lastColumn = (text.split('\n')[zone.afterLineNumber - 1] ?? '').length + 1;
+  const followingLine = (zone.afterColumn ?? lastColumn) >= lastColumn ? zone.afterLineNumber + 1 : zone.afterLineNumber;
+  return foldMarks.hidden.includes(followingLine) ? 0 : (zone.heightInPx ?? 0);
+}
 
 type FakeMark = {
   range: { startLineNumber: number };
@@ -398,6 +412,7 @@ beforeEach(() => {
   foldMarks.names = [];
   foldMarks.scrollbar = undefined;
   foldMarks.folding = [];
+  foldMarks.hidden = [];
   fakeMonaco.languages.registerFoldingRangeProvider = (language, provider) => foldMarks.providers.push({ language, provider: provider as (typeof foldMarks.providers)[number]['provider'] });
   fakeMonaco.editor.addKeybindingRules = (rules) => foldMarks.keybindings.push(...(rules as { keybinding: number; command: string }[]));
   window.localStorage.clear();
@@ -516,6 +531,19 @@ it('should open a call inside an open call, one shade deeper', async () => {
   await waitFor(() => expect(editor.querySelector('.callout-inner-mark')).toBeTruthy());
   press(editor.querySelector('.callout-inner-mark'));
   await waitFor(() => expect(editor.querySelector('.callout-section .callout-section')?.textContent).toBe('notify() {  sent();}'));
+});
+
+it('should open a call inside a method whose own block is still folded at its full height', async () => {
+  const text = 'class AppServer:\n    def restart(self) -> bool:\n        if not self.stop():\n            return False\n        return True\n\n    def stop(self) -> bool:\n        return True';
+  const member = (node_id: string, name: string, owner: string, start_line: number, end_line: number): NodeSourceData => ({ node_id, name, owner, type: owner ? 'Operation' : 'OoadClass', file: 'app.py', start_line, end_line, text: text.split('\n').slice(start_line - 1, end_line).join('\n'), members: [] });
+  const appServer = { ...member('app-server', 'AppServer', '', 1, 8), members: [member('app-server', 'AppServer', '', 1, 8), member('restart', 'restart', 'AppServer', 2, 5), member('stop', 'stop', 'AppServer', 7, 8)] };
+  foldMarks.hidden = [4];
+  render(<SourceView source={appServer} violation={null} rules={[]} activeRule="" language="python" />);
+  const editor = await screen.findByTestId('source-editor');
+  await waitFor(() => expect(rowOf(editor, 'if not self.stop()')?.querySelector('.callout-mark')).toBeTruthy());
+  press(rowOf(editor, 'if not self.stop()')?.querySelector('.callout-mark'));
+  await waitFor(() => expect(editor.querySelector('.callout-section')?.textContent).toContain('def stop(self) -> bool:'));
+  expect(editor.querySelector<HTMLElement>('.callout-block')?.style.height).toBe('40px');
 });
 
 it('should never open a class a comment or a docstring names', async () => {

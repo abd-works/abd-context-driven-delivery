@@ -211,6 +211,18 @@ class Source:
                     self._point_at(root, Location(path.relative_to(root_path).as_posix(), index + 1, end))
                     return
 
+    def align_to_declaration(self, root: str, declared_in: Path, start_line: int, end_line: int) -> None:
+        """Point this slice at lines start_line to end_line of declared_in, a file under root its reader already read,
+        such as the examples module a Python story test imports a fixture from; a file outside root leaves it where it
+        is, since a node names its file from root."""
+        if not root:
+            return
+        try:
+            relative = Path(declared_in).resolve().relative_to(Path(root).resolve())
+        except ValueError:
+            return
+        self._point_at(root, Location(relative.as_posix(), start_line, end_line))
+
     def _point_at(self, root: str, location: Location) -> None:
         """Point this slice at the lines location names, in its file under root."""
         self.file = location.file
@@ -462,7 +474,20 @@ class Filter:
             return False
         if self.relationships and not self._on_relationship(node):
             return False
-        return not self.paths or self._under_paths(node.source.file) or self._under_paths(self._named_from_folder(node.source))
+        return not self.paths or self._listed_or_below_listed(node)
+
+    def _listed_or_below_listed(self, node: Node) -> bool:
+        """True when node's file is listed, or a node above it was read from a listed file: a story listed by its story
+        map holds the scenarios and steps read for it from scenarios files the list leaves out."""
+        above: Node | None = node
+        while above is not None:
+            if self._source_listed(above.source):
+                return True
+            above = above.parent
+        return False
+
+    def _source_listed(self, source: Source) -> bool:
+        return self._under_paths(source.file) or self._under_paths(self._named_from_folder(source))
 
     def _listed(self, request: FilterRequest, many: str, one: str) -> list[str] | None:
         """A request key that takes a list or a single value, such as ``types`` or ``type``; none when it names neither."""

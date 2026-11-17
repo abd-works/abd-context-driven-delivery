@@ -45,11 +45,11 @@ class _CountingReads(Graph):
 
     def __init__(self) -> None:
         super().__init__()
-        self.reads = 0
+        self.working_copy_reads = 0
         read = self.build._read_working_copy
 
         def counted() -> None:
-            self.reads += 1
+            self.working_copy_reads += 1
             read()
 
         self.build._read_working_copy = counted
@@ -161,7 +161,7 @@ with description("a graph built for a chat's call"):
         shutil.rmtree(self.root, ignore_errors=True)
 
     with it("should read the working copy in a worker process, never in the process answering chats"):
-        expect(self.apart.reads).to(equal(0))
+        expect(self.apart.working_copy_reads).to(equal(0))
 
     with it("should hold the nodes a build in this process holds"):
         expect(_nodes(self.apart)).to(equal(_nodes(self.here)))
@@ -178,7 +178,7 @@ with description("a graph built for a chat's call"):
             expect(_class_names(self.apart)).to(equal(["Cart", "Wallet"]))
 
         with it("should still read nothing in the process answering chats"):
-            expect(self.apart.reads).to(equal(0))
+            expect(self.apart.working_copy_reads).to(equal(0))
 
         # A build that failed left the graph with its rules' findings dropped, which a validate then read as clean.
         with context("again, by a worker that fails"):
@@ -205,7 +205,7 @@ with description("a graph built for a chat's call"):
             self.in_process.load_files(str(self.root), ["clean_engineering"], ["src/cart.ts"], call=_IN_PROCESS)
 
         with it("should read the working copy in this process"):
-            expect(self.in_process.reads).to(equal(1))
+            expect(self.in_process.working_copy_reads).to(equal(1))
 
     with context("that is opened again from its saved graph"):
         with before.all:
@@ -217,7 +217,7 @@ with description("a graph built for a chat's call"):
             expect(_violations(self.reopened)).to(equal(_violations(self.here)))
 
         with it("should run no build to open it"):
-            expect(self.reopened.reads).to(equal(0))
+            expect(self.reopened.working_copy_reads).to(equal(0))
 
     with context("that holds DDD beside the Clean Engineering practice it extends"):
         with before.all:

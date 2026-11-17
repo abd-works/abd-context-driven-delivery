@@ -12,6 +12,7 @@ from space.session.session import MAIN_SESSION_NAME, Session
 from space.session.session_folder import COMPLETE_FOLDER
 from space.session.session_record import SESSION_FILE
 from space.work_state import WorkState
+from tools.prompt_queue.prompt_queue import PromptQueue
 
 if TYPE_CHECKING:
     from space.session.sessions import Sessions
@@ -22,16 +23,24 @@ _OUTSIDE_WORKTREE_NOTE = (
     "This chat works in {chat}, but {session}'s worktree is {worktree}. Do this session's work in a chat started there "
     "(start_session with cwd {worktree}), not in this chat.\n\n"
 )
+_HANDOFF_QUEUED_NOTE = (
+    "**Handoff queued.** The {count} steps of {handoff}'s Approach for Next Agent are on this chat's prompt queue, in "
+    "order: work through them first to last, calling prompt-queue.done with each prompt's id as you finish it; "
+    "prompt-queue.show lists them.\n\n"
+)
 _DEFAULT_ROOTS_NOTE = (
     "**Output roots.** These practices write under their default folders, which nobody has checked: {roots}. Before "
-    "generating anything, look for where the repository already keeps each one's artifacts. A practice's documents and "
-    "its code or tests can sit in different areas: the story map in the project's .context, and its scenarios and "
-    "story tests in story_tests/<epic>/<sub-epic>/. Set both: practice-session-output.choose_root for the practice's "
-    "own root (the map, or the code), and fidelity-session-output.choose_root for each fidelity kept apart, such as "
-    "the stories scenarios and acceptance_tests. Choose the most local folder that holds this session's work, such as "
-    "its epic's folder in story_tests rather than all of story_tests, so the Files app, the board and validate show "
-    "this ticket's files and new work lands beside them. Leave a default that already holds them, or where none "
-    "exist yet.\n\n"
+    "generating anything, set up the session's roots with session.set_up_roots, so they cover exactly the pieces the "
+    "ticket works on in every practice. A practice's documents and its code or tests can sit in different areas, each "
+    "where the practice's declared outputs place them, and the pieces of one ticket are spread across them: a domain "
+    "folder, the package that implements it, the story tests that cover it. Propose the roots from what the ticket "
+    "names and what its branch changed (fidelity-session-output.propose_roots answers the folders each fidelity "
+    "proposes), dig down to the most local folder that holds each piece rather than a parent that also holds its "
+    "siblings, and confirm them with the person before setting any. Then set them: "
+    "practice-session-output.choose_root for the practice's own root, fidelity-session-output.choose_root for a "
+    "fidelity kept apart, and fidelity-session-output.add_root for each further folder beside it, so the Files app, the "
+    "board and validate show this ticket's files and new work lands beside them. Leave a default that already holds "
+    "them, or where none exist yet.\n\n"
 )
 _WORKTREE_TICKET_NOTE = (
     "This chat works in {ticket}'s own worktree, so its session is {ticket}, not {asked}. To work on {asked}, open it "
@@ -126,13 +135,22 @@ class OpenSessions:
         ticket = self.ticket_of_worktree()
         if ticket is not None:
             opened = self.open(ticket, chat)
-            return self._worktree_ticket_note(ticket, name) + self._default_roots_note(opened) + opened.log.instructions()
+            return self._worktree_ticket_note(ticket, name) + self._handoff_queued_note(opened, chat) + self._default_roots_note(opened) + opened.log.instructions()
         wanted = self._name_to_switch_to(name, chat)
         folder = sessions.folder_of(wanted)
         is_kept = (folder / SESSION_FILE).is_file() or wanted == MAIN_SESSION_NAME
         session = sessions.held.load(folder) if is_kept else sessions.create(wanted, workpath)
         opened = self.open(session, chat)
-        return self._outside_worktree_note(session, call) + self._default_roots_note(opened) + opened.log.instructions()
+        return self._outside_worktree_note(session, call) + self._handoff_queued_note(opened, chat) + self._default_roots_note(opened) + opened.log.instructions()
+
+    def _handoff_queued_note(self, session: Session, chat: str) -> str:
+        """Queue the steps of session's latest handoff on chat's prompt queue, once per handoff, and say so; nothing for
+        a call from no chat, or a session with no handoff."""
+        handoff = session.handoffs.latest
+        if not chat or handoff is None:
+            return ""
+        queued = PromptQueue.of_chat(chat).queue_handoff(handoff)
+        return _HANDOFF_QUEUED_NOTE.format(count=queued, handoff=handoff.name) if queued else ""
 
     def _default_roots_note(self, session: Session) -> str:
         """What a chat opening session is told about the practices it works on whose roots nobody set, so it points each

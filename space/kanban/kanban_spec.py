@@ -593,6 +593,10 @@ with description("a ticket") as self:
             with it("should ask that chat to switch to its session before anything else"):
                 expect(parse_qs(self.link.query)["q"][0]).to(contain("First call sessions.switch with name pet-visits"))
 
+            # Requested 2026-11-17: activating a ticket sets up its session's roots before any work starts.
+            with it("should ask that chat to set up the session's roots with session.set_up_roots when the switch says they are unchecked"):
+                expect(parse_qs(self.link.query)["q"][0]).to(contain("set them up with session.set_up_roots before generating anything"))
+
     # (S) Board App --> Display Ticket Card, Place Ticket In Column
     with context("with its first logged work on a Specification fidelity"):
         with it("should be in Specification"):

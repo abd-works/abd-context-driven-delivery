@@ -22,18 +22,18 @@ export type ChatRequest = { chat: string } & (
   | { operation: 'finish'; body: { message: string } }
 )
 
-// The repository's own folder, which a chat in a ticket's worktree reaches through the git folder they share: the
-// project whose board this chat shows, where the board is installed and built, and what a path from the project is named
-// from. Empty outside a repository.
-export async function repositoryFolder($: EngineInterface): Promise<string> {
-  const { exitCode, stdout } = await $.process.run(['git', 'rev-parse', '--path-format=absolute', '--git-common-dir'])
-  return exitCode === 0 ? stdout.trim().replace(/[\\/]\.git$/, '') : ''
+// The checkout this chat works in: the main checkout, or a ticket's worktree. The cdd server picks a project's lane from
+// it, so a page naming a worktree is answered by the dev lane on the ticket's code, and one naming the main checkout by
+// the stable lane; the worktree shares the repository's board and sessions. Empty outside a repository.
+export async function checkoutFolder($: EngineInterface): Promise<string> {
+  const { exitCode, stdout } = await $.process.run(['git', 'rev-parse', '--show-toplevel'])
+  return exitCode === 0 ? stdout.trim() : ''
 }
 
-// An app's page at url showing this chat's repository, with any further query the link carries, such as a report to
+// An app's page at url showing this chat's checkout, with any further query the link carries, such as a report to
 // open. Outside a repository the page shows its server's own project.
 export async function projectPageUrl($: EngineInterface, url: string, query: Record<string, string> = {}): Promise<string> {
-  const project = await repositoryFolder($)
+  const project = await checkoutFolder($)
   const page = new URL(url)
   for (const [name, value] of Object.entries({ ...(project ? { [PROJECT_QUERY]: project } : {}), ...query })) page.searchParams.set(name, value)
   return page.toString()

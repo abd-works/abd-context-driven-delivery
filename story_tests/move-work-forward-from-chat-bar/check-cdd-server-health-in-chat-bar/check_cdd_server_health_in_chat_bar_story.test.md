@@ -148,6 +148,31 @@ section: body
 *Then* the board server starts from the repository's own folder  
   *And* once it answers, the board page opens in the browser pane
 
+#### Scenario: Open an app from a ticket's worktree on the dev lane
+
+Requested 2026-11-16: a chat in file-manager's worktree opened the Files page naming the main checkout, so its calls ran on the stable lane's older code and the page stopped on a file without callouts.
+
+*Given* the chat works in the ticket file-manager's worktree, C:\dev\abd-cdd-file-manager, which the dev lane serves  
+*When* the Person opens the Files app from the chat bar  
+*Then* the Files page's link names the worktree C:\dev\abd-cdd-file-manager as its project, not the main checkout C:\dev\abd-context-driven-delivery  
+  *And* every call the page makes is answered by the dev lane's server, on the ticket's code
+
+#### Scenario: Open an app from the main checkout on the stable lane
+
+*Given* the chat works in the main checkout, C:\dev\abd-context-driven-delivery  
+*When* the Person opens the Files app from the chat bar  
+*Then* the Files page's link names the main checkout as its project  
+  *And* every call the page makes is answered by the stable lane's server
+
+#### Scenario: Open an app named in any case
+
+Requested 2026-11-16: a chat asked to open the app "files" and was refused, since no app is registered as files; the registered app is Files.
+
+*Given* the apps registered are Graph, Files, Kanban and Story UI  
+*When* a chat opens the app "files", "FILES" or " story ui "  
+*Then* the registered app of that name opens, Files or Story UI, whatever the case of its letters or the spaces around it  
+  *And* a name no app is registered as, such as "Nowhere", is still refused, naming the apps there are
+
 #### Scenario: Open the Graph app while it runs
 
 *Given* the Graph app is running on port 5173  

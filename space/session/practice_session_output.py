@@ -16,20 +16,19 @@ from harness.design_canvas.versions import CanvasVersions
 from harness.guidance.declared_outputs import DeclaredFile
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.mcp.mcp_annotations import mcp
+from harness.whiteboard import BoardLinks, Whiteboard
 from cdd_guidance.practices.stories.model.story_map_files import STORY_TESTS_FOLDER
 from harness.installation.context_config import CONTEXT_FOLDER, DEFAULT_FORMAT
 from harness.markdown.format import Format
 from space.session.answer_reads import HeldForAnswer
 from space.session.file_manager import FileEntry
+from space.session.proposed_roots import ProposedRoots, code_extensions
 
 if TYPE_CHECKING:
     from harness.guidance.guidance import FidelityGuidance, GuidanceCollection, PracticeGuidance
     from space.session.session import Session
 
 _OUTPUT_PATTERN_MARKS = {"*", "{"}
-# A code format whose files also carry a second extension, such as React components in TypeScript; any other code format
-# is its own extension alone.
-_CODE_EXTENSIONS = {"typescript": (".ts", ".tsx"), "javascript": (".js", ".jsx")}
 # Report and handoff names end with the time they were made, written so names sort by time.
 ChosenOutputs = dict[str, object]
 """What session.json keeps for one practice under `outputs`: the root a person chose, and each fidelity's own choices."""
@@ -218,10 +217,17 @@ class PracticeSessionOutput:
 
     def keep_fidelity_root(self, fidelity: str, root: Path) -> None:
         """Write the files of fidelity, one of this practice's by name, under root, apart from the practice's own root;
-        kept in session.json relative to the workpath."""
-        relative = Path(os.path.relpath(Path(root).resolve(), self._session.work_root)).as_posix()
+        kept in session.json relative to the workpath. It replaces every root the fidelity had."""
+        self.keep_fidelity_roots(fidelity, [root])
+
+    def keep_fidelity_roots(self, fidelity: str, roots: list[Path]) -> None:
+        """Write the files of fidelity under each of roots, such as the folders of the sub-epics a ticket works on in
+        story_tests: one root is kept as ``root``, several as ``roots``, in session.json relative to the workpath."""
+        relative = list(dict.fromkeys(Path(os.path.relpath(Path(root).resolve(), self._session.work_root)).as_posix() for root in roots))
         chosen = self.chosen_outputs
-        self._save_chosen_outputs({**chosen, fidelity: {**chosen.get(fidelity, {}), "root": relative}})
+        kept = {key: value for key, value in chosen.get(fidelity, {}).items() if key not in ("root", "roots")}
+        kept.update({"root": relative[0]} if len(relative) == 1 else {"roots": relative})
+        self._save_chosen_outputs({**chosen, fidelity: kept})
 
     @mcp
     @agent_tool
@@ -244,7 +250,7 @@ class FormatNotOffered(ValueError):
     """A format was chosen for a fidelity that does not write it."""
 
     def __init__(self, fidelity: FidelityGuidance, format: str) -> None:
-        super().__init__(f"{fidelity.name} does not write {format}; it writes {', '.join(fidelity.outputs) or 'nothing'}")
+        super().__init__(f"{fidelity.name} does not write {format}; it writes {', '.join(fidelity.session_output.offered_formats) or 'nothing'}")
         self.fidelity = fidelity
         self.format = format
 
@@ -268,6 +274,8 @@ class FidelitySessionOutput:
         self.validation_reports = ValidationReports(self)
         # The files it writes in the session: where each format goes, which are there, and which the branch changed.
         self.written = WrittenFiles(self)
+        # The folders it proposes for the pieces the session's ticket works on, before a person confirms them as roots.
+        self.proposed_roots = ProposedRoots(self)
 
     @classmethod
     @tool_subject
@@ -296,8 +304,9 @@ class FidelitySessionOutput:
     @property
     @data_field
     def offered_formats(self) -> list[str]:
-        """The formats this fidelity writes, in the order its practice declares them: what a person can choose."""
-        return list(self._fidelity.outputs)
+        """The formats this fidelity writes, in the order its practice declares them: what a person can choose. An output
+        named for what it holds, such as thin_slice, is files the fidelity writes, not a format, so it is not offered."""
+        return [name for name in self._fidelity.outputs if Format(name).is_offered]
 
     @property
     @data_field
@@ -318,6 +327,22 @@ class FidelitySessionOutput:
         """Write this fidelity's files under path, a folder in the repository, apart from its practice's root: such as the stories scenarios and acceptance tests of one epic in story_tests/<epic>, while the story map stays in the practice's root, the project's .context."""
         self._practice.keep_fidelity_root(self._fidelity.name, self._session.repo_path / path)
         return self
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def add_root(self, path: str) -> FidelitySessionOutput:
+        """Write this fidelity's files under path as well, a folder in the repository, beside the roots it has: such as one more sub-epic's folder in story_tests that the session's ticket works on, so the session holds that sub-epic's scenarios and story tests and no other's."""
+        roots = [*self.roots, self._session.repo_path / path]
+        self._practice.keep_fidelity_roots(self._fidelity.name, roots)
+        return self
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def propose_roots(self, names: list[str]) -> list[str]:
+        """Return the folders this fidelity proposes to write under, each a path from the project as choose_root and add_root take it: the narrowest folder holding each piece the session's branch changed, and each piece names name, such as the aggregate or the story a ticket's text names (an aggregate's folder, a package, a sub-epic's folder in story_tests). Show them to the person and set only those confirmed."""
+        return self.proposed_roots.proposed(names)
 
     @mcp
     @agent_tool
@@ -368,10 +393,16 @@ class FidelitySessionOutput:
 
     @property
     def root(self) -> Path:
-        """The folder this fidelity writes under: its own root when session.json names one, else its practice's output
-        root."""
-        chosen = self.chosen_outputs.get("root")
-        return self._session.paths.folder_under_root(chosen) if chosen else self._practice.output_root
+        """The first folder this fidelity writes under (``roots``)."""
+        return self.roots[0]
+
+    @property
+    def roots(self) -> list[Path]:
+        """The folders this fidelity writes under: its own roots when session.json names them, as ``roots`` or one
+        ``root``, else its practice's output root."""
+        chosen = self.chosen_outputs
+        named = list(chosen.get("roots") or ([chosen["root"]] if chosen.get("root") else []))
+        return [self._session.paths.folder_under_root(root) for root in named] or [self._practice.output_root]
 
 
 class WrittenFiles:
@@ -392,9 +423,9 @@ class WrittenFiles:
     def output_paths(self) -> dict[str, list[str]]:
         """Where this fidelity writes each format in the session: its declared paths under its root. session.json can
         name a file per format for a single-file output."""
-        chosen, root = self._output.chosen_outputs, self._output.root
+        chosen, roots = self._output.chosen_outputs, self._output.roots
         return {
-            label: [self._under_root(name, root) for name in self._output_names(declared, chosen.get(label))]
+            label: list(dict.fromkeys(self._under_root(name, root) for root in roots for name in self._output_names(declared, chosen.get(label))))
             for label, declared in self._fidelity.outputs.items()
         }
 
@@ -420,11 +451,11 @@ class WrittenFiles:
 
     def _writes_code_to(self, file: Path) -> bool:
         """Whether file is production code in a format this fidelity writes as a folder per module, under its root."""
-        root = self._output.root.resolve()
-        if root not in file.resolve().parents or is_test_code(file.as_posix()):
+        roots = [root.resolve() for root in self._output.roots]
+        if not any(root in file.resolve().parents for root in roots) or is_test_code(file.as_posix()):
             return False
         folders = [label for label, declared in self._fidelity.outputs.items() if str(declared).endswith("/") and Format(label).is_code]
-        return any(file.suffix in _CODE_EXTENSIONS.get(Format(label).name, (Format(label).extension,)) for label in folders)
+        return any(file.suffix in code_extensions(label) for label in folders)
 
     def every_file(self) -> list[Path]:
         """Every file this fidelity declares that is in the session's checkout, worked on by the session or not: what a
@@ -468,7 +499,7 @@ class WrittenFiles:
         in every ``.context`` folder and the folders inside it, such as ``harness/.context/stories/story-map.md``, as
         its patterns already find its tests anywhere."""
         from_top = PurePosixPath(self._session.repo.path_from_top(path))
-        if self._output.root.resolve() != self._session.repo.root.resolve() or from_top.parts[:1] != (CONTEXT_FOLDER,):
+        if all(root.resolve() != self._session.repo.root.resolve() for root in self._output.roots) or from_top.parts[:1] != (CONTEXT_FOLDER,):
             return DeclaredFile(from_top.as_posix())
         return DeclaredFile(PurePosixPath("**", CONTEXT_FOLDER, "**", *from_top.parts[1:]).as_posix())
 
@@ -482,10 +513,10 @@ class WrittenFiles:
         listed, declared = self._listed(path), self._declared(path)
         found = [] if listed.names_one_path else self._found(label, listed)
         if found:
-            return [FileEntry(repo.path_from_top(file), True, file.resolve() in changed()).linked(self._canvas_link(file)) for file in found]
+            return [FileEntry(repo.path_from_top(file), True, file.resolve() in changed()).linked(published_link(file)) for file in found]
         if declared.names_one_path:
             named = repo.root / declared.glob
-            return [FileEntry(declared.glob, named.exists(), named.exists() and named.resolve() in changed())]
+            return [FileEntry(declared.glob, named.exists(), named.exists() and named.resolve() in changed()).linked(published_link(named))]
         return []
 
     def _worked_on_code(self, label: str, changed: Callable[[], set[Path]]) -> list[FileEntry]:
@@ -493,10 +524,10 @@ class WrittenFiles:
         files in that format under its root that the session's branch changed, the code the ticket worked on, not every
         file of that language in the repository. Specs, tests, and what only they use are the acceptance tests' and the
         development specs' files, not production code, so they are left out."""
-        root = self._output.root.resolve()
-        extensions = _CODE_EXTENSIONS.get(Format(label).name, (Format(label).extension,))
+        roots = [root.resolve() for root in self._output.roots]
+        extensions = code_extensions(label)
         worked_on = sorted(
-            file for file in changed() if file.suffix in extensions and (file == root or root in file.parents) and not is_test_code(file.as_posix())
+            file for file in changed() if file.suffix in extensions and any(file == root or root in file.parents for root in roots) and not is_test_code(file.as_posix())
         )
         return [FileEntry(self._session.repo.path_from_top(file), file.exists(), True) for file in worked_on]
 
@@ -546,13 +577,18 @@ class WrittenFiles:
         `.context`."""
         return Path(*root.parts[: root.parts.index(CONTEXT_FOLDER)])
 
-    def _canvas_link(self, file: Path) -> str:
-        """The link a design canvas's ``canvas.json`` is published at (``<design-canvas>/version-N/project/canvas.json``),
-        as its versions record it; none for any other file, or a version not yet published."""
-        if file.name != "canvas.json" or file.parent.name != "project":
-            return ""
-        version = file.parent.parent
-        return CanvasVersions(version.parent).published.of(version.name) or ""
+
+def published_link(file: Path) -> str:
+    """The link a file is published at, which a page opens instead of the file: a design canvas version's
+    ``canvas.json`` (``<design-canvas>/version-N/project/canvas.json``) at the link its versions record
+    (``versions.json``), and a ``.whiteboard`` file at the address of the board in Claude kept beside it
+    (``whiteboards.json``); none for any other file, or one not yet published."""
+    if file.suffix == Whiteboard.SUFFIX:
+        return BoardLinks.beside(file).of(file)
+    if file.name != "canvas.json" or file.parent.name != "project":
+        return ""
+    version = file.parent.parent
+    return CanvasVersions(version.parent).published.of(version.name) or ""
 
 
 class FidelityFormats:

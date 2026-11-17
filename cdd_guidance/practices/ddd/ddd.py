@@ -58,6 +58,8 @@ class Ddd(PracticeGuidance):
         "spec_blurb": "An aggregate model of the core domain, then the building blocks that implement it",
     }
 
+    claims_some_code = True
+
     def claims(self, file: Path) -> bool:
         """DDD's files are a domain's: a file whose path names a domain model or a bounded context, code declaring a
         class with a DDD stereotype, or code declaring a class named for a building block in a folder that holds a

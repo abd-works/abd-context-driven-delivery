@@ -314,6 +314,12 @@ class Example(StoryNode):
         """The facts this example records with: those the story file at file gives the example of its name."""
         return recording.example_facts(file, self.name)
 
+    @property
+    def declaration(self) -> Optional[tuple]:
+        """Where this example is defined apart from the story file that uses it, as (file, first line, last line); none
+        for an example its story file writes or whose definition is found by name (``align_to_example_export``)."""
+        return None
+
     def clone(self) -> "Example":
         cloned = type(self)(self.name, dict(self.value) if isinstance(self.value, dict) else self.value)
         cloned.sequential_order, cloned.scope = self.sequential_order, self.scope

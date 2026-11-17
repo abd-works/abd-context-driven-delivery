@@ -51,7 +51,7 @@ _LOADED = '{"message": "Loaded the working copies."}'
 # The files each of the six validators refreshes in the shared graph, from the practices folder: code and specs, so
 # every practice that reads the practices folder reads a file again.
 _VALIDATED = (
-    ("clean_engineering/model/operation.py", "clean_engineering/rules/class_graph.py"),
+    ("clean_engineering/model/operation.py", "clean_engineering/rules/class_rules.py"),
     ("stories/model/story_model.py", "stories/stories.py"),
     ("ddd/model/nodes.py", "ddd/model/graph_reading.py"),
     ("bdd/model/graph_bdd_model_spec.py", "bdd/model/graph_reading.py"),

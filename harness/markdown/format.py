@@ -67,6 +67,13 @@ class Format(str):
         return next((group for group, members in self.GROUPS.items() if self.name in members), self.name)
 
     @property
+    def is_offered(self) -> bool:
+        """Whether a person picks this format, by a group of ``GROUPS``. A fidelity output named for what it holds rather
+        than how it is written, such as the story map's ``thin_slice`` or the scenarios' ``realization``, names files its
+        fidelity writes, never a format a chip or a toggle offers."""
+        return any(self.name in members for members in self.GROUPS.values())
+
+    @property
     def group_order(self) -> int:
         """Where this format's group comes among the groups an action bar offers; a group of its own comes after them."""
         groups = list(self.GROUPS)

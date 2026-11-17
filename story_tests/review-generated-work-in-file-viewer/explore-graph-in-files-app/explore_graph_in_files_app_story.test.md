@@ -104,6 +104,23 @@ section: body
 | user request, 2026-11-15 | "graph filtered like file filter is" |
 | Graph app, Filter By Node Type, Filter By Connector, Select All Or No Filter Choices (Observed) | `Graph.filter_choices`, `Filter._on_relationship`, `FilterView.tsx` |
 | person's decision, 2026-11-16 | The file list stays the one file filter. A node filter is a different filter, on the graph's nodes, and it extends the file filter rather than replacing it: both apply, the node filter only narrows the nodes of the files listed and never brings back a file the list leaves out. |
+| user request, 2026-11-16 | "Collapse the graph filters by default — let users expand if they want them." |
+
+#### Scenario: The node filter starts collapsed behind one Filters toggle
+
+> Requested 2026-11-16, not walked.
+
+*Given* the Person never opened the graph view's filters in this browser  
+*When* the Person switches the file bar to the graph view  
+*Then* the graph view shows one closed Filters toggle above the practice trees  
+  *But* not the node type, connector and rule lists or the Violations switch, so the trees get the space
+
+#### Scenario: Pressing Filters opens the node filter, and the browser remembers it
+
+*Given* the graph view shows its Filters toggle closed  
+*When* the Person presses Filters  
+*Then* the node type, connector and rule lists and the Violations switch show above the trees  
+  *And* the graph view opens with them shown the next time this browser opens it, until the Person presses Filters again
 
 #### Scenario: Choosing a node type keeps only those nodes
 
@@ -200,6 +217,33 @@ section: body
 *When* the Person opens the call to Board.reread in Ticket.delete  
 *Then* the lines of Board.reread, from board.py, show in place below the call  
   *And* ticket.py stays open where it was
+
+#### Scenario: A class never opens itself in place
+
+Requested 2026-11-16 by the person: "don't code fold yourself! a class doesn't fold to itself; it folds across classes or methods". The line `class AppNotRegistered(KeyError):` opened a copy of AppNotRegistered inside AppNotRegistered. Only the page finds callouts: `harness/files_app/app/files/call-expansion.spec.ts`.
+
+*Given* the Files app shows ticket.py, which defines the class Ticket, and the graph is read  
+*When* the Person views the line `class Ticket:` and the lines of Ticket's own operations  
+*Then* no line inside Ticket opens Ticket in place  
+  *But* a line inside Ticket that names the class Board still opens Board
+
+#### Scenario: A method's call to another method of its class opens in place
+
+Requested 2026-11-16 by the person: "I can't find a single instance of code folding where it's supposed to happen, e.g. nesting methods and other classes". A Python call on `self` (`self.close()`) was skipped, and a call to a module function by its bare name (`reread_all(board)`) was not looked for.
+
+*Given* the Files app shows ticket.py, whose Ticket.delete calls `self.close()` and the module function `reread_all(board)`, and the graph is read  
+*When* the Person views Ticket.delete  
+*Then* the call `self.close()` opens Ticket.close in place below it  
+  *And* the call `reread_all(board)` opens the function reread_all in place below it
+
+#### Scenario: A call inside a folded method opens in place once the method is unfolded
+
+Requested 2026-11-16 by the person: "I can't find a single instance of code folding where it's supposed to happen". In harness/diagnostics/app.py, opened from the graph, AppServer.restart's line `if not self.stop():` opened AppServer.stop 0 px tall: opening the file folds every block, the `if` block's own body stayed folded once restart was unfolded, and Monaco gives no height to a view zone whose next line a fold hides. The page and Monaco's view zones: `harness/graph/app/app.test.tsx`; the real editor is checked by hand in the Files app.
+
+*Given* the Files app shows ticket.py from the graph with Ticket.delete folded, and the graph is read  
+*When* the Person unfolds Ticket.delete and opens the call `self.close()`, whose `if` block is still folded  
+*Then* the lines of Ticket.close show in place below the call, at their full height  
+  *And* the page grows by those lines, so it scrolls down to them
 
 #### Scenario: Calls open in place only once the graph is read
 

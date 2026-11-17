@@ -79,6 +79,17 @@ section: body
   *And* Delete Ticket holds the scenario its story test holds  
   *And* Restore Ticket, which has a story test but is not on the markdown map yet
 
+#### Scenario: A story map listed with a code story test keeps every epic of the map
+
+Requested 2026-11-16: the Files app listed the project's story map with a code story test, and its graph view showed one epic of eleven, read from the story test alone, its stories sourced to the story test and the markdown scenarios' stories gone.
+
+*Given* checkout-flow's story map holds Manage Tickets and Plan Releases, with Plan Releases' story Cut Release  
+  *And* the Files app lists the story map with Delete Ticket's and Restore Ticket's story tests  
+*When* the Person switches the file bar to the graph view  
+*Then* the Stories tree holds Manage Tickets and Plan Releases, with Cut Release, read from the story map  
+  *And* Delete Ticket is the story map's story, holding the scenario its story test holds  
+  *And* Restore Ticket, which only its story test holds, sits under Manage Tickets and Remove Tickets, the folders its story test sits in
+
 #### Scenario: A story map listed in markdown and drawio is read once, from its markdown
 
 *Given* the Files app lists checkout-flow's story map in markdown and in drawio  
@@ -90,6 +101,15 @@ section: body
 *Given* the Files app lists only the markdown formats: checkout-flow's story map and Delete Ticket's scenarios  
 *When* the Person switches the file bar to the graph view  
 *Then* Delete Ticket holds its scenario and its steps from the scenarios file
+
+#### Scenario: A story listed only by its story map holds its scenarios
+
+Requested 2026-11-16: "scenarios not rendering in graph". The Files app listed file-manager's story map but not its unchanged scenarios files, so every story arrived with no scenarios.
+
+*Given* the Files app lists only checkout-flow's story map, .context/story-map.md  
+  *But* not Delete Ticket's scenarios file under story_tests  
+*When* the Person switches the file bar to the graph view  
+*Then* Delete Ticket holds its scenario and its steps, read from its scenarios file
 
 ## Story: Filter Graph Like The File List
 
@@ -180,6 +200,14 @@ Requested by the person on 2026-11-16: a scenario or step selected in code opene
 *When* the Person selects the Given step a ticket on the board  
 *Then* the shared story test opens at lines 9 to 11, the Given's decorator through its function
 
+#### Scenario: Selecting a scenario opens only its own lines, not the examples module its example comes from
+
+Seen by the person on 2026-11-17: selecting a scenario marked lines far outside it.
+
+*Given* the Files app shows the Stories tree of Delete Ticket's story test, whose Then observes CHECKOUT_TICKET from the examples module  
+*When* the Person selects the scenario a ticket on the board is deleted  
+*Then* only the story test opens, at lines 7 to 19, its decorator through its Then
+
 #### Scenario: Selecting a story in a Python story test spans its scenarios
 
 Requested by the person on 2026-11-16: a story or sub-epic selected in code opened on one line, so it looked like the wrong file.
@@ -204,6 +232,27 @@ Requested by the person on 2026-11-16: a story or sub-epic selected in code open
 *Then* the lines of Ticket.activate are unfolded  
   *And* Ticket.close and Ticket's other operations are folded
 
+#### Scenario: A code file opens with its classes open and their members folded
+
+Requested 2026-11-16 by the person: "Default on open for code is classes opened and members collapsed." Only the page folds: `harness/files_app/app/files/code-outline.spec.ts`.
+
+*Given* no node is selected, and ticket.py holds the class Ticket with its operations activate and close  
+*When* the Person views ticket.py  
+*Then* Ticket is unfolded  
+  *And* Ticket.activate, Ticket.close and Ticket's other operations are folded to their first lines  
+  *And* a TypeScript file opens the same way, files-graph.ts with the class FilesGraph unfolded and its operations folded  
+*When* the Person then selects Ticket.close  
+*Then* the lines of Ticket.close are unfolded, as a selected node's are
+
+#### Scenario: Selecting a step in a Python story test unfolds its function
+
+Requested 2026-11-16 by the person: "when selecting a step in code mode expand the step if it's a function". A step spans its decorator and the function under it, and only the folds around its first line opened, so the function stayed folded under its decorator. Only the page folds: `harness/files_app/app/files/source-folding.spec.ts`.
+
+*Given* Delete Ticket's Python shared story test is open in the code view, its scenario's step functions folded  
+*When* the Person selects the step given a ticket on the board, its decorator `@s.given("a ticket on the board")` on line 9 and its function `def _(world):` on line 10  
+*Then* the function on line 10 is unfolded, showing its body  
+  *And* the scenario's other step functions stay folded
+
 #### Scenario: Selecting another node in the same file unfolds it too
 
 *Given* Ticket.activate is selected and unfolded in ticket.py  
@@ -225,6 +274,15 @@ Requested by the person on 2026-11-16.
 *When* the Person selects Ticket.close, which covers lines 538 to 560  
 *Then* the source view marks lines 538 to 560 as selected  
   *And* a node that covers the whole file marks no lines
+
+#### Scenario: A selected node is marked by one orange line beside its lines
+
+Requested 2026-11-16 by the person: "The selected node on text viewer - make it a single orange range line to the side; no shading of text required." Only the page marks lines: `harness/files_app/app/files/file-marks.spec.ts`.
+
+*Given* ticket.py is open at its first line  
+*When* the Person selects Ticket.close, which covers lines 538 to 560  
+*Then* one orange line runs beside lines 538 to 560, in the margin between the line numbers and the text  
+  *And* the text of lines 538 to 560 is not shaded
 
 ## Story: Open Story Scenarios Across Files
 
@@ -254,6 +312,29 @@ Reported by the person on 2026-11-16: a selected sub-epic's lines in its scenari
 *Given* the Files app shows the Stories tree of checkout-flow's story map and Delete Ticket's scenarios  
 *When* the Person selects the scenario a ticket is deleted  
 *Then* the scenarios file opens at lines 5 to 9, its heading through its Then
+
+#### Scenario: A markdown When is not asked to invoke code before a realization names it
+
+Requested 2026-11-16 by the person: steps in markdown scenario files "would only have [invokes] if realizations are generated", so require invokes only on code-backed steps; linking markdown steps through realizations is in the Backlog.
+
+*Given* checkout-flow's Delete Ticket scenarios in markdown, whose When the Person deletes the ticket's card names no code, and Clean Engineering read  
+*When* the Person views the scenarios file with the rules the whole working copy breaks  
+*Then* the When carries no finding that it invokes nothing, since only a step backed by code can name the code it invokes
+
+#### Scenario: A When in a story test that calls none of the code it tests is flagged
+
+*Given* Delete Ticket's Python shared story test, whose When the Person looks up the deleted ticket calls only the file's own helper ticket_left  
+*When* the Person views the shared story test with its own rules  
+*Then* that When carries the code-steps-invoke-code finding  
+  *But* the When that calls Ticket.delete carries none
+
+#### Scenario: A story test outside the session's folder shows the rules it breaks
+
+Requested 2026-11-16 by the person: "fix the session to include relevant test epics and stories". file-manager works in harness, its story tests sit in the project's story_tests, and a story test read on its own for its rules read nothing: no folds, no steps, no findings.
+
+*Given* checkout-flow works in the folder space, and Delete Ticket's Python shared story test, under story_tests outside it, has a When that calls only the file's own helper ticket_left  
+*When* the Person views the shared story test with its own rules  
+*Then* the story test's steps are read, and that When carries the code-steps-invoke-code finding
 
 #### Scenario: Selecting a markdown step spans its own line, whatever its prose holds
 
@@ -310,20 +391,39 @@ Changed by the person on 2026-11-16 ("only shade once; on expand, hide the callo
 | probe of the file-manager worktree, 2026-11-16 | a Python step invoked the operations it called on an object (`session_of(world).graph_branch(...)` reached Session.graph_branch) but none of the functions it called by name (`session_of`, `node_id_of`), which the graph holds as operations of their module |
 | main session's validation report, 2026-11-16 (`stories-acceptance-tests-20261116T173912.md`) | 11 When steps of the serve-cdd-code-in-lanes story tests, written as `with when("..."):` blocks calling `self.lanes.for_project(...)`, were reported with no invokes relationship to Operation or Property; the main session has Clean Engineering off, so its graph holds no operation for any step to invoke |
 
-#### Scenario: A step in a Python story test invokes the functions and operations it calls
+#### Scenario: A step in a Python story test invokes only the code it tests, never the test's own functions
 
-*Given* the Files app shows the Stories tree of Delete Ticket's Python shared story test, whose Given calls the function ticket_on_board and whose When calls Ticket.delete  
-*When* the Person opens the Given and the When  
-*Then* the Given shows an invokes group holding ticket_on_board  
-  *And* the When shows an invokes group holding delete
+Requested 2026-11-16: "internal functions in the test don't count for invokes; you have to cross to the methods that exist in the CE part of the graph". A step listed names_in and opened_names, helpers of its own story test, as code it invokes.
+
+*Given* the Files app shows the Stories tree of Delete Ticket's Python shared story test, whose Given calls its seed ticket_on_board, whose When calls Ticket.delete, and whose Then calls the file's own helper ticket_left  
+*When* the Person opens the Given, the When and the Then  
+*Then* the When shows an invokes group holding delete, Ticket's operation in Clean Engineering  
+  *But* the Given and the Then show no invokes group, since the seed and the helper are the story test's own code
+
+#### Scenario: Selecting an operation a step invokes opens just that operation
+
+Requested 2026-11-16: selecting `data_of` in a step's invokes group, with every session file listed, answered "maximum recursion depth exceeded", because the lines were gathered through every step that invokes it and every operation those steps invoke.
+
+*Given* the Files app shows the Stories tree of Delete Ticket's Python shared story test, its When opened to the invokes group holding delete  
+*When* the Person selects delete  
+*Then* ticket.py opens at lines 8 to 9, delete's own lines  
+  *But* the shared story test, whose When invokes delete, does not open
+
+#### Scenario: Selecting an example a step observes opens its definition
+
+Requested 2026-11-16: selecting STORY_MAP in a step's observes group opened the shared story test at the first scenario that uses it, not the examples module that defines it.
+
+*Given* the Files app shows the Stories tree of Delete Ticket's Python shared story test, whose Then observes CHECKOUT_TICKET, imported from ticket_story_examples.py  
+*When* the Person selects CHECKOUT_TICKET in the Then's observes group  
+*Then* ticket_story_examples.py opens at line 5, where CHECKOUT_TICKET is defined  
+  *But* the shared story test, whose Then observes it, does not open
 
 #### Scenario: A story test's callouts sit on the step that invokes them
 
 *Given* the Files app shows checkout-flow's graph of Delete Ticket's Python shared story test, whose docstring names the class Ticket  
 *When* the Person views the shared story test  
 *Then* the When's line carries a callout to Ticket.delete, the operation it invokes  
-  *And* the Given's line a callout to ticket_on_board  
-  *But* the docstring's line carries none
+  *But* the Given's line, calling only its seed, and the docstring's line carry none
 
 #### Scenario: A step in a with-block Python story test invokes the operation its block calls
 

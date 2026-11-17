@@ -279,6 +279,11 @@ class PracticeGuidance(Guidance):
         practice says which code there is its. Every practice claims all of it unless it narrows that."""
         return True
 
+    claims_some_code: ClassVar[bool] = False
+    """True for a practice whose claim narrows to some code, as DDD's does to a domain's. A practice that claims all code,
+    such as Clean Engineering, proposes no root for a file such a practice claims: that file's folder is the narrower
+    practice's piece, as an aggregate's folder is DDD's."""
+
     # The format the practice works in while it has no current fidelity.
     _own_format: Format = Format()
 

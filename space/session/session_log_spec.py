@@ -202,6 +202,14 @@ with description("a session a chat switches to"):
             answer = Sessions(self.repo).switch("alpha", self.repo)
             expect(answer).to(contain("fidelity-session-output.choose_root", "most local folder"))
 
+        with it("should tell the chat to set up its roots from the ticket and its branch and confirm them with the person"):
+            answer = Sessions(self.repo).switch("alpha", self.repo)
+            expect(answer).to(contain("session.set_up_roots", "fidelity-session-output.propose_roots", "confirm"))
+
+        with it("should tell the chat to add each further folder beside a fidelity's root"):
+            answer = Sessions(self.repo).switch("alpha", self.repo)
+            expect(answer).to(contain("fidelity-session-output.add_root"))
+
     with context("whose every practice has a chosen root"):
         with it("should not ask about roots"):
             Sessions(self.repo).switch("alpha", self.repo)

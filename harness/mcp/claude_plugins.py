@@ -1,4 +1,4 @@
-"""ClaudePlugins - installs the cdd and cdd-board plugins into Claude Code through its own command line."""
+"""ClaudePlugins - installs the cdd, cdd-board and prompt-queue plugins into Claude Code through its own command line."""
 from __future__ import annotations
 
 import os
@@ -10,7 +10,7 @@ from pathlib import Path
 
 from harness.installation.ide_layout import IdeLayout
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
-from harness.mcp.cdd_home import BOARD_PLUGIN, CLAUDE_MARKETPLACE, CLAUDE_PLUGIN, CddHome
+from harness.mcp.cdd_home import BOARD_PLUGIN, CLAUDE_MARKETPLACE, CLAUDE_PLUGIN, QUEUE_PLUGIN, CddHome
 
 # Each claude plugin command clones or reads a marketplace; a slow disk or network can take this long.
 _CLAUDE_COMMAND_TIMEOUT_SECONDS = 120
@@ -23,6 +23,7 @@ class ClaudePlugins:
 
     BOARD = f"{BOARD_PLUGIN}@{CLAUDE_MARKETPLACE}"
     CDD = f"{CLAUDE_PLUGIN}@{CLAUDE_MARKETPLACE}"
+    QUEUE = f"{QUEUE_PLUGIN}@{CLAUDE_MARKETPLACE}"
     # A board mod installed from a checkout's own marketplace runs that branch's code, not the server's.
     CHECKOUT_BOARD = f"{BOARD_PLUGIN}@abd-works"
     CHECKOUT_MARKETPLACE = "abd-works"
@@ -49,6 +50,17 @@ class ClaudePlugins:
             self.run(claude, "plugin", "uninstall", self.CHECKOUT_BOARD, "--scope", "user")
             self.run(claude, "plugin", "marketplace", "remove", self.CHECKOUT_MARKETPLACE)
         return self._install(claude, self.BOARD)
+
+    def install_queue(self) -> str:
+        """Install the prompt queue mod from the code the server runs, or update it when its files changed. Like the
+        board it is a convenience on top of the install, so a miss is printed, never raised."""
+        if self.installed.get(self.QUEUE) == self.published_version(QUEUE_PLUGIN):
+            return "installed"
+        claude = self.claude_cli
+        if claude is None:
+            print(f"{self.QUEUE} not installed: no claude command found", file=sys.stderr)
+            return "missing"
+        return self._install(claude, self.QUEUE)
 
     def install_cdd(self) -> str:
         """Install the ``cdd`` plugin, or update it when the server it declares has changed. Without it Claude Code has no

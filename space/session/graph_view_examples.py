@@ -4,6 +4,8 @@ Graph and Explore Graph In Files App."""
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+
 from space.kanban.session_board_examples import SessionSeed
 
 # Seed: checkout-flow working in the whole project with Stories and Clean Engineering on, its Stories root the project's
@@ -14,6 +16,17 @@ CHECKOUT_FLOW = SessionSeed(
     fields={
         "practices": {key: {"enabled": False} for key in ("ux", "ddd", "bdd")},
         "outputs": {"stories": {"root": ".context"}},
+    },
+)
+# Seed: checkout-flow as above, working in the folder space, so its story tests under story_tests sit outside the
+# session's folder, as a ticket working in harness keeps its story tests in the project's story_tests.
+CHECKOUT_FLOW_IN_SPACE = SessionSeed(
+    "checkout-flow",
+    "Checkout flow",
+    workpath="space",
+    fields={
+        "practices": {key: {"enabled": False} for key in ("ux", "ddd", "bdd")},
+        "outputs": {"stories": {"root": "../.context"}},
     },
 )
 # Seed: checkout-flow as above with Clean Engineering off as well, so its graph reads Stories alone and holds no
@@ -114,16 +127,19 @@ SHARED_STORY_TEXT = (
     '        world.shown = False\n'
 )
 LISTED = [STORY_MAP, TICKET_CODE, BOARD_CODE]
-# Seed: the examples the story test below takes its ticket from, a function of its module, not a class's operation.
+# Seed: the examples the story test below takes its ticket from, a function of its module, not a class's operation,
+# and the constant its Then observes, CHECKOUT_TICKET on line 5.
 TICKET_EXAMPLES = "space/kanban/ticket_story_examples.py"
-TICKET_EXAMPLES_TEXT = 'def ticket_on_board(world) -> str:\n    return "checkout"\n'
+TICKET_EXAMPLES_TEXT = 'def ticket_on_board(world) -> str:\n    return "checkout"\n\n\nCHECKOUT_TICKET = "checkout"\n'
+TICKET_EXAMPLES_CONSTANT_LINE = 5
 # Seed: Delete Ticket's Python shared story test, its docstring naming the class Ticket on line 1, its Given on line 9
-# calling the function ticket_on_board, its When on line 13 calling Ticket.delete.
+# calling the seed ticket_on_board, its When on line 13 calling Ticket.delete, its Then on line 17 observing the example
+# CHECKOUT_TICKET through the file's own helper ticket_left; neither the seed nor the helper is code a step invokes.
 STEP_STORY = "story_tests/manage-tickets/remove-tickets/delete-ticket.story.shared.py"
 STEP_STORY_TEXT = (
     '"""Delete Ticket: a Ticket leaves the board."""\n'
     "from space.kanban.story_test import SharedStories\n"
-    "from space.kanban.ticket_story_examples import ticket_on_board\n"
+    "from space.kanban.ticket_story_examples import CHECKOUT_TICKET, ticket_on_board\n"
     "\n"
     'shared_stories = SharedStories("Remove Tickets")\n'
     "\n"
@@ -136,7 +152,25 @@ STEP_STORY_TEXT = (
     '    @s.when("the Person deletes it")\n'
     "    def _(world):\n"
     "        world.ticket.delete(world.board)\n"
+    "\n"
+    '    @s.then("the checkout ticket is gone")\n'
+    "    def _(world):\n"
+    "        assert ticket_left(world) == CHECKOUT_TICKET\n"
+    "\n"
+    "\n"
+    "def ticket_left(world) -> str:\n"
+    "    return world.ticket\n"
+    "\n"
+    "\n"
+    '@shared_stories.scenario("Delete Ticket", "a deleted ticket is looked up")\n'
+    "def _(s):\n"
+    '    @s.when("the Person looks up the deleted ticket")\n'
+    "    def _(world):\n"
+    "        world.found = ticket_left(world)\n"
 )
+# Seed: that story test's second scenario, its When on line 28 calling only the file's own helper ticket_left, so it
+# invokes no code it tests.
+STEP_STORY_HELPER_WHEN = "when the Person looks up the deleted ticket"
 STEP_STORY_DOCSTRING_LINE = 1
 STEP_STORY_GIVEN_LINE = 9
 STEP_STORY_WHEN_LINE = 13
@@ -168,15 +202,28 @@ def session_of(world):
     return world.Ticket.load(CHECKOUT_FLOW.name).session
 
 
+def opened_entries(world, paths: list[str], node_filter: dict | None = None) -> Iterator[tuple[dict, list[str]]]:
+    """Each entry of the trees answered for paths and node_filter, in tree order, as its branch answers it once the
+    page opens it, with the names of the entries above it from its tree's root down."""
+    session = session_of(world)
+    pending = [(entry, []) for entry in reversed(list(world.data_of(session.graph_trees(paths=paths, node_filter=node_filter))))]
+    while pending:
+        entry, above = pending.pop()
+        if entry["children_left_out"]:
+            entry = world.data_of(session.graph_branch(node_id=entry["node_id"], paths=paths, node_filter=node_filter)) or entry
+        yield entry, above
+        below = [child for child in entry["children"] if "children_left_out" in child]
+        pending.extend((child, [*above, entry["name"]]) for child in reversed(below))
+
+
+def opened_entry_named(world, name: str, paths: list[str]) -> tuple[dict, list[str]]:
+    """The first entry named name in the trees answered for paths, with the names above it."""
+    found = next(((entry, above) for entry, above in opened_entries(world, paths) if entry["name"] == name), None)
+    if found is None:
+        raise AssertionError(f"no node named {name} in the trees of {paths}")
+    return found
+
+
 def node_id_of(world, name: str, paths: list[str]) -> str:
     """The id of the node named name in the trees answered for paths, opening each branch as the page opens it."""
-    session = session_of(world)
-    found = list(world.data_of(session.graph_trees(paths=paths)))
-    while found:
-        entry = found.pop()
-        if entry["name"] == name:
-            return entry["node_id"]
-        if entry["children_left_out"]:
-            entry = world.data_of(session.graph_branch(node_id=entry["node_id"], paths=paths)) or entry
-        found.extend(child for child in entry["children"] if "children_left_out" in child)
-    raise AssertionError(f"no node named {name} in the trees of {paths}")
+    return opened_entry_named(world, name, paths)[0]["node_id"]
