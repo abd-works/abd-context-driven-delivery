@@ -79,6 +79,17 @@ section: body
   *And* Delete Ticket holds the scenario its story test holds  
   *And* Restore Ticket, which has a story test but is not on the markdown map yet
 
+#### Scenario: A story map listed with a code story test keeps every epic of the map
+
+Requested 2026-11-16: the Files app listed the project's story map with a code story test, and its graph view showed one epic of eleven, read from the story test alone, its stories sourced to the story test and the markdown scenarios' stories gone.
+
+*Given* checkout-flow's story map holds Manage Tickets and Plan Releases, with Plan Releases' story Cut Release  
+  *And* the Files app lists the story map with Delete Ticket's and Restore Ticket's story tests  
+*When* the Person switches the file bar to the graph view  
+*Then* the Stories tree holds Manage Tickets and Plan Releases, with Cut Release, read from the story map  
+  *And* Delete Ticket is the story map's story, holding the scenario its story test holds  
+  *And* Restore Ticket, which only its story test holds, sits under Manage Tickets and Remove Tickets, the folders its story test sits in
+
 #### Scenario: A story map listed in markdown and drawio is read once, from its markdown
 
 *Given* the Files app lists checkout-flow's story map in markdown and in drawio  
@@ -224,6 +235,15 @@ Requested 2026-11-16 by the person: "Default on open for code is classes opened 
   *And* a TypeScript file opens the same way, files-graph.ts with the class FilesGraph unfolded and its operations folded  
 *When* the Person then selects Ticket.close  
 *Then* the lines of Ticket.close are unfolded, as a selected node's are
+
+#### Scenario: Selecting a step in a Python story test unfolds its function
+
+Requested 2026-11-16 by the person: "when selecting a step in code mode expand the step if it's a function". A step spans its decorator and the function under it, and only the folds around its first line opened, so the function stayed folded under its decorator. Only the page folds: `harness/files_app/app/files/source-folding.spec.ts`.
+
+*Given* Delete Ticket's Python shared story test is open in the code view, its scenario's step functions folded  
+*When* the Person selects the step given a ticket on the board, its decorator `@s.given("a ticket on the board")` on line 9 and its function `def _(world):` on line 10  
+*Then* the function on line 10 is unfolded, showing its body  
+  *And* the scenario's other step functions stay folded
 
 #### Scenario: Selecting another node in the same file unfolds it too
 
