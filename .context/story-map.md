@@ -1014,11 +1014,11 @@ Built (2026-11-17), not seen: the agent marks one step of a prompt done (`prompt
 
 ### (S:system) Prompt Queue --> [Copy Task List Onto Working Prompt](../story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/nest_prompt_steps_in_queue_story.test.md#story-copy-task-list-onto-working-prompt)
 
-Built (2026-11-17), not seen: the queue mod's `tool.call` hook replays each `update_plan` call (a whole list, advance, done, start) and copies the list onto the prompt being worked with `prompt-queue.set_steps`; a `wrap_up` finishes every step. Not yet seen: whether the desktop app hands the mod's hook its own `update_plan` calls; until the mod has seen one, the queue beside a prompt tells the agent to set and tick the steps itself.
+Observed (2026-11-17): after /reload-plugins, the person's prompt "?" went first on the queue as the one being worked, and the agent's task list was copied onto it as five steps (prompt-queue.show). Built (2026-11-17): the queue mod's `tool.call` hook replays each `update_plan` call (a whole list, advance, done, start) and copies the list onto the prompt being worked with `prompt-queue.set_steps`; a `wrap_up` finishes every step. Not yet seen: whether the desktop app hands the mod's hook its own `update_plan` calls; until the mod has seen one, the queue beside a prompt tells the agent to set and tick the steps itself.
 
 ### (S:system) Prompt Queue --> [Queue Sent Prompt As Running](../story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/nest_prompt_steps_in_queue_story.test.md#story-queue-sent-prompt-as-running)
 
-Built (2026-11-17), not seen: a prompt the person sends straight to the chat, not from the queue, goes on the queue first as the prompt being worked, and the agent is told its id to mark it done, so its steps have a prompt to sit under.
+Observed (2026-11-17): after /reload-plugins, the person's prompt "?" went first on the queue as the one being worked, and the agent's task list was copied onto it as five steps (prompt-queue.show). Built (2026-11-17): a prompt the person sends straight to the chat, not from the queue, goes on the queue first as the prompt being worked, and the agent is told its id to mark it done, so its steps have a prompt to sit under.
 
 ### (S) Person --> [Show Prompt Steps In Queue](../story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/nest_prompt_steps_in_queue_story.test.md#story-show-prompt-steps-in-queue)
 
