@@ -97,8 +97,9 @@ const ADD_ICON: Icon = { key: 'queue-add', svg: ADD_SVG, glyph: '+', tip: 'Queue
 const CLEAR_ICON: Icon = { key: 'queue-clear', svg: CLEAR_SVG, glyph: '✕', tip: 'Clear the queue' }
 
 /**
- * The open queue, a stack of task cards that grows downward, one bordered card per task. The pointer over a card
- * reveals its move and remove buttons.
+ * The open queue, one line per task, each drawn as the chat's own rounded buttons are, the session name's among them,
+ * so a card is one line tall with round ends. Pressing a card edits it; the pointer over it reveals its edit, move
+ * and remove buttons.
  */
 function QueueListView($: EngineInterface, e: AbovePromptEvent, queue: PromptQueue, editingId: string) {
   const { Box, Text, Button } = $.ui.resolve(e)
@@ -118,12 +119,13 @@ function QueueListView($: EngineInterface, e: AbovePromptEvent, queue: PromptQue
   return (
     <Box flexDirection="column" rowGap="sm">
       {queue.prompts.map((prompt, index) => (
-        <Box key={`card-${prompt.id}`} flexDirection="row" justifyContent="space-between" gap={1} borderStyle="round"
-          borderColor={LOOK.card} backgroundColor={LOOK.card} paddingX="xs">
+        <Box key={`card-${prompt.id}`} flexDirection="row" justifyContent="space-between" alignItems="center" gap={1}>
           <Box flexGrow={1} flexShrink={1}>
-            <Text wrap="truncate-end" dimColor={prompt.id === editingId} italic={prompt.id === editingId}>
-              {`${index + 1}. ${prompt.text.replace(/\s+/g, ' ')}${prompt.id === editingId ? '  (editing)' : ''}`}
-            </Text>
+            <Button key={`card-text-${prompt.id}`} onPress={() => editPrompt($, prompt)}>
+              <Text wrap="truncate-end" color={prompt.id === editingId ? LOOK.placeholder : undefined} italic={prompt.id === editingId}>
+                {`${index + 1}. ${prompt.text.replace(/\s+/g, ' ')}${prompt.id === editingId ? '  (editing)' : ''}`}
+              </Text>
+            </Button>
           </Box>
           <Box width={CARD_BUTTON_COLUMNS} justifyContent="flex-end">
             <Box flexDirection="row" gap={1} display="none" hover={{ display: 'flex' }}>
