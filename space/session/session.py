@@ -148,6 +148,21 @@ class SessionGuidanceTools:
         self.guidance_version.select(stages, practices, formats)
         return GuidanceSelection(self)
 
+    @mcp
+    @skill
+    @agent_instructions
+    def set_up_roots(self, ticket: str = "") -> str:
+        """Set up this session's roots so they cover exactly the pieces its ticket {{ticket}} works on, in every practice the session has on: for each practice and fidelity, the narrowest folders that hold those pieces (an aggregate's folder, the package that implements it, the sub-epics whose stories cover it), and no folder beside them. Run it when a session is created, switched to with roots nobody set, or found to miss files it works on. Pass the same session argument to every session tool this calls."""
+        """Step 1 - Read what the ticket works on: its text (session.show, and the title and description its session.json keeps), the story map nodes it names (epics, sub-epics, stories), and the domain names it uses (bounded contexts, aggregates, modules, screens). Write them down as the names to look for."""
+        """Step 2 - Read what the branch changed: `git diff --name-only <default branch>...HEAD` plus the uncommitted files in the session's worktree. Each changed file is evidence of a piece the ticket works on."""
+        """Step 3 - For each practice the session has on (session.guidance_selection), and each of its fidelities, read where it writes: the `outputs` each fidelity declares in the practice's guidance (its `{practice}.md`), such as a path through a context and an aggregate, a folder per module, or a path through an epic and a sub-epic. Practices keep their pieces in different areas of the project, so look in every area each one declares, not only beside the others."""
+        """Step 4 - Ask each fidelity for the folders it proposes: fidelity-session-output.propose_roots with the names from Step 1. It answers the narrowest folder holding each piece the branch changed and each piece a name names, as its declared outputs place them."""
+        """Step 5 - Dig further where the proposals miss or overreach. Scan each declared location across the project (Glob, Grep) for the names from Step 1: the domain folder of each aggregate, the module and package that implement it, the epic and sub-epic folders whose stories cover it, its screens and its specs. Go down to the narrowest folder that holds the piece; never propose a parent that also holds siblings the ticket does not touch."""
+        """Step 6 - Propose the roots to the person: a short table of practice, fidelity, and folders, each with its evidence (the name it matches, or the changed file it holds), and the folders left out on purpose. Ask the person to confirm or correct it; set nothing before they answer."""
+        """Step 7 - Set what the person confirmed: practice-session-output.choose_root for a practice's own root (where its documents go when no fidelity keeps its own); fidelity-session-output.choose_root for a fidelity's first folder, and fidelity-session-output.add_root for each further folder beside it. Leave a default root that already holds the pieces."""
+        """Step 8 - Check: session.show and ticket.root_files list the files under the new roots; every file Step 2 found that a practice writes must be among them. Whenever a later step finds another piece of the ticket outside the roots, such as a story test in another sub-epic, add its folder with fidelity-session-output.add_root, telling the person."""
+        return "Session roots set up and confirmed."
+
     @long_call
     @mcp
     @agent_tool
