@@ -26,6 +26,7 @@ const QUEUED = [
 ]
 
 type TestOn = Parameters<Extract<Parameters<typeof test>[1], (...args: never[]) => unknown>>[1]
+type TestEngine = Parameters<Extract<Parameters<typeof test>[1], (...args: never[]) => unknown>>[0]
 
 // The chat the tests run in, as the engine names it.
 const CHAT = 'chat-1'
@@ -311,6 +312,57 @@ test('adding while a prompt is being edited puts the draft back in its place', a
 
   expect(written.prompts).toEqual([{ id: 'a', text: 'Write the scenarios again' }, QUEUED[1]])
   await ui.unmount()
+})
+
+/** + with a draft in the prompt box, the model answering where it files the draft with placed. */
+async function smartAdd($: TestEngine, on: TestOn, placed: object[] | string, queued = QUEUED as Prompt[]) {
+  const seeded = seedQueue(on, true, '', queued)
+  const asked: string[] = []
+  const filled: string[] = []
+  on('prompt.read', () => ({ value: { text: 'also run the heavy tier', cursor: 23 } }))
+  on('prompt.fill', (_, e) => {
+    filled.push((e as { text: string }).text)
+    return { isFilled: true }
+  })
+  on('model.fork', (_, e) => {
+    asked.push((e as { prompt: string }).prompt)
+    return { value: typeof placed === 'string' ? { isAnswered: false, reason: placed } : { isAnswered: true, text: JSON.stringify(placed), usage: NO_USAGE } }
+  })
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'queue-add' })
+  await ui.unmount()
+  return { seeded, asked, filled }
+}
+
+test('+ asks the model where the draft belongs, showing it the goals on the queue', async ($, on) => {
+  const { asked } = await smartAdd($, on, [])
+
+  expect(asked.join()).toContain('also run the heavy tier')
+  expect(asked.join()).toContain('[b] Run the unit tier')
+})
+
+test('+ files the draft as a task of the goal the model picks', async ($, on) => {
+  const { seeded } = await smartAdd($, on, [{ goal: 'b', text: 'Run the heavy tier too' }])
+
+  expect(seeded.prompts[1]!.steps!.map(step => step.text)).toEqual(['[interruption] Run the heavy tier too'])
+})
+
+test("+ queues the draft as a new card in the robot's queue the model picks", async ($, on) => {
+  const { seeded } = await smartAdd($, on, [{ card: 'Run the heavy tier', robot: 'Bolt' }])
+
+  expect(seeded.prompts.map(prompt => [prompt.text, prompt.robot])).toContainEqual(['Run the heavy tier', 'Bolt'])
+})
+
+test('+ empties the prompt box once the draft is filed', async ($, on) => {
+  const { filled } = await smartAdd($, on, [{ card: 'Run the heavy tier' }])
+
+  expect(filled).toEqual([''])
+})
+
+test('+ keeps the draft in the prompt box when the model cannot place it', async ($, on) => {
+  const { seeded, filled } = await smartAdd($, on, 'the model is busy')
+
+  expect([filled, seeded.prompts.length]).toEqual([[], 2])
 })
 
 // What a model call cost and where a command ran, which the queue's tests do not read.
