@@ -762,12 +762,12 @@ test("a card's button bar hangs from the last thing in the card, an anchor at it
   expect([JSON.stringify(bar).includes('"send-now-a"'), bar.props.position === 'absolute']).toEqual([true, false])
 })
 
-test("a card's buttons sit on solid grey, so they read over the prompt's text", async ($, on) => {
+test("a card's buttons sit on a solid dark bar, so they read over the prompt's text", async ($, on) => {
   seedQueue(on, true)
 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
 
-  expect((await ui.find({ type: 'Box', key: 'card-a' }))?.children.some(child => JSON.stringify(child).includes('"backgroundColor":"#3F3F3F"'))).toBe(true)
+  expect((await ui.find({ type: 'Box', key: 'card-a' }))?.children.some(child => JSON.stringify(child).includes('"backgroundColor":"#1C1C1E"'))).toBe(true)
   await ui.unmount()
 })
 

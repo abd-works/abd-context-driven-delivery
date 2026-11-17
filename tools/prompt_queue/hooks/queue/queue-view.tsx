@@ -175,7 +175,7 @@ function PointerArrowsView($: EngineInterface, e: AbovePromptEvent, upKey: strin
   const { Box, Button } = $.ui.resolve(e)
 
   return (
-    <Box flexDirection="row" flexShrink={0} gap={1} backgroundColor={LOOK.keyCap} paddingX="xs" display="none" hover={{ display: 'flex' }}>
+    <Box flexDirection="row" flexShrink={0} gap={1} backgroundColor={LOOK.popover} borderStyle="round" borderColor={LOOK.popover} paddingX="xs" display="none" hover={{ display: 'flex' }}>
       {upKey !== '' && <Button key={upKey} label="▲" onPress={onUp} />}
       {downKey !== '' && <Button key={downKey} label="▼" onPress={onDown} />}
     </Box>
@@ -217,7 +217,7 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
           <Box position="relative" width={0} height={0} flexShrink={0} alignSelf="center">
             <Box position="absolute" top={0} bottom={0} left={-CARD_BAR_COLUMNS} flexDirection="row" alignItems="center">
               <Box flexDirection="row" alignItems="center" gap={1}
-                display="none" hover={{ display: 'flex' }} backgroundColor={LOOK.keyCap} paddingX="xs">
+                display="none" hover={{ display: 'flex' }} backgroundColor={LOOK.popover} borderStyle="round" borderColor={LOOK.popover} paddingX="xs">
                 {CardButtonsView($, e, prompt, index)}
               </Box>
             </Box>
@@ -364,7 +364,7 @@ function StepView($: EngineInterface, e: AbovePromptEvent, prompt: QueuedPrompt,
           {`${STEP_MARK[step.state]} ${step.text}`}
         </Text>
       </Box>
-      <Box flexDirection="row" gap={1} display="none" hover={{ display: 'flex' }} backgroundColor={LOOK.keyCap} paddingX="xs">
+      <Box flexDirection="row" gap={1} display="none" hover={{ display: 'flex' }} backgroundColor={LOOK.popover} borderStyle="round" borderColor={LOOK.popover} paddingX="xs">
         <Button key={`send-now-step-${prompt.id}-${number}`} label="↵" onPress={() => sendStepNow($, prompt, index)} />
         <Button key={`edit-step-${prompt.id}-${number}`} label="✎" onPress={() => editStep($, prompt, index)} />
         <Button key={`up-step-${prompt.id}-${number}`} label="↑" onPress={() => moveStep($, prompt, index, index - 1)} />

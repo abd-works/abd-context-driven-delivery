@@ -1,7 +1,7 @@
 import type { ElementTable } from 'claude-code'
 
 /** The desktop's own greys, sampled from its prompt box: the card, its placeholder text, and a key cap's grey behind buttons. */
-export const LOOK = { muted: '#9B9BA8', accent: '#E5531A', card: '#303030', placeholder: '#8C8C8C', keyCap: '#3F3F3F' }
+export const LOOK = { muted: '#9B9BA8', accent: '#E5531A', card: '#303030', placeholder: '#8C8C8C', keyCap: '#3F3F3F', popover: '#1C1C1E' }
 
 /** About one line of text tall, in the desktop's pixels. */
 const ICON_PIXELS = 16
