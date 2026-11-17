@@ -151,7 +151,7 @@ function CardsView($: EngineInterface, e: AbovePromptEvent, state: QueueState, p
         </Box>
       ))}
       {last && pointer === prompts.length && (
-        <Box flexDirection="row" paddingLeft={TASK_BUTTON_COLUMNS + 2}>
+        <Box key={`pointer-after-${last.id}`} flexDirection="row" paddingLeft={TASK_BUTTON_COLUMNS + 2}>
           {PointerArrowsView($, e, `pointer-up-after-${last.id}`, '', () => movePointerUp($, prompts))}
         </Box>
       )}
@@ -167,12 +167,12 @@ function PointerColumnView($: EngineInterface, e: AbovePromptEvent, arrows: Retu
   return <Box width={POINTER_COLUMNS} flexShrink={0} flexDirection="row" justifyContent="flex-end" alignItems="center">{arrows}</Box>
 }
 
-/** The pointer's ▲ and ▼ on the card's own grey, running into its text, as ↵ ✎ ↑ ↓ ✕ do at the card's right end. */
+/** The pointer's ▲ and ▼ on a solid grey bar, shown while the pointer is over its card or step, as ↵ ✎ ↑ ↓ ✕ are. */
 function PointerArrowsView($: EngineInterface, e: AbovePromptEvent, upKey: string, downKey: string, onUp: () => void, onDown: () => void = () => {}) {
   const { Box, Button } = $.ui.resolve(e)
 
   return (
-    <Box flexDirection="row" flexShrink={0} gap={1} backgroundColor={LOOK.keyCap} paddingX="xs">
+    <Box flexDirection="row" flexShrink={0} gap={1} backgroundColor={LOOK.keyCap} paddingX="xs" display="none" hover={{ display: 'flex' }}>
       {upKey !== '' && <Button key={upKey} label="▲" onPress={onUp} />}
       {downKey !== '' && <Button key={downKey} label="▼" onPress={onDown} />}
     </Box>
