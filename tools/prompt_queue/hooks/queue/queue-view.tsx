@@ -200,16 +200,18 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
       {(prompt.attachments ?? []).length > 0 && <Text key={`attached-${prompt.id}`} color={LOOK.muted}>{`📎${prompt.attachments!.length}`}</Text>}
       <Box position="relative" flexGrow={1} flexShrink={1} minWidth={0} flexDirection="row" alignItems="center" paddingX={1}
         backgroundColor={LOOK.card} borderStyle="round" borderColor={isWorking ? LOOK.accent : LOOK.card}>
-        <Text wrap="truncate-end" color={isEditing ? LOOK.placeholder : isWorking ? LOOK.accent : undefined}
-          italic={isEditing} bold={isWorking} underline={isWorking} dimColor={isEditing || isFinished}>
-          {`${index + 1}. ${prompt.text.replace(/\s+/g, ' ')}${isEditing ? '  (editing)' : ''}`}
-        </Text>
+        <Box flexGrow={1} flexShrink={1} minWidth={0}>
+          <Text wrap="truncate-end" color={isEditing ? LOOK.placeholder : isWorking ? LOOK.accent : undefined}
+            italic={isEditing} bold={isWorking} underline={isWorking} dimColor={isEditing || isFinished}>
+            {`${index + 1}. ${prompt.text.replace(/\s+/g, ' ')}${isEditing ? '  (editing)' : ''}`}
+          </Text>
+        </Box>
         {PressAreaView($, e, `card-text-${prompt.id}`, () => (isInColumn ? toggleOpenedCard($, prompt.id) : editPrompt($, prompt)), isEditing || isFinished)}
         {pointer && (
           <Box position="absolute" top={0} bottom={0} left={1} flexDirection="row" alignItems="center">{pointer}</Box>
         )}
         {!isInColumn && (
-          <Box position="absolute" top={0} bottom={0} right={1} flexDirection="row" alignItems="center" gap={1}
+          <Box flexShrink={0} flexDirection="row" alignItems="center" gap={1}
             display="none" hover={{ display: 'flex' }} backgroundColor={LOOK.keyCap} paddingX="xs">
             {CardButtonsView($, e, prompt, index)}
           </Box>
