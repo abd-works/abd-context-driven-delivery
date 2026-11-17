@@ -236,6 +236,15 @@ Requested 2026-11-16 by the person: "I can't find a single instance of code fold
 *Then* the call `self.close()` opens Ticket.close in place below it  
   *And* the call `reread_all(board)` opens the function reread_all in place below it
 
+#### Scenario: A call inside a folded method opens in place once the method is unfolded
+
+Requested 2026-11-16 by the person: "I can't find a single instance of code folding where it's supposed to happen". In harness/diagnostics/app.py, opened from the graph, AppServer.restart's line `if not self.stop():` opened AppServer.stop 0 px tall: opening the file folds every block, the `if` block's own body stayed folded once restart was unfolded, and Monaco gives no height to a view zone whose next line a fold hides. The page and Monaco's view zones: `harness/graph/app/app.test.tsx`; the real editor is checked by hand in the Files app.
+
+*Given* the Files app shows ticket.py from the graph with Ticket.delete folded, and the graph is read  
+*When* the Person unfolds Ticket.delete and opens the call `self.close()`, whose `if` block is still folded  
+*Then* the lines of Ticket.close show in place below the call, at their full height  
+  *And* the page grows by those lines, so it scrolls down to them
+
 #### Scenario: Calls open in place only once the graph is read
 
 *Given* the Files app lists checkout-flow's files and the graph view was never shown  

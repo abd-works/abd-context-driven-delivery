@@ -24,7 +24,7 @@ const CALLOUT_INNER_MARK = 'callout-inner-mark';
 const LINE_HEIGHT = 20;
 const LINE_END = Number.MAX_SAFE_INTEGER;
 
-type CalloutEditor = Pick<monaco.IStandaloneCodeEditor, 'createDecorationsCollection' | 'onMouseDown' | 'changeViewZones'>;
+type CalloutEditor = Pick<monaco.IStandaloneCodeEditor, 'createDecorationsCollection' | 'onMouseDown' | 'changeViewZones' | 'getModel'>;
 
 // The callouts of the open file. While a line's callouts are closed, a mark beside it and a label after it name what
 // they open; a press on either opens them under the line and hides the label, and a press on the mark closes them and
@@ -57,7 +57,8 @@ export function useCallouts(editor: CalloutEditor | null, callouts: SourceCallou
     editor.changeViewZones((accessor) => {
       for (const line of lines.filter((each) => open.includes(lineKey(each)))) {
         const shown = calloutsBlock(callouts.filter((each) => each.line === line), lineKey(line), { open, toggle, within }, []);
-        zones.push(accessor.addZone({ afterLineNumber: editorLineOf(line), heightInPx: shown.rows * LINE_HEIGHT, domNode: shown.node }));
+        const afterLineNumber = editorLineOf(line);
+        zones.push(accessor.addZone({ afterLineNumber, afterColumn: lastCharacterOf(editor, afterLineNumber), heightInPx: shown.rows * LINE_HEIGHT, domNode: shown.node }));
       }
     });
     return () => editor.changeViewZones((accessor) => zones.forEach((zone) => accessor.removeZone(zone)));
@@ -65,6 +66,14 @@ export function useCallouts(editor: CalloutEditor | null, callouts: SourceCallou
 }
 
 const lineKey = (line: number): string => `L${line}`;
+
+// The column of a line's last character, which a callout opens after. Monaco shows a zone only while the position just
+// after it shows: after a line's end that is the next line, which a fold closed under the line hides, as a call's `if`
+// block stays folded once the method around it unfolds; after its last character it is the line's own end.
+function lastCharacterOf(editor: CalloutEditor, line: number): number | undefined {
+  const lineEnd = editor.getModel()?.getLineMaxColumn(line) ?? 1;
+  return lineEnd > 1 ? lineEnd - 1 : undefined;
+}
 
 function markOf(callouts: SourceCallout[], line: number, isOpen: boolean): monaco.IModelDeltaDecoration {
   const named = callouts.map((callout) => callout.title).join(', ');
