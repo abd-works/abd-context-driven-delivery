@@ -178,7 +178,7 @@ confirm-order.edit_text("Show the order, then take the payment.")
 ```
 
 *Then* confirm-order.md in confirm-order's [session](../../../space/kanban/.context/kanban-model.md#session) folder holds Show the order, then take the payment.
-*And* confirm-order's tooltip in checkout-flow's card shows Show the order, then take the payment.
+*And* opening confirm-order from checkout-flow's card shows Show the order, then take the payment.
 
 ## Story: Reorder Tickets In Column
 

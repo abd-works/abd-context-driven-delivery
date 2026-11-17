@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { PNG } from 'pngjs';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { RESULTS_FILE, type StepRow, stepPairs, writeCompareReport, writeHistoryReport, writeStoryMapReport, writeWalkReport } from './report';
+import { placeOf, RESULTS_FILE, type StepRow, stepPairs, writeCompareReport, writeHistoryReport, writeStoryMapReport, writeWalkReport } from './report';
 
 const STORY = 'Maintain Tickets';
 const SCENARIO = 'Rename a ticket';
@@ -141,6 +141,22 @@ describe('a walk report', () => {
       expect(page).toContain('<div class="check warn"><span class="check-name">Previous</span><span class="check-value">changed since run-1</span></div>');
     });
 
+    it("should show a changed step's screen in the previous run beside its own, captioned with each run", () => {
+      expect(page).toMatch(/<div class="shots"><figure class="shot"><a href="\.\.\/run-1\/screens\/maintain-tickets-rename-a-ticket-2-then\.png"[^]*?<figcaption>run-1<\/figcaption><\/figure><figure class="shot">[^]*?<figcaption>run-2<\/figcaption>/);
+    });
+
+    it('should say how much of the screen changed and where', () => {
+      expect(page).toContain('What changed since run-1:</span> 100.00% of the screen across the whole screen');
+    });
+
+    it('should box the changed area in both screens', () => {
+      expect(page.match(/<span class="change-box"/g)).toHaveLength(2);
+    });
+
+    it('should leave a step whose screen is the same with its one screen', () => {
+      expect(page.match(/<div class="shots">/g)).toHaveLength(1);
+    });
+
     it('should leave a changed step for the judge', () => {
       expect(page).toContain('<span class="check-name">Judge</span><span class="check-value">not judged</span>');
     });
@@ -249,5 +265,15 @@ describe('the end-to-end story map report', () => {
     it("should count the newest run's steps", () => {
       expect(page).toContain('1 meet · 0 miss');
     });
+  });
+});
+
+describe('where a screen changed, in words', () => {
+  it('should name the corner a small change sits in', () => {
+    expect(placeOf({ left: 0.72, top: 0.94, width: 0.26, height: 0.04 })).toBe('in the bottom right');
+  });
+
+  it('should name the side of a change halfway down', () => {
+    expect(placeOf({ left: 0.05, top: 0.4, width: 0.2, height: 0.2 })).toBe('on the left');
   });
 });

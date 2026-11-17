@@ -176,7 +176,7 @@ def _(s):
     def _(world):
         expect(idea_file(world, CONFIRM_ORDER_CHILD)).to(equal(idea_file_text(CONFIRM_ORDER_CHILD.title, EDITED_CONFIRM_ORDER_TEXT)))
 
-    @s.and_("confirm-order's tooltip in checkout-flow's card shows Show the order, then take the payment.")
+    @s.and_("opening confirm-order from checkout-flow's card shows Show the order, then take the payment.")
     def _(world):
         children = ticket_in(board_of(world), CHECKOUT_FLOW.name)["children"]
         expect([(child["name"], child["text"]) for child in children]).to(equal([(CONFIRM_ORDER_CHILD.name, EDITED_CONFIRM_ORDER_TEXT)]))
