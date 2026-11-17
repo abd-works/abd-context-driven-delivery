@@ -1,5 +1,7 @@
-Summary: these commits built the robots' queues for sub-agent mode (open in place, collapse with progress), recorded what was seen live on the story map, and fixed ticket close after the session split.
+Summary: these commits made the robots' queues in sub-agent mode usable (cards open in place, robots collapse with a done count and keep their order on expand) and recorded on the story map what was seen working live, including four robots running in parallel.
 
+- Story map: four robots observed running in parallel and marking their own cards done; the run2 demo's outputs kept in the session's work folder
+- A robot's header keeps the same children in the same order when its queue collapses and expands, hiding only the name and ✎, so the robot stays first after an expand
 - A collapsed robot shows under it how many of its items are done, such as 3/5
 - Story map: the robots' queues observed working with the AI grouping eight demo prompts into four robots
 - Story map: the one-minute decision wait observed live, parking an unanswered card as [decision required]
@@ -8,5 +10,3 @@ Summary: these commits built the robots' queues for sub-agent mode (open in plac
 - In sub-agent mode the note on a new message shows each robot's queue and lets the agent decide: do it itself, make it a task of a robot's item, or give it to a robot as a new item, its text starting [for <robot name>]; a card so marked shows in that robot's queue
 - The agents' queues are usable: grouping hands out only work not yet done; sending to sub-agents keeps their cards so each marks its own done and it stays in its robot's queue, dimmed; an agent's card shows no buttons of its own, and pressing it opens it full width under the queues with its complete text and buttons
 - Each sub-agent's queue looks like the original queue: its robot and name on top, then its prompts as the queue's own cards, side by side with the others in the list's place
-- Sub-agent mode shows one queue per agent in the place of the queue's list, each item one line cut with an ellipsis, with no separate area
-- Closing a ticket merges its branch before its record moves, so the work folder it carries moves with the record

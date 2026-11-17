@@ -31,7 +31,7 @@ type TestOn = Parameters<Extract<Parameters<typeof test>[1], (...args: never[]) 
 const CHAT = 'chat-1'
 
 type Step = { text: string; state: 'pending' | 'in_progress' | 'done' }
-type Prompt = { id: string; text: string; steps?: Step[]; attachments?: string[]; is_done?: boolean }
+type Prompt = { id: string; text: string; steps?: Step[]; attachments?: string[]; is_done?: boolean; robot?: string }
 
 /** The cdd server's prompt-queue tools for one chat, in memory: the same operations as tools/prompt_queue's
  * PromptQueue, each answering the queue. */
@@ -72,6 +72,12 @@ function promptQueueTools(prompts: Prompt[]) {
       const goal = prompts[at(args.prompt)]!
       goal.steps = [...(goal.steps ?? []), { text: `[interruption] ${String(args.text).trim()}`, state: 'pending' }]
       goal.is_done = false
+      return answer()
+    },
+    assign: args => {
+      const prompt = prompts[at(args.prompt)]!
+      if (String(args.robot).trim()) prompt.robot = String(args.robot).trim()
+      else delete prompt.robot
       return answer()
     },
     set_steps: args => {
@@ -818,17 +824,53 @@ test("the agent's next task list keeps the person's interruption among the promp
 
 
 const GROUPED = [
-  { description: 'Write the story map', prompts: ['Write the scenarios', 'Validate them'] },
-  { description: 'Run the tests', prompts: ['Run the unit tier'] },
+  { description: 'Write the story map', prompts: ['Write the scenarios', 'Validate them'], name: 'Sparky' },
+  { description: 'Run the tests', prompts: ['Run the unit tier'], name: 'Bolt' },
 ]
 
-/** A queue in sub-agent mode whose prompts are grouped into GROUPED tasks, open. */
-function groupedQueue(on: TestOn, tasks: object[] = GROUPED) {
-  const seeded = seedQueue(on, true)
+/** A queue in sub-agent mode whose prompts are grouped into GROUPED tasks, open: each card carries its robot's name,
+ * as the queue keeps it. */
+function groupedQueue(on: TestOn, tasks: { prompts: string[]; name: string }[] = GROUPED) {
+  const robotOf = (text: string) => tasks.find(task => task.prompts.includes(text))?.name
+  const seeded = seedQueue(on, true, '', QUEUED.map(prompt => ({ ...prompt, ...(robotOf(prompt.text) ? { robot: robotOf(prompt.text) } : {}) })))
   seeded.stored.isSubAgentMode = { value: true, version: 1 }
   seeded.stored.tasks = { value: tasks, version: 1 }
   return seeded
 }
+
+test("a robot's queue comes back after a reload, from the robot each card keeps on the queue", async ($, on) => {
+  const seeded = groupedQueue(on)
+  delete seeded.stored.tasks
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  const first = JSON.stringify(await ui.find({ type: 'Box', key: 'agent-column-1' }))
+  const second = JSON.stringify(await ui.find({ type: 'Box', key: 'agent-column-2' }))
+
+  expect([first.includes('"card-row-a"'), second.includes('"card-row-b"')]).toEqual([true, true])
+  await ui.unmount()
+})
+
+test('grouping the queue gives each card its robot on the queue', async ($, on) => {
+  const seeded = seedQueue(on, true)
+  on('model.complete', () => ({ value: { isAnswered: true, text: JSON.stringify(GROUPED.map(({ description, prompts }) => ({ description, prompts }))), usage: NO_USAGE } }))
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'queue-sub-agents' })
+  await ui.unmount()
+
+  expect(seeded.prompts.map(prompt => prompt.robot)).toEqual(['Sparky', 'Bolt'])
+})
+
+test('grouping new work names its robots apart from the robots already on the queue', async ($, on) => {
+  const seeded = seedQueue(on, true, '', [{ id: 'a', text: 'Write the scenarios', is_done: true, robot: 'Sparky' }, { id: 'b', text: 'Run the unit tier' }])
+  on('model.complete', () => ({ value: { isAnswered: true, text: JSON.stringify([{ description: 'Run the tests', prompts: ['Run the unit tier'] }]), usage: NO_USAGE } }))
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'queue-sub-agents' })
+  await ui.unmount()
+
+  expect(seeded.prompts.map(prompt => prompt.robot)).toEqual(['Sparky', 'Bolt'])
+})
 
 test('sub-agent mode draws one column for each sub-agent, named, with a robot on top', async ($, on) => {
   groupedQueue(on)
@@ -868,11 +910,11 @@ test("✎ on a sub-agent's column names it from the prompt box's draft", async (
   await ui.press({ key: 'rename-agent-2' })
   await ui.unmount()
 
-  expect((seeded.stored.tasks?.value as { name?: string }[]).map(task => task.name)).toEqual([undefined, 'Captain Tests'])
+  expect(seeded.prompts.map(prompt => prompt.robot)).toEqual(['Sparky', 'Captain Tests'])
 })
 
 test("a sub-agent starts with its column's name", async ($, on) => {
-  const seeded = groupedQueue(on, [{ ...GROUPED[0], name: 'Captain Tests' }])
+  const seeded = groupedQueue(on, [{ ...GROUPED[0]!, name: 'Captain Tests' }, GROUPED[1]!])
   seeded.stored.isPlaying = { value: true, version: 1 }
   const spawned: string[] = []
   on('agent.spawn', (_, e) => {
@@ -884,7 +926,7 @@ test("a sub-agent starts with its column's name", async ($, on) => {
   await $.turn.complete(FINISHED_TURN)
   await unawaitedWorkSettled()
 
-  expect(spawned).toEqual(['Captain Tests: Write the story map'])
+  expect(spawned).toEqual(['Captain Tests: Write the story map', 'Bolt: Run the tests'])
 })
 
 
@@ -1005,7 +1047,7 @@ test('switching sub-agent mode on groups only the work not done yet', async ($, 
 })
 
 test('sending the queue to sub-agents keeps their cards, so each can mark its own card done', async ($, on) => {
-  const seeded = groupedQueue(on, [{ description: 'Run the tests', prompts: ['Run the unit tier'] }])
+  const seeded = groupedQueue(on)
   seeded.stored.isPlaying = { value: true, version: 1 }
   on('agent.spawn', () => ({ model: 'claude-sonnet-5-5' }))
   on('turn.complete', () => ({ text: 'Done.' }))
@@ -1064,7 +1106,7 @@ test("in sub-agent mode the note on a new message shows the robots' queues and l
 
 test("a card queued for a robot by name shows in that robot's queue", async ($, on) => {
   const seeded = groupedQueue(on)
-  seeded.stored.queue = { value: { chat: CHAT, prompts: [...QUEUED, { id: 'c', text: '[for Bolt] Run the heavy tier' }] }, version: 2 }
+  seeded.stored.queue = { value: { chat: CHAT, prompts: [...seeded.prompts, { id: 'c', text: '[for Bolt] Run the heavy tier' }] }, version: 2 }
 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
 
@@ -1104,9 +1146,9 @@ test("pressing a collapsed robot expands its queue again", async ($, on) => {
 
 
 test("a collapsed robot shows how many of its items are done under it, such as 1/2", async ($, on) => {
-  const seeded = groupedQueue(on, [{ description: 'Write the story map', prompts: ['Write the scenarios', 'Run the unit tier'] }])
+  const seeded = groupedQueue(on, [{ description: 'Write the story map', prompts: ['Write the scenarios', 'Run the unit tier'], name: 'Sparky' }])
   seeded.stored.collapsedAgents = { value: [0], version: 1 }
-  seeded.stored.queue = { value: { chat: CHAT, prompts: [{ ...QUEUED[0], is_done: true }, QUEUED[1]] }, version: 2 }
+  seeded.stored.queue = { value: { chat: CHAT, prompts: [{ ...QUEUED[0], is_done: true, robot: 'Sparky' }, { ...QUEUED[1], robot: 'Sparky' }] }, version: 2 }
 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
 

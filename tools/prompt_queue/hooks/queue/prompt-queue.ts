@@ -99,7 +99,7 @@ export async function currentQueue($: EngineInterface): Promise<QueueState> {
     openSteps: await read($, openSteps),
     openedId: await read($, openedCard),
     collapsedAgents: await read($, collapsedAgents),
-    tasks: await read($, tasks),
+    tasks: robotsOf((await read($, queue)).prompts, await read($, tasks)),
     notice: await read($, notice),
   }
 }
@@ -168,7 +168,6 @@ export async function queuePrompt($: EngineInterface, text: string): Promise<boo
   const isEditing = (await read($, queue)).prompts.some(prompt => prompt.id === edited)
   const isChanged = await changeQueue($, isEditing ? 'edit' : 'add', isEditing ? { prompt: edited, text } : { text })
   await update($, editingId, () => '')
-  await update($, tasks, () => [])
 
   return isChanged
 }
@@ -211,12 +210,10 @@ export async function movePrompt($: EngineInterface, from: number, to: number): 
     return
   }
   await changeQueue($, 'move', { prompt: moving.id, to })
-  await update($, tasks, () => [])
 }
 
 export async function removePrompt($: EngineInterface, id: string): Promise<void> {
   await changeQueue($, 'remove', { prompt: id })
-  await update($, tasks, () => [])
 }
 
 /** The pencil on a card: the prompt goes to the prompt box to be changed, and keeps its place in the queue, shaded,
@@ -228,7 +225,6 @@ export async function editPrompt($: EngineInterface, prompt: QueuedPrompt): Prom
 
 export async function clearQueue($: EngineInterface): Promise<void> {
   await changeQueue($, 'clear')
-  await update($, tasks, () => [])
 }
 
 export async function toggleExpanded($: EngineInterface): Promise<void> {
@@ -436,7 +432,7 @@ async function addInterruption($: EngineInterface, prompt: QueuedPrompt, text: s
   await changeQueue($, 'add_interruption', { prompt: prompt.id, text })
   const goals = (await read($, queue)).prompts
   await update($, plan, () => goals.find(goal => goal.id === prompt.id)?.steps ?? [])
-  const robots = (await read($, isSubAgentMode)) ? await read($, tasks) : []
+  const robots = (await read($, isSubAgentMode)) ? robotsOf(goals, await read($, tasks)) : []
   return { id: '', note: [filingNoteOf(prompt.id, goals), ...robotsNoteOf(robots, goals)].join('\n') }
 }
 
@@ -467,14 +463,23 @@ function robotsNoteOf(robots: SubAgentTask[], goals: QueuedPrompt[]): string[] {
   ]
 }
 
-/** A robot's items as they stand on the queue: the prompts grouped to it, in its order, and any card queued for it by
- * name, its text starting [for <robot name>]; a prompt no longer queued is left out. */
+/** A robot's items as they stand on the queue: the cards given to it, and any card queued for it by name, its text
+ * starting [for <robot name>], in queue order. */
 export function robotPromptsOf(goals: QueuedPrompt[], robot: SubAgentTask, place: number): QueuedPrompt[] {
-  const forRobot = `${ROBOT_MARK_OPEN}${agentNameOf(robot, place)}]`
-  return [
-    ...robot.prompts.flatMap(text => goals.filter(goal => goal.text === text)),
-    ...goals.filter(goal => goal.text.startsWith(forRobot)),
-  ]
+  const name = agentNameOf(robot, place)
+  return goals.filter(goal => goal.robot === name || goal.text.startsWith(`${ROBOT_MARK_OPEN}${name}]`))
+}
+
+/** The robots on the queue, in the order their first card stands. Each card keeps the robot it was given on the
+ * queue, so the robots' queues come back after a reload; what a robot does is what grouping said, while the plugin
+ * still holds it. */
+export function robotsOf(goals: QueuedPrompt[], described: SubAgentTask[]): SubAgentTask[] {
+  const names = [...new Set(goals.flatMap(goal => (goal.robot ? [goal.robot] : [])))]
+  return names.map(name => ({
+    name,
+    description: described.find(task => task.name === name)?.description ?? '',
+    prompts: goals.filter(goal => goal.robot === name).map(goal => goal.text),
+  }))
 }
 
 /** One `update_plan` call: the agent's task list follows it and is copied whole onto the prompt being worked. */
@@ -588,8 +593,10 @@ export async function sendNext($: EngineInterface): Promise<void> {
   await sendNextPrompt($)
 }
 
+/** The model groups the work not done and given to no robot yet into robots that can run side by side, and each card
+ * is given its robot on the queue; robots already on the queue keep their names and cards. */
 export async function groupIntoTasks($: EngineInterface): Promise<void> {
-  const queued = new PromptQueue((await read($, queue)).prompts.filter(prompt => !prompt.is_done))
+  const queued = new PromptQueue((await read($, queue)).prompts.filter(prompt => !prompt.is_done && !prompt.robot))
   if (queued.isEmpty) {
     return
   }
@@ -605,8 +612,28 @@ export async function groupIntoTasks($: EngineInterface): Promise<void> {
     await showFailure($, `Grouping failed: ${reply.reason}`, `Grouping the queue into sub-agent tasks with ${GROUPING_MODEL}`)
     return
   }
-  await update($, tasks, () => parseJsonArray(reply.text) as SubAgentTask[])
+  await assignRobots($, parseJsonArray(reply.text) as SubAgentTask[])
   await update($, notice, () => '')
+}
+
+/** Each grouped task becomes a robot with a name no robot on the queue has, and each of its cards is given to it. */
+async function assignRobots($: EngineInterface, grouped: SubAgentTask[]): Promise<void> {
+  const goals = (await read($, queue)).prompts
+  const names = freeRobotNames(goals, grouped.length)
+  const named = grouped.map((task, place) => ({ ...task, name: names[place]! }))
+  for (const robot of named) {
+    for (const goal of goals.filter(goal => !goal.is_done && !goal.robot && robot.prompts.includes(goal.text))) {
+      await changeQueue($, 'assign', { prompt: goal.id, robot: robot.name })
+    }
+  }
+  await update($, tasks, described => [...described.filter(task => !named.some(robot => robot.name === task.name)), ...named])
+}
+
+/** As many fun names as asked for, none of them a robot already on the queue. */
+function freeRobotNames(goals: QueuedPrompt[], count: number): string[] {
+  const taken = new Set(goals.flatMap(goal => (goal.robot ? [goal.robot] : [])))
+  const free = AGENT_NAMES.filter(name => !taken.has(name))
+  return Array.from({ length: count }, (_, place) => free[place] ?? `Robot ${taken.size + place + 1}`)
 }
 
 /** Fun names a sub-agent goes by, one for each place in turn, until the person names it. */
@@ -623,15 +650,22 @@ export async function renameAgent($: EngineInterface, place: number): Promise<vo
   if (text.trim() === '') {
     return
   }
-  await update($, tasks, grouped => grouped.map((task, index) => (index === place ? { ...task, name: text.trim() } : task)))
+  const goals = (await read($, queue)).prompts
+  const robot = robotsOf(goals, await read($, tasks))[place]
+  if (!robot) {
+    return
+  }
+  for (const goal of goals.filter(goal => goal.robot === robot.name)) {
+    await changeQueue($, 'assign', { prompt: goal.id, robot: text.trim() })
+  }
+  await update($, tasks, described => described.map(task => (task.name === robot.name ? { ...task, name: text.trim() } : task)))
   await $.prompt.fill({ text: '', mode: 'replace' })
 }
 
+/** Each robot with work not done starts as a sub-agent on its cards; work given to no robot is grouped first. */
 export async function sendTasksToSubAgents($: EngineInterface): Promise<void> {
-  if ((await read($, tasks)).length === 0) {
-    await groupIntoTasks($)
-  }
-  const grouped = await read($, tasks)
+  await groupIntoTasks($)
+  const grouped = robotsOf((await read($, queue)).prompts.filter(prompt => !prompt.is_done), await read($, tasks))
   for (const [place, task] of grouped.entries()) {
     const started = await $.agent.spawn({
       prompt: task.prompts.join('\n\n'),

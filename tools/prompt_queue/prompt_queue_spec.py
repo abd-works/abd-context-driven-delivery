@@ -44,6 +44,16 @@ with describe(PromptQueue):
     with it("clears every prompt when none is finished"):
         expect(self.queue.clear().prompts).to(equal([]))
 
+    with it("keeps the robot a prompt is assigned to on the queue, so its robot's queue comes back after a reload"):
+        self.queue.assign(self.queue.prompts[0]["id"], "Bolt")
+        expect([prompt.get("robot", "") for prompt in self.queue.prompts]).to(equal(["Bolt", ""]))
+
+    with it("takes a prompt off its robot when it is assigned to no robot"):
+        first = self.queue.prompts[0]["id"]
+        self.queue.assign(first, "Bolt")
+        self.queue.assign(first, "")
+        expect("robot" in self.queue.prompts[0]).to(equal(False))
+
     with it("refuses to mark done a prompt the queue does not hold"):
         expect(lambda: self.queue.done("gone")).to(raise_error(PromptNotQueued))
 
