@@ -18,7 +18,12 @@ const QUEUE_INSTRUCTIONS = [
   'Finish what you are doing now, then take the first prompt below and do it as if the person had just sent it.',
   "When it is done, call prompt-queue.done with its id, then take the next, until the queue is empty or the person stops you.",
   'prompt-queue.show reads the queue again. Mark a prompt done only once its work is done; never take one off that you have not done.',
+  `A prompt whose text starts with ${'"[decision required]"'} waits for the person's answer; pass over it.`,
 ].join(' ')
+// What marks a prompt put back on the queue to wait for the person's answer; play passes over it.
+const DECISION_FLAG = '[decision required]'
+// How long play waits for the person to answer a question the agent ended its turn with, before it moves on.
+const DECISION_WAIT_MS = 60_000
 // Until the mod has seen the agent's task list, the agent keeps a prompt's steps on the queue itself.
 const KEEP_STEPS_YOURSELF =
   'Give the prompt you take its steps with prompt-queue.set_steps, and mark each one done with prompt-queue.step_done as you finish it.'
@@ -42,6 +47,10 @@ const queuedByKey = atom({ plugin: 'prompt-queue', key: 'queuedByKey' } as const
 const editingId = atom({ plugin: 'prompt-queue', key: 'editingId' } as const, '')
 /** The prompt the agent was last asked to take: still first on the queue after that turn, the agent left it, so play pauses. */
 const askedAbout = atom({ plugin: 'prompt-queue', key: 'askedAbout' } as const, '')
+/** Whether the agent ended its turn asking the person something, so play waits a minute for the answer. */
+const isAwaitingDecision = atom({ plugin: 'prompt-queue', key: 'isAwaitingDecision' } as const, false)
+/** Which wait for an answer is the current one: each turn and each new wait moves it on, so an older wait ends quietly. */
+const decisionWait = atom({ plugin: 'prompt-queue', key: 'decisionWait' } as const, 0)
 /** The agent's task list for the prompt it works on, as its last `update_plan` call left it. */
 const plan = atom({ plugin: 'prompt-queue', key: 'plan' } as const, [] as PromptStep[])
 /** Whether the mod has seen the agent set its task list; until it has, the agent is told to keep the steps itself. */
@@ -225,6 +234,8 @@ export async function togglePlaying($: EngineInterface): Promise<void> {
 /** A main-chat turn started: play waits for it to finish. */
 export async function startTurn($: EngineInterface): Promise<void> {
   await update($, isTurnRunning, () => true)
+  await update($, isAwaitingDecision, () => false)
+  await update($, decisionWait, wait => wait + 1)
 }
 
 /** A main-chat turn ended: the queue is read again, since the agent may have queued or finished work in the turn, and,
@@ -232,9 +243,40 @@ export async function startTurn($: EngineInterface): Promise<void> {
 export async function finishTurn($: EngineInterface, isAnswered: boolean): Promise<void> {
   await update($, isTurnRunning, () => false)
   await refreshQueue($)
-  if (isAnswered && (await read($, isPlaying))) {
-    await sendNext($)
+  if (!isAnswered || !(await read($, isPlaying))) {
+    return
   }
+  if (await read($, isAwaitingDecision)) {
+    await waitForDecision($)
+    return
+  }
+  await sendNext($)
+}
+
+/** The agent's wrap-up asked the person something: play waits for the answer before it moves on. */
+export async function noteDecisionAsked($: EngineInterface, wrapUp: Record<string, unknown>): Promise<void> {
+  const isAsking = wrapUp.blocked === true || (typeof wrapUp.ask === 'string' && wrapUp.ask.trim() !== '')
+  await update($, isAwaitingDecision, () => isAsking)
+}
+
+/** Waits a minute for the person's answer; a turn starting meanwhile, the answer, ends the wait. */
+async function waitForDecision($: EngineInterface): Promise<void> {
+  const wait = (await read($, decisionWait)) + 1
+  await update($, decisionWait, () => wait)
+  $.clock.after(DECISION_WAIT_MS, () => void decisionTimedOut($, wait))
+}
+
+/** No answer came within the minute: the agent puts the prompt back as needing a decision and takes the next. */
+async function decisionTimedOut($: EngineInterface, wait: number): Promise<void> {
+  if (wait !== (await read($, decisionWait)) || (await read($, isTurnRunning)) || !(await read($, isPlaying))) {
+    return
+  }
+  await update($, isAwaitingDecision, () => false)
+  const asked = await read($, askedAbout)
+  const text = `No answer came within a minute. Put prompt [${asked}] back on the queue as unfinished: give it with ` +
+    `prompt-queue.edit a text that starts with "${DECISION_FLAG}", then the question and your recommendation. Then take the next prompt on the queue.`
+  $.prompt.submit({ text, asUser: true }).catch(thrown =>
+    showFailure($, `Not sent: ${reasonOf(thrown)}`, 'Waiting a minute for an answer, then moving play on'))
 }
 
 /** Asks the agent to take the next prompt on the queue: the agent does it and marks it done itself, so nothing leaves
@@ -260,7 +302,7 @@ export async function sendNextPrompt($: EngineInterface): Promise<void> {
  * its place. */
 async function promptsToDo($: EngineInterface): Promise<QueuedPrompt[]> {
   const edited = await read($, editingId)
-  return (await read($, queue)).prompts.filter(prompt => prompt.id !== edited && !prompt.is_done)
+  return (await read($, queue)).prompts.filter(prompt => prompt.id !== edited && !prompt.is_done && !prompt.text.startsWith(DECISION_FLAG))
 }
 
 async function nextToDo($: EngineInterface): Promise<QueuedPrompt | undefined> {

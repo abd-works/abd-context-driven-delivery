@@ -10,6 +10,7 @@ import {
   queueSentPrompt,
   followPlan,
   finishPlan,
+  noteDecisionAsked,
   refreshQueue,
   finishTurn,
   startTurn,
@@ -66,6 +67,7 @@ export const register: Register = on => {
       await followPlan($, e as unknown as Record<string, unknown>)
     } else if (e.agentId === undefined && WRAP_UP_TOOL.test(e.tool)) {
       await finishPlan($)
+      await noteDecisionAsked($, e as unknown as Record<string, unknown>)
     }
 
     return ran

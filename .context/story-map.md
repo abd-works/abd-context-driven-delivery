@@ -968,6 +968,10 @@ Built: the ✕ on a card takes its prompt off the queue (`removePrompt`); the bi
 
 Observed (2026-11-17, the person: "an agentic instruction with prompts to ai that they are responsible for taking the next item rather than it being forced on them ... don't remove it from the queue, have that be an operation the ai does"): while play is on, a finished turn asks the agent to take the next prompt ("Take the next prompt on the queue."), and the queue stays as it is until the agent marks a prompt done (`sendNextPrompt`). Play pauses when the agent left the prompt it was asked to take. A queued slash command runs as that command (`$.command.run`), which the agent cannot type, and the mod marks it done. Until 2026-11-17 play sent the next prompt itself and took it off the queue.
 
+### (S) Prompt Queue --> Wait For Answer Before Moving On
+
+Built (2026-11-17), not seen (the person: "never go idle - always proceed to next item -- if blocked on task by decision put item onto queue with a flag required decision and move onto next item, maybe have a timer"; then "if i dont answer after a minute time out, back in queue as unfinished and move on to next"): while play is on, a turn the agent ends asking the person something (its wrap-up names a question or says it is blocked) does not send the next prompt at once; play waits a minute (`waitForDecision`). A turn starting in that minute, the person's answer, ends the wait. With no answer, the agent is told to put the prompt back on the queue with a text starting "[decision required]", the question and its recommendation, and take the next prompt (`decisionTimedOut`); play and the queue the agent reads pass over prompts marked that way.
+
 ### (S) Person --> Pause Prompt Queue
 
 Built (2026-11-16): pause stops finished turns from sending the next prompt; the queue keeps its prompts until play is pressed again.

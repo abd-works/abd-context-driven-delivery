@@ -607,3 +607,77 @@ test('the queue beside a prompt leaves out the prompts already done', async ($, 
   expect(carried.join()).not.toContain('Write the scenarios')
   expect(carried.join()).toContain('Run the unit tier')
 })
+
+
+/** The engine's clock: each wait asked for is held until the test lets that time pass. */
+function heldClock(on: TestOn) {
+  const waits: { ms: number; pass: () => void }[] = []
+  on('clock.after', (_, e) => new Promise<{ value: undefined }>(resolve => {
+    waits.push({ ms: (e as { ms: number }).ms, pass: () => resolve({ value: undefined }) })
+  }))
+  return waits
+}
+
+/** A turn that ends with the agent asking the person something, while the queue plays prompt a. */
+async function turnEndedAsking($: Parameters<Parameters<typeof test>[1]>[0], on: TestOn) {
+  seedQueue(on, false, '', QUEUED, true, '', 'a')
+  const waits = heldClock(on)
+  const submitted: string[] = []
+  on('prompt.submit', (_, e) => {
+    submitted.push(e.text)
+    return { text: e.text }
+  })
+  on('turn.complete', () => ({ text: 'Done.' }))
+  on('turn.start', (_, e) => e)
+  planToolAnswers(on)
+  await $.tool.call({ tool: 'mcp__ccd_turn__wrap_up', recap: 'Two ways to do it.', ask: 'Which way?' })
+  await $.turn.complete(FINISHED_TURN)
+  await unawaitedWorkSettled()
+  return { waits, submitted }
+}
+
+test('a turn that ends asking the person something waits a minute before play moves on', async ($, on) => {
+  const { waits, submitted } = await turnEndedAsking($, on)
+
+  expect(submitted).toEqual([])
+  expect(waits.map(wait => wait.ms)).toEqual([60_000])
+})
+
+test('with no answer in the minute, the agent is told to put the prompt back as needing a decision and take the next', async ($, on) => {
+  const { waits, submitted } = await turnEndedAsking($, on)
+
+  waits[0]!.pass()
+  await unawaitedWorkSettled()
+
+  expect(submitted).toHaveLength(1)
+  expect(submitted[0]).toContain('[a]')
+  expect(submitted[0]).toContain('[decision required]')
+})
+
+test('an answer from the person within the minute leaves nothing to send when it passes', async ($, on) => {
+  const { waits, submitted } = await turnEndedAsking($, on)
+
+  await $.turn.start({ text: 'Take the first way', turnId: 't2' })
+  waits[0]!.pass()
+  await unawaitedWorkSettled()
+
+  expect(submitted).toEqual([])
+})
+
+test('play passes over a prompt put back as needing a decision', async ($, on) => {
+  seedQueue(on, false, '', [
+    { id: 'a', text: '[decision required] Which failure route? A or B' },
+    { id: 'b', text: 'Run the unit tier' },
+  ] as Prompt[], true, '', 'b')
+  const submitted: string[] = []
+  on('prompt.submit', (_, e) => {
+    submitted.push(e.text)
+    return { text: e.text }
+  })
+  on('turn.complete', () => ({ text: 'Done.' }))
+
+  await $.turn.complete(FINISHED_TURN)
+  await unawaitedWorkSettled()
+
+  expect(submitted).toEqual([])
+})

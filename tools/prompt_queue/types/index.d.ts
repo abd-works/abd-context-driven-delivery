@@ -36,6 +36,8 @@ declare module 'claude-code' {
       plan: PromptStep[]
       isPlanSeen: boolean
       openSteps: string[]
+      isAwaitingDecision: boolean
+      decisionWait: number
     }
   }
 }
