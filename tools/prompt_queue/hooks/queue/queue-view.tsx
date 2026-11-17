@@ -53,9 +53,8 @@ const ADD_COLUMNS = 3
 /** The columns kept at a card's right for its send, edit, move and remove buttons, shown when the pointer is on the card. */
 const CARD_BUTTON_COLUMNS = 15
 
-/** The columns kept before a card's text for its task button, 3/3 or +, and the queue's pointer on the next card to
- * do, set against the text, so every card's text starts in one place and the pointer sits on its card's line. */
-const TASK_BUTTON_COLUMNS = 13
+/** The columns kept before a card's text for its task button, 3/3 or +, so every card's text starts in one place. */
+const TASK_BUTTON_COLUMNS = 6
 
 /** The columns kept at a step's left for the step pointer, ▲ and ▼, drawn on the next step to do. */
 const POINTER_COLUMNS = 8
@@ -149,7 +148,7 @@ function CardsView($: EngineInterface, e: AbovePromptEvent, state: QueueState, p
         </Box>
       ))}
       {last && pointer === prompts.length && (
-        <Box flexDirection="row" width={TASK_BUTTON_COLUMNS} justifyContent="flex-end">
+        <Box flexDirection="row" paddingLeft={TASK_BUTTON_COLUMNS + 1}>
           {PointerArrowsView($, e, `pointer-up-after-${last.id}`, '', () => movePointerUp($, prompts))}
         </Box>
       )}
@@ -195,15 +194,15 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
   const isOpened = isInColumn && prompt.id === state.openedId
   const row = (
     <Box key={`card-row-${prompt.id}`} flexDirection="row" justifyContent="space-between" alignItems="center" gap={1} width="100%">
-      <Box width={TASK_BUTTON_COLUMNS} flexShrink={0} flexDirection="row" justifyContent="flex-end" alignItems="center" gap={1}>
-        {pointer}
+      <Box width={TASK_BUTTON_COLUMNS} flexShrink={0}>
         {progress !== ''
           ? <Button key={`steps-${prompt.id}`} label={progress} onPress={() => toggleSteps($, prompt.id)} />
           : !isFinished && !isPointer && <Button key={`steps-${prompt.id}`} label="+" onPress={() => addStep($, prompt)} />}
       </Box>
       {(prompt.attachments ?? []).length > 0 && <Text key={`attached-${prompt.id}`} color={LOOK.muted}>{`📎${prompt.attachments!.length}`}</Text>}
-      <Box flexGrow={1} flexShrink={1} minWidth={0}
+      <Box flexGrow={1} flexShrink={1} minWidth={0} flexDirection="row" alignItems="center"
         borderStyle={isWorking ? 'round' : undefined} borderColor={isWorking ? LOOK.accent : undefined}>
+        {pointer}
         <Button key={`card-text-${prompt.id}`} dimColor={isEditing || isFinished} onPress={() => (isInColumn ? toggleOpenedCard($, prompt.id) : editPrompt($, prompt))}>
           <Text wrap="wrap" color={isEditing ? LOOK.placeholder : isWorking ? LOOK.accent : undefined}
             italic={isEditing} bold={isWorking} underline={isWorking} dimColor={isFinished}>
