@@ -62,19 +62,6 @@ const TASK_BUTTON_COLUMNS = 6
  * step's text moves when the pointer does. */
 const POINTER_COLUMNS = 11
 
-/** The characters every task button's label is centred in, so a + and a count such as 3/5 draw the same width. */
-const TASK_LABEL_CHARACTERS = 5
-
-/** A figure space: as wide as a digit, so padding a label with it keeps every task button one width. */
-const FIGURE_SPACE = ' '
-
-/** A task button's label centred in TASK_LABEL_CHARACTERS with figure spaces: a button is as wide as its label. */
-function taskLabelOf(label: string): string {
-  const room = Math.max(0, TASK_LABEL_CHARACTERS - label.length)
-  const before = Math.floor(room / 2)
-  return `${FIGURE_SPACE.repeat(before)}${label}${FIGURE_SPACE.repeat(room - before)}`
-}
-
 /** The mark before a step for where it stands: done, being worked, or not started. */
 const STEP_MARK = { done: '✓', in_progress: '▸', pending: '○' } as const
 
@@ -207,8 +194,8 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
     <Box key={`card-row-${prompt.id}`} flexDirection="row" justifyContent="space-between" alignItems="center" gap={1} width="100%">
       <Box width={TASK_BUTTON_COLUMNS} flexShrink={0}>
         {progress !== ''
-          ? <Button key={`steps-${prompt.id}`} label={taskLabelOf(progress)} onPress={() => toggleSteps($, prompt.id)} />
-          : !isFinished && !isPointer && <Button key={`steps-${prompt.id}`} label={taskLabelOf('+')} onPress={() => addStep($, prompt)} />}
+          ? TaskButtonView($, e, `steps-${prompt.id}`, progress, () => toggleSteps($, prompt.id))
+          : !isFinished && !isPointer && TaskButtonView($, e, `steps-${prompt.id}`, '+', () => addStep($, prompt))}
       </Box>
       {(prompt.attachments ?? []).length > 0 && <Text key={`attached-${prompt.id}`} color={LOOK.muted}>{`📎${prompt.attachments!.length}`}</Text>}
       <Box flexGrow={1} flexShrink={1} minWidth={0} flexDirection="row" alignItems="center"
@@ -238,6 +225,19 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
     <Box key={`card-opened-${prompt.id}`} flexDirection="column" width="100%">
       {row}
       <Box flexDirection="row" gap={1} paddingLeft={TASK_BUTTON_COLUMNS + 1}>{CardButtonsView($, e, prompt, index)}</Box>
+    </Box>
+  )
+}
+
+/** A card's task button, 3/5 or +, centred on a solid grey box the task column's width, so every card's task button
+ * is one width whatever its label. */
+function TaskButtonView($: EngineInterface, e: AbovePromptEvent, key: string, label: string, onPress: () => void) {
+  const { Box, Button } = $.ui.resolve(e)
+
+  return (
+    <Box key={`${key}-box`} width={TASK_BUTTON_COLUMNS} flexDirection="row" justifyContent="center" alignItems="center"
+      backgroundColor={LOOK.keyCap}>
+      <Button key={key} label={label} onPress={onPress} />
     </Box>
   )
 }
