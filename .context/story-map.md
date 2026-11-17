@@ -946,11 +946,15 @@ Observed (2026-11-16): the `+` beside the stack moves the prompt box's draft to 
 
 ### (S) Person --> Open Prompt Queue
 
-Observed (2026-11-16): pressing the stack image opens the queue upward: one rounded card per prompt, in the order they will be sent, with the controls staying where they were at the bottom; an empty queue shows "Add" beside Alt and ↵ key caps. Pressing it again closes it.
+Observed (2026-11-16): pressing the stack image opens the queue upward: one rounded card per prompt, in the order they will be sent, with the controls staying where they were at the bottom; an empty queue shows "Add" beside Alt and ↵ key caps. Pressing it again closes it. Built (2026-11-17), not seen (the person's /queue): the open queue and each card fill the chat box's width, a card's hover buttons sit on solid grey so they read over its text, the card being worked is bright and one whose steps are all done dim.
 
 ### (S) Person --> Edit Queued Prompt
 
 Built (2026-11-16, the person: "right side of every queue item so we can edit before the arrows"; then "we should not lose positioning when we edit an item, keep it in list but shaded; adding to queue adds to the edited option"): the pencil on a card puts its prompt in the prompt box; the card keeps its place, shaded and marked editing, and is not sent while it waits; the next add, Alt+Enter or `+`, puts the changed text back in that place (`editPrompt`).
+
+### (S) Person --> Send Queued Prompt Now
+
+Built (2026-11-17), not seen (the person's /queue: "send now button"): the ↵ on a card moves its prompt to the top of the queue and sends it to the chat at once, playing or not, as "Take prompt [id] on the queue now: …", so the agent knows the id to mark it done; it becomes the prompt being worked.
 
 ### (S) Person --> Reorder Queued Prompts
 

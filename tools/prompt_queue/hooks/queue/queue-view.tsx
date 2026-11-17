@@ -7,6 +7,7 @@ import {
   editPrompt,
   movePrompt,
   removePrompt,
+  sendNow,
   queueDraft,
   togglePlaying,
   toggleExpanded,
@@ -42,8 +43,8 @@ type AbovePromptEvent = RenderInput<'AbovePrompt'>
  */
 const ADD_COLUMNS = 3
 
-/** The columns kept at a card's right for its edit, move and remove buttons, shown when the pointer is on the card. */
-const CARD_BUTTON_COLUMNS = 12
+/** The columns kept at a card's right for its send, edit, move and remove buttons, shown when the pointer is on the card. */
+const CARD_BUTTON_COLUMNS = 15
 
 /** The mark before a step for where it stands: done, being worked, or not started. */
 const STEP_MARK = { done: '✓', in_progress: '▸', pending: '○' } as const
@@ -63,7 +64,7 @@ export function QueueView($: EngineInterface, e: AbovePromptEvent, state: QueueS
 
   return (
     <Box key="prompt-queue" flexDirection="column" rowGap="sm" alignSelf="flex-start"
-      paddingX={1} width={state.isExpanded ? e.props.bodyColumns : undefined}>
+      paddingX={1} width={state.isExpanded ? '100%' : undefined}>
       {state.isExpanded && QueueListView($, e, state)}
       {state.isExpanded && state.isSubAgentMode && state.tasks.map(task => (
         <Text dimColor wrap="truncate-end">{`  ↳ ${task.description}: ${task.prompts.length} prompt(s)`}</Text>
@@ -149,7 +150,7 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
   const isFinished = progress !== '' && (prompt.steps ?? []).every(step => step.state === 'done')
 
   return (
-    <Box flexDirection="row" justifyContent="space-between" alignItems="center" gap={1}>
+    <Box key={`card-row-${prompt.id}`} flexDirection="row" justifyContent="space-between" alignItems="center" gap={1} width="100%">
       <Box flexGrow={1} flexShrink={1}>
         <Button key={`card-text-${prompt.id}`} dimColor={isEditing || isFinished} onPress={() => editPrompt($, prompt)}>
           <Text wrap="truncate-end" color={isEditing ? LOOK.placeholder : isWorking ? LOOK.accent : undefined}
@@ -161,7 +162,8 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
       {(prompt.attachments ?? []).length > 0 && <Text key={`attached-${prompt.id}`} color={LOOK.muted}>{`📎${prompt.attachments!.length}`}</Text>}
       {progress !== '' && <Button key={`steps-${prompt.id}`} label={progress} onPress={() => toggleSteps($, prompt.id)} />}
       <Box width={CARD_BUTTON_COLUMNS} justifyContent="flex-end">
-        <Box flexDirection="row" gap={1} display="none" hover={{ display: 'flex' }}>
+        <Box flexDirection="row" gap={1} display="none" hover={{ display: 'flex' }} backgroundColor={LOOK.keyCap} paddingX="xs">
+          <Button key={`send-now-${prompt.id}`} label="↵" onPress={() => sendNow($, prompt)} />
           <Button key={`edit-${prompt.id}`} label="✎" onPress={() => editPrompt($, prompt)} />
           <Button key={`up-${prompt.id}`} label="↑" onPress={() => movePrompt($, index, index - 1)} />
           <Button key={`down-${prompt.id}`} label="↓" onPress={() => movePrompt($, index, index + 1)} />

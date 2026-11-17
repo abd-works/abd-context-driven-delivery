@@ -516,3 +516,41 @@ test('a card with files queued with it shows how many', async ($, on) => {
   expect((await ui.find({ type: 'Box', key: 'card-b' }))?.text).not.toContain('📎')
   await ui.unmount()
 })
+
+
+test('send now on a card moves its prompt to the top and sends it to the chat at once', async ($, on) => {
+  const seeded = seedQueue(on, true)
+  const submitted: string[] = []
+  on('prompt.submit', (_, e) => {
+    submitted.push(e.text)
+    return { text: e.text }
+  })
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'send-now-b' })
+  await unawaitedWorkSettled()
+
+  expect(seeded.prompts.map(prompt => prompt.id)).toEqual(['b', 'a'])
+  expect(submitted).toEqual(['Take prompt [b] on the queue now: Run the unit tier'])
+  expect(seeded.stored.askedAbout?.value).toBe('b')
+  await ui.unmount()
+})
+
+test("a card's buttons sit on solid grey, so they read over the prompt's text", async ($, on) => {
+  seedQueue(on, true)
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+
+  expect((await ui.find({ type: 'Box', key: 'card-a' }))?.children.some(child => JSON.stringify(child).includes('"backgroundColor":"#3F3F3F"'))).toBe(true)
+  await ui.unmount()
+})
+
+test('the open queue and each card fill the width of the chat box', async ($, on) => {
+  seedQueue(on, true)
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+
+  expect((await ui.find({ type: 'Box', key: 'prompt-queue' }))?.props.width).toBe('100%')
+  expect((await ui.find({ type: 'Box', key: 'card-row-a' }))?.props.width).toBe('100%')
+  await ui.unmount()
+})

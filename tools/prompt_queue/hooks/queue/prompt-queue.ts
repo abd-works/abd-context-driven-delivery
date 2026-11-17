@@ -371,6 +371,16 @@ async function copyPlanOntoWorkingPrompt($: EngineInterface): Promise<void> {
   await changeQueue($, 'set_steps', { prompt: working, steps: await read($, plan) })
 }
 
+/** The send-now button on a card: the prompt moves to the top of the queue and goes to the chat at once, as the prompt
+ * being worked, whether the queue plays or not. The message names its id, since a plugin's own prompt carries no
+ * context, so the agent can mark it done. */
+export async function sendNow($: EngineInterface, prompt: QueuedPrompt): Promise<void> {
+  await changeQueue($, 'move', { prompt: prompt.id, to: 0 })
+  await workOn($, prompt.id)
+  $.prompt.submit({ text: `Take prompt [${prompt.id}] on the queue now: ${prompt.text}`, asUser: true }).catch(thrown =>
+    showFailure($, `Not sent: ${reasonOf(thrown)}`, `Pressing send now on "${prompt.text}"`))
+}
+
 /** The steps toggle on a card: its steps show under it, or fold away again. */
 export async function toggleSteps($: EngineInterface, id: string): Promise<void> {
   await update($, openSteps, open => (open.includes(id) ? open.filter(shown => shown !== id) : [...open, id]))
