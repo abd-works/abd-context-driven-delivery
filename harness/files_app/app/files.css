@@ -89,6 +89,10 @@ button:disabled { cursor: default; opacity: 0.5; }
 .graph-tree ul { padding-left: 1.25rem; }
 .tree-row { display: flex; flex-wrap: nowrap; align-items: center; gap: var(--space-2xs); min-width: 0; }
 .tree-twist, .tree-twist-spacer { width: var(--space-md); flex: 0 0 var(--space-md); padding: 0; border: none; background: transparent; color: var(--muted); font-size: var(--text-xs); }
+/* The Filters toggle opens like a tree row: no box, the arrow muted as a twist's, its label muted until pointed at. */
+.graph-filters-toggle { display: inline-flex; align-items: center; gap: var(--space-2xs); margin-bottom: var(--space-2xs); padding: var(--space-2xs) 0; border: none; background: transparent; color: var(--muted); font-weight: 500; }
+.graph-filters-toggle > span { width: var(--space-md); color: var(--muted); font-size: var(--text-xs); text-align: center; }
+.graph-filters-toggle:hover, .graph-filters-toggle[aria-expanded='true'] { color: var(--text); }
 .graph-node { display: inline-flex; align-items: center; gap: var(--space-2xs); min-width: 0; padding: var(--space-2xs) 0; border: none; background: transparent; font-weight: 500; text-align: left; }
 .graph-node .node-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .graph-node.selected { color: var(--select); font-weight: 600; }
