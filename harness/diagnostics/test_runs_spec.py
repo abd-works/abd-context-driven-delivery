@@ -234,7 +234,12 @@ with description("the test cadence") as self:
 
             with it("should tell that chat to retest the tier and merge the fix to main once it passes"):
                 prompt = self.fix_chats[0][1]
-                expect(["python -m harness.diagnostics.test_runs heavy ." in prompt, "merge" in prompt and "main" in prompt]).to(equal([True, True]))
+                expect([f"python -m harness.diagnostics.test_runs heavy {self.folder}" in prompt, "merge" in prompt and "main" in prompt]).to(equal([True, True]))
+
+            # The Claude app can open the chat in another folder than its link names, such as the last one used.
+            with it("should name the main checkout as the project the fix session is created in, whatever folder the chat opens in"):
+                prompt = self.fix_chats[0][1]
+                expect(f"project={self.folder}" in prompt).to(be_true)
 
     with context("that fails after a run that failed"):
         with before.each:

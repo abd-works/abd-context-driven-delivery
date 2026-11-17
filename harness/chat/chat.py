@@ -157,8 +157,18 @@ class ChatLinks:
     def link_to_new(self, folder: str, prompt: str) -> str:
         """The link that opens a new chat on folder with prompt filled in. The app files a new chat under its
         repository's name; when a chat asked for it, the prompt also has the new chat join that chat's sidebar section."""
-        prompt = " ".join(part for part in (prompt, self._join_opener_section()) if part)
+        prompt = " ".join(part for part in (prompt, self._stay_in(folder), self._join_opener_section()) if part)
         return f"{NEW_CHAT_LINK}?folder={quote(folder, safe='')}&q={quote(prompt, safe='')}"
+
+    def _stay_in(self, folder: str) -> str:
+        """What keeps a new chat on its own repository: the Claude app can open it in another folder than the link
+        names, such as the one last used, and a chat working on there would change that repository's sessions and
+        branches."""
+        return (
+            f"This chat was opened for the folder {folder}. Before anything else, check the folder this chat works in. "
+            "If it is another folder, stop: do not create, switch or change any session, ticket, branch or file there, "
+            f"and tell the person this chat opened in the wrong folder and should be started again in {folder}."
+        )
 
     def _join_opener_section(self) -> str:
         """What a new chat is told so it lands beside the chat that opened it: the app knows that chat by its title and

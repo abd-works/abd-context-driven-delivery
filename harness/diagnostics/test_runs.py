@@ -104,16 +104,19 @@ class TestRun:
         last_lines = "\n".join(output.strip().splitlines()[-SUMMARY_LINES:])
         return TestRun(self.tier, self.commit, self.started_at, outcome, pid=self.pid, finished_at=now, summary=last_lines, is_new_failure=is_new)
 
-    def fix_prompt(self, output: str) -> str:
+    def fix_prompt(self, output: str, checkout: Path) -> str:
         """What a new chat is asked when this run is a new failure: open a session for the fix, fix what failed test
-        first, run the tier again, and merge the fix to main once it passes."""
+        first, run the tier again, and merge the fix to main once it passes. The Claude app can open the chat in another
+        folder than its link names, so the prompt names the checkout everywhere the work depends on it."""
         failed = [line.removeprefix("FAILED ").strip() for line in output.splitlines() if line.startswith("FAILED ")]
         session = f"fix-{self.tier.value}-{self.commit[:9]}"
         return (
-            f"The {self.tier.value} tier failed on main at {self.commit[:9]}. Failed: {', '.join(failed) or 'see the run summary in the health report'}. "
-            f"Open a session for the fix with ticket.create and ticket.activate named {session}, so it works in its own worktree. "
+            f"The {self.tier.value} tier failed on main of the CDD repository at {checkout}, commit {self.commit[:9]}. "
+            f"Failed: {', '.join(failed) or 'see the run summary in the health report'}. "
+            f"Work in that repository, whatever folder this chat opened in: open a session for the fix with "
+            f"ticket.create named {session} and project={checkout}, then ticket.activate, so it works in its own worktree. "
             "Find the cause and fix it, test first. Then run the tier again with "
-            f"python -m harness.diagnostics.test_runs {self.tier.value} . and, once it passes, merge the fix to main and push."
+            f"python -m harness.diagnostics.test_runs {self.tier.value} {checkout} and, once it passes, merge the fix to main and push."
         )
 
     def is_due(self, now: datetime) -> bool:
@@ -365,7 +368,7 @@ class TestCadence:
         finished = started.finished(exit_code, output, self.record.previous(tier), self._clock())
         self.record.save(finished)
         if finished.is_new_failure:
-            self._open_fix_chat(self.checkout, finished.fix_prompt(output))
+            self._open_fix_chat(self.checkout, finished.fix_prompt(output, self.checkout))
         return finished
 
     def _reviewed(self, run_name: str) -> list[str]:

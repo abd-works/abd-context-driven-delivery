@@ -85,7 +85,7 @@ with description("a chat") as self:
             expect(parse_qs(urlsplit(self.link).query)["folder"]).to(equal([WORKTREE]))
 
         with it("should fill its prompt in for the person to send"):
-            expect(parse_qs(urlsplit(self.link).query)["q"]).to(equal([NEW_CHAT_PROMPT]))
+            expect(parse_qs(urlsplit(self.link).query)["q"][0]).to(start_with(NEW_CHAT_PROMPT))
 
     # The app files a new chat under its repository's name; a chat that opens one has it join its own sidebar section.
     with context("that a titled chat opens a new chat"):
@@ -308,3 +308,17 @@ with description("a chat") as self:
 
             with it("should hand the fill over once the turn has ended"):
                 expect(_said(Chat.load(CHAT).check_in(is_busy=False))).to(equal([("fill", "Write a handoff")]))
+
+
+with description("a new chat's link") as self:
+    with before.each:
+        self.link = RecordedChatLinks(Path(tempfile.mkdtemp()) / "opened.txt").link_to_new(WORKTREE, NEW_CHAT_PROMPT)
+        self.prompt = parse_qs(urlsplit(self.link).query)["q"][0]
+
+    with it("should keep the prompt it was given first"):
+        expect(self.prompt).to(start_with(NEW_CHAT_PROMPT))
+
+    # The Claude app can open a new chat in another folder than its link names, such as the folder last used, and a
+    # chat that works on in that folder changes another repository's sessions and branches.
+    with it("should tell the chat the folder it was opened for, and to stop and tell the person when it works in another"):
+        expect([WORKTREE in self.prompt, "stop" in self.prompt.lower()]).to(equal([True, True]))
