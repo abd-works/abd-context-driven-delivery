@@ -42,7 +42,7 @@ function FileEntryView({ page, entry, isOpen }: { page: FilesPage; entry: FileEn
 // a script opens can be refused.
 function DrawioTabLinkView({ page, path }: { page: FilesPage; path: string }) {
   return (
-    <a className="drawio-tab-link" href={drawioPageOf(path, page.link.chat)} target="_blank" rel="noreferrer" title={`${path}: opens in the draw.io editor in a tab of its own`}>
+    <a className="drawio-tab-link" href={drawioPageOf(path, page.link.chat, page.link.project)} target="_blank" rel="noreferrer" title={`${path}: opens in the draw.io editor in a tab of its own`}>
       ↗
     </a>
   )
@@ -255,7 +255,7 @@ function DrawioFileView({ page, path }: { page: FilesPage; path: string }) {
         <span className="source-path">{path}</span>
         <DrawioTabLinkView page={page} path={path} />
       </div>
-      <iframe className="drawio-frame" title={`${path} in the draw.io editor`} src={drawioPageOf(path, page.link.chat)} />
+      <iframe className="drawio-frame" title={`${path} in the draw.io editor`} src={drawioPageOf(path, page.link.chat, page.link.project)} />
     </section>
   )
 }

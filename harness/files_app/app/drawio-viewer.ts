@@ -43,10 +43,11 @@ export class DrawioViewer {
     return `${this.python} tools/drawio_viewer/drawio_viewer.py . ${DRAWIO_PORT}`
   }
 
-  // The editor's address for path, a file named from the repository's root, the viewer started first when it is down.
-  async urlOf(path: string): Promise<string> {
+  // The editor's address for path, a file named from project's root (this repository's when none is named), the viewer
+  // started first when it is down.
+  async urlOf(path: string, project = ''): Promise<string> {
     if (!(await answers(DRAWIO_PORT))) await this.start()
-    return drawioEditorUrl(path)
+    return drawioEditorUrl(path, project)
   }
 
   private async start(): Promise<void> {
