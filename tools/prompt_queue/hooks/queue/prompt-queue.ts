@@ -68,12 +68,18 @@ export async function queueByKey($: EngineInterface, text: string): Promise<void
 /** Whether a submitted prompt is the draft Alt+Enter just queued, which is then no longer awaited. */
 export async function isQueuedByKey($: EngineInterface, text: string): Promise<boolean> {
   const queued = await read($, queuedByKey)
-  if (queued === '' || queued !== text) {
+  if (queued === '' || sameDraft(queued) !== sameDraft(text)) {
     return false
   }
   await update($, queuedByKey, () => '')
 
   return true
+}
+
+// The draft as the person wrote it, whatever line endings and trailing spaces the desktop sends it with: a long pasted
+// draft came back with other endings, so the send after Alt+Enter was not recognised and went to the chat.
+function sameDraft(text: string): string {
+  return text.split(/\r?\n/).map(line => line.trimEnd()).join('\n').trim()
 }
 
 /** The `+` button: what the person typed so far moves to the bottom of the queue, or back in its place when edited. */

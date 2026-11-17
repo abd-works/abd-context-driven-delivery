@@ -89,6 +89,16 @@ for (const surface of ['desktop', 'terminal'] as const) {
   })
 }
 
+// Seen 2026-11-17: a long pasted list queued with Alt+Enter was still sent to the chat.
+test('the submission that follows Alt+Enter does not enter when the desktop sends its lines with other endings', async ($, on) => {
+  seedQueue(on, false, ['1. Rules fix not checked live.  ', '2. No Go to file on a fold-out.'].join(String.fromCharCode(13, 10)))
+  on('prompt.submit', (_, e) => ({ text: e.text }))
+
+  const submitted = await $.prompt.submit({ text: ['1. Rules fix not checked live.', '2. No Go to file on a fold-out.', ''].join(String.fromCharCode(10)), wait: false, origin: { kind: 'composer' } })
+
+  expect(submitted.drop).toBe('Queued for later')
+})
+
 test('the submission that follows Alt+Enter does not enter, as its draft is queued', async ($, on) => {
   seedQueue(on, false, 'Run the heavy tier')
   on('prompt.submit', (_, e) => ({ text: e.text }))
