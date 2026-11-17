@@ -357,37 +357,31 @@ async function boxAfterFailedClear($: Parameters<Parameters<typeof test>[1]>[0],
   return { seeded, ui: await $.ui.mount({ ...BAND, surface: 'desktop' }) }
 }
 
-test('a queue call no cdd server answers shows its failure in red with Fix', async ($, on) => {
+test("a queue call no cdd server answers keeps its failure, numbered, for CDD's shared failure line to show", async ($, on) => {
   const { seeded, ui } = await boxAfterFailedClear($, on)
 
-  expect(await ui.find({ type: 'Button', key: 'queue-fix' })).toBeDefined()
-  expect((seeded.stored.failure?.value as { failure: string }).failure).toBe(NO_SERVER_FAILURE)
-  await ui.unmount()
-})
-
-test("Fix on a queue failure runs the debug command with the failure and its context, as the chat bar's Fix does", async ($, on) => {
-  const ran: { command: string; args: string }[] = []
-  on('command.run', (_, e) => {
-    ran.push({ command: e.command, args: e.args })
-    return {}
+  expect(seeded.stored.failure?.value).toEqual({
+    id: 1,
+    failure: NO_SERVER_FAILURE,
+    context: 'Calling prompt-queue.clear on the cdd server, tried as cdd then plugin:cdd:cdd',
   })
-  const { seeded, ui } = await boxAfterFailedClear($, on)
-
-  await ui.press({ key: 'queue-fix' })
-
-  const details = `The prompt queue above the chat bar shows this failure. Failure: ${NO_SERVER_FAILURE} ` +
-    'Context: Calling prompt-queue.clear on the cdd server, tried as cdd then plugin:cdd:cdd'
-  expect(ran).toEqual([{ command: 'space-session-debug-session', args: `choice=fix details=${JSON.stringify(details)}` }])
-  expect(seeded.stored.failure?.value).toBe(null)
   await ui.unmount()
 })
 
-test('✕ on a queue failure dismisses it', async ($, on) => {
+test('each new queue failure gets the next number, so the shared line shows it again after an older one was handled', async ($, on) => {
   const { seeded, ui } = await boxAfterFailedClear($, on)
 
-  await ui.press({ key: 'queue-dismiss-failure' })
+  await ui.press({ key: 'queue-clear' })
 
-  expect(seeded.stored.failure?.value).toBe(null)
+  expect((seeded.stored.failure?.value as { id: number }).id).toBe(2)
+  await ui.unmount()
+})
+
+test('the queue box draws no failure line of its own, leaving Fix and ✕ to the shared line', async ($, on) => {
+  const { ui } = await boxAfterFailedClear($, on)
+
+  expect(await ui.find({ type: 'Button', key: 'queue-fix' })).toBeUndefined()
+  expect(await ui.find({ type: 'Box', key: 'queue-failure' })).toBeUndefined()
   await ui.unmount()
 })
 

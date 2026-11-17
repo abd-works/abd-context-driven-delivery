@@ -2,8 +2,6 @@ import type { EngineInterface, RenderInput } from 'claude-code'
 
 import {
   clearQueue,
-  dismissFailure,
-  fixFailure,
   editPrompt,
   movePrompt,
   removePrompt,
@@ -15,7 +13,7 @@ import {
   toggleSteps,
   type QueueState,
 } from './prompt-queue'
-import type { PromptStep, QueueFailure, QueuedPrompt } from '../../types'
+import type { PromptStep, QueuedPrompt } from '../../types'
 import { progressOf } from './plan-steps'
 import {
   ADD_SVG,
@@ -49,8 +47,6 @@ const CARD_BUTTON_COLUMNS = 15
 /** The mark before a step for where it stands: done, being worked, or not started. */
 const STEP_MARK = { done: '✓', in_progress: '▸', pending: '○' } as const
 
-/** A failure's red, as the chat bar draws its own. */
-const FAILURE_RED = '#EF4444'
 
 /**
  * Its own box above the chat bar. At rest it shows only the stack image, the count drawn on it, and the pointer over
@@ -70,7 +66,6 @@ export function QueueView($: EngineInterface, e: AbovePromptEvent, state: QueueS
         <Text dimColor wrap="truncate-end">{`  ↳ ${task.description}: ${task.prompts.length} prompt(s)`}</Text>
       ))}
       {state.notice !== '' && <Text color="warning">{state.notice}</Text>}
-      {state.failure && FailureView($, e, state.failure)}
       <Box flexDirection="row" gap={1}>
         {IconButtonView(elements, stackIcon(state), () => toggleExpanded($))}
         <Box width={ADD_COLUMNS}>
@@ -201,27 +196,6 @@ function KeyCapView($: EngineInterface, e: AbovePromptEvent, key: KeyCap) {
   return (
     <Box backgroundColor={LOOK.keyCap} paddingX={1}>
       <Text color={LOOK.keyText}>{key.glyph}</Text>
-    </Box>
-  )
-}
-
-/**
- * A failure the queue met, drawn as the chat bar draws its own: what failed in red, Fix to send it to this chat to be
- * fixed, ✕ to dismiss it, and the context it failed in beneath. Once Fix is pressed, a running bar stands in its place.
- */
-function FailureView($: EngineInterface, e: AbovePromptEvent, failure: QueueFailure) {
-  const { Box, Button, Progress, Text } = $.ui.resolve(e)
-
-  return (
-    <Box key="queue-failure" flexDirection="column">
-      <Box flexDirection="row" gap={1} alignItems="center">
-        <Text color={FAILURE_RED}>{failure.failure}</Text>
-        {failure.isFixing
-          ? <Progress key="queue-fixing" label="Sending the fix to Claude" />
-          : <Button key="queue-fix" label="Fix" variant="primary" onPress={() => fixFailure($)} />}
-        <Button key="queue-dismiss-failure" label="✕" onPress={() => dismissFailure($)} />
-      </Box>
-      <Text color={LOOK.muted}>{failure.context}</Text>
     </Box>
   )
 }
