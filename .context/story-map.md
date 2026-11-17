@@ -976,6 +976,10 @@ Built, not seen: with sub-agent mode on, the model groups the queued prompts int
 
 Built, not seen: `/queue [what to focus on]` has the model read the conversation and adds the next prompts it lists to the queue, in order (`planFromConversation`).
 
+### (S) Person --> [Attach Images To Queued Prompt](../story_tests/queue-prompts-for-later/attach-images-to-queued-prompt/attach_images_to_queued_prompt_story.test.py)
+
+Built (2026-11-17), not seen (the person's /queue: "add images / attachments in chat along with text"): a plugin cannot send images with a prompt (`$.prompt.submit`: pasted images are not expanded for a plugin's prompt), so when Alt+Enter queues a draft, the images and documents pasted in it, which the dropped submission carries, are read (`$.prompt.media`) and kept as files beside the queued prompt (`prompt-queue.attach`, the chat's `attachments` folder). The queue beside a prompt lists each file for the agent to open, and the card shows 📎 with how many. The `+` button reads only the draft's text, so it queues no images.
+
 ## (E) [Work Through Prompt Queue](../story_tests/queue-prompts-for-later/work-through-prompt-queue/work_through_prompt_queue_story.test.md)
 
 The queue is kept by the cdd server, so the mod, the agent in the chat and a session starting in it change one queue (`tools/prompt_queue/prompt_queue.py`, MCP tools `prompt-queue.*`). The agent works through it: it reads the queue, does each prompt in order, and marks each one done.

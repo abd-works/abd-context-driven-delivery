@@ -1,5 +1,5 @@
 /** One prompt waiting in the queue, for the agent to do as if the person typed it, as prompt-queue's tools answer it. */
-export type QueuedPrompt = { id: string; text: string; steps?: PromptStep[] }
+export type QueuedPrompt = { id: string; text: string; steps?: PromptStep[]; attachments?: string[] }
 
 /** Where a step of a queued prompt stands, as prompt-queue's tools answer it. */
 export type StepState = 'pending' | 'in_progress' | 'done'

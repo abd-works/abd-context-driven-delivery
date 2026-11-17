@@ -3,6 +3,8 @@ prompt-queue mod, the agent working in the chat, and a session starting in it al
 
 from __future__ import annotations
 
+import base64
+import mimetypes
 import re
 import uuid
 from pathlib import Path
@@ -21,6 +23,8 @@ from harness.mcp.mcp_annotations import mcp
 QUEUE_FILE = "prompt-queue.json"
 # How many hex characters of a random id name a queued prompt: short enough to read in the queue, enough not to repeat.
 _PROMPT_ID_LENGTH = 12
+# The folder beside a chat's queue file that holds the images and documents queued with its prompts.
+ATTACHMENTS_FOLDER = "attachments"
 # The section of a handoff that holds the numbered steps the next agent takes (space/session/HANDOFF-FORMAT.md).
 _APPROACH_HEADING = re.compile(r"^##\s+Approach for Next Agent\s*$", re.IGNORECASE)
 _NEXT_SECTION = re.compile(r"^##\s")
@@ -46,6 +50,7 @@ class QueuedPrompt(TypedDict):
     id: str
     text: str
     steps: NotRequired[list[PromptStep]]
+    attachments: NotRequired[list[str]]
 
 
 class StepNotPlanned(LookupError):
@@ -174,6 +179,15 @@ class PromptQueue:
         ticked = [{**planned_step, "state": "done"} if number == step else planned_step for number, planned_step in enumerate(planned, start=1)]
         return self._keep([{**item, "steps": ticked} if item["id"] == prompt else item for item in held])
 
+    @mcp
+    @agent_tool
+    def attach(self, prompt: str, filename: str, media_type: str, data: str) -> PromptQueue:
+        """Keep an image or document pasted in a queued draft beside the queued prompt whose id is prompt: data is its bytes in base64, saved as a file in this chat's folder whose path the prompt lists under attachments, for the agent to open when it takes the prompt."""
+        held = self._holding(prompt)
+        listed = next(item for item in held if item["id"] == prompt).get("attachments", [])
+        saved = self._saved_attachment(prompt, len(listed) + 1, filename, media_type, data)
+        return self._keep([{**item, "attachments": [*listed, str(saved)]} if item["id"] == prompt else item for item in held])
+
     def queue_handoff(self, handoff: Path) -> int:
         """Queue the numbered steps of handoff's Approach for Next Agent, in order, one prompt each, so a chat opening a
         session has its next work lined up; a handoff already queued on this chat queues nothing again. Answers how many
@@ -185,6 +199,15 @@ class PromptQueue:
         self.add_all(steps)
         self._file.write({**self._held(), "handoffs": [*held.get("handoffs", []), handoff.name]})
         return len(steps)
+
+    def _saved_attachment(self, prompt: str, number: int, filename: str, media_type: str, data: str) -> Path:
+        """The file an attachment is saved as: named for its prompt and its place among the prompt's attachments, with
+        the extension of its name, else of its media type."""
+        extension = Path(filename).suffix or mimetypes.guess_extension(media_type) or ""
+        saved = self._file.path.parent / ATTACHMENTS_FOLDER / f"{prompt}-{number}{extension}"
+        saved.parent.mkdir(parents=True, exist_ok=True)
+        saved.write_bytes(base64.b64decode(data))
+        return saved
 
     def _holding(self, prompt: str) -> list[QueuedPrompt]:
         """The prompts queued, refusing a prompt id the queue does not hold."""

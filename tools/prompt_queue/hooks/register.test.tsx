@@ -31,7 +31,7 @@ type TestOn = Parameters<Extract<Parameters<typeof test>[1], (...args: never[]) 
 const CHAT = 'chat-1'
 
 type Step = { text: string; state: 'pending' | 'in_progress' | 'done' }
-type Prompt = { id: string; text: string; steps?: Step[] }
+type Prompt = { id: string; text: string; steps?: Step[]; attachments?: string[] }
 
 /** The cdd server's prompt-queue tools for one chat, in memory: the same operations as tools/prompt_queue's
  * PromptQueue, each answering the queue. */
@@ -485,5 +485,34 @@ test("a card with steps shows how many are done, and opens them under it", async
   expect(progress?.props.label).toBe('1/2')
   expect(await ui.find({ type: 'Button', key: 'steps-b' })).toBeUndefined()
   expect((await ui.find({ type: 'Box', key: 'steps-of-a' }))?.text).toBe('✓ Read the epic▸ Write the stories')
+  await ui.unmount()
+})
+
+const ATTACHED = [
+  { id: 'a', text: 'Write the scenarios', attachments: ['C:/chats/chat-1/attachments/a-1.png'] },
+  { id: 'b', text: 'Run the unit tier' },
+] as Prompt[]
+
+test('the queue beside a prompt lists the files queued with each prompt, for the agent to open', async ($, on) => {
+  seedQueue(on, false, '', ATTACHED, true)
+  const carried: string[] = []
+  on('prompt.submit', (_, e) => {
+    carried.push(...(e.context ?? []))
+    return { text: e.text }
+  })
+
+  await $.prompt.submit({ text: 'Fix the Files app', wait: false, origin: { kind: 'composer' } })
+
+  expect(carried.join()).toContain('1. [a] Write the scenarios (attached, open each: C:/chats/chat-1/attachments/a-1.png)')
+  expect(carried.join()).not.toContain('Run the unit tier (attached')
+})
+
+test('a card with files queued with it shows how many', async ($, on) => {
+  seedQueue(on, true, '', ATTACHED)
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+
+  expect((await ui.find({ type: 'Box', key: 'card-a' }))?.text).toContain('📎1')
+  expect((await ui.find({ type: 'Box', key: 'card-b' }))?.text).not.toContain('📎')
   await ui.unmount()
 })

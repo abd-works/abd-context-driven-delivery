@@ -1,5 +1,5 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, McpToolResult } from 'claude-code'
+import type { EngineInterface, McpToolResult, PromptSubmitAttachment } from 'claude-code'
 
 import type { PromptStep, QueueFailure, QueueJson, QueuedPrompt, SubAgentTask } from '../../types'
 import { finishedPlan, nextPlan, type PlanCall } from './plan-steps'
@@ -280,7 +280,46 @@ export async function queueContext($: EngineInterface, sentId = ''): Promise<str
     return undefined
   }
   const instructions = (await read($, isPlanSeen)) ? QUEUE_INSTRUCTIONS : `${QUEUE_INSTRUCTIONS} ${KEEP_STEPS_YOURSELF}`
-  return [instructions, '', ...prompts.map((prompt, place) => `${place + 1}. [${prompt.id}] ${prompt.text}`)].join('\n')
+  return [instructions, '', ...prompts.map((prompt, place) => `${place + 1}. [${prompt.id}] ${prompt.text}${attachedNote(prompt)}`)].join('\n')
+}
+
+/** The files queued with a prompt, as the agent reads them beside it, to open when it takes the prompt. */
+function attachedNote(prompt: QueuedPrompt): string {
+  const attached = prompt.attachments ?? []
+  return attached.length === 0 ? '' : ` (attached, open each: ${attached.join(', ')})`
+}
+
+/** The images and documents pasted in a draft Alt+Enter queued: the engine sends them with the submission it drops, and
+ * a plugin cannot send them with a prompt later, so each is kept as a file beside the queued prompt. */
+export async function keepQueuedAttachments($: EngineInterface, text: string, attachments: readonly PromptSubmitAttachment[]): Promise<void> {
+  const queued = (await read($, queue)).prompts.filter(prompt => sameDraft(prompt.text) === sameDraft(text)).at(-1)
+  if (!queued) {
+    return
+  }
+  for (const attachment of attachments) {
+    const data = attachment.id ? await mediaOf($, attachment.id) : undefined
+    if (data) {
+      await changeQueue($, 'attach', { prompt: queued.id, filename: attachment.filename ?? '', media_type: data.mediaType, data: data.base64 })
+    }
+  }
+}
+
+/** One attached item's bytes, base64, read slice by slice; none for an item the engine will not give. */
+async function mediaOf($: EngineInterface, id: string): Promise<{ mediaType: string; base64: string } | undefined> {
+  const slices: string[] = []
+  let mediaType = ''
+  let offset: number | undefined = 0
+  while (offset !== undefined) {
+    const slice = await $.prompt.media({ id, offset })
+    if (slice.base64 === undefined) {
+      await showFailure($, `An attachment was not queued: ${slice.unreadable ?? slice.deny}`, 'Queuing a draft with Alt+Enter, reading its pasted item')
+      return undefined
+    }
+    slices.push(slice.base64)
+    mediaType = slice.mediaType
+    offset = slice.next
+  }
+  return { mediaType, base64: slices.join('') }
 }
 
 /** The prompt the agent works on now: the one play asked it to take, or one sent straight to the chat. Its task list

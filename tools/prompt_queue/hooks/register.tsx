@@ -3,6 +3,7 @@ import type { Register } from 'claude-code'
 import {
   currentQueue,
   isQueuedByKey,
+  keepQueuedAttachments,
   queueFromCommand,
   queueByKey,
   queueContext,
@@ -48,6 +49,7 @@ export const register: Register = on => {
   // Every other prompt carries the queue beside it while the queue plays, so the agent takes its work in order.
   on('prompt.submit', async ($, e, next) => {
     if (e.origin?.kind !== 'plugin' && (await isQueuedByKey($, e.text))) {
+      await keepQueuedAttachments($, e.text, e.attachments ?? [])
       return { drop: 'Queued for later' }
     }
     const sent = e.command || e.origin?.kind === 'plugin' ? undefined : await queueSentPrompt($, e.text)

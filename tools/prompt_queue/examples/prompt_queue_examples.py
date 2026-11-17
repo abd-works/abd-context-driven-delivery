@@ -48,3 +48,10 @@ def id_of(queue: PromptQueue, text: str) -> str:
 def steps_of(queue: PromptQueue, text: str) -> list[PromptStep]:
     """The steps the queue answers for the prompt whose text is text; none when it has none."""
     return next(prompt for prompt in queue.prompts if prompt["text"] == text).get("steps", [])
+
+# Interaction: an image pasted in a queued draft, as its file is named, and its bytes: a one-pixel PNG.
+SCREENSHOT_NAME = "screenshot.png"
+SCREENSHOT_PNG = bytes.fromhex(
+    "89504e470d0a1a0a0000000d4948445200000001000000010806000000"
+    "1f15c4890000000d4944415478da63f8ffff3f0005fe02fea7d6a49f0000000049454e44ae426082"
+)
