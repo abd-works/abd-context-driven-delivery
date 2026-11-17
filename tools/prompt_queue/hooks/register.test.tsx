@@ -973,3 +973,25 @@ test('a set_steps call the server refused leaves the prompt being worked as it w
 
   expect(seeded.stored.askedAbout?.value).toBe('a')
 })
+
+
+test("sub-agent mode draws one queue per agent in the list's place, with no separate list above them", async ($, on) => {
+  groupedQueue(on)
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+
+  expect(await ui.find({ type: 'Box', key: 'agent-column-1' })).toBeDefined()
+  expect(await ui.find({ type: 'Box', key: 'card-row-a' })).toBeUndefined()
+  await ui.unmount()
+})
+
+test("each item in an agent's queue is one line, cut with an ellipsis when it is long", async ($, on) => {
+  groupedQueue(on)
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  const column = JSON.stringify(await ui.find({ type: 'Box', key: 'agent-column-1' }))
+
+  expect(column).toContain('"wrap":"truncate-end"')
+  expect(column).not.toContain('"wrap":"wrap"')
+  await ui.unmount()
+})

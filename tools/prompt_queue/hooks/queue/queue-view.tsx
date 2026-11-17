@@ -64,8 +64,7 @@ export function QueueView($: EngineInterface, e: AbovePromptEvent, state: QueueS
   return (
     <Box key="prompt-queue" flexDirection="column" rowGap="sm" alignSelf="flex-start"
       paddingX={1} width={state.isExpanded ? '100%' : undefined}>
-      {state.isExpanded && QueueListView($, e, state)}
-      {state.isExpanded && state.isSubAgentMode && state.tasks.length > 0 && AgentColumnsView($, e, state.tasks)}
+      {state.isExpanded && (state.isSubAgentMode && state.tasks.length > 0 ? AgentColumnsView($, e, state.tasks) : QueueListView($, e, state))}
       {state.notice !== '' && <Text color="warning">{state.notice}</Text>}
       <Box flexDirection="row" gap={1}>
         {IconButtonView(elements, stackIcon(state), () => toggleExpanded($))}
@@ -166,7 +165,7 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
   )
 }
 
-/** Sub-agent mode: one column for each sub-agent side by side, each its own queue of the prompts it will run. */
+/** Sub-agent mode: one queue for each sub-agent, side by side, in the place of the queue's list, each item one line. */
 function AgentColumnsView($: EngineInterface, e: AbovePromptEvent, grouped: SubAgentTask[]) {
   const { Box } = $.ui.resolve(e)
 
@@ -195,8 +194,8 @@ function AgentColumnView($: EngineInterface, e: AbovePromptEvent, task: SubAgent
         <Text bold color={LOOK.accent}>{name}</Text>
         <Button key={`rename-agent-${number}`} label="✎" onPress={() => renameAgent($, place)} />
       </Box>
-      <Text dimColor wrap="wrap">{task.description}</Text>
-      {task.prompts.map((prompt, index) => <Text key={`agent-${number}-prompt-${index + 1}`} wrap="wrap">{`${index + 1}. ${prompt}`}</Text>)}
+      <Text dimColor wrap="truncate-end">{task.description}</Text>
+      {task.prompts.map((prompt, index) => <Text key={`agent-${number}-prompt-${index + 1}`} wrap="truncate-end">{`${index + 1}. ${prompt}`}</Text>)}
     </Box>
   )
 }
