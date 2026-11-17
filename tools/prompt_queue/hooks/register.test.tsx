@@ -805,7 +805,7 @@ test("a message sent while a prompt is worked becomes a step of that prompt, mar
 test('the agent is told a message sent mid-work joined the prompt it works on', async ($, on) => {
   const { carried } = await messageSentMidWork($, on, 'cut the text with an ellipsis')
 
-  expect(carried.join()).toContain('step of prompt [a]')
+  expect(carried.join()).toContain('filed it under the goal last worked, [a]')
 })
 
 test("the agent's next task list keeps the person's interruption among the prompt's steps", async ($, on) => {
@@ -929,5 +929,24 @@ test('a message sent between turns is filed under the goal last worked, opening 
   expect(seeded.prompts.map(prompt => prompt.text)).toEqual(['Write the scenarios', 'Run the unit tier'])
   expect(seeded.prompts[0]!.steps).toEqual([{ text: '[interruption] cut the text with an ellipsis', state: 'pending' }])
   expect(seeded.prompts[0]!.is_done).toBe(false)
-  expect(carried.join()).toContain('step of prompt [a]')
+  expect(carried.join()).toContain('filed it under the goal last worked, [a]')
+})
+
+
+test("the note on a filed message tells the agent to decide first where it belongs, listing the goals on the queue", async ($, on) => {
+  seedQueue(on, false, '', [
+    { id: 'a', text: 'Write the scenarios', is_done: true },
+    { id: 'b', text: 'Run the unit tier' },
+  ] as Prompt[], true, '', 'a')
+  const carried: string[] = []
+  on('prompt.submit', (_, e) => {
+    carried.push(...(e.context ?? []))
+    return { text: e.text }
+  })
+
+  await $.prompt.submit({ text: 'take the Alt hint off the queue', wait: false, origin: { kind: 'composer' } })
+
+  expect(carried.join()).toContain('Before any other work, decide where this message belongs')
+  expect(carried.join()).toContain('[b] Run the unit tier')
+  expect(carried.join()).toContain('prompt-queue.add_interruption')
 })
