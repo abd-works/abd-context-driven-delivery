@@ -232,10 +232,12 @@ function AgentColumnView($: EngineInterface, e: AbovePromptEvent, state: QueueSt
 
   return (
     <Box key={`agent-column-${number}`} flexDirection="column" flexGrow={isCollapsed ? 0 : 1} flexShrink={isCollapsed ? 0 : 1} minWidth={0} rowGap="sm">
-      <Box flexDirection="row" alignItems="center" gap={1}>
+      <Box key={`agent-header-${number}`} flexDirection="row" alignItems="center" gap={1}>
         {robot}
-        {!isCollapsed && <Text bold color={LOOK.accent}>{name}</Text>}
-        {!isCollapsed && <Button key={`rename-agent-${number}`} label="✎" onPress={() => renameAgent($, place)} />}
+        <Box key={`agent-label-${number}`} flexDirection="row" alignItems="center" gap={1} display={isCollapsed ? 'none' : 'flex'}>
+          <Text bold color={LOOK.accent}>{name}</Text>
+          <Button key={`rename-agent-${number}`} label="✎" onPress={() => renameAgent($, place)} />
+        </Box>
       </Box>
       {isCollapsed
         ? <Text key={`agent-progress-${number}`} color={LOOK.muted}>{`${items.filter(item => item.is_done).length}/${items.length}`}</Text>
