@@ -1,6 +1,51 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { keepWrap, storedWrap } from './files-theme'
+import type { editor } from 'monaco-editor'
+
+import { ABD_WORKS_ORANGE, keepWrap, storedWrap, wearBrand } from './files-theme'
+
+// The Monaco the page loads, keeping each look it is given by name.
+class FakeMonaco {
+  readonly looks = new Map<string, editor.IStandaloneThemeData>()
+  readonly editor = { defineTheme: (name: string, look: editor.IStandaloneThemeData) => void this.looks.set(name, look) }
+}
+
+const tokenColour = (look: editor.IStandaloneThemeData | undefined, token: string) => look?.rules.find(rule => rule.token === token)?.foreground
+
+// The source view in the abd.works look: the brand's executive light look and its engineering dark look, orange its
+// accent in both (harness/catalog_generator/templates/commons/site.css).
+describe('Source view in the abd.works look', () => {
+  let monaco: FakeMonaco
+
+  beforeEach(() => {
+    monaco = new FakeMonaco()
+    wearBrand(monaco)
+  })
+
+  describe('with the dark engineering look', () => {
+    it("should draw the source in abd.works' engineering colours, near-black behind light text", () => {
+      const look = monaco.looks.get('vs-dark')
+      expect([look?.colors['editor.background'], look?.colors['editor.foreground']]).toEqual(['#111113', '#E8E8ED'])
+    })
+
+    it('should draw keywords, the cursor and the current line number in abd.works orange', () => {
+      const look = monaco.looks.get('vs-dark')
+      expect([tokenColour(look, 'keyword'), look?.colors['editorCursor.foreground'], look?.colors['editorLineNumber.activeForeground']]).toEqual([ABD_WORKS_ORANGE.slice(1), ABD_WORKS_ORANGE, ABD_WORKS_ORANGE])
+    })
+  })
+
+  describe('with the light look', () => {
+    it("should draw the source in abd.works' executive colours, white behind near-black text", () => {
+      const look = monaco.looks.get('vs')
+      expect([look?.colors['editor.background'], look?.colors['editor.foreground']]).toEqual(['#FFFFFF', '#111113'])
+    })
+
+    it('should draw keywords, the cursor and the current line number in abd.works orange', () => {
+      const look = monaco.looks.get('vs')
+      expect([tokenColour(look, 'keyword'), look?.colors['editorCursor.foreground'], look?.colors['editorLineNumber.activeForeground']]).toEqual([ABD_WORKS_ORANGE.slice(1), ABD_WORKS_ORANGE, ABD_WORKS_ORANGE])
+    })
+  })
+})
 
 // Wrap lines: whether the source view wraps long lines, kept in this browser so the next file opens the same way.
 describe('Wrap long lines in the source view', () => {

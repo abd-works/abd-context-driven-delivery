@@ -1,4 +1,5 @@
 import { loader } from '@monaco-editor/react'
+import type { editor } from 'monaco-editor'
 
 // The Files app's look: the dark engineering look by default, the light one when the person turns it off. Kept in this
 // browser only, as the Graph app keeps its own; the source view reads it from the page's data-theme.
@@ -9,6 +10,53 @@ export type ThemeFailure = (failure: string) => void
 
 const STORED_THEME = 'files-theme'
 const STORED_WRAP = 'files-wrap-lines'
+
+// The abd.works brand's accent, the bundled brand's (harness/catalog_generator/templates/commons/site.css).
+export const ABD_WORKS_ORANGE = '#E5531A'
+
+// One look of the abd.works brand as the source view draws code: the page behind the text, the text, the quiet
+// colours of line numbers and comments, and the colours its strings, numbers and types take beside the orange.
+type BrandColours = { surface: string; text: string; muted: string; border: string; strings: string; numbers: string; types: string }
+
+const EXECUTIVE: BrandColours = { surface: '#FFFFFF', text: '#111113', muted: '#595A61', border: '#DDD8CF', strings: '#0B6E99', numbers: '#B45309', types: '#C64514' }
+const ENGINEERING: BrandColours = { surface: '#111113', text: '#E8E8ED', muted: '#9B9BA8', border: '#2A2A2A', strings: '#4FC3F7', numbers: '#F59E0B', types: '#F2A07A' }
+
+const hexOf = (colour: string) => colour.slice(1)
+
+function brandLook(base: 'vs' | 'vs-dark', colours: BrandColours): editor.IStandaloneThemeData {
+  return {
+    base,
+    inherit: true,
+    rules: [
+      { token: 'comment', foreground: hexOf(colours.muted), fontStyle: 'italic' },
+      { token: 'keyword', foreground: hexOf(ABD_WORKS_ORANGE) },
+      { token: 'string', foreground: hexOf(colours.strings) },
+      { token: 'number', foreground: hexOf(colours.numbers) },
+      { token: 'type', foreground: hexOf(colours.types) },
+    ],
+    colors: {
+      'editor.background': colours.surface,
+      'editor.foreground': colours.text,
+      'editorGutter.background': colours.surface,
+      'editorLineNumber.foreground': colours.muted,
+      'editorLineNumber.activeForeground': ABD_WORKS_ORANGE,
+      'editorCursor.foreground': ABD_WORKS_ORANGE,
+      'editor.selectionBackground': `${ABD_WORKS_ORANGE}2E`,
+      'editor.inactiveSelectionBackground': `${ABD_WORKS_ORANGE}1A`,
+      'editor.lineHighlightBorder': colours.border,
+      'editor.foldBackground': `${ABD_WORKS_ORANGE}14`,
+      'editorIndentGuide.background1': colours.border,
+      'editorBracketMatch.border': ABD_WORKS_ORANGE,
+    },
+  }
+}
+
+// Gives the source view the abd.works look. The source view names Monaco's own looks, vs and vs-dark, so the brand's
+// light and dark looks take those names in the Monaco this page loads, which Monaco allows for its built-in looks.
+export function wearBrand(monacoApi: { editor: Pick<typeof editor, 'defineTheme'> }): void {
+  monacoApi.editor.defineTheme('vs', brandLook('vs', EXECUTIVE))
+  monacoApi.editor.defineTheme('vs-dark', brandLook('vs-dark', ENGINEERING))
+}
 
 const reasonOf = (failure: unknown): string => (failure instanceof Error ? failure.message : String(failure))
 
@@ -35,7 +83,10 @@ export function applyTheme(theme: FilesTheme, fail: ThemeFailure): void {
   }
   loader
     .init()
-    .then(monaco => monaco.editor.setTheme(theme === 'engineering' ? 'vs-dark' : 'vs'))
+    .then(monaco => {
+      wearBrand(monaco)
+      monaco.editor.setTheme(theme === 'engineering' ? 'vs-dark' : 'vs')
+    })
     .catch(failure => fail(`The source view did not change its look: ${reasonOf(failure)}`))
 }
 

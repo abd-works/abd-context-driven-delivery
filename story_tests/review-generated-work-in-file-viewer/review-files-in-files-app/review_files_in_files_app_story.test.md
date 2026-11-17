@@ -312,6 +312,16 @@ Requested by the person on 2026-11-16.
 *Then* the [source view](../../../harness/graph/app/source/SourceView.tsx) wraps line 14 onto the lines below it, and grows as tall as the wrapped file
 *And* the Files app keeps Wrap lines on for the next file the Person opens
 
+#### Scenario: Show the source view in the abd.works look
+
+Requested 2026-11-16 by the person: "Format the viewer using ABD branding." The brand is the bundled abd-works one (`harness/catalog_generator/templates/commons/site.css`), its executive light look and its engineering dark look, with orange as its accent. Only the page draws it: `harness/files_app/app/files/files-theme.spec.ts`.
+
+*Given* the Files app shows *order.py* in its dark engineering look
+*When* the Person views *order.py*
+*Then* the source view draws *order.py* in abd.works' engineering colours, near-black behind light text in JetBrains Mono, its keywords, cursor and current line number in abd.works orange
+*When* the Person turns the dark look off
+*Then* the source view draws *order.py* in abd.works' executive colours, white behind near-black text, with the same orange accent
+
 #### Scenario: A file from an older server lane opens without callouts
 
 Found on 2026-11-16 (debug report `debug-20261116T225500.md`): a page reaching a cdd server lane older than the page (the pinned stable lane, whose `session.file` answers no callouts) stopped with "Cannot read properties of undefined (reading 'map')".
