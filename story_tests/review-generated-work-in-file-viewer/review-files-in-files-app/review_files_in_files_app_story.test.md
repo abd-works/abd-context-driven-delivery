@@ -7,7 +7,7 @@ section: body
 
 # Epic: Review Files In Files App
 
-Map: [story-map.md](../../../.context/story-map.md#e-review-generated-work-in-file-viewer). Acceptance tests: `story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review-files-in-files-app.story.shared.py`, replayed by `.story.domain.spec.py` and `.story.server.spec.py` beside it, for what the session answers; `harness/files_app/app/files/*.spec.ts` for what only the page shows.
+Map: [story-map.md](../../../.context/story-map.md#e-review-generated-work-in-file-viewer). Acceptance tests: `story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review-files-in-files-app.story.shared.py`, replayed by `.story.domain.spec.py` and `.story.server.spec.py` beside it, for what the session answers; `harness/files_app/app/files/*.spec.ts` for what only the page shows; `review-files-in-files-app.story.ui_e2e_spec.py` beside it runs the examples named ++another project++ in a real browser.
 
 Consolidated on 2026-11-14 from the board's Review Files In Viewer scenarios (this file, moved from `story_tests/move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/`), the chat bar's View Fidelity Files scenarios (`story_tests/move-work-forward-from-chat-bar/guide-work-through-practices/guide_work_through_practices_story.test.md`), the Story UI's acceptance-test link (`.../integrate_practice_content_editor_apps_in_chat_bar_story.test.md`), and the graph's source view stories (`harness/graph/.context/story-map.md`, Open Node Source, Unfold Calls And Classes In Source, Open Violation In Source). Scenario names kept from those sources are unchanged, so the shared steps still find them.
 

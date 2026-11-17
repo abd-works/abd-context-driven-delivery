@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from expects import equal, expect
 from mamba import after, before, context, description, it
 
-from files_app_browser import SHOWN_MILLISECONDS, TICKET_CODE, FilesStack, graph_view, line, open_branches, select, settled, shown_lines
+from files_app_browser import SHOWN_MILLISECONDS, TICKET_CODE, FilesStack, graph_view, line, lines_in_order, open_branches, select, settled, shown_lines
 from space.session.graph_view_examples import CHECKOUT_FLOW
 
 FIDELITIES = "stories-acceptance-tests,clean-engineering-code"
@@ -20,6 +20,11 @@ GIVEN_STEP_LINES = ['    @s.given("a ticket on the board")', "    def _(world):"
 # Interaction: the practice trees the graph view draws for checkout-flow's Stories and Clean Engineering files.
 PRACTICE_TREES = ["Practice clean_engineering", "Practice stories"]
 DELETE_LINES = ["        self.close()", "        reread_all(board)", "        Board.reread(board)"]
+# Interaction: the first line of the project's ticket.py; the CDD checkout's own space/kanban/ticket.py opens with its
+# docstring.
+TICKET_FIRST_LINE = "class Ticket:"
+# Interaction: the operations of the project's class Ticket, as its graph holds them.
+TICKET_OPERATIONS = ["Operation close", "Operation delete"]
 
 
 with description("Switch Files App Between Files And Graph, in a real browser") as self:
@@ -80,3 +85,38 @@ with description("Switch Files App Between Files And Graph, in a real browser") 
         with it("And the scenario's other step functions stay folded"):
             others = lambda: [shown for shown in shown_lines(self.page) if "world.ticket.delete(world.board)" in shown or "assert ticket_left(world)" in shown]
             expect(settled(others, lambda shown: shown == [])).to(equal([]))
+
+
+with description("Switch Files App Between Files And Graph, in a real browser, opened on another project") as self:
+    with before.all:
+        self.stack = FilesStack.on_another_project()
+
+    with after.all:
+        self.stack.close()
+
+    with context("Given the Files app is opened on another project and lists checkout-flow's Stories and Clean Engineering files"):
+        with before.all:
+            self.page = self.stack.open(CHECKOUT_FLOW.name, FIDELITIES)
+
+        with after.all:
+            self.page.close()
+
+        with context("Story: Switch Files App To Graph View, Scenario: The graph view shows the practice trees of the listed files, Example: another project"):
+            with before.all:
+                graph_view(self.page)
+
+            with it("Then the file bar shows the Stories and Clean Engineering practice trees"):
+                expect(sorted(self.page.locator('button.graph-node[title^="Practice "]').evaluate_all("nodes => nodes.map(node => node.title)"))).to(equal(PRACTICE_TREES))
+
+            with it("And they are that project's graph, whose class Ticket holds close and delete alone, not the CDD checkout's Ticket"):
+                open_branches(self.page, "clean_engineering", "kanban", "Ticket")
+                operations = lambda: sorted(self.page.locator('button.graph-node[title^="Operation "]').evaluate_all("nodes => nodes.map(node => node.title)"))
+                expect(settled(operations, lambda shown: bool(shown))).to(equal(TICKET_OPERATIONS))
+
+        with context("Story: Open Several Files From Graph Nodes, Scenario: Selecting a node opens its file, Example: another project"):
+            with before.all:
+                select(self.page, "Operation delete")
+                line(self.page, "self.close()").wait_for(timeout=SHOWN_MILLISECONDS)
+
+            with it("Then that project's ticket.py opens in the source view, not the CDD checkout's"):
+                expect(lines_in_order(self.page, TICKET_CODE)[0]).to(equal(TICKET_FIRST_LINE))
