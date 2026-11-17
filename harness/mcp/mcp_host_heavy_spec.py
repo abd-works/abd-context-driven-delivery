@@ -622,12 +622,14 @@ with description("an MCP install that deploys to the IDE's user-level config") a
             with it("should leave ~/.claude.json as it was, so open chats keep their connection"):
                 expect(self.config.read_text(encoding="utf-8")).to(equal(self.written))
 
-        with context("with a cdd server in the project's .mcp.json"):
+        # A main checkout, whose .git is a folder, is served on the stable lane, which the cdd plugin names for every chat.
+        with context("with a cdd server in the project's .mcp.json, installed from a main checkout"):
             with before.each:
                 self.project = self.root / "project"
-                (self.project / ".claude").mkdir(parents=True)
+                (self.project / ".git").mkdir(parents=True)
+                (self.project / ".claude").mkdir()
                 self.project_config = self.project / ".mcp.json"
-                self.installation = McpInstallation.create(IdeLayout("Claude"), self.project / ".claude", repo=_REPO_ROOT)
+                self.installation = McpInstallation.create(IdeLayout("Claude"), self.project / ".claude", repo=self.project)
                 self.installation.is_temporary = False
                 for tool in SampleMcpOps().tools.values():
                     self.installation.write(tool)
@@ -644,6 +646,28 @@ with description("an MCP install that deploys to the IDE's user-level config") a
                 self.installation.cdd_entry.write()
                 saved = json.loads(self.project_config.read_text(encoding="utf-8"))
                 expect(saved).to(equal({"mcpServers": {"other": {"command": "other"}}}))
+
+        # A ticket's worktree, whose .git is a file, is served on the dev lane: its chats reach the dev lane's server
+        # through the project's .mcp.json, which outranks the plugin.
+        with context("with a cdd server in the project's .mcp.json, installed from a ticket's worktree"):
+            with before.each:
+                self.project = self.root / "worktree"
+                (self.project / ".claude").mkdir(parents=True)
+                (self.project / ".git").write_text("gitdir: elsewhere\n", encoding="utf-8")
+                self.project_config = self.project / ".mcp.json"
+                self.installation = McpInstallation.create(IdeLayout("Claude"), self.project / ".claude", repo=self.project)
+                self.installation.is_temporary = False
+                for tool in SampleMcpOps().tools.values():
+                    self.installation.write(tool)
+                self.project_config.write_text(json.dumps({"mcpServers": {"cdd": {}, "other": {"command": "other"}}}), encoding="utf-8")
+                self.installation.cdd_entry.write()
+                self.saved = json.loads(self.project_config.read_text(encoding="utf-8"))["mcpServers"]
+
+            with it("should point the project's cdd server at the dev lane's server"):
+                expect(self.saved["cdd"]["url"]).to(equal(self.installation.served.daemon.url))
+
+            with it("should keep the project's other servers"):
+                expect(self.saved["other"]).to(equal({"command": "other"}))
 
         with it("should allow the cdd tools in ~/.claude/settings.json"):
             settings = json.loads((self.root / ".claude" / "settings.json").read_text(encoding="utf-8"))
