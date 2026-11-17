@@ -1036,6 +1036,10 @@ The file viewer is the Files app (`harness/files_app/`): a page of its own, open
 
 Requested (2026-11-15): the file viewer becomes where the graph is worked too. A toggle at its top switches between its files and the graph; the graph view does what the Graph app does, but on the files the Files app lists, opening every file a person selects and folding them to the nodes selected. The person: "the actual file viewer is going to have a toggle that can switch from folder files and graph ... we basically ingest all of the stories and functionality that the Graph application can do except for you're now selecting file(s), eg more than one file opens; expand and collapse in file viewer based on the nodes in the graph; graph filtered like file filter is". Once these stories work, the Graph app's own epics (Explore Graph In Graph App, Filter Graph In Graph App, Review Violations In Graph App) retire into them.
 
+
+### (S) Person --> Edit Prompt Steps
+
+Built (2026-11-17), not seen (the person: "i want to add steps sometimes ... 2/5 click opens + - up down just like queue"): with the pointer on a card, + adds the prompt box's draft as the card's last step, not started, empties the box and opens the steps (`addStep`); with the pointer on an open step, ↑ and ↓ move it one place (`moveStep`) and ✕ takes it off (`removeStep`). Each change gives the prompt its whole list through `prompt-queue.set_steps`; for the prompt being worked the agent's task list then carries on from the changed steps.
 ## (E) Open Files In Files App
 
 ### (S) Person --> [Open Stage Files From Chat Bar](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-open-stage-files-from-chat-bar)

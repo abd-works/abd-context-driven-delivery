@@ -480,7 +480,8 @@ test("a card with steps shows how many are done, and opens them under it", async
 
   expect(progress?.props.label).toBe('1/2')
   expect(await ui.find({ type: 'Button', key: 'steps-b' })).toBeUndefined()
-  expect((await ui.find({ type: 'Box', key: 'steps-of-a' }))?.text).toBe('✓ Read the epic▸ Write the stories')
+  expect((await ui.find({ type: 'Box', key: 'step-row-a-1' }))?.text.startsWith('✓ Read the epic')).toBe(true)
+  expect((await ui.find({ type: 'Box', key: 'step-row-a-2' }))?.text.startsWith('▸ Write the stories')).toBe(true)
   await ui.unmount()
 })
 
@@ -697,4 +698,65 @@ test('the prompt the agent gives steps to becomes the one being worked, so its t
   expect(seeded.stored.askedAbout?.value).toBe('b')
   expect(seeded.prompts[1]!.steps!.map(step => step.state)).toEqual(['done', 'in_progress'])
   expect(seeded.prompts[0]!.steps).toBeUndefined()
+})
+
+
+const WITH_STEPS = [
+  { id: 'a', text: 'Write the scenarios', steps: [
+    { text: 'Read the epic', state: 'done' },
+    { text: 'Write the stories', state: 'in_progress' },
+    { text: 'Validate them', state: 'pending' },
+  ] },
+  { id: 'b', text: 'Run the unit tier' },
+] as Prompt[]
+
+/** The queue drawn again after a press, with prompt a's steps open, as its next render draws it. */
+async function stepsOpenAfter($: Parameters<Parameters<typeof test>[1]>[0], press: string) {
+  const opening = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await opening.press({ key: 'steps-a' })
+  await opening.unmount()
+  const pressing = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await pressing.press({ key: press })
+  await pressing.unmount()
+}
+
+test("+ on a card adds the prompt box's draft as the card's last step, not started, and empties the box", async ($, on) => {
+  const seeded = seedQueue(on, true, '', WITH_STEPS.map(prompt => ({ ...prompt })))
+  on('prompt.read', () => ({ value: { text: 'Render the map', cursor: 14 } }))
+  const filled: string[] = []
+  on('prompt.fill', (_, e) => {
+    filled.push(e.text)
+    return { isFilled: true }
+  })
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'add-step-b' })
+  await ui.unmount()
+
+  expect(seeded.prompts[1]!.steps).toEqual([{ text: 'Render the map', state: 'pending' }])
+  expect(filled).toEqual([''])
+})
+
+test('✕ on a step takes it off its prompt', async ($, on) => {
+  const seeded = seedQueue(on, true, '', WITH_STEPS.map(prompt => ({ ...prompt })))
+
+  await stepsOpenAfter($, 'remove-step-a-2')
+
+  expect(seeded.prompts[0]!.steps!.map(step => step.text)).toEqual(['Read the epic', 'Validate them'])
+})
+
+test("↑ on a step moves it one place up among its prompt's steps", async ($, on) => {
+  const seeded = seedQueue(on, true, '', WITH_STEPS.map(prompt => ({ ...prompt })))
+
+  await stepsOpenAfter($, 'up-step-a-3')
+
+  expect(seeded.prompts[0]!.steps!.map(step => step.text)).toEqual(['Read the epic', 'Validate them', 'Write the stories'])
+})
+
+test("↓ on a step moves it one place down among its prompt's steps", async ($, on) => {
+  const seeded = seedQueue(on, true, '', WITH_STEPS.map(prompt => ({ ...prompt })))
+
+  await stepsOpenAfter($, 'down-step-a-1')
+
+  expect(seeded.prompts[0]!.steps!.map(step => step.text)).toEqual(['Write the stories', 'Read the epic', 'Validate them'])
 })

@@ -11,6 +11,9 @@ import {
   toggleExpanded,
   toggleSubAgentMode,
   toggleSteps,
+  addStep,
+  moveStep,
+  removeStep,
   type QueueState,
 } from './prompt-queue'
 import type { PromptStep, QueuedPrompt } from '../../types'
@@ -130,7 +133,7 @@ function QueueListView($: EngineInterface, e: AbovePromptEvent, state: QueueStat
       {queue.prompts.map((prompt, index) => (
         <Box key={`card-${prompt.id}`} flexDirection="column">
           {CardView($, e, state, prompt, index)}
-          {state.openSteps.includes(prompt.id) && StepsView($, e, prompt.id, prompt.steps ?? [])}
+          {state.openSteps.includes(prompt.id) && StepsView($, e, prompt)}
         </Box>
       ))}
     </Box>
@@ -159,6 +162,7 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
       <Box width={CARD_BUTTON_COLUMNS} justifyContent="flex-end">
         <Box flexDirection="row" gap={1} display="none" hover={{ display: 'flex' }} backgroundColor={LOOK.keyCap} paddingX="xs">
           <Button key={`send-now-${prompt.id}`} label="↵" onPress={() => sendNow($, prompt)} />
+          <Button key={`add-step-${prompt.id}`} label="+" onPress={() => addStep($, prompt)} />
           <Button key={`edit-${prompt.id}`} label="✎" onPress={() => editPrompt($, prompt)} />
           <Button key={`up-${prompt.id}`} label="↑" onPress={() => movePrompt($, index, index - 1)} />
           <Button key={`down-${prompt.id}`} label="↓" onPress={() => movePrompt($, index, index + 1)} />
@@ -170,17 +174,34 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
 }
 
 /** A card's steps under it, in order: done ones ticked and dim, the one being worked marked and bright. */
-function StepsView($: EngineInterface, e: AbovePromptEvent, id: string, steps: PromptStep[]) {
-  const { Box, Text } = $.ui.resolve(e)
+function StepsView($: EngineInterface, e: AbovePromptEvent, prompt: QueuedPrompt) {
+  const { Box } = $.ui.resolve(e)
 
   return (
-    <Box key={`steps-of-${id}`} flexDirection="column" paddingLeft={3}>
-      {steps.map((step, index) => (
-        <Text key={`step-${id}-${index + 1}`} wrap="truncate-end" dimColor={step.state === 'done'}
+    <Box key={`steps-of-${prompt.id}`} flexDirection="column" paddingLeft={3}>
+      {(prompt.steps ?? []).map((step, index) => StepView($, e, prompt, step, index))}
+    </Box>
+  )
+}
+
+/** One step under its card: its mark and text, and, with the pointer on it, ↑ ↓ to move it and ✕ to take it off. */
+function StepView($: EngineInterface, e: AbovePromptEvent, prompt: QueuedPrompt, step: PromptStep, index: number) {
+  const { Box, Button, Text } = $.ui.resolve(e)
+  const number = index + 1
+
+  return (
+    <Box key={`step-row-${prompt.id}-${number}`} flexDirection="row" justifyContent="space-between" gap={1}>
+      <Box flexGrow={1} flexShrink={1} minWidth={0}>
+        <Text key={`step-${prompt.id}-${number}`} wrap="wrap" dimColor={step.state === 'done'}
           color={step.state === 'in_progress' ? LOOK.accent : undefined}>
           {`${STEP_MARK[step.state]} ${step.text}`}
         </Text>
-      ))}
+      </Box>
+      <Box flexDirection="row" gap={1} display="none" hover={{ display: 'flex' }} backgroundColor={LOOK.keyCap} paddingX="xs">
+        <Button key={`up-step-${prompt.id}-${number}`} label="↑" onPress={() => moveStep($, prompt, index, index - 1)} />
+        <Button key={`down-step-${prompt.id}-${number}`} label="↓" onPress={() => moveStep($, prompt, index, index + 1)} />
+        <Button key={`remove-step-${prompt.id}-${number}`} label="✕" onPress={() => removeStep($, prompt, index)} />
+      </Box>
     </Box>
   )
 }
