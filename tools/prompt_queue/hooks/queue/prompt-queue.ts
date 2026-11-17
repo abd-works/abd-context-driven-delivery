@@ -69,7 +69,6 @@ const plan = atom({ plugin: 'prompt-queue', key: 'plan' } as const, [] as Prompt
 const isPlanSeen = atom({ plugin: 'prompt-queue', key: 'isPlanSeen' } as const, false)
 /** The cards whose steps are shown under them. */
 const openSteps = atom({ plugin: 'prompt-queue', key: 'openSteps' } as const, [] as string[])
-/** The card opened in its robot's queue, with its buttons beneath it; none when closed. */
 /** The places of the robots whose queues are collapsed to the robot alone, so the other queues take the room. */
 const collapsedAgents = atom({ plugin: 'prompt-queue', key: 'collapsedAgents' } as const, [] as number[])
 
