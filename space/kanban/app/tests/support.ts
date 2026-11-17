@@ -107,11 +107,14 @@ export async function holdOver(page: Page, dragged: Locator, target: Locator, { 
   const to = (await target.boundingBox())!
   const [top, bottom] = await shownRange(page)
   // A drop on a card makes the dragged ticket its child, so a drag onto a list drops where no card is: on the list's
-  // label while the board shows it, else below the list's cards.
+  // label while the board shows it, else below the list's cards. The label is used wherever it is inside the board
+  // region: an opened card makes its list taller than the region, so below the cards would be clamped onto one.
   const isList = await target.evaluate(element => element.classList.contains('card-list'))
   const label = isList && (await labels.count()) ? await labels.first().boundingBox() : null
+  const region = await page.locator('.board-region').boundingBox()
+  const isLabelShown = !!label && (!region || (label.y >= region.y && label.y + label.height <= region.y + region.height))
   const down = onTop ? NEAR_THE_TOP_EDGE : onBottom ? to.height - NEAR_THE_TOP_EDGE : isList ? await belowTheLastCard(target, to) : Math.min(to.height / 2, 60)
-  const y = label && label.y >= top && label.y + label.height <= bottom ? label.y + label.height / 2 : Math.max(top, Math.min(to.y + down, bottom))
+  const y = isLabelShown ? label!.y + label!.height / 2 : Math.max(top, Math.min(to.y + down, bottom))
   await page.mouse.move(to.x + to.width / 2, y, { steps: DRAG_STEPS })
 }
 

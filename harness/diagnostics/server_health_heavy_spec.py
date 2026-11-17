@@ -68,7 +68,7 @@ with description("server health") as self:
         with it("should answer the band's call with every part"):
             result = self.server.invoke("server-health.report", {})
             answer = json.loads(json.dumps(result, default=data_of))
-            expect(sorted(answer)).to(equal(["apps", "is_hook_server_running", "test_runs"]))
+            expect(sorted(answer)).to(equal(["apps", "e2e_review", "is_hook_server_running", "test_runs"]))
 
     with context("with a hook server state file whose process has gone"):
         with it("should report the hook server is not running"):

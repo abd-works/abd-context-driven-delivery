@@ -104,6 +104,18 @@ class TestRun:
         last_lines = "\n".join(output.strip().splitlines()[-SUMMARY_LINES:])
         return TestRun(self.tier, self.commit, self.started_at, outcome, pid=self.pid, finished_at=now, summary=last_lines, is_new_failure=is_new)
 
+    def fix_prompt(self, output: str) -> str:
+        """What a new chat is asked when this run is a new failure: open a session for the fix, fix what failed test
+        first, run the tier again, and merge the fix to main once it passes."""
+        failed = [line.removeprefix("FAILED ").strip() for line in output.splitlines() if line.startswith("FAILED ")]
+        session = f"fix-{self.tier.value}-{self.commit[:9]}"
+        return (
+            f"The {self.tier.value} tier failed on main at {self.commit[:9]}. Failed: {', '.join(failed) or 'see the run summary in the health report'}. "
+            f"Open a session for the fix with ticket.create and ticket.activate named {session}, so it works in its own worktree. "
+            "Find the cause and fix it, test first. Then run the tier again with "
+            f"python -m harness.diagnostics.test_runs {self.tier.value} . and, once it passes, merge the fix to main and push."
+        )
+
     def is_due(self, now: datetime) -> bool:
         """Its interval has passed since it started; at once when it was abandoned, since it gave no result."""
         return self.outcome is RunOutcome.ABANDONED or now - self.started_at >= self.tier.interval
@@ -279,6 +291,12 @@ def _review_screens(checkout: Path, run_name: str) -> list[str]:
     return ScheduledReview(checkout, run_name).start()
 
 
+def _open_fix_chat(checkout: Path, prompt: str) -> None:
+    from harness.chat.chat import links_of_run
+
+    links_of_run().open_new(str(checkout), prompt)
+
+
 class TestCadence:
     """Runs heavy every hour and e2e every day on main. Nothing keeps time: ``start_due`` is called whenever the health
     report is read, and starts the overdue tier, one run at a time, e2e first since it is the one that runs least."""
@@ -286,13 +304,15 @@ class TestCadence:
     __test__ = False
 
     def __init__(self, checkout: Path | None, record: TestRunRecord, runner: TestRunner | None = None, git: Git | None = None,
-                 clock: Callable[[], datetime] = _utc_now, review: Callable[[Path, str], list[str]] | None = None) -> None:
+                 clock: Callable[[], datetime] = _utc_now, review: Callable[[Path, str], list[str]] | None = None,
+                 open_fix_chat: Callable[[Path, str], object] | None = None) -> None:
         self.checkout = checkout
         self.record = record
         self._runner = runner or TestRunner()
         self._git = git or (Git(checkout) if checkout else None)
         self._clock = clock
         self._review = review or _review_screens
+        self._open_fix_chat = open_fix_chat or _open_fix_chat
 
     @property
     def latest_runs(self) -> list[TestRun]:
@@ -344,6 +364,8 @@ class TestCadence:
             exit_code, output = self._runner.run(tier, self.checkout)
         finished = started.finished(exit_code, output, self.record.previous(tier), self._clock())
         self.record.save(finished)
+        if finished.is_new_failure:
+            self._open_fix_chat(self.checkout, finished.fix_prompt(output))
         return finished
 
     def _reviewed(self, run_name: str) -> list[str]:

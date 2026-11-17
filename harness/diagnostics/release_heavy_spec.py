@@ -4,11 +4,13 @@ test_runs_spec.py are their stubbed twins.
 
 gh is run for real without publishing: a release on GitHub is public, so the release here is created through a gh that
 records it, and the real gh is asked only what publishes nothing."""
+import os
 import subprocess
 import shutil
 import tempfile
 import time
 from datetime import datetime, timezone
+from urllib.parse import quote, unquote
 from pathlib import Path
 
 from expects import be_none, contain, equal, expect, raise_error
@@ -132,8 +134,16 @@ with description("a tier run by the real runner") as self:
         (self.checkout / "scripts" / "test.ps1").write_text(
             'param([string]$Suite)\nWrite-Host "ran $Suite"\nWrite-Host "1 examples failed"\nexit 1\n', encoding="utf-8")
         self.record = TestRunRecord(self.root / "home")
+        # A new failure opens a fix chat; the run's links go to this file, so no chat opens on this machine.
+        self.opened_chats = self.root / "opened-chats.txt"
+        self.kept_opened_chats = os.environ.get("CDD_OPENED_CHATS")
+        os.environ["CDD_OPENED_CHATS"] = str(self.opened_chats)
 
     with after.each:
+        if self.kept_opened_chats is None:
+            os.environ.pop("CDD_OPENED_CHATS", None)
+        else:
+            os.environ["CDD_OPENED_CHATS"] = self.kept_opened_chats
         shutil.rmtree(self.root, ignore_errors=True)
 
     with it("should answer test.ps1's exit code and output"):
@@ -157,3 +167,11 @@ with description("a tier run by the real runner") as self:
             time.sleep(0.2)
         run = self.record.latest(TestTier.E2E)
         expect((run.state, run.is_new_failure, run.summary)).to(equal(("failed", True, "ran e2e\n1 examples failed")))
+
+    with it("should open a chat in the checkout to fix a new failure"):
+        TestCadence(self.checkout, self.record).start_due()
+        deadline = time.monotonic() + RECORDED_SECONDS
+        while time.monotonic() < deadline and not self.opened_chats.is_file():
+            time.sleep(0.2)
+        links = self.opened_chats.read_text(encoding="utf-8").splitlines() if self.opened_chats.is_file() else []
+        expect([("fix-e2e-" in unquote(link), quote(str(self.checkout), safe="") in link) for link in links]).to(equal([(True, True)]))

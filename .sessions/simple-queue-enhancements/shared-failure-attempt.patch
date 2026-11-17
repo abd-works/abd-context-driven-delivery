@@ -1,0 +1,254 @@
+diff --git a/tools/prompt_queue/hooks/queue/prompt-queue.ts b/tools/prompt_queue/hooks/queue/prompt-queue.ts
+index 10bbe405e..19b2e306e 100644
+--- a/tools/prompt_queue/hooks/queue/prompt-queue.ts
++++ b/tools/prompt_queue/hooks/queue/prompt-queue.ts
+@@ -1,7 +1,7 @@
+ import { atom, read, update } from 'claude-code'
+ import type { EngineInterface, McpToolResult, PromptSubmitAttachment } from 'claude-code'
+ 
+-import type { PromptStep, QueueFailure, QueueJson, QueuedPrompt, SubAgentTask } from '../../types'
++import type { PromptStep, QueueJson, QueuedPrompt, SubAgentTask, SharedFailure } from '../../types'
+ import { finishedPlan, nextPlan, type PlanCall } from './plan-steps'
+ import { PromptQueue, listedItems, parseJsonArray, slashCommandOf } from './queue-order'
+ 
+@@ -30,9 +30,8 @@ const isExpanded = atom({ plugin: 'prompt-queue', key: 'isExpanded' } as const,
+ const isSubAgentMode = atom({ plugin: 'prompt-queue', key: 'isSubAgentMode' } as const, false)
+ const tasks = atom({ plugin: 'prompt-queue', key: 'tasks' } as const, [] as SubAgentTask[])
+ const notice = atom({ plugin: 'prompt-queue', key: 'notice' } as const, '')
+-/** A failure the queue met, shown in red with Fix and ✕ until the person fixes or dismisses it, as the chat bar shows
+- * its own: what failed with the reason it gave, and what the queue was doing when it failed. */
+-const failure = atom({ plugin: 'prompt-queue', key: 'failure' } as const, null as QueueFailure | null)
++/** CDD's shared failure line, the board plugin's own value: every CDD failure shows there, with Fix and ✕. */
++const sharedFailure = atom({ plugin: 'cdd-board', key: 'failure' } as const, null as SharedFailure | null)
+ /** Playing, the agent sees the queue and each finished turn asks it to take the next prompt; paused, the queue waits. */
+ const isPlaying = atom({ plugin: 'prompt-queue', key: 'isPlaying' } as const, false)
+ /** Whether the main chat is in a turn, so play sends at once only when nothing is running. */
+@@ -60,7 +59,6 @@ export type QueueState = {
+   openSteps: string[]
+   tasks: SubAgentTask[]
+   notice: string
+-  failure: QueueFailure | null
+ }
+ 
+ export async function currentQueue($: EngineInterface): Promise<QueueState> {
+@@ -74,7 +72,6 @@ export async function currentQueue($: EngineInterface): Promise<QueueState> {
+     openSteps: await read($, openSteps),
+     tasks: await read($, tasks),
+     notice: await read($, notice),
+-    failure: await read($, failure),
+   }
+ }
+ 
+@@ -487,40 +484,11 @@ const GROUPING_INSTRUCTIONS =
+   'work go in one task, kept in their order. Answer with only a JSON array of ' +
+   '{"description": "<3 to 5 words>", "prompts": ["<prompt>", ...]}, using every prompt exactly once.'
+ 
+-/** What the debug skill takes to fix a failure, as the chat bar's Fix sends it: choice=fix with the failure as details. */
+-const DEBUG_COMMAND = 'space-session-debug-session'
+-
+-/** Shows a failure in the queue's box: what failed with the reason it gave, and what the queue was doing. */
++/** Shows a failure on CDD's shared failure line above the chat bar, which the board's plugin draws with its Fix and ✕:
++ * what failed with the reason it gave, and what the queue was doing. The shape is tools/error_display's Failure; the
++ * queue writes it itself, since a queue failure is often the cdd server being out of reach. */
+ async function showFailure($: EngineInterface, failed: string, context: string): Promise<void> {
+-  await update($, failure, () => ({ failure: failed, context }))
+-}
+-
+-/** ✕ beside a failure: it goes from the box. */
+-export async function dismissFailure($: EngineInterface): Promise<void> {
+-  await update($, failure, () => null)
+-}
+-
+-/** Fix beside a failure sends it and its context to this chat to find the cause and fix it, through the same debug
+- * command the chat bar's Fix runs. Until the command is in the chat the box shows it on its way, so a second press
+- * cannot send it twice; a command the chat did not take is shown as a failure of its own. */
+-export async function fixFailure($: EngineInterface): Promise<void> {
+-  const shown = await read($, failure)
+-  if (!shown || shown.isFixing) {
+-    return
+-  }
+-  await update($, failure, () => ({ ...shown, isFixing: true }))
+-  try {
+-    await $.command.run({ command: DEBUG_COMMAND, args: fixArgumentsOf(shown) })
+-  } catch (thrown) {
+-    await showFailure($, `The fix did not reach the chat: ${reasonOf(thrown)}`, `Pressing Fix on: ${shown.failure}`)
+-    return
+-  }
+-  await dismissFailure($)
+-}
+-
+-function fixArgumentsOf(shown: QueueFailure): string {
+-  const details = `The prompt queue above the chat bar shows this failure. Failure: ${shown.failure} Context: ${shown.context}`
+-  return `choice=fix details=${JSON.stringify(details)}`
++  await update($, sharedFailure, () => ({ failure: failed, context }))
+ }
+ 
+ /** The words a failure carries: a thrown error's message, or the value itself. */
+diff --git a/tools/prompt_queue/hooks/queue/queue-view.tsx b/tools/prompt_queue/hooks/queue/queue-view.tsx
+index e56983cf2..03885688c 100644
+--- a/tools/prompt_queue/hooks/queue/queue-view.tsx
++++ b/tools/prompt_queue/hooks/queue/queue-view.tsx
+@@ -2,8 +2,6 @@ import type { EngineInterface, RenderInput } from 'claude-code'
+ 
+ import {
+   clearQueue,
+-  dismissFailure,
+-  fixFailure,
+   editPrompt,
+   movePrompt,
+   removePrompt,
+@@ -15,7 +13,7 @@ import {
+   toggleSteps,
+   type QueueState,
+ } from './prompt-queue'
+-import type { PromptStep, QueueFailure, QueuedPrompt } from '../../types'
++import type { PromptStep, QueuedPrompt } from '../../types'
+ import { progressOf } from './plan-steps'
+ import {
+   ADD_SVG,
+@@ -49,8 +47,6 @@ const CARD_BUTTON_COLUMNS = 15
+ /** The mark before a step for where it stands: done, being worked, or not started. */
+ const STEP_MARK = { done: '✓', in_progress: '▸', pending: '○' } as const
+ 
+-/** A failure's red, as the chat bar draws its own. */
+-const FAILURE_RED = '#EF4444'
+ 
+ /**
+  * Its own box above the chat bar. At rest it shows only the stack image, the count drawn on it, and the pointer over
+@@ -70,7 +66,6 @@ export function QueueView($: EngineInterface, e: AbovePromptEvent, state: QueueS
+         <Text dimColor wrap="truncate-end">{`  ↳ ${task.description}: ${task.prompts.length} prompt(s)`}</Text>
+       ))}
+       {state.notice !== '' && <Text color="warning">{state.notice}</Text>}
+-      {state.failure && FailureView($, e, state.failure)}
+       <Box flexDirection="row" gap={1}>
+         {IconButtonView(elements, stackIcon(state), () => toggleExpanded($))}
+         <Box width={ADD_COLUMNS}>
+@@ -204,24 +199,3 @@ function KeyCapView($: EngineInterface, e: AbovePromptEvent, key: KeyCap) {
+     </Box>
+   )
+ }
+-
+-/**
+- * A failure the queue met, drawn as the chat bar draws its own: what failed in red, Fix to send it to this chat to be
+- * fixed, ✕ to dismiss it, and the context it failed in beneath. Once Fix is pressed, a running bar stands in its place.
+- */
+-function FailureView($: EngineInterface, e: AbovePromptEvent, failure: QueueFailure) {
+-  const { Box, Button, Progress, Text } = $.ui.resolve(e)
+-
+-  return (
+-    <Box key="queue-failure" flexDirection="column">
+-      <Box flexDirection="row" gap={1} alignItems="center">
+-        <Text color={FAILURE_RED}>{failure.failure}</Text>
+-        {failure.isFixing
+-          ? <Progress key="queue-fixing" label="Sending the fix to Claude" />
+-          : <Button key="queue-fix" label="Fix" variant="primary" onPress={() => fixFailure($)} />}
+-        <Button key="queue-dismiss-failure" label="✕" onPress={() => dismissFailure($)} />
+-      </Box>
+-      <Text color={LOOK.muted}>{failure.context}</Text>
+-    </Box>
+-  )
+-}
+diff --git a/tools/prompt_queue/hooks/register.test.tsx b/tools/prompt_queue/hooks/register.test.tsx
+index fc7f8618b..a491f6a20 100644
+--- a/tools/prompt_queue/hooks/register.test.tsx
++++ b/tools/prompt_queue/hooks/register.test.tsx
+@@ -96,12 +96,18 @@ function seedQueue(on: TestOn, isExpanded: boolean, queuedByKey = '', queued = Q
+     editingId: { value: editingId, version: 1 },
+     askedAbout: { value: askedAbout, version: 1 },
+   }
++  // Another plugin's value, such as the board's failure, is kept under its plugin's name.
++  const keyOf = (e: unknown) => {
++    const { plugin, key } = e as { plugin?: string; key: string }
++    return plugin && plugin !== 'prompt-queue' ? `${plugin}:${key}` : key
++  }
+   on('state.get', (_, e) => {
+-    const key = (e as { key: string }).key
++    const key = keyOf(e)
+     return { value: stored[key] ?? { value: undefined, version: 0 } }
+   })
+   on('state.set', (_, e) => {
+-    const { key, value } = e as { key: string; value: unknown }
++    const key = keyOf(e)
++    const { value } = e as { value: unknown }
+     const version = (stored[key]?.version ?? 0) + 1
+     stored[key] = { value, version }
+     return { value: { isSet: true, version } }
+@@ -357,37 +363,21 @@ async function boxAfterFailedClear($: Parameters<Parameters<typeof test>[1]>[0],
+   return { seeded, ui: await $.ui.mount({ ...BAND, surface: 'desktop' }) }
+ }
+ 
+-test('a queue call no cdd server answers shows its failure in red with Fix', async ($, on) => {
++test("a queue call no cdd server answers shows its failure on CDD's shared failure line, with its context", async ($, on) => {
+   const { seeded, ui } = await boxAfterFailedClear($, on)
+ 
+-  expect(await ui.find({ type: 'Button', key: 'queue-fix' })).toBeDefined()
+-  expect((seeded.stored.failure?.value as { failure: string }).failure).toBe(NO_SERVER_FAILURE)
+-  await ui.unmount()
+-})
+-
+-test("Fix on a queue failure runs the debug command with the failure and its context, as the chat bar's Fix does", async ($, on) => {
+-  const ran: { command: string; args: string }[] = []
+-  on('command.run', (_, e) => {
+-    ran.push({ command: e.command, args: e.args })
+-    return {}
++  expect(seeded.stored['cdd-board:failure']?.value).toEqual({
++    failure: NO_SERVER_FAILURE,
++    context: 'Calling prompt-queue.clear on the cdd server, tried as cdd then plugin:cdd:cdd',
+   })
+-  const { seeded, ui } = await boxAfterFailedClear($, on)
+-
+-  await ui.press({ key: 'queue-fix' })
+-
+-  const details = `The prompt queue above the chat bar shows this failure. Failure: ${NO_SERVER_FAILURE} ` +
+-    'Context: Calling prompt-queue.clear on the cdd server, tried as cdd then plugin:cdd:cdd'
+-  expect(ran).toEqual([{ command: 'space-session-debug-session', args: `choice=fix details=${JSON.stringify(details)}` }])
+-  expect(seeded.stored.failure?.value).toBe(null)
+   await ui.unmount()
+ })
+ 
+-test('✕ on a queue failure dismisses it', async ($, on) => {
+-  const { seeded, ui } = await boxAfterFailedClear($, on)
+-
+-  await ui.press({ key: 'queue-dismiss-failure' })
++test('the queue box draws no failure line of its own', async ($, on) => {
++  const { ui } = await boxAfterFailedClear($, on)
+ 
+-  expect(seeded.stored.failure?.value).toBe(null)
++  expect(await ui.find({ type: 'Button', key: 'queue-fix' })).toBeUndefined()
++  expect(await ui.find({ type: 'Box', key: 'queue-failure' })).toBeUndefined()
+   await ui.unmount()
+ })
+ 
+diff --git a/tools/prompt_queue/types/index.d.ts b/tools/prompt_queue/types/index.d.ts
+index 7225273b0..b7acb3ebd 100644
+--- a/tools/prompt_queue/types/index.d.ts
++++ b/tools/prompt_queue/types/index.d.ts
+@@ -11,8 +11,8 @@ export type PromptStep = { text: string; state: StepState }
+  * contract imports nothing, so the client file checks its answer against the adapter's type. */
+ export type QueueJson = { chat: string; prompts: QueuedPrompt[] }
+ 
+-/** A failure the queue shows with Fix: what failed with its reason, the context it failed in, and whether Fix is on its way. */
+-export type QueueFailure = { failure: string; context: string; isFixing?: boolean }
++/** A failure on CDD's shared failure line, as tools/error_display's Failure: what failed with its reason, and the context it failed in. */
++export type SharedFailure = { failure: string; context: string }
+ 
+ /** One task a sub-agent runs: the queued prompts the model grouped together. */
+ export type SubAgentTask = { description: string; prompts: string[] }
+@@ -25,7 +25,6 @@ declare module 'claude-code' {
+       isSubAgentMode: boolean
+       tasks: SubAgentTask[]
+       notice: string
+-      failure: QueueFailure | null
+       queuedByKey: string
+       isPlaying: boolean
+       isTurnRunning: boolean
+@@ -35,5 +34,9 @@ declare module 'claude-code' {
+       isPlanSeen: boolean
+       openSteps: string[]
+     }
++    /** The board plugin's failure, CDD's shared failure line, which the queue writes its failures to. */
++    'cdd-board': {
++      failure: SharedFailure | null
++    }
+   }
+ }
