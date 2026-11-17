@@ -62,6 +62,19 @@ const TASK_BUTTON_COLUMNS = 6
  * step's text moves when the pointer does. */
 const POINTER_COLUMNS = 11
 
+/** The characters every task button's label is centred in, so a + and a count such as 3/5 draw the same width. */
+const TASK_LABEL_CHARACTERS = 5
+
+/** A figure space: as wide as a digit, so padding a label with it keeps every task button one width. */
+const FIGURE_SPACE = '2007'
+
+/** A task button's label centred in TASK_LABEL_CHARACTERS with figure spaces: a button is as wide as its label. */
+function taskLabelOf(label: string): string {
+  const room = Math.max(0, TASK_LABEL_CHARACTERS - label.length)
+  const before = Math.floor(room / 2)
+  return `${FIGURE_SPACE.repeat(before)}${label}${FIGURE_SPACE.repeat(room - before)}`
+}
+
 /** The mark before a step for where it stands: done, being worked, or not started. */
 const STEP_MARK = { done: '✓', in_progress: '▸', pending: '○' } as const
 
@@ -194,8 +207,8 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
     <Box key={`card-row-${prompt.id}`} flexDirection="row" justifyContent="space-between" alignItems="center" gap={1} width="100%">
       <Box width={TASK_BUTTON_COLUMNS} flexShrink={0}>
         {progress !== ''
-          ? <Button key={`steps-${prompt.id}`} label={progress} onPress={() => toggleSteps($, prompt.id)} />
-          : !isFinished && !isPointer && <Button key={`steps-${prompt.id}`} label="+" onPress={() => addStep($, prompt)} />}
+          ? <Button key={`steps-${prompt.id}`} label={taskLabelOf(progress)} onPress={() => toggleSteps($, prompt.id)} />
+          : !isFinished && !isPointer && <Button key={`steps-${prompt.id}`} label={taskLabelOf('+')} onPress={() => addStep($, prompt)} />}
       </Box>
       {(prompt.attachments ?? []).length > 0 && <Text key={`attached-${prompt.id}`} color={LOOK.muted}>{`📎${prompt.attachments!.length}`}</Text>}
       <Box flexGrow={1} flexShrink={1} minWidth={0} flexDirection="row" alignItems="center"

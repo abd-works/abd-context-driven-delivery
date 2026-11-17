@@ -632,8 +632,8 @@ test("a card with steps shows how many are done, and opens them under it", async
   await pressed.unmount()
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
 
-  expect(progress?.props.label).toBe('1/2')
-  expect((await ui.find({ type: 'Button', key: 'steps-b' }))?.props.label).toBe('+')
+  expect(progress?.props.label?.trim()).toBe('1/2')
+  expect((await ui.find({ type: 'Button', key: 'steps-b' }))?.props.label?.trim()).toBe('+')
   expect((await ui.find({ type: 'Box', key: 'step-row-a-1' }))?.text.includes('✓ Read the epic')).toBe(true)
   expect((await ui.find({ type: 'Box', key: 'step-row-a-2' }))?.text.includes('▸ Write the stories')).toBe(true)
   await ui.unmount()
