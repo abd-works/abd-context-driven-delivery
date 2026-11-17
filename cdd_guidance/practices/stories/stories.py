@@ -19,7 +19,7 @@ from cdd_guidance.practices.stories.model.story_map_files import (
     path_from,
     preferred_maps,
 )
-from cdd_guidance.practices.stories.model.story_model import StoryModel, StoryNode
+from cdd_guidance.practices.stories.model.story_model import Epic, StoryModel, StoryNode
 from cdd_guidance.practices.stories.model.story_recording import StorySource, StorySources
 from cdd_guidance.practices.stories.stories_formats import StoriesFormats
 
@@ -103,21 +103,54 @@ class Stories(PracticeGuidance):
 
     def read_files(self, files: list[Path], project: Path, *, on_file: OnFile = None) -> StoryModel:
         """The story maps and story tests among files, merged into one story map whose nodes name their files as paths
-        from project. Story tests in code under a project's story_tests are the map themselves (``_story_map_of_code``);
-        otherwise the maps among files and beside them are read (``_maps_to_read``), and a story test's scenarios go on
-        the map's Story of the same name, which it specifies."""
+        from project. With a story map among files, it and the maps beside the rest are read (``_maps_to_read``), a
+        story test's scenarios go on the map's Story of the same name, which it specifies, and a story only a story test
+        in code holds goes under the epics its folders name (``_take_stories_only_code_holds``). With no story map among
+        files, story tests in code under a project's story_tests are the map themselves (``_story_map_of_code``)."""
         project = Path(project).resolve()
         paths = [Path(item).resolve() for item in files]
         tests = [path for path in paths if self._story_test_reader(path) is not None]
-        from_code = self._story_map_of_code(tests, project, on_file)
-        if from_code.epics:
-            return from_code
+        if not any(is_story_map_file(path) for path in paths):
+            from_code = self._story_map_of_code(tests, project, on_file)
+            if from_code.epics:
+                return from_code
         merged = StoryModel()
         for path in self._maps_to_read(paths, tests, project):
             self._take_map(merged, self._story_map_file(path, project, on_file))
         for path in tests:
             self._take_story_test(merged, self._read_story_test(path, project, on_file), project)
+        self._take_stories_only_code_holds(merged, tests, project)
         return merged
+
+    def _take_stories_only_code_holds(self, merged: StoryModel, tests: list[Path], project: Path) -> None:
+        """Each story the story tests in code hold that merged has no story of the same name for, under the epics of
+        merged its test's folders name, each epic added where merged has none of that name; a story's own folder,
+        which the code map reads as an epic of the story's name, is not one."""
+        held = merged.descendants.stories_by_name()
+        for story in self._story_map_of_code(tests, project).descendants.stories():
+            if story.name not in held:
+                self._epic_along(merged, story).stories.append(story)
+
+    def _epic_along(self, merged: StoryModel, story: StoryNode) -> StoryNode:
+        """The epic of merged at the epic names above story in its code map, made where merged lacks one."""
+        holder: StoryNode = merged
+        for code_epic in [epic for epic in self._epics_above(story) if epic.name != story.name]:
+            found = next((epic for epic in holder.epics if epic.name == code_epic.name), None)
+            if found is None:
+                found = Epic(code_epic.name, len(holder.epics) + 1)
+                found.source = code_epic.source
+                holder.epics.append(found)
+            holder = found
+        return holder
+
+    def _epics_above(self, story: StoryNode) -> list[StoryNode]:
+        """The epics above story, from its map's top epic down."""
+        above = []
+        node = story.parent
+        while isinstance(node, Epic):
+            above.insert(0, node)
+            node = node.parent
+        return above
 
     def _maps_to_read(self, paths: list[Path], tests: list[Path], project: Path) -> list[Path]:
         """The story maps among paths, and the map beside each story test and scenarios markdown file among them, which

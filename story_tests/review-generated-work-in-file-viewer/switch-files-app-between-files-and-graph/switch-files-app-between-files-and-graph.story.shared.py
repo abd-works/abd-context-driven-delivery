@@ -24,6 +24,7 @@ from space.session.graph_view_examples import (
     CHECKOUT_FLOW_READING_NO_CODE,
     LISTED,
     STORY_MAP,
+    STORY_MAP_TEXT,
     RESTORE_TEST,
     SCENARIOS,
     SCENARIOS_GIVEN_LINE,
@@ -61,6 +62,19 @@ def opened_names(world, entry: dict, paths: list[str]) -> list[str]:
         entry = world.data_of(session_of(world).graph_branch(node_id=entry["node_id"], paths=paths)) or entry
     below = [child for child in entry["children"] if "children_left_out" in child]
     return [entry["name"], *(name for child in below for name in opened_names(world, child, paths))]
+
+
+def names_above(world, name: str, paths: list[str]) -> list[str]:
+    """The names of the nodes above the node named name in the trees answered for paths, from its tree's root down."""
+    found = [(entry, []) for entry in world.data_of(session_of(world).graph_trees(paths=paths))]
+    while found:
+        entry, above = found.pop()
+        if entry["name"] == name:
+            return above
+        if entry["children_left_out"]:
+            entry = world.data_of(session_of(world).graph_branch(node_id=entry["node_id"], paths=paths)) or entry
+        found.extend((child, [*above, entry["name"]]) for child in entry["children"] if "children_left_out" in child)
+    raise AssertionError(f"no node named {name} in the trees of {paths}")
 
 
 def lines_of(world, name: str) -> list[tuple[str, int, int]]:
@@ -118,6 +132,35 @@ def _(s):
     @s.then("it holds Restore Ticket too, which has a story test but is not on the markdown map yet")
     def _(world):
         expect("Restore Ticket" in world.names).to(equal(True))
+
+
+@shared_stories.scenario("Switch Files App To Graph View", "A story map listed with a code story test keeps every epic of the map")
+def _(s):
+    @s.given("checkout-flow's story map holds Manage Tickets and Plan Releases, with Plan Releases' story Cut Release")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+        world.project.seed_file(STORY_MAP, STORY_MAP_TEXT + "(E) Plan Releases\n    (S) Person --> Cut Release\n")
+
+    @s.and_("the Files app lists the story map with Delete Ticket's and Restore Ticket's story tests")
+    def _(world):
+        world.listed = [STORY_MAP, STORY_TEST, RESTORE_TEST]
+
+    @s.when("the Person switches the file bar to the graph view")
+    def _(world):
+        world.names = names_in(world, world.listed)
+
+    @s.then("the Stories tree holds Manage Tickets and Plan Releases, with Cut Release, read from the story map")
+    def _(world):
+        expect(world.names).to(contain("Manage Tickets", "Plan Releases", "Cut Release"))
+
+    @s.then("Delete Ticket is the story map's story, holding the scenario its story test holds")
+    def _(world):
+        ranges = world.data_of(session_of(world).graph_node_ranges(node_id=node_id_of(world, "Delete Ticket", world.listed), paths=world.listed))
+        expect([found["path"] for found in ranges]).to(equal([STORY_MAP, STORY_TEST]))
+
+    @s.then("Restore Ticket, which only its story test holds, sits under Manage Tickets and Remove Tickets")
+    def _(world):
+        expect((names_above(world, "Restore Ticket", world.listed), world.names.count("Restore Ticket"))).to(equal((["stories", "Manage Tickets", "Remove Tickets"], 1)))
 
 
 @shared_stories.scenario("Switch Files App To Graph View", "A story map listed in markdown and drawio is read once, from its markdown")
