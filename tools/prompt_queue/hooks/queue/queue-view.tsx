@@ -122,7 +122,7 @@ function QueueListView($: EngineInterface, e: AbovePromptEvent, queue: PromptQue
       {queue.prompts.map((prompt, index) => (
         <Box key={`card-${prompt.id}`} flexDirection="row" justifyContent="space-between" alignItems="center" gap={1}>
           <Box flexGrow={1} flexShrink={1} minWidth={0}>
-            <Button key={`card-text-${prompt.id}`} onPress={() => editPrompt($, prompt)}>
+            <Button key={`card-text-${prompt.id}`} dimColor={prompt.id === editingId} onPress={() => editPrompt($, prompt)}>
               <Text wrap="truncate-end" color={prompt.id === editingId ? LOOK.placeholder : undefined} italic={prompt.id === editingId}>
                 {`${index + 1}. ${prompt.text.replace(/\s+/g, ' ')}${prompt.id === editingId ? '  (editing)' : ''}`}
               </Text>
