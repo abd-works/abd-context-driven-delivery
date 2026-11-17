@@ -1,4 +1,4 @@
-// Spec support for harness/files_app/files_app_e2e_spec.py: the Files server as serve.ts starts it, serving a page the
+// Spec support for the Files app story tests in a real browser (story_tests/review-generated-work-in-file-viewer/files_app_browser.py): the Files server as serve.ts starts it, serving a page the
 // spec built into a folder of its own, on a port of its own, so an e2e run never rebuilds or serves the app's own dist
 // and never takes the port a person's Files app answers on. It talks to the cdd server its CDD_HOME names, the spec's
 // throwaway one.

@@ -1,7 +1,8 @@
-"""E2E spec: the Files app in a real browser, on its real server, talking to a real cdd server about a real git project.
-The twins of the Files app's unit specs (``app/files/source-folding.spec.ts``, ``call-expansion.spec.ts``,
+"""The Files app in a real browser, on its real server, talking to a real cdd server about a real git project: what
+the browser tier of Review Generated Work In File Viewer's story tests (`*.story.ui_e2e_spec.py` beside each sub-epic's
+scenarios) runs on. The twins of the Files app's unit specs (``harness/files_app/app/files/source-folding.spec.ts``, ``call-expansion.spec.ts``,
 ``file-bar.spec.ts``), which stub the session's answers and the editor: here the page is built from this checkout's
-source, served by the Files server (``app/spec-files-server.ts``, as ``serve.ts`` serves it), and drives Monaco in
+source, served by the Files server (``harness/files_app/app/spec-files-server.ts``, as ``serve.ts`` serves it), and drives Monaco in
 Chromium, while the session's files, graph and members come from a cdd server of the spec's own.
 
 Everything is the spec's own, so it runs beside anything else: the page is built into a temporary folder, never the
@@ -26,8 +27,6 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from expects import be_above, be_none, equal, expect
-from mamba import after, before, context, description, it
 from playwright.sync_api import Page, sync_playwright
 
 from harness.mcp.spec_support import SpecServer
@@ -38,10 +37,10 @@ _NODE_TSX = _APP / "node_modules" / "tsx" / "dist" / "cli.mjs"
 _NODE_VITE = _APP / "node_modules" / "vite" / "bin" / "vite.js"
 _SERVER_STARTS_WITHIN_SECONDS = 60
 # A graph read builds the session's graph of the files listed on the cdd server, which takes seconds on a cold server.
-_GRAPH_READ_MILLISECONDS = 180_000
-_SHOWN_MILLISECONDS = 30_000
-_SETTLE_SECONDS = 10
-_NBSP = "\u00a0"
+GRAPH_READ_MILLISECONDS = 180_000
+SHOWN_MILLISECONDS = 30_000
+SETTLE_SECONDS = 10
+NBSP = "\u00a0"
 
 # Seed: the ticket code of call-expansion.spec.ts, as the person verified it live: the class Ticket on lines 1 to 9,
 # its close on lines 2 to 3 and its delete on lines 5 to 9, which calls self.close(), the module function reread_all,
@@ -155,38 +154,38 @@ class FilesStack:
         shutil.rmtree(self.top, ignore_errors=True)
 
 
-def _graph_view(page: Page) -> None:
+def graph_view(page: Page) -> None:
     """Every file under the session's root listed, shown as the session's graph, read for real."""
     page.get_by_role("button", name="All session files").click()
-    page.locator(".file-list, .file-tree").first.wait_for(timeout=_SHOWN_MILLISECONDS)
+    page.locator(".file-list, .file-tree").first.wait_for(timeout=SHOWN_MILLISECONDS)
     page.get_by_role("button", name="Graph", exact=True).click()
-    page.locator("ul.graph-tree").wait_for(timeout=_GRAPH_READ_MILLISECONDS)
+    page.locator("ul.graph-tree").wait_for(timeout=GRAPH_READ_MILLISECONDS)
 
 
-def _open_branches(page: Page, *names: str) -> None:
+def open_branches(page: Page, *names: str) -> None:
     for name in names:
         page.get_by_role("button", name=f"Open {name}", exact=True).first.click()
-        page.get_by_role("button", name=f"Close {name}", exact=True).first.wait_for(timeout=_GRAPH_READ_MILLISECONDS)
+        page.get_by_role("button", name=f"Close {name}", exact=True).first.wait_for(timeout=GRAPH_READ_MILLISECONDS)
 
 
-def _select(page: Page, title: str) -> None:
+def select(page: Page, title: str) -> None:
     page.locator(f'button.graph-node[title="{title}"]').first.click()
 
 
-def _line(page: Page, text: str):
+def line(page: Page, text: str):
     """The editor's line reading text and nothing else, its indent aside: Monaco keeps its lines' elements in no order,
     so a line that only holds text, such as reread_all's definition holding reread_all(board), must never answer. Its
     spaces are no-break spaces, which the page's whitespace class matches."""
     return page.locator(".view-lines .view-line", has_text=re.compile(r"^\s*" + r"\s".join(re.escape(word) for word in text.split(" ")) + r"\s*$")).first
 
 
-def _shown_lines(page: Page) -> list[str]:
-    return [line.replace(_NBSP, " ") for line in page.locator(".view-lines .view-line").all_inner_texts()]
+def shown_lines(page: Page) -> list[str]:
+    return [line.replace(NBSP, " ") for line in page.locator(".view-lines .view-line").all_inner_texts()]
 
 
-def _mark_on(page: Page, text: str):
+def mark_on(page: Page, text: str):
     """The callout mark beside the line reading text, none when the line opens nothing in place."""
-    row = _line(page, text).bounding_box()
+    row = line(page, text).bounding_box()
     for mark in page.locator(".callout-mark").all():
         box = mark.bounding_box()
         if box and row and abs((box["y"] + box["height"] / 2) - (row["y"] + row["height"] / 2)) < row["height"] / 2:
@@ -194,20 +193,20 @@ def _mark_on(page: Page, text: str):
     return None
 
 
-def _open_callout_on(page: Page, text: str) -> None:
-    mark = _mark_on(page, text)
+def open_callout_on(page: Page, text: str) -> None:
+    mark = mark_on(page, text)
     if mark is None:
         raise AssertionError(f"no callout mark beside the line {text!r}: the line opens nothing in place")
     mark.click()
-    page.locator(".callout-block").first.wait_for(state="attached", timeout=_SHOWN_MILLISECONDS)
+    page.locator(".callout-block").first.wait_for(state="attached", timeout=SHOWN_MILLISECONDS)
 
 
-def _callout_texts(page: Page) -> list[str]:
+def callout_texts(page: Page) -> list[str]:
     """Each open callout's lines, one line to each of its rows."""
-    return ["\n".join(row.replace(_NBSP, " ") for row in block.locator(".callout-text").all_inner_texts()) for block in page.locator(".callout-block").all()]
+    return ["\n".join(row.replace(NBSP, " ") for row in block.locator(".callout-text").all_inner_texts()) for block in page.locator(".callout-block").all()]
 
 
-def _settled(read, is_settled, seconds: float = _SETTLE_SECONDS):
+def settled(read, is_settled, seconds: float = SETTLE_SECONDS):
     """What read answers once is_settled holds of it, or what it answers when seconds have passed: the editor folds,
     unfolds and lays out view zones over a few frames after the page asks it to."""
     deadline = time.monotonic() + seconds
@@ -218,118 +217,7 @@ def _settled(read, is_settled, seconds: float = _SETTLE_SECONDS):
     return answer
 
 
-def _callout_heights(page: Page) -> list[float]:
+def callout_heights(page: Page) -> list[float]:
     return [(block.bounding_box() or {"height": 0.0})["height"] for block in page.locator(".callout-block").all()]
 
 
-with description("the Files app served for real") as self:
-    with before.all:
-        self.stack = FilesStack()
-
-    with after.all:
-        self.stack.close()
-
-    with description("Folds a selected node opens"):
-        with context("with a step of a Python story test selected, its decorator first"):
-            with before.all:
-                self.page = self.stack.open(CHECKOUT_FLOW.name, "stories-acceptance-tests,clean-engineering-code")
-                _graph_view(self.page)
-                _open_branches(self.page, "stories", "Manage Tickets", "Remove Tickets", "Delete Ticket", "Delete Ticket", "a ticket on the board is deleted")
-                _select(self.page, "Given given a ticket on the board")
-                _line(self.page, "world.ticket = ticket_on_board(world)").wait_for(timeout=_SHOWN_MILLISECONDS)
-
-            with after.all:
-                self.page.close()
-
-            with it("should unfold the step's function under its decorator, as well as the folds around it"):
-                expect([line for line in _shown_lines(self.page) if line.strip() in ('@s.given("a ticket on the board")', "def _(world):", "world.ticket = ticket_on_board(world)")][:3]).to(
-                    equal(['    @s.given("a ticket on the board")', "    def _(world):", "        world.ticket = ticket_on_board(world)"])
-                )
-
-            with it("should keep the other steps' functions folded"):
-                others = lambda: [line for line in _shown_lines(self.page) if "world.ticket.delete(world.board)" in line or "assert ticket_left(world)" in line]
-                expect(_settled(others, lambda shown: shown == [])).to(equal([]))
-
-    with description("Calls and classes a line opens in place"):
-        with context("with ticket.py opened at its operation delete, the graph's members read"):
-            with before.all:
-                self.page = self.stack.open(CHECKOUT_FLOW.name, "stories-acceptance-tests,clean-engineering-code")
-                _graph_view(self.page)
-                _open_branches(self.page, "clean_engineering", "kanban", "Ticket")
-                _select(self.page, "Operation delete")
-                _line(self.page, "self.close()").wait_for(timeout=_SHOWN_MILLISECONDS)
-                self.page.locator(".callout-mark").first.wait_for(timeout=_SHOWN_MILLISECONDS)
-
-            with after.all:
-                self.page.close()
-
-            with context("with a line inside the class it names"):
-                with it("should never open the class it sits in"):
-                    expect(_mark_on(self.page, "class Ticket:")).to(be_none)
-
-            with context("with a method's call on self"):
-                with it("should open the method of the class around it"):
-                    _open_callout_on(self.page, "self.close()")
-                    expect(_callout_texts(self.page)).to(equal([CLOSE_LINES]))
-
-            with context("with a call to a module function by its bare name"):
-                with it("should open that function"):
-                    _open_callout_on(self.page, "reread_all(board)")
-                    expect([text for text in _callout_texts(self.page) if text.startswith("def reread_all")]).to(equal(["def reread_all(board) -> None:\n    board.reread()"]))
-
-        with context("with ticket.py opened from the file list, its methods folded on open, and delete unfolded"):
-            with before.all:
-                self.page = self.stack.open(CHECKOUT_FLOW.name, "stories-acceptance-tests,clean-engineering-code")
-                _graph_view(self.page)
-                self.page.get_by_role("button", name="List", exact=True).click()
-                self.page.locator(f'button.file-entry[title="{TICKET_CODE}"]').click()
-                self.page.locator(".callout-mark").first.wait_for(timeout=_SHOWN_MILLISECONDS)
-                _line(self.page, "def delete(self, board: Board) -> None:").click()
-                self.page.keyboard.press("Control+Shift+BracketRight")
-                _line(self.page, "self.close()").wait_for(timeout=_SHOWN_MILLISECONDS)
-                _open_callout_on(self.page, "self.close()")
-
-            with after.all:
-                self.page.close()
-
-            with context("with a method's call on self"):
-                with it("should show the method it opens, its lines taking room under the line"):
-                    heights = _settled(lambda: _callout_heights(self.page), lambda shown: bool(shown) and min(shown) > 0)
-                    expect(min(heights or [0.0])).to(be_above(0))
-
-    with description("a design canvas in the file bar"):
-        with context("with UX on and version-1 published at its link in versions.json"):
-            with before.all:
-                self.page = self.stack.open(DESIGN_REVIEW, "ux-mockup,stories-story-map")
-                self.entry = self.page.locator(f'a.file-entry.is-published[title^="{CANVAS}"]')
-                self.entry.wait_for(timeout=_SHOWN_MILLISECONDS)
-
-            with after.all:
-                self.page.close()
-
-            with it("should open the design canvas at its link"):
-                expect(self.entry.get_attribute("href")).to(equal(CANVAS_LINK))
-
-            with it("should be named by its version, marked as a design canvas"):
-                expect(self.entry.inner_text().replace(_NBSP, " ").strip()).to(equal("version-1 ↗ design canvas"))
-
-    with description("a whiteboard file in the file bar"):
-        with context("with its board in Claude kept in whiteboards.json, and the diagram filter on"):
-            with before.all:
-                self.page = self.stack.open(DESIGN_REVIEW, "ux-mockup,stories-story-map")
-                diagram = self.page.locator('.format-toggle[title^="diagram:"]')
-                diagram.wait_for(timeout=_SHOWN_MILLISECONDS)
-                if diagram.get_attribute("aria-pressed") != "true":
-                    diagram.click()
-                self.page.locator('.format-toggle[title^="diagram:"][aria-pressed="true"]').wait_for(timeout=_SHOWN_MILLISECONDS)
-                self.entry = self.page.locator(f'a.file-entry.is-published[title^="{WHITEBOARD}"]')
-                self.entry.wait_for(timeout=_SHOWN_MILLISECONDS)
-
-            with after.all:
-                self.page.close()
-
-            with it("should open its board"):
-                expect(self.entry.get_attribute("href")).to(equal(BOARD_LINK))
-
-            with it("should be named story-map, marked as a whiteboard"):
-                expect(self.entry.inner_text().replace(_NBSP, " ").strip()).to(equal("story-map ↗ whiteboard"))
