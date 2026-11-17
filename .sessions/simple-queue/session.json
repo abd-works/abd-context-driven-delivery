@@ -4,6 +4,23 @@
     "stages": [
       "discovery"
     ],
-    "version": 5
+    "version": 10
+  },
+  "practices": {
+    "stories": {
+      "enabled": false
+    },
+    "ddd": {
+      "enabled": false
+    },
+    "ux": {
+      "enabled": false
+    },
+    "clean_engineering": {
+      "enabled": false
+    },
+    "bdd": {
+      "enabled": false
+    }
   }
 }
