@@ -27,17 +27,15 @@ section: body
 | --- | --- | --- | --- | --- |
 | ++Process Ticket Archive name++ | Stories | verb-noun-format | .context/story-map.md | 311 to 313 |
 | ++Handle Ticket Deletion name++ | Stories | verb-noun-format | .context/story-map.md | 315 to 317 |
-| ++Ticket details budget++ | UX | screen-story-budget | harness/.context/information-architecture.drawio | 8 to 10 |
 | ++Activate Ticket name++ | Clean Engineering | use-intention-revealing-names | space/kanban/ticket.py | 460 to 460 |
 
-*Move Ticket size*, a right-size-story-nodes example, left the examples on 2026-11-17 (decided by the person): the switch is shown with the four above. *Handle Ticket Deletion name* and *Process Ticket Archive name* are the verb-noun-format examples since 2026-11-16 (decided by the person): the real check passes *Delete Ticket*, a verb and a noun, and also an opening word it does not list, such as *Ticket*, so the examples open with a generic verb (handle, process), which the graph lists for the judgment.
+*Move Ticket size*, a right-size-story-nodes example, and *Ticket details budget*, a screen-story-budget example drawn in the information architecture's diagram, whose reader records no stories per screen, left the examples on 2026-11-17 (decided by the person): the switch is shown with the three above. *Handle Ticket Deletion name* and *Process Ticket Archive name* are the verb-noun-format examples since 2026-11-16 (decided by the person): the real check passes *Delete Ticket*, a verb and a noun, and also an opening word it does not list, such as *Ticket*, so the examples open with a generic verb (handle, process), which the graph lists for the judgment.
 
 ### checkout-flow violation counts
 
 | fidelity | count |
 | --- | --- |
 | Stories story map | 2 |
-| UX information architecture | 1 |
 | Clean Engineering code | 1 |
 
 ## Story: Show Only Violating Nodes In Files App
@@ -52,9 +50,9 @@ section: body
 
 #### Scenario: The Violations switch keeps only nodes that break a rule
 
-*Given* the Files app shows checkout-flow's graph with Stories, UX and Clean Engineering on  
+*Given* the Files app shows checkout-flow's graph with Stories and Clean Engineering on  
 *When* the Person turns on Violations  
-*Then* the graph view holds only the nodes of Process Ticket Archive name, Handle Ticket Deletion name, Ticket details budget and Activate Ticket name
+*Then* the graph view holds only the nodes of Process Ticket Archive name, Handle Ticket Deletion name and Activate Ticket name
 
 #### Scenario: Choosing a rule keeps only the nodes that break it
 
@@ -129,7 +127,7 @@ section: body
 *Given* the graph view shows only the Stories practice's 2 violations  
 *When* the Person fixes all  
 *Then* the chat receives one fix for Process Ticket Archive name and Handle Ticket Deletion name  
-  *But* not for the UX or Clean Engineering violations, which the graph view does not show
+  *But* not for the Clean Engineering violation, which the graph view does not show
 
 #### Scenario: A fixed violation leaves the graph view once its file is read again
 
@@ -148,7 +146,7 @@ section: body
 
 #### Scenario: Fix in the action picker fixes the selected fidelities' violations
 
-*Given* checkout-flow's live graph holds 4 violations  
+*Given* checkout-flow's live graph holds 3 violations  
   *And* only the Stories story map dot is selected on the chat bar  
 *When* the Person runs Fix from the action picker  
 *Then* the chat receives the fix for Process Ticket Archive name and Handle Ticket Deletion name
@@ -163,9 +161,9 @@ section: body
 
 #### Scenario: Each fidelity dot counts its violations from the live graph
 
-*Given* checkout-flow's live graph holds 4 violations  
+*Given* checkout-flow's live graph holds 3 violations  
 *When* the chat bar reads checkout-flow's session  
-*Then* the Stories story map dot shows 2, the UX information architecture dot 1 and the Clean Engineering code dot 1
+*Then* the Stories story map dot shows 2 and the Clean Engineering code dot 1
 
 #### Scenario: A file read again updates the dots without a validate
 
@@ -192,7 +190,7 @@ section: body
 
 #### Scenario Outline: Each tile counts its fidelity's violations from the live graph
 
-*Given* checkout-flow's live graph holds 4 violations  
+*Given* checkout-flow's live graph holds 3 violations  
 *When* the board shows checkout-flow's ${fidelity} tile  
 *Then* the tile shows ${count} violations
 
@@ -201,5 +199,4 @@ section: body
 | fidelity | count |
 | --- | --- |
 | Stories story map | 2 |
-| UX information architecture | 1 |
 | Clean Engineering code | 1 |

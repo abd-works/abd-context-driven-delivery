@@ -64,6 +64,22 @@ def seed_checkout_flow_with_both_tickets(world) -> None:
         world.project.seed_file(path, text)
 
 
+# Seed: Ticket whose activate takes a parameter named x, which use-intention-revealing-names breaks: the name says
+# nothing of what the parameter is for.
+VAGUE_PARAMETER_TICKET_TEXT = (
+    "class Ticket:\n"
+    "    def activate(self, x: str) -> None:\n"
+    "        return None\n"
+)
+LISTED_WITH_TICKET = [STORY_MAP, TICKET_CODE]
+
+
+def seed_checkout_flow_with_violations_in_two_practices(world) -> None:
+    """checkout-flow with its two verb-noun-format stories and Ticket.activate's vague parameter x."""
+    seed_checkout_flow_with_violating_stories(world)
+    world.project.seed_file(TICKET_CODE, VAGUE_PARAMETER_TICKET_TEXT)
+
+
 def seed_checkout_flow_with_violating_stories(world) -> None:
     world.project.seed_session(CHECKOUT_FLOW)
     world.project.seed_file(STORY_MAP, VIOLATING_MAP_TEXT)
