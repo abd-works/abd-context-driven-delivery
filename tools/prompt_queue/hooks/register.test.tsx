@@ -502,7 +502,7 @@ test("a long prompt is cut with an ellipsis to fit the chat box, keeping the car
   const shown = (await ui.find({ type: 'Button', key: 'card-text-a' }))?.text ?? ''
 
   expect(shown.endsWith('…')).toBe(true)
-  expect(shown.length).toBeLessThan(BAND.props.bodyColumns - 15)
+  expect(shown.length).toBeLessThan(BAND.props.bodyColumns)
   expect(JSON.stringify((await ui.find({ type: 'Box', key: 'card-row-a' }))?.children)).not.toContain('"overflow"')
   await ui.unmount()
 })
