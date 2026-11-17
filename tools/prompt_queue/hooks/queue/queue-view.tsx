@@ -203,7 +203,7 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
       {(prompt.attachments ?? []).length > 0 && <Text key={`attached-${prompt.id}`} color={LOOK.muted}>{`📎${prompt.attachments!.length}`}</Text>}
       <Box flexGrow={1} flexShrink={1} minWidth={0} flexDirection="row" alignItems="center"
         borderStyle={isWorking ? 'round' : undefined} borderColor={isWorking ? LOOK.accent : undefined}>
-        {pointer}
+        {pointer && <Box position="absolute" top={0} left={0}>{pointer}</Box>}
         <Button key={`card-text-${prompt.id}`} dimColor={isEditing || isFinished} onPress={() => (isInColumn ? toggleOpenedCard($, prompt.id) : editPrompt($, prompt))}>
           <Text wrap="wrap" color={isEditing ? LOOK.placeholder : isWorking ? LOOK.accent : undefined}
             italic={isEditing} bold={isWorking} underline={isWorking} dimColor={isFinished}>
