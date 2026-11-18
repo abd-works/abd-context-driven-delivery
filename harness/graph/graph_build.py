@@ -12,10 +12,7 @@ would have read back from a saved graph.
 from __future__ import annotations
 
 import json
-import os
 import shutil
-import subprocess
-import sys
 import tempfile
 import threading
 import weakref
@@ -25,6 +22,7 @@ from pathlib import Path
 from typing import IO, TYPE_CHECKING, TypedDict
 
 from harness.agent_tools.progress import report_progress
+from harness.agent_tools.worker_process import WorkerProcess
 from harness.graph.explorer import GraphLoaded
 from harness.graph.file_lines import BuildReads
 from harness.graph.load_scope import LoadScope
@@ -39,8 +37,6 @@ if TYPE_CHECKING:
 WORKER_MODULE = "harness.graph.graph_worker"
 # How much of a failed worker's error output the failure names.
 _ERROR_TAIL_CHARACTERS = 4000
-# Windows' CREATE_NO_WINDOW: the worker opens no console window beside a windowless server.
-_CREATE_NO_WINDOW = 0x08000000
 # The part of a worker build the server does itself, writing what its graph holds into the order and reading the
 # worker's answer back into its graph, is CPU-bound Python in the interpreter every chat shares. Builds take turns at
 # it, so the event loop waits for one build's turn at most, never for several builds' at once.
@@ -263,8 +259,7 @@ class HeldAnswer:
 
 
 class WorkerBuild:
-    """One order carried out by a worker process: started with this interpreter and this import path, it reports its
-    progress one line at a time, which goes on to report_progress, writes the graph it built to the answer file it is
+    """One order carried out by a worker process (*WorkerProcess*), which reports its progress as it goes, writes the graph it built to the answer file it is
     given, and, for a refresh the order asks it of, what it changed to a file of its own. The graph the order was made
     for holds what the worker answers."""
 
@@ -310,23 +305,7 @@ class WorkerBuild:
             practice.reading.in_graph.root.tree.rebuild()
 
     def _run(self, arguments: list[str], errors: IO[str]) -> int:
-        process = subprocess.Popen(
-            [sys.executable, "-m", WORKER_MODULE, *arguments],
-            cwd=os.getcwd(),
-            env={**os.environ, "PYTHONPATH": os.pathsep.join(path for path in sys.path if path), "PYTHONIOENCODING": "utf-8"},
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE,
-            stderr=errors,
-            encoding="utf-8",
-            errors="replace",
-            creationflags=_CREATE_NO_WINDOW if sys.platform == "win32" else 0,
-        )
-        assert process.stdout is not None
-        for line in process.stdout:
-            message = line.rstrip("\n")
-            if message:
-                report_progress(message)
-        return process.wait()
+        return WorkerProcess(WORKER_MODULE).run(arguments, errors)
 
 
 class GraphBuild:

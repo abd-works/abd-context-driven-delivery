@@ -835,9 +835,18 @@ class FidelityGuidance(Guidance):
         works in, in source, else in the format this fidelity works in. previous is the target file as it is now, whose
         layout a diagram keeps. A renderer that links to other files, such as a story map linking to each story's file,
         finds them in the folder the first path is, or sits in."""
+        return self.render_request(self.files_to_render(format, paths, source, previous))
+
+    def files_to_render(self, format: str, paths: NamedPaths, source: str | None = None, previous: str = "") -> RenderRequest:
+        """The render of the files at paths into format at this fidelity (``render_files``), with what it converts
+        read from them, before anything is rendered."""
         formats = self.practice_guidance.formats
         request = RenderRequest(Format(format), source=Format(source), previous=previous, folder=self._folder_holding(paths), fidelity=self)
-        return formats.render(replace(request, content=formats.read(paths, request)))
+        return replace(request, content=formats.read(paths, request))
+
+    def render_request(self, request: RenderRequest) -> dict:
+        """What request renders to through its practice's formats, at this fidelity."""
+        return self.practice_guidance.formats.render(replace(request, fidelity=self))
 
     def _folder_holding(self, paths: NamedPaths) -> str:
         """The folder the files at paths sit in, where a renderer finds the files they link to: the first path when it

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from cdd_guidance.actions.render.rendered_file import WHITEBOARD, RenderedFile
+from cdd_guidance.actions.render.worker_render import WorkerRender
 from harness.guidance_actions import GuidanceArg, GuidanceAction, WorkedGuidance
 from harness.guidance.guidance import FidelityGuidance
+from harness.guidance.practice_formats import RenderRequest
 from harness.guidance.stages import TAKES_FORMATS, on_stage
 from pathlib import Path
 
@@ -66,7 +68,17 @@ class Render(GuidanceAction):
         saved = RenderedFile.from_sources(sources, Format(source), Format(format), declared)
         if saved is None:
             return worked.render_files(format, paths, source)
-        return saved.save(worked.render_files(format, paths, source, saved.previous))
+        if not isinstance(worked, FidelityGuidance):
+            return saved.save(worked.render_files(format, paths, source, saved.previous))
+        return saved.save(self._drawn(worked, worked.files_to_render(format, paths, source, saved.previous)))
+
+    def _drawn(self, fidelity: FidelityGuidance, request: RenderRequest) -> dict:
+        """What request renders to at fidelity: drawn by a worker process for a call that answers a chat when it is a
+        diagram, whose class layout can hold the interpreter every chat shares for minutes; else in this process."""
+        worker = WorkerRender(fidelity)
+        if self.call is not None and self.call.request.answers_a_chat and worker.takes(request):
+            return worker.render(request)
+        return fidelity.render_request(request)
 
     @agent_instructions
     def place_rendered(self) -> str:
