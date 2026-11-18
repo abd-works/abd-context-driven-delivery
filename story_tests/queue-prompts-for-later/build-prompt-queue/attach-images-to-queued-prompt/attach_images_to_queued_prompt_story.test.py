@@ -17,7 +17,7 @@ from tools.prompt_queue.prompt_queue import PromptNotQueued
 from story_test import and_, given, scenario, story, then, when
 
 # Epic: Queue Prompts For Later
-# Map: ../../../.context/story-map.md#s-person----attach-images-to-queued-prompt
+# Map: ../../../../.context/story-map.md#s-person----attach-images-to-queued-prompt
 # Requested 2026-11-17 (the person's /queue): "add images / attachments in chat along with text". A plugin cannot send
 # images with a prompt, so a queued draft's images are kept as files beside its prompt, and the agent opens them.
 
