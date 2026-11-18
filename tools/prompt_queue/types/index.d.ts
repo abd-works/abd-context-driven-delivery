@@ -39,6 +39,7 @@ declare module 'claude-code' {
       openSteps: string[]
       expandedAgents: number[]
       sentCards: Record<string, string>
+      robotAgents: Record<string, string>
       isAwaitingDecision: boolean
       decisionWait: number
     }

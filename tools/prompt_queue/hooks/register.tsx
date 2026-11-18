@@ -14,6 +14,7 @@ import {
   noteDecisionAsked,
   refreshQueue,
   finishTurn,
+  rememberRobotAgent,
   startTurn,
   followQueueAnswer,
 } from './queue/prompt-queue'
@@ -72,6 +73,9 @@ export const register: Register = on => {
     const ran = await next(e)
     if (PROMPT_QUEUE_TOOL.test(e.tool) && !isRefused(ran)) {
       await followQueueAnswer($, ran)
+    }
+    if (e.agentId === undefined && e.tool === 'Agent' && !isRefused(ran)) {
+      await rememberRobotAgent($, e as unknown as Record<string, unknown>, ran)
     }
     if (e.agentId === undefined && PLAN_TOOL.test(e.tool)) {
       await followPlan($, e as unknown as Record<string, unknown>)

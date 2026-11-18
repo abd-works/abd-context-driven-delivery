@@ -1165,12 +1165,13 @@ test("✎ on a sub-agent's column names it from the prompt box's draft", async (
 
 /** A finished turn of this chat while playing in sub-agent mode, with the robots' queue as given: what this chat was
  * then asked to do, if anything. */
-async function handOut($: TestEngine, on: TestOn, prompts: Prompt[], sent: Record<string, string> = {}, tasks = GROUPED) {
+async function handOut($: TestEngine, on: TestOn, prompts: Prompt[], sent: Record<string, string> = {}, tasks = GROUPED, agents: Record<string, string> = {}) {
   const seeded = seedQueue(on, true, '', prompts)
   seeded.stored.isSubAgentMode = { value: true, version: 1 }
   seeded.stored.tasks = { value: tasks, version: 1 }
   seeded.stored.isPlaying = { value: true, version: 1 }
   seeded.stored.sentCards = { value: sent, version: 1 }
+  seeded.stored.robotAgents = { value: agents, version: 1 }
   const asked: string[] = []
   on('prompt.submit', (_, e) => {
     asked.push(e.text)
@@ -1197,7 +1198,7 @@ test("playing in sub-agent mode asks this chat to hand each robot its first card
 test("the hand-out says to send each robot the card's words exactly, and to mark the card done when the robot reports it finished", async ($, on) => {
   const { asked } = await handOut($, on, ROBOT_CARDS)
 
-  expect(['exactly', 'Agent', 'SendMessage', 'prompt-queue.done'].map(word => asked[0]?.includes(word))).toEqual([true, true, true, true])
+  expect(['exactly', 'Agent', 'prompt-queue.done'].map(word => asked[0]?.includes(word))).toEqual([true, true, true])
 })
 
 test('a robot still working the card it was handed is not handed another', async ($, on) => {
@@ -1216,6 +1217,23 @@ test('with every robot still working its card, this chat is asked nothing', asyn
   const { asked } = await handOut($, on, ROBOT_CARDS, { Sparky: 'a', Bolt: 'b' })
 
   expect(asked).toEqual([])
+})
+
+test("this chat's Agent call that starts a robot is remembered: the robot's name goes with that sub-agent's id", async ($, on) => {
+  const seeded = seedQueue(on, true, '', ROBOT_CARDS)
+  seeded.stored.isSubAgentMode = { value: true, version: 1 }
+  seeded.stored.tasks = { value: GROUPED, version: 1 }
+  on('tool.call', () => ({ result: { status: 'async_launched', agentId: 's1', description: 'Sparky: Write the scenarios' } }))
+
+  await $.tool.call({ tool: 'Agent', description: 'Sparky: Write the scenarios', prompt: 'Write the scenarios' })
+
+  expect(seeded.stored.robotAgents?.value).toEqual({ Sparky: 's1' })
+})
+
+test("a robot whose sub-agent is known is handed its next card by that sub-agent's id", async ($, on) => {
+  const { asked } = await handOut($, on, [{ ...ROBOT_CARDS[0]!, is_done: true }, ROBOT_CARDS[1]!, ROBOT_CARDS[2]!], { Sparky: 'a', Bolt: 'b' }, GROUPED, { Sparky: 's1' })
+
+  expect(asked[0]?.includes('SendMessage to s1')).toBe(true)
 })
 
 test('a robot is handed out under the name it goes by, so this chat can message it by name', async ($, on) => {

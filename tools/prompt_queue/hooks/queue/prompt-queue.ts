@@ -53,6 +53,8 @@ const failure = atom({ plugin: 'prompt-queue', key: 'failure' } as const, null a
 const isPlaying = atom({ plugin: 'prompt-queue', key: 'isPlaying' } as const, false)
 /** The card each robot was last handed, so a robot that stops without marking it done is not handed it again. */
 const sentCards = atom({ plugin: 'prompt-queue', key: 'sentCards' } as const, {} as Record<string, string>)
+/** Each robot's sub-agent id, from this chat's Agent call that started it, so its next card is sent to that sub-agent. */
+const robotAgents = atom({ plugin: 'prompt-queue', key: 'robotAgents' } as const, {} as Record<string, string>)
 /** Whether the main chat is in a turn, so play sends at once only when nothing is running. */
 const isTurnRunning = atom({ plugin: 'prompt-queue', key: 'isTurnRunning' } as const, false)
 /** The draft Alt+Enter just queued: the desktop still submits it after the key, so that submission is dropped. */
@@ -768,18 +770,33 @@ export async function sendTasksToSubAgents($: EngineInterface): Promise<void> {
     return
   }
   await update($, sentCards, cards => ({ ...cards, ...Object.fromEntries(handed.map(({ robot, card }) => [robot, card.id])) }))
-  $.prompt.submit({ text: handOutOf(handed), asUser: true })
+  $.prompt.submit({ text: handOutOf(handed, await read($, robotAgents)), asUser: true })
     .catch(thrown => showFailure($, `Not sent: ${reasonOf(thrown)}`, 'Playing the queue in sub-agent mode, asking this chat to hand out the robots\' cards'))
 }
 
-/** What this chat is asked when robots are due their next card: who gets which words, and how to hand them over. */
-function handOutOf(handed: { robot: string; card: QueuedPrompt }[]): string {
+/** What this chat is asked when robots are due their next card: who gets which words, and how to hand them over. A
+ * robot whose sub-agent is known is sent its words by that sub-agent's id; one not started yet is started with the
+ * Agent tool, its description starting with the robot's name, so the queue learns which sub-agent is that robot. */
+function handOutOf(handed: { robot: string; card: QueuedPrompt }[], agents: Record<string, string>): string {
   return [
-    "Hand out the robots' next cards. Send each robot its card's words exactly as written below, and nothing else:",
-    'start a robot that has not run with the Agent tool, named after the robot and run in the background; send a robot that already ran its words with SendMessage to its name.',
+    "Hand out the robots' next cards. Send each robot its card's words exactly as written below, and nothing else.",
     'When a robot tells you it finished, mark its card done with prompt-queue.done; its next card follows.',
-    ...handed.map(({ robot, card }) => `- ${robot}, card [${card.id}]: ${card.text}`),
+    ...handed.map(({ robot, card }) => {
+      const how = agents[robot] ? `SendMessage to ${agents[robot]}` : `start it with the Agent tool in the background, its description starting "${robot}: "`
+      return `- ${robot} (${how}), card [${card.id}]: ${card.text}`
+    }),
   ].join('\n')
+}
+
+/** This chat started a sub-agent: when its description starts with a robot's name, that robot goes with its id. */
+export async function rememberRobotAgent($: EngineInterface, call: Record<string, unknown>, ran: unknown): Promise<void> {
+  const result = (ran as { result?: { agentId?: string } } | undefined)?.result
+  const robot = String(call.description ?? '').split(':')[0]!.trim()
+  const names = robotsOf((await read($, queue)).prompts, await read($, tasks)).map((task, place) => agentNameOf(task, place))
+  if (!result?.agentId || !names.includes(robot)) {
+    return
+  }
+  await update($, robotAgents, agents => ({ ...agents, [robot]: result.agentId! }))
 }
 
 /**
