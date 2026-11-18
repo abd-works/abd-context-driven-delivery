@@ -2,8 +2,11 @@
 
 The test runner, git and the clock are faked at the boundary *TestCadence* reaches them through, so nothing here runs
 scripts/test.ps1 or git. test_runs_heavy_spec.py runs the real runner and git."""
+import atexit
 import os
 import shutil
+import subprocess
+import sys
 import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -18,6 +21,10 @@ from harness.git.git import RepoConnectError
 NOON = datetime(2026, 11, 15, 12, 0, tzinfo=timezone.utc)
 # A process id that is never running.
 GONE = 2 ** 22 + 7
+# A live process that is neither this one nor its parent, as a run another process started is; it ends with the spec.
+ANOTHER_PROCESS = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(600)"], stdin=subprocess.DEVNULL,
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+atexit.register(ANOTHER_PROCESS.kill)
 
 
 class RunnerStub:
@@ -69,7 +76,8 @@ with description("the test cadence") as self:
         self.clock = Clock(NOON)
         self.reviewed = []
         self.review_lines = ["move-work-forward-on-session-board/maintain-tickets: 3 changed step(s)", "review agent started on 1 run(s)"]
-        self.cadence = TestCadence(self.folder, self.record, self.runner, GitStub(), self.clock, review=self.review)
+        self.waits = []
+        self.cadence = TestCadence(self.folder, self.record, self.runner, GitStub(), self.clock, review=self.review, wait=self.wait)
 
     with after.each:
         shutil.rmtree(self.folder, ignore_errors=True)
@@ -79,6 +87,20 @@ with description("the test cadence") as self:
         if isinstance(self.review_lines, Exception):
             raise self.review_lines
         return self.review_lines
+
+    def wait(self, seconds: float) -> None:
+        """While run_now waits, the other process's run ends, and a run after it ends too, so neither the latest nor the
+        previous run of a tier is live; what had run here by then is kept for the spec."""
+        self.waits.append(list(self.runner.ran))
+        for tier in TestTier:
+            for minutes in (3, 4):
+                self.record.save(TestRun(tier, "abc123", NOON - timedelta(minutes=minutes), RunOutcome.FAILED, pid=GONE))
+
+    def running_elsewhere(self, tier: TestTier) -> TestRun:
+        """A run of tier another live process holds, one this spec started that runs until the spec ends."""
+        run = TestRun(tier, "abc123", NOON - timedelta(minutes=2), pid=ANOTHER_PROCESS.pid)
+        self.record.save(run)
+        return run
 
     def ran_at(self, tier: TestTier, started: datetime, outcome: RunOutcome = RunOutcome.PASSED) -> None:
         self.record.save(TestRun(tier, "old", started, outcome, pid=GONE))
@@ -126,6 +148,11 @@ with description("the test cadence") as self:
             self.record.save(TestRun(TestTier.HEAVY, "old", NOON - timedelta(hours=2), pid=os.getpid()))
             expect(self.cadence.start_due()).to(be_none)
 
+        with it("should start nothing while a run recorded over it was abandoned, its own process still running"):
+            self.running_elsewhere(TestTier.E2E)
+            self.record.save(TestRun(TestTier.E2E, "abc123", NOON - timedelta(minutes=1), RunOutcome.RUNNING, pid=GONE))
+            expect(self.cadence.start_due()).to(be_none)
+
         with it("should read as abandoned once its process is gone"):
             self.record.save(TestRun(TestTier.HEAVY, "old", NOON - timedelta(hours=2), pid=GONE))
             expect(self.cadence.latest_runs[0].state).to(equal("abandoned"))
@@ -171,6 +198,46 @@ with description("the test cadence") as self:
         with it("should keep the last lines the run printed"):
             self.runner.output = "\n".join(f"line {number}" for number in range(40))
             expect(self.cadence.run_now(TestTier.HEAVY).summary.splitlines()).to(have_len(12))
+
+    with context("that another process is running the same tier"):
+        # Two e2e runs of one checkout both start the board's Playwright server on its one port, and the second fails.
+        with before.each:
+            self.running_elsewhere(TestTier.E2E)
+
+        with it("should run nothing until that run ends"):
+            self.cadence.run_now(TestTier.E2E)
+            expect(self.waits[0]).to(equal([]))
+
+        with it("should then run the tier itself"):
+            self.cadence.run_now(TestTier.E2E)
+            expect(self.runner.ran).to(equal([TestTier.E2E]))
+
+        with it("should record its own run, not take over the other process's"):
+            expect(self.cadence.run_now(TestTier.E2E).started_at).to(equal(NOON))
+
+    with context("that another process is running the other tier"):
+        with it("should run nothing until that run ends"):
+            self.running_elsewhere(TestTier.HEAVY)
+            self.cadence.run_now(TestTier.E2E)
+            expect(self.waits[0]).to(equal([]))
+
+    with context("whose live run is held as the previous one, a later run recorded over it"):
+        with it("should run nothing until that run ends"):
+            self.running_elsewhere(TestTier.E2E)
+            self.record.save(TestRun(TestTier.E2E, "abc123", NOON - timedelta(minutes=1), RunOutcome.FAILED, pid=GONE))
+            self.cadence.run_now(TestTier.E2E)
+            expect(self.waits[0]).to(equal([]))
+
+    with context("with no other run live"):
+        with it("should not wait"):
+            self.cadence.run_now(TestTier.E2E)
+            expect(self.waits).to(equal([]))
+
+    with context("whose run the cadence recorded by the id of this process's parent, the virtual environment's python.exe"):
+        with it("should not wait for itself"):
+            self.record.save(TestRun(TestTier.E2E, "abc123", NOON, pid=os.getppid()))
+            self.cadence.run_now(TestTier.E2E)
+            expect(self.waits).to(equal([]))
 
     with context("of the e2e tier"):
         with it("should screenshot its steps under the scheduled release"):

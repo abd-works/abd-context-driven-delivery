@@ -28,6 +28,8 @@ RECORD_FILE = "test-runs.json"
 # Held while one process looks at what is due and starts it.
 CLAIM_FILE = "test-runs.claim"
 CLAIM_STALE_SECONDS = 60
+# How long a run started by hand waits between looks at whether another process's run has ended.
+WAIT_SECONDS = 10
 # How many of a run's last output lines its result keeps, enough to name what failed.
 SUMMARY_LINES = 12
 
@@ -286,8 +288,10 @@ class TestCadence:
     __test__ = False
 
     def __init__(self, checkout: Path | None, record: TestRunRecord, runner: TestRunner | None = None, git: Git | None = None,
-                 clock: Callable[[], datetime] = _utc_now, review: Callable[[Path, str], list[str]] | None = None) -> None:
+                 clock: Callable[[], datetime] = _utc_now, review: Callable[[Path, str], list[str]] | None = None,
+                 wait: Callable[[float], None] = time.sleep) -> None:
         self.checkout = checkout
+        self._wait = wait
         self.record = record
         self._runner = runner or TestRunner()
         self._git = git or (Git(checkout) if checkout else None)
@@ -301,9 +305,10 @@ class TestCadence:
         return [self._settled(run) for run in runs if run is not None]
 
     def due(self) -> list[TestTier]:
-        """The tiers whose interval has passed since they last started, or that never ran; none while a run is live."""
+        """The tiers whose interval has passed since they last started, or that never ran; none while a run is live,
+        whether held as its tier's latest run or as the previous one a later run was recorded over."""
         latest = {run.tier: run for run in self.latest_runs}
-        if any(run.outcome is RunOutcome.RUNNING for run in latest.values()):
+        if any(run.outcome is RunOutcome.RUNNING for run in latest.values()) or self._live_elsewhere():
             return []
         return [tier for tier in (TestTier.E2E, TestTier.HEAVY) if tier not in latest or latest[tier].is_due(self._clock())]
 
@@ -329,12 +334,7 @@ class TestCadence:
     def run_now(self, tier: TestTier) -> TestRun:
         """Run tier here to its end and record its result: the background process the cadence starts runs this, and so
         can a person. A run the cadence recorded as running is the one finished; otherwise a new one starts."""
-        started = self.record.latest(tier)
-        head = self._head()
-        # A run left as running by a process that ended, on another commit, is not taken over: this run tests HEAD.
-        if started is None or not started.is_run_by_this_process or started.commit != head:
-            started = TestRun(tier, head, self._clock(), pid=os.getpid())
-            self.record.save(started)
+        started = self._started(tier)
         if tier is TestTier.E2E:
             # Each browser story step is screenshotted into this run's folder under .sessions/scheduled/, then reviewed.
             run_name = e2e_run_name(started)
@@ -345,6 +345,33 @@ class TestCadence:
         finished = started.finished(exit_code, output, self.record.previous(tier), self._clock())
         self.record.save(finished)
         return finished
+
+    def _started(self, tier: TestTier) -> TestRun:
+        """The run this process goes on with, recorded as running once no other process has a run live. Every run of
+        a tier works in the one main checkout, and the e2e tier's board specs all serve on one port, so a second run
+        started beside a live one fails on what the first holds, not on the code it tests."""
+        while True:
+            with self.record.lock, self.record.claimed() as is_claimed:
+                if is_claimed and not self._live_elsewhere():
+                    started = self.record.latest(tier)
+                    head = self._head()
+                    # A run left as running by a process that ended, on another commit, is not taken over: this run tests HEAD.
+                    if started is None or not started.is_run_by_this_process or started.commit != head:
+                        started = TestRun(tier, head, self._clock(), pid=os.getpid())
+                        self.record.save(started)
+                    return started
+                live = self._live_elsewhere()
+            if live:
+                print(f"waiting for the {live[0].tier.value} run process {live[0].pid} started at {live[0].started} to end", flush=True)
+            self._wait(WAIT_SECONDS)
+
+    def _live_elsewhere(self) -> list[TestRun]:
+        """Every recorded run, of any tier, whose process is running and is not this one; a run recorded over a live
+        one leaves it held as the previous run, so both are looked at. The cadence records the id of the process it
+        starts, which a virtual environment's python.exe starts again as its child, so this process's parent is
+        this run too."""
+        runs = [run for tier in TestTier for run in (self.record.latest(tier), self.record.previous(tier)) if run is not None]
+        return [run for run in runs if run.is_live and run.pid not in (os.getpid(), os.getppid())]
 
     def _reviewed(self, run_name: str) -> list[str]:
         """The screen review of the e2e run just ended; a review that cannot start says why and leaves the run's result."""
