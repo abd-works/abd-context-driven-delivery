@@ -487,13 +487,13 @@ with description("a graph"):
 
                 with it("should list the epic rules"):
                     expect(
-                        {"verb-noun-format", "branch-on-mechanical-uniqueness", "four-to-nine-children"}
+                        {"verb-noun-format", "branch-on-mechanical-uniqueness", "child-count-fits-layer"}
                         <= set(_rule_names(self.onboard))
                     ).to(equal(True))
 
                 with it("should list the sub-epic rules"):
                     expect(
-                        {"verb-noun-format", "branch-on-mechanical-uniqueness", "four-to-nine-children"}
+                        {"verb-noun-format", "branch-on-mechanical-uniqueness", "child-count-fits-layer"}
                         <= set(_rule_names(self.authenticate))
                     ).to(equal(True))
 
@@ -541,15 +541,15 @@ with description("a graph"):
                 with it("should leave verb-noun format passing on Submit Order"):
                     expect(rule_on(self.submit_order, "verb-noun-format")["status"]).to(equal("passing"))
 
-                with it("should violate four to nine children on the epic"):
-                    hit = rule_on(self.onboard, "four-to-nine-children")
+                with it("should flag the epic holding one sub-epic outside its 2-6 children"):
+                    hit = rule_on(self.onboard, "child-count-fits-layer")
                     expect(hit["status"]).to(equal("violating"))
                     expect(hit["violations"][0]["message"]).to(
-                        equal("epic 'Onboard A Customer': 1 children (target 4-9)")
+                        equal("epic 'Onboard A Customer': 1 children (target 2-6)")
                     )
 
                 with it("should store the epic child-count hit on the line that names the epic"):
-                    hit = rule_on(self.onboard, "four-to-nine-children")["violations"][0]
+                    hit = rule_on(self.onboard, "child-count-fits-layer")["violations"][0]
                     expect({"location": hit["location"], "line": hit["line"], "end_line": hit["end_line"]}).to(
                         equal(
                             {
@@ -560,8 +560,8 @@ with description("a graph"):
                         )
                     )
 
-                with it("should leave four to nine children passing on the sub-epic"):
-                    expect(rule_on(self.authenticate, "four-to-nine-children")["status"]).to(equal("passing"))
+                with it("should leave the child count passing on the sub-epic"):
+                    expect(rule_on(self.authenticate, "child-count-fits-layer")["status"]).to(equal("passing"))
 
                 with it("should leave do-not-invent-requirements prompt"):
                     expect(rule_on(self.handle_request, "do-not-invent-requirements")["status"]).to(equal("prompt"))

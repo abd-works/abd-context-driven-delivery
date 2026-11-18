@@ -61,11 +61,10 @@ function e2eReviewPartOf(review: E2eReviewJson): Part {
 
 export function partsOf(health: ServerHealthJson): Part[] {
   const client = new ServerHealthClient(health.report as ServerHealthData | null)
-  const { apps, isHookServerRunning: isHookRunning, e2eReview } = client
+  const { apps, e2eReview } = client
   return [
     hostPartOf(health),
     ...apps.map(appPartOf),
-    { icon: '↪', label: 'Hook server', value: isHookRunning ? 'running' : 'not installed', isUp: isHookRunning },
     ...client.testRuns.map(testRunPartOf),
     ...(e2eReview ? [e2eReviewPartOf(e2eReview)] : []),
   ]

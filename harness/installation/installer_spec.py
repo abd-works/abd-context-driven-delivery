@@ -8,7 +8,7 @@ from mamba import before, description, it
 
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.installation.installer import Installer
-import harness.hooks  # noqa: F401 - registers the hook server's installation with the Installer, as the cdd server does
+import harness.hooks  # noqa: F401 - registers the hook installation with the Installer, as the cdd server does
 import harness.mcp.mcp_server  # noqa: F401 - registers the MCP server's installation with the Installer
 
 _REPO = Path(__file__).resolve().parents[2]

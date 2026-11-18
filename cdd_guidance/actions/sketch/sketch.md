@@ -76,7 +76,7 @@ Do not render UX as markdown from a multi-lens sketch file — that output is no
 
 2. **`build_render_calls`** — pass the approved sketch path and the stage's required format list (e.g. `["drawio", "markdown"]` at discovery). Returns JSON: one `render.render` entry per practice × format. Each entry carries the **full sketch file** as `content` with `source: sketch` so each practice parses only its own `##` section.
 
-3. **`render_approved_sketch`** — run that JSON in a background sub-agent (non-blocking). Each call is `render.render(guidance: {toolset, fidelity}, format, content, source=sketch)`. Then follow `render.place_rendered` on the written files.
+3. **`render_approved_sketch`** — run that JSON in a background sub-agent (non-blocking). Each call is `render.render(guidance: {toolset, fidelity}, format, paths=<the sketch file>, source=sketch)`. Render saves each drawio, whiteboard, or markdown file beside the sketch; follow `render.place_rendered` for the code it answers with.
 
 Do not invent render parameters in the sub-agent — `build_render_calls` owns them.
 

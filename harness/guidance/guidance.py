@@ -466,7 +466,7 @@ class PracticeGuidance(Guidance):
         if scoped:
             instructions(scoped)
         if examples:
-            instructions(examples)
+            instructions(f"{self.EXAMPLES_PREAMBLE}\n\n{examples}")
         if templates:
             instructions(templates)
         # The practice's own Guidance section, then its current fidelity's guidance and companion text, which that
@@ -495,6 +495,15 @@ class PracticeGuidance(Guidance):
         """The practice's own document, ``{key}.md`` in the folder beside its class."""
         class_dir = self.module_dir
         return class_dir / f"{class_dir.name}.md"
+
+    # What the examples the guidance shows are for, set above them: an agent shown one example copies its structure
+    # into every artifact unless it is told the structure belongs to the example's own domain.
+    EXAMPLES_PREAMBLE = (
+        "## Examples\n\n"
+        "These examples show notation, naming, depth, and tone. Their structure, such as how many epics, modules, or "
+        "screens they have and how those nest, belongs to their own domain: take the structure of what you write from "
+        "your sources, never from an example."
+    )
 
     @markdown
     def examples(self) -> str:
@@ -821,12 +830,13 @@ class FidelityGuidance(Guidance):
         by every call in a session, so a call working at this fidelity asks this fidelity, never the practice."""
         return self.practice_guidance.formats.render(RenderRequest(Format(format), content, Format(source), fidelity=self))
 
-    def render_files(self, format: str, paths: NamedPaths, source: str | None = None) -> dict:
+    def render_files(self, format: str, paths: NamedPaths, source: str | None = None, previous: str = "") -> dict:
         """Render the files at paths into format at this fidelity, read from the project of the session its practice
-        works in, in source, else in the format this fidelity works in. A renderer that links to other files, such as a
-        story map linking to each story's file, finds them in the folder the first path is, or sits in."""
+        works in, in source, else in the format this fidelity works in. previous is the target file as it is now, whose
+        layout a diagram keeps. A renderer that links to other files, such as a story map linking to each story's file,
+        finds them in the folder the first path is, or sits in."""
         formats = self.practice_guidance.formats
-        request = RenderRequest(Format(format), source=Format(source), folder=self._folder_holding(paths), fidelity=self)
+        request = RenderRequest(Format(format), source=Format(source), previous=previous, folder=self._folder_holding(paths), fidelity=self)
         return formats.render(replace(request, content=formats.read(paths, request)))
 
     def _folder_holding(self, paths: NamedPaths) -> str:

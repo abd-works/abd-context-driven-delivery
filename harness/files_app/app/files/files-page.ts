@@ -132,11 +132,11 @@ export class FilesPage {
     return this.state.place || this.link.subject
   }
 
-  // Where the files are, read once as the page opens.
+  // Where the files are, and whether a branch says which of them the session changed, read once as the page opens.
   private async readPlace(): Promise<void> {
     try {
       const session = await this.session.show()
-      if (session) this.store.change(() => ({ place: [session.repoName, session.branch, session.root].filter(Boolean).join(' · ') }))
+      if (session) this.store.change(() => ({ place: [session.repoName, session.branch, session.root].filter(Boolean).join(' · '), isRepository: session.isRepository !== false }))
     } catch (failure) {
       this.notices.fail(`The Files app did not read where the session works: ${reasonOf(failure)}`, 'Opening the Files app, calling session.show')
     }

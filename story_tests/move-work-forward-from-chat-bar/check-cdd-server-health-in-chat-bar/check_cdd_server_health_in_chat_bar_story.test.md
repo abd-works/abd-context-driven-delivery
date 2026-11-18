@@ -49,18 +49,17 @@ section: body
 | Source | Note |
 |--------|------|
 | `harness/chat-ui/pane/test/move-work-forward-from-chat-bar/check-cdd-server-health/open-server-health-panel/open_server_health_panel_story.test.ts` (removed) | the story test these scenarios were recovered from |
-| Show every part running on one line | observed: server-health-view.tsx lists MCP host, Tools, Kanban app, Graph app, Hook server; register.test.ts |
+| Show every part running on one line | observed: server-health-view.tsx lists MCP host, Tools, Kanban app, Graph app; register.test.ts. The Hook server part was removed: the hook command starts that server itself |
 | Pin the panel open | requested: the health mark opens only with the session card |
 | Say what is wrong when cdd is down | observed: server-health-view.tsx headlineOf and the Details, Run install, Reconnect buttons |
 
 #### Scenario: Show every part running on one line
 
 *Given* cdd is connected with 116 tools loaded, the Kanban app on port 8778 and the Graph app on port 5173  
-  *And* the hook server is not running  
 *When* the Person opens the server health panel  
 *Then* the session card opens with the panel on top, MCP host, Tools, Kanban app and Graph app green  
   *And* Tools reads 116 loaded, Kanban app 8778 and Graph app 5173  
-  *And* Hook server is grey  
+  *And* no Hook server part shows  
   *And* each part's name shows on hover
 
 #### Scenario: Pin the panel open

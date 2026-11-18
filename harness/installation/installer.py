@@ -402,9 +402,9 @@ class Installer:
 
         Before you run it, write these steps in the chat as a checklist. Then, as each one completes, write ``✓`` and the step in the chat with what the output said for it, so the person follows the install as it goes:
 
-        1. Install every toolset: skills, commands, rules, MCP, and hooks (the line ``hook: …, mcp: …, cdd plugin: …, board: …``).
+        1. Install every toolset: skills, commands, rules, MCP, and hooks (the line ``mcp: …, cdd plugin: …, board: …``).
         2. Check the cdd server runs, moved onto this commit when it ran an older one (``mcp: running (pid …)``, or ``cdd server: …``).
-        3. Read ``diagnostics.json`` in the install folder (latest ``diagnose_install`` report) and paste the full summary: color, channel deltas, cdd server, hook server, hooks registered.
+        3. Read ``diagnostics.json`` in the install folder (latest ``diagnose_install`` report) and paste the full summary: color, channel deltas, cdd server, hooks registered.
 
         When a step fails, write ``✗`` and the step with its error, stop, and follow "When install fails" in ``harness/installation/installer.md``."""
         return self.deployment.run(toolsets, replace)
@@ -418,12 +418,12 @@ class Installer:
         Before you run it, put these seven steps in your task list (in Claude Code, the plan the app shows under your message) and write them in the chat as a checklist:
 
         1. Fetch origin's tags and merge the latest release into this checkout. A fetch or merge that fails or conflicts, or an origin with no release tag, stops here, before anything is stopped: tell the person and wait.
-        2. Stop every app's server and the hook server.
+        2. Stop every app's server.
         3. Restart the cdd server on this checkout's commit: its lane (stable from main, dev from a ticket's worktree) serves the release just merged, and the chats point at that lane, so the chat bar's version shows it.
         4. Install every toolset: skills, commands, rules, MCP, and hooks. This is the long step, about a minute.
         5. Ping the cdd server.
         6. Reconnect this chat: when the cdd server reads failed, reconnect it, or ask the person to run ``/reload-plugins``.
-        7. Read ``diagnostics.json`` in the install folder (latest ``diagnose_install`` report) and paste the summary: color, channel deltas, cdd server, hook server.
+        7. Read ``diagnostics.json`` in the install folder (latest ``diagnose_install`` report) and paste the summary: color, channel deltas, cdd server.
 
         Run the command in the background and watch its output as it runs, rather than waiting for it to end, so the person sees each step finish as it happens. The script writes ``▶ n/7 <step>`` as a step starts and ``✓ n/7 <step>: <result>`` as it is done. On each ``✓`` line, mark that step done in your task list and write the same line in the chat; on a ``✗ n/7`` line, write it, stop, and follow "When install fails" in ``harness/installation/installer.md``. Steps 6 and 7 are yours: mark and write each the same way once you have done it.
 

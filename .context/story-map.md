@@ -230,7 +230,7 @@ Observed: a band across the page says the cdd server is not connected and how to
 
 ### (S) Person --> Open Board Server Health Panel
 
-Requested (2026-11-06, as the Chat Bar does): a panel listing MCP host, Tools, Kanban app, Graph app and Hook server, or what is wrong.
+Requested (2026-11-06, as the Chat Bar does): a panel listing MCP host, Tools, Kanban app and Graph app, or what is wrong.
 
 ### (S) Person --> Reconnect CDD Server From Board
 
@@ -642,7 +642,7 @@ Observed: `ServerHealthBandView` draws ✓ connected, ⟳ reconnecting, ✕ disc
 
 ### (S) Person --> [Open Server Health Panel](../story_tests/move-work-forward-from-chat-bar/check-cdd-server-health-in-chat-bar/check_cdd_server_health_in_chat_bar_story.test.md#story-open-server-health-panel)
 
-Observed: the panel shows MCP host, Tools with the loaded count, Kanban app, Graph app and Hook server, or a headline saying what is wrong; pressing the mark pins it open.
+Observed: the panel shows MCP host, Tools with the loaded count, Kanban app and Graph app, or a headline saying what is wrong; pressing the mark pins it open.
 
 ### (S) Person --> [Reconnect CDD Server](../story_tests/move-work-forward-from-chat-bar/check-cdd-server-health-in-chat-bar/check_cdd_server_health_in_chat_bar_story.test.md#story-reconnect-cdd-server)
 
@@ -651,6 +651,8 @@ Observed: Reconnect retries `cdd` up to three times (`RECONNECT_TRIES`), then re
 ### (S) Person --> [Reinstall CDD Tools](../story_tests/move-work-forward-from-chat-bar/check-cdd-server-health-in-chat-bar/check_cdd_server_health_in_chat_bar_story.test.md#story-reinstall-cdd-tools)
 
 Observed: Run install runs the installer and says installing, installed (open a new session) or failed; Details shows the tool, error, server and fix.
+
+Built (2026-11-18), not seen (the person: "When the plugin starts in a chat, run the installer into that chat's folder if its .claude, skills and commands are missing"): when the board mod starts in a chat whose folder has no `.claude/skills` or no `.claude/commands`, it runs the same install Run install runs (`installWhenMissing`, `health/server-health-client.ts`), beside the board's first read, and the health panel says installing, installed or failed. `scripts/install.py --from-chat FOLDER` for a folder that is no CDD checkout now installs into `FOLDER/.claude`, where it had installed into the served checkout's own `.claude`. Tests: `harness/chat-ui/pane/hooks/health/install-on-start.test.ts` (`claude plugin test`), `scripts/install_spec.py`.
 
 ### (S) Chat Bar --> Display CDD Version Badge
 
@@ -662,7 +664,7 @@ Observed (requested 2026-11-14, "/version --> enters the next version to repo co
 
 ### (S) Person --> Update CDD From Chat Bar
 
-Observed (requested 2026-11-14, "click opens dialog update and reinstall? use above script if yes"): pressing the version badge asks to update and reinstall; Update and reinstall runs `/harness:installation:install-latest` in the chat (`updateToLatest`, `health/cdd-version-client.ts`), so the chat lists its seven steps and ticks each off as it finishes: pull origin main, stop every app and the hook server, restart the cdd server, install every toolset, ping the server; once the command's turn ends the badge reads the version again; hovering the badge says updating…, up to date, or update failed, and a failure shows why on the failure line. The agent does the same with `/install-latest` (`Installer.install_latest`), which ticks off each step as `scripts/install.py` reports it.
+Observed (requested 2026-11-14, "click opens dialog update and reinstall? use above script if yes"): pressing the version badge asks to update and reinstall; Update and reinstall runs `/harness:installation:install-latest` in the chat (`updateToLatest`, `health/cdd-version-client.ts`), so the chat lists its seven steps and ticks each off as it finishes: pull origin main, stop every app, restart the cdd server, install every toolset, ping the server; once the command's turn ends the badge reads the version again; hovering the badge says updating…, up to date, or update failed, and a failure shows why on the failure line. The agent does the same with `/install-latest` (`Installer.install_latest`), which ticks off each step as `scripts/install.py` reports it.
 
 ### (S) Person --> [Open App From Health Panel](../story_tests/move-work-forward-from-chat-bar/check-cdd-server-health-in-chat-bar/check_cdd_server_health_in_chat_bar_story.test.md#story-open-app-from-health-panel)
 

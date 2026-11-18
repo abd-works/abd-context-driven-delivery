@@ -326,7 +326,7 @@ with description("the server health report's test runs") as self:
         self.record = TestRunRecord(self.folder)
         self.runner = RunnerStub()
         cadence = TestCadence(self.folder, self.record, self.runner, GitStub(), Clock(NOON))
-        self.health = ServerHealth(self.folder, hook_daemon=object(), cadence=cadence)
+        self.health = ServerHealth(self.folder, cadence=cadence)
 
     with after.each:
         shutil.rmtree(self.folder, ignore_errors=True)

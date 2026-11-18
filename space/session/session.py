@@ -495,6 +495,13 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionLo
 
     @property
     @data_field
+    def is_repository(self) -> bool:
+        """Whether the session works in a git repository, whose branch says which files the session changed; in a plain
+        folder there is no branch, so no file is ever changed and a page lists the session's own files instead."""
+        return self.repo.is_clone
+
+    @property
+    @data_field
     def root(self) -> str:
         """The whole path of the folder the session works in, as a page heads it."""
         return str(self.work_root)

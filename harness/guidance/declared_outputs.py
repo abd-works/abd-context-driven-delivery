@@ -40,6 +40,27 @@ class DeclaredFile:
         parts = [self._part(token, named) for token in _DECLARED_PART.split(self._declared) if token]
         return re.compile(r"(?:^|/)" + "".join(parts) + "$", re.I)
 
+    def parts_of(self, path: str) -> dict[str, str]:
+        """The named parts path gives this declared path, such as ``{"module": "harness"}`` for
+        ``harness/.context/harness-model.md`` against ``{module}/.context/{module}-model.md``; none when path is not one
+        of its files."""
+        found = self.pattern.search(path)
+        return {name: value for name, value in found.groupdict().items() if value} if found is not None else {}
+
+    def named_with(self, parts: dict[str, str]) -> str:
+        """The declared path with each named part written as parts gives it; empty when parts leaves one out, or the
+        path is a glob, which names no one file."""
+        if "*" in self._declared:
+            return ""
+        missing = [token for token in re.findall(r"\{([^{}/]+)\}", self._declared) if self._group(token) not in parts]
+        if missing:
+            return ""
+        return re.sub(r"\{([^{}/]+)\}", lambda token: parts[self._group(token.group(1))], self._declared)
+
+    def _group(self, name: str) -> str:
+        """The name a named part goes by in the pattern: a name such as ``sub-epic`` is no group name as it is written."""
+        return re.sub(r"\W", "_", name)
+
     def _part(self, token: str, named: set[str]) -> str:
         """The pattern for one part; ``named`` holds the names earlier parts of the same path used."""
         if token == "**/":
@@ -48,7 +69,7 @@ class DeclaredFile:
             return r"[^/]*"
         if not token.startswith("{"):
             return re.escape(token)
-        name = re.sub(r"\W", "_", token.strip("{}/"))
+        name = self._group(token.strip("{}/"))
         folder = "/" if token.endswith("/") else ""
         if name in named:
             return f"(?P={name}){folder}"
@@ -81,6 +102,17 @@ class DeclaredOutputs:
         held = self._files
         chosen = held.get(format, []) if format else [declared for files in held.values() for declared in files]
         return any(declared.pattern.search(path) for declared in chosen)
+
+    def file_name_beside(self, source: str, format: str) -> str:
+        """The name of the file the fidelity writes format to, for the source file at source, written from the project's
+        root or absolute: the name of the file it declares in format, with each named part read off source where another
+        file it declares matches it, so ``harness/.context/harness-model.md`` names ``harness-model.drawio``. Empty when
+        none of its files in format can be named so."""
+        parts: dict[str, str] = {}
+        for declared in (declared for files in self._files.values() for declared in files):
+            parts.update(declared.parts_of(source))
+        named = (declared.named_with(parts) for declared in self._files.get(format, []))
+        return next((path.rsplit("/", 1)[-1] for path in named if path), "")
 
     def output_paths(self) -> dict[str, list[str]]:
         """Where the fidelity writes each format in the session its practice works in: its declared paths under the

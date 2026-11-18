@@ -19,6 +19,7 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeWithFidelities,
 )
 from harness.guidance.fixtures.split_tool.split_tool import SplitPracticeGuidance
+from harness.guidance.guidance import PracticeGuidance
 from harness.markdown import HTML, Markdown
 from harness.hooks.hook_server import HookPayload
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
@@ -354,6 +355,12 @@ with description("practice guidance with fidelities examples and templates besid
     with context("with the examples property read on practice guidance"):
         with it("should return examples folder content as a separate property not inside instructions"):
             expect(self.guidance.examples).to(contain("example file not inlined"))
+
+    with context("with the guidance instruction expanded"):
+        with it("should show the examples under a heading that takes structure from the sources, not from them"):
+            text = self.guidance.instruction("guidance").expand({}).instructions
+            expect(text).to(contain(f"{PracticeGuidance.EXAMPLES_PREAMBLE}\n\n"))
+            expect(text.index(PracticeGuidance.EXAMPLES_PREAMBLE) < text.index("example file not inlined")).to(equal(True))
 
     with context("with a markdown-backed property read as HTML on practice guidance"):
         with it("should return HTML formatted from that property extract"):

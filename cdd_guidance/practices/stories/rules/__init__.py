@@ -24,7 +24,7 @@ from cdd_guidance.practices.stories.rules.scenarios import (
 from cdd_guidance.practices.stories.rules.story_map import (
     BehavioursNotOneTimeTasks,
     BranchOnMechanicalUniqueness,
-    FourToNineChildren,
+    ChildCountFitsLayer,
     KebabCasePaths,
     StoryScenariosAtMostSeven,
     RightSizeStoryNodes,
@@ -33,7 +33,7 @@ from cdd_guidance.practices.stories.rules.story_map import (
 )
 
 RULES: tuple = (
-    FourToNineChildren(),
+    ChildCountFitsLayer(),
     StoryScenariosAtMostSeven(),
     VerbNounFormat(),
     ScenariosShape(),

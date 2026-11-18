@@ -1,7 +1,9 @@
 """BDD spec for the Render action — Guidance refs, fidelity, and source format."""
 
+import json
 import sys
 import tempfile
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -142,13 +144,13 @@ with description("Render"):
         story_file = folder / "orders" / "browse_product_catalog_story.test.md"
         story_file.parent.mkdir(parents=True)
         story_file.write_text("## Story: Browse Product Catalog\n", encoding="utf-8")
-        results = Render().render(
+        Render().render(
             _STORIES,
             format="drawio",
             paths=[str(story_map)],
             source="markdown",
         )
-        expect(str(results[0]["content"])).to(contain('link="orders/browse_product_catalog_story.test.md"'))
+        expect((folder / "story-map.drawio").read_text(encoding="utf-8")).to(contain('link="orders/browse_product_catalog_story.test.md"'))
 
 
 with description("Render publishing a whiteboard file to its board in Claude") as self:
@@ -203,3 +205,124 @@ with description("Render publishing a whiteboard file to its board in Claude") a
         with it("should tell the agent to write only the changed elements to a board already kept"):
             text = AgentInstructions.for_callable(Render.publish_board, Render()).expand({}).instructions
             expect(text).to(contain("batches"))
+
+
+def _card_holding(drawio: str, name: str) -> ET.Element:
+    """The cell drawing name in a draw.io story map: the cell itself, or the one inside the link that carries it."""
+    for holder in ET.fromstring(drawio).iter():
+        if holder.get("value") == name or holder.get("label") == name:
+            return holder if holder.tag == "mxCell" else holder.find("mxCell")
+    raise AssertionError(f"no cell draws {name}")
+
+
+def _moved_card(drawio: str, name: str, x: str) -> str:
+    """drawio with the card drawing name moved to x, as draw.io saves it after a person drags the card."""
+    root = ET.fromstring(drawio)
+    for holder in root.iter():
+        if holder.get("value") == name or holder.get("label") == name:
+            cell = holder if holder.tag == "mxCell" else holder.find("mxCell")
+            cell.find("mxGeometry").set("x", x)
+    return ET.tostring(root, encoding="unicode")
+
+
+def _written_ids(result: dict) -> list:
+    return [entry["doc_id"] for batch in result["batches"] for entry in batch]
+
+
+with description("Render saving what it makes beside its source") as self:
+    with before.each:
+        self.folder = Path(tempfile.mkdtemp(prefix="render-beside-")) / ".context"
+        self.folder.mkdir()
+        self.story_map = self.folder / "story-map.md"
+        self.story_map.write_text(_MARKDOWN_STORY_MAP, encoding="utf-8")
+
+    with context("a story map rendered to drawio from its markdown"):
+        with before.each:
+            self.results = Render().render(_STORIES, format="drawio", paths=[str(self.story_map)], source="markdown")
+            self.drawing = self.folder / "story-map.drawio"
+
+        with it("should save the drawing beside the markdown, under the name the story map fidelity writes it to"):
+            expect(self.drawing.read_text(encoding="utf-8")).to(contain("Browse Product Catalog"))
+
+        with it("should answer with the file it saved"):
+            expect(self.results[0]["path"]).to(equal(str(self.drawing)))
+
+        with it("should leave the drawing out of its answer, so the agent has nothing to place"):
+            expect("content" in self.results[0]).to(equal(False))
+
+    with context("a story map whose drawing a person moved a card on"):
+        with before.each:
+            Render().render(_STORIES, format="drawio", paths=[str(self.story_map)], source="markdown")
+            self.drawing = self.folder / "story-map.drawio"
+            moved = _moved_card(self.drawing.read_text(encoding="utf-8"), "Browse Product Catalog", "777")
+            self.drawing.write_text(moved, encoding="utf-8")
+            Render().render(_STORIES, format="drawio", paths=[str(self.story_map)], source="markdown")
+
+        with it("should keep the card where the person put it"):
+            card = _card_holding(self.drawing.read_text(encoding="utf-8"), "Browse Product Catalog")
+            expect(card.find("mxGeometry").get("x")).to(equal("777"))
+
+    with context("a story map rendered to markdown from its sketch"):
+        with before.each:
+            self.sketch = self.folder / "orders-sketch.md"
+            self.sketch.write_text(_STORY_MAP, encoding="utf-8")
+            self.story_map.unlink()
+            Render().render(_STORIES, format="markdown", paths=[str(self.sketch)], source="sketch")
+
+        with it("should save the document beside the sketch"):
+            expect(self.story_map.read_text(encoding="utf-8")).to(contain("Browse Product Catalog"))
+
+        with it("should leave the sketch as it was"):
+            expect(self.sketch.read_text(encoding="utf-8")).to(equal(_STORY_MAP))
+
+    with context("a model rendered to code"):
+        with before.each:
+            self.sketch = self.folder / "cart-sketch.md"
+            self.sketch.write_text("Cart\n  owner\n", encoding="utf-8")
+            self.results = Render().render(["clean-engineering-model"], format="python", paths=[str(self.sketch)], source="sketch")
+
+        with it("should answer with the code, for the agent to fold into the module it belongs to"):
+            expect(str(self.results[0]["content"])).to(contain("Cart"))
+
+        with it("should save no file"):
+            expect(sorted(path.name for path in self.folder.iterdir())).to(equal(["cart-sketch.md", "story-map.md"]))
+
+    with context("a story map rendered to whiteboard"):
+        with before.each:
+            self.results = Render().render(_STORIES, format="whiteboard", paths=[str(self.story_map)], source="markdown")
+            self.board_file = self.folder / "story-map.whiteboard"
+
+        with it("should save the board file beside the markdown"):
+            expect(Whiteboard.from_text(self.board_file.read_text(encoding="utf-8")).title).to(equal("Story Map"))
+
+        with it("should answer with the writes that put the whole board on a new board in Claude"):
+            saved = Whiteboard.from_text(self.board_file.read_text(encoding="utf-8"))
+            expect(len(_written_ids(self.results[0]))).to(equal(len(saved.elements) + 1))
+
+        with it("should answer with no board, since none is kept for the file yet"):
+            expect(self.results[0]["board"]).to(equal(""))
+
+    with context("a story map whose board is kept and a person moved a card on"):
+        with before.each:
+            Render().render(_STORIES, format="whiteboard", paths=[str(self.story_map)], source="markdown")
+            self.board_file = self.folder / "story-map.whiteboard"
+            BoardLinks.beside(self.board_file).record(self.board_file, "https://claude.ai/artifact/StoryMapBoard")
+            board = json.loads(self.board_file.read_text(encoding="utf-8"))
+            self.card = next(key for key, record in board["elements"].items() if "Browse Product Catalog" in str(record.get("text")))
+            board["elements"][self.card]["x"] = 777
+            self.board_file.write_text(json.dumps(board), encoding="utf-8")
+            self.results = Render().render(_STORIES, format="whiteboard", paths=[str(self.story_map)], source="markdown")
+
+        with it("should keep the card where the person put it"):
+            expect(json.loads(self.board_file.read_text(encoding="utf-8"))["elements"][self.card]["x"]).to(equal(777))
+
+        with it("should answer with the board kept for the file"):
+            expect(self.results[0]["board"]).to(equal("https://claude.ai/artifact/StoryMapBoard"))
+
+        with it("should write none of the elements the render left as they were"):
+            expect(_written_ids(self.results[0])).to(equal(["meta"]))
+
+    with context("rendered from content, with no paths"):
+        with it("should answer with what it made, since it has no source to save beside"):
+            results = Render().render(_STORIES, format="drawio", paths=[], content=_STORY_MAP, source="md")
+            expect(str(results[0]["content"])).to(contain("mxGraphModel"))

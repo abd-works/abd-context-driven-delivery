@@ -12,7 +12,8 @@ from harness.agent_tools import agent_instructions, agent_toolset, instructions,
 from harness.installation.files import skill
 from harness.markdown.format import Format
 from harness.mcp.mcp_annotations import mcp
-from cdd_guidance.actions.render.render import WHITEBOARD, Render
+from cdd_guidance.actions.render.render import Render
+from cdd_guidance.actions.render.rendered_file import WHITEBOARD
 from cdd_guidance.actions.validate.validate import Validate
 
 # A path that names no one folder: a template to fill, or a wildcard.

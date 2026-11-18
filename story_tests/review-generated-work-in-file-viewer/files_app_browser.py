@@ -147,17 +147,37 @@ def _seed_project(root: Path) -> None:
     _write(root, f".sessions/{STORY_REVIEW}/session.log", "")
 
 
+# Seed: plain-work, a session in a project that is a plain folder, no git repository, with Discovery and Stories alone
+# on and its story map in markdown, as the Nov 18 demo's session had them: its story map written under .context, and a
+# note of no fidelity beside it.
+PLAIN_WORK = "plain-work"
+PLAIN_MAP = ".context/story-map.md"
+PLAIN_NOTE = "notes/plain.txt"
+
+
+def _seed_plain_folder(root: Path) -> None:
+    """A plain folder, never made a git repository, holding plain-work's session, its story map and a note."""
+    _write(root, PLAIN_MAP, VIOLATING_MAP_TEXT)
+    _write(root, PLAIN_NOTE, "a note\n")
+    practices = {key: {"enabled": False} for key in ("ux", "ddd", "bdd", "clean_engineering")}
+    practices["stories"] = {"enabled": True, "formats": {"story_map": ["markdown"]}}
+    plain = {"guidance": {"stages": ["discovery"]}, "practices": practices, "outputs": {"stories": {"root": ".context"}}}
+    _write(root, f".sessions/{PLAIN_WORK}/session.json", json.dumps({"name": PLAIN_WORK, "title": "Plain work", **plain}))
+    _write(root, f".sessions/{PLAIN_WORK}/session.log", "")
+
+
 class FilesStack:
     """The Files app as a person meets it, every part of it the spec's own: the page built from this checkout, the Files
-    server serving it, the cdd server it asks, a git project, and Chromium. ``close`` stops and removes all of them."""
+    server serving it, the cdd server it asks, a project, a git repository unless seeded otherwise, and Chromium.
+    ``close`` stops and removes all of them."""
 
-    def __init__(self, started_for: Path | None = None) -> None:
+    def __init__(self, started_for: Path | None = None, seed=_seed_project) -> None:
         """started_for is the project the Files server is started for, the one a call naming no project is about; the
-        seeded project when none is given."""
+        seeded project when none is given. seed writes the project."""
         self.top = Path(tempfile.mkdtemp(prefix="cdd-files-e2e-")).resolve()
         self.project = self.top / "project"
         self.project.mkdir()
-        _seed_project(self.project)
+        seed(self.project)
         self._build_page()
         self.cdd = SpecServer()
         self.cdd.start()
@@ -182,6 +202,12 @@ class FilesStack:
         stack = cls(started_for=_REPO_ROOT)
         _write(stack.project, DIAGRAM, DIAGRAM_TEXT)
         return stack
+
+    @classmethod
+    def in_a_plain_folder(cls) -> "FilesStack":
+        """The Files app opened on a project that is a plain folder, no git repository: plain-work's story map and a
+        note."""
+        return cls(seed=_seed_plain_folder)
 
     def _build_page(self) -> None:
         subprocess.run(["node", str(_NODE_VITE), "build", "--outDir", str(self.top / "dist"), "--emptyOutDir"], cwd=_APP, capture_output=True, text=True, check=True)

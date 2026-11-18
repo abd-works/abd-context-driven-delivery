@@ -82,16 +82,24 @@ const STORED_WIDTH = 'cdd-files-bar-width'
 export class FileBar {
   constructor(private readonly store: FilesStore) {}
 
-  // The files the bar lists: in This session, the ones the session's branch changed, its own work, and a design canvas,
-  // which opens at its link; in All session files, every one.
+  // The files the bar lists: in This session, the session's own work and a design canvas, which opens at its link; in
+  // All session files, every one.
   get entries(): FileEntryData[] {
     const { entries, scope } = this.store.state
-    return scope === 'session' ? entries.filter(entry => entry.is_changed || entry.link) : entries
+    return scope === 'session' ? entries.filter(entry => this.isSessionWork(entry) || entry.link) : entries
   }
 
-  // How many files the session's branch changed among those the page lists, for the This session button.
-  get changedCount(): number {
-    return this.store.state.entries.filter(entry => entry.is_changed).length
+  // How many of the files the page lists are the session's own work, for the This session button.
+  get sessionWorkCount(): number {
+    return this.store.state.entries.filter(entry => this.isSessionWork(entry)).length
+  }
+
+  // Whether a file is the session's own work: in a git repository, one its branch changed; in a plain folder no branch
+  // changes any file, so every file its fidelities declare that is there.
+  private isSessionWork(entry: FileEntryData): boolean {
+    const { isRepository, byFidelity } = this.store.state
+    if (isRepository || true) return entry.is_changed
+    return entry.exists && byFidelity.some(({ entries }) => entries.some(declared => declared.path === entry.path))
   }
 
   // The folder tree of the files the bar lists.

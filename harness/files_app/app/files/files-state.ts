@@ -41,6 +41,9 @@ export type FilesState = {
   guidance: GuidanceSelectionData | null
   // Where the files are, as the header shows it: the repository, the branch, and the session's root.
   place: string
+  // Whether the session works in a git repository, whose branch says which files it changed; until the session answers,
+  // it is taken to.
+  isRepository: boolean
   // What the page lists of the files its stages, practices and formats select: This session, those the session's
   // branch changed against main; or All session files, every one under the session's root, older work included.
   scope: 'session' | 'all'
@@ -75,6 +78,7 @@ export const FILE_BAR_WIDTH = { narrowest: 160, usual: 288, widest: 900 }
 export const NO_FILES: FilesState = {
   guidance: null,
   place: '',
+  isRepository: true,
   scope: 'session',
   rootFiles: null,
   reads: { rules: false, crossFile: false },

@@ -127,13 +127,15 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
         else:
             _ClassDiagramReader(self).read_single_page(document)
 
-    def render(self, canonical: CleanEngineeringModel) -> str:
-        """Become the canonical model once, as Draw.io modules and classes, then write this model's own diagram."""
+    def render(self, canonical: CleanEngineeringModel, previous: Optional[str] = None) -> str:
+        """Become the canonical model once, as Draw.io modules and classes, then write this model's own diagram. With
+        previous, the drawing this one replaces, the cards and arrows a person placed there stay where they are; without
+        it, the diagram this model keeps positions from, when it keeps them."""
         if canonical is not self:
             self.translate_from(canonical)
         if self.is_modules_view:
-            return _ModulesDiagramWriter(self).write()
-        return _ClassDiagramWriter(self).write()
+            return _ModulesDiagramWriter(self, previous or self.previous).write()
+        return _ClassDiagramWriter(self, previous or self.kept_previous()).write()
 
     def kept_previous(self) -> Optional[str]:
         """The previous diagram when this render keeps its positions, else None."""
@@ -298,8 +300,10 @@ class _ClassDiagramReader:
 class _ModulesDiagramWriter(ModulesView):
     """Writes one modules-view diagram: top-level modules layered by dependency depth, path children nested inside."""
 
-    def __init__(self, channel: DrawIOCleanEngineeringModel) -> None:
+    def __init__(self, channel: DrawIOCleanEngineeringModel, kept: Optional[str] = None) -> None:
         super().__init__(channel)
+        # The drawing this one replaces, whose module boxes stay where they stood.
+        self._kept = kept
         self._bounds: Dict[str, Geometry] = {}
         self._parent_ids: Dict[str, str] = {}
         self._cell_ids: Dict[str, str] = {
@@ -308,7 +312,7 @@ class _ModulesDiagramWriter(ModulesView):
         }
 
     def write(self) -> str:
-        previous = DrawioPage.whole(self._channel.previous) if self._channel.previous else None
+        previous = DrawioPage.whole(self._kept) if self._kept else None
         previous_positions = previous.positions() if previous is not None else {}
         self._lay_out()
         mxfile = ET.Element('mxfile')
@@ -384,6 +388,11 @@ class _ModulesDiagramWriter(ModulesView):
 class _ClassDiagramWriter(ClassView):
     """Writes one class-view diagram as Draw.io pages."""
 
+    def __init__(self, channel: DrawIOCleanEngineeringModel, kept: Optional[str] = None) -> None:
+        # The drawing this one replaces, whose cards and arrows stay where they stood; set before the view reads its pages.
+        self.kept = kept
+        super().__init__(channel)
+
     def write(self) -> str:
         mxfile = ET.Element('mxfile')
         mxfile.set('host', 'CleanEngineering.diagram.drawio')
@@ -398,8 +407,7 @@ class _ClassDiagramWriter(ClassView):
     def _write_single_page(self, mxfile: ET.Element) -> None:
         graph = self._add_diagram_page(mxfile, 'CleanEngineering Model', 'CleanEngineering-model')
         page = _ClassDiagramPage(self)
-        previous = self.channel.kept_previous()
-        drawn = DrawioPage.whole(previous) if previous else None
+        drawn = DrawioPage.whole(self.kept) if self.kept else None
         positions = drawn.positions() if drawn is not None else {}
         previous_edges = drawn.edges_by_ends() if drawn is not None else {}
         page.write(graph, positions, previous_edges)
@@ -415,7 +423,7 @@ class _ClassDiagramWriter(ClassView):
     def _previous_pages(self) -> Dict[str, DrawioPage]:
         """The pages of the diagram this render replaces, by name; none when it keeps no positions or the previous
         text is not a draw.io file."""
-        previous = self.channel.kept_previous()
+        previous = self.kept
         if not previous:
             return {}
         try:
@@ -441,7 +449,7 @@ class _ClassDiagramPage(ClassViewPage):
         to), then draw arrows, keeping the routes already drawn."""
         root_el = _add_graph_root(graph)
         cards, arrows = self.laid_out(positions)
-        if self._writer.channel.kept_previous() and self._writer.channel.close_gaps and CardSpacing(list(cards.values()), arrows).close_gaps():
+        if self._writer.kept and self._writer.channel.close_gaps and CardSpacing(list(cards.values()), arrows).close_gaps():
             # A card moved, so an arrow kept from the last drawing no longer meets it: every arrow is drawn again.
             previous_edges = {}
         for card in cards.values():

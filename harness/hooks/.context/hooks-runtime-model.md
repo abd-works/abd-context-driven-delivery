@@ -62,9 +62,6 @@ Install-time writer for hook artifacts. Same walk as markdown and MCP; only the 
 + interpreter: PythonInterpreter
 + handlers_file: HookHandlersFile
 + manifest: HooksManifest
-+ daemon: HookDaemon
-+ server: HookServer | None
-+ diagnosis: dict | None
 + dispatch_command: str
 	// "{console python} -u {harness/hooks}/hook_daemon.py"; HookDaemon.COMMAND_SCRIPT
 + << composition >> handlers_file: HookHandlersFile
@@ -87,10 +84,8 @@ Install-time writer for hook artifacts. Same walk as markdown and MCP; only the 
 	// every other command the file holds stays
 	-> HooksManifest.hooks
 	-> HooksManifest.write
-+ standup(): HookServer
-	-> HookServer.from_handlers
-+ diagnose(): dict
-	-> HookServer.diagnose
++ status(): list[str]
+	// the events and operations the install registered; the install stands up, starts, and reports no hook server
 
 ## HooksManifest                                                  <!-- Md -->
 

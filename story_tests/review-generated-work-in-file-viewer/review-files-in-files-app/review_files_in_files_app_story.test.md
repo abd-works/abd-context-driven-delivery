@@ -233,6 +233,21 @@ Requested (the person, 2026-11-15): two buttons. All session files lists every f
 *When* the Person lists All session files
 *Then* the file bar lists that project's *story-map.drawio* as the one story map file on disk, not a file of the CDD checkout
 
+#### Scenario: List this session's own files in a folder with no git
+
+Reported (Nov 18 demo, 2026-11-18): in a plain folder This session listed nothing, since with no branch no file is ever changed.
+
+*Given* the [Files app](../../../harness/files_app/.context/files-app-model.md#filebar-filesfile-barts) is opened on a project in a plain folder, with no git repository, whose session's root holds its story map *.context/story-map.md* and *notes/plain.txt* of no fidelity
+*When* the Person lists This session
+*Then* the file bar lists *story-map.md*, the file the session's story map fidelity declares
+*And* leaves out *plain.txt*
+
+##### Example: a plain folder
+
+*Given* the Files app is opened on ++a plain folder++, its link naming plain-work's stories-story-map
+*When* the Person lists This session
+*Then* the file bar lists *.context/story-map.md* alone
+
 #### Scenario: List all session files in the formats selected
 
 *Given* the Files app has Discovery and the markdown format selected

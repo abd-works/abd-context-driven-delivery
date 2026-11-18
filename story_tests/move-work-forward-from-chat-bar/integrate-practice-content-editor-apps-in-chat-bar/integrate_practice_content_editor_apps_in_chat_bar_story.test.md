@@ -11,7 +11,7 @@ section: body
 
 Each term links to its class in the model, [editor-apps-model.md](../../../harness/.context/editor-apps/.context/editor-apps-model.md).
 
-- ++app status row++ — the strip of the server health panel under the chat bar's health mark: MCP host, Tools, then each [app](../../../harness/.context/editor-apps/.context/editor-apps-model.md#app) the server health reports ([ServerHealth.apps](../../../harness/.context/editor-apps/.context/editor-apps-model.md#serverhealth-extended)), then the Hook server.
+- ++app status row++ — the strip of the server health panel under the chat bar's health mark: MCP host, Tools, then each [app](../../../harness/.context/editor-apps/.context/editor-apps-model.md#app) the server health reports ([ServerHealth.apps](../../../harness/.context/editor-apps/.context/editor-apps-model.md#serverhealth-extended)), then the latest test runs.
 - ++app++ — one CDD web app a person opens beside the chat: the Story UI editor, the Graph app or the CDD Kanban ([App](../../../harness/.context/editor-apps/.context/editor-apps-model.md#app)).
 - ++app status++ — not installed, not running or running ([AppStatus](../../../harness/.context/editor-apps/.context/editor-apps-model.md#appstatus)).
 - ++side panel++ — the pane beside the chat an app opens in, at the app's url.
@@ -87,7 +87,7 @@ Each term links to its class in the model, [editor-apps-model.md](../../../harne
 | Source | Note |
 |--------|------|
 | `.context/story-map.md:803-805` | Requested (2026-11-12): the app status row lists the Story UI editor with its status; a press installs, launches and opens it in the side panel; the file viewer shows a story-map editor tile for every Stories file |
-| `harness/chat-ui/pane/hooks/health/server-health-wording.ts:19-28` | Observed: the row lists MCP host, Tools, Kanban app, Graph app and Hook server today |
+| `harness/chat-ui/pane/hooks/health/server-health-wording.ts:19-28` | Observed: the row lists MCP host, Tools, Kanban app, Graph app, then the latest test runs |
 | `harness/chat-ui/pane/hooks/board-chat/board-server.ts:40-120` | Observed: the chat bar starts the board only, in TypeScript; this moves to *App.open* |
 | `harness/chat-ui/pane/hooks/chat-bar/fidelity-files-view.tsx:55-75` | Observed: the file viewer's tabs, and the "Open in draw.io" button a diagram tab already has, which the editor tile sits beside |
 

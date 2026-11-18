@@ -6,6 +6,8 @@ The questions to ask are in `stories.md`, under **Sketch** for the active fideli
 
 Sketch the story hierarchy first, then deepen only as far as the active fidelity needs. Confirm epics and sub-epics (the e2e journey), then drill into exact stories by risk or uncertainty — unique **mechanical** flows first, then scaffold patterns already encountered.
 
+Decide each epic's shape on its own: give it sub-epics when its stories fall into separate outcomes, and keep it flat when they are one outcome. The Template and Example below show the notation with one epic; they are not the shape to repeat, so the number of epics and how each nests come from the sources. Generate fills the shape the sketch fixes, so settle it here, epic by epic.
+
 Sketch increments next if there will be more than one.
 
 Then detail groups of related stories together — e.g. stories for a sub-epic in a particular increment. Narrate in e2e flow order.

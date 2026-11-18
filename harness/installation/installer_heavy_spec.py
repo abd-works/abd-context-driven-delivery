@@ -60,7 +60,6 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeGuidance,
     SamplePracticeWithFidelities,
 )
-from harness.hooks.hook_installation import HookInstallation
 from harness.hooks.hooks import Hook, hook
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_server import McpInstallation, McpServer
@@ -334,13 +333,6 @@ with description("an agent toolset") as self:
                         data = json.loads((self.tree / "hook-handlers.json").read_text(encoding="utf-8"))
                         expect(data["handlers"][0]["event"]).to(equal("stop"))
                         expect(data["handlers"][0]["operation"]).to(equal("auto_turn"))
-
-                with context("with the hook host stood up"):
-                    with it("should diagnose that the hook server answers ping"):
-                        expect(self.run.of(HookInstallation).diagnosis["ping"]).to(equal("pong"))
-
-                    with it("should list the installed hook event"):
-                        expect(self.run.of(HookInstallation).diagnosis["events"]).to(contain("stop"))
 
             with context("that are not annotated as Cursor hooks and a hooks manifest is already on the IDE path"):
                 with before.each:
@@ -644,7 +636,7 @@ with description("an agent toolset") as self:
                         expect(report).to(contain("installed"))
                         expect(report).to(contain("skill 1 -> 1 (delta 0)"))
                         expect(report).to(contain("cdd server:"))
-                        expect(report).to(contain("hook server:"))
+                        expect(report).not_to(contain("hook server:"))
                         expect(report).to(contain("hooks registered (events):"))
 
                     with it("should mark the install green"):
@@ -714,11 +706,13 @@ with description("an agent toolset") as self:
                 with after.each:
                     self.machine.leave()
 
-                with it("should leave the hook server and the cdd server answering"):
+                with it("should leave the cdd server answering"):
                     installer = Installer.create(ide="Cursor", path=_REPO_ROOT / ".cursor", repo=_REPO_ROOT)
-                    status = installer.deployment.ensure_runtimes()
-                    expect(status["hook"]).to(equal("running"))
-                    expect(status["mcp"]).to(start_with("running"))
+                    expect(installer.deployment.ensure_runtimes()["mcp"]).to(start_with("running"))
+
+                with it("should start no hook server, which the hook command starts on the first event"):
+                    installer = Installer.create(ide="Cursor", path=_REPO_ROOT / ".cursor", repo=_REPO_ROOT)
+                    expect(installer.deployment.ensure_runtimes()).not_to(have_key("hook"))
 
             with context("that resolves deploy imports and toolsets from the repo catalog"):
                 with before.each:

@@ -1178,12 +1178,10 @@ The long-running hook server of one checkout, whichever IDE's hook command reach
 
 ## HookInstallation : ServerInstallation
 
-Write the IDE's `hooks.json`, which runs the hook command for each event a hook operation serves, and `hook-handlers.json`, which lists those operations for the hook server; then start the checkout's hook server.
+Write the IDE's `hooks.json`, which runs the hook command for each event a hook operation serves, and `hook-handlers.json`, which lists those operations for the hook server. The install stands up, starts, and reports no hook server: the hook command starts it on the first event.
 
 + HookInstallation(layout: IdeLayout, path: Path | str, python: str | None = None, repo: Path | str | None = None)
 ------
-+ << association >> server: HookServer | None
-+ << composition >> daemon: HookDaemon
 + interpreter: PythonInterpreter
 + dispatch_command: str
 + handlers_file: HookHandlersFile
@@ -1196,15 +1194,10 @@ Write the IDE's `hooks.json`, which runs the hook command for each event a hook 
 + write(tool: AgentTool): None
 + write_handlers(): None
 + write_hooks_manifest(): None
-+ standup(): HookServer
-+ ensure_running(): dict[str, str]
 + status(): list[str]
-+ diagnose(): dict[str, Any]
 ---<<reads hook event of>>--> AgentTool
----<<loads>>--> HookServer
 ---<<enrolls in hooks.json>>--> Hook
 ---<<registers with>>--> Installer
----<<raises>>--> HookServerNotRunning
 
 # harness/mcp
 
@@ -2395,16 +2388,14 @@ This module reports whether CDD is running and answering: *ServerHealth* says wh
 
 ## ServerHealth
 
-Report the parts of CDD that run outside this MCP host, so a person can see what is up without opening a terminal: every registered *App*, each read as it is now, and the hook server.
+Report the parts of CDD that run outside this MCP host, so a person can see what is up without opening a terminal: every registered *App*, each read as it is now, and the latest heavy and e2e test runs.
 
-+ ServerHealth(repo_root: Path | str, hook_daemon: HookDaemon | None = None)
++ ServerHealth(repo_root: Path | str, cadence: TestCadence | None = None, e2e_review: E2eReview | None = None)
 ------
 + apps: list[App]
-+ is_hook_server_running: bool
 ----
 + load(project: Path | str): ServerHealth
 + report(): ServerHealth
----<<creates>>--> HookDaemon
 ---<<aggregation>>--> App
 ---<<annotated with>>--> LanguageAdapter
 

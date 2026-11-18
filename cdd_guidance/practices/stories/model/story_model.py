@@ -90,6 +90,7 @@ class StoryNode(ModelNode, ABC):
         "child_count",
         "child_label",
         "child_band",
+        "child_target",
         "near_duplicate",
         "generic_handler",
         "shared_verb",
@@ -127,6 +128,7 @@ class StoryNode(ModelNode, ABC):
         self.child_count = 0
         self.child_label = "children"
         self.child_band = ""
+        self.child_target = ""
         self.near_duplicate = False
         self.generic_handler = False
         self.shared_verb = ""
@@ -150,10 +152,13 @@ class StoryNode(ModelNode, ABC):
     def _load_path_case(self) -> None:
         self.artifact_name, self.camel_case_path = name_facts.file_name_facts(getattr(self, "source", None))
 
-    def _load_child_band(self, count: int, label: str) -> None:
+    def _load_child_band(self, count: int, label: str, fewest: int = 4, most: int = 9) -> None:
+        """Record how many children the node holds and whether that count is outside fewest..most; a node with no
+        children yet passes, since its children are simply not written."""
         self.child_count = count
         self.child_label = label
-        self.child_band = "" if count == 0 or 4 <= count <= 9 else "error"
+        self.child_target = f"{fewest}-{most}"
+        self.child_band = "" if count == 0 or fewest <= count <= most else "error"
 
     def take_code_from(self, source: "StoryNode") -> None:
         """Keep the code the source was read with, so a copy in another channel can still write it back."""
@@ -1052,8 +1057,19 @@ class Epic(StoryNode):
         self.generic_handler = False
         self.near_duplicate = False
         self.one_time_task = False
-        self._load_child_band(len(self.epics) + len(self.stories), "children")
+        self._load_child_band(len(self.epics) + len(self.stories), *self._child_band_for_layer())
         self.shared_verb = self._shared_opening()
+
+    def _child_band_for_layer(self) -> tuple[str, int, int]:
+        """The children this node is counted by and the band they fit (`child-count-fits-layer`). A node holding
+        sub-epics groups 2-6 outcomes; a sub-epic holding only stories holds 2-9, since its sibling sub-epics carry the
+        breadth; a top epic holding only stories holds 4-9, since an epic of two or three stories is usually a sub-epic
+        of a neighbouring epic."""
+        if self.epics:
+            return "children", 2, 6
+        if self.is_sub_epic:
+            return "stories", 2, 9
+        return "stories", 4, 9
 
     def _shared_opening(self) -> str:
         names = [story.name.strip().casefold() for story in self.stories if story.name.strip()]

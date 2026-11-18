@@ -18,7 +18,7 @@ Every chat in every project talks to **one cdd server**, installed once under `~
 
 When install runs **inside** the cdd server itself, the installer skips standing up a second MCP host and starting the server, so it does not reload every toolset during an unrelated tool request.
 
-**After install finishes, read the diagnostic report back to the user.** `install` always runs `diagnose_after_install` (install-channel counts and runtime status only) and appends to `{install_path}/diagnostics.json` (for this repo, `.cursor/diagnostics.json`). It does not run guidance instruction or action probes — use `/guidance-diagnostics` for those. The CLI only prints reports that start with `!` (red); green and yellow stay in the log. Open the latest `installs[]` entry: give the overall `color`, paste the full `diagnose_install` `report` (channel deltas, any new/deleted items, **cdd server**, **hook server**, **hooks registered (events)**, **hook handlers (operations)**), and call out red or yellow. If you ran install in the shell, read that file or run `Installer(...).diagnose_install()` against the same install path — do not leave the user without the summary.
+**After install finishes, read the diagnostic report back to the user.** `install` always runs `diagnose_after_install` (install-channel counts and runtime status only) and appends to `{install_path}/diagnostics.json` (for this repo, `.cursor/diagnostics.json`). It does not run guidance instruction or action probes — use `/guidance-diagnostics` for those. The CLI only prints reports that start with `!` (red); green and yellow stay in the log. Open the latest `installs[]` entry: give the overall `color`, paste the full `diagnose_install` `report` (channel deltas, any new/deleted items, **cdd server**, **hooks registered (events)**, **hook handlers (operations)**), and call out red or yellow. If you ran install in the shell, read that file or run `Installer(...).diagnose_install()` against the same install path — do not leave the user without the summary.
 
 ### When install fails
 
@@ -40,7 +40,7 @@ Remove files written by the previous install for this IDE path. Slash **`/clean`
 
 ## Diagnose Install
 
-Compare this install with the last entry in `diagnostics.json` on the install path. Report green, yellow, or red, each channel as previous -> current (delta), every new or deleted item, whether the cdd server and hook server are running, and which hook events and handler operations are registered on the install path.
+Compare this install with the last entry in `diagnostics.json` on the install path. Report green, yellow, or red, each channel as previous -> current (delta), every new or deleted item, whether the cdd server is running, and which hook events and handler operations are registered on the install path.
 
 `diagnose_after_install` is the last install step. It runs `diagnose_install` and appends one install section to `diagnostics.json`.
 
@@ -64,4 +64,4 @@ Probe **space**, **harness**, and **tools**: ping on the live MCP host; light + 
 
 ## Ensure Runtimes
 
-Start the hook daemon and MCP host; fail if either stays down.
+Start the MCP host; fail if it stays down. The install starts no hook server: the hook command starts the checkout's hook daemon on the first event.

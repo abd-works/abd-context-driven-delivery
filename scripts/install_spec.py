@@ -1,10 +1,14 @@
 """The install script's restart of the cdd server, as /install-latest runs it: the lane serves the checkout's own commit."""
 
+import argparse
 import importlib.util
+import tempfile
 from pathlib import Path
 
 from expects import contain, equal, expect
 from mamba import before, description, it
+
+from harness.process.claude_chat_process import claude_config_folder
 
 _SCRIPT = Path(__file__).resolve().parent / "install.py"
 _spec = importlib.util.spec_from_file_location("cdd_install_script", _SCRIPT)
@@ -66,3 +70,44 @@ with description("the cdd server's restart in an install from the latest release
             server = FakeServer()
             install._serve_this_checkout(FakeInstaller(is_claude_code=False), server)
             expect(server.cdd_entry.pointed).to(equal(0))
+
+
+def _chat_install(from_chat: str | None, path: str | None = None, ide: str | None = "Claude") -> argparse.Namespace:
+    return argparse.Namespace(from_chat=from_chat, path=path, ide=ide)
+
+
+with description("the folder an install writes into"):
+    with description("for a chat working in a folder that is no CDD checkout"):
+        with it("should be the IDE's folder in the chat's folder, so the chat gets the skills and commands it works with"):
+            expect(install._install_path(_chat_install("C:/work/shop"))).to(equal(str(Path("C:/work/shop").resolve() / ".claude")))
+
+    with description("with a path named"):
+        with it("should be the path named, whatever chat asked"):
+            expect(install._install_path(_chat_install("C:/work/shop", path="C:/elsewhere/.claude"))).to(equal("C:/elsewhere/.claude"))
+
+    with description("with no chat named"):
+        with it("should be none, so the saved install's folder is used"):
+            expect(install._install_path(_chat_install(None))).to(equal(None))
+
+
+with description("a chat folder an install refuses"):
+    with description("for the home folder"):
+        with it("should refuse it, since its .claude holds Claude Code's settings for every project"):
+            expect(install._chat_folder_refusal(_chat_install(str(Path.home())))).to(contain("home folder"))
+
+    with description("for a folder in the temporary folder"):
+        with it("should refuse it, since it is thrown away"):
+            expect(install._chat_folder_refusal(_chat_install(str(Path(tempfile.gettempdir()) / "scratch")))).to(contain("temporary folder"))
+
+    with description("for one of the desktop app's spare folders"):
+        with it("should refuse it, since the app moves the chat to its project"):
+            spare = claude_config_folder() / "spares" / "spare-Ab12"
+            expect(install._chat_folder_refusal(_chat_install(str(spare)))).to(contain("spare folder"))
+
+    with description("for a project folder"):
+        with it("should refuse nothing"):
+            expect(install._chat_folder_refusal(_chat_install("C:/work/shop"))).to(equal(""))
+
+    with description("with a path named"):
+        with it("should refuse nothing, since the path says where to install"):
+            expect(install._chat_folder_refusal(_chat_install(str(Path.home()), path="C:/elsewhere/.claude"))).to(equal(""))

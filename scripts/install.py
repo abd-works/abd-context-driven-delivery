@@ -22,6 +22,10 @@ def main() -> int:
     for stream in (sys.stdout, sys.stderr):
         stream.reconfigure(encoding="utf-8", errors="replace")
     args = _parser().parse_args()
+    refusal = _chat_folder_refusal(args)
+    if refusal:
+        print(refusal, file=sys.stderr)
+        return NOT_A_PROJECT_EXIT
     chat_checkout = _other_chat_checkout(args)
     if chat_checkout is not None:
         return _install_from_chat_checkout(args, chat_checkout)
@@ -39,7 +43,8 @@ def _parser() -> argparse.ArgumentParser:
         default=None,
         metavar="FOLDER",
         help="Install for the chat working in FOLDER: from FOLDER when it is a CDD checkout, the one the person is "
-        "working on, else from this checkout. The chat bar's Run install runs this.",
+        "working on, else from this checkout into FOLDER's IDE folder. The chat bar's Run install runs this, and the "
+        "board mod runs it when a chat starts in a folder without CDD's skills and commands.",
     )
     return parser
 
@@ -97,10 +102,34 @@ def _add_serving_options(parser: argparse.ArgumentParser) -> None:
     serving.add_argument(
         "--restart-everything",
         action="store_true",
-        help="Stop every app's server and the hook server, and restart the cdd server at once, even one that holds its "
+        help="Stop every app's server and restart the cdd server at once, even one that holds its "
         "port without answering; then install in full and ping the server. A chat that connected in the seconds it was "
         "down needs its cdd connection reconnected.",
     )
+
+
+# The exit of an install refused for a chat folder that is no project; the board mod reads it to stay quiet at chat start.
+NOT_A_PROJECT_EXIT = 3
+
+
+def _chat_folder_refusal(args: argparse.Namespace) -> str:
+    """Why the chat's folder is no project to install into, when it is none: the home folder, whose ``.claude`` is
+    Claude Code's own settings for every project; a folder in the system's temporary folder, which is thrown away; or one
+    of the desktop app's spare folders, which a chat waits in before the app moves it to its project. Empty otherwise,
+    and when no chat is named or ``--path`` names where to install."""
+    if args.from_chat is None or args.path is not None:
+        return ""
+    from harness.installation.destination import is_temporary
+    from harness.process.claude_chat_process import is_desktop_spare
+
+    folder = Path(args.from_chat).resolve()
+    if folder == Path.home().resolve():
+        return f"not installed: {folder} is the home folder, whose .claude holds Claude Code's settings for every project"
+    if is_temporary(folder):
+        return f"not installed: {folder} is in the temporary folder, which is thrown away"
+    if is_desktop_spare(folder):
+        return f"not installed: {folder} is a spare folder the desktop app keeps a chat in before moving it to its project"
+    return ""
 
 
 def _other_chat_checkout(args: argparse.Namespace) -> Path | None:
@@ -111,6 +140,16 @@ def _other_chat_checkout(args: argparse.Namespace) -> Path | None:
     if chat_checkout == _REPO or not (chat_checkout / "scripts" / "install.py").is_file():
         return None
     return chat_checkout
+
+
+def _install_path(args: argparse.Namespace) -> str | None:
+    """The IDE folder to install into: the one ``--path`` names, else, for a chat, the IDE's folder in the chat's own
+    folder, so a chat in any project gets the skills and commands it works with; else none, for the saved install."""
+    if args.path is not None or args.from_chat is None:
+        return args.path
+    from harness.installation.ide_layout import IdeLayout
+
+    return str(Path(args.from_chat).resolve() / IdeLayout(args.ide or IdeLayout.DEFAULT_IDE).folder_name)
 
 
 def _install_from_chat_checkout(args: argparse.Namespace, chat_checkout: Path) -> int:
@@ -125,7 +164,7 @@ def _install(args: argparse.Namespace) -> int:
     from harness.installation.installer import Installer
     from harness.mcp.mcp_server import McpInstallation
 
-    installer = Installer.create(ide=args.ide, path=args.path, repo=_REPO)
+    installer = Installer.create(ide=args.ide, path=_install_path(args), repo=_REPO)
     server = McpInstallation.create(installer.layout, installer.path, repo=_REPO)
     # Switching the code the server runs takes seconds; a full install takes a minute, so the switch runs alone.
     if args.pin_runtime or args.update or args.serve_from_checkout:
@@ -175,7 +214,7 @@ def _install_toolsets(args: argparse.Namespace, installer: Installer, server: Mc
 # watching its output can tick each step in the chat as it happens; the agent does steps 6 and 7 itself.
 INSTALL_LATEST_STEPS = {
     1: "Merge the latest release",
-    2: "Stop every app's server and the hook server",
+    2: "Stop every app's server",
     3: "Restart the cdd server",
     4: "Install every toolset",
     5: "Ping the cdd server",
@@ -270,18 +309,16 @@ def _restart_everything(installer: Installer, server: McpInstallation) -> None:
     """Stop each server an install replaces the code of, so none keeps serving what it loaded before. The cdd server
     starts again at once rather than after the install: a chat that connects while it is down runs its header helper,
     which waits for a server longer than Claude Code waits for the helper, and Claude Code then sends no project header,
-    is refused, and leaves that chat's cdd connection failed until it is reconnected."""
+    is refused, and leaves that chat's cdd connection failed until it is reconnected. The hook server is left alone: the
+    next hook command replaces a hook daemon that loaded older hook code."""
     import space.kanban  # noqa: F401  registers the Kanban and Story UI apps
     import space.session  # noqa: F401  registers the Files app
     from harness.diagnostics.app import APPS
-    from harness.hooks.hook_installation import HookInstallation
 
     _step_started(2)
     # Two apps can share one server, as the Kanban and the Story UI do; the second finds it already stopped.
     stopped = [app.label for app in APPS.registered if app.server.stop()]
-    HookInstallation(installer.layout, installer.path, repo=_REPO).daemon.stop()
-    apps = f"stopped {', '.join(stopped)}" if stopped else "no app server was running"
-    _step_done(2, f"{apps}; hook server stopped")
+    _step_done(2, f"stopped {', '.join(stopped)}" if stopped else "no app server was running")
     _step_started(3)
     _step_done(3, _serve_this_checkout(installer, server))
 

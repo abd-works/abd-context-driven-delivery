@@ -1,0 +1,119 @@
+{
+  "chat": "5b5466c3-9f1f-4998-ace2-5da34679e50c",
+  "taken_off": "2026-11-18T19:52:49.166064+00:00",
+  "prompts": [
+    {
+      "id": "cd606ccc30ee",
+      "text": "[interruption] Title this session \"release-1-2-fixes\". You are the chat of the session board's ticket release-1-2-fixes; work on that ticket. First call sessions.switch with name release-1-2-fixes, so every tool works on its session, then read the session's latest handoff. When the switch says the session's roots are unchecked, set them up with session.set_up_roots before generating anything, so they cover exactly the pieces the ticket works on. This chat was opened for the folder C:\\dev\\abd-cdd-release-1-2-fixes. Before anything else, check the folder this chat works in. If it is another folder, stop: do not create, switch or change any session, ticket, branch or file there, and tell the person this chat opened in the wrong folder and should be started again in C:\\dev\\abd-cdd-release-1-2-fixes. This chat was opened from the chat titled \"main\" in C:\\dev\\abd-context-driven-delivery. When list_sessions shows that chat filed under a sidebar section, move this chat into the same section with move_sessions and session \"self\"; otherwise leave it where the app put it.",
+      "steps": [
+        {
+          "text": "Repin the dev lane onto the latest fixes",
+          "state": "in_progress"
+        },
+        {
+          "text": "Run unit, heavy, automated e2e tiers",
+          "state": "pending"
+        },
+        {
+          "text": "Report results",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] I'll list them",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] you're going to stay open while I work in other threads and chats will send you messages with bug reports and then you will fix them and run end to end and heavy tests the automated ones only not the judge ones after each fix once this is done we'll also do a judge round Once everything is done we'll do a judge round and I'll tell you when and then we will integrate this back into the 1.2 release",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] Yes, delete them",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] across all c:\\dev",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] delete all session logs as well",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] please get latest granola discussion code demo",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] pull out all he cdd defects and requirwed improvemtns  and lsit them",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] /backlog these into one parent ticket",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] even the queued ones gpoing to redo the queue",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] hello",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] yes",
+          "state": "pending"
+        }
+      ],
+      "is_done": false
+    },
+    {
+      "id": "91a1d86a6e98",
+      "text": "Chat UI and prompt-queue bar crash in Claude Code: find out whether it still happens after the reinstall (diagnostics green, hook not installed by design) and fix its cause. (From main's pml-web handoff.)",
+      "steps": [
+        {
+          "text": "[interruption] pml-web main chat: its mods are working now (chats.list shows it checked in from cdd-board; prompt queue and prompt-submit hook work). It is asking the person for the visual answers. When the crash started is unknown.",
+          "state": "pending"
+        }
+      ],
+      "is_done": false,
+      "robot": "Sparky"
+    },
+    {
+      "id": "446c20f0699f",
+      "text": "Story maps converge on one shape (flat 4-story epics plus one middle epic with sub-epics): make the story-map guidance (template, four-to-nine-children band, sketch format, re-generate anchoring) lead to considered two-layer maps where the sources support it, so the band no longer punishes that shape. (From the client-testimonial-video-creator chat.)",
+      "steps": [
+        {
+          "text": "[interruption] From the Nov 18 Granola demo (Emil, Timur): Timur saw the story map copy the shape of his US tax session; suspected cause is the examples CDD ships, test-framework examples included. Fix direction: install without test examples, or tell the agent not to copy an example's structure.",
+          "state": "pending"
+        }
+      ],
+      "is_done": false
+    },
+    {
+      "id": "5906584313c1",
+      "text": "render returns content but never writes the file; place_rendered only covers code modules, so markdown to drawio or whiteboard has no placing step; render for ux-ia returns just the slug (no IA converter). (From the client-testimonial-video-creator chat.)",
+      "steps": [
+        {
+          "text": "[interruption] Client chat: render with ux-ia returned just the slug while ux was ON (session.json version 2): not explained by the turned-off case; needs its exact render arguments.",
+          "state": "pending"
+        }
+      ],
+      "is_done": false
+    },
+    {
+      "id": "9022ec0fa882",
+      "text": "Files app: \"All session files\" shows \"No files here yet\" in a non-git project, though ticket.root_files and ticket.fidelity_files answer every file. (Client testimonial chat; dev lane, port 9783.)"
+    },
+    {
+      "id": "b862ddcef14d",
+      "text": "Files app: \"This session\" lists only branch-changed files, so a non-git project, where nothing is ever changed, shows none of its work; fall back to the files its fidelities declare. (Client testimonial chat.)"
+    },
+    {
+      "id": "43826eddc70f",
+      "text": "Files app: ?session-folder=<ticket> lists only .sessions/<ticket>/, not the session's root files under .context/. (Client testimonial chat.)"
+    },
+    {
+      "id": "f5b7fa5ff586",
+      "text": "Files app: a .whiteboard entry opens as an external claude.ai link; open it as a canvas inside the viewer instead. (Client testimonial chat.)"
+    }
+  ]
+}

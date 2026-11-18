@@ -21,6 +21,7 @@ import {
   currentInstall,
   currentServerHealth,
   hideDetails,
+  installWhenMissing,
   openDetails,
   reconnect,
   refreshHealth,
@@ -66,6 +67,8 @@ async function readActive($: EngineInterface): Promise<void> {
 
 // The hooks below hand the event on first and then call one of these without waiting, so a failure shows on the failure line.
 async function readBoardAfterStart($: EngineInterface): Promise<void> {
+  // The install runs beside the board's first read: a chat with no skills or commands of CDD's may have no cdd server either.
+  void installWhenMissing($).catch(shownAsFailure($, 'CDD was not installed into the folder the chat works in', 'Starting the chat, looking for .claude/skills and .claude/commands'))
   await readName($).catch(shownAsFailure($, 'The chat was not named', 'Starting the chat, reading its name'))
   await readActive($).catch(shownAsFailure($, 'The board did not load', 'Starting the chat, calling board.show'))
   readChatBarUntilAnswered($, () => readActive($).catch(shownAsFailure($, 'The board did not load', 'Opening the chat while cdd connects, calling board.show')))
