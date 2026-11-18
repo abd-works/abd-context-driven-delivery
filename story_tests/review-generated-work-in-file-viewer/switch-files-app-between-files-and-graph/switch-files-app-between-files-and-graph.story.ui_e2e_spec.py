@@ -25,6 +25,8 @@ DELETE_LINES = ["        self.close()", "        reread_all(board)", "        Bo
 TICKET_FIRST_LINE = "class Ticket:"
 # Interaction: the operations of the project's class Ticket, as its graph holds them.
 TICKET_OPERATIONS = ["Operation close", "Operation delete"]
+# Interaction: the first lines of Ticket.close and Ticket.delete, which show while their bodies are folded.
+TICKET_FIRST_LINES = ["    def close(self) -> None:", "    def delete(self, board: Board) -> None:"]
 # Interaction: the editor lines of Ticket.delete in ticket.py, 5 to 9, which a selected node's orange line runs beside.
 DELETE_LINE_COUNT = 5
 
@@ -77,7 +79,8 @@ with description("Switch Files App Between Files And Graph, in a real browser") 
         with context("Story: Fold Open Files To Selected Nodes"):
             with context("Scenario: An open file unfolds only the selected node"):
                 with it("Then the lines of Ticket.delete are unfolded"):
-                    expect([shown for shown in shown_lines(self.page) if shown in DELETE_LINES]).to(equal(DELETE_LINES))
+                    unfolded = lambda: [shown for shown in shown_lines(self.page) if shown in DELETE_LINES]
+                    expect(settled(unfolded, lambda shown: shown == DELETE_LINES)).to(equal(DELETE_LINES))
 
                 with it("And Ticket.close is folded to its first line"):
                     hidden = lambda: [shown for shown in shown_lines(self.page) if shown == "        return None"]
@@ -95,7 +98,8 @@ with description("Switch Files App Between Files And Graph, in a real browser") 
             self.page.close()
 
         with it("Then the function under the step's decorator is unfolded, showing its body"):
-            expect([shown for shown in shown_lines(self.page) if shown.strip() in {text.strip() for text in GIVEN_STEP_LINES}][:3]).to(equal(GIVEN_STEP_LINES))
+            unfolded = lambda: [shown for shown in shown_lines(self.page) if shown.strip() in {text.strip() for text in GIVEN_STEP_LINES}][:3]
+            expect(settled(unfolded, lambda shown: shown == GIVEN_STEP_LINES)).to(equal(GIVEN_STEP_LINES))
 
         with it("And the scenario's other step functions stay folded"):
             others = lambda: [shown for shown in shown_lines(self.page) if "world.ticket.delete(world.board)" in shown or "assert ticket_left(world)" in shown]
@@ -120,7 +124,8 @@ with description("Fold Open Files To Selected Nodes and Open Several Files From 
             self.page.close()
 
         with it("Then Ticket is unfolded, showing the first lines of its operations"):
-            expect([shown for shown in shown_lines(self.page) if shown.strip().startswith("def ")][:2]).to(equal(["    def close(self) -> None:", "    def delete(self, board: Board) -> None:"]))
+            firsts = lambda: [shown for shown in shown_lines(self.page) if shown.strip().startswith("def ")][:2]
+            expect(settled(firsts, lambda shown: shown == TICKET_FIRST_LINES)).to(equal(TICKET_FIRST_LINES))
 
         with it("And Ticket.close and Ticket.delete are folded to their first lines"):
             bodies = lambda: [shown for shown in shown_lines(self.page) if shown in ("        return None", *DELETE_LINES)]

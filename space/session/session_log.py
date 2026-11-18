@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from harness.agent_tools.chat_pointer import NO_CHAT, ChatPointer
+from space.work_state import SESSIONS_FOLDER
 
 if TYPE_CHECKING:
     from harness.guidance.guidance import FidelityGuidance
@@ -233,9 +234,20 @@ class SessionLog:
             return []
         return log.read_text(encoding="utf-8").splitlines()
 
+    @property
+    def _is_writable(self) -> bool:
+        """Whether the checkout the session works in is still there: a ticket's worktree can be removed while the cdd
+        server still holds its session, and a log line making its folder again would stand where the next worktree of
+        that name must be added."""
+        folder = self._session.work_folder
+        if folder is None:
+            return False
+        checkout = next((parent.parent for parent in folder.parents if parent.name == SESSIONS_FOLDER), folder.parent)
+        return checkout.is_dir()
+
     def record(self, line: str) -> None:
-        """Append line to session.log, stamped with the time it was written."""
-        if self.path is None:
+        """Append line to session.log, stamped with the time it was written; nothing once the session's checkout is gone."""
+        if not self._is_writable:
             return
         # A project's main session has no folder until something is written in it.
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -248,7 +260,9 @@ class SessionLog:
         return ChatLog(self, chat)
 
     def append_trace(self, failure: BaseException, tool: str) -> int:
-        """Append failure's trace to session.err; the line its header is on."""
+        """Append failure's trace to session.err; the line its header is on, 0 once the session's checkout is gone."""
+        if not self._is_writable:
+            return 0
         err = self.error_path
         err.parent.mkdir(parents=True, exist_ok=True)
         line_number = len(err.read_text(encoding="utf-8").splitlines()) + 1 if err.is_file() else 1

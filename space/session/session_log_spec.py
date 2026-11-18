@@ -52,6 +52,20 @@ with description("a session loop"):
             expanded = session.log.loop_at(1).expanded_text()
             expect("question" in expanded and "sketch" in expanded).to(equal(True))
 
+    # A worktree removed while the cdd server still holds its session, as a reset of a ticket's sessions removes it: a
+    # folder made again under the worktree's name would stop the next ticket.activate from adding the worktree there.
+    with context("whose ticket's worktree was removed"):
+        with before.each:
+            repo = Path(tempfile.mkdtemp())
+            Sessions(repo).switch("alpha", repo)
+            self.session = Sessions(repo).current()
+            self.worktree = Path(tempfile.mkdtemp()) / "cdd-alpha"
+            self.session.work_folder = self.worktree / ".sessions" / "alpha"
+            self.session.log.record("move alpha Discovery")
+
+        with it("should write nothing, leaving no folder where the worktree was"):
+            expect(self.worktree.exists()).to(equal(False))
+
     with context("marked by a tool call a chat sent"):
         with it("should point its next loop marker at that chat"):
             repo = Path(tempfile.mkdtemp())
