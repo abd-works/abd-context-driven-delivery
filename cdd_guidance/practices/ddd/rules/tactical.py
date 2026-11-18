@@ -129,11 +129,16 @@ class NoOrphanedObjects(PracticeGraphRule):
     node_types = ("EntityRoot", "Entity", "ValueObject")
 
     def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+        """A type is related when another class shares its module, or when it depends on another building block or one
+        depends on it, as the classes a domain model's cards compose, aggregate, associate with, or type a member by."""
         if not node.has_fact("peer_names"):
             return []
-        if len(node.get_fact("peer_names")) <= 1:
-            return [f"Domain type '{node.name}' has no relationship to other concepts in this module."]
-        return []
+        if len(node.get_fact("peer_names")) > 1 or self._depends_either_way(node, context):
+            return []
+        return [f"Domain type '{node.name}' has no relationship to other concepts in this module."]
+
+    def _depends_either_way(self, node: Node, context: RuleCheckContext) -> bool:
+        return any((edge.parent is node) != (edge.child is node) for edge in context.edges("dependsOn"))
 
 
 class ScreenInterfaceNotADomainObject(PracticeGraphRule):

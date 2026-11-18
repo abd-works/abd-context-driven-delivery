@@ -51,6 +51,8 @@ BOUNDED_CONTEXT_MARKER = Path(".context") / "bounded-context.md"
 # The words a document's name holds when it is a domain model, written with a hyphen or an underscore.
 DOMAIN_MODEL_NAMES = ("domain-model", "domain_model")
 _CONTEXT_FOLDER = ".context"
+# A run of the characters a class name is spelled with: a member's type names a class when its name is one whole run.
+_TYPE_WORD = re.compile(r"[A-Za-z0-9_]+")
 
 
 class BuildingBlock(Node):
@@ -266,6 +268,8 @@ class _WorkingCopyRead:
         self._root = reading.root
         self._domain = domain
         self._contexts = _ContextFolders()
+        # Each building block a domain model describes, with the class names its card relates it to.
+        self._described: list[tuple[Node, set[str]]] = []
 
     def read(self) -> None:
         marked = self._bounded_contexts()
@@ -274,6 +278,7 @@ class _WorkingCopyRead:
             self._read_aggregate_folder(folder, held)
         for document in self._domain_models():
             self._read_domain_model(document)
+        self._relate_described()
         self._link_blocks()
         self._map_contexts(marked)
 
@@ -376,6 +381,19 @@ class _WorkingCopyRead:
             oclass = tactical.oclass
             block = self._block(node, tactical, kind, Location(relative, oclass.line or start, oclass.end_line or start))
             block.set_fact(DESCRIBED_FACT, True)
+            self._described.append((block, _named_in_card(oclass)))
+
+    def _relate_described(self) -> None:
+        """Each building block a domain model describes depends on every other building block its card relates it to,
+        as a class read from code depends on each class its properties' types name: the classes it composes,
+        aggregates, or associates with, the classes its other members are typed by, and the classes it extends. They
+        are linked once every document is read, so a card can name a class in another aggregate."""
+        by_name = {block.name: block for block in self._in_graph.nodes() if block.type in _BLOCK_KINDS}
+        for block, names in self._described:
+            for name in sorted(names):
+                other = by_name.get(name)
+                if other is not None and other is not block:
+                    self._graph.edges.relate("dependsOn", block, other)
 
     def _aggregate(self, folder: str, members: list[tuple[TacticalClass, str]]) -> Node:
         context = self._contexts.around(folder) or self._in_graph.root
@@ -451,6 +469,13 @@ class _WorkingCopyRead:
     def _aggregate_id(self, folder: str) -> str:
         """The graph's id of the aggregate a folder holds."""
         return f"ddd:Aggregate:{folder}"
+
+
+def _named_in_card(oclass) -> set[str]:
+    """The class names a card relates its class to: each whole word of its members' types, a collection's included,
+    and the classes it extends."""
+    hints = [member.type_hint for member in [*oclass.properties, *oclass.operations] if getattr(member, "type_hint", "")]
+    return {word for hint in hints for word in _TYPE_WORD.findall(hint)} | set(oclass.bases)
 
 
 def folder_of(file: str) -> str:

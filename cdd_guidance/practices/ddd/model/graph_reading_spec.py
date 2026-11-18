@@ -13,7 +13,7 @@ from mamba import before, context, description, it  # noqa: E402
 
 from cdd_guidance.practices.ddd.ddd import Ddd  # noqa: E402
 from harness.graph.graph import Graph  # noqa: E402
-from harness.graph.rule_fixture import RuleFixture  # noqa: E402
+from harness.graph.rule_fixture import RuleFixture, SchemaRuleRun  # noqa: E402
 
 _SALES = {
     "src/.context/bounded-context.md": "# Sales\n\nMappings:\n- Sales · cart → Billing · invoice\n",
@@ -122,3 +122,68 @@ with description("DDD's reading of a domain model no code realizes yet"):
 
         with it("should hold one building block for the root, the one the code declares"):
             expect([(root.name, root.source.file) for root in blocks_of(self.fixture, "EntityRoot")]).to(equal([("Cart", "src/cart/cart.py")]))
+
+
+# A domain model whose cards relate their classes: the Cart composes its Lines and associates with a Customer in another
+# aggregate; the Coupon is related to nothing.
+_RELATED_DOMAIN_MODEL = (
+    "# Domain Model — Shop\n"
+    "\n"
+    "## Sales | custom\n"
+    "\n"
+    "### Cart\n"
+    "\n"
+    "#### Cart <<Aggregate Root>> <<Entity>>\n"
+    "\n"
+    "------\n"
+    "+ << composition >> lines: Line[]\n"
+    "+ << association >> customer: Customer\n"
+    "\n"
+    "#### CartRepository <<Repository>>\n"
+    "\n"
+    "------\n"
+    "+ << aggregation >> carts: Collection<Cart>\n"
+    "\n"
+    "#### Line <<Entity>>\n"
+    "\n"
+    "------\n"
+    "+ nickname: string\n"
+    "\n"
+    "#### Coupon <<Value Object>>\n"
+    "\n"
+    "------\n"
+    "+ code: string\n"
+    "\n"
+    "### Customer\n"
+    "\n"
+    "#### Customer <<Aggregate Root>> <<Entity>>\n"
+    "\n"
+    "------\n"
+    "+ name: string\n"
+    "\n"
+    "#### CustomerRepository <<Repository>>\n"
+    "\n"
+    "------\n"
+    "+ << aggregation >> customers: Collection<Customer>\n"
+)
+
+
+def orphaned_in(fixture: RuleFixture) -> list[str]:
+    """The building blocks no-orphaned-objects reports, by name."""
+    rule = next(rule for rule in fixture.practice.reading.graph_checks.values() if getattr(rule, "slug", "") == "no-orphaned-objects")
+    run = SchemaRuleRun(rule, fixture.context)
+    return sorted(node.name for node in fixture.context.nodes() if run.node_hits(node))
+
+
+with description("DDD's reading of the relationships a domain model's cards declare"):
+    with before.all:
+        self.fixture = RuleFixture(Ddd, {"src/.context/domain-model.md": _RELATED_DOMAIN_MODEL})
+        self.edges = self.fixture.practice.reading.graph.edges
+        self.cart = next(iter(blocks_of(self.fixture, "EntityRoot")), None)
+
+    with it("should relate the root to the class it composes and the class it associates with"):
+        related = sorted(edge.child.name for edge in self.edges.from_parent("dependsOn", self.cart)) if self.cart else []
+        expect(related).to(equal(["Customer", "Line"]))
+
+    with it("should report no class the document relates to another as orphaned, only the one it relates to none"):
+        expect(orphaned_in(self.fixture)).to(equal(["Coupon"]))
