@@ -73,6 +73,20 @@ with description("WhiteboardBoundedContextMap"):
             cards = [element.text for element in self.board.elements if isinstance(element, Shape) and element.role == "class"]
             expect(any("*«Aggregate Root» «Entity»*" in card and "**CustomerProfile**" in card for card in cards)).to(be_true)
 
+        with it("should draw no «from:» copy of a class another aggregate owns"):
+            copies = [element.text for element in self.board.elements if isinstance(element, Shape) and "«from:" in element.text]
+            expect(copies).to(equal([]))
+
+        with it("should draw a call into another aggregate as one arrow between the two classes' own cards"):
+            ids = {element.text.split("**")[1]: element.id for element in self.board.elements if isinstance(element, Shape) and element.role == "class"}
+            calls = [(arrow.from_id, arrow.to_id) for arrow in self.board.elements if isinstance(arrow, Arrow) and arrow.label == "«sendSupportRequest»"]
+            expect(calls).to(equal([(ids["CustomerProfile"], ids["KycInquiryRepository"])]))
+
+        with it("should draw each integration from the root as one arrow to the root it reaches, named by its pattern"):
+            ids = {element.text.split("**")[1]: element.id for element in self.board.elements if isinstance(element, Shape) and element.role == "class"}
+            reached = [(arrow.from_id, arrow.to_id) for arrow in self.board.elements if isinstance(arrow, Arrow) and arrow.label == "«Customer/Supplier»"]
+            expect(reached).to(equal([(ids["Subscription"], ids["CustomerProfile"])]))
+
         with it("should read back each aggregate's classes"):
             def classes(drawn):
                 return sorted((aggregate.name, sorted(oclass.name for oclass in aggregate.classes)) for aggregate in drawn.every_aggregate)

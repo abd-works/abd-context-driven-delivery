@@ -339,6 +339,9 @@ class ClassBoard(ClassView):
     """The room between a module page's section and the cards in it."""
     group_role = "group"
     """What the id of the section drawn round a group of pages starts with."""
+    links_across_pages = False
+    """True when an arrow from one page's class to another page's is drawn between the two cards themselves; else
+    each page shows the other page's class as a dashed «from:» copy and the arrow ends on that."""
 
     @property
     def draws_one_page(self) -> bool:
@@ -367,7 +370,16 @@ class ClassBoard(ClassView):
             group.draw_section_on(board, corner)
         for group, corner in zip(groups, corners):
             group.draw_pages_on(board, corner)
+        if self.links_across_pages:
+            for arrow in self._arrows_across_pages():
+                board.add(_arrow_element(arrow, f"across.{_key(arrow.source, arrow.target)}", f"class.{_key(arrow.source)}", f"class.{_key(arrow.target)}"))
         return board
+
+    def _arrows_across_pages(self) -> List[DiagramArrow]:
+        """The arrows of the whole model whose two classes sit on different pages, each straight from card to card."""
+        every = ClassViewPage(self)._arrows()
+        page_of = {cell_id: id(self.module_of.get(id(oclass))) for cell_id, oclass in self.classes_by_cell.items()}
+        return [arrow for arrow in every if page_of.get(arrow.source) != page_of.get(arrow.target)]
 
 
 def _flowed(sizes: List[Tuple[float, float]], row_width: float) -> List[Tuple[float, float]]:
@@ -429,6 +441,10 @@ class _ClassBoardPage(ClassViewPage):
 
     def __init__(self, view: ClassBoard, module: Optional[Module] = None) -> None:
         super().__init__(view, module)
+        if view.links_across_pages and self._local_ids is not None:
+            # The board draws the links to other pages itself, so this page shows only its own classes.
+            self._import_ids = []
+            self._page_ids = set(self._local_ids)
         self._view = view
         self._name = module.name.strip() if module is not None else ""
         self._title = view.page_title(module) if module is not None else ""
@@ -481,16 +497,21 @@ class _ClassBoardPage(ClassViewPage):
 
     def _board_arrow(self, arrow: DiagramArrow, cards: Dict[str, DiagramClass], page_name: str) -> BoardElement:
         """The board's arrow for a routed arrow: its kind in its id, the ends it leaves and reaches by, and its route."""
-        kind = arrow.kind if arrow.kind in KINDS else "association"
-        label = "extends" if kind == INHERITANCE and not arrow.label else arrow.label
-        heads = ["circle", "arrow"] if kind in ("composition", "aggregation") else None
-        return BoardElement.arrow(
-            f"{kind}.{_key(page_name, arrow.source, arrow.target)}",
-            from_id=self._element_id(arrow.source, page_name), to_id=self._element_id(arrow.target, page_name),
+        return _arrow_element(
+            arrow, _key(page_name, arrow.source, arrow.target),
+            self._element_id(arrow.source, page_name), self._element_id(arrow.target, page_name),
             from_side=arrow.exit_side, to_side=arrow.entry_side,
-            label=label, dash=kind == "dependency", heads=heads,
             bends=None if arrow.straight else arrow.bends_from_middles(cards[arrow.source].geometry, cards[arrow.target].geometry),
         )
+
+
+def _arrow_element(arrow: DiagramArrow, key: str, from_id: str, to_id: str, **route: object) -> BoardElement:
+    """The board's arrow for arrow between the elements from_id and to_id name: its kind in its id, its words, its dash
+    and its heads, and the route, when one is given; with none, the board draws it straight."""
+    kind = arrow.kind if arrow.kind in KINDS else "association"
+    label = "extends" if kind == INHERITANCE and not arrow.label else arrow.label
+    heads = ["circle", "arrow"] if kind in ("composition", "aggregation") else None
+    return BoardElement.arrow(f"{kind}.{key}", from_id=from_id, to_id=to_id, label=label, dash=kind == "dependency", heads=heads, **route)
 
 
 
