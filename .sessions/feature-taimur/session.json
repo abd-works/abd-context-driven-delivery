@@ -3,5 +3,11 @@
   "title": "feature taimur",
   "scope": "feature",
   "branch": "feature-taimur",
-  "worktree": "C:\\dev\\abd-cdd-feature-taimur"
+  "worktree": "C:\\dev\\abd-cdd-feature-taimur",
+  "guidance": {
+    "stages": [
+      "discovery"
+    ],
+    "version": 1
+  }
 }
