@@ -1,7 +1,8 @@
 import type { FileEntryData } from '@cdd/space/kanban/fidelity-progress'
 import type { SessionFileData } from '@cdd/space/session/session'
 
-import type { BoardStore, FilesPanel, FilesSource } from '../shared/board-store'
+import { DEFAULT_FILE_READS } from '../shared/board-store'
+import type { BoardStore, FileReads, FilesPanel, FilesSource } from '../shared/board-store'
 import type { FidelityProgressClient } from './fidelity-progress-client'
 import { OpenFileComments } from './open-file-comments'
 import type { TicketClient } from './ticket-client'
@@ -77,7 +78,8 @@ export class FilesPanelClient {
   private async openPanel(ticket: TicketClient, choice: FilesChoice, tab: string = ''): Promise<void> {
     const files = await this.read(ticket, choice)
     if (!files) return
-    const panel: FilesPanel = { kind: 'files', ticket, ...choice, files, changedOnly: false, activeTab: '', shown: null, lines: {}, isExpanded: false }
+    const reads = this.panel?.reads ?? DEFAULT_FILE_READS
+    const panel: FilesPanel = { kind: 'files', ticket, ...choice, files, changedOnly: false, reads, activeTab: '', shown: null, lines: {}, isExpanded: false }
     this.store.showPanel(panel)
     await this.openTab(tab || (shownTabs(panel)[0]?.path ?? ''))
   }
@@ -85,6 +87,12 @@ export class FilesPanelClient {
   async togglePractice(practice: string): Promise<void> {
     this.change(panel => ({ ...panel, practicesOn: panel.practicesOn.includes(practice) ? panel.practicesOn.filter(on => on !== practice) : [...panel.practicesOn, practice] }))
     await this.keepATabShown()
+  }
+
+  // Turns the open file's folds or its broken rules on or off, each apart from the other, and reads the file again.
+  async toggleRead(read: keyof FileReads): Promise<void> {
+    this.change(panel => ({ ...panel, reads: { ...panel.reads, [read]: !panel.reads[read] } }))
+    await this.refreshShown()
   }
 
   async filterChanged(changedOnly: boolean): Promise<void> {
@@ -102,7 +110,8 @@ export class FilesPanelClient {
   // A file that is not there yet is shown as not generated, without asking the session for it.
   private async fileOf(ticket: TicketClient, path: string, isOnDisk: boolean): Promise<SessionFileData | null> {
     if (!path || !isOnDisk) return null
-    return ticket.sessionClient.file(path)
+    const { folds, rules } = this.panel?.reads ?? DEFAULT_FILE_READS
+    return ticket.sessionClient.file(path, rules, false, folds)
   }
 
   private isOnDisk(panel: FilesPanel, path: string): boolean {

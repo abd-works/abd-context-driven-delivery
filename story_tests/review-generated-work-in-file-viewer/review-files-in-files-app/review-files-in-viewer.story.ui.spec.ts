@@ -38,7 +38,8 @@ const ORDER_LINES = [
   '    def place(self, cart: Cart) -> Order:',
   '        if not cart.items:',
   LINE_14,
-  ...Array.from({ length: 27 }, (_, index) => `        # step ${index + 15}`),
+  // Lines of the class itself, so a read of the file finds Order on lines 5 to 41 as its saved graph does.
+  ...Array.from({ length: 27 }, (_, index) => `    STEP_${index + 15} = ${index + 15}`),
 ]
 // The graph checkout-flow saved, in the shape harness/graph/saved_graph.py writes (SAVED_SHAPE_VERSION 5).
 const ORDER_GRAPH = {
@@ -84,6 +85,12 @@ async function viewOrder(page: Page): Promise<void> {
   await page.locator('.details-bar').getByRole('button', { name: 'checkout-flow', exact: true }).click()
   await files(page).getByRole('tab', { name: 'order.py', exact: true }).click()
   await expect(row(page, 12)).toBeVisible()
+}
+
+// The viewer's Rules toggle, off by default; Folds is on by default.
+async function turnOn(page: Page, toggle: 'Folds' | 'Rules'): Promise<void> {
+  await files(page).getByRole('button', { name: toggle, exact: true }).click()
+  await expect(files(page).getByRole('button', { name: toggle, exact: true })).toHaveAttribute('aria-pressed', 'true')
 }
 
 async function selectLines(page: Page, start: number, end: number): Promise<void> {
@@ -161,11 +168,12 @@ test.describe('View Files In Rich Viewer', () => {
       seedOrder()
       writeInto(join(SESSION, 'graph.json'), JSON.stringify(ORDER_GRAPH))
       await viewOrder(page)
+      await turnOn(page, 'Rules')
     })
 
     test('Then the viewer marks lines 12 to 14 with vocabulary-traces-to-source: EmptyCartError should say which cart and why', async ({ page }) => {
       for (const line of [12, 13, 14]) await expect(row(page, line).locator('.code-line')).toHaveClass(/is-violated/)
-      await expect(row(page, 11).locator('.code-line')).not.toHaveClass(/is-violated/)
+      await expect(row(page, 4).locator('.code-line')).not.toHaveClass(/is-violated/)
       await expect(row(page, 12).getByRole('note')).toHaveText('vocabulary-traces-to-source: EmptyCartError should say which cart and why')
     })
   })

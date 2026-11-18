@@ -42,6 +42,9 @@ export type RootChoice = {
 export type ReportPanel = { kind: 'report'; ticket: TicketClient; progress: FidelityProgressClient | null; report: ReportClient; closedRules: string[]; isExpanded: boolean }
 // Where a files panel's tabs come from: the fidelities of the ticket's stage, its session folder, or its workpath.
 export type FilesSource = 'fidelities' | 'session' | 'workpath'
+// What the open file is read with: its folds, on by default, and the rules it breaks, off by default.
+export type FileReads = { folds: boolean; rules: boolean }
+export const DEFAULT_FILE_READS: FileReads = { folds: true, rules: false }
 export type FilesPanel = {
   kind: 'files'
   ticket: TicketClient
@@ -52,6 +55,7 @@ export type FilesPanel = {
   // The practices whose files show as tabs, and whether only the files the ticket's branch changed show.
   practicesOn: string[]
   changedOnly: boolean
+  reads: FileReads
   activeTab: string
   // The open file as the session reads it, with its comments, folds and violations; none for a file not there yet.
   shown: SessionFileData | null

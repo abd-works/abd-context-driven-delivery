@@ -187,6 +187,30 @@ def _(s):
         expect(folds).to(equal([("Order", "class", *ORDER_CLASS_LINES), ("place", "block", 12, 14)]))
 
 
+@shared_stories.scenario("Fold Classes And Operations", "Fold the file with Folds on and Rules off")
+def _(s):
+    @s.given("checkout-flow's session holds order.py")
+    def _(world):
+        seed_checkout_flow(world)
+
+    @s.and_("checkout-flow's graph places the class Order on lines 5 to 41 of order.py, and found vocabulary-traces-to-source broken on lines 12 to 14")
+    def _(world):
+        world.project.seed_session_file(CHECKOUT_FLOW, GRAPH_FILE_NAME, json.dumps(ORDER_GRAPH))
+
+    @s.when("the Person views order.py with Folds on and Rules off")
+    def _(world):
+        world.opened = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.file(path=ORDER_FILE, folds=True))
+
+    @s.then("the viewer offers a fold of Order over lines 5 to 41, and a fold of place over lines 12 to 14")
+    def _(world):
+        folds = [(fold["name"], fold["kind"], fold["range"]["start_line"], fold["range"]["end_line"]) for fold in world.opened["folds"]]
+        expect(folds).to(equal([("Order", "class", *ORDER_CLASS_LINES), ("place", "block", 12, 14)]))
+
+    @s.and_("it marks no broken rule")
+    def _(world):
+        expect(world.opened["violations"]).to(equal([]))
+
+
 @shared_stories.scenario("Mark Lines A Broken Rule Names", "Mark the lines a broken rule names")
 def _(s):
     @s.given("checkout-flow's session holds order.py")

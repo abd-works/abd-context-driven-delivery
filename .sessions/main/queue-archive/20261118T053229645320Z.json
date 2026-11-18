@@ -1,0 +1,25 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-18T05:32:29.645320+00:00",
+  "prompts": [
+    {
+      "id": "e6d5446fdc5d",
+      "text": "[interruption] Yes",
+      "steps": [
+        {
+          "text": "Commit leftover session files",
+          "state": "done"
+        },
+        {
+          "text": "Close the ticket session",
+          "state": "done"
+        },
+        {
+          "text": "Check branch merged and worktree gone",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    }
+  ]
+}

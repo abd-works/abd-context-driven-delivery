@@ -166,12 +166,19 @@ class FileViolation:
 
 
 class RuleReads:
-    """Which rules a viewer reads on a file: with rules, those the file breaks read on its own; with cross_file, those
-    only the session's whole working copy finds. Either gives the file's folds; neither reads a graph."""
+    """What a viewer reads on a file: with folds, the folds of its classes and members and no broken rule; with rules,
+    the rules the file breaks read on its own; with cross_file, those only the session's whole working copy finds. Any
+    of them gives the file's folds; none reads a graph."""
 
-    def __init__(self, rules: bool = False, cross_file: bool = False) -> None:
+    def __init__(self, rules: bool = False, cross_file: bool = False, folds: bool = False) -> None:
         self.rules = rules
         self.cross_file = cross_file
+        self.folds = folds
+
+    @property
+    def reads_graph(self) -> bool:
+        """Whether the viewer asked for anything a graph places: folds, steps, or broken rules."""
+        return self.folds or self.rules or self.cross_file
 
 
 class SessionFile:
@@ -185,6 +192,7 @@ class SessionFile:
         self._session = session
         self._reads_rules = reads.rules
         self._cross_file = reads.cross_file
+        self._reads_graph = reads.reads_graph
         self._text = session.session_files.read(path)
         self._path = self._text.path
 
@@ -229,9 +237,9 @@ class SessionFile:
     @property
     @data_field
     def folds(self) -> list[Fold]:
-        """A fold for each class, operation, and property read in this file, in line order; none while the viewer reads
-        no rules."""
-        if not (self._reads_rules or self._cross_file):
+        """A fold for each class, operation, and property read in this file, in line order; none while the viewer asks
+        for no folds and no rules."""
+        if not self._reads_graph:
             return []
         nodes = [node for node in self._nodes() if node.type in CLASS_TYPES | MEMBER_TYPES]
         folds = [Fold(self.range(node.line, node.end_line), "class" if node.type in CLASS_TYPES else "block", node.name) for node in nodes if node.end_line > node.line]

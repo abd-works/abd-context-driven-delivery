@@ -12,6 +12,9 @@ function subjectOf(panel: FilesPanel): string {
   return `${panel.ticket.name} · ${panel.ticket.face.stagePlace}`
 }
 
+const READ_LABELS = { folds: 'Folds', rules: 'Rules' } as const
+const READ_TITLES = { folds: "Fold the open file's classes and operations", rules: 'Mark the rules the open file breaks, read on its own: under a second' } as const
+
 // A toggle per practice of the ticket's stage, by its short form and in its colour, then the changed-files filter.
 function FileFiltersView({ panel }: { panel: FilesPanel }) {
   const { page } = useBoard()
@@ -26,6 +29,11 @@ function FileFiltersView({ panel }: { panel: FilesPanel }) {
           </button>
         )
       })}
+      {(['folds', 'rules'] as const).map(read => (
+        <button key={read} className={panel.reads[read] ? 'read-toggle is-on' : 'read-toggle'} aria-pressed={panel.reads[read]} title={READ_TITLES[read]} onClick={() => void page.files.toggleRead(read)}>
+          {READ_LABELS[read]}
+        </button>
+      ))}
       <label className="changed-filter">
         <input type="checkbox" checked={panel.changedOnly} onChange={event => void page.files.filterChanged(event.target.checked)} />
         only changed files

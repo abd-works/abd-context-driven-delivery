@@ -381,6 +381,16 @@ Inherited from the graph's Unfold Calls And Classes In Source: the Files app reu
 *Then* the source view offers a fold of each heading over its section, *# Checkout* over both of the others
 *But* a heading inside a code block folds nothing
 
+#### Scenario: Fold the file with Folds on and Rules off
+
+Requested by the person on 2026-11-18: "Code folds is a separate toggle." The board's file viewer has a Folds toggle, on by default, and a Rules toggle, off by default: Folds shows the folds of the file's classes and operations, Rules its broken rules, each without the other.
+
+*Given* checkout-flow's session holds *order.py*
+*And* checkout-flow's graph places the class *Order* on lines 5 to 41 of *order.py*, and found *vocabulary-traces-to-source* broken on lines 12 to 14
+*When* the Person views *order.py* with Folds on and Rules off
+*Then* the viewer offers a fold of *Order* over lines 5 to 41, and a fold of *place* over lines 12 to 14
+*And* it marks no broken rule
+
 ## Story: Fold With Keyboard Shortcuts
 
 Requested by the person on 2026-11-16: "Cursor-equivalent keyboard shortcuts (or VS Code, configurable in a context config json), e.g. Ctrl+K Ctrl+0, Ctrl+M etc." The project's keys sit in `.context/files-app-keybindings.json`, written as VS Code's and Cursor's keybindings.json writes them. Only the page binds keys: `harness/files_app/app/files/files-fold-keys.spec.ts`.
