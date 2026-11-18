@@ -8,7 +8,7 @@
     "stages": [
       "discovery"
     ],
-    "version": 6
+    "version": 7
   },
   "practices": {
     "bdd": {
@@ -18,6 +18,9 @@
       "enabled": false
     },
     "ux": {
+      "enabled": false
+    },
+    "clean_engineering": {
       "enabled": false
     }
   }
