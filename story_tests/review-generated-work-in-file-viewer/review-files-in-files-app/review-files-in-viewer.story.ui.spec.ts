@@ -87,12 +87,6 @@ async function viewOrder(page: Page): Promise<void> {
   await expect(row(page, 12)).toBeVisible()
 }
 
-// The viewer's Rules toggle, off by default; Folds is on by default.
-async function turnOn(page: Page, toggle: 'Folds' | 'Rules'): Promise<void> {
-  await files(page).getByRole('button', { name: toggle, exact: true }).click()
-  await expect(files(page).getByRole('button', { name: toggle, exact: true })).toHaveAttribute('aria-pressed', 'true')
-}
-
 async function selectLines(page: Page, start: number, end: number): Promise<void> {
   await row(page, start).getByRole('button', { name: `Line ${start}`, exact: true }).click()
   await row(page, end).getByRole('button', { name: `Line ${end}`, exact: true }).click({ modifiers: ['Shift'] })
@@ -168,7 +162,6 @@ test.describe('View Files In Rich Viewer', () => {
       seedOrder()
       writeInto(join(SESSION, 'graph.json'), JSON.stringify(ORDER_GRAPH))
       await viewOrder(page)
-      await turnOn(page, 'Rules')
     })
 
     test('Then the viewer marks lines 12 to 14 with vocabulary-traces-to-source: EmptyCartError should say which cart and why', async ({ page }) => {

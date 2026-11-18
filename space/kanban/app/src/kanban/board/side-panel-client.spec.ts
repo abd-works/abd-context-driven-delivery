@@ -64,7 +64,7 @@ const twoPractices = (changes: Partial<FilesPanel> = {}): FilesPanel =>
     files: { 'stories-scenarios': STORIES_FILES, 'bdd-realization': BDD_FILES },
     practicesOn: ['stories'],
     changedOnly: false,
-    reads: { folds: true, rules: false },
+    reads: { folds: true, rules: true },
     activeTab: '',
     shown: null,
     lines: {},

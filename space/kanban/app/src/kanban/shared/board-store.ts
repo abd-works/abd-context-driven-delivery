@@ -42,9 +42,9 @@ export type RootChoice = {
 export type ReportPanel = { kind: 'report'; ticket: TicketClient; progress: FidelityProgressClient | null; report: ReportClient; closedRules: string[]; isExpanded: boolean }
 // Where a files panel's tabs come from: the fidelities of the ticket's stage, its session folder, or its workpath.
 export type FilesSource = 'fidelities' | 'session' | 'workpath'
-// What the open file is read with: its folds, on by default, and the rules it breaks, off by default.
+// What the open file is read with: its folds, and the rules it breaks; both on by default, as the graph's source view shows them.
 export type FileReads = { folds: boolean; rules: boolean }
-export const DEFAULT_FILE_READS: FileReads = { folds: true, rules: false }
+export const DEFAULT_FILE_READS: FileReads = { folds: true, rules: true }
 export type FilesPanel = {
   kind: 'files'
   ticket: TicketClient

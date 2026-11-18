@@ -383,7 +383,7 @@ Inherited from the graph's Unfold Calls And Classes In Source: the Files app reu
 
 #### Scenario: Fold the file with Folds on and Rules off
 
-Requested by the person on 2026-11-18: "Code folds is a separate toggle." The board's file viewer has a Folds toggle, on by default, and a Rules toggle, off by default: Folds shows the folds of the file's classes and operations, Rules its broken rules, each without the other.
+Requested by the person on 2026-11-18: "Code folds is a separate toggle." Changed by the person the same day ("in the graph folds and rules are on by default"): both toggles are on by default, as the graph shows them. The board's file viewer has a Folds toggle and a Rules toggle: Folds shows the folds of the file's classes and operations, Rules its broken rules, each without the other.
 
 *Given* checkout-flow's session holds *order.py*
 *And* checkout-flow's graph places the class *Order* on lines 5 to 41 of *order.py*, and found *vocabulary-traces-to-source* broken on lines 12 to 14
