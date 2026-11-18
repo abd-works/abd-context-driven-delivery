@@ -534,7 +534,7 @@ function robotsNoteOf(robots: SubAgentTask[], goals: QueuedPrompt[]): string[] {
   return [
     "Sub-agent mode is on. You decide where this message goes: do it yourself; make it a task of an item in a robot's queue with prompt-queue.add_interruption;",
     "or give it to a robot as a new item with prompt-queue.add, its text starting [for <robot name>]. Take its step off this goal when it goes elsewhere.",
-    "A robot already at work reads a new task only when it next reads the queue: tell it at once with SendMessage to its robot name. The robots' queues:",
+    "A robot works only the words this chat sends it, and says when it finished: send it new work with SendMessage to its robot name. The robots' queues:",
     ...robots.map((robot, place) => `${agentNameOf(robot, place)}: ${robotPromptsOf(goals, robot, place).map(goal => `[${goal.id}] ${goal.text.slice(0, GOAL_TITLE_COLUMNS)}`).join('; ')}`),
   ]
 }
@@ -745,82 +745,40 @@ export async function renameAgent($: EngineInterface, place: number): Promise<vo
   await $.prompt.fill({ text: '', mode: 'replace' })
 }
 
-/** A sub-agent's turn ended: while the queue plays in sub-agent mode, its robot is handed its next open card. */
-export async function finishRobotTurn($: EngineInterface, agentId: string): Promise<void> {
-  if ((await read($, isPlaying)) && (await read($, isSubAgentMode))) {
-    await sendTasksToSubAgents($, agentId)
-  }
-}
-
-/** A sub-agent still starting, working a turn, or waiting on work it owns: it is not handed another card yet. */
-const AT_WORK = ['pending', 'running', 'waiting']
-
 /**
- * Each robot works one card at a time: a robot with no sub-agent starts as one on its first open card; a robot whose
- * sub-agent finished its card is sent its next open card as a message, so the same sub-agent carries on with what it
- * learned. A robot at work is passed over, and one that stopped without marking its card done is not sent that card
- * again. `finished` names a sub-agent whose turn just ended, which counts as finished even while still listed as
- * running. Work given to no robot is grouped first, except when a robot's turn ends: that only hands on its next card.
+ * Sub-agent mode, playing: this chat is the orchestrator. Each robot whose last card is done, or that has had none, is
+ * handed its next open card: this chat is asked to send the robot the card's words exactly, and to mark the card done
+ * when the robot reports it finished. A robot still working the card it was handed is passed over, and with nothing to
+ * hand out, this chat is asked nothing. Work given to no robot is grouped first.
  */
-export async function sendTasksToSubAgents($: EngineInterface, finished = ''): Promise<void> {
-  if (finished === '') {
-    await groupIntoTasks($)
-  }
-  const held = await read($, queue)
-  const agents = await $.agent.list()
-  for (const [place, task] of robotsOf(held.prompts.filter(prompt => !prompt.is_done), await read($, tasks)).entries()) {
+export async function sendTasksToSubAgents($: EngineInterface): Promise<void> {
+  await groupIntoTasks($)
+  const held = (await read($, queue)).prompts
+  const sent = await read($, sentCards)
+  const handed: { robot: string; card: QueuedPrompt }[] = []
+  for (const [place, task] of robotsOf(held.filter(prompt => !prompt.is_done), await read($, tasks)).entries()) {
     const robot = agentNameOf(task, place)
-    const card = held.prompts.find(prompt => prompt.robot === robot && !prompt.is_done)
-    const agent = agents.filter(listed => listed.name === robot).at(-1)
-    if (!card || (agent && agent.id !== finished && AT_WORK.includes(agent.status)) || (agent && !(await claimCard($, robot, card)))) {
-      continue
+    const working = held.find(prompt => prompt.id === sent[robot] && !prompt.is_done)
+    const card = held.find(prompt => prompt.robot === robot && !prompt.is_done)
+    if (card && !working) {
+      handed.push({ robot, card })
     }
-    if (!(await handCard($, robot, task, card, agent?.id, held.chat))) {
-      return
-    }
-    await update($, sentCards, cards => ({ ...cards, [robot]: card.id }))
   }
+  if (handed.length === 0) {
+    return
+  }
+  await update($, sentCards, cards => ({ ...cards, ...Object.fromEntries(handed.map(({ robot, card }) => [robot, card.id])) }))
+  $.prompt.submit({ text: handOutOf(handed), asUser: true })
+    .catch(thrown => showFailure($, `Not sent: ${reasonOf(thrown)}`, 'Playing the queue in sub-agent mode, asking this chat to hand out the robots\' cards'))
 }
 
-/** A robot's sub-agent is about to be sent its next card: the card is recorded as sent first, so a second hand-on at the
- * same moment, or after the robot stopped without marking it done, finds it sent and sends nothing. */
-async function claimCard($: EngineInterface, robot: string, card: QueuedPrompt): Promise<boolean> {
-  let isClaimed = false
-  await update($, sentCards, cards => {
-    if (cards[robot] === card.id) {
-      return cards
-    }
-    isClaimed = true
-    return { ...cards, [robot]: card.id }
-  })
-  return isClaimed
-}
-
-/** One card to a robot: a message to its sub-agent when it has one, else a new sub-agent under the robot's name. */
-async function handCard($: EngineInterface, robot: string, task: SubAgentTask, card: QueuedPrompt, agentId: string | undefined, chat: string): Promise<boolean> {
-  const brief = cardBriefOf(robot, card, chat)
-  if (agentId) {
-    const delivered = await $.session.send({ to: { agentId }, text: brief })
-    if (!delivered.isDelivered) {
-      await showFailure($, `${robot} was not sent its next card: ${delivered.reason}`, `Sending "${card.text.slice(0, GOAL_TITLE_COLUMNS)}" to ${robot}`)
-    }
-    return delivered.isDelivered
-  }
-  const started = await $.agent.spawn({ prompt: brief, description: `${robot}: ${task.description}`, name: robot, subagentType: 'general-purpose' })
-  if (started.deny) {
-    await showFailure($, `Sub-agent refused: ${started.deny}`, `Sending the task "${task.description}" to a sub-agent`)
-    return false
-  }
-  return true
-}
-
-/** What a robot is told with each card: the card and its id, and that it reports its own progress on the queue. */
-function cardBriefOf(robot: string, card: QueuedPrompt, chat: string): string {
+/** What this chat is asked when robots are due their next card: who gets which words, and how to hand them over. */
+function handOutOf(handed: { robot: string; card: QueuedPrompt }[]): string {
   return [
-    `You are ${robot}, working one card of the prompt queue of chat ${chat}.`,
-    `Card [${card.id}] ${card.text}`,
-    `First give the card its tasks with prompt-queue.set_steps (chat ${chat}, prompt ${card.id}), tick each with prompt-queue.step_done as you finish it,`,
-    `and when the card's work is done mark it done with prompt-queue.done (chat ${chat}, prompt ${card.id}). Then stop: your next card is sent to you.`,
+    "Hand out the robots' next cards. Send each robot its card's words exactly as written below, and nothing else:",
+    'start a robot that has not run with the Agent tool, named after the robot and run in the background; send a robot that already ran its words with SendMessage to its name.',
+    'When a robot tells you it finished, mark its card done with prompt-queue.done; its next card follows.',
+    ...handed.map(({ robot, card }) => `- ${robot}, card [${card.id}]: ${card.text}`),
   ].join('\n')
 }
 

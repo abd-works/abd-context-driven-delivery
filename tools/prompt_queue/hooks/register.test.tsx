@@ -1163,130 +1163,65 @@ test("✎ on a sub-agent's column names it from the prompt box's draft", async (
   expect(seeded.prompts.map(prompt => prompt.robot)).toEqual(['Sparky', 'Captain Tests'])
 })
 
-test("a sub-agent starts with its column's name", async ($, on) => {
-  const seeded = groupedQueue(on, [{ ...GROUPED[0]!, name: 'Captain Tests' }, GROUPED[1]!])
-  seeded.stored.isPlaying = { value: true, version: 1 }
-  const spawned: string[] = []
-  on('agent.spawn', (_, e) => {
-    spawned.push((e as { description: string }).description)
-    return { model: 'claude-sonnet-5-5' }
-  })
-  on('agent.list', () => ({ value: [] }))
-  on('turn.complete', () => ({ text: 'Done.' }))
-
-  await $.turn.complete(FINISHED_TURN)
-  await unawaitedWorkSettled()
-
-  expect(spawned).toEqual(['Captain Tests: Write the story map', 'Bolt: Run the tests'])
-})
-
-test("a robot starts on its first open card alone, told the card's id and to mark it done itself", async ($, on) => {
-  const seeded = groupedQueue(on)
-  seeded.stored.isPlaying = { value: true, version: 1 }
-  const briefs: string[] = []
-  on('agent.spawn', (_, e) => {
-    briefs.push((e as { prompt: string }).prompt)
-    return { model: 'claude-sonnet-5-5' }
-  })
-  on('agent.list', () => ({ value: [] }))
-  on('turn.complete', () => ({ text: 'Done.' }))
-
-  await $.turn.complete(FINISHED_TURN)
-  await unawaitedWorkSettled()
-
-  expect([briefs[0]!.includes('[a] Write the scenarios'), briefs[0]!.includes('prompt-queue.done'), briefs[0]!.includes('Run the unit tier')]).toEqual([true, true, false])
-})
-
-/** Sparky's first card done and a second open, the sub-agent that worked the first one finished. */
-function robotBetweenCards(on: TestOn, more: Prompt[] = []) {
-  const seeded = seedQueue(on, true, '', [{ id: 'a', text: 'Write the scenarios', is_done: true, robot: 'Sparky' }, { id: 'c', text: 'Validate them', robot: 'Sparky' }, ...more])
+/** A finished turn of this chat while playing in sub-agent mode, with the robots' queue as given: what this chat was
+ * then asked to do, if anything. */
+async function handOut($: TestEngine, on: TestOn, prompts: Prompt[], sent: Record<string, string> = {}, tasks = GROUPED) {
+  const seeded = seedQueue(on, true, '', prompts)
   seeded.stored.isSubAgentMode = { value: true, version: 1 }
-  seeded.stored.tasks = { value: [GROUPED[0]!], version: 1 }
+  seeded.stored.tasks = { value: tasks, version: 1 }
   seeded.stored.isPlaying = { value: true, version: 1 }
-  const spawned: string[] = []
-  const sent: { to: string; text: string }[] = []
-  on('agent.spawn', (_, e) => {
-    spawned.push((e as { prompt: string }).prompt)
-    return { model: 'claude-sonnet-5-5' }
-  })
-  on('agent.list', () => ({ value: [{ id: 's1', name: 'Sparky', description: 'Sparky: Write the story map', type: 'general-purpose', status: 'completed' }] }))
-  on('session.send', (_, e) => {
-    sent.push({ to: String((e as { to: unknown }).to), text: (e as { text: string }).text })
-    return { isDelivered: true }
+  seeded.stored.sentCards = { value: sent, version: 1 }
+  const asked: string[] = []
+  on('prompt.submit', (_, e) => {
+    asked.push(e.text)
+    return { text: e.text }
   })
   on('turn.complete', () => ({ text: 'Done.' }))
-  return { seeded, spawned, sent }
+  await $.turn.complete(FINISHED_TURN)
+  await unawaitedWorkSettled()
+  return { seeded, asked }
 }
 
-test('a robot that finished a card is sent its next open card as the same sub-agent, keeping what it learned', async ($, on) => {
-  const { spawned, sent } = robotBetweenCards(on)
+const ROBOT_CARDS = [
+  { id: 'a', text: 'Write the scenarios', robot: 'Sparky' },
+  { id: 'c', text: 'Validate them', robot: 'Sparky' },
+  { id: 'b', text: 'Run the unit tier', robot: 'Bolt' },
+] as Prompt[]
 
-  await $.turn.complete({ ...FINISHED_TURN, agentId: 's1' })
-  await unawaitedWorkSettled()
+test("playing in sub-agent mode asks this chat to hand each robot its first card's words", async ($, on) => {
+  const { asked } = await handOut($, on, ROBOT_CARDS)
 
-  expect([spawned.length, sent.length, sent[0]?.to, sent[0]?.text.includes('[c] Validate them')]).toEqual([0, 1, 's1', true])
+  expect([asked.length, asked[0]?.includes('Sparky'), asked[0]?.includes('Write the scenarios'), asked[0]?.includes('Bolt'), asked[0]?.includes('Run the unit tier'), asked[0]?.includes('Validate them')]).toEqual([1, true, true, true, true, false])
 })
 
-test("a robot's finished turn hands on its next card without grouping the cards given to no robot", async ($, on) => {
-  const { sent } = robotBetweenCards(on, [{ id: 'm', text: '[interruption] is it started' }])
+test("the hand-out says to send each robot the card's words exactly, and to mark the card done when the robot reports it finished", async ($, on) => {
+  const { asked } = await handOut($, on, ROBOT_CARDS)
 
-  await $.turn.complete({ ...FINISHED_TURN, agentId: 's1' })
-  await unawaitedWorkSettled()
-
-  expect(sent.map(message => message.text.includes('[c] Validate them'))).toEqual([true])
+  expect(['exactly', 'Agent', 'SendMessage', 'prompt-queue.done'].map(word => asked[0]?.includes(word))).toEqual([true, true, true, true])
 })
 
-test('a card is sent to its robot once, even when two finished turns hand it on at the same moment', async ($, on) => {
-  const { sent } = robotBetweenCards(on)
+test('a robot still working the card it was handed is not handed another', async ($, on) => {
+  const { asked } = await handOut($, on, ROBOT_CARDS, { Sparky: 'a' })
 
-  await Promise.all([$.turn.complete({ ...FINISHED_TURN, agentId: 's1' }), $.turn.complete(FINISHED_TURN)])
-  await unawaitedWorkSettled()
-
-  expect(sent.length).toBe(1)
+  expect([asked[0]?.includes('Sparky'), asked[0]?.includes('Bolt')]).toEqual([false, true])
 })
 
-test('a robot that stopped without marking its card done is not sent the same card again', async ($, on) => {
-  const { seeded, sent } = robotBetweenCards(on)
-  seeded.stored.sentCards = { value: { Sparky: 'c' }, version: 1 }
+test('a robot whose card is done is handed its next card', async ($, on) => {
+  const { asked } = await handOut($, on, [{ ...ROBOT_CARDS[0]!, is_done: true }, ROBOT_CARDS[1]!, ROBOT_CARDS[2]!], { Sparky: 'a', Bolt: 'b' })
 
-  await $.turn.complete({ ...FINISHED_TURN, agentId: 's1' })
-  await unawaitedWorkSettled()
-
-  expect(sent).toEqual([])
+  expect([asked[0]?.includes('Validate them'), asked[0]?.includes('Run the unit tier')]).toEqual([true, false])
 })
 
-test('a robot already at work is not started again when the next turn ends', async ($, on) => {
-  const seeded = groupedQueue(on)
-  seeded.stored.isPlaying = { value: true, version: 1 }
-  const named: (string | undefined)[] = []
-  on('agent.spawn', (_, e) => {
-    named.push((e as { name?: string }).name)
-    return { model: 'claude-sonnet-5-5' }
-  })
-  on('agent.list', () => ({ value: [{ id: 'a1', name: 'Sparky', description: 'Sparky: Write the story map', type: 'general-purpose', status: 'running' }] }))
-  on('turn.complete', () => ({ text: 'Done.' }))
+test('with every robot still working its card, this chat is asked nothing', async ($, on) => {
+  const { asked } = await handOut($, on, ROBOT_CARDS, { Sparky: 'a', Bolt: 'b' })
 
-  await $.turn.complete(FINISHED_TURN)
-  await unawaitedWorkSettled()
-
-  expect(named).toEqual(['Bolt'])
+  expect(asked).toEqual([])
 })
 
-test('a sub-agent goes by its robot name, so the lead can message the robot by name', async ($, on) => {
-  const seeded = groupedQueue(on, [{ ...GROUPED[0]!, name: 'Captain Tests' }, GROUPED[1]!])
-  seeded.stored.isPlaying = { value: true, version: 1 }
-  const named: (string | undefined)[] = []
-  on('agent.spawn', (_, e) => {
-    named.push((e as { name?: string }).name)
-    return { model: 'claude-sonnet-5-5' }
-  })
-  on('agent.list', () => ({ value: [] }))
-  on('turn.complete', () => ({ text: 'Done.' }))
+test('a robot is handed out under the name it goes by, so this chat can message it by name', async ($, on) => {
+  const { asked } = await handOut($, on, ROBOT_CARDS.map(card => (card.robot === 'Sparky' ? { ...card, robot: 'Captain Tests' } : card)), {}, [{ ...GROUPED[0]!, name: 'Captain Tests' }, GROUPED[1]!])
 
-  await $.turn.complete(FINISHED_TURN)
-  await unawaitedWorkSettled()
-
-  expect(named).toEqual(['Captain Tests', 'Bolt'])
+  expect(asked[0]?.includes('Captain Tests')).toBe(true)
 })
 
 
@@ -1430,7 +1365,7 @@ test('switching sub-agent mode on groups only the work not done yet', async ($, 
 test('sending the queue to sub-agents keeps their cards, so each can mark its own card done', async ($, on) => {
   const seeded = groupedQueue(on)
   seeded.stored.isPlaying = { value: true, version: 1 }
-  on('agent.spawn', () => ({ model: 'claude-sonnet-5-5' }))
+  on('prompt.submit', (_, e) => ({ text: e.text }))
   on('turn.complete', () => ({ text: 'Done.' }))
 
   await $.turn.complete(FINISHED_TURN)
