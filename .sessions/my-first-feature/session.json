@@ -16,10 +16,21 @@
       "enabled": false
     },
     "stories": {
-      "enabled": true
+      "enabled": true,
+      "formats": {
+        "story_map": [
+          "markdown",
+          "drawio",
+          "whiteboard"
+        ],
+        "scenarios": [
+          "python",
+          "markdown"
+        ]
+      }
     }
   },
   "guidance": {
-    "version": 6
+    "version": 15
   }
 }
