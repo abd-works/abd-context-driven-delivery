@@ -49,6 +49,7 @@ class CheckedGraph:
         self._formats = [fidelity.format for fidelity in fidelities]
         self._named = to_check.graph
         self.unchecked_files = self._other_format_files()
+        self.checked_files = self._checked_format_files()
         # Read now, so a path that is not there is refused before the call claims any report file.
         self._names_paths = bool(to_check.paths)
         self.edited = self._edited_in_checked_format(to_check.paths)
@@ -82,6 +83,15 @@ class CheckedGraph:
         if self.prefixes:
             found = [violation for violation in found if violation.is_under(self.prefixes)]
         found = self._on_session_stories(found)
+        return self._in_one_format(found)
+
+    def _in_one_format(self, found: list[Violation]) -> list[Violation]:
+        """The violations of one format: those in the files of a format the call does not check are dropped only when
+        the graph also found some in the checked format's files, so a finding is not reported once for each mirror. A
+        graph that reads only the other format, as it reads a model from its markdown while drawio is checked, keeps
+        what it found there, which is then no copy of anything."""
+        if not any(violation.location in self.checked_files for violation in found):
+            return found
         return [violation for violation in found if violation.location not in self.unchecked_files]
 
     def _on_session_stories(self, found: list[Violation]) -> list[Violation]:
@@ -195,6 +205,16 @@ class CheckedGraph:
             if "{" not in path
         ]
         return {self.session.session_files.from_root(path) for path in others if path.exists() and self.session.session_files.in_root(path)}
+
+    def _checked_format_files(self) -> set[str]:
+        """The declared files of the format validate checks, as graph node files record them."""
+        checked = [
+            self.session.paths.path_named(path)
+            for fidelity, format in zip(self._fidelities, self._formats)
+            for path in fidelity.declared.output_paths().get(format, [])
+            if "{" not in path
+        ]
+        return {self.session.session_files.from_root(path) for path in checked if path.exists() and self.session.session_files.in_root(path)}
 
     def _written_outputs(self) -> list[str]:
         """The folders holding what each listed fidelity declares in its checked format and has already written. The

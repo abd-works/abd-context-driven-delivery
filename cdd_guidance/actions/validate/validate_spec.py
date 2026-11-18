@@ -463,6 +463,12 @@ with description("a validate action on practice guidance") as self:
                     with it("should judge only the format the guidance names"):
                         expect(self.named_format_report).to(contain("Judge only the checked format's files (drawio: "))
 
+                    # The graph reads the story map from its markdown only, so a finding there is no second copy of one
+                    # in the drawio; reported 2026-11-18: a domain model checked in drawio dropped all 93 of its graph's
+                    # findings, which sat in domain-model.md.
+                    with it("should keep the findings the graph found in the format it reads"):
+                        expect(self.named_format_report).to(contain("Boarding Stuff"))
+
                 with context("that the latest generate wrote"):
                     with before.all:
                         from harness.guidance_actions import GuidanceAction
