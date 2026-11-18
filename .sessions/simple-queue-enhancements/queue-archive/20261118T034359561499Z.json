@@ -1,0 +1,11 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-18T03:43:59.561499+00:00",
+  "prompts": [
+    {
+      "id": "05be969c89a2",
+      "text": "Run6 files, part 3: put a line at the top of demo/run6/files.md naming the folder with the most files",
+      "robot": "Rivet"
+    }
+  ]
+}

@@ -1,0 +1,122 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-18T03:43:55.726498+00:00",
+  "prompts": [
+    {
+      "id": "d9044caa8101",
+      "text": "Run6 words, part 1: write the 3 shortest words of 6 letters or more in AGENTS.md to .sessions/simple-queue-enhancements/demo/run6/words.md",
+      "robot": "Bolt",
+      "steps": [
+        {
+          "text": "Find the 3 shortest words of 6+ letters in AGENTS.md",
+          "state": "done"
+        },
+        {
+          "text": "Write them to demo/run6/words.md",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "3b0ad8533929",
+      "text": "Run6 words, part 2: in demo/run6/words.md, write each word backwards beside it",
+      "robot": "Bolt",
+      "steps": [
+        {
+          "text": "Write each word backwards beside it in words.md",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "7a59eacf9db3",
+      "text": "Run6 words, part 3: put a line at the top of demo/run6/words.md saying which of the 3 words comes first in the alphabet",
+      "robot": "Bolt",
+      "steps": [
+        {
+          "text": "Put a line at the top of words.md naming the first word alphabetically",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "2ca329236d4a",
+      "text": "Run6 clock, part 1: write the current time to .sessions/simple-queue-enhancements/demo/run6/clock.md, wait about 10 seconds, and write the time again",
+      "robot": "Gizmo",
+      "steps": [
+        {
+          "text": "Write the current time to clock.md",
+          "state": "done"
+        },
+        {
+          "text": "Wait about 10 seconds",
+          "state": "done"
+        },
+        {
+          "text": "Write the time again",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "33336192a74a",
+      "text": "Run6 clock, part 2: add the seconds between the two times in demo/run6/clock.md as a third line",
+      "robot": "Gizmo",
+      "steps": [
+        {
+          "text": "Add the seconds between the two times as a third line",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "3fbfb61715cd",
+      "text": "Run6 clock, part 3: add a line to demo/run6/clock.md saying the clock strand finished, with the time",
+      "robot": "Gizmo",
+      "steps": [
+        {
+          "text": "Add a line saying the clock strand finished, with the time",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "c201bafaa948",
+      "text": "Run6 files, part 1: list the folder names directly under tools/ in .sessions/simple-queue-enhancements/demo/run6/files.md",
+      "robot": "Rivet",
+      "steps": [
+        {
+          "text": "List folders directly under tools/",
+          "state": "done"
+        },
+        {
+          "text": "Write them to run6/files.md",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "45425eda1867",
+      "text": "Run6 files, part 2: beside each folder in demo/run6/files.md, write how many files it holds, leaving out node_modules",
+      "robot": "Rivet",
+      "steps": [
+        {
+          "text": "Count files in each tools/ folder, leaving out node_modules",
+          "state": "done"
+        },
+        {
+          "text": "Write each count beside its folder in files.md",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    }
+  ]
+}

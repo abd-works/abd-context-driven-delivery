@@ -1198,8 +1198,8 @@ test("a robot starts on its first open card alone, told the card's id and to mar
 })
 
 /** Sparky's first card done and a second open, the sub-agent that worked the first one finished. */
-function robotBetweenCards(on: TestOn) {
-  const seeded = seedQueue(on, true, '', [{ id: 'a', text: 'Write the scenarios', is_done: true, robot: 'Sparky' }, { id: 'c', text: 'Validate them', robot: 'Sparky' }])
+function robotBetweenCards(on: TestOn, more: Prompt[] = []) {
+  const seeded = seedQueue(on, true, '', [{ id: 'a', text: 'Write the scenarios', is_done: true, robot: 'Sparky' }, { id: 'c', text: 'Validate them', robot: 'Sparky' }, ...more])
   seeded.stored.isSubAgentMode = { value: true, version: 1 }
   seeded.stored.tasks = { value: [GROUPED[0]!], version: 1 }
   seeded.stored.isPlaying = { value: true, version: 1 }
@@ -1225,6 +1225,15 @@ test('a robot that finished a card is sent its next open card as the same sub-ag
   await unawaitedWorkSettled()
 
   expect([spawned.length, sent.length, sent[0]?.to, sent[0]?.text.includes('[c] Validate them')]).toEqual([0, 1, 's1', true])
+})
+
+test("a robot's finished turn hands on its next card without grouping the cards given to no robot", async ($, on) => {
+  const { sent } = robotBetweenCards(on, [{ id: 'm', text: '[interruption] is it started' }])
+
+  await $.turn.complete({ ...FINISHED_TURN, agentId: 's1' })
+  await unawaitedWorkSettled()
+
+  expect(sent.map(message => message.text.includes('[c] Validate them'))).toEqual([true])
 })
 
 test('a card is sent to its robot once, even when two finished turns hand it on at the same moment', async ($, on) => {

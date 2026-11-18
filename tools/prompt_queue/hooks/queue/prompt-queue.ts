@@ -760,10 +760,12 @@ const AT_WORK = ['pending', 'running', 'waiting']
  * sub-agent finished its card is sent its next open card as a message, so the same sub-agent carries on with what it
  * learned. A robot at work is passed over, and one that stopped without marking its card done is not sent that card
  * again. `finished` names a sub-agent whose turn just ended, which counts as finished even while still listed as
- * running. Work given to no robot is grouped first.
+ * running. Work given to no robot is grouped first, except when a robot's turn ends: that only hands on its next card.
  */
 export async function sendTasksToSubAgents($: EngineInterface, finished = ''): Promise<void> {
-  await groupIntoTasks($)
+  if (finished === '') {
+    await groupIntoTasks($)
+  }
   const held = await read($, queue)
   const agents = await $.agent.list()
   for (const [place, task] of robotsOf(held.prompts.filter(prompt => !prompt.is_done), await read($, tasks)).entries()) {
