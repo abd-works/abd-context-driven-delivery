@@ -284,7 +284,7 @@ block is one: *MarkdownEntity*, *MarkdownValueObject*, *MarkdownRepository*, *Ma
 stereotypes are the class's `stereotypes`.
 
 + ClassCard.from_heading(heading: str): ClassCard
-+ ClassCard.read(section: list[str]): ClassCard
++ ClassCard.read(section: list[str]): ClassCard[]
 + ClassCard.from_sketch(heading: str, lines: list[str]): list[ClassCard]
 	// the card, then the repository its fence's `repo:` names; a *_SketchFence* reads the fence onto the card
 ------

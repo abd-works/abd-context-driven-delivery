@@ -140,6 +140,15 @@ class OoadClass(OoadNode):
         self.source_facts = ClassSourceFacts(self)
         # Where each relationship drawn from it lands: on the properties it types, or among its dependencies.
         self.arrows = ClassArrows(self)
+        # The classes drawn inside this class's card, as a root's card holds the repository that keeps it, and the
+        # class whose card draws this one when it is folded into another.
+        self.folded: List["OoadClass"] = []
+        self.folded_into = ""
+
+    def fold(self, other: "OoadClass") -> None:
+        """Draw other inside this class's card, under its own heading, in place of a card of its own."""
+        other.folded_into = self.name
+        self.folded.append(other)
 
     @property
     def properties(self) -> List["Property"]:
@@ -192,6 +201,8 @@ class OoadClass(OoadNode):
         cloned.line = self.line
         cloned.properties = [item.clone() for item in self.properties]
         cloned.operations = [item.clone() for item in self.operations]
+        for folded in self.folded:
+            cloned.fold(folded.clone())
         return cloned
 
     def as_record(self) -> dict:

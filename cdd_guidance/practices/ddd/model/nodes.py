@@ -471,7 +471,8 @@ class BoundedContextMap:
         """Give each public class of model whose place names an aggregate to that aggregate; answer the rest, each with
         the name of the context its module gives it."""
         unplaced: list[tuple[str, OoadClass]] = []
-        public = ((module, oclass) for module in model.modules for oclass in module.classes if not oclass.name.startswith("_"))
+        drawn = ((module, item) for module in model.modules for oclass in module.classes for item in (oclass, *oclass.folded))
+        public = ((module, oclass) for module, oclass in drawn if not oclass.name.startswith("_"))
         for module, oclass in public:
             place = self._place_of(module, oclass)
             if place:

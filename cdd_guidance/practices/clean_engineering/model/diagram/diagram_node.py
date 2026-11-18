@@ -67,7 +67,8 @@ class DiagramClass(OoadClass, DiagramNode):
 
     def height(self) -> int:
         member_count = len(self.properties) + len(self.operations)
-        return max(CELL_MIN_HEIGHT, CLASS_TITLE_HEIGHT + member_count * LINE_HEIGHT + 2 * SECTION_PAD)
+        folded = sum(CLASS_TITLE_HEIGHT + (len(item.properties) + len(item.operations)) * LINE_HEIGHT + 2 * SECTION_PAD for item in self.folded)
+        return max(CELL_MIN_HEIGHT, CLASS_TITLE_HEIGHT + member_count * LINE_HEIGHT + 2 * SECTION_PAD + folded)
 
     def take_arrow(self, target: str, kind: str) -> None:
         """An arrow of kind drawn to target is the property whose type names the target. Inheritance and a dependency

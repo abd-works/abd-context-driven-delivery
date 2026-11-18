@@ -78,6 +78,19 @@ class DrawIOClass(DiagramClass, DrawioVertex):
             f'<p style="margin:0px;margin-left:4px;font-size:10px;">{self._properties_html()}</p>'
             f'<hr size="1"/>'
             f'<p style="margin:0px;margin-left:4px;font-size:10px;">{self._operations_html()}</p>'
+            f'{"".join(item.folded_html() for item in self.folded)}'
+        )
+
+    def folded_html(self) -> str:
+        """This class drawn inside another's card: a rule, its stereotypes and name as its own heading, then its
+        properties and operations, each under a rule as on a card of its own."""
+        return (
+            f'<hr size="1"/>'
+            f'<p style="margin:0px;margin-top:4px;text-align:center;">{self._stereotype_html()}<b>{html.escape(self.name)}</b></p>'
+            f'<hr size="1"/>'
+            f'<p style="margin:0px;margin-left:4px;font-size:10px;">{self._properties_html()}</p>'
+            f'<hr size="1"/>'
+            f'<p style="margin:0px;margin-left:4px;font-size:10px;">{self._operations_html()}</p>'
         )
 
     def style(self) -> str:
@@ -98,7 +111,8 @@ class DrawIOClass(DiagramClass, DrawioVertex):
         ]
 
     def _member_lines(self) -> List[str]:
-        return [self.name] + self._property_lines() + self._operation_lines()
+        own = [self.name] + self._property_lines() + self._operation_lines()
+        return own + [line for item in self.folded for line in item._member_lines()]
 
     def _properties_html(self) -> str:
         return ''.join(f'{html.escape(line)}<br/>' for line in self._property_lines()) or '<br/>'

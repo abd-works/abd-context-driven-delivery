@@ -3,7 +3,7 @@ as the drawio channel draws them: contexts as sections holding their aggregates,
 
 from pathlib import Path
 
-from expects import be_true, equal, expect
+from expects import be_above, be_true, equal, expect
 from mamba import before, context, description, it
 
 from harness.whiteboard.whiteboard import Arrow, Section, Shape, Whiteboard
@@ -77,6 +77,25 @@ with description("WhiteboardBoundedContextMap"):
             def classes(drawn):
                 return sorted((aggregate.name, sorted(oclass.name for oclass in aggregate.classes)) for aggregate in drawn.every_aggregate)
             expect(classes(WhiteboardBoundedContextMap().parse(self.text))).to(equal(classes(self.source)))
+
+    with context("that draws a domain model whose repository is written inside its root's card"):
+        with before.all:
+            folded = _MODEL.replace("#### KycInquiryRepository <<Repository>>", "**KycInquiryRepository** «Repository»")
+            self.text = WhiteboardBoundedContextMap().render(MarkdownBoundedContextMap().parse(folded))
+            cards = [element.text for element in Whiteboard.from_text(self.text).elements if isinstance(element, Shape) and element.role == "class"]
+            self.root = next(card for card in cards if "**KycInquiry**" in card and "«from:" not in card)
+            self.cards = cards
+
+        with it("should draw the repository inside its root's card, not as a card of its own"):
+            expect([card for card in self.cards if "**KycInquiryRepository**" in card]).to(equal([self.root]))
+
+        with it("should head the repository's part of the card with its «Repository» stereotype, below the root's operations"):
+            expect(self.root.index("*«Repository»*\n**KycInquiryRepository**")).to(be_above(self.root.index("+ verify()")))
+
+        with it("should read the repository back as the aggregate's repository, kept inside its root's card"):
+            kyc = next(item for item in WhiteboardBoundedContextMap().parse(self.text).every_aggregate if item.name == "KYC")
+            expect((kyc.repository.name, kyc.repository.drawn_in_root, [item.name for item in kyc.repository.operations])).to(
+                equal(("KycInquiryRepository", True, ["create", "load", "update"])))
 
     with context("that draws a domain model of two contexts, one holding two aggregates"):
         with before.all:

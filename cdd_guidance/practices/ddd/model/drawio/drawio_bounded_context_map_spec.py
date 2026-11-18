@@ -1,11 +1,12 @@
 """DrawIOBoundedContextMap — the bounded-context map and the aggregate view drawn by Clean Engineering's draw.io
 diagram: contexts and aggregates as nested modules, building blocks as classes with their stereotypes."""
 
+import html
 import tempfile
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
-from expects import be_empty, be_true, contain, equal, expect
+from expects import be_above, be_below, be_empty, be_true, contain, equal, expect
 from mamba import before, context, description, it
 
 from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import DrawioScanner
@@ -117,3 +118,41 @@ with description("DrawIOBoundedContextMap"):
 
         with it("should pass every Clean Engineering layout scanner"):
             expect(_layout_violations(self.xml)).to(be_empty)
+
+    with context("that draws a domain model whose repository is written inside its root's card"):
+        with before.all:
+            self.markdown = _MODEL.replace("#### KycInquiryRepository <<Repository>>", "**KycInquiryRepository** «Repository»")
+            self.xml = DrawIOBoundedContextMap().render(MarkdownBoundedContextMap().parse(self.markdown))
+            self.cells = _cells(self.xml)
+            self.root = html.unescape(self.cells["customer-custom-kyc--kycinquiry"].get("value"))
+            self.ends = {(arrow.get("source"), arrow.get("target")): arrow for arrow in _arrows(self.xml)}
+
+        with it("should draw the repository inside its root's card, not as a card of its own"):
+            expect("customer-custom-kyc--kycinquiryrepository" in self.cells).to(equal(False))
+
+        with it("should head the repository's part of the card with its «Repository» stereotype and its name"):
+            expect("<<Repository>>" in self.root and "<b>KycInquiryRepository</b>" in self.root).to(be_true)
+
+        with it("should list the repository's operations under its own heading, below the root's"):
+            expect(self.root.index("create(identity: Identity, address: Address)")).to(be_above(self.root.index("<b>KycInquiryRepository</b>")))
+
+        with it("should keep the root's own operations above the repository's heading"):
+            expect(self.root.index("verify()")).to(be_below(self.root.index("<b>KycInquiryRepository</b>")))
+
+        with it("should land an arrow to the repository on its root's card"):
+            arrow = self.ends[("customer-custom-customer-profile--customerprofile", "customer-custom-kyc--kycinquiry")]
+            expect(arrow.get("value")).to(equal("«sendSupportRequest»"))
+
+        with it("should pass every Clean Engineering layout scanner"):
+            expect(_layout_violations(self.xml)).to(be_empty)
+
+        with context("that is read back"):
+            with before.all:
+                read = DrawIOBoundedContextMap().parse(self.xml)
+                self.kyc = next(item for item in read.every_aggregate if item.name == "KYC")
+
+            with it("should read the repository as the aggregate's repository, kept inside its root's card"):
+                expect((self.kyc.repository.name, self.kyc.repository.drawn_in_root)).to(equal(("KycInquiryRepository", True)))
+
+            with it("should read the repository's operations as its own, not the root's"):
+                expect([item.name for item in self.kyc.root_card.operations]).to(equal(["fill", "verify"]))

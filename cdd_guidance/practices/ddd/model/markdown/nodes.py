@@ -178,7 +178,7 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
 
     def load_root(self) -> None:
         sections, map_lines = self._split_cards()
-        self.classes.extend(ClassCard.read(section) for section in sections)
+        self.classes.extend(card for section in sections for card in ClassCard.read(section))
         self._read_map_lines(map_lines)
         self._take_root_card()
         super().load_root()
@@ -265,11 +265,21 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
     def write_classes_into(self, module: Module) -> None:
         """Write the aggregate into module as code holds it: each card a class kept in the aggregate's place, and the
         root alone when it has no cards."""
-        for card in self.ordered_cards:
-            card.write_into(module, self.place_labels)
+        written = {id(card): card.write_into(module, self.place_labels) for card in self.ordered_cards}
+        self._fold_into_root(module, written)
         if not module.classes and self.root is not None:
             self.root.write_into(module, self.place_labels)
         self._depend_across(module)
+
+    def _fold_into_root(self, module: Module, written: dict[int, OoadClass]) -> None:
+        """Draw each repository written inside its root's card inside the root's class, in place of a class of its own."""
+        root = self.root_card
+        if root is None:
+            return
+        for card in self.classes:
+            if card.drawn_in_root and id(card) in written:
+                module.classes.remove(written[id(card)])
+                written[id(root)].fold(written[id(card)])
 
     def _depend_across(self, module: Module) -> None:
         """Each class depends on the class of another aggregate its operations call, named by the calling operation,

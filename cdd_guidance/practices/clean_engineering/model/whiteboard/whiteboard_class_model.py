@@ -126,6 +126,13 @@ class _BoardText:
     def terms(self) -> List[str]:
         return [line[2:].strip() for line in self.lines[self.at + 1:] if line.startswith("- ") and line[2:].strip() != "..."]
 
+    def folded_parts(self) -> List["_BoardText"]:
+        """The words of each class drawn inside this card below its own operations: each from its italic stereotype
+        line, or its bold name, to the next one's."""
+        names = [index for index, line in enumerate(self.lines) if index > self.at >= 0 and self.BOLD.match(line)]
+        starts = [index - 1 if self.ITALIC.match(self.lines[index - 1]) else index for index in names]
+        return [_BoardText("\n".join(self.lines[start:end])) for start, end in zip(starts, [*starts[1:], len(self.lines)])]
+
     def members(self, part: int) -> List[str]:
         """The member lines under rule number part (0 for the properties, 1 for the operations), without their mark."""
         rules = [index for index, line in enumerate(self.lines) if line == RULE]
@@ -153,8 +160,16 @@ class WhiteboardClass(DiagramClass, _PlacedOnBoard):
     @property
     def shown_text(self) -> str:
         lines = [f"`{self.owning_module}`"] if self.owning_module else []
-        if self.stereotypes:
-            lines.append(f"*{' '.join(f'«{item}»' for item in self.stereotypes)}*")
+        lines.extend(self.own_lines())
+        for folded in self.folded:
+            lines.append(RULE)
+            lines.extend(folded.own_lines())
+        return "\n".join(lines)
+
+    def own_lines(self) -> List[str]:
+        """Its stereotypes, its name in bold, then its properties and its operations, each part under a rule: the
+        whole card, or its part of the card of a class it is folded into."""
+        lines = [f"*{' '.join(f'«{item}»' for item in self.stereotypes)}*"] if self.stereotypes else []
         lines.extend([f"**{self.name}**", RULE])
         lines.extend(f"+ {item.name}{(': ' + item.type_hint) if item.type_hint else ''}" for item in self.properties)
         lines.append(RULE)
@@ -163,7 +178,7 @@ class WhiteboardClass(DiagramClass, _PlacedOnBoard):
             f"{(': ' + item.return_type) if item.return_type else ''}"
             for item in self.operations
         )
-        return "\n".join(lines)
+        return lines
 
     def width(self) -> int:
         return int(_text_box(self.shown_text)[0])
@@ -180,6 +195,8 @@ class WhiteboardClass(DiagramClass, _PlacedOnBoard):
         self.stereotypes = text.stereotypes
         self.properties = [Property.from_signature(line) or Property(name=line.strip()) for line in text.members(0)]
         self.operations = [found for found in (Operation.from_signature(line) for line in text.members(1)) if found is not None]
+        for part in text.folded_parts():
+            self.fold(WhiteboardClass(name=part.name, sequential_order=1).take_text(part))
         return self
 
 

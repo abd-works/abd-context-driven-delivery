@@ -72,7 +72,8 @@ class ClassView:
         module = self.module_of.get(id(source))
         if module is not None:
             for oclass in module.classes:
-                if oclass.name == target_name or plain_class_name(oclass.name) == target_name:
+                names = {oclass.name, plain_class_name(oclass.name), *(item.name for item in oclass.folded)}
+                if target_name in names:
                     return self.cell_ids[id(oclass)]
         ids = self._cell_ids_by_name.get(target_name) or []
         return ids[0] if ids else None
@@ -95,6 +96,9 @@ class ClassView:
                 plain = plain_class_name(oclass.name)
                 if plain and plain != oclass.name:
                     self._cell_ids_by_name.setdefault(plain, []).append(cell_id)
+                # A class folded into this one has no card of its own, so an arrow to it lands on this card.
+                for folded in oclass.folded:
+                    self._cell_ids_by_name.setdefault(folded.name, []).append(cell_id)
 
     def _module_fill_colors(self) -> Dict[str, str]:
         """One colour per module, so a reader sees where a class lives. One module needs no colour."""
