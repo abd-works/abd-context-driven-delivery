@@ -37,6 +37,7 @@ from harness.process.process import (
     ProcessNotStopped,
     PythonInterpreter,
     RunningProcess,
+    SpawnLock,
 )
 
 logger = logging.getLogger(__name__)
@@ -208,42 +209,6 @@ class _Wire:
         if not chunk:
             raise OSError("hook daemon closed")
         return chunk
-
-
-class _SpawnLock:
-    """The file that lets one hook command start the daemon while the others wait for it."""
-
-    def __init__(self, path: Path) -> None:
-        self._path = path
-
-    def claim(self) -> bool:
-        self._release_if_holder_died()
-        try:
-            fd = os.open(str(self._path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-        except FileExistsError:
-            return False
-        try:
-            os.write(fd, str(os.getpid()).encode("ascii"))
-        finally:
-            os.close(fd)
-        return True
-
-    def release(self) -> None:
-        try:
-            self._path.unlink(missing_ok=True)
-        except OSError:
-            return
-
-    def _release_if_holder_died(self) -> None:
-        if not self._path.is_file() or RunningProcess(self._holder()).alive:
-            return
-        self.release()
-
-    def _holder(self) -> int:
-        try:
-            return int(self._path.read_text(encoding="ascii").strip())
-        except (OSError, ValueError):
-            return 0
 
 
 class _Serving:
@@ -480,7 +445,7 @@ class HookDaemon:
 
     def _start_once(self) -> None:
         """Start the daemon unless another hook command is starting it; either way, it is starting when this returns."""
-        lock = _SpawnLock(self.folder / "spawn.lock")
+        lock = SpawnLock(self.folder / "spawn.lock")
         self.folder.mkdir(parents=True, exist_ok=True)
         deadline = time.time() + _READY_WAIT_SECONDS
         while time.time() < deadline:
