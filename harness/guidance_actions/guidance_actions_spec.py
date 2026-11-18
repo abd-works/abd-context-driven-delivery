@@ -165,6 +165,28 @@ with description("a guidance action"):
             action = GuidanceAction()
             expect(lambda: action._work_on(["cdd"])).to(raise_error(ValueError, contain("clean-engineering-model")))
 
+    # Reported 2026-11-18: with ux off, `ux-ia` alone ran as text, so render answered the slug back and validate checked
+    # nothing, while ["stories-story-map", "ux-ia"] said no practice had the slug.
+    with context("in a session that works on stories with ux turned off"):
+        with before.each:
+            from types import SimpleNamespace
+
+            from cdd_guidance.practices.stories.stories import Stories
+            from harness.guidance_actions import GuidanceAction
+
+            session = SimpleNamespace(name="sign-up", practices={"stories": SimpleNamespace(guidance=Stories())}, overlays=[])
+            self.action = GuidanceAction(session)
+
+        with it("should refuse the slug of a fidelity of the practice turned off, sent alone, saying it is off"):
+            expect(lambda: self.action._work_on("ux-ia")).to(raise_error(ValueError, contain("ux-ia is a fidelity of ux, which is turned off for session sign-up")))
+
+        with it("should refuse it in a list the same way"):
+            expect(lambda: self.action._work_on(["stories-story-map", "ux-ia"])).to(raise_error(ValueError, contain("ux-ia is a fidelity of ux, which is turned off for session sign-up")))
+
+        with it("should read a slug of the practice it works on as guidance, not text"):
+            self.action._work_on("stories-story-map")
+            expect(self.action.work.text).to(equal(None))
+
     with it("should run the passed operation on each Guidance when guidance is a list"):
         from harness.guidance_actions import GuidanceAction
 
