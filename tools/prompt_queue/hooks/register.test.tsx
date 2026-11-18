@@ -1340,7 +1340,7 @@ test("a robot's card has the same buttons as a card in the single queue, shown o
   expect(['"send-now-a"', '"edit-a"', '"up-a"', '"down-a"', '"remove-a"'].every(key => column.includes(key))).toBe(true)
 })
 
-test("the robots sit one under another on the right, the open queue taking the room to their left", async ($, on) => {
+test("the robots sit one under another on the left, the open queue taking the room to their right", async ($, on) => {
   groupedQueue(on)
 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
@@ -1349,7 +1349,8 @@ test("the robots sit one under another on the right, the open queue taking the r
   const robots = await ui.find({ type: 'Box', key: 'agent-robots' })
   await ui.unmount()
 
-  expect([row?.props.flexDirection, queues?.props.flexGrow, robots?.props.flexDirection, robots?.props.flexShrink]).toEqual(['row', 1, 'column', 0])
+  const drawn = JSON.stringify(row)
+  expect([drawn.indexOf('"agent-robots"') < drawn.indexOf('"agent-queues"'), queues?.props.flexGrow, robots?.props.flexDirection, robots?.props.flexShrink]).toEqual([true, 1, 'column', 0])
 })
 
 test("work a robot finishes stays in that robot's queue, dimmed", async ($, on) => {

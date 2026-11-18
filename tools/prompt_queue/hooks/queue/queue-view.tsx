@@ -274,24 +274,24 @@ function CardButtonsView($: EngineInterface, e: AbovePromptEvent, prompt: Queued
   ]
 }
 
-/** Sub-agent mode, in the place of the queue's list: the open robot's queue on the left, taking the room and the height
- * the robots stand in, and the robots one under another on the right, so many robots read as a plain list. */
+/** Sub-agent mode, in the place of the queue's list: the robots one under another on the left, so many robots read as a
+ * plain list, and the open robot's queue to their right, taking the room and the height the robots stand in. */
 function AgentColumnsView($: EngineInterface, e: AbovePromptEvent, state: QueueState) {
   const { Box } = $.ui.resolve(e)
 
   return (
     <Box key="agent-columns" flexDirection="row" gap={1} width="100%">
-      <Box key="agent-queues" flexDirection="column" flexGrow={1} flexShrink={1} width={0} minWidth={0} rowGap="sm">
-        {state.tasks.map((task, place) => AgentQueueView($, e, state, task, place))}
-      </Box>
       <Box key="agent-robots" flexDirection="column" flexShrink={0} rowGap="sm">
         {state.tasks.map((task, place) => AgentRobotView($, e, state, task, place))}
+      </Box>
+      <Box key="agent-queues" flexDirection="column" flexGrow={1} flexShrink={1} width={0} minWidth={0} rowGap="sm">
+        {state.tasks.map((task, place) => AgentQueueView($, e, state, task, place))}
       </Box>
     </Box>
   )
 }
 
-/** An open robot's queue: its prompts as the queue's cards, at the full width left of the robots. */
+/** An open robot's queue: its prompts as the queue's cards, at the full width right of the robots. */
 function AgentQueueView($: EngineInterface, e: AbovePromptEvent, state: QueueState, task: SubAgentTask, place: number) {
   if (!state.expandedAgents.includes(place)) {
     return null
@@ -304,7 +304,7 @@ function AgentQueueView($: EngineInterface, e: AbovePromptEvent, state: QueueSta
   )
 }
 
-/** One robot on its own line: the robot, which opens its queue to the left and closes it again, its name, and how many
+/** One robot on its own line: the robot, which opens its queue to the right and closes it again, its name, and how many
  * of its items are done, such as 3/5, or ✎ to rename it while its queue is open. */
 function AgentRobotView($: EngineInterface, e: AbovePromptEvent, state: QueueState, task: SubAgentTask, place: number) {
   const elements = $.ui.resolve(e)
