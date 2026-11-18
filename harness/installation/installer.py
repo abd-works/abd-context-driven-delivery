@@ -155,7 +155,7 @@ class Deployment:
         installer.toolsets.ensure_import_path()
         items = self._repository_toolsets() if toolsets is None else list(toolsets)
         channels = self._channels = InstallChannels(installer, SERVER_CHANNELS.kinds, installing=True)
-        self._publish_every_toolset(items, channels)
+        self._publish_every_toolset(items, channels, whole=replace and toolsets is None)
         self._save_installed_files(replace)
         self._standup_channels()
         self._report_diagnosis()
@@ -166,13 +166,14 @@ class Deployment:
         into every install, such as the hooks that start the cdd server."""
         return self.run([], replace=replace)
 
-    def _publish_every_toolset(self, items: list[ToolsetConfiguration], channels: InstallChannels) -> None:
+    def _publish_every_toolset(self, items: list[ToolsetConfiguration], channels: InstallChannels, whole: bool) -> None:
         """Write every channel's files for items, the Installer, and the toolsets the server channels publish, then the
-        language adapters, the agents, and the standing rules."""
+        language adapters, the agents, and the standing rules. whole says items are every toolset the repository
+        defines, published in place of the last install, so the adapters' folder keeps nothing else."""
         self._install_all(items)
         for toolset in (self._installer, *channels.toolsets):
             self._install_toolset(toolset)
-        channels.language_adapters.write_all()
+        channels.language_adapters.write_all(whole=whole)
         self._install_agents()
         self._install_standing_rules()
 
@@ -206,7 +207,7 @@ class Deployment:
             toolset = AgentToolSet.instantiate(item)
             for each in (toolset, *toolset.child_toolsets()):
                 adapters.record(each)
-        return adapters.write_all()
+        return adapters.write_all(whole=True)
 
     def _repository_toolsets(self) -> list[type]:
         """The class of every toolset the repository defines; one whose module cannot be imported stops the install,
