@@ -19,11 +19,11 @@ function useFilesState(page: FilesPage) {
 }
 
 // One file the link names: a file it cannot open says why, not generated yet or deleted on this branch, and a file standing for something published in Claude, a
-// design canvas or a whiteboard's board, opens that in a tab of its own; a .drawio file also offers its draw.io editor in
+// design canvas or a whiteboard's board, opens that in Claude Desktop's artifact panel; a .drawio file also offers its draw.io editor in
 // a tab of its own.
 function FileEntryView({ page, entry, isOpen }: { page: FilesPage; entry: FileEntryData; isOpen: boolean }) {
   const published = publishedOf(entry)
-  if (published) return <PublishedFileView path={entry.path} published={published} />
+  if (published) return <PublishedFileView page={page} entry={entry} published={published} />
   const classes = ['file-entry', isOpen ? 'is-open' : '', entry.exists ? '' : 'is-missing', entry.is_changed ? 'is-changed' : ''].filter(Boolean).join(' ')
   const hint = entry.exists ? entry.path : `${entry.path}: ${missingNoteOf(entry)}`
   return (
@@ -48,9 +48,10 @@ function DrawioTabLinkView({ page, path }: { page: FilesPage; path: string }) {
   )
 }
 
-// A design canvas or a whiteboard: it opens at the link it is published at, never as the file's text; one not published
-// yet says so and opens nothing.
-function PublishedFileView({ path, published }: { path: string; published: PublishedFile }) {
+// A design canvas or a whiteboard: it opens in Claude Desktop's artifact panel, beside the chat, never as the file's
+// text; a page no chat opened opens the link in a browser instead. One not published yet says so and opens nothing.
+function PublishedFileView({ page, entry, published }: { page: FilesPage; entry: FileEntryData; published: PublishedFile }) {
+  const path = entry.path
   if (!published.link) {
     return (
       <li>
@@ -61,9 +62,13 @@ function PublishedFileView({ path, published }: { path: string; published: Publi
       </li>
     )
   }
+  const open = async (event: { preventDefault: () => void }) => {
+    event.preventDefault()
+    if (!(await page.openPublished(entry))) window.open(published.link, '_blank', 'noreferrer')
+  }
   return (
     <li>
-      <a className="file-entry is-published" href={published.link} target="_blank" rel="noreferrer" title={`${path}: opens the ${published.kind} at ${published.link}`}>
+      <a className="file-entry is-published" href={published.link} onClick={event => void open(event)} rel="noreferrer" title={`${path}: opens the ${published.kind} in Claude's artifact panel`}>
         {published.name}
         <span className="file-entry-note"> ↗ {published.kind}</span>
       </a>

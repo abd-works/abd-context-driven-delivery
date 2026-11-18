@@ -499,6 +499,30 @@ describe('Add File Or Selection To Chat Context', () => {
   })
 })
 
+// A whiteboard opens in Claude Desktop's artifact panel, beside the chat, not in a browser: the page asks the chat that
+// opened it to open the board; requested 2026-11-18: "im in claude desktop i want it open in desktop".
+describe('Open Whiteboard In Claude Desktop', () => {
+  const board = { path: '.context/story-map.version-2.whiteboard', exists: true, is_changed: true, link: 'https://claude.ai/artifact/board-2', format: 'whiteboard', fidelities: [] } as never
+
+  it('should ask the chat that opened the page to open the board in its artifact panel', async () => {
+    const server = new FakeFilesServer()
+    const page = new FilesPage(server, new FilesLink(STAGE_LINK))
+    await started(page)
+    await page.openPublished(board)
+    const asked = server.posted('/send').filter(post => post.body.kind === 'submit').map(post => String(post.body.text))
+    expect(asked).toHaveLength(1)
+    expect(asked[0]).toContain('https://claude.ai/artifact/board-2')
+  })
+
+  it('should say the page cannot reach a chat when none opened it', async () => {
+    const server = new FakeFilesServer()
+    const page = new FilesPage(server, new FilesLink(STAGE_LINK.replace('&chat=chat-1', '')))
+    await started(page)
+    expect(await page.openPublished(board)).toBe(false)
+    expect(server.posted('/send').filter(post => post.body.kind === 'submit')).toHaveLength(0)
+  })
+})
+
 describe('Send Files App Failures To Chat', () => {
   describe('with files that do not list', () => {
     class FailingFilesServer extends FakeFilesServer {

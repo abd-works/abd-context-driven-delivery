@@ -1,4 +1,5 @@
 import type { CddApi } from '@cdd/cdd-shared'
+import { ChatClientGenerated } from '@cdd/harness/chat/chat'
 import { TicketClientGenerated } from '@cdd/space/kanban/ticket'
 import { SessionClientGenerated, type FileEntryData, type GuidanceSelectionData, type SessionFileData } from '@cdd/space/session/session'
 
@@ -305,6 +306,18 @@ export class FilesPage {
   private stopRefreshing(): void {
     if (this.refreshTimer) clearTimeout(this.refreshTimer)
     this.refreshTimer = null
+  }
+
+  // Open a whiteboard or design canvas in Claude Desktop's artifact panel, beside the chat: the page cannot reach that
+  // panel itself, so it asks the chat that opened it to open the board there. Answers false when no chat opened the
+  // page, so the view opens the link in a browser instead.
+  async openPublished(entry: FileEntryData): Promise<boolean> {
+    const published = publishedOf(entry)
+    if (!published?.link || !this.link.chat) return false
+    const ask = `Open the ${published.kind} ${published.name} (${entry.path}) in the artifact panel: ${published.link}`
+    const asked = await this.attempt(`The ${published.kind} ${published.name} did not open`, () => ChatClientGenerated.named(this.api, this.link.chat).send('submit', ask))
+    if (asked) this.notices.toast(`Opening ${published.name} in Claude's artifact panel`)
+    return asked
   }
 
   async attempt(what: string, work: () => Promise<unknown>): Promise<boolean> {
