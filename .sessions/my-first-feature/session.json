@@ -23,5 +23,7 @@
     "bdd": {
       "enabled": false
     }
-  }
+  },
+  "workpath": "demos/spider-man-shopping",
+  "repo_path": "C:\\dev\\abd-cdd-my-first-feature"
 }
