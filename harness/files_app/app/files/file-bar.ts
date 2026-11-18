@@ -98,7 +98,7 @@ export class FileBar {
   // changes any file, so every file its fidelities declare that is there.
   private isSessionWork(entry: FileEntryData): boolean {
     const { isRepository, byFidelity } = this.store.state
-    if (isRepository || true) return entry.is_changed
+    if (isRepository) return entry.is_changed
     return entry.exists && byFidelity.some(({ entries }) => entries.some(declared => declared.path === entry.path))
   }
 
