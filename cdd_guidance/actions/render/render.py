@@ -5,11 +5,24 @@ from __future__ import annotations
 from cdd_guidance.actions.render.rendered_file import WHITEBOARD, RenderedFile
 from harness.guidance_actions import GuidanceArg, GuidanceAction, WorkedGuidance
 from harness.guidance.stages import TAKES_FORMATS, on_stage
-from harness.agent_tools.agent_tools import agent_instructions, agent_tool, agent_toolset, noSessionLog, tools
+from pathlib import Path
+
+from harness.agent_tools.agent_tools import agent_instructions, agent_tool, agent_toolset, instructions, noSessionLog, tools
 from harness.installation.files import skill
 from harness.markdown.format import Format
 from harness.mcp.mcp_annotations import mcp
 from harness.whiteboard import BoardLinks, Whiteboard
+
+
+class BoardNotKept(LookupError):
+    """A comment came from a board no whiteboard file of the session's project was published to, so no practice says
+    how to answer it."""
+
+    def __init__(self, board: str, searched: Path) -> None:
+        super().__init__(f"No whiteboard file under {searched} keeps the board {board} in its whiteboards.json")
+        self.board = board
+        self.searched = searched
+
 
 @agent_toolset
 class Render(GuidanceAction):
@@ -60,8 +73,53 @@ class Render(GuidanceAction):
 
     @agent_instructions
     def publish_board(self) -> str:
-        """After a render to whiteboard, put each .whiteboard file on its board in Claude. A file render saved answers with board, the address kept for it in whiteboards.json beside it, and batches, the writes that put the file on that board: write each batch to the board's store with ArtifactData batch, in order. With no board, create a Whiteboard artifact titled after the file first, write the batches to its store, then call record_board with the file and the board's address, so the next render updates the same board and the Files app opens it. A render's batches change only what the render changed, so what people moved or added on the board stays. For a .whiteboard file you wrote yourself, read the address kept for it in whiteboards.json beside it; with one, read that board's store into the board as it is in Claude and write only the batches Whiteboard.batches(previous) answers against it, never rebuilding the board; with none, create the artifact, write Whiteboard.batches(), and call record_board."""
+        """After a render to whiteboard, put each .whiteboard file on its board in Claude. A file render saved answers with board, the address kept for it in whiteboards.json beside it, and batches, the writes that put the file on that board: write each batch to the board's store with ArtifactData batch, in order. With no board, create a Whiteboard artifact titled after the file first, write the batches to its store, then call record_board with the file and the board's address, so the next render updates the same board and the Files app opens it. A render's batches change only what the render changed, so what people moved or added on the board stays. For a .whiteboard file you wrote yourself, read the address kept for it in whiteboards.json beside it; with one, read that board's store into the board as it is in Claude and write only the batches Whiteboard.batches(previous) answers against it, never rebuilding the board; with none, create the artifact, write Whiteboard.batches(), and call record_board. A comment a person later leaves on the board goes through answer_board_comment, which names the file to change and hands over the rules of the practice that draws it."""
         return "Publish each whiteboard file to its board in Claude, and record the address of a board you created."
+
+    @mcp
+    @skill
+    @agent_instructions
+    def answer_board_comment(self, board: str) -> str:
+        """Answer a comment a person left on a board in Claude that CDD published. board: the board's address, the claude.ai artifact link the comment came from. Make the change the comment asks for in the file the board is drawn from, following the rules below, never on the board alone, which the next render would undo. Then render that file to whiteboard with paths set to it, follow publish_board, and reply on the comment's thread saying what changed."""
+        drawn_from = self._drawn_from(board)
+        instructions(drawn_from)
+        rules = self.work.rules_to_follow
+        instructions(rules)
+        tools(self.render)
+        tools(self.publish_board)
+        return ""
+
+    def _drawn_from(self, board: str) -> str:
+        """Which whiteboard file the board was published from and the file it is drawn from, working from now on at the
+        fidelity that draws it, so the rules handed over are that fidelity's."""
+        board_file = self._file_published_to(board)
+        relative = self._from_root(board_file)
+        fidelity = self._fidelity_drawing(relative)
+        if fidelity is None:
+            return f"The board was published from {relative}, which no fidelity of this session draws: change the file it is drawn from."
+        self._work_on(fidelity.slug)
+        folder = relative.rsplit("/", 1)[0] + "/" if "/" in relative else ""
+        source = fidelity.declared.file_name_beside(relative, "markdown")
+        return f"The board was published from {relative}, which {fidelity.slug} draws. Change {folder}{source or 'the file it is drawn from'}."
+
+    def _file_published_to(self, board: str) -> Path:
+        """The whiteboard file of the session's project whose board is at board; refused when none was published to it."""
+        root = self.session.work_root
+        for record in self.session.session_files.find(f"{root.as_posix()}/**/{BoardLinks.RECORD}"):
+            found = BoardLinks(record.parent).file_published_to(board)
+            if found is not None:
+                return found
+        raise BoardNotKept(board, root)
+
+    def _fidelity_drawing(self, relative: str):
+        """The fidelity of the session's practices that writes the file at relative as its whiteboard; none when none
+        declares it."""
+        fidelities = (fidelity for practice in self.work.practice_set() for fidelity in practice.fidelities)
+        return next((fidelity for fidelity in fidelities if fidelity.declared.includes(relative, WHITEBOARD)), None)
+
+    def _from_root(self, file: Path) -> str:
+        """file named from the folder the session works in."""
+        return file.resolve().relative_to(self.session.work_root.resolve()).as_posix()
 
     @mcp
     @agent_tool

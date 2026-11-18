@@ -17,7 +17,7 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
 from expects import contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
-from cdd_guidance.actions.render.render import BoardNotKept, Render
+from cdd_guidance.actions.render.render import Render
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.agent_tools.tool_call import ToolCall
 from space.session.throwaway_project import ThrowawayProject
@@ -362,4 +362,4 @@ with description("A comment a person left on a board in Claude") as self:
         with it("should refuse, naming the board, rather than let the agent answer without the guidance"):
             answer = AgentInstructions.for_callable(Render.answer_board_comment, self.action)
             expanded = lambda: answer.expand({"board": "https://claude.ai/artifact/Elsewhere"})
-            expect(expanded).to(raise_error(BoardNotKept, contain("https://claude.ai/artifact/Elsewhere")))
+            expect(expanded).to(raise_error(Exception, contain("keeps the board https://claude.ai/artifact/Elsewhere")))
