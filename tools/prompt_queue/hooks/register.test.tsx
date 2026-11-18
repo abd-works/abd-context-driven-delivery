@@ -1201,6 +1201,12 @@ test('a robot whose card is done is handed its next card', async ($, on) => {
   expect([asked[0]?.includes('Validate them'), asked[0]?.includes('Run the unit tier')]).toEqual([true, false])
 })
 
+test('a robot whose earlier card was opened again is handed that card, though the later card it was handed is open too', async ($, on) => {
+  const { asked } = await handOut($, on, ROBOT_CARDS, { Sparky: 'c', Bolt: 'b' })
+
+  expect([asked[0]?.includes('card [a]: Write the scenarios'), asked[0]?.includes('Run the unit tier')]).toEqual([true, false])
+})
+
 test('with every robot still working its card, this chat is asked nothing', async ($, on) => {
   const { asked } = await handOut($, on, ROBOT_CARDS, { Sparky: 'a', Bolt: 'b' })
 

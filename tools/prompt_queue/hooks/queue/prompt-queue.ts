@@ -733,8 +733,9 @@ export function agentNameOf(task: SubAgentTask, place: number): string {
 /**
  * Sub-agent mode, playing: this chat is the orchestrator. Each robot whose last card is done, or that has had none, is
  * handed its next open card: this chat is asked to send the robot the card's words exactly, and to mark the card done
- * when the robot reports it finished. A robot still working the card it was handed is passed over, and with nothing to
- * hand out, this chat is asked nothing. Work given to no robot is grouped first.
+ * when the robot reports it finished. A robot whose next open card is the one it was last handed is still working it
+ * and is passed over; one whose earlier card was opened again is handed that card. With nothing to hand out, this chat
+ * is asked nothing. Work given to no robot is grouped first.
  */
 export async function sendTasksToSubAgents($: EngineInterface): Promise<void> {
   await groupIntoTasks($)
@@ -743,9 +744,8 @@ export async function sendTasksToSubAgents($: EngineInterface): Promise<void> {
   const handed: { robot: string; card: QueuedPrompt }[] = []
   for (const [place, task] of robotsOf(held.filter(prompt => !prompt.is_done), await read($, tasks)).entries()) {
     const robot = agentNameOf(task, place)
-    const working = held.find(prompt => prompt.id === sent[robot] && !prompt.is_done)
     const card = held.find(prompt => prompt.robot === robot && !prompt.is_done)
-    if (card && !working) {
+    if (card && card.id !== sent[robot]) {
       handed.push({ robot, card })
     }
   }
