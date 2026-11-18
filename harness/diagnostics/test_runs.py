@@ -327,9 +327,10 @@ class TestCadence:
         return [self._settled(run) for run in runs if run is not None]
 
     def due(self) -> list[TestTier]:
-        """The tiers whose interval has passed since they last started, or that never ran; none while a run is live."""
+        """The tiers whose interval has passed since they last started, or that never ran; none while a run is live,
+        whether held as its tier's latest run or as the previous one a later run was recorded over."""
         latest = {run.tier: run for run in self.latest_runs}
-        if any(run.outcome is RunOutcome.RUNNING for run in latest.values()):
+        if any(run.outcome is RunOutcome.RUNNING for run in latest.values()) or self._live_elsewhere():
             return []
         return [tier for tier in (TestTier.E2E, TestTier.HEAVY) if tier not in latest or latest[tier].is_due(self._clock())]
 

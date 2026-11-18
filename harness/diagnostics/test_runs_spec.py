@@ -150,6 +150,11 @@ with description("the test cadence") as self:
             self.record.save(TestRun(TestTier.HEAVY, "old", NOON - timedelta(hours=2), pid=os.getpid()))
             expect(self.cadence.start_due()).to(be_none)
 
+        with it("should start nothing while a run recorded over it was abandoned, its own process still running"):
+            self.running_elsewhere(TestTier.E2E)
+            self.record.save(TestRun(TestTier.E2E, "abc123", NOON - timedelta(minutes=1), RunOutcome.RUNNING, pid=GONE))
+            expect(self.cadence.start_due()).to(be_none)
+
         with it("should read as abandoned once its process is gone"):
             self.record.save(TestRun(TestTier.HEAVY, "old", NOON - timedelta(hours=2), pid=GONE))
             expect(self.cadence.latest_runs[0].state).to(equal("abandoned"))
