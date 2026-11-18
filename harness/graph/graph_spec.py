@@ -1398,6 +1398,35 @@ with description("a graph opened on a folder"):
             with it("should drop its classes"):
                 expect(_class_names_in(self.graph)).to(equal([]))
 
+    with context("that is refreshed with the folder holding the files an action wrote"):
+        with before.each:
+            self.moved = self.folder / "src" / "cart.py"
+            self.moved.write_text("class Cart:\n    pass\n", encoding="utf-8")
+            data_of(self.graph.refresh([str(self.folder / "src")]))
+
+        with it("should read the classes of every file in it"):
+            expect(_class_names_in(self.graph)).to(equal(["Cart", "Order"]))
+
+        with context("and one file is moved out of the folder and the folder refreshed"):
+            with before.each:
+                history = self.folder / "history"
+                history.mkdir()
+                self.moved.rename(history / "cart.py")
+                data_of(self.graph.refresh([str(self.folder / "src")]))
+
+            with it("should hold only what the folder holds now"):
+                expect(_class_names_in(self.graph)).to(equal(["Order"]))
+
+        with context("and the whole folder is deleted and refreshed"):
+            with before.each:
+                import shutil
+
+                shutil.rmtree(self.folder / "src")
+                data_of(self.graph.refresh([str(self.folder / "src")]))
+
+            with it("should drop the classes of every file that was in it"):
+                expect(_class_names_in(self.graph)).to(equal([]))
+
     with context("that is refreshed with a file in a session's folder"):
         with before.each:
             report = self.session_folder / "report.md"

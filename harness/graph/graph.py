@@ -54,6 +54,11 @@ class Call:
 MARKDOWN_SUFFIXES = frozenset({".md", ".markdown"})
 
 
+def _under_any(file: str, folders: set[str]) -> bool:
+    """Whether file, a path from a practice's source root, lies under one of folders, given from the same root."""
+    return any(folder == "." or file.startswith(f"{folder}/") for folder in folders)
+
+
 def _decorated_end(lines: list[str], after: int) -> int:
     """The last line of the function or class a Python decorator ending on line after (counted from 1) decorates: the
     last line indented under its def. After decorators stacked below, or no def at all, the decorator's own line."""
@@ -1188,10 +1193,17 @@ class PracticeLoading:
         self._held.release(node)
 
     def forget_files(self, files: Iterable[Path]) -> set[int]:
-        """Drop every node read from one of files, so a refresh reads those files again from nothing; answer the ``id``
-        of each node dropped, whose edges every practice then drops."""
+        """Drop every node read from one of files, and every node read from a file under one of them that is no longer
+        on disk, so a refresh reads those files again from nothing and holds exactly what is under a refreshed folder
+        now: a file deleted or moved out of it leaves no node behind. Answer the ``id`` of each node dropped, whose
+        edges every practice then drops."""
         read_from = self._from_root(files)
-        return self.forget({id(node) for node in self._held.of_type(None) if node.source.file in read_from})
+        root = self._root
+        return self.forget({
+            id(node)
+            for node in self._held.of_type(None)
+            if node.source.file in read_from or (root is not None and _under_any(node.source.file or "", read_from) and not (root / node.source.file).is_file())
+        })
 
     def forget(self, dropped: set[int]) -> set[int]:
         """Drop the nodes whose ``id`` is in dropped; answer dropped."""
@@ -1220,11 +1232,16 @@ class PracticeLoading:
 
     def _from_root(self, files: Iterable[Path]) -> set[str]:
         """Each of files under the practice's source root, as a path from that root, the way its nodes name their file."""
-        held_root = self._part.source_root_path
-        root = held_root.resolve() if held_root is not None else self._part.graph.scope.folder
+        root = self._root
         if root is None:
             return set()
         return {file.relative_to(root).as_posix() for file in files if file == root or root in file.parents}
+
+    @property
+    def _root(self) -> Path | None:
+        """The practice's source root, which its nodes name their files from; the loaded folder when it has none."""
+        held_root = self._part.source_root_path
+        return held_root.resolve() if held_root is not None else self._part.graph.scope.folder
 
 
 class PracticeRuleRun:

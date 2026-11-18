@@ -17,7 +17,8 @@ class LoadScope:
     load of the whole working copy, or only the files a call names, for a load of the files being edited or a refresh.
     Each call that reads makes its own, and the graph keeps the scope of the read it last made (``graph.scope``), which
     the practices' readers ask while they read: which source files to read, which of them were edited, and the folders
-    holding those. A refresh names a file that is gone so that its nodes drop; only the files still there are read."""
+    holding those. A refresh names a file that is gone so that its nodes drop, and a folder so that the nodes of every
+    file no longer under it drop; only the files still there are read."""
 
     def __init__(self, folder: Path | None, named: Iterable[Path] | None = None, over_whole: bool = False) -> None:
         self.folder = folder
@@ -41,10 +42,10 @@ class LoadScope:
                 continue
             if skipped.intersection(path.relative_to(root).parts):
                 continue
+            # A folder is named as well as its files, so a refresh drops the nodes of a file no longer under it.
+            named.append(path)
             if path.is_dir():
                 named.extend(file.resolve() for file in scanned_files(path))
-            else:
-                named.append(path)
         return cls(folder, named)
 
     def refreshing(self, paths: Iterable[str]) -> LoadScope:
