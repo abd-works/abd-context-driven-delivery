@@ -763,6 +763,14 @@ with description("the board tools") as self:
             with it("should refuse thin_slice as a format of the story map"):
                 expect(lambda: self.project.call("fidelity-session-output.choose_format", session=session_file_of("sign-up"), practice="stories", fidelity="story_map", format="thin_slice", is_chosen=True)).to(raise_error(Exception, contain("does not write thin_slice")))
 
+            with it("should take the story map by the slug the guidance names it by, as well as by its name"):
+                chosen = self.project.call("fidelity-session-output.choose_format", session=session_file_of("sign-up"), practice="stories", fidelity="stories-story-map", format="markdown", is_chosen=True)
+                expect(chosen["name"]).to(equal("story_map"))
+
+            with it("should refuse a fidelity the practice does not have, naming the ones it has"):
+                expect(lambda: self.project.call("fidelity-session-output.choose_format", session=session_file_of("sign-up"), practice="stories", fidelity="ux-ia", format="markdown", is_chosen=True)).to(
+                    raise_error(Exception, contain("stories has no fidelity named ux-ia; it has story_map")))
+
             with it("should show the chip of its default format chosen until a person chooses"):
                 expect([chip["label"] for chip in self.chips if chip["is_chosen"]]).to(equal(["markdown"]))
 

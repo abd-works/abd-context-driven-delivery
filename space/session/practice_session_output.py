@@ -255,6 +255,16 @@ class FormatNotOffered(ValueError):
         self.format = format
 
 
+class FidelityNotInPractice(LookupError):
+    """A fidelity was named that the practice does not have, by its name or its slug."""
+
+    def __init__(self, practice: PracticeGuidance, fidelity: str) -> None:
+        names = ", ".join(item.name for item in practice.fidelities)
+        super().__init__(f"{practice.slug} has no fidelity named {fidelity}; it has {names}")
+        self.practice = practice
+        self.fidelity = fidelity
+
+
 @identity("session_file", "practice_name", "name")
 @language_adapter(language="typescript")
 @agent_toolset
@@ -280,9 +290,14 @@ class FidelitySessionOutput:
     @classmethod
     @tool_subject
     def load(cls, session: str, practice: str, fidelity: str, *, call: ToolCall) -> FidelitySessionOutput:
-        """The fidelity named fidelity, such as story_map, of the practice named practice in the session whose
-        session.json is session, a path from the project the call names."""
-        return call.session_named(session).practice(practice).guidance.fidelities.entries[fidelity].session_output
+        """The fidelity fidelity names, by its name (story_map, story-map) or its slug (stories-story-map), of the
+        practice named practice in the session whose session.json is session, a path from the project the call names."""
+        guidance = call.session_named(session).practice(practice).guidance
+        found = guidance.fidelities.called(fidelity) or guidance.answers_to(fidelity)
+        # The practice's own slug answers the practice, which is not one of its fidelities.
+        if found is None or found is guidance:
+            raise FidelityNotInPractice(guidance, fidelity)
+        return found.session_output
 
     @property
     @data_field
