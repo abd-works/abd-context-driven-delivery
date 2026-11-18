@@ -1,0 +1,3 @@
+# Story maps converge on one shape
+
+Generated story maps come out the same: several flat epics of 4 stories plus one middle epic that alone has sub-epics. Wanted: considered two-layer maps, with sub-epics across the map where the sources support it. Causes to check: the four-to-nine-children band rewards flat epics (sub-epics of 1–2 stories fail, and an epic of 3 sub-epics errors), so epics holding sub-epics may need their own band, such as 2–6; the template shows that very shape; the sketch fixes the shape before generate; re-generate anchors on the existing story-map.md; and the examples CDD ships, test-framework examples included (Timur's US tax map had the same shape). From the client testimonial chat and the Nov 18 demo.
