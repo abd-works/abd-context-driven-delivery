@@ -33,7 +33,7 @@ Sketch and context markdown stay in `.context/`. Story and object-model JS stay 
 - `specifications/abd-works/` — the same layouts as brand-styled HTML sharing `abd-works-brand.css`. Use this folder when the screen needs the abd.works brand (`brand-is-opt-in`).
 - Add further sibling folders for other brands the same way; each folder stays self-contained.
 
-Before sketching ASCII, drawio regions, or brand-layer html, open the matching file in the folder that applies (`generic/` unless a brand is asked for or already established), read its areas, and adapt that file. Do not draw from scratch when a specification already covers the shape. `Screen.apply_layout(layout_id)` records the layout name; append real `Region`s from the areas you just read.
+Before drawing a screen's artboard in the design canvas, drawio regions, or brand-layer html, open the matching file in the folder that applies (`generic/` unless a brand is asked for or already established), read its areas, and adapt that file. Do not draw from scratch when a specification already covers the shape. `Screen.apply_layout(layout_id)` records the layout name; append real `Region`s from the areas you just read.
 
 **Fidelities.**
 

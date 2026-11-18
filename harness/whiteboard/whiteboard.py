@@ -475,6 +475,11 @@ class BoardLinks:
         """The address of the board file was published to; none while it was never published."""
         return self._all().get(file.name, "")
 
+    def file_published_to(self, url: str) -> Optional[Path]:
+        """The whiteboard file in this folder whose board is at url; none when no file here was published to it."""
+        name = next((name for name, kept in self._all().items() if kept == url), "")
+        return self._record.parent / name if name else None
+
     def record(self, file: Path, url: str) -> None:
         """Keep url as the address of the board file was published to."""
         self._record.write_text(json.dumps({**self._all(), file.name: url}, indent=2), encoding="utf-8")

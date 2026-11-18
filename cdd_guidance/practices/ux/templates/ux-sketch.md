@@ -1,18 +1,20 @@
-# UX sketch — visual ASCII, match active fidelity
+# UX sketch — screens drawn in the design canvas, match active fidelity
 
 The questions to ask are in `ux.md`, under **Sketch** for the active fidelity. The shell's level of detail is that fidelity's **Scaffold** section. This file is the notation for the `user experience:` section.
 
-The site map **is** the structure: a screen lives under the touchpoint it belongs to, inside the journey that reaches it, with its outbound links and its box together in one place. There is no second SCREENS list — a screen is described once, where it sits.
+The site map **is** the structure: a screen lives under the touchpoint it belongs to, inside the journey that reaches it, with its outbound links and its link to the drawn screen together in one place. There is no second SCREENS list — a screen is described once, where it sits.
 
-Control types and states are drawn as glyphs inside the box — not written as `type=` / `state=` labels. Put a **key under each screen** for glyph meanings and interaction notes.
+**Draw screens in the design canvas, never as ASCII boxes.** Each screen is a greybox `.dc.html` artboard in the session's design canvas, so the person sees and comments on a real layout and the story explorer can later run it on the stories' fixtures. Draw it into the canvas's working version under the UX practice's root, `<ux root>/design-canvas/version-N/project/screens/{screen-slug}.dc.html` (start the next version from the latest when the latest is published, as `story_canvas.md` § Versions says), with the version's shared `styles/greybox.css`. Publish the version as a Claude Design canvas, record its link in `versions.json`, and update it in place on every refinement, so the sketch and the canvas never disagree. The sketch file holds the site map and links each screen to its artboard; the drawing itself lives only in the canvas, because a box drawn twice drifts.
 
-**Order:** journeys and touchpoints (`ia`) → screens with their outbound links, regions / rows / verb rows (`ia`) → visual controls + states inside boxes (`mockup`) → brand/stub notes in key (`specification`) → real frontend / backend wiring (`front_end_code`, usually outside this sketch).
+What each artboard shows follows the fidelity: at **ia**, the screen's regions and representative rows, labelled; at **mockup**, its real controls in their states (selected, disabled, validation messages); at **specification**, brand and stub notes in the key. A screen's interaction notes go in its **key** in the sketch.
 
-**Do not annotate sketch lines.** No `<-i` / `<-m` / `<-s` (or any margin fidelity tags). Declare fidelity once at the top of the file. Mockup wiring lives in HTML — do not litter the ASCII with "this line is mockup" markers.
+**Order:** journeys and touchpoints (`ia`) → screens with their outbound links and a regions artboard each (`ia`) → controls and states on each artboard (`mockup`) → brand/stub notes in the key (`specification`) → real frontend / backend wiring (`front_end_code`, usually outside this sketch).
+
+**Do not annotate sketch lines.** No `<-i` / `<-m` / `<-s` (or any margin fidelity tags). Declare fidelity once at the top of the file.
 
 **IA discipline:** no toolbar dumps, AC, or copy walls. ~4 user stories per screen. Tab states are **separate screens** under the same touchpoint; sibling chrome dimmed / `chrome: same as …`.
 
-**Layouts:** pick from the reference library at `specifications/generic/` (`sidebar`, `tabbed`, `modal-dialog`, `form`, `list`, `split-screen`, `holy-grail`, `breadcrumb`, `kanban-board`, … — 43 patterns, one `.md` ASCII + one `.drawio` fragment per layout) — the default, unbranded set. If a specific brand applies (e.g. abd.works), use its sibling folder under `specifications/` instead (e.g. `specifications/abd-works/`). Open the matching file(s), read its areas, and alter it for this screen rather than drawing the box from scratch. `apply_layout` just records the chosen layout name — append the regions yourself.
+**Layouts:** pick from the reference library at `specifications/generic/` (`sidebar`, `tabbed`, `modal-dialog`, `form`, `list`, `split-screen`, `holy-grail`, `breadcrumb`, `kanban-board`, … — 43 patterns, one `.md` ASCII + one `.drawio` fragment per layout) — the default, unbranded set. If a specific brand applies (e.g. abd.works), use its sibling folder under `specifications/` instead (e.g. `specifications/abd-works/`). Open the matching file(s), read its areas, and lay the screen's artboard out on them rather than inventing a layout. `apply_layout` just records the chosen layout name — append the regions yourself.
 
 ## Notation — headings carry the hierarchy
 
@@ -24,7 +26,7 @@ Journeys, touchpoints, and screens nest through markdown headings, so each folds
 | `#### {Touchpoint}` | one moment in that journey — where the person meets the product |
 | `##### [ {screen name} ]` | one screen at that touchpoint, with its layout name on the same line |
 
-Under a screen heading, one fenced block holds, in order: the screen's **outbound links**, its **box**, its **Stories**, its **Domain terms**, and its **key**. A screen reached from more than one touchpoint is drawn under the touchpoint that owns it and referenced by name from the others.
+Under a screen heading, one fenced block holds, in order: the screen's **outbound links**, its **canvas** artboard, its **Stories**, its **Domain terms**, and its **key**. A screen reached from more than one touchpoint is drawn under the touchpoint that owns it and referenced by name from the others.
 
 Nav tags: `[Quick Action]` · `[top nav]` · `[drawer nav]` · `[secondary nav]` · `[action]` · `[system]`
 
@@ -45,23 +47,11 @@ Fidelity: ia | mockup | specification | front_end_code
   ├─ [{nav_type}] {action} ──────────→ {Destination screen}
   └─ [{nav_type}] {action} ──────────→ {Destination screen}
 
-  ┌─────────────────────────────┐
-  │ {region}                    │
-  │ {field} · {field}           │  — representative row
-  │ [ Create ] [ Delete ]       │  — verb row
-  │ name [____________]         │
-  │ kind [ Model      ▾ ]       │
-  │ [x] active   [ ] default    │
-  │ › selected row ‹            │
-  │ (dim) disabled action       │
-  │ ! validation feedback       │
-  └─────────────────────────────┘
+  canvas: screens/{screen-slug}.dc.html
 
   Stories (~N): {Story} · {Story}
   Domain terms: {term} · {term}
   key:
-    [____] text · [▾] dropdown · [x]/[ ] check · [ btn ] button
-    ›sel‹ selected · (dim) disabled · ! error
     on [ Edit ] → {destination or effect}
     // stub/brand notes (specification only)
 ```
@@ -89,22 +79,12 @@ Fidelity: ia
   ├─ [action] selects Identities tab → character sheet — identities
   └─ [action] selects Movements tab ─→ character sheet — movements
 
-  ┌────────────────┬────────────────────────────┐
-  │ ▼ All chars    │ Identities                 │
-  │   ▶ Crowd 1    │ [ Abilities ]              │  inactive greyed
-  │   › Char A ‹   │ Movements                  │
-  │   Char B       ├────────────────────────────┤
-  │                │ ability · rank · key       │
-  │                │ › Strike · 3 · Q ‹         │
-  │                │ Guard · 2 · E              │
-  │                │ [ Create ] [ Delete ] [ Edit ]
-  └────────────────┴────────────────────────────┘
+  canvas: screens/character-sheet-abilities.dc.html
 
   Stories (~4): Update Ability Rank · Create Ability · Delete Ability · Set Key
   Domain terms: ability · ability rank · activation key
   key:
-    tree · list rows · [ btn ] button bar
-    ▼/▶ expand · ›sel‹ selected
+    left panel: the character tree · body: the ability list with Create, Delete, Edit
     on [ Edit ] → ability editor
 ```
 
@@ -113,20 +93,12 @@ Fidelity: ia
 ```
   └─ [action] selects Abilities tab ─→ character sheet — abilities
 
-  ┌──────────┬────────────────┐
-  │ (dim)    │ [Identities]   │
-  │ tree     │ Abilities      │
-  │          │ Movements      │
-  │          ├────────────────┤
-  │          │ identity row   │
-  │          │ [ Add ][ Remove ]
-  └──────────┴────────────────┘
+  canvas: screens/character-sheet-identities.dc.html
 
   Stories (~2): Add Identity · Remove Identity
   Domain terms: identity
   key:
-    chrome: same as character sheet — abilities
-    (dim) = shared chrome
+    chrome: same as character sheet — abilities, dimmed
 ```
 
 #### Change An Ability
@@ -136,21 +108,13 @@ Fidelity: ia
 ```
   └─ [action] save ──────────────────→ character sheet — abilities
 
-  ┌─────────────────────────────┐
-  │ ability name                │
-  │ name [ Strike_________ ]    │
-  │ rank [ 3 ▾ ]  key [ Q__ ]   │
-  │ [x] persistent              │
-  │ [ Save ] [ Cancel ]         │
-  │ ! rank must be 1–10         │
-  └─────────────────────────────┘
+  canvas: screens/ability-editor.dc.html
 
   Stories (~2): Update Ability Rank · Toggle Persistence
   Domain terms: ability rank
   key:
-    [____] text · [▾] dropdown · [x] check · [ btn ] button
-    ! error
     on [ Save ] → character sheet — abilities (update rank)
+    ! rank must be 1–10 shows under the rank field
     // rank update must leave the sheet consistent
 ```
 ~~~

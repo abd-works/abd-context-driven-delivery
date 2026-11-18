@@ -15,10 +15,12 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
         sys.path.insert(0, _p)
 
 from expects import contain, equal, expect, raise_error
-from mamba import before, context, description, it
+from mamba import after, before, context, description, it
 
-from cdd_guidance.actions.render.render import Render
+from cdd_guidance.actions.render.render import BoardNotKept, Render
 from harness.agent_tools.agent_tools import AgentInstructions
+from harness.agent_tools.tool_call import ToolCall
+from space.session.throwaway_project import ThrowawayProject
 from harness.whiteboard import BoardLinks, Whiteboard
 
 _REF = "cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering"
@@ -326,3 +328,38 @@ with description("Render saving what it makes beside its source") as self:
         with it("should answer with what it made, since it has no source to save beside"):
             results = Render().render(_STORIES, format="drawio", paths=[], content=_STORY_MAP, source="md")
             expect(str(results[0]["content"])).to(contain("mxGraphModel"))
+
+
+with description("A comment a person left on a board in Claude") as self:
+    with before.each:
+        self.project = ThrowawayProject()
+        self.folder = self.project.root / ".context"
+        self.folder.mkdir()
+        (self.folder / "story-map.md").write_text(_MARKDOWN_STORY_MAP, encoding="utf-8")
+        self.board_file = self.folder / "story-map.whiteboard"
+        self.board_file.write_text(Whiteboard("Story Map").save(), encoding="utf-8")
+        self.action = Render().for_call(ToolCall({}, self.project.root))
+
+    with after.each:
+        self.project.close()
+
+    with context("on the board the story map's whiteboard file was published to"):
+        with before.each:
+            BoardLinks.beside(self.board_file).record(self.board_file, "https://claude.ai/artifact/StoryMapBoard")
+            answer = AgentInstructions.for_callable(Render.answer_board_comment, self.action)
+            self.text = answer.expand({"board": "https://claude.ai/artifact/StoryMapBoard"}).instructions
+
+        with it("should hand the agent the rules of the fidelity that draws the board"):
+            expect(self.text).to(contain("verb-noun-format"))
+
+        with it("should name the whiteboard file the board was published from"):
+            expect(self.text).to(contain(".context/story-map.whiteboard"))
+
+        with it("should name the story map file to change, which the board is drawn from"):
+            expect(self.text).to(contain(".context/story-map.md"))
+
+    with context("on a board no whiteboard file in the project was published to"):
+        with it("should refuse, naming the board, rather than let the agent answer without the guidance"):
+            answer = AgentInstructions.for_callable(Render.answer_board_comment, self.action)
+            expanded = lambda: answer.expand({"board": "https://claude.ai/artifact/Elsewhere"})
+            expect(expanded).to(raise_error(BoardNotKept, contain("https://claude.ai/artifact/Elsewhere")))

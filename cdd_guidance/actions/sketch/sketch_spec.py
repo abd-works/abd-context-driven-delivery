@@ -241,6 +241,17 @@ with description("Sketch toolset") as self:
         with it("says the rules are an AI check on the sketch, not a graph query"):
             expect(self.prose).to(contain("not a graph query"))
 
+    with context("sketch action expanded for a call naming the UX information architecture"):
+        with before.each:
+            from cdd_guidance.practices.ux.ux import Ux
+
+            arguments = {"guidance": [Ux(fidelity="ia")]}
+            sketcher = Sketch().for_call(ToolCall(arguments))
+            self.prose = AgentInstructions.for_callable(Sketch.sketch, sketcher).expand(arguments).instructions
+
+        with it("should say to draw each screen in the design canvas, not as an ASCII box"):
+            expect(self.prose).to(contain("Draw screens in the design canvas, never as ASCII boxes"))
+
 
 with description("a sketch action"):
     with context("that expands with context tools"):
