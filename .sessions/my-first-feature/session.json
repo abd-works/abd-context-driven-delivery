@@ -8,7 +8,7 @@
     "stages": [
       "discovery"
     ],
-    "version": 6
+    "version": 7
   },
   "practices": {
     "ddd": {
@@ -24,7 +24,7 @@
       "enabled": false
     },
     "stories": {
-      "enabled": false
+      "enabled": true
     }
   },
   "workpath": "demos/spider-man-shopping",
