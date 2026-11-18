@@ -143,28 +143,25 @@ function QueueListView($: EngineInterface, e: AbovePromptEvent, state: QueueStat
 }
 
 /** A stack of the queue's cards, each with its steps open under it when they are opened. A card keeps its place in the
- * whole queue, so its ↑ and ↓ move it there. */
+ * whole queue, so its ↑ and ↓ move it there. The current card is the first not done, or the last when every card is
+ * done, whose ▲ then opens it again. */
 function CardsView($: EngineInterface, e: AbovePromptEvent, state: QueueState, prompts: QueuedPrompt[]) {
   const { Box } = $.ui.resolve(e)
   const all = state.queue.prompts
   const pointer = pointerOf(prompts)
-  const last = prompts.at(-1)
+  const isAllDone = pointer === prompts.length
+  const current = isAllDone ? prompts.length - 1 : pointer
   const arrowsOf = (prompt: QueuedPrompt) =>
-    PointerArrowsView($, e, `pointer-up-${prompt.id}`, `pointer-down-${prompt.id}`, () => movePointerUp($, prompts), () => movePointerDown($, prompts))
+    PointerArrowsView($, e, `pointer-up-${prompt.id}`, isAllDone ? '' : `pointer-down-${prompt.id}`, () => movePointerUp($, prompts), () => movePointerDown($, prompts))
 
   return (
     <Box flexDirection="column" rowGap="sm" width="100%">
       {prompts.map((prompt, place) => (
         <Box key={`card-${prompt.id}`} flexDirection="column">
-          {CardView($, e, state, prompt, all.indexOf(prompt), place === pointer ? arrowsOf(prompt) : null)}
+          {CardView($, e, state, prompt, all.indexOf(prompt), place === current ? arrowsOf(prompt) : null)}
           {state.openSteps.includes(prompt.id) && (prompt.steps ?? []).length > 0 && StepsView($, e, prompt)}
         </Box>
       ))}
-      {last && pointer === prompts.length && (
-        <Box key={`pointer-after-${last.id}`} flexDirection="row" paddingLeft={TASK_BUTTON_COLUMNS + 2}>
-          {PointerArrowsView($, e, `pointer-up-after-${last.id}`, '', () => movePointerUp($, prompts))}
-        </Box>
-      )}
     </Box>
   )
 }

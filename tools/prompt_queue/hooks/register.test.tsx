@@ -414,10 +414,20 @@ test('▼ on the pointer marks its card done, so play moves past it', async ($, 
   expect(seeded.prompts[1]!.is_done).toBe(true)
 })
 
-test('with every card done, the pointer stands under the last card, and ▲ opens it again', async ($, on) => {
-  const seeded = await pressedQueue($, on, QUEUED.map(prompt => ({ ...prompt, is_done: true })), ['pointer-up-after-b'])
+test('with every card done, the last card is the current one, and its ▲ opens it again', async ($, on) => {
+  const seeded = await pressedQueue($, on, QUEUED.map(prompt => ({ ...prompt, is_done: true })), ['pointer-up-b'])
 
   expect(seeded.prompts.map(prompt => Boolean(prompt.is_done))).toEqual([true, false])
+})
+
+test('with every card done, the last card carries the orange working mark', async ($, on) => {
+  seedQueue(on, true, '', QUEUED.map(prompt => ({ ...prompt, is_done: true })))
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  const last = JSON.stringify(await ui.find({ type: 'Box', key: 'card-row-b' }))
+  await ui.unmount()
+
+  expect(last).toContain('"borderColor":"#E5531A"')
 })
 
 const STEPPED = [{ id: 'a', text: 'Write the scenarios', steps: [{ text: 'Read the epic', state: 'done' }, { text: 'Write them', state: 'in_progress' }] }] as Prompt[]
