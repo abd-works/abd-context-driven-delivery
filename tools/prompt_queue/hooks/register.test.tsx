@@ -359,6 +359,19 @@ test('+ queues new work as a card of its own, given to no robot: the agents butt
   expect([seeded.prompts.map(prompt => [prompt.text, prompt.robot]).at(-1), asked.join().includes('robot')]).toEqual([['Run the heavy tier', undefined], false])
 })
 
+test("+ in sub-agent mode adds the draft as a card of the open robot's queue", async ($, on) => {
+  const seeded = groupedQueue(on)
+  seeded.stored.expandedAgents = { value: [1], version: 1 }
+  on('prompt.read', () => ({ value: { text: 'Run the heavy tier', cursor: 18 } }))
+  on('prompt.fill', () => ({ isFilled: true }))
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'queue-add' })
+  await ui.unmount()
+
+  expect(seeded.prompts.map(prompt => [prompt.text, prompt.robot]).at(-1)).toEqual(['Run the heavy tier', 'Bolt'])
+})
+
 test('/queue with a draft places it into the plan the way + does', async ($, on) => {
   const seeded = seedQueue(on, false)
   on('model.fork', () => ({ value: { isAnswered: true, text: JSON.stringify([{ goal: 'b', text: 'Run the heavy tier too' }]), usage: NO_USAGE } }))

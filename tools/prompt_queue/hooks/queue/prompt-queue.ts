@@ -200,10 +200,35 @@ export async function queueDraft($: EngineInterface): Promise<void> {
   }
   const edited = await read($, editingId)
   const isEditing = (await read($, queue)).prompts.some(prompt => prompt.id === edited)
-  const isPlaced = isEditing ? await queuePrompt($, text) : (await runQueueCommand($, text)).isPlaced
+  const robot = await openRobotOf($)
+  const isPlaced = isEditing
+    ? await queuePrompt($, text)
+    : robot ? await queueForRobot($, text, robot) : (await runQueueCommand($, text)).isPlaced
   if (isPlaced) {
     await $.prompt.fill({ text: '', mode: 'replace' })
   }
+}
+
+/** In sub-agent mode, the robot whose queue is open, which + adds to; none while no robot is open or the mode is off. */
+async function openRobotOf($: EngineInterface): Promise<string | undefined> {
+  if (!(await read($, isSubAgentMode))) {
+    return undefined
+  }
+  const open = (await read($, expandedAgents))[0]
+  if (open === undefined) {
+    return undefined
+  }
+  const robot = robotsOf((await read($, queue)).prompts, await read($, tasks))[open]
+  return robot ? agentNameOf(robot, open) : undefined
+}
+
+/** + while a robot's queue is open: the draft becomes the last card of that robot's queue, where the person sees it. */
+async function queueForRobot($: EngineInterface, text: string, robot: string): Promise<boolean> {
+  if (!(await changeQueue($, 'add', { text: text.trim() }))) {
+    return false
+  }
+  const added = (await read($, queue)).prompts.at(-1)
+  return added ? changeQueue($, 'assign', { prompt: added.id, robot }) : false
 }
 
 /** Where the model put one piece of a draft: a task of the goal whose id it names, or a card of its own. */
