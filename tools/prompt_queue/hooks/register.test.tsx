@@ -963,6 +963,17 @@ test("+ on a card with no tasks adds the prompt box's draft as its first task, n
   expect(filled).toEqual([''])
 })
 
+test('+ with an empty prompt box says to type the task there first, instead of doing nothing', async ($, on) => {
+  const seeded = seedQueue(on, true, '', QUEUED.map(prompt => ({ ...prompt })))
+  on('prompt.read', () => ({ value: { text: '  ', cursor: 0 } }))
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'steps-a' })
+  await ui.unmount()
+
+  expect(seeded.stored.notice?.value).toBe('Type the task in the prompt box, then press + to add it.')
+})
+
 test('+ shows on a done card with no tasks too, and its new task opens the card again so it runs', async ($, on) => {
   const seeded = seedQueue(on, true, '', [{ id: 'a', text: 'Write the scenarios', is_done: true }])
   on('prompt.read', () => ({ value: { text: 'Render the map', cursor: 14 } }))

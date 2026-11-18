@@ -584,13 +584,18 @@ export async function sendNow($: EngineInterface, prompt: QueuedPrompt): Promise
 }
 
 /** The steps toggle on a card: its steps show under it, or fold away again. */
+/** What + says when the prompt box is empty, since a card's new task is the prompt box's draft. */
+const EMPTY_TASK_NOTICE = 'Type the task in the prompt box, then press + to add it.'
+
 /** + on a card: the prompt box's draft becomes the prompt's last step, not started, and the box empties; the steps open.
  * A done card opens again, since it has work to run. */
 export async function addStep($: EngineInterface, prompt: QueuedPrompt): Promise<void> {
   const { text } = await $.prompt.read()
   if (text.trim() === '') {
+    await update($, notice, () => EMPTY_TASK_NOTICE)
     return
   }
+  await update($, notice, said => (said === EMPTY_TASK_NOTICE ? '' : said))
   await changeSteps($, prompt, [...(prompt.steps ?? []), { text: text.trim(), state: 'pending' }])
   if (prompt.is_done) {
     await changeQueue($, 'reopen', { prompt: prompt.id })

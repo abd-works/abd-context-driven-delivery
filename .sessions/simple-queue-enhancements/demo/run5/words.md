@@ -1,3 +1,5 @@
+Total letters: 70
+
 # Five longest words in AGENTS.md
 
 1. ExampleBudgetMs (15)
