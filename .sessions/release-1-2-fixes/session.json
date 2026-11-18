@@ -10,11 +10,11 @@
       "specification",
       "implementation"
     ],
-    "version": 10
+    "version": 11
   },
   "practices": {
     "bdd": {
-      "enabled": false
+      "enabled": true
     },
     "ddd": {
       "enabled": false
