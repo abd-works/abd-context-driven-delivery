@@ -382,6 +382,20 @@ with description("a validate action on practice guidance") as self:
 
         # The session board validates with no paths, and a report saved without its graph lists no violations to fix.
         with context("that the story map fidelity declares as its output"):
+            # graph: true names the session's graph, "created for the session and loaded when it is missing": with
+            # nothing saved yet, the call builds it from what the fidelity has written instead of checking nothing.
+            with context("that is validated with the session's graph before one is saved"):
+                with before.all:
+                    self.unsaved = _StoryMapFolder(declared=True)
+                    self.unsaved_report = self.unsaved.action.validate(guidance=["stories-story-map"], graph=True)
+
+                with after.all:
+                    self.unsaved.close()
+
+                with it("should check the graph built from the files the fidelity has written"):
+                    expect(self.unsaved_report).not_to(contain("No saved graph found"))
+                    expect(self.unsaved_report).to(contain("Boarding Stuff"))
+
             with context("that is validated with no paths named"):
                 with before.all:
                     self.declared = _StoryMapFolder(declared=True)
@@ -409,6 +423,22 @@ with description("a validate action on practice guidance") as self:
 
                     with it("should judge only the markdown the fidelity writes by default"):
                         expect(self.both_report).to(contain("Judge only the checked format's files (markdown: "))
+
+                # A call that names only files of the format the fidelity does not check, with the session's graph,
+                # still checks the session's graph; reported 2026-11-18: a domain model validated on its markdown, with
+                # drawio checked, answered "No saved graph found" and ran no graph rule.
+                with context("that is validated on only its drawio with the session's graph"):
+                    with before.all:
+                        self.drawio_only = _StoryMapFolder(declared=True, drawio=True)
+                        self.drawio_only_report = self.drawio_only.action.validate(
+                            guidance=["stories-story-map"], paths=["board/.context/story-map.drawio"], graph=True)
+
+                    with after.all:
+                        self.drawio_only.close()
+
+                    with it("should check the graph built from the files the fidelity has written"):
+                        expect(self.drawio_only_report).not_to(contain("No saved graph found"))
+                        expect(self.drawio_only_report).to(contain("Boarding Stuff"))
 
                 with context("that is validated on a markdown file the call names"):
                     with before.all:

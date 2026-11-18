@@ -50,6 +50,7 @@ class CheckedGraph:
         self._named = to_check.graph
         self.unchecked_files = self._other_format_files()
         # Read now, so a path that is not there is refused before the call claims any report file.
+        self._names_paths = bool(to_check.paths)
         self.edited = self._edited_in_checked_format(to_check.paths)
         self.prefixes = self._graph_prefixes()
         self._checked: SavedGraph | None = None
@@ -60,9 +61,13 @@ class CheckedGraph:
         return [path for path in self._from_session_root(edited) if path not in self.unchecked_files]
 
     def _graph_prefixes(self) -> list[str]:
-        """The files the graph is built from: the paths the call names, else, when it names no graph either, the folders
-        holding what each graph-backed fidelity has written."""
-        return self.edited or self._from_session_root(self._written_outputs() if self._named is None else [])
+        """The files the graph is built from: the paths the call names in the checked format; else the folders holding
+        what each graph-backed fidelity has written, when the call names no graph, or names the session's graph and
+        paths that are all in a format it does not check, since the session's graph is still what it asks to check."""
+        if self.edited:
+            return self.edited
+        builds_written = self._named is None or (self._named is True and self._names_paths)
+        return self._from_session_root(self._written_outputs()) if builds_written else []
 
     def check_beside(self, reports: ReportFiles) -> list[Path]:
         """The graph files this call checks: a graph built from the prefixes and written where reports keeps the call's
@@ -126,8 +131,16 @@ class CheckedGraph:
         if self.prefixes and self._named in (None, True) and self._fidelities:
             return [self._built_at(reports.graph_file())]
         if self._named is True:
-            return self._session_saved()
+            return self._session_saved() or self._built_from_written(reports)
         return self._read_named()
+
+    def _built_from_written(self, reports: ReportFiles) -> list[Path]:
+        """The session's graph when none is saved yet, "created for the session and loaded when it is missing": built
+        from what each listed fidelity has written, so a call naming the session's graph checks it instead of nothing."""
+        self.prefixes = self._from_session_root(self._written_outputs())
+        if not (self.prefixes and self._fidelities):
+            return []
+        return [self._built_at(reports.graph_file())]
 
     def _session_saved(self) -> list[Path]:
         """The session's saved graph, read from the file its graph saves in; none when nothing is saved there."""

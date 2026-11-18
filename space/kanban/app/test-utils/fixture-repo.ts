@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 // A throwaway git repository with no remote, so nothing a spec presses can reach real work.
@@ -105,9 +105,26 @@ function removeWorktrees(root: string): void {
   if (!existsSync(join(root, '.git'))) return
   const listed = execFileSync('git', ['worktree', 'list', '--porcelain'], { cwd: root, encoding: 'utf-8' }).split(/\r?\n/)
   const folders = listed.filter(line => line.startsWith('worktree ')).map(line => line.slice('worktree '.length))
-  for (const folder of folders.slice(1)) rmSync(folder, { recursive: true, force: true, maxRetries: REMOVE_RETRIES, retryDelay: REMOVE_RETRY_MILLISECONDS })
+  for (const folder of [...folders.slice(1), ...leftoverWorktreeFolders(root)]) rmSync(folder, { recursive: true, force: true, maxRetries: REMOVE_RETRIES, retryDelay: REMOVE_RETRY_MILLISECONDS })
   // Git keeps a removed folder registered, and will not delete a branch it still counts as checked out there.
   execFileSync('git', ['worktree', 'prune'], { cwd: root, stdio: 'ignore' })
+}
+
+// A ticket's session can still write its log into its worktree just after a reset removed it, which leaves a folder
+// git no longer lists, and the next start of that ticket fails because its folder already exists. A ticket's worktree
+// is the folder beside the repository named after the repository's abbreviated name, as space/repo/worktree.py names it.
+function leftoverWorktreeFolders(root: string): string[] {
+  const parent = dirname(root)
+  const prefix = `${abbreviatedClone(basename(root))}-`
+  return readdirSync(parent, { withFileTypes: true })
+    .filter(entry => entry.isDirectory() && entry.name.startsWith(prefix))
+    .map(entry => join(parent, entry.name))
+}
+
+// `cdd-board-surface-fixture` is `cdd-bsf`, as Worktrees._abbreviated in space/repo/worktree.py shortens it.
+function abbreviatedClone(folder: string): string {
+  const [first, ...rest] = folder.split(/[-_]+/).filter(Boolean)
+  return rest.length ? `${first}-${rest.map(token => token[0]).join('')}` : first
 }
 
 // The board saves to git in the background after a change, so a reset right after can meet its index lock for a moment.
