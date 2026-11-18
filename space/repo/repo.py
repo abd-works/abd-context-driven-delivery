@@ -15,6 +15,7 @@ from harness.git.git import Git, RepoConnectError
 from space.repo.git_folder import GitFolder
 from space.repo.origin import Merges, Origin
 from space.repo.worktree import Worktree, Worktrees
+from space.repo.new_repository import NewRepository
 
 # A file git reports as changed that is the hook server's running log, not work: it never blocks a switch or a close.
 _RUNTIME_LOG = "events.log"
@@ -285,6 +286,16 @@ class Repo:
         main, so origin's main holds the work; the main clone goes back to the branch it had. Answer the commit main is
         on."""
         return self.publishing.take_work_to_main(push=True)
+
+    @long_call
+    @agent_tool
+    @mcp
+    def make_repository(self) -> str:
+        """Make the project, a plain folder, a git repository on main with a first commit of its files, so its tickets get
+        branches, worktrees and chats of their own: the chat bar offers it in a session whose project is no repository.
+        Its .gitignore first takes what the CDD checkout ignores. A repository already there is left as it is. Answer what
+        was done."""
+        return NewRepository(self.checkout_folder).make_from_folder()
 
     @command(name="push")
     @agent_instructions

@@ -100,10 +100,10 @@ The base of an annotation that says where install publishes a member, by its `ch
 
 # harness/process
 
-*BackgroundStart* and *PythonInterpreter* start a server without a console window, *RunningProcess* asks about and ends one by its id, and *ExclusivePort* is the one port a server may hold.
+*BackgroundStart* and *PythonInterpreter* start a server without a console window, *RunningProcess* asks about and ends one by its id, *ExclusivePort* is the one port a server may hold, and *CappedLogFile* keeps a log a server or the session writes under a size, so it cannot fill the disk.
 
 - **Purpose:** Start, name, and stop the processes the framework keeps, the same way on Windows and elsewhere.
-- **Seam (terms):** BackgroundStart, Wmi, OutsideJobStartFailed, PythonInterpreter, ExclusivePort, RunningProcess, ProcessNotStopped
+- **Seam (terms):** BackgroundStart, Wmi, OutsideJobStartFailed, PythonInterpreter, ExclusivePort, RunningProcess, ProcessNotStopped, CappedLogFile
 - **Dependencies (one-way):** *(none)*
 
 ## BackgroundStart
@@ -173,6 +173,20 @@ One Python on this computer.
 + windowless: str
 + console: str
 ----
+
+## CappedLogFile
+
+A log file that, once it reaches its size (4 MB), moves its lines to the previous file beside it (`server.log.1`), replacing an older one, so the next line starts a new file. The session log, the hook server's log, and the cdd server's output each keep one.
+
++ CappedLogFile(path: Path, limit_bytes: int = LOG_SIZE_LIMIT_BYTES)
+------
++ path: Path
++ limit_bytes: int
++ previous: Path
++ is_full: bool
+----
++ roll_when_full(): bool
+	// a log another process holds open cannot be moved on Windows, so it rolls at the next write or start that finds it free
 
 # harness/git
 
@@ -1497,7 +1511,8 @@ One fidelity of a practice, such as the story map: its stage, its outputs, its r
 + rules(): RulesCollection
 + generate_output(): str
 + render(format: str, content: Any = '', source: str | None = None): dict
-+ render_files(format: str, paths: list[str] | str, source: str | None = None): dict
++ render_files(format: str, paths: list[str] | str, source: str | None = None, previous: str = ''): dict
+	// previous is the target file as it is now, whose layout a diagram keeps
 + guidance_parts(): list[str]
 ---<<reads its stage from>>--> ApproachStage
 ---<<runs actions through>>--> ActionCatalogue
@@ -1548,6 +1563,8 @@ A path a fidelity declares as its output, as a glob over the session's current r
 + names_one_path: bool
 + pattern: re.Pattern[str]
 ----
++ parts_of(path: str): dict[str, str]
++ named_with(parts: dict[str, str]): str
 
 ## DeclaredOutputs
 
@@ -1562,6 +1579,8 @@ The files one fidelity declares, made from its outputs: whether a path is one of
 + files(): dict[str, list]
 + has_output(): bool
 + files_to_review(): dict[str, list]
++ file_name_beside(source: str, format: str): str
+	// the file a render of source into format is saved as, beside source
 ---<<matches with>>--> DeclaredFile
 
 ## PracticeFormats
@@ -3073,6 +3092,7 @@ One named piece of work in a project, its record (session.json, idea file) kept 
 + record_folder: Path | None
 + work_folder: Path | None
 + is_closed: bool
++ is_repository: bool
 + session_file: Path
 + session_file_from_project: str
 + work_root: Path
@@ -4074,6 +4094,8 @@ Convert already-generated content into another format.
 + render(guidance: GuidanceArg, format: str, paths: list[str] | str, content: str = '', source: str | None = None): list
 	-> GuidanceAction.document_named
 + place_rendered(): str
++ answer_board_comment(board: str): str
+	// the board's comment is answered in the file it was drawn from, never on the board alone
 
 ## Satisfy : GuidanceAction
 
@@ -4318,7 +4340,10 @@ A class in the model: what it remembers, what it does, and how it relates.
 + held_fields: dict[str, str]
 + << composition >> source_facts: ClassSourceFacts
 + << composition >> arrows: ClassArrows
++ << association >> folded: list[OoadClass]
++ folded_into: str
 ----
++ fold(other: OoadClass): None
 + doc_comment(marked: bool): DocComment
 + declared_bases(known_names: Iterable[str]): list[str]
 + update_self(source: OoadNode): None
@@ -4609,7 +4634,8 @@ The draw.io format of the class model: a modules view of rounded module cards, o
 + load_module_cell(source: Module): DrawIOModule
 + imported_class(source: OoadClass, from_module: str = ''): DrawIOImportedClass
 + parse(text: str): DrawIOCleanEngineeringModel
-+ render(canonical: CleanEngineeringModel): str
++ render(canonical: CleanEngineeringModel, previous: str | None = None): str
+	// with previous, the cards and arrows a person placed there stay where they are
 + kept_previous(): str | None
 ---<<creates>>--> DrawIOModule
 

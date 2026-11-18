@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from cdd_guidance.actions.render.rendered_file import WHITEBOARD, RenderedFile
 from harness.guidance_actions import GuidanceArg, GuidanceAction, WorkedGuidance
+from harness.guidance.guidance import FidelityGuidance
 from harness.guidance.stages import TAKES_FORMATS, on_stage
 from pathlib import Path
 
@@ -61,7 +62,8 @@ class Render(GuidanceAction):
     def _render_files(self, worked: WorkedGuidance, format: str, paths: list[str] | str, source: str | None) -> dict:
         """The render of the files at paths, saved beside them when it is a diagram or a document."""
         sources = [self.files.path_named(path) for path in ([paths] if isinstance(paths, str) else paths)]
-        saved = RenderedFile.beside(worked, Format(format), Format(source), sources)
+        declared = worked.declared if isinstance(worked, FidelityGuidance) else None
+        saved = RenderedFile.from_sources(sources, Format(source), Format(format), declared)
         if saved is None:
             return worked.render_files(format, paths, source)
         return saved.save(worked.render_files(format, paths, source, saved.previous))

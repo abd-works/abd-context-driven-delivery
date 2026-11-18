@@ -17,7 +17,7 @@ import { openReport, openSessionFolder, openStageFiles } from './fidelity-files-
 import { openHelp } from './fidelity-help-client'
 import type { PracticeDotClient } from './fidelity-progress-client'
 import { CARD_SCOPE, SessionCardView } from './session-card-view'
-import { openClose, toggleRepoListWithRepos } from './session-client'
+import { makeRepository, openClose, toggleRepoListWithRepos } from './session-client'
 import { toggleSessionList } from './session-dialogs-client'
 import { CloseView, RepoListView, repoListRowsOf, SessionListView, sessionListRowsOf } from './session-dialogs-view'
 import type { StageClient } from './stage-client'
@@ -102,19 +102,15 @@ function StageButtonsView($: EngineInterface, elements: ElementTable, { chatBar 
 // tickets to open; each shows its name above it on hover, and + shows the session card too. The line under the chat
 // names the repository and branch, so the icons alone keep the line short. A ticket's own chat works only on that
 // ticket, so it shows the name alone: a press opens the session's folder in the files pane, its card showing on hover.
-// A chat in a plain folder, in any session, has neither other repositories nor tickets nor a branch to close, so it
-// shows the folder's path alone, read only, and no close button.
 function SessionNameView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw) {
   const { chatBar } = draw
   const { Box, Button, Text } = elements
   if (chatBar.isMain) return MainChatListsView($, elements, draw)
-  const name = chatBar.isPlainFolder
-    ? <Text weight="semibold" color={BRAND.text} wrap="truncate-start">{chatBar.folder}</Text>
-    : (
-      <Button key="session-name-button" plain onPress={() => openSessionFolder($)}>
-        <Text weight="semibold" color={BRAND.text} wrap="truncate-end">{chatBar.sessionName}</Text>
-      </Button>
-    )
+  const name = (
+    <Button key="session-name-button" plain onPress={() => openSessionFolder($)}>
+      <Text weight="semibold" color={BRAND.text} wrap="truncate-end">{chatBar.sessionName}</Text>
+    </Button>
+  )
   // The name is the one part of the line that gives way: it shrinks and is cut short, so the buttons beside it stay in view.
   return (
     <Box key="session-name" flexDirection="row" gap={1} flexShrink={1} minWidth={0}>
@@ -191,9 +187,9 @@ function SessionButtonsView($: EngineInterface, elements: ElementTable, { chatBa
   const { Box } = elements
   return (
     <Box key="session-buttons" flexDirection="row" gap={1} flexShrink={0}>
-      {chatBar.isClone ? push.buttons : null}
+      {push.buttons}
       {IconButtonView(elements, 'restart-button', '↻', 'restart cdd server', () => restartServer($))}
-      {chatBar.isMain || chatBar.isPlainFolder ? null : IconButtonView(elements, 'close-button', '✕', 'close session', () => openClose($, chatBar))}
+      {chatBar.isMain ? null : IconButtonView(elements, 'close-button', '✕', 'close session', () => openClose($, chatBar))}
     </Box>
   )
 }
@@ -261,10 +257,29 @@ function OverlayListView($: EngineInterface, { Box, Button, Text }: ElementTable
 
 // The line, left to right: the stage button, │, fidelity dots and the action chip, then at the right end the session
 // name, its buttons, the health mark, and the version badge.
+// CDD works in a git repository: a session's tickets get branches, worktrees and chats of their own. In a folder that is
+// no repository the line asks for the repository first and offers nothing else; the folder's path is the part that
+// gives way when the line is full.
+function RepositoryRequiredView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw) {
+  const { Box, Button, Text } = elements
+  return (
+    <Box key="line" flexDirection="row" gap={1} alignItems="center">
+      <Box flexDirection="row" flexShrink={1} minWidth={0}>
+        <Text color={BRAND.muted} wrap="truncate-start">{`${draw.chatBar.folder} is no git repository, and CDD works in one`}</Text>
+      </Box>
+      <Button key="make-repository-button" label="Create the git repository" onPress={() => makeRepository($)} />
+      <Box flexGrow={1} />
+      {draw.health.band}
+      {draw.version.badge}
+    </Box>
+  )
+}
+
 function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw) {
   const { Box, Text } = elements
   const { chatBar } = draw
   if (!chatBar.hasSession) return <Box key="line" flexDirection="row" gap={1}><Box flexGrow={1} />{SessionNameView($, elements, draw)}{draw.health.band}{draw.version.badge}</Box>
+  if (chatBar.isPlainFolder) return RepositoryRequiredView($, elements, draw)
   return (
     <Box key="line" flexDirection="row" gap={1} alignItems="center">
         {StageButtonsView($, elements, draw)}
@@ -341,8 +356,8 @@ export function ChatBarView($: EngineInterface, elements: ElementTable, draw: Ch
       {draw.version.dialog}
       {draw.push.dialog}
       {CloseView($, elements, draw)}
-      {SessionCardView($, elements, draw)}
-      {ListRoomView(elements, draw)}
+      {chatBar.isPlainFolder ? null : SessionCardView($, elements, draw)}
+      {chatBar.isPlainFolder ? null : ListRoomView(elements, draw)}
       {LineView($, elements, draw)}
     </Box>
   )

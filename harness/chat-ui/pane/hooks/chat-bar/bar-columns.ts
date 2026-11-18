@@ -14,11 +14,11 @@ const HEALTH_MARK = 1
 // A list box's round border and its padding, on both sides.
 const LIST_FRAME = 4
 
-// The icons after the session name at the right end, as SessionButtonsView draws them: push and push & merge in a
-// repository, restart, and close in a ticket's own chat, a gap between each.
+// The icons after the session name at the right end, as SessionButtonsView draws them: push and push & merge, restart,
+// and close in a ticket's own chat, a gap between each.
 function sessionButtonCellsOf(chatBar: ChatBarClient): number {
   if (!chatBar.hasSession) return 0
-  const icons = (chatBar.isClone ? 2 : 0) + 1 + (chatBar.isMain || chatBar.isPlainFolder ? 0 : 1)
+  const icons = 2 + 1 + (chatBar.isMain ? 0 : 1)
   return GAP + icons + (icons - 1) * GAP
 }
 

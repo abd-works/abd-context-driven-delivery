@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
-
+from harness.guidance.declared_outputs import DeclaredOutputs
 from harness.markdown.format import Format
 from harness.whiteboard import BoardLinks, Whiteboard
 
@@ -13,8 +12,6 @@ WHITEBOARD = "whiteboard"
 # The groups of formats a render saves itself: a draw.io file or a whiteboard, and markdown. Code goes into the module it
 # belongs to, which only the agent knows, so a render to code answers with the code.
 SAVED_GROUPS = ("diagram", "markdown")
-# What a sketch file's name ends with, which the file rendered from it leaves off: orders-sketch.md renders orders.md.
-SKETCH_ENDING = "-sketch"
 
 
 class RenderedFile:
@@ -37,13 +34,17 @@ class RenderedFile:
         return self._before if self.format.group == "diagram" else ""
 
     @classmethod
-    def beside(cls, fidelity: Any, format: Format, source: Format, sources: list[Path]) -> RenderedFile | None:
-        """The file a render of sources into format saves, beside the first of them; none for a format a render does
-        not save, or when no name can be given to it without writing over a source."""
+    def from_sources(cls, sources: list[Path], source: Format, format: Format, declared: DeclaredOutputs | None) -> RenderedFile | None:
+        """The file a render of sources, written in source, into format saves, beside the first of them: the name the
+        fidelity that declares these files writes format to, else the first source's own name in format. None for a
+        format a render does not save, or when no name can be given to it without writing over a source."""
         if format.group not in SAVED_GROUPS or not sources:
             return None
         first = sources[0]
-        name = _declared_name(fidelity, first, format) or _source_name(first, format, source)
+        declared_name = declared.file_name_beside(first.as_posix(), format.name) if declared is not None else ""
+        # A folder names no one file, so only a file lends its own name.
+        own_name = f"{source.stem_of(first)}{format.extension}" if first.is_file() else ""
+        name = declared_name or own_name
         if not name:
             return None
         target = (first if first.is_dir() else first.parent) / name
@@ -67,18 +68,3 @@ class RenderedFile:
         before = Whiteboard.from_text(self._before) if board and self._before else None
         return {"board": board, "batches": Whiteboard.from_text(content).batches(before)}
 
-
-def _declared_name(fidelity: Any, source: Path, format: Format) -> str:
-    """The name the fidelity writes format to for source; none for guidance that declares no files."""
-    declared = getattr(fidelity, "declared", None)
-    return declared.file_name_beside(source.as_posix(), format.name) if declared is not None else ""
-
-
-def _source_name(source: Path, format: Format, source_format: Format) -> str:
-    """The source's own name in format; none for a folder, which names no one file."""
-    if not source.is_file():
-        return ""
-    stem = source.stem
-    if source_format == "sketch" and stem.endswith(SKETCH_ENDING):
-        stem = stem[: -len(SKETCH_ENDING)]
-    return f"{stem}{format.extension}"

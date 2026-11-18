@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 from mamba import description, it
 from expects import equal, expect
@@ -89,3 +90,10 @@ with description("a format") as self:
 
         with it("should stay the same format when made again from itself"):
             expect(Format(Format("ts")).is_code).to(equal(True))
+
+    with description("naming the file it was read from"):
+        with it("should be a sketch file's name without its sketch ending"):
+            expect(Format("sketch").stem_of(Path("work/orders-sketch.md"))).to(equal("orders"))
+
+        with it("should be any other file's own name without its extension"):
+            expect(Format("markdown").stem_of(Path("work/orders-sketch.md"))).to(equal("orders-sketch"))

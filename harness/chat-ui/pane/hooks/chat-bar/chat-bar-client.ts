@@ -199,19 +199,20 @@ export class ChatBarClient {
     return this.board?.project ?? ''
   }
 
-  // Whether the folder is a git repository, where tickets get worktrees and chats of their own. A board read before the
-  // overview said so counts as one, so its tickets stay open.
+  // Whether the folder is a git repository, which CDD works in: tickets get worktrees and chats of their own. A board
+  // read before the overview said so counts as one, so its tickets stay open.
   get isClone(): boolean {
     return this.board?.is_clone ?? true
   }
 
-  // The project's folder on disk, which a chat in a plain folder shows instead of the repo and session buttons.
+  // The project's folder on disk: where the new session's folder picker opens, and what a chat in a plain folder names
+  // when it asks for the repository.
   get folder(): string {
     return this.board?.folder ?? ''
   }
 
-  // A chat in a folder that is no git repository, such as one opened from FOLDER on its own session, has no branch to
-  // switch or close and no other repository to open, so the bar shows its folder alone, read only.
+  // A chat in a folder that is no git repository: CDD works only in one, so the bar asks to create it and shows nothing
+  // else until it is there.
   get isPlainFolder(): boolean {
     return Boolean(this.board) && !this.isClone
   }

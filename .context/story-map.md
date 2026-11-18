@@ -648,6 +648,10 @@ Observed: the panel shows MCP host, Tools with the loaded count, Kanban app and 
 
 Observed: Reconnect retries `cdd` up to three times (`RECONNECT_TRIES`), then reads the active session again.
 
+### (S) Person --> Create Git Repository First
+
+Built (2026-11-18), not seen (the coordinator, relaying the person: "A git repository is required: remove every way to choose or work in a plain folder, and in a plain folder the chat bar asks to create the git repository first"): CDD works in a git repository. In a session whose project is no git repository, the chat bar's line holds only the folder's path, "is no git repository, and CDD works in one", a Create the git repository button, the health mark and the version badge: no stages, fidelities, actions, session card or lists. The press calls `repo.make_repository` (`Repo.make_repository`, `NewRepository.make_from_folder`): the folder's `.gitignore` takes what the CDD checkout ignores, then `git init -b main` and a first commit of the folder's own files with a README, leaving `.claude` and `.sessions` out; the bar is read again and draws the session. The repository list's Folder Only (No Repo) section and the `repos.open_folder` tool and `/open-folder` command, which opened a folder as it was, are gone. Tests: `harness/chat-ui/pane/hooks/chat-bar/make-repository.test.ts` (`claude plugin test`), `space/repo/new_repository_heavy_spec.py`.
+
 ### (S) Person --> [Reinstall CDD Tools](../story_tests/move-work-forward-from-chat-bar/check-cdd-server-health-in-chat-bar/check_cdd_server_health_in_chat_bar_story.test.md#story-reinstall-cdd-tools)
 
 Observed: Run install runs the installer and says installing, installed (open a new session) or failed; Details shows the tool, error, server and fix.
