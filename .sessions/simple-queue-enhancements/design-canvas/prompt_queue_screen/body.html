@@ -12,7 +12,7 @@
 <sc-if value="{{group.hasRobot}}" hint-placeholder-val="{{ false }}">
 <div class="pq-robot-head">
 <button class="pq-robot" title="{{group.robotTip}}" onClick="{{group.toggle}}"><img src="{{group.robotSrc}}" alt="{{group.robotTip}}" width="{{robotPixels}}" height="{{robotPixels}}"></button>
-<sc-if value="{{group.isOpen}}" hint-placeholder-val="{{ true }}"><span class="pq-robot-name">{{group.name}}</span><button class="pq-chip" title="Rename from the prompt box's draft" onClick="{{group.rename}}">✎</button></sc-if>
+<sc-if value="{{group.isOpen}}" hint-placeholder-val="{{ true }}"><span class="pq-robot-name">{{group.name}}</span></sc-if>
 </div>
 </sc-if>
 <sc-if value="{{group.isCollapsed}}" hint-placeholder-val="{{ false }}"><span class="pq-robot-progress">{{group.progress}}</span></sc-if>

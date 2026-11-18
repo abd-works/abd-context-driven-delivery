@@ -74,7 +74,6 @@ name: name,
 robotTip: name + ', a robot: press to fold or open its queue',
 robotSrc: this.svgSource(mod.robotSvgOf(robot.place)),
 toggle: this.act((m, $) => m.toggleCollapsedAgent($, robot.place)),
-rename: this.act((m, $) => m.renameAgent($, robot.place)),
 progress: items.filter((item) => item.is_done).length + '/' + items.length,
 };
 }

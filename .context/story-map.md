@@ -1074,7 +1074,7 @@ Observed (2026-11-17, run2 demo): pressing play sent the four robots off side by
 
 ### (S) Person --> [Rename Robot](../story_tests/queue-prompts-for-later/share-queue-among-robots/share_queue_among_robots_story.test.md#story-rename-robot)
 
-Built (2026-11-17), not seen (the person: "allow naming, its fun!"): ✎ beside a robot's name renames it from the prompt box's draft, gives each of its cards the new name (`renameAgent`, `prompt-queue.assign`) and empties the box; the sub-agent starts with that name in its description.
+Removed for now (2026-11-17, the person: "remove the edit bot name button for now, its distracting"); the robot shows its name only. Was built, not seen (the person: "allow naming, its fun!"): ✎ beside a robot's name renames it from the prompt box's draft, gives each of its cards the new name (`renameAgent`, `prompt-queue.assign`) and empties the box; the sub-agent starts with that name in its description.
 
 ### (S) Person --> [Collapse Robot Queue](../story_tests/queue-prompts-for-later/share-queue-among-robots/share_queue_among_robots_story.test.md#story-collapse-robot-queue)
 

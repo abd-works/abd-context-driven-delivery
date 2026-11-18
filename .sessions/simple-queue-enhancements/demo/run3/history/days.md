@@ -1,12 +1,31 @@
-# Commit history, last 3 days with commits (simple-queue-enhancements)
+# Commits by day on simple-queue-enhancements
 
-Busiest day: 2026-11-15, with 454 commits (2026-11-16 had 375, 2026-11-17 had 244).
-Total commits: 1073 across the three days.
+- Busiest day: 2026-11-15, with 454 commits.
+- Total commits over the three days: 1092 (263 on 2026-11-17, 375 on 2026-11-16, 454 on 2026-11-15).
 
 ## 2026-11-17
 
-Summary: the prompt queue grew into a shared queue for several robots, with step buttons, archiving of removed prompts and a wait-instead-of-idle rule, while main brought in dev-lane pinning, end-to-end report checks and graph view fixes.
+Summary: the prompt queue's sub-agent mode took shape: robots each work one card at a time, this chat hands each robot its next card, and the queue layout and + button were reworked.
 
+- Run9 demo results from the second pass
+- Play hands a robot its card again when an earlier card was opened, instead of waiting on the later card it was last handed
+- In sub-agent mode, cards no robot has show under the robots at full width as in the single queue, and grouping leaves the person's interruptions to this chat
+- Robots lose the ✎ rename button for now; each robot shows its name and done count, open or closed
+- Note the short-path demo cards in the corrections log
+- The queue remembers each robot's sub-agent id from this chat's Agent call, and the hand-out sends a robot's next card to that id
+- This chat orchestrates the robots: play asks it to send each robot its next card's words exactly, and it marks the card done when the robot reports finished; the queue no longer starts or messages robots itself
+- A robot's finished turn only hands on its next card, without grouping the cards given to no robot, so a failed grouping no longer stops the hand-on
+- A robot's next card is claimed before it is sent, so two hand-ons at the same moment send it once
+- Robots work one card at a time: a robot starts on its first open card, told its id and to report on the queue, and when it finishes, the same sub-agent is sent its next card
+- + in sub-agent mode adds the draft as a card of the open robot's queue, where it shows
+- + with an empty prompt box says to type the task there first, instead of doing nothing
+- With every card done, the last card is the current one: orange border and its ▲ to run it again
+- Robots stand on the left, the open robot's queue to their right
+- Every card with no tasks shows +, done ones too; a task added to a done card opens it again
+- Robots stand one under another on the right, the open robot's queue fills the room to their left, and only one robot's queue is open at a time
+- A robot already at work is not started again when the next turn ends, so robots no longer pile up on the same cards
+- Robots show as a plain list, each with its name and done count; pressing a robot opens its queue, and grouping leaves every queue closed
+- A robot's sub-agent starts under its robot name, so the lead can message it with SendMessage; the note beside a message says to
 - Queue Prompts For Later: every story has its scenarios, and the epic is grouped into four sub-epics
 - Drop the opened card's leftover comment
 - A robot's card works as the single queue's: its buttons on hover, pressing it edits it; the open-in-place view and its state are gone. The invisible press buttons over a card and a task box are blank with no-break spaces, which the desktop does not collapse, so a press on + and on a card lands
@@ -254,7 +273,7 @@ Summary: the prompt queue grew into a shared queue for several robots, with step
 
 ## 2026-11-16
 
-Summary: the prompt queue started as one-line chat buttons, the version-1 refactoring folded modules and fixed clean engineering findings, and the Files app gained in-place code navigation, Cursor-style source view and fold keys; much of the day is session guidance saves.
+Summary: the prompt queue cards became one-line chat buttons, while the Files app and the session graph gained node filters, relationship groups, validation history and a Cursor-style source view.
 
 - Prompt queue: each card is a chat button, one line tall with round ends; pressing it edits the prompt
 - Prompt queue: an edited prompt keeps its place, shaded, and the next add puts it back there
@@ -634,7 +653,7 @@ Summary: the prompt queue started as one-line chat buttons, the version-1 refact
 
 ## 2026-11-15
 
-Summary: release-2 was merged, the Files app moved into harness with a resizable file bar, session file lists and a graph view, the chat bar got health icons and stage toggles, and the cdd connection learned to ride out a server restart.
+Summary: the chat bar and Files app learned to follow the session's guidance selection, alongside graph view story tests, a compact whiteboard thin slice, TDD practice overlay rules and release-cadence fixes.
 
 - Graph view story tests: Switch and Explore sub-epics in story form; LoadProgressView split
 - sessions: file-manager guidance {'stages': ['discovery', 'implementation… sessions: file-manager guidance {'stages': ['discovery', 'implementation…
