@@ -1,7 +1,7 @@
 import json
 
 from mamba import describe, it, before
-from expects import expect, equal, raise_error
+from expects import contain, expect, equal, raise_error
 
 from tools.prompt_queue.prompt_queue import PromptNotQueued, PromptQueue, handoff_steps
 
@@ -63,6 +63,15 @@ with describe(PromptQueue):
 
     with it("refuses to mark done a prompt the queue does not hold"):
         expect(lambda: self.queue.done("gone")).to(raise_error(PromptNotQueued))
+
+    with it("names the chat whose queue it read and the prompts that queue holds, when it refuses one it does not hold"):
+        held = ", ".join(prompt["id"] for prompt in self.queue.prompts)
+        expect(lambda: self.queue.done("gone")).to(raise_error(PromptNotQueued, f"no prompt 'gone' is on the queue of chat chat-1, which holds {held}"))
+
+    with it("says when a prompt was taken off the queue, when it refuses one the archive holds"):
+        removed = self.queue.prompts[0]["id"]
+        self.queue.remove(removed)
+        expect(lambda: self.queue.done(removed)).to(raise_error(PromptNotQueued, contain(f"{removed} was taken off the queue at ")))
 
     with it("keeps a copy of the prompts clear takes off, as JSON in the chat's queue archive"):
         self.queue.clear()

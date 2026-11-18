@@ -76,8 +76,11 @@ class StepNotPlanned(LookupError):
 class PromptNotQueued(LookupError):
     """A call named a prompt the queue does not hold, such as one already sent or removed."""
 
-    def __init__(self, prompt: str) -> None:
-        super().__init__(f"no prompt {prompt!r} is on the queue: it was sent or removed")
+    def __init__(self, prompt: str, chat: str, held: list[str], taken_off: str = "") -> None:
+        """The queue of chat, which holds the prompts held, was read: a call that names another chat reads another
+        queue. taken_off is when the chat's queue archive says the prompt was taken off it; empty when it never was."""
+        told = f"no prompt {prompt!r} is on the queue of chat {chat}, which holds {', '.join(held) or 'nothing'}"
+        super().__init__(f"{told}; {prompt} was taken off the queue at {taken_off}" if taken_off else told)
         self.prompt = prompt
 
 
@@ -266,8 +269,15 @@ class PromptQueue:
         """The prompts queued, refusing a prompt id the queue does not hold."""
         held = self.prompts
         if not any(item["id"] == prompt for item in held):
-            raise PromptNotQueued(prompt)
+            raise PromptNotQueued(prompt, self._chat, [item["id"] for item in held], self._taken_off(prompt))
         return held
+
+    def _taken_off(self, prompt: str) -> str:
+        """When the chat's queue archive says prompt was taken off the queue, the latest time; empty when it holds none."""
+        if not self._archive_folder.is_dir():
+            return ""
+        archived = (json.loads(saved.read_text(encoding="utf-8")) for saved in sorted(self._archive_folder.glob("*.json"), reverse=True))
+        return next((record.get("taken_off", "") for record in archived if any(item.get("id") == prompt for item in record.get("prompts", []))), "")
 
     def _held(self) -> dict:
         """What the queue's file holds; an empty queue when it has none yet."""
