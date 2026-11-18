@@ -5,7 +5,9 @@
   "branch": "release-1-2-fixes",
   "worktree": "C:\\dev\\abd-cdd-release-1-2-fixes",
   "guidance": {
-    "stages": [],
-    "version": 2
+    "stages": [
+      "discovery"
+    ],
+    "version": 3
   }
 }
