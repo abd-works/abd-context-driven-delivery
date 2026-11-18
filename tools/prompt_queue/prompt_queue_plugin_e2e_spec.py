@@ -45,7 +45,9 @@ _CHAT_ENVIRONMENT = (
 _MODEL = "haiku"
 # How long one turn may take, from the message sent to the chat's result.
 _TURN_SECONDS = 240
-_NOTICE = "<task-notification> <task-id>b1</task-id> <status>completed</status> </task-notification>"
+# How many times the chat is asked to give the goal its steps before the spec goes on and fails on what it finds.
+_SET_STEPS_ASKS = 3
+_NOTICE ="<task-notification> <task-id>b1</task-id> <status>completed</status> </task-notification>"
 
 
 class HeadlessChat:
@@ -175,9 +177,14 @@ with description("a chat's prompt queue as the prompt-queue plugin keeps it in a
             self.chat = HeadlessChat(self.server, allowed_tools=("mcp__cdd__prompt-queue_set_steps",))
             self.goal = self.chat.queue_work(["Write the scenarios", "Run the unit tier"], done=1)[0]
             self.chat.start()
-            self.chat.send(
-                f'Call the tool mcp__cdd__prompt-queue_set_steps once, with chat "{self.chat.id}", prompt "{self.goal["id"]}" '
-                'and steps [{"text": "Read the epic", "state": "done"}]. Then reply only: ok')
+            # The cheapest model now and then answers without the call, or makes it with steps it cannot read; the
+            # goal is the one last worked only once its call lands, so the chat is asked again until the steps are there.
+            for _ask in range(_SET_STEPS_ASKS):
+                self.chat.send(
+                    f'Call the tool mcp__cdd__prompt-queue_set_steps once, with chat "{self.chat.id}", prompt "{self.goal["id"]}" '
+                    'and steps [{"text": "Read the epic", "state": "done"}]. Then reply only: ok')
+                if any(prompt["id"] == self.goal["id"] and prompt.get("steps") for prompt in self.chat.prompts()):
+                    break
 
         with after.all:
             self.chat.stop()
