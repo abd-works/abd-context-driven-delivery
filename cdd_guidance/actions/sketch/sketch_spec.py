@@ -212,6 +212,11 @@ with description("Sketch toolset") as self:
             expect(joined).to(contain("Batch similar questions"))
             expect(joined).to(contain("does not run forever"))
 
+        with it("instructs keeping the questions when the person asks to hurry or to proceed"):
+            joined = "\n".join(self.body.prompt)
+            expect(joined).to(contain("hurry-keeps-the-questions"))
+            expect(joined).to(contain("ask fewer, sharper questions"))
+
         with it("includes the grill_with_context body in sketch"):
             joined = "\n".join(self.body.prompt)
             expect(joined).to(contain("(Recommended)"))

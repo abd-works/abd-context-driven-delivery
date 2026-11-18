@@ -11,6 +11,7 @@ from typing import Any
 
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_address import McpAddress
+from harness.process.capped_log_file import CappedLogFile
 from harness.process.process import BackgroundStart, ExclusivePort, RunningProcess
 
 # The process a throwaway server belongs to, such as the spec run that started it on a port of its own. The server ends
@@ -108,8 +109,10 @@ class McpDaemon:
         return f"running (pid {running.pid}, {self.home.mode} {running.source})"
 
     def spawn(self) -> None:
-        """Start the server in the background, past the chat that asked for it, with its output in the home's log."""
+        """Start the server in the background, past the chat that asked for it, with its output in the home's log; a log
+        that reached its size starts again, its earlier output kept in its previous file."""
         self.home.folder.mkdir(parents=True, exist_ok=True)
+        CappedLogFile(self.home.log_path).roll_when_full()
         command = [self.home.interpreter.windowless, "-m", "harness.mcp", "--port", str(self.port)]
         with open(self.home.log_path, "a", encoding="utf-8") as log:
             BackgroundStart(log).run(command, self.home.source, {**os.environ, **self.home.server_environment})

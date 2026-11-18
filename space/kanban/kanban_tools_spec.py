@@ -696,6 +696,7 @@ with description("the board tools") as self:
                     written = {
                         story_map: "text\n",
                         "notes/plain.txt": "text\n",
+                        ".context/sign-up-sketch.md": "# Stories\n",
                         "src/orders/chat_bar.py": "class ChatBar:\n    pass\n",
                         "src/carts/cart.py": "@aggregate_root\nclass Cart:\n    pass\n",
                         "src/carts/carts.py": "class CartRepository:\n    pass\n",
@@ -714,10 +715,15 @@ with description("the board tools") as self:
                 self.root_files = ProjectTools.answer_of(root_files)
 
             with it("should name the fidelities the story map belongs to"):
-                expect([entry["fidelities"] for entry in self.root_files.values() if entry["format"] == "markdown"]).to(equal([["stories-story-map"]]))
+                expect([entry["fidelities"] for path, entry in self.root_files.items() if entry["format"] == "markdown" and not path.endswith("-sketch.md")]).to(equal([["stories-story-map"]]))
 
             with it("should name no fidelity for a file none declares"):
                 expect(self.root_files["notes/plain.txt"]["fidelities"]).to(equal([]))
+
+            # Reported 2026-11-18 (Nov 18 demo): the Files app opened without the sketch just written, as no fidelity
+            # declares it, so a practice selected hid it.
+            with it("should name the session's fidelities for its sketch, which holds a section for each practice"):
+                expect(self.root_files[".context/sign-up-sketch.md"]["fidelities"]).to(contain("stories-story-map", "ux-ia"))
 
             # Requested 2026-11-16: a design canvas and a whiteboard open where they are published, wherever they lie.
             with it("should list a design canvas the root holds at the link it is published at"):

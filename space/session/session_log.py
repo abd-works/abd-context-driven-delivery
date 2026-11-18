@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from harness.agent_tools.chat_pointer import NO_CHAT, ChatPointer
+from harness.process.capped_log_file import CappedLogFile
 from space.work_state import SESSIONS_FOLDER
 
 if TYPE_CHECKING:
@@ -66,8 +67,10 @@ class HookLog:
         self.path = Path(path)
 
     def append(self, text: str) -> None:
-        """Append text, an entry that carries its own time, such as a prompt log entry under its stamped header."""
+        """Append text, an entry that carries its own time, such as a prompt log entry under its stamped header; a log
+        that reached its size starts again, its earlier entries kept in its previous file."""
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        CappedLogFile(self.path).roll_when_full()
         with self.path.open("a", encoding="utf-8") as log:
             log.write(text if text.endswith("\n") else f"{text}\n")
 
@@ -251,8 +254,23 @@ class SessionLog:
             return
         # A project's main session has no folder until something is written in it.
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._roll_when_full()
+        self._append(line)
+
+    def _append(self, line: str) -> None:
         with self.path.open("a", encoding="utf-8") as handle:
             handle.write(f"{LogTimestamp.now()} {line}\n")
+
+    def _roll_when_full(self) -> None:
+        """Move a full session.log's lines to session.log.1 and start the new one in the loop it was in, so loops number
+        on and that loop's next lines are read with it."""
+        capped = CappedLogFile(self.path)
+        if not capped.is_full:
+            return
+        loop = self.last_loop_number
+        capped.roll_when_full()
+        if loop:
+            self._append(f"--- {loop} continued from {capped.previous.name}")
 
     def by(self, chat: ChatPointer | None) -> ChatLog:
         """The lines chat writes in this log, each pointing at it; ``no-chat`` when no chat is known, such as for work
@@ -265,6 +283,7 @@ class SessionLog:
             return 0
         err = self.error_path
         err.parent.mkdir(parents=True, exist_ok=True)
+        CappedLogFile(err).roll_when_full()
         line_number = len(err.read_text(encoding="utf-8").splitlines()) + 1 if err.is_file() else 1
         trace = "".join(traceback.format_exception(type(failure), failure, failure.__traceback__))
         header = f"{LogTimestamp.now()} {tool} {type(failure).__name__}: {failure}".strip()

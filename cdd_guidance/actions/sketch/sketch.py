@@ -31,11 +31,6 @@ class Sketch(GuidanceAction):
         return type(self)(agent_dir=self._agent_dir, session=session, call=call)
 
     @property
-    def _sketch_name(self) -> str:
-        """The session's sketch file name: a session is named for the subject it works on, so its sketch is too."""
-        return f"{self.session.name or 'main'}-sketch.md"
-
-    @property
     def sketch_template(self) -> str:
         """The sketch template for this instance's agent_dir (tiered discovery)."""
         return self.find_template()
@@ -85,7 +80,7 @@ class Sketch(GuidanceAction):
         paths: a file, a list of files, or a folder. Pass paths. This action reads them locally. Do not pass the sketch body in content.
         content: in-process text. Leave this empty on an MCP call.
         module: a module's folder under the session root, for a sketch of that module alone; it goes in that module's .context folder."""
-        target = self.session.paths.context_folder(module) / self._sketch_name
+        target = self.session.paths.sketch(module)
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(self.files.read(content, paths), encoding="utf-8")
         self.files.wrote([target])

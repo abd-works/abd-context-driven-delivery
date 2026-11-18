@@ -232,6 +232,23 @@ with description("a hook log"):
         with it("should stamp a line with the time it was written"):
             expect(self.text.splitlines()[1]).to(contain("Z dispatch line"))
 
+    with context("that reached its size limit"):
+        with before.each:
+            repo = Path(tempfile.mkdtemp())
+            (repo / ".git").mkdir()
+            Sessions(repo).switch("alpha", repo)
+            logs = repo / ".sessions" / "alpha" / "logs"
+            logs.mkdir(parents=True)
+            (logs / "dispatch.debug").write_text("x" * LOG_SIZE_LIMIT_BYTES, encoding="utf-8")
+            Sessions(repo).current().folder.hook_log("dispatch.debug").stamped("dispatch line")
+            self.logs = logs
+
+        with it("should start a new log with the next line"):
+            expect((self.logs / "dispatch.debug").read_text(encoding="utf-8")).to(contain("Z dispatch line"))
+
+        with it("should keep the earlier entries in the previous file"):
+            expect((self.logs / "dispatch.debug.1").stat().st_size).to(equal(LOG_SIZE_LIMIT_BYTES))
+
 
 # (E) Record Session Log
 with description("a session a chat switches to"):

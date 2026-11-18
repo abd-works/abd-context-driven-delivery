@@ -110,6 +110,17 @@ async function fixQueueFailure($: EngineInterface, failure: FailureClient): Prom
 // presses Enter to send it. Running it straight away waits until the chat is idle, so a press showed nothing for a
 // long time.
 export async function promptCommand($: EngineInterface, command: string): Promise<void> {
-  const unfilled = await filledPrompt($, command).catch(reasonOf)
+  const unfilled = await promptOf($, command).then(prompt => filledPrompt($, prompt)).catch(reasonOf)
   if (unfilled) await showFailure($, `${command} could not go in the prompt box: ${unfilled}`, `Pressing the button that puts ${command} in the prompt box`)
+}
+
+// What goes in the prompt box for command: the command itself while the chat has loaded its skill. A chat whose folder
+// had no CDD install when it last read its skills has not, and the prompt box marks the slash command "not a command"
+// and sends it as plain text; it then goes in as a plain request the agent runs through the tool its skill names, and a
+// toast says why.
+async function promptOf($: EngineInterface, command: string): Promise<string> {
+  const name = commandOf(command).command
+  if ((await $.command.list()).some(each => each.name === name)) return command
+  $.ui.toast(`This chat has not loaded the CDD skill ${name}: CDD was not installed in this folder when the chat read its skills. The request goes in as plain text, which the agent runs through the tool the skill names; install CDD here and its skills load.`)
+  return `Run the CDD skill ${name}, which this chat has not loaded, through the MCP tool or script its SKILL.md names: ${command.slice(1)}`
 }

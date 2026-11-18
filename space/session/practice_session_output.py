@@ -455,10 +455,13 @@ class WrittenFiles:
         }
 
     def holds(self, file: Path) -> bool:
-        """Whether file, in the session's checkout, is one of this fidelity's, changed by the session or not: a file one
-        of its outputs names, or production code under a folder it writes code to, and either way one its practice
+        """Whether file, in the session's checkout, is one of this fidelity's, changed by the session or not: the
+        session's sketch, a file one of its outputs names, or production code under a folder it writes code to, and either way one its practice
         claims, since a pattern such as DDD's ``{bounded_context}/{aggregate}/{aggregate}.py`` fits files of no domain.
-        A page lists every file of the fidelities it shows."""
+        A page lists every file of the fidelities it shows. The session's sketch is every fidelity's, since it holds a
+        section for each practice."""
+        if self._session.paths.is_sketch(file):
+            return True
         if not (self._fidelity.declared.includes(self._session.repo.path_from_top(file)) or self._writes_code_to(file)):
             return False
         practice = self._fidelity.practice_guidance

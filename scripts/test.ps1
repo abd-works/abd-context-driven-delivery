@@ -43,7 +43,36 @@ $excludedDirs = [System.Collections.Generic.HashSet[string]]::new(
     [StringComparer]::OrdinalIgnoreCase
 )
 
+# Every temporary folder a spec makes, and the cdd homes and output of each batch, go in one folder for the run, which
+# the run removes when it ends: specs that make temporary folders and never remove them left tens of thousands behind in
+# %TEMP%, several gigabytes a day, until the disk filled. A folder a run could not remove, because a server a heavy spec
+# started still held a file in it, or because the run was killed, is removed by a later run once it is a day old.
+$runFolderPrefix = "cdd-test-run-"
+$staleRunHours = 24
+
+function Remove-StaleRunFolders {
+    param([string]$Temp)
+    $cutoff = (Get-Date).AddHours(-$staleRunHours)
+    Get-ChildItem -LiteralPath $Temp -Directory -Filter "$runFolderPrefix*" -ErrorAction SilentlyContinue |
+        Where-Object { $_.LastWriteTime -lt $cutoff } |
+        ForEach-Object { Remove-Item -LiteralPath $_.FullName -Recurse -Force -ErrorAction SilentlyContinue }
+}
+
+function Set-RunTemp {
+    # The shell that runs the script keeps its environment after it, so the run gives back the temporary folder it found.
+    $script:shellTemp = $env:TEMP
+    $script:shellTmp = $env:TMP
+    $temp = [IO.Path]::GetTempPath()
+    Remove-StaleRunFolders $temp
+    $script:runTemp = Join-Path $temp ($runFolderPrefix + [guid]::NewGuid().ToString("N"))
+    New-Item -ItemType Directory -Force $script:runTemp | Out-Null
+    # Python's tempfile reads TEMP and TMP, and .NET's GetTempPath reads TMP, so both point every spec at the run's folder.
+    $env:TEMP = $script:runTemp
+    $env:TMP = $script:runTemp
+}
+
 function Set-TestEnvironment {
+    Set-RunTemp
     $roots = @(".", "cdd_guidance/actions", "tools", "cdd_guidance/practices", "cdd_guidance/patterns")
     # Leave the harness folder off the path so `import mcp` stays the SDK,
     # not harness/mcp. The repo root still exposes the harness package.
@@ -387,6 +416,9 @@ try {
     }
 } finally {
     Pop-Location
+    $env:TEMP = $script:shellTemp
+    $env:TMP = $script:shellTmp
+    Remove-Item -LiteralPath $script:runTemp -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 # A run that stopped before counting its files proved nothing, so it fails.

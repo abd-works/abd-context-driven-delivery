@@ -48,6 +48,19 @@ class SessionPaths:
                 return candidate.parent / ".context"
         return folder / ".context"
 
+    def sketch(self, module: str = "") -> Path:
+        """The session's sketch, in the .context folder of its root or of a module under it: a session is named for the
+        subject it works on, so its sketch is too, and one file holds every practice's section."""
+        return self.context_folder(module) / self._sketch_name
+
+    def is_sketch(self, file: Path) -> bool:
+        """Whether file is the session's sketch, of its root or of a module under it."""
+        return file.name == self._sketch_name and file.parent.name == ".context"
+
+    @property
+    def _sketch_name(self) -> str:
+        return f"{self._session.name or 'main'}-sketch.md"
+
     def path_named(self, named: str | Path) -> Path:
         """named as a path in this session's project, the way its agent writes one: from the project's root, or
         absolute."""

@@ -461,9 +461,6 @@ The one way the code runs git, with a timeout and no stdin.
   - `-> AgentTool.toolset` reads toolset of · harness/hooks/hooks.py:229
   - `-> AgentTool.name` reads name of · harness/hooks/hooks.py:231
   - `-> AgentTool.registration_name` reads registration name of · harness/hooks/hooks.py:231
-- `HookInstallation.standup`
-  - `-> HookServer.from_handlers` loads · harness/hooks/hooks.py:283
-  - `<- HookServer`
 - `HookInstallation` `-> Hook` enrolls in hooks.json · harness/hooks/hooks.py:227
 
 # harness/mcp
