@@ -9,7 +9,7 @@
       "specification",
       "implementation"
     ],
-    "version": 17
+    "version": 18
   },
   "practices": {
     "bdd": {
@@ -22,7 +22,15 @@
       "enabled": false
     },
     "clean_engineering": {
-      "enabled": true
+      "enabled": true,
+      "formats": {
+        "model": [
+          "python",
+          "drawio",
+          "whiteboard",
+          "markdown"
+        ]
+      }
     },
     "stories": {
       "formats": {
