@@ -1,5 +1,7 @@
 {
   "name": "my-first-feature",
   "title": "my-first-feature",
-  "scope": "feature"
+  "scope": "feature",
+  "branch": "my-first-feature",
+  "worktree": "C:\\dev\\abd-cdd-my-first-feature"
 }
