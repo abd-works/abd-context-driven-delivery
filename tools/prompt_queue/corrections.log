@@ -28,3 +28,5 @@ are back on the right. A request to change one part of a view is not a request t
 2026-11-17 — Final: the card's pointer is placed exactly as the card's right-hand buttons are: a solid grey bar (keyCap, paddingX xs, gap 1) drawn OVER the card's left end (position absolute, top 0, bottom 0, left 1, centred on the line), covering the start of the text the way ↵ ✎ ↑ ↓ ✕ cover its end. Not a column, not beside the card, not pushing the text.
 
 2026-11-17 Robot list side: I put the robots on the right with the open queue to their left. The person wanted the robots on the LEFT, the open queue to their right. Fixed by swapping them; read "open queue to the left" with the earlier message before placing.
+
+2026-11-17 Demo cards with short paths: Run8 parts 2 and 3 said demo/run8/... while part 1 gave the full path, so robots given only the card words could not find the files. Every demo card now names the full path from the repository root.
