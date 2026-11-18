@@ -2,8 +2,11 @@
 
 The test runner, git and the clock are faked at the boundary *TestCadence* reaches them through, so nothing here runs
 scripts/test.ps1 or git. test_runs_heavy_spec.py runs the real runner and git."""
+import atexit
 import os
 import shutil
+import subprocess
+import sys
 import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -18,6 +21,10 @@ from harness.git.git import RepoConnectError
 NOON = datetime(2026, 11, 15, 12, 0, tzinfo=timezone.utc)
 # A process id that is never running.
 GONE = 2 ** 22 + 7
+# A live process that is neither this one nor its parent, as a run another process started is; it ends with the spec.
+ANOTHER_PROCESS = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(600)"], stdin=subprocess.DEVNULL,
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+atexit.register(ANOTHER_PROCESS.kill)
 
 
 class RunnerStub:
@@ -92,8 +99,8 @@ with description("the test cadence") as self:
                 self.record.save(TestRun(tier, "abc123", NOON - timedelta(minutes=minutes), RunOutcome.FAILED, pid=GONE))
 
     def running_elsewhere(self, tier: TestTier) -> TestRun:
-        """A run of tier another live process holds: this process's parent, which runs as long as the spec does."""
-        run = TestRun(tier, "abc123", NOON - timedelta(minutes=2), pid=os.getppid())
+        """A run of tier another live process holds, one this spec started that runs until the spec ends."""
+        run = TestRun(tier, "abc123", NOON - timedelta(minutes=2), pid=ANOTHER_PROCESS.pid)
         self.record.save(run)
         return run
 
@@ -220,6 +227,12 @@ with description("the test cadence") as self:
 
     with context("with no other run live"):
         with it("should not wait"):
+            self.cadence.run_now(TestTier.E2E)
+            expect(self.waits).to(equal([]))
+
+    with context("whose run the cadence recorded by the id of this process's parent, the virtual environment's python.exe"):
+        with it("should not wait for itself"):
+            self.record.save(TestRun(TestTier.E2E, "abc123", NOON, pid=os.getppid()))
             self.cadence.run_now(TestTier.E2E)
             expect(self.waits).to(equal([]))
 

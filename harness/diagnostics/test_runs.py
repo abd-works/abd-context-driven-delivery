@@ -390,9 +390,11 @@ class TestCadence:
 
     def _live_elsewhere(self) -> list[TestRun]:
         """Every recorded run, of any tier, whose process is running and is not this one; a run recorded over a live
-        one leaves it held as the previous run, so both are looked at."""
+        one leaves it held as the previous run, so both are looked at. The cadence records the id of the process it
+        starts, which a virtual environment's python.exe starts again as its child, so this process's parent is
+        this run too."""
         runs = [run for tier in TestTier for run in (self.record.latest(tier), self.record.previous(tier)) if run is not None]
-        return [run for run in runs if run.is_live and run.pid != os.getpid()]
+        return [run for run in runs if run.is_live and run.pid not in (os.getpid(), os.getppid())]
 
     def _reviewed(self, run_name: str) -> list[str]:
         """The screen review of the e2e run just ended; a review that cannot start says why and leaves the run's result."""
