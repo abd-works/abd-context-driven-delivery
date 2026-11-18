@@ -8,7 +8,7 @@
     "stages": [
       "discovery"
     ],
-    "version": 5
+    "version": 6
   },
   "practices": {
     "ddd": {
@@ -21,6 +21,9 @@
       "enabled": false
     },
     "bdd": {
+      "enabled": false
+    },
+    "stories": {
       "enabled": false
     }
   },
