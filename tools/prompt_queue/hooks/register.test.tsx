@@ -1151,18 +1151,6 @@ test("each sub-agent's robot differs from the others", async ($, on) => {
   await ui.unmount()
 })
 
-test("✎ on a sub-agent's column names it from the prompt box's draft", async ($, on) => {
-  const seeded = groupedQueue(on)
-  on('prompt.read', () => ({ value: { text: 'Captain Tests', cursor: 13 } }))
-  on('prompt.fill', () => ({ isFilled: true }))
-
-  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
-  await ui.press({ key: 'rename-agent-2' })
-  await ui.unmount()
-
-  expect(seeded.prompts.map(prompt => prompt.robot)).toEqual(['Sparky', 'Captain Tests'])
-})
-
 /** A finished turn of this chat while playing in sub-agent mode, with the robots' queue as given: what this chat was
  * then asked to do, if anything. */
 async function handOut($: TestEngine, on: TestOn, prompts: Prompt[], sent: Record<string, string> = {}, tasks = GROUPED, agents: Record<string, string> = {}) {

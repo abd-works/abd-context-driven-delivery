@@ -729,24 +729,6 @@ export function agentNameOf(task: SubAgentTask, place: number): string {
   return task.name ?? AGENT_NAMES[place % AGENT_NAMES.length]!
 }
 
-/** ✎ on a sub-agent's column: the prompt box's draft becomes its name, and the box empties. */
-export async function renameAgent($: EngineInterface, place: number): Promise<void> {
-  const { text } = await $.prompt.read()
-  if (text.trim() === '') {
-    return
-  }
-  const goals = (await read($, queue)).prompts
-  const robot = robotsOf(goals, await read($, tasks))[place]
-  if (!robot) {
-    return
-  }
-  for (const goal of goals.filter(goal => goal.robot === robot.name)) {
-    await changeQueue($, 'assign', { prompt: goal.id, robot: text.trim() })
-  }
-  await update($, tasks, described => described.map(task => (task.name === robot.name ? { ...task, name: text.trim() } : task)))
-  await $.prompt.fill({ text: '', mode: 'replace' })
-}
-
 /**
  * Sub-agent mode, playing: this chat is the orchestrator. Each robot whose last card is done, or that has had none, is
  * handed its next open card: this chat is asked to send the robot the card's words exactly, and to mark the card done

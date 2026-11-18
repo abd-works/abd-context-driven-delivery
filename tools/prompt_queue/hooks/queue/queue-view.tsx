@@ -14,7 +14,6 @@ import {
   toggleAgentQueue,
   robotPromptsOf,
   agentNameOf,
-  renameAgent,
   addStep,
   moveStep,
   removeStep,
@@ -302,7 +301,7 @@ function AgentQueueView($: EngineInterface, e: AbovePromptEvent, state: QueueSta
 }
 
 /** One robot on its own line: the robot, which opens its queue to the right and closes it again, its name, and how many
- * of its items are done, such as 3/5, or ✎ to rename it while its queue is open. */
+ * of its items are done, such as 3/5. */
 function AgentRobotView($: EngineInterface, e: AbovePromptEvent, state: QueueState, task: SubAgentTask, place: number) {
   const elements = $.ui.resolve(e)
   const { Box, Button, Text } = elements
@@ -323,9 +322,7 @@ function AgentRobotView($: EngineInterface, e: AbovePromptEvent, state: QueueSta
         </Box>
       </Box>
       <Text bold color={isOpen ? LOOK.accent : LOOK.muted}>{name}</Text>
-      {isOpen
-        ? TipView(elements, `rename-agent-${number}`, 'Rename', 'names this robot from the prompt box', <Button key={`rename-agent-${number}`} label="✎" onPress={() => renameAgent($, place)} />)
-        : <Text key={`agent-progress-${number}`} color={LOOK.muted}>{`${items.filter(item => item.is_done).length}/${items.length}`}</Text>}
+      <Text key={`agent-progress-${number}`} color={LOOK.muted}>{`${items.filter(item => item.is_done).length}/${items.length}`}</Text>
     </Box>
   )
 }
