@@ -148,16 +148,18 @@ def _seed_project(root: Path) -> None:
 
 
 # Seed: plain-work, a session in a project that is a plain folder, no git repository, with Discovery and Stories alone
-# on and its story map in markdown, as the Nov 18 demo's session had them: its story map written under .context, and a
-# note of no fidelity beside it.
+# on and its story map in markdown, as the Nov 18 demo's session had them: its story map and its sketch written under
+# .context, and a note of no fidelity beside it.
 PLAIN_WORK = "plain-work"
 PLAIN_MAP = ".context/story-map.md"
 PLAIN_NOTE = "notes/plain.txt"
+PLAIN_SKETCH = f".context/{PLAIN_WORK}-sketch.md"
 
 
 def _seed_plain_folder(root: Path) -> None:
-    """A plain folder, never made a git repository, holding plain-work's session, its story map and a note."""
+    """A plain folder, never made a git repository, holding plain-work's session, its story map, its sketch and a note."""
     _write(root, PLAIN_MAP, VIOLATING_MAP_TEXT)
+    _write(root, PLAIN_SKETCH, "# Stories\n")
     _write(root, PLAIN_NOTE, "a note\n")
     practices = {key: {"enabled": False} for key in ("ux", "ddd", "bdd", "clean_engineering")}
     practices["stories"] = {"enabled": True, "formats": {"story_map": ["markdown"]}}

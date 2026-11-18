@@ -122,6 +122,7 @@ class Sketch(GuidanceAction):
         self._work_on(guidance)
         "save_sketch the shell in the same turn it is written. After three or four grill answers, sketch the theme into that same file, save_sketch again, then review_sketch. Do not ask the next theme until that review confirms the sketch."
         "Carry forward every mistake named in review. Correct the sketch. Do not regenerate as if those mistakes never happened."
+        "hurry-keeps-the-questions: when the person asks to hurry, to go faster, or to just proceed with the sketch, ask fewer, sharper questions, one or two per theme with your recommendation first, never none, because their answers are what make the sketch better than a guess. Stop asking only when they say plainly to stop and decide for them, and then mark each line you decided alone as `? assumed`, so the next review sees what nobody agreed."
         "Evaluate the sketch against each listed guidance's rules, which the generate instructions below give, as an AI check — not a graph query."
         self.work.each(self._sketch_text)
         instructions(self._grill_context().grill_with_context)

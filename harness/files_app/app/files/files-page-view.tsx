@@ -8,9 +8,10 @@ import type { SourceCallout } from '@source-view/source-callouts'
 import { FileSourceView } from './file-source-view'
 import { FilesGraphView } from './files-graph-view'
 import type { FilesPage } from './files-page'
-import { drawioPageOf, isDrawio, missingNoteOf, revealLabelOf } from './files-paths'
+import { drawioPageOf, isDrawio, isWhiteboard, missingNoteOf, revealLabelOf } from './files-paths'
 import { formatGlyphOf } from './format-chips'
 import { applyTheme, storedTheme, type FilesTheme } from './files-theme'
+import { WhiteboardCanvas } from './whiteboard-canvas'
 
 const fileNameOf = (path: string): string => path.split('/').at(-1) ?? path
 
@@ -18,11 +19,12 @@ function useFilesState(page: FilesPage) {
   return useSyncExternalStore(page.store.subscribe, () => page.store.state)
 }
 
-// One file the link names: a file it cannot open says why, not generated yet or deleted on this branch, and a file standing for something published in Claude, a
-// design canvas or a whiteboard's board, opens that in Claude Desktop's artifact panel; a .drawio file also offers its draw.io editor in
-// a tab of its own.
+// One file the link names: a file it cannot open says why, not generated yet or deleted on this branch; a whiteboard
+// opens as a canvas; a design canvas opens in Claude Desktop's artifact panel; a .drawio file also offers its draw.io
+// editor in a tab of its own.
 function FileEntryView({ page, entry, isOpen }: { page: FilesPage; entry: FileEntryData; isOpen: boolean }) {
   const published = publishedOf(entry)
+  if (published?.kind === 'whiteboard') return <WhiteboardEntryView page={page} entry={entry} published={published} isOpen={isOpen} />
   if (published) return <PublishedFileView page={page} entry={entry} published={published} />
   const classes = ['file-entry', isOpen ? 'is-open' : '', entry.exists ? '' : 'is-missing', entry.is_changed ? 'is-changed' : ''].filter(Boolean).join(' ')
   const hint = entry.exists ? entry.path : `${entry.path}: ${missingNoteOf(entry)}`
@@ -48,8 +50,37 @@ function DrawioTabLinkView({ page, path }: { page: FilesPage; path: string }) {
   )
 }
 
-// A design canvas or a whiteboard: it opens in Claude Desktop's artifact panel, beside the chat, never as the file's
-// text; a page no chat opened opens the link in a browser instead. One not published yet says so and opens nothing.
+// A whiteboard opens beside the file list as its board drawn on a canvas, never as the file's text; one published to a
+// board in Claude also offers that board, which opens in Claude Desktop's artifact panel.
+function WhiteboardEntryView({ page, entry, published, isOpen }: { page: FilesPage; entry: FileEntryData; published: PublishedFile; isOpen: boolean }) {
+  const classes = ['file-entry', 'is-whiteboard', isOpen ? 'is-open' : '', entry.is_changed ? 'is-changed' : ''].filter(Boolean).join(' ')
+  return (
+    <li className="file-entry-row">
+      <button className={classes} title={`${entry.path}: opens the whiteboard as a canvas`} aria-current={isOpen ? 'true' : undefined} disabled={!entry.exists} onClick={() => void page.open(entry.path)} onContextMenu={menuOn(page, entry.path)}>
+        {published.name}
+        <span className="file-entry-note"> {published.link ? 'whiteboard' : 'whiteboard, not on a board in Claude yet'}</span>
+      </button>
+      {published.link ? <BoardLinkView page={page} entry={entry} published={published} /> : null}
+    </li>
+  )
+}
+
+// The board in Claude a whiteboard was published to: it opens in Claude Desktop's artifact panel, beside the chat; a page
+// no chat opened opens the link in a browser instead.
+function BoardLinkView({ page, entry, published }: { page: FilesPage; entry: FileEntryData; published: PublishedFile }) {
+  const open = async (event: { preventDefault: () => void }) => {
+    event.preventDefault()
+    if (!(await page.openPublished(entry))) window.open(published.link, '_blank', 'noreferrer')
+  }
+  return (
+    <a className="drawio-tab-link board-link" href={published.link} onClick={event => void open(event)} rel="noreferrer" title={`${entry.path}: opens its board in Claude's artifact panel`}>
+      ↗
+    </a>
+  )
+}
+
+// A design canvas: it opens in Claude Desktop's artifact panel, beside the chat, never as the file's text; a page no
+// chat opened opens the link in a browser instead. One not published yet says so and opens nothing.
 function PublishedFileView({ page, entry, published }: { page: FilesPage; entry: FileEntryData; published: PublishedFile }) {
   const path = entry.path
   if (!published.link) {
@@ -265,6 +296,57 @@ function DrawioFileView({ page, path }: { page: FilesPage; path: string }) {
   )
 }
 
+// A whiteboard file drawn on a canvas beside the file list, as its board shows it: sections behind the blocks they hold,
+// each block with its words, the labels, and the arrows between blocks; its board in Claude a press away when it has one.
+function WhiteboardFileView({ page, file }: { page: FilesPage; file: SessionFileData }) {
+  const canvas = WhiteboardCanvas.from(file.text)
+  const entry = page.fileBar.entries.find(each => each.path === file.path)
+  const published = entry ? publishedOf(entry) : null
+  const { x, y, w, h } = canvas.frame
+  return (
+    <section className="open-file open-diagram" aria-label={file.path}>
+      <div className="comment-toolbar">
+        <span className="source-path">{file.path}</span>
+        {entry && published?.link ? <BoardLinkView page={page} entry={entry} published={published} /> : null}
+      </div>
+      {canvas.problem ? <p className="files-note">{canvas.problem}</p> : null}
+      <div className="whiteboard-frame">
+        <svg className="whiteboard-canvas" role="img" aria-label={`${canvas.title || file.path} whiteboard`} viewBox={`${x} ${y} ${w} ${h}`} width={w} height={h}>
+          <defs>
+            <marker id="whiteboard-arrow-head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" className="whiteboard-arrow-head" />
+            </marker>
+          </defs>
+          {canvas.blocks.map(block => (
+            <g key={block.id} className={`whiteboard-block${block.isSection ? ' is-section' : ''}`} data-element={block.id}>
+              <rect x={block.x} y={block.y} width={block.w} height={block.h} rx={block.isRounded ? 10 : 2} fill={fillOf(block.color, block.isSection)} />
+              {block.lines.map((line, index) => (
+                <text key={index} x={block.x + 8} y={block.y + 18 + index * 16} className="whiteboard-words">
+                  {line}
+                </text>
+              ))}
+            </g>
+          ))}
+          {canvas.arrows.map(arrow => (
+            <line key={arrow.id} x1={arrow.from.x} y1={arrow.from.y} x2={arrow.to.x} y2={arrow.to.y} className="whiteboard-arrow" strokeDasharray={arrow.isDashed ? '6 4' : undefined} markerEnd="url(#whiteboard-arrow-head)" />
+          ))}
+          {canvas.labels.map(label => (
+            <text key={label.id} x={label.x} y={label.y + 20} className={`whiteboard-words${label.isTitle ? ' is-title' : ''}`}>
+              {label.text}
+            </text>
+          ))}
+        </svg>
+      </div>
+    </section>
+  )
+}
+
+// The colours a board fills its blocks with, by the names the whiteboard file gives them; a section is a paler wash.
+const BOARD_FILLS: Record<string, string> = {
+  purple: '#e3d7fb', green: '#d3f2d8', yellow: '#fff1a8', blue: '#d6e6fb', red: '#fbd6d6', orange: '#fde2c4', pink: '#fbd6ec', gray: '#ececec', grey: '#ececec', white: '#ffffff',
+}
+const fillOf = (color: string, isSection: boolean): string => (isSection ? '#f6f6f6' : BOARD_FILLS[color] ?? '#ffffff')
+
 function OpenFileView({ page }: { page: FilesPage }) {
   const state = useFilesState(page)
   const path = state.file?.path ?? ''
@@ -275,6 +357,7 @@ function OpenFileView({ page }: { page: FilesPage }) {
   if (!state.openPath) return <p className="files-note">Choose a file.</p>
   if (isDrawio(state.openPath)) return <DrawioFileView page={page} path={state.openPath} />
   if (!state.file) return <p className="files-note">Opening {state.openPath}…</p>
+  if (isWhiteboard(state.file.path)) return <WhiteboardFileView page={page} file={state.file} />
   const isOneOfSeveral = state.moreFiles.length > 0
   return (
     <section className="open-file" aria-label={state.file.path}>

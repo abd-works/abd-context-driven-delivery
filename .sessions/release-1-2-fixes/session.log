@@ -268,3 +268,7 @@
 2026-11-18T20:27:00Z tool generate.generate
 2026-11-18T20:27:00Z generate C:\dev\abd-cdd-release-1-2-fixes no-chat
 2026-11-18T20:27:07Z tool prompt-queue.done 5b5466c3-9f1f-4998-ace2-5da34679e50c C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\5b5466c3-9f1f-4998-ace2-5da34679e50c.jsonl 1-4888
+2026-11-18T20:27:29Z tool prompt-queue.show 5b5466c3-9f1f-4998-ace2-5da34679e50c C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\5b5466c3-9f1f-4998-ace2-5da34679e50c.jsonl 1-4916
+2026-11-18T20:28:00Z tool prompt-queue.done 5b5466c3-9f1f-4998-ace2-5da34679e50c C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\5b5466c3-9f1f-4998-ace2-5da34679e50c.jsonl 1-4941
+2026-11-18T20:28:01Z tool prompt-queue.done 5b5466c3-9f1f-4998-ace2-5da34679e50c C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\5b5466c3-9f1f-4998-ace2-5da34679e50c.jsonl 1-4941
+2026-11-18T20:28:03Z tool prompt-queue.done 5b5466c3-9f1f-4998-ace2-5da34679e50c C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\5b5466c3-9f1f-4998-ace2-5da34679e50c.jsonl 1-4941

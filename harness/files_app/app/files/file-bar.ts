@@ -95,11 +95,12 @@ export class FileBar {
   }
 
   // Whether a file is the session's own work: in a git repository, one its branch changed; in a plain folder no branch
-  // changes any file, so every file its fidelities declare that is there.
+  // changes any file, so every file its fidelities declare or hold, such as its sketch, that is there.
   private isSessionWork(entry: FileEntryData): boolean {
     const { isRepository, byFidelity } = this.store.state
     if (isRepository) return entry.is_changed
-    return entry.exists && byFidelity.some(({ entries }) => entries.some(declared => declared.path === entry.path))
+    const isDeclared = byFidelity.some(({ entries }) => entries.some(declared => declared.path === entry.path))
+    return entry.exists && (isDeclared || entry.fidelities.length > 0)
   }
 
   // The folder tree of the files the bar lists.

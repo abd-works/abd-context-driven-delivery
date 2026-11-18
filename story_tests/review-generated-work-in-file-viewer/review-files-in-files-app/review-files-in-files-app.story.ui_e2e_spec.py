@@ -23,6 +23,7 @@ from files_app_browser import (
     SHOWN_MILLISECONDS,
     TICKET_CODE,
     PLAIN_MAP,
+    PLAIN_SKETCH,
     PLAIN_WORK,
     FilesStack,
     all_session_files,
@@ -103,10 +104,10 @@ with description("Review Files In Files App") as self:
         with context("Story: List This Session Or All Session Files, Scenario: List this session's own files in a folder with no git, Example: a plain folder"):
             with before.all:
                 self.page = self.stack.open(PLAIN_WORK, STORY_MAP_FIDELITIES)
-                self.page.locator(f'button.file-entry[title="{PLAIN_MAP}"]').wait_for(timeout=SHOWN_MILLISECONDS)
+                self.page.locator(f'button.file-entry[title="{PLAIN_SKETCH}"]').wait_for(timeout=SHOWN_MILLISECONDS)
 
             with after.all:
                 self.page.close()
 
-            with it("Then the file bar lists .context/story-map.md alone"):
-                expect(self.page.locator("button.file-entry").evaluate_all("entries => entries.map(entry => entry.title)")).to(equal([PLAIN_MAP]))
+            with it("Then the file bar lists .context/plain-work-sketch.md and .context/story-map.md"):
+                expect(sorted(self.page.locator("button.file-entry").evaluate_all("entries => entries.map(entry => entry.title)"))).to(equal([PLAIN_SKETCH, PLAIN_MAP]))
