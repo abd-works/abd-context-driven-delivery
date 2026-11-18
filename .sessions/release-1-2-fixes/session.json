@@ -8,10 +8,16 @@
     "stages": [
       "discovery"
     ],
-    "version": 4
+    "version": 6
   },
   "practices": {
     "bdd": {
+      "enabled": false
+    },
+    "ddd": {
+      "enabled": false
+    },
+    "ux": {
       "enabled": false
     }
   }
