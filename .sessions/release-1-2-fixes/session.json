@@ -10,7 +10,7 @@
       "specification",
       "implementation"
     ],
-    "version": 9
+    "version": 10
   },
   "practices": {
     "bdd": {
@@ -24,6 +24,19 @@
     },
     "clean_engineering": {
       "enabled": false
+    },
+    "stories": {
+      "formats": {
+        "story_map": [
+          "markdown",
+          "drawio",
+          "whiteboard"
+        ],
+        "scenarios": [
+          "python",
+          "markdown"
+        ]
+      }
     }
   }
 }
