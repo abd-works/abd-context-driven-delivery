@@ -1,0 +1,10 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-18T03:16:22.492418+00:00",
+  "prompts": [
+    {
+      "id": "d913d1c57ce0",
+      "text": "Run4 practices survey, part 3: after the rule counts are in demo/run4/practices/headings.md, give this card two steps (practice with the most rules, total rules) and write both at the top, ticking each step done. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done."
+    }
+  ]
+}

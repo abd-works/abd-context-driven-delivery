@@ -506,7 +506,8 @@ function robotsNoteOf(robots: SubAgentTask[], goals: QueuedPrompt[]): string[] {
   }
   return [
     "Sub-agent mode is on. You decide where this message goes: do it yourself; make it a task of an item in a robot's queue with prompt-queue.add_interruption;",
-    "or give it to a robot as a new item with prompt-queue.add, its text starting [for <robot name>]. Take its step off this goal when it goes elsewhere. The robots' queues:",
+    "or give it to a robot as a new item with prompt-queue.add, its text starting [for <robot name>]. Take its step off this goal when it goes elsewhere.",
+    "A robot already at work reads a new task only when it next reads the queue: tell it at once with SendMessage to its robot name. The robots' queues:",
     ...robots.map((robot, place) => `${agentNameOf(robot, place)}: ${robotPromptsOf(goals, robot, place).map(goal => `[${goal.id}] ${goal.text.slice(0, GOAL_TITLE_COLUMNS)}`).join('; ')}`),
   ]
 }
@@ -712,9 +713,11 @@ export async function sendTasksToSubAgents($: EngineInterface): Promise<void> {
   await groupIntoTasks($)
   const grouped = robotsOf((await read($, queue)).prompts.filter(prompt => !prompt.is_done), await read($, tasks))
   for (const [place, task] of grouped.entries()) {
+    const robot = agentNameOf(task, place)
     const started = await $.agent.spawn({
       prompt: task.prompts.join('\n\n'),
-      description: `${agentNameOf(task, place)}: ${task.description}`,
+      description: `${robot}: ${task.description}`,
+      name: robot,
       subagentType: 'general-purpose',
     })
     if (started.deny) {

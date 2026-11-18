@@ -1133,6 +1133,22 @@ test("a sub-agent starts with its column's name", async ($, on) => {
   expect(spawned).toEqual(['Captain Tests: Write the story map', 'Bolt: Run the tests'])
 })
 
+test('a sub-agent goes by its robot name, so the lead can message the robot by name', async ($, on) => {
+  const seeded = groupedQueue(on, [{ ...GROUPED[0]!, name: 'Captain Tests' }, GROUPED[1]!])
+  seeded.stored.isPlaying = { value: true, version: 1 }
+  const named: (string | undefined)[] = []
+  on('agent.spawn', (_, e) => {
+    named.push((e as { name?: string }).name)
+    return { model: 'claude-sonnet-5-5' }
+  })
+  on('turn.complete', () => ({ text: 'Done.' }))
+
+  await $.turn.complete(FINISHED_TURN)
+  await unawaitedWorkSettled()
+
+  expect(named).toEqual(['Captain Tests', 'Bolt'])
+})
+
 
 test("a background task's notice arriving in the chat is not queued as the person's prompt", async ($, on) => {
   const seeded = seedQueue(on, false, '', QUEUED.map(prompt => ({ ...prompt })), true)
