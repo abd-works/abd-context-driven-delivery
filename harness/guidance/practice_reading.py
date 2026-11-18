@@ -7,6 +7,8 @@ from collections.abc import Iterable, Mapping
 from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from harness.guidance.guidance import PracticeGuidance
 
 
@@ -111,6 +113,12 @@ class PracticeReading:
     def read_working_copy(self) -> None:
         """Read this practice's nodes and edges into its graph, and link them to the nodes of the practices it reads
         after. A practice that reads no files from the working copy reads nothing."""
+
+    def reads_model_document(self, file: Path) -> bool:
+        """Whether this practice reads file, a model document in a ``.context`` folder, in a model format of its own,
+        such as DDD's domain model; another practice whose documents share its name pattern then leaves it alone, as
+        its own format would misread it. A practice that reads no model document of its own reads none."""
+        return False
 
     @functools.cached_property
     def graph_checks(self) -> dict[str, Any]:

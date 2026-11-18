@@ -1,6 +1,6 @@
 """One read of the code into Clean Engineering's graph: the files it parses, the folders it takes, and the class nodes
-it adds and links. The practice makes one for each read (``GraphReading.read_working_copy``), so nothing one read finds
-stays on the practice for the next."""
+it adds and links, with each class a model document describes that no code declares. The practice makes one for each
+read (``GraphReading.read_working_copy``), so nothing one read finds stays on the practice for the next."""
 
 from __future__ import annotations
 
@@ -34,6 +34,9 @@ if TYPE_CHECKING:
 
 # The fact a folder's module or package keeps: whether any of its source is production code.
 PRODUCTION_FACT = "holds_production_code"
+# The fact a class keeps when a model document describes it and no code declares it: the design, read from the
+# document, standing in for code not written yet.
+DESCRIBED_FACT = "described_by_model_document"
 _CLASS_NAMES = re.compile(r"\bclass\s+(\w+)")
 # A run of the characters a class name is spelled with: a type hint names a class when the class's name is one whole run.
 _HINT_WORD = re.compile(r"[A-Za-z0-9_]+")
@@ -56,16 +59,19 @@ class CodeRead:
         self._unreadable: dict[Path, str] = {}
 
     def read(self) -> None:
-        """Parse the files, add the folders, classes, and members they hold, then link the types and the folders."""
+        """Parse the files, add the folders, classes, and members they hold, and each class a model document describes
+        that no code declares, then link the types and the folders."""
         self._parse()
         self._record_public_sources()
-        classes = ClassNodes(self._reading, self._class_names())
+        declared = self._class_names()
+        classes = ClassNodes(self._reading, set(declared))
         self._folders.add()
         for file, module in self._modules.items():
             relative = file.relative_to(self._root).as_posix()
             folder = self._folders.take(relative, module)
             for cls in module.classes:
                 classes.add(relative, folder, cls)
+        DescribedClasses(self._reading, classes).add(declared)
         classes.link_types()
         for file, reason in self._unreadable.items():
             self._folders.keep_unreadable(file.relative_to(self._root).as_posix(), reason)
@@ -188,6 +194,33 @@ class OutsideScope:
                 found = found.parent
             self._owners[folder] = found.relative_to(self._root).as_posix() if found != self._root and self._root in found.parents else ""
         return self._owners[folder]
+
+
+class DescribedClasses:
+    """The classes the practice's model documents describe that no code declares, added as the code's classes are, so
+    the model's rules check the design before its code is written. Each sits at its card in its document, owned by the
+    folder the document describes (the one holding its ``.context``), else the practice's root, and keeps the fact that
+    a document, not code, declares it. A class code declares keeps the code's node alone."""
+
+    def __init__(self, reading: "GraphReading", classes: "ClassNodes") -> None:
+        self._documents = reading.model_documents
+        self._in_graph = reading.in_graph
+        self._classes = classes
+
+    def add(self, declared: set[str]) -> None:
+        """Add each class the documents read now describe whose name no code class has, the first document's when two
+        describe it; declared holds the classes this read's code declares, and the classes held from before that code
+        declares count too."""
+        taken = declared | {node.name for node in self._in_graph.nodes("OoadClass") if not node.has_fact(DESCRIBED_FACT)}
+        folders = {node.source.file: node for kind in ("Module", "Package") for node in self._in_graph.nodes(kind)}
+        for relative, oclass in self._documents.described_now():
+            if oclass.name in taken:
+                continue
+            taken.add(oclass.name)
+            described = Path(relative).parent.parent.as_posix()
+            self._classes.add(relative, folders.get(described, self._in_graph.root), oclass)
+            oclass.set_fact(DESCRIBED_FACT, True)
+            oclass.set_fact(PRODUCTION_FACT, True)
 
 
 class ClassNodes:

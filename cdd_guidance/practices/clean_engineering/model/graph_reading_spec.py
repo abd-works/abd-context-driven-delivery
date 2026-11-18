@@ -11,12 +11,47 @@ from cdd_guidance.practices.stories.model.fixtures.round_trip_story_map import r
 from cdd_guidance.practices.stories.model.whiteboard.nodes import WhiteboardStoryModel
 from cdd_guidance.practices.clean_engineering.model.whiteboard.whiteboard_class_model import WhiteboardCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module
+from cdd_guidance.practices.clean_engineering.model.code_read import DESCRIBED_FACT
 
 _CART = (
     "class Cart:\n"
     "    def __init__(self) -> None:\n"
     "        self.lines = []\n"
 )
+
+
+# A Clean Engineering class model of the shop folder, describing a ledger no code declares yet.
+_SHOP_MODEL = (
+    "# shop\n"
+    "\n"
+    "## Ledger <<Entity>>\n"
+    "\n"
+    "------\n"
+    "+ balance: int\n"
+    "----\n"
+    "+ record(entry: str): str\n"
+)
+
+# A DDD domain model of the shop folder, which DDD reads in its own format and Clean Engineering leaves to it.
+_SHOP_DOMAIN_MODEL = (
+    "# Domain Model — Shop\n"
+    "\n"
+    "## Sales | custom\n"
+    "\n"
+    "### Cart\n"
+    "\n"
+    "#### Cart <<Aggregate Root>> <<Entity>>\n"
+    "\n"
+    "------\n"
+    "+ total: int\n"
+    "----\n"
+    "+ add(item: str): Cart\n"
+)
+
+
+def _classes(fixture) -> list:
+    """The classes Clean Engineering's graph holds, by node id."""
+    return sorted(fixture.practice.reading.in_graph.nodes("OoadClass"), key=lambda node: node.node_id)
 
 
 def _modules_board() -> str:
@@ -302,6 +337,55 @@ with description("Clean Engineering reading code into its graph"):
         with it("should not hold the folder's package to the participants a package of production code needs"):
             package = next(node for node in self.fixture.practice.reading.in_graph.nodes("Package") if node.name == "pay")
             expect(package.get_fact("exempt_relationships")).to(equal(["participants"]))
+
+
+with description("Clean Engineering reading the classes its model documents describe"):
+    with context("with a folder whose only file is a class model describing a class"):
+        with before.all:
+            self.fixture = practice_from_files({"shop/.context/module-context.md": "# Shop\n", "shop/.context/shop-model.md": _SHOP_MODEL})
+            self.ledger = next(iter(_classes(self.fixture)), None)
+            self.graph = self.fixture.practice.reading.graph
+
+        with it("should hold the class the document describes"):
+            expect([node.name for node in _classes(self.fixture)]).to(equal(["Ledger"]))
+
+        with it("should hold the operation the document gives the class"):
+            expect(_targets(self.fixture, "owns", "Ledger")).to(equal(["record"]))
+
+        with it("should keep the stereotypes the document gives the class"):
+            expect(self.ledger and self.ledger.get_fact("stereotypes")).to(equal(["Entity"]))
+
+        with it("should place the class at the document's line that names it"):
+            expect(self.ledger and (self.ledger.source.file, self.ledger.source.start_line)).to(equal(("shop/.context/shop-model.md", 3)))
+
+        with it("should place the operation at the document's line that declares it"):
+            lines = [node.source.start_line for node in self.fixture.practice.reading.in_graph.nodes("Operation") if node.name == "record"]
+            expect(lines).to(equal([8]))
+
+        with it("should have the class owned by the folder the document describes"):
+            expect(self.ledger and self.graph.edges.direct_parent(self.ledger).name).to(equal("shop"))
+
+        with it("should mark the class as one a model document describes, not one code declares"):
+            expect(self.ledger and self.ledger.get_fact(DESCRIBED_FACT)).to(be_true)
+
+    with context("with code that declares the class the model document describes"):
+        with before.all:
+            self.fixture = practice_from_files(
+                {
+                    "shop/.context/shop-model.md": _SHOP_MODEL,
+                    "shop/ledger.py": "class Ledger:\n    def record(self, entry: str) -> str:\n        return entry\n",
+                }
+            )
+
+        with it("should hold one node for the class, the one the code declares"):
+            expect([(node.name, node.source.file) for node in _classes(self.fixture)]).to(equal([("Ledger", "shop/ledger.py")]))
+
+    with context("with a folder whose only file is a DDD domain model"):
+        with before.all:
+            self.fixture = practice_from_files({"shop/.context/domain-model.md": _SHOP_DOMAIN_MODEL})
+
+        with it("should leave the domain model to DDD and read no class from it"):
+            expect([node.name for node in _classes(self.fixture)]).to(equal([]))
 
 
 def _exempt(fixture, name: str) -> list[str]:

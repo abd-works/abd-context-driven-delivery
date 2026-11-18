@@ -1,7 +1,8 @@
 """How Clean Engineering takes part in the graph: it reads each source file with the class model of its language, from
 its own formats, and adds the folders, classes, properties, operations, and parameters it parsed to its graph as nodes;
-and it keeps the class models its model documents describe, so a realization can follow an interaction the model gives
-a member.
+it adds each class its model documents describe that no code declares, so the model's rules check a design whose code
+is not written; and it keeps the class models those documents describe, so a realization can follow an interaction the
+model gives a member.
 
 The practice holds two parts for as long as it lives, its code index and its model documents, and makes a code read,
 with the folders that read takes, for each read: what one read finds stays on that read, not on the practice."""
@@ -20,9 +21,10 @@ from harness.graph.model_node import schema_sync_paused
 from harness.graph.skipped_folders import skips_folder
 from harness.graph.schema_conformance import EXEMPT_FACT
 
-from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel
+from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, OoadClass
 from cdd_guidance.practices.clean_engineering.model.code_read import PRODUCTION_FACT, CodeRead
 from cdd_guidance.practices.clean_engineering.model.compared_facts import ComparedFacts
+from cdd_guidance.practices.clean_engineering.model.markdown.card_lines import CardLines
 from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
@@ -38,10 +40,10 @@ _MEMBER_READ = re.compile(r"\.([A-Za-z_$][\w$]*)\b(?!\s*\()")
 
 
 class GraphReading(PracticeReading):
-    """How Clean Engineering takes part in the graph: it reads the code, then the model documents. Its classes are the
-    classes the source view opens and folds, their operations and properties the members it opens a call to, and its
-    checks run on each class as a whole. Every practice that links to the code asks its code index; a realization asks
-    its model documents."""
+    """How Clean Engineering takes part in the graph: it reads the model documents, then the code, and holds each class
+    a document describes that no code declares as it holds the code's. Its classes are the classes the source view
+    opens and folds, their operations and properties the members it opens a call to, and its checks run on each class
+    as a whole. Every practice that links to the code asks its code index; a realization asks its model documents."""
 
     class_types = ("OoadClass",)
     member_types = ("Operation", "Property")
@@ -61,12 +63,13 @@ class GraphReading(PracticeReading):
         self.model_documents = ModelDocuments(self)
 
     def read_working_copy(self) -> None:
-        """Read each source file with its language's class model, adding the folders, classes, properties, operations,
-        and parameters it parsed as nodes, and keep the class model each model document describes."""
+        """Keep the class model each model document describes, then read each source file with its language's class
+        model, adding the folders, classes, properties, operations, and parameters it parsed as nodes, and each class a
+        document describes that no code declares."""
         self.code_index.forget()
         with schema_sync_paused():
-            CodeRead(self).read()
             self.model_documents.read()
+            CodeRead(self).read()
         CallLinks(self).link()
         ComparedFacts(self).record()
         self._exempt_test_code()
@@ -192,14 +195,17 @@ class CodeIndex:
 
 class ModelDocuments:
     """The class models the practice's model documents describe, ``{folder}/.context/*-model.md``, by each document's
-    path from the source root. A realization follows an interaction into a class the load left out through them,
-    without a second copy of the class among the code's nodes."""
+    path from the source root; a document another practice reads in a format of its own, such as DDD's domain model,
+    is that practice's. A realization follows an interaction into a class the load left out through them, and the code
+    read adds each class they describe that no code declares, placed at the document's lines."""
 
     def __init__(self, reading: GraphReading) -> None:
         self._reading = reading
         # The format the practice's model documents are written in, which reads each into the class model it describes.
         self._format: type[CleanEngineeringModel] = reading.practice.model_document_format
         self._models: dict[str, CleanEngineeringModel] = {}
+        # The documents the last read read, by path from the source root: a refresh reads only some.
+        self._read_now: list[str] = []
         # Whether the documents have been read for the graph the practice is in.
         self._read = False
 
@@ -210,10 +216,25 @@ class ModelDocuments:
         if graph.scope.edited_files is None or not self._read:
             self._models = {}
         self._read = True
+        self._read_now = []
         for file in self._files():
             relative = file.relative_to(self._root).as_posix()
             report_progress(f"clean_engineering · model · {relative}")
-            self._models[relative] = self._model_described_by(self._text_of(file))
+            text = self._text_of(file)
+            model = self._model_described_by(text)
+            lines = CardLines(text)
+            for oclass in self._classes_of(model):
+                lines.place(oclass)
+            self._models[relative] = model
+            self._read_now.append(relative)
+
+    def described_now(self) -> list[tuple[str, OoadClass]]:
+        """Each class the documents the last read read describe, with its document's path from the source root, in the
+        order the documents and their cards give them."""
+        return [(relative, oclass) for relative in self._read_now for oclass in self._classes_of(self._models[relative])]
+
+    def _classes_of(self, model: CleanEngineeringModel) -> list[OoadClass]:
+        return [oclass for module in model.modules for oclass in module.classes]
 
     def _text_of(self, file: Path) -> str:
         """The text of one model document, as it is on disk now."""
@@ -242,7 +263,14 @@ class ModelDocuments:
         edited = graph.scope.edited_files
         folders = self._every_folder() if edited is None else {self._root, *(graph.scope.folders or [])}
         named = {path for path in (edited or []) if path.name.endswith("-model.md")}
-        return sorted({model for folder in folders for model in (folder / ".context").glob("*-model.md")} | named)
+        found = {model for folder in folders for model in (folder / ".context").glob("*-model.md")} | named
+        return sorted(document for document in found if not self._read_by_another_practice(document))
+
+    def _read_by_another_practice(self, document: Path) -> bool:
+        """Whether another practice the graph holds reads the document in a model format of its own."""
+        own = self._reading.practice
+        held = self._reading.graph.practices.held.values()
+        return any(practice is not own and practice.reading.reads_model_document(document) for practice in held)
 
     def _every_folder(self) -> set[Path]:
         folders = set()

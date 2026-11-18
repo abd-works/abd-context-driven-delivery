@@ -24,6 +24,34 @@ _SALES = {
 }
 
 
+# A domain model, the only file of its folder: one aggregate whose root and repository no code declares.
+_SHOP_DOMAIN_MODEL = (
+    "# Domain Model — Shop\n"
+    "\n"
+    "## Sales | custom\n"
+    "\n"
+    "### Cart\n"
+    "\n"
+    "#### Cart <<Aggregate Root>> <<Entity>>\n"
+    "\n"
+    "------\n"
+    "+ total: int\n"
+    "----\n"
+    "+ add(item: str): Cart\n"
+    "\n"
+    "#### CartRepository <<Repository>>\n"
+    "\n"
+    "------\n"
+    "----\n"
+    "+ load(id: str): Cart\n"
+)
+
+
+def blocks_of(fixture: RuleFixture, kind: str) -> list:
+    """The building blocks of kind DDD's graph holds."""
+    return fixture.practice.reading.in_graph.nodes(kind)
+
+
 def mappings_of(graph: Graph) -> list[tuple]:
     """Each context mapping on graph's DDD practice: its name, its line, the context it sits under, and the aggregates
     its sides name."""
@@ -58,3 +86,39 @@ with description("DDD's reading of a working copy into the graph"):
 
             with it("should hold the mappings the build that saved it held"):
                 expect(mappings_of(self.reopened)).to(equal(mappings_of(self.graph)))
+
+
+with description("DDD's reading of a domain model no code realizes yet"):
+    with context("with a folder whose only file is a domain model"):
+        with before.all:
+            self.fixture = RuleFixture(Ddd, {"src/.context/domain-model.md": _SHOP_DOMAIN_MODEL})
+            self.roots = blocks_of(self.fixture, "EntityRoot")
+
+        with it("should hold the aggregate root the document describes as a building block"):
+            expect([root.name for root in self.roots]).to(equal(["Cart"]))
+
+        with it("should keep the stereotypes the document gives the root"):
+            expect(self.roots[0].get_fact("stereotypes") if self.roots else None).to(equal(["Aggregate Root", "Entity"]))
+
+        with it("should hold the root and its repository in the aggregate the document names"):
+            aggregates = self.fixture.practice.reading.in_graph.nodes("Aggregate")
+            edges = self.fixture.practice.reading.graph.edges
+            held = [(kind, [edge.child.name for edge in edges.from_parent(kind, aggregates[0])]) for kind in ("root", "owns")] if aggregates else []
+            expect(([node.name for node in aggregates], held)).to(equal((["Cart"], [("root", ["Cart"]), ("owns", ["CartRepository"])])))
+
+        with it("should place the root at the document's line that names it"):
+            source = self.roots[0].source if self.roots else None
+            expect((source.file, source.start_line) if source else None).to(equal(("src/.context/domain-model.md", 7)))
+
+    with context("with code that declares the root the domain model describes"):
+        with before.all:
+            self.fixture = RuleFixture(
+                Ddd,
+                {
+                    "src/.context/domain-model.md": _SHOP_DOMAIN_MODEL,
+                    "src/cart/cart.py": "@aggregate_root\nclass Cart:\n    def total(self) -> int:\n        return 1\n",
+                },
+            )
+
+        with it("should hold one building block for the root, the one the code declares"):
+            expect([(root.name, root.source.file) for root in blocks_of(self.fixture, "EntityRoot")]).to(equal([("Cart", "src/cart/cart.py")]))
