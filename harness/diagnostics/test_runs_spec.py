@@ -70,8 +70,9 @@ with description("the test cadence") as self:
         self.reviewed = []
         self.review_lines = ["move-work-forward-on-session-board/maintain-tickets: 3 changed step(s)", "review agent started on 1 run(s)"]
         self.fix_chats = []
+        self.waits = []
         self.cadence = TestCadence(self.folder, self.record, self.runner, GitStub(), self.clock, review=self.review,
-                                   open_fix_chat=lambda folder, prompt: self.fix_chats.append((folder, prompt)))
+                                   open_fix_chat=lambda folder, prompt: self.fix_chats.append((folder, prompt)), wait=self.wait)
 
     with after.each:
         shutil.rmtree(self.folder, ignore_errors=True)
@@ -81,6 +82,20 @@ with description("the test cadence") as self:
         if isinstance(self.review_lines, Exception):
             raise self.review_lines
         return self.review_lines
+
+    def wait(self, seconds: float) -> None:
+        """While run_now waits, the other process's run ends, and a run after it ends too, so neither the latest nor the
+        previous run of a tier is live; what had run here by then is kept for the spec."""
+        self.waits.append(list(self.runner.ran))
+        for tier in TestTier:
+            for minutes in (3, 4):
+                self.record.save(TestRun(tier, "abc123", NOON - timedelta(minutes=minutes), RunOutcome.FAILED, pid=GONE))
+
+    def running_elsewhere(self, tier: TestTier) -> TestRun:
+        """A run of tier another live process holds: this process's parent, which runs as long as the spec does."""
+        run = TestRun(tier, "abc123", NOON - timedelta(minutes=2), pid=os.getppid())
+        self.record.save(run)
+        return run
 
     def ran_at(self, tier: TestTier, started: datetime, outcome: RunOutcome = RunOutcome.PASSED) -> None:
         self.record.save(TestRun(tier, "old", started, outcome, pid=GONE))
@@ -173,6 +188,40 @@ with description("the test cadence") as self:
         with it("should keep the last lines the run printed"):
             self.runner.output = "\n".join(f"line {number}" for number in range(40))
             expect(self.cadence.run_now(TestTier.HEAVY).summary.splitlines()).to(have_len(12))
+
+    with context("that another process is running the same tier"):
+        # Two e2e runs of one checkout both start the board's Playwright server on its one port, and the second fails.
+        with before.each:
+            self.running_elsewhere(TestTier.E2E)
+
+        with it("should run nothing until that run ends"):
+            self.cadence.run_now(TestTier.E2E)
+            expect(self.waits[0]).to(equal([]))
+
+        with it("should then run the tier itself"):
+            self.cadence.run_now(TestTier.E2E)
+            expect(self.runner.ran).to(equal([TestTier.E2E]))
+
+        with it("should record its own run, not take over the other process's"):
+            expect(self.cadence.run_now(TestTier.E2E).started_at).to(equal(NOON))
+
+    with context("that another process is running the other tier"):
+        with it("should run nothing until that run ends"):
+            self.running_elsewhere(TestTier.HEAVY)
+            self.cadence.run_now(TestTier.E2E)
+            expect(self.waits[0]).to(equal([]))
+
+    with context("whose live run is held as the previous one, a later run recorded over it"):
+        with it("should run nothing until that run ends"):
+            self.running_elsewhere(TestTier.E2E)
+            self.record.save(TestRun(TestTier.E2E, "abc123", NOON - timedelta(minutes=1), RunOutcome.FAILED, pid=GONE))
+            self.cadence.run_now(TestTier.E2E)
+            expect(self.waits[0]).to(equal([]))
+
+    with context("with no other run live"):
+        with it("should not wait"):
+            self.cadence.run_now(TestTier.E2E)
+            expect(self.waits).to(equal([]))
 
     with context("of the e2e tier"):
         with it("should screenshot its steps under the scheduled release"):
