@@ -314,6 +314,15 @@ describe('Filter Files By Format In Files App', () => {
     const shown = filesShown([{ slug: 'stories-story-map', entries: [entry('.context/story-map.md')] }], ['stories-story-map'])
     expect(shown.map(each => each.path)).toEqual(['.context/story-map.md'])
   })
+
+  // A board published from the story map opens in Claude, so it shows whatever formats are chosen; requested
+  // 2026-11-18: "first of all where is whiteboard link" while only markdown and drawio were chosen.
+  it('should show a published whiteboard while only other formats are selected', () => {
+    const board = { ...(entry('.context/story-map.version-2.whiteboard') as object), link: 'https://claude.ai/artifact/board' } as never
+    const files = [{ slug: 'stories-story-map', entries: [entry('.context/story-map.md'), board], formatOf: { '.context/story-map.md': 'markdown', '.context/story-map.version-2.whiteboard': 'whiteboard' } }]
+    const shown = filesShown(files, ['stories-story-map'], ['markdown', 'drawio'])
+    expect(shown.map(each => each.path)).toEqual(['.context/story-map.md', '.context/story-map.version-2.whiteboard'])
+  })
 })
 
 describe('Open Diagram In Files App', () => {

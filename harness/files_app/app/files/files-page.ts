@@ -33,9 +33,10 @@ export const listedBy = (selection: GuidanceSelectionData | null, linked: string
 export const selectedFormatsOf = (selection: GuidanceSelectionData | null): string[] =>
   [...new Set((selection?.formats ?? []).filter(format => format.is_selected).flatMap(format => format.formats))]
 
-// The files the page shows, each once: of the fidelities listed, only the ones in a format selected while any is.
+// The files the page shows, each once: of the fidelities listed, only the ones in a format selected while any is, and
+// every one published to a link, such as a whiteboard, which opens in Claude whatever format is chosen.
 export const filesShown = (byFidelity: FidelityFiles[], listed: string[], formats: string[] = []): FileEntryData[] => {
-  const inFormat = ({ entries, formatOf = {} }: FidelityFiles) => (formats.length ? entries.filter(entry => formats.includes(formatOf[entry.path] ?? '')) : entries)
+  const inFormat = ({ entries, formatOf = {} }: FidelityFiles) => (formats.length ? entries.filter(entry => entry.link || formats.includes(formatOf[entry.path] ?? '')) : entries)
   return eachOnce(byFidelity.filter(({ slug }) => !slug || listed.includes(slug)).flatMap(inFormat))
 }
 
