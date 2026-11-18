@@ -14,7 +14,10 @@ param(
     [ValidateSet("unit", "vanilla", "heavy", "e2e", "agent")]
     [string]$Suite = "unit",
     # The unit tier's budget for one example, before.each and after.each included. Over it, the example's file fails.
-    [int]$ExampleBudgetMs = 100
+    [int]$ExampleBudgetMs = 100,
+    # The e2e tier without the agentic BDD specs, whose agents' answers are judged: the browser specs and the
+    # Playwright suite alone, for a check after each fix before a judge round.
+    [switch]$SkipAgents
 )
 if ($Suite -eq "vanilla") { $Suite = "unit" }
 if ($Suite -eq "agent") { $Suite = "e2e" }
@@ -358,7 +361,7 @@ try {
         # A browser or an agent per example: one file at a time, so they do not fight over the machine.
         $endToEndSpecs = @(Get-RepoFiles { param($name) $name -like "*_spec.py" } | Where-Object {
             $name = [IO.Path]::GetFileName($_)
-            (Test-EndToEnd $name) -or (Test-AgenticBdd $name)
+            (Test-EndToEnd $name) -or ((-not $SkipAgents) -and (Test-AgenticBdd $name))
         })
         $agentFailures = @()
         foreach ($spec in $endToEndSpecs) {
