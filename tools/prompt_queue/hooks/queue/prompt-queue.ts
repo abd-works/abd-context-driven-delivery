@@ -51,6 +51,8 @@ const notice = atom({ plugin: 'prompt-queue', key: 'notice' } as const, '')
 const failure = atom({ plugin: 'prompt-queue', key: 'failure' } as const, null as QueueFailure | null)
 /** Playing, the agent sees the queue and each finished turn asks it to take the next prompt; paused, the queue waits. */
 const isPlaying = atom({ plugin: 'prompt-queue', key: 'isPlaying' } as const, false)
+/** The card each robot was last handed, so a robot that stops without marking it done is not handed it again. */
+const sentCards = atom({ plugin: 'prompt-queue', key: 'sentCards' } as const, {} as Record<string, string>)
 /** Whether the main chat is in a turn, so play sends at once only when nothing is running. */
 const isTurnRunning = atom({ plugin: 'prompt-queue', key: 'isTurnRunning' } as const, false)
 /** The draft Alt+Enter just queued: the desktop still submits it after the key, so that submission is dropped. */
@@ -743,37 +745,68 @@ export async function renameAgent($: EngineInterface, place: number): Promise<vo
   await $.prompt.fill({ text: '', mode: 'replace' })
 }
 
-/** The robots whose sub-agent is still starting, working or waiting: every finished turn sends the robots again, so a
- * robot already at work is passed over instead of being started a second time on the same cards. */
-async function robotsAtWork($: EngineInterface): Promise<Set<string>> {
-  const agents = await $.agent.list()
-  return new Set(agents.filter(agent => AT_WORK.includes(agent.status) && agent.name).map(agent => agent.name!))
+/** A sub-agent's turn ended: while the queue plays in sub-agent mode, its robot is handed its next open card. */
+export async function finishRobotTurn($: EngineInterface, agentId: string): Promise<void> {
+  if ((await read($, isPlaying)) && (await read($, isSubAgentMode))) {
+    await sendTasksToSubAgents($, agentId)
+  }
 }
 
-const AT_WORK = ['pending', 'running', 'waiting', 'idle']
+/** A sub-agent still starting, working a turn, or waiting on work it owns: it is not handed another card yet. */
+const AT_WORK = ['pending', 'running', 'waiting']
 
-/** Each robot with work not done starts as a sub-agent on its cards, unless it is already at work; work given to no robot is grouped first. */
-export async function sendTasksToSubAgents($: EngineInterface): Promise<void> {
+/**
+ * Each robot works one card at a time: a robot with no sub-agent starts as one on its first open card; a robot whose
+ * sub-agent finished its card is sent its next open card as a message, so the same sub-agent carries on with what it
+ * learned. A robot at work is passed over, and one that stopped without marking its card done is not sent that card
+ * again. `finished` names a sub-agent whose turn just ended, which counts as finished even while still listed as
+ * running. Work given to no robot is grouped first.
+ */
+export async function sendTasksToSubAgents($: EngineInterface, finished = ''): Promise<void> {
   await groupIntoTasks($)
-  const grouped = robotsOf((await read($, queue)).prompts.filter(prompt => !prompt.is_done), await read($, tasks))
-  const atWork = await robotsAtWork($)
-  for (const [place, task] of grouped.entries()) {
+  const held = await read($, queue)
+  const agents = await $.agent.list()
+  const sent = await read($, sentCards)
+  for (const [place, task] of robotsOf(held.prompts.filter(prompt => !prompt.is_done), await read($, tasks)).entries()) {
     const robot = agentNameOf(task, place)
-    if (atWork.has(robot)) {
+    const card = held.prompts.find(prompt => prompt.robot === robot && !prompt.is_done)
+    const agent = agents.filter(listed => listed.name === robot).at(-1)
+    if (!card || (agent && agent.id !== finished && AT_WORK.includes(agent.status)) || (agent && sent[robot] === card.id)) {
       continue
     }
-    const started = await $.agent.spawn({
-      prompt: task.prompts.join('\n\n'),
-      description: `${robot}: ${task.description}`,
-      name: robot,
-      subagentType: 'general-purpose',
-    })
-    if (started.deny) {
-      await showFailure($, `Sub-agent refused: ${started.deny}`, `Sending the task "${task.description}" to a sub-agent`)
+    if (!(await handCard($, robot, task, card, agent?.id, held.chat))) {
       return
     }
+    await update($, sentCards, cards => ({ ...cards, [robot]: card.id }))
   }
-  await update($, notice, () => `Sent ${grouped.length} task(s) to sub-agents.`)
+}
+
+/** One card to a robot: a message to its sub-agent when it has one, else a new sub-agent under the robot's name. */
+async function handCard($: EngineInterface, robot: string, task: SubAgentTask, card: QueuedPrompt, agentId: string | undefined, chat: string): Promise<boolean> {
+  const brief = cardBriefOf(robot, card, chat)
+  if (agentId) {
+    const delivered = await $.session.send({ to: { agentId }, text: brief })
+    if (!delivered.isDelivered) {
+      await showFailure($, `${robot} was not sent its next card: ${delivered.reason}`, `Sending "${card.text.slice(0, GOAL_TITLE_COLUMNS)}" to ${robot}`)
+    }
+    return delivered.isDelivered
+  }
+  const started = await $.agent.spawn({ prompt: brief, description: `${robot}: ${task.description}`, name: robot, subagentType: 'general-purpose' })
+  if (started.deny) {
+    await showFailure($, `Sub-agent refused: ${started.deny}`, `Sending the task "${task.description}" to a sub-agent`)
+    return false
+  }
+  return true
+}
+
+/** What a robot is told with each card: the card and its id, and that it reports its own progress on the queue. */
+function cardBriefOf(robot: string, card: QueuedPrompt, chat: string): string {
+  return [
+    `You are ${robot}, working one card of the prompt queue of chat ${chat}.`,
+    `Card [${card.id}] ${card.text}`,
+    `First give the card its tasks with prompt-queue.set_steps (chat ${chat}, prompt ${card.id}), tick each with prompt-queue.step_done as you finish it,`,
+    `and when the card's work is done mark it done with prompt-queue.done (chat ${chat}, prompt ${card.id}). Then stop: your next card is sent to you.`,
+  ].join('\n')
 }
 
 /**

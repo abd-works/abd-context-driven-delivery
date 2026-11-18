@@ -13,6 +13,7 @@ import {
   finishPlan,
   noteDecisionAsked,
   refreshQueue,
+  finishRobotTurn,
   finishTurn,
   startTurn,
   followQueueAnswer,
@@ -98,6 +99,8 @@ export const register: Register = on => {
     const result = await next(e)
     if (e.agentId === undefined) {
       await finishTurn($, e.reason === 'answer')
+    } else {
+      await finishRobotTurn($, e.agentId)
     }
 
     return result

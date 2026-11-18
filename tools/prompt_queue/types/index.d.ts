@@ -38,6 +38,7 @@ declare module 'claude-code' {
       isPlanSeen: boolean
       openSteps: string[]
       expandedAgents: number[]
+      sentCards: Record<string, string>
       isAwaitingDecision: boolean
       decisionWait: number
     }

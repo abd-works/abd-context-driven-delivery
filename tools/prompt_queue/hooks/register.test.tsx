@@ -1180,6 +1180,63 @@ test("a sub-agent starts with its column's name", async ($, on) => {
   expect(spawned).toEqual(['Captain Tests: Write the story map', 'Bolt: Run the tests'])
 })
 
+test("a robot starts on its first open card alone, told the card's id and to mark it done itself", async ($, on) => {
+  const seeded = groupedQueue(on)
+  seeded.stored.isPlaying = { value: true, version: 1 }
+  const briefs: string[] = []
+  on('agent.spawn', (_, e) => {
+    briefs.push((e as { prompt: string }).prompt)
+    return { model: 'claude-sonnet-5-5' }
+  })
+  on('agent.list', () => ({ value: [] }))
+  on('turn.complete', () => ({ text: 'Done.' }))
+
+  await $.turn.complete(FINISHED_TURN)
+  await unawaitedWorkSettled()
+
+  expect([briefs[0]!.includes('[a] Write the scenarios'), briefs[0]!.includes('prompt-queue.done'), briefs[0]!.includes('Run the unit tier')]).toEqual([true, true, false])
+})
+
+/** Sparky's first card done and a second open, the sub-agent that worked the first one finished. */
+function robotBetweenCards(on: TestOn) {
+  const seeded = seedQueue(on, true, '', [{ id: 'a', text: 'Write the scenarios', is_done: true, robot: 'Sparky' }, { id: 'c', text: 'Validate them', robot: 'Sparky' }])
+  seeded.stored.isSubAgentMode = { value: true, version: 1 }
+  seeded.stored.tasks = { value: [GROUPED[0]!], version: 1 }
+  seeded.stored.isPlaying = { value: true, version: 1 }
+  const spawned: string[] = []
+  const sent: { to: string; text: string }[] = []
+  on('agent.spawn', (_, e) => {
+    spawned.push((e as { prompt: string }).prompt)
+    return { model: 'claude-sonnet-5-5' }
+  })
+  on('agent.list', () => ({ value: [{ id: 's1', name: 'Sparky', description: 'Sparky: Write the story map', type: 'general-purpose', status: 'completed' }] }))
+  on('session.send', (_, e) => {
+    sent.push({ to: String((e as { to: unknown }).to), text: (e as { text: string }).text })
+    return { isDelivered: true }
+  })
+  on('turn.complete', () => ({ text: 'Done.' }))
+  return { seeded, spawned, sent }
+}
+
+test('a robot that finished a card is sent its next open card as the same sub-agent, keeping what it learned', async ($, on) => {
+  const { spawned, sent } = robotBetweenCards(on)
+
+  await $.turn.complete({ ...FINISHED_TURN, agentId: 's1' })
+  await unawaitedWorkSettled()
+
+  expect([spawned.length, sent.length, sent[0]?.to, sent[0]?.text.includes('[c] Validate them')]).toEqual([0, 1, 's1', true])
+})
+
+test('a robot that stopped without marking its card done is not sent the same card again', async ($, on) => {
+  const { seeded, sent } = robotBetweenCards(on)
+  seeded.stored.sentCards = { value: { Sparky: 'c' }, version: 1 }
+
+  await $.turn.complete({ ...FINISHED_TURN, agentId: 's1' })
+  await unawaitedWorkSettled()
+
+  expect(sent).toEqual([])
+})
+
 test('a robot already at work is not started again when the next turn ends', async ($, on) => {
   const seeded = groupedQueue(on)
   seeded.stored.isPlaying = { value: true, version: 1 }
