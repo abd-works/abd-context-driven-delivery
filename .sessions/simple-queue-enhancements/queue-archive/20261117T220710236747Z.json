@@ -1,0 +1,46 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-17T22:07:10.236747+00:00",
+  "prompts": [
+    {
+      "id": "9b5a36dee1be",
+      "text": "[interruption] i dlert3ed the queue build a queue that's actually going to exercise at least three or four agents in parallel when I hit the queue button remember you're supposed to use AI to determine which tasks can go in what queues based on their ability to be paralyzed and then put them all in the correct queues it's not a manual process",
+      "is_done": true,
+      "steps": [
+        {
+          "text": "Queue four independent two-step strands for the AI to group into agents",
+          "state": "done"
+        }
+      ]
+    },
+    {
+      "id": "e9cf4b872285",
+      "text": "Count the .py files under tools/prompt_queue (read only, change no tracked file) and write the count to .sessions/simple-queue-enhancements/demo/files/report.md. Then mark this card done: call prompt-queue.show with chat 60be2cd0-d264-44b3-8635-0cebd8d9c856, find the card with this text, and call prompt-queue.done with that chat and its id.",
+      "is_done": true
+    },
+    {
+      "id": "d64a332555cb",
+      "text": "Write the subjects of the last 10 commits on the simple-queue-enhancements branch (git log, read only) to .sessions/simple-queue-enhancements/demo/history/log.md. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done.",
+      "is_done": true
+    },
+    {
+      "id": "c444b0e7e2f8",
+      "text": "In sub-agent mode, the agent decides where each new message goes: do it itself, make it a task of an item in a robot's queue, or give it to a robot as a new item",
+      "steps": [
+        {
+          "text": "[interruption] new cards: you decide whether you do it or add it to an agent's queue and item",
+          "state": "done"
+        },
+        {
+          "text": "Tests first: the note shows each robot's queue and the three choices; a [for <robot>] card shows in that robot's queue",
+          "state": "done"
+        },
+        {
+          "text": "Build it; commit, push, repin dev",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-18T03:16:23.173073+00:00",
+  "prompts": [
+    {
+      "id": "6d7ea4044c66",
+      "text": "Run4 tools survey (read only): give this card one step per package under tools/, then for each write its name and line count of its largest file to .sessions/simple-queue-enhancements/demo/run4/tools/sizes.md, ticking each step done as you go. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done."
+    }
+  ]
+}

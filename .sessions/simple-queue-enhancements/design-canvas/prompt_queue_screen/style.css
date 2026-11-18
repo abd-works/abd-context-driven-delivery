@@ -1,0 +1,55 @@
+.pq-root { position: relative; min-height: 900px; box-sizing: border-box; padding: 64px 24px 24px; background: #262624; color: #E8E8E8; font: 14px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif; display: flex; justify-content: center; }
+.pq-root button { font: inherit; color: inherit; cursor: pointer; }
+.pq-chat { width: 760px; display: flex; flex-direction: column; justify-content: flex-end; gap: 12px; min-height: 780px; }
+.pq-sent { display: flex; flex-direction: column; gap: 6px; }
+.pq-sent-line { align-self: flex-end; max-width: 80%; background: var(--pq-card); border-radius: 10px; padding: 6px 12px; color: #E8E8E8; }
+.pq-sent-title { color: var(--pq-muted); font-size: 12px; }
+.pq-box { display: flex; flex-direction: column; gap: 6px; padding: 0 1ch; align-self: flex-start; }
+.pq-box.pq-open { width: 100%; box-sizing: border-box; }
+.pq-band { display: flex; flex-direction: row; gap: 1ch; align-items: center; }
+.pq-icon { width: 16px; height: 16px; padding: 0; border: 0; background: transparent; display: block; }
+.pq-icon img { width: 16px; height: 16px; display: block; }
+.pq-add-room { width: calc(var(--pq-add-columns) * 1ch); }
+.pq-add-room .pq-reveal { display: none; }
+.pq-band:hover .pq-add-room .pq-reveal, .pq-open .pq-add-room .pq-reveal { display: block; }
+.pq-notice { color: #E5A50A; }
+.pq-failure { color: #EF4444; font-size: 13px; }
+.pq-groups { display: flex; flex-direction: row; gap: 1ch; width: 100%; }
+.pq-group { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1 1 0; }
+.pq-group.pq-collapsed { flex: 0 0 auto; }
+.pq-robot-head { display: flex; flex-direction: row; align-items: center; gap: 1ch; }
+.pq-robot { padding: 0; border: 0; background: transparent; }
+.pq-robot img { display: block; }
+.pq-robot-name { color: var(--pq-accent); font-weight: 700; }
+.pq-robot-progress { color: var(--pq-muted); }
+.pq-card { display: flex; flex-direction: column; }
+.pq-row { display: flex; flex-direction: row; align-items: center; gap: 1ch; width: 100%; }
+.pq-task { width: calc(var(--pq-task-columns) * 1ch); flex-shrink: 0; display: flex; }
+.pq-chip { border: 0; border-radius: 8px; background: var(--pq-card); padding: 2px 8px; }
+.pq-attached { color: var(--pq-muted); }
+.pq-textbox { position: relative; flex: 1 1 auto; min-width: 0; display: flex; align-items: center; border: 1px solid transparent; border-radius: 12px; }
+.pq-textbox.pq-pointed { border-color: var(--pq-accent); }
+.pq-pill { display: block; width: 100%; min-width: 0; text-align: left; border: 0; border-radius: 10px; background: var(--pq-card); padding: 4px 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pq-pill.pq-working { color: var(--pq-accent); font-weight: 700; text-decoration: underline; }
+.pq-pill.pq-finished { opacity: .45; }
+.pq-pill.pq-editing { opacity: .6; font-style: italic; color: var(--pq-placeholder); }
+.pq-bar { display: flex; flex-direction: row; align-items: center; gap: 1ch; background: var(--pq-key-cap); padding: 0 4px; }
+.pq-bar button { border: 0; background: transparent; padding: 0 2px; }
+.pq-pointer { position: absolute; top: 0; bottom: 0; left: 1ch; }
+.pq-hover { display: none; position: absolute; top: 0; bottom: 0; right: 0; }
+.pq-row:hover .pq-hover { display: flex; }
+.pq-opened-buttons { padding-left: calc((var(--pq-task-columns) + 1) * 1ch); display: flex; }
+.pq-after { padding-left: calc((var(--pq-task-columns) + 2) * 1ch); display: flex; }
+.pq-steps { display: flex; flex-direction: column; padding-left: calc((var(--pq-task-columns) + 1) * 1ch); }
+.pq-step { display: flex; flex-direction: row; align-items: center; gap: 1ch; justify-content: space-between; }
+.pq-step-pointer { width: calc(var(--pq-pointer-columns) * 1ch); flex-shrink: 0; display: flex; flex-direction: row; justify-content: flex-end; align-items: center; }
+.pq-step-text { flex: 1 1 auto; min-width: 0; }
+.pq-step-text.pq-done { opacity: .45; }
+.pq-step-text.pq-in-progress { color: var(--pq-accent); }
+.pq-step .pq-step-buttons { display: none; }
+.pq-step:hover .pq-step-buttons { display: flex; }
+.pq-step-add { display: flex; flex-direction: row; gap: 1ch; align-items: center; }
+.pq-step-add .pq-plus { border: 0; background: transparent; padding: 0 2px; }
+.pq-prompt { border: 1px solid #3A3A38; border-radius: 16px; background: #30302E; padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; }
+.pq-prompt textarea { width: 100%; box-sizing: border-box; min-height: 52px; resize: none; border: 0; outline: 0; background: transparent; color: #E8E8E8; font: inherit; }
+.pq-prompt-hint { color: var(--pq-muted); font-size: 12px; }

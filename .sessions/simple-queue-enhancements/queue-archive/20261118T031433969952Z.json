@@ -1,0 +1,50 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-18T03:14:33.969952+00:00",
+  "prompts": [
+    {
+      "id": "7368b4916010",
+      "text": "[interruption] create a queioe that will resutls oin lsots of task fopr losdts of agents like 4",
+      "is_done": false,
+      "steps": [
+        {
+          "text": "[interruption] rememrbert dotnm asssign toagent sagent bujttoin does it",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] ?",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] nvm they were co,lpased we should always expoanbd on populaew",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] ??",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] we lost all the mov e up move doen etc nuttons ewr hve in single view",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] * also dioesnt workl",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] +",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] Story scenarios  do we have ?",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] n F the design canvas",
+          "state": "pending"
+        }
+      ],
+      "robot": "Sparky"
+    }
+  ]
+}

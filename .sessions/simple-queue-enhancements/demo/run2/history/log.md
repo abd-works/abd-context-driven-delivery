@@ -1,0 +1,10 @@
+- The pointer's card hides its + task button, and the pointer's ▲ ▼ sit on a solid background instead of an outline
+- The queue keeps up with the agent: every prompt-queue answer, the agent's or a sub-agent's, is drawn at once; the orange working mark stands only on the pointer's card, so moving the pointer up takes it off; the pointer's ▲ ▼ get room beside the task button and an orange outline
+- Session log after the pointer reran Rivet's and Gizmo's demo cards
+- Session log after the pointer reran Pixel's demo card
+- The queue's pointer: orange ▲ ▼ at the left of the next card to do, and of the next step in a card, in the list and in each robot's queue; ▲ opens the done one above again so it reruns (prompt-queue.reopen), ▼ marks the one pointed at done
+- /queue's description names placing a draft into the plan
+- The queue's + runs /queue on the prompt box's draft, and /queue given a draft places it into the plan as a task of a goal or a card of its own; neither picks robots, which the agents button groups
+- The queue's + is a smart add: the model reads the conversation and the queue and files the draft as a task of a goal or as new cards, given to a robot in sub-agent mode; Alt+Enter stays the plain add
+- Each queued card keeps its robot on the queue (prompt-queue.assign), so the robots' queues come back after a reload; grouping gives new work fresh robot names and leaves robots already on the queue as they are
+- Story map: four robots observed running in parallel and marking their own cards done; the run2 demo's outputs kept in the session's work folder

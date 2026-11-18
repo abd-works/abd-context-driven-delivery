@@ -14,10 +14,12 @@ import {
   noteDecisionAsked,
   refreshQueue,
   finishTurn,
+  rememberRobotAgent,
   startTurn,
+  followQueueAnswer,
 } from './queue/prompt-queue'
 import { QueueView } from './queue/queue-view'
-import { PLAN_TOOL, SET_STEPS_TOOL, WRAP_UP_TOOL } from './queue/plan-steps'
+import { PLAN_TOOL, PROMPT_QUEUE_TOOL, SET_STEPS_TOOL, WRAP_UP_TOOL } from './queue/plan-steps'
 
 /** Whether a tool call's answer says the call failed, such as the server refusing a prompt it does not hold. */
 function isRefused(ran: unknown): boolean {
@@ -28,8 +30,8 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({
       name: 'queue',
-      description: 'Queue a pasted list, one prompt per item, or turn this conversation into ordered prompts',
-      argumentHint: '[a list to queue, or what to focus on]',
+      description: 'Queue a pasted list, one prompt per item; place a draft into the plan; or, with nothing given, turn this conversation into ordered prompts',
+      argumentHint: '[a list to queue, or a draft to place into the plan]',
     })
     // The queue lives on the cdd server: the agent or a session starting in this chat may already have queued prompts.
     await refreshQueue($)
@@ -69,6 +71,12 @@ export const register: Register = on => {
   // The agent's task list in the chat is copied onto the prompt it works on, so the queue shows its steps.
   on('tool.call', async ($, e, next) => {
     const ran = await next(e)
+    if (PROMPT_QUEUE_TOOL.test(e.tool) && !isRefused(ran)) {
+      await followQueueAnswer($, ran)
+    }
+    if (e.agentId === undefined && e.tool === 'Agent' && !isRefused(ran)) {
+      await rememberRobotAgent($, e as unknown as Record<string, unknown>, ran)
+    }
     if (e.agentId === undefined && PLAN_TOOL.test(e.tool)) {
       await followPlan($, e as unknown as Record<string, unknown>)
     } else if (e.agentId === undefined && SET_STEPS_TOOL.test(e.tool) && !isRefused(ran)) {

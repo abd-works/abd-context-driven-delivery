@@ -1,7 +1,7 @@
 import type { ElementTable } from 'claude-code'
 
 /** The desktop's own greys, sampled from its prompt box: the card, its placeholder text, and a key cap's grey behind buttons. */
-export const LOOK = { muted: '#9B9BA8', accent: '#E5531A', card: '#303030', placeholder: '#8C8C8C', keyCap: '#3F3F3F' }
+export const LOOK = { muted: '#9B9BA8', accent: '#E5531A', card: '#303030', placeholder: '#8C8C8C', keyCap: '#3F3F3F', popover: '#1C1C1E', raised: '#1B1B20', text: '#E8E8ED' }
 
 /** About one line of text tall, in the desktop's pixels. */
 const ICON_PIXELS = 16
@@ -25,6 +25,34 @@ export function IconButtonView(elements: ElementTable, icon: Icon, onPress: () =
       <Box position="absolute" top={0} left={0}>
         <Button key={icon.key} plain label=" " onPress={onPress} />
       </Box>
+      {TipLabelView(elements, icon.tip)}
+    </Box>
+  )
+}
+
+/**
+ * A control with its tip, which shows just above it while the pointer is over it, as the board's own buttons show
+ * theirs: a Button takes no tooltip, so the tip is a hidden Box in the control's own keyed Box, which the hover reveals.
+ */
+export function TipView(elements: ElementTable, key: string, words: string, detail: string, control: ReturnType<ElementTable['Button']>) {
+  const { Box } = elements
+
+  return (
+    <Box key={`${key}-tip`}>
+      {control}
+      {TipLabelView(elements, words, detail)}
+    </Box>
+  )
+}
+
+/** A tip as the board draws one: its name in white, then what it does in grey, on a dark raised label just above. */
+export function TipLabelView(elements: ElementTable, words: string, detail = '') {
+  const { Box, Text } = elements
+
+  return (
+    <Box position="absolute" bottom={1} left={0} paddingX={1} backgroundColor={LOOK.raised} display="none" hover={{ display: 'flex' }}>
+      <Text color={LOOK.text}>{detail ? `${words} ` : words}</Text>
+      {detail ? <Text color={LOOK.muted}>{detail}</Text> : null}
     </Box>
   )
 }

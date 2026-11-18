@@ -60,6 +60,7 @@ class QueuedPrompt(TypedDict):
     steps: NotRequired[list[PromptStep]]
     attachments: NotRequired[list[str]]
     is_done: NotRequired[bool]
+    robot: NotRequired[str]
 
 
 class StepNotPlanned(LookupError):
@@ -184,6 +185,18 @@ class PromptQueue:
 
     @mcp
     @agent_tool
+    def reopen(self, prompt: str) -> PromptQueue:
+        """Open the done prompt whose id is prompt again so it runs again: it is no longer done, and its steps are not started. The person moves the queue's pointer back onto it to rerun its work."""
+        return self._keep([_reopened(held) if held["id"] == prompt else held for held in self._holding(prompt)])
+
+    @mcp
+    @agent_tool
+    def assign(self, prompt: str, robot: str) -> PromptQueue:
+        """Give the queued prompt whose id is prompt to the robot named robot, the sub-agent that works it in sub-agent mode: the queue keeps it, so each robot's queue comes back after a reload. An empty robot takes the prompt off its robot."""
+        return self._keep([_assigned(held, robot.strip()) if held["id"] == prompt else held for held in self._holding(prompt)])
+
+    @mcp
+    @agent_tool
     def set_steps(self, prompt: str, steps: list[PromptStep]) -> PromptQueue:
         """Give the queued prompt whose id is prompt the steps planned for it, in order, each its text and its state: pending, in_progress, or done. They replace any steps it had, so the agent's task list for the prompt is copied whole each time it changes."""
         planned = [{"text": step["text"].strip(), "state": step["state"]} for step in steps]
@@ -269,6 +282,18 @@ class PromptQueue:
         self._file.path.parent.mkdir(parents=True, exist_ok=True)
         self._file.write({**self._held(), "prompts": prompts})
         return self
+
+
+def _reopened(prompt: QueuedPrompt) -> QueuedPrompt:
+    """The prompt not done, each of its steps not started."""
+    steps = {"steps": [{**step, "state": "pending"} for step in prompt["steps"]]} if "steps" in prompt else {}
+    return {**prompt, "is_done": False, **steps}
+
+
+def _assigned(prompt: QueuedPrompt, robot: str) -> QueuedPrompt:
+    """The prompt given to robot, or to no robot when robot is empty."""
+    unassigned = {key: value for key, value in prompt.items() if key != "robot"}
+    return {**unassigned, "robot": robot} if robot else unassigned
 
 
 def handoff_steps(text: str) -> list[str]:

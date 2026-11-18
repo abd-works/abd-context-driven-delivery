@@ -1,0 +1,36 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-18T03:40:36.708057+00:00",
+  "prompts": [
+    {
+      "id": "4a56ce319225",
+      "text": "[interruption] how do agents notify when done a item and are ready for the next ? ; hoew dothe yoinfor you of tyhe task tyhey are doing",
+      "is_done": false,
+      "steps": [
+        {
+          "text": "[interruption] !",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] are you sending the whole list or one taks at a time",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] The cost is that each card starts a fresh sub-agent, so it\u2019s slower and nothing carries over from the card before. WHY send it to the same sub agenbt!",
+          "state": "pending"
+        }
+      ],
+      "robot": "Cog"
+    },
+    {
+      "id": "4502d7dcebc6",
+      "text": "[decision required] eeee: no work it names; keep it or take it off?",
+      "robot": "Pixel"
+    },
+    {
+      "id": "055aebb93fbe",
+      "text": "[decision required] abcdsef: no work it names; keep it or take it off?",
+      "robot": "Widget"
+    }
+  ]
+}

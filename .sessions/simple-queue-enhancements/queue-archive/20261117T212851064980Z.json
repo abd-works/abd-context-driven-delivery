@@ -1,0 +1,17 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-17T21:28:51.064980+00:00",
+  "prompts": [
+    {
+      "id": "0097f7c3431c",
+      "text": "[interruption] i hit clear notihng happenede",
+      "steps": [
+        {
+          "text": "Check: the clear worked, archived twice into the worktree's queue-archive; the box had not redrawn yet",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    }
+  ]
+}

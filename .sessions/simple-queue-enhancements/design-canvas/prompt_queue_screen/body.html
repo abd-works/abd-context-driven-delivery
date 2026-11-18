@@ -1,0 +1,68 @@
+<style>__STYLE__</style>
+<div class="pq-chat" style="--pq-card: {{look.card}}; --pq-accent: {{look.accent}}; --pq-muted: {{look.muted}}; --pq-placeholder: {{look.placeholder}}; --pq-key-cap: {{look.keyCap}}; --pq-task-columns: {{taskColumns}}; --pq-pointer-columns: {{pointerColumns}}; --pq-add-columns: {{addColumns}}">
+<div class="pq-sent">
+<sc-if value="{{hasSent}}" hint-placeholder-val="{{ false }}"><div class="pq-sent-title">Sent to the chat</div></sc-if>
+<sc-for list="{{sent}}" as="line" hint-placeholder-count="0"><div class="pq-sent-line">{{line}}</div></sc-for>
+</div>
+<div class="{{boxClass}}">
+<sc-if value="{{isExpanded}}" hint-placeholder-val="{{ true }}">
+<div class="pq-groups">
+<sc-for list="{{groups}}" as="group" hint-placeholder-count="1">
+<div class="{{group.cls}}">
+<sc-if value="{{group.hasRobot}}" hint-placeholder-val="{{ false }}">
+<div class="pq-robot-head">
+<button class="pq-robot" title="{{group.robotTip}}" onClick="{{group.toggle}}"><img src="{{group.robotSrc}}" alt="{{group.robotTip}}" width="{{robotPixels}}" height="{{robotPixels}}"></button>
+<sc-if value="{{group.isOpen}}" hint-placeholder-val="{{ true }}"><span class="pq-robot-name">{{group.name}}</span></sc-if>
+</div>
+</sc-if>
+<sc-if value="{{group.isCollapsed}}" hint-placeholder-val="{{ false }}"><span class="pq-robot-progress">{{group.progress}}</span></sc-if>
+<sc-for list="{{group.cards}}" as="card" hint-placeholder-count="3">
+<div class="pq-card">
+<div class="pq-row">
+<div class="pq-task">
+<sc-if value="{{card.showProgress}}" hint-placeholder-val="{{ false }}"><button class="pq-chip" title="Open or fold this card's steps" onClick="{{card.toggleSteps}}">{{card.progress}}</button></sc-if>
+<sc-if value="{{card.showAddTask}}" hint-placeholder-val="{{ true }}"><button class="pq-chip" title="Add the prompt box's draft as a step" onClick="{{card.addTask}}">+</button></sc-if>
+</div>
+<sc-if value="{{card.hasAttachments}}" hint-placeholder-val="{{ false }}"><span class="pq-attached">{{card.attached}}</span></sc-if>
+<div class="{{card.boxClass}}">
+<button class="{{card.pillClass}}" title="{{card.text}}" onClick="{{card.press}}">{{card.label}}</button>
+<sc-if value="{{card.isPointer}}" hint-placeholder-val="{{ false }}"><div class="pq-bar pq-pointer"><sc-for list="{{card.arrows}}" as="arrow" hint-placeholder-count="2"><button title="{{arrow.tip}}" onClick="{{arrow.press}}">{{arrow.label}}</button></sc-for></div></sc-if>
+<sc-if value="{{card.hasHoverButtons}}" hint-placeholder-val="{{ true }}"><div class="pq-bar pq-hover"><sc-for list="{{card.buttons}}" as="button" hint-placeholder-count="5"><button title="{{button.tip}}" onClick="{{button.press}}">{{button.label}}</button></sc-for></div></sc-if>
+</div>
+</div>
+<sc-if value="{{card.isOpened}}" hint-placeholder-val="{{ false }}"><div class="pq-opened-buttons"><div class="pq-bar"><sc-for list="{{card.buttons}}" as="button" hint-placeholder-count="5"><button title="{{button.tip}}" onClick="{{button.press}}">{{button.label}}</button></sc-for></div></div></sc-if>
+<sc-if value="{{card.showSteps}}" hint-placeholder-val="{{ false }}">
+<div class="pq-steps">
+<sc-for list="{{card.steps}}" as="step" hint-placeholder-count="3">
+<div class="pq-step">
+<div class="pq-step-pointer"><sc-if value="{{step.isPointer}}" hint-placeholder-val="{{ false }}"><div class="pq-bar"><sc-for list="{{step.arrows}}" as="arrow" hint-placeholder-count="2"><button title="{{arrow.tip}}" onClick="{{arrow.press}}">{{arrow.label}}</button></sc-for></div></sc-if></div>
+<div class="{{step.cls}}">{{step.label}}</div>
+<div class="pq-bar pq-step-buttons"><sc-for list="{{step.buttons}}" as="button" hint-placeholder-count="5"><button title="{{button.tip}}" onClick="{{button.press}}">{{button.label}}</button></sc-for></div>
+</div>
+</sc-for>
+<div class="pq-step-add">
+<div class="pq-step-pointer"><sc-if value="{{card.isStepPointerAfter}}" hint-placeholder-val="{{ false }}"><div class="pq-bar"><sc-for list="{{card.stepArrowsAfter}}" as="arrow" hint-placeholder-count="1"><button title="{{arrow.tip}}" onClick="{{arrow.press}}">{{arrow.label}}</button></sc-for></div></sc-if></div>
+<button class="pq-plus" title="Add the prompt box's draft as the last step" onClick="{{card.addTask}}">+</button>
+</div>
+</div>
+</sc-if>
+</div>
+</sc-for>
+<sc-if value="{{group.isPointerAfter}}" hint-placeholder-val="{{ false }}"><div class="pq-after"><div class="pq-bar"><sc-for list="{{group.arrowsAfter}}" as="arrow" hint-placeholder-count="1"><button title="{{arrow.tip}}" onClick="{{arrow.press}}">{{arrow.label}}</button></sc-for></div></div></sc-if>
+</div>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{hasNotice}}" hint-placeholder-val="{{ false }}"><div class="pq-notice">{{notice}}</div></sc-if>
+<div class="pq-band">
+<button class="pq-icon" title="{{stack.tip}}" onClick="{{stack.press}}"><img src="{{stack.src}}" alt="{{stack.tip}}"></button>
+<div class="pq-add-room"><button class="pq-icon pq-reveal" title="{{add.tip}}" onClick="{{add.press}}"><img src="{{add.src}}" alt="{{add.tip}}"></button></div>
+<sc-for list="{{openIcons}}" as="icon" hint-placeholder-count="3"><button class="pq-icon" title="{{icon.tip}}" onClick="{{icon.press}}"><img src="{{icon.src}}" alt="{{icon.tip}}"></button></sc-for>
+</div>
+</div>
+<sc-if value="{{hasFailure}}" hint-placeholder-val="{{ false }}"><div class="pq-failure">{{failure}}</div></sc-if>
+<div class="pq-prompt">
+<textarea aria-label="Prompt box" placeholder="Reply to Claude…" value="{{draft}}" onChange="{{typeDraft}}" onKeyDown="{{draftKey}}"></textarea>
+<div class="pq-prompt-hint">Alt+Enter queues the draft as it is · + on a card adds it as a step · ✎ puts a card's text here</div>
+</div>
+</div>

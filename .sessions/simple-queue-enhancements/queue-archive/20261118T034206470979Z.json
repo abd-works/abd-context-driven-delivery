@@ -1,0 +1,18 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-18T03:42:06.470979+00:00",
+  "prompts": [
+    {
+      "id": "5d8a2918a755",
+      "text": "Demo queue: 3 robots with 3 quick tasks each",
+      "steps": [
+        {
+          "text": "Queue 3 strands of 3 quick cards, no robot given and no reporting words",
+          "state": "in_progress"
+        }
+      ],
+      "robot": "Sparky",
+      "is_done": true
+    }
+  ]
+}

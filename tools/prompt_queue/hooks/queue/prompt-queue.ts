@@ -33,6 +33,8 @@ const DECISION_WAIT_MS = 60_000
 const SYSTEM_NOTICE = /^\s*<(task-notification|system-reminder)>/
 // How much of each goal's text the note on a filed message lists, enough to tell the goals apart.
 const GOAL_TITLE_COLUMNS = 100
+// How a card queued for a robot by name starts: [for Bolt] ...
+const ROBOT_MARK_OPEN = '[for '
 // What marks a step that came from a message the person sent while the agent worked.
 const INTERRUPTION_MARK = '[interruption]'
 // Until the mod has seen the agent's task list, the agent keeps a prompt's steps on the queue itself.
@@ -49,6 +51,10 @@ const notice = atom({ plugin: 'prompt-queue', key: 'notice' } as const, '')
 const failure = atom({ plugin: 'prompt-queue', key: 'failure' } as const, null as QueueFailure | null)
 /** Playing, the agent sees the queue and each finished turn asks it to take the next prompt; paused, the queue waits. */
 const isPlaying = atom({ plugin: 'prompt-queue', key: 'isPlaying' } as const, false)
+/** The card each robot was last handed, so a robot that stops without marking it done is not handed it again. */
+const sentCards = atom({ plugin: 'prompt-queue', key: 'sentCards' } as const, {} as Record<string, string>)
+/** Each robot's sub-agent id, from this chat's Agent call that started it, so its next card is sent to that sub-agent. */
+const robotAgents = atom({ plugin: 'prompt-queue', key: 'robotAgents' } as const, {} as Record<string, string>)
 /** Whether the main chat is in a turn, so play sends at once only when nothing is running. */
 const isTurnRunning = atom({ plugin: 'prompt-queue', key: 'isTurnRunning' } as const, false)
 /** The draft Alt+Enter just queued: the desktop still submits it after the key, so that submission is dropped. */
@@ -67,6 +73,8 @@ const plan = atom({ plugin: 'prompt-queue', key: 'plan' } as const, [] as Prompt
 const isPlanSeen = atom({ plugin: 'prompt-queue', key: 'isPlanSeen' } as const, false)
 /** The cards whose steps are shown under them. */
 const openSteps = atom({ plugin: 'prompt-queue', key: 'openSteps' } as const, [] as string[])
+/** The places of the robots whose queues are collapsed to the robot alone, so the other queues take the room. */
+const expandedAgents = atom({ plugin: 'prompt-queue', key: 'expandedAgents' } as const, [] as number[])
 
 export type QueueState = {
   queue: PromptQueue
@@ -74,8 +82,8 @@ export type QueueState = {
   isSubAgentMode: boolean
   isPlaying: boolean
   editingId: string
-  workingId: string
   openSteps: string[]
+  expandedAgents: number[]
   tasks: SubAgentTask[]
   notice: string
 }
@@ -87,9 +95,9 @@ export async function currentQueue($: EngineInterface): Promise<QueueState> {
     isSubAgentMode: await read($, isSubAgentMode),
     isPlaying: await read($, isPlaying),
     editingId: await read($, editingId),
-    workingId: await read($, askedAbout),
     openSteps: await read($, openSteps),
-    tasks: await read($, tasks),
+    expandedAgents: await read($, expandedAgents),
+    tasks: robotsOf((await read($, queue)).prompts, await read($, tasks)),
     notice: await read($, notice),
   }
 }
@@ -158,7 +166,6 @@ export async function queuePrompt($: EngineInterface, text: string): Promise<boo
   const isEditing = (await read($, queue)).prompts.some(prompt => prompt.id === edited)
   const isChanged = await changeQueue($, isEditing ? 'edit' : 'add', isEditing ? { prompt: edited, text } : { text })
   await update($, editingId, () => '')
-  await update($, tasks, () => [])
 
   return isChanged
 }
@@ -187,12 +194,91 @@ function sameDraft(text: string): string {
   return text.split(/\r?\n/).map(line => line.trimEnd()).join('\n').trim()
 }
 
-/** The `+` button: what the person typed so far moves to the bottom of the queue, or back in its place when edited. */
+/** The `+` button runs /queue on the prompt box's draft, which places it into the plan; an edited prompt goes back in
+ * its place instead. Alt+Enter is the plain add. The box empties once the draft is placed, and keeps it when the model
+ * could not place it. */
 export async function queueDraft($: EngineInterface): Promise<void> {
   const { text } = await $.prompt.read()
-  if (await queuePrompt($, text)) {
+  if (text.trim() === '') {
+    return
+  }
+  const edited = await read($, editingId)
+  const isEditing = (await read($, queue)).prompts.some(prompt => prompt.id === edited)
+  const robot = await openRobotOf($)
+  const isPlaced = isEditing
+    ? await queuePrompt($, text)
+    : robot ? await queueForRobot($, text, robot) : (await runQueueCommand($, text)).isPlaced
+  if (isPlaced) {
     await $.prompt.fill({ text: '', mode: 'replace' })
   }
+}
+
+/** In sub-agent mode, the robot whose queue is open, which + adds to; none while no robot is open or the mode is off. */
+async function openRobotOf($: EngineInterface): Promise<string | undefined> {
+  if (!(await read($, isSubAgentMode))) {
+    return undefined
+  }
+  const open = (await read($, expandedAgents))[0]
+  if (open === undefined) {
+    return undefined
+  }
+  const robot = robotsOf((await read($, queue)).prompts, await read($, tasks))[open]
+  return robot ? agentNameOf(robot, open) : undefined
+}
+
+/** + while a robot's queue is open: the draft becomes the last card of that robot's queue, where the person sees it. */
+async function queueForRobot($: EngineInterface, text: string, robot: string): Promise<boolean> {
+  if (!(await changeQueue($, 'add', { text: text.trim() }))) {
+    return false
+  }
+  const added = (await read($, queue)).prompts.at(-1)
+  return added ? changeQueue($, 'assign', { prompt: added.id, robot }) : false
+}
+
+/** Where the model put one piece of a draft: a task of the goal whose id it names, or a card of its own. */
+type DraftPlace = { goal?: string; card?: string; text?: string }
+
+/** What /queue did with what it was given: whether the work is on the queue, and what it says about it. */
+type QueueCommandResult = { isPlaced: boolean; said: string }
+
+/** The model reads this conversation and the queue and places each piece of the draft into the plan: a task of the goal
+ * it is about, or a card of its own. It gives no card a robot; the agents button groups the work into robots. */
+async function placeDraft($: EngineInterface, draft: string): Promise<QueueCommandResult> {
+  const goals = (await read($, queue)).prompts
+  const reply = await $.model.fork({ prompt: placingPrompt(draft, goals) })
+  if (!reply.isAnswered) {
+    await showFailure($, `The draft was not placed on the queue: ${reply.reason}`, 'Running /queue on a draft, asking the model where it belongs')
+    return { isPlaced: false, said: `Placed nothing: ${reply.reason}` }
+  }
+  const places = parseJsonArray(reply.text) as DraftPlace[]
+  for (const place of places) {
+    await placeDraftPiece($, goals, place)
+  }
+  await update($, isExpanded, () => true)
+  return { isPlaced: true, said: `Placed ${places.length} piece(s) of the draft on the queue.` }
+}
+
+async function placeDraftPiece($: EngineInterface, goals: QueuedPrompt[], place: DraftPlace): Promise<void> {
+  if (place.goal && place.text && goals.some(goal => goal.id === place.goal)) {
+    await changeQueue($, 'add_interruption', { prompt: place.goal, text: place.text })
+    return
+  }
+  if (place.card) {
+    await changeQueue($, 'add', { text: place.card })
+  }
+}
+
+function placingPrompt(draft: string, goals: QueuedPrompt[]): string {
+  return [
+    'Do not answer or do any of the work. The person wants this draft placed into the plan on the prompt queue:',
+    draft.trim(),
+    'Decide where it belongs, reading this conversation. It may hold several pieces of work; place each one.',
+    'A piece about a goal on the queue becomes a task of that goal: {"goal": "<id>", "text": "<the task, short>"}.',
+    'A piece no goal covers becomes a card of its own, a short title of the goal: {"card": "<text>"}.',
+    'The goals on the queue:',
+    ...goals.map(goal => `- [${goal.id}] ${goal.text.replace(/\s+/g, ' ').slice(0, GOAL_TITLE_COLUMNS)}${goal.is_done ? ' (done)' : ''}`),
+    'Answer with only a JSON array of those objects.',
+  ].join('\n')
 }
 
 export async function movePrompt($: EngineInterface, from: number, to: number): Promise<void> {
@@ -201,12 +287,10 @@ export async function movePrompt($: EngineInterface, from: number, to: number): 
     return
   }
   await changeQueue($, 'move', { prompt: moving.id, to })
-  await update($, tasks, () => [])
 }
 
 export async function removePrompt($: EngineInterface, id: string): Promise<void> {
   await changeQueue($, 'remove', { prompt: id })
-  await update($, tasks, () => [])
 }
 
 /** The pencil on a card: the prompt goes to the prompt box to be changed, and keeps its place in the queue, shaded,
@@ -218,7 +302,6 @@ export async function editPrompt($: EngineInterface, prompt: QueuedPrompt): Prom
 
 export async function clearQueue($: EngineInterface): Promise<void> {
   await changeQueue($, 'clear')
-  await update($, tasks, () => [])
 }
 
 export async function toggleExpanded($: EngineInterface): Promise<void> {
@@ -426,7 +509,8 @@ async function addInterruption($: EngineInterface, prompt: QueuedPrompt, text: s
   await changeQueue($, 'add_interruption', { prompt: prompt.id, text })
   const goals = (await read($, queue)).prompts
   await update($, plan, () => goals.find(goal => goal.id === prompt.id)?.steps ?? [])
-  return { id: '', note: filingNoteOf(prompt.id, goals) }
+  const robots = (await read($, isSubAgentMode)) ? robotsOf(goals, await read($, tasks)) : []
+  return { id: '', note: [filingNoteOf(prompt.id, goals), ...robotsNoteOf(robots, goals)].join('\n') }
 }
 
 /** What the agent is told about a message filed under the goal last worked: decide where it belongs before any other
@@ -441,6 +525,39 @@ function filingNoteOf(filedUnder: string, goals: QueuedPrompt[]): string {
     'A question or a yes/no answer belongs to the goal it is about. The goals on the queue:',
     ...goals.map(goal => `- [${goal.id}] ${goal.text.replace(/\s+/g, ' ').slice(0, GOAL_TITLE_COLUMNS)}${goal.is_done ? ' (done)' : ''}`),
   ].join('\n')
+}
+
+/** In sub-agent mode, what the agent reads beside a new message: each robot's queue, and that the agent decides whether
+ * to do the message itself, make it a task of a robot's item, or give it to a robot as a new item. */
+function robotsNoteOf(robots: SubAgentTask[], goals: QueuedPrompt[]): string[] {
+  if (robots.length === 0) {
+    return []
+  }
+  return [
+    "Sub-agent mode is on. You decide where this message goes: do it yourself; make it a task of an item in a robot's queue with prompt-queue.add_interruption;",
+    "or give it to a robot as a new item with prompt-queue.add, its text starting [for <robot name>]. Take its step off this goal when it goes elsewhere.",
+    "A robot works only the words this chat sends it, and says when it finished: send it new work with SendMessage to its robot name. The robots' queues:",
+    ...robots.map((robot, place) => `${agentNameOf(robot, place)}: ${robotPromptsOf(goals, robot, place).map(goal => `[${goal.id}] ${goal.text.slice(0, GOAL_TITLE_COLUMNS)}`).join('; ')}`),
+  ]
+}
+
+/** A robot's items as they stand on the queue: the cards given to it, and any card queued for it by name, its text
+ * starting [for <robot name>], in queue order. */
+export function robotPromptsOf(goals: QueuedPrompt[], robot: SubAgentTask, place: number): QueuedPrompt[] {
+  const name = agentNameOf(robot, place)
+  return goals.filter(goal => goal.robot === name || goal.text.startsWith(`${ROBOT_MARK_OPEN}${name}]`))
+}
+
+/** The robots on the queue, in the order their first card stands. Each card keeps the robot it was given on the
+ * queue, so the robots' queues come back after a reload; what a robot does is what grouping said, while the plugin
+ * still holds it. */
+export function robotsOf(goals: QueuedPrompt[], described: SubAgentTask[]): SubAgentTask[] {
+  const names = [...new Set(goals.flatMap(goal => (goal.robot ? [goal.robot] : [])))]
+  return names.map(name => ({
+    name,
+    description: described.find(task => task.name === name)?.description ?? '',
+    prompts: goals.filter(goal => goal.robot === name).map(goal => goal.text),
+  }))
 }
 
 /** One `update_plan` call: the agent's task list follows it and is copied whole onto the prompt being worked. */
@@ -496,13 +613,22 @@ export async function sendNow($: EngineInterface, prompt: QueuedPrompt): Promise
 }
 
 /** The steps toggle on a card: its steps show under it, or fold away again. */
-/** + on a card: the prompt box's draft becomes the prompt's last step, not started, and the box empties; the steps open. */
+/** What + says when the prompt box is empty, since a card's new task is the prompt box's draft. */
+const EMPTY_TASK_NOTICE = 'Type the task in the prompt box, then press + to add it.'
+
+/** + on a card: the prompt box's draft becomes the prompt's last step, not started, and the box empties; the steps open.
+ * A done card opens again, since it has work to run. */
 export async function addStep($: EngineInterface, prompt: QueuedPrompt): Promise<void> {
   const { text } = await $.prompt.read()
   if (text.trim() === '') {
+    await update($, notice, () => EMPTY_TASK_NOTICE)
     return
   }
+  await update($, notice, said => (said === EMPTY_TASK_NOTICE ? '' : said))
   await changeSteps($, prompt, [...(prompt.steps ?? []), { text: text.trim(), state: 'pending' }])
+  if (prompt.is_done) {
+    await changeQueue($, 'reopen', { prompt: prompt.id })
+  }
   await $.prompt.fill({ text: '', mode: 'replace' })
   await update($, openSteps, open => (open.includes(prompt.id) ? open : [...open, prompt.id]))
 }
@@ -531,6 +657,12 @@ async function changeSteps($: EngineInterface, prompt: QueuedPrompt, steps: Prom
   await changeQueue($, 'set_steps', { prompt: prompt.id, steps })
 }
 
+/** Pressing a robot opens its queue under it and closes the one that was open, so one queue shows at a time; pressing
+ * it again closes its queue to the robot alone. */
+export async function toggleAgentQueue($: EngineInterface, place: number): Promise<void> {
+  await update($, expandedAgents, open => (open.includes(place) ? [] : [place]))
+}
+
 export async function toggleSteps($: EngineInterface, id: string): Promise<void> {
   await update($, openSteps, open => (open.includes(id) ? open.filter(shown => shown !== id) : [...open, id]))
 }
@@ -544,8 +676,11 @@ export async function sendNext($: EngineInterface): Promise<void> {
   await sendNextPrompt($)
 }
 
+/** The model groups the work not done and given to no robot yet into robots that can run side by side, and each card
+ * is given its robot on the queue; robots already on the queue keep their names and cards. The person's interruptions
+ * are left out, as this chat decides where each one goes. */
 export async function groupIntoTasks($: EngineInterface): Promise<void> {
-  const queued = new PromptQueue((await read($, queue)).prompts)
+  const queued = new PromptQueue((await read($, queue)).prompts.filter(prompt => !prompt.is_done && !prompt.robot && !prompt.text.startsWith(INTERRUPTION_MARK)))
   if (queued.isEmpty) {
     return
   }
@@ -561,8 +696,30 @@ export async function groupIntoTasks($: EngineInterface): Promise<void> {
     await showFailure($, `Grouping failed: ${reply.reason}`, `Grouping the queue into sub-agent tasks with ${GROUPING_MODEL}`)
     return
   }
-  await update($, tasks, () => parseJsonArray(reply.text) as SubAgentTask[])
+  await assignRobots($, parseJsonArray(reply.text) as SubAgentTask[])
   await update($, notice, () => '')
+}
+
+/** Each grouped task becomes a robot with a name no robot on the queue has, and each of its cards is given to it;
+ * every robot's queue then closes, so the robots show as a plain list until one is pressed. */
+async function assignRobots($: EngineInterface, grouped: SubAgentTask[]): Promise<void> {
+  const goals = (await read($, queue)).prompts
+  const names = freeRobotNames(goals, grouped.length)
+  const named = grouped.map((task, place) => ({ ...task, name: names[place]! }))
+  for (const robot of named) {
+    for (const goal of goals.filter(goal => !goal.is_done && !goal.robot && robot.prompts.includes(goal.text))) {
+      await changeQueue($, 'assign', { prompt: goal.id, robot: robot.name })
+    }
+  }
+  await update($, tasks, described => [...described.filter(task => !named.some(robot => robot.name === task.name)), ...named])
+  await update($, expandedAgents, () => [])
+}
+
+/** As many fun names as asked for, none of them a robot already on the queue. */
+function freeRobotNames(goals: QueuedPrompt[], count: number): string[] {
+  const taken = new Set(goals.flatMap(goal => (goal.robot ? [goal.robot] : [])))
+  const free = AGENT_NAMES.filter(name => !taken.has(name))
+  return Array.from({ length: count }, (_, place) => free[place] ?? `Robot ${taken.size + place + 1}`)
 }
 
 /** Fun names a sub-agent goes by, one for each place in turn, until the person names it. */
@@ -573,53 +730,81 @@ export function agentNameOf(task: SubAgentTask, place: number): string {
   return task.name ?? AGENT_NAMES[place % AGENT_NAMES.length]!
 }
 
-/** ✎ on a sub-agent's column: the prompt box's draft becomes its name, and the box empties. */
-export async function renameAgent($: EngineInterface, place: number): Promise<void> {
-  const { text } = await $.prompt.read()
-  if (text.trim() === '') {
-    return
-  }
-  await update($, tasks, grouped => grouped.map((task, index) => (index === place ? { ...task, name: text.trim() } : task)))
-  await $.prompt.fill({ text: '', mode: 'replace' })
-}
-
+/**
+ * Sub-agent mode, playing: this chat is the orchestrator. Each robot whose last card is done, or that has had none, is
+ * handed its next open card: this chat is asked to send the robot the card's words exactly, and to mark the card done
+ * when the robot reports it finished. A robot whose next open card is the one it was last handed is still working it
+ * and is passed over; one whose earlier card was opened again is handed that card. With nothing to hand out, this chat
+ * is asked nothing. Work given to no robot is grouped first.
+ */
 export async function sendTasksToSubAgents($: EngineInterface): Promise<void> {
-  if ((await read($, tasks)).length === 0) {
-    await groupIntoTasks($)
-  }
-  const grouped = await read($, tasks)
-  for (const [place, task] of grouped.entries()) {
-    const started = await $.agent.spawn({
-      prompt: task.prompts.join('\n\n'),
-      description: `${agentNameOf(task, place)}: ${task.description}`,
-      subagentType: 'general-purpose',
-    })
-    if (started.deny) {
-      await showFailure($, `Sub-agent refused: ${started.deny}`, `Sending the task "${task.description}" to a sub-agent`)
-      return
+  await groupIntoTasks($)
+  const held = (await read($, queue)).prompts
+  const sent = await read($, sentCards)
+  const handed: { robot: string; card: QueuedPrompt }[] = []
+  for (const [place, task] of robotsOf(held.filter(prompt => !prompt.is_done), await read($, tasks)).entries()) {
+    const robot = agentNameOf(task, place)
+    const card = held.find(prompt => prompt.robot === robot && !prompt.is_done)
+    if (card && card.id !== sent[robot]) {
+      handed.push({ robot, card })
     }
   }
-  await clearQueue($)
-  await update($, notice, () => `Sent ${grouped.length} task(s) to sub-agents.`)
+  if (handed.length === 0) {
+    return
+  }
+  await update($, sentCards, cards => ({ ...cards, ...Object.fromEntries(handed.map(({ robot, card }) => [robot, card.id])) }))
+  $.prompt.submit({ text: handOutOf(handed, await read($, robotAgents)), asUser: true })
+    .catch(thrown => showFailure($, `Not sent: ${reasonOf(thrown)}`, 'Playing the queue in sub-agent mode, asking this chat to hand out the robots\' cards'))
+}
+
+/** What this chat is asked when robots are due their next card: who gets which words, and how to hand them over. A
+ * robot whose sub-agent is known is sent its words by that sub-agent's id; one not started yet is started with the
+ * Agent tool, its description starting with the robot's name, so the queue learns which sub-agent is that robot. */
+function handOutOf(handed: { robot: string; card: QueuedPrompt }[], agents: Record<string, string>): string {
+  return [
+    "Hand out the robots' next cards. Send each robot its card's words exactly as written below, and nothing else.",
+    'When a robot tells you it finished, mark its card done with prompt-queue.done; its next card follows.',
+    ...handed.map(({ robot, card }) => {
+      const how = agents[robot] ? `SendMessage to ${agents[robot]}` : `start it with the Agent tool in the background, its description starting "${robot}: "`
+      return `- ${robot} (${how}), card [${card.id}]: ${card.text}`
+    }),
+  ].join('\n')
+}
+
+/** This chat started a sub-agent: when its description starts with a robot's name, that robot goes with its id. */
+export async function rememberRobotAgent($: EngineInterface, call: Record<string, unknown>, ran: unknown): Promise<void> {
+  const result = (ran as { result?: { agentId?: string } } | undefined)?.result
+  const robot = String(call.description ?? '').split(':')[0]!.trim()
+  const names = robotsOf((await read($, queue)).prompts, await read($, tasks)).map((task, place) => agentNameOf(task, place))
+  if (!result?.agentId || !names.includes(robot)) {
+    return
+  }
+  await update($, robotAgents, agents => ({ ...agents, [robot]: result.agentId! }))
 }
 
 /**
- * `/queue [list or focus]`: a pasted list queues each of its items in order; otherwise the model reads this
- * conversation and proposes the ordered prompts to queue, with the focus given. Answers what it queued, and why it
- * queued nothing when it did not.
+ * `/queue [list or draft]`: a pasted list queues each of its items in order; a draft is placed into the plan, as a
+ * task of a goal or a card of its own, as the `+` button does; with nothing given, the model reads this conversation
+ * and proposes the ordered prompts to queue. Answers what it queued, and why it queued nothing when it did not.
  */
 export async function queueFromCommand($: EngineInterface, args: string): Promise<string> {
+  return (await runQueueCommand($, args)).said
+}
+
+async function runQueueCommand($: EngineInterface, args: string): Promise<QueueCommandResult> {
   const listed = listedItems(args)
   if (listed.length > 0) {
     await queueAll($, listed)
-    return `Queued ${listed.length} prompt(s).`
+    return { isPlaced: true, said: `Queued ${listed.length} prompt(s).` }
   }
-
-  return planFromConversation($, args)
+  if (args.trim() !== '') {
+    return placeDraft($, args)
+  }
+  return { isPlaced: true, said: await planFromConversation($) }
 }
 
-async function planFromConversation($: EngineInterface, focus: string): Promise<string> {
-  const reply = await $.model.fork({ prompt: planningPrompt(focus) })
+async function planFromConversation($: EngineInterface): Promise<string> {
+  const reply = await $.model.fork({ prompt: PLANNING_INSTRUCTIONS })
   if (!reply.isAnswered) {
     await showFailure($, `/queue could not read the conversation: ${reply.reason}`, 'Running /queue, asking the model to plan prompts from this conversation')
     return `Queued 0 prompt(s): the conversation could not be read. ${reply.reason}`
@@ -636,11 +821,6 @@ async function planFromConversation($: EngineInterface, focus: string): Promise<
 async function queueAll($: EngineInterface, texts: string[]): Promise<void> {
   await changeQueue($, 'add_all', { texts })
   await update($, isExpanded, () => true)
-}
-
-function planningPrompt(focus: string): string {
-  const about = focus.trim() === '' ? '' : `Focus on: ${focus.trim()}\n`
-  return `${about}${PLANNING_INSTRUCTIONS}`
 }
 
 const PLANNING_INSTRUCTIONS =
@@ -664,4 +844,110 @@ async function showFailure($: EngineInterface, failed: string, context: string):
 /** The words a failure carries: a thrown error's message, or the value itself. */
 function reasonOf(thrown: unknown): string {
   return thrown instanceof Error ? thrown.message : String(thrown)
+}
+
+/** The queue's pointer in a stack of cards: the place of the next card to do, past the last card when every card is
+ * done. Play takes the card it points at. */
+export function pointerOf(prompts: QueuedPrompt[]): number {
+  const next = prompts.findIndex(prompt => !prompt.is_done && !prompt.text.startsWith(DECISION_FLAG))
+  return next === -1 ? prompts.length : next
+}
+
+/** ▲ on the pointer: the nearest done card above it opens again, its steps not started, so play runs it again. */
+export async function movePointerUp($: EngineInterface, prompts: QueuedPrompt[]): Promise<void> {
+  const above = prompts.slice(0, pointerOf(prompts)).filter(prompt => prompt.is_done).at(-1)
+  if (!above) {
+    return
+  }
+  await changeQueue($, 'reopen', { prompt: above.id })
+  await update($, askedAbout, working => (working === above.id ? '' : working))
+}
+
+/** ▼ on the pointer: the card it points at is marked done, so play moves past it. */
+export async function movePointerDown($: EngineInterface, prompts: QueuedPrompt[]): Promise<void> {
+  const pointed = prompts[pointerOf(prompts)]
+  if (pointed) {
+    await changeQueue($, 'done', { prompt: pointed.id })
+  }
+}
+
+/** A card's step pointer: the place of its first step not done, past the last step when every step is done. */
+export function stepPointerOf(steps: PromptStep[]): number {
+  const next = steps.findIndex(step => step.state !== 'done')
+  return next === -1 ? steps.length : next
+}
+
+/** ▲ on a card's step pointer: the done step above it is worked again, and every step after it is not started. */
+export async function moveStepPointerUp($: EngineInterface, prompt: QueuedPrompt): Promise<void> {
+  const steps = prompt.steps ?? []
+  const above = stepPointerOf(steps) - 1
+  if (above < 0) {
+    return
+  }
+  await changeSteps($, prompt, steps.map((step, place) => (place < above ? step : { ...step, state: place === above ? 'in_progress' : 'pending' })))
+}
+
+/** ▼ on a card's step pointer: its step is done and the next step is the one worked. */
+export async function moveStepPointerDown($: EngineInterface, prompt: QueuedPrompt): Promise<void> {
+  const steps = prompt.steps ?? []
+  const pointed = stepPointerOf(steps)
+  if (pointed >= steps.length) {
+    return
+  }
+  await changeSteps($, prompt, steps.map((step, place) => (place === pointed ? { ...step, state: 'done' } : place === pointed + 1 ? { ...step, state: 'in_progress' } : step)))
+}
+
+/** The answer of a prompt-queue call the agent or a sub-agent made: the queue as the server now holds it, drawn at once,
+ * so the cards, the pointer and the working mark keep up with the agent instead of waiting for the mod's next read. */
+export async function followQueueAnswer($: EngineInterface, ran: unknown): Promise<void> {
+  const text = (ran as { result?: { content?: { text?: string }[] } } | undefined)?.result?.content?.[0]?.text ?? ''
+  const answered = parseQueueAnswer(text)
+  if (!answered) {
+    return
+  }
+  const held = await read($, queue)
+  if (held.chat !== '' && answered.chat !== held.chat) {
+    return
+  }
+  await update($, queue, () => answered)
+}
+
+function parseQueueAnswer(text: string): QueueJson | undefined {
+  try {
+    const parsed = JSON.parse(text) as Partial<QueueJson>
+    return typeof parsed.chat === 'string' && Array.isArray(parsed.prompts) ? (parsed as QueueJson) : undefined
+  } catch (thrown) {
+    if (thrown instanceof SyntaxError) {
+      return undefined
+    }
+    throw thrown
+  }
+}
+
+/** ↵ on a step: that step of its prompt goes to the chat at once, the prompt being worked. */
+export async function sendStepNow($: EngineInterface, prompt: QueuedPrompt, index: number): Promise<void> {
+  const step = (prompt.steps ?? [])[index]
+  if (!step) {
+    return
+  }
+  await workOn($, prompt.id)
+  $.prompt.submit({ text: `Take step ${index + 1} of prompt [${prompt.id}] on the queue now: ${step.text}`, asUser: true }).catch(thrown =>
+    showFailure($, `Not sent: ${reasonOf(thrown)}`, `Pressing send now on the step "${step.text}"`))
+}
+
+/** ✎ on a step: with the prompt box empty, the step's text goes to the box to change; with a draft there, the draft
+ * becomes the step's text and the box empties. */
+export async function editStep($: EngineInterface, prompt: QueuedPrompt, index: number): Promise<void> {
+  const steps = prompt.steps ?? []
+  const step = steps[index]
+  if (!step) {
+    return
+  }
+  const { text } = await $.prompt.read()
+  if (text.trim() === '') {
+    await $.prompt.fill({ text: step.text, mode: 'replace' })
+    return
+  }
+  await changeSteps($, prompt, steps.map((held, place) => (place === index ? { ...held, text: text.trim() } : held)))
+  await $.prompt.fill({ text: '', mode: 'replace' })
 }

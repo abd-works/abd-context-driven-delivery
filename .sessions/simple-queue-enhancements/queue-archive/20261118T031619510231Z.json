@@ -1,0 +1,10 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-18T03:16:19.510231+00:00",
+  "prompts": [
+    {
+      "id": "c81cbad4759e",
+      "text": "Run4 harness survey, part 2: after demo/run4/harness/survey.md lists every folder, give this card one step per folder and add under each the first sentence of its .context/module-context.md (or 'none'), ticking each step done. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done."
+    }
+  ]
+}

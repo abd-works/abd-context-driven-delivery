@@ -940,57 +940,47 @@ Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "Branch guard"): a
 
 The prompt queue is its own Claude Code mod, `prompt-queue`, not part of the CDD chat bar: it sits above the chat bar, at rest only a stack image with the count drawn on it (the person, 2026-11-16: "this shouldnt be part of the cdd chat bar / it should be above it with some separation / a separate mod from chat ui"). Sources: the brief that started the simple-queue chat on 2026-11-16 (stack above the prompt, a `+` button, Ctrl+Enter, reordering, a sub-agent mode, sending on `turn.complete` ahead of Claude's own queue, a `/queue` command) and the person's directions in that chat. The mod is `tools/prompt_queue/hooks/`, published by the installer, with its `claude plugin test` specs in `register.test.tsx`. Evidence words as on the chat bar epics: **Observed** seen working in the desktop chat, **Built** in code and plugin tests but not seen, **Intended** asked for and not done.
 
-### (S) Person --> Queue Draft Prompt
+Grouped on 2026-11-17 into four sub-epics, as the epic had grown to sixteen children: Build Prompt Queue (the person puts work on the queue and shapes it), Work Through Prompt Queue (play, pause and the agent take the work in order), Nest Prompt Steps In Queue (each card's steps), and Share Queue Among Robots (sub-agent mode). The story names stay as they were.
 
-Observed (2026-11-16): the `+` beside the stack moves the prompt box's draft to the bottom of the queue and empties the box (`queueDraft`); the `+` shows when the pointer is on the stack. Ctrl+Enter did not work on the desktop, so the key is Alt+Enter. Built: Alt+Enter queues the draft (`queueByKey`), and a submission that follows it is dropped, "Queued for later" (`isQueuedByKey`).
+## (E) [Build Prompt Queue](../story_tests/queue-prompts-for-later/build-prompt-queue/build_prompt_queue_story.test.md)
 
-### (S) Person --> Open Prompt Queue
+The person puts work on the chat's queue and shapes it before it runs: queues a draft as it is, has the model place a draft or the conversation into the plan, keeps a draft's images with it, and opens, edits, reorders and removes the cards. Every change goes through the cdd server's `prompt-queue.*` tools (`tools/prompt_queue/prompt_queue.py`), and the mod draws the queue the server answers (`tools/prompt_queue/hooks/queue/prompt-queue.ts`).
+
+### (S) Person --> [Queue Draft Prompt](../story_tests/queue-prompts-for-later/build-prompt-queue/build_prompt_queue_story.test.md#story-queue-draft-prompt)
+
+Observed (2026-11-16): the `+` beside the stack moves the prompt box's draft to the bottom of the queue and empties the box (`queueDraft`); the `+` shows when the pointer is on the stack. Ctrl+Enter did not work on the desktop, so the key is Alt+Enter. Built: Alt+Enter queues the draft (`queueByKey`), and a submission that follows it is dropped, "Queued for later" (`isQueuedByKey`). Changed (2026-11-17, commit 54e73186a): the `+` no longer moves the draft as it is; it places the draft into the plan (Place Draft Into Plan), and Alt+Enter is the plain add.
+
+### (S) Person --> [Place Draft Into Plan](../story_tests/queue-prompts-for-later/build-prompt-queue/build_prompt_queue_story.test.md#story-place-draft-into-plan)
+
+Built (2026-11-17), not seen (commits f803207ae, 54e73186a; `register.test.tsx` "+ files the draft as a task of the goal the model picks", "/queue with a draft places it into the plan the way + does"): the `+` on the band runs /queue on the prompt box's draft (`queueDraft`). /queue given a draft has the model read this conversation and the goals on the queue, each with its id, and place each piece of the draft (`placeDraft`): a piece about a goal on the queue becomes a task of that goal, marked [interruption] (`prompt-queue.add_interruption`); a piece no goal covers becomes a card of its own (`prompt-queue.add`). Neither gives a card a robot: the agents button groups the work into robots. The prompt box empties once the draft is placed and keeps it when the model could not place it; an edited prompt goes back in its place instead. Observed (2026-11-17, a pasted list answered "Queued 0 prompt(s)"), then built: /queue given a pasted list queues each item in order without asking the model (`listedItems`).
+
+### (S) Person --> [Plan Queue From Conversation](../story_tests/queue-prompts-for-later/build-prompt-queue/build_prompt_queue_story.test.md#story-plan-queue-from-conversation)
+
+Built, not seen: `/queue [what to focus on]` has the model read the conversation and adds the next prompts it lists to the queue, in order (`planFromConversation`). Built: when the model proposes none, /queue says so with what the model answered.
+
+### (S) Person --> [Attach Images To Queued Prompt](../story_tests/queue-prompts-for-later/build-prompt-queue/build_prompt_queue_story.test.md#story-attach-images-to-queued-prompt)
+
+Built (2026-11-17), not seen (the person's /queue: "add images / attachments in chat along with text"): a plugin cannot send images with a prompt (`$.prompt.submit`: pasted images are not expanded for a plugin's prompt), so when Alt+Enter queues a draft, the images and documents pasted in it, which the dropped submission carries, are read (`$.prompt.media`) and kept as files beside the queued prompt (`prompt-queue.attach`, the chat's `attachments` folder). The queue beside a prompt lists each file for the agent to open, and the card shows 📎 with how many. The `+` button reads only the draft's text, so it queues no images. Story test: [attach_images_to_queued_prompt_story.test.py](../story_tests/queue-prompts-for-later/build-prompt-queue/attach-images-to-queued-prompt/attach_images_to_queued_prompt_story.test.py).
+
+### (S) Person --> [Open Prompt Queue](../story_tests/queue-prompts-for-later/build-prompt-queue/build_prompt_queue_story.test.md#story-open-prompt-queue)
 
 Observed (2026-11-16): pressing the stack image opens the queue upward: one rounded card per prompt, in the order they will be sent, with the controls staying where they were at the bottom; an empty queue shows "Add" beside Alt and ↵ key caps. Pressing it again closes it. Built (2026-11-17), not seen (the person's /queue): the open queue and each card fill the chat box's width, a card's hover buttons sit on solid grey so they read over its text, the card being worked is bright. Observed (2026-11-17, the person: "looks great"): the card being worked has an orange rounded border around its button and its text bold and underlined; a button's text takes no colour of its own, so the orange is in the border. Observed (2026-11-17, the person: "Dim, good"), asked as "dont remove done items, dim them": prompt-queue.done marks a prompt done and keeps it in its place, drawn dim with its steps; play, the stack's count and the queue the agent reads pass over done prompts, and clear takes the done prompts off first, everything only when none is done. Built (2026-11-17), not seen (the person's /queue: "use the same exception handling / fix defect button that the rest of cdd uses"): the queue draws no failure line of its own; it keeps its latest failure, numbered, and the CDD chat bar's one failure line shows it with the same Fix (`/space-session-debug-session choice=fix`) and ✕, which hide it there by its number. Only a plugin writes its own stored values, so the board reads the queue's.
 
-### (S) Person --> Edit Queued Prompt
+### (S) Person --> [Edit Queued Prompt](../story_tests/queue-prompts-for-later/build-prompt-queue/build_prompt_queue_story.test.md#story-edit-queued-prompt)
 
 Built (2026-11-16, the person: "right side of every queue item so we can edit before the arrows"; then "we should not lose positioning when we edit an item, keep it in list but shaded; adding to queue adds to the edited option"): the pencil on a card puts its prompt in the prompt box; the card keeps its place, shaded and marked editing, and is not sent while it waits; the next add, Alt+Enter or `+`, puts the changed text back in that place (`editPrompt`).
 
-### (S) Person --> Send Queued Prompt Now
-
-Built (2026-11-17), not seen (the person's /queue: "send now button"): the ↵ on a card moves its prompt to the top of the queue and sends it to the chat at once, playing or not, as "Take prompt [id] on the queue now: …", so the agent knows the id to mark it done; it becomes the prompt being worked.
-
-### (S) Person --> Reorder Queued Prompts
+### (S) Person --> [Reorder Queued Prompts](../story_tests/queue-prompts-for-later/build-prompt-queue/build_prompt_queue_story.test.md#story-reorder-queued-prompts)
 
 Built: the ↑ and ↓ on a card move its prompt one place (`movePrompt`). Intended (the brief): drag a card to its new place; a drag list was built and taken out on 2026-11-16, as the desktop never drew it.
 
-### (S) Person --> Remove Queued Prompts
+### (S) Person --> [Remove Queued Prompts](../story_tests/queue-prompts-for-later/build-prompt-queue/build_prompt_queue_story.test.md#story-remove-queued-prompts)
 
-Built: the ✕ on a card takes its prompt off the queue (`removePrompt`); the bin clears the whole queue (`clearQueue`). Built (2026-11-17), not seen (the person: "when deleting a queue (eg clear all) make sure we save a copy of the json so we have an archive of the work"): every prompt clear or remove takes off is kept as JSON in the chat's `queue-archive` folder, one file for each time, named for when they were taken off, with the prompts' steps and attachments.
-
-### (S) Person --> Play Prompt Queue
-
-Observed (2026-11-17, the person: "an agentic instruction with prompts to ai that they are responsible for taking the next item rather than it being forced on them ... don't remove it from the queue, have that be an operation the ai does"): while play is on, a finished turn asks the agent to take the next prompt ("Take the next prompt on the queue."), and the queue stays as it is until the agent marks a prompt done (`sendNextPrompt`). Play pauses when the agent left the prompt it was asked to take. A queued slash command runs as that command (`$.command.run`), which the agent cannot type, and the mod marks it done. Until 2026-11-17 play sent the next prompt itself and took it off the queue.
-
-### (S) Prompt Queue --> Wait For Answer Before Moving On
-
-Built (2026-11-17), not seen (the person: "never go idle - always proceed to next item -- if blocked on task by decision put item onto queue with a flag required decision and move onto next item, maybe have a timer"; then "if i dont answer after a minute time out, back in queue as unfinished and move on to next"): while play is on, a turn the agent ends asking the person something (its wrap-up names a question or says it is blocked) does not send the next prompt at once; play waits a minute (`waitForDecision`). A turn starting in that minute, the person's answer, ends the wait. With no answer, the agent is told to put the prompt back on the queue with a text starting "[decision required]", the question and its recommendation, and take the next prompt (`decisionTimedOut`); play and the queue the agent reads pass over prompts marked that way.
-
-### (S) Person --> Pause Prompt Queue
-
-Built (2026-11-16): pause stops finished turns from sending the next prompt; the queue keeps its prompts until play is pressed again.
-
-### (S) Person --> Send Queued Prompts To Sub-Agents
-
-Built, not seen: with sub-agent mode on, the model groups the queued prompts into tasks that can run side by side (`groupIntoTasks`), and sending starts one sub-agent per task (`sendTasksToSubAgents`). Built (2026-11-17), not seen (the person: "visualize the use of sub agents: place tasks in columns, independent queues by sub agent name (allow naming, its fun!) with a robot on the top of each queue, claude orange, different robot per queue"): the open queue draws one column for each sub-agent side by side, each with its own Claude-orange robot on top (a different shade, eyes and antenna for each place), a fun name (Sparky, Bolt, Gizmo…), what it does, and its prompts in order; ✎ beside the name renames it from the prompt box's draft (`renameAgent`), and the sub-agent starts with that name in its description.
-
-### (S) Person --> Plan Queue From Conversation
-
-Built, not seen: `/queue [what to focus on]` has the model read the conversation and adds the next prompts it lists to the queue, in order (`planFromConversation`).
-
-### (S) Person --> [Attach Images To Queued Prompt](../story_tests/queue-prompts-for-later/attach-images-to-queued-prompt/attach_images_to_queued_prompt_story.test.py)
-
-Built (2026-11-17), not seen (the person's /queue: "add images / attachments in chat along with text"): a plugin cannot send images with a prompt (`$.prompt.submit`: pasted images are not expanded for a plugin's prompt), so when Alt+Enter queues a draft, the images and documents pasted in it, which the dropped submission carries, are read (`$.prompt.media`) and kept as files beside the queued prompt (`prompt-queue.attach`, the chat's `attachments` folder). The queue beside a prompt lists each file for the agent to open, and the card shows 📎 with how many. The `+` button reads only the draft's text, so it queues no images.
+Built: the ✕ on a card takes its prompt off the queue (`removePrompt`); the bin clears the whole queue (`clearQueue`). Built (2026-11-17), not seen (the person: "when deleting a queue (eg clear all) make sure we save a copy of the json so we have an archive of the work"): every prompt clear or remove takes off is kept as JSON in the chat's `queue-archive` folder, one file for each time, named for when they were taken off, with the prompts' steps and attachments. Built (2026-11-17): in a session the copy goes to the session's work folder, `.sessions/<session>/queue-archive`, in the ticket's worktree (`PromptQueue.load`).
 
 ## (E) [Work Through Prompt Queue](../story_tests/queue-prompts-for-later/work-through-prompt-queue/work_through_prompt_queue_story.test.md)
 
-The queue is kept by the cdd server, so the mod, the agent in the chat and a session starting in it change one queue (`tools/prompt_queue/prompt_queue.py`, MCP tools `prompt-queue.*`). The agent works through it: it reads the queue, does each prompt in order, and marks each one done.
+The queue is kept by the cdd server, so the mod, the agent in the chat and a session starting in it change one queue (`tools/prompt_queue/prompt_queue.py`, MCP tools `prompt-queue.*`). The agent works through it: it reads the queue, does each prompt in order, and marks each one done. The person sets the pace: plays and pauses the queue, sends a card now, and moves the queue's pointer back to rerun a card or forward to pass one.
 
 ### (S) Agent --> [Queue Prompts Through The Cdd Server](../story_tests/queue-prompts-for-later/work-through-prompt-queue/work_through_prompt_queue_story.test.md#story-queue-prompts-through-the-cdd-server)
 
@@ -1003,6 +993,26 @@ Built (2026-11-17): switching a chat to a session queues the numbered steps of i
 ### (S) Prompt Queue --> [Show Prompt Queue To Agent](../story_tests/queue-prompts-for-later/work-through-prompt-queue/work_through_prompt_queue_story.test.md#story-show-prompt-queue-to-agent)
 
 Observed (2026-11-17): while play is on, every prompt carries the queue, in order with each prompt's id, and how to work through it (`queueContext`); a paused queue carries nothing, and a prompt the person is editing is left out.
+
+### (S) Person --> [Play Prompt Queue](../story_tests/queue-prompts-for-later/work-through-prompt-queue/work_through_prompt_queue_story.test.md#story-play-prompt-queue)
+
+Observed (2026-11-17, the person: "an agentic instruction with prompts to ai that they are responsible for taking the next item rather than it being forced on them ... don't remove it from the queue, have that be an operation the ai does"): while play is on, a finished turn asks the agent to take the next prompt ("Take the next prompt on the queue."), and the queue stays as it is until the agent marks a prompt done (`sendNextPrompt`). Play pauses when the agent left the prompt it was asked to take. A queued slash command runs as that command (`$.command.run`), which the agent cannot type, and the mod marks it done. Until 2026-11-17 play sent the next prompt itself and took it off the queue.
+
+### (S) Person --> [Pause Prompt Queue](../story_tests/queue-prompts-for-later/work-through-prompt-queue/work_through_prompt_queue_story.test.md#story-pause-prompt-queue)
+
+Built (2026-11-16): pause stops finished turns from sending the next prompt; the queue keeps its prompts until play is pressed again.
+
+### (S) Prompt Queue --> [Wait For Answer Before Moving On](../story_tests/queue-prompts-for-later/work-through-prompt-queue/work_through_prompt_queue_story.test.md#story-wait-for-answer-before-moving-on)
+
+Observed (2026-11-17): the agent ended a turn asking the person to check the robots' queues; with no answer in a minute, play sent the agent "No answer came within a minute. Put prompt [0b21ea030467] back on the queue as unfinished...", and the agent marked the card [decision required]. Built (2026-11-17), not seen (the person: "never go idle - always proceed to next item -- if blocked on task by decision put item onto queue with a flag required decision and move onto next item, maybe have a timer"; then "if i dont answer after a minute time out, back in queue as unfinished and move on to next"): while play is on, a turn the agent ends asking the person something (its wrap-up names a question or says it is blocked) does not send the next prompt at once; play waits a minute (`waitForDecision`). A turn starting in that minute, the person's answer, ends the wait. With no answer, the agent is told to put the prompt back on the queue with a text starting "[decision required]", the question and its recommendation, and take the next prompt (`decisionTimedOut`); play and the queue the agent reads pass over prompts marked that way.
+
+### (S) Person --> [Send Queued Prompt Now](../story_tests/queue-prompts-for-later/work-through-prompt-queue/work_through_prompt_queue_story.test.md#story-send-queued-prompt-now)
+
+Built (2026-11-17), not seen (the person's /queue: "send now button"): the ↵ on a card moves its prompt to the top of the queue and sends it to the chat at once, playing or not, as "Take prompt [id] on the queue now: …", so the agent knows the id to mark it done; it becomes the prompt being worked.
+
+### (S) Person --> [Move Queue Pointer](../story_tests/queue-prompts-for-later/work-through-prompt-queue/work_through_prompt_queue_story.test.md#story-move-queue-pointer)
+
+Observed (2026-11-17, commits 89c85aa52, c0e3a1875, 1ca7fc939): the run2 demo's cards were rerun through the queue's pointer, which reopened each with `prompt-queue.reopen`. Built (2026-11-17, commits c2cff7454, 0173f75bf; `register.test.tsx` "▲ on the pointer opens the done card above it again, so it runs again"): the queue's pointer stands at the left of the next card to do, the first card neither done nor marked [decision required], and under the last card when every card is done (`pointerOf`). ▲, "Set previous to current", opens the nearest done card above it again, its steps not started (`movePointerUp`, `prompt-queue.reopen`), so play runs it again; ▼, "Set next to current", marks the card it points at done (`movePointerDown`, `prompt-queue.done`), so play moves past it. The orange working mark stands on the pointer's card, whichever card the agent last touched, so it moves with the pointer. In sub-agent mode each robot's queue has its own pointer.
 
 ## (E) [Nest Prompt Steps In Queue](../story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/nest_prompt_steps_in_queue_story.test.md)
 
@@ -1018,17 +1028,57 @@ Built (2026-11-17), not seen: the agent marks one step of a prompt done (`prompt
 
 ### (S:system) Prompt Queue --> [Copy Task List Onto Working Prompt](../story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/nest_prompt_steps_in_queue_story.test.md#story-copy-task-list-onto-working-prompt)
 
-Observed (2026-11-17): after /reload-plugins, the person's prompt "?" went first on the queue as the one being worked, and the agent's task list was copied onto it as five steps (prompt-queue.show). Built (2026-11-17): the queue mod's `tool.call` hook replays each `update_plan` call (a whole list, advance, done, start) and copies the list onto the prompt being worked with `prompt-queue.set_steps`; a `wrap_up` finishes every step. Not yet seen: whether the desktop app hands the mod's hook its own `update_plan` calls; until the mod has seen one, the queue beside a prompt tells the agent to set and tick the steps itself.
+Observed (2026-11-17): after /reload-plugins, the person's prompt "?" went first on the queue as the one being worked, and the agent's task list was copied onto it as five steps (prompt-queue.show). Built (2026-11-17): the queue mod's `tool.call` hook replays each `update_plan` call (a whole list, advance, done, start) and copies the list onto the prompt being worked with `prompt-queue.set_steps`; a `wrap_up` finishes every step. Not yet seen: whether the desktop app hands the mod's hook its own `update_plan` calls; until the mod has seen one, the queue beside a prompt tells the agent to set the steps and mark each one done itself.
 
+Built (2026-11-17), not seen (the person: the queue and task list "doesnt make sense"; the steps had landed on the person's last message, not the queue item worked): the queue tells the agent to call `prompt-queue.set_steps` with a prompt's id when it takes it, and the mod's `tool.call` hook makes that prompt the one being worked (`followTakenPrompt`), so the task list's next changes follow onto it. A wrap-up still marks every step done, as the desktop app's own wrap-up checks off the task list.
 
-Built (2026-11-17), not seen (the person: the queue and task list "doesnt make sense"; the steps had landed on the person's last message, not the queue item worked): the queue tells the agent to call `prompt-queue.set_steps` with a prompt's id when it takes it, and the mod's `tool.call` hook makes that prompt the one being worked (`followTakenPrompt`), so the task list's next changes follow onto it. A wrap-up still ticks every step, as the desktop app's own wrap-up checks off the task list.
 ### (S:system) Prompt Queue --> [Queue Sent Prompt As Running](../story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/nest_prompt_steps_in_queue_story.test.md#story-queue-sent-prompt-as-running)
 
-Observed (2026-11-17): after /reload-plugins, the person's prompt "?" went first on the queue as the one being worked, and the agent's task list was copied onto it as five steps (prompt-queue.show). Built (2026-11-17): a prompt the person sends straight to the chat, not from the queue, goes on the queue first as the prompt being worked, and the agent is told its id to mark it done, so its steps have a prompt to sit under.
+Observed (2026-11-17): after /reload-plugins, the person's prompt "?" went first on the queue as the one being worked, and the agent's task list was copied onto it as five steps (prompt-queue.show). Built (2026-11-17): a prompt the person sends straight to the chat, not from the queue, goes on the queue first as the prompt being worked, and the agent is told its id to mark it done, so its steps have a prompt to sit under. Built (2026-11-17, `register.test.tsx` "a prompt sent straight to the chat goes above the next prompt to do, below the done ones, marked as an interruption"): the prompt goes just above the next prompt to do, below the done ones, its text starting "[interruption]"; a background task's notice arriving in the chat is not queued.
+
+### (S:system) Prompt Queue --> [Add Interruption To Working Prompt](../story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/nest_prompt_steps_in_queue_story.test.md#story-add-interruption-to-working-prompt)
+
+Observed (2026-11-17): after /reload-plugins, the person's message "heavy test are written and run in a sub task tho", sent between turns, was filed by the cdd server under the goal last worked as an "[interruption]" step, and the agent was told so. Built (2026-11-17), not seen (the person: "YES and update backend for this", to filing a message sent between turns under the goal last worked): the cdd server files a message under a goal (`prompt-queue.add_interruption`): it becomes the goal's last step, not started, marked "[interruption]", and a done goal opens again; the mod calls it for every message the person sends while a goal last worked is on the queue, mid-turn or between turns, and a card of its own is made only when there is none. Built (2026-11-17), not seen (the person: "you should be putting these interruptions into one goal and adding tasks to them, add smarter organizing instructions"): the queue tells the agent to keep one card for each goal: a message that belongs to a goal already on the queue becomes a task of that goal and its own card comes off, related [interruption] cards gather under one goal card, and the order stays done, being worked, not started. Observed (2026-11-17): a message the person sent while the agent worked the sub-agent columns prompt joined it as an "[interruption]" step, and the agent was told so. Built (2026-11-17), not seen (the person: "a new chat message from the edit box doesnt go to top of queue it goes above the active or next item in queue as an interruption OR inside current queue item as a task"): a message sent when no turn runs goes on the queue just above the next prompt to do, below the done ones, its text starting "[interruption]". Built (2026-11-17), not seen (the person: "if its a simple correction or comment in flight pertaining to a current queue then add it to the queues list as a task in process, put a special annotation in front and save that it was a user interruption"): a message the person sends while a turn runs on a queued prompt becomes a step of that prompt, its text starting "[interruption]", instead of a new card (`addInterruption`); the agent is told which prompt it joined and may move it to a card of its own with `prompt-queue.add` when it is separate work. A new task list from the agent keeps interruption steps it does not list (`keptInterruptions`).
 
 ### (S) Person --> [Show Prompt Steps In Queue](../story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/nest_prompt_steps_in_queue_story.test.md#story-show-prompt-steps-in-queue)
 
 Built (2026-11-17), not seen: each card shows how many of its steps are done (3/7) as a button that opens its steps under it, done ones ticked and dim and the one being worked marked; the card being worked is bright and a card whose steps are all done dim.
+
+### (S) Person --> [Edit Prompt Steps](../story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/nest_prompt_steps_in_queue_story.test.md#story-edit-prompt-steps)
+
+Built (2026-11-17), not seen (the person: "i want to add steps sometimes ... 2/5 click opens + - up down just like queue"): with the pointer on a card, + adds the prompt box's draft as the card's last step, not started, empties the box and opens the steps (`addStep`); with the pointer on an open step, ↑ and ↓ move it one place (`moveStep`) and ✕ takes it off (`removeStep`). Each change gives the prompt its whole list through `prompt-queue.set_steps`; for the prompt being worked the agent's task list then carries on from the changed steps. Built (2026-11-17, commit 3d19477a7): ✎ on a step with the prompt box empty puts the step's text in the box to change; with a draft in the box, the draft becomes the step's text and the box empties (`editStep`).
+
+### (S) Person --> [Send Prompt Step Now](../story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/nest_prompt_steps_in_queue_story.test.md#story-send-prompt-step-now)
+
+Built (2026-11-17), not seen (commit 3d19477a7, the person: a step has all of a card's buttons): ↵ on a step sends that step of its prompt to the chat at once, as "Take step 2 of prompt [a] on the queue now: …", and its prompt becomes the one being worked (`sendStepNow`).
+
+### (S) Person --> [Move Step Pointer](../story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/nest_prompt_steps_in_queue_story.test.md#story-move-step-pointer)
+
+Built (2026-11-17, commit c2cff7454): a card's open steps have a pointer of their own at the left of the first step not done (`stepPointerOf`). ▲ works the done step above it again and puts every step after it back to not started (`moveStepPointerUp`); ▼ marks its step done and starts the next (`moveStepPointerDown`). Each change gives the prompt its whole list through `prompt-queue.set_steps`.
+
+## (E) [Share Queue Among Robots](../story_tests/queue-prompts-for-later/share-queue-among-robots/share_queue_among_robots_story.test.md)
+
+In sub-agent mode the queue's work is shared among robots: sub-agents that run side by side, each drawn as a Claude-orange robot with a fun name on top of its own queue of the queue's cards (the person: "visualize the use of sub agents: place tasks in columns, independent queues by sub agent name (allow naming, its fun!) with a robot on the top of each queue"). Each card keeps its robot on the cdd server's queue.
+
+### (S) Person --> [Group Queue Into Robots](../story_tests/queue-prompts-for-later/share-queue-among-robots/share_queue_among_robots_story.test.md#story-group-queue-into-robots)
+
+Observed (2026-11-17, the person: "its good"): with eight demo prompts in four independent two-step strands, switching sub-agent mode on had the model group them into four robots (Bolt, Gizmo, Rivet, Pixel) of two prompts each, side by side as the queue's own cards. Built (2026-11-17, commits bab265447, 81ae9ada6, 12e7c3a94, 52592da57): switching sub-agent mode on has the model group the work not done and given to no robot into tasks that can run side by side (`groupIntoTasks`); each task becomes a robot named apart from the robots already on the queue (Sparky, Bolt, Gizmo…), each of its cards is given that robot (`prompt-queue.assign`), and every robot's queue opens, so the work just handed out shows. The open queue draws one queue for each robot in the list's place, each with its own robot drawing (a different shade, eyes and antenna for each place), its name and what it does, the queues sharing the width evenly. A card whose text starts "[for Bolt]" shows in Bolt's queue.
+
+### (S:system) Cdd Server --> [Assign Queued Prompt To Robot](../story_tests/queue-prompts-for-later/share-queue-among-robots/share_queue_among_robots_story.test.md#story-assign-queued-prompt-to-robot)
+
+Built (2026-11-17, commit 81ae9ada6; `prompt_queue_spec.py` "keeps the robot a prompt is assigned to on the queue, so its robot's queue comes back after a reload"): the cdd server keeps the robot each card is given (`prompt-queue.assign`), so each robot's queue comes back after a reload, when the mod no longer holds the grouping; an empty robot takes the card off its robot.
+
+### (S) Person --> [Send Queued Prompts To Sub-Agents](../story_tests/queue-prompts-for-later/share-queue-among-robots/share_queue_among_robots_story.test.md#story-send-queued-prompts-to-sub-agents)
+
+Observed (2026-11-17, run2 demo): pressing play sent the four robots off side by side; each wrote only into its own .sessions/simple-queue-enhancements/demo/run2/ folder and marked its own two cards done through prompt-queue.done, which stayed on the queue dimmed in its robot's queue; Pixel's timed lines show the robots ran at the same time. Built: with sub-agent mode on, sending starts one sub-agent for each robot with work not done, on its cards, described by the robot's name and what it does (`sendTasksToSubAgents`); the cards stay on the queue, so each sub-agent marks its own done. Built (2026-11-17, commit 5dcc4cf5f): a robot's card has the single queue's buttons, shown on hover; the card that opened in place under a robot is gone.
+
+### (S) Person --> [Rename Robot](../story_tests/queue-prompts-for-later/share-queue-among-robots/share_queue_among_robots_story.test.md#story-rename-robot)
+
+Removed for now (2026-11-17, the person: "remove the edit bot name button for now, its distracting"); the robot shows its name only. Was built, not seen (the person: "allow naming, its fun!"): ✎ beside a robot's name renames it from the prompt box's draft, gives each of its cards the new name (`renameAgent`, `prompt-queue.assign`) and empties the box; the sub-agent starts with that name in its description.
+
+### (S) Person --> [Collapse Robot Queue](../story_tests/queue-prompts-for-later/share-queue-among-robots/share_queue_among_robots_story.test.md#story-collapse-robot-queue)
+
+Built (2026-11-17, commits 3320efd56, 8594772f9): pressing a robot collapses its queue to the robot alone, showing under it how many of its items are done, such as 3/5, and the other robots' queues widen to take the room; pressing it again expands it (`toggleCollapsedAgent`).
 
 # (E) Review Generated Work In File Viewer
 
@@ -1036,14 +1086,6 @@ The file viewer is the Files app (`harness/files_app/`): a page of its own, open
 
 Requested (2026-11-15): the file viewer becomes where the graph is worked too. A toggle at its top switches between its files and the graph; the graph view does what the Graph app does, but on the files the Files app lists, opening every file a person selects and folding them to the nodes selected. The person: "the actual file viewer is going to have a toggle that can switch from folder files and graph ... we basically ingest all of the stories and functionality that the Graph application can do except for you're now selecting file(s), eg more than one file opens; expand and collapse in file viewer based on the nodes in the graph; graph filtered like file filter is". Once these stories work, the Graph app's own epics (Explore Graph In Graph App, Filter Graph In Graph App, Review Violations In Graph App) retire into them.
 
-
-### (S) Person --> Edit Prompt Steps
-
-Built (2026-11-17), not seen (the person: "i want to add steps sometimes ... 2/5 click opens + - up down just like queue"): with the pointer on a card, + adds the prompt box's draft as the card's last step, not started, empties the box and opens the steps (`addStep`); with the pointer on an open step, ↑ and ↓ move it one place (`moveStep`) and ✕ takes it off (`removeStep`). Each change gives the prompt its whole list through `prompt-queue.set_steps`; for the prompt being worked the agent's task list then carries on from the changed steps.
-
-### (S:system) Prompt Queue --> Add Interruption To Working Prompt
-
-Observed (2026-11-17): after /reload-plugins, the person's message "heavy test are written and run in a sub task tho", sent between turns, was filed by the cdd server under the goal last worked as an "[interruption]" step, and the agent was told so. Built (2026-11-17), not seen (the person: "YES and update backend for this", to filing a message sent between turns under the goal last worked): the cdd server files a message under a goal (`prompt-queue.add_interruption`): it becomes the goal's last step, not started, marked "[interruption]", and a done goal opens again; the mod calls it for every message the person sends while a goal last worked is on the queue, mid-turn or between turns, and a card of its own is made only when there is none. Built (2026-11-17), not seen (the person: "you should be putting these interruptions into one goal and adding tasks to them, add smarter organizing instructions"): the queue tells the agent to keep one card for each goal: a message that belongs to a goal already on the queue becomes a task of that goal and its own card comes off, related [interruption] cards gather under one goal card, and the order stays done, being worked, not started. Observed (2026-11-17): a message the person sent while the agent worked the sub-agent columns prompt joined it as an "[interruption]" step, and the agent was told so. Built (2026-11-17), not seen (the person: "a new chat message from the edit box doesnt go to top of queue it goes above the active or next item in queue as an interruption OR inside current queue item as a task"): a message sent when no turn runs goes on the queue just above the next prompt to do, below the done ones, its text starting "[interruption]". Built (2026-11-17), not seen (the person: "if its a simple correction or comment in flight pertaining to a current queue then add it to the queues list as a task in process, put a special annotation in front and save that it was a user interruption"): a message the person sends while a turn runs on a queued prompt becomes a step of that prompt, its text starting "[interruption]", instead of a new card (`addInterruption`); the agent is told which prompt it joined and may move it to a card of its own with `prompt-queue.add` when it is separate work. A new task list from the agent keeps interruption steps it does not list (`keptInterruptions`).
 ## (E) Open Files In Files App
 
 ### (S) Person --> [Open Stage Files From Chat Bar](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-open-stage-files-from-chat-bar)

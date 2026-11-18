@@ -1,0 +1,10 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-18T03:16:26.056367+00:00",
+  "prompts": [
+    {
+      "id": "9fb8766a4fce",
+      "text": "Run4 timed progress, part 2: after demo/run4/progress/log.md has its eight timed lines, give this card two steps (seconds between first and last, average gap) and write both as the last lines, ticking each step done. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done."
+    }
+  ]
+}

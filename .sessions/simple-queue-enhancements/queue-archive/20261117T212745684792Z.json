@@ -1,0 +1,29 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-17T21:27:45.684792+00:00",
+  "prompts": [
+    {
+      "id": "ed638566ab19",
+      "text": "[interruption] where are the archicve logs?",
+      "is_done": true,
+      "steps": [
+        {
+          "text": "Answer where the archive is",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] that's not this session's worktree: archive into the worktree's .sessions/<session>/queue-archive, spec first",
+          "state": "done"
+        },
+        {
+          "text": "Move today's archive there; commit, push, repin",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] why a second session path: the worktree has no open-session pointer, so it falls back to main's",
+          "state": "done"
+        }
+      ]
+    }
+  ]
+}

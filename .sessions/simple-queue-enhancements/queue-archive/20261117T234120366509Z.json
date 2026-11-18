@@ -1,0 +1,18 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-17T23:41:20.366509+00:00",
+  "prompts": [
+    {
+      "id": "6aea8463f5e1",
+      "text": "Write the subjects of the last 10 commits on the simple-queue-enhancements branch (git log, read only) to .sessions/simple-queue-enhancements/demo/run2/history/log.md. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done.",
+      "is_done": false,
+      "robot": "Rivet",
+      "steps": [
+        {
+          "text": "Write the last 10 commit subjects to demo/run2/history/log.md",
+          "state": "pending"
+        }
+      ]
+    }
+  ]
+}

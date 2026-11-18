@@ -1,0 +1,18 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-18T03:42:55.123045+00:00",
+  "prompts": [
+    {
+      "id": "fa9b31996fe6",
+      "text": "[interruption] starrt",
+      "robot": "Sparky",
+      "steps": [
+        {
+          "text": "Read the interruption: 'starrt' (start) names no task beyond starting",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    }
+  ]
+}

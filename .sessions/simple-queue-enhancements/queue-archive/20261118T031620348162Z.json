@@ -1,0 +1,10 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-18T03:16:20.348162+00:00",
+  "prompts": [
+    {
+      "id": "3791fb8d93dc",
+      "text": "Run4 harness survey, part 3: after the folder summaries are in demo/run4/harness/survey.md, give this card three steps (biggest folder, smallest folder, total .py files) and write each answer at the top, ticking each step done. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done."
+    }
+  ]
+}

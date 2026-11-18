@@ -1,0 +1,76 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-17T21:28:06.923813+00:00",
+  "prompts": [
+    {
+      "id": "30954702adbb",
+      "text": "Split a session's folders: main keeps only its record (session.json, what the board needs to track the ticket); every other session file (log, errors, reports, handoffs, debug, progress cache, queue archive) goes to the ticket worktree's .sessions/<session> (on main, pushed)",
+      "steps": [
+        {
+          "text": "[interruption] A please update on abd-cdd main worktree and push",
+          "state": "done"
+        },
+        {
+          "text": "Read how a call's session is found (open_sessions, session folder)",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] session record stays on main for the ticket's position only; everything else goes to the worktree: two separate locations",
+          "state": "done"
+        },
+        {
+          "text": "Background agent: specs first, split record folder (main) from work folder (worktree), on main",
+          "state": "in_progress"
+        },
+        {
+          "text": "Check its result; repin; the person checks",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] this is taking forever (agent still working: about 20 files changed in main so far, nothing committed yet)",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] commit the new feature after the unit tests alone; heavy specs run after, in the background",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] so if I clear, where will the archive go? (answer: the worktree's .sessions/simple-queue-enhancements/queue-archive)",
+          "state": "pending"
+        }
+      ],
+      "is_done": false
+    },
+    {
+      "id": "6a6df5686eee",
+      "text": "Merge the latest simple-queue-enhancements into main and push, once the session-split agent has finished in the main checkout",
+      "steps": [
+        {
+          "text": "[interruption] make sure main has the latest queue as well",
+          "state": "done"
+        },
+        {
+          "text": "Wait for the session-split agent to finish in the main checkout",
+          "state": "done"
+        },
+        {
+          "text": "Merge simple-queue-enhancements into main (baa17c033)",
+          "state": "done"
+        },
+        {
+          "text": "Queue archive uses the session's new work folder (spec first)",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] unit tests have to be done: unit tier running on merged main",
+          "state": "in_progress"
+        },
+        {
+          "text": "Commit and push main when the unit tier passes; repin",
+          "state": "pending"
+        }
+      ],
+      "is_done": false
+    }
+  ]
+}

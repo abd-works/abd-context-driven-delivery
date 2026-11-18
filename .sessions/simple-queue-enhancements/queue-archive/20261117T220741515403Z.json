@@ -1,0 +1,17 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-17T22:07:41.515403+00:00",
+  "prompts": [
+    {
+      "id": "2e3522dad6bf",
+      "text": "[interruption] booking a ticket creates a new item\nbooking a ticket creates a new item",
+      "steps": [
+        {
+          "text": "[interruption] cl;ciking",
+          "state": "pending"
+        }
+      ],
+      "is_done": false
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-18T03:16:26.625029+00:00",
+  "prompts": [
+    {
+      "id": "99d1ccc26d22",
+      "text": "Run4 wrap-up: after every other Run4 card is done, give this card four steps (one per survey folder under demo/run4) and write .sessions/simple-queue-enhancements/demo/run4/summary.md with one line per folder saying what it found, ticking each step done. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done."
+    }
+  ]
+}

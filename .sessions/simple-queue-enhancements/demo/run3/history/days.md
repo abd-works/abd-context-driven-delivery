@@ -1,0 +1,1112 @@
+# Commits by day on simple-queue-enhancements
+
+- Busiest day: 2026-11-15, with 454 commits.
+- Total commits over the three days: 1092 (263 on 2026-11-17, 375 on 2026-11-16, 454 on 2026-11-15).
+
+## 2026-11-17
+
+Summary: the prompt queue's sub-agent mode took shape: robots each work one card at a time, this chat hands each robot its next card, and the queue layout and + button were reworked.
+
+- Run9 demo results from the second pass
+- Play hands a robot its card again when an earlier card was opened, instead of waiting on the later card it was last handed
+- In sub-agent mode, cards no robot has show under the robots at full width as in the single queue, and grouping leaves the person's interruptions to this chat
+- Robots lose the ✎ rename button for now; each robot shows its name and done count, open or closed
+- Note the short-path demo cards in the corrections log
+- The queue remembers each robot's sub-agent id from this chat's Agent call, and the hand-out sends a robot's next card to that id
+- This chat orchestrates the robots: play asks it to send each robot its next card's words exactly, and it marks the card done when the robot reports finished; the queue no longer starts or messages robots itself
+- A robot's finished turn only hands on its next card, without grouping the cards given to no robot, so a failed grouping no longer stops the hand-on
+- A robot's next card is claimed before it is sent, so two hand-ons at the same moment send it once
+- Robots work one card at a time: a robot starts on its first open card, told its id and to report on the queue, and when it finishes, the same sub-agent is sent its next card
+- + in sub-agent mode adds the draft as a card of the open robot's queue, where it shows
+- + with an empty prompt box says to type the task there first, instead of doing nothing
+- With every card done, the last card is the current one: orange border and its ▲ to run it again
+- Robots stand on the left, the open robot's queue to their right
+- Every card with no tasks shows +, done ones too; a task added to a done card opens it again
+- Robots stand one under another on the right, the open robot's queue fills the room to their left, and only one robot's queue is open at a time
+- A robot already at work is not started again when the next turn ends, so robots no longer pile up on the same cards
+- Robots show as a plain list, each with its name and done count; pressing a robot opens its queue, and grouping leaves every queue closed
+- A robot's sub-agent starts under its robot name, so the lead can message it with SendMessage; the note beside a message says to
+- Queue Prompts For Later: every story has its scenarios, and the epic is grouped into four sub-epics
+- Drop the opened card's leftover comment
+- A robot's card works as the single queue's: its buttons on hover, pressing it edits it; the open-in-place view and its state are gone. The invisible press buttons over a card and a task box are blank with no-break spaces, which the desktop does not collapse, so a press on + and on a card lands
+- The open robots' queues share the width evenly, each starting from no width, so a robot with a short card no longer shrinks to nothing and its header no longer spills over itself
+- Grouping the queue into robots opens every robot's queue, so the work it handed out shows
+- The pointer's card keeps its + task box, now that the pointer is a hover pop-up over the card and needs no room beside it
+- The pointer's tips read Set previous to current and Set next to current
+- Tool tips on the queue's buttons, drawn as the board's: the name in white and what it does in grey on a dark raised label just above the button, for the band's icons, the task boxes, the card's and the step's buttons, the pointer and the robot's rename
+- The pointer's, the card's and the step's pop-up bars share one solid dark rounded background (LOOK.popover)
+- The card's button bar floats over the card's right end like the pointer at its left: an anchor laid out at the card's right end, the bar placed its own width to the anchor's left
+- Put the chat's prompt queue in a Claude Design canvas: the Queue Prompts For Later stories, played in the story explorer on a clickable port of the queue that runs the mod's own code
+- The card's button bar sits in the card's own row after its text, which grows to fill the card, so the bar shows at the card's right end; a test holds it there
+- Card and task boxes are relative, so the button bar, the pointer and the press area lie over their own box and not the row's left end
+- The pointer's arrows show only while the pointer is over their card or step, as the card's buttons do; the orange border still marks the pointer's card
+- Cards and task buttons are rounded solid boxes with an invisible button over the whole box: a card fills the width, its button bar and pointer lie over its ends inside it
+- Each task button keeps its own label and sits centred on a solid grey box the task column's width, so every card's task button is one width; no padded labels that the desktop cut to an ellipsis
+- The task buttons' padding is a figure space again, not the text 2007
+- Every task button is one width: a + and a count such as 3/5 are centred in the same five characters with figure spaces
+- The pointer hangs from the card's row, last, so the card's box is no layer of its own and the button bar stays solid over the pointer's card as over every other
+- The card's pointer lies over the card's left end on a solid grey bar, centred on its line, placed as the card's buttons are at its right end
+- The pointer's arrows are part of their card: a grey bar at the start of the card's box running into its text, in a column every card keeps, as the card's buttons run into it at the right
+- A step's row centres its pointer and its text on one line, as a card's row does
+- The pointer's column is wide enough for both arrows, so they stop running into the step's mark
+- The pointer's arrows are plain buttons each on its own solid grey, instead of the desktop's primary button
+- A step has all of a card's buttons: ↵ sends that step to the chat at once, ✎ puts its text in the prompt box or makes the box's draft its text, beside ↑ ↓ ✕
+- The pointer has a narrow column of its own before every card's and step's text, full-size arrows beside the text that never cover it, drawn as solid primary buttons
+- The step pointer lies over its step's left end as the card pointer does, so opening a card's steps moves no text
+- The pointer's arrows stand on no bar of their own, now that the buttons are solid
+- The pointer's arrows are solid buttons drawn as the card's right-hand buttons are, centred on the card's line inside its outline
+- Corrections log: the pointer bar lies over the card without moving its text
+- The pointer's arrow bar lies over the card's left end without moving the card's text, as the button bar lies over its right end
+- Corrections log: the pointer mirrors the card's right-hand button bar
+- The pointer's arrows are a bar of their own at the card's left, drawn as its buttons are at the right, instead of one bar holding the whole card
+- The pointer's card is one grey bar holding the pointer and the text, so the arrows sit inside the card as its buttons do at the right
+- The orange working mark stands on the pointer's card, so it shows the current card and moves with the pointer, whichever card the agent last touched
+- The queue's pointer sits over the left end of its card, inside the card as its buttons sit at the right, and the task column goes back to its narrow width
+- Run2 demo cards rerun through the queue's pointer: fresh commit history and timed progress lines
+- The queue's pointer sits in its card's own left slot, against the text beside the task count, instead of a wide column of its own that left it floating off its card
+- The pointer's card hides its + task button, and the pointer's ▲ ▼ sit on a solid background instead of an outline
+- The queue keeps up with the agent: every prompt-queue answer, the agent's or a sub-agent's, is drawn at once; the orange working mark stands only on the pointer's card, so moving the pointer up takes it off; the pointer's ▲ ▼ get room beside the task button and an orange outline
+- Session log after the pointer reran Rivet's and Gizmo's demo cards
+- Session log after the pointer reran Pixel's demo card
+- The queue's pointer: orange ▲ ▼ at the left of the next card to do, and of the next step in a card, in the list and in each robot's queue; ▲ opens the done one above again so it reruns (prompt-queue.reopen), ▼ marks the one pointed at done
+- /queue's description names placing a draft into the plan
+- The queue's + runs /queue on the prompt box's draft, and /queue given a draft places it into the plan as a task of a goal or a card of its own; neither picks robots, which the agents button groups
+- The queue's + is a smart add: the model reads the conversation and the queue and files the draft as a task of a goal or as new cards, given to a robot in sub-agent mode; Alt+Enter stays the plain add
+- Each queued card keeps its robot on the queue (prompt-queue.assign), so the robots' queues come back after a reload; grouping gives new work fresh robot names and leaves robots already on the queue as they are
+- Story map: four robots observed running in parallel and marking their own cards done; the run2 demo's outputs kept in the session's work folder
+- A robot's header keeps the same children in the same order when its queue collapses and expands, hiding only the name and ✎, so the robot stays first after an expand
+- A collapsed robot shows under it how many of its items are done, such as 3/5
+- Story map: the robots' queues observed working with the AI grouping eight demo prompts into four robots
+- Story map: the one-minute decision wait observed live, parking an unanswered card as [decision required]
+- Pressing a robot collapses its queue to the robot alone, and the other robots' queues widen to take the room; pressing it again expands it
+- Pressing a card in a robot's queue opens it in place, with its buttons on a row beneath it, instead of a copy under the queues that looked like a new item; pressing it again closes it
+- In sub-agent mode the note on a new message shows each robot's queue and lets the agent decide: do it itself, make it a task of a robot's item, or give it to a robot as a new item, its text starting [for <robot name>]; a card so marked shows in that robot's queue
+- The agents' queues are usable: grouping hands out only work not yet done; sending to sub-agents keeps their cards so each marks its own done and it stays in its robot's queue, dimmed; an agent's card shows no buttons of its own, and pressing it opens it full width under the queues with its complete text and buttons
+- Each sub-agent's queue looks like the original queue: its robot and name on top, then its prompts as the queue's own cards, side by side with the others in the list's place
+- Sub-agent mode shows one queue per agent in the place of the queue's list, each item one line cut with an ellipsis, with no separate area
+- Closing a ticket merges its branch before its record moves, so the work folder it carries moves with the record
+- The prompt queue archives into its session's work folder, in the ticket's worktree, now that a session keeps its record and its work in separate folders
+- Merge branch 'simple-queue-enhancements'
+- A session keeps two folders: its record on main, its work in its ticket's worktree
+- The prompt queue archives into its session's folder in the checkout the call works in (the ticket's worktree), .sessions/<session>/queue-archive; today's archive moved there
+- Story map: the card being worked observed with its orange border and bold, underlined text
+- The queue card being worked has an orange rounded border around its button
+- The queue card being worked shows its text bold and underlined, with no marker beside it
+- The queue card being worked has an orange ▸ drawn beside it, where its colour shows; a button's text takes no colour of its own
+- The queue card being worked is marked with ▸ in orange, as the task being worked is under its card
+- The prompt queue archives what clear and remove take off in the folder of the session the call works in, .sessions/<session>/queue-archive, beside the rest of that session's work; in no session it stays beside the chat's queue
+- The prompt queue heavy spec keeps its chat folders in a throwaway folder, never the person's own ~/.claude/cdd-chats
+- Queue plugin fixes from its first real run: a message the person sends reads the queue from the server before placing it, since the chat's start can read it before the cdd server connects; a set_steps call the server refused no longer changes the prompt being worked. Adds the e2e spec that runs the plugin headless through claude -p against a real cdd server
+- A message the queue files under the goal last worked comes with a note telling the agent to decide where it belongs before any other work: leave it, file it under another goal it lists by id and title, or give it its own card
+- The empty queue no longer shows the Alt ↵ hint, since every message now goes onto the queue by itself; the key-cap drawing it used is deleted
+- merge simple-queue-enhancements into main
+- main: work kept before merging simple-queue-enhancements
+- Story map: a message sent between turns observed filed under the goal last worked
+- The cdd server files a message under the goal last worked (prompt-queue.add_interruption): its last step, not started, marked [interruption], reopening a done goal; the queue mod sends every message there, between turns as well as mid-turn, instead of a card of its own
+- Heavy spec: clearing the queue through a real cdd server keeps a JSON copy of what it took off in the chat's queue archive and leaves the work still to do
+- TDD flow rule: Flow A also covers a feature built for the first time and a change the person has already corrected, so those are run for real and seen before stubbed tests
+- The queue tells the agent to keep one card for each goal: a message that belongs to a goal on the queue becomes its task and its own card comes off, related interruptions gather under one goal, and the order stays done, worked, not started
+- Queue cards line up: the task button sits in a fixed slot before the text; + on a card with no tasks adds the draft as its first task instead of opening an empty list; a done card with no tasks has no +
+- A queue card with no tasks shows just + to open its tasks
+- The add-task button under a queue item's tasks is just +
+- A queue item's task shows ↑ ↓ ✕ only with the pointer on it again
+- A queue item's tasks are easy to reach: every card has a task button (2/5, or +task when it has none) that opens its tasks; each open task shows ↑ ↓ ✕ always, and + Add task at the bottom adds the prompt box's draft
+- A notice the chat gives the agent, such as a background task finishing, is no longer queued as the person's prompt
+- Sub-agent mode draws a column for each sub-agent: its own Claude-orange robot on top, a fun name the person can change with ✎ from the prompt box, and its prompts in order; a sub-agent starts with its name
+- A message sent straight to the chat goes above the next prompt to do, below the done ones, marked [interruption], instead of to the top of the queue; mid-work interruption steps observed live
+- Prompts taken off the queue are archived: clear and remove each keep a JSON copy of what they took off in the chat's queue-archive folder, named for when
+- Every new chat stays on the repository it was opened for: its prompt names its folder and says to stop and tell the person if it works in another, since the Claude app can open a chat in the folder last used. A failing tier's fix prompt names the CDD checkout as the fix session's project and the folder the tier runs on
+- A message the person sends while a queued prompt is worked becomes an [interruption] step of that prompt, not a new card; the agent is told which prompt it joined, and its next task list keeps the interruption
+- sessions: file-manager moves to _complete
+- The person edits a queued prompt's steps: + on a card adds the prompt box's draft as its last step, and ↑ ↓ ✕ on an open step move it or take it off, each through prompt-queue.set_steps
+- main: work kept before merging file-manager
+- merge simple-queue-enhancements into main
+- The prompt the agent gives steps to with prompt-queue.set_steps becomes the one being worked, so the task list follows onto the queue item taken rather than the person's last message; the queue tells the agent to name the prompt it takes that way
+- Never go idle: a playing queue waits a minute when the agent ends a turn asking the person something; an answer in that minute ends the wait, and with none the agent is told to put the prompt back marked [decision required] and take the next; play passes over prompts marked that way
+- Story map: done queue cards observed staying, dim
+- sessions: simple-queue-enhancements guidance {'stages': ['discovery', 'implementation… sessions: simple-queue-enhancements guidance {'stages': ['discovery', 'implementation…
+- Done prompts stay on the queue, dim: prompt-queue.done marks a prompt done in its place instead of taking it off; play, the stack's count and the queue the agent reads pass over done prompts; clear takes the done prompts off first, every prompt only when none is done
+- A queue card's prompt wraps onto more lines inside its rounded card, its box allowed to shrink to the chat box, instead of running past the chat box's right edge
+- Queue cards are drawn as they were when they filled the chat box (c0fbbff0d), with only the progress and attachment count moved before the text; the computed cutting and padding and the overlaid hover buttons are gone
+- Queue cards stretch across the whole chat box: the card's text is padded to the width left after its progress and attachment count, and the hover buttons draw over the card's right end instead of keeping a blank column for themselves
+- corrections.log: clipping the queue card squared its rounded ends
+- Queue cards keep their rounded button at its own height: the text is cut with an ellipsis to the columns the chat box leaves after the progress, attachment count and hover buttons, in place of a clipping box that squared the card's ends
+- A failing test tier opens a chat to fix it: a new failure asks for a fix session (ticket fix-<tier>-<commit>), the fix test first, the tier run again, and a merge to main; spec runs keep the chat as a recorded link. Also the server health heavy spec expects the e2e_review part, and a drag onto a list drops on its label whenever the board region shows it, so an opened card no longer takes the drop
+- A queue card's progress and attachment count come before its text and never shrink, and the text shrinks and ends in an ellipsis at the card's right side, so a long prompt no longer pushes them past the edge
+- Story map: Copy Task List Onto Working Prompt and Queue Sent Prompt As Running observed live after /reload-plugins
+- Queue failures show on CDD's one failure line: the prompt queue keeps its latest failure, numbered, and draws no failure line of its own; the chat bar's failure line reads it (one plugin cannot write another's stored value) and shows it with the same Fix and ✕, which hide it there by its number, so a newer one shows again
+- A test tier cut short is recorded as failed: test.ps1 passes over a spec-timings file another run holds instead of stopping after its first spec, exits 1 when it never counted its files, and a run passes only when its last count says every file passed
+- merge file-manager into main
+- main: work kept before merging file-manager
+- merge main into file-manager: the Files app's another-project browser examples beside file-manager's
+- main: work kept before merging file-manager
+- Version v1.1
+- merge e2e/another-project into main: the Files app opened on another project, end to end
+- e2e: open files, filter, graph view and calls in place, each with an another-project example
+- e2e: the Files app opened on another project, its draw.io diagram from that project
+- The host spec's .mcp.json examples name their lane: installed from a main checkout, cdd leaves the project's .mcp.json (they served this checkout, so from a ticket's worktree they ran on the dev lane and failed); installed from a ticket's worktree, the project's cdd server points at the dev lane's server and its other servers stay
+- Files app: a .drawio file opens from its own project, whichever project started the shared draw.io viewer
+- The error-prone Files app scenarios run in a real browser: filtering to operations and keeping the filter when the file list grows, a call into board.py opening in place, a failed load, a code file opening with its members folded, the one orange line beside a selected node, a scenario opening only its story test, collapsing one open file then all, and a callout's mark opening and closing it. A failed graph load now offers Copy for AI, as the Graph app does; it showed only the reason. The browser seed keeps board.py on main and checkout-flow's work on its own branch, so This session and All session files differ
+- Chat bar: a browser pane refused in Auto mode tells the person to choose Bypass permissions in the permission mode menu at the bottom of the chat box, or to ask Claude to open it
+- The queue box: a send-now button (↵) on each card sends its prompt at once as the prompt being worked, naming its id; a card's hover buttons sit on solid grey; the open queue and each card fill the chat box's width
+- A draft queued with Alt+Enter keeps its pasted images: the dropped submission's attachments are read and saved beside the queued prompt (prompt-queue.attach, the chat's attachments folder), the queue beside a prompt lists each file for the agent to open, and the card shows a paperclip with how many
+- The queue shows each prompt's steps: the mod's tool.call hook replays the agent's update_plan calls and copies the task list onto the prompt being worked (set_steps), a wrap_up finishes its steps, a prompt sent straight to the chat goes first on the queue as the one being worked, and each card shows its progress (1/2), opening its steps under it, bright while worked and dim once done; until a task list is seen the queue tells the agent to keep the steps itself
+- With the Violations switch on, a node the graph view keeps lists only the rules it breaks: ExplorerEntry.kept_by keeps a node's rules by the same node filter (GraphRulesCollection.kept_by), where they were chosen by the graph's standing filter and every rule showed. The Violations scenario says so in an And, and its browser test now opens Process Ticket Archive's own verb-noun-format, which opens the story map at its line
+- A queued prompt holds the steps the agent planned for it: prompt-queue.set_steps gives a prompt its steps, each pending, in_progress or done, replacing any it had, and prompt-queue.step_done marks one done, refusing a step the prompt does not have (StepNotPlanned); story tests for Set Steps Of Queued Prompt and Tick Off Prompt Step run on the queue's shared examples
+- simple-queue-enhancements: the prompt queue work file-manager built, and the live check of play pausing that is left
+- Move Ticket size leaves the examples of Check Work In Generate and Integrate Practice Content Editor Apps In Chat Bar too, as the person decided: checkout-flow's latest graph holds 4 violations, and fixing verb-noun-format leaves 2, fixing ticket.py 3
+- Queue Prompts For Later gains Nest Prompt Steps In Queue: five Intended stories (set a queued prompt's steps, tick one off, copy the chat's task list onto the working prompt, queue a prompt sent straight to the chat as running, show each card's steps and progress) with 16 scenarios, and the decision to keep the queue and its steps on the cdd server rather than Claude Code's ~/.claude/tasks; the map is drawn again in drawio and on the whiteboard
+- A server restart leaves a feature's mods in every chat: a dev lane's server publishes its mods into the stable lane's marketplace, which chats install from, and the stable server, restarting while the dev lane's server answers, publishes the dev lane's mods after its own (CddHome.publish_mods_for_chats). The stable server used to put main's mods back until the next dev-lane install
+- merge e2e-testing into main
+- e2e-testing: leave session
+- e2e report: a changed step shows the previous run's screen beside its own, boxes what changed, and says how much, where, and the review's verdict
+- The Files app's graph view shows each node's rules: a node that holds rules can be opened even with nothing else below it, its rules group lists each rule marked passing, broken or left to judgement, a broken rule's title carries its message for a hover, selecting it opens the lines its violations name, and a node that breaks a rule is marked in the tree. The page used to drop the rules group the server sends. Review Graph Violations' browser test passes both scenarios
+- Clean Engineering's graph read skips a board that draws its modules or classes: a saved .whiteboard parses into a drawing of the design, not source, and asking it for a file module failed the whole graph build, so validate failed on any path beside .context/modules.whiteboard
+- board: Edit text opens a wrapping box that shows the whole text, under a child's title; the child scenario reopens it to read the text
+- sessions: simple-queue-enhancements practices {'ddd': {'enabled': False}, 'ux': {'enab… sessions: simple-queue-enhancements guidance {'stages': ['specification', 'implementa… sessions: simple-queue-enhancements practices {'ddd': {'enabled': False}, 'ux': {'enab… sessions: simple-queue-enhancements guidance {'stages': ['specification', 'implementa… sessions: simple-queue-enhancements practices {'ddd': {'enabled': False}, 'ux': {'enab… sessions: simple-queue-enhancements guidance {'stages': ['specification', 'implementa… sessions: simple-queue-enhancements practices {'ddd': {'enabled': False}, 'ux': {'enab… sessions: simple-queue-enhancements guidance {'stages': ['specification', 'implementa… sessions: simple-queue-enhancements practices {'ddd': {'enabled': False}, 'ux': {'enab… sessions: simple-queue-enhancements guidance {'stages': ['specification', 'implementa… sessions: simple-queue-enhancements practices {'ddd': {'enabled': False}, 'ux': {'enab… sessions: simple-queue-enhancements guidance {'stages': ['specification', 'implementa…
+- sessions: simple-queue-enhancements guidance {'stages': ['implementation'], 'version'… sessions: simple-queue-enhancements guidance {'stages': ['implementation'], 'version'… sessions: simple-queue-enhancements guidance {'stages': ['specification', 'implementa… sessions: simple-queue-enhancements guidance {'stages': ['specification', 'implementa…
+- sessions: simple-queue-enhancements guidance {'stages': [], 'version': 15} sessions: simple-queue-enhancements guidance {'stages': [], 'version': 16}
+- sessions: simple-queue-enhancements guidance {'stages': ['specification'], 'version':… sessions: simple-queue-enhancements guidance {'stages': ['specification'], 'version':…
+- sessions: simple-queue-enhancements practices {'ddd': {'enabled': False}, 'ux': {'enab… sessions: simple-queue-enhancements practices {'ddd': {'enabled': False}, 'ux': {'enab… sessions: simple-queue-enhancements guidance {'stages': ['discovery', 'specification'…
+- sessions: simple-queue-enhancements practices {'ddd': {'enabled': False}, 'ux': {'enab… sessions: simple-queue-enhancements guidance {'stages': ['discovery', 'specification'… sessions: simple-queue-enhancements practices {'ddd': {'enabled': False}, 'ux': {'enab… sessions: simple-queue-enhancements practices {'ddd': {'enabled': False}, 'ux': {'enab… sessions: simple-queue-enhancements practices {'ddd': {'enabled': False}, 'ux': {'enab… sessions: simple-queue-enhancements practices {'ddd': {'enabled': False}, 'ux': {'enab… sessions: simple-queue-enhancements practices {'ddd': {'enabled': False}, 'ux': {'enab… sessions: simple-queue-enhancements practices {'ddd': {'enabled': False}, 'ux': {'enab… sessions: simple-queue-enhancements guidance {'stages': ['discovery', 'specification'…
+- sessions: simple-queue-enhancements practices {'ddd': {'enabled': False}, 'ux': {'enab… sessions: simple-queue-enhancements guidance {'stages': ['discovery', 'specification'…
+- sessions: simple-queue-enhancements practices {'ddd': {'enabled': False}, 'ux': {'enab… sessions: simple-queue-enhancements guidance {'stages': ['discovery', 'specification'…
+- sessions: simple-queue-enhancements practices {'ddd': {'enabled': False}, 'ux': {'enab… sessions: simple-queue-enhancements guidance {'stages': ['discovery', 'specification'…
+- sessions: simple-queue-enhancements guidance {'stages': ['discovery', 'specification'… sessions: simple-queue-enhancements guidance {'stages': ['discovery', 'specification'…
+- sessions: simple-queue-enhancements guidance {'stages': ['discovery', 'specification'… sessions: simple-queue-enhancements guidance {'stages': ['discovery', 'specification'…
+- sessions: simple-queue-enhancements guidance {'stages': ['discovery', 'specification'… sessions: simple-queue-enhancements guidance {'stages': ['discovery', 'specification'…
+- sessions: simple-queue-enhancements practices {'ddd': {'enabled': False}, 'ux': {'enab… sessions: simple-queue-enhancements guidance {'stages': ['discovery'], 'version': 3} sessions: simple-queue-enhancements practices {'ddd': {'enabled': False}, 'ux': {'enab… sessions: simple-queue-enhancements guidance {'stages': ['discovery'], 'version': 4} sessions: simple-queue-enhancements practices {'ddd': {'enabled': False}, 'ux': {'enab… sessions: simple-queue-enhancements guidance {'stages': ['discovery'], 'version': 5}
+- sessions: simple-queue-enhancements practices {'ddd': {'enabled': False}} sessions: simple-queue-enhancements guidance {'stages': ['discovery'], 'version': 2}
+- merge simple-queue-enhancements into main: the prompt queue's server tool and dev-lane routing
+- A dev-lane pin points the worktree's chats at the dev lane
+- Merge remote-tracking branch 'origin/main' into simple-queue-enhancements
+- prompt queue: the card of the prompt being edited is drawn dim, its button as well as its text
+- The Violations switch runs in a real browser on a story-review session whose story map holds two verb-noun-format breakers: it keeps Process Ticket Archive and Handle Ticket Deletion, not Delete Ticket. Selecting a broken rule is red there: the Files app's graph view drops the rules group the server sends under each node (files-graph.ts isEntry), so no node shows its rules
+- Merge remote-tracking branch 'origin/main' into simple-queue-enhancements
+- A prompt queue failure shows in red with Fix and ✕, as the chat bar's failures do: what failed with its reason, the context beneath (such as the prompt-queue tool and the servers tried), Fix running /space-session-debug-session choice=fix with both as details, and ✕ dismissing it. "The queue did not change", "Not sent", grouping, sub-agent and /queue failures go there; progress notices stay plain. This branch takes in file-manager, where the server-side queue lives
+- Merge remote-tracking branch 'origin/file-manager' into simple-queue-enhancements
+- maintain-tickets: the refused delete says its card is stale, and a board read again is expanded again
+- Merge remote-tracking branch 'origin/main' into e2e-testing
+- board: an opened card stays inside its column, and a card title breaks only between words
+- The graph's main flow runs in a real browser: the Switch story test shows the Stories and Clean Engineering trees for checkout-flow's files, opens ticket.py when Ticket.delete is selected, and unfolds delete alone with close folded, each walked by hand in the Files app first
+- file-manager: which Files app and graph scenarios run in a real browser, and why
+- The Files app's real-browser examples are story tests now: each sits beside its sub-epic's scenarios as {sub_epic}.story.ui_e2e_spec.py, named by its story, scenario and Then, on the shared Files app setup in story_tests/review-generated-work-in-file-viewer/files_app_browser.py. harness/files_app/files_app_e2e_spec.py is gone; its 10 examples pass in Open Calls Across Files, Fold Open Files To Selected Nodes, Open Whiteboard and Filter Files By Format
+- sessions: simple-queue-enhancements guidance {'stages': ['discovery']} sessions: simple-queue-enhancements guidance {'stages': ['discovery'], 'version': 1}
+- sessions: simple-queue-enhancements branch simple-queue-enhancements, worktree C:\dev\abd-cdd-simple-queue-enhancement sessions: open simple-queue-enhancements
+- sessions: simple-queue-enhancements name simple-queue-enhancements, title simple-queue-enhancements, scope feature sessions: save before opening simple-queue-enhancements
+- sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager guidance {'stages': ['specification', 'implementa…
+- sessions: file-manager guidance {'stages': ['specification', 'implementa… sessions: file-manager guidance {'stages': ['specification', 'implementa…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager guidance {'stages': ['specification'], 'version':…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager guidance {'stages': ['specification'], 'version':…
+- sessions: file-manager guidance {'stages': ['specification'], 'version':… sessions: file-manager guidance {'stages': ['specification'], 'version':…
+- sessions: file-manager guidance {'stages': ['specification', 'implementa… sessions: file-manager guidance {'stages': ['specification', 'implementa…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager guidance {'stages': ['implementation'], 'version'…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager guidance {'stages': ['implementation'], 'version'…
+- e2e-testing: three checks per step in the e2e report (test, judge, same as previous), judge verdicts carried over unchanged screens
+- The Files list says a file the branch deleted is deleted on this branch, where it said not generated yet, as for harness/process/git.py, which main still has. The fidelity outputs spec counts the acceptance tests' four Python patterns, the runnable story file among them
+- The Violations switch scenario runs: with Stories and Clean Engineering on, turning on Violations keeps only Process Ticket Archive, Handle Ticket Deletion and Ticket.activate's parameter x. Ticket details budget leaves the examples too, as the person decided, since the information architecture's diagram records no stories per screen
+- Review Graph Violations In Files App shows the Violations switch with four examples: Move Ticket size leaves them, as the person decided, so the Stories story map counts 2 and the live graph 4
+- The Go to file menu stands out from the editor it opens over: it is drawn on the raised surface with a border in the selection colour, where it was the editor's own near-black
+- file-manager handoff: the agentic prompt queue, worktree chats on the dev lane, and the queue worked down
+- Rendering a class model to code writes an interaction the model writes as a whole call, CredentialsRepository.create(this), as that call: it no longer gains a second argument list, and a note written after the call stays out of the code rather than dropping the call
+- A step observes the example its own story file records, not every example of that name: two story files that each use a LISTED hold two LISTED nodes, so a step naming it showed two fold-outs
+- The graph view reads each open node again when its trees are read again, so a switched scope or node filter shows an open branch's nodes for the new file list rather than the old one
+- A story written as one runnable file, {story_snake}_story.test.py or .ts with its steps filled in, is listed with the Stories acceptance tests as well as the scenarios, so an implementation-stage Files list shows story tests such as those of Serve CDD Code In Lanes. The graph build heavy spec validates class_rules.py, as class_graph.py is gone
+- Seventeen files the merge in 51c9fe28e brought back go again, each deleted on purpose before it and untouched since: the old story map, thin slice and scenarios under harness/.context/stories and the chat-ui and graph maps (moved to the root .context and story_tests in 78c00ad13), two story files left in space/kanban, harness/process/git.py (split into harness/git), scripts/unit_guard/sitecustomize.py (replaced by budget_formatter.py, so the unit tier timed every example twice), and four module-context.md files of folded modules
+- The prompt queue's server side is specified: a heavy spec queues and marks done through a real cdd server, the session spec checks a switch queuing the handoff's steps once, and the map's Queue Prompts For Later epic gains Work Through Prompt Queue with its scenarios; Play Prompt Queue says play now asks the agent rather than sending. SpecChat, the MCP client the ticket work spec kept, moves to harness/mcp/spec_support.py for both
+- The ticket work heavy spec's server loads the actions: a stage's steps are the actions registered for it, and with none ticket.create failed reading the generate step
+- The graph worker heavy spec counts the working-copy reads in working_copy_reads: its own reads overwrote the graph's reads, which load_files calls
+- The graph build no longer crashes recording an example: where an example is declared is read from the story object, since the graph may answer an add with a node it already held, such as one added for its file, which has no declaration
+- A dev-lane install publishes the feature's mods into the stable lane's marketplace, which every chat installs its mods from, before installing them, so the person runs the board and prompt queue mods the feature changed; the full install and the server switch share one install_mods
+- A dev-lane install reads the lane it serves, not the stable lane every plugin names, to write the worktree's cdd entry
+- A dev-lane install points the worktree's chats at the dev lane: it writes a cdd entry for the dev lane's server into the project's .mcp.json, which outranks the cdd plugin's stable-lane server, so a chat started in the worktree lists and calls the feature's own tools, such as prompt-queue's; the stable lane's install still drops that entry. The prompt queue mod asks the project's cdd server first and the cdd plugin's after, keeping the one that answered Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+- The prompt queue is the agent's to work through: while it plays, every prompt carries the queue beside it, in order, with how to work through it, and a finished turn asks the agent to take the next prompt instead of sending and removing it. The agent marks each prompt done with prompt-queue.done once its work is done, which replaces take_next; play pauses when the agent left the prompt it was asked to take. A queued slash command still runs as the command and is marked done. A switched session's handoff note says the same Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+- e2e-testing: e2e review toolset, the daily run's screen review, and its health line
+- The prompt queue mod reads and changes the queue through the cdd server's prompt-queue tools: its prompts are no longer kept in $.state but held as the queue the tools answered, read again at session start and after each turn, so prompts the agent queued show; show reads the queue and take_next passes over the prompt being edited, in Python. Switching a chat to a session queues the numbered steps of the session's latest handoff on that chat's queue, once per handoff, and says so
+- e2e-testing: step capture, compare report, regression review, and the TDD and Stories guidance
+- The prompt queue lives behind the cdd server: PromptQueue keeps the prompts one chat has queued in that chat's own folder, with add, add_all, edit, move, remove, clear and take_next as MCP tools on prompt-queue, loaded for the chat a call names or, with none named, the calling chat, so the queue mod, the agent in the chat and a starting session all reach one queue
+- One walk of the graph view's trees: the story tests' helpers that open each branch as the page does, node_id_of, entries_in, names_in and names_above, all read opened_entries in space/session/graph_view_examples.py, instead of four walks of their own. Clean Engineering's rules folder loses class_graph.py and near_copies.py, old copies of the model's modules that nothing imports, brought back by 51c9fe28e
+- e2e-testing: walk report writer, from pml-web's report.ts reduced to one run
+- Rendering from markdown to Python works again. A class model rendered through a channel the practice keeps is written from a model of its own, so a second model file rendered in a session no longer takes the first file's class names. Markdown notes stay out of the code: a note after a type's dash becomes the member's comment, the words a heading writes after a class's name go into its description, and an array written Type[] is list[Type]. Scenarios rendered to a Python story test import but_, which a But step uses, and open each scenario one indent inside its story
+- e2e-testing: story map epic Review End-To-End Screens and its BDD behavior signatures
+- sessions: file-manager handoff of 2026-11-17: the Files app ran main's Python until dc982e45c; connectors fold out in place; queue mod installed; outstanding items 1-14 done
+- Generate puts a whiteboard it writes on its board in Claude: when a listed fidelity writes a whiteboard, Generate gives the same publish_board instructions and record_board tool as Render does, and the whiteboard format's name lives with Render. Generate no longer fails in a session that overlays a pattern while a root is a wildcard path such as harness/**/.context: a path naming no one folder is left to the agent, as a templated one was
+- The chat bar's checkoutFolder has its spec, run through /board in the engine: the board opens on the checkout git names as the chat's own, so a ticket's worktree is answered on the dev lane, and outside any repository it names no project and shows its server's own
+- prompt-queue: card buttons back at the right on hover; long text cut off with an ellipsis
+- The Files app's Filters toggle opens like a tree row: no box, its arrow muted as a twist's, its label muted until pointed at or open, instead of the page's default bordered button
+- The chat bar's format glyphs name only the groups a person can choose: realization and thin_slice are fidelity outputs, never offered as formats, so their glyphs and the comment about them are gone, and the glyph map is the file's own
+- prompt-queue: card buttons always shown at the card's left
+- A dev-lane chat is listed the served feature's tools: the stable lane's server answers a chat's tool list from the lane that answers its project's calls, asking the dev lane for its tools (cdd.list_tools) as it hands it calls, so tools only the feature has, such as fidelity-session-output.add_root, are listed and callable. A chat naming no project, or on the stable lane, is listed the server's own
+- prompt-queue: long queued prompts wrap instead of being cut off
+- prompt-queue: card buttons back at the right; the text shrinks so they stay in view
+- prompt-queue: card buttons always shown at the card's left edge
+- A ticket's session roots are set up from the start: the story tests for Choose Session And Practice Roots run the agent's calls on refund-order's project (shared seeds in space/session/session_roots_examples.py), and found that Clean Engineering proposed the aggregate's folder too, so a practice that claims all code now leaves to a practice that claims only some, such as DDD a domain's, the files it claims. Activating a ticket asks its new chat to set up the roots with session.set_up_roots when the switch says they are unchecked, and the board's roots dialog offers Set up with the chat, which fills that prompt in the ticket's chat
+- e2e-testing: ticket text in the session folder
+- sessions: e2e-testing text
+- The graph app type-checks clean: the stale copy of the inventory bundle test left at the app's root, importing a module that moved into explorer/ and expecting the trees the inventory no longer carries, is gone; the current test stays beside the module
+- A step's connector fold-outs show only code: the call markers the graph puts after each line of an operation are left out, as the fold-outs a line's own calls open already left them out
+- sessions: e2e-testing text
+- sessions: e2e-testing text
+- sessions: e2e-testing text
+- Go to file answers a real right-click on a fold-out: the editor's text layer lies over the fold-outs, so the right-click is heard on the editor's own node before Monaco's menu, and the fold-out under the pointer is found there
+- sessions: e2e-testing guidance {'stages': ['discovery']} sessions: e2e-testing guidance {'stages': ['discovery'], 'version': 1}
+- Go to file on a fold-out: right-clicking an open fold-out offers Go to file, which opens what it shows in its own file at its lines, the node's own lines looked up by its id, or for a section the file and lines it names. The fold-out stays in place otherwise, so connectors still never jump across files on their own
+- sessions: e2e-testing branch e2e-testing, worktree C:\dev\abd-cdd-e2e-testing sessions: open e2e-testing
+- sessions: e2e-testing name e2e-testing, title e2e-testing, scope feature sessions: save before opening e2e-testing
+- sessions: file-manager overlays ['cdd_claude_mod']
+- Alt+Enter on a long pasted draft queues it and keeps it out of the chat: the send that follows is recognised as the queued draft whatever line endings and trailing spaces the desktop sends it with
+- The installer publishes and installs the prompt queue mod the same way it does the board: write_mod_plugins publishes cdd-board with its extras and then prompt-queue into the cdd-home marketplace, the server's start installs both, and install.py prints a prompt-queue line
+- /queue given a pasted list queues each item in order, one prompt each, without asking the model: the items are the lines with a list marker, the marker left off, so headings between them are skipped. With no list it plans from the conversation as before, and a plan that queues nothing says why instead of a bare count
+- sessions: file-manager guidance {'stages': ['discovery', 'implementation… sessions: file-manager guidance {'stages': ['discovery', 'implementation…
+- Broken rules show only when asked: a file opened from the graph is still read with its rules for the folds the graph places, but its violations stay hidden while Rules and Cross-file are off
+- A file just opened from the graph keeps the selected line in view while its folds settle: the page scrolls again each time the editor's height changes, for a moment after the line is asked for, since closing folds moves the line up after the first scroll
+- A connector selected in the graph expands only inside its holder: the fold-outs that open are those on the lines of the scenario or step the node was selected under, not every step in the file that uses the same example or operation
+- Merge remote-tracking branch 'origin/main' into file-manager
+- Every connector folds out where it is used, and the graph never jumps across it: a story test's step shows what it invokes and observes as a collapsed fold-out under the first line of the step that names it, and selecting a node reached through a connector, an operation under a step's invokes or an example a scenario uses, keeps the holder's file open at its lines and expands that node's fold-out in place
+- merge simple-queue into main
+- simple-queue: leave session
+- Selecting a scenario opens only its own lines: an example declared in a file the spans do not cover, such as the examples module a story test imports, is used by the scenario but is no part of it. The session reads any file of the checkout it works in, such as a ticket's worktree, so a node the graph read outside the session's roots still opens
+- A dev-lane app reaches the dev lane's server: the connect script in the dev lane's home answers the port after the stable lane's (McpAddress.of_home), so the Files app of a session kept in the main checkout no longer has main's code answer its calls through the stable lane. The dev lane's folder and port live beside the address, DEV_LANE_FOLDER and DEV_PORT_AFTER_STABLE, read by ServerLanes and its specs
+- sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager guidance {'stages': [], 'version': 115} sessions: file-manager guidance {'stages': ['implementation'], 'version'… sessions: file-manager guidance {'stages': ['implementation'], 'version'…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager guidance {'stages': [], 'version': 114}
+- sessions: file-manager guidance {'stages': [], 'version': 112} sessions: file-manager guidance {'stages': [], 'version': 113}
+
+## 2026-11-16
+
+Summary: the prompt queue cards became one-line chat buttons, while the Files app and the session graph gained node filters, relationship groups, validation history and a Cursor-style source view.
+
+- Prompt queue: each card is a chat button, one line tall with round ends; pressing it edits the prompt
+- Prompt queue: an edited prompt keeps its place, shaded, and the next add puts it back there
+- Prompt queue: the empty card reads Add beside its Alt and Enter keys
+- Prompt queue: Alt+Enter queues the draft, as Ctrl+Enter never reached the mod on the desktop
+- sessions: simple-queue modules validation report
+- Prompt queue joins tools as tools/prompt_queue, with its module card
+- sessions: simple-queue practices {'stories': {'enabled': True, 'formats':… sessions: simple-queue guidance {'stages': [], 'version': 75}
+- sessions: simple-queue guidance {'stages': [], 'version': 73} sessions: simple-queue guidance {'stages': [], 'version': 74}
+- sessions: simple-queue story map validation report
+- Story map: Queue Prompts For Later, the prompt queue mod's epic
+- sessions: simple-queue guidance {'stages': ['implementation'], 'version'… sessions: simple-queue guidance {'stages': ['implementation'], 'version'… sessions: simple-queue practices {'stories': {'enabled': False, 'formats'… sessions: simple-queue guidance {'stages': ['implementation'], 'version'…
+- sessions: simple-queue guidance {'stages': ['implementation'], 'version'… sessions: simple-queue guidance {'stages': ['implementation'], 'version'…
+- sessions: simple-queue guidance {'stages': [], 'version': 68} sessions: simple-queue guidance {'stages': [], 'version': 69}
+- sessions: simple-queue practices {'stories': {'enabled': False, 'formats'… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 68}
+- sessions: simple-queue practices {'stories': {'enabled': False, 'formats'… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 67}
+- sessions: simple-queue guidance {'stages': [], 'version': 64} sessions: simple-queue guidance {'stages': [], 'version': 65}
+- sessions: simple-queue practices {'stories': {'enabled': True, 'formats':… sessions: simple-queue guidance {'stages': ['implementation'], 'version'…
+- sessions: simple-queue practices {'stories': {'enabled': False, 'formats'… sessions: simple-queue guidance {'stages': ['implementation'], 'version'…
+- sessions: simple-queue practices {'stories': {'enabled': False, 'formats'… sessions: simple-queue guidance {'stages': ['implementation'], 'version'… sessions: simple-queue practices {'stories': {'enabled': False, 'formats'… sessions: simple-queue guidance {'stages': ['implementation'], 'version'… sessions: simple-queue guidance {'stages': ['implementation'], 'version'…
+- sessions: simple-queue practices {'stories': {'enabled': False, 'formats'… sessions: simple-queue guidance {'stages': ['implementation'], 'version'…
+- sessions: simple-queue practices {'stories': {'enabled': True, 'formats':… sessions: simple-queue guidance {'stages': ['implementation'], 'version'…
+- sessions: simple-queue guidance {'stages': ['implementation'], 'version'… sessions: simple-queue guidance {'stages': ['implementation'], 'version'…
+- sessions: simple-queue guidance {'stages': ['discovery', 'implementation… sessions: simple-queue guidance {'stages': ['discovery', 'implementation…
+- sessions: simple-queue practices {'stories': {'enabled': False, 'formats'… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 55}
+- sessions: simple-queue practices {'stories': {'enabled': True, 'formats':… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 54}
+- sessions: simple-queue practices {'stories': {'enabled': True, 'formats':… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 53}
+- sessions: simple-queue practices {'stories': {'enabled': False, 'formats'… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 52}
+- sessions: simple-queue practices {'stories': {'enabled': False, 'formats'… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 51}
+- Chat bar: tooltips sit above their buttons instead of over them
+- sessions: simple-queue practices {'stories': {'enabled': True, 'formats':… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 49}
+- sessions: simple-queue practices {'stories': {'enabled': False, 'formats'… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 48}
+- sessions: simple-queue practices {'stories': {'enabled': False, 'formats'… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 47}
+- sessions: simple-queue practices {'stories': {'enabled': True, 'formats':… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 46}
+- sessions: simple-queue practices {'stories': {'enabled': True, 'formats':… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 45}
+- sessions: simple-queue practices {'stories': {'enabled': False, 'formats'… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 43} sessions: simple-queue practices {'stories': {'enabled': False, 'formats'… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 44}
+- sessions: simple-queue practices {'stories': {'enabled': True, 'formats':… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 41} sessions: simple-queue guidance {'stages': ['discovery'], 'version': 42}
+- sessions: simple-queue guidance {'stages': ['discovery', 'specification'… sessions: simple-queue guidance {'stages': ['discovery', 'specification'… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 39} sessions: simple-queue guidance {'stages': ['discovery'], 'version': 40}
+- sessions: simple-queue branch simple-queue, worktree C:\dev\abd-cdd-simple-queue sessions: open simple-queue
+- Chat bar: an action runs only on the practices whose dots are on
+- sessions: simple-queue practices {'stories': {'enabled': False, 'formats'… sessions: simple-queue practices {'stories': {'enabled': False, 'formats'… sessions: simple-queue practices {'stories': {'enabled': False, 'formats'… sessions: simple-queue guidance {'stages': ['specification'], 'version':…
+- sessions: simple-queue guidance {'stages': ['discovery', 'specification'… sessions: simple-queue guidance {'stages': ['discovery', 'specification'… sessions: simple-queue guidance {'stages': ['specification'], 'version':… sessions: simple-queue guidance {'stages': ['specification'], 'version':…
+- sessions: simple-queue practices {'stories': {'enabled': True, 'formats':… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 34}
+- sessions: simple-queue practices {'stories': {'enabled': True, 'formats':… sessions: simple-queue practices {'stories': {'enabled': True, 'formats':… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 32}
+- sessions: simple-queue practices {'stories': {'enabled': True, 'formats':… sessions: simple-queue practices {'stories': {'enabled': True, 'formats':… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 31}
+- sessions: simple-queue guidance {'stages': ['discovery'], 'version': 30}
+- sessions: simple-queue practices {'stories': {'enabled': True, 'formats':… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 29}
+- sessions: simple-queue practices {'stories': {'enabled': False, 'formats'… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 28}
+- sessions: simple-queue practices {'stories': {'enabled': True, 'formats':… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 26}
+- sessions: simple-queue practices {'stories': {'enabled': True, 'formats':… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 24}
+- sessions: simple-queue practices {'stories': {'enabled': False, 'formats'… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 23}
+- sessions: simple-queue practices {'stories': {'enabled': True, 'formats':… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 22}
+- sessions: simple-queue practices {'stories': {'enabled': True, 'formats':… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 21}
+- sessions: simple-queue practices {'stories': {'enabled': False, 'formats'… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 20}
+- sessions: simple-queue practices {'stories': {'enabled': True, 'formats':… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 19}
+- sessions: simple-queue practices {'stories': {'enabled': False, 'formats'… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 17} sessions: simple-queue practices {'stories': {'enabled': False, 'formats'… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 18}
+- sessions: simple-queue practices {'stories': {'enabled': False, 'formats'… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 16}
+- sessions: simple-queue practices {'stories': {'enabled': False, 'formats'… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 15}
+- sessions: simple-queue practices {'stories': {'enabled': False, 'formats'… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 14}
+- sessions: simple-queue practices {'stories': {'enabled': True, 'formats':… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 12} sessions: simple-queue guidance {'stages': ['discovery'], 'version': 13}
+- sessions: simple-queue practices {'stories': {'enabled': True}, 'ddd': {'… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 11}
+- sessions: simple-queue practices {'stories': {'enabled': False}} sessions: simple-queue guidance {'stages': ['discovery'], 'version': 6} sessions: simple-queue practices {'stories': {'enabled': False}, 'ddd': {… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 7} sessions: simple-queue practices {'stories': {'enabled': False}, 'ddd': {… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 8} sessions: simple-queue practices {'stories': {'enabled': False}, 'ddd': {… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 9} sessions: simple-queue practices {'stories': {'enabled': False}, 'ddd': {… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 10}
+- sessions: simple-queue guidance {'stages': ['discovery', 'implementation… sessions: simple-queue guidance {'stages': ['discovery', 'implementation… sessions: simple-queue guidance {'stages': ['discovery'], 'version': 4} sessions: simple-queue guidance {'stages': ['discovery'], 'version': 5}
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- A bare call to a module function opens it in place when the graph gives the function the owner _module, as Clean Engineering's graph does for every module function, and the Files app e2e finds an editor line by its whole text, so reread_all's definition never stands in for its call
+- The Files app's live-verified paths run for real in heavy and e2e specs: render.record_board through a real cdd server keeps a whiteboard's board address in whiteboards.json and refuses any other file; session.write_file from a ticket's real git worktree saves into the session's folder in the main checkout; and in Chromium against the page built from this checkout, its Files server and a throwaway cdd server, a selected story-test step unfolds its own function, self calls open the open file's member with room under the line, a class never opens itself, and a design canvas and a whiteboard list as entries linking to their addresses. A bare module-function call opens nothing against the real graph, whose members own module functions under _module, which the unit twin stubs as no owner
+- Setting up a session's roots has instructions, session.set_up_roots, which switching to a session with unchecked roots points to: read the ticket and its branch, ask each fidelity for its proposed roots, dig to the narrowest folders in every practice's declared locations, confirm with the person, then set them with choose_root and add_root
+- A fidelity proposes the roots for the pieces a ticket works on: the narrowest folder holding each piece its branch changed or its names name, read from the fidelity's own declared outputs (an aggregate's folder, a package, a sub-epic's folder), published as fidelity-session-output.propose_roots
+- A session's roots cover exactly the pieces its ticket works on: scenarios for rooting every practice on one aggregate's folders, adding a folder found later with add_root, and proposing roots from the ticket and its branch for the person to confirm
+- sessions: simple-queue guidance {'stages': ['discovery', 'specification'… sessions: simple-queue guidance {'stages': ['discovery', 'specification'…
+- sessions: simple-queue guidance {'stages': ['specification', 'implementa… sessions: simple-queue guidance {'stages': ['specification', 'implementa…
+- A fidelity holds several roots, kept as roots in session.json, so a session names each sub-epic folder it works on in story_tests; add_root adds one beside the roots it has
+- Backlog: on a step's first run the AI judges its screenshot against the scenario's intent before it becomes the baseline
+- Backlog: review screens on every end-to-end run, scheduled daily runs included
+- Backlog: review end-to-end screens against the previous run, with the AI judging each changed step screenshot and adding the tests that missed it
+- A file read on its own for its rules is read from the project's root, so a story test outside the session's folder shows its folds, steps and the rules it breaks
+- A call inside a method opens in place at its full height even while the call's own block stays folded: each callout's view zone opens after its line's last character, so Monaco lays it out by that line's visibility, not the next line's, which a fold closed under the call hides
+- sessions: file-manager outputs {'stories': {'root': '../.context', 'sce…
+- A handoff names the practice guidance the next agent reads and applies before generating anything: the session's practices at the fidelities touched, the TDD supplement with its flow, the pattern overlays, the module contexts, and the person's corrections
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: add Integrate End-To-End Compare Runs And Reports Into CDD to the Backlog
+- A line means the open file's own class or member when another file defines one of the same name, so a class never opens another file's namesake over itself, and self calls open the open file's member
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['implementation'], 'version'…
+- sessions: simple-queue guidance {'stages': ['implementation']} sessions: simple-queue guidance {'stages': ['implementation'], 'version'…
+- sessions: simple-queue name simple-queue
+- sessions: file-manager guidance {'stages': ['specification', 'implementa… sessions: file-manager guidance {'stages': ['specification', 'implementa… sessions: file-manager guidance {'stages': ['implementation'], 'version'… sessions: file-manager guidance {'stages': ['implementation'], 'version'…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: file-manager guidance {'stages': ['discovery', 'specification'… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- A class or member never opens itself in place, and a method's call on self and a call to a module function by its bare name open in place
+- sessions: file-manager guidance {'stages': ['discovery', 'specification'… sessions: file-manager guidance {'stages': ['discovery', 'specification'… sessions: file-manager guidance {'stages': ['discovery'], 'version': 117… sessions: file-manager guidance {'stages': ['discovery'], 'version': 118…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'specification'… sessions: add Link Markdown Steps To Code Through Realizations to the Backlog
+- Only a step backed by code is asked to invoke code: a markdown When names none until a realization links it, and code-steps-invoke-code flags a story test's When that calls nothing or only its own helpers and seeds
+- A story map listed with code story tests stays the map: every epic of it is kept, each story test's scenarios go on its Story of the same name, and a story only a story test holds goes under the epics its folders name; story tests alone, with no story map listed, are still read as the map
+- A whiteboard file published to a board in Claude keeps the board's address: rendering to whiteboard tells the agent to publish the board and call render.record_board, which records it beside the file in whiteboards.json, so the Files app's whiteboard entries open the board
+- Selecting a step or an operation written under decorators unfolds its own function, not only the folds around its decorator
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- session.write_file finds a session by its name, as sessions.switch does, and saves into the session's own folder, kept in the main checkout's .sessions outside a ticket's worktree; a path outside that folder and the session's roots is still refused
+- An app opens by its label in any case and with spaces around it: "files", "FILES" and " story ui " open Files and Story UI; a label no app is registered as is still refused
+- A debug fix goes live where the chat works: a ticket's branch is pushed and served by repinning the dev lane and opening the changed apps, main is pushed and the stable lane repinned after messaging its chats, and a project with CDD installed elsewhere gets a fork and pull request; it never merges to main
+- A step's invokes skip functions of story tests and examples modules (graph_reading, left out of 585e3954e)
+- An example a step observes opens where its examples module defines it, read from the project; a step invokes only the code it tests, never a story test's helpers or its examples module's seeds
+- sessions: add Cache The Graph By Content, Answer Scope And View As Queries to the Backlog
+- A handoff says where the work goes live: a ticket branch's work by repinning the dev lane and opening the changed apps, main's by repinning the stable lane; it never offers a merge to main the person did not ask for
+- Handoff: finished ticket work goes live by repinning the dev lane, never by offering a main merge
+- The Files app's source view shows Cursor's own editor background, not the page's raised colour the shared source view paints
+- The Files app's source view draws code in Cursor's default looks, Cursor Dark and Cursor Light, with abd.works orange only on the cursor, the current line number and the selected node's line; selection is Cursor's grey and folded lines carry no tint
+- A whiteboard file in the Files app is named by its board and opens the board in Claude at its address, never the file's text; one with no board yet says so, and the page never opens a whiteboard or design canvas as its first file
+- A design canvas in the Files app's folder tree sits in its design-canvas folder beside versions.json, named by its version, and opens at its link; one not yet published says so and opens nothing, never its canvas.json
+- Selecting an operation a step invokes opens just that operation's lines
+- A whiteboard file lists at the address of its board in Claude, kept beside it in whiteboards.json, and every file under a session's root lists the link its design canvas or board is published at
+- A code file opens in the Files app's source view with its classes open and their members folded, unless a node is selected
+- thin_slice and realization are files their fidelity writes, never format options: no chip on the board, chat bar or Files app, and choosing either as a format is refused
+- The Files app's fold shortcuts default to Cursor's own keys, Ctrl+M chords and Ctrl+Shift+[ ], which a project's keybindings file may still override
+- The Files app's source view draws code in the abd.works look, light and dark, with orange as its accent
+- A selected node in the Files app's source view is marked by one orange line beside its lines, the text unshaded
+- The Files app's graph view keeps its node filter closed behind one Filters toggle until the person opens it, and the browser remembers the choice
+- sessions: file-manager guidance {'stages': ['discovery', 'specification'… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: file-manager guidance {'stages': ['discovery', 'specification'… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- Handoff: file-manager
+- A story listed only by its story map holds its scenarios in the graph view
+- Handoff: file-manager
+- A worktree chat's app pages name the worktree and its dev-lane app servers talk to the dev lane
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: file-manager guidance {'stages': ['discovery', 'specification'… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- Merge remote-tracking branch 'origin/file-manager' into file-manager
+- sessions: file-manager session state
+- Merge file-manager: a file from an older server lane opens without callouts instead of crashing the Files page
+- Merge origin/file-manager: a file sent without callouts opens in the source view
+- A file sent without callouts opens in the source view instead of crashing on .map
+- Merge file-manager: Files app graph view and viewer, callouts, folding, node filters, dev lane ports, WMI starts
+- Merge origin/main into file-manager
+- sessions: main practices {'stories': {'formats': {'story_map': ['… sessions: main guidance {'version': 74, 'stages': ['discovery', …
+- DDD bounded context map: offer and save drawio; fix map parse and chip errors
+- DDD bounded context map: offer and save drawio; fix map parse and chip errors
+- Merge fix/ce-skips-stories-whiteboard: Clean Engineering skips a Stories whiteboard
+- Clean Engineering skips a Stories whiteboard instead of failing the graph build
+- Files page shows a failed graph read instead of crashing on .map
+- Files page shows a failed graph read instead of crashing on .map
+- sessions: file-manager guidance {'stages': ['discovery', 'implementation… sessions: file-manager guidance {'stages': ['discovery', 'implementation…
+- sessions: file-manager guidance {'stages': ['discovery', 'specification'… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: file-manager guidance {'stages': ['discovery'], 'version': 99} sessions: file-manager guidance {'stages': ['discovery'], 'version': 100… sessions: file-manager guidance {'stages': ['discovery', 'specification'… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': [], 'version': 97} sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager guidance {'stages': [], 'version': 98} sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager guidance {'stages': [], 'version': 99}
+- sessions: file-manager guidance {'stages': [], 'version': 95} sessions: file-manager guidance {'stages': [], 'version': 96}
+- sessions: version-1-refactoring moves to _complete
+- merge version-1-refactoring into main
+- main: work kept before merging version-1-refactoring
+- Merge remote-tracking branch 'origin/main' into version-1-refactoring
+- Handoff: file-manager
+- conforms-to-schema leaves a link into a practice the graph does not read to the AI judge
+- Deep-module judges a module by its seam methods
+- kanban_tools_spec expects session.graph_filter_choices among the published tools
+- Validation fix pass: the lane a home serves is ServerLane.from_home, an app server starts itself, WMI's refusal has a heavy example
+- sessions: main guidance {'version': 58, 'stages': ['discovery', … sessions: main guidance {'version': 59, 'stages': ['discovery', …
+- A server started from a chat whose job refuses breakaway is created through WMI, outside every job, so it outlives the chat
+- A story map story or sub-epic opens its scenarios file from its own heading there
+- Dev lane apps answer on ports of their own, 1000 above the stable lane's, and the chat starts them with --port
+- sessions: add when coomenting put a radio button call corrfection; setting it flags the skill /tool etcx needs to be corfected to the Backlog
+- Scenarios: Filter Files In Files App has its sub-epic heading, as the story map has it
+- A markdown scenario or step spans its own section or line, not a code scanner's run past it
+- Deep-module counts class definitions and the routes that make them public
+- install.py copies the language adapters into the lane it pins, the dev lane's for a worktree
+- sessions: file-manager guidance {'stages': ['discovery', 'specification'… sessions: file-manager guidance {'stages': ['discovery', 'specification'… sessions: file-manager guidance {'stages': ['specification'], 'version':… sessions: file-manager guidance {'stages': ['specification'], 'version':…
+- sessions: file-manager guidance {'stages': ['discovery', 'specification'… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'implementation… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'implementation…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'implementation… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager guidance {'stages': ['discovery', 'implementation…
+- A whiteboard that holds no module or class is an unreadable source, so one stray board no longer stops the graph read
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'implementation…
+- sessions: file-manager guidance {'stages': ['discovery', 'implementation… sessions: file-manager guidance {'stages': ['discovery', 'implementation…
+- Modules in cdd_guidance: one per direct child, one per practice
+- Merge remote-tracking branch 'origin/main' into file-manager
+- Deep-module ratios in module order
+- sessions: file-manager session state
+- Deep-module ratios: public and private classes per module against the 40% threshold
+- Graph rules read facts the build compared
+- sessions: version-1-refactoring log
+- Backlog command: say it runs as the backlog slash command, which installs as space:kanban:backlog
+- Actions are one module: the six action folders fold into cdd_guidance/actions
+- sessions: version-1-refactoring re-validates after round 3 (23 violations) and adds the run to its violation history
+- Clean engineering round 3, and docs for the split and the history
+- Split git out of harness/process into harness/git
+- Validate keeps a violation history and saves small reports
+- sessions: version-1-refactoring backfills its violation history from its four clean engineering reports
+- sessions: version-1-refactoring re-validates after round 2: 31 violations, 22 outside OSS
+- Docs and story tests follow clean engineering round 2
+- Space, tools, scripts: clean engineering round 2
+- Harness: clean engineering round 2
+- Practices, patterns, graph: clean engineering round 2
+- Guidance, annotations, installer: clean engineering round 2
+- Make the TDD flow reach the agent before any rule
+- Board Playwright specs follow the current board: new chats are recorded, not opened; chats picked per ticket; thin-slice chips and tabs; kept format picks
+- sessions: edit Agent Orchestration's text in the Backlog
+- sessions: add Agent Orchestration to the Backlog
+- sessions: version-1-refactoring re-validates clean engineering code after the fixes: 130 violations, 82 outside OSS
+- Story map: add Serve CDD Code In Lanes to the drawio map
+- Serve CDD code in two lanes: main on stable, every other session on dev
+- Validate fix pass: FoldKeys.fromFailure names its factory, SessionFile._sources is an instance operation, SourceView re-exports nothing
+- Source view folds with Monaco, binds VS Code's fold keys, and opens calls as callouts shaded once
+- sessions: main guidance {'version': 51, 'stages': ['discovery', … sessions: main guidance {'version': 52, 'stages': ['discovery', …
+- Docs and story tests follow the clean engineering code fixes
+- Space, tools, scripts: clean engineering code fixes
+- Harness: clean engineering code fixes
+- Practices, patterns, graph: clean engineering code fixes
+- Guidance, annotations, installer: clean engineering code fixes
+- sessions: main guidance {'version': 49, 'stages': ['discovery', … sessions: main guidance {'version': 50, 'stages': ['discovery', …
+- Python story steps invoke the functions they call by name, as well as the operations they call on an object
+- Scenarios: the verb-noun-format note sits below the violations table, not inside it
+- Validate fix pass: Session._narrowed_to is an instance operation; FilesGraph keeps its node filter private
+- Files app graph view filters nodes with the Graph app's node filter, layered on the file list
+- Story tests: choosing verb-noun-format keeps only Process Ticket Archive and Handle Ticket Deletion
+- verb-noun-format: a generic verb is listed for the judgment to decide from its context
+- A graph node filter narrows the nodes of the files listed: session.graph_trees and graph_branch take a node filter
+- Scenarios: verb-noun-format examples open with a generic verb, which the real check breaks
+- A story opens its scenarios across files; markdown links open their sections in place
+- LERN's rules reach only TypeScript nodes: Ticket in ticket.ts carries its Domain tier rules, Ticket in ticket.py none
+- Story tests: a practice turned on in the Files app reaches the chat bar through guidance_selection_after, with no refresh sent
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- Scenarios: a verb-noun-format example that breaks the rule; the chat bar learns of a toggle through guidance_selection_after
+- Scenarios: LERN overlay on TypeScript only; node filters narrow within the file list
+- Graph view opens a node at all its lines, near the top, marked
+- Toggle Practice story tests call session.guidance_selection in each step, not through a helper
+- sessions: file-manager guidance {'stages': ['discovery', 'specification'… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: file-manager guidance {'stages': ['discovery', 'specification'… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- Story tests: turning a practice on or off in the Files app saves it on the session
+- sessions: version-1-refactoring leaves the OSS portal pattern out of its judgment
+- Story test: calls open in place only once the Files app's graph is read
+- Files app graph view opens a relationship group: the practice holds the groups its nodes make
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'implementation…
+- sessions: review-ai-changes-in-files-app text
+- sessions: review-ai-changes-in-files-app name review-ai-changes-in-files-app, title Review AI Changes In Files App, scope feature, workpath harness sessions: review-ai-changes-in-files-app parent file-manager, pulled_out False
+- sessions: file-manager guidance {'stages': [], 'version': 93} sessions: file-manager guidance {'stages': [], 'version': 94} sessions: file-manager guidance {'stages': ['implementation'], 'version'… sessions: file-manager guidance {'stages': ['implementation'], 'version'…
+- sessions: file-manager guidance {'stages': ['discovery'], 'version': 92} sessions: file-manager guidance {'stages': ['discovery'], 'version': 93}
+- sessions: file-manager guidance {'stages': ['discovery', 'implementation… sessions: file-manager guidance {'stages': ['discovery', 'implementation…
+- sessions: version-1-refactoring judges its clean engineering code report
+- Add /backlog: the chat adds a Backlog idea as the board's + does; e2e tier runs the kanban Playwright suite
+- sessions: version-1-refactoring re-validates clean engineering code on its worktree: 192 violations, none of use-intention-revealing-names
+- Graph populate model: set_fact names its fact, as the code does
+- sessions: version-1-refactoring carries main's clean engineering code validate into its log
+- sessions: main chat 6d1032f6-20ce-4099-8508-995d43acc208
+- sessions: version-1-refactoring takes main's latest clean engineering code report
+- sessions: version-1-refactoring guidance {'stages': ['implementation']} sessions: version-1-refactoring guidance {'stages': ['implementation'], 'version'…
+- sessions: version-1-refactoring stage Implementation, stage_mark sessions: version-1-refactoring stage Implementation, stage_mark in-progress
+- sessions: version-1-refactoring stage Specification, stage_mark sessions: version-1-refactoring stage Specification, stage_mark in-progress
+- sessions: version-1-refactoring branch version-1-refactoring, worktree C:\dev\abd-cdd-version-1-refactoring sessions: open version-1-refactoring
+- sessions: version-1-refactoring name version-1-refactoring, title Version 1 refactoring, scope feature sessions: version-1-refactoring keeps version-1-refactoring.md
+- sessions: add Version 1 refactoring to the Backlog
+- Files app keeps Wrap lines beside its look, telling the page when the browser will not
+- Source view scrolls long lines sideways and wraps them on Wrap lines
+- sessions: main guidance {'version': 47, 'stages': ['discovery', … sessions: main guidance {'version': 48, 'stages': ['discovery', …
+- sessions: file-manager guidance {'stages': ['discovery', 'implementation… sessions: file-manager guidance {'stages': ['discovery', 'implementation…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'specification'… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'specification'… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'specification'… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- Merge remote-tracking branch 'origin/main'
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- Merge remote-tracking branch 'origin/main' into claude/nice-lovelace-uujerc
+- Merge remote-tracking branch 'origin/main' into claude/nice-lovelace-uujerc
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: file-manager branch file-manager, worktree C:\dev\abd-cdd-file-manager sessions: open file-manager
+- Release the version /version set instead of raising the major
+- Version v1.1
+- Heavy specs and OSS overlay follow the reshaped graph and installer seams
+- Class-size rule: a property's setter and a cached property are not public behaviour
+- Specs follow the reshaped seams: OSS reads scoped_markdown as a property, the board expects the story map's thin slice and whiteboard outputs
+- Space: round-2 fixes
+- Guidance, installation and catalog: round-2 fixes
+- Practices: round-2 fixes
+- Harness graph core: round-2 fixes
+- Clean engineering model: round-2 fixes
+- Harness rest, tools and scripts: round-2 clean-engineering fixes
+- Clean engineering rules: stop flagging correct code
+- Graph reading spec: a spec member is exempt from whatever the schema requires of an operation
+- Harness rest, space, tools and scripts: fix their clean-engineering-code findings
+- Thin slice: call the increment's own _bullet
+- Stories practice: fix its clean-engineering-code findings
+- Harness guidance, agent tools, installation and catalog generator: fix their clean-engineering-code findings
+- Harness core: fix its clean-engineering-code findings
+- Catalog and patterns: fix their clean-engineering-code findings
+- Practices, actions and context setup: fix their clean-engineering-code findings
+- Clean engineering practice: fix its own clean-engineering-code findings
+- Install only releases from the version badge
+- Clean engineering: optional invokes and members in the schema, harness free of guidance imports, repo no longer imports session
+- sessions: file-manager guidance {'stages': ['discovery', 'specification'… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: file-manager guidance {'stages': ['specification', 'implementa… sessions: file-manager guidance {'stages': ['specification', 'implementa…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager guidance {'stages': ['discovery', 'specification'… sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: file-manager guidance {'stages': ['discovery', 'specification'… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: file-manager guidance {'stages': ['discovery', 'specification'… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- merge claude-whiteboard into main
+- claude-whiteboard: leave session
+- sessions: file-manager handoff
+- Merge branch 'file-manager'
+- sessions: file-manager log
+- Board sub-epics' markdown scenarios generated from their story tests' code
+- Recover Check CDD Server Health In Chat Bar's scenarios from its removed story tests
+- sessions: file-manager validation judgments
+- A listed scenarios markdown file brings in its story map, so a refresh reads it as it is now
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['specification'], 'version':…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['specification'], 'version':… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['specification'], 'version':… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['specification'], 'version':…
+- sessions: file-manager guidance {'stages': ['specification'], 'version':… sessions: file-manager guidance {'stages': ['specification'], 'version':…
+- sessions: file-manager guidance {'stages': ['specification', 'implementa… sessions: file-manager guidance {'stages': ['specification', 'implementa…
+- Merge branch 'file-manager'
+- sessions: file-manager validation judgment
+- Markdown scenario files are named from their map's base; validate takes every session root
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'specification'… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: file-manager guidance {'stages': ['discovery', 'specification'… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'implementation…
+- sessions: file-manager guidance {'stages': ['discovery', 'implementation… sessions: file-manager guidance {'stages': ['discovery', 'implementation…
+- sessions: file-manager guidance {'stages': ['implementation'], 'version'… sessions: file-manager guidance {'stages': ['implementation'], 'version'…
+- Merge branch 'file-manager'
+- sessions: file-manager guidance {'stages': ['specification', 'implementa… sessions: file-manager guidance {'stages': ['specification', 'implementa…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- Stories reads the map from code story tests' folders when code is listed
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: file-manager guidance {'stages': ['discovery', 'specification'… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: file-manager guidance {'stages': ['discovery', 'specification'… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- Merge branch 'file-manager'
+- working_copy_scan_spec: a story map listed in both formats is read once, from its markdown
+- Graph view reads exactly the files the Files app lists, one format per thing: code, then markdown, then diagram
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: file-manager guidance {'stages': ['discovery', 'specification'… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: file-manager guidance {'stages': ['discovery', 'specification'… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: file-manager guidance {'stages': ['discovery', 'specification'… sessions: file-manager guidance {'stages': ['discovery', 'specification'… sessions: file-manager guidance {'stages': ['discovery'], 'version': 41} sessions: file-manager guidance {'stages': ['discovery'], 'version': 42}
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager guidance {'stages': ['discovery', 'specification'… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- sessions: file-manager guidance {'stages': ['discovery', 'specification'… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- Session opening tells the AI to set code and story-test roots apart, each as local as it can
+- sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager guidance {'stages': ['discovery', 'implementation…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'implementation…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'implementation…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'implementation…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'implementation…
+- sessions: file-manager keeps its story map in .context and its story tests in story_tests/review-generated-work-in-file-viewer
+- Merge branch 'file-manager'
+- Stories fidelities can take one epic's folder in story_tests as their root
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'implementation…
+- Session file manager reads every folder a practice's fidelities write to, story_tests among them
+- Chat bar Fix runs its slash command with command.run instead of prompt.submit
+- Diagram chip off-and-on examples read the chips the call answers, one server call fewer each, inside the 100 ms unit budget
+- Merge remote-tracking branch 'origin/main' into claude-whiteboard
+- Merge remote-tracking branch 'origin/main' into file-manager
+- sessions: claude-whiteboard stage Implementation, stage_mark sessions: claude-whiteboard stage Implementation, stage_mark in-progress
+- Root story map drawn in drawio and whiteboard (generate format=drawio,whiteboard): 515 nodes, both read back as the markdown's map
+- sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['discovery'], 'version': 52} sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['discovery'], 'version': 53} sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['discovery'], 'version': 54} sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['discovery'], 'version': 55} sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['discovery'], 'version': 56} sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['discovery'], 'version': 57}
+- sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['discovery'], 'version': 50}
+- sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['discovery'], 'version': 49}
+- sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['discovery'], 'version': 48}
+- sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['discovery'], 'version': 46} sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['discovery'], 'version': 47}
+- merge claude-whiteboard into main
+- main: work kept before merging claude-whiteboard
+- A chip of several default formats does them all: the diagram chip chooses, sends and clears drawio and whiteboard together, and an action works a fidelity once in each listed format it writes, in turn
+- sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['discovery'], 'version': 45}
+- sessions: claude-whiteboard guidance {'stages': ['discovery'], 'version': 43} sessions: claude-whiteboard guidance {'stages': ['discovery'], 'version': 44}
+- sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['discovery', 'specification'… sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['discovery', 'specification'…
+- sessions: claude-whiteboard guidance {'stages': ['discovery', 'specification'… sessions: claude-whiteboard guidance {'stages': ['discovery', 'specification'… sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['discovery', 'specification'…
+- merge claude-whiteboard into main
+- main: work kept before merging claude-whiteboard
+- claude-whiteboard: work taken to main
+- Project default formats: .context/config.json default_formats chooses a fidelity's formats until its session chooses (practice.fidelity, then practice, then *; default = the fidelity's own); this repo defaults every diagram to drawio and whiteboard, UX keeps its own, mockups to the design canvas
+- sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['specification'], 'version':…
+- sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['specification'], 'version':… sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['specification'], 'version':…
+- Story map in the root .context, scenarios and story tests in story_tests/<epic>/<sub-epic>/
+- sessions: claude-whiteboard guidance {'stages': ['specification'], 'version':… sessions: claude-whiteboard guidance {'stages': ['specification'], 'version':…
+- sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['discovery', 'specification'…
+- sessions: claude-whiteboard guidance {'stages': ['discovery', 'specification'… sessions: claude-whiteboard guidance {'stages': ['discovery', 'specification'…
+- sessions: claude-whiteboard guidance {'stages': ['discovery', 'implementation… sessions: claude-whiteboard guidance {'stages': ['discovery', 'implementation…
+
+## 2026-11-15
+
+Summary: the chat bar and Files app learned to follow the session's guidance selection, alongside graph view story tests, a compact whiteboard thin slice, TDD practice overlay rules and release-cadence fixes.
+
+- Graph view story tests: Switch and Explore sub-epics in story form; LoadProgressView split
+- sessions: file-manager guidance {'stages': ['discovery', 'implementation… sessions: file-manager guidance {'stages': ['discovery', 'implementation…
+- Files app graph view: Graph app tree look, load steps, folder nodes, calls across files, Stories root
+- sessions: file-manager guidance {'stages': [], 'version': 27} sessions: file-manager guidance {'stages': [], 'version': 28} sessions: file-manager guidance {'stages': ['implementation'], 'version'… sessions: file-manager guidance {'stages': ['implementation'], 'version'…
+- sessions: file-manager guidance {'stages': ['specification'], 'version':… sessions: file-manager guidance {'stages': ['specification'], 'version':…
+- CE model card: name the shared ModuleLayout and ClassView, and that board readers own what they read (shape-classes-around-resources, already clear in code)
+- Merge branch 'file-manager'
+- sessions: claude-whiteboard guidance {'stages': ['discovery', 'implementation… sessions: claude-whiteboard guidance {'stages': ['discovery', 'implementation… sessions: claude-whiteboard guidance {'stages': ['implementation'], 'version'… sessions: claude-whiteboard guidance {'stages': ['implementation'], 'version'…
+- sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['discovery', 'specification'… sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['discovery', 'specification'…
+- Whiteboard title labels write no wrap (a wrap of 0 set every word on its own line) and stand clear of the subtitle; board files regenerated
+- CE and DDD whiteboards drawn with drawio's layout: ModuleLayout and ClassView move into the diagram layer (drawio output byte-identical); whiteboard modules view nests sections, class view routes arrows with bends and wraps module pages in rows; DDD whiteboard map and domain model registered
+- Whiteboard thin slice as drawio draws it: square story cards, the increment's name in a label beside its lane; an update clears a field the element no longer has
+- Drawio, Miro and whiteboard stories share their placement: LaidOutStory and LaidOutEpic hold the story column and bar layout each format kept its own copy of; every format draws exactly what it did
+- Thin slice layout shared: DiagramStoryModel owns the columns, lanes and widths drawio drew privately; drawio's output is unchanged and the whiteboard draws the same layout
+- Whiteboard writes delete before they set or update, so a board people watch while an update lands never shows the old drawing under the new one
+- Whiteboard thin slice compact: one lane per increment stacked below each other, stories in map order 12 to a row (2252 wide, not 68000); a split block's words show on its first piece only
+- Thin slice drawio re-rendered as increment lanes from the merged thin-slice.md
+- Merge main: the thin slice is the story map's thin_slice format, drawn as increment lanes; the whiteboard draws it the same way (save_thin_slice, load_thin_slice), each increment a lane below the one before
+- sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['discovery', 'specification'…
+- Story map: condense the Author Story Maps epic to 17 stories with their acceptance criteria in the source, as merged on the whiteboard; thin slice follows; re-render both drawio
+- Story map: carry the whiteboard edits into the source — merge the Story UI save stories, the AI chat stories, and Expand Story Details, Build Map Structure and Rearrange Map By Dragging into one sub-epic; re-render story-map and thin-slice drawio
+- Whiteboard draws a block wider than 8000 as pieces side by side and reads them back as one, because the Whiteboard page draws a wider block at its default size
+- Release v1.0.0
+- Graph build heavy spec: the two-second answer check under five builds is skipped, by the user's choice, so it does not hold a release
+- Whiteboard story map sized for a board: 160x112 cards 24 apart with the actor in italics on the card, bars with a gap between them; a spec keeps story cards from overlapping
+- Thin slice: the board files, ticket and editor app increments marked built after Built Today, and File Manager Complete holding the Review Generated Work In File Viewer stories
+- Thin slice: drawn as one lane per increment, each sub-epic widened to hold its fullest lane's stories on one row; the thin slice is the story map's own thin_slice format, as a scenario realization is
+- Thin slice: drawio drawn as increment lanes across the story map's epics, through save_thin_slice
+- Heavy specs: the repo toolset's push and merge tools, the health report's test runs, a sketch on a project of its own, and the Story UI installed before it is built
+- Thin slice: drawio re-rendered from thin-slice.md
+- sessions: main guidance {'version': 34, 'stages': ['discovery', … sessions: main guidance {'version': 35, 'stages': ['discovery', … sessions: main guidance {'version': 35, 'stages': ['discovery']} sessions: main guidance {'version': 36, 'stages': ['discovery']}
+- Whiteboard store writes match ArtifactData batch entries and pin read versions; Block holds one Box, elements name their role, and Whiteboard.from_text reads a board
+- Stories: the story map's thin slice is listed beside it in the Files app, through a fidelity's also_lists, which generate never writes
+- Fix the code validate hits on the whiteboard channel: Box and Block in harness/whiteboard, instance batches, smaller writes; the drawio and whiteboard story maps share DiagramStoryCell and place_cells; class cards read through _BoardText and _Grid
+- Files app: a practice the project's config puts at the repository's own folder also lists its documents from every .context folder
+- Specs that list a fidelity's formats now expect the whiteboard beside drawio
+- Files app: main lists a practice's documents from every .context folder, such as harness/.context/stories/story-map.md, as its patterns already find tests anywhere
+- Files app graph view: shorter start and entry view, typed select
+- sessions: main outputs {'stories': {}}
+- Clean Engineering whiteboard format: WhiteboardCleanEngineeringModel draws the modules view and the class view on a board and reads them back; take_arrow moves from DrawIOClass to DiagramClass so both channels share it
+- Files app graph view: Switch Files App Between Files And Graph
+- Restore the stories channel example outputs a spec run rewrote; only the new to-whiteboard outputs belong to this ticket
+- Stories whiteboard format: WhiteboardStoryModel draws epics, sub-epics, stories and actors on a board and reads them back by position; registered beside drawio and miro, in the diagram group, and in the story channel spec
+- test_runs: a run records HEAD instead of taking over a run left running on another commit
+- harness/whiteboard: Whiteboard, its elements, keep_places and the store writes that update a board, with its spec
+- test_runs: a character the console cannot write shows as ? instead of ending the run
+- Whiteboard modules and behavior: harness/whiteboard card, practice whiteboard packages, and the BDD behavior specs for the board, the story map and the class model
+- sessions: release-cadence moves to _complete sessions: close release-cadence
+- Story map: name each whiteboard practice story after its mechanic, so validate's branch-on-mechanical-uniqueness passes
+- tdd-practice: leave session
+- merge tdd-practice into main
+- main: work kept before merging tdd-practice
+- Story map: Draw Practice Models On Claude Whiteboard epic, the whiteboard as a channel beside drawio and miro
+- tdd-practice: generate instructions for stories-acceptance-tests, captured to check the TDD rules reach them
+- sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['discovery', 'specification'…
+- sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['discovery', 'specification'…
+- sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['discovery', 'specification'…
+- sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['discovery', 'specification'…
+- sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['discovery', 'specification'…
+- sessions: claude-whiteboard guidance {'stages': ['discovery', 'specification'… sessions: claude-whiteboard guidance {'stages': ['discovery', 'specification'…
+- sessions: claude-whiteboard guidance {'stages': ['discovery', 'specification'… sessions: claude-whiteboard guidance {'stages': ['discovery', 'specification'…
+- sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['discovery'], 'version': 16} sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['discovery'], 'version': 17}
+- sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['discovery'], 'version': 15}
+- sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['discovery'], 'version': 13} sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['discovery'], 'version': 14}
+- sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['discovery'], 'version': 11} sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['discovery'], 'version': 12}
+- sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html']}}… sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html'], … sessions: claude-whiteboard guidance {'stages': ['discovery'], 'version': 10}
+- sessions: claude-whiteboard guidance {'stages': ['discovery'], 'version': 8} sessions: claude-whiteboard guidance {'stages': ['discovery'], 'version': 9}
+- sessions: claude-whiteboard guidance {'stages': ['discovery', 'implementation… sessions: claude-whiteboard guidance {'stages': ['discovery', 'implementation…
+- sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html']}}… sessions: claude-whiteboard guidance {'stages': ['discovery', 'specification'…
+- sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html', '… sessions: claude-whiteboard guidance {'stages': ['discovery', 'specification'…
+- sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html']}}… sessions: claude-whiteboard guidance {'stages': ['discovery', 'specification'…
+- sessions: claude-whiteboard practices {'ux': {'formats': {'mockup': ['html', '… sessions: claude-whiteboard guidance {'stages': ['discovery', 'specification'…
+- sessions: claude-whiteboard guidance {'stages': ['discovery', 'specification'… sessions: claude-whiteboard guidance {'stages': ['discovery', 'specification'…
+- sessions: claude-whiteboard guidance {'stages': ['discovery']} sessions: claude-whiteboard guidance {'stages': ['discovery'], 'version': 1}
+- sessions: claude-whiteboard branch claude-whiteboard, worktree C:\dev\abd-cdd-claude-whiteboard sessions: open claude-whiteboard
+- sessions: claude-whiteboard name claude-whiteboard, title claude-whiteboard, scope feature sessions: save before opening claude-whiteboard
+- Ignore the saved graph in closed sessions: .sessions/_complete/** re-included it, and release-2's was 116 MB
+- Merge remote-tracking branch 'origin/release-cadence'
+- sessions: release-2 moves to _complete sessions: close release-2
+- merge release-2 into main
+- main: work kept before merging release-2
+- sessions: file-manager guidance {'stages': ['discovery', 'specification'… sessions: file-manager guidance {'stages': ['discovery', 'specification'…
+- Files app references follow its move to harness/files_app, and its story tests to space/session
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery'], 'version': 25}
+- sessions: file-manager guidance {'stages': ['discovery'], 'version': 23} sessions: file-manager guidance {'stages': ['discovery'], 'version': 24}
+- sessions: file-manager guidance {'stages': ['discovery', 'implementation… sessions: file-manager guidance {'stages': ['discovery', 'implementation…
+- Merge file-manager: the Files app moves to harness/files_app
+- merge release-2 into main
+- main: work kept before merging release-2
+- Merge test-speed into release-2: faster specs (guidance source files checked at most once a second); its format fix was already on main as _is_format_given
+- sessions: release-2 log
+- Chat bar: repo and session tips show the name alone
+- Chat bar: repo and session buttons as icons with their names on hover, repo\branch before the path under the chat, flat grey bug for debug
+- sessions: main guidance {'version': 15, 'stages': ['discovery', … sessions: main guidance {'version': 16, 'stages': ['discovery', …
+- Chat bar: realization format chip shows a glyph, and any unlisted format its first and last letter, not its whole name
+- Chat bar: brand-coloured flag for the debug button in place of the pink bug emoji
+- Files app moves to harness/files_app, beside the Graph app it will take in
+- sessions: main guidance {'version': 12, 'stages': ['discovery', … sessions: main guidance {'version': 13, 'stages': ['discovery', …
+- TDD graph rules and YAML: the graph reads a supplement's overlay, schema and rules as it does a pattern's
+- merge release-2 into main
+- main: work kept before merging release-2
+- Version v2.0
+- Merge branch 'file-manager'
+- merge release-2 into main
+- main: work kept before merging release-2
+- PracticeSupplement read on its own holds every fidelity-named section: its instructions, checked rules and every_rule
+- No generic shared rules in a supplement: each rule section names the fidelities it applies to
+- Files app: FilesPage keeps reading and showing the files; the right-click menu (FileMenu, FileBrowser), the chat's context (ChatContext), and toasts and failures (FilesNotices) are classes of their own, the toggles called on page.guidance. The TypeScript and Java reader records a method declared private, which keep-classes-single-responsibility leaves out of the public budget
+- sessions: release-cadence stage Implementation, stage_mark sessions: release-cadence stage Implementation, stage_mark done
+- sessions: release-cadence pulled_out True
+- sessions: integrate-practice-content-editor-apps moves to _complete sessions: close integrate-practice-content-editor-apps
+- Files app: the file bar's divider runs the window's height, so it can be dragged wherever the list ends
+- Files app: drag the line between the file bar and the open file to resize the bar, 160 to 900 pixels, remembered in this browser (story Resize File Bar)
+- sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': ['specification', 'implementa… sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': ['specification', 'implementa… sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['specification', 'implementa… sessions: release-2 guidance {'stages': ['specification', 'implementa… sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['specification', 'implementa… sessions: release-2 guidance {'stages': ['specification', 'implementa…
+- sessions: release-2 stage Implementation, stage_mark sessions: release-2 stage Implementation, stage_mark in-progress
+- sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': ['specification', 'implementa…
+- sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['specification', 'implementa…
+- sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['specification', 'implementa…
+- merge release-2 into main
+- main: work kept before merging release-2
+- sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['specification', 'implementa…
+- Merge main into release-2: story-map.drawio rendered again from the merged story map
+- main: work kept before merging release-2
+- Files app: Add to context on a file's right-click menu and beside Add comment for selected lines puts the file, or the lines quoted, in the opening chat's prompt box for its next prompt (Session.add_to_chat_context; story Add File Or Selection To Chat Context)
+- Scenarios: Add File Or Selection To Chat Context, a file, a selection, and a chat not connected; validated
+- Story map: Add File Or Selection To Chat Context under Review Files With Comments
+- sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['specification', 'implementa… sessions: release-2 guidance {'stages': ['specification', 'implementa…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager guidance {'stages': ['implementation'], 'version'…
+- sessions: file-manager guidance {'stages': ['implementation'], 'version'… sessions: file-manager guidance {'stages': ['implementation'], 'version'…
+- Story map: Add File Or Selection To Chat Context under Review Files With Comments
+- sessions: file-manager guidance {'stages': ['discovery', 'specification'… sessions: file-manager guidance {'stages': ['discovery', 'specification'… sessions: file-manager guidance {'stages': ['specification', 'implementa… sessions: file-manager guidance {'stages': ['specification', 'implementa…
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery', 'implementation… sessions: file-manager practices {'stories': {'formats': {'story_map': []… sessions: file-manager guidance {'stages': ['discovery', 'implementation…
+- sessions: file-manager guidance {'stages': ['discovery', 'implementation… sessions: file-manager guidance {'stages': ['discovery', 'implementation…
+- Chat bar: a debug button after handoff captures what went wrong, then asks whether to fix the bug or request help; help drafts an email to the CDD maintainer, a fix runs in a sub-agent and pushes to main or opens a pull request where the person cannot push; Fix buttons take the same fix (Session.debug_session)
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery'], 'version': 15}
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery'], 'version': 11} sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery'], 'version': 12} sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery'], 'version': 13} sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery'], 'version': 14}
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery'], 'version': 10}
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery'], 'version': 9}
+- Files app: right-click a file or folder to open it in the system's file browser, Explorer, Finder or the desktop's file manager, named for the system; the Files server starts it through /reveal (story Open File In File Browser)
+- Files app: DDD lists only a domain's files: code with a DDD stereotype, a building block's name only in a bounded context, an aggregate or a folder with a stereotyped class, or a domain model or bounded context by name; a DDD file pattern counts only for such a file
+- Files app: All session files and This session are icons, ▤ and Δ with its count, their names and what they list in the hover text
+- sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': ['implementation'], 'version'…
+- sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['implementation'], 'version'… sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['implementation'], 'version'…
+- sessions: release-2 guidance {'stages': ['specification'], 'version':… sessions: release-2 guidance {'stages': ['specification'], 'version':… sessions: release-2 guidance {'stages': [], 'version': 130} sessions: release-2 guidance {'stages': [], 'version': 131} sessions: release-2 guidance {'stages': ['implementation'], 'version'… sessions: release-2 guidance {'stages': ['implementation'], 'version'…
+- sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- TDD: run only the change's specs in the foreground; the whole unit tier runs in a sub-task while the person tests
+- Files app: All session files lists every file of the fidelities selected, not only the session's; a fidelity holds a file one of its outputs names, or code under its module folders its practice claims (DDD: a building block by stereotype or name, or a domain model or bounded context); a pattern that finds no file lists nothing
+- sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['discovery', 'implementation… sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['discovery', 'implementation… sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['discovery', 'implementation…
+- sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['discovery', 'implementation…
+- sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['discovery', 'implementation… sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['discovery', 'implementation…
+- sessions: release-2 guidance {'stages': ['discovery', 'implementation… sessions: release-2 guidance {'stages': ['discovery', 'implementation…
+- sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- Files app: All session files and This session sit first along the top, before the stage filters, orange while selected as the stages are
+- sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['discovery', 'implementation…
+- sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['discovery', 'implementation…
+- sessions: release-2 guidance {'stages': ['discovery', 'implementation… sessions: release-2 guidance {'stages': ['discovery', 'implementation…
+- Files app: a .drawio file opens in the draw.io editor in the file view, beside the file list, with a ↗ link to a tab of its own; the app's browser pane opens no new tab, so a link to one took the Files app's place (story Open Diagram In Files App)
+- Kanban stories: a listed file carries its format and fidelities, as FileEntry answers them
+- sessions: release-2 guidance {'stages': ['discovery'], 'version': 100… sessions: release-2 guidance {'stages': ['discovery'], 'version': 101…
+- sessions: release-2 guidance {'stages': [], 'version': 99} sessions: release-2 guidance {'stages': [], 'version': 100}
+- sessions: release-2 guidance {'stages': ['discovery'], 'version': 98} sessions: release-2 guidance {'stages': ['discovery'], 'version': 99}
+- sessions: release-2 guidance {'stages': [], 'version': 97} sessions: release-2 guidance {'stages': [], 'version': 98}
+- sessions: release-2 guidance {'stages': ['discovery'], 'version': 96} sessions: release-2 guidance {'stages': ['discovery'], 'version': 97}
+- sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': [], 'version': 96}
+- sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': ['discovery'], 'version': 94}
+- sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': ['discovery'], 'version': 93}
+- sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': ['discovery'], 'version': 92}
+- Guidance selection: stages and practices translate to fidelities in one place, the session's, a filter with nothing selected filtering nothing; the chat bar's dots and actions and the Files app all read it (fidelities_listed folded into fidelities)
+- Files app: a filter with nothing selected filters nothing; no stage lists every stage, no practice every practice and the files of no fidelity, which show only then (guidance selection fidelities_listed)
+- Files app: a file no fidelity declares, such as a practice's example, lists under All session files only while every practice is on, so Stories alone shows Stories' files
+- sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': ['discovery'], 'version': 91}
+- sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': ['discovery'], 'version': 89} sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['discovery'], 'version': 90}
+- sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['discovery'], 'version': 88}
+- sessions: release-2 guidance {'stages': ['discovery'], 'version': 86} sessions: release-2 guidance {'stages': ['discovery'], 'version': 87}
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery'], 'version': 8}
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery'], 'version': 5} sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery'], 'version': 6} sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery'], 'version': 7}
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery'], 'version': 4}
+- merge release-2 into main
+- main: work kept before merging release-2
+- Merge branch 'release-2' into file-manager
+- sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': ['discovery', 'implementation…
+- sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': ['discovery', 'implementation…
+- merge tdd-practice into main
+- main: work kept before merging tdd-practice
+- release-cadence: a run starts inside a job that refuses breakaway, a run that will not start is abandoned and due again, and one process at a time looks at what is due
+- TDD supplement: testing guidance and rules on Clean Engineering code, Stories acceptance tests, BDD development and DDD tactics, on in every session
+- Merge remote-tracking branch 'origin/release-2' into release-cadence
+- sessions: main guidance {'version': 8, 'stages': ['discovery', '… sessions: main guidance {'version': 9, 'stages': ['discovery', '…
+- PracticeSupplement: guidance that supplements other practices' fidelities, always on, with graph rules shared across practices
+- Files app: All session files lists every file under the session root, This session the ones the branch changed; stages, practices and formats narrow both, by each file's format and the fidelities it belongs to (ticket.root_files)
+- release-cadence: heavy spec releases a throwaway repository with real git, asks the real gh, and runs test.ps1 in the background
+- merge file-manager into main
+- main: work kept before merging file-manager
+- sessions: file-manager session.json resolved after merging main, with the Stories root
+- Merge main into file-manager
+- main: work kept before merging file-manager
+- merge release-2 into main
+- main: work kept before merging release-2
+- release-cadence: /release, a major release never on red, tagged and published with notes through gh
+- Graph model: SharedPracticeGraphRule's properties render in the drawio
+- PracticeSupplement holds the set's own FidelityGuidance objects; shared rules key node types by practice class
+- release-cadence: health band shows the heavy and e2e runs, and toasts a new failure once
+- release-cadence: heavy hourly and e2e daily on main, started when the health report is read, results in the cdd home
+- Draw the guidance and graph class models, PracticeSupplement included
+- sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice guidance {'stages': ['specification', 'implementa…
+- sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice guidance {'stages': ['specification', 'implementa…
+- Merge branch 'release-2' into tdd-practice
+- Merge branch 'release-2' into release-cadence
+- Merge branch 'release-2' into file-manager
+- Model PracticeSupplement: guidance that supplements other practices' fidelities, always on, with rules shared across practices
+- sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': ['discovery', 'implementation…
+- sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice guidance {'stages': ['specification', 'implementa… sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice guidance {'stages': ['specification', 'implementa…
+- sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice guidance {'stages': ['specification', 'implementa…
+- sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice guidance {'stages': ['specification', 'implementa…
+- sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice guidance {'stages': ['implementation'], 'version'… sessions: tdd-practice guidance {'stages': ['specification', 'implementa… sessions: tdd-practice guidance {'stages': ['specification', 'implementa…
+- sessions: tdd-practice guidance {'stages': ['implementation'], 'version'… sessions: tdd-practice guidance {'stages': ['implementation'], 'version'…
+- sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice guidance {'stages': ['specification', 'implementa…
+- Chat bar: a practice that is on shows underlined on a light tint again, so on and off read apart
+- sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice guidance {'stages': ['specification', 'implementa…
+- sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice guidance {'stages': ['specification', 'implementa…
+- sessions: tdd-practice guidance {'stages': ['specification', 'implementa… sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice guidance {'stages': ['specification', 'implementa… sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice guidance {'stages': ['specification', 'implementa…
+- sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['…
+- sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice guidance {'stages': ['specification', 'implementa… sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice guidance {'stages': ['specification', 'implementa…
+- sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice guidance {'stages': ['specification', 'implementa…
+- sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice guidance {'stages': ['specification', 'implementa…
+- sessions: tdd-practice practices {'stories': {'formats': {'story_map': ['… sessions: tdd-practice guidance {'stages': ['specification', 'implementa…
+- sessions: tdd-practice guidance {'stages': ['specification', 'implementa… sessions: tdd-practice guidance {'stages': ['specification', 'implementa…
+- sessions: tdd-practice guidance {'stages': ['implementation'], 'version'… sessions: tdd-practice guidance {'stages': ['implementation'], 'version'…
+- sessions: tdd-practice guidance {'stages': ['specification', 'implementa… sessions: tdd-practice guidance {'stages': ['specification', 'implementa…
+- sessions: release-cadence branch release-cadence, worktree C:\dev\abd-cdd-release-cadence sessions: open release-cadence
+- sessions: release-cadence name release-cadence, title release-cadence, scope feature, parent tdd-practice
+- tdd-practice: run guidance matches the cadence
+- tdd-practice: test cadence (unit every pass, heavy hourly, e2e daily and per release) and the release command it needs
+- mcp_daemon_spec: fake the ping at the address boundary; the real ping moves to mcp_daemon_heavy_spec
+- tdd-practice: optimizing with a fake points to heavy coverage
+- tdd-practice: every stubbed boundary has heavy coverage; heavy examples keep a stubbed twin
+- tdd-practice: an example moved to heavy keeps a stubbed twin in unit
+- tdd-practice: slow tests are optimized first; moving to heavy is the last resort
+- sessions: main guidance {'version': 2, 'stages': ['specification… sessions: main guidance {'version': 3, 'stages': ['specification…
+- Chat bar health: icons only, coloured by state, with a hover card naming each part; the MCP host and its tools are one part; the icons sit at the top right of the session card, and the green panel shows only when something needs a person
+- sessions: integrate-practice-content-editor-apps stage Implementation, stage_mark sessions: integrate-practice-content-editor-apps stage Implementation, stage_mark in-progress
+- sessions: open-app-from-health-panel moves to _complete sessions: close open-app-from-health-panel
+- sessions: optimize-unit-tests moves to _complete sessions: close optimize-unit-tests
+- tdd-practice: re-measured unit tier on an idle machine (20 s); tier budget 25 s
+- Sessions: switching tells the chat to point default output roots at existing artifacts
+- sessions: file-manager outputs {'stories': {'root': '.context/stories'}…
+- Files app: a link naming no session asks cdd nothing and says to open it from the chat bar, instead of failing on /session//show
+- Board: a second press on a shown backlog card collapses it
+- sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager practices {'stories': {'formats': {'story_map': ['… sessions: file-manager guidance {'stages': ['discovery'], 'version': 2}
+- sessions: review-work-in-board-files moves to _complete sessions: close review-work-in-board-files
+- sessions: edit Sync Design Canvas With Production's text in the Backlog
+- sessions: test-speed moves to _complete sessions: close test-speed
+- sessions: test-speed stage Implementation, stage_mark done
+- sessions: review-work-in-board-files stage Implementation, stage_mark done
+- sessions: open-app-from-health-panel stage Implementation, stage_mark done
+- sessions: file-manager guidance {'stages': ['discovery']} sessions: file-manager guidance {'stages': ['discovery'], 'version': 1}
+- main: work kept before merging release-2
+- merge release-2 into main
+- main: work kept before merging release-2
+- Merge to main commits the main clone's own changes first, such as the session log the call itself writes there, so git no longer refuses the merge
+- tdd-practice: speed budgets from today's measured unit run (29 s wall, ~1 s slowest file)
+- release-2 session log
+- sessions: release-2 guidance {'stages': ['implementation'], 'version'… sessions: release-2 guidance {'stages': ['implementation'], 'version'… sessions: release-2 guidance {'stages': ['discovery', 'implementation… sessions: release-2 guidance {'stages': ['discovery', 'implementation… sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 guidance {'stages': ['specification', 'implementa… sessions: release-2 guidance {'stages': ['specification', 'implementa…
+- tdd-practice: test speed rules for the TDD overlay (100 ms example, 20 s file, unit tier wall clock, parallel runs)
+- A ticket started in a folder shows that folder as its workpath in its own worktree; the Story UI page mount moves to a heavy spec
+- tdd-practice: not always test first; every practice's guidance follows the two flows
+- tdd-practice: TDD guidance leads with two flows (first boundary crossing runs end to end first; known area tests first); BDD process rules to backlog
+- tdd-practice: shared overlay rules span BDD and Stories; sketch the code a classic overlay lacks
+- tdd-practice: tidy open decision 2
+- tdd-practice: the overlay's shared rules are the test tiers BDD and Stories have in common
+- tdd-practice: overlay sketch drops rules Stories and BDD already have
+- Story UI spec posts an example cell edit as example.edit_field takes it: field and text
+- tdd-practice: overlay rules check output only; process moves to guidance
+- Graph app tests expect conforms-to-schema among each node type's rules, as the recorded filter answers give it
+- tdd-practice: overlay sketch gives every decorated practice its own rules folder
+- tdd-practice: the TDD overlay lives with the practices, not the patterns
+- sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- Files app: All session files or This session, both filtered by the stages, practices and formats selected; session.root_files deleted
+- sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 practices {'clean_engineering': {'enabled': False,… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 practices {'clean_engineering': {'enabled': False,…
+- sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 guidance {'stages': ['specification', 'implementa… sessions: release-2 guidance {'stages': ['specification', 'implementa…
+- sessions: file-manager branch file-manager, worktree C:\dev\abd-cdd-file-manager sessions: open file-manager
+- sessions: file-manager name file-manager, title file-manager, scope feature, workpath harness sessions: save before opening file-manager
+- tdd-practice: sketch of the TDD overlay, its TOC and rule names
+- cdd connection rides out a server restart: a call nothing answered is sent once more; one cut off while answered fails saying so
+- Merge origin/main into release-2: the file viewer stories are back on the main map
+- File search walks each folder once and shares its files for three seconds: fifteen fidelities' lists drop from 5.3 s to 1.3 s
+- Graph page reads an open entry's branch whenever its children were left out
+- tdd-content: practice markdown reaches the agent through MCP tools and skills; only testing-approach.md and personas are not delivered
+- Graph docs: explorer_trees sends one level, explorer_branch the next
+- Faster file lists: the Files app lists every fidelity in one call (ticket.fidelity_files), the branch's changed files are asked of git once and shared for three seconds, and a waiting read of the guidance selection sleeps until woken
+- Story map: file viewer stories back on the main map, with the Files app graph view
+- Graph explorer sends one level of the tree and reads the next when a person opens an entry
+- Files app's This session / All files: All files lists every file and folder under the session's root with no filtering, to review older work (Session.root_files)
+- sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- Files app shows folders by default, every folder open; the bar keeps the folders a person closed, so a filter change no longer resets them
+- sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['specification'], 'version':… sessions: release-2 guidance {'stages': ['specification'], 'version':…
+- sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['specification'], 'version':… sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['specification'], 'version':…
+- Files app says 'not generated yet' beside a file a fidelity declares but no one has written, not only on hover
+- sessions: release-2 guidance {'stages': ['specification'], 'version':… sessions: release-2 guidance {'stages': ['specification'], 'version':…
+- sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 guidance {'stages': [], 'version': 40} sessions: release-2 guidance {'stages': [], 'version': 41} sessions: release-2 guidance {'stages': ['discovery'], 'version': 41} sessions: release-2 guidance {'stages': ['discovery'], 'version': 42}
+- sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 guidance {'stages': ['discovery'], 'version': 37} sessions: release-2 guidance {'stages': ['discovery'], 'version': 38} sessions: release-2 guidance {'stages': [], 'version': 38} sessions: release-2 guidance {'stages': [], 'version': 39} sessions: release-2 guidance {'stages': ['discovery'], 'version': 39} sessions: release-2 guidance {'stages': ['discovery'], 'version': 40}
+- Files app heads its page with the repository, the branch, and the session's root, which Session.show now sends
+- sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 guidance {'stages': ['discovery'], 'version': 32} sessions: release-2 guidance {'stages': ['discovery'], 'version': 33} sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['discovery'], 'version': 34}
+- sessions: release-2 guidance {'stages': [], 'version': 31} sessions: release-2 guidance {'stages': [], 'version': 32}
+- sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 guidance {'stages': ['discovery'], 'version': 30} sessions: release-2 guidance {'stages': ['discovery'], 'version': 31}
+- sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 guidance {'stages': ['discovery'], 'version': 22} sessions: release-2 guidance {'stages': ['discovery'], 'version': 23} sessions: release-2 guidance {'stages': [], 'version': 23} sessions: release-2 guidance {'stages': [], 'version': 24} sessions: release-2 guidance {'stages': ['discovery'], 'version': 24} sessions: release-2 guidance {'stages': ['discovery'], 'version': 25}
+- sessions: release-2 guidance {'stages': ['discovery', 'implementation… sessions: release-2 guidance {'stages': ['discovery', 'implementation…
+- sessions: release-2 guidance {'stages': ['discovery', 'implementation… sessions: release-2 guidance {'stages': ['discovery', 'implementation… sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 guidance {'stages': ['implementation'], 'version'… sessions: release-2 guidance {'stages': ['implementation'], 'version'…
+- sessions: release-2 guidance {'stages': ['discovery', 'implementation… sessions: release-2 guidance {'stages': ['discovery', 'implementation…
+- sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['implementation'], 'version'… sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['implementation'], 'version'…
+- sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 guidance {'stages': ['implementation'], 'version'…
+- sessions: release-2 guidance {'stages': [], 'version': 9} sessions: release-2 guidance {'stages': [], 'version': 10} sessions: release-2 guidance {'stages': ['implementation'], 'version'… sessions: release-2 guidance {'stages': ['implementation'], 'version'…
+- sessions: release-2 guidance {'stages': ['discovery'], 'version': 8} sessions: release-2 guidance {'stages': ['discovery'], 'version': 9}
+- sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 guidance {'stages': ['discovery'], 'version': 6} sessions: release-2 guidance {'stages': ['discovery'], 'version': 7}
+- sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 guidance {'stages': ['discovery', 'specification'…
+- sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 guidance {'stages': ['discovery', 'specification'… sessions: release-2 guidance {'stages': ['discovery'], 'version': 4} sessions: release-2 guidance {'stages': ['discovery'], 'version': 5}
+- sessions: release-2 guidance {'stages': ['discovery', 'implementation… sessions: release-2 guidance {'stages': ['discovery', 'implementation…
+- sessions: release-2 guidance {'stages': ['implementation']} sessions: release-2 guidance {'stages': ['implementation'], 'version'…
+- sessions: main practices {'stories': {'formats': {'story_map': ['… sessions: main guidance {'version': 1}
+- Merge remote-tracking branch 'origin/main' into release-2
+- sessions: tdd-practice guidance {'stages': ['specification']} sessions: tdd-practice guidance {'stages': ['specification'], 'version':…
+- Chat bar and Files app follow the session's guidance selection: one waiting read each, a press drawn at once and sent as one update, older answers ignored
+- Tickets drop on Complete from any stage; leftover session folders stay off the board
+- Session holds one guidance selection: stages, practices and formats selected, the fidelities they cover, and a version every change raises
+- sessions: release-2 practices {'clean_engineering': {'enabled': True, …
+- sessions: release-2 practices {'clean_engineering': {'enabled': True, …
+- cdd holds each selected fidelity and each shown stage once, however often a page names it
+- Graph inventory leaves the trees to explorer_trees; the cdd connection reads a long answer stream in linear time and fails on an event it cannot read
+- sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 practices {'clean_engineering': {'enabled': True, …
+- sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 practices {'clean_engineering': {'enabled': True, …
+- Stage, practice and format buttons redraw the moment they are pressed, on the chat bar and in the Files app; cdd's answer then replaces them and the file list follows
+- sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 practices {'clean_engineering': {'enabled': True, …
+- Format chips read the same on the chat bar and in the Files app: both read and choose them for the fidelities the dots show, the shown stages' fidelities of the practices turned on
+- sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 practices {'clean_engineering': {'enabled': True, …
+- Chat bar stage buttons are one fixed width, icon centred, a gap apart: the desktop draws stage icons wider than their measured column
+- Chat bar shows one dot per practice for the fidelities of every stage shown, listed on hover
+- Chat bar shows a check-in failure only once ten in a row fail: a cdd restart for a repin drops the one in flight, and the next answers
+- Stage buttons turn off: a choice of no stage shows none, on the chat bar and in the Files app
+- Stages shown are one choice held by cdd: the chat bar's stage buttons and the Files app's toggle one or more stages, the dots and the action span every stage shown, and the Files app lists their files
+- Code lists leave specs and tests out; the Files app says why its list is empty when the formats chosen hold none of the files
+- Files app opens a .drawio file through a link to the Files server's draw.io page, never window.open
+- sessions: release-2 practices {'clean_engineering': {'enabled': True, …
+- sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 practices {'clean_engineering': {'enabled': True, …
+- sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 practices {'clean_engineering': {'enabled': True, …
+- sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 practices {'clean_engineering': {'enabled': True, … sessions: release-2 practices {'clean_engineering': {'enabled': True, …
+- sessions: release-2 practices {'clean_engineering': {'enabled': True},… sessions: release-2 practices {'clean_engineering': {'enabled': True},… sessions: release-2 practices {'clean_engineering': {'enabled': True},… sessions: release-2 practices {'clean_engineering': {'enabled': True, …
+- sessions: release-2 practices {'clean_engineering': {'enabled': True},…
+- Chat bar failure line: a running bar stands in for Fix until the fix is in the chat; a fix the chat did not take shows as its own failure
+- Files app filters by format with the chat bar's chips, synced both ways; a cdd call still running is asked again, never answered as its notice
+- Files app: Rules and Cross-file are independent; Rules reads the file alone with only its own rules (Session.file_alone), Cross-file adds only what the whole working copy finds (Session.file_in_whole)
+- sessions: release-2 practices {'clean_engineering': {'enabled': True},…
+- sessions: release-2 practices {'clean_engineering': {'enabled': True},…
+- Graph and Files apps show a toast already showing only once
+- Graph app: main.tsx imports only components, so a changed module never runs it twice
+- Files viewer highlights where a rule found the problem: a rule can name its finding's lines (Finding), prefer-class-operations names the helper's line; a file changed since the session's graph read it is read again
+- Chat bar reads only the first JSON object of the Browser pane's tabs answer
+- Kanban: every failure through PageFailures.fail, shown and sent once to the chat that opened the board
+- Story UI: every failure through StoryMapFailures.fail, shown and sent once to the opening chat
+- Files app header shows the Rules and Cross-file toggles
+- Files app: Rules and Cross-file toggles, off by default; with Rules on, the open file's folds and broken rules come from the session's live graph, as the Graph app shows them
+- sessions: review-work-in-board-files stage Implementation, stage_mark sessions: review-work-in-board-files stage Implementation, stage_mark in-progress
+- sessions: review-work-in-board-files stage Specification, stage_mark sessions: review-work-in-board-files stage Specification, stage_mark in-progress
+- sessions: optimize-unit-tests stage Implementation, stage_mark sessions: optimize-unit-tests stage Implementation, stage_mark in-progress
+- sessions: open-app-from-health-panel stage Implementation, stage_mark sessions: open-app-from-health-panel stage Implementation, stage_mark in-progress
+- sessions: add Replace cdd polling with events to the Backlog
+- Graph app: every failure through GraphFailures.fail, shown and sent once to the opening chat
+- Selection syncs within a second both ways: the Files app reads it every second, and the chat bar reads it every second even while an idle chat checks in every five
+- Files app writes the chat's one selection through Chat.select and shows what cdd answered
+- One selection for a chat, held by cdd: Chat.select writes it, Chat.show answers it, check-ins keep it; the chat bar's dots write through chat.select and draw what cdd holds
+- Files app: every failure through fail, sent once; the chat bar names its chat in every app link
+- Chat bar checks in with the cdd server directly, not through the Kanban app
+- Files server routes chat.show, so the page reads the chat bar's selection; each failure is shown and sent once
+- Files app: two-way sync with the chat bar's selected dots, and every failure sent to the opening chat's chat bar
+- Files app follows the chat bar's selected fidelity dots: the chat bar sends them at check-in, Chat.show answers them, and the page shows only their files, its practice toggles following
+- sessions: release-2 practices {'clean_engineering': {'enabled': True},…
+- Merge remote-tracking branch 'origin/main' into tdd-practice
+- Merge remote-tracking branch 'origin/main' into release-2
+- Version v0.8
+- Version badge puts /install-latest in the prompt box, as the action button does
+- Version badge asks the chat to update in words, so the update runs as a turn
+- Version v0.7
+- Version badge reads the version on disk after every turn, without fetching
+- Version v0.6
+- main: work taken to main
+- main: work pushed
+- main: work pushed
+- Chat bar lists open from their buttons; closed sessions stay closed
+- Merge remote-tracking branch 'origin/main' into release-2
+- main: work pushed
+- Session files: a branch checked out in a worktree of its own has its changed files there
+- main: work pushed
+- Files app: a Changed button lists only the files the session's branch changed, with its count, a published design canvas kept
+- chat-ui: version badge after the health mark; new chats join their opener's sidebar section
+- Files app: UX front-end code is reviewed through its IA and mockup, not its view code; a published design canvas opens at its link
+- Files app: the file bar's files and folders in the page's text size
+- sessions: release-2 practices {'clean_engineering': {'enabled': True},…
+- sessions: release-2 practices {'clean_engineering': {'enabled': True},…
+- Files app: the Folders view is a folder tree, as Windows Explorer shows it, each level nested and indented, folders before files
+- sessions: release-2 practices {'clean_engineering': {'enabled': True},…
+- sessions: release-2 practices {'clean_engineering': {'enabled': True},…
+- sessions: release-2 practices {'clean_engineering': {'enabled': False}… sessions: release-2 practices {'clean_engineering': {'enabled': False}… sessions: release-2 practices {'clean_engineering': {'enabled': False}… sessions: release-2 practices {'clean_engineering': {'enabled': False}… sessions: release-2 practices {'clean_engineering': {'enabled': True},…
+- Merge remote-tracking branch 'origin/main'
+- sessions: release-2 practices {'clean_engineering': {'enabled': False}…
+- Files app model: the engineering look by default
+- Files app: the dark engineering look by default, with a header button for the light one
+- Merge origin/main into release-2: main's chat bar layout (files after the action button, handoff after files, push buttons), files opening the shown stage in the Files app
+- sessions: release-2 session.json
+- main: work taken to main
+- CDD 0.4.0
+- CDD 0.3.0: Claude Code chats connect to cdd with no headers helper
+- main: work taken to main
+- Chat bar: no commit text after a push
+- Chat bar: handoff right after files
+- Chat bar: files right after the action button
+- Chat bar: push, push & merge, files, handoff, restart, close
+

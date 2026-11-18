@@ -1,0 +1,11 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-17T22:06:33.731036+00:00",
+  "prompts": [
+    {
+      "id": "efe4265e67bf",
+      "text": "Read .context/story-map.md (read only) and write the title of every story under the Queue Prompts For Later epic to .sessions/simple-queue-enhancements/demo/stories/list.md. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done.",
+      "is_done": true
+    }
+  ]
+}

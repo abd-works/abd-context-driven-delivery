@@ -13,6 +13,9 @@ export const WRAP_UP_TOOL = /^mcp__.*__wrap_up$/
 /** The cdd server's tool the agent gives a queued prompt its steps with, which names the prompt it takes. */
 export const SET_STEPS_TOOL = /^mcp__.*__prompt-queue_set_steps$/
 
+/** Every prompt-queue tool, whose answer is the queue as the server now holds it. */
+export const PROMPT_QUEUE_TOOL = /^mcp__.*__prompt-queue_/
+
 /** The agent's steps after one `update_plan` call: a call with items replaces the list; advance finishes the step being
  * worked and starts the next pending one; done finishes the steps it numbers, from 1; start works the step it numbers. */
 export function nextPlan(steps: PromptStep[], call: PlanCall): PromptStep[] {
