@@ -20,7 +20,8 @@ Render it with `ClaudeDesignStoryModel` (`cdd_guidance.practices.ux.model.claude
 
 - **`two-pages`** — `canvas.json` has two pages: **Story map** and **Screens**. The Story map page holds one artboard; the Screens page holds one board per prototype screen.
 - **`one-map-artboard`** — The whole story map is one artboard (`Main.dc.html`) with one Play button. Do not split the map into an artboard per epic or story: many live artboards render hatched and slow.
-- **`map-zooms`** — The map zooms with a trackpad pinch (ctrl + wheel) and its − / % / + buttons (`Artboard(..., zoomable=True)`).
+- **`map-zooms`** — The map zooms with a trackpad pinch (ctrl + wheel) and its − / % / + buttons (`Artboard(..., zoomable=True)`). The % button shows the zoom and fits the whole map into its frame; pressed again once it fits, it goes back to actual size, so a reader sees every epic at once without pinching.
+- **`thumbnails-need-screenshots`** — A story's thumbnail is its main screen's screenshot, the `image` the UX map records for that screen. A greenfield project has none until each prototype screen is captured, so its thumbnails read *No screenshot*; say so when you publish, rather than presenting the map as finished.
 
 ## Story map artboard
 

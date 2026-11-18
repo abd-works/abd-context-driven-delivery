@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from expects import equal, expect
 from mamba import after, before, context, description, it
 
-from files_app_browser import BOARD_LINK, DESIGN_REVIEW, NBSP, SHOWN_MILLISECONDS, WHITEBOARD, FilesStack
+from files_app_browser import BOARD_LINK, BOARD_STORY, DESIGN_REVIEW, NBSP, SHOWN_MILLISECONDS, WHITEBOARD, FilesStack
 
 FIDELITIES = "ux-mockup,stories-story-map"
 
@@ -22,7 +22,7 @@ with description("Story: Open Whiteboard In Files App") as self:
     with after.all:
         self.stack.close()
 
-    with context("Scenario: Open a whiteboard file's board"):
+    with context("Scenario: Open a whiteboard file as a canvas"):
         with before.all:
             self.page = self.stack.open(DESIGN_REVIEW, FIDELITIES)
             diagram = self.page.locator('.format-toggle[title^="diagram:"]')
@@ -30,17 +30,24 @@ with description("Story: Open Whiteboard In Files App") as self:
             if diagram.get_attribute("aria-pressed") != "true":
                 diagram.click()
             self.page.locator('.format-toggle[title^="diagram:"][aria-pressed="true"]').wait_for(timeout=SHOWN_MILLISECONDS)
-            self.entry = self.page.locator(f'a.file-entry.is-published[title^="{WHITEBOARD}"]')
+            self.entry = self.page.locator(f'button.file-entry.is-whiteboard[title^="{WHITEBOARD}"]')
             self.entry.wait_for(timeout=SHOWN_MILLISECONDS)
 
         with after.all:
             self.page.close()
 
         with it("Then the whiteboard is listed as story-map, marked as a whiteboard"):
-            expect(self.entry.inner_text().replace(NBSP, " ").strip()).to(equal("story-map ↗ whiteboard"))
+            expect(self.entry.inner_text().replace(NBSP, " ").strip()).to(equal("story-map whiteboard"))
 
-        with it("And pressing it opens the board in Claude, not the text of the file"):
-            expect(self.entry.get_attribute("href")).to(equal(BOARD_LINK))
+        with it("And pressing it draws the board on a canvas, not the text of the file"):
+            self.entry.click()
+            canvas = self.page.locator("svg.whiteboard-canvas")
+            canvas.wait_for(timeout=SHOWN_MILLISECONDS)
+            expect(BOARD_STORY in canvas.text_content()).to(equal(True))
+
+        with it("And the board in Claude is a press away, at its board's address"):
+            link = self.page.locator(f'a.board-link[title^="{WHITEBOARD}"]').first
+            expect(link.get_attribute("href")).to(equal(BOARD_LINK))
 
 
 with description("Story: Open Whiteboard In Files App, opened on another project") as self:
@@ -50,7 +57,7 @@ with description("Story: Open Whiteboard In Files App, opened on another project
     with after.all:
         self.stack.close()
 
-    with context("Scenario: Open a whiteboard file's board, Example: another project"):
+    with context("Scenario: Open a whiteboard file as a canvas, Example: another project"):
         with before.all:
             self.page = self.stack.open(DESIGN_REVIEW, FIDELITIES)
             diagram = self.page.locator('.format-toggle[title^="diagram:"]')
@@ -58,14 +65,14 @@ with description("Story: Open Whiteboard In Files App, opened on another project
             if diagram.get_attribute("aria-pressed") != "true":
                 diagram.click()
             self.page.locator('.format-toggle[title^="diagram:"][aria-pressed="true"]').wait_for(timeout=SHOWN_MILLISECONDS)
-            self.entry = self.page.locator(f'a.file-entry.is-published[title^="{WHITEBOARD}"]')
+            self.entry = self.page.locator(f'button.file-entry.is-whiteboard[title^="{WHITEBOARD}"]')
             self.entry.wait_for(timeout=SHOWN_MILLISECONDS)
 
         with after.all:
             self.page.close()
 
         with it("Then the whiteboard is listed as story-map, marked as a whiteboard"):
-            expect(self.entry.inner_text().replace(NBSP, " ").strip()).to(equal("story-map ↗ whiteboard"))
+            expect(self.entry.inner_text().replace(NBSP, " ").strip()).to(equal("story-map whiteboard"))
 
-        with it("And pressing it opens the board at the address that project keeps, not one the CDD checkout keeps"):
-            expect(self.entry.get_attribute("href")).to(equal(BOARD_LINK))
+        with it("And its board is at the address that project keeps, not one the CDD checkout keeps"):
+            expect(self.page.locator(f'a.board-link[title^="{WHITEBOARD}"]').first.get_attribute("href")).to(equal(BOARD_LINK))

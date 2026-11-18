@@ -77,6 +77,17 @@ CANVAS = "design/ux/design-canvas/version-1/project/canvas.json"
 CANVAS_LINK = "https://claude.ai/artifact/checkout-canvas"
 WHITEBOARD = "design/.context/story-map.whiteboard"
 BOARD_LINK = "https://claude.ai/artifact/story-board"
+# The story map's board as Render saves it: one epic bar over one story card.
+BOARD_STORY = "Browse Product Catalog"
+WHITEBOARD_TEXT = json.dumps({
+    "v": 1,
+    "title": "Story Map",
+    "order": ["epic", "story"],
+    "elements": {
+        "epic": {"type": "shape", "color": "purple", "text": "Manage Customer Orders", "x": 20, "y": 120, "w": 168, "h": 60},
+        "story": {"type": "shape", "color": "yellow", "text": f"*Customer*\n{BOARD_STORY}", "x": 32, "y": 280, "w": 152, "h": 152},
+    },
+})
 
 # Seed: story-review, a session working in the project's review folder with Stories alone on, whose story map holds two
 # stories that open with a generic verb, which verb-noun-format breaks, beside Delete Ticket, which passes it.
@@ -137,7 +148,7 @@ def _seed_project(root: Path) -> None:
     _write(root, ".sessions/checkout-flow/session.log", "")
     _write(root, CANVAS, "{}\n")
     _write(root, "design/ux/design-canvas/versions.json", json.dumps({"version-1": CANVAS_LINK}))
-    _write(root, WHITEBOARD, "{}\n")
+    _write(root, WHITEBOARD, WHITEBOARD_TEXT)
     _write(root, "design/.context/whiteboards.json", json.dumps({"story-map.whiteboard": BOARD_LINK}))
     _write(root, f".sessions/{DESIGN_REVIEW}/session.json", json.dumps({"name": DESIGN_REVIEW, "title": "Design review", "workpath": str(root / "design")}))
     _write(root, f".sessions/{DESIGN_REVIEW}/session.log", "")

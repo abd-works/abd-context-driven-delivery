@@ -62,3 +62,20 @@ with description("a design canvas made with its project folder"):
 
     with it("should hold no file the project does not have"):
         expect(self.canvas.size_of("shots/missing.png")).to(equal(None))
+
+
+with description("a zoomable artboard"):
+    with before.each:
+        from harness.design_canvas.canvas import Artboard
+
+        self.text = Artboard("Story map", 2400, 1200, "<map>", "", "", zoomable=True).text
+
+    with it("should fit the whole artboard into its frame when its middle zoom button is pressed"):
+        expect('aria-label="Fit to window"' in self.text).to(equal(True))
+        expect('onClick="{{zoomFit}}"' in self.text and ": this.fitted())" in self.text).to(equal(True))
+
+    with it("should go back to actual size when its middle zoom button is pressed while the artboard already fits"):
+        expect("? 1 : this.fitted()" in self.text).to(equal(True))
+
+    with it("should measure the fit from its frame against its own width and height"):
+        expect("Math.min(window.innerWidth / 2400, window.innerHeight / 1200)" in self.text).to(equal(True))

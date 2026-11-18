@@ -166,10 +166,11 @@ PINCH_PIXELS_PER_E = 200
 ZOOM_BUTTON_FACTOR = 1.25
 
 
-# The − / fit / + buttons every zoomable artboard shows in its top right corner.
+# The − / fit / + buttons every zoomable artboard shows in its top right corner; fit shows the zoom it is at, and a press
+# on it fits the whole artboard into its frame, or goes back to actual size once it already fits.
 ZOOM_CONTROLS = f"""<div style="position: fixed; top: 12px; right: 12px; display: flex; gap: 6px; z-index: 10">
 <button type="button" style="{ZOOM_BUTTON}" onClick="{{{{zoomOut}}}}" aria-label="Zoom out">−</button>
-<button type="button" style="{ZOOM_BUTTON}" onClick="{{{{zoomReset}}}}" aria-label="Actual size">{{{{zoomLabel}}}}</button>
+<button type="button" style="{ZOOM_BUTTON}" onClick="{{{{zoomFit}}}}" aria-label="Fit to window" title="Fit to window; press again for actual size">{{{{zoomLabel}}}}</button>
 <button type="button" style="{ZOOM_BUTTON}" onClick="{{{{zoomIn}}}}" aria-label="Zoom in">+</button>
 </div>
 """
@@ -199,6 +200,10 @@ window.removeEventListener('wheel', this.pinch);
 zoom() {{
 return (this.state && this.state.zoom) || 1;
 }}
+// The zoom that shows the whole artboard in its frame, never larger than actual size.
+fitted() {{
+return Math.min(1, Math.min(window.innerWidth / __WIDTH__, window.innerHeight / __HEIGHT__));
+}}
 zoomTo(zoom) {{
 this.setState({{ zoom: Math.min({ZOOM_RANGE[-1] / 100}, Math.max({ZOOM_RANGE[0] / 100}, zoom)) }});
 }}
@@ -210,7 +215,7 @@ zoomClass: 'zoom-' + level,
 zoomLabel: level + '%',
 zoomIn: () => this.zoomTo(zoom * {ZOOM_BUTTON_FACTOR}),
 zoomOut: () => this.zoomTo(zoom / {ZOOM_BUTTON_FACTOR}),
-zoomReset: () => this.zoomTo(1)
+zoomFit: () => this.zoomTo(Math.abs(zoom - this.fitted()) < 0.01 ? 1 : this.fitted())
 }};
 }}
 }}
@@ -261,7 +266,8 @@ class Artboard(NamedTuple):
         """The artboard's file text."""
         fields = {**self._asdict(), "title": html.escape(self.title)}
         if self.zoomable:
-            return _ZOOMABLE_PAGE.format(**fields, zoom_classes=_ZOOM_CLASSES, controls=ZOOM_CONTROLS, component=ZOOM_COMPONENT)
+            component = ZOOM_COMPONENT.replace("__WIDTH__", str(self.width)).replace("__HEIGHT__", str(self.height))
+            return _ZOOMABLE_PAGE.format(**fields, zoom_classes=_ZOOM_CLASSES, controls=ZOOM_CONTROLS, component=component)
         return _STATIC_PAGE.format(**fields)
 
 
