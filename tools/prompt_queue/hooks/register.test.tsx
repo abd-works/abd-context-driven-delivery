@@ -953,6 +953,18 @@ test("+ on a card with no tasks adds the prompt box's draft as its first task, n
   expect(filled).toEqual([''])
 })
 
+test('+ shows on a done card with no tasks too, and its new task opens the card again so it runs', async ($, on) => {
+  const seeded = seedQueue(on, true, '', [{ id: 'a', text: 'Write the scenarios', is_done: true }])
+  on('prompt.read', () => ({ value: { text: 'Render the map', cursor: 14 } }))
+  on('prompt.fill', () => ({ isFilled: true }))
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'steps-a' })
+  await ui.unmount()
+
+  expect([seeded.prompts[0]!.steps, seeded.prompts[0]!.is_done ?? false]).toEqual([[{ text: 'Render the map', state: 'pending' }], false])
+})
+
 test('✕ on a step takes it off its prompt', async ($, on) => {
   const seeded = seedQueue(on, true, '', WITH_STEPS.map(prompt => ({ ...prompt })))
 

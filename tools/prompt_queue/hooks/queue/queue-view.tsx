@@ -204,7 +204,7 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
       <Box width={TASK_BUTTON_COLUMNS} flexShrink={0}>
         {progress !== ''
           ? TaskButtonView($, e, `steps-${prompt.id}`, progress, 'Tasks', 'shows or hides them', () => toggleSteps($, prompt.id))
-          : !isFinished && TaskButtonView($, e, `steps-${prompt.id}`, '+', 'Add task', 'from the draft in the prompt box', () => addStep($, prompt))}
+          : TaskButtonView($, e, `steps-${prompt.id}`, '+', 'Add task', 'from the draft in the prompt box', () => addStep($, prompt))}
       </Box>
       {(prompt.attachments ?? []).length > 0 && <Text key={`attached-${prompt.id}`} color={LOOK.muted}>{`📎${prompt.attachments!.length}`}</Text>}
       <Box position="relative" flexGrow={1} flexShrink={1} minWidth={0} flexDirection="row" alignItems="center" paddingX={1}
