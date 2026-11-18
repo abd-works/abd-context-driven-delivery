@@ -57,8 +57,7 @@ function Set-TestEnvironment {
     $env:CDD_HOME = Join-Path ([IO.Path]::GetTempPath()) ("cdd-spec-home-" + [guid]::NewGuid().ToString("N"))
     New-Item -ItemType Directory -Force $env:CDD_HOME | Out-Null
     Remove-Item Env:CLAUDE_CODE_SESSION_ID -ErrorAction SilentlyContinue
-    # A chat a spec opens, such as the fix chat a failing tier asks for, is kept as a link in this file, never opened
-    # in the Claude app on this machine.
+    # A chat a spec opens is kept as a link in this file, never opened in the Claude app on this machine.
     $env:CDD_OPENED_CHATS = Join-Path $env:CDD_HOME "opened-chats.txt"
 }
 

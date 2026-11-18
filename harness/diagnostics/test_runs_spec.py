@@ -69,9 +69,7 @@ with description("the test cadence") as self:
         self.clock = Clock(NOON)
         self.reviewed = []
         self.review_lines = ["move-work-forward-on-session-board/maintain-tickets: 3 changed step(s)", "review agent started on 1 run(s)"]
-        self.fix_chats = []
-        self.cadence = TestCadence(self.folder, self.record, self.runner, GitStub(), self.clock, review=self.review,
-                                   open_fix_chat=lambda folder, prompt: self.fix_chats.append((folder, prompt)))
+        self.cadence = TestCadence(self.folder, self.record, self.runner, GitStub(), self.clock, review=self.review)
 
     with after.each:
         shutil.rmtree(self.folder, ignore_errors=True)
@@ -220,27 +218,6 @@ with description("the test cadence") as self:
         with it("should be a new failure"):
             expect(self.cadence.run_now(TestTier.HEAVY).is_new_failure).to(be_true)
 
-        with context("whose output names the file that failed"):
-            with before.each:
-                self.runner.output = "48/49 files passed\nFAILED harness/diagnostics/server_health_heavy_spec.py"
-                self.cadence.run_now(TestTier.HEAVY)
-
-            with it("should open one chat in the main checkout to fix it"):
-                expect([folder for folder, _ in self.fix_chats]).to(equal([self.folder]))
-
-            with it("should tell that chat to open a fix session, name the tier, its commit and the failed file"):
-                prompt = self.fix_chats[0][1]
-                expect([part in prompt for part in ("fix-heavy-abc123", "heavy", "abc123", "harness/diagnostics/server_health_heavy_spec.py")]).to(equal([True] * 4))
-
-            with it("should tell that chat to retest the tier and merge the fix to main once it passes"):
-                prompt = self.fix_chats[0][1]
-                expect([f"python -m harness.diagnostics.test_runs heavy {self.folder}" in prompt, "merge" in prompt and "main" in prompt]).to(equal([True, True]))
-
-            # The Claude app can open the chat in another folder than its link names, such as the last one used.
-            with it("should name the main checkout as the project the fix session is created in, whatever folder the chat opens in"):
-                prompt = self.fix_chats[0][1]
-                expect(f"project={self.folder}" in prompt).to(be_true)
-
     with context("that fails after a run that failed"):
         with before.each:
             self.ran_at(TestTier.HEAVY, NOON - timedelta(hours=1), RunOutcome.FAILED)
@@ -248,15 +225,6 @@ with description("the test cadence") as self:
 
         with it("should not be a new failure"):
             expect(self.cadence.run_now(TestTier.HEAVY).is_new_failure).to(be_false)
-
-        with it("should open no other fix chat"):
-            self.cadence.run_now(TestTier.HEAVY)
-            expect(self.fix_chats).to(equal([]))
-
-    with context("that passes"):
-        with it("should open no fix chat"):
-            self.cadence.run_now(TestTier.HEAVY)
-            expect(self.fix_chats).to(equal([]))
 
 
 with description("the main checkout the cadence runs in") as self:
