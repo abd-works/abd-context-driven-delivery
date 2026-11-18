@@ -8,11 +8,11 @@
     "stages": [
       "implementation"
     ],
-    "version": 14
+    "version": 16
   },
   "practices": {
     "bdd": {
-      "enabled": true
+      "enabled": false
     },
     "ddd": {
       "enabled": false
@@ -21,7 +21,7 @@
       "enabled": false
     },
     "clean_engineering": {
-      "enabled": false
+      "enabled": true
     },
     "stories": {
       "formats": {
