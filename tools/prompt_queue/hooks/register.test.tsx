@@ -1126,12 +1126,30 @@ test("a sub-agent starts with its column's name", async ($, on) => {
     spawned.push((e as { description: string }).description)
     return { model: 'claude-sonnet-5-5' }
   })
+  on('agent.list', () => ({ value: [] }))
   on('turn.complete', () => ({ text: 'Done.' }))
 
   await $.turn.complete(FINISHED_TURN)
   await unawaitedWorkSettled()
 
   expect(spawned).toEqual(['Captain Tests: Write the story map', 'Bolt: Run the tests'])
+})
+
+test('a robot already at work is not started again when the next turn ends', async ($, on) => {
+  const seeded = groupedQueue(on)
+  seeded.stored.isPlaying = { value: true, version: 1 }
+  const named: (string | undefined)[] = []
+  on('agent.spawn', (_, e) => {
+    named.push((e as { name?: string }).name)
+    return { model: 'claude-sonnet-5-5' }
+  })
+  on('agent.list', () => ({ value: [{ id: 'a1', name: 'Sparky', description: 'Sparky: Write the story map', type: 'general-purpose', status: 'running' }] }))
+  on('turn.complete', () => ({ text: 'Done.' }))
+
+  await $.turn.complete(FINISHED_TURN)
+  await unawaitedWorkSettled()
+
+  expect(named).toEqual(['Bolt'])
 })
 
 test('a sub-agent goes by its robot name, so the lead can message the robot by name', async ($, on) => {
@@ -1142,6 +1160,7 @@ test('a sub-agent goes by its robot name, so the lead can message the robot by n
     named.push((e as { name?: string }).name)
     return { model: 'claude-sonnet-5-5' }
   })
+  on('agent.list', () => ({ value: [] }))
   on('turn.complete', () => ({ text: 'Done.' }))
 
   await $.turn.complete(FINISHED_TURN)

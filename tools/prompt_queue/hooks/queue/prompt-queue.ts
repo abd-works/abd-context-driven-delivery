@@ -708,12 +708,25 @@ export async function renameAgent($: EngineInterface, place: number): Promise<vo
   await $.prompt.fill({ text: '', mode: 'replace' })
 }
 
-/** Each robot with work not done starts as a sub-agent on its cards; work given to no robot is grouped first. */
+/** The robots whose sub-agent is still starting, working or waiting: every finished turn sends the robots again, so a
+ * robot already at work is passed over instead of being started a second time on the same cards. */
+async function robotsAtWork($: EngineInterface): Promise<Set<string>> {
+  const agents = await $.agent.list()
+  return new Set(agents.filter(agent => AT_WORK.includes(agent.status) && agent.name).map(agent => agent.name!))
+}
+
+const AT_WORK = ['pending', 'running', 'waiting', 'idle']
+
+/** Each robot with work not done starts as a sub-agent on its cards, unless it is already at work; work given to no robot is grouped first. */
 export async function sendTasksToSubAgents($: EngineInterface): Promise<void> {
   await groupIntoTasks($)
   const grouped = robotsOf((await read($, queue)).prompts.filter(prompt => !prompt.is_done), await read($, tasks))
+  const atWork = await robotsAtWork($)
   for (const [place, task] of grouped.entries()) {
     const robot = agentNameOf(task, place)
+    if (atWork.has(robot)) {
+      continue
+    }
     const started = await $.agent.spawn({
       prompt: task.prompts.join('\n\n'),
       description: `${robot}: ${task.description}`,
