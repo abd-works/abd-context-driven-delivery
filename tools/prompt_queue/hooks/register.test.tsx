@@ -1077,17 +1077,16 @@ test('grouping new work names its robots apart from the robots already on the qu
   expect(seeded.prompts.map(prompt => prompt.robot)).toEqual(['Sparky', 'Bolt'])
 })
 
-test('sub-agent mode draws one column for each sub-agent, named, with a robot on top', async ($, on) => {
+test('sub-agent mode lists each robot by name, with its picture, and draws its open queue', async ($, on) => {
   groupedQueue(on)
 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  const robots = JSON.stringify(await ui.find({ type: 'Box', key: 'agent-robots' }))
   const first = JSON.stringify(await ui.find({ type: 'Box', key: 'agent-column-1' }))
   const second = JSON.stringify(await ui.find({ type: 'Box', key: 'agent-column-2' }))
 
-  expect(first).toContain('Sparky')
-  expect(first).toContain('<svg')
+  expect([robots.includes('Sparky'), robots.includes('Bolt'), robots.includes('<svg')]).toEqual([true, true, true])
   expect(first).toContain('Write the scenarios')
-  expect(second).toContain('Bolt')
   expect(second).toContain('Run the unit tier')
   await ui.unmount()
 })
@@ -1097,7 +1096,7 @@ test("each sub-agent's robot differs from the others", async ($, on) => {
 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
   const robotOf = async (column: number) => {
-    const drawn = JSON.stringify(await ui.find({ type: 'Box', key: `agent-column-${column}` }))
+    const drawn = JSON.stringify(await ui.find({ type: 'Box', key: `agent-robot-${column}` }))
     return drawn.slice(drawn.indexOf('<svg'), drawn.indexOf('</svg>'))
   }
 
@@ -1329,14 +1328,16 @@ test("a robot's card has the same buttons as a card in the single queue, shown o
   expect(['"send-now-a"', '"edit-a"', '"up-a"', '"down-a"', '"remove-a"'].every(key => column.includes(key))).toBe(true)
 })
 
-test("the open robots' queues share the width evenly, however long their cards are", async ($, on) => {
+test("the robots sit one under another on the right, the open queue taking the room to their left", async ($, on) => {
   groupedQueue(on)
 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
-  const columns = [await ui.find({ type: 'Box', key: 'agent-column-1' }), await ui.find({ type: 'Box', key: 'agent-column-2' })]
+  const row = await ui.find({ type: 'Box', key: 'agent-columns' })
+  const queues = await ui.find({ type: 'Box', key: 'agent-queues' })
+  const robots = await ui.find({ type: 'Box', key: 'agent-robots' })
   await ui.unmount()
 
-  expect(columns.map(column => [column?.props.width, column?.props.flexGrow])).toEqual([[0, 1], [0, 1]])
+  expect([row?.props.flexDirection, queues?.props.flexGrow, robots?.props.flexDirection, robots?.props.flexShrink]).toEqual(['row', 1, 'column', 0])
 })
 
 test("work a robot finishes stays in that robot's queue, dimmed", async ($, on) => {
@@ -1380,20 +1381,26 @@ test("a card queued for a robot by name shows in that robot's queue", async ($, 
 })
 
 
-test("pressing a robot collapses its queue to the robot alone, and the other queues take the room", async ($, on) => {
-  groupedQueue(on)
+test("pressing the open robot closes its queue, leaving the robots alone", async ($, on) => {
+  const seeded = groupedQueue(on)
+  seeded.stored.expandedAgents = { value: [0], version: 1 }
 
-  const before = await $.ui.mount({ ...BAND, surface: 'desktop' })
-  await before.press({ key: 'collapse-agent-1' })
-  await before.unmount()
-  const after = await $.ui.mount({ ...BAND, surface: 'desktop' })
-  const first = await after.find({ type: 'Box', key: 'agent-column-1' })
-  const second = await after.find({ type: 'Box', key: 'agent-column-2' })
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'collapse-agent-1' })
+  await ui.unmount()
 
-  expect(JSON.stringify(first)).not.toContain('"card-row-a"')
-  expect(first?.props.flexGrow).toBe(0)
-  expect(second?.props.flexGrow).toBe(1)
-  await after.unmount()
+  expect(seeded.stored.expandedAgents?.value).toEqual([])
+})
+
+test("opening one robot's queue closes the robot that was open, so one queue shows at a time", async ($, on) => {
+  const seeded = groupedQueue(on)
+  seeded.stored.expandedAgents = { value: [1], version: 1 }
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'collapse-agent-1' })
+  await ui.unmount()
+
+  expect(seeded.stored.expandedAgents?.value).toEqual([0])
 })
 
 test("pressing a closed robot opens its queue", async ($, on) => {
@@ -1415,9 +1422,10 @@ test("a robot's queue is closed until the robot is pressed, the robot listed wit
   delete seeded.stored.expandedAgents
 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
-  const first = await ui.find({ type: 'Box', key: 'agent-column-1' })
+  const queue = await ui.find({ type: 'Box', key: 'agent-column-1' })
+  const robot = await ui.find({ type: 'Box', key: 'agent-robot-1' })
 
-  expect([JSON.stringify(first).includes('"card-row-a"'), first?.text.includes('Sparky')]).toEqual([false, true])
+  expect([queue === undefined, robot?.text.includes('Sparky')]).toEqual([true, true])
   await ui.unmount()
 })
 
@@ -1428,6 +1436,6 @@ test("a closed robot shows how many of its items are done beside it, such as 1/2
 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
 
-  expect((await ui.find({ type: 'Box', key: 'agent-column-1' }))?.text).toContain('1/2')
+  expect((await ui.find({ type: 'Box', key: 'agent-robot-1' }))?.text).toContain('1/2')
   await ui.unmount()
 })

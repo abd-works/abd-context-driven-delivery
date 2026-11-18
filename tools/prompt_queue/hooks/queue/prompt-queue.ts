@@ -619,9 +619,10 @@ async function changeSteps($: EngineInterface, prompt: QueuedPrompt, steps: Prom
   await changeQueue($, 'set_steps', { prompt: prompt.id, steps })
 }
 
-/** Pressing a robot opens its queue under it; pressing it again closes the queue to the robot alone. */
+/** Pressing a robot opens its queue under it and closes the one that was open, so one queue shows at a time; pressing
+ * it again closes its queue to the robot alone. */
 export async function toggleAgentQueue($: EngineInterface, place: number): Promise<void> {
-  await update($, expandedAgents, open => (open.includes(place) ? open.filter(other => other !== place) : [...open, place]))
+  await update($, expandedAgents, open => (open.includes(place) ? [] : [place]))
 }
 
 export async function toggleSteps($: EngineInterface, id: string): Promise<void> {

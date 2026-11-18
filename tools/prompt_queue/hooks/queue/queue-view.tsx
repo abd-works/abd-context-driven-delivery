@@ -274,51 +274,61 @@ function CardButtonsView($: EngineInterface, e: AbovePromptEvent, prompt: Queued
   ]
 }
 
-/** Sub-agent mode: one queue for each sub-agent, side by side, in the place of the queue's list, each the same cards. */
+/** Sub-agent mode, in the place of the queue's list: the open robot's queue on the left, taking the room and the height
+ * the robots stand in, and the robots one under another on the right, so many robots read as a plain list. */
 function AgentColumnsView($: EngineInterface, e: AbovePromptEvent, state: QueueState) {
   const { Box } = $.ui.resolve(e)
 
   return (
     <Box key="agent-columns" flexDirection="row" gap={1} width="100%">
-      {state.tasks.map((task, place) => AgentColumnView($, e, state, task, place))}
+      <Box key="agent-queues" flexDirection="column" flexGrow={1} flexShrink={1} width={0} minWidth={0} rowGap="sm">
+        {state.tasks.map((task, place) => AgentQueueView($, e, state, task, place))}
+      </Box>
+      <Box key="agent-robots" flexDirection="column" flexShrink={0} rowGap="sm">
+        {state.tasks.map((task, place) => AgentRobotView($, e, state, task, place))}
+      </Box>
     </Box>
   )
 }
 
-/** One robot's queue, closed until its robot is pressed, so many robots read as a plain list: the robot, its name, and
- * how many of its items are done, such as 3/5. Pressing the robot opens its queue under it, with ✎ to rename it and its
- * prompts as the queue's cards. The open queues share the width evenly, whatever their cards hold (each starts from no
- * width and grows by the same share); a closed one takes no room the others could use. */
-function AgentColumnView($: EngineInterface, e: AbovePromptEvent, state: QueueState, task: SubAgentTask, place: number) {
+/** An open robot's queue: its prompts as the queue's cards, at the full width left of the robots. */
+function AgentQueueView($: EngineInterface, e: AbovePromptEvent, state: QueueState, task: SubAgentTask, place: number) {
+  if (!state.expandedAgents.includes(place)) {
+    return null
+  }
+  const { Box } = $.ui.resolve(e)
+  return (
+    <Box key={`agent-column-${place + 1}`} flexDirection="column" width="100%" rowGap="sm">
+      {CardsView($, e, state, robotPromptsOf(state.queue.prompts, task, place))}
+    </Box>
+  )
+}
+
+/** One robot on its own line: the robot, which opens its queue to the left and closes it again, its name, and how many
+ * of its items are done, such as 3/5, or ✎ to rename it while its queue is open. */
+function AgentRobotView($: EngineInterface, e: AbovePromptEvent, state: QueueState, task: SubAgentTask, place: number) {
   const elements = $.ui.resolve(e)
   const { Box, Button, Text } = elements
   const number = place + 1
   const name = agentNameOf(task, place)
-  const isCollapsed = !state.expandedAgents.includes(place)
+  const isOpen = state.expandedAgents.includes(place)
   const items = robotPromptsOf(state.queue.prompts, task, place)
   const picture = 'Svg' in elements
     ? <elements.Svg key={`robot-${number}`} source={robotSvgOf(place)} alt={`${name}, a robot`} width={ROBOT_PIXELS} height={ROBOT_PIXELS} />
     : <Text key={`robot-${number}`} color={LOOK.accent}>🤖</Text>
-  const robot = (
-    <Box key={`robot-box-${number}`} flexShrink={0}>
-      {picture}
-      <Box position="absolute" top={0} left={0}>
-        <Button key={`collapse-agent-${number}`} plain label=" " onPress={() => toggleAgentQueue($, place)} />
-      </Box>
-    </Box>
-  )
 
   return (
-    <Box key={`agent-column-${number}`} flexDirection="column" flexGrow={isCollapsed ? 0 : 1} flexShrink={isCollapsed ? 0 : 1}
-      width={isCollapsed ? undefined : 0} minWidth={0} rowGap="sm">
-      <Box key={`agent-header-${number}`} flexDirection="row" alignItems="center" gap={1}>
-        {robot}
-        <Text bold color={LOOK.accent}>{name}</Text>
-        {isCollapsed
-          ? <Text key={`agent-progress-${number}`} color={LOOK.muted}>{`${items.filter(item => item.is_done).length}/${items.length}`}</Text>
-          : TipView(elements, `rename-agent-${number}`, 'Rename', 'names this robot from the prompt box', <Button key={`rename-agent-${number}`} label="✎" onPress={() => renameAgent($, place)} />)}
+    <Box key={`agent-robot-${number}`} flexDirection="row" alignItems="center" gap={1}>
+      <Box key={`robot-box-${number}`} flexShrink={0}>
+        {picture}
+        <Box position="absolute" top={0} left={0}>
+          <Button key={`collapse-agent-${number}`} plain label=" " onPress={() => toggleAgentQueue($, place)} />
+        </Box>
       </Box>
-      {!isCollapsed && CardsView($, e, state, items)}
+      <Text bold color={isOpen ? LOOK.accent : LOOK.muted}>{name}</Text>
+      {isOpen
+        ? TipView(elements, `rename-agent-${number}`, 'Rename', 'names this robot from the prompt box', <Button key={`rename-agent-${number}`} label="✎" onPress={() => renameAgent($, place)} />)
+        : <Text key={`agent-progress-${number}`} color={LOOK.muted}>{`${items.filter(item => item.is_done).length}/${items.length}`}</Text>}
     </Box>
   )
 }
