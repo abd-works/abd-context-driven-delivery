@@ -37,7 +37,7 @@ declare module 'claude-code' {
       plan: PromptStep[]
       isPlanSeen: boolean
       openSteps: string[]
-      collapsedAgents: number[]
+      expandedAgents: number[]
       isAwaitingDecision: boolean
       decisionWait: number
     }

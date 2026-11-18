@@ -70,7 +70,7 @@ const isPlanSeen = atom({ plugin: 'prompt-queue', key: 'isPlanSeen' } as const, 
 /** The cards whose steps are shown under them. */
 const openSteps = atom({ plugin: 'prompt-queue', key: 'openSteps' } as const, [] as string[])
 /** The places of the robots whose queues are collapsed to the robot alone, so the other queues take the room. */
-const collapsedAgents = atom({ plugin: 'prompt-queue', key: 'collapsedAgents' } as const, [] as number[])
+const expandedAgents = atom({ plugin: 'prompt-queue', key: 'expandedAgents' } as const, [] as number[])
 
 export type QueueState = {
   queue: PromptQueue
@@ -79,7 +79,7 @@ export type QueueState = {
   isPlaying: boolean
   editingId: string
   openSteps: string[]
-  collapsedAgents: number[]
+  expandedAgents: number[]
   tasks: SubAgentTask[]
   notice: string
 }
@@ -92,7 +92,7 @@ export async function currentQueue($: EngineInterface): Promise<QueueState> {
     isPlaying: await read($, isPlaying),
     editingId: await read($, editingId),
     openSteps: await read($, openSteps),
-    collapsedAgents: await read($, collapsedAgents),
+    expandedAgents: await read($, expandedAgents),
     tasks: robotsOf((await read($, queue)).prompts, await read($, tasks)),
     notice: await read($, notice),
   }
@@ -619,9 +619,9 @@ async function changeSteps($: EngineInterface, prompt: QueuedPrompt, steps: Prom
   await changeQueue($, 'set_steps', { prompt: prompt.id, steps })
 }
 
-/** Pressing a robot collapses its queue to the robot alone; pressing it again expands it. */
-export async function toggleCollapsedAgent($: EngineInterface, place: number): Promise<void> {
-  await update($, collapsedAgents, collapsed => (collapsed.includes(place) ? collapsed.filter(other => other !== place) : [...collapsed, place]))
+/** Pressing a robot opens its queue under it; pressing it again closes the queue to the robot alone. */
+export async function toggleAgentQueue($: EngineInterface, place: number): Promise<void> {
+  await update($, expandedAgents, open => (open.includes(place) ? open.filter(other => other !== place) : [...open, place]))
 }
 
 export async function toggleSteps($: EngineInterface, id: string): Promise<void> {
@@ -661,7 +661,7 @@ export async function groupIntoTasks($: EngineInterface): Promise<void> {
 }
 
 /** Each grouped task becomes a robot with a name no robot on the queue has, and each of its cards is given to it;
- * every robot's queue then opens, so the work just handed out shows. */
+ * every robot's queue then closes, so the robots show as a plain list until one is pressed. */
 async function assignRobots($: EngineInterface, grouped: SubAgentTask[]): Promise<void> {
   const goals = (await read($, queue)).prompts
   const names = freeRobotNames(goals, grouped.length)
@@ -672,7 +672,7 @@ async function assignRobots($: EngineInterface, grouped: SubAgentTask[]): Promis
     }
   }
   await update($, tasks, described => [...described.filter(task => !named.some(robot => robot.name === task.name)), ...named])
-  await update($, collapsedAgents, () => [])
+  await update($, expandedAgents, () => [])
 }
 
 /** As many fun names as asked for, none of them a robot already on the queue. */

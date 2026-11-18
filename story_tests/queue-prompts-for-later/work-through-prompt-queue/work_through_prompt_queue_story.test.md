@@ -24,16 +24,17 @@ The agent works through the queue in order and marks each prompt done; the perso
 
 ### queued prompts
 
-| example | id |
+| queued prompt | id |
 | --- | --- |
 | ++Write the scenarios++ | a |
 | ++Run the unit tier++ | b |
-| ++/actions-generate stories-story-map format=drawio++ | c, a queued slash command |
+| ++Generate the story map drawing++ | c, the queued slash command /actions-generate stories-story-map format=drawio |
 | ++[decision required] Which failure route? A or B++ | a, put back to wait for an answer |
+| ++Read the handoff++ | the first step of a handoff's Approach for Next Agent |
 
 ### messages the person sends
 
-| example | why |
+| message | why |
 | --- | --- |
 | ++Fix the Files app++ | a prompt sent straight to the chat |
 | ++Which way?++ | the question the agent's wrap-up ends its turn with |
@@ -41,7 +42,7 @@ The agent works through the queue in order and marks each prompt done; the perso
 
 ### what play sends
 
-| example | text |
+| request | text |
 | --- | --- |
 | ++ask for the next prompt++ | Take the next prompt on the queue. |
 | ++decision timed out++ | No answer came within a minute. Put prompt [a] back on the queue as unfinished: give it with prompt-queue.edit a text that starts with "[decision required]", then the question and your recommendation. Then take the next prompt on the queue. |
@@ -51,19 +52,19 @@ The agent works through the queue in order and marks each prompt done; the perso
 #### Scenario: Queue a list of work on the agent's own chat
 
 *Given* the agent's chat has an empty prompt queue
-*When* the agent calls prompt-queue.add_all with Write the scenarios and Run the unit tier, naming no chat
-*Then* its chat's prompt queue holds Write the scenarios, then Run the unit tier
+*When* the agent queues ++Write the scenarios++, then ++Run the unit tier++, naming no chat
+*Then* its chat's prompt queue holds ++Write the scenarios++, then ++Run the unit tier++
 
 #### Scenario: Mark a prompt done once its work is done
 
-*Given* the agent's chat queue holds Write the scenarios, then Run the unit tier
-*When* the agent calls prompt-queue.done with the id of Write the scenarios
-*Then* its chat's prompt queue still holds Write the scenarios, marked done, then Run the unit tier
-*And* clearing the queue takes off Write the scenarios and leaves Run the unit tier
+*Given* the agent's chat queue holds ++Write the scenarios++ (a), then ++Run the unit tier++ (b)
+*When* the agent marks a done
+*Then* its chat's prompt queue still holds ++Write the scenarios++, marked done, then ++Run the unit tier++
+*And* clearing the queue takes off ++Write the scenarios++ and leaves ++Run the unit tier++
 
 #### Scenario: Keep each chat's queue apart
 
-*Given* the agent's chat queue holds Run the unit tier
+*Given* the agent's chat queue holds ++Run the unit tier++
 *When* another chat in the same project reads its prompt queue
 *Then* that queue is empty
 
@@ -71,14 +72,14 @@ The agent works through the queue in order and marks each prompt done; the perso
 
 #### Scenario: Queue the handoff's steps when a chat switches to its session
 
-*Given* session alpha's latest handoff lists Read the handoff, then Run the unit tier under Approach for Next Agent
+*Given* session alpha's latest handoff lists ++Read the handoff++, then ++Run the unit tier++ under Approach for Next Agent
 *When* a chat switches to alpha
-*Then* the chat's prompt queue holds Read the handoff, then Run the unit tier
+*Then* the chat's prompt queue holds ++Read the handoff++, then ++Run the unit tier++
 *And* the switch tells the agent to work through them, marking each one done
 
 #### Scenario: Queue a handoff once
 
-*Given* a chat switched to alpha and its prompt queue holds alpha's two handoff steps
+*Given* a chat switched to alpha and its prompt queue holds ++Read the handoff++, then ++Run the unit tier++
 *When* the chat switches to alpha again
 *Then* its prompt queue still holds two prompts
 
@@ -86,15 +87,15 @@ The agent works through the queue in order and marks each prompt done; the perso
 
 #### Scenario: Carry the queue beside each prompt while it plays
 
-*Given* the prompt queue plays and holds Write the scenarios, then Run the unit tier
-*When* the Person sends Fix the Files app
+*Given* the prompt queue plays and holds ++Write the scenarios++ (a), then ++Run the unit tier++ (b)
+*When* the person sends ++Fix the Files app++
 *Then* the agent reads the queue beside the prompt, in order, with each prompt's id
 *And* it is told to finish its work, then take the first prompt, and mark each one done
 
 #### Scenario: Carry no queue while paused
 
-*Given* the prompt queue is paused and holds Write the scenarios
-*When* the Person sends Fix the Files app
+*Given* the prompt queue is paused and holds ++Write the scenarios++ (a)
+*When* the person sends ++Fix the Files app++
 *Then* the agent reads no queue beside the prompt
 
 #### Scenario: Leave out the prompts already done
@@ -123,10 +124,10 @@ The agent works through the queue in order and marks each prompt done; the perso
 
 #### Scenario: Ask for the next prompt when a turn ends
 
-*Given* the prompt queue plays and holds Write the scenarios
+*Given* the prompt queue plays and holds ++Write the scenarios++ (a)
 *When* a turn ends
-*Then* the chat is sent Take the next prompt on the queue
-*And* Write the scenarios stays on the queue until the agent marks it done
+*Then* the chat is sent ++ask for the next prompt++
+*And* ++Write the scenarios++ stays on the queue until the agent marks it done
 
 #### Scenario: Pass over done prompts
 
@@ -137,16 +138,18 @@ The agent works through the queue in order and marks each prompt done; the perso
 
 #### Scenario: Run a queued slash command as the command
 
-*Given* the open prompt queue holds only ++/actions-generate stories-story-map format=drawio++ (c)
+*Given* the open prompt queue holds only ++Generate the story map drawing++ (c)
 *When* the person plays the queue
 *Then* the chat runs the command actions-generate with stories-story-map format=drawio, not a prompt
-*And* ++/actions-generate stories-story-map format=drawio++ is marked done
+*And* ++Generate the story map drawing++ is marked done
 
 #### Scenario: Pause when the agent left the prompt it was asked to take
 
-*Given* the agent was asked to take Write the scenarios and it is still first on the queue
+*Given* the prompt queue plays and holds ++Write the scenarios++ (a), then ++Run the unit tier++ (b)
+*And* the agent was asked to take ++Write the scenarios++
+*But* the agent did not mark ++Write the scenarios++ done
 *When* the turn ends
-*Then* the queue pauses and says the agent left Write the scenarios on the queue
+*Then* the queue pauses and says the agent left ++Write the scenarios++ on the queue
 
 ## Story: Pause Prompt Queue
 

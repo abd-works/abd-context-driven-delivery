@@ -11,7 +11,7 @@ import {
   toggleExpanded,
   toggleSubAgentMode,
   toggleSteps,
-  toggleCollapsedAgent,
+  toggleAgentQueue,
   robotPromptsOf,
   agentNameOf,
   renameAgent,
@@ -285,16 +285,16 @@ function AgentColumnsView($: EngineInterface, e: AbovePromptEvent, state: QueueS
   )
 }
 
-/** One robot's queue: its robot on top, which collapses the queue to the robot alone and expands it again, its name and
- * ✎ to rename it, then its prompts as the queue's cards. The open queues share the width evenly, whatever their cards
- * hold (each starts from no width and grows by the same share); a collapsed queue takes no room the others could use,
- * and shows under its robot how many of its items are done, such as 3/5. */
+/** One robot's queue, closed until its robot is pressed, so many robots read as a plain list: the robot, its name, and
+ * how many of its items are done, such as 3/5. Pressing the robot opens its queue under it, with ✎ to rename it and its
+ * prompts as the queue's cards. The open queues share the width evenly, whatever their cards hold (each starts from no
+ * width and grows by the same share); a closed one takes no room the others could use. */
 function AgentColumnView($: EngineInterface, e: AbovePromptEvent, state: QueueState, task: SubAgentTask, place: number) {
   const elements = $.ui.resolve(e)
   const { Box, Button, Text } = elements
   const number = place + 1
   const name = agentNameOf(task, place)
-  const isCollapsed = state.collapsedAgents.includes(place)
+  const isCollapsed = !state.expandedAgents.includes(place)
   const items = robotPromptsOf(state.queue.prompts, task, place)
   const picture = 'Svg' in elements
     ? <elements.Svg key={`robot-${number}`} source={robotSvgOf(place)} alt={`${name}, a robot`} width={ROBOT_PIXELS} height={ROBOT_PIXELS} />
@@ -303,7 +303,7 @@ function AgentColumnView($: EngineInterface, e: AbovePromptEvent, state: QueueSt
     <Box key={`robot-box-${number}`} flexShrink={0}>
       {picture}
       <Box position="absolute" top={0} left={0}>
-        <Button key={`collapse-agent-${number}`} plain label=" " onPress={() => toggleCollapsedAgent($, place)} />
+        <Button key={`collapse-agent-${number}`} plain label=" " onPress={() => toggleAgentQueue($, place)} />
       </Box>
     </Box>
   )
@@ -313,14 +313,12 @@ function AgentColumnView($: EngineInterface, e: AbovePromptEvent, state: QueueSt
       width={isCollapsed ? undefined : 0} minWidth={0} rowGap="sm">
       <Box key={`agent-header-${number}`} flexDirection="row" alignItems="center" gap={1}>
         {robot}
-        <Box key={`agent-label-${number}`} flexDirection="row" alignItems="center" gap={1} display={isCollapsed ? 'none' : 'flex'}>
-          <Text bold color={LOOK.accent}>{name}</Text>
-          {TipView(elements, `rename-agent-${number}`, 'Rename', 'names this robot from the prompt box', <Button key={`rename-agent-${number}`} label="✎" onPress={() => renameAgent($, place)} />)}
-        </Box>
+        <Text bold color={LOOK.accent}>{name}</Text>
+        {isCollapsed
+          ? <Text key={`agent-progress-${number}`} color={LOOK.muted}>{`${items.filter(item => item.is_done).length}/${items.length}`}</Text>
+          : TipView(elements, `rename-agent-${number}`, 'Rename', 'names this robot from the prompt box', <Button key={`rename-agent-${number}`} label="✎" onPress={() => renameAgent($, place)} />)}
       </Box>
-      {isCollapsed
-        ? <Text key={`agent-progress-${number}`} color={LOOK.muted}>{`${items.filter(item => item.is_done).length}/${items.length}`}</Text>
-        : CardsView($, e, state, items)}
+      {!isCollapsed && CardsView($, e, state, items)}
     </Box>
   )
 }

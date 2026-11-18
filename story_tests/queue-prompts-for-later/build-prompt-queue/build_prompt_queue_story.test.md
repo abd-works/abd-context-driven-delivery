@@ -25,14 +25,14 @@ The person puts work on the chat's prompt queue and shapes it before it runs. Th
 
 ### queued prompts
 
-| example | id | done |
+| queued prompt | id | done |
 | --- | --- | --- |
 | ++Write the scenarios++ | a | no |
 | ++Run the unit tier++ | b | no |
 
 ### drafts
 
-| example | how the person queues it |
+| draft | how the person queues it |
 | --- | --- |
 | ++Run the heavy tier++ | as it is, with Alt+Enter |
 | ++also run the heavy tier++ | placed into the plan, with + or /queue |
@@ -40,27 +40,33 @@ The person puts work on the chat's prompt queue and shapes it before it runs. Th
 
 ### where the model places a draft
 
-| example | place |
+| placed draft | place |
 | --- | --- |
 | ++Run the heavy tier too++ | a task of ++Run the unit tier++ (b) |
 | ++Run the heavy tier card++ | a card of its own, Run the heavy tier |
 
 ### pasted list
 
-| example | lines |
+| pasted list | lines |
 | --- | --- |
 | ++outstanding items++ | 2. Right-click Go to file on a fold-out. / 3. Files e2e not re-run since the connector fold-outs. / Session roots setup / 7. No story tests for the three Choose Session And Practice Roots scenarios. |
 
 ### attachments
 
-| example | file |
+| attachment | file |
 | --- | --- |
 | ++screenshot.png++ | a one-pixel PNG pasted in the draft of ++Write the scenarios++ |
 | ++a-1.png++ | C:/chats/chat-1/attachments/a-1.png, kept beside ++Write the scenarios++ |
 
+### what the model answers
+
+| model answer | lists |
+| --- | --- |
+| ++Nothing is left to do++ | no prompt |
+
 ### missing prompt
 
-| example | id |
+| prompt | id |
 | --- | --- |
 | ++missing prompt++ | z, an id the queue does not hold |
 
@@ -110,7 +116,8 @@ The person puts work on the chat's prompt queue and shapes it before it runs. Th
 #### Scenario: Queue new work as a card of its own, given to no robot
 
 *Given* the chat's prompt queue holds ++Write the scenarios++ (a), then ++Run the unit tier++ (b)
-*And* the model places ++also run the heavy tier++ as ++Run the heavy tier card++, naming the robot Bolt
+*And* the prompt box holds the draft ++also run the heavy tier++
+*And* the model places it as ++Run the heavy tier card++, naming the robot Bolt
 *When* the person places the draft into the plan
 *Then* the queue ends with Run the heavy tier, given to no robot
 *And* the model was not asked about robots, which Group Queue Into Robots decides
@@ -127,7 +134,8 @@ The person puts work on the chat's prompt queue and shapes it before it runs. Th
 #### Scenario: Queue each item of a pasted list in order without asking the model
 
 *Given* the chat's prompt queue is empty
-*When* the person runs /queue with ++outstanding items++
+*And* the prompt box holds /queue followed by the pasted list ++outstanding items++
+*When* the person runs /queue with that list
 *Then* the queue holds the three numbered items of ++outstanding items++, in order, without their numbers
 *And* the heading Session roots setup is not queued
 *And* /queue answers "Queued 3 prompt(s)."
@@ -149,7 +157,7 @@ Intended: built (`planFromConversation`) but no test or run shows it; the eviden
 #### Scenario: Say why nothing was queued
 
 *Given* the chat's prompt queue is empty
-*And* the model, reading this conversation, answers "Nothing is left to do."
+*And* the model, reading this conversation, answers ++Nothing is left to do++
 *When* the person runs /queue with nothing after it
 *Then* /queue answers "Queued 0 prompt(s): the model proposed none. It answered: Nothing is left to do."
 *And* the queue is still empty
@@ -284,5 +292,5 @@ Intended: built (`movePrompt`, `prompt-queue.move`); the evidence missing is a t
 
 *Given* the chat works in the session simple-queue, whose work folder is .sessions/simple-queue in the ticket's worktree
 *And* its prompt queue holds ++Write the scenarios++
-*When* the queue is cleared
+*When* the person clears the queue
 *Then* .sessions/simple-queue/queue-archive in the ticket's worktree holds one copy

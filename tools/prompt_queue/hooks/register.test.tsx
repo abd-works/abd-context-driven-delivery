@@ -1020,13 +1020,14 @@ const GROUPED = [
   { description: 'Run the tests', prompts: ['Run the unit tier'], name: 'Bolt' },
 ]
 
-/** A queue in sub-agent mode whose prompts are grouped into GROUPED tasks, open: each card carries its robot's name,
- * as the queue keeps it. */
+/** A queue in sub-agent mode whose prompts are grouped into GROUPED tasks, every robot's queue opened: each card carries
+ * its robot's name, as the queue keeps it. */
 function groupedQueue(on: TestOn, tasks: { prompts: string[]; name: string }[] = GROUPED) {
   const robotOf = (text: string) => tasks.find(task => task.prompts.includes(text))?.name
   const seeded = seedQueue(on, true, '', QUEUED.map(prompt => ({ ...prompt, ...(robotOf(prompt.text) ? { robot: robotOf(prompt.text) } : {}) })))
   seeded.stored.isSubAgentMode = { value: true, version: 1 }
   seeded.stored.tasks = { value: tasks, version: 1 }
+  seeded.stored.expandedAgents = { value: tasks.map((_, place) => place), version: 1 }
   return seeded
 }
 
@@ -1053,16 +1054,16 @@ test('grouping the queue gives each card its robot on the queue', async ($, on) 
   expect(seeded.prompts.map(prompt => prompt.robot)).toEqual(['Sparky', 'Bolt'])
 })
 
-test("grouping the queue opens every robot's queue, so the work it filled them with shows", async ($, on) => {
+test("grouping the queue closes every robot's queue, leaving only the list of robots", async ($, on) => {
   const seeded = seedQueue(on, true)
-  seeded.stored.collapsedAgents = { value: [0, 1], version: 1 }
+  seeded.stored.expandedAgents = { value: [0, 1], version: 1 }
   on('model.complete', () => ({ value: { isAnswered: true, text: JSON.stringify(GROUPED.map(({ description, prompts }) => ({ description, prompts }))), usage: NO_USAGE } }))
 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
   await ui.press({ key: 'queue-sub-agents' })
   await ui.unmount()
 
-  expect(seeded.stored.collapsedAgents?.value).toEqual([])
+  expect(seeded.stored.expandedAgents?.value).toEqual([])
 })
 
 test('grouping new work names its robots apart from the robots already on the queue', async ($, on) => {
@@ -1376,9 +1377,9 @@ test("pressing a robot collapses its queue to the robot alone, and the other que
   await after.unmount()
 })
 
-test("pressing a collapsed robot expands its queue again", async ($, on) => {
+test("pressing a closed robot opens its queue", async ($, on) => {
   const seeded = groupedQueue(on)
-  seeded.stored.collapsedAgents = { value: [0], version: 1 }
+  seeded.stored.expandedAgents = { value: [1], version: 1 }
 
   const before = await $.ui.mount({ ...BAND, surface: 'desktop' })
   await before.press({ key: 'collapse-agent-1' })
@@ -1390,9 +1391,20 @@ test("pressing a collapsed robot expands its queue again", async ($, on) => {
 })
 
 
-test("a collapsed robot shows how many of its items are done under it, such as 1/2", async ($, on) => {
+test("a robot's queue is closed until the robot is pressed, the robot listed with its name and nothing more", async ($, on) => {
+  const seeded = groupedQueue(on)
+  delete seeded.stored.expandedAgents
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  const first = await ui.find({ type: 'Box', key: 'agent-column-1' })
+
+  expect([JSON.stringify(first).includes('"card-row-a"'), first?.text.includes('Sparky')]).toEqual([false, true])
+  await ui.unmount()
+})
+
+test("a closed robot shows how many of its items are done beside it, such as 1/2", async ($, on) => {
   const seeded = groupedQueue(on, [{ description: 'Write the story map', prompts: ['Write the scenarios', 'Run the unit tier'], name: 'Sparky' }])
-  seeded.stored.collapsedAgents = { value: [0], version: 1 }
+  seeded.stored.expandedAgents = { value: [], version: 1 }
   seeded.stored.queue = { value: { chat: CHAT, prompts: [{ ...QUEUED[0], is_done: true, robot: 'Sparky' }, { ...QUEUED[1], robot: 'Sparky' }] }, version: 2 }
 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })

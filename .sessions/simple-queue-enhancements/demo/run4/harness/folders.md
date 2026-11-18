@@ -60,14 +60,17 @@
 - .py files: 33
 
 ## guidance_actions
+- Purpose: The shared start of every action an agent runs on practice guidance (Generate, Validate, Document, Sketch, Partition), made per call for that call's session and run once for each guidance listed.
 
 - .py files: 3
 
 ## hooks
+- Purpose: Lets a toolset member run when the IDE fires a named event such as sessionStart or preToolUse, merging every handler's answer into one reply, and publishes those hooks through the hook server.
 
 - .py files: 10
 
 ## installation
+- Purpose: Publishes every annotated toolset member in a repository into an IDE's folder (.claude, .cursor, .github, Kilo) so no author writes a skill, command, rules file, MCP entry, or hook entry by hand.
 
 - .py files: 25
 

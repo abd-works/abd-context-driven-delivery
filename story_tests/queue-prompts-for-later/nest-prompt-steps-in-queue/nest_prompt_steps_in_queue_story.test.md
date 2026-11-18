@@ -25,7 +25,7 @@ Agreed with the person on 2026-11-17 and built the same day: the server's specs 
 
 ### queued prompts
 
-| example | id | how it reached the queue |
+| queued prompt | id | how it reached the queue |
 | --- | --- | --- |
 | ++Write the scenarios++ | a | queued by the person |
 | ++Run the unit tier++ | b | queued by the person |
@@ -33,7 +33,7 @@ Agreed with the person on 2026-11-17 and built the same day: the server's specs 
 
 ### steps of Write the scenarios
 
-| example | state |
+| step | state |
 | --- | --- |
 | ++Read the epic++ | done |
 | ++Write the stories++ | being worked |
@@ -41,7 +41,7 @@ Agreed with the person on 2026-11-17 and built the same day: the server's specs 
 
 ### steps the person changes
 
-| example | state |
+| step | state |
 | --- | --- |
 | ++Write them++ | being worked, after Read the epic done |
 | ++Validate them++ | pending |
@@ -50,7 +50,7 @@ Agreed with the person on 2026-11-17 and built the same day: the server's specs 
 
 ### messages the person sends while a goal is worked
 
-| example | text |
+| message | text |
 | --- | --- |
 | ++cut the text++ | cut the text with an ellipsis |
 | ++also run the heavy tier++ | also run the heavy tier |
@@ -58,7 +58,7 @@ Agreed with the person on 2026-11-17 and built the same day: the server's specs 
 
 ### robots
 
-| example | cards |
+| robot | cards |
 | --- | --- |
 | ++Sparky++ | ++Write the scenarios++ (a) |
 | ++Bolt++ | ++Run the unit tier++ (b) |
@@ -110,7 +110,7 @@ Agreed with the person on 2026-11-17 and built the same day: the server's specs 
 
 #### Scenario: Refuse a step the prompt does not have
 
-*Given* ++Write the scenarios++ (a) has three steps
+*Given* ++Write the scenarios++ (a) has three steps, none done
 *When* the agent marks step 4 of a done
 *Then* the agent is told ++Write the scenarios++ has three steps
 *And* ++Write the scenarios++ still has no step done

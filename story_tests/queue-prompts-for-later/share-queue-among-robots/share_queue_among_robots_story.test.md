@@ -23,7 +23,7 @@ In sub-agent mode the queue's work is shared among robots, sub-agents that run s
 
 ### queued prompts
 
-| example | id |
+| queued prompt | id |
 | --- | --- |
 | ++Write the scenarios++ | a |
 | ++Run the unit tier++ | b |
@@ -31,14 +31,14 @@ In sub-agent mode the queue's work is shared among robots, sub-agents that run s
 
 ### grouping
 
-| example | description | prompts |
+| grouping | description | prompts |
 | --- | --- | --- |
 | ++story map task++ | Write the story map | ++Write the scenarios++ |
 | ++tests task++ | Run the tests | ++Run the unit tier++ |
 
 ### robots
 
-| example | does | cards |
+| robot | does | cards |
 | --- | --- | --- |
 | ++Sparky++ | Write the story map | ++Write the scenarios++ (a) |
 | ++Bolt++ | Run the tests | ++Run the unit tier++ (b) |
