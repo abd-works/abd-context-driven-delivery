@@ -3,5 +3,11 @@
   "title": "release 1.2 fixes",
   "scope": "feature",
   "branch": "release-1-2-fixes",
-  "worktree": "C:\\dev\\abd-cdd-release-1-2-fixes"
+  "worktree": "C:\\dev\\abd-cdd-release-1-2-fixes",
+  "guidance": {
+    "stages": [
+      "discovery"
+    ],
+    "version": 1
+  }
 }
