@@ -419,7 +419,7 @@ class Installer:
 
         1. Fetch origin's tags and merge the latest release into this checkout. A fetch or merge that fails or conflicts, or an origin with no release tag, stops here, before anything is stopped: tell the person and wait.
         2. Stop every app's server and the hook server.
-        3. Restart the cdd server.
+        3. Restart the cdd server on this checkout's commit: its lane (stable from main, dev from a ticket's worktree) serves the release just merged, and the chats point at that lane, so the chat bar's version shows it.
         4. Install every toolset: skills, commands, rules, MCP, and hooks. This is the long step, about a minute.
         5. Ping the cdd server.
         6. Reconnect this chat: when the cdd server reads failed, reconnect it, or ask the person to run ``/reload-plugins``.

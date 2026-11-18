@@ -283,8 +283,17 @@ def _restart_everything(installer: Installer, server: McpInstallation) -> None:
     apps = f"stopped {', '.join(stopped)}" if stopped else "no app server was running"
     _step_done(2, f"{apps}; hook server stopped")
     _step_started(3)
-    restarted = server.daemon.restart()
-    _step_done(3, f"pid {restarted.pid}")
+    _step_done(3, _serve_this_checkout(installer, server))
+
+
+def _serve_this_checkout(installer: Installer, server: McpInstallation) -> str:
+    """Restart the cdd server on this checkout's current commit, served the way its lane already serves it, and point the
+    chats at that lane. A lane pinned to another branch's older commit would keep serving it, and the chat bar would
+    show that branch's version, not the release just merged."""
+    served = server.served.update()
+    if installer.layout.is_claude_code:
+        server.cdd_entry.point_chats_at_served_lane()
+    return served
 
 
 def _ping_server(server: McpInstallation) -> int:
