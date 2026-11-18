@@ -677,9 +677,10 @@ export async function sendNext($: EngineInterface): Promise<void> {
 }
 
 /** The model groups the work not done and given to no robot yet into robots that can run side by side, and each card
- * is given its robot on the queue; robots already on the queue keep their names and cards. */
+ * is given its robot on the queue; robots already on the queue keep their names and cards. The person's interruptions
+ * are left out, as this chat decides where each one goes. */
 export async function groupIntoTasks($: EngineInterface): Promise<void> {
-  const queued = new PromptQueue((await read($, queue)).prompts.filter(prompt => !prompt.is_done && !prompt.robot))
+  const queued = new PromptQueue((await read($, queue)).prompts.filter(prompt => !prompt.is_done && !prompt.robot && !prompt.text.startsWith(INTERRUPTION_MARK)))
   if (queued.isEmpty) {
     return
   }

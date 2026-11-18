@@ -271,18 +271,24 @@ function CardButtonsView($: EngineInterface, e: AbovePromptEvent, prompt: Queued
 }
 
 /** Sub-agent mode, in the place of the queue's list: the robots one under another on the left, so many robots read as a
- * plain list, and the open robot's queue to their right, taking the room and the height the robots stand in. */
+ * plain list, and the open robot's queue to their right, taking the room and the height the robots stand in. The cards no
+ * robot has, such as the person's interruptions, show under them at the queue's full width, as in the single queue. */
 function AgentColumnsView($: EngineInterface, e: AbovePromptEvent, state: QueueState) {
   const { Box } = $.ui.resolve(e)
 
+  const loose = state.queue.prompts.filter(prompt => !prompt.robot)
+
   return (
-    <Box key="agent-columns" flexDirection="row" gap={1} width="100%">
-      <Box key="agent-robots" flexDirection="column" flexShrink={0} rowGap="sm">
-        {state.tasks.map((task, place) => AgentRobotView($, e, state, task, place))}
+    <Box key="agent-mode" flexDirection="column" rowGap="sm" width="100%">
+      <Box key="agent-columns" flexDirection="row" gap={1} width="100%">
+        <Box key="agent-robots" flexDirection="column" flexShrink={0} rowGap="sm">
+          {state.tasks.map((task, place) => AgentRobotView($, e, state, task, place))}
+        </Box>
+        <Box key="agent-queues" flexDirection="column" flexGrow={1} flexShrink={1} width={0} minWidth={0} rowGap="sm">
+          {state.tasks.map((task, place) => AgentQueueView($, e, state, task, place))}
+        </Box>
       </Box>
-      <Box key="agent-queues" flexDirection="column" flexGrow={1} flexShrink={1} width={0} minWidth={0} rowGap="sm">
-        {state.tasks.map((task, place) => AgentQueueView($, e, state, task, place))}
-      </Box>
+      {loose.length > 0 && <Box key="agent-loose-cards" flexDirection="column" width="100%">{CardsView($, e, state, loose)}</Box>}
     </Box>
   )
 }

@@ -1368,6 +1368,33 @@ test('switching sub-agent mode on groups only the work not done yet', async ($, 
   expect(asked).toEqual([JSON.stringify(['Run the unit tier'])])
 })
 
+test("grouping leaves the person's interruptions out, as this chat decides where they go", async ($, on) => {
+  seedQueue(on, true, '', [{ id: 'a', text: 'Run the unit tier' }, { id: 'm', text: '[interruption] is it started' }])
+  const asked: string[] = []
+  on('model.complete', (_, e) => {
+    asked.push((e as { prompt: string }).prompt)
+    return { value: { isAnswered: true, text: '[]', usage: NO_USAGE } }
+  })
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'queue-sub-agents' })
+  await ui.unmount()
+
+  expect(asked).toEqual([JSON.stringify(['Run the unit tier'])])
+})
+
+test("in sub-agent mode the cards no robot has show under the robots at the queue's full width, as in the single queue", async ($, on) => {
+  const seeded = groupedQueue(on)
+  seeded.stored.queue = { value: { chat: CHAT, prompts: [...QUEUED.map(prompt => ({ ...prompt, robot: prompt.id === 'a' ? 'Sparky' : 'Bolt' })), { id: 'm', text: '[interruption] is it started' }] }, version: 2 }
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  const loose = await ui.find({ type: 'Box', key: 'agent-loose-cards' })
+  const robots = JSON.stringify(await ui.find({ type: 'Box', key: 'agent-columns' }))
+  await ui.unmount()
+
+  expect([JSON.stringify(loose).includes('"card-row-m"'), robots.includes('"card-row-m"'), loose?.props.width]).toEqual([true, false, '100%'])
+})
+
 test('sending the queue to sub-agents keeps their cards, so each can mark its own card done', async ($, on) => {
   const seeded = groupedQueue(on)
   seeded.stored.isPlaying = { value: true, version: 1 }
