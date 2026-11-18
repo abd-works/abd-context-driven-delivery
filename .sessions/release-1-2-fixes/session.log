@@ -1208,3 +1208,11 @@
 2026-11-18T22:15:53Z tool prompt-queue.show 5b5466c3-9f1f-4998-ace2-5da34679e50c C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\5b5466c3-9f1f-4998-ace2-5da34679e50c.jsonl 1-5758
 2026-11-18T23:23:05Z tool prompt-queue.show 5b5466c3-9f1f-4998-ace2-5da34679e50c C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\5b5466c3-9f1f-4998-ace2-5da34679e50c.jsonl 1-5758
 2026-11-18T23:23:05Z tool prompt-queue.add_interruption 5b5466c3-9f1f-4998-ace2-5da34679e50c C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\5b5466c3-9f1f-4998-ace2-5da34679e50c.jsonl 1-5760
+2026-11-18T23:23:32Z tool prompt-queue.set_steps 5b5466c3-9f1f-4998-ace2-5da34679e50c C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\5b5466c3-9f1f-4998-ace2-5da34679e50c.jsonl 1-5775
+2026-11-18T23:23:32Z tool prompt-queue.show 5b5466c3-9f1f-4998-ace2-5da34679e50c C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\5b5466c3-9f1f-4998-ace2-5da34679e50c.jsonl 1-5777
+2026-11-18T23:23:36Z tool prompt-queue.done 5b5466c3-9f1f-4998-ace2-5da34679e50c C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\5b5466c3-9f1f-4998-ace2-5da34679e50c.jsonl 1-5786
+2026-11-18T23:23:41Z tool prompt-queue.show 5b5466c3-9f1f-4998-ace2-5da34679e50c C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\5b5466c3-9f1f-4998-ace2-5da34679e50c.jsonl 1-5797
+2026-11-18T23:24:14Z tool session.handoff_session 5b5466c3-9f1f-4998-ace2-5da34679e50c C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\5b5466c3-9f1f-4998-ace2-5da34679e50c.jsonl 1-5814
+2026-11-18T23:24:16Z tool prompt-queue.show 5b5466c3-9f1f-4998-ace2-5da34679e50c C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\5b5466c3-9f1f-4998-ace2-5da34679e50c.jsonl 1-5817
+2026-11-18T23:24:20Z tool session.read_handoff_format 5b5466c3-9f1f-4998-ace2-5da34679e50c C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\5b5466c3-9f1f-4998-ace2-5da34679e50c.jsonl 1-5817
+2026-11-18T23:24:49Z tool session.write_handoff 5b5466c3-9f1f-4998-ace2-5da34679e50c C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\5b5466c3-9f1f-4998-ace2-5da34679e50c.jsonl 1-5818
