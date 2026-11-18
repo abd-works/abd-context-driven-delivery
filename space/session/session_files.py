@@ -161,8 +161,10 @@ class BranchChanges:
 
     def files(self) -> set[Path]:
         """The files the session's branch changed since it left the default branch, with its uncommitted changes when
-        it is checked out; none for a project that is no clone, or a session with no branch of its own. Asking git takes
-        a moment, and a page lists many fidelities at once, so the answer is kept for CHANGED_KEPT_SECONDS and shared."""
+        it is checked out; none for a project that is no clone. The main session works in the repository's own folder,
+        on whatever branch that folder has checked out, so its changes are that branch's, as a ticket's are its own
+        branch's. Asking git takes a moment, and a page lists many fidelities at once, so the answer is kept for
+        CHANGED_KEPT_SECONDS and shared."""
         repo = self._session.repo
         if not repo.is_clone:
             return set()
@@ -173,6 +175,8 @@ class BranchChanges:
         if held is not None and time.monotonic() - held[0] < CHANGED_KEPT_SECONDS:
             return held[1]
         branch = repo.branch_named(self._session.name)
+        if branch.is_default:
+            branch = repo.current_branch
         checkout = branch.checkout if branch.exists else None
         root = checkout.root if checkout is not None else repo.root
         changed = {(root / path).resolve() for path in branch.changed_files()}

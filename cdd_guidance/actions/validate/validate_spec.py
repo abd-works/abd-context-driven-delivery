@@ -11,6 +11,8 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
         sys.path.insert(0, _p)
 
 import json
+import os
+import stat
 import shutil
 import tempfile
 import threading
@@ -312,6 +314,38 @@ with description("a validate action on practice guidance") as self:
 
             with it("should name its violations on that line"):
                 expect(self.validate_lines[-1]).to(contain(" graph-rule "))
+
+        # Windows can mark a folder read-only, and the whole graph an earlier report was checked against is dropped
+        # when the next report is saved; reported 2026-11-18: validate failed with "PermissionError: [WinError 5]
+        # Access is denied" on an earlier checked graph.
+        with context("whose earlier checked graph is marked read-only"):
+            with before.all:
+                self.marked = _StoryMapFolder()
+                self.marked.validate()
+                checked_graphs = next(self.marked.session.rglob("checked-graphs"))
+                earlier = checked_graphs / "stories-story-map-20000101T000000"
+                earlier.mkdir()
+                (earlier / "graph.json").write_text("{}", encoding="utf-8")
+                for path in (earlier / "graph.json", earlier):
+                    os.chmod(path, stat.S_IREAD)
+                self.earlier = earlier
+                try:
+                    self.marked.validate()
+                    self.refused = ""
+                except PermissionError as refused:
+                    self.refused = str(refused)
+
+            with after.all:
+                for path in (self.earlier, self.earlier / "graph.json"):
+                    if path.exists():
+                        os.chmod(path, stat.S_IWRITE | stat.S_IREAD)
+                self.marked.close()
+
+            with it("should save the report"):
+                expect(self.refused).to(equal(""))
+
+            with it("should drop that earlier graph"):
+                expect(self.earlier.exists()).to(equal(False))
 
         # The line names the fidelity worked at, which the log reads from that fidelity's own session output.
         with context("that has been validated at a fidelity after the first"):

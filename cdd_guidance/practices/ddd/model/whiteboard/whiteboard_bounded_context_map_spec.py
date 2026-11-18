@@ -52,6 +52,17 @@ with description("WhiteboardBoundedContextMap"):
         with it("should read back every context, aggregate, member and integration"):
             expect(_map_summary(WhiteboardBoundedContextMap().parse(self.text))).to(equal(_map_summary(self.source)))
 
+    with context("that draws an aggregate reaching two members of one other aggregate"):
+        with before.all:
+            twice = _MAP.replace("    integration: synchronous call to Catalog.Product.unit_price at add_item\n",
+                                 "    integration: synchronous call to Catalog.Product.unit_price at add_item\n"
+                                 "  - Product (by Sku)\n    pattern: Conformist\n    direction: downstream\n")
+            self.board = Whiteboard.from_text(WhiteboardBoundedContextMap().render(MarkdownBoundedContextMap().parse(twice)))
+
+        with it("should draw one arrow to that aggregate, named by the first integration's pattern"):
+            labels = [arrow.label for arrow in self.board.elements if isinstance(arrow, Arrow)]
+            expect(labels).to(equal(["Customer/Supplier"]))
+
     with context("that draws a domain model"):
         with before.all:
             self.source = MarkdownBoundedContextMap().parse(_MODEL)

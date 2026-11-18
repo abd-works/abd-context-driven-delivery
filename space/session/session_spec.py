@@ -1414,6 +1414,21 @@ with description("a session whose story map is drawn on a whiteboard") as self:
         with it("should list the whiteboard file at no address"):
             expect([entry.link for entry in self.story_map.declared.files()["whiteboard"]]).to(equal([""]))
 
+    # A board regenerated after people edited the first one is published as a new version beside it
+    # (story-map.version-2.whiteboard), so their edits survive; requested 2026-11-18: "no whiteboard link there for
+    # story map at all" while the Files app still opened version 1.
+    with context("that was regenerated as a later version"):
+        with before.each:
+            first, second = self.work / ".context" / "story-map.whiteboard", self.work / ".context" / "story-map.version-2.whiteboard"
+            second.write_text("{}", encoding="utf-8")
+            BoardLinks.beside(first).record(first, "https://claude.ai/artifact/story-board")
+            BoardLinks.beside(second).record(second, "https://claude.ai/artifact/story-board-2")
+
+        with it("should list the latest version at its board's address"):
+            expect([(entry.path, entry.link) for entry in self.story_map.declared.files()["whiteboard"]]).to(
+                equal([("work/.context/story-map.version-2.whiteboard", "https://claude.ai/artifact/story-board-2")])
+            )
+
 
 # The chat bar's stage buttons, practice dots, and format chips, and the Files app's toggles, are one selection the
 # session holds; every change raises its version, which a page waits on.

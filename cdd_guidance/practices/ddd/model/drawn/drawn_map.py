@@ -57,7 +57,10 @@ class AggregateCell(MapCell):
         return cell
 
     def depend_on_aggregate(self, target: Aggregate, pattern: str) -> None:
-        """An arrow to the aggregate an integration reaches, named by the integration's pattern."""
+        """An arrow to the aggregate an integration reaches, named by the integration's pattern; one arrow per aggregate,
+        named by the first integration, when several of its members are reached."""
+        if target.module_path in self.dependencies:
+            return
         self.dependencies.append(target.module_path)
         self.dependency_labels[target.module_path] = pattern
 

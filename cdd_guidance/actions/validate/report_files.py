@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import os
 import shutil
+import stat
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable
 
 from harness.graph.saved_graph import GRAPH_FILE_NAME
 from harness.guidance.guidance import FidelityGuidance
@@ -18,6 +20,15 @@ if TYPE_CHECKING:
 # each report, ignored by git as every saved graph is (``graph.json``), and only the latest of each fidelity kept.
 _CONTEXT_FOLDER = ".context"
 _CHECKED_GRAPHS_FOLDER = "checked-graphs"
+
+
+def _writable_then_retried(remove: Callable[[str], Any], path: str, error: BaseException) -> None:
+    """Delete path again once it may be written: Windows refuses to delete a file or folder marked read-only, and an
+    earlier checked graph can carry that mark, which would fail the whole validate."""
+    if not isinstance(error, PermissionError):
+        raise error
+    os.chmod(path, stat.S_IWRITE | stat.S_IREAD)
+    remove(path)
 
 
 class ReportFiles:
@@ -70,7 +81,7 @@ class ReportFiles:
         folders = self._checked_graphs.glob(f"{fidelity}-*") if self._checked_graphs.is_dir() else []
         for folder in folders:
             if folder.is_dir() and folder.name.rsplit("-", 1)[0] == fidelity and folder.name < report.stem:
-                shutil.rmtree(folder)
+                shutil.rmtree(folder, onexc=_writable_then_retried)
 
     def _claimed(self, dated: Path) -> Path:
         """Create the report file under a name no other call holds. A report's name is dated to the second, so a call

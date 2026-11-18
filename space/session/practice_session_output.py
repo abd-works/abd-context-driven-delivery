@@ -515,8 +515,9 @@ class WrittenFiles:
         if found:
             return [FileEntry(repo.path_from_top(file), True, file.resolve() in changed()).linked(published_link(file)) for file in found]
         if declared.names_one_path:
-            named = repo.root / declared.glob
-            return [FileEntry(declared.glob, named.exists(), named.exists() and named.resolve() in changed()).linked(published_link(named))]
+            named = latest_version(repo.root / declared.glob)
+            path = repo.path_from_top(named) if named.exists() else declared.glob
+            return [FileEntry(path, named.exists(), named.exists() and named.resolve() in changed()).linked(published_link(named))]
         return []
 
     def _worked_on_code(self, label: str, changed: Callable[[], set[Path]]) -> list[FileEntry]:
@@ -576,6 +577,18 @@ class WrittenFiles:
         """The folder holding the `.context` root sits in, where a project keeps its `story_tests` beside its
         `.context`."""
         return Path(*root.parts[: root.parts.index(CONTEXT_FOLDER)])
+
+
+def latest_version(file: Path) -> Path:
+    """The latest version of file kept beside it, ``story-map.version-2.whiteboard`` for ``story-map.whiteboard``: a
+    board regenerated after people edited it is published as a new version, so a page opens the newest; file itself
+    when no version is kept."""
+    numbered = {}
+    for sibling in file.parent.glob(f"{file.stem}.version-*{file.suffix}") if file.parent.is_dir() else []:
+        number = sibling.name[len(file.stem) + len(".version-"): -len(file.suffix) or None]
+        if number.isdigit():
+            numbered[int(number)] = sibling
+    return numbered[max(numbered)] if numbered else file
 
 
 def published_link(file: Path) -> str:

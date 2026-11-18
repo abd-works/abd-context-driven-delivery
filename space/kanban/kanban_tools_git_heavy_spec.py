@@ -343,6 +343,22 @@ with description("the board tools") as self:
                 files = self.project.call("fidelity-progress.files", ticket="pet-visits", fidelity="bdd-behavior")["python"]
                 expect({entry["path"]: entry["is_changed"] for entry in files}).to(equal({"src/mine_spec.py": True, "src/theirs_spec.py": False}))
 
+        # The main session works in the repository's own folder, on whatever branch that folder has checked out, so what
+        # the folder changed is the main session's work, as a ticket's branch changes are the ticket's.
+        with context("with specs in the repository, the main session open, and the folder on a branch that changed one"):
+            with before.each:
+                (self.project.root / "src").mkdir()
+                (self.project.root / "src" / "theirs_spec.py").write_text("", encoding="utf-8")
+                subprocess.run(["git", "add", "src"], cwd=self.project.root, check=True)
+                subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "spec"], cwd=self.project.root, check=True)
+                subprocess.run(["git", "checkout", "-q", "-b", "someone-else"], cwd=self.project.root, check=True)
+                Sessions(self.project.root).switch("main")
+                (self.project.root / "src" / "mine_spec.py").write_text("", encoding="utf-8")
+
+            with it("should mark the files the folder changed as the main session's changes"):
+                files = self.project.call("fidelity-progress.files", ticket="main", fidelity="bdd-behavior")["python"]
+                expect({entry["path"]: entry["is_changed"] for entry in files}).to(equal({"src/mine_spec.py": True, "src/theirs_spec.py": False}))
+
         with context("with the active ticket's branch not checked out, and another branch checked out"):
             with before.each:
                 subprocess.run(["git", "branch", "pet-visits"], cwd=self.project.root, check=True)
