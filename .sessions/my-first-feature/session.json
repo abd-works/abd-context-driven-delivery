@@ -3,5 +3,11 @@
   "title": "my-first-feature",
   "scope": "feature",
   "branch": "my-first-feature",
-  "worktree": "C:\\dev\\abd-cdd-my-first-feature"
+  "worktree": "C:\\dev\\abd-cdd-my-first-feature",
+  "guidance": {
+    "stages": [
+      "discovery"
+    ],
+    "version": 1
+  }
 }
