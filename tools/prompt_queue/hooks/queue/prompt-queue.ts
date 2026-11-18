@@ -766,12 +766,11 @@ export async function sendTasksToSubAgents($: EngineInterface, finished = ''): P
   await groupIntoTasks($)
   const held = await read($, queue)
   const agents = await $.agent.list()
-  const sent = await read($, sentCards)
   for (const [place, task] of robotsOf(held.prompts.filter(prompt => !prompt.is_done), await read($, tasks)).entries()) {
     const robot = agentNameOf(task, place)
     const card = held.prompts.find(prompt => prompt.robot === robot && !prompt.is_done)
     const agent = agents.filter(listed => listed.name === robot).at(-1)
-    if (!card || (agent && agent.id !== finished && AT_WORK.includes(agent.status)) || (agent && sent[robot] === card.id)) {
+    if (!card || (agent && agent.id !== finished && AT_WORK.includes(agent.status)) || (agent && !(await claimCard($, robot, card)))) {
       continue
     }
     if (!(await handCard($, robot, task, card, agent?.id, held.chat))) {
@@ -779,6 +778,20 @@ export async function sendTasksToSubAgents($: EngineInterface, finished = ''): P
     }
     await update($, sentCards, cards => ({ ...cards, [robot]: card.id }))
   }
+}
+
+/** A robot's sub-agent is about to be sent its next card: the card is recorded as sent first, so a second hand-on at the
+ * same moment, or after the robot stopped without marking it done, finds it sent and sends nothing. */
+async function claimCard($: EngineInterface, robot: string, card: QueuedPrompt): Promise<boolean> {
+  let isClaimed = false
+  await update($, sentCards, cards => {
+    if (cards[robot] === card.id) {
+      return cards
+    }
+    isClaimed = true
+    return { ...cards, [robot]: card.id }
+  })
+  return isClaimed
 }
 
 /** One card to a robot: a message to its sub-agent when it has one, else a new sub-agent under the robot's name. */

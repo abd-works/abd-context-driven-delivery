@@ -1227,6 +1227,15 @@ test('a robot that finished a card is sent its next open card as the same sub-ag
   expect([spawned.length, sent.length, sent[0]?.to, sent[0]?.text.includes('[c] Validate them')]).toEqual([0, 1, 's1', true])
 })
 
+test('a card is sent to its robot once, even when two finished turns hand it on at the same moment', async ($, on) => {
+  const { sent } = robotBetweenCards(on)
+
+  await Promise.all([$.turn.complete({ ...FINISHED_TURN, agentId: 's1' }), $.turn.complete(FINISHED_TURN)])
+  await unawaitedWorkSettled()
+
+  expect(sent.length).toBe(1)
+})
+
 test('a robot that stopped without marking its card done is not sent the same card again', async ($, on) => {
   const { seeded, sent } = robotBetweenCards(on)
   seeded.stored.sentCards = { value: { Sparky: 'c' }, version: 1 }
