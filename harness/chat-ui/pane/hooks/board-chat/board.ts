@@ -24,14 +24,14 @@ export type ChatRequest = { chat: string } & (
 
 // The checkout this chat works in: the main checkout, or a ticket's worktree. The cdd server picks a project's lane from
 // it, so a page naming a worktree is answered by the dev lane on the ticket's code, and one naming the main checkout by
-// the stable lane; the worktree shares the repository's board and sessions. Empty outside a repository.
+// the stable lane; the worktree shares the repository's board and sessions. Outside a repository, the chat's own folder.
 export async function checkoutFolder($: EngineInterface): Promise<string> {
   const { exitCode, stdout } = await $.process.run(['git', 'rev-parse', '--show-toplevel'])
-  return exitCode === 0 ? stdout.trim() : ''
+  return exitCode === 0 ? stdout.trim() : await $.session.root()
 }
 
 // An app's page at url showing this chat's checkout, with any further query the link carries, such as a report to
-// open. Outside a repository the page shows its server's own project.
+// open. Outside a repository the project is the folder the chat works in, which holds its tickets and sessions.
 export async function projectPageUrl($: EngineInterface, url: string, query: Record<string, string> = {}): Promise<string> {
   const project = await checkoutFolder($)
   const page = new URL(url)
