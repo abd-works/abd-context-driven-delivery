@@ -77,3 +77,87 @@ with description("WhiteboardBoundedContextMap"):
             def classes(drawn):
                 return sorted((aggregate.name, sorted(oclass.name for oclass in aggregate.classes)) for aggregate in drawn.every_aggregate)
             expect(classes(WhiteboardBoundedContextMap().parse(self.text))).to(equal(classes(self.source)))
+
+    with context("that draws a domain model of two contexts, one holding two aggregates"):
+        with before.all:
+            self.board = Whiteboard.from_text(WhiteboardBoundedContextMap().render(MarkdownBoundedContextMap().parse(_TWO_CONTEXTS)))
+            self.sections = [element for element in self.board.whole_elements if isinstance(element, Section)]
+            self.by_text = {element.text: element for element in self.sections}
+            self.cards = [element for element in self.board.whole_elements if isinstance(element, Shape) and element.role in ("class", "imported")]
+
+        with it("should label each aggregate's container with the aggregate's name and each context's with the context's name"):
+            expect(sorted(self.by_text)).to(equal(["Cart", "Inventory", "Plans", "Revenue", "Subscription"]))
+
+        with it("should draw each aggregate's container inside its context's container, with room for its title"):
+            for context_name, aggregate_names in (("Revenue", ("Cart", "Subscription")), ("Inventory", ("Plans",))):
+                for aggregate_name in aggregate_names:
+                    expect(_encloses(self.by_text[context_name], self.by_text[aggregate_name], _TITLE_ROOM)).to(be_true)
+
+        with it("should draw no class card across the edge of its aggregate's container"):
+            aggregates = [self.by_text[name] for name in ("Cart", "Subscription", "Plans")]
+            for card in self.cards:
+                holder = next(section for section in aggregates if section.holds(card))
+                expect(_encloses(holder, card, 0)).to(be_true)
+
+        with it("should put the context containers first in the order, then the aggregate containers"):
+            sections = [element_id for element_id in self.board.order if element_id in {section.id for section in self.sections}]
+            texts = [self.board.element(element_id).text for element_id in sections]
+            expect(texts[:2]).to(equal(["Revenue", "Inventory"]))
+            expect(sorted(texts[2:])).to(equal(["Cart", "Plans", "Subscription"]))
+
+        with it("should lay the contexts out left to right"):
+            expect(self.by_text["Revenue"].box.x + self.by_text["Revenue"].box.w < self.by_text["Inventory"].box.x).to(be_true)
+
+
+_INSET = 24
+_TITLE_ROOM = 28
+
+
+def _encloses(outer, inner, title_room):
+    """Whether inner sits inside outer, _INSET in from each edge, with title_room above it for its title."""
+    return (outer.box.x + _INSET <= inner.box.x and inner.box.x + inner.box.w <= outer.box.x + outer.box.w - _INSET
+            and outer.box.y + _INSET + title_room <= inner.box.y and inner.box.y + inner.box.h <= outer.box.y + outer.box.h - _INSET)
+
+
+_TWO_CONTEXTS = """# Domain Model
+
+## Revenue | custom
+
+### Cart
+
+#### Cart <<Aggregate Root>> <<Entity>>
+
+------
++ id: string
++ << composition >> items: CartItem
+----
++ addItem(sku: string): void
+
+#### CartItem <<Value Object>>
+
+------
++ sku: string
++ quantity: number
+----
+
+### Subscription
+
+#### Subscription <<Aggregate Root>> <<Entity>>
+
+------
++ id: string
++ << association >> cart: Cart
+----
++ renew(): void
+
+## Inventory | custom
+
+### Plans
+
+#### Plan <<Aggregate Root>> <<Entity>>
+
+------
++ planId: string
++ price: number
+----
+"""

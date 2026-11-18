@@ -19,7 +19,7 @@ import re
 from typing import Dict, List, Optional, Tuple
 
 from harness.whiteboard import BoardElement, Box, Whiteboard, WhiteboardNode
-from harness.whiteboard.whiteboard import UnreadableBoard
+from harness.whiteboard.whiteboard import MAX_SIDE, UnreadableBoard
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass, UnreadableSource
 from cdd_guidance.practices.clean_engineering.model.diagram.class_layout import PAGE_MARGIN, ArrowRouter, DiagramArrow
@@ -62,6 +62,10 @@ PAGE_ROW_WIDTH = 12000
 """The widest a row of module pages runs before the next page starts a row under it."""
 PAGE_INSET = 48
 """The room between a module page's section and the cards in it."""
+GROUP_INSET = 24
+"""The room between the section drawn round a group of module pages and the pages' sections."""
+SECTION_TITLE_ROOM = 28
+"""How far above its box a section's title stands, so a section nested in another needs this room above it."""
 NESTED_TITLE_ROOM = 44
 """The room above a section nested in another for its title, which a board writes over the section's top edge."""
 ABOUT_INSET_X = 16
@@ -307,55 +311,138 @@ class _ModulesBoard(ModulesView):
         return board
 
 
-class _ClassBoard(ClassView):
+class ClassBoard(ClassView):
     """Draws one class view as the drawio channel decides it: one page, or one page per module. A drawio diagram
     keeps each module's page on a tab of its own; a board has one canvas, so each page is a section, the sections
-    side by side in rows no wider than PAGE_ROW_WIDTH, each row under the last."""
+    side by side in rows no wider than PAGE_ROW_WIDTH, each row under the last. A model whose modules fall into
+    groups, such as the aggregates of one bounded context, draws a larger section round each group's pages, titled
+    with the group's name, the groups side by side in rows the same way."""
+
+    page_inset = PAGE_INSET
+    """The room between a module page's section and the cards in it."""
+    group_role = "group"
+    """What the id of the section drawn round a group of pages starts with."""
+
+    @property
+    def draws_one_page(self) -> bool:
+        return self.on_one_page
+
+    def page_groups(self) -> List[Tuple[str, List[Module]]]:
+        """The module pages in the order the board draws them, each group under the name of the section drawn round
+        it; one group with no name when no section is drawn round the pages."""
+        return [("", self.named_modules)]
+
+    def page_title(self, module: Module) -> str:
+        """The words a module page's section is titled with."""
+        return module.name.strip()
 
     def draw(self) -> Whiteboard:
         board = Whiteboard("Classes")
         board.add(BoardElement.words("title", Box(PAGE_MARGIN, PAGE_MARGIN - TITLE_ROOM, 0, 0),
                                      text=f"{self.channel.name or 'Model'} - Classes", size="large"))
-        if self.on_one_page:
-            _ClassBoardPage(self).draw_on(board, "", Box(0.0, PAGE_MARGIN, 0, 0))
+        if self.draws_one_page:
+            _ClassBoardPage(self).draw_on(board, Box(0.0, PAGE_MARGIN, 0, 0))
             return board
-        left, top, row_bottom = 0.0, float(PAGE_MARGIN), float(PAGE_MARGIN)
-        for module in self.named_modules:
-            page = _ClassBoardPage(self, module)
-            if left > 0 and left + page.width_hint() > PAGE_ROW_WIDTH:
-                left, top = 0.0, row_bottom + PAGE_GAP
-            drawn = page.draw_on(board, module.name.strip(), Box(left, top, 0, 0))
-            left = drawn.x + drawn.w + PAGE_GAP
-            row_bottom = max(row_bottom, drawn.y + drawn.h)
+        groups = [_PageGroup(self, name, modules) for name, modules in self.page_groups()]
+        corners = [Box(left, top + PAGE_MARGIN, 0, 0) for left, top in _flowed([group.size() for group in groups], PAGE_ROW_WIDTH)]
+        # Every group's section goes on the board before any page's, so each lies behind the pages it holds.
+        for group, corner in zip(groups, corners):
+            group.draw_section_on(board, corner)
+        for group, corner in zip(groups, corners):
+            group.draw_pages_on(board, corner)
         return board
+
+
+def _flowed(sizes: List[Tuple[float, float]], row_width: float) -> List[Tuple[float, float]]:
+    """The top-left corner of each box of sizes, laid left to right PAGE_GAP apart, a new row PAGE_GAP under the last
+    when a box would run the row wider than row_width; the first box at (0, 0)."""
+    corners: List[Tuple[float, float]] = []
+    left, top, row_bottom = 0.0, 0.0, 0.0
+    for width, height in sizes:
+        if left > 0 and left + width > row_width:
+            left, top = 0.0, row_bottom + PAGE_GAP
+        corners.append((left, top))
+        left += width + PAGE_GAP
+        row_bottom = max(row_bottom, top + height)
+    return corners
+
+
+class _PageGroup:
+    """The module pages of one group on a board, laid out in rows, and, when the group has a name, the section drawn
+    round them: GROUP_INSET in from its edges, with SECTION_TITLE_ROOM above the first row for the pages' own titles,
+    and rows no wider than a board draws one section, so the section is never cut into pieces."""
+
+    def __init__(self, view: ClassBoard, name: str, modules: List[Module]) -> None:
+        self._view = view
+        self.name = name
+        self._pages = [_ClassBoardPage(view, module) for module in modules]
+        row_width = MAX_SIDE - 2 * GROUP_INSET if name else PAGE_ROW_WIDTH
+        self._corners = _flowed([page.size() for page in self._pages], row_width)
+
+    @property
+    def _inset(self) -> Tuple[float, float]:
+        """How far the first page stands in from the group's left and top edges."""
+        return (GROUP_INSET, GROUP_INSET + SECTION_TITLE_ROOM) if self.name else (0.0, 0.0)
+
+    def size(self) -> Tuple[float, float]:
+        """The width and height the group fills: its pages, and round them its section's edges when it has one."""
+        if not self._pages:
+            return (0.0, 0.0)
+        right = max(left + page.size()[0] for page, (left, _) in zip(self._pages, self._corners))
+        bottom = max(top + page.size()[1] for page, (_, top) in zip(self._pages, self._corners))
+        if not self.name:
+            return (right, bottom)
+        return (right + 2 * GROUP_INSET, bottom + GROUP_INSET + SECTION_TITLE_ROOM + GROUP_INSET)
+
+    def draw_section_on(self, board: Whiteboard, corner: Box) -> None:
+        if self.name and self._pages:
+            width, height = self.size()
+            board.add(BoardElement.section(f"{self._view.group_role}.{_key(self.name)}", Box(corner.x, corner.y, width, height),
+                                           text=self.name))
+
+    def draw_pages_on(self, board: Whiteboard, corner: Box) -> None:
+        inset_x, inset_y = self._inset
+        for page, (left, top) in zip(self._pages, self._corners):
+            page.draw_on(board, Box(corner.x + inset_x + left, corner.y + inset_y + top, 0, 0))
 
 
 class _ClassBoardPage(ClassViewPage):
     """One page of a class view on a board: its cards where the shared placement puts them and its arrows routed by
     the shared router, the whole page in a section when it is one module's page."""
 
-    def width_hint(self) -> float:
-        """How wide the page's cards are laid out, so the board knows whether the page fits in the row."""
-        if not hasattr(self, "_laid"):
-            self._laid = self.laid_out({})
+    def __init__(self, view: ClassBoard, module: Optional[Module] = None) -> None:
+        super().__init__(view, module)
+        self._view = view
+        self._name = module.name.strip() if module is not None else ""
+        self._title = view.page_title(module) if module is not None else ""
+        self._laid = self.laid_out({})
+
+    @property
+    def _inset(self) -> float:
+        return self._view.page_inset if self._name else 0
+
+    def size(self) -> Tuple[float, float]:
+        """The width and height the page fills: its cards as they are laid out, inset from the page's edges."""
         cards = self._laid[0].values()
         if not cards:
-            return 0.0
-        return max(card.geometry.x + card.geometry.width for card in cards) - min(card.geometry.x for card in cards) + 2 * PAGE_INSET
+            return (0.0, 0.0)
+        width = max(card.geometry.x + card.geometry.width for card in cards) - min(card.geometry.x for card in cards)
+        height = max(card.geometry.y + card.geometry.height for card in cards) - min(card.geometry.y for card in cards)
+        return (width + 2 * self._inset, height + 2 * self._inset)
 
-    def draw_on(self, board: Whiteboard, page_name: str, corner: Box) -> Box:
+    def draw_on(self, board: Whiteboard, corner: Box) -> Box:
         """Draw the page with its top-left corner at corner, and answer the box it fills."""
-        cards, arrows = self._laid if hasattr(self, "_laid") else self.laid_out({})
+        cards, arrows = self._laid
         routed = ArrowRouter(list(cards.values()), arrows).route()
         if not cards:
             return Box(corner.x, corner.y, 0, 0)
         # The routes are written from the cards' middles, so they are worked out before the page moves.
-        lines = [self._board_arrow(arrow, cards, page_name) for arrow in routed]
-        filled = self._moved_to(cards, corner, PAGE_INSET if page_name else 0)
-        if page_name:
-            board.add(BoardElement.section(f"page.{_key(page_name)}", filled, text=page_name))
+        lines = [self._board_arrow(arrow, cards, self._name) for arrow in routed]
+        filled = self._moved_to(cards, corner, self._inset)
+        if self._name:
+            board.add(BoardElement.section(f"page.{_key(self._name)}", filled, text=self._title))
         for cell_id, card in cards.items():
-            board.add(card.card(self._element_id(cell_id, page_name)))
+            board.add(card.card(self._element_id(cell_id, self._name)))
         for line in lines:
             board.add(line)
         return filled
@@ -396,6 +483,9 @@ class WhiteboardCleanEngineeringModel(DiagramCleanEngineeringModel):
     module_type = WhiteboardModule
     suffixes = (Whiteboard.SUFFIX,)
 
+    class_board_type: type = ClassBoard
+    """What draws the model's class view; a model that groups its module pages names its own."""
+
     module_cell_types: Tuple[type, ...] = (WhiteboardModule,)
     """The module types a modules view reads its elements back as, each picked by the role its id starts with; a model
     that draws modules of its own kinds names their types first."""
@@ -420,7 +510,7 @@ class WhiteboardCleanEngineeringModel(DiagramCleanEngineeringModel):
 
     def board(self) -> Whiteboard:
         """The model drawn: its modules view, or its class view."""
-        return _ModulesBoard(self).draw() if self.is_modules_view else _ClassBoard(self).draw()
+        return _ModulesBoard(self).draw() if self.is_modules_view else self.class_board_type(self).draw()
 
     def parse(self, text: str) -> "WhiteboardCleanEngineeringModel":
         """The modules view or class view a saved board's text holds, read into this model's own modules. Text that is
