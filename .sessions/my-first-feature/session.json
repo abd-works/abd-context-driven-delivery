@@ -1,5 +1,25 @@
 {
   "name": "my-first-feature",
   "title": "my-first-feature",
-  "scope": "feature"
+  "scope": "feature",
+  "practices": {
+    "ddd": {
+      "enabled": false
+    },
+    "ux": {
+      "enabled": false
+    },
+    "clean_engineering": {
+      "enabled": false
+    },
+    "bdd": {
+      "enabled": false
+    },
+    "stories": {
+      "enabled": true
+    }
+  },
+  "guidance": {
+    "version": 6
+  }
 }
