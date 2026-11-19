@@ -10,7 +10,7 @@
       "specification",
       "implementation"
     ],
-    "version": 29
+    "version": 30
   },
   "practices": {
     "bdd": {
@@ -27,7 +27,14 @@
       "formats": {
         "model": [
           "python",
-          "markdown"
+          "markdown",
+          "drawio",
+          "whiteboard"
+        ],
+        "modules": [
+          "markdown",
+          "drawio",
+          "whiteboard"
         ]
       }
     },
