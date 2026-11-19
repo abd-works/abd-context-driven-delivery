@@ -5,11 +5,8 @@
   "branch": "release-1-2-fixes",
   "worktree": "C:\\dev\\abd-cdd-release-1-2-fixes",
   "guidance": {
-    "stages": [
-      "specification",
-      "implementation"
-    ],
-    "version": 18
+    "stages": [],
+    "version": 20
   },
   "practices": {
     "bdd": {
