@@ -293,7 +293,7 @@ class Repo:
     def make_repository(self) -> str:
         """Make the project, a plain folder, a git repository on main with a first commit of its files, so its tickets get
         branches, worktrees and chats of their own: the chat bar offers it in a session whose project is no repository.
-        Its .gitignore first takes what the CDD checkout ignores. A repository already there is left as it is. Answer what
+        Its .gitignore first takes what CDD writes into a project (``CDD_WRITTEN_PATTERNS``) and nothing else. A repository already there is left as it is. Answer what
         was done."""
         return NewRepository(self.checkout_folder).make_from_folder()
 

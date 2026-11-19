@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process'
+import { statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 
@@ -22,6 +23,16 @@ export class CddNotConnectedError extends Error {
   constructor(detail: string) {
     super(`The cdd server is not connected: ${detail}`)
     this.name = 'CddNotConnectedError'
+  }
+}
+
+// The project folder a connection was made for is not there, such as a ticket's worktree removed while its page stays
+// open. The connect script runs in that folder, and Node words a missing working folder as the program not found
+// (`spawn python.exe ENOENT`), which sends the person to repair a Python and a cdd server that are both fine.
+export class ProjectFolderMissingError extends Error {
+  constructor(readonly folder: string) {
+    super(`The project folder ${folder} is not there: it was moved or removed, such as a ticket's worktree closed since this page opened.`)
+    this.name = 'ProjectFolderMissingError'
   }
 }
 
@@ -142,7 +153,7 @@ export class CddConnection {
   private connected(): Promise<Session> {
     this.session ??= this.start().catch(failure => {
       this.session = null
-      if (failure instanceof CddNotConnectedError) throw failure
+      if (failure instanceof CddNotConnectedError || failure instanceof ProjectFolderMissingError) throw failure
       throw new CddNotConnectedError(failure instanceof Error ? failure.message : String(failure))
     })
     return this.session
@@ -163,6 +174,7 @@ export class CddConnection {
   // address, it prints the server's address too, so this connection never reads the file the server publishes it in.
   private connectScriptOutput(): Promise<string> {
     const script = join(cddHome(), 'connect.py')
+    if (!statSync(this.project, { throwIfNoEntry: false })?.isDirectory()) return Promise.reject(new ProjectFolderMissingError(this.project))
     return new Promise((resolve, reject) => {
       execFile(process.env.CDD_PYTHON ?? PYTHON, [script, '--address'], { cwd: this.project, timeout: LONGEST_TOOL_MILLISECONDS }, (failure, stdout, stderr) =>
         failure ? reject(new CddNotConnectedError(`${script} failed: ${stderr.trim() || failure.message}`)) : resolve(stdout.trim()),

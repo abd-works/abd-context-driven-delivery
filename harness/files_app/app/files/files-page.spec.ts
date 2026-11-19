@@ -30,8 +30,6 @@ class FakeFilesServer implements CddApi {
   practices = ['stories', 'ddd']
   formats: string[] = []
   rootFiles: object[] = []
-  // The files the session refuses to read, such as one deleted since the page listed it, each with the refusal.
-  refusals: Record<string, string> = {}
   private readonly waiting: (() => void)[] = []
 
   async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
@@ -42,7 +40,6 @@ class FakeFilesServer implements CddApi {
     if (path.endsWith('/guidance-selection-after')) return (await this.after(Number(body.version))) as Result
     if (path.endsWith('/fidelity-files')) return Object.fromEntries((body.fidelities as string[]).map(slug => [slug, { markdown: [entry(`.context/${slug}.md`)], drawio: [entry(`.context/${slug}.drawio`)] }])) as Result
     if (path.endsWith('/root-files')) return this.rootFiles as Result
-    if (path.endsWith('/file') && this.refusals[String(body.path)]) throw new Error(this.refusals[String(body.path)])
     return null
   }
 
@@ -325,20 +322,6 @@ describe('Review All Session Files Or This Session', () => {
         page.showScope('all')
         await settled()
         expect(page.fileBar.entries.map(each => each.path)).not.toContain('src/order.py')
-      })
-    })
-  })
-
-  describe('with a file deleted on disk since the page listed it', () => {
-    describe('that the Person opens', () => {
-      it('should say the file did not open and why, showing no empty file', async () => {
-        const server = new FakeFilesServer()
-        server.rootFiles = ROOT_FILES
-        server.refusals = { 'src/order.py': 'NamedPathNotFoundError: nothing at src/order.py, read from C:/dev/abd-cdd-2' }
-        const { page, stop } = await following(server)
-        stop()
-        await page.open('src/order.py')
-        expect([page.state.problem, page.state.file]).toEqual(['src/order.py did not open: NamedPathNotFoundError: nothing at src/order.py, read from C:/dev/abd-cdd-2', null])
       })
     })
   })

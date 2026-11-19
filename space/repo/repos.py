@@ -1,6 +1,6 @@
 """Repos - the repositories CDD works on beside one another, in the folder ``~/.cdd/config.json`` keeps as
 ``repos_folder``. Opening one creates it when missing, on main, publishes it, installs CDD into its ``.claude``, ignores
-what the CDD checkout ignores, and starts a chat of its own in it: a top-level chat, not one nested in the chat that
+what CDD writes into a project (``CDD_WRITTEN_PATTERNS``), and starts a chat of its own in it: a top-level chat, not one nested in the chat that
 asked, where the person switches to or creates sessions as usual."""
 
 from __future__ import annotations
@@ -212,7 +212,7 @@ class Repos:
         """Open the repository called name in a chat of its own, on main. folder is where it is kept, by default the
         repos folder (/repos-folder). A repository not there yet is created: git init on main with a first commit.
         publish creates it on GitHub with the gh CLI when it has no origin; visibility is private (the default), public,
-        or internal. With install, CDD is installed into its .claude; its .gitignore gets every line the CDD checkout's has.
+        or internal. With install, CDD is installed into its .claude; its .gitignore gets what CDD writes into a project (CDD_WRITTEN_PATTERNS) and nothing else.
         start_chat opens a new top-level Claude chat on the folder; the person sends its first prompt, which opens the
         repository's main session. Ask the person for visibility before publishing, offering private as the default."""
         cleaned = self._checked_name(name, visibility)

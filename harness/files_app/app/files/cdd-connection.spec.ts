@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 import { CddConnection } from '@cdd/cdd-connection'
 
@@ -25,8 +27,23 @@ function connectionFromBeforeRestart(): CddConnection {
   return connection
 }
 
+// Seed: a project folder that is not there, such as a ticket's worktree removed while its page stays open.
+const REMOVED_PROJECT = join(tmpdir(), 'cdd-connection-project-removed')
+
 describe('cdd connection', () => {
   afterEach(() => vi.unstubAllGlobals())
+
+  describe('that is made for a project folder that is not there', () => {
+    const calling = () => new CddConnection(REMOVED_PROJECT).call('session.show', {})
+
+    it('should refuse the call, naming the folder as not there', async () => {
+      await expect(calling()).rejects.toThrow(`The project folder ${REMOVED_PROJECT} is not there`)
+    })
+
+    it('should say nothing of the Python program, which is where it was', async () => {
+      await expect(calling().catch(failure => String(failure.message).toLowerCase().includes('python'))).resolves.toBe(false)
+    })
+  })
 
   describe('that opened its session before the cdd server restarted', () => {
     it('should answer the next call on a new session rather than fail it', async () => {

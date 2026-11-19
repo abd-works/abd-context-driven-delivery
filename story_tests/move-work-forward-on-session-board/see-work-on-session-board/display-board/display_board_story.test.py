@@ -48,14 +48,14 @@ with story("Display Board"):
             pass
     with scenario("Show a failing tool in a toast"):
         # Evidence: observed: board-client.spec 'with a tool failing' — 'should show no band', 'should show a toast'.
-        with given("the [session](../../../.context/kanban-model.md#session) folder .sessions/broken holds a session.json that is not JSON"):
+        with given("the [ticket](../../../.context/kanban-model.md#ticket--card)s checkout-flow and billing-report are on the [board](../../../.context/kanban-model.md#board)"):
             pass
-        with when("the session board reads the [board](../../../.context/kanban-model.md#board)"):
-            # Board page -> Board.show()
-            # Board -> Board.tickets
-            # Board <- JsonFileUnreadable
+        with when("the Person adds a child titled Billing report to checkout-flow"):
+            # Ticket card -> Ticket.add_child(title)
+            # Ticket -> CardName
+            # Ticket <- TicketNameTakenError
             pass
-        with then("a toast says cdd board.show failed: JsonFileUnreadable: .sessions/broken/session.json is not a readable JSON object (Expecting property name enclosed in double quotes: line 1 column 2 (char 1))"):
+        with then("a toast says cdd ticket.add_child failed: TicketNameTakenError: a ticket named billing-report already exists; give 'Billing report' another title"):
             pass
         with but_("no band says the cdd server is lost"):
             pass

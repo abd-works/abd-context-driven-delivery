@@ -5,6 +5,7 @@ import { ActivationView } from '../ticket/activation-view'
 import { RootChoiceView } from '../ticket/root-choice-view'
 import { DetailsView } from '../ticket/details-view'
 import type { TicketClient } from '../ticket/ticket-client'
+import type { BoardClient } from './board-client'
 import { BoardColumnsView } from './board-columns-view'
 import { BoardContext, useBoard } from '../shared/board-context'
 import { BoardHeaderView } from './board-header-view'
@@ -54,6 +55,20 @@ function UnsavedBandView({ changes, error }: { changes: string[]; error: string 
   )
 }
 
+// A ticket's session.json the board could not read, such as one cut off half way, is on no column until it is repaired;
+// the band names each such file and what is wrong in it, and every other ticket shows below as it is.
+export function UnreadableBandView({ files }: { files: BoardClient['unreadable'] }) {
+  return (
+    <div className="band band-failure" role="alert" aria-label="Session files not read">
+      {files.map(each => (
+        <span key={each.file} className="band-words">
+          {`${each.file} was not read, so its ticket is on no column until the file is repaired · ${each.error}`}
+        </span>
+      ))}
+    </div>
+  )
+}
+
 function ViolationsBandView({ ticket }: { ticket: TicketClient }) {
   return (
     <div className="band" role="status" aria-label="Active ticket's violations">
@@ -70,6 +85,7 @@ function BandsView() {
   const active = page.board.activeTicket
   return (
     <>
+      {page.board.unreadable?.length ? <UnreadableBandView files={page.board.unreadable} /> : null}
       {page.board.unsaved ? <UnsavedBandView changes={page.board.unsaved.changes} error={page.board.unsaved.error} /> : null}
       {active?.work.violatedSlugs.length ? <ViolationsBandView ticket={active} /> : null}
     </>

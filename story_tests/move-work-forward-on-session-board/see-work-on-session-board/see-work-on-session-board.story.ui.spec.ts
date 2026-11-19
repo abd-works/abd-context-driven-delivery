@@ -94,18 +94,49 @@ test.describe('Display Board', () => {
   })
 
   test.describe('Show a failing tool in a toast', () => {
+    // The Person adds a child titled Billing report to checkout-flow: billing-report is a ticket already.
     test.beforeEach(async ({ page }) => {
       await openBoard(page)
-      writeInto(join(fixtureRoot, '.sessions', 'broken', 'session.json'), '{broken')
+      await card(page, 'checkout-flow').getByRole('button', { name: 'Add child' }).first().click()
+      await page.getByLabel('Child title').fill('Billing report')
+      await page.getByLabel('Child title').press('Enter')
     })
 
-    test('Then a toast says cdd board.show failed: JsonFileUnreadable: .sessions/broken/session.json is not a readable JSON object (Expecting property name enclosed in double quotes: line 1 column 2 (char 1))', async ({ page }) => {
-      await expect(toast(page, /^cdd board\.show failed: JsonFileUnreadable: .*[\\/]\.sessions[\\/]broken[\\/]session\.json is not a readable JSON object \(Expecting property name enclosed in double quotes: line 1 column 2 \(char 1\)\)/).first()).toBeVisible({ timeout: 8_000 })
+    test("Then a toast says cdd ticket.add_child failed: TicketNameTakenError: a ticket named billing-report already exists; give 'Billing report' another title", async ({ page }) => {
+      await expect(toast(page, "cdd ticket.add_child failed: TicketNameTakenError: a ticket named billing-report already exists; give 'Billing report' another title").first()).toBeVisible({ timeout: 8_000 })
     })
 
     test('But no band says the cdd server is lost', async ({ page }) => {
-      await expect(toast(page, /board\.show failed/).first()).toBeVisible({ timeout: 8_000 })
+      await expect(toast(page, /ticket\.add_child failed/).first()).toBeVisible({ timeout: 8_000 })
       await expect(page.locator('.band-failure')).toHaveCount(0)
+    })
+  })
+
+  test.describe("Show the other tickets when one ticket's session file does not read", () => {
+    const notice = (page: Page) => page.getByRole('alert', { name: 'Session files not read' })
+
+    test.beforeEach(async ({ page }) => {
+      writeInto(join(fixtureRoot, '.sessions', 'broken', 'session.json'), '{broken')
+      await openBoard(page)
+    })
+
+    test('Then billing-report shows on the board', async ({ page }) => {
+      await expect(notice(page)).toBeVisible()
+      await expect(card(page, 'billing-report').first()).toBeVisible()
+    })
+
+    test('And no column shows broken', async ({ page }) => {
+      await expect(notice(page)).toBeVisible()
+      await expect(card(page, 'broken')).toHaveCount(0)
+    })
+
+    test('And the board names .sessions/broken/session.json as a file it could not read, with what is wrong in it', async ({ page }) => {
+      await expect(notice(page)).toContainText(/\.sessions\/broken\/session\.json was not read.*is not a readable JSON object \(Expecting property name enclosed in double quotes: line 1 column 2 \(char 1\)\)/)
+    })
+
+    test('But no band says the cdd server is not answering', async ({ page }) => {
+      await expect(notice(page)).toBeVisible()
+      await expect(page.locator('.band-failure').filter({ hasText: 'not answering' })).toHaveCount(0)
     })
   })
 

@@ -43,14 +43,16 @@ section: body
 
 #### Scenario: Show a failing tool in a toast
 
-*Given* the [session](../../../space/kanban/.context/kanban-model.md#session) folder .sessions/broken holds a session.json that is not JSON
-*When* the session board reads the [board](../../../space/kanban/.context/kanban-model.md#board)
-*Then* a toast says cdd board.show failed: JsonFileUnreadable: .sessions/broken/session.json is not a readable JSON object (Expecting property name enclosed in double quotes: line 1 column 2 (char 1))
+> A session.json that does not read no longer fails `board.show` (the next scenario), so the failing tool here is a child ticket whose title makes the name of a ticket already there, which `ticket.add_child` refuses.
+
+*Given* the [ticket](../../../space/kanban/.context/kanban-model.md#ticket--card)s checkout-flow and billing-report are on the [board](../../../space/kanban/.context/kanban-model.md#board)
+*When* the Person adds a child titled Billing report to checkout-flow
+*Then* a toast says cdd ticket.add_child failed: TicketNameTakenError: a ticket named billing-report already exists; give 'Billing report' another title
 *But* no band says the cdd server is lost
 
 #### Scenario: Show the other tickets when one ticket's session file does not read
 
-> Test: see-work-on-session-board.story.shared.py, replayed by the domain spec; unit: space/kanban/kanban_tools_spec.py.
+> Test: see-work-on-session-board.story.shared.py, replayed by the domain spec; unit: space/kanban/kanban_tools_spec.py; the page's notice: see-work-on-session-board.story.ui.spec.ts and space/kanban/app/src/kanban/board/board-page.spec.ts.
 
 > Evidence: exploratory-testing defect pixel-07. One session.json cut off half way took every card off the board.
 

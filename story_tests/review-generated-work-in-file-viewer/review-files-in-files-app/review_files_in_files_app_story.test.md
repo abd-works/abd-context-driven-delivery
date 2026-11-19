@@ -114,7 +114,7 @@ Found on 2026-11-19 (exploratory testing, pixel-02): git writes such a name in q
 
 #### Scenario: Say so when the project folder the link names is not there
 
-Found on 2026-11-19 (exploratory testing, pixel-04): the page said the cdd server was not connected because `python.exe` was not found, which sent the person to repair a Python and a cdd server that were both fine. Acceptance tests: `harness/files_app/app/files-server.spec.ts`; `open-files-in-files-app.story.ui_e2e_spec.py` for the page.
+Found on 2026-11-19 (exploratory testing, pixel-04): the page said the cdd server was not connected because `python.exe` was not found, which sent the person to repair a Python and a cdd server that were both fine. Acceptance tests: `harness/files_app/app/files-server.spec.ts` for the Files server and `harness/files_app/app/files/cdd-connection.spec.ts` for every other page's connection; `open-files-in-files-app.story.ui_e2e_spec.py` for the page.
 
 *Given* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets)'s link names a project folder that is not there, such as a ticket's worktree removed while its Files tab stayed open
 *When* the Files app opens
@@ -406,7 +406,7 @@ Found on 2026-11-16 (debug report `debug-20261116T225500.md`): a page reaching a
 
 #### Scenario: Say so when a listed file is gone
 
-Found on 2026-11-19 (exploratory testing, pixel-01): a file deleted or moved on disk after the page listed it opened as one empty line in a live editor, exactly as an empty file opens, so the next save would bring it back empty. Acceptance tests: `space/session/session_graph_spec.py` and `space/session/file_manager_spec.py` for what the session answers; `harness/files_app/app/files/files-page.spec.ts` and `open-files-in-files-app.story.ui_e2e_spec.py` for the page.
+Found on 2026-11-19 (exploratory testing, pixel-01): a file deleted or moved on disk after the page listed it opened as one empty line in a live editor, exactly as an empty file opens, so the next save would bring it back empty. Acceptance tests: `space/session/session_graph_spec.py` and `space/session/file_manager_spec.py` for what the session answers; `open-files-in-files-app.story.ui_e2e_spec.py` for the page.
 
 *Given* the file bar lists *src/order.py*, and *order.py* was deleted on disk since the page listed it
 *When* the Person views *order.py*
