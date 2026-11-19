@@ -8,6 +8,8 @@ from pathlib import Path
 from expects import contain, equal, expect
 from mamba import before, description, it
 
+import harness.hooks  # noqa: F401 - registers the hook installation with the Installer, as the script does
+import harness.mcp.mcp_server  # noqa: F401 - registers the MCP server's installation with the Installer
 from harness.process.claude_chat_process import claude_config_folder
 
 _SCRIPT = Path(__file__).resolve().parent / "install.py"
@@ -111,3 +113,50 @@ with description("a chat folder an install refuses"):
     with description("with a path named"):
         with it("should refuse nothing, since the path says where to install"):
             expect(install._chat_folder_refusal(_chat_install(str(Path.home()), path="C:/elsewhere/.claude"))).to(equal(""))
+
+    with description("for a chat whose folder is not known, named with nothing"):
+        with it("should refuse it, since an empty name would install into whatever directory the script runs in"):
+            expect(install._chat_folder_refusal(_chat_install(""))).to(contain("not known"))
+
+
+with description("an install told where to go by something that is no IDE or no folder"):
+    with description("with an IDE name CDD does not install into"):
+        with it("should refuse with the refused exit, before anything is written"):
+            expect(install._install(_chat_install(None, path="C:/work/shop/.emacs", ide="Emacs"))).to(equal(install.REFUSED_EXIT))
+
+    with description("with a file as the path"):
+        with it("should refuse with the refused exit, before anything is written"):
+            expect(install._install(_chat_install(None, path=str(_SCRIPT)))).to(equal(install.REFUSED_EXIT))
+
+
+class FakeDeployment:
+    """The installer's deployment, recording how its Installer-only refresh was asked for."""
+
+    def __init__(self) -> None:
+        self.self_installs = 0
+
+    def install_self(self) -> None:
+        self.self_installs += 1
+
+
+class FakeFullInstaller:
+    """An installer that fails the spec if the refresh runs a whole install, which would replace the last one."""
+
+    def __init__(self) -> None:
+        self.deployment = FakeDeployment()
+
+
+def _self_install() -> argparse.Namespace:
+    """The script's arguments for its self option, whose name a Namespace cannot take as a keyword."""
+    args = argparse.Namespace(no_replace=False)
+    setattr(args, "self", True)
+    return args
+
+
+with description("an Installer-only refresh asked of the install script"):
+    with before.each:
+        self.installer = FakeFullInstaller()
+        install._install_toolsets(_self_install(), self.installer, FakeServer())
+
+    with it("should refresh the Installer's own commands, leaving the rest of the last install in place"):
+        expect(self.installer.deployment.self_installs).to(equal(1))

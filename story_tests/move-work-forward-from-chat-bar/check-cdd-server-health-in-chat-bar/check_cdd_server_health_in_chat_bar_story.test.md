@@ -125,6 +125,32 @@ section: body
 *When* the Person opens Details  
 *Then* Details shows the tool server-health.report, the installer's error, the server plugin:cdd:cdd and the fix Press Reconnect. If that fails, press Run install.
 
+## Story: Create Git Repository First
+
+### Evidence
+
+| Source | Note |
+|--------|------|
+| `space/repo/new_repository.py` `NewRepository.make_from_folder` | the first commit "holds the folder's own files and not CDD's install or its sessions' working files" |
+| `.sessions/release-1-2-fixes/exploratory-testing/defects/bolt-05-make-repository-ignores-the-persons-own-files.md` | the defect the second scenario closes |
+| `space/repo/new_repository_spec.py` | unit tier: the patterns written into `.gitignore` |
+| `space/repo/new_repository_heavy_spec.py` | heavy tier, with real git |
+
+#### Scenario: Make a plain folder a repository
+
+*Given* the plain folder shop holds notes.md, CDD installed into .claude, and the main session's log  
+*When* the Person creates the git repository  
+*Then* shop is a repository on main  
+  *And* its first commit holds .gitignore, README.md and notes.md  
+  *And* .claude and the session's log are ignored
+
+#### Scenario: Commit the folder's own files that the CDD checkout would ignore
+
+*Given* the plain folder shop holds pages/_app.tsx, _config.yml, conf/settings.yaml, sandbox/try.py and count_all.py  
+*When* the Person creates the git repository  
+*Then* its first commit holds each of those files  
+  *And* its .gitignore lists only what CDD writes into a project
+
 ## Story: Open App From Health Panel
 
 ### Evidence

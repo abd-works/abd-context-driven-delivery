@@ -23,16 +23,16 @@ from harness.installation.destination import Installation, ServerInstallation, i
 from harness.installation.files import FileChannel, FileInstallation, command
 from harness.installation.ide_layout import IdeLayout
 from harness.installation.install_diagnostics import InstallDiagnostics
+from harness.installation.install_lock import InstallLock
 from harness.installation.install_target import InstallTarget
-from harness.installation.install_record import InstallRecord
+from harness.installation.install_record import InstallRecord, LastInstall
 from harness.installation.language_adapter import LanguageAdapterInstallation
 from harness.installation.repository_toolsets import RepositoryToolsets
 from harness.markdown import markdown
 from harness.markdown.front_matter import FrontMatter
 
-# The record of the last install into a project's own IDE folder; an install into a temporary folder keeps its record
-# in that folder, so a spec's install never replaces the person's.
-_SHARED_RECORD = Path(__file__).resolve().parent / InstallRecord.NAME
+# Where this checkout keeps the IDE and folder it last installed into; each folder keeps the record of its own files.
+_LAST_INSTALL = Path(__file__).resolve().parent / InstallRecord.NAME
 
 _Server = TypeVar("_Server", bound=ServerInstallation)
 
@@ -78,7 +78,7 @@ class InstallChannels:
         }
         self.standing_rules = FileInstallation(installer.target, FileChannel(InstallDestination.RULE), repo=repo)
         for installation in (*self.servers, self.language_adapters, *self._files.values(), self.standing_rules):
-            installation.track_writes_with(lambda written: installer.record.track(written, installer.path))
+            installation.track_writes_with(installer.record.track)
         # The toolsets the server channels publish into every install, such as the hooks that start the cdd server.
         self.toolsets: list[Any] = [AgentToolSet.instantiate(toolset) for server in self.servers for toolset in server.toolsets]
 
@@ -146,12 +146,17 @@ class Deployment:
 
     def run(self, toolsets: Iterable[ToolsetConfiguration] | None, replace: bool) -> InstallChannels:
         """Publish toolsets, every toolset the repository defines when none are named; replace wipes the previous
-        install first."""
+        install first. The run holds the folder's lock, so a second install into the folder waits for it."""
+        with self._installer.lock.held():
+            return self._run(toolsets, replace)
+
+    def _run(self, toolsets: Iterable[ToolsetConfiguration] | None, replace: bool) -> InstallChannels:
         installer = self._installer
         if replace:
             installer.clean()
         else:
-            installer.record.keep_existing(installer.path)
+            installer.last_install.hand_over_to(installer.record)
+            installer.record.keep_existing()
         installer.toolsets.ensure_import_path()
         items = self._repository_toolsets() if toolsets is None else list(toolsets)
         channels = self._channels = InstallChannels(installer, SERVER_CHANNELS.kinds, installing=True)
@@ -161,10 +166,11 @@ class Deployment:
         self._report_diagnosis()
         return channels
 
-    def install_self(self, *, replace: bool = False) -> InstallChannels:
+    def install_self(self) -> InstallChannels:
         """Deploy only the Installer toolset — ``/install``, ``/clean`` — and the toolsets the server channels publish
-        into every install, such as the hooks that start the cdd server."""
-        return self.run([], replace=replace)
+        into every install, such as the hooks that start the cdd server. It adds to the last install and removes none
+        of it: a refresh of two commands must not take every skill and rule away."""
+        return self.run([], replace=False)
 
     def _publish_every_toolset(self, items: list[ToolsetConfiguration], channels: InstallChannels, whole: bool) -> None:
         """Write every channel's files for items, the Installer, and the toolsets the server channels publish, then the
@@ -184,8 +190,9 @@ class Deployment:
             # Only after a full wipe and republish do the enrolled MCP names hold the whole catalog; a partial install
             # must not delete skills for toolsets not in this run.
             self._remove_skills_naming_missing_mcp()
-        installer.record.prune_empty_skill_folders(installer.path)
-        installer.record.save(installer.ide, installer.path)
+        installer.record.prune_empty_skill_folders()
+        installer.record.save()
+        installer.last_install.remember(installer.target)
 
     def _report_diagnosis(self) -> None:
         """Diagnose the finished install, printing each red report."""
@@ -255,7 +262,7 @@ class Deployment:
             dest = installer.path / "agents" / f"{front_matter.fields.get('name') or path.stem}.md"
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_text(front_matter.text, encoding="utf-8")
-            installer.record.track(dest, installer.path)
+            installer.record.track(dest)
 
     def _install_standing_rules(self) -> None:
         """Install cdd_guidance/rules as always-on rules in the IDE rules folder."""
@@ -290,7 +297,7 @@ class Deployment:
         installer = self._installer
         relative = skill.resolve().relative_to(installer.path.resolve()).as_posix()
         skill.unlink()
-        installer.record.prune_empty_parents(skill, installer.path)
+        installer.record.prune_empty_parents(skill)
         installer.record.forget(relative)
         return relative
 
@@ -337,11 +344,16 @@ class Installer:
     MCP and hook channels each point the IDE at a server, and harness/mcp and harness/hooks register their installation
     with ``SERVER_CHANNELS`` when they are imported, so this module never imports them."""
 
-    def __init__(self, target: InstallTarget, record: InstallRecord, toolsets: RepositoryToolsets) -> None:
+    def __init__(self, target: InstallTarget, toolsets: RepositoryToolsets, last_install: LastInstall) -> None:
         self.target = target
         """The IDE folder it installs into, with that IDE's layout."""
-        self.record = record
-        """The files the last install wrote, read and written by the install and the clean."""
+        self.record = InstallRecord(target)
+        """The files the last install into that folder wrote, kept in the folder, read and written by the install and
+        the clean."""
+        self.last_install = last_install
+        """The IDE and folder the checkout last installed into, where an install that names neither goes."""
+        self.lock = InstallLock(target.path)
+        """The folder's lock: one install or clean in it at a time."""
         self.toolsets = toolsets
         """The toolsets of the repository it installs."""
         self.diagnostics = target.diagnostics
@@ -351,13 +363,14 @@ class Installer:
     @classmethod
     def create(cls, ide: str | None = None, path: str | Path | None = None, *, repo: str | Path) -> Installer:
         """The installer of repo into path for ide; with neither named, into the IDE folder it last installed into,
-        else repo's own folder for the default IDE. An install into a temporary folder keeps its record there."""
+        else repo's own folder for the default IDE. An IDE name that is none CDD installs into is refused with
+        *UnknownIde*, and a path that is empty or a file with *NotAnInstallFolder*."""
         root = Path(repo).resolve()
-        last = InstallRecord(_SHARED_RECORD).saved if ide is None and path is None else {}
+        last_install = LastInstall(_LAST_INSTALL)
+        last = last_install.saved if ide is None and path is None else {}
         layout = IdeLayout(ide or last.get("ide") or IdeLayout.DEFAULT_IDE)
         target = InstallTarget(layout, path) if path is not None else InstallTarget.from_last_install(layout, last.get("path"), root)
-        record = InstallRecord(target.path / InstallRecord.NAME if target.is_temporary else _SHARED_RECORD)
-        return cls(target, record, RepositoryToolsets(root))
+        return cls(target, RepositoryToolsets(root), last_install)
 
     @classmethod
     @tool_subject
@@ -388,8 +401,12 @@ class Installer:
     @agent_tool
     def clean(self) -> list[str]:
         """Remove files from the previous install on this IDE path."""
-        removed = self.record.remove_installed(self.path)
-        self.record.prune_empty_skill_folders(self.path)
+        if not self.path.is_dir():
+            return []
+        with self.lock.held():
+            self.last_install.hand_over_to(self.record)
+            removed = self.record.remove_installed()
+            self.record.prune_empty_skill_folders()
         return removed
 
     @command(name="install")

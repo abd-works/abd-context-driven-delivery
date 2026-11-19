@@ -5,12 +5,18 @@ import json
 import os
 import threading
 import time
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Mapping
+from typing import IO, Any, Iterator, Mapping
 
 # How long a swap Windows refuses is tried again, and how long between tries.
 _SWAP_SECONDS = 5.0
 _SWAP_RETRY_SECONDS = 0.05
+# How long a change waits for another holder of the file to let go, and how long between tries.
+_HOLD_SECONDS = 30.0
+_HOLD_RETRY_SECONDS = 0.01
+# What follows the file's name in the name of the lock file beside it.
+_LOCK_SUFFIX = ".lock"
 
 
 class JsonFileUnreadable(ValueError):
@@ -26,12 +32,22 @@ class JsonFileUnreadable(ValueError):
         return f"{path} is not a readable JSON object ({cause})"
 
 
+class JsonFileBusy(TimeoutError):
+    """Another holder kept a JSON file for longer than a change waits for it, so the change was not made."""
+
+    def __init__(self, path: Path, seconds: float) -> None:
+        super().__init__(f"{path} is held for a change by another caller, and was not let go in {seconds:g} seconds")
+        self.path = path
+        self.seconds = seconds
+
+
 class JsonFile:
     """One file holding a JSON object, such as ``.context/config.json`` or an install's ``diagnostics.json``. A missing
     file reads as empty, and the file is written indented with a closing newline, so a person can read and compare it.
     A file holding anything but a JSON object raises the owner's kind of *JsonFileUnreadable*, so an owner never saves a
     partial object over what a person wrote. A file only programs read, such as a saved knowledge graph of several
-    megabytes, is written ``compact``: on one line, without the spaces indenting would add to every value."""
+    megabytes, is written ``compact``: on one line, without the spaces indenting would add to every value. A file several
+    processes change, such as a chat's prompt queue, is ``held`` from each change's read to its write."""
 
     def __init__(self, path: Path, unreadable: type[JsonFileUnreadable] = JsonFileUnreadable, compact: bool = False) -> None:
         self.path = Path(path)
@@ -46,8 +62,8 @@ class JsonFile:
         if not self.path.is_file():
             return {}
         try:
-            data = json.loads(self.path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as error:
+            data = json.loads(self._text())
+        except (OSError, ValueError) as error:
             raise self._unreadable(self.path, error) from error
         if not isinstance(data, dict):
             raise self._unreadable(self.path, TypeError(f"expected an object, found {type(data).__name__}"))
@@ -69,6 +85,54 @@ class JsonFile:
             staged.unlink(missing_ok=True)
             raise
         return self.path
+
+    @contextmanager
+    def held(self) -> Iterator[None]:
+        """Hold the file for one change, from its read to its write, so a change another thread or process makes to the
+        same file waits its turn and none is lost. The hold is the operating system's lock on the lock file beside the
+        file, which ends when the holder lets go or its process ends, however it ends: a killed holder blocks nobody,
+        and the lock file it leaves holds nothing. A wait longer than _HOLD_SECONDS raises *JsonFileBusy*."""
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        with open(self.path.with_name(f"{self.path.name}{_LOCK_SUFFIX}"), "a+b") as lock_file:
+            self._take(lock_file)
+            yield
+
+    def _take(self, lock_file: IO[bytes]) -> None:
+        """Take the operating system's lock on lock_file, which closing the file gives back, trying again while another
+        holder has it."""
+        deadline = time.monotonic() + _HOLD_SECONDS
+        while not self._is_taken(lock_file):
+            if time.monotonic() >= deadline:
+                raise JsonFileBusy(self.path, _HOLD_SECONDS)
+            time.sleep(_HOLD_RETRY_SECONDS)
+
+    def _is_taken(self, lock_file: IO[bytes]) -> bool:
+        """Whether this try took the lock; false while another holder has it."""
+        lock_file.seek(0)
+        try:
+            if os.name == "nt":
+                import msvcrt
+
+                msvcrt.locking(lock_file.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                import fcntl
+
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            return False
+        return True
+
+    def _text(self) -> str:
+        """The file's text, without the byte-order mark an editor may have saved at its start. Windows refuses a read
+        for the moment another process swaps the file in, so a refusal is tried again until _SWAP_SECONDS pass."""
+        deadline = time.monotonic() + _SWAP_SECONDS
+        while True:
+            try:
+                return self.path.read_text(encoding="utf-8-sig")
+            except PermissionError:
+                if time.monotonic() >= deadline:
+                    raise
+                time.sleep(_SWAP_RETRY_SECONDS)
 
     def _holds(self, text: str) -> bool:
         try:

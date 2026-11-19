@@ -65,7 +65,7 @@ def _add_install_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--self",
         action="store_true",
-        help="Deploy only the Installer toolset (slash /install and /clean, hooks).",
+        help="Deploy only the Installer toolset (slash /install and /clean, hooks), leaving the rest of the last install in place.",
     )
 
 
@@ -119,6 +119,8 @@ def _chat_folder_refusal(args: argparse.Namespace) -> str:
     and when no chat is named or ``--path`` names where to install."""
     if args.from_chat is None or args.path is not None:
         return ""
+    if not args.from_chat.strip():
+        return "not installed: the chat's folder is not known (--from-chat names no folder)"
     from harness.installation.destination import is_temporary
     from harness.process.claude_chat_process import is_desktop_spare
 
@@ -158,13 +160,23 @@ def _install_from_chat_checkout(args: argparse.Namespace, chat_checkout: Path) -
     return subprocess.run(command, cwd=chat_checkout, check=False).returncode
 
 
+# The exit of an install refused for an IDE name that is no IDE, or a path that is empty or a file.
+REFUSED_EXIT = 2
+
+
 def _install(args: argparse.Namespace) -> int:
     # The MCP and hook installations register with the Installer when their modules are imported.
     import harness.hooks.hook_installation  # noqa: F401
+    from harness.installation.ide_layout import UnknownIde
+    from harness.installation.install_target import NotAnInstallFolder
     from harness.installation.installer import Installer
     from harness.mcp.mcp_server import McpInstallation
 
-    installer = Installer.create(ide=args.ide, path=_install_path(args), repo=_REPO)
+    try:
+        installer = Installer.create(ide=args.ide, path=_install_path(args), repo=_REPO)
+    except (UnknownIde, NotAnInstallFolder) as refusal:
+        print(f"not installed: {refusal}", file=sys.stderr)
+        return REFUSED_EXIT
     server = McpInstallation.create(installer.layout, installer.path, repo=_REPO)
     # Switching the code the server runs takes seconds; a full install takes a minute, so the switch runs alone.
     if args.pin_runtime or args.update or args.serve_from_checkout:
@@ -200,7 +212,7 @@ def _switch_server_only(args: argparse.Namespace, installer: Installer, server: 
 
 def _install_toolsets(args: argparse.Namespace, installer: Installer, server: McpInstallation) -> None:
     if args.self:
-        installer.deployment.install_self(replace=not args.no_replace)
+        installer.deployment.install_self()
         return
     installer.install(replace=not args.no_replace)
     # A plain install from the main checkout also moves the server onto the commit it just installed.
@@ -279,9 +291,10 @@ _VERSION_LINE = re.compile(r'^version = "[^"]*"$', re.MULTILINE)
 
 def _match_release_version(release: str) -> str:
     """Install from latest runs the version the release carries, so a local edit to the version line in pyproject.toml,
-    which the merge leaves in place, is put back to the release's; the rest of the file keeps any local edits."""
-    shown = _git("show", f"{release}:pyproject.toml")
-    origin_line = _VERSION_LINE.search(shown.stdout) if shown.returncode == 0 else None
+    which the merge leaves in place, is put back to the release's; the rest of the file keeps any local edits. A version
+    line the checkout has committed is no local edit: a checkout past the release keeps its own commits, its version
+    among them."""
+    origin_line = _committed_version_line(release)
     if origin_line is None:
         return f"{release}'s version was not read"
     pyproject = _REPO / "pyproject.toml"
@@ -290,9 +303,18 @@ def _match_release_version(release: str) -> str:
     local_line = _VERSION_LINE.search(local.replace("\r\n", "\n"))
     if local_line is not None and local_line.group(0) == origin_line.group(0):
         return origin_line.group(0)
+    committed_line = _committed_version_line("HEAD")
+    if local_line is not None and committed_line is not None and local_line.group(0) == committed_line.group(0):
+        return f"{local_line.group(0)} (this checkout's own commit, past {release})"
     with pyproject.open("w", encoding="utf-8", newline="") as file:
         file.write(re.sub(r'^version = "[^"]*"(?=\r?$)', origin_line.group(0), local, count=1, flags=re.MULTILINE))
     return f"{origin_line.group(0)} (set from {release})"
+
+
+def _committed_version_line(commit: str) -> re.Match[str] | None:
+    """The version line of pyproject.toml as commit holds it; none when it cannot be read."""
+    shown = _git("show", f"{commit}:pyproject.toml")
+    return _VERSION_LINE.search(shown.stdout) if shown.returncode == 0 else None
 
 
 def _switch_server(args: argparse.Namespace, server: McpInstallation) -> str:
