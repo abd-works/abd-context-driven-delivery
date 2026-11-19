@@ -6,7 +6,7 @@ Build tested: branch `release-1-2-fixes`, from commit 302efe378. Fixes are on th
 
 - **Themes.** Eight kinds of behaviour that keep producing defects and that the test tiers reach only through fakes: [coverage-themes.md](coverage-themes.md).
 - **Two rounds, six tester robots**, each on its own charter, sandbox and throwaway cdd home: [charters.md](charters.md). Round 1 explored; in round 2 a robot that had not reported a defect reproduced it from the report alone, and the others took the areas round 1 had not reached.
-- **86 files in the defect area** ([defects/](defects/)): 64 defects and 22 questions for the person.
+- **88 files in the defect area** ([defects/](defects/)): 66 defects and 22 questions for the person.
 - **Seven closing robots** wrote, for each confirmed defect, a scenario, a test seen failing first at the tier that owns the behaviour, and the fix. A last robot brought the story map, module cards and class model up to date.
 
 ## Defects by epic, sub-epic and story
@@ -41,7 +41,7 @@ Build tested: branch `release-1-2-fixes`, from commit 302efe378. Fixes are on th
 | | Switch Files App Between Files And Graph | Open Several Files From Graph Nodes | pixel-08 | yes |
 | no story on the map | the test runner and its cadence | | rivet-01 to 10 | all |
 
-Of the 64 defects, 59 are fixed, 4 are fixed in part (widget-08, widget-12, widget-20, sparky-09), and 1 is not fixed (widget-19).
+Of the 66 defects, 59 are fixed, 4 are fixed in part (widget-08, widget-12, widget-20, sparky-09), and 3 are not fixed: widget-19, and pixel-09 and pixel-10, two browser tests the e2e tier showed failing from before this session (see Test results).
 
 ## Defects by module and class
 
@@ -95,9 +95,13 @@ A new Stories rule, `scenarios-name-a-story-on-the-map`, reports a scenario file
   - `story_map_edits_spec.py` copies a story test into a throwaway project at its real path, which went past Windows' 260 character path limit under the tier's temporary folder. The tier's folder and the throwaway project's folder now have short names; the spec passed in the fourth run.
   - `harness/mcp/cdd_home_spec.py` had three examples that serve two checkouts and publish their mods as real files, at 100 to 146 ms against the 100 ms unit budget. They are now in `cdd_home_lanes_heavy_spec.py`.
   - `space/session/session_spec.py` and `session_log_spec.py` each had one example at 102 or 103 ms in one run and inside the budget in the others, while robots were loading the machine.
-  The tier has not yet passed whole in one run; the run after these two fixes is the one to read.
-- **Heavy tier as a whole: not run.** Only the heavy specs each robot touched.
-- **E2E tier as a whole: not run.** Only the Files app browser spec (13 passed) and the board's see-work browser spec (38 passed, 4 failing until the language adapters were installed again; not rerun since).
+  The fifth run, after these two fixes, passed 366 of 367: one example of `session_spec.py` at 107 ms. A different example of that spec is at the budget's edge in each run, so the tier has not passed whole in one run, and no example has failed on an assertion in any of the five.
+- **Heavy tier as a whole**, through the changed runner in a detached worktree (`python -m harness.diagnostics.test_runs heavy`, throwaway cdd home): the first run passed 58 of 62 files. One failure was a stale list of repo tools in `mcp_host_heavy_spec.py` (fixed). Two were the worktree itself: it had no installed language adapters, so the Graph app and the Story UI did not start; a tier's worktree now gets a copy of them (8762cff7a). The fourth was a path over Windows' limit in the OSS pattern's rules spec, an effect of the long temporary folder used for that run. **The second run passed 62 of 62 on 8762cff7a.**
+- **E2E tier without the agent specs** (`scripts/test.ps1 -Suite e2e -SkipAgents`, on 8762cff7a): 7 of 10 files passed, and 274 of 275 Playwright tests. The three failures:
+  - `review-files-in-files-app.story.ui_e2e_spec.py`, one example: the file bar of another project lists its whiteboard beside its drawing. The page does what the story Open Whiteboard In Files App asks; the test and its scenario are older. Not caused by this session (pixel-09), and which of the two is right is a decision for the person.
+  - `review-files-in-viewer.story.ui.spec.ts`, one test: a changed line's row holds the removed line and the new one, and the test's locator finds both once the change is drawn. A fault in the test since 2026-11-12, passing or failing by timing (pixel-10). Not fixed.
+  - `tools/prompt_queue/prompt_queue_plugin_e2e_spec.py`, all six examples: `'NoneType' object has no attribute 'stdin'` when it starts a headless Claude Code chat. `claude` is not on PATH on this machine; read as a fault of the machine's set-up, not confirmed.
+  The new browser examples of this session passed in that run, the board's unreadable-session-file band among them.
 
 ## Not tested, and why
 
