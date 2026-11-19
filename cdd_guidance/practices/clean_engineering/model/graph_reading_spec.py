@@ -165,6 +165,15 @@ with description("Clean Engineering reading code into its graph"):
         with it("should keep the file that does not parse on its module, as a load of the whole folder does"):
             expect([kept.split(":")[0] for kept in self.shop.get_fact("unreadable_sources") or []]).to(equal(["shop/broken.py"]))
 
+    with context("with a Python file that starts with a byte-order mark"):
+        with before.all:
+            self.fixture = practice_from_files(
+                {"shop/.context/module-context.md": "# Shop\n", "shop/bom.py": "﻿class BomOnly:\n    pass\n"}
+            )
+
+        with it("should read the byte-order mark as the file's start, and the class the file declares"):
+            expect([node.name for node in self.fixture.practice.reading.in_graph.nodes("OoadClass")]).to(equal(["BomOnly"]))
+
     with context("with a Stories story-map board among the edited files"):
         with before.all:
             board = WhiteboardStoryModel(round_trip_story_map()).save()

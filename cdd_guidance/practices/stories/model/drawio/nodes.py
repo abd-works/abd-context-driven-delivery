@@ -297,14 +297,18 @@ class _KeptPlaces:
         return cls({cell_id: geometry.attrib for cell_id, geometry in _drawn_geometries(root)})
 
     def place(self, vertex: "DrawIOStoryModel.Vertex") -> None:
-        """Put vertex where its cell stood before, at the size it had; a cell new to the map stays where it was laid out."""
+        """Put vertex where its cell stood before, at the size it had; a cell new to the map stays where it was laid out.
+        An epic or sub-epic that has grown since is drawn as wide as it is laid out now, so it still covers every story
+        it holds."""
         kept = self._places.get(str(vertex.cell_id))
         if kept is None:
             return
         vertex.x = kept.get("x", vertex.x)
         vertex.y = kept.get("y", vertex.y)
-        vertex.width = kept.get("width", vertex.width)
         vertex.height = kept.get("height", vertex.height)
+        kept_width = kept.get("width", vertex.width)
+        if not (isinstance(vertex.node, Epic) and float(kept_width) < float(vertex.width)):
+            vertex.width = kept_width
 
 
 def _drawn_geometries(root: ET.Element) -> Iterator[Tuple[str, ET.Element]]:
@@ -437,7 +441,7 @@ class DrawIOStoryModel(DiagramStoryModel):
     def load(self, text: str) -> "DrawIOStoryModel":
         """Read the story map by where its cells sit, not their order in the file: draw.io saves cells back to
         front, so bringing a cell forward or sending it back moves it in the file but not on screen."""
-        cells = [_PlacedCell(element) for element in self._vertices(self._graph_model(text))]
+        cells = self.placed_cells(text)
         story_map = DrawIOStoryModel()
         owners = story_map.place_cells(cells)
         for cell in cells:
@@ -445,6 +449,10 @@ class DrawIOStoryModel(DiagramStoryModel):
             if owner is not None and (cell.role == "estimate" or cell.estimate):
                 owner.node.estimate = cell.estimate
         return story_map
+
+    def placed_cells(self, text: str) -> List[_PlacedCell]:
+        """Each vertex a draw.io story map draws, as it sits on screen."""
+        return [_PlacedCell(element) for element in self._vertices(self._graph_model(text))]
 
     def _graph_model(self, text: str) -> ET.Element:
         try:

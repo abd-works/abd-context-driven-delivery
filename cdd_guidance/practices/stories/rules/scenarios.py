@@ -11,6 +11,8 @@ from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
 
+from cdd_guidance.practices.stories.model.story_model import NOT_ON_STORY_MAP
+
 if TYPE_CHECKING:
     from harness.graph.graph import Node
     from harness.graph.rule_context import RuleCheckContext
@@ -239,6 +241,23 @@ class ScenarioNamesContinuation(PracticeGraphRule):
                 f"Long Then {text!r} should name the next story on the map when continuing a flow."
             ]
         return []
+
+class ScenariosNameAStoryOnTheMap(PracticeGraphRule):
+    """A scenarios file specifies stories by their names. A story it names that the story map does not hold is read
+    with its scenarios and reported here, on the story, so the file is never read as empty."""
+
+    slug = "scenarios-name-a-story-on-the-map"
+    node_types = ("Story",)
+
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+        if not node.get_fact(NOT_ON_STORY_MAP):
+            return []
+        file = node.source.file if node.source is not None else ""
+        return [
+            f"Story {node.name!r} has scenarios in {file} and is not on the story map; add it to the map or name the "
+            "story the scenarios belong to."
+        ]
+
 
 class ScenariosShape(PracticeGraphRule):
     slug = "scenarios-shape"

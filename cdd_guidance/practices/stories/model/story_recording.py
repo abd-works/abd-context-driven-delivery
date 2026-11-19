@@ -232,6 +232,8 @@ class StoryRecording:
     def write(self) -> None:
         for epic in self.story_map.epics:
             epic.record(self, self.practice.reading.in_graph.root)
+        for story in self.story_map.unplaced_stories:
+            story.record(self, None)
 
     def announce(self, story: "Story") -> None:
         self.story_at += 1

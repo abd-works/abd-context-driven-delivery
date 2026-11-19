@@ -42,6 +42,9 @@ _CLASS_NAMES = re.compile(r"\bclass\s+(\w+)")
 _HINT_WORD = re.compile(r"[A-Za-z0-9_]+")
 
 
+# Source files are UTF-8; a byte-order mark an editor put first is read as the file's start, not as its first character.
+SOURCE_ENCODING = "utf-8-sig"
+
 class CodeRead:
     """One read of the code into the practice's graph: the files it parses, the module each parses into, and the files
     that do not parse, with the reason. Made for each read, so nothing one read finds stays on the practice for the
@@ -120,9 +123,10 @@ class CodeRead:
         return module
 
     def _text_of(self, file: Path) -> str | None:
-        """The file's text; none for a file the disk cannot give, which is kept with the reason."""
+        """The file's text, a byte-order mark read as its start and not as text; none for a file the disk cannot give,
+        which is kept with the reason."""
         try:
-            return file.read_text(encoding="utf-8")
+            return file.read_text(encoding=SOURCE_ENCODING)
         except (OSError, UnicodeDecodeError) as error:
             self._unreadable[file] = f"cannot be read: {error}"
             return None
@@ -165,7 +169,7 @@ class OutsideScope:
         for index, file in enumerate(files, start=1):
             report_progress(f"clean_engineering · class names · {index}/{len(files)} · {file.name}")
             try:
-                text = file.read_text(encoding="utf-8")
+                text = file.read_text(encoding=SOURCE_ENCODING)
             except (OSError, UnicodeDecodeError):
                 continue
             names.update(_CLASS_NAMES.findall(text))
@@ -353,10 +357,12 @@ class CodeFolders:
 
     def keep_unreadable(self, relative: str, reason: str) -> None:
         """A file that did not parse, kept on the module that holds it, so validate reports it instead of skipping it.
-        A file in no module is kept on the practice's root, which no rule checks."""
+        A file in no module is kept on the folder that holds it; only a file in no folder read is kept on the
+        practice's root, which no rule checks."""
+        folder = str(Path(relative).parent).replace("\\", "/")
         cards = {path: module for path, module in self._modules.items() if module.type == "Module"}
-        owner = self._nodes.get(self._nearest(str(Path(relative).parent).replace("\\", "/"), cards)) or self._in_graph.root
-        kept = owner.get_fact("unreadable_sources") or []
+        owner = self._nodes.get(self._nearest(folder, cards)) or self._nodes.get(self._nearest(folder, self._modules)) or self._in_graph.root
+        kept = (owner.get_fact("unreadable_sources") or []) if owner.has_fact("unreadable_sources") else []
         owner.set_fact("unreadable_sources", list(dict.fromkeys([*kept, f"{relative}: {reason}"])))
 
     def link(self) -> None:

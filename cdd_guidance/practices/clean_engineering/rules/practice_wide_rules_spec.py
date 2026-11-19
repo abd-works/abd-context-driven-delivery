@@ -158,9 +158,21 @@ with description("modules across the graph"):
                 _module("cart", {"cart.py": "class Cart:\n    pass\n"}),
             )
             self.nested_package = practice_from_files(_module("cart", {"lines/line.py": "class Line(:\n    pass\n"}))
+            self.no_module_card = practice_from_files(
+                {"src/order.py": "class Order(:\n    def total(self\n", "src/other.py": "class Other:\n    pass\n"}
+            )
+            self.byte_order_mark = practice_from_files(_module("shop", {"bom.py": "﻿class BomOnly:\n    pass\n"}))
 
         with it("should report a module's Python file that does not parse"):
             self.pair.check()
 
         with it("should report a file that does not parse in a package inside the module"):
             expect(len(_hits("source-parses", self.nested_package))).to(equal(1))
+
+        with it("should report a file that does not parse in a folder that has no module card"):
+            expect([hit.split(":")[0] for hit in _hits("source-parses", self.no_module_card)]).to(
+                equal(["Source file src/order.py"])
+            )
+
+        with it("should not report a file that only starts with a byte-order mark"):
+            expect(_hits("source-parses", self.byte_order_mark)).to(equal([]))

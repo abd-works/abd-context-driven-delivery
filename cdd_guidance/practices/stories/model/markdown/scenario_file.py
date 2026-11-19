@@ -185,7 +185,7 @@ class ScenarioFileReading:
     def _open_section(self, name: str, heading: Optional[str]) -> StorySection:
         if not self.sections:
             self.document_examples = self.backgrounds.shared.examples
-        section = StorySection(name, heading, self.number)
+        section = StorySection(name, heading, self.number, self.rel)
         self.sections.append(section)
         self.document_parts.append(section)
         self.section = section

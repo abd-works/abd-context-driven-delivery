@@ -11,6 +11,8 @@ each bounded context a larger section round its aggregates' sections, titled wit
 
 from __future__ import annotations
 
+from harness.whiteboard.whiteboard import Whiteboard
+
 from cdd_guidance.practices.clean_engineering.model.base_class_model import Module
 from cdd_guidance.practices.clean_engineering.model.class_stereotypes import module_path_in
 from cdd_guidance.practices.clean_engineering.model.whiteboard.whiteboard_class_model import (
@@ -18,7 +20,7 @@ from cdd_guidance.practices.clean_engineering.model.whiteboard.whiteboard_class_
     WhiteboardCleanEngineeringModel,
     WhiteboardModule,
 )
-from cdd_guidance.practices.ddd.model.drawn.drawn_map import AggregateCell, ContextCell, DrawnBoundedContextMap
+from cdd_guidance.practices.ddd.model.drawn.drawn_map import MODULES_TITLE_ENDING, AggregateCell, ContextCell, DrawnBoundedContextMap
 from cdd_guidance.practices.ddd.model.nodes import BoundedContextMap
 
 
@@ -77,6 +79,14 @@ class WhiteboardBoundedContextMap(DrawnBoundedContextMap, WhiteboardCleanEnginee
         """The aggregate view when the map's aggregates hold class cards (model fidelity); otherwise the map."""
         self.draw(canonical if canonical is not None else self)
         return WhiteboardCleanEngineeringModel.render(self, self, previous)
+
+    def take_board(self, board: Whiteboard) -> "WhiteboardBoundedContextMap":
+        """Read the board's modules or classes, and the map's own name from the title it was drawn under; a modules
+        view's title names its system instead."""
+        super().take_board(board)
+        if not board.title.rstrip().endswith(MODULES_TITLE_ENDING):
+            self.title = board.title.strip()
+        return self
 
     def parse(self, text: str) -> "WhiteboardBoundedContextMap":
         """Read a board into this map, and return it."""

@@ -171,7 +171,7 @@ class WhiteboardClass(DiagramClass, _PlacedOnBoard):
         whole card, or its part of the card of a class it is folded into."""
         lines = [f"*{' '.join(f'«{item}»' for item in self.stereotypes)}*"] if self.stereotypes else []
         lines.extend([f"**{self.name}**", RULE])
-        lines.extend(f"+ {item.name}{(': ' + item.type_hint) if item.type_hint else ''}" for item in self.properties)
+        lines.extend(self.property_lines())
         lines.append(RULE)
         lines.extend(
             f"{'- ' if item.name.startswith('_') else '+ '}{item.name}({', '.join(parameter.save() for parameter in item.parameters)})"
@@ -672,7 +672,7 @@ class _ClassReader:
                 source.bases.append(target_name)
             for label in _DEPENDENCY_LABEL.findall(arrow.label):
                 source.arrows.depend_on(target_name, label.strip())
-            source.take_arrow(target_name, arrow.role)
+            source.take_arrow(target_name, arrow.role, arrow.label)
         for oclass in self._classes.values():
             for prop in oclass.properties:
                 prop.arrow.derive()

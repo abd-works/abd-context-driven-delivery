@@ -52,6 +52,8 @@ class InvariantHolder:
 
 # `identity: Identity`, or `nickname?: string` for an optional field, as a model line writes a property.
 _SIGNATURE = re.compile(r"^(\w+)\??\s*:\s*(.+)$")
+# A model line with the relationship it may write first: `<< composition >> lines: Line`.
+_MARKED_SIGNATURE = re.compile(r"^(?:<<\s*(composition|aggregation|association)\s*>>\s*)?(.*)$", re.I)
 _CARDINALITY = re.compile(r"^(?:\d+\.\.\*|\d+\.\.\d+|\*|\d+)$")
 _ORIGIN = re.compile(r"^from\s+([A-Z][\w ]*)$")
 # The kinds of arrow a field's relationship can be; any other kind reads as an association.
@@ -87,9 +89,19 @@ class Property(InvariantHolder, OoadNode):
     @classmethod
     def from_signature(cls, text: str) -> "Property | None":
         """The property a typed model line such as `identity: Identity` writes; none for a line that is no typed
-        property. Every format that writes members as such lines reads them here."""
-        match = _SIGNATURE.match(text.strip())
-        return cls(match.group(1), type_hint=match.group(2).strip()) if match else None
+        property. A line may write its relationship first, as `<< composition >> lines: Line`. Every format that
+        writes members as such lines reads them here."""
+        marked = _MARKED_SIGNATURE.match(text.strip())
+        match = _SIGNATURE.match(marked.group(2))
+        if match is None:
+            return None
+        found = cls(match.group(1), type_hint=match.group(2).strip())
+        found.stereotype = (marked.group(1) or "").lower()
+        return found
+
+    def marked_signature(self) -> str:
+        """The property as a model line writes it with the relationship written on it: `<< composition >> lines: Line`."""
+        return f"<< {self.stereotype} >> {self.save()}" if self.stereotype else self.save()
 
     @property
     def value_type(self) -> str:
@@ -201,17 +213,24 @@ class FieldArrow:
             field.stereotype = drawn
         self.derive()
 
+    def _is_unmarked_collection(self) -> bool:
+        """True for a list with no stereotype written on it, which stands for no arrow of its own."""
+        field = self._field
+        return not field.stereotype and (field.type_hint or " ")[0].islower()
+
     def derive(self) -> None:
-        """Give the field its relationship, which exists only when the field's type names a domain class."""
+        """Give the field its relationship, which exists only when the field's type names a domain class. A field with
+        no stereotype is an association and stays unmarked: the stereotype is what a person wrote or drew, and a format
+        writes it back, so one put there here would come back as a mark nobody wrote."""
         field = self._field
         targets = domain_type_names(field.type_hint)
-        is_unmarked_collection = not field.stereotype and (field.type_hint or " ")[0].islower()
-        if not targets or is_unmarked_collection:
+        if not targets or self._is_unmarked_collection():
             # An unmarked list is derived from relationships drawn elsewhere, so it adds no arrow of its own.
             field.relationship = None
             return
         kind = (field.stereotype or "association").lower()
         if kind not in _ARROW_KINDS:
             kind = "association"
-        field.stereotype = kind
+        if field.stereotype:
+            field.stereotype = kind
         field.relationship = Relationship(target=targets[0], kind=kind, cardinality=field.cardinality, description=field.origin)

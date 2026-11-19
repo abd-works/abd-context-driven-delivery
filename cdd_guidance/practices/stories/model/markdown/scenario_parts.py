@@ -23,9 +23,11 @@ class StorySection:
     file links its scenarios to their story only by this section's name; once a story takes them, each scenario's story
     is its parent."""
 
-    def __init__(self, name: str, heading: Optional[str], line: int = 0) -> None:
+    def __init__(self, name: str, heading: Optional[str], line: int = 0, file: str = "") -> None:
         self.name = name
         self.heading = heading
+        # The scenarios file the section was read from, named as its reading names it.
+        self.file = file
         # The line of the file the heading is on (line, where the section opens); 0 for a section with no heading.
         self.line, self.parts = (line, [HEADING_LINE]) if heading is not None else (0, [])
         self.background = Background("background", 1)

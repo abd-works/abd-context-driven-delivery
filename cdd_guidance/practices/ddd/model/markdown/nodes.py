@@ -639,7 +639,7 @@ class MarkdownBoundedContextMap(BoundedContextMap, MarkdownDomainNode):
 
     def _text(self, source: BoundedContextMap) -> str:
         """source as markdown: each context's own lines, then the event map."""
-        heading = "Domain Model" if source.has_class_cards else (source.title or "Bounded Context Map")
+        heading = source.title or ("Domain Model" if source.has_class_cards else "Bounded Context Map")
         lines = [f"{_TITLE}{heading}", ""]
         for context in source.contexts:
             if isinstance(context, MarkdownBoundedContext):

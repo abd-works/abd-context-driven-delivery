@@ -190,26 +190,11 @@ class MarkdownOoadClass(OoadClass):
         return f"+ {body}"
 
     def _property_line(self, prop: Property) -> str:
-        """Public field, with << composition|aggregation|association >> when an edge names its type."""
+        """Public field, with the << composition|aggregation|association >> written or drawn on it; a field nobody
+        marked is written plain."""
         kind = (prop.stereotype or "").lower()
-        if kind not in {"composition", "aggregation", "association"}:
-            kind = self._relationship_kind(prop.type_hint)
-        stereo = f"<< {kind} >> " if kind else ""
+        stereo = f"<< {kind} >> " if kind in {"composition", "aggregation", "association"} else ""
         return self._public_line(f"{stereo}{prop.save()}")
-
-    def _relationship_kind(self, type_hint: str) -> str:
-        if not type_hint:
-            return ""
-        by_target = {
-            relationship.target: (relationship.kind or "").lower()
-            for relationship in self.relationships
-            if relationship.kind
-        }
-        for name in re.findall(r"\b([A-Z][A-Za-z0-9]*)\b", type_hint):
-            kind = by_target.get(name, "")
-            if kind in {"composition", "aggregation", "association"}:
-                return kind
-        return ""
 
     @classmethod
     def read_card(cls, heading: ClassHeading, body: str, sequential_order: int) -> "MarkdownOoadClass":

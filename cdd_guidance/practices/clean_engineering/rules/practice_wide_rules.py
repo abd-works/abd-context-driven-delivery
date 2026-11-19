@@ -147,12 +147,15 @@ class ExtensionsLiveWithTheDomain(ProductionCodeRule):
 
 class SourceParses(PracticeGraphRule):
     """A source file its language cannot parse is read into no class, so every other rule passes it without a look.
-    Specs are judged too: a spec that does not parse cannot run, and nothing else reports it."""
+    The module that holds the file reports it, or the folder that holds it when no module does. Specs are judged too: a spec that does not parse cannot run, and nothing else reports it."""
 
     slug = "source-parses"
-    node_types = ("Module",)
+    node_types = _FOLDER_TYPES
 
     def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+        if not node.has_fact("unreadable_sources"):
+            # A folder reads its module's facts as its own, and the module has already reported these files.
+            return []
         return [
             f"Source file {entry}; fix it so its classes can be checked."
             for entry in node.get_fact("unreadable_sources", []) or []

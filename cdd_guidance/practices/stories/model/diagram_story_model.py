@@ -138,6 +138,8 @@ class DiagramStoryCell:
         self.depth = -1
         self.kind = ""
         self.text = ""
+        # The id a format gave the cell when it drew it: the ids of the bars over it, then its own, joined by "/".
+        self.cell_id = ""
         # The actor a story cell names on itself, for a format that writes it on the card rather than in a cell above.
         self.actor = ""
         self.x = self.y = self.width = self.height = 0.0
@@ -167,6 +169,17 @@ class DiagramStoryCell:
         if spanning:
             return max(spanning, key=lambda bar: bar.depth)
         return min(bars, key=lambda bar: abs(bar.center - where), default=None)
+
+    def owner_among(self, bars: List["DiagramStoryCell"]) -> Optional["DiagramStoryCell"]:
+        """The bar that holds this story. The bar its id names holds it while the story sits under that bar, under one
+        of the bars over that bar, or under no bar at all, so a story drawn past its bar's edge stays where it was
+        written. A story a person dragged under another bar, and one whose id names no bar, goes by where it sits."""
+        named_id = self.cell_id.rpartition("/")[0]
+        named = next((bar for bar in bars if named_id and bar.cell_id == named_id), None)
+        over = max((bar for bar in bars if bar.spans(self.center)), key=lambda bar: bar.depth, default=None)
+        if named is not None and (over is None or over is named or named_id.startswith(f"{over.cell_id}/")):
+            return named
+        return self.beneath(bars)
 
 
 class DiagramEpic(Epic, DiagramStoryNode):
@@ -254,8 +267,8 @@ class DiagramStoryModel(StoryModel):
 
     def place_cells(self, cells: List[DiagramStoryCell]) -> List[DiagramStoryCell]:
         """Read the epics and stories cells draw into this map by where they sit: epics left to right, each sub-epic
-        under the shallower bar above it, each story under the deepest bar over it with the actor just above it as its
-        actor. Answers the cells that became epics and sub-epics, which a format places what else it draws under."""
+        under the shallower bar above it, each story under the bar its cell names or sits under (``owner_among``) with
+        the actor just above it as its actor. Answers the cells that became epics and sub-epics, which a format places what else it draws under."""
         owners: List[DiagramStoryCell] = []
         for cell in sorted((c for c in cells if c.role == "epic"), key=lambda c: c.x):
             cell.node = self.epic_type(cell.text.strip(), len(self.epics) + 1)
@@ -275,7 +288,7 @@ class DiagramStoryModel(StoryModel):
         actors = {id(story): actor for actor in cells if actor.role == "actor"
                   for story in [actor.story_below(stories)] if story is not None}
         for cell in stories:
-            owner = cell.beneath(owners)
+            owner = cell.owner_among(owners)
             if owner is None:
                 continue
             story = self.story_type(cell.text, len(owner.node.stories) + 1, cell.story_type)

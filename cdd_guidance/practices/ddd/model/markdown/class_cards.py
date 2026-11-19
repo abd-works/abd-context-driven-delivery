@@ -158,8 +158,9 @@ class ClassCard(MarkdownDomainNode):
         heading = f"**{self.name}** «Repository»" if self.drawn_in_root else f"{CARD}{self.heading}"
         written = [heading, "", _PROPERTIES]
         written.extend(self._property_lines())
-        written.append(_OPERATIONS)
-        written.extend(self._operation_lines())
+        operations = self._operation_lines()
+        if operations:
+            written.extend([_OPERATIONS, *operations])
         if self.invariants:
             written.extend(["", "**Invariants**", ""])
             written.extend(f"- {item}" for item in self.invariants)

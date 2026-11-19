@@ -34,6 +34,8 @@ from cdd_guidance.practices.stories.model.markdown.thin_slice import MarkdownInc
 if TYPE_CHECKING:
     from cdd_guidance.practices.stories.model.story_model import Examples, Step, StoryNode
 
+# The heading a sketch writes its Stories section under, which tells a sketch from a story map already written.
+_SKETCH_SECTION = "## stories:"
 # Markdown has six heading levels; an outline nested deeper writes its headings at the sixth.
 _DEEPEST_HEADING = 6
 
@@ -441,10 +443,24 @@ class MarkdownStoryModel(StoryModel):
 
     def _attach_markdown(self, root: Path, on_file: Optional[Callable[[str], None]] = None, base: Optional[Path] = None) -> None:
         sections = ScenarioFiles(root, base).sections(MarkdownScenario, on_file)
-        for story in self.descendants.stories():
+        placed = self.descendants.stories()
+        for story in placed:
             story.load_scenarios(sections)
+        self._keep_unplaced([section for section in sections if not any(section.names(story) for story in placed)])
         if not self.increments and StoryMapFiles(root).thin_slicing() is not None:
             self.slicing = thin_slice_in(root, self, root)
+
+    def _keep_unplaced(self, sections: List[StorySection]) -> None:
+        """Keep the story each of sections specifies as one this map does not hold, once for each name, with the
+        scenarios of every section headed with that name, read where the first of them stands in its scenarios file. A
+        section with no scenarios specifies nothing, so it keeps no story."""
+        for section in sections:
+            if not section.scenarios or any(section.names(story) for story in self.unplaced_stories):
+                continue
+            story = self.story_type(section.name.strip(), len(self.unplaced_stories) + 1)
+            story.source = source_at(section.file, section.line)
+            story.load_scenarios(sections)
+            self.unplaced_stories.append(story)
 
     # -- Uniform Callable Surface ----------------------------------------------
 
@@ -475,9 +491,21 @@ class MarkdownStoryModel(StoryModel):
         if story_map.outline is not None and story_map.outline.lines:
             # A map read with lines above its first epic is written back with them, as it was laid out.
             return "\n".join([*_outlined(story_map, None), body]) + "\n"
+        opening = self._opening_of_replaced_map(previous)
+        if opening:
+            # A map read from a format that holds no title, such as a drawing, keeps the one its file already had.
+            return "\n".join([*opening, body]) + "\n"
         if self._is_discovery_story_map(story_map):
             return self._wrap_story_map_document(body, previous)
         return body
+
+    def _opening_of_replaced_map(self, previous: Optional[str]) -> List[str]:
+        """The lines the story map this render replaces has above its first epic, such as its title and sources; none
+        when it replaces no file, a sketch, or a map with nothing above its first epic."""
+        if not previous or _SKETCH_SECTION in previous.lower() or not is_outline(previous.splitlines()):
+            return []
+        replaced = MarkdownStoryModel().parse(previous)
+        return list(replaced.outline.lines) if replaced.outline is not None else []
 
     def _should_render_outline(self, story_map: "MarkdownStoryModel", previous: Optional[str]) -> bool:
         """Outline notation is for documents already written that way, or that carry estimates,

@@ -57,6 +57,9 @@ from cdd_guidance.practices.clean_engineering.model.property import Property
 _EDGE_BASE_STYLE = 'edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;'
 EDGE_STYLES = {'inheritance': f'{_EDGE_BASE_STYLE}endArrow=block;endSize=16;endFill=0;', 'composition': f'{_EDGE_BASE_STYLE}startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;', 'aggregation': f'{_EDGE_BASE_STYLE}startArrow=diamondThin;startFill=0;startSize=14;endArrow=open;endSize=12;', 'association': f'{_EDGE_BASE_STYLE}endArrow=open;endSize=12;', 'dependency': f'{_EDGE_BASE_STYLE}dashed=1;endArrow=open;endSize=12;'}
 DEFAULT_EDGE_STYLE = EDGE_STYLES['association']
+UNMARKED_STYLE_KEY = 'unmarked'
+"""An arrow's style lists, under this key, the properties it stands for that nobody wrote a relationship on, so reading
+the drawing back writes no `<< association >>` on them."""
 PAGE_EDGE_ALLOWANCE = 200
 MODULES_PAGE_MARGIN = 80
 """The room a modules view leaves right of and below its last module; its title is inset half of it on each side."""
@@ -289,9 +292,10 @@ class _ClassDiagramReader:
             kind = page.kind_of(cell)
             if kind == 'inheritance' and target_name not in source.bases:
                 source.bases.append(target_name)
-            for label in _DEPENDENCY_LABEL.findall(html.unescape(cell.get('value', '') or '')):
+            words = html.unescape(cell.get('value', '') or '')
+            for label in _DEPENDENCY_LABEL.findall(words):
                 source.arrows.depend_on(target_name, label.strip())
-            source.take_arrow(target_name, kind)
+            source.take_arrow(target_name, kind, words, style_value(cell.get('style', ''), UNMARKED_STYLE_KEY))
         for oclass in self._classes_by_cell.values():
             for prop in oclass.properties:
                 prop.arrow.derive()
@@ -485,6 +489,9 @@ class _ClassDiagramPage(ClassViewPage):
         style = EDGE_STYLES.get(arrow.kind, DEFAULT_EDGE_STYLE)
         if arrow.straight:
             style = style.replace('edgeStyle=orthogonalEdgeStyle;', 'edgeStyle=none;')
+        unmarked = self._writer.unmarked_properties.get((arrow.source, arrow.target))
+        if unmarked:
+            style = f"{style}{UNMARKED_STYLE_KEY}={','.join(unmarked)};"
         cell = ET.Element('mxCell', attrib={
             'id': edge_id, 'value': arrow.label, 'style': self._anchored_style(style, arrow, cards), 'edge': '1',
             'source': arrow.source, 'target': arrow.target, 'parent': '1',

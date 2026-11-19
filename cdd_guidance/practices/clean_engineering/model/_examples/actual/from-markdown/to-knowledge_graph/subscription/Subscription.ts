@@ -6,7 +6,6 @@
 @Entity()
 class Line {
   msisdn: string | null;
-  // << association >>
   // SimType.Esim | SimType.Psim
   // null until selectSim or attachIccid
   simType: SimType | null;

@@ -91,8 +91,8 @@ One typed Customer failure carrying enough domain context for callers to handle 
 
 + CustomerException(...)
 ------
-+ << association >> operation: CustomerOperation
-+ << association >> accountCredentials: AccountCredentials
++ operation: CustomerOperation
++ accountCredentials: AccountCredentials
 + message: string
 + cause: Error
 ----
@@ -141,7 +141,7 @@ Paradise wrap of ++CognitoUser++. Own aggregate: constructed through `AccountRep
 + validationCode: string
 + verified: boolean
 	// from CognitoUser.confirmed when constructed from CognitoUser
-+ << association >> token: AccountToken | null
++ token: AccountToken | null
 	// derived from CognitoUser.accountToken
 + customerId: string | null
 	// derived from CognitoUser.customerId
@@ -249,15 +249,15 @@ Catalog of rules. `missingRequirements()` returns the unmet subset.
 
 + AccountCredentialRequirements(...)
 ------
-+ << association >> emailRequired: AccountCredentialRequirement
-+ << association >> emailFormat: AccountCredentialRequirement
-+ << association >> passwordRequired: AccountCredentialRequirement
-+ << association >> passwordLetters: AccountCredentialRequirement
-+ << association >> passwordNumber: AccountCredentialRequirement
-+ << association >> passwordSymbol: AccountCredentialRequirement
-+ << association >> passwordLength: AccountCredentialRequirement
-+ << association >> confirmRequired: AccountCredentialRequirement
-+ << association >> confirmMismatch: AccountCredentialRequirement
++ emailRequired: AccountCredentialRequirement
++ emailFormat: AccountCredentialRequirement
++ passwordRequired: AccountCredentialRequirement
++ passwordLetters: AccountCredentialRequirement
++ passwordNumber: AccountCredentialRequirement
++ passwordSymbol: AccountCredentialRequirement
++ passwordLength: AccountCredentialRequirement
++ confirmRequired: AccountCredentialRequirement
++ confirmMismatch: AccountCredentialRequirement
 ----
 
 ## AmplifyService <<Service>> <<System>>
@@ -334,7 +334,7 @@ Timestamped record of every initial or repeated validation-code send performed b
 + inquiryId: string | null
 	// inquiryID
 	// from PersonaInquiry.inquiryId when present
-+ << association >> voucher: Voucher | null
++ voucher: Voucher | null
 	// JSON-encoded Voucher characteristic
 	// Cart.applyVoucher writes this
 	// absent after Cart.removeVoucher
@@ -439,16 +439,16 @@ Catalog of required Identity / Address rows. Optional preferredName, otherPhoneN
 
 + ProfileRequirements(...)
 ------
-+ << association >> nameRequired: ProfileRequirement
-+ << association >> lastNameRequired: ProfileRequirement
-+ << association >> dateOfBirthRequired: ProfileRequirement
-+ << association >> idNationalityRequired: ProfileRequirement
-+ << association >> idTypeRequired: ProfileRequirement
-+ << association >> idNumberRequired: ProfileRequirement
-+ << association >> expiryRequired: ProfileRequirement
-+ << association >> streetRequired: ProfileRequirement
-+ << association >> parishRequired: ProfileRequirement
-+ << association >> postalCodeRequired: ProfileRequirement
++ nameRequired: ProfileRequirement
++ lastNameRequired: ProfileRequirement
++ dateOfBirthRequired: ProfileRequirement
++ idNationalityRequired: ProfileRequirement
++ idTypeRequired: ProfileRequirement
++ idNumberRequired: ProfileRequirement
++ expiryRequired: ProfileRequirement
++ streetRequired: ProfileRequirement
++ parishRequired: ProfileRequirement
++ postalCodeRequired: ProfileRequirement
 ----
 + missing(identity: Identity, address: Address): ProfileRequirement[]
 	// when Identity / Address are updated
@@ -688,8 +688,8 @@ Owns `Collection<Cart>`. Associates to `PortalGateway` to read and create ++Mave
 
 + CartException(...)
 ------
-+ << association >> operation: CartOperation
-+ << association >> customer: Customer
++ operation: CartOperation
++ customer: Customer
 + message: string
 + cause: Error
 ----
@@ -1371,7 +1371,7 @@ The phone line on a Cart or Subscription. Owns number, SIM type, ICCID, and port
 + Line(...)
 ------
 + msisdn: string | null
-+ << association >> simType: SimType | null
++ simType: SimType | null
 	// SimType.Esim | SimType.Psim
 	// null until selectSim or attachIccid
 + iccid: string | null

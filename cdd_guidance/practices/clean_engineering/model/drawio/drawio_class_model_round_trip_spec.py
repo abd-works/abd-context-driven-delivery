@@ -10,6 +10,7 @@ from mamba import before, context, description, it
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass
 from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model import DrawIOCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import DrawioScanner
+from cdd_guidance.practices.clean_engineering.model.markdown.markdown_class_model import MarkdownCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
 
@@ -129,3 +130,71 @@ with description("a class model where several classes derive from one base"):
 
         with it("should give the base no base of its own"):
             expect(_class(self.parsed, "Payment").bases).to(equal([]))
+
+
+_ORDERS_MODEL = """# Orders
+
+**Module:** `src`
+
+## Order <<Aggregate Root>>
+
++ Order(lines: list[OrderLine])
+------
++ number: str
++ << composition >> lines: list[OrderLine]
++ history: list[OrderLine]
++ total: Money
++ seller: Seller
++ << association >> bookId: BookId
+----
++ total(): Money
++ cancel(reason: str): OrderCancelled
+
+## OrderLine <<Value Object>>
+
++ OrderLine(title: str, price: Money)
+------
++ title: str
++ price: Money
+----
+
+## Seller <<Entity>>
+
++ Seller(name: str)
+------
++ name: str
+----
+"""
+
+
+def _cards(markdown: str) -> str:
+    """The class cards of a class model's markdown, without the title and module lines above them."""
+    return markdown[markdown.index("## "):].strip()
+
+
+def _property_lines(markdown: str, class_name: str) -> list:
+    card = markdown[markdown.index(f"## {class_name}"):]
+    return [line for line in card.split("------", 1)[1].split("----", 1)[0].splitlines() if line.strip()]
+
+
+with description("a class model written in markdown"):
+    with context("that is read and written again"):
+        with before.each:
+            self.written = MarkdownCleanEngineeringModel().render(MarkdownCleanEngineeringModel().parse(_ORDERS_MODEL))
+
+        with it("should write every class card as it was written, adding no relationship"):
+            expect(_cards(self.written)).to(equal(_cards(_ORDERS_MODEL)))
+
+    with context("that is drawn as a Draw.io class diagram and written back as markdown"):
+        with before.each:
+            drawn = DrawIOCleanEngineeringModel().render(MarkdownCleanEngineeringModel().parse(_ORDERS_MODEL))
+            self.back = MarkdownCleanEngineeringModel().render(DrawIOCleanEngineeringModel().parse(drawn))
+
+        with it("should bring back each property of the class that holds the relationship as it was written"):
+            expect(_property_lines(self.back, "Order")).to(equal(_property_lines(_ORDERS_MODEL, "Order")))
+
+        with it("should add no relationship to a property whose type is no class of the model"):
+            expect(_property_lines(self.back, "OrderLine")).to(equal(["+ title: str", "+ price: Money"]))
+
+        with it("should bring back every class card as it was written"):
+            expect(_cards(self.back)).to(equal(_cards(_ORDERS_MODEL)))

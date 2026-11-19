@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+import re
 from typing import Dict, List, Optional
 
 from harness.graph.graph import Graph
@@ -54,12 +55,24 @@ class DiagramNode(ABC):
         ...
 
 
+# The interactions an arrow's label names after the properties it stands for, as `lines «prices»`.
+_INTERACTION_WORDS = re.compile('«[^»]*»')
+
+
+def _names_in(listed: str) -> List[str]:
+    """The property names an arrow lists, written `lines, history`."""
+    return [name.strip() for name in listed.split(',') if name.strip()]
+
+
 class DiagramClass(OoadClass, DiagramNode):
     """OoadClass on a page: name, members, height. Channel fills the label."""
 
     def __init__(self, name: str = '', sequential_order: int = 1, intent: str = '') -> None:
         OoadClass.__init__(self, name, sequential_order, intent)
         DiagramNode.__init__(self)
+        # The properties whose written relationship no arrow on the drawing shows, because the class their type names
+        # has no card: the card writes the relationship on their line, so reading the drawing brings it back.
+        self.marked_on_card: set[str] = set()
 
     def width(self) -> int:
         """The width of the card before the arrows it carries widen it; a format whose words need more sets its own."""
@@ -70,13 +83,21 @@ class DiagramClass(OoadClass, DiagramNode):
         folded = sum(CLASS_TITLE_HEIGHT + (len(item.properties) + len(item.operations)) * LINE_HEIGHT + 2 * SECTION_PAD for item in self.folded)
         return max(CELL_MIN_HEIGHT, CLASS_TITLE_HEIGHT + member_count * LINE_HEIGHT + 2 * SECTION_PAD + folded)
 
-    def take_arrow(self, target: str, kind: str) -> None:
-        """An arrow of kind drawn to target is the property whose type names the target. Inheritance and a dependency
-        stand for no property."""
+    def property_lines(self) -> List[str]:
+        """Each property as its card writes it, with the relationship written on it when no arrow can show it."""
+        return [f"+ {item.marked_signature() if item.name in self.marked_on_card else item.save()}" for item in self.properties]
+
+    def take_arrow(self, target: str, kind: str, label: str = '', unmarked: str = '') -> None:
+        """An arrow of kind drawn to target is the properties its label names, of those whose type names the target; an
+        arrow whose label names none of them is every property whose type names the target. A property the arrow lists
+        as unmarked stays as it is: nobody wrote a relationship on it, and the arrow only shows what its type already
+        says. Inheritance and a dependency stand for no property."""
         if (kind or "").lower() in {"inheritance", "dependency"}:
             return
-        for prop in self.properties:
-            if target in pascal_type_names(prop.type_hint or ""):
+        named = _names_in(_INTERACTION_WORDS.sub('', label))
+        reaching = [prop for prop in self.properties if target in pascal_type_names(prop.type_hint or "")]
+        for prop in [prop for prop in reaching if prop.name in named] or reaching:
+            if prop.name not in _names_in(unmarked):
                 prop.arrow.take_kind(kind)
 
 

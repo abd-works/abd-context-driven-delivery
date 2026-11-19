@@ -99,9 +99,6 @@ class DrawIOClass(DiagramClass, DrawioVertex):
         module = f'module={self.owning_module};' if self.owning_module else ''
         return f'{CLASS_STYLE}{fill}{module}'
 
-    def _property_lines(self) -> List[str]:
-        return [f"+ {p.name}{(': ' + p.type_hint if p.type_hint else '')}" for p in self.properties]
-
     def _operation_lines(self) -> List[str]:
         return [
             f"{('- ' if op.name.startswith('_') else '+ ')}"
@@ -111,11 +108,11 @@ class DrawIOClass(DiagramClass, DrawioVertex):
         ]
 
     def _member_lines(self) -> List[str]:
-        own = [self.name] + self._property_lines() + self._operation_lines()
+        own = [self.name] + self.property_lines() + self._operation_lines()
         return own + [line for item in self.folded for line in item._member_lines()]
 
     def _properties_html(self) -> str:
-        return ''.join(f'{html.escape(line)}<br/>' for line in self._property_lines()) or '<br/>'
+        return ''.join(f'{html.escape(line)}<br/>' for line in self.property_lines()) or '<br/>'
 
     def _operations_html(self) -> str:
         return ''.join(f'{html.escape(line)}<br/>' for line in self._operation_lines()) or '<br/>'

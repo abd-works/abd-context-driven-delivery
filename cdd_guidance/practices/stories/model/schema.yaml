@@ -64,6 +64,7 @@ story:
     - behaviours-not-one-time-tasks
     - story-scenarios-at-most-seven
     - kebab-case-paths
+    - scenarios-name-a-story-on-the-map
 
 scenario:
   fidelity: scenarios

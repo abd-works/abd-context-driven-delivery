@@ -12,7 +12,7 @@ from xml.etree import ElementTree as ET
 
 from cdd_guidance.practices.clean_engineering.model.drawio.diagram_node import DrawIOModule
 from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model import DrawIOCleanEngineeringModel
-from cdd_guidance.practices.ddd.model.drawn.drawn_map import AggregateCell, ContextCell, DrawnBoundedContextMap
+from cdd_guidance.practices.ddd.model.drawn.drawn_map import MODULES_TITLE_ENDING, AggregateCell, ContextCell, DrawnBoundedContextMap
 from cdd_guidance.practices.ddd.model.nodes import BoundedContextMap
 
 
@@ -50,7 +50,7 @@ class DrawIOBoundedContextMap(DrawnBoundedContextMap, DrawIOCleanEngineeringMode
 
     @staticmethod
     def name_from_modules_title(cell: ET.Element) -> bool:
-        return html.unescape(cell.get("value", "")).rstrip().endswith("Modules Context")
+        return html.unescape(cell.get("value", "")).rstrip().endswith(MODULES_TITLE_ENDING)
 
     def parse(self, text: str) -> "DrawIOBoundedContextMap":
         """Read a drawing into this map, and return it."""

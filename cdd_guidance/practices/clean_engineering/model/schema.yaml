@@ -53,6 +53,7 @@ package:
   rules:
     - one-way-deps
     - layer-separation
+    - source-parses
 
 class:
   fidelity: model

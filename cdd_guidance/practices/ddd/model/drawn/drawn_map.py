@@ -15,6 +15,8 @@ from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContext, Bo
 
 # What a drawn map is called on the page it is drawn on.
 _TITLE = "Bounded Context Map"
+# How the title of a Clean Engineering modules view ends, which names its system rather than a map.
+MODULES_TITLE_ENDING = "Modules Context"
 
 
 class MapCell:

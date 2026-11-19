@@ -112,6 +112,8 @@ class ClassView:
     def _collect_relationships(self) -> None:
         """The arrows between the classes' cells, with the words each carries."""
         self.arrow_labels: Dict[Tuple[str, str], str] = {}
+        # The properties each pair's arrow stands for that carry no written relationship: their type alone draws it.
+        self.unmarked_properties: Dict[Tuple[str, str], List[str]] = {}
         # The interactions each pair's dependencies name, in model order: `stops`, `reads sections with`.
         self.dependency_labels: Dict[Tuple[str, str], List[str]] = {}
         self.relationships: Relationships = []
@@ -132,11 +134,15 @@ class ClassView:
         relationship = getattr(prop, 'relationship', None)
         target = self.resolve_target(oclass, relationship.target) if relationship is not None else None
         if not target:
+            if prop.stereotype:
+                oclass.marked_on_card.add(prop.name)
             return
         source = self.cell_ids[id(oclass)]
         self.relationships.append((source, target, relationship.kind or 'association'))
         named = self.arrow_labels.get((source, target))
         self.arrow_labels[(source, target)] = f'{named}, {prop.name}' if named else prop.name
+        if not prop.stereotype:
+            self.unmarked_properties.setdefault((source, target), []).append(prop.name)
 
     def _collect_dependency(self, oclass: OoadClass, dependency: Relationship) -> None:
         source = self.cell_ids[id(oclass)]

@@ -1089,6 +1089,10 @@ class Epic(StoryNode):
 
 
 
+# The fact a story's graph node carries when a scenarios file specifies it and the story map does not hold it.
+NOT_ON_STORY_MAP = "not_on_story_map"
+
+
 @language_adapter(language="typescript")
 @agent_toolset
 class Story(StoryNode):
@@ -1213,9 +1217,10 @@ class Story(StoryNode):
         """The epic of the story map this story sits under; none for a story under no epic."""
         return self.parent.top_epic if isinstance(self.parent, Epic) else None
 
-    def record(self, recording: StoryRecording, parent: "Node") -> None:
+    def record(self, recording: StoryRecording, parent: "Node | None") -> None:
         """Add this story under parent, its epic's node, with the facts of the file it was read from, then its
-        backgrounds and its scenarios."""
+        backgrounds and its scenarios. A story the map does not hold has no parent: it is added under no epic and
+        marked as not on the story map."""
         recording.announce(self)
         file = file_of(self)
         lines = recording.span_of(self, file)
@@ -1223,7 +1228,10 @@ class Story(StoryNode):
         node = recording.add(self, f"stories:Story:{file}:{self.name}", lines)
         for fact, held in recording.source_of(file).facts.items():
             node.set_fact(fact, held)
-        recording.graph.edges.link("decomposedInto", parent, node)
+        if parent is None:
+            node.set_fact(NOT_ON_STORY_MAP, True)
+        else:
+            recording.graph.edges.link("decomposedInto", parent, node)
         for background in self.backgrounds:
             background.record(recording, file, node)
         for scenario in self.scenarios:
@@ -1267,6 +1275,10 @@ class StoryModel(StoryNode):
         self.examples = Examples(self)
         self.descendants = Descendants(self)
         self.test_scenarios = StoryTestScenarios(self)
+        # The stories a scenarios file specifies that this map does not hold. Each is recorded on a graph with its
+        # scenarios, under no epic and marked ``not_on_story_map``, so a file that names a story the map lacks is seen
+        # rather than left out.
+        self.unplaced_stories: List[Story] = []
         # The files this map was read from, so recording the map on a graph finds each node's lines without reading a
         # file again.
         self.sources = StorySources()

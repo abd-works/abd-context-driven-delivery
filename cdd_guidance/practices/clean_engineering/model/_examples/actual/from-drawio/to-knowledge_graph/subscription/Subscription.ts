@@ -2,7 +2,6 @@
 
 class Line {
   msisdn: string | null;
-  // << association >>
   simType: SimType | null;
   iccid: string | null;
   availableNumbers: string[];

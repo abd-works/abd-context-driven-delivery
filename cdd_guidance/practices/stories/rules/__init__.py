@@ -17,6 +17,7 @@ from cdd_guidance.practices.stories.rules.scenarios import (
     OutlineRequiresManyPermutations,
     PlainEnglishGwtSteps,
     ScenarioNamesContinuation,
+    ScenariosNameAStoryOnTheMap,
     ScenariosShape,
     WhenHoldsTheOperation,
     WhenNamesIntentNotInterfaceGesture,
@@ -58,6 +59,7 @@ RULES: tuple = (
     BehavioursNotOneTimeTasks(),
     GivenNamesComplexStateRootFirst(),
     ScenarioNamesContinuation(),
+    ScenariosNameAStoryOnTheMap(),
 )
 
 BY_SLUG = {rule.slug: rule for rule in RULES}
