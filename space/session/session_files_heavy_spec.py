@@ -13,12 +13,12 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from expects import be_false, equal, expect, raise_error
+from expects import be_false, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentToolSet
 from space.repo.built_once import BuiltOnce
-from space.session import Session
+from space.session import Session, Sessions
 from space.session.session import SessionNotFoundError
 from space.session.throwaway_project import ExampleHome
 
@@ -26,6 +26,8 @@ from space.session.throwaway_project import ExampleHome
 DEBUG_REPORT = "debug/debug-20261116T225500.md"
 DEBUG_TEXT = "# debug" + chr(10)
 TICKET = "checkout-flow"
+# Seed: a file whose name git writes in quotes with octal escapes unless it is asked for NUL-ended entries.
+QUOTED_BY_GIT = "src/ünïcödé_日本.py"
 
 
 def _git(folder: Path, *args: str) -> str:
@@ -49,6 +51,28 @@ def _main_checkout_with_ticket_worktree(top: Path) -> None:
 
 
 _REPOSITORIES = BuiltOnce("cdd-session-files-", _main_checkout_with_ticket_worktree)
+
+
+with description("SessionFiles") as self:
+    with before.each:
+        self.home = ExampleHome()
+        self.top = _REPOSITORIES.copy()
+        self.main = self.top / "main"
+
+    with after.each:
+        self.home.close()
+        shutil.rmtree(self.top, ignore_errors=True)
+
+    with context("of a session working in a git checkout that holds a file with letters outside ASCII in its name"):
+        with before.each:
+            (self.main / "src").mkdir()
+            (self.main / QUOTED_BY_GIT).write_text("uni = 1" + chr(10), encoding="utf-8")
+            _git(self.main, "add", "-A")
+            _git(self.main, "commit", "-m", "a file git quotes")
+            self.listed = Session(Sessions(self.main)).session_files.under_root()
+
+        with it("should list that file among the files under the session's root"):
+            expect([entry.path for entry in self.listed]).to(contain(QUOTED_BY_GIT))
 
 
 with description("session.write_file") as self:

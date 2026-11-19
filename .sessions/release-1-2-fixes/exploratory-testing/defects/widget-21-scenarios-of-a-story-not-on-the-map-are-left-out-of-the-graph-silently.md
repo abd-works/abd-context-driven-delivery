@@ -23,3 +23,9 @@ The same file saved with CRLF line ends, or with a byte-order mark, and the map'
 
 ## Tier that should catch it
 Unit (the Stories graph reading's spec): no example reads a scenarios file whose stories the map lacks.
+
+## Confirmation (Cog)
+- Result: confirmed
+- What I ran and saw: The Stories reading on a real folder of my own through the rule fixture (`C:\dev\_et\cog\w21.py`): a story map with Place Order and Cancel Order and one scenarios file. With the file's stories named as on the map the graph holds Story x2 and Scenario x2; with them renamed Gift Order and Wrap Order it holds Story x2 (the map's), no Scenario, and no violation. The cdd server was not run.
+- Cause: `cdd_guidance/practices/stories/model/markdown/nodes.py` `MarkdownStoryModel._attach_markdown` gives each story of the map the sections of the scenarios files headed with its name, and a section no story of the map names was dropped there.
+- Fix: such a section's story is kept on the map as one it does not hold (`StoryModel.unplaced_stories`), recorded in the graph with its scenarios under no epic, and reported by the new rule `scenarios-name-a-story-on-the-map`.

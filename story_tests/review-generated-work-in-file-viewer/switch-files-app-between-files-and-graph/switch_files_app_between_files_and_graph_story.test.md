@@ -170,6 +170,15 @@ Requested 2026-11-16: "scenarios not rendering in graph". The Files app listed f
 *When* the Person selects Ticket.delete  
 *Then* that project's ticket.py opens in the source view, not the CDD checkout's
 
+#### Scenario: Selecting a node whose file has moved says so
+
+Found on 2026-11-19 (exploratory testing, pixel-08): a node whose file was moved or deleted after the graph was read answered no lines, as a node read from no lines does, so the selection did nothing and the file of the node selected before stayed on show with no word that this node's source was gone. Acceptance test: `space/session/session_graph_spec.py`.
+
+*Given* the graph view shows the class Ticket, read from *ticket.py*, and *ticket.py* was moved on disk since the graph was read
+*When* the Person selects Ticket
+*Then* the Files app says Ticket did not open because nothing is at *ticket.py*, naming the file
+*And* the node selected before stays selected, with its own file on show
+
 #### Scenario: Selecting nodes in two files opens both files
 
 *Given* the Files app shows checkout-flow's graph, with Ticket.activate selected and ticket.py open  

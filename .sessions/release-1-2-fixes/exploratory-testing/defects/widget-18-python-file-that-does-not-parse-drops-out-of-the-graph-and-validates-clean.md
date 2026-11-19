@@ -32,3 +32,9 @@ A TypeScript file cut off mid-class (`web2/cart.ts`) also lost its class node; i
 
 ## Tier that should catch it
 Heavy (`graph_build_heavy_spec.py` / `validate_heavy_spec.py`): no example refreshes or validates a file that does not parse or that carries a byte-order mark.
+
+## Confirmation (Cog)
+- Result: confirmed
+- What I ran and saw: The Clean Engineering reading on a real folder of my own through the rule fixture, which reads files the way a live load does (`C:\dev\_et\cog\w18.py`, CDD_HOME in `C:\dev\_et\cog`): `src/order.py` holding the report's broken text beside a valid `src/other.py`, and `shop/b1.py` starting with a byte-order mark beside a CRLF file, with no module card in either folder. Before the fix the graph held `CrlfOnly` and `Other` only, the `source-parses` rule reported nothing, and both files sat in the fact `unreadable_sources` on the practice's root. The cdd server and the validate report were not run.
+- Cause: `cdd_guidance/practices/clean_engineering/model/code_read.py`. `keep_unreadable` kept a file that did not parse on the nearest module card and, where a folder has none, on the practice's root, "which no rule checks"; `SourceParses` (`rules/practice_wide_rules.py`) checked Module nodes only. The byte-order mark is a second cause: `_text_of` read the file as `utf-8`, so the mark reached Python's parser as a character and the file was called unparseable.
+- Fix: a file that does not parse is kept on the folder that holds it when no module does, and `source-parses` checks packages too; source files are read as `utf-8-sig`. Not changed: a file that does not parse at the project's root, in no folder, is still kept on the practice's root, which no rule checks.

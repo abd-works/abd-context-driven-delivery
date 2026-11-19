@@ -7,6 +7,7 @@ from pathlib import Path
 from harness.graph.explorer import ExplorerEntry
 from harness.graph.graph import MARKDOWN_SUFFIXES, FilterRequest, Graph, Node
 from harness.markdown.markdown import MarkdownText
+from space.session.session_files import NamedPathNotFoundError
 
 # The kind of node a story's example is: a fixture a scenario uses, declared in the story test or in an examples module.
 EXAMPLE_TYPE = "Example"
@@ -50,7 +51,9 @@ class NodeSpans:
         relationship group, such as the invokes group a step's calls sit under or the invokedBy group of the steps that
         call an operation, is left closed, so a step opens no operation it calls and an operation no step that calls it.
         A node shown under another as a relationship covers its own lines alone. The walk keeps its own stack, so a deep
-        tree never runs past Python's call stack."""
+        tree never runs past Python's call stack. A node read from the lines of a file that is no longer there, such as
+        one moved since the graph read it, is refused: it would open nothing, which reads as a node with no lines."""
+        self._refuse_gone(self._graph.node(node_id))
         pending: list[tuple[str, bool]] = [(node_id, False)]
         while pending:
             current, below_lines = pending.pop()
@@ -88,14 +91,23 @@ class NodeSpans:
         self._spans[path] = (min(start, source.start_line), max(end, source.end_line, source.start_line))
         return True
 
+    def _refuse_gone(self, node: Node | None) -> None:
+        named = self._named_file(node) if node is not None and node.source is not None else None
+        if named is not None and not named.is_file():
+            raise NamedPathNotFoundError(node.source.file, Path(node.source.root or self._root))
+
     def _lines_file(self, node: Node) -> Path | None:
-        """The file whose lines node was read from; none for a node read from no lines, such as a module that is a
+        """The file whose lines node was read from, while it is there; none for a node read from no lines."""
+        path = self._named_file(node)
+        return path if path is not None and path.is_file() else None
+
+    def _named_file(self, node: Node) -> Path | None:
+        """The file node's source names its lines in; none for a node read from no lines, such as a module that is a
         folder or a relationship group, which carries its holder's source but no lines of its own."""
         source = node.source
         if node.type == node.name or not source.file or source.start_line < 1:
             return None
-        path = (Path(source.root or self._root) / source.file).resolve()
-        return path if path.is_file() else None
+        return (Path(source.root or self._root) / source.file).resolve()
 
     def _below(self, node: Node, below_lines: bool) -> list[tuple[str, bool]]:
         """The nodes the request keeps at their home below node, still to take. A node shown under node only as a

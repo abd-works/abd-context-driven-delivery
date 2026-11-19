@@ -103,6 +103,24 @@ A chat working in a repository other than the CDD checkout opens the Files app o
 *Then* it lists *story-map.md* as not generated yet
 *And* the Person cannot open it
 
+#### Scenario: List a file whose name holds letters outside ASCII
+
+Found on 2026-11-19 (exploratory testing, pixel-02): git writes such a name in quotes with octal escapes unless asked for NUL-ended entries, so the file was dropped from the list and from the branch's changed files, with no word that a file was left out. Acceptance tests: `harness/git/git_spec.py` for the reading of git's listing; `space/session/session_files_heavy_spec.py` and `space/repo/repo_heavy_spec.py` on a real git repository.
+
+*Given* checkout-flow's branch committed *src/ünïcödé_日本.py* in a git project
+*When* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) lists every file under the session's root
+*Then* it lists *src/ünïcödé_日本.py* by the name it has on disk
+*And* the files the session's branch changed name it the same way
+
+#### Scenario: Say so when the project folder the link names is not there
+
+Found on 2026-11-19 (exploratory testing, pixel-04): the page said the cdd server was not connected because `python.exe` was not found, which sent the person to repair a Python and a cdd server that were both fine. Acceptance tests: `harness/files_app/app/files-server.spec.ts`; `open-files-in-files-app.story.ui_e2e_spec.py` for the page.
+
+*Given* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets)'s link names a project folder that is not there, such as a ticket's worktree removed while its Files tab stayed open
+*When* the Files app opens
+*Then* it says the files did not list because that project folder is not there, naming the folder
+*But* the page holds no word of Python or of the cdd server
+
 ## Story: Open Diagram In Files App
 
 Requested (the person, 2026-11-15): the app's browser pane opens no tab of its own from a page, so a diagram opened in a new tab took the Files app's place there. It opens beside the file list instead.
@@ -226,6 +244,15 @@ Requested (the person, 2026-11-15): two buttons. All session files lists every f
 *And* leaves out *checkout.md*, whose stage is not selected
 *When* the Person lists This session
 *Then* the file bar lists *order.py* alone
+
+#### Scenario: List the files again on each press
+
+Found on 2026-11-19 (exploratory testing, pixel-01): the files were listed once as the page opened, so a file renamed on disk kept its old name in the list until the page was loaded again. Acceptance tests: `harness/files_app/app/files/files-page.spec.ts`; `open-files-in-files-app.story.ui_e2e_spec.py` for the page.
+
+*Given* the file bar lists *src/order.py*, and *order.py* was renamed *basket.py* on disk since the page opened
+*When* the Person lists All session files again
+*Then* the file bar lists *src/basket.py*
+*And* lists *src/order.py* no longer as a file to open
 
 ##### Example: another project
 
@@ -376,6 +403,24 @@ Found on 2026-11-16 (debug report `debug-20261116T225500.md`): a page reaching a
 *When* the Person views *order.py*
 *Then* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows *order.py* in the source view, with no callout and no broken rule
 *And* a server answer that is no file at all, such as the text of a call it cannot run, is shown and told as *order.py* not opening, and the page keeps working
+
+#### Scenario: Say so when a listed file is gone
+
+Found on 2026-11-19 (exploratory testing, pixel-01): a file deleted or moved on disk after the page listed it opened as one empty line in a live editor, exactly as an empty file opens, so the next save would bring it back empty. Acceptance tests: `space/session/session_graph_spec.py` and `space/session/file_manager_spec.py` for what the session answers; `harness/files_app/app/files/files-page.spec.ts` and `open-files-in-files-app.story.ui_e2e_spec.py` for the page.
+
+*Given* the file bar lists *src/order.py*, and *order.py* was deleted on disk since the page listed it
+*When* the Person views *order.py*
+*Then* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) says *src/order.py* did not open because nothing is at that path, naming the path and the project it was read from
+*And* shows no editor for it, so nothing can be saved over it
+
+#### Scenario: Refuse a file longer than the viewer shows
+
+Found on 2026-11-19 (exploratory testing, pixel-03): the source view is as tall as its file and draws every line, so a file of 90,000 lines left the page answering after twelve seconds and one of 360,000 crashed its tab, with every open file and comment not yet sent. The viewer shows at most 30,000 lines (`VIEWER_SHOWS_LINES` in `space/session/session_file.py`). Acceptance tests: `space/session/session_graph_spec.py`; `open-files-in-files-app.story.ui_e2e_spec.py` for the page.
+
+*Given* the file bar lists *src/big.py*, which has 90,000 lines
+*When* the Person views *big.py*
+*Then* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) says *src/big.py* did not open, naming its lines and the most the viewer shows
+*And* the next file the Person views opens as before
 
 ## Story: Fold Classes And Operations
 

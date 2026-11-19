@@ -174,11 +174,18 @@ PLAIN_TEXT = "plaintext"
 
 
 class FileText:
-    """The text of one file, with its path from the workpath; no text for a file that is not there."""
+    """The text of one file, with its path from the workpath; no text for a file that is not there, which ``exists``
+    tells from a file that is there and empty."""
 
-    def __init__(self, path: str, text: str) -> None:
+    def __init__(self, path: str, text: str, exists: bool = True) -> None:
         self._path = path
         self._text = text
+        self._exists = exists
+
+    @property
+    def exists(self) -> bool:
+        """Whether the file was there when it was read."""
+        return self._exists
 
     @property
     @data_field
@@ -242,8 +249,9 @@ class FileManager:
     def read(self, path: str) -> FileText:
         """Return the text of path, a file inside one of the session's roots, named from its workpath; no text when the file is not there, such as one deleted since a page listed it."""
         target = self._inside(path)
-        text = target.read_text(encoding="utf-8", errors="replace") if target.is_file() else ""
-        return FileText(self._relative(target), text)
+        exists = target.is_file()
+        text = target.read_text(encoding="utf-8", errors="replace") if exists else ""
+        return FileText(self._relative(target), text, exists)
 
     @mcp
     @agent_tool

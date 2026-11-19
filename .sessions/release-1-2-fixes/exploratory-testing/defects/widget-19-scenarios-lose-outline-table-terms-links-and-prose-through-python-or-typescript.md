@@ -43,3 +43,9 @@ and has lost the front matter, `**Story type:** website`, the link to the story 
 
 ## Tier that should catch it
 Unit (`code_story_round_trip_spec.py`): it covers a trip for steps; no example carries a scenario outline's table, domain terms or prose through and back.
+
+## Confirmation (Cog)
+- Result: confirmed
+- What I ran and saw: The Stories adapters called directly on a scenarios file of my own after the template (`C:\dev\_et\cog\place_order_story.test.md`, run by `w19.py` and `w19b.py`), not through the cdd server. Markdown read and written again is unchanged. The Python holds the outline as `scenario("Order total follows the lines")` with its two steps and no rows; read back, the scenario is no longer an outline. Front matter, the story map link, Domain terms, Story type and the sentence under Cancel Order are in neither code file.
+- Cause: the story model does not hold an outline's rows. `ScenarioFileReading` (`stories/model/markdown/scenario_file.py`) reads a table into examples only under an Examples heading; the table under a Scenario Outline is kept as the lines the scenario was read with, which only the markdown writer writes back. `Scenario.examples` is empty for the outline, so no code format has rows to write, and `is_outline` is not written to code either.
+- Fix: none yet. It needs the model to hold the outline's rows and each code format to write and read them, which is more than an adapter correction.

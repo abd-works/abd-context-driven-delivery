@@ -22,6 +22,7 @@ from harness.markdown.markdown import MarkdownText
 
 from space.session.file_comments import PROCESSED, FileComment
 from space.session.file_range import LineSpan, Range
+from space.session.session_files import NamedPathNotFoundError
 
 if TYPE_CHECKING:
     from space.session.session import Session
@@ -165,6 +166,23 @@ class FileViolation:
         return self._range
 
 
+# The most lines the viewer shows of one file. The Files app's editor is as tall as its file, so the page scrolls rather
+# than the editor, and it draws every line at once: a file of 90,000 lines left the page answering after 12 seconds and
+# one of 360,000 crashed its tab. The longest file of this repository is under half of this.
+VIEWER_SHOWS_LINES = 30_000
+
+
+class FileTooLongToShowError(ValueError):
+    """Raised when the viewer asks for a file longer than it shows: drawing it would freeze or crash the page, and with
+    it every other open file and comment not yet sent. It carries the file, its lines and the most the viewer shows."""
+
+    def __init__(self, path: str, lines: int, shown: int = VIEWER_SHOWS_LINES) -> None:
+        self.path = path
+        self.lines = lines
+        self.shown = shown
+        super().__init__(f"{path} has {lines:,} lines and the viewer shows at most {shown:,}: open it in an editor")
+
+
 class RuleReads:
     """What a viewer reads on a file: with folds, the folds of its classes and members and no broken rule; with rules,
     the rules the file breaks read on its own; with cross_file, those only the session's whole working copy finds. Any
@@ -185,7 +203,9 @@ class SessionFile:
     """A file of the session, named from the project: its text, the comments on it, and, when the viewer asks, its folds
     and the rules it breaks. With rules, the file is read on its own and only its own rules run; with cross_file, the
     session's knowledge graph holds the whole working copy and adds the rules only it finds, linking files and
-    practices. Either read gives the folds."""
+    practices. Either read gives the folds. A file that is not there, such as one deleted or moved since a page listed
+    it, is refused with *NamedPathNotFoundError*: a viewer shown no text would take it for an empty file. A file of more than
+    VIEWER_SHOWS_LINES lines is refused with *FileTooLongToShowError*."""
 
     def __init__(self, session: Session, path: str, reads: RuleReads | None = None) -> None:
         reads = reads or RuleReads()
@@ -194,6 +214,11 @@ class SessionFile:
         self._cross_file = reads.cross_file
         self._reads_graph = reads.reads_graph
         self._text = session.session_files.read(path)
+        if not self._text.exists:
+            raise NamedPathNotFoundError(path, session.repo_path)
+        lines = self._text.text.count("\n") + 1
+        if lines > VIEWER_SHOWS_LINES:
+            raise FileTooLongToShowError(self._text.path, lines)
         self._path = self._text.path
 
     @property

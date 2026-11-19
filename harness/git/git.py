@@ -33,6 +33,16 @@ class Git:
     def run(self, *args: str, env: dict[str, str] | None = None, timeout: float | None = None) -> str:
         """Run git with args and answer its output. ``env`` adds variables to git's environment; ``timeout`` overrides
         the limit the command gets by default."""
+        return self._output(args, env, timeout).strip()
+
+    def listed(self, *args: str) -> list[str]:
+        """The entries of a command that lists files, such as ``ls-files``, ``diff --name-only`` or ``status
+        --porcelain``, each as git writes it under ``-z``: ended by a NUL and never quoted, so a name with letters
+        outside ASCII, a quote, a backslash or a tab is the name the file has on disk. Nothing is trimmed, so a status
+        entry keeps the space its two status letters may start with."""
+        return [entry for entry in self._output((*args, "-z")).split(chr(0)) if entry]
+
+    def _output(self, args: tuple[str, ...], env: dict[str, str] | None = None, timeout: float | None = None) -> str:
         limit = timeout or (_LONG_COMMAND_TIMEOUT_SECONDS if args and args[0] in _LONG_COMMANDS else _COMMAND_TIMEOUT_SECONDS)
         command = f"git {' '.join(args)}"
         try:
@@ -43,7 +53,7 @@ class Git:
             raise RepoConnectError(f"Cannot connect git: {exc}.") from exc
         if code != 0:
             raise RepoConnectError(f"Cannot connect git: {command} failed in {self.folder}: {(stderr or stdout or '').strip()}.")
-        return (stdout or "").strip()
+        return stdout or ""
 
     def succeeds(self, *args: str) -> bool:
         """Whether git with args succeeds, such as ``show-ref --verify`` for a ref that may not exist."""

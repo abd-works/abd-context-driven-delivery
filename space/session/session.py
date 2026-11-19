@@ -113,7 +113,7 @@ class SessionFileTools:
     @agent_tool
     @noSessionLog
     def file(self, path: str, rules: bool = False, cross_file: bool = False, folds: bool = False) -> SessionFile:
-        """Return path, a file named as read_file names it, as the viewer shows it: its text and language, the comments on it, and with any of folds, rules or cross_file the folds of its classes, operations, and properties. With folds alone, the folds and no broken rule. With rules, the rules it breaks read on its own, under a second; with cross_file, the rules only the whole working copy finds broken in it, linking files and practices, which takes far longer. Each on its range of lines. All off, browsing never reads a graph."""
+        """Return path, a file named as read_file names it, as the viewer shows it, refused when the file is not there, such as one deleted or moved since a page listed it, or is longer than the viewer shows: its text and language, the comments on it, and with any of folds, rules or cross_file the folds of its classes, operations, and properties. With folds alone, the folds and no broken rule. With rules, the rules it breaks read on its own, under a second; with cross_file, the rules only the whole working copy finds broken in it, linking files and practices, which takes far longer. Each on its range of lines. All off, browsing never reads a graph."""
         return SessionFile(self, path, RuleReads(rules, cross_file, folds))
 
     @mcp

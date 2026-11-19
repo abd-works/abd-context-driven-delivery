@@ -489,12 +489,13 @@ class Branch:
         if not self.exists:
             return []
         git = self._repo.git
-        committed = git.run("diff", "--name-only", f"{self._repo.default_branch}...{self.name}").splitlines()
+        committed = git.listed("diff", "--name-only", f"{self._repo.default_branch}...{self.name}")
         checkout = self.checkout
         if checkout is None:
             return committed
-        uncommitted = checkout.git.run("status", "--porcelain", "--untracked-files=all", "--no-renames").splitlines()
-        return [*committed, *(line[3:].strip('"') for line in uncommitted)]
+        # A status entry is two status letters, a space, and the path.
+        uncommitted = checkout.git.listed("status", "--porcelain", "--untracked-files=all", "--no-renames")
+        return [*committed, *(entry[3:] for entry in uncommitted)]
 
     @property
     def checkout(self) -> Repo | None:

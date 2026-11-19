@@ -211,9 +211,22 @@ export class FilesPage {
   }
 
   // This session lists the files the branch changed; All session files lists every file of the fidelities listed, older
-  // work included. The stages, practices and formats selected filter both.
+  // work included. The stages, practices and formats selected filter both. Each press reads the files again, so one
+  // renamed, added or deleted on disk since the page opened is listed as it is now.
   showScope(scope: 'session' | 'all'): void {
     this.store.change(() => ({ scope }))
+    if (this.link.namesFiles && !this.link.isSessionFolder && !this.state.isListing) void this.listAgain()
+  }
+
+  // The files of the fidelities already listed and every file under the session's root, read again and shown.
+  private async listAgain(): Promise<void> {
+    try {
+      const byFidelity = await this.filesByFidelity(this.state.byFidelity.map(each => each.slug))
+      this.store.change(state => ({ byFidelity, entries: this.shownFrom({ ...state, byFidelity }) }))
+    } catch (failure) {
+      this.notices.fail(`The Files app did not list the files again: ${reasonOf(failure)}`, 'Pressing This session or All session files, calling ticket.fidelity_files')
+    }
+    await this.readRootFiles()
   }
 
   // Why the list is empty: the formats selected hold none of the files of the fidelities listed, such as code at a stage

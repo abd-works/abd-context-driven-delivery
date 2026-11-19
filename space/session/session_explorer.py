@@ -71,7 +71,7 @@ class SessionExplorer:
     @agent_tool
     @noSessionLog
     def graph_node_ranges(self, node_id: str, paths: list[str]) -> list[Range]:
-        """Return the lines the node node_id covers, one range for each file, each named from the project, so a viewer opens every file there. A node read from lines of a file answers that one range; a node read from no file's lines, such as a module that is a folder, answers each file the nodes below it come from, among paths, spanning the lines they cover; none for an id the graph no longer holds."""
+        """Return the lines the node node_id covers, one range for each file, each named from the project, so a viewer opens every file there. A node read from lines of a file answers that one range; a node read from no file's lines, such as a module that is a folder, answers each file the nodes below it come from, among paths, spanning the lines they cover; none for an id the graph no longer holds. A node the graph read from the lines of a file that is no longer there, such as one moved since, is refused, naming that file."""
         spans = NodeSpans(self.graph, {"paths": self.paths.in_project(paths)}, self.work_root).collect(node_id).spans
         return [self.file(self.paths.from_project(path)).range(start, end) for path, (start, end) in spans.items()]
 

@@ -27,6 +27,10 @@ from space.repo.latest_release import LatestRelease
 from space.repo.repo import Repo
 
 
+# Seed: a file whose name git writes in quotes with octal escapes unless it is asked for NUL-ended entries.
+QUOTED_BY_GIT = "ünïcödé_日本.py"
+NOT_COMMITTED = "café.md"
+
 # (E) Open Work Session
 # (E) Work With Repo Branch
 with description("a Repo"):
@@ -59,6 +63,18 @@ with description("a Repo"):
             self.repo.branch_named("session/demo").check_out()
             (self.clone / "a.py").write_text("work\n", encoding="utf-8")
             expect(self.repo.branch_named("session/demo").changed_files()).to(equal(["a.py"]))
+
+        with context("with a branch that committed a file whose name git quotes, and changed a tracked file without staging it"):
+            with before.each:
+                self.repo.branch_named("session/demo").check_out()
+                (self.clone / QUOTED_BY_GIT).write_text("uni = 1" + chr(10), encoding="utf-8")
+                _git(self.clone, "add", "-A")
+                _git(self.clone, "commit", "-m", "demo turn")
+                (self.clone / "README.md").write_text("changed" + chr(10), encoding="utf-8")
+                (self.clone / NOT_COMMITTED).write_text("# café" + chr(10), encoding="utf-8")
+
+            with it("should name each file as it is on disk"):
+                expect(sorted(self.repo.branch_named("session/demo").changed_files())).to(equal(sorted(["README.md", QUOTED_BY_GIT, NOT_COMMITTED])))
 
         with context("with a branch checked out in a worktree of its own, a file committed there and one not yet"):
             with before.each:

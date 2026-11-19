@@ -102,8 +102,8 @@ class SessionFiles:
         return [FileEntry(repo.path_from_top(path), True, path.resolve() in changed) for path in sorted(files) if path.is_file()]
 
     def _tracked_under(self, root: Path) -> list[Path]:
-        listed = Git(root).run("ls-files", "--cached", "--others", "--exclude-standard")
-        return [root / line for line in dict.fromkeys(listed.splitlines()) if line]
+        listed = Git(root).listed("ls-files", "--cached", "--others", "--exclude-standard")
+        return [root / name for name in dict.fromkeys(listed)]
 
     def _walked_under(self, root: Path) -> list[Path]:
         return [path for path in root.rglob("*") if not UNREAD_FOLDERS.intersection(path.relative_to(root).parts)]

@@ -1,7 +1,8 @@
 import express, { type Express, type NextFunction, type Request, type Response } from 'express'
+import { statSync } from 'node:fs'
 import { join } from 'node:path'
 
-import type { ProjectConnections } from '@cdd/cdd-connection'
+import type { CddConnection, ProjectConnections } from '@cdd/cdd-connection'
 import { CddRequestError, PROJECT_HEADER, cddProgressRoutes, type CddRoute } from '@cdd/cdd-shared'
 import { ChatAdapter, chatRoutes } from '@cdd/harness/chat/chat'
 import type { FailureData } from '@cdd/tools/error_display/failure'
@@ -39,6 +40,26 @@ export const filesRoutes: CddRoute[] = [
   ...ticketRoutes.filter(route => TICKET_ROUTES.includes(route.path)),
 ]
 
+// A request naming a project folder that is not there, such as a ticket's worktree removed while its Files tab stays
+// open. Without it the cdd connection starts its connect script in that folder, and Node words the failure as the
+// Python program not found, which sends the person to repair a Python and a cdd server that are both fine.
+export class ProjectFolderMissingError extends Error {
+  constructor(readonly folder: string) {
+    super(`The project folder ${folder} is not there: it was moved or removed, such as a ticket's worktree closed since this page opened.`)
+    this.name = 'ProjectFolderMissingError'
+  }
+}
+
+// The connection of the project the request names in its header, refused when that folder is not there; the connection
+// the server started with for a request naming none.
+export function connectionOf(projects: ProjectConnections, request: { get(name: string): string | undefined }): CddConnection {
+  const named = request.get(PROJECT_HEADER)?.trim()
+  if (named && !statSync(named, { throwIfNoEntry: false })?.isDirectory()) throw new ProjectFolderMissingError(named)
+  return projects.of(request)
+}
+
+const REFUSALS = [CddRequestError, ProjectFolderMissingError]
+
 const textOf = (failure: unknown): string => (failure instanceof Error ? failure.message : String(failure))
 
 // This server can put a person's comments into a live chat, so only this machine's own page may reach it. The Host check
@@ -67,7 +88,7 @@ async function answer(running: () => Promise<unknown>, response: Response): Prom
   try {
     response.json((await running()) ?? null)
   } catch (failure) {
-    response.status(failure instanceof CddRequestError ? BAD_REQUEST : FAILED).json({ error: textOf(failure) })
+    response.status(REFUSALS.some(refusal => failure instanceof refusal) ? BAD_REQUEST : FAILED).json({ error: textOf(failure) })
   }
 }
 
@@ -75,7 +96,7 @@ export function createFilesApp(projects: ProjectConnections, port: number, stati
   const app = express()
   app.use(onlyThisMachine(port))
   app.use(express.json())
-  for (const route of filesRoutes) app.post(`${API_ROOT}${route.path}`, (request, response) => void answer(() => route.run(projects.of(request), request), response))
+  for (const route of filesRoutes) app.post(`${API_ROOT}${route.path}`, (request, response) => void answer(async () => route.run(connectionOf(projects, request), request), response))
   // A .drawio file's link: start the viewer on the file and send the tab on to it. A viewer that does not start is shown
   // in the tab and told to the chat that opened the page, as the page tells every failure.
   app.get(`${API_ROOT}${DRAWIO_PAGE}`, async (request, response) => {
