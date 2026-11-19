@@ -184,8 +184,9 @@ class TicketTreeTools:
     @agent_tool
     @noSessionLog
     def add_child(self, title: str) -> Ticket:
-        """Open a child ticket of ticket titled title, a story In progress in Discovery, working where ticket works. Committed on main and pushed."""
-        return self.board.placement.ticket_of(self.session.hierarchy.open_child(title, scope="story"))
+        """Open a child ticket of ticket titled title, a story In progress in Discovery, working where ticket works. A title that gives no name, one too long, or the name of a ticket already there is refused, as for any new ticket. Committed on main and pushed."""
+        placement = self.board.placement
+        return placement.ticket_of(self.session.hierarchy.open_child(placement.free_name_for(title), title, scope="story"))
 
     @mcp
     @agent_tool

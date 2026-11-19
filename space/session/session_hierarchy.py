@@ -35,10 +35,11 @@ class SessionHierarchy:
         longer pulled out of one."""
         self._session.record.save_fields(**{PARENT_FIELD: parent.name if parent is not None else "", _PULLED_OUT_FIELD: False})
 
-    def open_child(self, title: str, scope: str) -> Session:
-        """A new session titled title, its parent this one, working where this one works."""
+    def open_child(self, name: str, title: str, scope: str) -> Session:
+        """A new session called name and titled title, its parent this one, working where this one works. The caller
+        gives a name no session has, since a session of that name would be opened again and made its own parent."""
         session = self._session
-        return session.sessions.create(title, session.work_root, title=title, scope=scope, parent=session.name)
+        return session.sessions.create(name, session.work_root, title=title, scope=scope, parent=session.name)
 
     def mark_pulled_out(self) -> None:
         self._session.record.save_fields(**{_PULLED_OUT_FIELD: True})

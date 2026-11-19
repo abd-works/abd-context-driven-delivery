@@ -174,10 +174,10 @@ Rule text: [tdd/tdd.md:165](C:\Users\jeffa\.cdd\dev\runtime\cdd_guidance\practic
 ## Judgment — `harness/diagnostics/test_runs.py`
 
 ### `hold-state-on-the-object-not-in-parameters` — Fail
-- test_runs.py:499 `TestCadence.run_now`: `recorded_start` is handed from `run_now` to `_started` and on to `_live_elsewhere`, two private layers, instead of being held once by the cadence made for that process.
+- test_runs.py:533 `TestCadence.run_now`: `recorded_start` is handed from `run_now` to `_started` and on to `_live_elsewhere`, two private layers, instead of being held once by the cadence made for that process.
 
 ### `every-branch-taken-by-a-test` — Fail
-- test_runs.py:330 `RunWorktree._link`: the branch that links installed packages outside Windows is taken by no spec; the specs run on Windows only.
+- test_runs.py:372 `RunWorktree._link`: the branch that links installed packages outside Windows is taken by no spec; the specs run on Windows only.
 
 ## Judgment — `harness/process/starter_bound_job.py`
 

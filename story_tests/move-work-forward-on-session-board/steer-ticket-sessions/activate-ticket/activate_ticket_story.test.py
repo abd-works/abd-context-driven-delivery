@@ -92,3 +92,51 @@ with story("Activate Ticket"):
             pass
         with then("checkout-flow's session records its own branch checkout-flow"):
             pass
+    with scenario("Open a ticket again after its worktree folder was deleted"):
+        # Evidence: tested by heavy: space/repo/worktree_heavy_spec.py 'whose folder was deleted outside CDD'; unit: space/repo/worktree_spec.py.
+        with given("billing-report is open in its own worktree"):
+            pass
+        with but_("that worktree's folder is no longer on disk"):
+            pass
+        with when("the Person activates billing-report"):
+            # Person -> Ticket.activate()
+            # TicketCheckout -> Branch.open_in_worktree()
+            # Worktrees -> Worktrees.add(folder, branch)
+            pass
+        with then("billing-report has its own worktree again, on the branch billing-report"):
+            pass
+    with scenario("Give tickets whose names start alike their own worktrees"):
+        # Evidence: tested by heavy: space/repo/worktree_heavy_spec.py 'with another branch whose name starts with the same 24 characters open in its worktree'; unit: space/repo/worktree_spec.py.
+        with given("customer-order-history-export-monthly is open in its own worktree"):
+            pass
+        with when("the Person activates customer-order-history-export-weekly"):
+            # Person -> Ticket.activate()
+            # Worktrees -> Worktrees.sibling_folder(branch)
+            pass
+        with then("customer-order-history-export-weekly has a worktree of its own, in another folder"):
+            pass
+    with scenario("Refuse to open a ticket onto a folder that is not its checkout"):
+        # Evidence: tested by heavy: space/kanban/ticket_work_heavy_spec.py 'that a ticket is activated while a folder left on no branch is where its worktree goes'.
+        with given("billing-report's worktree folder is still there, left on no branch"):
+            pass
+        with and_("the git [repository](../../../.context/kanban-model.md#repo) no longer has the branch billing-report"):
+            pass
+        with when("the Person activates billing-report"):
+            # Person -> Ticket.activate()
+            # TicketCheckout -> Branch.open_in_worktree()
+            # Worktrees -> Worktrees.add(folder, branch)
+            pass
+        with then("the board says billing-report cannot open in a worktree, naming that folder"):
+            pass
+        with and_("the folder's files are as they were"):
+            pass
+    with scenario("Answer every chat that activates a ticket at the same moment"):
+        # Evidence: tested by heavy: space/repo/worktree_heavy_spec.py 'that two callers open for one branch at the same moment'.
+        with given("billing-report has no worktree yet"):
+            pass
+        with when("three chats activate billing-report at the same moment"):
+            # Chat -> Ticket.activate()
+            # Worktrees -> Worktrees.open(branch), one caller at a time
+            pass
+        with then("each is answered billing-report, in the one worktree"):
+            pass

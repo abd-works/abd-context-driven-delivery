@@ -21,6 +21,7 @@ from harness.installation.files import FileChannel, FileInstallation  # noqa: E4
 from harness.installation.ide_layout import IdeLayout  # noqa: E402
 from harness.installation.install_target import InstallTarget  # noqa: E402
 from harness.installation.data_class import DataClass  # noqa: E402
+from harness.installation.json_file import JsonFileUnreadable  # noqa: E402
 from space.kanban.backlog_item import BacklogItem  # noqa: E402
 from space.kanban.board import Stage  # noqa: E402
 from space.kanban.card_name import NAME_LENGTH_LIMIT, BacklogItemTakenError, TicketNameTakenError, TitleNamesNothingError, TitleTooLongError  # noqa: E402
@@ -387,6 +388,44 @@ with description("the board tools") as self:
             with it("should leave that rule's hits out of the report"):
                 report = self.project.call("fidelity-progress.report", ticket="pet-visits", fidelity="stories-story-map")
                 expect(report["rules"]).to(equal([]))
+
+        # (S) Board App --> Display Board
+        with context("with another ticket whose session.json is cut off half way"):
+            with before.each:
+                self.cut_off = self.project.ticket("loyalty-points", title="Loyalty points") / "session.json"
+                self.cut_off.write_text('{"name": "loyalty-points", "title": "Loyal', encoding="utf-8")
+                self.shown = self.project.call("board.show")
+
+            with it("should still show the tickets whose files read"):
+                expect(ticket_names_in(self.shown, "Discovery")).to(contain("pet-visits"))
+
+            with it("should leave the ticket it cannot read off its columns"):
+                expect([name for column in self.shown["columns"] for name in ticket_names_in(self.shown, column["name"])]).not_to(contain("loyalty-points"))
+
+            with it("should say which session file could not be read"):
+                expect([unread["file"] for unread in self.shown["unreadable"]]).to(equal([".sessions/loyalty-points/session.json"]))
+
+            with it("should say why it could not be read"):
+                expect(self.shown["unreadable"][0]["error"]).to(contain("not a readable JSON object"))
+
+            with it("should refuse a change to that ticket, leaving its file as it was"):
+                expect(lambda: self.project.call("ticket.tag", ticket="loyalty-points", word="urgent")).to(raise_error(JsonFileUnreadable))
+                expect(self.cut_off.read_text(encoding="utf-8")).to(equal('{"name": "loyalty-points", "title": "Loyal'))
+
+        # (S) Person --> Split Ticket Into Child Tickets
+        with context("that adds a child whose title makes the name of a ticket already there"):
+            with it("should refuse it, naming that ticket"):
+                expect(lambda: self.project.call("ticket.add_child", ticket="pet-visits", title="PET VISITS")).to(raise_error(TicketNameTakenError, contain("pet-visits")))
+
+            with it("should refuse a child whose title gives no name"):
+                expect(lambda: self.project.call("ticket.add_child", ticket="pet-visits", title="日本語")).to(raise_error(TitleNamesNothingError))
+
+        with context("that adds a child to a ticket"):
+            with before.each:
+                self.child = self.project.call("ticket.add_child", ticket="pet-visits", title="Book a visit")
+
+            with it("should name the child after its title, under its parent"):
+                expect((self.child["name"], self.child["session"]["parent"])).to(equal(("book-a-visit", "pet-visits")))
 
         # (E) Tickets
         # (S) Person --> Open Ticket Session

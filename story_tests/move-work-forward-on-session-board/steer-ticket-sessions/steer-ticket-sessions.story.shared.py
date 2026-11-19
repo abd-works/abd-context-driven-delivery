@@ -23,6 +23,7 @@ from pathlib import Path
 
 from expects import be_false, be_none, be_true, contain, end_with, equal, expect
 
+from space.kanban.card_name import NAME_LENGTH_LIMIT, TicketNameTakenError, TitleNamesNothingError, TitleTooLongError
 from space.kanban.session_board_examples import (
     ALMOST_SHIPPED,
     BACK_TO_BACKLOG,
@@ -970,3 +971,72 @@ def _(s):
     @s.then("the details say No handoff yet")
     def _(world):
         expect(world.selected["session"]["handoff"]).to(equal(""))
+
+
+@shared_stories.scenario("Open Ticket Session", "Refuse a title that gives a ticket no name")
+def _(s):
+    @s.given("the board shows checkout-flow")
+    def _(world):
+        world.project.seed_session(CHECKOUT_FLOW)
+
+    @s.when("the Person opens a new ticket whose title is empty, or 日本語")
+    def _(world):
+        world.refusals = [refusal_of(lambda title=title: world.Ticket.create(title=title)) for title in ("", "日本語")]
+
+    @s.then("the board says the title gives no name, naming the title")
+    def _(world):
+        expect([type(refusal) for refusal in world.refusals]).to(equal([TitleNamesNothingError, TitleNamesNothingError]))
+        expect(str(world.refusals[1])).to(contain("日本語"))
+
+    @s.and_("no session file is written in .sessions itself")
+    def _(world):
+        expect((world.project.sessions / "session.json").exists()).to(be_false)
+
+
+@shared_stories.scenario("Open Ticket Session", "Refuse a title whose name a ticket already has")
+def _(s):
+    @s.given("the ticket pet-visits is titled Pet visits")
+    def _(world):
+        world.project.seed_session(PET_VISITS)
+
+    @s.when("the Person opens a new ticket titled PET VISITS")
+    def _(world):
+        world.refusal = refusal_of(lambda: world.Ticket.create(title=PET_VISITS.title.upper()))
+
+    @s.then("the board says a ticket named pet-visits already exists")
+    def _(world):
+        expect_refused(world.refusal, TicketNameTakenError, "a ticket named pet-visits already exists; give 'PET VISITS' another title")
+
+    @s.and_("pet-visits is still titled Pet visits")
+    def _(world):
+        saved = json.loads((world.project.sessions / PET_VISITS.name / "session.json").read_text(encoding="utf-8"))
+        expect(saved["title"]).to(equal(PET_VISITS.title))
+
+    @s.when("the Person opens a new ticket titled main")
+    def _(world):
+        world.refusal = refusal_of(lambda: world.Ticket.create(title="main"))
+
+    @s.then("the board says a ticket named main already exists")
+    def _(world):
+        expect_refused(world.refusal, TicketNameTakenError, "a ticket named main already exists; give 'main' another title")
+
+
+@shared_stories.scenario("Open Ticket Session", "Refuse a title too long for a name")
+def _(s):
+    @s.given("the board shows checkout-flow")
+    def _(world):
+        world.project.seed_session(CHECKOUT_FLOW)
+        world.folders = sorted(path.name for path in world.project.sessions.iterdir())
+
+    @s.when("the Person opens a new ticket whose title makes a name longer than 64 characters")
+    def _(world):
+        world.refusal = refusal_of(lambda: world.Ticket.create(title="word " * (NAME_LENGTH_LIMIT // 4)))
+
+    @s.then("the board says the title makes too long a name, naming the limit")
+    def _(world):
+        expect(type(world.refusal)).to(equal(TitleTooLongError))
+        expect(str(world.refusal)).to(contain(f"shorten it to {NAME_LENGTH_LIMIT} or fewer"))
+
+    @s.and_("no session folder is made for it")
+    def _(world):
+        expect(sorted(path.name for path in world.project.sessions.iterdir())).to(equal(world.folders))

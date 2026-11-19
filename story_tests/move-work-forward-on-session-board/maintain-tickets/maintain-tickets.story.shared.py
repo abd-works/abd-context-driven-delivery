@@ -16,6 +16,7 @@ import json
 from expects import be_none, contain, equal, expect
 
 from space.kanban.board import TicketNotFoundError
+from space.kanban.card_name import BacklogItemTakenError, TicketNameTakenError, TitleNamesNothingError
 from space.kanban.session_board_examples import (
     BILLING_TAG,
     CHECKOUT_FLOW,
@@ -323,3 +324,66 @@ def _(s):
     @s.then("pet-visits' card shows the tags billing and urgent")
     def _(world):
         expect(ticket_in(board_of(world), PET_VISITS.name)["tags"]).to(equal([BILLING_TAG, URGENT_TAG]))
+
+
+@shared_stories.scenario("Add Backlog Item", "Refuse an idea whose title another idea's file has")
+def _(s):
+    @s.given("the Backlog keeps the idea Gift cards, with the text Sell gift cards.")
+    def _(world):
+        world.kept = world.project.seed_backlog_file(GIFT_CARDS_IN_BACKLOG)
+
+    @s.when("the Person adds an idea titled Gift cards with another text")
+    def _(world):
+        world.refusal = refusal_of(lambda: world.BacklogItem.create(title=GIFT_CARDS_IN_BACKLOG.heading, text=EDITED_GIFT_CARDS_TEXT))
+
+    @s.then("the board says the Backlog already keeps an idea in .sessions/_backlog/gift-cards.md")
+    def _(world):
+        expect_refused(world.refusal, BacklogItemTakenError, "the Backlog already keeps an idea in .sessions/_backlog/gift-cards.md; give 'Gift cards' another title")
+
+    @s.and_("that file still says Sell gift cards.")
+    def _(world):
+        expect(world.kept.read_text(encoding="utf-8")).to(contain(GIFT_CARDS_IN_BACKLOG.text))
+
+
+@shared_stories.scenario("Add Backlog Item", "Refuse an idea whose title gives its file no name")
+def _(s):
+    @s.given("the board shows the Backlog")
+    def _(world):
+        world.project.seed_backlog_file(GIFT_CARDS_IN_BACKLOG)
+
+    @s.when("the Person adds an idea whose title is empty, or 日本語")
+    def _(world):
+        world.refusals = [refusal_of(lambda title=title: world.BacklogItem.create(title=title, text="idea")) for title in ("", "日本語")]
+
+    @s.then("the board says the title gives no name")
+    def _(world):
+        expect([type(refusal) for refusal in world.refusals]).to(equal([TitleNamesNothingError, TitleNamesNothingError]))
+
+    @s.and_("no file named .md is written in the Backlog")
+    def _(world):
+        expect((world.project.sessions / "_backlog" / ".md").exists()).to(equal(False))
+
+
+@shared_stories.scenario("Add Backlog Item", "Refuse to start an idea whose name a ticket already has")
+def _(s):
+    @s.given("the ticket pet-visits is on the board")
+    def _(world):
+        world.project.seed_session(PET_VISITS)
+
+    @s.and_("the Backlog keeps an idea titled Pet visits")
+    def _(world):
+        world.kept = world.project.sessions / "_backlog" / f"{PET_VISITS.name}.md"
+        world.kept.parent.mkdir(parents=True, exist_ok=True)
+        world.kept.write_text(idea_file_text(PET_VISITS.title, PET_VISITS_TEXT), encoding="utf-8")
+
+    @s.when("the Person starts that idea")
+    def _(world):
+        world.refusal = refusal_of(lambda: world.BacklogItem.load(PET_VISITS.title).start())
+
+    @s.then("the board says a ticket named pet-visits already exists")
+    def _(world):
+        expect_refused(world.refusal, TicketNameTakenError, "a ticket named pet-visits already exists; give 'Pet visits' another title")
+
+    @s.and_("the idea stays in the Backlog")
+    def _(world):
+        expect(world.kept.is_file()).to(equal(True))

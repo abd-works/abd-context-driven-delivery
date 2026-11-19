@@ -6,6 +6,7 @@ import threading
 from functools import cached_property
 from pathlib import Path
 
+from harness.installation.json_file import JsonFileUnreadable
 from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import tool_subject
 from harness.agent_tools.tool_call import SESSION_OPENING, ToolCall
@@ -144,7 +145,22 @@ class Sessions:
     def all(self) -> list[Session]:
         """Every session the board shows: main first, the default session that works on the whole repository, then the
         work sessions, open ones before closed; never the folders the sessions share."""
-        return [self.held.load(self.folder_of(MAIN_SESSION_NAME)), *(self.held.load(folder) for folder in self.listing.work_folders())]
+        return [self.held.load(folder) for folder in self._shown_folders()]
+
+    def _shown_folders(self) -> list[Path]:
+        return [self.folder_of(MAIN_SESSION_NAME), *self.listing.work_folders()]
+
+    def read_apart(self) -> SessionsRead:
+        """Every session ``all`` lists whose session.json reads, with the failure of each one that does not, such as a
+        file cut off half way: a reader that shows many sessions, such as the board, shows the rest and names the file,
+        where ``all`` stops at the first."""
+        read = SessionsRead()
+        for folder in self._shown_folders():
+            try:
+                read.sessions.append(self.held.load(folder))
+            except JsonFileUnreadable as failure:
+                read.failures.append(failure)
+        return read
 
     def named(self, name: str) -> Session | None:
         """The session called name: the main session, or a work session, open before closed; none when there is none.
@@ -215,6 +231,15 @@ class Sessions:
         A chat in a ticket's own worktree always opens that ticket's session, whatever name it asks for, because the
         worktree holds only that ticket's work; the answer says so when it asked for another."""
         return self.opened.switch(name, workpath, call)
+
+
+class SessionsRead:
+    """*SessionsRead* is one read of a checkout's sessions that went on past a session.json it could not read: the
+    sessions that read, in the board's order, and the failure of each that did not, which names its file."""
+
+    def __init__(self) -> None:
+        self.sessions: list[Session] = []
+        self.failures: list[JsonFileUnreadable] = []
 
 
 class SessionListing:

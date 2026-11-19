@@ -48,6 +48,22 @@ section: body
 *Then* a toast says cdd board.show failed: JsonFileUnreadable: .sessions/broken/session.json is not a readable JSON object (Expecting property name enclosed in double quotes: line 1 column 2 (char 1))
 *But* no band says the cdd server is lost
 
+#### Scenario: Show the other tickets when one ticket's session file does not read
+
+> Test: see-work-on-session-board.story.shared.py, replayed by the domain spec; unit: space/kanban/kanban_tools_spec.py.
+
+> Evidence: exploratory-testing defect pixel-07. One session.json cut off half way took every card off the board.
+
+*Given* the [session](../../../space/kanban/.context/kanban-model.md#session) folder .sessions/broken holds a session.json that is not JSON
+*And* the [ticket](../../../space/kanban/.context/kanban-model.md#ticket--card) pet-visits is on the [board](../../../space/kanban/.context/kanban-model.md#board)
+*When* the session board reads the board
+*Then* pet-visits shows in Discovery
+*And* no column shows broken
+*And* the board names .sessions/broken/session.json as a file it could not read, with what is wrong in it
+*When* the Person tags broken's session with billing
+*Then* the board says .sessions/broken/session.json is not a readable JSON object
+*And* that file is as it was
+
 #### Scenario: Install the board again
 
 *Given* the board is open

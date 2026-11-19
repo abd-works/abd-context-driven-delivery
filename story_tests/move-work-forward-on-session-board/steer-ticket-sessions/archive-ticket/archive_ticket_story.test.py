@@ -35,3 +35,18 @@ with story("Archive Ticket"):
             pass
         with but_("nothing is moved to .sessions/_archive"):
             pass
+    with scenario("Archive a ticket that is open in its own worktree"):
+        # Evidence: tested by heavy: space/kanban/ticket_work_heavy_spec.py 'that a ticket open in its own worktree, with work not saved, is archived'.
+        with given("the [ticket](../../../.context/kanban-model.md#ticket--card) pet-visits is open in its own worktree, with work nobody committed"):
+            pass
+        with when("the Person archives pet-visits"):
+            # Person -> Ticket.archive()
+            # Ticket -> TicketCheckout.free_worktree()
+            # Ticket -> SessionFolder.move_to_archive()
+            pass
+        with then("that work is committed on the branch pet-visits on origin"):
+            pass
+        with and_("pet-visits's worktree is gone"):
+            pass
+        with and_("its folder is in .sessions/_archive/pet-visits"):
+            pass

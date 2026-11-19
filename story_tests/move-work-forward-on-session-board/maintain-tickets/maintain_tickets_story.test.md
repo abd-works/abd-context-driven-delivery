@@ -89,6 +89,8 @@ Seed state from `space/kanban/session_board_examples.py`, which the shared stori
 
 #### Scenario: Refuse an idea whose title another idea's file has
 
+> Test: maintain-tickets.story.shared.py, replayed by the domain spec.
+
 > Evidence: exploratory-testing defect gizmo-13. space/kanban module-context: a backlog item's file is the only copy of the idea.
 
 *Given* the Backlog keeps the idea Gift cards, with the text Sell gift cards.
@@ -98,6 +100,8 @@ Seed state from `space/kanban/session_board_examples.py`, which the shared stori
 
 #### Scenario: Refuse an idea whose title gives its file no name
 
+> Test: maintain-tickets.story.shared.py, replayed by the domain spec.
+
 > Evidence: exploratory-testing defect gizmo-13.
 
 *Given* the [board](../../../space/kanban/.context/kanban-model.md#board) shows the Backlog
@@ -106,6 +110,8 @@ Seed state from `space/kanban/session_board_examples.py`, which the shared stori
 *And* no file named .md is written in the Backlog
 
 #### Scenario: Refuse to start an idea whose name a ticket already has
+
+> Test: maintain-tickets.story.shared.py, replayed by the domain spec.
 
 > Evidence: exploratory-testing defect gizmo-13.
 
@@ -267,6 +273,8 @@ Returns and refunds.move_before(Gift cards)
 
 #### Scenario: Archive a ticket that is open in its own worktree
 
+> Test: heavy: space/kanban/ticket_work_heavy_spec.py 'that a ticket open in its own worktree, with work not saved, is archived'.
+
 > Evidence: exploratory-testing defect gizmo-16. Evidence gap: no source says what becomes of an archived ticket's worktree and branch; this takes what closing with delete_worktree does, awaiting the person's decision.
 
 *Given* the [ticket](../../../space/kanban/.context/kanban-model.md#ticket--card) pet-visits is open in its own worktree, with work nobody committed
@@ -319,6 +327,8 @@ CardPlacement.ticket("no-such-ticket")
 
 #### Scenario: Delete a ticket that is open in its own worktree
 
+> Test: heavy: space/kanban/ticket_work_heavy_spec.py 'that a ticket open in its own worktree, with work not saved, is deleted'.
+
 > Evidence: exploratory-testing defect gizmo-16. Evidence gap, as the story's own: no source says what becomes of a deleted ticket's worktree and branch; this takes what closing with delete_worktree does, and keeps the branch, awaiting the person's decision.
 
 *Given* the [ticket](../../../space/kanban/.context/kanban-model.md#ticket--card) pet-visits is open in its own worktree, with work nobody committed
@@ -328,6 +338,8 @@ CardPlacement.ticket("no-such-ticket")
 *And* .sessions/pet-visits is gone
 
 #### Scenario: Keep a ticket whole when its session folder cannot be removed
+
+> Test: heavy, Windows: space/kanban/ticket_work_heavy_spec.py 'that a ticket whose session folder a running program holds open is deleted'.
 
 > Evidence: exploratory-testing defect gizmo-09, as its second charter repeated it on Windows.
 

@@ -104,3 +104,40 @@ with story("Add Backlog Item"):
             pass
         with but_("no new ticket is opened"):
             pass
+    with scenario("Refuse an idea whose title another idea's file has"):
+        # Evidence: tested by maintain-tickets.story.shared.py, replayed by the domain spec.
+        with given("the Backlog keeps the idea Gift cards, with the text Sell gift cards."):
+            pass
+        with when("the Person adds an idea titled Gift cards with another text"):
+            # Person -> BacklogItem.create('Gift cards', text) <- BacklogItemTakenError
+            pass
+        with then("the board says the Backlog already keeps an idea in .sessions/_backlog/gift-cards.md"):
+            pass
+        with and_("that file still says Sell gift cards."):
+            pass
+    with scenario("Refuse an idea whose title gives its file no name"):
+        # Evidence: tested by maintain-tickets.story.shared.py, replayed by the domain spec.
+        with given("the [board](../../../.context/kanban-model.md#board) shows the Backlog"):
+            pass
+        with when("the Person adds an idea whose title is empty, or 日本語"):
+            # Person -> BacklogItem.create(title, text)
+            # BacklogItem -> CardName.for_new_card() <- TitleNamesNothingError
+            pass
+        with then("the board says the title gives no name"):
+            pass
+        with and_("no file named .md is written in the Backlog"):
+            pass
+    with scenario("Refuse to start an idea whose name a ticket already has"):
+        # Evidence: tested by maintain-tickets.story.shared.py, replayed by the domain spec.
+        with given("the [ticket](../../../.context/kanban-model.md#ticket--card) pet-visits is on the board"):
+            pass
+        with and_("the Backlog keeps an idea titled Pet visits"):
+            pass
+        with when("the Person starts that idea"):
+            # Person -> BacklogItem.start()
+            # CardPlacement -> CardPlacement.free_name_for('Pet visits') <- TicketNameTakenError
+            pass
+        with then("the board says a ticket named pet-visits already exists"):
+            pass
+        with and_("the idea stays in the Backlog"):
+            pass

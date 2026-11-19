@@ -9,7 +9,7 @@ fields its classes mark, which the board app draws from.
 
 Covered by the board app's TypeScript client specs in space/kanban/app, not here, because they have no Python
 operation: Arrange Board And Details (all three); Arrange Side Panel (all four); Display Board "Say the cdd server is
-not connected", "Install the board again", "Say why the board's install failed", "Keep the newer board when an older read answers late", "Announce a
+not connected", "Show a failing tool in a toast", "Install the board again", "Say why the board's install failed", "Keep the newer board when an older read answers late", "Announce a
 ticket that moved", "Announce a fidelity done"; Display Ticket Card "Draw the card's title, age, and fidelity
 segments", "Name the active ticket on the chat's status line"; Display Ticket Details "Show the active ticket with no
 card pressed", "Show main when no other ticket is opened", "Say another session must be activated to act on
@@ -111,21 +111,49 @@ def _(s):
         expect(required).to(equal((["stories-story-map", "ddd-bounded-context", "ux-ia"], ["generate", "validate"])))
 
 
-@shared_stories.scenario("Display Board", "Show a failing tool in a toast")
+@shared_stories.scenario("Display Board", "Show the other tickets when one ticket's session file does not read")
 def _(s):
     @s.given("the session folder .sessions/broken holds a session.json that is not JSON")
     def _(world):
         world.project.seed_session(BROKEN)
         world.project.seed_session_json_text(BROKEN, BROKEN_SESSION_JSON)
 
+    @s.and_("the ticket pet-visits is on the board")
+    def _(world):
+        world.project.seed_session(PET_VISITS)
+
     @s.when("the session board reads the board")
     def _(world):
-        world.refusal = refusal_of(lambda: world.data_of(world.Board.load().show()))
+        # Board.show()
+        #   -> BoardReads.sessions -> Sessions.read_apart()
+        #   <- the board with pet-visits, and .sessions/broken/session.json among its unreadable files
+        world.read = world.data_of(world.Board.load().show())
 
-    @s.then("a toast says cdd board.show failed: JsonFileUnreadable: .sessions/broken/session.json is not a readable JSON object (Expecting property name enclosed in double quotes: line 1 column 2 (char 1))")
+    @s.then("pet-visits shows in Discovery")
+    def _(world):
+        expect(PET_VISITS.name in names_in(column_in(world.read, "Discovery"))).to(be_true)
+
+    @s.and_("no column shows broken")
+    def _(world):
+        expect(ticket_in(world.read, BROKEN.name)).to(be_none)
+
+    @s.and_("the board names .sessions/broken/session.json as a file it could not read, with what is wrong in it")
+    def _(world):
+        named = [(unread["file"], "is not a readable JSON object (Expecting property name" in unread["error"]) for unread in world.read["unreadable"]]
+        expect(named).to(equal([(".sessions/broken/session.json", True)]))
+
+    @s.when("the Person tags broken's session with billing")
+    def _(world):
+        world.refusal = refusal_of(lambda: world.Ticket.load(BROKEN.name).tag(word="billing"))
+
+    @s.then("the board says .sessions/broken/session.json is not a readable JSON object")
     def _(world):
         broken = world.project.sessions / BROKEN.name / "session.json"
         expect_refused(world.refusal, JsonFileUnreadable, f"{broken} is not a readable JSON object (Expecting property name enclosed in double quotes: line 1 column 2 (char 1))")
+
+    @s.and_("that file is as it was")
+    def _(world):
+        expect((world.project.sessions / BROKEN.name / "session.json").read_text(encoding="utf-8")).to(equal(BROKEN_SESSION_JSON))
 
 
 @shared_stories.scenario("Display Backlog Items As Tickets", "Show each idea file in the Backlog")

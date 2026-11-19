@@ -121,3 +121,26 @@ with story("Display Board"):
             pass
         with then("a toast says stories-story-map done on billing-report"):
             pass
+    with scenario("Show the other tickets when one ticket's session file does not read"):
+        # Evidence: tested by see-work-on-session-board.story.shared.py, replayed by the domain spec; unit: space/kanban/kanban_tools_spec.py.
+        with given("the [session](../../../.context/kanban-model.md#session) folder .sessions/broken holds a session.json that is not JSON"):
+            pass
+        with and_("the [ticket](../../../.context/kanban-model.md#ticket--card) pet-visits is on the [board](../../../.context/kanban-model.md#board)"):
+            pass
+        with when("the session board reads the board"):
+            # Board page -> Board.show()
+            # BoardReads -> Sessions.read_apart()
+            pass
+        with then("pet-visits shows in Discovery"):
+            pass
+        with and_("no column shows broken"):
+            pass
+        with and_("the board names .sessions/broken/session.json as a file it could not read, with what is wrong in it"):
+            pass
+        with when("the Person tags broken's session with billing"):
+            # Person -> Ticket.tag('billing') <- JsonFileUnreadable
+            pass
+        with then("the board says .sessions/broken/session.json is not a readable JSON object"):
+            pass
+        with and_("that file is as it was"):
+            pass
