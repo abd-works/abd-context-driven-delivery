@@ -1219,3 +1219,16 @@
 2026-11-18T23:25:09Z tool prompt-queue.show 5b5466c3-9f1f-4998-ace2-5da34679e50c C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\5b5466c3-9f1f-4998-ace2-5da34679e50c.jsonl 1-5827
 2026-11-18T23:25:31Z tool prompt-queue.show 5b5466c3-9f1f-4998-ace2-5da34679e50c C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\5b5466c3-9f1f-4998-ace2-5da34679e50c.jsonl 1-5829
 2026-11-18T23:25:31Z tool prompt-queue.add_interruption 5b5466c3-9f1f-4998-ace2-5da34679e50c C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\5b5466c3-9f1f-4998-ace2-5da34679e50c.jsonl 1-5831
+2026-11-18T23:25:55Z tool prompt-queue.set_steps 5b5466c3-9f1f-4998-ace2-5da34679e50c C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\5b5466c3-9f1f-4998-ace2-5da34679e50c.jsonl 1-5844
+2026-11-18T23:25:55Z tool prompt-queue.show 5b5466c3-9f1f-4998-ace2-5da34679e50c C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\5b5466c3-9f1f-4998-ace2-5da34679e50c.jsonl 1-5844
+2026-11-18T23:25:59Z tool prompt-queue.done 5b5466c3-9f1f-4998-ace2-5da34679e50c C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\5b5466c3-9f1f-4998-ace2-5da34679e50c.jsonl 1-5854
+2026-11-18T23:26:04Z tool prompt-queue.show 5b5466c3-9f1f-4998-ace2-5da34679e50c C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\5b5466c3-9f1f-4998-ace2-5da34679e50c.jsonl 1-5867
+2026-11-19T17:35:42Z tool prompt-queue.show 5b5466c3-9f1f-4998-ace2-5da34679e50c C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\5b5466c3-9f1f-4998-ace2-5da34679e50c.jsonl 1-5868
+2026-11-19T17:36:04Z tool app.open 5b5466c3-9f1f-4998-ace2-5da34679e50c C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\5b5466c3-9f1f-4998-ace2-5da34679e50c.jsonl 1-5868
+2026-11-19T17:36:23Z tool prompt-queue.show 5b5466c3-9f1f-4998-ace2-5da34679e50c C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\5b5466c3-9f1f-4998-ace2-5da34679e50c.jsonl 1-5870
+2026-11-19T17:36:23Z tool prompt-queue.add 5b5466c3-9f1f-4998-ace2-5da34679e50c C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\5b5466c3-9f1f-4998-ace2-5da34679e50c.jsonl 1-5870
+2026-11-19T17:36:23Z tool prompt-queue.move 5b5466c3-9f1f-4998-ace2-5da34679e50c C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\5b5466c3-9f1f-4998-ace2-5da34679e50c.jsonl 1-5871
+2026-11-19T17:36:38Z tool prompt-queue.done 5b5466c3-9f1f-4998-ace2-5da34679e50c C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\5b5466c3-9f1f-4998-ace2-5da34679e50c.jsonl 1-5900
+2026-11-19T17:36:42Z tool prompt-queue.show 5b5466c3-9f1f-4998-ace2-5da34679e50c C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\5b5466c3-9f1f-4998-ace2-5da34679e50c.jsonl 1-5912
+2026-11-19T17:37:22Z tool prompt-queue.set_steps 5b5466c3-9f1f-4998-ace2-5da34679e50c C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\5b5466c3-9f1f-4998-ace2-5da34679e50c.jsonl 1-5917
+2026-11-19T17:37:48Z tool validate.validate tools\prompt_queue\prompt_queue.py, cdd_guidance\actions\render\rendered_file.py 5b5466c3-9f1f-4998-ace2-5da34679e50c C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\5b5466c3-9f1f-4998-ace2-5da34679e50c.jsonl 1-5956
