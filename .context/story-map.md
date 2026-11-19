@@ -47,7 +47,22 @@ The map reads in the order the work happens: authors register and install toolse
 ### (S) File Installation --> Publish Markdown Files
 ### (S) File Installation --> Publish Guidance Files
 ### (S) Installer --> Publish Action Command
-### (S) Installer --> Store Install State
+### (S) Installer --> [Store Install State](../story_tests/register-and-install-toolsets/install-markdown-files/install_markdown_files_story.test.md#story-store-install-state)
+### (S) Person --> [Choose Where To Install](../story_tests/register-and-install-toolsets/install-markdown-files/install_markdown_files_story.test.md#story-choose-where-to-install)
+
+Observed (2026-11-19, `scripts/install.py`, `harness/installation/ide_layout.py`, `install_target.py`): the IDE is named in any case; a name that is no IDE is refused with the names it can be (`UnknownIde`), and a path that is a file, is empty, or is a chat's unknown folder is refused before anything is written (`NotAnInstallFolder`).
+
+### (S) Person --> [Refresh The Installer's Own Commands](../story_tests/register-and-install-toolsets/install-markdown-files/install_markdown_files_story.test.md#story-refresh-the-installers-own-commands)
+
+Observed (2026-11-19, `scripts/install.py --self`, `Installer.install`): the install and clean commands are written again over a finished install, and the record still lists every file that install wrote, so a clean removes them (`InstallRecord.adopt`).
+
+### (S) Person --> [Install The Latest Release](../story_tests/register-and-install-toolsets/install-markdown-files/install_markdown_files_story.test.md#story-install-the-latest-release)
+
+Observed (2026-11-19, `scripts/install.py` `_install_from_latest`, `_match_release_version`): installing from the latest release puts a locally edited, uncommitted version line back to the release's and keeps a committed version that is past the release.
+
+### (S:system) Installer --> [Publish Mods For Every Chat](../story_tests/register-and-install-toolsets/install-markdown-files/install_markdown_files_story.test.md#story-publish-mods-for-every-chat)
+
+Observed (2026-11-19, `harness/mcp/cdd_home.py` `CddHome._publish_mods`): one install at a time publishes the mods into the cdd home's `claude-plugins` folder, holding an `InstallLock`, so an install from the main checkout and one from a ticket's worktree at the same moment both finish.
 
 ## (E) Install MCP And Hook Manifests
 
@@ -100,7 +115,7 @@ Observed: `/partition` splits handbooks, specs or code into an index plus verbat
 
 Observed: partitioning the same source through another practice adds that lens's columns and segments to the existing index; nothing already there is wiped (`catalog/workflow.md` Scenario 1).
 
-### (S) Agent --> Describe Existing Artifacts
+### (S) Agent --> [Describe Existing Artifacts](../story_tests/deliver-work-with-context-guidance/turn-source-material-into-context/turn_source_material_into_context_story.test.md#story-describe-existing-artifacts)
 
 Observed: `/document` records what code, tests or docs already do for the listed guidance, flagging violations without correcting them, so context for an existing system is not an invented design (`actions/document`).
 
@@ -132,13 +147,17 @@ Observed: `record-decisions.write_cdr` writes a decision record under the sessio
 
 ## (E) Produce Formal Artifacts
 
-### (S) Agent --> Generate Fidelity Artifact
+### (S) Agent --> [Generate Fidelity Artifact](../story_tests/deliver-work-with-context-guidance/produce-formal-artifacts/produce_formal_artifacts_story.test.md#story-generate-fidelity-artifact)
 
 Observed: `/generate` writes each listed guidance's artifact at its fidelity, such as a story map, a class model or acceptance tests, into the session workpath's `.context/` or code folder, then validates what it wrote (`actions/generate`).
 
-### (S) Agent --> Render Artifact Into Another Format
+### (S) Agent --> [Render Artifact Into Another Format](../story_tests/deliver-work-with-context-guidance/produce-formal-artifacts/produce_formal_artifacts_story.test.md#story-render-artifact-into-another-format)
 
 Observed: `/render` turns an artifact already generated into another format on the same guidance, such as a markdown story map into drawio (`actions/render`).
+
+### (S) Agent --> [Take Artifact To Another Format And Back](../story_tests/deliver-work-with-context-guidance/produce-formal-artifacts/take_artifact_to_another_format_and_back_story.test.md#story-take-artifact-to-another-format-and-back)
+
+Observed (2026-11-19, the practices' format adapters under `cdd_guidance/practices/stories/model`, `clean_engineering/model` and `ddd/model`): an artifact rendered to another format and rendered back keeps what a person wrote: a story comes back under the sub-epic its cell names, and a class model gains no relationship nobody wrote. Split from Render Artifact Into Another Format, whose scenarios say where a render is saved. Intended: the scenarios in the story's file that name the evidence still missing.
 
 ### (S) Agent --> Generate From Previous Fidelity
 
@@ -150,7 +169,7 @@ Observed: one action with several guidance names produces every practice's artif
 
 ## (E) Check Artifacts Against Rules
 
-### (S) Agent --> Validate Artifact Against Rules
+### (S) Agent --> [Validate Artifact Against Rules](../story_tests/deliver-work-with-context-guidance/check-artifacts-against-rules/check_artifacts_against_rules_story.test.md#story-validate-artifact-against-rules)
 
 Observed: `/validate` runs the practice's graph rules over the files and judges every rule Pass or Fail without editing, then saves the report, which the board and chat bar read (`actions/validate`).
 
@@ -318,7 +337,7 @@ Observed: `Ticket.latest_handoff`.
 
 Observed: with Active session only on, a ticket that is not the active session disables what sends commands to a chat; moving, activating and information stay open.
 
-### (S) Board App --> Open Ticket Chat On Session Open
+### (S) Board App --> [Open Ticket Chat On Session Open](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-open-ticket-chat-on-session-open)
 
 Observed (checked 2026-11-10): a press on a card points the board at the ticket's own chat (`ticket-client.tsx:184-188`), and the card's chat button opens the worktree, making it first if needed, then a new Claude chat on it through Python's `chats.open` (`Chats.open`, `harness/chat/chat.py`) (`ticket-client.tsx:196-205`, `chat-client.tsx:72-80`, `claude-link.ts`). It opens a new chat rather than the one the ticket ran in, and Activate opens none. Was: Intended (`.sessions/_backlog/suggest-the-next-step.md` "open associated chat on session open / manually"): opening a ticket's session opens the Claude Code chat it ran in. Observed today: a press on a ticket switches to its chat by hand (`chats.open`).
 
@@ -592,7 +611,7 @@ Observed: one tab per format the fidelity offers, generated or not; × closes on
 
 Intended (`.sessions/_backlog/review-work-in-board-files.md` "include ticket context file and folders with list - folder-files; separate section"): the files panel lists the ticket's own context file and folders in a section of their own.
 
-#### (S) Person --> Open Session Files From Details
+#### (S) Person --> [Open Session Files From Details](../story_tests/move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-fidelity-outputs-on-board/review_fidelity_outputs_on_board_story.test.md#story-open-session-files-from-details)
 
 Intended (`.sessions/_backlog/review-work-in-board-files.md` "session information -> link to file or folders"): each file or folder the session information names opens from where it is named. Built today (checked 2026-11-10): the details open the session folder, the stage's files and the latest handoff (`details-view.tsx:37-55`). Missing: the workpath link opens the root chooser rather than the folder. Requested (2026-11-12, "clicking on a session button when the button is in session mode eg no expand no main; opens the file view on .session/session"): pressing a ticket's session button, not main and not expanded, opens the file view on its .sessions/<session> folder.
 
@@ -648,7 +667,7 @@ Observed: the panel shows MCP host, Tools with the loaded count, Kanban app and 
 
 Observed: Reconnect retries `cdd` up to three times (`RECONNECT_TRIES`), then reads the active session again.
 
-### (S) Person --> Create Git Repository First
+### (S) Person --> [Create Git Repository First](../story_tests/move-work-forward-from-chat-bar/check-cdd-server-health-in-chat-bar/check_cdd_server_health_in_chat_bar_story.test.md#story-create-git-repository-first)
 
 Built (2026-11-18), not seen (the coordinator, relaying the person: "A git repository is required: remove every way to choose or work in a plain folder, and in a plain folder the chat bar asks to create the git repository first"): CDD works in a git repository. In a session whose project is no git repository, the chat bar's line holds only the folder's path, "is no git repository, and CDD works in one", a Create the git repository button, the health mark and the version badge: no stages, fidelities, actions, session card or lists. The press calls `repo.make_repository` (`Repo.make_repository`, `NewRepository.make_from_folder`): the folder's `.gitignore` takes what the CDD checkout ignores, then `git init -b main` and a first commit of the folder's own files with a README, leaving `.claude` and `.sessions` out; the bar is read again and draws the session. The repository list's Folder Only (No Repo) section and the `repos.open_folder` tool and `/open-folder` command, which opened a folder as it was, are gone. Tests: `harness/chat-ui/pane/hooks/chat-bar/make-repository.test.ts` (`claude plugin test`), `space/repo/new_repository_heavy_spec.py`.
 
@@ -696,7 +715,7 @@ Observed: one square per fidelity of the shown stage in its practice's colour, f
 
 Observed: pressing a stage icon shows that stage's fidelities on the dots, tinted while it is not the stage in progress, and drops an action picked from the menu (`stage-client.ts` `selectStage`).
 
-### (S) Person --> Display Session Card
+### (S) Person --> [Display Session Card](../story_tests/move-work-forward-from-chat-bar/see-work-in-chat-bar/see_work_in_chat_bar_story.test.md#story-display-session-card)
 
 Observed: the pointer on the session name shows the card, with each fidelity's name and state over its dot and its folder as a chip that opens its files; pressing the name pins the card open and ✕ closes it (`session-card-view.tsx`). The folder chip covers `.sessions/_backlog/bring-chat-bar-level-with-board.md` "Click a practice to get its file list".
 
@@ -714,7 +733,7 @@ Inferred: the `prompt.compose` hook in `register.ts` adds the active session and
 
 Observed: the ▾ beside the session name opens the session list, whose field names a new session that `ticket.create` creates (`session-client.ts` `createSession`). Requested (2026-11-06, as the CDD Kanban does): choose the session root.
 
-### (S) Person --> Open Session
+### (S) Person --> [Open Session](../story_tests/move-work-forward-from-chat-bar/steer-sessions/steer_sessions_story.test.md#story-open-session)
 
 Observed: picking a session from the list opens a dialog saying the active session is committed and pushed, with merge off, and that the new one opens on its own branch and worktree, then calls `board.activate` (`session-dialogs-view.tsx` `ActivateView`).
 
@@ -722,7 +741,7 @@ Observed: picking a session from the list opens a dialog saying the active sessi
 
 Observed: the ⇥ handoff icon adds "Write a handoff for ticket <session> with /space-handoff-handoff-session." to the prompt (`chat-bar-client.ts` `runHandoff`).
 
-### (S) Chat Bar --> Display Latest Session Handoff
+### (S) Chat Bar --> [Display Latest Session Handoff](../story_tests/move-work-forward-from-chat-bar/steer-sessions/steer_sessions_story.test.md#story-display-latest-session-handoff)
 
 Requested (2026-11-06, as the CDD Kanban does): the chat bar shows the active session's latest handoff.
 
@@ -760,7 +779,7 @@ Requested (2026-11-10, "add feature to backlog widget in chat ui --> have add fe
 
 Observed: once every fidelity of the stage has passed validate, the action button shows ➜ and pressing it calls `ticket.move_next` (`action-button-view.tsx` `actionOf`).
 
-### (S) Person --> Invoke Next Fidelity Action
+### (S) Person --> [Invoke Next Fidelity Action](../story_tests/move-work-forward-from-chat-bar/guide-work-through-practices/guide_work_through_practices_story.test.md#story-invoke-next-fidelity-action)
 
 From the chat bar's own map (harness/chat-ui/.context/story-map.md, folded in 2026-11-16). Mirrors Send Next Fidelity Action, for one fidelity: the action button runs generate, validate or review on the selected fidelity (CDR "Action button and ▾ picker"; "Actions run on one fidelity at a time"). Its story test was removed with the chat bar's stubbed tests (8c56ab052).
 
@@ -788,15 +807,15 @@ Requested (2026-11-06, as the CDD Kanban does): the chat bar opens the same help
 
 Requested (2026-11-10, "new session or session where folders aren't set on switch --> probably one dialog box, eg expand above chat bar"): when the chat bar creates a session that does not come from a backlog item, or switches to a session whose workpath and practice roots are not set, one dialog opens above the chat bar to choose the workpath and each practice's root, as the board's Choose Where A Backlog Item Works and Choose Session And Practice Roots do.
 
-### (S:system) Ticket --> List Available Patterns
+### (S:system) Ticket --> [List Available Patterns](../story_tests/move-work-forward-from-chat-bar/guide-work-through-practices/guide_work_through_practices_story.test.md#story-list-available-patterns)
 
 Requested (2026-11-11, "opens a list box for LERN, MERN eg all patterns we have ... set this list dynamically based on contents of folder"): a ticket's `overlay_choices` answers one choice per pattern, each with its icon and whether the session chose it. The patterns are every one registered from `cdd_guidance/patterns/`, where each subfolder whose module of the same name defines a pattern class registers itself (`PatternOverlays.names`), so a pattern folder added there is offered with no change to the chat bar.
 
-### (S) Person --> Choose Graph Overlays
+### (S) Person --> [Choose Graph Overlays](../story_tests/move-work-forward-from-chat-bar/guide-work-through-practices/guide_work_through_practices_story.test.md#story-choose-graph-overlays)
 
 Requested (2026-11-11, "right after practices we need + overlay button where we can add one or more graph overlays ... can select more than one"): a + right after the fidelity dots opens a list box of the patterns the board lists, the session's chosen ones marked; a press on one adds it to or takes it out of the session's overlays through `ticket.choose_overlays`, which keeps them in the session's `session.json` and applies them to the session's graph (`Graph.overlays`).
 
-### (S) Chat Bar --> Display Overlay Icons
+### (S) Chat Bar --> [Display Overlay Icons](../story_tests/move-work-forward-from-chat-bar/guide-work-through-practices/guide_work_through_practices_story.test.md#story-display-overlay-icons)
 
 Requested (2026-11-11, "adds a new icon to bar, pushing action and format", "icon is first and last letter of pattern"): each overlay the session has chosen shows as an icon after the + and before the format chips and the action button, its pattern's first and last letter in capitals (`lern_domain_driven` is LN), the pattern's name on hover.
 
@@ -894,15 +913,15 @@ Intended (`.sessions/_backlog/integrate-practice-content-editor-apps.md` "Trace 
 
 ### (E) Capture Session Knowledge
 
-#### (S) Claude Code --> Write Handoff When Session Ends
+#### (S) Claude Code --> [Write Handoff When Session Ends](../story_tests/move-work-forward-from-chat-bar/capture-session-knowledge/capture_session_knowledge_story.test.md#story-write-handoff-when-session-ends)
 
 Intended (`.sessions/_backlog/suggest-the-next-step.md` "Automatic handoff"): the handoff is written when a session ends, so the next session never starts cold. Built today (checked 2026-11-10): closing or leaving a session from the chat bar offers Create handoff, on by default (`session-dialogs-view.tsx:34`). Missing: writing one when a Claude Code session ends.
 
-#### (S) Claude Code --> Offer Correction Log Entry
+#### (S) Claude Code --> [Offer Correction Log Entry](../story_tests/move-work-forward-from-chat-bar/capture-session-knowledge/capture_session_knowledge_story.test.md#story-offer-correction-log-entry)
 
 Intended (`.sessions/_backlog/suggest-the-next-step.md` "Correction capture"): `$.model.classify` spots when the person corrects generated work and offers, in the chat panel, to add it to `corrections.log` beside that work.
 
-#### (S) Claude Code --> Offer Decision Record
+#### (S) Claude Code --> [Offer Decision Record](../story_tests/move-work-forward-from-chat-bar/capture-session-knowledge/capture_session_knowledge_story.test.md#story-offer-decision-record)
 
 Intended (`.sessions/_backlog/suggest-the-next-step.md` "Correction capture"): the same check spots a decision and offers to write a CDR for it.
 
@@ -916,7 +935,7 @@ Intended (`.sessions/_backlog/enter-commands-faster.md` "Command entry and autoc
 
 Intended (`.sessions/_backlog/enter-commands-faster.md` "argumentHint"): after a command's name, the prompt shows the parameters it expects.
 
-### (S) Claude Code --> Suggest Next Command
+### (S) Claude Code --> [Suggest Next Command](../story_tests/move-work-forward-from-chat-bar/enter-cdd-commands-faster/enter_cdd_commands_faster_story.test.md#story-suggest-next-command)
 
 Intended (`.sessions/_backlog/suggest-the-next-step.md` "Next-step suggestion"): after each turn, `$.prompt.suggest` fills in the next command from `ticket.generate_commands`. Requested (2026-11-06, "the list box of actions should be on the next action recommended"): the recommendation shows on the chat band's action list box, marked recommended and set on ▶, not in the chat panel. Built today (checked 2026-11-10): the action button shows the fidelity's next action and the action list marks it next (`action-button-view.tsx:20-25,77-83`), which covers the 2026-11-06 request. Missing: `prompt.suggest` after a turn.
 
@@ -983,6 +1002,14 @@ Built: the ↑ and ↓ on a card move its prompt one place (`movePrompt`). Inten
 ### (S) Person --> [Remove Queued Prompts](../story_tests/queue-prompts-for-later/build-prompt-queue/build_prompt_queue_story.test.md#story-remove-queued-prompts)
 
 Built: the ✕ on a card takes its prompt off the queue (`removePrompt`); the bin clears the whole queue (`clearQueue`). Built (2026-11-17), not seen (the person: "when deleting a queue (eg clear all) make sure we save a copy of the json so we have an archive of the work"): every prompt clear or remove takes off is kept as JSON in the chat's `queue-archive` folder, one file for each time, named for when they were taken off, with the prompts' steps and attachments. Built (2026-11-17): in a session the copy goes to the session's work folder, `.sessions/<session>/queue-archive`, in the ticket's worktree (`PromptQueue.load`).
+
+### (S) Agent --> [Refuse Queue File That Holds No Queue](../story_tests/queue-prompts-for-later/build-prompt-queue/build_prompt_queue_story.test.md#story-refuse-queue-file-that-holds-no-queue)
+
+Observed (2026-11-19, `tools/prompt_queue/prompt_queue.py` `QueueFileUnreadable`; `prompt_queue_spec.py`, `harness/installation/json_file_spec.py`): a queue file that is cut off, is empty, holds a list, or holds cards with no id or a shared id is refused with the file's path, and nothing is written over it, so a person can repair it; a file saved with a byte-order mark is read.
+
+### (S) Agent --> [Name Queue By Chat Id](../story_tests/queue-prompts-for-later/build-prompt-queue/build_prompt_queue_story.test.md#story-name-queue-by-chat-id)
+
+Observed (2026-11-19, `PromptQueue.of_chat`, `ChatIdNotAnId`; `prompt_queue_spec.py`, `prompt_queue_heavy_spec.py`): a chat's queue is kept in that chat's own folder under the chats folder, and a chat id that is a path, holds a separator or a drive, or is empty is refused, so no queue file is written outside the chats folder.
 
 ## (E) [Work Through Prompt Queue](../story_tests/queue-prompts-for-later/work-through-prompt-queue/work_through_prompt_queue_story.test.md)
 
@@ -1146,7 +1173,7 @@ Built (2026-11-15): the stages, practices and format groups selected are one gui
 
 Built (2026-11-15): the chat bar's single stage chip and its list become a button per stage, toggled on together; the dots show, and the action runs on, the fidelities of every stage shown. The Files app has the same buttons first in its header. The stages shown are the chat's, one choice held by cdd (`Chat.show_stages`), with each stage's fidelities listed by the chat bar from the board (`Chat.list_stages`). Requested (the person, 2026-11-15): "we don't have a sync for stages", "toggles to select one or more stage, default stage from chat bar", "a collection of buttons so you can toggle and generate across multiple stages; the action would then submit fidelities of all toggled-on stages", "and we have exact same thing on top of file viewer".
 
-### (S) Person --> Filter Files By Format In Files App
+### (S) Person --> [Filter Files By Format In Files App](../story_tests/review-generated-work-in-file-viewer/filter-files-in-files-app/filter_files_in_files_app_story.test.md#story-filter-files-by-format-in-files-app)
 
 Built (2026-11-15): format chips after the practice toggles, with the chat bar's glyphs (M↓, ◇, </>, ▦) and colours; a press chooses the format in the session (`ticket.choose_formats`), the same choice as the chat bar's chips, which read again on the refresh the page sends; while any is chosen the list shows only those formats' files (`format-chips.ts`, `filesShown`). Requested (the person, 2026-11-15): "we want formats to be a filter as well ... same exact functionality as practice filter; place buttons after practices; use same images as chat bar".
 
@@ -1441,7 +1468,7 @@ This epic is the app's own story map, `C:/dev/story-ui/.context/story-map.md`; i
 - Intended: each save records one save event; today stories-server.ts only comments that the collaboration layer emits it (mern-story-map-ai-sketch.md; story_map.modules.md audit).
 - Intended: the designer browses the saved versions on a history timeline; no history screen exists (story_map.information_architecture.md, Version History Timeline).
 
-### (S) Story Designer --> Recover Workspace View State
+### (S) Story Designer --> [Recover Workspace View State](../story_tests/author-story-maps/save-and-share-changes/save_and_share_changes_story.test.md#story-recover-workspace-view-state)
 
 **Acceptance criteria:**
 - Intended: reloading keeps the view mode, expanded nodes and toggles; session.ts and session-server.ts can store them, but app.ts never mounts `createSessionRouter` and the workspace never calls `useStoryMapSession` (story_map.stories.md, Recover Persisted Story Map State).
@@ -1452,7 +1479,7 @@ This epic is the app's own story map, `C:/dev/story-ui/.context/story-map.md`; i
 - Intended: designers on the same map see each other's changes as they happen; no collaboration module or broadcast exists (story_map.stories.md, Synchronize Story Map State).
 - Intended: concurrent view-state changes are reconciled; no collaboration module exists (story_map.stories.md, Resolve Concurrent View State Changes).
 
-### (S) Agent --> Test Story UI Editor On Session Story Map
+### (S) Agent --> [Test Story UI Editor On Session Story Map](../story_tests/author-story-maps/save-and-share-changes/save_and_share_changes_story.test.md#story-test-story-ui-editor-on-session-story-map)
 
 **Acceptance criteria:**
 - Requested on 2026-11-06: the Story UI editor opens a CDD session's `story-map.md`, edits it and saves it back, and its tests run against that map; each gap a test finds becomes an Intended story here, fixed before the board or chat bar invokes the app.
@@ -1470,80 +1497,80 @@ The story explorer is a new part of the Story UI app: the Story UI editor's scre
 
 ## (E) Show Screen Frames In Story UI
 
-### (S) Person --> Switch Story Map To Screen Frames View
+### (S) Person --> [Switch Story Map To Screen Frames View](../story_tests/explore-stories-in-story-ui/show-screen-frames-in-story-ui/show_screen_frames_in_story_ui_story.test.md#story-switch-story-map-to-screen-frames-view)
 
 Requested (2026-11-06): the Story UI editor has a screen frames view beside its base view; in it, each story's card has its screen as a frame beneath it. The base view stays the plain story map.
 
-### (S) Story UI --> Show Screen Frame Under Each Story
+### (S) Story UI --> [Show Screen Frame Under Each Story](../story_tests/explore-stories-in-story-ui/show-screen-frames-in-story-ui/show_screen_frames_in_story_ui_story.test.md#story-show-screen-frame-under-each-story)
 
 Requested (2026-11-06): each frame is the story's main design canvas screen, drawn small under its card. It replaces the design canvas, where today the story map artboard draws a thumbnail under each story (`thumbnail` in `canvas.py`, `claude_design_story_model_spec.py`).
 
-### (S) Story UI --> Mark Story Without A Screen
+### (S) Story UI --> [Mark Story Without A Screen](../story_tests/explore-stories-in-story-ui/show-screen-frames-in-story-ui/show_screen_frames_in_story_ui_story.test.md#story-mark-story-without-a-screen)
 
 Requested (2026-11-06): a story with no screen gets an empty frame saying so. It replaces the design canvas, where today the artboard shows "No screenshot" in place of the picture (`thumbnail` in `canvas.py`).
 
-### (S) Person --> Open Story Explorer From Screen Frame
+### (S) Person --> [Open Story Explorer From Screen Frame](../story_tests/explore-stories-in-story-ui/show-screen-frames-in-story-ui/show_screen_frames_in_story_ui_story.test.md#story-open-story-explorer-from-screen-frame)
 
 Requested (2026-11-06): pressing a frame opens the browser story explorer at that story, scenario and step. It replaces the design canvas, where today only the artboard's thumbnails link, each opening `explorer.dc.html` at its story (`claude_design_story_model_spec.py`).
 
 ## (E) Navigate The Story Tree
 
-### (S) Person --> Open The Explorer At A Story, Scenario And Step
+### (S) Person --> [Open The Explorer At A Story, Scenario And Step](../story_tests/explore-stories-in-story-ui/navigate-the-story-tree/navigate_the_story_tree_story.test.md#story-open-the-explorer-at-a-story-scenario-and-step)
 
 Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where inferred, `explorer.dc.html` reads the story, scenario and step from the link, or from the place the map kept, and selects it in the tree.
 
-### (S) Person --> Collapse And Reset The Story Tree
+### (S) Person --> [Collapse And Reset The Story Tree](../story_tests/explore-stories-in-story-ui/navigate-the-story-tree/navigate_the_story_tree_story.test.md#story-collapse-and-reset-the-story-tree)
 
 Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where inferred, the explorer's *Collapse all* and *Reset* buttons close the epic → sub-epic → story → scenario → step tree or return it to the first story (`explorer.dc.html`).
 
-### (S) Story UI --> Keep The Selected Story In View
+### (S) Story UI --> [Keep The Selected Story In View](../story_tests/explore-stories-in-story-ui/navigate-the-story-tree/navigate_the_story_tree_story.test.md#story-keep-the-selected-story-in-view)
 
 Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where inferred, the explorer scrolls the selected entry into view when the selection changes (`explorer.dc.html`).
 
-### (S) Person --> Copy A Request To Open A Story In Its File
+### (S) Person --> [Copy A Request To Open A Story In Its File](../story_tests/explore-stories-in-story-ui/navigate-the-story-tree/navigate_the_story_tree_story.test.md#story-copy-a-request-to-open-a-story-in-its-file)
 
 Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where observed, the explorer carries each story's and scenario's `path:line` and offers to copy an open-in-file-viewer request for it (`claude_design_story_model_spec.py`, `copyOpenRequest` in `explorer.dc.html`).
 
-### (S) Person --> Pick An Outline Scenario's Example
+### (S) Person --> [Pick An Outline Scenario's Example](../story_tests/explore-stories-in-story-ui/navigate-the-story-tree/navigate_the_story_tree_story.test.md#story-pick-an-outline-scenarios-example)
 
 Built in the design canvas explorer (checked 2026-11-10): `explorer.dc.html` lists an outline scenario's examples from the fixtures bundle and picking one calls `go(..., ex.name)` (`outlineRows`). Intended: the Story UI explorer does the same. Was: Intended (`claude_design.md` outline-rows): an outline scenario lists its examples from the fixtures bundle and picking one loads it on the screen; the explorer does not list them yet.
 
 ## (E) Play Stories In The Explorer
 
-### (S) Person --> Play The Next Story
+### (S) Person --> [Play The Next Story](../story_tests/explore-stories-in-story-ui/play-stories-in-the-explorer/play_stories_in_the_explorer_story.test.md#story-play-the-next-story)
 
 Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where inferred, the explorer's *Play next* button moves the selection to the next step or story (`explorer.dc.html`).
 
-### (S) Person --> Hide And Show The Story Panel
+### (S) Person --> [Hide And Show The Story Panel](../story_tests/explore-stories-in-story-ui/play-stories-in-the-explorer/play_stories_in_the_explorer_story.test.md#story-hide-and-show-the-story-panel)
 
 Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where inferred, the » and « buttons hide the story panel so the screen fills the frame, and bring it back (`explorer.dc.html`).
 
-### (S) Person --> Return To Story UI Map
+### (S) Person --> [Return To Story UI Map](../story_tests/explore-stories-in-story-ui/play-stories-in-the-explorer/play_stories_in_the_explorer_story.test.md#story-return-to-story-ui-map)
 
 Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where inferred, the panel's **← Story map** link opens `Main.dc.html` again (`explorer.dc.html`).
 
-### (S) Agent --> Test Story Explorer On Session Story Map
+### (S) Agent --> [Test Story Explorer On Session Story Map](../story_tests/explore-stories-in-story-ui/play-stories-in-the-explorer/play_stories_in_the_explorer_story.test.md#story-test-story-explorer-on-session-story-map)
 
 Requested on 2026-11-06: the browser story explorer plays a CDD session's story map on its design canvas screens, and its specs run against that map. Each gap a test finds becomes an Intended story in this app's map, fixed before the board or chat bar invokes the app.
 
 ## (E) Frame Design Canvas Screens In Explorer
-### (S) Story UI --> Show Design Canvas Screen As Explorer Frame
+### (S) Story UI --> [Show Design Canvas Screen As Explorer Frame](../story_tests/explore-stories-in-story-ui/frame-design-canvas-screens-in-explorer/frame_design_canvas_screens_in_explorer_story.test.md#story-show-design-canvas-screen-as-explorer-frame)
 
 Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where observed, `_imports` in `nodes.py` imports each prototype screen into the explorer with the story, scenario and a `go` call, so the selected scenario runs on the real screen (`claude_design_story_model_spec.py`).
 
-### (S) Story UI --> Choose The Screen For A Step
+### (S) Story UI --> [Choose The Screen For A Step](../story_tests/explore-stories-in-story-ui/frame-design-canvas-screens-in-explorer/frame_design_canvas_screens_in_explorer_story.test.md#story-choose-the-screen-for-a-step)
 
 Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where observed, a step shows the screen it is shown on, else its scenario's screen, else its story's screen (`_story_entry` and `_screen_of` in `nodes.py`, `claude_design_story_model_spec.py`).
 
-### (S) Story UI --> Join A Step Without A Screen To The Next Step
+### (S) Story UI --> [Join A Step Without A Screen To The Next Step](../story_tests/explore-stories-in-story-ui/frame-design-canvas-screens-in-explorer/frame_design_canvas_screens_in_explorer_story.test.md#story-join-a-step-without-a-screen-to-the-next-step)
 
 Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where inferred, `_story_entry` in `nodes.py` groups a step with no screen of its own with the next step that has one, so every entry the person picks shows a screen.
 
-### (S) Story UI --> Show A Screenshot When No Screen Runs
+### (S) Story UI --> [Show A Screenshot When No Screen Runs](../story_tests/explore-stories-in-story-ui/frame-design-canvas-screens-in-explorer/frame_design_canvas_screens_in_explorer_story.test.md#story-show-a-screenshot-when-no-screen-runs)
 
 Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where inferred, when no prototype applies, the explorer shows the step's screenshot, skipping blank captures (`_blank` in `nodes.py`).
 
-### (S) Story UI --> Keep Each Screen's Own Stylesheets
+### (S) Story UI --> [Keep Each Screen's Own Stylesheets](../story_tests/explore-stories-in-story-ui/frame-design-canvas-screens-in-explorer/frame_design_canvas_screens_in_explorer_story.test.md#story-keep-each-screens-own-stylesheets)
 
 Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where inferred, `_stylesheets` in `nodes.py` links every stylesheet the prototype screens use, so a screen drawn inside the explorer keeps its own look.
 
@@ -1658,7 +1685,7 @@ Observed: `record_link` keeps each version's canvas link in `versions.json`, in 
 
 Observed: `release` renames the version's folder and its link to the release's name (`versions_spec.py`).
 
-### (S) Agent --> Remove Older Versions When Keeping A Release
+### (S) Agent --> [Remove Older Versions When Keeping A Release](../story_tests/build-design-canvas-screens/publish-and-release-a-canvas-version/publish_and_release_a_canvas_version_story.test.md#story-remove-older-versions-when-keeping-a-release)
 
 Intended (`claude_design.md` release-a-version): when a version is kept as a release the older versions are removed; `release` in `versions.py` only renames.
 
@@ -1871,7 +1898,7 @@ Observed: `graph.save_json` writes the serialized graph to the loaded folder's `
 Observed: saving merges into the existing `graph.json`, so practices already saved that this load did not include stay in the file (`graph.py` `_merged_graph_document`, `graph_json_spec.py` "should keep other practices when saving a different load").
 
 ## (E) Build Practice Trees From Source
-### (S) Knowledge Graph --> Read Modules Classes And Operations
+### (S) Knowledge Graph --> [Read Modules Classes And Operations](../story_tests/map-work-into-knowledge-graph/build-practice-trees-from-source/build_practice_trees_from_source_story.test.md#story-read-modules-classes-and-operations)
 
 Observed: Clean Engineering reads modules (folders with a module card), packages, classes, operations, properties and parameters, keeps each file's top-level functions in a `_module` class, and orders their groups under each node (`working_copy.py` `_record_clean`, `graph_spec.py` "with clean engineering", `working_copy_scan_spec.py` "over module cards").
 
@@ -1883,7 +1910,7 @@ Inferred: the load reads each scoped folder's `.context/*-model.md` beside the c
 
 Observed: DDD reads bounded contexts from folders holding `.context/bounded-context.md` and places aggregates, entity roots, value objects and repositories under them by stereotype (`working_copy.py` `_record_ddd`, `graph_spec.py` "with domain-driven design").
 
-### (S) Knowledge Graph --> Read Story Maps And Story Tests
+### (S) Knowledge Graph --> [Read Story Maps And Story Tests](../story_tests/map-work-into-knowledge-graph/build-practice-trees-from-source/build_practice_trees_from_source_story.test.md#story-read-story-maps-and-story-tests)
 
 Observed: Stories reads epics, sub-epics and stories from story map markdown and draw.io files, and scenarios, steps and examples from story tests, keeping each node's path and line (`working_copy.py` `_record_stories`, `graph_spec.py` "with stories", `working_copy_scan_spec.py` "limited to an edited story map markdown file", "limited to an edited Python story test").
 
@@ -2094,7 +2121,7 @@ Observed: hovering a violating rule shows its violation messages (`GraphView.tsx
 
 Observed: selecting a violating rule opens the node's source with a banner naming the rule and message and highlights the lines the hit names (`SourceView.tsx`, `graph/graph-selection.ts` `selectionForRule`, `app.test.tsx` "should show the violation banner, highlight the source").
 
-### (S) Person --> Display Drawio File As Diagram
+### (S) Person --> [Display Drawio File As Diagram](../story_tests/map-work-into-knowledge-graph/review-violations-in-graph-app/review_violations_in_graph_app_story.test.md#story-display-drawio-file-as-diagram)
 
 Requested on 2026-11-06: a `.drawio` file opens as its diagram, with a Source tab for the XML. A violation marks the shape it names in red, and pressing a shape opens its lines in the source. Built today (checked 2026-11-10): the chat bar's files view offers Open in draw.io, which opens the file in the draw.io editor through `tools/drawio_viewer` (`drawio-viewer-client.ts:44`). Missing: a Source tab, marking the shape a violation names, and opening a pressed shape's lines.
 
@@ -2102,7 +2129,7 @@ Requested on 2026-11-06: a `.drawio` file opens as its diagram, with a Source ta
 
 Observed: the Correct button copies a prompt holding the node, file and lines, rule, code excerpt and violation, asking for a test-driven fix (`source/violation-prompt.ts`, `app.test.tsx` "should build a Correct prompt with the rule, excerpt, and violation message").
 
-### (S) Agent --> Test Knowledge Graph Explorer On Session Files
+### (S) Agent --> [Test Knowledge Graph Explorer On Session Files](../story_tests/map-work-into-knowledge-graph/review-violations-in-graph-app/review_violations_in_graph_app_story.test.md#story-test-knowledge-graph-explorer-on-session-files)
 
 Requested on 2026-11-06: the Graph app loads a CDD session's files and shows their nodes and violations, and its specs run against those files. Each gap a test finds becomes an Intended story in this app's map, fixed before the board or chat bar invokes the app.
 
@@ -2191,7 +2218,7 @@ Requested (UX draws its information architecture in drawio today, `ux/model/draw
 
 Requested (2026-11-15, "the only difference you are creating whiteboard artifacts in claude"): what a render wrote reaches a Whiteboard artifact in Claude.
 
-### (S) Agent --> Create Whiteboard Artifact For Fidelity File
+### (S) Agent --> [Create Whiteboard Artifact For Fidelity File](../story_tests/draw-practice-models-on-claude-whiteboard/publish-board-to-claude/publish_board_to_claude_story.test.md#story-create-whiteboard-artifact-for-fidelity-file)
 
 Requested: the first render of a fidelity's file creates a Whiteboard artifact titled after it, and the board's address is kept beside the file, so the next render updates the same board.
 
@@ -2253,45 +2280,45 @@ The chat bar, the CDD Kanban, the Story UI editor and the knowledge graph work o
 
 ## (E) Connect Chat Bar Board And Story UI
 
-### (S) Person --> Open Board Side Panel From Chat Bar
+### (S) Person --> [Open Board Side Panel From Chat Bar](../story_tests/connect-sessions-across-channels-and-apps/connect-chat-bar-board-and-story-ui/connect_chat_bar_board_and_story_ui_story.test.md#story-open-board-side-panel-from-chat-bar)
 
 Requested (2026-11-06, "chat band -> board side panel"): the chat bar opens the active ticket's board card and tiles in a side panel beside the chat.
 
-### (S) Chat Bar --> Sync Chat Bar With Board Selection
+### (S) Chat Bar --> [Sync Chat Bar With Board Selection](../story_tests/connect-sessions-across-channels-and-apps/connect-chat-bar-board-and-story-ui/connect_chat_bar_board_and_story_ui_story.test.md#story-sync-chat-bar-with-board-selection)
 
 Requested (2026-11-06, "update chat band, eg selected stage, next action"; "and on the chat panel"; "and practices enabled for that session"): a ticket, stage or fidelity selected on the board becomes the chat bar's session, shown stage and selected fidelity, so the action button shows that fidelity's next action; the chat panel switches to that ticket's chat and the band shows the practices enabled for its session.
 
-### (S) Chat Bar --> Keep Chosen Formats Across Actions In A Fidelity
+### (S) Chat Bar --> [Keep Chosen Formats Across Actions In A Fidelity](../story_tests/connect-sessions-across-channels-and-apps/connect-chat-bar-board-and-story-ui/connect_chat_bar_board_and_story_ui_story.test.md#story-keep-chosen-formats-across-actions-in-a-fidelity)
 
 Requested (2026-11-06, "have format saved across actions in fidelity"): the formats picked for a fidelity stay picked when the person switches between generate, render, sketch, iterate, document and fix, so each action writes the same formats without picking them again. Built today (checked 2026-11-10): format chips are kept per set of fidelities (`format-choices-client.ts:23,30`, commit 07c9026ee). Missing: the picks go back to the defaults after an action runs, and only generate and render take formats.
 
-### (S) Person --> Start Ticket Session From Increment
+### (S) Person --> [Start Ticket Session From Increment](../story_tests/connect-sessions-across-channels-and-apps/connect-chat-bar-board-and-story-ui/connect_chat_bar_board_and_story_ui_story.test.md#story-start-ticket-session-from-increment)
 
 Requested (2026-11-06, "increment could be a separate ticket/session in board"; "create a ticket on board on demand in backlog with proper naming reference to story map increment"): the Story UI editor's increments view offers Create ticket on each increment; pressing it adds a ticket to the board's backlog named after the story map and the increment, with its own session holding that increment's stories.
 
-### (S) Board App --> Show Increment Ticket In Story UI
+### (S) Board App --> [Show Increment Ticket In Story UI](../story_tests/connect-sessions-across-channels-and-apps/connect-chat-bar-board-and-story-ui/connect_chat_bar_board_and_story_ui_story.test.md#story-show-increment-ticket-in-story-ui)
 
 Requested (2026-11-06, "story UI -> board/chat integration"): an increment that has a ticket shows that ticket's stage and active state in the Story UI editor.
 
 ## (E) Check Work In Generate
 
-### (S) Generate --> Refresh Graph After Generate
+### (S) Generate --> [Refresh Graph After Generate](../story_tests/connect-sessions-across-channels-and-apps/check-work-in-generate/check_work_in_generate_story.test.md#story-refresh-graph-after-generate)
 
 Requested (2026-11-06, "generate --> load refreshed graph based on changes immediately"): when generate writes a fidelity's files, the knowledge graph rebuilds those files at once, without a separate load or Validate run. Built today (checked 2026-11-10): generate tells the agent to call validate afterwards, and validate refreshes the graph (`generate.py:32-33`, `graph.py:1397`). Missing: generate refreshing the graph itself.
 
-### (S) Knowledge Graph --> Attach Violations To Latest Graph
+### (S) Knowledge Graph --> [Attach Violations To Latest Graph](../story_tests/connect-sessions-across-channels-and-apps/check-work-in-generate/check_work_in_generate_story.test.md#story-attach-violations-to-latest-graph)
 
 Observed (checked 2026-11-10): a refresh drops and re-reads the files, then `practices.check()` records each hit on its node (`harness/graph/graph_build.py:368-394`, `graph.py:1105,1131`), and violations are saved per node in graph.json (`saved_graph.py:134,153`); a refresh saves only the checked files' nodes, not the whole graph.json. Was: Requested (2026-11-06, "violations now attached to latest graph automatically"): each rebuilt node carries its graph-rule violations, so the latest graph is where every violation is read from.
 
-### (S) Generate --> Judge Rules During Generate
+### (S) Generate --> [Judge Rules During Generate](../story_tests/connect-sessions-across-channels-and-apps/check-work-in-generate/check_work_in_generate_story.test.md#story-judge-rules-during-generate)
 
 Requested (2026-11-06, "judge validation must be part of generate, merge the two actions"): generate ends with the agent's rule-by-rule judgment of what it wrote, saved with the graph's hits, so a generate counts as generated and validated. Built today (checked 2026-11-10): generate ends by calling validate, which runs the AI judgment and saves it with the graph hits (`generate.py:32-36`, `validate.py:80`). Missing: one action; validate is still a separate call, log line, and board and chat bar action.
 
-### (S) Agent --> Fix Graph Violations
+### (S) Agent --> [Fix Graph Violations](../story_tests/connect-sessions-across-channels-and-apps/check-work-in-generate/check_work_in_generate_story.test.md#story-fix-graph-violations)
 
 Requested (2026-11-06, "/fix is a first class action; fix rule; file; default across all rules / files"): Fix is an action of its own: on one rule, on one file, or by default on every violation of every rule in every file, reading the violations from the latest graph.
 
-### (S) Agent --> Validate Fidelity On Demand
+### (S) Agent --> [Validate Fidelity On Demand](../story_tests/connect-sessions-across-channels-and-apps/check-work-in-generate/check_work_in_generate_story.test.md#story-validate-fidelity-on-demand)
 
 Requested (2026-11-06, "validate still exists as independent action"; "validate is a slash command story only now"): Validate runs on its own on any files only as the `/actions-validate` slash command, and its report is saved as today; the board and the chat bar have no Validate, since generate judges the rules. Built today (checked 2026-11-10): `/actions-validate` runs and saves its report. Missing: validate is still on the board tiles (`action-bar-view.tsx:64-70`) and in the chat bar's stage actions.
 

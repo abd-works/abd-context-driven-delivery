@@ -103,7 +103,7 @@ The base of an annotation that says where install publishes a member, by its `ch
 *BackgroundStart* and *PythonInterpreter* start a server without a console window, *RunningProcess* asks about and ends one by its id, *ExclusivePort* is the one port a server may hold, and *CappedLogFile* keeps a log a server or the session writes under a size, so it cannot fill the disk.
 
 - **Purpose:** Start, name, and stop the processes the framework keeps, the same way on Windows and elsewhere.
-- **Seam (terms):** BackgroundStart, Wmi, OutsideJobStartFailed, PythonInterpreter, ExclusivePort, RunningProcess, ProcessNotStopped, CappedLogFile
+- **Seam (terms):** BackgroundStart, Wmi, OutsideJobStartFailed, PythonInterpreter, ExclusivePort, RunningProcess, ProcessNotStopped, StarterBoundJob, JobNotMade, CappedLogFile
 - **Dependencies (one-way):** *(none)*
 
 ## BackgroundStart
@@ -134,6 +134,8 @@ A process by its id, to ask whether it is still running and which ports it liste
 ------
 + pid: int
 + alive: bool
++ started_at: datetime | None
+	// when the process started, as the operating system keeps it; the system gives an ended process's id to a later one, so the id together with this time names one process
 + listening_ports: list[int]
 ----
 + stop(wait_seconds: float): None
@@ -148,6 +150,26 @@ A process was asked to stop and is still running.
 ------
 + pid: int
 + cause: BaseException | None
+----
+
+## StarterBoundJob
+
+The processes a starter holds to its own life: each process it takes in, and every process those start, is ended by Windows when the starter ends, however it ends, so no child goes on working in a folder the next starter believes is free. Outside Windows it holds nothing.
+
++ StarterBoundJob()
+------
+----
++ take_in(process: subprocess.Popen): None
+---<<raises>>--> JobNotMade
+
+## JobNotMade : Exception
+
+Windows refused the job object, or refused to put a process in it.
+
++ JobNotMade(step: str, pid: int = 0)
+------
++ step: str
++ pid: int
 ----
 
 ## ExclusivePort
@@ -206,6 +228,8 @@ The git command line, run in one folder.
 ----
 + run(*args: str, env: dict[str, str] | None = None, timeout: float | None = None): str
 	// every repository operation goes through run, so the time limit, the stop of a hung git, and the RepoConnectError a failure raises are the same for all of them
++ listed(*args: str): list[str]
+	// the entries of a command that lists files, each as git writes it under -z: never quoted and never trimmed, so a name with letters outside ASCII, a quote or a tab is the name the file has on disk
 + succeeds(*args: str): bool
 ---<<raises>>--> RepoConnectError
 
@@ -705,24 +729,30 @@ Which chat a tool call, and the session.log line it writes, came from, so `read_
 The *Installer* publishes every annotated member of a repository's toolsets into one IDE folder, through an *Installation* for each channel laid out by its *IdeLayout*, then starts the servers its *ServerInstallation* channels point at; *RepositoryToolsets* finds every toolset a repository defines. The module also reads and writes a project's CDD configuration files (*ContextConfig*, *JsonFile*, *AppPorts*) and holds the annotations that say what an object's data is.
 
 - **Purpose:** Install one repository into one IDE folder through every channel, from one walk of the repository, and start the servers that install points at; give every channel the annotations, the data, and the writer it publishes a member with.
-- **Seam (terms):** Installer, InstallDiagnostics, Installation, ServerInstallation, FileInstallation, SkippedTool, SkippedTools, IdeLayout, RepositoryToolsets, ContextConfig, JsonFile, JsonFileUnreadable, AppPorts, SourceFile, DataClass, NamedDestination, Skill, Command, Rules, DataField, Identity, LanguageAdapter; `data_of`, `CONTEXT_FOLDER`, `is_temporary`
+- **Seam (terms):** Installer, InstallRecord, LastInstall, InstallLock, InstallAlreadyRunning, UnknownIde, NotAnInstallFolder, JsonFileBusy, InstallDiagnostics, Installation, ServerInstallation, FileInstallation, SkippedTool, SkippedTools, IdeLayout, RepositoryToolsets, ContextConfig, JsonFile, JsonFileUnreadable, AppPorts, SourceFile, DataClass, NamedDestination, Skill, Command, Rules, DataField, Identity, LanguageAdapter; `data_of`, `CONTEXT_FOLDER`, `is_temporary`
 - **Dependencies (one-way):** harness/annotations, harness/agent_tools, harness/markdown
 
 ## Installer
 
 Publish every annotated member of the toolsets a repository defines into one IDE folder, through the installation of each channel its annotations name, then start the servers the installed files point at. harness/mcp and harness/hooks register their server installations with `SERVER_CHANNELS` when they are imported, so this module imports neither.
 
-+ Installer(ide: str | None = None, path: str | Path | None = None, repo: str | Path)
++ Installer(target: InstallTarget, toolsets: RepositoryToolsets, last_install: LastInstall)
 ------
++ target: InstallTarget
 + repo: Path
 + ide: str
-+ << composition >> layout: IdeLayout
++ layout: IdeLayout
 + path: Path
-+ record: InstallRecord
-+ << composition >> diagnostics: InstallDiagnostics
-+ << composition >> toolsets: RepositoryToolsets
++ << composition >> record: InstallRecord
++ << association >> last_install: LastInstall
++ << composition >> lock: InstallLock
+	// one install or clean runs in the folder at a time
++ << association >> diagnostics: InstallDiagnostics
++ << association >> toolsets: RepositoryToolsets
 + << composition >> deployment: Deployment
 ----
++ create(ide: str | None = None, path: str | Path | None = None, repo: str | Path): Installer
+	// an IDE name is matched whatever its case; a name that is no IDE raises UnknownIde, and a path that is empty or a file raises NotAnInstallFolder, before anything is written
 + load(project: Path | str): Installer
 + clean(): list[str]
 + install(toolsets: Iterable[Any] | None = None, replace: bool = True): Any
@@ -731,7 +761,91 @@ Publish every annotated member of the toolsets a repository defines into one IDE
 + diagnose_instructions(): str
 ---<<reads toolsets with>>--> RepositoryToolsets
 ---<<writes sections with>>--> InstallDiagnostics
+---<<holds the folder with>>--> InstallLock
+---<<hands the last install's files to its record through>>--> LastInstall
+---<<raises>>--> UnknownIde
+---<<raises>>--> NotAnInstallFolder
 ---<<annotated with>>--> NoCatalog
+
+## InstallRecord
+
+`.install-state.json` in the IDE folder an install writes into: the IDE, the folder's whole path, and every file the install wrote, relative to the folder. Each folder keeps its own, and it is saved as each file is written, so an install stopped halfway still lists what it wrote and a clean removes it.
+
++ InstallRecord(target: InstallTarget)
+------
++ folder: Path
++ ide: str
++ path: Path
++ installed_files: list[str]
++ saved: dict[str, Any]
+----
++ track(written: Path): None
++ forget(relative: str): None
++ keep_existing(): None
++ adopt(installed_files: list[str]): None
+	// takes the list an earlier CDD kept for this folder outside it, and saves
++ save(): None
++ remove_installed(): list[str]
++ prune_empty_parents(removed: Path): None
++ prune_empty_skill_folders(): None
+---<<reads and writes through>>--> JsonFile
+
+## LastInstall
+
+The IDE and folder a checkout last installed into, kept in one file beside the installer, so an install or a clean that names neither goes there. An install into a temporary folder is not remembered.
+
++ LastInstall(path: Path)
+------
++ saved: dict[str, Any]
+----
++ remember(target: InstallTarget): None
++ hand_over_to(record: InstallRecord): None
+	-> InstallRecord.adopt
+
+## InstallLock
+
+The file `.install-lock` in a folder installs write into, locked by the operating system for the process that installs into it or cleans it, and naming that process. Of any number of installs that ask at the same moment exactly one gets the folder, and the operating system gives the lock back when its process ends, so a stopped install never leaves a held folder. harness/mcp's *CddHome* holds one on the cdd home while it publishes the mods.
+
++ InstallLock(folder: Path, wait_seconds: float = WAIT_SECONDS)
+------
++ folder: Path
++ is_held: bool
+----
++ held(): Iterator[None]
+	// a second install says what it waits for and how long, waits for the first, then runs; the steps of one install share its lock
++ claim(): None
++ release(): None
+---<<raises>>--> InstallAlreadyRunning
+
+## InstallAlreadyRunning : RuntimeError
+
+Another process is still installing into, or cleaning, the same folder after the wait.
+
++ InstallAlreadyRunning(folder: Path, holder: int, waited_seconds: float)
+------
++ folder: Path
++ holder: int
++ waited_seconds: float
+----
+
+## UnknownIde : ValueError
+
+An install named an IDE CDD does not install into. Nothing is written.
+
++ UnknownIde(ide: str, known: list[str])
+------
++ ide: str
++ known: list[str]
+----
+
+## NotAnInstallFolder : ValueError
+
+An install was told to write into something that cannot be an IDE folder: an empty path or a file. Nothing is written.
+
++ NotAnInstallFolder(path: Path | str, reason: str)
+------
++ path: Path | str
+----
 
 ## Deployment
 
@@ -940,7 +1054,10 @@ One file holding a JSON object, read and written whole by its owner. A missing f
 + exists(): bool
 + read(): dict[str, Any]
 + write(data: Mapping[str, Any]): Path
++ held(): Iterator[None]
+	// holds the file for one change, from its read to its write, through the operating system's lock on a lock file beside it, so a change another thread or process makes waits its turn; the lock ends with its holder's process
 ---<<raises>>--> JsonFileUnreadable
+---<<raises>>--> JsonFileBusy
 
 ## JsonFileUnreadable : ValueError
 
@@ -952,6 +1069,16 @@ A JSON file holds something other than a JSON object. Nothing is written over it
 + cause: Exception
 ----
 + message(path: Path, cause: Exception): str
+
+## JsonFileBusy : TimeoutError
+
+Another holder kept a JSON file for longer than a change waits for it, so the change was not made.
+
++ JsonFileBusy(path: Path, seconds: float)
+------
++ path: Path
++ seconds: float
+----
 
 ## AppPorts
 
@@ -1161,7 +1288,7 @@ The hooks of one checkout, loaded once: it runs the enabled handlers for each ev
 
 ## HookDaemon
 
-The long-running hook server of one checkout, whichever IDE's hook command reaches it; it keeps its address, log, and start lock in the checkout's `.hook-server/` folder.
+The long-running hook server of one checkout, whichever IDE's hook command reaches it; it keeps its address, log, and start lock in the checkout's `.hook-server/` folder. The start lock is a file of its own, `spawn.lock`, claimed by a class private to the module: one hook command starts the daemon while the others wait for it.
 
 + HookDaemon(repo: Path | str, port: int | None = None)
 ------
@@ -1348,6 +1475,7 @@ The user's cdd folder: which checkout the one server runs, the pinned copy of it
 ---<<creates>>--> PythonInterpreter
 ---<<takes the import path from>>--> RepositoryToolsets
 ---<<reads and writes through>>--> JsonFile
+---<<publishes the mods one install at a time, holding>>--> InstallLock
 
 ## ThrottledReporter
 
@@ -1853,6 +1981,8 @@ The files one guidance action names and writes in the session it works in.
 ------
 ----
 + path_named(named: str | Path): Path
++ paths_to_read(named: list[str] | str | None): list[Path]
+	// each path a call names must be there under one of the session's roots; one that is not is refused by name
 + read(content: str = '', paths: list[str] | str | None = None): str
 + wrote(paths: list[str | Path]): None
 ---<<refreshes the graph of>>--> GuidanceAction
@@ -1874,6 +2004,16 @@ A listed word no practice or fidelity has as its slug; its message lists the slu
 ------
 + word: str
 + slugs: Sequence[str]
+----
+
+## GuidanceMappingNamesNoToolset : ValueError
+
+A guidance mapping with no `toolset`, which is where a mapping names its practice; its message lists the slugs there are.
+
++ GuidanceMappingNamesNoToolset(mapping: Mapping[str, Any], slugs: Sequence[str])
+------
++ mapping: dict
++ slugs: tuple
 ----
 
 ## ActionWorksInNoSession : Exception
@@ -2402,7 +2542,7 @@ Spec support: one rule's findings over one practice's nodes, as the graph's own 
 This module reports whether CDD is running and answering: *ServerHealth* says which of its long-running parts are up right now, and the diagnostics toolsets, each a *CallDiagnostics* made for one call, probe what an install published through the MCP host answering that call and write a report section.
 
 - **Purpose:** Show whether CDD is running: which of its servers and apps are up, for the chat's server health band, and whether what an install published answers through the live MCP host, so a broken publication shows up in a report rather than in a failing chat.
-- **Seam (terms):** ServerHealth, CallDiagnostics, DiagnosticsNeedACall, AgentToolsDiagnostics, GuidanceDiagnostics, AgentToolsProbe, GuidanceProbe; the MCP operations `server-health.report`, `agent-tools-diagnostics.agent_tools_diagnostics`, `guidance-diagnostics.guidance_diagnostics`
+- **Seam (terms):** ServerHealth, TestCadence, TestTier, TestRun, TestRunRecord, TestRunRecordUnreadable, TestRunner, RunWorktree, CallDiagnostics, DiagnosticsNeedACall, AgentToolsDiagnostics, GuidanceDiagnostics, AgentToolsProbe, GuidanceProbe; the MCP operations `server-health.report`, `agent-tools-diagnostics.agent_tools_diagnostics`, `guidance-diagnostics.guidance_diagnostics`
 - **Dependencies (one-way):** harness/agent_tools, harness/installation, harness/process, harness/git, harness/hooks, harness/mcp, harness/guidance, harness/graph
 
 ## ServerHealth
@@ -2417,6 +2557,111 @@ Report the parts of CDD that run outside this MCP host, so a person can see what
 + report(): ServerHealth
 ---<<aggregation>>--> App
 ---<<annotated with>>--> LanguageAdapter
+
+## TestRun
+
+One run of a tier on one commit of one checkout: when it started, the process that runs it, how it ended, and the last lines it printed.
+
++ TestRun(tier: TestTier, commit: str, started_at: datetime, outcome: RunOutcome = RunOutcome.RUNNING, checkout: str = '', pid: int = 0, process_started: datetime | None = None, finished_at: datetime | None = None, summary: str = '', is_new_failure: bool = False)
+------
++ tier: TestTier
++ commit: str
++ checkout: str
++ started_at: datetime
++ pid: int
++ process_started: datetime | None
++ is_live: bool
+	// live only while the process it names runs: one with its id that started when the record says
++ name: str
++ state: str
++ run_id: str
++ started: str
++ summary: str
++ is_new_failure: bool
+----
++ from_json(json_data: dict): TestRun
++ to_json(): dict
++ taken_by(process: RunningProcess): TestRun
+	// the run keeps the process's id and when it started, which together name that one process
++ finished(exit_code: int, output: str, previous: TestRun | None, now: datetime): TestRun
++ is_due(now: datetime): bool
+---<<names the process that runs it as>>--> RunningProcess
+
+## TestRunRecord
+
+The latest run of each tier on one checkout, and the finished run before it, kept with every other checkout's in `test-runs.json` in the cdd home. One process at a time looks at what is due: it claims the file `test-runs.claim` beside the record, and a claim left by a process that ended is taken over once it is stale.
+
++ TestRunRecord(folder: Path | str, checkout: Path | str | None = None)
+------
++ folder: Path
++ path: Path
++ checkout: Path | None
++ runs: list[TestRun]
++ claim_wait: str
+----
++ latest(tier: TestTier): TestRun | None
++ previous(tier: TestTier): TestRun | None
++ new_run(tier: TestTier, commit: str, started_at: datetime): TestRun
++ save(run: TestRun): None
+	// the file is put in place whole, so a reader never meets half a record
++ claimed(): Iterator[bool]
++ log_path(tier: TestTier): Path
+---<<keeps>>--> TestRun
+---<<raises>>--> TestRunRecordUnreadable
+
+## TestRunRecordUnreadable : Exception
+
+The record's file holds something that is no record of test runs. It is left as it is, for a person to mend or remove.
+
++ TestRunRecordUnreadable(path: Path, held: object, reason: str)
+------
++ path: Path
+----
+
+## RunWorktree
+
+The folder a run's tier works in: a detached git worktree of the checkout, holding the files of the commit the run records, so a tier never tests a folder that goes on changing under it.
+
++ RunWorktree(record: TestRunRecord, run: TestRun)
+------
++ folder: Path
+----
++ made(): Iterator[Path]
+	// the folder while the tier runs, removed after; one a killed run left is removed first
+---<<runs git worktree through>>--> Git
+
+## TestRunner
+
+The boundary to `scripts/test.ps1` for one record's checkout: start a run in a background process that records its own result, or run one here and answer its exit code and output.
+
++ TestRunner(record: TestRunRecord)
+------
+----
++ start(run: TestRun): RunningProcess
+	-> BackgroundStart.run
++ run(run: TestRun, env: dict[str, str] | None = None): tuple[int, str]
+	-> RunWorktree.made
+	-> StarterBoundJob.take_in
+	// killing the runner ends its test.ps1 and the specs under it
+
+## TestCadence
+
+Runs heavy every hour and e2e every day on the main checkout its record is of. Nothing keeps time: `start_due` is called whenever the health report is read, and starts the overdue tier, one run at a time.
+
++ TestCadence(record: TestRunRecord, runner: TestRunner | None = None, git: Git | None = None, clock: Callable[[], datetime] = _utc_now, review: Callable[[Path, str], list[str]] | None = None, wait: Callable[[float], None] = time.sleep, say: Callable[[str], None] = _say)
+------
++ << association >> record: TestRunRecord
++ checkout: Path | None
++ latest_runs: list[TestRun]
+----
++ due(): list[TestTier]
++ start_due(): TestRun | None
+	-> TestRunRecord.claimed
+	-> TestRunner.start
++ run_now(tier: TestTier, recorded_start: datetime | None = None): TestRun
+	// a run started while another is live, on any checkout, waits and says each time what it waits for
+	-> TestRunner.run
+	-> TestRunRecord.save
 
 ## App
 
@@ -2774,7 +3019,7 @@ The open branch, worktree, and session of one chat, or of one checkout folder fo
 A *Repo* is the local clone; a *Branch* is a named branch on it, its *Worktrees* are its checkouts, and a *Worktree* is one of them.
 
 - **Purpose:** Give every caller one object graph for the clone, its branches and worktrees, and its commits, so version control is never reimplemented with raw git output.
-- **Seam (terms):** Repo, ServedCheckouts, Branch, Worktrees, Worktree, Commit, WorktreeNotRemovedError
+- **Seam (terms):** Repo, ServedCheckouts, Branch, Worktrees, Worktree, Commit, WorktreeNotRemovedError, WorktreeFolderTakenError, MergeRefusedError
 - **Dependencies (one-way):** harness/agent_tools, harness/installation, harness/git, harness/hooks, harness/mcp, space/work_state
 
 ## Repo
@@ -2881,6 +3126,7 @@ Named branch on a *Repo* — checkout, commit, merge, and close.
 + start_point: str
 ----
 + changed_files(): list[str]
+	// read through Git.listed, so a file whose name git would quote is listed by the name it has on disk
 + check_out(): Branch
 + switch_to(): Branch
 + open_in_worktree(): Worktree
@@ -2906,11 +3152,13 @@ The checkouts of one repository, as `git worktree` lists them: the main clone an
 + open(branch: Branch): Worktree
 + sibling_folder(branch: Branch): Path
 + add(path: str | Path, branch: Branch): Worktree
+	// a folder already at path that is not the branch's checkout raises WorktreeFolderTakenError, unless it is the empty folder a removed worktree left
 + remove(worktree: Worktree): None
 	// stops the checkout's hook daemon first; a folder still there afterwards raises WorktreeNotRemovedError
 ---<<lists>>--> Worktree
 ---<<stops>>--> HookDaemon
 ---<<raises>>--> WorktreeNotRemovedError
+---<<raises>>--> WorktreeFolderTakenError
 
 ## Worktree
 
@@ -2938,12 +3186,33 @@ A worktree's folder still there after git, a forced delete, and the Windows fall
 + folder: Path
 ----
 
+## WorktreeFolderTakenError : RuntimeError
+
+A branch is to be opened in a worktree whose folder is already there and is not that branch's checkout; it names the branch and the folder.
+
++ WorktreeFolderTakenError(branch: str, folder: Path)
+------
++ branch: str
++ folder: Path
+----
+
+## MergeRefusedError : RepoConnectError
+
+Git refused to merge one branch into the branch a checkout has checked out, such as when both changed the same lines. The merge is undone before this is raised, so the checkout is as it was.
+
++ MergeRefusedError(branch: str, into: str, refusal: str)
+------
++ branch: str
++ into: str
++ refusal: str
+----
+
 # space/session
 
 A *Session* is one named piece of work in `.sessions/{name}/`; *Sessions* are all of a checkout's sessions; its *SessionLog* records each action, a *PracticeSessionOutput* is what one practice has in it, and its *FileManager* lists and reads the files under its roots.
 
 - **Purpose:** Keep the state of one piece of work — where it works, which practices it uses and where they write, the files it works with, the log of what was done, the handoff the next agent resumes from, and the reasons behind hard-to-reverse choices — so any chat or tool can pick the work up from its folder.
-- **Seam (terms):** Sessions, Session, BoardPractices, CallSessions, SessionLog, ChatLog, LogEntry, LogTimestamp, HookLog, PracticeSessionOutput, FidelitySessionOutput, FileManager, FileEntry, FileText, PathOutsideRootsError, ThrowawayProject, SessionDiagnostics
+- **Seam (terms):** Sessions, Session, BoardPractices, CallSessions, SessionLog, ChatLog, LogEntry, LogTimestamp, HookLog, PracticeSessionOutput, FidelitySessionOutput, FileManager, FileEntry, FileText, PathOutsideRootsError, ThrowawayProject, SessionDiagnostics, SessionsRead, OutputRootRefused, FileTooLongToShowError, SessionFolderHeldError
 - **Dependencies (one-way):** harness/annotations, harness/agent_tools, harness/installation, harness/hooks, harness/mcp, harness/guidance, harness/graph, harness/diagnostics, harness/catalog_generator, harness/git, space/work_state, space/repo, cdd_guidance/actions (the session diagnostics probe runs Generate and Validate)
 
 ## Sessions
@@ -2967,6 +3236,8 @@ The work sessions of one checkout: open ones in `.sessions/{name}/`, closed ones
 	-> CallSessions.of_project
 + folder_of(name: str): Path
 + all(): list[Session]
++ read_apart(): SessionsRead
+	// goes on past a session.json it cannot read, where all stops at the first
 + named(name: str): Session | None
 + with_file(session_file: str): Session
 	-> HeldSessions.load
@@ -2990,6 +3261,16 @@ The work sessions of one checkout: open ones in `.sessions/{name}/`, closed ones
 ---<<annotated with>>--> AgentToolAnnotation
 ---<<annotated with>>--> Mcp
 ---<<annotated with>>--> Command
+
+## SessionsRead
+
+One read of a checkout's sessions that went on past a session.json it could not read: the sessions that read, in the board's order, and the failure of each that did not, which names its file.
+
++ SessionsRead()
+------
++ sessions: list[Session]
++ failures: list[JsonFileUnreadable]
+----
 
 ## SessionListing
 
@@ -3347,11 +3628,14 @@ What one practice has in one session: the session's one instance of the practice
 + save(**values): None
 + enable(is_enabled: bool): PracticeSessionOutput
 + choose_root(path: str): PracticeSessionOutput
++ root_named(path: str): Path
+	// an empty path and a path to a file raise OutputRootRefused; a folder that is not there yet is a root the practice writes into
 + keep_root(root: Path): None
 + use_default_root(): PracticeSessionOutput
 ---<<creates>>--> FidelitySessionOutput
 ---<<reads the configured folder from>>--> ContextConfig
 ---<<saves fields>>--> Session
+---<<raises>>--> OutputRootRefused
 ---<<annotated with>>--> Identity
 ---<<annotated with>>--> LanguageAdapter
 ---<<annotated with>>--> AgentToolSetAnnotation
@@ -3432,12 +3716,13 @@ One file something declares, such as a fidelity's output, as a path from the pro
 
 ## FileText
 
-The text of one file, with its path from the workpath; no text for a file that is not there.
+The text of one file, with its path from the workpath; no text for a file that is not there, which `exists` tells from a file that is there and empty.
 
-+ FileText(path: str, text: str)
++ FileText(path: str, text: str, exists: bool = True)
 ------
 + path: Annotated[str, SourceFile]
 + text: str
++ exists: bool
 ----
 
 ## PathOutsideRootsError : ValueError
@@ -3446,6 +3731,35 @@ A path outside every root of the session, which a page may name but never reach.
 
 + PathOutsideRootsError(path: str)
 ------
+----
+
+## OutputRootRefused : ValueError
+
+A path was chosen as the root a practice or a fidelity writes under that names no folder: an empty path, or a file.
+
++ OutputRootRefused(path: str, reason: str)
+------
++ path: str
+----
+
+## FileTooLongToShowError : ValueError
+
+The viewer asked for a file longer than it shows, `VIEWER_SHOWS_LINES` (30,000) lines: drawing it would freeze the page.
+
++ FileTooLongToShowError(path: str, lines: int, shown: int = VIEWER_SHOWS_LINES)
+------
++ path: str
++ lines: int
++ shown: int
+----
+
+## SessionFolderHeldError : RuntimeError
+
+A session's record folder cannot be removed because a running program holds it open. Nothing in the folder was deleted; it names the folder.
+
++ SessionFolderHeldError(folder: Path)
+------
++ folder: Path
 ----
 
 ## ThrowawayProject
@@ -3482,7 +3796,7 @@ Probe session logging (generate, validate, loops, chat pointers). Made for one c
 The *Board* shows every session as a *Ticket* in a *Column*: Backlog, a *Stage*, or Complete. A ticket holds three parts made once: its *TicketWork* (its *FidelityProgress* on each fidelity the board requires), its *TicketCheckout* (its branch, worktree, and chat), and its *StageMarks* (the moves and marks a person made). A *BacklogItem* is an idea not yet started, and a *Report* is the rules a validation found broken, read from a *ReportFile*. No Python module imports this one; the CDD Kanban app and the chat bar reach these classes through their MCP tools and TypeScript adapters. The whole model of this module, internals included, is `space/kanban/.context/kanban-model.md`; that document is canonical, and this section shows only the classes those tools publish.
 
 - **Purpose:** See every session's progress through the delivery stages, and move sessions through them, from an agent's tools or from the CDD Kanban app.
-- **Seam (terms):** Board, Column, Stage, Card, Ticket, TicketWork, TicketCheckout, StageMarks, FidelityProgress, StageWork, LeaveChoices, OpenChoices, BacklogItem, Report, ReportFile, Help, BoardOverview, FormatChoice
+- **Seam (terms):** Board, Column, Stage, Card, Ticket, TicketWork, TicketCheckout, StageMarks, FidelityProgress, StageWork, LeaveChoices, BacklogItem, Report, ReportFile, Help, BoardOverview, FormatChoice, UnreadableSessionFile, CardName, TitleNamesNothingError, TitleTooLongError, TicketNameTakenError, BacklogItemTakenError, TicketWorktreeBlockedError
 - **Dependencies (one-way):** harness/annotations, harness/agent_tools, harness/installation, harness/mcp, harness/markdown, harness/guidance, harness/graph, harness/diagnostics, harness/chat, harness/catalog_generator, space/repo, space/session
 
 ## Board
@@ -3495,6 +3809,8 @@ Show every work session as a ticket on a kanban: Backlog, Discovery, Specificati
 + << association >> sessions: Sessions
 + << association >> catalogued_practices: BoardPractices
 + file: Path
++ unreadable: list[UnreadableSessionFile]
+	// each ticket's session.json the board could not read; such a ticket is on no column until its file is repaired, and the file is never written over
 + project: str
 + worktrees: dict[Branch, Worktree]
 + practices: list[PracticeGuidance]
@@ -3651,16 +3967,9 @@ Show one work session as a unit of delivery and move it through the stages. Its 
 + format_choices(fidelities: list[str]): list[FormatChoice]
 	-> FormatChoice.offered_by
 + close_choices(): LeaveChoices
-+ leave_choices(): LeaveChoices
-+ open_choices(): OpenChoices
-+ activate(leaving: list[str] | None = None, opening: list[str] | None = None): Ticket
-	-> leave_for_another
++ activate(): Ticket
+	// opens the ticket in its own worktree; the chat that asks keeps its own session, and the repository's own folder stays on main
 	-> TicketCheckout.open
-	-> Sessions.switch
-+ leave_for_another(leaving: list[str]): None
-	-> TicketCheckout.leave
-+ open_worktree(): Ticket
-	-> TicketCheckout.open_worktree
 + move_next(): Ticket
 	-> TicketMoves.move_next
 + move_previous(): Ticket | BacklogItem
@@ -3668,9 +3977,17 @@ Show one work session as a unit of delivery and move it through the stages. Its 
 + move_to(stage: str, done: bool = False): Ticket | BacklogItem
 	-> TicketMoves.move_to
 + close(leaving: list[str] | None = None): Ticket
+	// its work is committed and merged first, then its worktree and branch removed, then its session ended and its record moved
 	-> TicketCheckout.save_work
+	-> TicketCheckout.leave_branch
 + archive(): Ticket
+	-> TicketCheckout.free_worktree
 	-> SessionFolder.move_to_archive
++ delete(): None
+	-> TicketCheckout.free_worktree
++ add_child(title: str): Ticket
+	-> CardPlacement.free_name_for
+	-> SessionHierarchy.open_child
 + violations(): Report
 	-> FidelityProgress.report
 	-> Report.from_reports
@@ -3717,30 +4034,106 @@ Where one ticket's work sits in git: its own branch, the worktree that branch is
 + worktree: str
 + << association >> chat: Chat | None
 + assigned_chat: str
-+ leave_choices: LeaveChoices
 + close_choices: LeaveChoices
-+ open_choices: OpenChoices
 ----
 + assign_chat(chat: str): None
 	-> SessionRecord.save_fields
-+ open(opening: list[str]): None
-	-> Repo.switch_worktree
-	-> Repo.switch_branch
-+ open_worktree(): None
++ open(): None
+	// opens the ticket in its own worktree, the one it has or a new one on its own branch; a folder in the way raises TicketWorktreeBlockedError
 	-> Branch.open_in_worktree
-+ leave(leaving: list[str]): None
+	-> SessionRecord.save_fields
++ keep_landing_release(leaving: list[str]): None
 + write_handoff(leaving: list[str]): None
 + save_work(leaving: list[str]): None
+	// commits, pushes, and merges only; nothing of the ticket is removed here, so a merge git refuses leaves its worktree, branch, and session as they were
 	-> Branch.land_on_default
++ leave_branch(leaving: list[str]): None
+	// after the work is saved and merged: deletes the ticket's worktree and its branch, each when leaving names it
+	-> Worktree.close
 	-> Branch.delete
-+ free_worktree(leaving: list[str]): None
++ free_worktree(): None
+	// removes the ticket's own worktree, its work committed and pushed first; the branch stays
 	-> Worktree.close
 + return_to_default_branch(): None
 ---<<writes>>--> LeavingHandoff
 ---<<creates>>--> LeaveChoices
----<<creates>>--> OpenChoices
+---<<raises>>--> TicketWorktreeBlockedError
 ---<<finds its chat among>>--> Chat
 ---<<reads branch and chat recorded in>>--> Session
+
+## TicketWorktreeBlockedError : RuntimeError
+
+A ticket cannot open in its own worktree because the folder that worktree goes in is already there and is not the ticket's checkout; it names the ticket and the folder.
+
++ TicketWorktreeBlockedError(ticket: str, folder: Path)
+------
++ ticket: str
++ folder: Path
+----
+
+## UnreadableSessionFile
+
+One ticket's session.json that does not hold a JSON object, such as a file a crash cut off half way. The board shows every other ticket and names this file, with what is wrong in it, so a person repairs it.
+
++ UnreadableSessionFile(repo: Repo, failure: JsonFileUnreadable)
+------
++ file: str
++ error: str
+----
+---<<names the file from the top of>>--> Repo
+
+## CardName
+
+The name a new card gets from its title: `pet-visits` for `Pet visits`, which names a ticket's session folder and branch, or a backlog item's file. A name is at most `NAME_LENGTH_LIMIT` (64) characters.
+
++ CardName(title: str)
+------
+----
++ for_new_card(): str
+	// refused before any folder, file, or branch is made
+---<<writes the name with>>--> Name
+---<<raises>>--> TitleNamesNothingError
+---<<raises>>--> TitleTooLongError
+
+## TitleNamesNothingError : ValueError
+
+A new card's title holds no Latin letter or digit, so the name made from it would be empty.
+
++ TitleNamesNothingError(title: str)
+------
++ title: str
+----
+
+## TitleTooLongError : ValueError
+
+The name made from a new card's title is longer than a folder and a branch can safely be.
+
++ TitleTooLongError(title: str, name: str, limit: int)
+------
++ title: str
++ name: str
++ limit: int
+----
+
+## TicketNameTakenError : ValueError
+
+A new ticket's title makes the name of a session the repository already has, main included.
+
++ TicketNameTakenError(title: str, name: str)
+------
++ title: str
++ name: str
+----
+
+## BacklogItemTakenError : ValueError
+
+A new backlog item's title makes the file name of an idea already in the Backlog, which holds the only copy of that idea.
+
++ BacklogItemTakenError(title: str, file: str)
+------
++ title: str
++ file: str
+----
 
 ## LeaveChoices
 
@@ -3750,18 +4143,6 @@ What leaving a ticket for another, or closing it, can do with its work now, in t
 ------
 + branch: str
 + own_branch: str
-+ choices: list[str]
-+ chosen: list[str]
-----
-
-## OpenChoices
-
-What opening a ticket can create for it now: its own branch while the repository has none, and its own worktree while it has none.
-
-+ OpenChoices(branch: Branch, worktree: str, candidate_branches: list[str])
-------
-+ has_branch: bool
-+ candidate_branches: list[str]
 + choices: list[str]
 + chosen: list[str]
 ----
@@ -3919,8 +4300,8 @@ A validation report of one fidelity, saved in a session folder, with the violati
 *Tools* are standalone toolsets an agent or an application calls beside the practices: *SubAgent* hands work to a background sub-agent, *Echo* shows an action's instructions inside a do-not-follow fence, *Granola* files meeting notes and writes the ones that matter as `.context` files, *PromptLog* writes what crossed to the model into the open session's logs, and *PromptNotify* shows a toast naming the guidance a tool call used. Each sits in its own package (`tools/sub_agent`, `tools/echo`, `tools/granola`, `tools/prompt_log`, `tools/prompt_notify`) and imports none of the others; they share one card, `tools/.context/module-context.md`. `tools/drawio_viewer` is a small local web server beside them, not a toolset, and imports nothing from the framework. Nothing in the framework imports this module. The whole model of PromptNotify, internals included, is `tools/prompt_notify/.context/prompt-notify-model.md`; that document is canonical for it.
 
 - **Purpose:** Hold the toolsets that are useful on their own, outside any one practice or action: delegating to a sub-agent, reading what an action instructs, filing meeting notes as context, and showing and logging what crosses to the model.
-- **Seam (terms):** SubAgent, Echo, Granola, PromptLog, PromptNotify, ToastFile
-- **Dependencies (one-way):** harness/annotations, harness/agent_tools, harness/installation, harness/hooks, harness/mcp, harness/guidance, space/session
+- **Seam (terms):** SubAgent, Echo, Granola, PromptLog, PromptNotify, ToastFile, PromptQueue, ChatIdNotAnId, QueueFileUnreadable, StepStateUnknown
+- **Dependencies (one-way):** harness/annotations, harness/agent_tools, harness/installation, harness/hooks, harness/mcp, harness/guidance, harness/chat, space/session
 
 ## SubAgent
 
@@ -4040,6 +4421,68 @@ The toast notice of one workspace folder, `.cursor/prompt-notify-toast.json`, wh
 ---<<reads and writes>>--> JsonFile
 ---<<stamps the toast with>>--> LogTimestamp
 
+## PromptQueue
+
+The prompts one chat has queued, in the order they will be done, kept in a file in that chat's own folder. Several processes change one chat's queue, the stable lane's cdd server and the dev lane's among them, so each change holds the queue's file from its read to its write and no caller's change is lost.
+
++ PromptQueue(chat: str, file: Path, archive: Path | None = None)
+------
++ chat: str
++ prompts: list[QueuedPrompt]
+----
++ load(chat: str, call: ToolCall): PromptQueue
++ of_chat(chat: str, archive: Path | None = None): PromptQueue
+	// a chat id is never a path: an empty one, or one holding a folder separator, a drive or two dots, raises ChatIdNotAnId
++ show(): PromptQueue
++ add(text: str): PromptQueue
++ add_all(texts: list[str]): PromptQueue
++ edit(prompt: str, text: str): PromptQueue
++ move(prompt: str, to: int): PromptQueue
++ remove(prompt: str): PromptQueue
++ clear(): PromptQueue
++ done(prompt: str): PromptQueue
++ reopen(prompt: str): PromptQueue
++ assign(prompt: str, robot: str): PromptQueue
++ set_steps(prompt: str, steps: list[PromptStep]): PromptQueue
+	// a step's state is one of STEP_STATES; any other raises StepStateUnknown
++ add_interruption(prompt: str, text: str): PromptQueue
++ step_done(prompt: str, step: int): PromptQueue
++ attach(prompt: str, filename: str, media_type: str, data: str): PromptQueue
++ queue_handoff(handoff: Path): int
+---<<reads and writes through, holding it for each change>>--> JsonFile
+---<<raises>>--> ChatIdNotAnId
+---<<raises>>--> QueueFileUnreadable
+---<<raises>>--> StepStateUnknown
+---<<annotated with>>--> Identity
+---<<annotated with>>--> LanguageAdapter
+---<<annotated with>>--> NoCatalog
+
+## ChatIdNotAnId : ValueError
+
+A call named a chat by something that is not a chat id: empty, or a path that leads out of the chat's own folder.
+
++ ChatIdNotAnId(chat: str)
+------
++ chat: str
+----
+
+## QueueFileUnreadable : JsonFileUnreadable
+
+A chat's queue file does not hold a prompt queue: it is damaged, cut off, empty, or holds something other than cards that each have an id of their own and a text. Nothing is written over it.
+
+------
+----
++ message(path: Path, cause: Exception): str
+
+## StepStateUnknown : ValueError
+
+A call gave a step a state that is none of the states a step has.
+
++ StepStateUnknown(state: str)
+------
++ state: str
+----
+
 # cdd_guidance/actions
 
 Each action is a *GuidanceAction*: *Generate*, *Validate*, *Document*, *Render*, *Satisfy*, *Sketch*, *Partition*, *Iterate*, *GrillContext*, *Improvement* (repair), and *Diagnose*. Importing the package registers every action folder's toolset with *ActionCatalogue*, and registers the practices first, since the actions work on them. The saved sketch is read by *SketchOutline* in cdd_guidance/practices/sketch_document, and each practice's section of it is a *SketchLens* in harness/guidance; neither lives here any more.
@@ -4069,12 +4512,23 @@ Check artifacts against each listed guidance's rules, add the graph rules' hits,
 + Validate(session = None, call = None)
 ------
 ----
-+ validate(guidance: GuidanceArg, rule: Rule | None = None, graph: bool | str | list[str] | None = None, paths: list[str] | None = None): str
++ validate(guidance: GuidanceArg, rule: str | None = None, graph: bool | str | list[str] | None = None, paths: list[str] | None = None): str
+	// rule names one rule, which is then the only rule the report shows; a name none of the listed guidance checks raises UnknownRule
 + create_rule(guidance: GuidanceArg, failed: str = '', wanted: str = ''): str
 ---<<validates with>>--> Rule
 ---<<reads the saved graph with>>--> SavedGraph
 ---<<annotated with>>--> NoDeploy
 ---<<annotated with>>--> Skill
+
+## UnknownRule : ValueError
+
+A validate call named a rule none of its listed guidance checks. The message lists the rules there are.
+
++ UnknownRule(rule: str, rules: list[str])
+------
++ rule: str
++ rules: tuple
+----
 
 ## Document : GuidanceAction
 
@@ -4376,6 +4830,8 @@ Something a class remembers or derives, with its relationship when its type name
 + take_note(text: str): None
 + notes(): list[str]
 + save(): str
++ marked_signature(): str
+	// the property as a model line writes it with the relationship written on it; a property nobody marked is written with none
 + as_record(): dict
 + update_self(source: OoadNode): None
 ---<<keeps>>--> Relationship
@@ -4721,6 +5177,8 @@ One story map: its epics and increments, and the files it was read from (*StoryS
 + << composition >> epics: list[Epic]
 	// numbered in the order they stand: an epic appended takes the next number
 + increments: list[Increment]
++ unplaced_stories: list[Story]
+	// the stories a scenarios file specifies that this map does not hold; each is recorded with its scenarios under no epic, so the rule scenarios-name-a-story-on-the-map reports it
 + sources: StorySources
 	// each file the map was read from: its path and text, and the imports, exports, examples and evidence it declares
 + links: StoryMapLinks | None

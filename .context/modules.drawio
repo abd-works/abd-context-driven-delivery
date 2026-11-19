@@ -10,8 +10,11 @@
         <mxCell id="subtitle" value="Independent modules with one-way dependencies. Arrows point toward the depended-on module (build before). Path nesting = containment; shared base terms live on the parent." style="text;html=1;align=center;verticalAlign=middle;fontSize=11;fontStyle=2;" parent="1" vertex="1">
           <mxGeometry x="40" y="55" width="1520" height="20" as="geometry" />
         </mxCell>
-        <mxCell id="tools" value="&lt;b style=&quot;font-size: 14px;&quot;&gt;tools&lt;/b&gt;&lt;br&gt;&lt;i&gt;Hold the toolsets that are useful on their own, outside any one practice or action: deleg...&lt;/i&gt;&lt;hr&gt;• SubAgent&lt;br&gt;• Echo&lt;br&gt;• Failure&lt;br&gt;• Granola&lt;br&gt;• PromptLog&lt;br&gt;• PromptNotify&lt;br&gt;• ..." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a3a6e;strokeColor=#0e2547;fontColor=#ffffff;fontSize=12;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;strokeWidth=3;" vertex="1" parent="1">
+        <mxCell id="harness" value="&lt;b style=&quot;font-size: 14px;&quot;&gt;harness&lt;/b&gt;&lt;br&gt;&lt;i&gt;Give practices, actions, and tools one framework for publishing classes to agents and IDE...&lt;/i&gt;&lt;hr&gt;• the annotations `@agent_toolset&lt;br&gt;• @agent_tool&lt;br&gt;• @agent_instructions&lt;br&gt;• @markdown&lt;br&gt;• @mcp&lt;br&gt;• @skill&lt;br&gt;• ..." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a3a6e;strokeColor=#0e2547;fontColor=#ffffff;fontSize=12;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;strokeWidth=3;" vertex="1" parent="1">
           <mxGeometry x="40" y="100" width="280" height="184" as="geometry" />
+        </mxCell>
+        <mxCell id="cdd-guidance" value="&lt;b style=&quot;font-size: 14px;&quot;&gt;cdd_guidance&lt;/b&gt;&lt;br&gt;&lt;i&gt;Hold the practices, actions, and patterns an agent follows to deliver work, as classes pl...&lt;/i&gt;&lt;hr&gt;• each practice&amp;#x27;s and fidelity&amp;#x27;s instructions&lt;br&gt;• published under its slug (`stories&lt;br&gt;• clean-engineering-model`)&lt;br&gt;• each action&amp;#x27;s MCP operations (`generate.generate&lt;br&gt;• validate.validate&lt;br&gt;• ...)&lt;br&gt;• ..." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a3a6e;strokeColor=#0e2547;fontColor=#ffffff;fontSize=12;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="40" y="316" width="280" height="184" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
