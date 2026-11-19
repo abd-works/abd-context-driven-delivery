@@ -11,7 +11,7 @@ from typing import Any
 
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_address import McpAddress
-from harness.process.process import BackgroundStart, ExclusivePort, RunningProcess
+from harness.process.process import BackgroundStart, ExclusivePort, RunningProcess, SpawnLock
 
 # The process a throwaway server belongs to, such as the spec run that started it on a port of its own. The server ends
 # when that process does, so a run that is killed or hangs leaves no server behind; the person's own server names none.
@@ -26,6 +26,8 @@ _LOG_LINES_SHOWN = 20
 CONNECT_SCRIPT = Path(__file__).resolve().parent / "scripts" / "connect.py"
 # How often a start looks again for the server's answer while it waits for the server to come up.
 _PING_RETRY_SECONDS = 0.25
+# The file in the home that lets one ensure start the server while the others wait for it.
+_SPAWN_LOCK = "spawn.lock"
 
 
 class ServerDidNotStart(Exception):
@@ -56,6 +58,9 @@ class McpDaemon:
 
     Holding the port exclusively is the claim: two servers cannot both hold it, so a second start exits quietly."""
 
+    # How often an ensure looks again for the server's answer while it, or another ensure, starts the server.
+    ping_retry_seconds = _PING_RETRY_SECONDS
+
     def __init__(self, home: CddHome, address: McpAddress | None = None, port: ExclusivePort | None = None) -> None:
         self.home = home
         self.address = address or McpAddress()
@@ -82,12 +87,25 @@ class McpDaemon:
         return self.ping() is not None
 
     def ensure(self) -> RunningServer:
-        """The running server, starting it first when none answers."""
-        answer = self.ping()
-        if answer is not None:
-            return answer
-        self.spawn()
-        return self._wait_for_ping()
+        """The running server, starting it first when none answers. One ensure at a time starts it, holding the home's
+        spawn lock, and the others wait for its answer instead of each starting their own. The one that starts it first
+        stops a process that holds the port without answering, such as a hung or deadlocked server: left running, it
+        would keep the new server from claiming the port. A server another ensure is starting is never stopped, because
+        that ensure holds the lock until its server answers or its wait runs out."""
+        lock = SpawnLock(self.home.folder / _SPAWN_LOCK)
+        deadline = time.time() + _START_SECONDS
+        while time.time() < deadline:
+            answer = self.ping()
+            if answer is not None:
+                return answer
+            if not lock.claim():
+                time.sleep(self.ping_retry_seconds)
+                continue
+            try:
+                return self._start()
+            finally:
+                lock.release()
+        raise ServerDidNotStart(self.url, self._log_tail())
 
     def restart(self) -> RunningServer:
         """Stop the running server and start it again on the code ``~/.cdd/runtime.json`` names now."""
@@ -99,9 +117,10 @@ class McpDaemon:
         by the port it listens on and stopped too: left running, it would keep every new server from claiming the
         port."""
         running = self.ping()
-        process = running.process if running is not None else self._port.holder()
-        if process is not None:
-            process.stop(_STOP_SECONDS)
+        if running is not None:
+            running.process.stop(_STOP_SECONDS)
+        else:
+            self._stop_port_holder()
 
     def status(self, running: RunningServer) -> str:
         """How the server runs, as an install reports it: its process, and the code it serves, pinned or on disk."""
@@ -114,13 +133,29 @@ class McpDaemon:
         with open(self.home.log_path, "a", encoding="utf-8") as log:
             BackgroundStart(log).run(command, self.home.source, {**os.environ, **self.home.server_environment})
 
+    def _start(self) -> RunningServer:
+        """Start the server, holding the spawn lock: another ensure may have started it before this one took the lock,
+        else whatever holds the port without answering is stopped first."""
+        answer = self.ping()
+        if answer is not None:
+            return answer
+        self._stop_port_holder()
+        self.spawn()
+        return self._wait_for_ping()
+
+    def _stop_port_holder(self) -> None:
+        """Stop the process holding the port, which a ping has just found not answering; nothing when none holds it."""
+        process = self._port.holder()
+        if process is not None:
+            process.stop(_STOP_SECONDS)
+
     def _wait_for_ping(self) -> RunningServer:
         deadline = time.time() + _START_SECONDS
         while time.time() < deadline:
             answer = self.ping()
             if answer is not None:
                 return answer
-            time.sleep(_PING_RETRY_SECONDS)
+            time.sleep(self.ping_retry_seconds)
         raise ServerDidNotStart(self.url, self._log_tail())
 
     def _log_tail(self) -> str:
