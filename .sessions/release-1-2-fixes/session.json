@@ -9,7 +9,7 @@
       "specification",
       "implementation"
     ],
-    "version": 27
+    "version": 28
   },
   "practices": {
     "bdd": {
@@ -26,8 +26,6 @@
       "formats": {
         "model": [
           "python",
-          "drawio",
-          "whiteboard",
           "markdown"
         ]
       }
