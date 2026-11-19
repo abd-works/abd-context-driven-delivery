@@ -29,3 +29,9 @@ Two runs, 0.47 s apart. The cadence records pid 48372 (the launcher `BackgroundS
 
 ## Tier that should catch it
 heavy - only a real `BackgroundStart` from inside a job that refuses breakaway gives the launcher-and-child pair; test_runs_spec.py has a context for "recorded by the id of this process's parent" but checks only that the run does not wait, not that it records one run.
+
+## Confirmation (Sparky, round 2)
+- Result: confirmed
+- What I ran and saw: Run on a sandbox repository of my own built as rivet-01 describes, a copy of `scripts/test.ps1` and three heavy specs, with CDD_HOME in the sandbox (`C:\dev\_et\sparky\confirm\rivet\rv.py`). The report's `cadence.py` is not in the report; I ran its one line, `TestCadence(main_checkout(repo), TestRunRecord(home)).start_due()`, from a command my chat ran, with heavy recorded as failed two hours ago (pid 18624). The record went: latest running pid 38412 with previous the failed 18624; 0.47 s later latest running pid 13512 with previous running 38412; at the end latest `failed`, pid 13512, `is_new_failure: true`, previous still `running` 38412.
+- Cause, if you found it: `harness/diagnostics/test_runs.py` `TestCadence._started` with `TestRun.is_run_by_this_process`: the cadence records the launcher's pid, and the runner it starts does not take that record as its own.
+- Shares its cause with: rivet-04 (the pid in the record is not the process that runs the tier)

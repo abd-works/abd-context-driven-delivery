@@ -7,6 +7,7 @@ import os
 import re
 import shutil
 import subprocess
+import threading
 from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -24,14 +25,28 @@ logger = logging.getLogger(__name__)
 _FOLDER_BRANCH_LENGTH = 24
 # A branch named for a ticket, such as `checkout-flow-87`, names its worktree folder by the ticket number alone.
 _TICKET_NUMBER = re.compile(r"-(\d+)$")
+# The number the second branch's folder ends with when two branches would get one worktree folder.
+_SECOND_FOLDER_NUMBER = 2
 
 
 class WorktreeNotRemovedError(RuntimeError):
     """Raised when a worktree's folder is still there after git, a forced delete, and the Windows fallbacks each tried
-    to remove it, such as a checkout a running program holds open. It names the folder left behind."""
+    to remove it, such as a checkout a running program holds open. It names the folder left behind. The branch's work
+    was committed and pushed before the removal, and git no longer lists the folder as a checkout."""
 
     def __init__(self, folder: Path) -> None:
         super().__init__(f"could not remove the worktree at {folder}; close what holds it open and close it again")
+        self.folder = folder
+
+
+class WorktreeFolderTakenError(RuntimeError):
+    """Raised when a branch is to be opened in a worktree whose folder is already there and is not that branch's
+    checkout: a checkout left on no branch, or a folder holding files that git lists as no checkout. It names the
+    branch and the folder, so a person moves or removes the folder and opens the branch again."""
+
+    def __init__(self, branch: str, folder: Path) -> None:
+        super().__init__(f"cannot open {branch} in a worktree at {folder}: that folder is already there and is not {branch}'s checkout; move or remove it and open {branch} again")
+        self.branch = branch
         self.folder = folder
 
 
@@ -99,6 +114,8 @@ class Worktrees:
     def __init__(self, repo: Repo, checkouts: ServedCheckouts) -> None:
         self._repo = repo
         self._checkouts = checkouts
+        # Held while a branch is looked for and its worktree made, so two callers opening one branch get one worktree.
+        self._opening = threading.Lock()
 
     def repository_at(self, folder: Path | str) -> Repo:
         """The repository as checked out at folder, one of these checkouts, as this process holds it: this checkout's own
@@ -108,9 +125,11 @@ class Worktrees:
 
     def __iter__(self) -> Iterator[Worktree]:
         # Every checkout lists the same worktrees; the main clone lists them even after the checkout these were read
-        # from is removed.
+        # from is removed. git goes on listing a checkout whose folder was deleted by hand until it is pruned; with no
+        # folder there is no checkout to work in, so it is not one of these.
         for path, branch in self._repo.main_clone.worktrees.listing():
-            yield self._listed(path, branch)
+            if Path(path).is_dir():
+                yield self._listed(path, branch)
 
     def listing(self) -> list[tuple[Path, str]]:
         """Every checkout of the repository with the branch it has checked out (empty when none is), the main clone
@@ -152,16 +171,18 @@ class Worktrees:
 
     def open(self, branch: Branch) -> Worktree:
         """Check branch out in a sibling worktree, up to date with origin where origin can be reached, and return it:
-        the worktree that already has it, or the main clone when the clone has it checked out."""
-        existing = self.of(branch)
-        if existing is not None and existing.path.resolve() != self._repo.root:
-            existing.fetch_pull()
-            return existing
-        if self._repo.current_branch == branch:
-            opened = self._listed(self._repo.root, branch.name)
-            opened.fetch_pull()
-            return opened
-        return self._added_from_origin(branch)
+        the worktree that already has it, or the main clone when the clone has it checked out. A folder in the way that
+        is not branch's checkout raises ``WorktreeFolderTakenError``."""
+        with self._opening:
+            existing = self.of(branch)
+            if existing is not None and existing.path.resolve() != self._repo.root:
+                existing.fetch_pull()
+                return existing
+            if self._repo.current_branch == branch:
+                opened = self._listed(self._repo.root, branch.name)
+                opened.fetch_pull()
+                return opened
+            return self._added_from_origin(branch)
 
     def _added_from_origin(self, branch: Branch) -> Worktree:
         """A new sibling worktree for branch, up to date with origin, or from local refs when origin cannot be reached."""
@@ -179,12 +200,17 @@ class Worktrees:
         return opened
 
     def sibling_folder(self, branch: Branch) -> Path:
-        """The folder beside the main clone that branch's worktree gets: ``{abbreviated clone}-{short branch}``."""
+        """The folder beside the main clone that branch's worktree gets: ``{abbreviated clone}-{short branch}``. Two
+        branches whose short names are the same never share it: while another branch's checkout has that folder, branch
+        gets the next one no other branch has, numbered ``-2``, ``-3``, and on."""
         primary = self.primary_root()
         slug = branch.name.replace("/", "-")
         ticket = _TICKET_NUMBER.search(slug)
         short = ticket.group(1) if ticket else slug[:_FOLDER_BRANCH_LENGTH].rstrip("-")
-        return primary.parent / f"{self._abbreviated(primary.name)}-{short}"
+        first = primary.parent / f"{self._abbreviated(primary.name)}-{short}"
+        of_other_branches = {tree.path for tree in self if tree.branch is not None and tree.branch != branch}
+        numbered = (first.with_name(f"{first.name}-{number}") for number in range(_SECOND_FOLDER_NUMBER, _SECOND_FOLDER_NUMBER + len(of_other_branches)))
+        return next(folder for folder in (first, *numbered) if folder.resolve() not in of_other_branches)
 
     def _abbreviated(self, folder: str) -> str:
         """A clone folder's name shortened for its worktrees: `abd-context-driven` is `abd-cd`."""
@@ -194,17 +220,35 @@ class Worktrees:
         return tokens[0] + ("-" + "".join(token[0] for token in tokens[1:]) if len(tokens) > 1 else "")
 
     def add(self, path: str | Path, branch: Branch) -> Worktree:
-        """Check branch out in a new worktree at path; the worktree that already has it, when one does."""
+        """Check branch out in a new worktree at path; the worktree that already has it, when one does. A folder already
+        at path that is not branch's checkout raises ``WorktreeFolderTakenError``, unless it is the empty folder a
+        removed worktree left, which is cleared."""
         existing = self.of(branch)
         if existing is not None:
             return existing
         dest = Path(path)
         dest.parent.mkdir(parents=True, exist_ok=True)
+        self._clear_folder_for(branch, dest)
+        # git refuses a path and a branch it still lists for a checkout whose folder is gone.
+        self._repo.git.run("worktree", "prune")
         if branch.exists:
             self._repo.git.run("worktree", "add", str(dest), branch.name)
         else:
             self._repo.git.run("worktree", "add", "-b", branch.name, str(dest), branch.start_point)
         return self._listed(dest, branch.name)
+
+    def _clear_folder_for(self, branch: Branch, dest: Path) -> None:
+        """Make sure nothing is at dest before branch's worktree is made there. A folder holding no file is what a
+        worktree removed while a program held it open left behind, and is deleted; a checkout git lists there, or a
+        folder with files in it, is someone's work and is refused by name."""
+        if not dest.exists():
+            return
+        holds_files = dest.is_file() or any(entry.is_file() for entry in dest.rglob("*"))
+        if holds_files or self.at(dest) is not None:
+            raise WorktreeFolderTakenError(branch.name, dest)
+        self._rmtree_logged(dest)
+        if dest.exists():
+            raise WorktreeFolderTakenError(branch.name, dest)
 
     def _listed(self, folder: Path, branch_name: str) -> Worktree:
         """The checkout at folder with branch_name checked out; the main clone's repository is the one held here."""
@@ -231,16 +275,16 @@ class Worktrees:
         if dest.exists():
             self._unregister_held(dest)
         git.run("worktree", "prune")
+        if dest.exists():
+            raise WorktreeNotRemovedError(dest)
 
     def _unregister_held(self, dest: Path) -> None:
         """A folder a running process works in (a chat, its shells) cannot be deleted on Windows. git forgets it all the
-        same once its .git link is gone, so its branch is free to delete; the folder left on disk holds no checkout."""
+        same once its .git link is gone, so the folder left on disk holds no checkout, and its branch opens in a
+        worktree again once the folder is free."""
         link = dest / ".git"
         if link.is_file():
             link.unlink()
-        if (dest / ".git").exists():
-            raise WorktreeNotRemovedError(dest)
-        logger.warning("worktree %s is in use; git no longer lists it, and its folder is left to delete once free", dest)
 
     def _force_remove_directory_windows(self, path: Path) -> bool:
         """Last resort when git/shutil cannot delete a locked checkout (Windows only)."""

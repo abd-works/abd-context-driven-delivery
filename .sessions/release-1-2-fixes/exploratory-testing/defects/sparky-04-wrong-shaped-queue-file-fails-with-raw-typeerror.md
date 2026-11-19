@@ -28,3 +28,9 @@ The errors in the table. With `"prompts": null` the queue cannot be shown, added
 ## Tier that should catch it
 
 Unit: `prompt_queue_spec.py`, with a hand-written file in its temp folder. Every example builds its queue through `add_all`, so the file is always well shaped.
+
+## Confirmation (Rivet, round 2)
+- Result: confirmed
+- What I ran and saw: my own `s347.py`, each of the four file texts: `null` gives `TypeError 'NoneType' object is not iterable` on all three calls; `"abc"` gives `TypeError string indices must be integers` on `done`, and `add` saves `["a","b","c",{card}]`; a card with no id gives `KeyError 'id'`; two cards with id z1 are both marked done. One difference: with `"abc"`, `prompts` itself answers `["a","b","c"]` without an error, so the report's `AttributeError ... 'get'` comes from whatever printed the cards, not from the queue.
+- Cause, if you found it: `tools/prompt_queue/prompt_queue.py` `PromptQueue.prompts` (`list(self._held().get("prompts", []))`, no check of what it holds) and `PromptQueue._holding` (`item["id"]`).
+- Shares its cause with: rivet-07 (`TestRun.from_json` on a `test-runs.json` that is valid JSON with wrong values: the same missing check of a hand-edited file).

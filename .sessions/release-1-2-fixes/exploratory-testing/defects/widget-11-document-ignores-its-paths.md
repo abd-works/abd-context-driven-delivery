@@ -21,3 +21,9 @@ All three answer `isError=False` with the same 3,628 characters: the template an
 
 ## Tier that should catch it
 Unit: Document has no spec file (`cdd_guidance/actions/document/` holds only document.py and document.md).
+
+## Confirmation (Sparky, round 2)
+- Result: confirmed
+- What I ran and saw: Run through a sandbox cdd server on port 48933, on a fresh repository of my own (`C:\dev\_et\sparky\confirm\widget\wz.py`; the report's `drv` files are not in the report). The three `document.document` calls, with a real path, with `nope/missing.md` and `../../outside.md`, and with no path, each answer 3,355 characters with no error, and the three answers are identical.
+- Cause, if you found it: `cdd_guidance/actions/document/document.py` `Document` takes `paths` and does nothing with it.
+- Shares its cause with: widget-07, widget-12

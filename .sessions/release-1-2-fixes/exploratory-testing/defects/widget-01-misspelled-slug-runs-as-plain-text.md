@@ -37,3 +37,9 @@ Unit (`harness/guidance_actions/guidance_actions_spec.py`): the argument reading
 
 ## Also seen by
 - Widget, on render: `render.render {"guidance": "story_map", "format": "drawio", "paths": [".context/story-map.md"], "source": "markdown"}` answers `["story_map"]` with `isError=False` and renders nothing.
+
+## Confirmation (Sparky, round 2)
+- Result: confirmed
+- What I ran and saw: Run through a sandbox cdd server on port 48933, on a fresh repository of my own (`C:\dev\_et\sparky\confirm\widget\wz.py`; the report's `drv` files are not in the report). `stories-story-map` answers 25,610 characters with the rules. `story_map`, `Stories-Story-Map`, `STORIES-STORY-MAP`, `stories_story_map`, `stories story map`, `Story Map`, `IA`, `wibble-wobble`, `""` and `[]` each answer 761 to 780 characters with no error: the opening sentence, the word as sent, the closing sentence. My sandbox did not turn UX off, so `IA` was tried with UX on.
+- Cause, if you found it: Not read in the code. By what is seen: a word that is no slug is taken as prose for the action instead of being looked up or refused.
+- Shares its cause with: widget-02 (how a guidance argument is matched to a practice or fidelity)

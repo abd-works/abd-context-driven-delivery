@@ -25,3 +25,9 @@ A spec file added, changed or deleted by the later commit is run (or not run) un
 
 ## Tier that should catch it
 heavy - it needs a real git checkout that moves while a real test.ps1 runs; test_runs_spec.py stubs the runner and git, so the folder the specs really run in is never looked at.
+
+## Confirmation (Sparky, round 2)
+- Result: confirmed
+- What I ran and saw: Run on a sandbox repository of my own built as rivet-01 describes, a copy of `scripts/test.ps1` and three heavy specs, with CDD_HOME in the sandbox (`C:\dev\_et\sparky\confirm\rivet\rv.py`). RIVET_SLEEP=20, a commit made nine seconds into the run. Closing line `heavy failed on 2aeedc6e7` and the record's commit are the commit the run started on; the run's own summary says `HEAD at end of sleep: a61cd6bda...` and `marker file present: True`.
+- Cause, if you found it: `harness/diagnostics/test_runs.py` `TestCadence._started` records `_head()` once, and `TestRunner.run` runs `scripts/test.ps1` in the checkout's live folder.
+- Shares its cause with: rivet-09 (the record says which commit, not which files or which checkout the specs ran on)

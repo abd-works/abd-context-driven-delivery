@@ -33,3 +33,9 @@ The byte-order-mark case is the sharpest: the file still holds all three cards, 
 ## Tier that should catch it
 
 Unit: `prompt_queue_spec.py` can write a damaged file into its temp folder. No example reads a queue whose file is not a JSON object.
+
+## Confirmation (Rivet, round 2)
+- Result: confirmed
+- What I ran and saw: my own `s347.py`: for the truncated, empty, `[1,2]` and byte-order-mark files alike, `show -> []`, `done` refused with "which holds nothing", and `add` saved the one new card over the file.
+- Cause, if you found it: `tools/prompt_queue/prompt_queue.py` `PromptQueue._held` (catches `JsonFileUnreadable`, answers `{}`), then `PromptQueue._keep` writes. For the byte-order mark: `JsonFile.read` reads with `encoding="utf-8"`, not `utf-8-sig`.
+- Shares its cause with: sparky-01; rivet-06 (an empty or truncated `test-runs.json` is read as no runs and overwritten the same way).

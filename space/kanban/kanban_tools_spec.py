@@ -23,6 +23,7 @@ from harness.installation.install_target import InstallTarget  # noqa: E402
 from harness.installation.data_class import DataClass  # noqa: E402
 from space.kanban.backlog_item import BacklogItem  # noqa: E402
 from space.kanban.board import Stage  # noqa: E402
+from space.kanban.card_name import NAME_LENGTH_LIMIT, BacklogItemTakenError, TicketNameTakenError, TitleNamesNothingError, TitleTooLongError  # noqa: E402
 from harness.graph.violation import Violation  # noqa: E402
 from space.kanban.report import ReportRule  # noqa: E402
 from space.kanban.session_board_examples import saved_graph, saved_practice  # noqa: E402
@@ -426,6 +427,40 @@ with description("the board tools") as self:
                 fields = json.loads((self.project.sessions / "pet-records" / "session.json").read_text(encoding="utf-8"))
                 expect("workpath" in fields).to(equal(False))
 
+        with context("that opens a ticket whose title has no letter a to z and no digit"):
+            with it("should refuse an empty title"):
+                expect(lambda: self.project.call("ticket.create", title="   ")).to(raise_error(TitleNamesNothingError))
+
+            with it("should refuse a title in another script"):
+                expect(lambda: self.project.call("ticket.create", title="日本語")).to(raise_error(TitleNamesNothingError))
+
+            with it("should write no session into the sessions folder itself"):
+                expect(lambda: self.project.call("ticket.create", title="日本語")).to(raise_error(TitleNamesNothingError))
+                expect((self.project.sessions / "session.json").exists()).to(be_false)
+
+        with context("that opens a ticket whose title makes the name of a ticket already there"):
+            with it("should refuse it, naming that ticket"):
+                expect(lambda: self.project.call("ticket.create", title="PET VISITS")).to(raise_error(TicketNameTakenError, contain("pet-visits")))
+
+            with it("should keep that ticket's title"):
+                expect(lambda: self.project.call("ticket.create", title="PET VISITS")).to(raise_error(TicketNameTakenError))
+                fields = json.loads((self.project.sessions / "pet-visits" / "session.json").read_text(encoding="utf-8"))
+                expect(fields["title"]).to(equal("Pet visits"))
+
+            with it("should refuse a ticket titled main"):
+                expect(lambda: self.project.call("ticket.create", title="main")).to(raise_error(TicketNameTakenError))
+
+        with context("that opens a ticket whose title makes a name longer than a folder and a branch can be"):
+            with before.each:
+                self.long_title = "A very long title that goes on and on about the bookshop and its many needs"
+
+            with it("should refuse it, naming the limit"):
+                expect(lambda: self.project.call("ticket.create", title=self.long_title)).to(raise_error(TitleTooLongError, contain(str(NAME_LENGTH_LIMIT))))
+
+            with it("should make no session folder"):
+                expect(lambda: self.project.call("ticket.create", title=self.long_title)).to(raise_error(TitleTooLongError))
+                expect([folder.name for folder in self.project.sessions.iterdir() if folder.name.startswith("a-very")]).to(equal([]))
+
         # (S) Person --> Split Ticket Into Child Tickets
         with context("that opens a ticket split from another"):
             with before.each:
@@ -445,6 +480,34 @@ with description("the board tools") as self:
             with it("should write the title and text to one markdown file"):
                 file = self.project.sessions / "_backlog" / "gift-cards.md"
                 expect(file.read_text(encoding="utf-8")).to(equal("# Gift cards\n\nSell gift cards.\n"))
+
+            with context("and then an item whose title makes the same file name"):
+                with it("should refuse it, naming the file that keeps the first idea"):
+                    expect(lambda: self.project.call("backlog-item.create", title="Gift cards", text="A second idea.")).to(raise_error(BacklogItemTakenError, contain("gift-cards.md")))
+
+                with it("should keep the first idea's text"):
+                    expect(lambda: self.project.call("backlog-item.create", title="Gift cards", text="A second idea.")).to(raise_error(BacklogItemTakenError))
+                    file = self.project.sessions / "_backlog" / "gift-cards.md"
+                    expect(file.read_text(encoding="utf-8")).to(equal("# Gift cards\n\nSell gift cards.\n"))
+
+        with context("that adds a backlog item whose title has no letter a to z and no digit"):
+            with it("should refuse it"):
+                expect(lambda: self.project.call("backlog-item.create", title="", text="idea")).to(raise_error(TitleNamesNothingError))
+
+            with it("should write no file without a name"):
+                expect(lambda: self.project.call("backlog-item.create", title="日本語", text="idea")).to(raise_error(TitleNamesNothingError))
+                expect((self.project.sessions / "_backlog" / ".md").exists()).to(be_false)
+
+        with context("that starts a backlog item whose title makes the name of a ticket already there"):
+            with before.each:
+                self.project.backlog_item("pet-visits.md", "Pet visits")
+
+            with it("should refuse it, naming that ticket"):
+                expect(lambda: self.project.call("backlog-item.start", backlog_item="Pet visits")).to(raise_error(TicketNameTakenError, contain("pet-visits")))
+
+            with it("should keep the idea in the Backlog"):
+                expect(lambda: self.project.call("backlog-item.start", backlog_item="Pet visits")).to(raise_error(TicketNameTakenError))
+                expect((self.project.sessions / "_backlog" / "pet-visits.md").is_file()).to(be_true)
 
         # (S) Person --> Add Backlog Item, Start Backlog Item
         with context("that starts a backlog item"):

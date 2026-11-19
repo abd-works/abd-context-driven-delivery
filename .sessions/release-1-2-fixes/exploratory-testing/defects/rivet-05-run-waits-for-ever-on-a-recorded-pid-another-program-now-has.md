@@ -28,3 +28,9 @@ Liveness asks only whether some process has that id: not whether it is a python 
 
 ## Tier that should catch it
 unit - `RunningProcess` can be faked alive for an old record; test_runs_spec.py has only "live in another process" and "process gone", never "alive but not the run".
+
+## Confirmation (Sparky, round 2)
+- Result: confirmed
+- What I ran and saw: Run on a sandbox repository of my own built as rivet-01 describes, a copy of `scripts/test.ps1` and three heavy specs, with CDD_HOME in the sandbox (`C:\dev\_et\sparky\confirm\rivet\rv.py`). The report's `due.py` is not in the report; I wrote its two lines from rivet-04's description. With a nine-day-old `running` entry whose pid a sleeping Python program now has: `health report states: [('heavy', 'running', 43496), ('e2e', 'passed', 1)] due: []`, and the run by hand was still printing `waiting for the heavy run process 43496 started at 2026-11-10T10:00:00+00:00 to end` after 24 s. Once the other program ended the same read answered `abandoned` and `due: ['heavy']`.
+- Cause, if you found it: `harness/diagnostics/test_runs.py` `TestRun.is_live`: `self.outcome is RunOutcome.RUNNING and RunningProcess(self.pid).alive`, with no look at what the process is or when it started.
+- Shares its cause with: rivet-03, rivet-04; rivet-10 (a wait with no end and no way out said)

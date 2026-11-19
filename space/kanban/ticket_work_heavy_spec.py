@@ -328,6 +328,133 @@ with description("a ticket's work through the cdd server") as self:
         with it("should keep the clone's own folder on main"):
             expect(self.clone.branch).to(equal("main"))
 
+    # (S) Person --> Close Active Session
+    with context("that a ticket is closed with its branch merged while the clone's own folder holds an edit nobody committed"):
+        with before.all:
+            self.chat.answer("ticket.create", title="Walk beside")
+            self.chat.answer("ticket.activate", ticket="walk-beside")
+            (self.clone.worktree_of("walk-beside") / "beside.txt").write_text("the ticket's work\n", encoding="utf-8")
+            (self.clone.work / "README.md").write_text("# Work\nthe person's own edit\n", encoding="utf-8")
+            self.chat.answer("ticket.close", ticket="walk-beside", leaving=["commit", "push", "merge", "delete_branch", "delete_worktree"])
+            self.left_uncommitted = git(self.clone.work, "status", "--porcelain", "--", "README.md")
+            self.readme_on_origin = git(self.clone.work, "show", "origin/main:README.md")
+            git(self.clone.work, "checkout", "-q", "--", "README.md")
+
+        with it("should bring the ticket's work to main on origin"):
+            expect(self.clone.tracked("origin/main", "beside.txt")).to(equal(["beside.txt"]))
+
+        with it("should leave the person's edit uncommitted in the clone's own folder"):
+            expect(self.left_uncommitted).to(equal("M README.md"))
+
+        with it("should keep the person's edit off origin's main"):
+            expect(self.readme_on_origin).not_to(contain("the person's own edit"))
+
+    # (S) Person --> Close Active Session
+    with context("that a ticket is closed with its branch merged into a main it conflicts with"):
+        with before.all:
+            self.chat.answer("ticket.create", title="Walk clash")
+            self.chat.answer("ticket.activate", ticket="walk-clash")
+            self.clash_worktree = self.clone.worktree_of("walk-clash")
+            (self.clash_worktree / "clash.txt").write_text("the ticket's line\n", encoding="utf-8")
+            self.clone.push_from_elsewhere("main", "clash.txt", "main's line\n", "Main's line")
+            _, self.error = self.chat.call("ticket.close", ticket="walk-clash", leaving=["commit", "push", "merge", "delete_branch", "delete_worktree"])
+            self.merging = (self.clone.work / ".git" / "MERGE_HEAD").exists()
+            self.still_open = (self.clone.work / ".sessions" / "walk-clash" / "session.json").is_file()
+            self.worktree_kept = self.clash_worktree.is_dir() and self.clone.worktree_of("walk-clash") == self.clash_worktree
+            self.on_board = self.chat.answer("ticket.close_choices", ticket="walk-clash")["choices"]
+            self.chat.answer("ticket.close", ticket="walk-clash", leaving=["delete_branch"])
+
+        with it("should refuse the close, saying the branch does not merge into main"):
+            expect(self.error).to(contain("walk-clash does not merge into main"))
+
+        with it("should leave no merge half done on main"):
+            expect(self.merging).to(equal(False))
+
+        with it("should keep the ticket's worktree"):
+            expect(self.worktree_kept).to(be_true)
+
+        with it("should keep the ticket among the open sessions"):
+            expect(self.still_open).to(be_true)
+
+        with it("should still offer to delete its worktree"):
+            expect(self.on_board).to(contain("delete_worktree"))
+
+    # (S) Person --> Activate Ticket
+    with context("that a ticket is activated while a folder left on no branch is where its worktree goes"):
+        with before.all:
+            self.chat.answer("ticket.create", title="Walk stuck")
+            self.chat.answer("ticket.activate", ticket="walk-stuck")
+            self.stuck = self.clone.worktree_of("walk-stuck")
+            git(self.stuck, "checkout", "-q", "--detach")
+            git(self.clone.work, "branch", "-q", "-D", "walk-stuck")
+            _, self.error = self.chat.call("ticket.activate", ticket="walk-stuck")
+            git(self.clone.work, "worktree", "remove", "--force", str(self.stuck))
+
+        with it("should refuse to open it, naming the ticket"):
+            expect(self.error).to(contain("walk-stuck cannot open in a worktree"))
+
+        with it("should name the folder in the way"):
+            expect(self.error).to(contain(self.stuck.name))
+
+    # (S) Person --> Delete Ticket
+    with context("that a ticket open in its own worktree, with work not saved, is deleted"):
+        with before.all:
+            self.chat.answer("ticket.create", title="Walk gone")
+            self.chat.answer("ticket.activate", ticket="walk-gone")
+            self.gone = self.clone.worktree_of("walk-gone")
+            (self.gone / "unsaved.txt").write_text("not committed\n", encoding="utf-8")
+            self.chat.answer("ticket.delete", ticket="walk-gone")
+
+        with it("should save that work on its branch on origin"):
+            expect(self.clone.tracked("origin/walk-gone", "unsaved.txt")).to(equal(["unsaved.txt"]))
+
+        with it("should remove its worktree"):
+            expect((self.gone.exists(), self.clone.worktree_of("walk-gone"))).to(equal((False, None)))
+
+        with it("should remove its session folder"):
+            expect((self.clone.work / ".sessions" / "walk-gone").exists()).to(equal(False))
+
+    # (S) Person --> Archive Ticket
+    with context("that a ticket open in its own worktree, with work not saved, is archived"):
+        with before.all:
+            self.chat.answer("ticket.create", title="Walk shelf")
+            self.chat.answer("ticket.activate", ticket="walk-shelf")
+            self.shelf = self.clone.worktree_of("walk-shelf")
+            (self.shelf / "unsaved.txt").write_text("not committed\n", encoding="utf-8")
+            self.chat.answer("ticket.archive", ticket="walk-shelf")
+
+        with it("should save that work on its branch on origin"):
+            expect(self.clone.tracked("origin/walk-shelf", "unsaved.txt")).to(equal(["unsaved.txt"]))
+
+        with it("should remove its worktree"):
+            expect((self.shelf.exists(), self.clone.worktree_of("walk-shelf"))).to(equal((False, None)))
+
+        with it("should move its session folder among the archived sessions"):
+            expect((self.clone.work / ".sessions" / "_archive" / "walk-shelf" / "session.json").is_file()).to(be_true)
+
+    # Only Windows refuses to move or delete a folder a running program works in.
+    if os.name == "nt":
+        # (S) Person --> Delete Ticket
+        with context("that a ticket whose session folder a running program holds open is deleted"):
+            with before.all:
+                self.chat.answer("ticket.create", title="Walk held")
+                held = self.clone.work / ".sessions" / "walk-held"
+                holder = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(120)"], cwd=held)
+                _, self.error = self.chat.call("ticket.delete", ticket="walk-held")
+                self.kept = sorted(file.name for file in held.iterdir())
+                self.on_board = "walk-held" in board_tickets(self.chat.answer("board.show"))
+                holder.kill()
+                holder.wait()
+
+            with it("should refuse the delete, naming the folder that is held open"):
+                expect(self.error).to(contain("walk-held", "close what holds it open"))
+
+            with it("should keep the session's record and log"):
+                expect(self.kept).to(contain("session.json", "session.log"))
+
+            with it("should keep the ticket on the board"):
+                expect(self.on_board).to(be_true)
+
     # (S) Person --> Switch Session
     with context("that a session is switched to and closed"):
         with before.all:

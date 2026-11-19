@@ -33,3 +33,9 @@ Track Order moved to Ship Orders. In an earlier run where Place Order had been m
 
 ## Tier that should catch it
 Heavy (`render_saves_beside_source_heavy_spec.py`) or a unit example on the Stories drawio adapter: the specs keep a moved card's position but never read the kept drawing back into a tree after the map grew.
+
+## Confirmation (Sparky, round 2)
+- Result: confirmed
+- What I ran and saw: Run through a sandbox cdd server on port 48933, on a fresh repository of my own (`C:\dev\_et\sparky\confirm\widget\wz.py`; the report's `drv` files are not in the report). After the second render the cells sit as the report says: Take Orders x=20, Place Order 25, Cancel Order 85, Track Order 145, Ship Orders 200, Pack Order 205. The markdown that comes back has `Customer --> Track Order` under `Ship Orders`. Where the loss is: in the adapter that reads the drawing. The drawing still says whose story it is: its actor cell's id is `sell-books/take-orders/track-order/actor`. But the second render kept Take Orders at its first width (x=20, width 110, so it ends at 130) and put the new story at x=145, outside it, and the reader goes by position, not by the id. The save then writes that tree over the person's file. The hand-moved card of the report's last sentence was not run.
+- Cause, if you found it: The Stories drawio adapter under `cdd_guidance/practices/stories/model/`: its writer keeps a sub-epic's old width when a story is added, and its reader finds a story's sub-epic from where the cells sit.
+- Shares its cause with: widget-04, widget-08 (the save over the markdown)

@@ -28,3 +28,9 @@ Shown: the empty read under a real concurrent write, and the silent overwrite. N
 
 ## Tier that should catch it
 heavy - two real processes on one file; the unit spec uses one process, where the thread lock does hold.
+
+## Confirmation (Sparky, round 2)
+- Result: confirmed
+- What I ran and saw: Run on a sandbox repository of my own built as rivet-01 describes, a copy of `scripts/test.ps1` and three heavy specs, with CDD_HOME in the sandbox (`C:\dev\_et\sparky\confirm\rivet\rv.py`). The report's `race.py` is not in the report; I wrote the two loops it describes. In six seconds: `reads 51055 read as no run at all: 5789`, `saves 11008`, about one read in nine. With the file emptied, and cut to its first 150 bytes: `health report states: [] due: ['e2e', 'heavy']`, and the next run wrote a fresh record over it with no word, its failure marked `is_new_failure: true`.
+- Cause, if you found it: `harness/diagnostics/test_runs.py` `TestRunRecord._read` answers an empty record for any `OSError` or `ValueError`, which is what a read meeting a write, an empty file and a truncated file all give; `save` then writes over it.
+- Shares its cause with: rivet-07 (the record is read with no check of what it holds); sparky-01 and sparky-03 (the prompt queue's file read as empty and written over, the same way)

@@ -28,3 +28,4 @@ Unit (`kanban_tools_spec.py`): no git needed. The specs never create the same ti
 - What I ran and saw: Run through a sandbox cdd server on a fresh clone (`C:\dev\_et\sparky\confirm\gizmo\gz.py`). `ticket.create title="GIFT WRAP"` answers the existing `gift-wrap` with title `GIFT WRAP`; `title="main"` answers `is_main: true` and writes `.sessions/main/session.json` as `name main, title main, scope feature`. Also seen: the ticket's worktree copy of its `session.json` still says `Gift wrap`, so the two copies now disagree.
 - Cause, if you found it: `CardPlacement.open_ticket` -> `Sessions.create` (`space/session/sessions.py`) opens the session of that name whether or not it exists, and writes the new title over it.
 - Shares its cause with: gizmo-04, gizmo-06
+- Pixel, round 2, on the board's page: a second `ticket.create` titled Alpha answers the first ticket and the board shows one Alpha card, with no word that nothing was made.

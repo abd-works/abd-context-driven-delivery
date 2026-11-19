@@ -27,3 +27,9 @@ Text that is only spaces changes nothing, as `add` promises ("Text that is only 
 ## Tier that should catch it
 
 Unit: `prompt_queue_spec.py`. It checks blank text for `add` and `add_all` only.
+
+## Confirmation (Rivet, round 2)
+- Result: confirmed
+- What I ran and saw: my own `s347.py` on one (done), two, three: after the three calls the queue holds `{'text': 'one', 'is_done': False, 'steps': [{'text': '[interruption] ', 'state': 'pending'}]}`, `{'text': 'two', 'steps': [{'text': '', 'state': 'pending'}]}` and `{'text': ''}`; `add("   ")` on the same queue adds nothing.
+- Cause, if you found it: `tools/prompt_queue/prompt_queue.py` `PromptQueue.edit`, `add_interruption` and `set_steps` strip the text and keep it; only `add_all` drops text that is empty after the strip.
+- Shares its cause with: sparky-08 (`set_steps` keeps whatever each step holds)

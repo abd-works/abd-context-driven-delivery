@@ -18,6 +18,7 @@ from harness.installation.data_class import data_field, identity, language_adapt
 from harness.installation.json_file import JsonFile
 from harness.mcp.mcp_annotations import mcp
 from harness.guidance.stages import STAGES, ApproachStage, StageScope
+from space.kanban.card_name import CardName, TicketNameTakenError
 from space.repo.repo import Repo
 from space.session.session_record import SESSION_FILE
 from space.session.session_log import LogTimestamp
@@ -341,12 +342,23 @@ class CardPlacement:
 
     def open_ticket(self, title: str, scope: str, path: str = "") -> Ticket:
         """A new ticket titled title in Discovery, its session working on path, a folder in the repository given from its
-        top or in full (its top when empty). A folder outside the repository raises ``FolderOutsideRepositoryError``."""
+        top or in full (its top when empty). A folder outside the repository raises ``FolderOutsideRepositoryError``; a
+        title that gives no name, one too long, or the name of a session already there is refused by ``CardName`` or
+        ``TicketNameTakenError`` before any folder is made."""
         root = self._board.repo.root.resolve()
         workpath = (root / path).resolve() if path else root
         if not workpath.is_relative_to(root):
             raise FolderOutsideRepositoryError(path, str(root))
-        return self.ticket_of(self._board.sessions.create(title, workpath, title=title, scope=scope))
+        return self.ticket_of(self._board.sessions.create(self._free_name_for(title), workpath, title=title, scope=scope))
+
+    def _free_name_for(self, title: str) -> str:
+        """The name a new ticket titled title gets, refused while a session has it, main or one open or closed: opening
+        it again would write the new title over that session's record."""
+        name = CardName(title).for_new_card()
+        sessions = self._board.sessions
+        if sessions.named(name) is not None or sessions.folder_of(name).exists():
+            raise TicketNameTakenError(title, name)
+        return name
 
     def make_ticket(self, session: Session) -> Ticket:
         """The ticket the board places for session, as it reads it now."""

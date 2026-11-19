@@ -27,3 +27,10 @@ with `unsaved.py` and `unsaved2.py` uncommitted in them, and offline-two's commi
 Heavy (`ticket_work_heavy_spec.py`): real worktrees. The delete and archive examples use tickets never activated.
 
 ## Also seen by
+
+## Confirmation (Sparky, round 2)
+- Result: confirmed
+- What I ran and saw: Run through a sandbox cdd server on a fresh clone (`C:\dev\_et\sparky\confirm\gizmo\gz2.py`). `ticket.delete ticket="offline-two"` answers null and `ticket.archive ticket="conflict-one"` answers the ticket in `_archive`. Git still lists both worktrees and both branches; `unsaved2.py` and `unsaved.py` are uncommitted in them, and offline-two's local commit is on no remote. `ticket.activate ticket="conflict-one"` answers `TicketNotFoundError`. Also seen: the deleted ticket's worktree shows its own `session.json` and `session.log` as deleted.
+- Cause, if you found it: `space/kanban/ticket.py` `Ticket.delete` and `Ticket.archive` close the session and move or remove its folder without asking the ticket's checkout whether it has a worktree, as `Ticket.close` does.
+- Shares its cause with: none (gizmo-09's side note, a child left naming a deleted parent, is the same kind of leftover from `Ticket.delete`)
+- Pixel, round 2, on the board's page: after `POST /api/ticket/alpha/archive` the Alpha card is gone from every column, while `git worktree list` still lists `repo-alpha [alpha]` and the branch `alpha` stays; nothing on the page leads to them.

@@ -21,3 +21,9 @@ render: the first call answered "render.render is still running after 10 seconds
 
 ## Tier that should catch it
 Heavy (`render_saves_beside_source_heavy_spec.py`): no example names a path outside the project.
+
+## Confirmation (Sparky, round 2)
+- Result: confirmed
+- What I ran and saw: Run through a sandbox cdd server on port 48933, on a fresh repository of my own (`C:\dev\_et\sparky\confirm\widget\wz.py`; the report's `drv` files are not in the report). `render.render` with `../outside.md` answered `render.render is still running after 10 seconds; it was not started again...` after 10.3 s, and `story-map.drawio` was then in the folder above the project. `validate.validate` with the same path answered `NamedPathNotFoundError: nothing under the session's root ...`. The slow first call is confirmed and still unexplained.
+- Cause, if you found it: `cdd_guidance/actions/render/render.py` `Render._render_files` takes the path as named with no check against the session's root, where `Validate` makes a `NamedToCheck` that refuses it.
+- Shares its cause with: widget-11, widget-12 (only validate checks that a named path is there and under the session's root)

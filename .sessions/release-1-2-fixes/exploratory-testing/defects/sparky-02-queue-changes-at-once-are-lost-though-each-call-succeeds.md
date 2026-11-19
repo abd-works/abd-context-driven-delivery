@@ -48,3 +48,10 @@ The file always parsed, no id was duplicated, and the order of the surviving car
 ## Tier that should catch it
 
 Heavy: real processes on one real queue file. The unit spec uses one `PromptQueue` object, and the heavy spec one server, so no test makes two changes overlap.
+
+## Confirmation (Rivet, round 2)
+- Result: confirmed
+- What I ran and saw: my own `s2.py`, eight processes with 15 calls each on their own cards of a 99-card queue: `adds acked 45 missing 25`, `removes acked 15 still on queue 15` with 15 archive files, `done acked but not done 21`, `assign acked, wrong robot 15`, `steps acked, not kept 15`, 1 error (sparky-01).
+- Cause, if you found it: `tools/prompt_queue/prompt_queue.py` `PromptQueue._keep` and each operation that calls it: read the whole file, change the copy, write the whole file, nothing held in between. `JsonFile.write` makes each write whole but does not order two of them.
+- Shares its cause with: sparky-01 (same `_keep`); rivet-06 (`TestRunRecord.save`, the same read-then-write).
+- Is the file written by more than one process in the product: yes, see the confirmation in sparky-01. Through real cdd servers: one server, six callers, 4 of 90 answered adds lost; two servers on one chats folder, 47 of 90 lost. This is the case of a supervisor's robots each queueing a defect card at the same moment.

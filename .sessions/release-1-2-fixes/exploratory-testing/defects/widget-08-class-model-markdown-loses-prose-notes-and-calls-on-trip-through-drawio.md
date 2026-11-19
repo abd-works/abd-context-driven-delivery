@@ -81,3 +81,9 @@ Lost: the front matter, the Module line, both descriptions, the group heading, e
 
 ## Tier that should catch it
 Unit: `class_dependency_round_trip_spec.py` / `class_heritage_round_trip_spec.py` cover relationships on a trip; none compares a model written after the template, with notes and calls, before and after markdown -> drawio -> markdown.
+
+## Confirmation (Sparky, round 2)
+- Result: confirmed
+- What I ran and saw: Run through a sandbox cdd server on port 48933, on a fresh repository of my own (`C:\dev\_et\sparky\confirm\widget\wz.py`; the report's `drv` files are not in the report). After markdown to drawio to markdown, `src-model.md` is the report's text word for word, with the doubled `<< composition >> lines` and `<< association >> price: Money`. Where the loss is, in three places: (1) the drawing does not hold the prose, the `//` notes or the call `-> OrderLine.price` (none of those words is in `src-model.drawio`), so the markdown-to-drawio side drops them; (2) the adapter that reads the drawing adds what nobody wrote, a second composition for `lines` and an association for `price`; (3) the save writes that poorer text over the person's file whole, front matter and group heading included.
+- Cause, if you found it: The Clean Engineering model's drawio adapter for (1) and (2); `cdd_guidance/actions/render/rendered_file.py` `RenderedFile.save` for (3).
+- Shares its cause with: widget-04, widget-05

@@ -25,3 +25,9 @@ The message denies a slug and then lists that same slug first, so the agent cann
 
 ## Tier that should catch it
 Unit (`guidance_actions_spec.py`): no example sends a mapping whose toolset is a slug.
+
+## Confirmation (Sparky, round 2)
+- Result: confirmed
+- What I ran and saw: Run through a sandbox cdd server on port 48933, on a fresh repository of my own (`C:\dev\_et\sparky\confirm\widget\wz.py`; the report's `drv` files are not in the report). The three mappings answer `UnknownGuidance: no practice or fidelity has the slug 'stories'; the slugs are stories, stories-story-map, ...`, the same for `'ux'`, and for `''` with `{"foo": "bar"}`. UX was on in my sandbox, so the turned-off half was not run.
+- Cause, if you found it: Not read in the code.
+- Shares its cause with: widget-01

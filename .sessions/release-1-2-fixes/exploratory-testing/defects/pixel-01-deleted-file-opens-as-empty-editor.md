@@ -32,3 +32,9 @@ Pressing **This session** and **All session files** again after the rename does 
 e2e (`open-files-in-files-app.story.ui_e2e_spec.py`): only a real page over a real folder has a file that goes between the list and the press. The unit specs stub the session's answers and never answer a read for a file that is gone; the domain tier asserts `read_file` answers no text, which is the very answer the page cannot tell from an empty file.
 
 ## Also seen by
+
+## Confirmation (Rivet, round 2)
+- Result: confirmed
+- What I ran and saw: my own stack (`pstack.py`: cdd server on 8913, Files server on 8914, headless Chromium) on a fresh repository with session `rivet-files`. After moving `src/order.py` out and pressing it, the editor shows one empty line, the entry stays enabled, no response of 400 or above, no console error, no word of gone, deleted or missing on the page. After renaming `cart.py` to `basket.py` and pressing **This session** then **All session files**, `cart.py` is still listed and `basket.py` is not. The code format filter was already off on my page, so step 2's "turn the code format filter off" needed no press.
+- Cause, if you found it: `space/session/file_manager.py` `FileManager.read` (`text = ... if target.is_file() else ""`) and `SessionFiles.read`, whose `FileText` carries no sign that the file is not there, so `files-page.ts` `open` cannot tell it from an empty file.
+- Shares its cause with: none

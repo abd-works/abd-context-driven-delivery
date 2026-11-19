@@ -35,3 +35,10 @@ Card c is in Sparky's queue and in Bolt's. `PromptQueue.assign(c, "Sparky")` on 
 ## Tier that should catch it
 
 Unit, in the mod's plugin tests (`hooks/register.test.tsx`): the scenario's example has the `[for Bolt]` card given to no robot, so no test has the two disagree.
+
+## Confirmation (Rivet, round 2)
+- Result: confirmed
+- What I ran and saw: my own `robots.test.ts` under `bun test`, `claude-code` mocked, the build's `robotsOf` and `robotPromptsOf` on the four cards: `Sparky -> ["a","c"]`, `Bolt -> ["b","c","h"]`. `PromptQueue.assign(c, "Sparky")` on a card reading `[for Bolt] Run the heavy tier` succeeds and keeps `robot: Sparky`.
+- Which part I ran: the two exported functions on a hand-made list, and `PromptQueue.assign` on the Python class directly. Not run: the mod's grouping giving the card to Sparky in a real chat, nor two real sub-agents being handed card c. The report says how a queue gets there but gives no steps for it.
+- Cause, if you found it: `tools/prompt_queue/hooks/queue/prompt-queue.ts` `robotPromptsOf`, line 548: `goal.robot === name || goal.text.startsWith('[for ' + name + ']')`; the name in the text still counts when the card has been given to a robot.
+- Shares its cause with: none

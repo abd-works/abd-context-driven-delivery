@@ -26,3 +26,9 @@ on `main` and `remotes/origin/main`: a commit on main holding only the person's 
 Heavy (`ticket_work_heavy_spec.py`): real worktree plus a dirty main clone. Every close example there starts from a clean main clone.
 
 ## Also seen by
+
+## Confirmation (Sparky, round 2)
+- Result: confirmed
+- What I ran and saw: Run through a sandbox cdd server on a fresh clone (`C:\dev\_et\sparky\confirm\gizmo\gz2.py`). As reported: with the ticket's line and the person's line both appended to `src/order.py`, the close fails on the merge conflict, and main and origin/main hold a commit `dirty-nine: leave session` whose only change is the person's line (`src/order.py | 1 +`). The case the report did not run, a close with merge that succeeds cleanly (the ticket adds only `src/nine.py`; the main clone has the uncommitted line in `src/order.py`): `ticket.close leaving=[commit, push, merge, delete_branch, delete_worktree]` answers the closed ticket with no word about the main clone. Main's log reads `dirty-nine: leave session` (the ticket's commit), `dirty-nine: leave session` (a second commit, holding only the person's line), `merge dirty-nine into main`, `sessions: close dirty-nine`. `git show origin/main:src/order.py` holds the person's line and the main clone's status is clean. So the uncommitted edit is committed and pushed, under the ticket's name, on a close that reports success.
+- Cause, if you found it: `space/kanban/ticket_checkout.py` `TicketCheckout.save_work`: by the time it runs, `Ticket.close` has freed the ticket's worktree, so `_checked_out_work_branch` answers the branch the main clone has checked out, and `_commit_and_push` commits and pushes whatever is uncommitted there.
+- Shares its cause with: gizmo-14 (the same order in `Ticket.close`)

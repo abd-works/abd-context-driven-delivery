@@ -27,3 +27,9 @@ After it: the merge was aborted and main is clean (good); the work, both handoff
 Heavy (`space/kanban/ticket_work_heavy_spec.py` has "walk-conflict" closed with delete_branch only; no example closes with merge into a conflicting main).
 
 ## Also seen by
+
+## Confirmation (Sparky, round 2)
+- Result: confirmed
+- What I ran and saw: Run through a sandbox cdd server on a fresh clone (`C:\dev\_et\sparky\confirm\gizmo\gz2.py`). Without the handoff step (`session.write_handoff`'s arguments are not in the report). The close fails with the report's `RepoConnectError: Cannot connect git: git merge conflict-one ... CONFLICT (content): Merge conflict in src/order.py`. Afterwards `..\repo-conflict-one` is gone, `session.json` still names it as the worktree, the ticket's folder is still among the open sessions, main has no merge under way, and `origin/conflict-one` holds `conflict-one: leave session`.
+- Cause, if you found it: `space/kanban/ticket.py` `Ticket.close`: `checkout.free_worktree(leaving)` (line 240) and `self.session.close()` (line 242) run before `checkout.save_work(leaving)` (line 246), which is where the merge is tried.
+- Shares its cause with: gizmo-17 (the same order in `Ticket.close`: the worktree is freed before the work is saved and merged)

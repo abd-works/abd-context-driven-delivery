@@ -13,6 +13,8 @@ from space.kanban.leaving_handoff import LeavingHandoff
 from space.repo.latest_release import LatestRelease
 from space.repo.repo import Branch
 
+from space.repo.worktree import WorktreeFolderTakenError
+
 if TYPE_CHECKING:
     from space.kanban.ticket import Ticket
     from space.repo.worktree import Worktree
@@ -148,15 +150,22 @@ class TicketCheckout:
         branch, made when missing, after the session folders not yet committed are committed on main and pushed, so the
         branch starts from a main that has them. The repository's own folder stays on main, and no chat's open session
         changes. The branch and worktree found are recorded in the ticket's session, and that record is committed on main
-        and pushed. Two branches that could each be the ticket's are named instead of either being guessed."""
+        and pushed. Two branches that could each be the ticket's are named instead of either being guessed, and a
+        folder in the way of its worktree raises ``TicketWorktreeBlockedError``."""
         board = self._ticket.board
         if not self.worktree:
             self._refuse_unclear_branch()
             board.sessions.saves.now(f"sessions: save before opening {self._ticket.name}")
-            self.branch.open_in_worktree()
+            self._open_worktree()
             board.placement.reread()
         self._ticket.session.record.save_fields(branch=self.branch.name, worktree=self.worktree)
         board.sessions.saves.now(f"sessions: open {self._ticket.name}")
+
+    def _open_worktree(self) -> None:
+        try:
+            self.branch.open_in_worktree()
+        except WorktreeFolderTakenError as taken:
+            raise TicketWorktreeBlockedError(self._ticket.name, taken.folder) from taken
 
     def _refuse_unclear_branch(self) -> None:
         candidates = [] if self.branch.exists else self.candidate_branches
@@ -174,45 +183,76 @@ class TicketCheckout:
         if LEAVE_HANDOFF in leaving:
             self._ticket.session.handoffs.write(LeavingHandoff(self._ticket).document)
 
+    @property
+    def _leave_message(self) -> str:
+        """The message of the commit that saves the ticket's work as it is left."""
+        return f"{self._ticket.name}: leave session"
+
     def save_work(self, leaving: list[str]) -> None:
         """Commit and push the branch the ticket's work is on, in the checkout that has it: the repository, or the
-        ticket's own worktree; work on the default branch is committed and pushed there. Then do what leaving names with
-        the ticket's own branch, checked out or not: delete its worktree, merge it into the default branch, or merge and
-        delete it."""
+        ticket's own worktree; work on the default branch is committed and pushed there. Then merge the ticket's own
+        branch into the default branch when leaving names merge. Nothing of the ticket is removed here, and this runs
+        before anything is: a merge git refuses leaves its worktree, its branch, and its session as they were, and the
+        commit is made where the ticket's work is, never from whatever the repository's own folder holds once the
+        worktree is gone."""
         if not set(leaving) & {LEAVE_COMMIT, LEAVE_PUSH, *LEAVE_BRANCH_STEPS}:
             return
         branch = self._checked_out_work_branch
         if branch is not None:
             self._commit_and_push(branch, leaving)
         own = self._own_branch
+        if own is None:
+            return
+        self._save_worktree_to_delete(own, leaving)
+        if LEAVE_MERGE in leaving:
+            own.land_on_default()
+
+    def leave_branch(self, leaving: list[str]) -> None:
+        """Do what leaving names with the ticket's own branch once its work is saved and merged: delete its worktree,
+        and delete the branch, here and on origin. Each is its own choice: deleting never merges."""
+        own = self._own_branch
         if own is None or not set(leaving) & LEAVE_BRANCH_STEPS:
             return
         self._delete_worktree(own, leaving)
-        self._merge(own, leaving)
+        self._delete_branch(leaving)
 
-    def free_worktree(self, leaving: list[str]) -> None:
-        """Delete the ticket's own worktree, its work committed and pushed there, when leaving names a step that needs
-        its branch free; ahead of anything else leaving changes, so a worktree held open stops it before it starts."""
+    def free_worktree(self) -> None:
+        """Remove the ticket's own worktree, its work committed and pushed on its branch first; the branch stays. A
+        ticket that is archived or deleted takes its card away, so it leaves no checkout with unsaved work that no card
+        reaches. A worktree a running program holds open stops it before the ticket changes."""
         own = self._own_branch
-        if own is not None and set(leaving) & LEAVE_BRANCH_STEPS:
-            self._delete_worktree(own, leaving)
+        if own is not None:
+            self._delete_worktree(own, [LEAVE_DELETE_WORKTREE])
 
     def _commit_and_push(self, branch: Branch, leaving: list[str]) -> None:
         # Checked out in the repository itself, else in the ticket's own worktree.
         checkout = self._repo if branch.is_checked_out else branch.worktree.repository
         if LEAVE_COMMIT in leaving or LEAVE_PUSH in leaving:
-            checkout.working_tree.commit([str(checkout.root)], f"{self._ticket.name}: leave session", untracked=True)
+            checkout.working_tree.commit([str(checkout.root)], self._leave_message, untracked=True)
         if LEAVE_PUSH in leaving:
             checkout.origin.push_upstream()
 
+    def _worktree_to_delete(self, branch: Branch, leaving: list[str]) -> Worktree | None:
+        """The branch's own worktree when leaving names delete_worktree or delete_branch: git deletes no branch a
+        worktree has checked out, so deleting the branch takes its worktree with it. A merge needs neither, since the
+        default branch's checkout merges it."""
+        if not {LEAVE_DELETE_WORKTREE, LEAVE_DELETE_BRANCH} & set(leaving):
+            return None
+        return own_worktree_of(branch)
+
+    def _save_worktree_to_delete(self, branch: Branch, leaving: list[str]) -> None:
+        """Commit and push the work in a worktree leaving is about to delete, whether or not leaving names a commit, so
+        the merge that follows carries all of it."""
+        worktree = self._worktree_to_delete(branch, leaving)
+        if worktree is not None and worktree.branch is not None:
+            worktree.branch.save(self._leave_message)
+
     def _delete_worktree(self, branch: Branch, leaving: list[str]) -> None:
-        """Remove the branch's own worktree folder, its work committed and pushed there, when leaving names
-        delete_worktree or delete_branch: git deletes no branch a worktree has checked out, so deleting the branch takes
-        its worktree with it. A merge needs neither, since the default branch's checkout merges it."""
-        worktree = own_worktree_of(branch)
-        if worktree is None or not {LEAVE_DELETE_WORKTREE, LEAVE_DELETE_BRANCH} & set(leaving):
+        """Remove the branch's own worktree folder, its work committed and pushed there, when leaving names it."""
+        worktree = self._worktree_to_delete(branch, leaving)
+        if worktree is None:
             return
-        worktree.close(f"{self._ticket.name}: leave session")
+        worktree.close(self._leave_message)
         self._work_from_main_clone()
         self._ticket.board.placement.reread()
 
@@ -222,16 +262,16 @@ class TicketCheckout:
         self._repo = self._repo.main_clone
         self.branch = self._repo.branch_named(self.branch.name)
 
-    def _merge(self, branch: Branch, leaving: list[str]) -> None:
-        """Merge the branch into the default branch and push it when leaving names merge; delete it, here and on
-        origin, when leaving names delete_branch. Each is its own choice: deleting never merges."""
-        if LEAVE_MERGE in leaving:
-            branch.land_on_default()
-        if LEAVE_DELETE_BRANCH in leaving:
-            # git deletes no branch the checkout is on, so the checkout goes back to the default branch first.
-            if branch.is_checked_out and self._repo.root == self._repo.main_clone.root:
-                self._repo.branch_named(self._repo.default_branch).check_out()
-            branch.delete(unmerged=LEAVE_MERGE not in leaving)
+    def _delete_branch(self, leaving: list[str]) -> None:
+        """Delete the ticket's own branch, here and on origin, when leaving names delete_branch; unmerged unless leaving
+        merged it. The branch is read where it is now, the main clone once its worktree is deleted."""
+        if LEAVE_DELETE_BRANCH not in leaving:
+            return
+        branch = self.branch
+        # git deletes no branch the checkout is on, so the checkout goes back to the default branch first.
+        if branch.is_checked_out and self._repo.root == self._repo.main_clone.root:
+            self._repo.branch_named(self._repo.default_branch).check_out()
+        branch.delete(unmerged=LEAVE_MERGE not in leaving)
 
     def return_to_default_branch(self) -> None:
         """Closing a ticket opens main, the default branch in the repository's own folder, so the closed ticket's own
@@ -244,6 +284,17 @@ class TicketCheckout:
             return
         self._repo.branch_named(self._repo.default_branch).check_out()
 
+
+
+class TicketWorktreeBlockedError(RuntimeError):
+    """Raised when a ticket cannot open in its own worktree because the folder that worktree goes in is already there
+    and is not the ticket's checkout: a checkout left on no branch, or a folder holding someone's files. It names the
+    ticket and the folder, so a person moves or removes the folder and activates the ticket again."""
+
+    def __init__(self, ticket: str, folder: Path) -> None:
+        super().__init__(f"{ticket} cannot open in a worktree: the folder {folder} is already there and is not {ticket}'s checkout; move or remove that folder and activate {ticket} again")
+        self.ticket = ticket
+        self.folder = folder
 
 
 class TicketBranchUnclearError(LookupError):

@@ -22,3 +22,9 @@
 It failed in standup, after its files and record were written and before the server check and `diagnostics.json`: `.claude` holds 201 files and no `diagnostics.json`, so the person sees a failed install and no report. Seen once in one try. In real use this is two chats starting together, since the board mod runs `install.py --from-chat` at chat start.
 
 **Tier that should catch it:** heavy: no spec runs two installs at once against one cdd home.
+
+## Confirmation (Sparky, round 2)
+- Result: confirmed
+- What I ran and saw: The real `scripts/install.py` in a local clone of the build under my sandbox (`C:\dev\_et\sparky\confirm\bolt2\checkout-main`, removed afterwards), home, USERPROFILE, APPDATA, LOCALAPPDATA, CLAUDE_CONFIG_DIR and CDD_HOME in the sandbox, `CDD_SERVER_PORT=48930`, a stub `claude` first on PATH. A linked worktree `checkout-feature` on branch feature-x, both lanes pinned and serving (ports 48930 and 48931), then both installs started together, five times. Failed: 2 of 5. Both times the failing install was the worktree's, not the main checkout's, with the report's `shutil.Error ... claude-plugins\cdd-board\.claude-plugin\plugin.json ... [WinError 32]`, raised from `CddHome._copy_mod`. Its `.claude` held 202 files and a `diagnostics.json`; I cannot say that file was written by the failed run.
+- Cause, if you found it: `harness/mcp/cdd_home.py` `CddHome._copy_mod`, reached from `write_claude_plugin` -> `write_mod_plugins` -> `_publish_mods` -> `_publish_mod`: both installs copy the mods into the one `<CDD_HOME>\claude-plugins` folder, and nothing keeps two installs apart.
+- Shares its cause with: bolt-13 (two installs at once, nothing holds one back; the failing operation differs)

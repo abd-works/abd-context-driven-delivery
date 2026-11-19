@@ -26,3 +26,12 @@ Every call answers `isError=False`. The practice's answer shows `"root": "src/or
 
 ## Tier that should catch it
 Unit (the session output's spec): no example gives a file or a path outside the project as a root.
+
+## Confirmation (Sparky, round 2)
+- Result: confirmed
+- What I ran and saw: Run through a sandbox cdd server on port 48933, on a fresh repository of my own (`C:\dev\_et\sparky\confirm\widget\wz.py`; the report's `drv` files are not in the report). Every `choose_root` call answers with no error. The practice's answer shows `"root": "src/order.py"` and, for `../outside-root`, a root outside the repository. The fidelity's answers show only its formats; `session.json` then held `"stories": {"root": "src/order.py", "story_map": {"root": "."}}`. `generate.generate` then says `Where each listed practice writes: - stories: .../repo/src/order.py`.
+- Cause, if you found it: `space/session/practice_session_output.py` `PracticeSessionOutput.choose_root` and `FidelitySessionOutput.choose_root` keep the path as given.
+- Shares its cause with: widget-07, widget-11
+
+## Also seen by
+- Pixel, round 2, through the board's own route `POST /api/session/.sessions%2Fmain%2Fsession.json/choose-workpath`: `session.choose_workpath` takes `no/such/folder` (root becomes `repo/no/such/folder`, which is not there), `C:\Windows` and `..\outside` (root `C:/dev/_et/pixel/work/outside`, outside the project) with 200 and no word, the same unchecked root for the session's workpath.

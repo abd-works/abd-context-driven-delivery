@@ -23,3 +23,9 @@ Both saved reports say "**No graph checked.** The judgment covers the checked fi
 
 ## Tier that should catch it
 Heavy (`validate_heavy_spec.py`): its examples pass paths; none asks for the session's graph with `graph: true` alone on a project whose graph was never built.
+
+## Confirmation (Sparky, round 2)
+- Result: confirmed
+- What I ran and saw: Run through a sandbox cdd server on port 48933, on a fresh repository of my own (`C:\dev\_et\sparky\confirm\widget\wz.py`; the report's `drv` files are not in the report). Clean Engineering's root set to `src`. `paths: ["src"]`: the report has a `Graph sources` section. `graph: true` alone and no argument at all: both reports say `**No graph checked.** The judgment covers the checked files.`, and no `graph.json` is in `.sessions/main`. `graph: "yes"` answers `FileNotFoundError: [Errno 2] No such file or directory: 'yes'`. Differs: for `stories-story-map` with `graph: true` my report did have a `Graph sources` section, so the report's last remark did not reproduce here. I did not count the three violations.
+- Cause, if you found it: `cdd_guidance/actions/validate/validate.py` `Validate._check` with `NamedToCheck(paths, graph, self.call)` (`checked_graph.py`): `graph: true` with no paths builds or loads no graph for this fidelity.
+- Shares its cause with: widget-03

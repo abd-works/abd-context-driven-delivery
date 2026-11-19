@@ -25,3 +25,9 @@ A real rule and a made-up one get the same refusal, which names neither the rule
 
 ## Tier that should catch it
 Heavy (`validate_heavy_spec.py`, through the server): no example passes `rule`; the unit spec passes a Rule object in process, which a chat cannot send.
+
+## Confirmation (Sparky, round 2)
+- Result: confirmed
+- What I ran and saw: Run through a sandbox cdd server on port 48933, on a fresh repository of my own (`C:\dev\_et\sparky\confirm\widget\wz.py`; the report's `drv` files are not in the report). `rule: "verb-noun-format"` and `rule: "no-such-rule"` both answer `Input validation error: '...' is not valid under any of the given schemas`; `rule: {"name": "verb-noun-format"}` answers `RecipeLineFailed ... validate.py:64 ... AttributeError: 'dict' object has no attribute 'validate'`.
+- Cause, if you found it: `cdd_guidance/actions/validate/validate.py` `Validate.validate` hands `rule` to `self._report` as given; the tool's schema lets only an object through, and nothing turns a name or an object into a Rule.
+- Shares its cause with: widget-10 (an argument of validate that the tool describes and the code does not carry out)

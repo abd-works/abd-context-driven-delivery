@@ -20,3 +20,9 @@
 **Actual:** `version = "1.2.0" (set from v1.2.0)`; `pyproject.toml` reads 1.2.0 again and `git status` shows ` M pyproject.toml`. The install then runs, and the chat bar shows 1.2.0, for code that is ahead of 1.2.0; the next commit of the whole worktree commits the downgrade.
 
 **Tier that should catch it:** unit (`scripts/install_spec.py`): its examples change the version line without committing it, on a checkout at the release.
+
+## Confirmation (Sparky, round 2)
+- Result: confirmed
+- What I ran and saw: Through the script's functions, as the report does, loaded from the clone's `scripts/install.py` (`C:\dev\_et\sparky\confirm\bolt2\refuse.py latest`). With `version = "1.3.0"` committed: `_latest_release()` -> `v1.2.0`; `git merge --no-edit v1.2.0` -> `Already up to date.`; `_match_release_version("v1.2.0")` -> `version = "1.2.0" (set from v1.2.0)`; `pyproject.toml` reads 1.2.0 and `git status` shows ` M pyproject.toml`.
+- Cause, if you found it: `scripts/install.py` `_match_release_version` writes the release's version line whenever the local line differs, without asking whether the difference is committed or whether the checkout is past the release.
+- Shares its cause with: none

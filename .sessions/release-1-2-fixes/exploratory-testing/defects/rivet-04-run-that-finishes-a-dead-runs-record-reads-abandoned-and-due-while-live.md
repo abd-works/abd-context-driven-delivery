@@ -23,3 +23,9 @@ The record still names the dead pid 6096, so the live run reads as abandoned, an
 
 ## Tier that should catch it
 unit - a spec for `run_now` with a record left running by a dead pid on the same commit, checking the pid saved before the runner starts; test_runs_spec.py checks the take-over but not which pid the record holds during the run.
+
+## Confirmation (Sparky, round 2)
+- Result: confirmed
+- What I ran and saw: Run on a sandbox repository of my own built as rivet-01 describes, a copy of `scripts/test.ps1` and three heavy specs, with CDD_HOME in the sandbox (`C:\dev\_et\sparky\confirm\rivet\rv.py`). The report's `due.py` is not in the report; I wrote its two lines from rivet-04's description. RIVET_SLEEP=20. The first run killed after four seconds; the second (pid 13332) went on with its record, which kept pid 45824 and the first start time. While the second ran: `health report states: [('heavy', 'abandoned', 45824), ('e2e', 'passed', 1)] due: ['heavy']`. The finished record still names pid 45824. The killed run's test.ps1 was also still running beside the second, as in rivet-03.
+- Cause, if you found it: `harness/diagnostics/test_runs.py` `TestCadence._started`: a run that goes on with a dead run's record does not write its own pid into it, so `TestRun.is_live` is false for a run that is live.
+- Shares its cause with: rivet-02, rivet-03, rivet-05

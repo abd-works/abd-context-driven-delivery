@@ -56,3 +56,9 @@ The title "Bookshop" is gone, replaced by the template's placeholder "Product / 
 
 ## Tier that should catch it
 Heavy (`render_saves_beside_source_heavy_spec.py`): it renders markdown to drawio and whiteboard, never drawio back to markdown over an existing story-map.md. A unit example on the Stories markdown adapter comparing a map before and after the trip would also catch it.
+
+## Confirmation (Sparky, round 2)
+- Result: confirmed
+- What I ran and saw: Run through a sandbox cdd server on port 48933, on a fresh repository of my own (`C:\dev\_et\sparky\confirm\widget\wz.py`; the report's `drv` files are not in the report). After markdown to drawio to markdown, `story-map.md` is the report's text word for word: front matter, `# Story Map — Product / Feature Name`, the placeholder Sources line and Scope boundary section, and the four nodes. Where the loss is: the drawing never held the title (the word `Bookshop` is not in `story-map.drawio`), so the adapter that reads the drawing has nothing to read and fills the template's placeholders; the title is then lost in the save, which writes the whole of that text over the person's file.
+- Cause, if you found it: `cdd_guidance/actions/render/rendered_file.py` `RenderedFile.save` writes the rendered text over the file the fidelity names, whole, keeping nothing of the file already there; the Stories markdown writer fills what the drawing does not hold from the template.
+- Shares its cause with: widget-05, widget-08 (the save writes over the person's markdown whole); widget-06 (the saved name comes from the fidelity)

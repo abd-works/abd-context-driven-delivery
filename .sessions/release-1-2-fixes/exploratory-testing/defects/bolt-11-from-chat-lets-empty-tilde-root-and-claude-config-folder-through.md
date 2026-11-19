@@ -29,3 +29,9 @@
 A folder that does not exist is not checked either; the install makes it (see bolt-10).
 
 **Tier that should catch it:** unit (`scripts/install_spec.py`): its examples name the home, temp and spare folders by their plain paths only.
+
+## Confirmation (Sparky, round 2)
+- Result: confirmed
+- What I ran and saw: The steps call `refuse.py`, which the report does not hold; I wrote my own from its "How it was run" line (`C:\dev\_et\sparky\confirm\bolt2\refuse.py`), loading `scripts/install.py` from a clone of the build and calling `_chat_folder_refusal` and `_install_path`. Let through, with the folder each installs into exactly as the table says: `""`, `.`, `~`, `C:\`, `<home>\.claude`, `C:\Windows\Temp`. Refused: home plain, with a trailing slash and in upper case, the temporary folder, and a missing subfolder of it. I tried 11 spellings, not the report's 27; the spare folders, short names and junctions were not run.
+- Cause, if you found it: `scripts/install.py` `_chat_folder_refusal` resolves the folder and refuses three kinds only (home, this user's temporary folder, a desktop spare folder); `_install_path` then joins the IDE folder's name to whatever is left.
+- Shares its cause with: bolt-02, bolt-03, bolt-04 (where to install is taken as given)

@@ -27,3 +27,10 @@ The second create is refused, or kept as a second item; the first idea's text st
 Unit (`space/kanban/kanban_tools_spec.py`): file naming only. The specs create each title once.
 
 ## Also seen by
+
+## Confirmation (Sparky, round 2)
+- Result: confirmed
+- What I ran and saw: Run through a sandbox cdd server on a fresh clone (`C:\dev\_et\sparky\confirm\gizmo\gz2.py`). The second `backlog-item.create title="Gift cards"` answers success and `gift-cards.md` holds only `A second idea with the same title.` An empty title and `日本語` both write `_backlog/.md`, the first answering `"title": ".md"`. Starting `Stock intake` answers the open ticket stock-intake with the item's text and moves the file to `.sessions/stock-intake/stock-intake.md`. Starting `日本語` answers a ticket named `.sessions`; here the idea file ended as `.sessions/.md`, where the report says `.sessions/.sessions.md`.
+- Cause, if you found it: `space/kanban/backlog_item.py` `BacklogItem.create` writes `_backlog/{Name(title).title_slug}.md` without checking that the slug is not empty or that the file is not there; `BacklogItem.start` opens the session of that name whether or not a ticket has it.
+- Shares its cause with: gizmo-04, gizmo-05 (a name made from a title is never checked: empty, or already taken)
+- Pixel, round 2, on the board's page: after a second `backlog-item.create` titled Idea one the Backlog shows one Idea one card holding the second text; the first text is gone.

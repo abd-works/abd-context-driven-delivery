@@ -33,3 +33,9 @@ Smaller, seen in the same runs: a heavy spec file that fails to import is report
 
 ## Tier that should catch it
 heavy - a real test.ps1 over a folder with a space and a file with no examples; nothing runs test.ps1 itself against a planted layout.
+
+## Confirmation (Sparky, round 2)
+- Result: confirmed
+- What I ran and saw: Run on a sandbox repository of my own built as rivet-01 describes, a copy of `scripts/test.ps1` and three heavy specs, with CDD_HOME in the sandbox (`C:\dev\_et\sparky\confirm\rivet\rv.py`). Heavy tier on the clone in a folder with a space, with a record folder with a space: `[my specs .. my specs] 1 files`, `0 examples ran in 0.0000 seconds`, `3/4 files passed`, and the only failure listed is `specs/fail_heavy_spec.py`; `space spec ran` is nowhere in the output. The spec file holding only a comment: `[broken .. broken] 1 files`, `0 examples ran`, counted in `3/4 files passed`. Differs for the unit tier: my sandbox holds one unit spec, the one in `my specs`, and the run answered `Mamba specs (1)`, `0/1 files passed`, `FAILED my specs .. my specs`, exit 1. So here the unit tier did call the file failed, though it never ran it (`space spec ran` is not in the output); I did not find why it failed.
+- Cause, if you found it: `scripts/test.ps1` `Start-SpecBatch` hands Mamba the paths joined by spaces and unquoted, and `Get-FailedFiles` fails a batch only on a non-zero exit or a `Failure/Error:` line, so a batch that ran nothing passes.
+- Shares its cause with: none

@@ -28,3 +28,9 @@ The queue file keeps `bogus`, and the mod that draws the steps reads a state it 
 ## Tier that should catch it
 
 Heavy: `prompt_queue_heavy_spec.py`, since the schema is the server's. It sets steps only with the three states.
+
+## Confirmation (Rivet, round 2)
+- Result: confirmed
+- What I ran and saw: my own `s89.py`, a real cdd server (`SpecServer`, port 8911) called as a chat: `set_steps` with `"state": "bogus"` answers the queue holding `{"text": "s", "state": "bogus"}`; the same call without `state` is refused with `Input validation error: 'state' is a required property`.
+- Cause, if you found it: `tools/prompt_queue/prompt_queue.py` `PromptQueue.set_steps` copies `step["state"]` as given; the schema the server builds from `PromptStep` requires `state` but does not carry the three values of `StepState`.
+- Shares its cause with: sparky-07 (`set_steps` checks nothing about a step)

@@ -27,3 +27,9 @@ Nothing in the product removes the leftover folder, and nothing said it was left
 Heavy on Windows (`space/repo/worktree_heavy_spec.py`): needs a real process holding the folder, then a second open of the same branch.
 
 ## Also seen by
+
+## Confirmation (Sparky, round 2)
+- Result: confirmed
+- What I ran and saw: Run through a sandbox cdd server on a fresh clone (`C:\dev\_et\sparky\confirm\gizmo\gz2.py`). With a Python process holding `repo-held-four\src` as its working folder, `ticket.close leaving=[commit, push, delete_worktree]` answers the closed ticket; `git worktree list` no longer lists it, the session is in `_complete`, and `repo-held-four\src` is still on disk, empty. After the holder ended, `ticket.activate` fails with the report's `git worktree add ...repo-held-four held-four ... already exists`.
+- Cause, if you found it: `space/repo/worktree.py` `Worktrees.remove` -> `_unregister_held`: it removes the folder's `.git` link, logs a warning, and returns, so the folder stays and no `WorktreeNotRemovedError` is raised, though `remove`'s own description promises one. `Worktrees.add` then runs onto the folder.
+- Shares its cause with: gizmo-07 (a folder in the way of `Worktrees.add`, which never looks); gizmo-03 and gizmo-08 fail with the same message

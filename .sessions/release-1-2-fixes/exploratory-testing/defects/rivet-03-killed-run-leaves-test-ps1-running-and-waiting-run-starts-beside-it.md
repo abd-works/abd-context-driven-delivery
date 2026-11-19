@@ -27,3 +27,9 @@ Liveness is judged by the recorded python process alone; the tier itself runs in
 
 ## Tier that should catch it
 heavy - needs real processes: a run killed while its test.ps1 child lives. The unit spec's fake runner has no child process.
+
+## Confirmation (Sparky, round 2)
+- Result: confirmed
+- What I ran and saw: Run on a sandbox repository of my own built as rivet-01 describes, a copy of `scripts/test.ps1` and three heavy specs, with CDD_HOME in the sandbox (`C:\dev\_et\sparky\confirm\rivet\rv.py`). RIVET_SLEEP=30. Chat two printed `waiting for the heavy run process 42380 ... to end`. Twelve seconds after `taskkill /F /PID 42380`, two `powershell.exe ... test.ps1 -Suite heavy` were running on the one repository: pid 44448, whose parent is the killed 42380, and pid 6948, started by the run that had been waiting.
+- Cause, if you found it: `harness/diagnostics/test_runs.py` `TestRunner.run` starts powershell as a plain child, which outlives it, and `TestRun.is_live` asks only whether the recorded python process is alive.
+- Shares its cause with: rivet-04, rivet-05 (a run's liveness is one recorded process id and nothing else)

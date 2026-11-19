@@ -6,7 +6,6 @@ import re
 import shutil
 import threading
 from pathlib import Path
-from typing import Iterator
 
 from space.repo.origin import Merges, Origin
 from space.repo.repo import SERVED_CHECKOUTS, Branch, Publishing, Refs, Repo, WorkingTree
@@ -415,10 +414,6 @@ class MockWorktrees(Worktrees):
     @property
     def _held(self) -> MockGit:
         return self._repo.held
-
-    def __iter__(self) -> Iterator[Worktree]:
-        for path, branch in self._held.worktrees():
-            yield self._listed(path, branch)
 
     def listing(self) -> list[tuple[Path, str]]:
         return self._held.worktrees()

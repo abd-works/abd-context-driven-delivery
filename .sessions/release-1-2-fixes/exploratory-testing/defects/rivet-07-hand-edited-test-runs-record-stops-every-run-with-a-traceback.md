@@ -33,3 +33,9 @@ None of the messages names test-runs.json. An entry written by a later CDD versi
 
 ## Tier that should catch it
 unit - `TestRunRecord` over a file with each bad entry; test_runs_spec.py has no example for a record it cannot read.
+
+## Confirmation (Sparky, round 2)
+- Result: confirmed
+- What I ran and saw: Run on a sandbox repository of my own built as rivet-01 describes, a copy of `scripts/test.ps1` and three heavy specs, with CDD_HOME in the sandbox (`C:\dev\_et\sparky\confirm\rivet\rv.py`). The report's `due.py` is not in the report; I wrote its two lines from rivet-04's description. Files 1, 2, 3, 5 and 6: the read and the run by hand both end in the report's errors (`'list' object has no attribute 'get'`, `'done' is not a valid RunOutcome`, `Invalid isoformat string: 'yesterday'`, `invalid literal for int() with base 10: 'abc'`, `'str' object has no attribute 'get'`), the run exits 1 without running the tier, and the file is left as it was. File 4: the run by hand works and `due()` fails with `TypeError: can't subtract offset-naive and offset-aware datetimes`. No message names test-runs.json.
+- Cause, if you found it: `harness/diagnostics/test_runs.py` `TestRunRecord._run` and `TestRun.from_json` turn whatever the file holds into a run with no check, and `TestRun.is_due` subtracts the time as read.
+- Shares its cause with: rivet-06; sparky-04 (the prompt queue's wrongly shaped file, the same kind of raw error)

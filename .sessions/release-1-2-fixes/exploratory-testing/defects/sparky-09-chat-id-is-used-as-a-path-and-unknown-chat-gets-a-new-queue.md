@@ -26,3 +26,10 @@
 ## Tier that should catch it
 
 Heavy: `prompt_queue_heavy_spec.py` names a chat only as `""`.
+
+## Confirmation (Rivet, round 2)
+- Result: confirmed
+- What I ran and saw: my own `s89.py` through a real cdd server with `CDD_CHATS_FOLDER=C:\dev\_et\rivet\confirm\chats-server`: `add chat="..\escape-chat"` succeeds and `C:\dev\_et\rivet\confirm\escape-chat\prompt-queue.json` exists beside the chats folder; `done chat="some-other-chat"` is refused clearly ("which holds nothing"); `add chat="some-other-chat"` succeeds and makes `chats-server\some-other-chat\prompt-queue.json`.
+- Which part I ran: both steps, and the `add` on an unknown chat the report describes under Actual. Not run: an absolute path or a drive letter as the chat, nor `..` through the other chat tools.
+- Cause, if you found it: `tools/prompt_queue/prompt_queue.py` `PromptQueue.load`: `CHATS_FOLDER.path / chat / QUEUE_FILE` with chat as the caller gave it.
+- Shares its cause with: none among the queue's reports. gizmo-04 and gizmo-13 are the same kind of fault (a name from the caller used as a folder name unchecked) in other classes.
