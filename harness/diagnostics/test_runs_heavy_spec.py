@@ -29,6 +29,9 @@ Start-Sleep -Seconds ([int]$env:RUN_SECONDS)
 Write-Host "HEAD $(git -C $PSScriptRoot rev-parse HEAD)"
 Write-Host "moved $(Test-Path (Join-Path $PSScriptRoot '..\\moved.txt'))"
 Write-Host "packages $(Test-Path (Join-Path $PSScriptRoot '..\\app\\node_modules\\installed.txt'))"
+$adapters = Join-Path $PSScriptRoot '..\\.claude\\language-adapters\\typescript'
+Write-Host "adapters $(Test-Path (Join-Path $adapters 'cdd-shared.ts'))"
+if (Test-Path $adapters) { Set-Content -Path (Join-Path $adapters 'written-by-the-tier.ts') -Value 'a file the tier wrote' }
 if ($env:RUN_CAPTURES -eq "1") {
     $captures = Join-Path $PSScriptRoot '..\\.sessions\\scheduled\\e2e-test-results\\run-1'
     New-Item -ItemType Directory -Force $captures | Out-Null
@@ -75,7 +78,8 @@ with description("a tier run") as self:
 
     def repository(self, name: str) -> Path:
         """A repository on main that commits the stand-in scripts/test.ps1 and an app's package.json, with the app's
-        packages installed beside it as npm leaves them, kept out of git."""
+        packages installed beside it as npm leaves them and the language adapters an install writes, a stand-in
+        for them, both kept out of git."""
         folder = self.root / name
         subprocess.run(["git", "init", "-q", "-b", "main", str(folder)], check=True)
         for setting in (("user.name", "Spec"), ("user.email", "spec@example.invalid"), ("commit.gpgsign", "false")):
@@ -84,10 +88,14 @@ with description("a tier run") as self:
         (folder / "scripts" / "test.ps1").write_text(STAND_IN_TEST_SCRIPT, encoding="utf-8")
         (folder / "app" / "node_modules").mkdir(parents=True)
         (folder / "app" / "package.json").write_text("{}", encoding="utf-8")
-        (folder / ".gitignore").write_text("node_modules/\n", encoding="utf-8")
+        (folder / ".gitignore").write_text("node_modules/\n.claude/\n", encoding="utf-8")
         git(folder, "add", "scripts", "app/package.json", ".gitignore")
         git(folder, "commit", "-q", "-m", "The stand-in tier")
         (folder / "app" / "node_modules" / "installed.txt").write_text("a package npm installed", encoding="utf-8")
+        adapters = folder / ".claude" / "language-adapters" / "typescript"
+        adapters.mkdir(parents=True)
+        (adapters / "cdd-shared.ts").write_text("export const installed = true\n", encoding="utf-8")
+        (folder / ".claude" / "settings.json").write_text("{}", encoding="utf-8")
         return folder
 
     def start(self, seconds: int = 0, checkout: Path | None = None, exit_code: int = 0, captures: bool = False) -> subprocess.Popen:
@@ -204,6 +212,22 @@ with description("a tier run") as self:
 
         with it("should leave them in the checkout once it ends"):
             expect((self.checkout / "app" / "node_modules" / "installed.txt").is_file()).to(be_true)
+
+    with context("whose checkout has the language adapters an install wrote, which git does not keep"):
+        with before.each:
+            self.installed = self.checkout / ".claude"
+            self.output = self.ended(self.start())
+
+        def installed_files(self) -> dict:
+            return {file.relative_to(self.installed).as_posix(): file.read_text(encoding="utf-8")
+                    for file in self.installed.rglob("*") if file.is_file()}
+
+        with it("should run with those adapters"):
+            expect(self.output).to(contain("adapters True"))
+
+        with it("should leave the checkout's installed folder whole once it ends, without what the tier wrote in its own"):
+            expect(self.installed_files()).to(equal({"language-adapters/typescript/cdd-shared.ts": "export const installed = true\n",
+                                                    "settings.json": "{}"}))
 
     with context("whose tier captures screens under the scheduled release"):
         with it("should bring them back to the checkout, where they are reviewed"):

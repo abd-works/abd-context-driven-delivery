@@ -43,6 +43,8 @@ WORKTREES_FOLDER = "test-run-worktrees"
 WORKTREE_SECONDS = 600
 # The packages npm installed beside a package.json, which git does not keep and a run's worktree borrows.
 INSTALLED_PACKAGES = "node_modules"
+# The language adapters an install writes into the checkout, which git does not keep and a run's worktree copies.
+INSTALLED_ADAPTERS = Path(".claude") / "language-adapters"
 # How long a run started by hand waits between looks at whether another process's run has ended.
 WAIT_SECONDS = 10
 # How many of a run's last output lines its result keeps, enough to name what failed.
@@ -356,6 +358,7 @@ class RunWorktree:
         self._git.run("worktree", "add", "--detach", str(self.folder), self._commit, timeout=WORKTREE_SECONDS)
         try:
             self._borrow_installed_packages()
+            self._copy_installed_adapters()
             yield self.folder
         finally:
             self._bring_back_captures()
@@ -368,6 +371,14 @@ class RunWorktree:
             borrowed = self.folder / Path(package).parent / INSTALLED_PACKAGES
             if Path(package).name == "package.json" and installed.is_dir() and borrowed.parent.is_dir():
                 self._link(installed, borrowed)
+
+    def _copy_installed_adapters(self) -> None:
+        """Copy the language adapters the checkout's install wrote, which every app's page imports and git does not
+        keep. They are copied, not linked: nothing then needs giving back before the worktree is removed, and a tier
+        that writes among them, or a removal that goes wrong, cannot reach the person's own installed folder."""
+        installed = self._checkout / INSTALLED_ADAPTERS
+        if installed.is_dir():
+            shutil.copytree(installed, self.folder / INSTALLED_ADAPTERS)
 
     def _link(self, installed: Path, borrowed: Path) -> None:
         if sys.platform == "win32":
