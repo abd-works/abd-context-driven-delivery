@@ -541,11 +541,12 @@ function robotsNoteOf(robots: SubAgentTask[], goals: QueuedPrompt[]): string[] {
   ]
 }
 
-/** A robot's items as they stand on the queue: the cards given to it, and any card queued for it by name, its text
- * starting [for <robot name>], in queue order. */
+/** A robot's items as they stand on the queue, in queue order: the cards given to it, and any card given to no robot
+ * that is queued for it by name, its text starting [for <robot name>]. The robot a card was given to decides, so a
+ * card stands in one robot's queue and one sub-agent is handed it. */
 export function robotPromptsOf(goals: QueuedPrompt[], robot: SubAgentTask, place: number): QueuedPrompt[] {
   const name = agentNameOf(robot, place)
-  return goals.filter(goal => goal.robot === name || goal.text.startsWith(`${ROBOT_MARK_OPEN}${name}]`))
+  return goals.filter(goal => (goal.robot ? goal.robot === name : goal.text.startsWith(`${ROBOT_MARK_OPEN}${name}]`)))
 }
 
 /** The robots on the queue, in the order their first card stands. Each card keeps the robot it was given on the

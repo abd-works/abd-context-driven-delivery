@@ -1476,6 +1476,17 @@ test("a card queued for a robot by name shows in that robot's queue", async ($, 
   await ui.unmount()
 })
 
+test("a card given to one robot and named for another stands only in the queue of the robot it was given to", async ($, on) => {
+  const seeded = groupedQueue(on)
+  seeded.stored.queue = { value: { chat: CHAT, prompts: [...seeded.prompts, { id: 'c', text: '[for Bolt] Run the heavy tier', robot: 'Sparky' }] }, version: 2 }
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  const sparky = JSON.stringify(await ui.find({ type: 'Box', key: 'agent-column-1' }))
+  const bolt = JSON.stringify(await ui.find({ type: 'Box', key: 'agent-column-2' }))
+
+  expect([sparky.includes('"card-row-c"'), bolt.includes('"card-row-c"')]).toEqual([true, false])
+  await ui.unmount()
+})
 
 test("pressing the open robot closes its queue, leaving the robots alone", async ($, on) => {
   const seeded = groupedQueue(on)

@@ -93,6 +93,19 @@ Agreed with the person on 2026-11-17 and built the same day: the server's specs 
 *Then* the agent is told no prompt z is on the queue
 *And* the queue still holds ++Write the scenarios++ with no steps
 
+#### Scenario: Leave out a step whose text is only spaces
+
+*Given* the chat's prompt queue holds ++Write the scenarios++ (a)
+*When* the agent sets the steps of a to ++Read the epic++ done and a step of only spaces, pending
+*Then* the queue answers ++Write the scenarios++ with only ++Read the epic++ done
+
+#### Scenario: Refuse a state a step does not have
+
+*Given* ++Write the scenarios++ (a) has the step ++Read the epic++ done
+*When* the agent sets the steps of a to ++Read the epic++ with the state completed
+*Then* the agent is told completed is not a step's state, which is one of pending, in_progress, done
+*And* ++Write the scenarios++ still has only ++Read the epic++ done
+
 ## Story: Tick Off Prompt Step
 
 #### Scenario: Mark one step done
@@ -210,6 +223,13 @@ Not yet known: whether a mod's tool-call hook sees the desktop app's `update_pla
 *But* it holds no prompt with id z
 *When* the cdd server is asked to file ++cut the text++ under z
 *Then* it is told no prompt z is on the queue
+
+#### Scenario: File nothing for a message of only spaces
+
+*Given* the chat's prompt queue holds ++Write the scenarios++ (a), done, with no steps
+*When* a message of only spaces is filed under a
+*Then* ++Write the scenarios++ still has no steps
+*And* ++Write the scenarios++ is still done
 
 ## Story: Show Prompt Steps In Queue
 
