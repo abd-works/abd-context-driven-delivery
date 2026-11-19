@@ -8,7 +8,7 @@
     "stages": [
       "implementation"
     ],
-    "version": 25
+    "version": 26
   },
   "practices": {
     "bdd": {
@@ -43,7 +43,7 @@
           "markdown"
         ]
       },
-      "enabled": false
+      "enabled": true
     }
   }
 }
