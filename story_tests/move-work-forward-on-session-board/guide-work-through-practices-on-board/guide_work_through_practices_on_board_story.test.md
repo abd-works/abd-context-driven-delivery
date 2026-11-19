@@ -261,3 +261,14 @@ section: body
 *Then* DDD's tactics propose domain/orders/refund and Stories' acceptance tests propose story_tests/manage-orders/refund-order  
   *And* the agent shows the proposed roots for each practice and fidelity to the person  
   *And* it sets them only once the person confirms them
+
+#### Scenario: Refuse a file or an empty path as a root
+
+> Exploratory testing, widget-12: a file and an empty path were kept as roots, and generate then told the agent to write there.
+
+*Given* refund-order's acceptance tests are rooted at story_tests/manage-orders/refund-order
+*When* the agent chooses the file domain/orders/refund/refund.py as the acceptance tests' root
+*Then* the choice is refused, saying domain/orders/refund/refund.py is a file
+*When* the agent chooses an empty path as Stories' root
+*Then* the choice is refused, saying an empty path names no folder
+  *And* the acceptance tests keep story_tests/manage-orders/refund-order

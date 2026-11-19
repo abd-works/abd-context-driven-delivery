@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from expects import contain, equal, expect
+from expects import contain, equal, expect, raise_error
 
 from harness.agent_tools.agent_tools import AgentToolSet
+from space.session.practice_session_output import OutputRootRefused
 from space.session.session import Session
 from space.session.session_roots_examples import (
     PAYMENT_CODE,
@@ -83,4 +84,22 @@ with story("Choose Session And Practice Roots"):
             expect(self.instructions).to(contain("fidelity-session-output.propose_roots"))
         with and_("it sets them only once the person confirms them"):
             expect(self.instructions).to(contain("set nothing before they answer"))
+            self.refund.close()
+
+    with scenario("Refuse a file or an empty path as a root"):
+        with given("refund-order's acceptance tests are rooted at story_tests/manage-orders/refund-order"):
+            self.refund = RefundOrderSession()
+            self.refund.output("stories", "acceptance_tests").choose_root(REFUND_STORIES)
+        with when("the agent chooses the file domain/orders/refund/refund.py as the acceptance tests' root"):
+            # Agent -> FidelitySessionOutput.choose_root('domain/orders/refund/refund.py')
+            self.choose_file = lambda: self.refund.output("stories", "acceptance_tests").choose_root(REFUND_AGGREGATE)
+        with then("the choice is refused, saying domain/orders/refund/refund.py is a file"):
+            expect(self.choose_file).to(raise_error(OutputRootRefused, contain(f"{REFUND_AGGREGATE} is a file")))
+        with when("the agent chooses an empty path as Stories' root"):
+            # Agent -> PracticeSessionOutput.choose_root('')
+            self.choose_nothing = lambda: self.refund.session.practice("stories").choose_root("")
+        with then("the choice is refused, saying an empty path names no folder"):
+            expect(self.choose_nothing).to(raise_error(OutputRootRefused, contain("an empty path names no folder")))
+        with and_("the acceptance tests keep story_tests/manage-orders/refund-order"):
+            expect(self.refund.roots("stories", "acceptance_tests")).to(equal([REFUND_STORIES]))
             self.refund.close()

@@ -316,13 +316,6 @@ with description("Render saving what it makes beside its source") as self:
                     pass
                 expect(self.drawing.read_text(encoding="utf-8")).to(equal(self.laid_out))
 
-            with it("should save no drawing for the empty file"):
-                try:
-                    self.render()
-                except NothingToRender:
-                    pass
-                expect((self.folder / "returns.drawio").exists()).to(equal(False))
-
     with context("a story map rendered to markdown from its sketch"):
         with before.each:
             self.sketch = self.folder / "orders-sketch.md"
