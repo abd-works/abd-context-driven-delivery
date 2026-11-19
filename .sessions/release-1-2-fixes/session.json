@@ -6,10 +6,11 @@
   "worktree": "C:\\dev\\abd-cdd-release-1-2-fixes",
   "guidance": {
     "stages": [
+      "discovery",
       "specification",
       "implementation"
     ],
-    "version": 28
+    "version": 29
   },
   "practices": {
     "bdd": {
