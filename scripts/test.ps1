@@ -64,7 +64,9 @@ function Set-RunTemp {
     $script:shellTmp = $env:TMP
     $temp = [IO.Path]::GetTempPath()
     Remove-StaleRunFolders $temp
-    $script:runTemp = Join-Path $temp ($runFolderPrefix + [guid]::NewGuid().ToString("N"))
+    # Eight characters of the guid keep the folder apart from another run's and keep a spec's deepest file, such as a
+    # story test copied into a throwaway project, under Windows' 260 character path limit.
+    $script:runTemp = Join-Path $temp ($runFolderPrefix + [guid]::NewGuid().ToString("N").Substring(0, 8))
     New-Item -ItemType Directory -Force $script:runTemp | Out-Null
     # Python's tempfile reads TEMP and TMP, and .NET's GetTempPath reads TMP, so both point every spec at the run's folder.
     $env:TEMP = $script:runTemp

@@ -26,7 +26,7 @@ import { PageLinks } from './page-links'
 import { SidePanelClient } from './side-panel-client'
 
 const CHAT_POLL_MILLISECONDS = 2000
-const NOT_READ_YET: BoardData = { project: '', practices: [], open_tickets: [], active: null, columns: [], fidelities: [], sends_fixes_directly: false, unsaved: null }
+const NOT_READ_YET: BoardData = { project: '', practices: [], open_tickets: [], active: null, columns: [], fidelities: [], sends_fixes_directly: false, unsaved: null, unreadable: [] }
 
 // Everything the page's views act through, wired once.
 // How much of a chat's id tells two chats with the same name apart.

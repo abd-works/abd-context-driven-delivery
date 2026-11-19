@@ -39,12 +39,18 @@ const closedTwinOf = (name: string, title: string) => board.writeSession({ name,
 describe('Display Board', () => {
   describe('Display Connected Status', () => {
     it('should show a band when the board read answers that cdd is not connected', async () => {
-      const lost = new CddConnection(join(tmpdir(), 'cdd-board-page-no-such-project'))
+      // The project folder is there, so the connection gets as far as starting cdd's connect script, with a Python that
+      // is not on this machine: a folder that is not there is refused before cdd is asked, as its own failure.
+      const python = process.env.CDD_PYTHON
+      process.env.CDD_PYTHON = 'no-such-python-for-the-board-page'
+      const lost = new CddConnection(tmpdir())
       const unreachable = await RunningBoard.on(lost)
       const { page } = unreachable.unreadPage()
       await page.reader.refresh()
       await unreachable.close()
       await lost.close()
+      if (python === undefined) delete process.env.CDD_PYTHON
+      else process.env.CDD_PYTHON = python
       expect(page.store.state.serverFailure).toContain('The cdd server is not connected')
     })
 
@@ -71,7 +77,7 @@ describe('Display Board', () => {
 
     describe('with a tool failing', () => {
       async function failed() {
-        board.write('.sessions/broken/session.json', '{not json')
+        board.write('.sessions/_board.json', '{not json')
         const { page } = board.unreadPage()
         await page.reader.refresh()
         return page
@@ -82,9 +88,10 @@ describe('Display Board', () => {
       })
 
       it('should show a toast', async () => {
-        // The session names its unreadable session.json, whose folder is the throwaway project's own.
+        // One ticket's unreadable session.json no longer fails the board's read, so the failing tool is the read of the
+        // board's own file, which the failure names.
         const [toast, ...others] = toastsOf(await failed())
-        expect([toast, others]).toEqual([expect.stringMatching(/^cdd board\.show failed: JsonFileUnreadable: .*[\\/]\.sessions[\\/]broken[\\/]session\.json is not a readable JSON object \(Expecting property name/), []])
+        expect([toast, others]).toEqual([expect.stringMatching(/^cdd board\.show failed: JsonFileUnreadable: .*[\\/]\.sessions[\\/]_board\.json is not a readable JSON object \(Expecting property name/), []])
       })
     })
 
