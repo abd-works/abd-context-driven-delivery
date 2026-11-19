@@ -47,7 +47,7 @@ $excludedDirs = [System.Collections.Generic.HashSet[string]]::new(
 # the run removes when it ends: specs that make temporary folders and never remove them left tens of thousands behind in
 # %TEMP%, several gigabytes a day, until the disk filled. A folder a run could not remove, because a server a heavy spec
 # started still held a file in it, or because the run was killed, is removed by a later run once it is a day old.
-$runFolderPrefix = "cdd-test-run-"
+$runFolderPrefix = "cdd-run-"
 $staleRunHours = 24
 
 function Remove-StaleRunFolders {

@@ -16,31 +16,7 @@ from mamba import after, before, context, description, it
 
 from harness.installation.repository_toolsets import RepositoryToolsets
 from harness.mcp.cdd_home import CddHome, RuntimeRecordUnreadable
-
-BOARD_MOD = Path("harness") / "chat-ui" / "pane"
-QUEUE_MOD = Path("tools") / "prompt_queue"
-
-
-def _checkout_with_board_mod(root: Path) -> Path:
-    mod = root / "checkout" / BOARD_MOD
-    (mod / ".claude-plugin").mkdir(parents=True)
-    (mod / "hooks").mkdir()
-    (mod / "types").mkdir()
-    (mod / ".claude-plugin" / "plugin.json").write_text(json.dumps({"name": "cdd-board", "version": "0.6.3"}), encoding="utf-8")
-    (mod / "hooks" / "hooks.json").write_text("{}", encoding="utf-8")
-    (mod / "hooks" / "register.ts").write_text("export default {}\n", encoding="utf-8")
-    (mod / "hooks" / "register.test.ts").write_text("test('x', () => {})\n", encoding="utf-8")
-    (mod / "types" / "index.d.ts").write_text("export {}\n", encoding="utf-8")
-    viewer = root / "checkout" / "tools" / "drawio_viewer"
-    viewer.mkdir(parents=True)
-    (viewer / "drawio_viewer.py").write_text("# the viewer", encoding="utf-8")
-    queue = root / "checkout" / QUEUE_MOD
-    (queue / ".claude-plugin").mkdir(parents=True)
-    (queue / "hooks").mkdir()
-    (queue / ".claude-plugin" / "plugin.json").write_text(json.dumps({"name": "prompt-queue", "version": "0.1.0", "description": "A prompt queue"}), encoding="utf-8")
-    (queue / "hooks" / "register.tsx").write_text("export default { queue: true }\n", encoding="utf-8")
-    return root / "checkout"
-
+from harness.mcp.cdd_home_checkout_examples import BOARD_MOD, QUEUE_MOD, checkout_with_board_mod
 
 def _plugin_names(home: CddHome) -> list[str]:
     marketplace = json.loads((home.claude_plugins / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
@@ -76,7 +52,7 @@ with description("a cdd home's Claude Code plugins") as self:
     # A chat runs the board mod its marketplace names; one named in a worktree runs that branch's mod, whatever the server runs.
     with context("that serves a checkout"):
         with before.each:
-            self.checkout = _checkout_with_board_mod(self.root)
+            self.checkout = checkout_with_board_mod(self.root)
             self.home.write_claude_plugin({"type": "http"})
             self.home.serve_from(self.checkout)
             self.board = self.home.claude_plugins / "cdd-board"
@@ -141,35 +117,6 @@ with description("a cdd home's Claude Code plugins") as self:
             with it("should still serve the checkout as it is on disk"):
                 expect((self.home.mode, self.home.source)).to(equal((CddHome.CHECKOUT, self.checkout.resolve())))
 
-    # Every chat installs its mods from the stable lane's marketplace, so a feature's mods stay there while its dev lane
-    # runs, whichever lane's server restarts.
-    with context("with a dev lane beside it, serving a feature checkout whose prompt queue mod differs"):
-        with before.each:
-            self.home.write_claude_plugin({"type": "http"})
-            self.home.serve_from(_checkout_with_board_mod(self.root / "stable"))
-            feature = _checkout_with_board_mod(self.root / "feature")
-            (feature / QUEUE_MOD / "hooks" / "register.tsx").write_text("export default { feature: true }\n", encoding="utf-8")
-            self.dev = CddHome(self.home.folder / "dev")
-            self.dev.write_claude_plugin({"type": "http"})
-            self.dev.serve_from(feature)
-            self.published_queue = lambda: (self.home.claude_plugins / "prompt-queue" / "hooks" / "register.tsx").read_text(encoding="utf-8")
-
-        with context("that the dev lane's server restarts"):
-            with it("should publish the feature's mods where every chat installs them"):
-                self.dev.publish_mods_for_chats(is_dev_lane_running=True)
-                expect(self.published_queue()).to(equal("export default { feature: true }\n"))
-
-        with context("that the stable server restarts while the dev lane's server runs"):
-            with it("should keep the feature's mods where every chat installs them"):
-                self.home.publish_mods_for_chats(is_dev_lane_running=True)
-                expect(self.published_queue()).to(equal("export default { feature: true }\n"))
-
-        with context("that the stable server restarts with the dev lane's server stopped"):
-            with it("should publish the stable lane's own mods"):
-                self.home.publish_mods_for_chats(is_dev_lane_running=False)
-                expect(self.published_queue()).to(equal("export default { queue: true }\n"))
-
-
 with description("a cdd home's runtime record") as self:
     with before.each:
         self.root = Path(tempfile.mkdtemp(prefix="cdd-home-"))
@@ -198,7 +145,7 @@ with description("a cdd home's server environment") as self:
     with before.each:
         self.root = Path(tempfile.mkdtemp(prefix="cdd-home-"))
         self.home = CddHome(self.root / ".cdd")
-        self.checkout = _checkout_with_board_mod(self.root)
+        self.checkout = checkout_with_board_mod(self.root)
         self.home.serve_from(self.checkout)
 
     with after.each:
