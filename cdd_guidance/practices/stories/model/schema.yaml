@@ -107,6 +107,7 @@ step:
     - plain-english-gwt-steps
     - gwt-steps-trace-to-domain-operations
     - but-marks-missing-state
+    - domain-terms-link-to-model
 
 given:
   fidelity: scenarios

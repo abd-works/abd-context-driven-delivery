@@ -13,6 +13,7 @@ from mamba import before, context, description, it  # noqa: E402
 from cdd_guidance.practices.stories.model.story_model import Background, Epic, Scenario, Step, StepType, Story, StoryModel  # noqa: E402
 from cdd_guidance.practices.stories.rules.scenarios import (  # noqa: E402
     AndChaining,
+    DomainTermsLinkToModel,
     ExamplesTraceDomainModel,
     FlaggedWritesIntendedGwt,
     GivenNamesComplexStateRootFirst,
@@ -81,6 +82,10 @@ def _scenario_hits(rule, context: RuleCheckContext) -> list[str]:
 
 def _given_hits(context: RuleCheckContext) -> list[str]:
     return SchemaRuleRun(GivenNamesComplexStateRootFirst(), context).hits()
+
+
+def _term_hits(context: RuleCheckContext) -> list[str]:
+    return SchemaRuleRun(DomainTermsLinkToModel(), context).hits()
 
 
 def _order_aggregate(graph: Graph) -> None:
@@ -208,3 +213,37 @@ with description("a scenario on a story graph"):
             with context("that is read back from graph.json"):
                 with it("should still pass"):
                     expect(_scenario_hits(ExamplesTraceDomainModel(), _read_back(self.context))).to(equal([]))
+
+
+    with context("whose step underlines a domain term"):
+        with context("with no DDD model loaded"):
+            with it("should pass, since there is no model to link to"):
+                given = "an ++order++ with two lamps"
+                expect(_term_hits(_loaded(_scenario([("Given", given)])))).to(equal([]))
+
+        with context("with a DDD model whose Order aggregate owns line items"):
+            with before.each:
+                self.graph = Graph()
+                _order_aggregate(self.graph)
+
+            with context("with the term linked to its heading in the domain model"):
+                with it("should pass"):
+                    given = "an ++[order](../domain-model.md#order-aggregate-root-entity)++ with a ++[line item](../domain-model.md#lineitem-entity)++"
+                    expect(_term_hits(_loaded(_scenario([("Given", given)]), self.graph))).to(equal([]))
+
+            with context("with the term left unlinked"):
+                with it("should be told to link it to the domain model"):
+                    given = "an ++order++ with a ++line item++ for two lamps"
+                    expect(_term_hits(_loaded(_scenario([("Given", given)]), self.graph))).to(equal([
+                        f"Step {given!r} names the domain terms ['order', 'line item'] without linking them to their headings in the domain model."
+                    ]))
+
+                with context("that is read back from graph.json"):
+                    with it("should still be told to link it"):
+                        given = "an ++order++ with two lamps"
+                        expect(len(_term_hits(_read_back(_loaded(_scenario([("Given", given)]), self.graph))))).to(equal(1))
+
+            with context("with an underlined example name that is no domain class"):
+                with it("should pass"):
+                    given = "an ++[order](../domain-model.md#order-aggregate-root-entity)++ holding ++two lamps++"
+                    expect(_term_hits(_loaded(_scenario([("Given", given)]), self.graph))).to(equal([]))

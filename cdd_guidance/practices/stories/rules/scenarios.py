@@ -140,6 +140,52 @@ class ExamplesTraceDomainModel(PracticeGraphRule):
         ]
         return scenario_domain_concepts(steps)
 
+
+# An underlined term in a step, ++cart++, and the same term written as a link, ++[cart](domain-model.md#cart-…)++.
+_UNDERLINED_TERM = re.compile(r"\+\+([^+\n]+?)\+\+")
+_LINKED_TERM = re.compile(r"^\[[^\]]+\]\([^)]*\)$")
+# The classes of the DDD model a step can name: aggregate roots, entities, and value objects.
+_DOMAIN_CLASS_TYPES = ("EntityRoot", "Entity", "ValueObject")
+
+
+class DomainTermsLinkToModel(PracticeGraphRule):
+    """Which underlined terms are domain terms comes from the DDD model loaded beside the stories: a term that names one
+    of its classes, as the class (LineItem) or as words (line item). Without a DDD model there is no heading to link
+    to, so the rule passes."""
+
+    slug = "domain-terms-link-to-model"
+    node_types = ("Step", "Given", "When", "Then")
+
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+        classes = self._class_keys(context)
+        if not classes:
+            return []
+        text = _text(node)
+        unlinked = [
+            term.strip()
+            for term in _UNDERLINED_TERM.findall(text)
+            if not _LINKED_TERM.match(term.strip()) and self._key(term) in classes
+        ]
+        if not unlinked:
+            return []
+        return [
+            f"Step {text!r} names the domain terms {unlinked} without linking them to their headings in the domain model."
+        ]
+
+    def _class_keys(self, context: RuleCheckContext) -> set[str]:
+        """Each class of the DDD model as the key a term is matched by: its name lower case, with no spaces."""
+        ddd = context.practice.reading.domain_model
+        if ddd is None:
+            return set()
+        return {self._key(node.name) for kind in _DOMAIN_CLASS_TYPES for node in ddd.in_graph.nodes(kind)}
+
+    def _key(self, name: str) -> str:
+        """The name lower case, with no spaces, hyphens, or underscores, and no plural s: line items and LineItem
+        match."""
+        key = re.sub(r"[\s_-]+", "", name).casefold()
+        return key[:-1] if key.endswith("s") and len(key) > 3 else key
+
+
 class WhenNamesIntentNotInterfaceGesture(PracticeGraphRule):
     slug = "when-names-intent-not-interface-gesture"
     node_types = ("When", "Step")
