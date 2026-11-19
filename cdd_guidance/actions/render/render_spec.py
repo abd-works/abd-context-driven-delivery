@@ -316,6 +316,18 @@ with description("Render saving what it makes beside its source") as self:
                     pass
                 expect(self.drawing.read_text(encoding="utf-8")).to(equal(self.laid_out))
 
+    with context("a story map with its own title, rendered to drawio and back to markdown"):
+        with before.each:
+            self.story_map.write_text("# Story Map — Bookshop\n\n" + _MARKDOWN_STORY_MAP, encoding="utf-8")
+            Render().render(_STORIES, format="drawio", paths=[str(self.story_map)], source="markdown")
+            Render().render(_STORIES, format="markdown", paths=[str(self.folder / "story-map.drawio")], source="drawio")
+
+        with it("should keep the map's own title"):
+            expect(self.story_map.read_text(encoding="utf-8")).to(contain("# Story Map — Bookshop"))
+
+        with it("should keep the stories the drawing holds"):
+            expect(self.story_map.read_text(encoding="utf-8")).to(contain("Browse Product Catalog"))
+
     with context("a story map rendered to markdown from its sketch"):
         with before.each:
             self.sketch = self.folder / "orders-sketch.md"

@@ -28,21 +28,25 @@ class NothingToRender(ValueError):
 class RenderedFile:
     """The file one render saves beside its source: the name the fidelity writes the format to, else the source's own
     name in the format, in the folder the source is in. It reads the file as it is before the render, so a diagram keeps
-    the layout people gave it, and it writes the render there. A whiteboard saved this way also answers with the writes
+    the layout people gave it and a document keeps the words its source does not hold, and it writes the render there. A whiteboard saved this way also answers with the writes
     that put it on its board in Claude."""
 
-    def __init__(self, path: Path, format: Format) -> None:
+    def __init__(self, path: Path, format: Format, source: Format = Format()) -> None:
         self.path = path
         self.format = format
+        # The format the render reads, which says whether a document already there is handed to the render.
+        self._source = source
         # What the file held before the render, which a diagram keeps the layout of and a whiteboard's writes are made
         # against.
         self._before = path.read_text(encoding="utf-8") if path.is_file() else ""
 
     @property
     def previous(self) -> str:
-        """The file as it was, for a diagram, whose layout the render keeps; none for a document, which a render writes
-        from its source alone, so a sketch's wording is never lost to the document it replaces."""
-        return self._before if self.format.group == "diagram" else ""
+        """The file as it was, which the render keeps what people gave of: a diagram's layout, and a document's own
+        words that its source does not hold, such as a story map's title and scope when it is written back from its
+        drawing. None for a document rendered from a sketch, which is written from the sketch alone, so the sketch's
+        wording is never lost to the document it replaces."""
+        return "" if self._source.name == _SKETCH and self.format.group != "diagram" else self._before
 
     @classmethod
     def from_sources(cls, sources: list[Path], source: Format, format: Format, declared: DeclaredOutputs | None) -> RenderedFile | None:
@@ -65,7 +69,7 @@ class RenderedFile:
         if not name:
             return None
         target = (first if first.is_dir() else first.parent) / name
-        return None if target in sources else cls(target, format)
+        return None if target in sources else cls(target, format, source)
 
     def save(self, rendered: dict) -> dict:
         """Write the render into the file, and answer with the file rather than its text, so the agent has nothing to

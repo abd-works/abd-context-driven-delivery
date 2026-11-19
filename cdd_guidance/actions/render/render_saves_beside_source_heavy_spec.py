@@ -33,6 +33,19 @@ _STORY_MAP = """\
 """
 
 
+_BOOKSHOP_STORY_MAP = """\
+# Story Map — Bookshop
+
+**In scope:** orders placed in the shop
+
+# (E) Sell Books
+
+## (E) Take Orders
+
+### (S) Customer --> Place Order
+"""
+
+
 async def _render(server: SpecServer, project: Path, format: str, path: str = ".context/story-map.md", source: str | None = "markdown") -> tuple[bool, str]:
     async with server.chat(project, _CALL_SECONDS) as chat:
         arguments = {"guidance": "stories-story-map", "format": format, "paths": [path], **({"source": source} if source else {})}
@@ -157,6 +170,24 @@ with description("Render saving what it makes beside its source, called through 
 
         with it("should fail in one line, with no traceback"):
             expect((self.failed, "Traceback" in self.answer)).to(equal((True, False)))
+
+    # Exploratory testing, widget-04: the drawing holds no title, so the markdown written back from it took the
+    # template's, and the save wrote that over the person's file.
+    with context("a story map with its own title and scope, rendered to drawio and back to markdown"):
+        with before.each:
+            (self.folder / "story-map.md").write_text(_BOOKSHOP_STORY_MAP, encoding="utf-8")
+            asyncio.run(_render(self.server, self.project.root, "drawio"))
+            self.failed, self.answer = asyncio.run(_render(self.server, self.project.root, "markdown", ".context/story-map.drawio", "drawio"))
+            self.written_back = (self.folder / "story-map.md").read_text(encoding="utf-8")
+
+        with it("should keep the map's own title"):
+            expect((self.failed, "# Story Map — Bookshop" in self.written_back)).to(equal((False, True)))
+
+        with it("should keep the scope the person wrote above the first epic"):
+            expect(self.written_back).to(contain("**In scope:** orders placed in the shop"))
+
+        with it("should keep the stories the drawing holds"):
+            expect(self.written_back).to(contain("Customer --> Place Order"))
 
     with context("a story map whose board is kept, rendered to whiteboard again"):
         with before.each:
