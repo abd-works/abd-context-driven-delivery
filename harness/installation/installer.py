@@ -242,12 +242,15 @@ class Deployment:
 
     def _install_agents(self) -> None:
         """Copy cdd_guidance/agents into the IDE agents folder, each named as its front matter names it. The source
-        stays on cdd_guidance."""
+        stays on cdd_guidance. An agent kept in a folder of its own kind, such as exploratory-testing/tester.md, is
+        installed flat under its front matter's name, since an IDE reads agents from one folder."""
         installer = self._installer
         source = installer.toolsets.agents_folder
         if not source.is_dir():
             return
-        for path in sorted(source.glob("*.md")):
+        for path in sorted(source.rglob("*.md")):
+            if ".context" in path.relative_to(source).parts:
+                continue
             front_matter = FrontMatter.of_file(path)
             dest = installer.path / "agents" / f"{front_matter.fields.get('name') or path.stem}.md"
             dest.parent.mkdir(parents=True, exist_ok=True)

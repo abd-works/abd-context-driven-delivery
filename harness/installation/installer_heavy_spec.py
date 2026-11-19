@@ -1192,6 +1192,7 @@ with description("lifecycle actions annotated for installation") as self:
                     expect(InstalledTree(self.tree).skill_names()).to(
                         equal(
                             {
+                                "answer-board-comment",
                                 "document",
                                 "generate",
                                 "grill",
@@ -1309,7 +1310,10 @@ with description("guidance agents"):
         try:
             Installer.create(ide="Cursor", path=tree, repo=_REPO_ROOT).deployment._install_agents()
             installed = sorted(path.name for path in (tree / "agents").glob("*.md"))
-            expect(installed).to(equal(["context.md", "discoverer.md", "implementation.md", "specification.md"]))
+            expect(installed).to(equal([
+                "context.md", "discoverer.md", "exploratory-testing-supervisor.md", "exploratory-testing-tester.md",
+                "implementation.md", "specification.md",
+            ]))
             expect((tree / "agents" / "discoverer.md").read_text(encoding="utf-8")).to(contain("name: discoverer"))
             expect(((_REPO_ROOT / "cdd_guidance" / "agents" / "discovery.md").is_file())).to(equal(True))
         finally:
