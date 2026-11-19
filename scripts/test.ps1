@@ -240,7 +240,10 @@ function Start-SpecBatch {
     $env:CDD_HOME = Join-Path $OutputFolder ("home-" + [guid]::NewGuid().ToString("N"))
     New-Item -ItemType Directory -Force $env:CDD_HOME | Out-Null
     $out = Join-Path $OutputFolder ([guid]::NewGuid().ToString("N") + ".out")
-    $process = Start-Process -FilePath $Executable -ArgumentList ($Arguments + $Relatives) -WorkingDirectory $repo `
+    # Start-Process joins its arguments with spaces, so a path that holds one is quoted, or Mamba is handed its halves
+    # as two paths, finds neither, and runs nothing.
+    $paths = @($Relatives | ForEach-Object { if ($_ -match '\s') { '"' + $_ + '"' } else { $_ } })
+    $process = Start-Process -FilePath $Executable -ArgumentList ($Arguments + $paths) -WorkingDirectory $repo `
         -NoNewWindow -PassThru -RedirectStandardOutput $out -RedirectStandardError "$out.err"
     # Windows PowerShell reads a started process's exit code only when its handle was taken while it ran.
     $null = $process.Handle
@@ -253,7 +256,21 @@ function Get-FailedFiles {
     $text = Get-Content $Batch.Out, "$($Batch.Out).err" -Raw -ErrorAction SilentlyContinue
     $failed = @($Batch.Relatives | Where-Object { $text -match [regex]::Escape("Failure/Error: " + $_.Replace('/', '\')) -or $text -match [regex]::Escape("Failure/Error: " + $_) })
     if ($Batch.Process.ExitCode -ne 0 -and $failed.Count -eq 0) { return @($Batch.Key) }
+    # A batch that ran no example proved nothing about its files, so each of them fails: a spec file with no example,
+    # or one Mamba never found, would otherwise be counted as passed.
+    if ($failed.Count -eq 0 -and (Get-ExamplesRan ($text -join "`n")) -eq 0) { return @($Batch.Relatives) }
     return $failed
+}
+
+# How many examples a batch's Mamba process says it ran, on its closing line: "12 examples ran in ..." or
+# "2 examples failed of 12 ran in ...". None when it printed no such line.
+function Get-ExamplesRan {
+    param([string]$Text)
+    $ran = 0
+    foreach ($line in [regex]::Matches($Text, '(\d+) (?:examples? )?ran (?:in|\()')) {
+        $ran += [int]$line.Groups[1].Value
+    }
+    return $ran
 }
 
 # The examples the unit guard logged over the budget, each with its spec file from the repository's top.

@@ -162,7 +162,7 @@ class CddVersion:
         4. On their yes, call this with publish true. It pushes HEAD, tags it v<version> and pushes the tag, and runs
            gh release create with the notes.
         5. Hand the person release_url, the release's page on the repository."""
-        release = self._release or CddRelease(self._project_git, GitHubCli(self._project), TestRunRecord(default_record_folder()))
+        release = self._release or CddRelease(self._project_git, GitHubCli(self._project), TestRunRecord(default_record_folder(), self._project))
         return release.publish() if publish else release.check_green()
 
     def _next_version_from(self, version: str, current: Release) -> str:

@@ -131,13 +131,17 @@ with description("a tier run by the real runner") as self:
         (self.checkout / "scripts").mkdir()
         (self.checkout / "scripts" / "test.ps1").write_text(
             'param([string]$Suite)\nWrite-Host "ran $Suite"\nWrite-Host "1 examples failed"\nexit 1\n', encoding="utf-8")
-        self.record = TestRunRecord(self.root / "home")
+        # A tier runs on the files of the commit its run records, so the stand-in test.ps1 is committed.
+        git(self.checkout, "add", "scripts")
+        git(self.checkout, "commit", "-q", "-m", "The stand-in tier")
+        self.record = TestRunRecord(self.root / "home", self.checkout)
 
     with after.each:
         shutil.rmtree(self.root, ignore_errors=True)
 
     with it("should answer test.ps1's exit code and output"):
-        expect(TestRunner().run(TestTier.HEAVY, self.checkout)).to(equal((1, "ran heavy\n1 examples failed\n")))
+        run = self.record.new_run(TestTier.HEAVY, git(self.checkout, "rev-parse", "HEAD"), datetime.now(timezone.utc))
+        expect(TestRunner(self.record).run(run)).to(equal((1, "ran heavy\n1 examples failed\n")))
 
     with it("should be run in the repository's own folder while it has main checked out"):
         expect(main_checkout(self.checkout)).to(equal(Path(git(self.checkout, "rev-parse", "--show-toplevel"))))
@@ -151,7 +155,7 @@ with description("a tier run by the real runner") as self:
         expect(main_checkout(worktree)).to(be_none)
 
     with it("should record a new failure from its background process"):
-        TestCadence(self.checkout, self.record).start_due()
+        TestCadence(self.record).start_due()
         deadline = time.monotonic() + RECORDED_SECONDS
         while time.monotonic() < deadline and self.record.latest(TestTier.E2E).outcome is RunOutcome.RUNNING:
             time.sleep(0.2)

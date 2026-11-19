@@ -22,7 +22,7 @@ class ServerHealth:
 
     def __init__(self, repo_root: Path | str, cadence: TestCadence | None = None, e2e_review: E2eReview | None = None) -> None:
         self._repo_root = Path(repo_root).resolve()
-        self._cadence = cadence if cadence is not None else TestCadence(main_checkout(self._repo_root), TestRunRecord(default_record_folder()))
+        self._cadence = cadence if cadence is not None else TestCadence(TestRunRecord(default_record_folder(), main_checkout(self._repo_root)))
         # The scheduled e2e run's screens are reviewed in the main checkout it runs in.
         self._e2e_review = e2e_review if e2e_review is not None else E2eReview(self._cadence.checkout or self._repo_root, SCHEDULED_RELEASE)
 
