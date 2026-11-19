@@ -22,15 +22,13 @@ from harness.markdown.format import Format
 
 # The module a worker process runs, which draws one order.
 WORKER_MODULE = "cdd_guidance.actions.render.render_worker"
-# How much of a failed worker's error output the failure names.
-_ERROR_TAIL_CHARACTERS = 4000
-
-
 class RenderFailed(RuntimeError):
-    """The worker process drawing a render exited with an error."""
+    """The worker process drawing a render exited with an error. The message says what failed in one line, the last
+    line the worker wrote, which is the error it raised; ``errors`` holds everything it wrote."""
 
     def __init__(self, exit_code: int, errors: str) -> None:
-        super().__init__(f"the render's worker process exited with {exit_code}:\n{errors[-_ERROR_TAIL_CHARACTERS:]}")
+        written = [line.strip() for line in errors.splitlines() if line.strip()]
+        super().__init__(f"the render's worker process exited with {exit_code}: {written[-1] if written else 'it wrote no error'}")
         self.exit_code = exit_code
         self.errors = errors
 

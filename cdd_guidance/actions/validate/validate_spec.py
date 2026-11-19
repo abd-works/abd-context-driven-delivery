@@ -31,7 +31,7 @@ import space.session.practice_session_output as session_output_module
 from harness.graph.saved_graph import SavedGraph
 from cdd_guidance.actions.validate.checked_graph import CheckedGraph
 from space.session.session_files import NamedPathNotFoundError
-from cdd_guidance.actions.validate.validate import Validate
+from cdd_guidance.actions.validate.validate import UnknownRule, Validate
 from cdd_guidance.actions.validate.validate_examples import ENTITY_ROOT_FILE, SPEC_FILE, STORY_FILE, SampleWorkingCopy, working_in
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
@@ -132,11 +132,23 @@ with description("a validate action on practice guidance") as self:
             report = self.action.validate(guidance=[self.guidance])
             expect(report).to(contain("sample-rule-one"))
 
-    with context("with one rule passed"):
-        with it("should return validate instructions for that rule only"):
-            rule = self.guidance.rules.entries["sample-rule-one"]
-            report = self.action.validate(guidance=[self.guidance], rule=rule)
-            expect(report).to(contain("sample-rule-one"))
+    with context("with one rule named"):
+        with it("should return validate instructions for that rule"):
+            report = self.action.validate(guidance=["stories-story-map"], rule="verb-noun-format")
+            expect(report).to(contain("Evaluate the current context against this rule (verb-noun-format)"))
+
+        with it("should leave the fidelity's other rules out"):
+            report = self.action.validate(guidance=["stories-story-map"], rule="verb-noun-format")
+            expect(report).not_to(contain("Evaluate the current context against this rule (vocabulary-traces-to-domain-source)"))
+
+    with context("with a rule named that no listed guidance has"):
+        with it("should refuse the rule by name"):
+            validate = lambda: self.action.validate(guidance=["stories-story-map"], rule="no-such-rule")
+            expect(validate).to(raise_error(UnknownRule, contain("no rule 'no-such-rule'")))
+
+        with it("should list the rules there are"):
+            validate = lambda: self.action.validate(guidance=["stories-story-map"], rule="no-such-rule")
+            expect(validate).to(raise_error(UnknownRule, contain("verb-noun-format")))
 
     with context("with a fidelity active"):
         with it("should pass that fidelity's rules with the shared rules"):
@@ -166,7 +178,7 @@ with description("a validate action on practice guidance") as self:
 
     with context("with graph JSON paths"):
         with it("should append a graph-rule report from summary JSON and still include AI rules"):
-            fixture = Path(__file__).with_name("fixtures") / "sample-graph-violations.json"
+            fixture = Path(__file__).resolve().with_name("fixtures") / "sample-graph-violations.json"
             report = self.action.validate(
                 guidance=[self.guidance],
                 graph=str(fixture),
@@ -182,7 +194,7 @@ with description("a validate action on practice guidance") as self:
             expect(report).not_to(contain("[src\\example.ts]"))
 
         with it("should return the graph-rule report when the MCP prompt expands validate"):
-            fixture = Path(__file__).with_name("fixtures") / "sample-graph-violations.json"
+            fixture = Path(__file__).resolve().with_name("fixtures") / "sample-graph-violations.json"
             prose = _expanded_validate(
                 self.action,
                 {"guidance": [self.guidance], "graph": str(fixture)},
@@ -191,9 +203,14 @@ with description("a validate action on practice guidance") as self:
             expect(prose).to(contain("[src/example.ts]("))
             expect(prose).to(contain("sample-rule-one"))
 
+    with context("with a graph named by a path that is not there"):
+        with it("should refuse the path by name, read from the project"):
+            validate = lambda: self.action.validate(guidance=["clean-engineering-code"], graph="no/such/graph.json")
+            expect(validate).to(raise_error(NamedPathNotFoundError, contain("nothing at no/such/graph.json")))
+
     with context("with the saved graph"):
         with before.each:
-            self.folder = Path(__file__).with_name("fixtures") / "saved-graph"
+            self.folder = Path(__file__).resolve().with_name("fixtures") / "saved-graph"
             self.action = Validate(session=working_in(self.project, self.folder, self.folder))
             self.session = Path(self.action.session.work_folder)
             # A session's graph is the one created for it in its own folder, so the fixture's graph is put there.
@@ -220,7 +237,7 @@ with description("a validate action on practice guidance") as self:
             self.action = Validate(session=working_in(self.project, self.folder, self.folder))
             self.session = Path(self.action.session.work_folder)
             self.session.mkdir(parents=True, exist_ok=True)
-            shutil.copy(Path(__file__).with_name("fixtures") / "sample-graph-violations.json", self.session / "clean-engineering-violations.json")
+            shutil.copy(Path(__file__).resolve().with_name("fixtures") / "sample-graph-violations.json", self.session / "clean-engineering-violations.json")
 
         with after.each:
             shutil.rmtree(self.folder, ignore_errors=True)
@@ -583,6 +600,34 @@ with description("a validate action on practice guidance") as self:
                 except NamedPathNotFoundError:
                     pass
                 expect((self.missing.session / "validation-reports").exists()).to(equal(False))
+
+    # Exploratory testing, widget-10: the code fidelity declares its output as a folder named by a part, {module}/, which
+    # names no one folder, so a validate naming no paths found nothing written and answered "No graph checked".
+    with context("with code written under the practice's root and no paths named"):
+        with before.all:
+            self.written_project = ThrowawayProject()
+            self.written = Path(tempfile.mkdtemp(prefix="cdd-validate-"))
+            _write(self.written, "src/orders/order.ts", _OVER_LIMIT.format(name="Order"))
+            session = working_in(self.written_project, self.written, self.written)
+            self.session_graph_report = Validate(session=session).validate(guidance=["clean-engineering-code"], graph=True)
+            self.no_argument_report = Validate(session=session).validate(guidance=["clean-engineering-code"])
+            self.one_rule_report = Validate(session=session).validate(guidance=["clean-engineering-code"], rule="limit-comments")
+
+        with after.all:
+            self.written_project.close()
+            shutil.rmtree(self.written, ignore_errors=True)
+
+        with it("should check the session's graph, built from what the fidelity has written, when graph is true"):
+            expect(self.session_graph_report).to(contain("limit-operation-parameters"))
+
+        with it("should check the folders holding the fidelity's written output when no graph is named either"):
+            expect(self.no_argument_report).to(contain("limit-operation-parameters"))
+
+        with it("should hand the judge the one rule the call names"):
+            expect(self.one_rule_report).to(contain("Evaluate the current context against this rule (limit-comments)"))
+
+        with it("should leave the other rules out when the call names one"):
+            expect(self.one_rule_report).not_to(contain("Evaluate the current context against this rule (hide-inner-details)"))
 
     # The sample's graph takes seconds to build, so one working copy is validated in before.all, once for each call the
     # examples read, and each example reads the report, and the report files, its own call left.

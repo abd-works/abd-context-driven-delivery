@@ -22,10 +22,11 @@ from cdd_guidance.actions.validate.validation_report import ValidationReport
 
 
 class _CheckedGraph:
-    """The graph a validate checked, as a report reads it: its violations, the files it was read from, and nothing
-    held beside them."""
+    """The graph a validate checked, as a report reads it: the session it was checked in, its violations, the files it
+    was read from, and nothing held beside them."""
 
-    def __init__(self, violations: list[Violation]) -> None:
+    def __init__(self, session: Session, violations: list[Violation]) -> None:
+        self.session = session
         self._violations = violations
         self.files = [Path("graph.json")]
         self.held_beside: list[str] = []
@@ -56,7 +57,7 @@ with description("a validation report"):
             session = Session(Sessions(self.root))
             session.workpath = self.root
             session.work_folder = self.session_dir
-            report_md = ValidationReport(session, [], _CheckedGraph(self.violations)).for_judge()
+            report_md = ValidationReport([], _CheckedGraph(session, self.violations)).for_judge()
             report_path = self.session_dir / "validate-clean-engineering-code-src.md"
             report_path.write_text(report_md, encoding="utf-8")
             account = (self.root / "src/customer/account/account.ts").resolve()

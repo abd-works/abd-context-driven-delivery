@@ -21,7 +21,7 @@ from harness.agent_tools.tool_call import ToolCall
 from harness.graph.saved_graph import SavedGraph
 from space.session.throwaway_project import ThrowawayProject
 
-_FIXTURES = Path(__file__).with_name("fixtures")
+_FIXTURES = Path(__file__).resolve().with_name("fixtures")
 _SAVED_GRAPH = _FIXTURES / "saved-graph" / ".context" / "graph.json"
 _NODE_LIST = _FIXTURES / "sample-graph-violations.json"
 

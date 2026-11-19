@@ -12,6 +12,17 @@ WHITEBOARD = "whiteboard"
 # The groups of formats a render saves itself: a draw.io file or a whiteboard, and markdown. Code goes into the module it
 # belongs to, which only the agent knows, so a render to code answers with the code.
 SAVED_GROUPS = ("diagram", "markdown")
+# The format a sketch is written in: a sketch is no file its fidelity declares, yet it renders to the fidelity's own file.
+_SKETCH = "sketch"
+
+
+class NothingToRender(ValueError):
+    """A render was asked to save the file made from a source that holds no text: the file it would save holds
+    nothing either, and written over a drawing or a document a person made, it loses their work."""
+
+    def __init__(self, source: Path) -> None:
+        super().__init__(f"{source} is empty, so there is nothing to render from it; name the file that holds the content")
+        self.source = source
 
 
 class RenderedFile:
@@ -36,15 +47,21 @@ class RenderedFile:
     @classmethod
     def from_sources(cls, sources: list[Path], source: Format, format: Format, declared: DeclaredOutputs | None) -> RenderedFile | None:
         """The file a render of sources, written in source, into format saves, beside the first of them: the name the
-        fidelity that declares these files writes format to, else the first source's own name in format. None for a
-        format a render does not save, or when no name can be given to it without writing over a source."""
+        fidelity writes format to when the first source is one of the fidelity's own files, a sketch, or a folder; else
+        the first source's own name in format, so a render of another file never writes over the fidelity's file. None
+        for a format a render does not save, or when no name can be given to it without writing over a source. An
+        empty source file raises *NothingToRender*."""
         if format.group not in SAVED_GROUPS or not sources:
             return None
         first = sources[0]
-        declared_name = declared.file_name_beside(first.as_posix(), format.name) if declared is not None else ""
+        empty = next((file for file in sources if file.is_file() and not file.read_text(encoding="utf-8", errors="replace").strip()), None)
+        if empty is not None:
+            raise NothingToRender(empty)
         # A folder names no one file, so only a file lends its own name.
         own_name = f"{source.stem_of(first)}{format.extension}" if first.is_file() else ""
-        name = declared_name or own_name
+        # A file that is neither one the fidelity declares nor a sketch belongs to no file of the fidelity.
+        belongs = declared is not None and (first.is_dir() or source.name == _SKETCH or declared.includes(first.as_posix()))
+        name = (declared.file_name_beside(first.as_posix(), format.name) if belongs else "") or own_name
         if not name:
             return None
         target = (first if first.is_dir() else first.parent) / name

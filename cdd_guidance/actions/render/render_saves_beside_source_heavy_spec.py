@@ -4,6 +4,7 @@ spec starts a cdd server of its own, on its own port, from a throwaway ``~/.cdd`
 it runs beside any other spec and never reaches the person's server."""
 import asyncio
 import json
+import shutil
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -32,9 +33,9 @@ _STORY_MAP = """\
 """
 
 
-async def _render(server: SpecServer, project: Path, format: str) -> tuple[bool, str]:
+async def _render(server: SpecServer, project: Path, format: str, path: str = ".context/story-map.md", source: str | None = "markdown") -> tuple[bool, str]:
     async with server.chat(project, _CALL_SECONDS) as chat:
-        arguments = {"guidance": "stories-story-map", "format": format, "paths": [".context/story-map.md"], "source": "markdown"}
+        arguments = {"guidance": "stories-story-map", "format": format, "paths": [path], **({"source": source} if source else {})}
         result = await chat.call_tool("render.render", arguments=arguments)
         return bool(result.isError), result.content[0].text
 
@@ -93,6 +94,69 @@ with description("Render saving what it makes beside its source, called through 
 
         with it("should keep the card where the person put it"):
             expect(_card(self.drawing.read_text(encoding="utf-8"), "Browse Product Catalog").find("mxGeometry").get("x")).to(equal("777"))
+
+    # Exploratory testing, widget-06: a render of any markdown file in the folder was saved as story-map.drawio.
+    with context("a story map whose drawing is there, with another markdown file beside it"):
+        with before.each:
+            asyncio.run(_render(self.server, self.project.root, "drawio"))
+            self.drawn = self.drawing.read_text(encoding="utf-8")
+
+        with context("that holds a story map of its own, rendered to drawio"):
+            with before.each:
+                (self.folder / "returns.md").write_text(_STORY_MAP.replace("Browse Product Catalog", "Return Damaged Item"), encoding="utf-8")
+                self.failed, self.answer = asyncio.run(_render(self.server, self.project.root, "drawio", ".context/returns.md"))
+
+            with it("should leave the story map's drawing as it was"):
+                expect(self.drawing.read_text(encoding="utf-8")).to(equal(self.drawn))
+
+            with it("should save the other file's drawing under that file's own name"):
+                expect((self.folder / "returns.drawio").read_text(encoding="utf-8")).to(contain("Return Damaged Item"))
+
+        with context("that is empty, rendered to drawio"):
+            with before.each:
+                (self.folder / "empty.md").write_text("", encoding="utf-8")
+                self.failed, self.answer = asyncio.run(_render(self.server, self.project.root, "drawio", ".context/empty.md"))
+
+            with it("should refuse the render, naming the empty file"):
+                expect((self.failed, "NothingToRender" in self.answer, "empty.md" in self.answer)).to(equal((True, True, True)))
+
+            with it("should leave the story map's drawing as it was"):
+                expect(self.drawing.read_text(encoding="utf-8")).to(equal(self.drawn))
+
+    # Exploratory testing, widget-07: render took ../outside.md and wrote story-map.drawio outside the project.
+    with context("a story map outside the project, named from it"):
+        with before.each:
+            self.outside = self.project.root.parent / f"{self.project.root.name}-outside"
+            self.outside.mkdir()
+            (self.outside / "story-map.md").write_text(_STORY_MAP, encoding="utf-8")
+            self.failed, self.answer = asyncio.run(_render(self.server, self.project.root, "drawio", f"../{self.outside.name}/story-map.md"))
+
+        with after.each:
+            shutil.rmtree(self.outside, ignore_errors=True)
+
+        with it("should refuse the path by name, as validate does"):
+            expect((self.failed, "NamedPathNotFoundError" in self.answer, self.outside.name in self.answer)).to(equal((True, True, True)))
+
+        with it("should write no drawing outside the project"):
+            expect((self.outside / "story-map.drawio").exists()).to(equal(False))
+
+    # Exploratory testing, widget-09: a whiteboard file with no source named was read as markdown and failed with the
+    # worker's traceback.
+    with context("a story map's whiteboard file rendered to drawio with no source named"):
+        with before.each:
+            asyncio.run(_render(self.server, self.project.root, "whiteboard"))
+            self.failed, self.answer = asyncio.run(_render(self.server, self.project.root, "drawio", ".context/story-map.whiteboard", source=None))
+
+        with it("should draw the story map the whiteboard holds"):
+            expect((self.failed, "Browse Product Catalog" in self.drawing.read_text(encoding="utf-8"))).to(equal((False, True)))
+
+    with context("a file that is no story map, rendered to drawio as markdown"):
+        with before.each:
+            (self.folder / "notes.md").write_text("just some words\n", encoding="utf-8")
+            self.failed, self.answer = asyncio.run(_render(self.server, self.project.root, "drawio", ".context/notes.md"))
+
+        with it("should fail in one line, with no traceback"):
+            expect((self.failed, "Traceback" in self.answer)).to(equal((True, False)))
 
     with context("a story map whose board is kept, rendered to whiteboard again"):
         with before.each:

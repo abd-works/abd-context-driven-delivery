@@ -33,17 +33,20 @@ _RULE_BULLET = re.compile(r"^\s*[-*]\s+(?:\*\*`?|`)(?P<slug>[^`*]+)`?(?:\*\*)?\s
 class ValidationReport:
     """The validation report of one session on the guidance a validate call lists, each at the fidelity it is validated
     at, and the graph the call checked (its *CheckedGraph*). It shows each rule that guidance checks, and for a graph hit
-    of a rule it does not check, that rule as the guidance has it. It names files by their path from the session's root
+    of a rule it does not check, that rule as the guidance has it; for a call that names one rule, that rule alone. It names files by their path from the session's root
     and links each hit to its file by absolute path and line, so a link opens the file from wherever the report is read.
 
     The judge is given each rule's text with its hits (``for_judge``); the report saved in the session points at where
     each rule's text is kept instead (``for_saving``), since every report would otherwise copy the same rules again."""
 
-    def __init__(self, session: Session, guidance: list[Guidance], checked: CheckedGraph) -> None:
-        self._session = session
+    def __init__(self, guidance: list[Guidance], checked: CheckedGraph, only: Rule | None = None) -> None:
+        # The session the checked graph was built in, whose root the report names files from.
+        self._session: Session = checked.session
         self._guidance = guidance
         self._checked = checked
-        self._root = session.work_root.resolve()
+        # The one rule the call names, which is then the only rule the report shows; none for every rule.
+        self._only = only
+        self._root = self._session.work_root.resolve()
         self._places = RulePlaces(guidance)
 
     def for_judge(self) -> str:
@@ -69,7 +72,9 @@ class ValidationReport:
     def _sections(self) -> list[tuple[str, Rule | None, list[Violation]]]:
         """Each rule the listed guidance checks, then each other rule the graph hit, with the hits on it."""
         grouped = Violation.by_rule(self._checked.violations())
-        rules = [rule for item in self._guidance for rule in item.checked_rules()]
+        rules = self._rules_in_scope()
+        if self._only is not None:
+            return [(rule.slug, rule, grouped.get(rule.slug, [])) for rule in rules]
         checked = {rule.slug for rule in rules}
         every = {slug: check.rule for slug, check in FRAMEWORK_RULES.items()}
         every.update((rule.slug, rule) for item in self._guidance for rule in item.every_rule)
@@ -106,9 +111,14 @@ class ValidationReport:
         else:
             lines.append(f"**Total graph violations:** {len(violations)}")
             lines.append(f"**Rules with graph hits:** {len(Violation.by_rule(violations))}")
-        rules_in_scope = sum(len(item.checked_rules()) for item in self._guidance)
-        lines.extend([f"**AI rules in scope:** {rules_in_scope}", ""])
+        lines.extend([f"**AI rules in scope:** {len(self._rules_in_scope())}", ""])
         return lines
+
+    def _rules_in_scope(self) -> list[Rule]:
+        """The rules the judge judges: the one the call names, else every rule the listed guidance checks."""
+        if self._only is not None:
+            return [self._only]
+        return [rule for item in self._guidance for rule in item.checked_rules()]
 
     def _hit_lines(self, hits: list[Violation]) -> list[str]:
         if not hits:

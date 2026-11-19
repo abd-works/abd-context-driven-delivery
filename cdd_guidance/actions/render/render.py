@@ -38,11 +38,11 @@ class Render(GuidanceAction):
     def render(
         self, guidance: GuidanceArg, format: str, paths: list[str] | str, content: str = "", source: str | None = None,
     ) -> list:
-        """Convert already-generated content into format. Returns one result per guidance. A drawio, whiteboard, or markdown render of paths is saved beside the first path, under the name the fidelity writes that format to, keeping the layout people gave a drawing already there; its result names the saved file. Any other render returns its content. After the conversion returns, follow place_rendered; for format whiteboard, then follow publish_board.
+        """Convert already-generated content into format. Returns one result per guidance. A drawio, whiteboard, or markdown render of paths is saved beside the first path, under the name the fidelity writes that format to when the path is one of the fidelity's own files or a sketch, else under the path's own name, keeping the layout people gave a drawing already there; its result names the saved file. Any other render returns its content. After the conversion returns, follow place_rendered; for format whiteboard, then follow publish_board.
         format: the target channel, such as python, markdown, or drawio.
-        paths: a file, a list of files, or a folder. Required on every call. Pass paths so this action reads locally. Do not pass the document body in content on MCP.
+        paths: a file, a list of files, or a folder, named from the project's root or absolute. Required on every call. Pass paths so this action reads locally. Do not pass the document body in content on MCP. A path that is not there, or not under the session's root, is refused, and so is an empty file.
         content: in-process text when paths is empty. Leave this empty on an MCP call.
-        source: the format content is already in. Use sketch for a sketch file. Otherwise markdown, python, typescript, java, javascript, json, or drawio. md is markdown. Omit source when content is already the current format."""
+        source: the format content is already in. Use sketch for a sketch file. Otherwise markdown, python, typescript, java, javascript, json, or drawio. md is markdown. Omit source when content is already the current format, or for a file whose extension says its format, such as .drawio, .whiteboard, or .py."""
         self._work_on(guidance)
 
         def on(worked: WorkedGuidance) -> object:
@@ -63,7 +63,8 @@ class Render(GuidanceAction):
 
     def _render_files(self, worked: WorkedGuidance, format: str, paths: list[str] | str, source: str | None) -> dict:
         """The render of the files at paths, saved beside them when it is a diagram or a document."""
-        sources = [self.files.path_named(path) for path in ([paths] if isinstance(paths, str) else paths)]
+        sources = self.files.paths_to_read(paths)
+        source = source or self._format_named_by(sources)
         declared = worked.declared if isinstance(worked, FidelityGuidance) else None
         saved = RenderedFile.from_sources(sources, Format(source), Format(format), declared)
         if saved is None:
@@ -71,6 +72,16 @@ class Render(GuidanceAction):
         if not isinstance(worked, FidelityGuidance):
             return saved.save(worked.render_files(format, paths, source, saved.previous))
         return saved.save(self._drawn(worked, worked.files_to_render(format, paths, source, saved.previous)))
+
+    def _format_named_by(self, sources: list[Path]) -> str | None:
+        """The format the first source's name says it is in, for a call that names no source: a drawing, a whiteboard,
+        or code, by its extension. None for a folder, and for a markdown file, which is a document or a sketch as the
+        fidelity it is rendered at says."""
+        first = sources[0] if sources else None
+        if first is None or not first.is_file():
+            return None
+        named = Format.from_extension(first.suffix)
+        return named.name if named.is_offered and named.group != "markdown" else None
 
     def _drawn(self, fidelity: FidelityGuidance, request: RenderRequest) -> dict:
         """What request renders to at fidelity: drawn by a worker process for a call that answers a chat when it is a

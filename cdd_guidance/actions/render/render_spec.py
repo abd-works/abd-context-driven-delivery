@@ -18,8 +18,11 @@ from expects import contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from cdd_guidance.actions.render.render import Render
+from cdd_guidance.actions.render.rendered_file import NothingToRender
+from cdd_guidance.actions.render.worker_render import RenderFailed
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.agent_tools.tool_call import ToolCall
+from space.session.session_files import NamedPathNotFoundError
 from space.session.throwaway_project import ThrowawayProject
 from harness.whiteboard import BoardLinks, Whiteboard
 
@@ -43,6 +46,18 @@ _MARKDOWN_STORY_MAP = """\
 ## (E) Place New Order
 
 ### (S) Customer --> Browse Product Catalog
+"""
+_OTHER_STORY_MAP = """# (E) Manage Customer Returns
+
+## (E) Accept Return
+
+### (S) Customer --> Return Damaged Item
+"""
+_WORKER_TRACEBACK = """Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "nodes.py", line 535, in parse
+    raise MarkdownParseError("Not a valid Markdown story map: no recognised structure found")
+MarkdownParseError: Not a valid Markdown story map: no recognised structure found
 """
 _STORY_TEST = '''\
 from story_test import given, scenario, story, then, when
@@ -264,6 +279,50 @@ with description("Render saving what it makes beside its source") as self:
             card = _card_holding(self.drawing.read_text(encoding="utf-8"), "Browse Product Catalog")
             expect(card.find("mxGeometry").get("x")).to(equal("777"))
 
+    with context("a story map whose drawing a person laid out, with another markdown file beside it"):
+        with before.each:
+            Render().render(_STORIES, format="drawio", paths=[str(self.story_map)], source="markdown")
+            self.drawing = self.folder / "story-map.drawio"
+            self.laid_out = _moved_card(self.drawing.read_text(encoding="utf-8"), "Browse Product Catalog", "777")
+            self.drawing.write_text(self.laid_out, encoding="utf-8")
+            self.other = self.folder / "returns.md"
+
+        with context("that holds a story map of its own, rendered to drawio"):
+            with before.each:
+                self.other.write_text(_OTHER_STORY_MAP, encoding="utf-8")
+                self.results = Render().render(_STORIES, format="drawio", paths=[str(self.other)], source="markdown")
+
+            with it("should leave the story map's drawing as the person laid it out"):
+                expect(self.drawing.read_text(encoding="utf-8")).to(equal(self.laid_out))
+
+            with it("should save the other file's drawing under that file's own name"):
+                expect((self.folder / "returns.drawio").read_text(encoding="utf-8")).to(contain("Return Damaged Item"))
+
+            with it("should answer with the file it saved"):
+                expect(self.results[0]["path"]).to(equal(str(self.folder / "returns.drawio")))
+
+        with context("that is empty, rendered to drawio"):
+            with before.each:
+                self.other.write_text("  ", encoding="utf-8")
+                self.render = lambda: Render().render(_STORIES, format="drawio", paths=[str(self.other)], source="markdown")
+
+            with it("should refuse the render, naming the empty file"):
+                expect(self.render).to(raise_error(NothingToRender, contain("returns.md")))
+
+            with it("should leave the story map's drawing as the person laid it out"):
+                try:
+                    self.render()
+                except NothingToRender:
+                    pass
+                expect(self.drawing.read_text(encoding="utf-8")).to(equal(self.laid_out))
+
+            with it("should save no drawing for the empty file"):
+                try:
+                    self.render()
+                except NothingToRender:
+                    pass
+                expect((self.folder / "returns.drawio").exists()).to(equal(False))
+
     with context("a story map rendered to markdown from its sketch"):
         with before.each:
             self.sketch = self.folder / "orders-sketch.md"
@@ -324,10 +383,65 @@ with description("Render saving what it makes beside its source") as self:
         with it("should write none of the elements the render left as they were"):
             expect(_written_ids(self.results[0])).to(equal(["meta"]))
 
+    with context("a story map's whiteboard file rendered to drawio with no source named"):
+        with before.each:
+            Render().render(_STORIES, format="whiteboard", paths=[str(self.story_map)], source="markdown")
+            Render().render(_STORIES, format="drawio", paths=[str(self.folder / "story-map.whiteboard")])
+
+        with it("should read the file as the whiteboard its name says it is"):
+            expect((self.folder / "story-map.drawio").read_text(encoding="utf-8")).to(contain("Browse Product Catalog"))
+
     with context("rendered from content, with no paths"):
         with it("should answer with what it made, since it has no source to save beside"):
             results = Render().render(_STORIES, format="drawio", paths=[], content=_STORY_MAP, source="md")
             expect(str(results[0]["content"])).to(contain("mxGraphModel"))
+
+
+with description("A render whose worker process failed"):
+    with it("should say what failed in one line, the worker's own last word"):
+        failure = RenderFailed(1, _WORKER_TRACEBACK)
+        expect(str(failure)).to(equal("the render's worker process exited with 1: MarkdownParseError: Not a valid Markdown story map: no recognised structure found"))
+
+    with it("should keep the worker's whole error output for whoever debugs it"):
+        expect(RenderFailed(1, _WORKER_TRACEBACK).errors).to(equal(_WORKER_TRACEBACK))
+
+
+with description("Render asked for a path, in a session") as self:
+    with before.each:
+        self.project = ThrowawayProject()
+        self.folder = self.project.root / ".context"
+        self.folder.mkdir()
+        (self.folder / "story-map.md").write_text(_MARKDOWN_STORY_MAP, encoding="utf-8")
+        self.action = Render().for_call(ToolCall({}, self.project.root))
+
+    with after.each:
+        self.project.close()
+
+    with context("that is outside the session's root"):
+        with before.each:
+            self.outside = Path(tempfile.mkdtemp(prefix="render-outside-")) / "story-map.md"
+            self.outside.write_text(_MARKDOWN_STORY_MAP, encoding="utf-8")
+            self.render = lambda: self.action.render("stories-story-map", format="drawio", paths=[str(self.outside)], source="markdown")
+
+        with it("should refuse the path by name, as validate does"):
+            expect(self.render).to(raise_error(NamedPathNotFoundError, contain("under the session's root")))
+
+        with it("should write no drawing beside it"):
+            try:
+                self.render()
+            except NamedPathNotFoundError:
+                pass
+            expect((self.outside.parent / "story-map.drawio").exists()).to(equal(False))
+
+    with context("that is not there"):
+        with it("should refuse the path by name"):
+            render = lambda: self.action.render("stories-story-map", format="drawio", paths=["nope/missing.md"], source="markdown")
+            expect(render).to(raise_error(NamedPathNotFoundError, contain("nope/missing.md")))
+
+    with context("that is under the session's root"):
+        with it("should save the drawing beside it"):
+            self.action.render("stories-story-map", format="drawio", paths=[".context/story-map.md"], source="markdown")
+            expect((self.folder / "story-map.drawio").read_text(encoding="utf-8")).to(contain("Browse Product Catalog"))
 
 
 with description("A comment a person left on a board in Claude") as self:
