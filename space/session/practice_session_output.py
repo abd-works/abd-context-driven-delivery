@@ -555,15 +555,11 @@ class WrittenFiles:
         ``harness/.context/stories``, holds the practice's documents itself, so a declared ``.context/story-map.md``
         lands in it as ``story-map.md`` rather than in a ``.context`` within the ``.context``; a declared
         ``story_tests/...`` lands in the ``story_tests`` beside that ``.context``, or, for a root inside ``story_tests``
-        such as one epic's folder, under that root. A root the fidelity has of its own outside ``story_tests`` and
-        ``.context``, such as a project's ``tests``, is the folder its story tests are in, so ``story_tests`` is not added
-        inside it."""
+        such as one epic's folder, under that root."""
         folder_mark = "/" if name.endswith("/") else ""
         declared = PurePosixPath(name)
         if STORY_TESTS_FOLDER in root.parts and declared.parts[:1] == (STORY_TESTS_FOLDER,):
             return f"{(root / self._below_named(declared, root)).as_posix()}{folder_mark}"
-        if self._is_own_story_tests_folder(root) and declared.parts[:1] == (STORY_TESTS_FOLDER,):
-            return f"{(root / PurePosixPath(*declared.parts[1:])).as_posix()}{folder_mark}"
         if CONTEXT_FOLDER in root.parts and declared.parts[:1] == (STORY_TESTS_FOLDER,):
             return f"{(self._beside_context(root) / declared).as_posix()}{folder_mark}"
         if CONTEXT_FOLDER in root.parts and declared.parts[:1] == (CONTEXT_FOLDER,):
@@ -573,20 +569,9 @@ class WrittenFiles:
     def _below_named(self, declared: PurePosixPath, root: Path) -> PurePosixPath:
         """The part of a declared ``story_tests/{epic}/{sub-epic}/...`` path below a root inside ``story_tests``, such as
         a session's epic folder: the folders the root already names, ``story_tests`` and one name per folder below it,
-        are dropped. A ``**`` folder matches any depth, so it stays, and so does every part after it."""
-        below = len(root.parts) - root.parts.index(STORY_TESTS_FOLDER) - 1
-        parts = list(declared.parts[1:])
-        while below and parts and parts[0].startswith("{"):
-            parts.pop(0)
-            below -= 1
-        return PurePosixPath(*parts)
-
-    def _is_own_story_tests_folder(self, root: Path) -> bool:
-        """Whether root is one session.json names for this fidelity itself, outside ``story_tests`` and ``.context``:
-        the folder the project keeps its story tests in under its own name, such as ``tests``."""
-        chosen = self._output.chosen_outputs
-        named = chosen.get("roots") or chosen.get("root")
-        return bool(named) and STORY_TESTS_FOLDER not in root.parts and CONTEXT_FOLDER not in root.parts
+        are dropped."""
+        named = len(root.parts) - root.parts.index(STORY_TESTS_FOLDER)
+        return PurePosixPath(*declared.parts[named:])
 
     def _beside_context(self, root: Path) -> Path:
         """The folder holding the `.context` root sits in, where a project keeps its `story_tests` beside its

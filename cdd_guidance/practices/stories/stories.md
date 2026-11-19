@@ -97,7 +97,7 @@ stage: specification
 outputs:
   python: "story_tests/{epic}/{sub-epic}/{story}/{story_snake}_story.test.py"
   typescript: "story_tests/{epic}/{sub-epic}/{story}/{story_snake}_story.test.ts"
-  markdown: "story_tests/**/{story_snake}_story.test.md"
+  markdown: "story_tests/{epic}/{sub-epic}/{story_snake}_story.test.md"
   realization: ".context/{scope}-scenario-realization.md"
 ```
 

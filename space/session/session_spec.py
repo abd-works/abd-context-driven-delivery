@@ -1071,13 +1071,13 @@ with description("a practice"):
 
                 with it("should write the scenarios in the story_tests beside that .context"):
                     outputs = self.stories.fidelities["scenarios"].declared.output_paths()
-                    expect(outputs["markdown"]).to(equal([(self.work / "story_tests" / "**/{story_snake}_story.test.md").resolve().as_posix()]))
+                    expect(outputs["markdown"]).to(equal([(self.work / "story_tests" / "{epic}/{sub-epic}/{story_snake}_story.test.md").resolve().as_posix()]))
 
                 with context("and the scenarios' own root one epic's folder in story_tests"):
                     with it("should write the scenarios under that epic's folder only"):
                         self.write_overrides({"stories": {"root": ".context/stories", "scenarios": {"root": "story_tests/manage-orders"}}})
                         outputs = self.stories.fidelities["scenarios"].declared.output_paths()
-                        expect(outputs["markdown"]).to(equal([(self.work / "story_tests" / "manage-orders" / "**/{story_snake}_story.test.md").resolve().as_posix()]))
+                        expect(outputs["markdown"]).to(equal([(self.work / "story_tests" / "manage-orders" / "{sub-epic}/{story_snake}_story.test.md").resolve().as_posix()]))
 
                 with context("and a person chooses one epic's folder for the scenarios"):
                     with it("should write the scenarios there and keep the story map in the practice's root"):
@@ -1085,7 +1085,7 @@ with description("a practice"):
                         scenarios = self.stories.fidelities["scenarios"].declared.output_paths()["markdown"]
                         story_map = self.fidelity.declared.output_paths()["markdown"]
                         expect((scenarios, story_map)).to(equal((
-                            [(self.work / "story_tests" / "manage-orders" / "**/{story_snake}_story.test.md").resolve().as_posix()],
+                            [(self.work / "story_tests" / "manage-orders" / "{sub-epic}/{story_snake}_story.test.md").resolve().as_posix()],
                             [(self.work / ".context" / "stories" / "story-map.md").resolve().as_posix()],
                         )))
 
@@ -1096,8 +1096,8 @@ with description("a practice"):
                     with it("should write the scenarios under each sub-epic's folder, and nowhere else in story_tests"):
                         outputs = self.stories.fidelities["scenarios"].declared.output_paths()
                         expect(outputs["markdown"]).to(equal([
-                            (self.work / "story_tests" / "manage-orders" / "place-order" / "**/{story_snake}_story.test.md").resolve().as_posix(),
-                            (self.work / "story_tests" / "ship-orders" / "track-parcel" / "**/{story_snake}_story.test.md").resolve().as_posix(),
+                            (self.work / "story_tests" / "manage-orders" / "place-order" / "{story_snake}_story.test.md").resolve().as_posix(),
+                            (self.work / "story_tests" / "ship-orders" / "track-parcel" / "{story_snake}_story.test.md").resolve().as_posix(),
                         ]))
 
                     with it("should let the session's file manager read a story test in the second sub-epic"):
@@ -1112,8 +1112,8 @@ with description("a practice"):
                         scenarios.choose_root("work/story_tests/manage-orders/place-order")
                         scenarios.add_root("work/story_tests/ship-orders/track-parcel")
                         expect(self.stories.fidelities["scenarios"].declared.output_paths()["markdown"]).to(equal([
-                            (self.work / "story_tests" / "manage-orders" / "place-order" / "**/{story_snake}_story.test.md").resolve().as_posix(),
-                            (self.work / "story_tests" / "ship-orders" / "track-parcel" / "**/{story_snake}_story.test.md").resolve().as_posix(),
+                            (self.work / "story_tests" / "manage-orders" / "place-order" / "{story_snake}_story.test.md").resolve().as_posix(),
+                            (self.work / "story_tests" / "ship-orders" / "track-parcel" / "{story_snake}_story.test.md").resolve().as_posix(),
                         ]))
 
                 with it("should let the session's file manager read the story tests in that story_tests"):
@@ -1304,38 +1304,6 @@ with description("a session working on the whole repository, whose story map is 
 
         with it("should still list that story map as the story map's markdown"):
             expect([entry.path for entry in self.story_map.declared.files()["markdown"]]).to(equal(["harness/.context/stories/story-map.md"]))
-
-
-# A project can keep its story tests in a folder of its own name, such as ``tests``, and give each epic one folder with
-# one ``<epic_snake>_story.test.md`` and no sub-epic folders: the scenarios' root is that folder, and every markdown
-# scenarios file under it is listed, at any depth.
-with description("a session whose scenarios root is a tests folder holding an epic folder and no sub-epic folder") as self:
-    with before.each:
-        self.home = ExampleHome()
-        self.repo = Path(tempfile.mkdtemp(prefix="session-scenarios-")).resolve()
-        (self.repo / ".git").mkdir()
-        self.epic = self.repo / "tests" / "choose-lines" / "choose_lines_story.test.md"
-        self.nested = self.repo / "tests" / "place-order" / "pay" / "card" / "pay_by_card_story.test.md"
-        for file in (self.epic, self.nested):
-            file.parent.mkdir(parents=True, exist_ok=True)
-            file.write_text("# Scenarios\n", encoding="utf-8")
-        session = ToolCall({}, self.repo).session
-        session.record.save_fields(outputs={"stories": {"root": "tests/.context", "scenarios": {"root": "tests"}}})
-        session = ToolCall({}, self.repo).session
-        session.session_files.branch_changes.files = lambda: {self.epic.resolve()}
-        self.scenarios = session.practice("stories").fidelities["scenarios"]
-
-    with after.each:
-        shutil.rmtree(self.repo, ignore_errors=True)
-        self.home.close()
-
-    with it("should list every markdown scenarios file under the root, in the epic's folder or nested deeper"):
-        listed = sorted(entry.path for entry in self.scenarios.declared.files()["markdown"])
-        expect(listed).to(equal(["tests/choose-lines/choose_lines_story.test.md", "tests/place-order/pay/card/pay_by_card_story.test.md"]))
-
-    with it("should say each listed file exists and whether the branch changed it"):
-        marked = {entry.path: (entry.exists, entry.is_changed) for entry in self.scenarios.declared.files()["markdown"]}
-        expect(marked).to(equal({"tests/choose-lines/choose_lines_story.test.md": (True, True), "tests/place-order/pay/card/pay_by_card_story.test.md": (True, False)}))
 
 
 # A fidelity that declares a folder per module, as Clean Engineering's code does with ``{module}/``, lists the code the

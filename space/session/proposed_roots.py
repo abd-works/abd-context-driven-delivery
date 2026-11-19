@@ -15,8 +15,6 @@ if TYPE_CHECKING:
 
 _NAMED_FOLDER = re.compile(r"^\{[^{}/]+\}$")
 _FILLED_IN = re.compile(r"[{*?]")
-# The folder part of a declared path that matches folders at any depth, none included.
-_ANY_DEPTH = "**"
 # A code format whose files also carry a second extension, such as React components in TypeScript; any other code format
 # is its own extension alone.
 _CODE_EXTENSIONS = {"typescript": (".ts", ".tsx"), "javascript": (".js", ".jsx")}
@@ -82,13 +80,10 @@ class ProposedRoots:
     def _piece_folder(self, path: str) -> str | None:
         """The narrowest folder holding the piece path is part of, path being from the project: through the deepest
         named folder its declared path shares with the fidelity's other paths under the same fixed folder, else the
-        folder the declared path hangs off; for a declared path with a ``**`` folder, which matches any depth, and for
-        code written as a folder per module, its own folder."""
+        folder the declared path hangs off; for code written as a folder per module, its own folder."""
         for template in self._declared_files():
             match = DeclaredFile(template).pattern.search(path)
             if match is not None:
-                if _ANY_DEPTH in PurePosixPath(template).parts:
-                    return PurePosixPath(path).parent.as_posix()
                 piece = self._piece_name(template)
                 return path[: match.end(piece) if piece else match.start()] or PROJECT_TOP
         if self._writes_code(path):
@@ -100,8 +95,7 @@ class ProposedRoots:
         the same fixed folders, such as ``sub_epic`` for ``story_tests/{epic}/{sub-epic}/{story}/...``; empty when it
         shares none."""
         head = _fixed_head(template)
-        folders = PurePosixPath(template).parts[:-1]
-        siblings = [_compared_folders(PurePosixPath(other).parts[:-1], folders) for other in self._declared_files() if _fixed_head(other) == head]
+        siblings = [PurePosixPath(other).parts[:-1] for other in self._declared_files() if _fixed_head(other) == head]
         shared = [parts[0] for parts in zip(*siblings) if len(set(parts)) == 1]
         named = [part for part in shared if _NAMED_FOLDER.match(part)]
         return re.sub(r"\W", "_", named[-1].strip("{}")) if named else ""
@@ -127,17 +121,6 @@ def _fixed_head(template: str) -> tuple[str, ...]:
     """The folders a declared path names outright before its first named or wildcard part."""
     parts = PurePosixPath(template).parts[:-1]
     return tuple(part for part in parts[: next((index for index, part in enumerate(parts) if _FILLED_IN.search(part)), len(parts))])
-
-
-def _compared_folders(other: tuple[str, ...], folders: tuple[str, ...]) -> tuple[str, ...]:
-    """The folders of a sibling declared path, other, as compared with a template's folders. A ``**`` folder matches the
-    folders above a file's own folder, so it shares every folder of the template but the one holding the template's
-    file, as ``story_tests/**/{story_snake}_story.test.md`` shares ``{epic}/{sub-epic}`` with
-    ``story_tests/{epic}/{sub-epic}/{story}/{story_snake}_story.test.py``."""
-    if _ANY_DEPTH not in other:
-        return other
-    before = other[: other.index(_ANY_DEPTH)]
-    return before + folders[len(before): -1]
 
 
 def _squashed(text: str) -> str:
