@@ -62,8 +62,10 @@ def _rule(fidelity) -> str:
 
 
 def _open_project() -> ThrowawayProject:
-    """A throwaway project with its session alpha open, which the actions it is named for log to."""
+    """A throwaway project with its session alpha open, which the actions it is named for log to, and the docs
+    folder the examples name as paths: document and partition refuse a path that is not there."""
     throwaway = ThrowawayProject()
+    (throwaway.root / "docs").mkdir()
     sessions = Sessions(throwaway.root)
     sessions.opened.open(sessions.create("alpha", throwaway.root))
     return throwaway
