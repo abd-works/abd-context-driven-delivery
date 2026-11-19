@@ -122,6 +122,9 @@ with description("an install into an IDE folder") as self:
         with it("should finish both"):
             expect([(code, errors[-600:] if code else "") for errors, code in self.outcomes]).to(equal([(0, ""), (0, "")]))
 
+        with it("should have the one that waited say what it waited for and for how long"):
+            expect(len([errors for errors, _code in self.outcomes if "waiting up to 180 seconds for the install process" in errors])).to(equal(1))
+
         with it("should leave every file the record lists in the folder"):
             folder = self.project / ".cursor"
             expect([name for name in _recorded(folder) if not (folder / name).is_file()]).to(equal([]))

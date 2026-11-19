@@ -19,6 +19,7 @@ CDD_WRITTEN_PATTERNS = (
     ".kilo/",
     ".mcp.json",
     "**/.install-state.json",
+    "**/.install-lock",
     ".hook-server/",
     ".context/prompt-log.txt",
     "**/.context/graph.json",

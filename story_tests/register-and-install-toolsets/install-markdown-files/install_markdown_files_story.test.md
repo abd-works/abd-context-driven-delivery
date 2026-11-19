@@ -163,7 +163,8 @@ section: body
 | Source | Note |
 |--------|------|
 | bolt-12 | two installs at the same moment, from the main checkout and a ticket's worktree, both copy the mods into the one `claude-plugins` folder of the cdd home, and one fails with WinError 32 |
-| `harness/mcp/cdd_home.py` `CddHome._copy_mod` | the owner of that folder; no test yet |
+| `harness/mcp/cdd_home.py` `CddHome._publish_mods` | the owner of that folder: one install publishes into it at a time |
+| `harness/mcp/cdd_home_heavy_spec.py` | heavy tier: four real processes publishing into one cdd home |
 
 #### Scenario: Install from the main checkout and a ticket's worktree at the same moment
 
