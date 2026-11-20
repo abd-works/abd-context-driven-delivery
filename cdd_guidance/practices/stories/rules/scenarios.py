@@ -239,14 +239,33 @@ class GivenNamesComplexStateRootFirst(PracticeGraphRule):
         if _keyword(node).casefold() not in {"given", ""} and node.type != "Given":
             return []
         text = _text(node)
+        earlier = " ".join(_text(step) for step in self._earlier_steps(node, context))
         for part, root in self._owned_parts(context).items():
             part_at = self._first_mention(part, text)
-            if part_at is None:
+            if part_at is None or self._first_mention(root, earlier) is not None:
                 continue
             root_at = self._first_mention(root, text)
             if root_at is None or root_at > part_at:
                 return [f"Given {text!r} names {part} before its aggregate root {root}; open with {root}, then its owned parts."]
         return []
+
+    def _earlier_steps(self, step: Node, context: RuleCheckContext) -> list[Node]:
+        """Its story's background steps and the steps before it in its scenario: a root one of them names is already
+        open, so a later step may name that root's parts alone."""
+        for edge in context.edges("steps"):
+            if edge.child is step:
+                steps = context.children(edge.parent, "steps")
+                return self._background_steps(edge.parent, context) + steps[: steps.index(step)]
+        return []
+
+    def _background_steps(self, scenario: Node, context: RuleCheckContext) -> list[Node]:
+        stories = [edge.parent for edge in context.edges("scenarios") if edge.child is scenario]
+        return [
+            step
+            for story in stories
+            for background in context.children(story, "background")
+            for step in context.children(background, "steps")
+        ]
 
     def _owned_parts(self, context: RuleCheckContext) -> dict[str, str]:
         """Each entity and value object an aggregate in the DDD model owns, mapped to the name of that aggregate's root."""
@@ -267,7 +286,8 @@ class GivenNamesComplexStateRootFirst(PracticeGraphRule):
     def _first_mention(self, concept: str, text: str) -> int | None:
         """Where text first names a model concept, written as the class (LineItem) or as words (line items)."""
         words = re.findall(r"[A-Z]?[a-z0-9]+|[A-Z]+(?![a-z])", concept) or [concept]
-        pattern = r"\b" + r"[\s_-]*".join(re.escape(word) for word in words) + r"s?\b"
+        # A word joined to another by a hyphen describes it, as "line" does in "one-line cart", so it is no mention.
+        pattern = r"(?<![\w-])" + r"[\s_-]*".join(re.escape(word) for word in words) + r"s?(?![\w-])"
         found = re.search(pattern, text, re.I)
         return found.start() if found else None
 

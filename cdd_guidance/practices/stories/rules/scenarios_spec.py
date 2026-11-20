@@ -27,15 +27,26 @@ from harness.graph.rule_context import RuleCheckContext  # noqa: E402
 from harness.graph.rule_fixture import SchemaRuleRun  # noqa: E402
 
 
-def _step(keyword: str, text: str, order: int) -> Step:
-    step = Step(text, StepType(keyword.lower()), order)
+def _step(keyword: str, text: str, order: int, phase: StepType) -> Step:
+    step = Step(text, phase, order)
     step.keyword = keyword
     return step
 
 
+def _phases(steps: list[tuple[str, str]]) -> list[StepType]:
+    """Each step's phase: its own keyword's, or for an And or But, the phase of the step it continues."""
+    phases: list[StepType] = []
+    for keyword, _ in steps:
+        phases.append(StepType(keyword.lower()) if keyword.lower() in ("given", "when", "then") else phases[-1])
+    return phases
+
+
 def _scenario(steps: list[tuple[str, str]], *, examples: int = 0, outline: bool = False, evidence: tuple = ()) -> Scenario:
     scenario = Scenario("Place the order")
-    scenario.steps = [_step(keyword, text, order) for order, (keyword, text) in enumerate(steps, start=1)]
+    scenario.steps = [
+        _step(keyword, text, order, phase)
+        for order, ((keyword, text), phase) in enumerate(zip(steps, _phases(steps)), start=1)
+    ]
     for number in range(examples):
         scenario.examples[f"order {number + 1}"] = f"order {number + 1}"
     scenario.is_outline = outline
@@ -195,6 +206,27 @@ with description("a scenario on a story graph"):
             with it("should be told to open with the Order root"):
                 given = "a ShippingAddress in Leeds"
                 expect(len(_given_hits(_loaded(_scenario([("Given", given)]), self.graph)))).to(equal(1))
+
+        # An example name such as "one-line-item order" uses the part's words to describe the root, not to name the part.
+        with context("with a Given whose example name joins a part's words to the root by a hyphen"):
+            with it("should pass"):
+                given = "the ++two-line-item Order++ ships to Leeds"
+                expect(_given_hits(_loaded(_scenario([("Given", given)]), self.graph))).to(equal([]))
+
+        with context("with an And that names a line item after an earlier Given opened with the Order"):
+            with it("should pass, since the scenario already opened with the root"):
+                steps = [("Given", "an Order for two lamps"), ("And", "its line item for the lamps is backordered")]
+                expect(_given_hits(_loaded(_scenario(steps), self.graph))).to(equal([]))
+
+            with context("that is read back from graph.json"):
+                with it("should still pass"):
+                    steps = [("Given", "an Order for two lamps"), ("And", "its line item for the lamps is backordered")]
+                    expect(_given_hits(_read_back(_loaded(_scenario(steps), self.graph)))).to(equal([]))
+
+        with context("with an And that names a line item before any Given names the Order"):
+            with it("should be told to open with the Order root"):
+                steps = [("Given", "a customer named Ann"), ("And", "a line item for two lamps")]
+                expect(len(_given_hits(_loaded(_scenario(steps), self.graph)))).to(equal(1))
 
     with context("that names a domain concept"):
         with context("with no examples anywhere"):
