@@ -68,3 +68,69 @@ Publishing a whiteboard to a board in Claude; a real Claude Design canvas; runni
 
 - Sandboxes: `C:\dev\_et\round3\<robot>`; the combined project: `C:\dev\_et\round3\combined\work`.
 - Screenshots: `C:\dev\_et\round3\pixel\shots` and `C:\dev\_et\round3\lens\shots`.
+
+## What was fixed (2026-11-20)
+
+Two waves of robots closed the gaps, test first, each in its own files; the lead committed after each report. Commits 88c9f6d3a to 1194888e0 on `release-1-2-fixes`.
+
+| Defect | State | Note |
+|---|---|---|
+| r3-sparky-01, widget-06 | fixed | A thin slice is drawn as its increments and saved as its own drawing |
+| r3-sparky-02 | fixed | A story map back from a drawing keeps descriptions, story links and scope |
+| r3-sparky-03, 05, 08, 09 | fixed | One Background per story; a step's domain term is an edge to the DDD class; story tests keep steps, invokes edges and examples; a step invokes only code its file reaches |
+| r3-sparky-04 | part | The example-file rule no longer runs on markdown; every Then needing an Example waits on the person |
+| r3-sparky-06 | fixed | Scenarios rendered to Python or TypeScript parse |
+| r3-sparky-07 | part | A code render holds only its own stories; where it is saved waits on the person |
+| r3-sparky-10 | part | A story test validated alone takes its place from the map |
+| r3-sparky-11 | part | Schema text only; no acceptance-test template per language |
+| widget-19 | part | An outline's examples survive code; front matter, story type and term links do not |
+| r3-bolt-01, 02, 03, 05 | fixed | Contexts, mappings, events and dependencies reach the graph; a model after the template validates; arrows read back |
+| widget-20 | fixed | Prose, invariants, events and integrations survive a drawing written over its markdown; a drawing with no markdown beside it has nothing to take them from |
+| r3-bolt-04 | not fixed | The drawio model still draws no context or aggregate container |
+| r3-bolt-06 | waits on the person | Whether a code render saves files; today it answers content and the declared paths |
+| r3-bolt-07, r3-widget-07 | part | Type spellings and names are right; properties, imports and super calls are not |
+| r3-gizmo-01 | fixed | A render between the IA drawing and the UX context leaves the other file alone |
+| r3-gizmo-02, 04 | part | Stories, terms and controls read back; descriptions, states and interactions are not drawn, which waits on the person |
+| r3-gizmo-05 | part | Rendering a view is refused by name; whether views render between languages waits on the person |
+| r3-gizmo-06 | fixed | UX is in the graph |
+| r3-widget-01 | part | The modules drawing is saved in the root `.context`; the trip back still writes one `modules.md` |
+| r3-widget-02, 03, 04, 06, 08, 09, 10, widget-08 | fixed | Module cards, class models and the graph reading |
+| r3-widget-05 | fixed | A `.md` path is read as markdown |
+| r3-rivet-01 | fixed by removal | Java is no longer offered for BDD specs |
+| r3-rivet-02 | fixed | Validate names each path that gave the graph no node |
+| r3-rivet-03 to 07, 09, 10 | fixed | Spec trips and BDD graph links |
+| r3-rivet-08 | part | A graph render answers content and the declared path; it no longer saves `graph.md` |
+| r3-cog-01, 02, 04 | fixed | Links by import; refresh leaves the graph as loaded; a story off the map is reported |
+| r3-cog-03 | part | A whole load reads code story tests; DDD roots' own code is not reached |
+| r3-cog-05 | fixed | Document and code nodes of one class both stay, joined by `isA` and `implements`; aggregate and context to module |
+| r3-pixel-01 to 05, 07, 09 | fixed | Rendered and Source views show callouts and follow links |
+| r3-pixel-06, r3-lens-02 | fixed in the declarations | Not checked in the Files app |
+| r3-lens-01, 03 to 08 | fixed | Graph view selection, lines, filters |
+| r3-lens-09 | not fixed | Tree entries that cannot be told apart |
+| r3-gizmo-03, r3-rivet-11, r3-pixel-08 | wait on the person | Unanswered questions |
+
+### What the fixes broke, and how it was caught
+
+The unit tier, run after each wave, caught three knock-on breaks, each fixed before the next run:
+1. Linking a call only through what a file imports dropped the invokes edges of this repository's own story tests (5 examples) and of operations whose parameter is annotated with a class the file does not import (2 examples). The link now follows the class the file built the receiver as, an annotation naming a class of the file's own folder, and, for a receiver of no known class, the one class in the caller's file that declares the operation.
+2. The new file declarations moved a fidelity's proposed root up one folder (6 examples) and put two examples over the 100 ms budget.
+3. A renamed scenario was still listed under its old name in a server-tier spec.
+
+### Known limits of the fixes
+
+- A call through a field typed only by its constructor assignment, or a local typed only by an annotated return, still gets no edge.
+- A step's id still carries its line number, so a step is not found again after its file changes.
+- Stories and BDD each have their own class that follows a file's imports.
+- Which callouts show is worked out on the page, not in Python, against the project's own rule for web access to the domain.
+- In the Source view a link opens on Ctrl-press and leaves an editor error in the console; checked by hand only.
+- Several tests were not seen failing before their fix, because another robot's half-made edit broke imports at that moment: Rivet's for r3-rivet-03, 06, 07, Gizmo's drawio read-back, Cog's for r3-sparky-08, Anvil's render-level examples for the thin slice and the modules drawing.
+- No robot ran the metrics gate, and most did not call generate or validate through the cdd server, whose answers were too long to read whole.
+
+### New decisions for the person
+
+1. Does a render to Python or TypeScript save its files at the fidelity's declared paths, or answer content for the agent to save (r3-bolt-06, r3-sparky-07)?
+2. Does every Then have to observe an Example (r3-sparky-04)? Scenarios written to the template fail the rule.
+3. Is Java removed from BDD specs, or supported (r3-rivet-01)?
+4. Should the IA drawing show descriptions, content types and notes, and a mockup's drawing its states and interactions (r3-gizmo-02, 04)?
+5. Does a link to a heading that is not there get a callout saying so? It replaces an older scenario that said it carries none (r3-pixel-04).
+6. Do front-end views render between TypeScript and JavaScript (r3-gizmo-05)?
