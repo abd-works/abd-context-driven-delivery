@@ -116,6 +116,12 @@ class _BracketDepth:
         return 1
 
 
+def as_code_writes(text: str) -> tuple[str, ...]:
+    """text as a line of a file can hold it: as it is, and as code writes it inside a string of the same quotes, each
+    quote escaped (``refuses with \\"not paid\\"``). A step is found on its line by any of them."""
+    return (text, text.replace('"', '\\"'), text.replace("'", "\\'"))
+
+
 class Source:
     """Source text Monaco displays: file, start and end line, and text with each call marked."""
 
@@ -177,13 +183,24 @@ class Source:
         lines = self._file_lines()
         if not quote or not lines:
             return
-        hits = [index for index, line in enumerate(lines) if quote in line]
+        written = as_code_writes(quote)
+        hits = [index for index, line in enumerate(lines) if any(form in line for form in written)]
         if not hits:
             return
         chosen = min(hits, key=lambda index: (abs(index + 1 - self.start_line), index))
         self.start_line = chosen + 1
         self.end_line = self._call_end(lines, chosen)
         self._text = None
+
+    def align_to_table_row(self, name: str) -> None:
+        """Point this slice at the first row of a markdown table in its file that holds name as one of its cells, with
+        or without the underline marks around it; left where it is when no row does."""
+        for index, line in enumerate(self._file_lines()):
+            cells = [cell.strip().strip("+").strip() for cell in line.strip().strip("|").split("|")] if line.lstrip().startswith("|") else []
+            if name in cells:
+                self.start_line = self.end_line = index + 1
+                self._text = None
+                return
 
     def widen_to_call_close(self) -> None:
         """Extend ``end_line`` through the call or block that starts on ``start_line``."""

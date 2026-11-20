@@ -301,6 +301,24 @@ with description("DDD's reading of aggregates written in two languages, in folde
         expect(classes).to(equal([root.ooad_class.node_id]))
 
 
+    with it("should join each aggregate to the Clean Engineering package or module of its folder, which it is"):
+        cart = next(node for node in ddd_nodes(self.fixture, "Aggregate") if node.source.file == "ordering/cart")
+        expect([edge.child.node_id.split(":", 2)[2] for edge in self.fixture.practice.reading.graph.edges.from_parent("isA", cart)]).to(equal(["ordering/cart"]))
+
+    with context("with a bounded context whose folder has a module card"):
+        with before.all:
+            self.carded = RuleFixture(Ddd, {**_ORDERING_CODE, "ordering/.context/module-context.md": "# ordering\nWhere a Customer fills a Cart.\n"})
+
+        with it("should join the bounded context to the Clean Engineering module of its folder"):
+            ordering = next(node for node in ddd_nodes(self.carded, "BoundedContext") if node.name == "Ordering")
+            joined = [edge.child.node_id for edge in self.carded.practice.reading.graph.edges.from_parent("isA", ordering)]
+            expect(joined).to(equal(["clean_engineering:Module:ordering"]))
+
+        with it("should join no module to a bounded context whose folder Clean Engineering reads nothing from"):
+            catalogue = next(node for node in ddd_nodes(self.carded, "BoundedContext") if node.name == "Catalogue")
+            expect(self.carded.practice.reading.graph.edges.from_parent("isA", catalogue)).to(equal([]))
+
+
 with description("DDD's reading of a domain model beside the code that implements it"):
     with before.all:
         self.fixture = RuleFixture(

@@ -39,6 +39,8 @@ class BddGraphReading(PracticeReading):
 
     reads_after = ("clean_engineering",)
     node_types = ("Spec", "Description", "Context", "Observation")
+    # A describe's states and observations are listed as its spec writes them, in turn, not kind by kind.
+    source_ordered_types = frozenset({"Description", "Context", "Observation"})
 
     def read_working_copy(self) -> None:
         """Each spec file's language model reads its describe tree, whose spec, descriptions, contexts, and observations

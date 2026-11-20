@@ -132,3 +132,26 @@ with description("the whole working copy of a project with a story map, scenario
 
     with it("should link the steps of the story tests in code to the operations they call"):
         expect(sorted((edge.parent.node_id, edge.child.node_id) for edge in self.stories.edge_index.of("invokes"))).to(equal(self.files_load.edges("invokes")))
+
+
+_ADD_BOOK = "story_tests/fill-cart/add-books/add_book_to_cart_story.test.md"
+
+
+with description("where the graph places the nodes of a story map's story files") as self:
+    with before.all:
+        self.project = BookshopProject()
+
+    with context("with a step whose text a Python story test writes with escaped quotes"):
+        with it("should place the step on the line that writes it"):
+            step = self.project.node_named("Then", 'then the Bookshop refuses with "order 1002 is not paid"', _PACK_ORDER)[0]
+            expect(step.source.start_line).to(equal(31))
+
+    with context("with a step whose text a TypeScript story test writes with escaped quotes"):
+        with it("should place the step on the line that writes it"):
+            step = self.project.node_named("Then", 'then the Bookshop refuses with "order 9999 is not found"', _VIEW_CONFIRMATION)[0]
+            expect(step.source.start_line).to(equal(42))
+
+    with context("with examples a markdown scenarios file declares in a table"):
+        with it("should place each example on its row of the table"):
+            placed = {node.name: node.source.start_line for node in self.project.stories.nodes("Example") if node.source.file == _ADD_BOOK}
+            expect(placed).to(equal({"Tiny Tales": 25, "Grand Atlas": 26, "empty cart": 32, "cart with Tiny Tales": 33}))

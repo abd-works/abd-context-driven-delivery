@@ -103,6 +103,35 @@ Observed (`term_links_spec.py`).
 *Then* the When names no class for that link
   *And* it still names the root Book, whose link names a heading the model holds
 
+#### Scenario: Link a step to the one class its seed's package holds that declares the operation
+
+Observed (`cdd_guidance/practices/stories/model/step_call_reach_spec.py`). Source: the lead's card for Cog, second wave: where the receiver's class cannot be known and exactly one class the story file reaches declares the operation, link to it. The files are that spec's: `space/kanban/ticket.py`, `board.py` and `ticket_story_examples.py`, and `space/archive/archive.py`, which no story test imports.
+
+*Given* a story test imports only the seed `ticket_on_board` from `space/kanban/ticket_story_examples.py`
+  *And* its When calls `world.ticket.reread()`, on a receiver no line of the file gives a class
+*When* the Knowledge Graph reads the files for Stories and Clean Engineering
+*Then* the When invokes `reread` of Board in `space/kanban/board.py`
+  *And* it invokes nothing in `space/archive/archive.py`
+
+#### Scenario: Link a step to the class the story file built the receiver as
+
+Observed (`step_call_reach_spec.py`).
+
+*Given* a story test imports Board and Ticket, which both declare `delete`
+  *And* its Given writes `self.board = Board()` and its When calls `self.board.delete()`
+*When* the Knowledge Graph reads the files for Stories and Clean Engineering
+*Then* the When invokes `delete` of Board
+  *And* it does not invoke `delete` of Ticket
+
+#### Scenario: Link nothing when two classes in reach declare the operation and the receiver's class is not written
+
+Observed (`step_call_reach_spec.py`).
+
+*Given* a story test imports Board and Ticket, which both declare `delete`
+  *And* its When calls `self.board.delete()` on a receiver a seed returned
+*When* the Knowledge Graph reads the files for Stories and Clean Engineering
+*Then* the When invokes no operation
+
 ## Story: Link Examples To Classes And Steps
 
 ### Evidence

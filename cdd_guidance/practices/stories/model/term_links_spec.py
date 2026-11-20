@@ -53,10 +53,11 @@ with description("a step that links a domain term to its heading in the domain m
             expect(_demonstrated_by(self.project, paid_order)).to(equal([_ORDER]))
 
     with context("whose link names a heading the domain model does not hold"):
-        with it("should name no class for that link"):
-            with open(self.project.root / _ADD_BOOK, encoding="utf-8") as scenarios:
-                text = scenarios.read().replace("#cart-aggregate-root-entity", "#basket-aggregate-root-entity")
-            (self.project.root / _ADD_BOOK).write_text(text, encoding="utf-8")
+        with before.all:
+            scenarios = self.project.root / _ADD_BOOK
+            scenarios.write_text(scenarios.read_text(encoding="utf-8").replace("#cart-aggregate-root-entity", "#basket-aggregate-root-entity"), encoding="utf-8")
             self.project.graph.refresh([_ADD_BOOK])
-            when = self.project.node_named("When", "when the Customer adds ++Book++ ++Tiny Tales++ to the ++Cart++", _ADD_BOOK)[0]
-            expect(_named_by(self.project, when)).to(equal([_BOOK]))
+            self.when = self.project.node_named("When", "when the Customer adds ++Book++ ++Tiny Tales++ to the ++Cart++", _ADD_BOOK)[0]
+
+        with it("should name no class for that link"):
+            expect(_named_by(self.project, self.when)).to(equal([_BOOK]))

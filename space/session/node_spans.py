@@ -15,8 +15,8 @@ EXAMPLE_TYPE = "Example"
 
 class NodeSpans:
     """The lines a node covers, one span for each file: a node read from lines of a file covers those; a node read from
-    no file's lines, such as a module that is a folder, covers the lines of the nodes below it, among the files the
-    request keeps."""
+    no file's lines, such as a module that is a folder, covers the lines of the nodes below it. Only the files the
+    request keeps are covered."""
 
     def __init__(self, graph: Graph, request: FilterRequest, root: Path) -> None:
         self._graph = graph
@@ -93,10 +93,24 @@ class NodeSpans:
         path = self._lines_file(node)
         if path is None:
             return False
+        if not self._kept(path):
+            # Read from lines, but of a file the request leaves out: nothing of it opens, and the nodes below it still do.
+            return True
         source = node.source
         start, end = self._spans.get(path, (source.start_line, source.end_line))
         self._spans[path] = (min(start, source.start_line), max(end, source.end_line, source.start_line))
         return True
+
+    def _kept(self, path: Path) -> bool:
+        """Whether the request keeps the file at path: every file when it names no paths, else one it names or one
+        under a folder it names. A story the graph placed on a story map the viewer does not list, because its story
+        test names that map, opens its story test alone."""
+        listed = [str(named).replace("\\", "/").strip("/") for named in self._request.get("paths") or []]
+        folder = self._graph.folder
+        if not listed or not folder or not path.is_relative_to(Path(folder).resolve()):
+            return True
+        named = path.relative_to(Path(folder).resolve()).as_posix()
+        return any(named == kept or named.startswith(kept + "/") for kept in listed)
 
     def _refuse_gone(self, node: Node | None) -> None:
         named = self._named_file(node) if node is not None and node.source is not None else None

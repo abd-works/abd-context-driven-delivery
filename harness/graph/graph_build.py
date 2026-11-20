@@ -27,6 +27,7 @@ from harness.graph.explorer import GraphLoaded
 from harness.graph.file_lines import BuildReads
 from harness.graph.load_scope import LoadScope
 from harness.graph.saved_graph import GraphChanges, GraphDocument, SavedGraph
+from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 
 if TYPE_CHECKING:
     from harness.agent_tools.tool_call import ToolCall
@@ -122,8 +123,8 @@ class BuildTask:
 class BuildOrderDocument(TypedDict):
     """A build order as the server writes it for the worker: the task, the scope the worker reads (its folder, the files
     it is limited to, and whether it stands on the whole working copy), each chosen practice's source root, the pattern
-    overlays, the graph before the step (written in, or named by the file of the worker's last answer), and the
-    modules that register the practices and patterns the graph holds."""
+    overlays, the graph before the step (written in, or named by the file of the worker's last answer), the
+    modules that register the practices and patterns the graph holds, and the keys of the practices it holds."""
 
     task: BuildTaskDocument
     folder: str
@@ -134,6 +135,7 @@ class BuildOrderDocument(TypedDict):
     state: GraphDocument | None
     state_file: str
     modules: list[str]
+    held: list[str]
 
 
 class BuildOrder:
@@ -164,6 +166,7 @@ class BuildOrder:
             "state": before.document if isinstance(before, SavedGraph) else None,
             "state_file": str(before) if isinstance(before, Path) else "",
             "modules": sorted({type(item).__module__ for item in [*graph.practices.held.values(), *graph.applied_patterns.patterns]}),
+            "held": sorted(graph.practices.held),
         })
 
     @classmethod
@@ -193,6 +196,13 @@ class BuildOrder:
     @property
     def modules(self) -> list[str]:
         return list(self._document.get("modules") or [])
+
+    def held_practices(self) -> list[PracticeGuidance]:
+        """The practices the worker's graph holds: one of each the graph the order was made for holds, made anew from
+        the practices the order's modules registered. A graph that holds none, as a session's with every practice
+        turned off does, is built by a worker's graph that holds none, never by one holding every practice."""
+        held = set(self._document.get("held") or [])
+        return [practice for practice in PRACTICE_CATALOGUE.create_all(fidelity=None) if practice.key in held] if held else []
 
     @property
     def state(self) -> SavedGraph:

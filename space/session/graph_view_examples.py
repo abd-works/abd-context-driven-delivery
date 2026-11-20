@@ -176,9 +176,11 @@ STEP_STORY_GIVEN_LINE = 9
 STEP_STORY_WHEN_LINE = 13
 STEP_LISTED = [STEP_STORY, TICKET_CODE, BOARD_CODE, TICKET_EXAMPLES]
 # Seed: Archive Ticket's Python story test, its steps `with` blocks, its When calling Ticket.delete on the ticket its
-# Given holds, as the serve-cdd-code-in-lanes story tests call `self.lanes.for_project(...)`.
+# Given holds, as the serve-cdd-code-in-lanes story tests call `self.lanes.for_project(...)`. Like them it imports the
+# class it tests, since a step invokes only code its story file's imports lead to.
 WITH_STORY = "story_tests/manage-tickets/remove-tickets/archive-ticket/archive_ticket_story.test.py"
 WITH_STORY_TEXT = (
+    "from space.kanban.ticket import Ticket\n"
     "from story_test import given, scenario, story, when\n"
     "\n"
     'with story("Archive Ticket"):\n'

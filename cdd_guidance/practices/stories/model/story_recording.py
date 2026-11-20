@@ -15,7 +15,7 @@ from functools import cached_property
 from typing import TYPE_CHECKING, Callable, Iterator, Optional
 from pathlib import Path, PurePosixPath
 
-from harness.graph.graph import Node
+from harness.graph.graph import Node, as_code_writes
 from harness.graph.location import Location
 
 from cdd_guidance.practices.stories.model.story_map_files import source_at
@@ -259,12 +259,14 @@ class StoryRecording:
     def _align(self, node: Node, story_object: "StoryNode") -> None:
         """Move node, story_object's node, onto the lines that declare it, since the map read it by a nearby line: a
         step sits on its label's line; a scenario, story, or background runs to the close of its call; an example sits
-        on its export. Where an example is declared is the story object's to say: the graph may answer with a node it
+        on its export, or on its row of the table a markdown scenarios file declares it in. Where an example is declared is the story object's to say: the graph may answer with a node it
         already held, such as one added for its file, which knows nothing of the example."""
         if node.type in {"Step", "Given", "When", "Then"}:
             node.source.align_to_label(node.name)
         elif node.type in {"Scenario", "Story", "Background"}:
             node.source.widen_to_call_close()
+        elif node.type == "Example" and PurePosixPath(node.source.file or "").suffix.lower() == ".md":
+            node.source.align_to_table_row(node.name)
         elif node.type == "Example" and story_object.declaration is not None:
             node.source.align_to_declaration(self.practice.reading.in_graph.source_root, *story_object.declaration)
         elif node.type == "Example":
@@ -342,8 +344,9 @@ class StoryRecording:
             return 1
         # Search on from the last node found first, so a repeated name lands on its own entry; a diagram
         # need not list its cells in the map's order, so search from the top when that finds nothing.
+        written = as_code_writes(text)
         for index in [*range(start, len(lines)), *range(0, start)]:
-            if text in lines[index]:
+            if any(form in lines[index] for form in written):
                 self._cursor[file] = index + 1
                 return index + 1
         return 1
