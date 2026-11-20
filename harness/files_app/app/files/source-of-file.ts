@@ -49,11 +49,22 @@ export function sourceOf(file: SessionFileData, members: NodeSourceData[] = []):
   return { node_id: file.path, name: fileNameOf(file.path), type: FILE_NODE, owner: '', file: file.path, text: file.text, start_line: 1, end_line: lines, members }
 }
 
-// What the file opens in place itself: each link to a heading in another file, that heading's section under its line;
-// and in a story test, each connector of a step, what it invokes and observes, collapsed under the line of the step that
-// uses it, so the code it reaches opens where the step reaches it.
+// A callout as session.file answers it since links to whole files and missing targets carry one; a cdd server lane
+// older than the page answers neither link nor missing.
+type LinkCallout = SessionFileData['callouts'][number] & { link?: string; missing?: string }
+
+// What a link opens in place: the section or file it names, or, when that is not there, what is missing.
+function linkCallout(callout: LinkCallout): SourceCallout {
+  const { path, start_line: startLine, end_line: endLine, content } = callout.section
+  const linked = { line: callout.line, title: callout.title, link: callout.link ?? '', path, startLine, endLine }
+  return callout.missing ? { ...linked, id: `${path}:missing:${callout.link}`, kind: 'missing', text: callout.missing } : { ...linked, id: `${path}:${startLine}`, kind: 'section', text: content }
+}
+
+// What the file opens in place itself: each link to another file, the section or file it names under its line; and in a
+// story test, each connector of a step, what it invokes and observes, collapsed under the line of the step that uses it,
+// so the code it reaches opens where the step reaches it.
 export function calloutsOf(file: SessionFileData): SourceCallout[] {
-  const sections = file.callouts.map((callout): SourceCallout => ({ id: `${callout.section.path}:${callout.section.start_line}`, kind: 'section', line: callout.line, title: callout.title, path: callout.section.path, startLine: callout.section.start_line, endLine: callout.section.end_line, text: callout.section.content }))
+  const sections = file.callouts.map(linkCallout)
   const code = typeof file.text === 'string' ? codeOf(file.text, monacoLanguageOf(file)).split(String.fromCharCode(10)) : []
   const starts = file.steps.map(step => step.line).sort((one, other) => one - other)
   const steps = file.steps.flatMap(step => {

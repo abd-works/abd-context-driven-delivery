@@ -75,6 +75,37 @@ export function useCallouts(editor: CalloutEditor | null, callouts: SourceCallou
     return () => editor.changeViewZones((accessor) => zones.forEach((zone) => accessor.removeZone(zone)));
   }, [editor, callouts, open, within, editorLineOf, goTo]);
   useGoToMenu(editor, goTo);
+  useLinkPresses(editor, callouts, editorLineOf, goTo);
+}
+
+// The callout whose link, as the line writes it, holds column: `[Cart](../domain-model.md#cart)` from its first bracket
+// to its last; none for a callout that is no link's, or a link that names something not there.
+export function linkCalloutAt(callouts: SourceCallout[], lineText: string, column: number): SourceCallout | undefined {
+  return callouts.find((callout) => {
+    if (!callout.link || callout.kind === 'missing') return false;
+    const written = `[${callout.title}](${callout.link})`;
+    const start = lineText.indexOf(written);
+    return start >= 0 && start < column && column <= start + written.length + 1;
+  });
+}
+
+// A press on a link with Ctrl or Cmd held follows it, as an editor follows a link: the file it names opens at the
+// section its callout holds.
+function useLinkPresses(editor: CalloutEditor | null, callouts: SourceCallout[], editorLineOf: (fileLine: number) => number, goTo?: GoToFile): void {
+  useEffect(() => {
+    if (!editor || !goTo || !callouts.some((callout) => callout.link)) return;
+    const pressing = editor.onMouseDown((event) => {
+      const at = event.target.position;
+      if (!at || !(event.event.ctrlKey || event.event.metaKey)) return;
+      const onLine = callouts.filter((callout) => editorLineOf(callout.line) === at.lineNumber);
+      const followed = linkCalloutAt(onLine, editor.getModel()?.getLineContent(at.lineNumber) ?? '', at.column);
+      if (!followed) return;
+      event.event.preventDefault();
+      // Once Monaco has finished with the press: opening the file takes this editor away.
+      setTimeout(() => goTo(followed), 0);
+    });
+    return () => pressing.dispose();
+  }, [editor, callouts, editorLineOf, goTo]);
 }
 
 const lineKey = (line: number): string => `L${line}`;

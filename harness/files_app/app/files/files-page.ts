@@ -84,7 +84,7 @@ export class FilesPage {
     this.session = SessionClientGenerated.named(api, link.sessionFile)
     this.notices = new FilesNotices(this.store, api, link.chat)
     this.foldKeys = new FilesFoldKeys(this.session, this.notices)
-    this.callouts = new FileCallouts(this.store, this.session, this.notices)
+    this.callouts = new FileCallouts(this.store, this.session)
     this.chatContext = new ChatContext(this.session, link.chat, this.notices)
     this.menu = new FileMenu(this.store, this.chatContext, new FileBrowser(api, this.notices))
     this.comments = new FileCommentsActions(this)

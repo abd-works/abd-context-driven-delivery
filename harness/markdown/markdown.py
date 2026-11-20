@@ -93,11 +93,17 @@ class HTML:
 LocationKind = Literal["file", "folder", "section"]
 
 
+# A markdown link, whose words are all of it a heading shows.
+_LINK_IN_HEADING = re.compile(r"\[([^\]]*)\]\([^)]*\)")
+
+
 def heading_anchor(heading: str) -> str:
-    """The anchor a link names a heading by, as GitHub writes it: lower case, its punctuation dropped, each space a hyphen
-    (``Story: Delete Ticket`` is ``story-delete-ticket``, ``FilesPage (`files/files-page.ts`)`` is
-    ``filespage-filesfiles-pagets``)."""
-    return re.sub(r"[^\w\- ]", "", heading.strip().lower()).replace(" ", "-")
+    """The anchor a link names a heading by, as GitHub writes it from the words the heading shows: lower case, its
+    punctuation dropped, each space a hyphen (``Story: Delete Ticket`` is ``story-delete-ticket``,
+    ``FilesPage (`files/files-page.ts`)`` is ``filespage-filesfiles-pagets``). A link the heading holds counts as its
+    words alone (``(S) Person --> [Delete Ticket](x.md)`` is ``s-person----delete-ticket``)."""
+    shown = _LINK_IN_HEADING.sub(r"\1", heading)
+    return re.sub(r"[^\w\- ]", "", shown.strip().lower()).replace(" ", "-")
 
 
 def _section_heading(label: str) -> str:

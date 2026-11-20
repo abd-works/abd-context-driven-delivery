@@ -21,6 +21,7 @@ from harness.installation.data_class import SourceFile, data_field
 from harness.markdown.markdown import MarkdownText
 
 from space.session.file_comments import PROCESSED, FileComment
+from space.session.file_manager import FileText
 from space.session.file_range import LineSpan, Range
 from space.session.session_files import NamedPathNotFoundError
 
@@ -35,8 +36,11 @@ _CHANGE_KINDS: dict[str, FileChangeKind] = {"replace": "changed", "insert": "add
 # a block (harness/graph/app/source/call-expansion.ts). The classes are Clean Engineering's and DDD's class types.
 CLASS_TYPES = frozenset({"OoadClass", "Aggregate", "DomainEvent", "EntityRoot", "Entity", "ValueObject", "Repository", "DomainService", "Factory", "Specification"})
 MEMBER_TYPES = frozenset({"Operation", "Property"})
-# A markdown link to a heading in another markdown file: its words, the file named from the linking one, and the anchor.
-_LINKED_HEADING = re.compile(r"\[([^\]]+)\]\(([^)\s#]+\.md)#([^)\s]+)\)")
+# A markdown link to another file: its words, the file named from the linking one, and the anchor of the heading it
+# names there, when it names one. An image and a web address are not one.
+_FILE_LINK = re.compile(r"(?<!!)\[([^\]]+)\]\(([^)\s#:]+)(?:#([^)\s]+))?\)")
+# The line of a story test's header that names its story map or its model: ``# Map: ../.context/story-map.md#s-...``.
+_HEADER_LINK = re.compile(r"^\s*(?:#|//|\*)\s*(Map|Model):\s*([^\s#:]+)(?:#(\S+))?\s*$")
 
 
 class Fold:
@@ -65,15 +69,32 @@ class Fold:
         return self._name
 
 
-class FileCallout:
-    """A line of a markdown file whose link names a heading in another file, which the viewer opens in place under the
-    line, as a call opens in place in code: a story map's story opens its scenarios, and a scenario's domain term its
-    class in the markdown model."""
+class FileLink:
+    """A link a line of a file writes to another file: the line, the link's words, the file it names from the linking
+    one, and the anchor of the heading it names there, when it names one."""
 
-    def __init__(self, line: int, title: str, section: Range) -> None:
-        self._line = line
-        self._title = title
+    def __init__(self, line: int, written: re.Match[str]) -> None:
+        self.line = line
+        self.title, self.file, self.anchor = written.groups(default="")
+
+    @property
+    def target(self) -> str:
+        """The link's target as the file writes it, such as ``../domain-model.md#cart``."""
+        return f"{self.file}#{self.anchor}" if self.anchor else self.file
+
+
+class FileCallout:
+    """A line of a file whose markdown link names another file, or a heading in it, which the viewer opens in place
+    under the line, as a call opens in place in code: a story map's story opens its scenarios, and a scenario's domain
+    term its class in the markdown model. A link to a file or a heading that is not there opens nothing and says what
+    is missing."""
+
+    def __init__(self, link: FileLink, section: Range, missing: str = "") -> None:
+        self._line = link.line
+        self._title = link.title
+        self._link = link.target
         self._section = section
+        self._missing = missing
 
     @property
     @data_field
@@ -89,9 +110,23 @@ class FileCallout:
 
     @property
     @data_field
+    def link(self) -> str:
+        """The link's target as the file writes it, such as ``../domain-model.md#cart``."""
+        return self._link
+
+    @property
+    @data_field
     def section(self) -> Range:
-        """The linked heading's section, in the file it sits in, with its text."""
+        """The linked heading's section, or the whole of a file linked with no heading, in the file it sits in, with
+        its text; no lines and no text when it is missing."""
         return self._section
+
+    @property
+    @data_field
+    def missing(self) -> str:
+        """What the link names that is not there, such as ``.context/domain-model.md has no heading #cartline-entity``;
+        nothing when the section is there."""
+        return self._missing
 
 
 class FileStep:
@@ -296,25 +331,38 @@ class SessionFile:
     @property
     @data_field
     def callouts(self) -> list[FileCallout]:
-        """A callout for each link in this markdown file to a heading another file has, in line order; a link to a file
-        or heading not there, and every line of a file in another language, carry none."""
-        if self.language != "markdown":
-            return []
+        """A callout for each markdown link in this file to another file, in line order: the section of the heading it
+        names, or the whole file when it names none, and what is missing when the file or the heading is not there.
+        A file in another language, such as a story test whose steps link their domain terms, carries a callout only
+        for a link to a file that is there, since its code can read as a link (``handlers[name](event)``)."""
         lines = enumerate(self.text.splitlines(), start=1)
         return [callout for number, line in lines for callout in self._callouts_on(number, line)]
 
     def _callouts_on(self, number: int, line: str) -> list[FileCallout]:
-        linked = ((title, self._section_linked(link, anchor)) for title, link, anchor in _LINKED_HEADING.findall(line))
-        return [FileCallout(number, title, section) for title, section in linked if section is not None]
+        written = [*_FILE_LINK.finditer(line), *_HEADER_LINK.finditer(line)]
+        found = (self._callout(FileLink(number, link)) for link in written)
+        return [callout for callout in found if callout is not None]
 
-    def _section_linked(self, link: str, anchor: str) -> Range | None:
-        """The section of the heading anchor names in link, a markdown file named from this one; none when either is not there."""
-        target = posixpath.normpath(posixpath.join(posixpath.dirname(self._path), link))
+    def _callout(self, link: FileLink) -> FileCallout | None:
+        """The callout of link, whose file is named from this one; none for a link out of the project, or one in code
+        to a file not there."""
+        target = posixpath.normpath(posixpath.join(posixpath.dirname(self._path), link.file))
         if target.startswith(".."):
             return None
         linked = self._session.session_files.read(target)
-        lines = MarkdownText(linked.text).anchored_lines(anchor) if linked.text else None
-        return Range.of_text(linked.path, linked.text, LineSpan(*lines)) if lines is not None else None
+        if not linked.exists:
+            return FileCallout(link, Range(target, LineSpan(0, 0), ""), f"{target} is not there") if self.language == "markdown" else None
+        lines = self._lines_linked(linked, link.anchor)
+        if lines is None:
+            return FileCallout(link, Range(linked.path, LineSpan(0, 0), ""), f"{linked.path} has no heading #{link.anchor}")
+        return FileCallout(link, Range.of_text(linked.path, linked.text, LineSpan(*lines)))
+
+    def _lines_linked(self, linked: FileText, anchor: str) -> tuple[int, int] | None:
+        """The lines of linked a link opens: the section under the heading anchor names in a markdown file, the whole
+        file when the link names no heading or the file is in another language; none when no heading has that anchor."""
+        if anchor and linked.language == "markdown":
+            return MarkdownText(linked.text).anchored_lines(anchor)
+        return 1, max(1, len(linked.text.splitlines()))
 
     @property
     @data_field
