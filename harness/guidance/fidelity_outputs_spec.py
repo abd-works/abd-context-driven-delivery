@@ -31,8 +31,26 @@ with description("a fidelity's declared outputs") as self:
         with before.each:
             self.outputs = Stories().fidelities["acceptance_tests"].outputs
 
-        with it("should list every file pattern for that format: the sub-epic's three tier files and a story's one runnable file"):
-            expect(len(self.outputs["python"])).to(equal(4))
+        with it("should list every file pattern for that format: the sub-epic's three tier files, a story's one runnable file, and an epic's own stories' file"):
+            expect(len(self.outputs["python"])).to(equal(5))
+
+    with context("with a story that sits directly under an epic, and an epic with a sub-epic"):
+        with before.each:
+            self.scenarios = Stories().fidelities["scenarios"].declared
+            self.acceptance_tests = Stories().fidelities["acceptance_tests"].declared
+
+        with it("should declare the markdown scenarios an epic holds for its own stories, in the epic's folder"):
+            expect(self.scenarios.includes("story_tests/increase-credit-limit/increase_credit_limit_story.test.md", "markdown")).to(equal(True))
+
+        with it("should declare the code scenarios an epic holds for its own stories, in the epic's folder"):
+            expect(all(self.scenarios.includes(f"story_tests/increase-credit-limit/increase_credit_limit_story.test.{ext}", label)
+                       for label, ext in (("python", "py"), ("typescript", "ts")))).to(equal(True))
+
+        with it("should declare the story test an epic holds for its own stories, in the epic's folder"):
+            expect(self.acceptance_tests.includes("story_tests/increase-credit-limit/increase_credit_limit_story.test.py", "python")).to(equal(True))
+
+        with it("should still declare a sub-epic's scenarios in the sub-epic's folder"):
+            expect(self.scenarios.includes("story_tests/fill-cart/add-books/add_books_story.test.md", "markdown")).to(equal(True))
 
     with context("with every practice loaded"):
         with before.each:
@@ -61,7 +79,8 @@ with description("a fidelity's declared outputs") as self:
                 f"{type(practice).__name__}.{name}.{label}"
                 for practice in self.practices
                 for name, fidelity in practice.fidelities.entries.items()
-                for label, path in fidelity.outputs.items()
+                for label, paths in fidelity.outputs.items()
+                for path in ([paths] if isinstance(paths, str) else paths)
                 if label in ("markdown", "drawio", "realization") and ".context/" not in path and not path.startswith("story_tests/")
             ]
             expect(outside).to(be_empty)

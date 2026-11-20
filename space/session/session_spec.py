@@ -1071,13 +1071,19 @@ with description("a practice"):
 
                 with it("should write the scenarios in the story_tests beside that .context"):
                     outputs = self.stories.fidelities["scenarios"].declared.output_paths()
-                    expect(outputs["markdown"]).to(equal([(self.work / "story_tests" / "{epic}/{sub-epic}/{story_snake}_story.test.md").resolve().as_posix()]))
+                    expect(outputs["markdown"]).to(equal([
+                        (self.work / "story_tests" / "{epic}/{sub-epic}/{story_snake}_story.test.md").resolve().as_posix(),
+                        (self.work / "story_tests" / "{epic}/{epic_snake}_story.test.md").resolve().as_posix(),
+                    ]))
 
                 with context("and the scenarios' own root one epic's folder in story_tests"):
                     with it("should write the scenarios under that epic's folder only"):
                         self.write_overrides({"stories": {"root": ".context/stories", "scenarios": {"root": "story_tests/manage-orders"}}})
                         outputs = self.stories.fidelities["scenarios"].declared.output_paths()
-                        expect(outputs["markdown"]).to(equal([(self.work / "story_tests" / "manage-orders" / "{sub-epic}/{story_snake}_story.test.md").resolve().as_posix()]))
+                        expect(outputs["markdown"]).to(equal([
+                            (self.work / "story_tests" / "manage-orders" / "{sub-epic}/{story_snake}_story.test.md").resolve().as_posix(),
+                            (self.work / "story_tests" / "manage-orders" / "{epic_snake}_story.test.md").resolve().as_posix(),
+                        ]))
 
                 with context("and a person chooses one epic's folder for the scenarios"):
                     with it("should write the scenarios there and keep the story map in the practice's root"):
@@ -1085,7 +1091,10 @@ with description("a practice"):
                         scenarios = self.stories.fidelities["scenarios"].declared.output_paths()["markdown"]
                         story_map = self.fidelity.declared.output_paths()["markdown"]
                         expect((scenarios, story_map)).to(equal((
-                            [(self.work / "story_tests" / "manage-orders" / "{sub-epic}/{story_snake}_story.test.md").resolve().as_posix()],
+                            [
+                                (self.work / "story_tests" / "manage-orders" / "{sub-epic}/{story_snake}_story.test.md").resolve().as_posix(),
+                                (self.work / "story_tests" / "manage-orders" / "{epic_snake}_story.test.md").resolve().as_posix(),
+                            ],
                             [(self.work / ".context" / "stories" / "story-map.md").resolve().as_posix()],
                         )))
 

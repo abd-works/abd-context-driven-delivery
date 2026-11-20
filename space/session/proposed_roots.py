@@ -93,9 +93,15 @@ class ProposedRoots:
     def _piece_name(self, template: str) -> str:
         """The group naming the deepest named folder template shares with every declared path of this fidelity under
         the same fixed folders, such as ``sub_epic`` for ``story_tests/{epic}/{sub-epic}/{story}/...``; empty when it
-        shares none."""
+        shares none. A path with one folder below the fixed ones, such as an epic's own stories' file, is left out when
+        template has more, so that layout does not pull a sub-epic's piece up to the epic's folder."""
         head = _fixed_head(template)
-        siblings = [PurePosixPath(other).parts[:-1] for other in self._declared_files() if _fixed_head(other) == head]
+        below = len(PurePosixPath(template).parts) - 1 - len(head)
+        siblings = [
+            PurePosixPath(other).parts[:-1]
+            for other in self._declared_files()
+            if _fixed_head(other) == head and (below <= 1 or len(PurePosixPath(other).parts) - 1 - len(head) >= 2)
+        ]
         shared = [parts[0] for parts in zip(*siblings) if len(set(parts)) == 1]
         named = [part for part in shared if _NAMED_FOLDER.match(part)]
         return re.sub(r"\W", "_", named[-1].strip("{}")) if named else ""
