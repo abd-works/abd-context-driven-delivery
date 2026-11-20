@@ -5,7 +5,7 @@ import type { FileEntryData, SessionFileData } from '@cdd/space/session/session'
 import { publishedOf, type FileFolder, type PublishedFile } from './file-bar'
 import type { SourceCallout } from '@source-view/source-callouts'
 
-import { FileSourceView } from './file-source-view'
+import { FileView } from './file-view'
 import { FilesGraphView } from './files-graph-view'
 import type { FilesPage } from './files-page'
 import { drawioPageOf, isDrawio, isWhiteboard, missingNoteOf, revealLabelOf } from './files-paths'
@@ -365,7 +365,7 @@ function OpenFileView({ page }: { page: FilesPage }) {
       {isOneOfSeveral ? <OpenFilesBarView page={page} /> : null}
       {isOneOfSeveral ? <OpenFileHeadView page={page} path={state.file.path} /> : null}
       {page.openFiles.isCollapsed(state.file.path) ? null : (
-        <FileSourceView key={state.file.path} file={state.file} actions={page.comments} onAddToContext={addLines} openAround={page.selectedLinesIn(state.file.path)} expanded={state.graph.expanded} onGoToFile={goToFile} members={state.graph.members} keys={page.foldKeys} fail={wrapFailed(page)} />
+        <FileView key={state.file.path} file={state.file} actions={page.comments} onAddToContext={addLines} openAround={page.selectedLinesIn(state.file.path)} expanded={state.graph.expanded} onGoToFile={goToFile} members={state.graph.members} keys={page.foldKeys} fail={wrapFailed(page)} />
       )}
       {state.moreFiles.map(file => (
         <MoreFileView key={file.path} page={page} file={file} />
@@ -406,7 +406,7 @@ function MoreFileView({ page, file }: { page: FilesPage; file: SessionFileData }
     <section className="open-file more-file" aria-label={file.path}>
       <OpenFileHeadView page={page} path={file.path} />
       {page.openFiles.isCollapsed(file.path) ? null : (
-        <FileSourceView file={file} actions={page.comments} onAddToContext={addLines} openAround={page.selectedLinesIn(file.path)} expanded={page.state.graph.expanded} onGoToFile={goToFile} members={page.state.graph.members} keys={page.foldKeys} fail={wrapFailed(page)} />
+        <FileView file={file} actions={page.comments} onAddToContext={addLines} openAround={page.selectedLinesIn(file.path)} expanded={page.state.graph.expanded} onGoToFile={goToFile} members={page.state.graph.members} keys={page.foldKeys} fail={wrapFailed(page)} />
       )}
     </section>
   )

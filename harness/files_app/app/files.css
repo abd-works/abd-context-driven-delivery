@@ -130,7 +130,23 @@ button:disabled { cursor: default; opacity: 0.5; }
 .copy-prompt { align-self: center; }
 
 .file-source { position: relative; min-width: 0; }
-.file-source-bar { display: flex; justify-content: flex-end; margin-bottom: var(--space-2xs); }
+.file-source-bar { display: flex; justify-content: flex-end; gap: var(--space-xs); margin-bottom: var(--space-2xs); }
+.file-render-toggle { display: inline-flex; margin-right: auto; }
+.file-render-toggle button { font-size: var(--text-xs); }
+.file-render-toggle button:first-child { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.file-render-toggle button:last-child { border-top-left-radius: 0; border-bottom-left-radius: 0; border-left-width: 0; }
+.file-render-toggle button.is-on { border-color: var(--accent); color: var(--accent); }
+.file-rendered { min-width: 0; overflow-x: auto; }
+.file-rendered .markdown-page { max-width: 60rem; line-height: 1.55; }
+.file-rendered .markdown-page table { border-collapse: collapse; margin: var(--space-xs) 0; }
+.file-rendered .markdown-page th,
+.file-rendered .markdown-page td { border: 1px solid var(--border); padding: var(--space-2xs) var(--space-xs); text-align: left; vertical-align: top; }
+.file-rendered .markdown-page pre,
+.file-rendered.rendered-json pre { font-family: var(--font-mono); font-size: var(--text-xs); padding: var(--space-xs); border: 1px solid var(--border); border-radius: var(--radius-sm); overflow-x: auto; }
+.file-rendered .markdown-page code { font-family: var(--font-mono); }
+.file-rendered .markdown-page img,
+.file-rendered.rendered-svg svg { max-width: 100%; height: auto; }
+iframe.file-rendered.rendered-html { width: 100%; height: 80vh; border: 1px solid var(--border); border-radius: var(--radius-sm); background: #ffffff; }
 .file-wrap { font-size: var(--text-xs); }
 .file-wrap.is-on { border-color: var(--accent); color: var(--accent); }
 .comment-box { position: absolute; z-index: 20; width: min(32rem, 80%); display: grid; gap: var(--space-2xs); padding: var(--space-xs); background: var(--surface); border: 1px solid var(--select); border-radius: var(--radius-sm); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15); }

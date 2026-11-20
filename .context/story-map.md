@@ -1189,7 +1189,9 @@ Built (2026-11-14): a practice turned on or off in the Files app sends the chat 
 
 ### (S) Person --> [View File In Source View](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-view-file-in-source-view)
 
-Observed (2026-11-14): the open file shows in the graph explorer's Monaco source view, read-only, its lines numbered and coloured by language (`file-source-view.tsx`, `@source-view/SourceView`). Was the board's View Files In Rich Viewer and the graph's Open Node Source. Intended: a markdown file rendered as the page it describes.
+Observed (2026-11-14): the open file shows in the graph explorer's Monaco source view, read-only, its lines numbered and coloured by language (`file-source-view.tsx`, `@source-view/SourceView`). Was the board's View Files In Rich Viewer and the graph's Open Node Source.
+
+Built (2026-11-19, requested: scenarios, story maps and domain models read as pages, their text a press away): a markdown, HTML, SVG or JSON file opens rendered, with Rendered and Source toggles leading the file's bar (`files/file-view.tsx`, `files/file-rendering.ts`); a file opened at lines asked for, such as a node selected in the graph view, opens in the source view. Markdown and SVG are cleaned with DOMPurify, markdown rendered with marked, both the versions Monaco already loads; an HTML page shows in a sandboxed frame that runs no script.
 
 ### (S) Person --> [Fold Classes And Operations](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-fold-classes-and-operations)
 

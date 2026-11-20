@@ -182,3 +182,124 @@ with description("Open Files In Files App, with files that changed on disk since
 
         with it("But the page holds no word of Python or of the cdd server"):
             expect([word for word in ("python", "cdd server") if word in self.said.lower()]).to(equal([]))
+
+
+# Seed: one file of each form the page renders, beside board.py, and the text each reads
+# (review_files_in_files_app_story.test.md, View File In Source View).
+README = str(Path(BOARD_CODE).with_name("README.md").as_posix())
+README_TEXT = "# Checkout\n\nPlace an order from a [cart](cart.md).\n"
+RENDERED_FILES = {
+    README: README_TEXT,
+    str(Path(BOARD_CODE).with_name("page.html").as_posix()): "<h1>Checkout</h1><script>parent.hacked = 1</script>",
+    str(Path(BOARD_CODE).with_name("cart.svg").as_posix()): '<svg xmlns="http://www.w3.org/2000/svg"><circle r="4"/><script>alert(1)</script></svg>',
+    str(Path(BOARD_CODE).with_name("cart.json").as_posix()): '{"items":[1,2]}',
+    str(Path(BOARD_CODE).with_name("broken.json").as_posix()): '{"items":',
+}
+
+
+def _view(stack, path: str):
+    """A page on checkout-flow's files opened on path, as a link naming the file to open first opens it."""
+    page = stack.browser.new_page(viewport={"width": 1600, "height": 900})
+    query = urllib.parse.urlencode({"files": CHECKOUT_FLOW.name, "fidelity": CODE_FIDELITIES, "project": str(stack.project), "file": path})
+    page.goto(f"http://127.0.0.1:{stack.port}/?{query}")
+    page.locator(f'section.open-file[aria-label="{path}"]').wait_for(timeout=SHOWN_MILLISECONDS)
+    return page
+
+
+def _pressed(page, name: str) -> str | None:
+    return page.get_by_role("button", name=name, exact=True).get_attribute("aria-pressed")
+
+
+with description("Story: View File In Source View, files with a rendered form") as self:
+    with before.all:
+        self.stack = FilesStack()
+        for path, text in RENDERED_FILES.items():
+            (self.stack.project / path).write_text(text, encoding="utf-8")
+
+    with after.all:
+        self.stack.close()
+
+    with context("Scenario: Render a markdown file as the page it describes"):
+        with before.all:
+            self.page = _view(self.stack, README)
+
+        with after.all:
+            self.page.close()
+
+        with it("Then the Files app shows Checkout rendered as a heading, not as # Checkout"):
+            heading = self.page.locator(".file-rendered").get_by_role("heading", name="Checkout", level=1)
+            heading.wait_for(timeout=SHOWN_MILLISECONDS)
+            expect((heading.count(), self.page.get_by_text("# Checkout").count())).to(equal((1, 0)))
+
+        with it("And its Rendered toggle is pressed and its Source toggle is not"):
+            expect((_pressed(self.page, "Rendered"), _pressed(self.page, "Source"))).to(equal(("true", "false")))
+
+        with it("And a link to another file keeps the Files app's page where it is"):
+            url = self.page.url
+            self.page.locator(".file-rendered a", has_text="cart").click()
+            expect(self.page.url).to(equal(url))
+
+    with context("Scenario: Switch a rendered file to its source and back"):
+        with before.all:
+            self.page = _view(self.stack, README)
+            self.page.get_by_role("button", name="Source", exact=True).click()
+            self.page.locator(".view-lines .view-line").first.wait_for(timeout=SHOWN_MILLISECONDS)
+
+        with after.all:
+            self.page.close()
+
+        with it("Then the source view shows README.md's text, its first line reading # Checkout, with Wrap lines beside the toggle"):
+            first = self.page.locator(".view-lines .view-line").evaluate_all("lines => lines.sort((one, other) => one.offsetTop - other.offsetTop)[0].innerText")
+            expect((first.replace(NBSP, " "), self.page.get_by_role("button", name="Wrap lines").count())).to(equal(("# Checkout", 1)))
+
+        with it("And pressing Rendered shows Checkout as a heading again"):
+            self.page.get_by_role("button", name="Rendered", exact=True).click()
+            heading = self.page.locator(".file-rendered").get_by_role("heading", name="Checkout", level=1)
+            heading.wait_for(timeout=SHOWN_MILLISECONDS)
+            expect(self.page.locator(".view-lines").count()).to(equal(0))
+
+    with context("Scenario: Render each format the page can draw"):
+        with before.all:
+            self.pages = []
+
+        with after.all:
+            for page in self.pages:
+                page.close()
+
+        with it("Then page.html shows in a frame that runs no script, Checkout as its heading"):
+            page = _view(self.stack, "space/kanban/page.html")
+            self.pages.append(page)
+            page.frame_locator("iframe.rendered-html").get_by_role("heading", name="Checkout").wait_for(timeout=SHOWN_MILLISECONDS)
+            expect(page.evaluate("window.hacked === undefined")).to(equal(True))
+
+        with it("And cart.svg shows its circle and no script"):
+            page = _view(self.stack, "space/kanban/cart.svg")
+            self.pages.append(page)
+            drawing = page.locator(".file-rendered.rendered-svg")
+            drawing.locator("circle").wait_for(state="attached", timeout=SHOWN_MILLISECONDS)
+            expect(drawing.locator("script").count()).to(equal(0))
+
+        with it('And cart.json is laid out two spaces to a level, "items": [ on its second line'):
+            page = _view(self.stack, "space/kanban/cart.json")
+            self.pages.append(page)
+            laid_out = page.locator(".file-rendered.rendered-json pre")
+            laid_out.wait_for(timeout=SHOWN_MILLISECONDS)
+            expect(laid_out.inner_text().split(chr(10))[1]).to(equal('  "items": ['))
+
+        with it("And broken.json shows its text and says it is not valid JSON"):
+            page = _view(self.stack, "space/kanban/broken.json")
+            self.pages.append(page)
+            problem = page.locator(".rendered-problem")
+            problem.wait_for(timeout=SHOWN_MILLISECONDS)
+            expect((problem.inner_text().startswith("Not valid JSON"), page.locator(".file-rendered.rendered-json pre").inner_text())).to(equal((True, '{"items":')))
+
+    with context("Scenario: Show only the source view for a file with no rendered form"):
+        with before.all:
+            self.page = _view(self.stack, BOARD_CODE)
+            self.page.locator(".view-lines .view-line").first.wait_for(timeout=SHOWN_MILLISECONDS)
+
+        with after.all:
+            self.page.close()
+
+        with it("Then the Files app shows board.py in the source view, with no Rendered or Source toggle"):
+            expect(self.page.locator(".file-render-toggle").count()).to(equal(0))

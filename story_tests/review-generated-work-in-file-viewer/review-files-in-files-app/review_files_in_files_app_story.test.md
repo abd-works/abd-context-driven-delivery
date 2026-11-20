@@ -359,11 +359,47 @@ Reported (Nov 18 demo, 2026-11-18): in a plain folder This session listed nothin
 
 #### Scenario: Render a markdown file as the page it describes
 
-Intended: the Files app shows markdown as text today.
+Requested 2026-11-19: scenarios, story maps and domain models are read as pages, and their text is a press away. Markdown is rendered with the `marked` and `DOMPurify` the page already loads with Monaco, so nothing the file holds runs a script. Only the page draws it: `harness/files_app/app/files/file-rendering.spec.ts`.
 
 *Given* checkout-flow's session holds *README.md*, which starts *# Checkout*
 *When* the Person views *README.md*
 *Then* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows *Checkout* rendered as a heading, not as *# Checkout*
+*And* its Rendered toggle is pressed and its Source toggle is not
+
+#### Scenario: Switch a rendered file to its source and back
+
+*Given* the Files app shows *README.md* rendered
+*When* the Person presses Source
+*Then* the source view shows *README.md*'s text, its first line reading *# Checkout*, with Wrap lines beside the toggle
+*When* the Person presses Rendered
+*Then* the Files app shows *Checkout* as a heading again
+
+#### Scenario: Open a rendered file as source at the lines asked for
+
+The lines of a node selected in the graph view, its comments and its broken rules are marked on the source view's lines, which a rendered page has none of.
+
+*Given* the Person selects, in the graph view, a story of *.context/story-map.md*
+*When* the Files app opens *story-map.md* at that story's lines
+*Then* it opens in the source view with those lines shown, and Rendered a press away
+
+#### Scenario: Render each format the page can draw
+
+*Given* checkout-flow's session holds <file>, reading <text>
+*When* the Person views <file>
+*Then* the Files app shows <rendered>, with Source a press away
+
+| file | text | rendered |
+| --- | --- | --- |
+| *notes/page.html* | `<h1>Checkout</h1><script>parent.hacked = 1</script>` | the page in a frame that runs no script, *Checkout* as its heading |
+| *design/cart.svg* | `<svg xmlns="http://www.w3.org/2000/svg"><circle r="4"/><script>alert(1)</script></svg>` | the drawing, its circle and no script |
+| *data/cart.json* | `{"items":[1,2]}` | the object laid out two spaces to a level, *"items": [* on its second line |
+| *data/broken.json* | `{"items":` | its text, and a note that it is not valid JSON |
+
+#### Scenario: Show only the source view for a file with no rendered form
+
+*Given* checkout-flow's session holds *order.py*
+*When* the Person views *order.py*
+*Then* the Files app shows it in the source view, with no Rendered or Source toggle
 
 #### Scenario: Scroll a long line sideways
 

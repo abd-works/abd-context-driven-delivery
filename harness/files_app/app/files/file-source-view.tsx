@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import type { NodeSourceData } from '@cdd/harness/graph/graph'
 import type { SessionFileData } from '@cdd/space/session/session'
@@ -50,7 +50,7 @@ function useMembersFolded(editor: SourceEditorInstance | null, text: string, lan
 // editor is as tall as the file, so the page scrolls, not the editor. Every other fold closes; with none asked, a code
 // file opens with its classes open and their members folded, and any other file with every fold open. Long lines scroll sideways, or wrap once the reader turns on Wrap lines. With the graph's members,
 // once the graph view read them, a call opens in place even when it reaches another file; in a story test, what each
-// step invokes and observes opens on the step's line instead.
+// step invokes and observes opens on the step's line instead. toggle, for a file with a rendered form, leads its bar.
 export function FileSourceView({
   file,
   actions,
@@ -61,6 +61,7 @@ export function FileSourceView({
   members = [],
   keys,
   fail,
+  toggle,
 }: {
   file: SessionFileData
   actions: FileCommentsActions
@@ -71,6 +72,7 @@ export function FileSourceView({
   members?: NodeSourceData[]
   keys: FilesFoldKeys
   fail: ThemeFailure
+  toggle?: ReactNode
 }) {
   const wrapper = useRef<HTMLDivElement>(null)
   const held = useRef(file)
@@ -135,6 +137,7 @@ export function FileSourceView({
   return (
     <div className="file-source" ref={wrapper}>
       <div className="file-source-bar">
+        {toggle}
         <button type="button" className={wrap ? 'file-wrap is-on' : 'file-wrap'} aria-pressed={wrap} title="Wrap long lines instead of scrolling sideways (shift+wheel)" onClick={toggleWrap}>
           Wrap lines
         </button>
