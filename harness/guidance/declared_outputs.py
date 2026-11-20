@@ -3,7 +3,10 @@ from __future__ import annotations
 
 import functools
 import re
+from pathlib import Path
 from typing import TYPE_CHECKING
+
+from harness.markdown.format import Format
 
 if TYPE_CHECKING:
     from harness.guidance.guidance import FidelityGuidance
@@ -57,6 +60,20 @@ class DeclaredFile:
             return ""
         return re.sub(r"\{([^{}/]+)\}", lambda token: parts[self._group(token.group(1))], self._declared)
 
+    def is_written_in(self, format: Format) -> bool:
+        """Whether the declared path ends with format's extension, such as ``.drawio``: an output named for what it
+        holds, such as the thin slice, declares one file for each format it is written in."""
+        return bool(format.extension) and self._declared.endswith(format.extension)
+
+    def start_of(self, path: str) -> str:
+        """What path holds before this declared path starts in it, such as ``docs/`` for ``docs/.context/story-map.md``
+        against ``.context/story-map.md``; empty when the declared path takes the whole of path, or path is not one of
+        its files."""
+        found = self.pattern.search(path)
+        if found is None:
+            return ""
+        return path[: found.start() + (1 if found.group(0).startswith("/") else 0)]
+
     def _group(self, name: str) -> str:
         """The name a named part goes by in the pattern: a name such as ``sub-epic`` is no group name as it is written."""
         return re.sub(r"\W", "_", name)
@@ -106,13 +123,54 @@ class DeclaredOutputs:
     def file_name_beside(self, source: str, format: str) -> str:
         """The name of the file the fidelity writes format to, for the source file at source, written from the project's
         root or absolute: the name of the file it declares in format, with each named part read off source where another
-        file it declares matches it, so ``harness/.context/harness-model.md`` names ``harness-model.drawio``. Empty when
-        none of its files in format can be named so."""
+        file it declares matches it, so ``harness/.context/harness-model.md`` names ``harness-model.drawio``. A source
+        declared in an output named for what it holds, such as the story map's ``thin_slice``, names the file that same
+        output declares in format, ``thin-slice.drawio``, never the file of another output. Empty when none of its
+        files in format can be named so."""
+        return self._path_beside(source, format).rsplit("/", 1)[-1]
+
+    def file_beside(self, source: str, format: str) -> str:
+        """The path of the file the fidelity writes format to for the source file at source, one of its own files,
+        written from the same place source is: the path it declares in format (``file_name_beside``), starting where
+        source's own declared path starts, so ``docs/.context/story-map.md`` places ``docs/.context/story-map.drawio``.
+        A declared path that takes the whole of source, such as ``{module}/.context/module-context.md``, places the file
+        from the fidelity's root: one ``.context/modules.drawio`` for every module. Empty when source is none of its
+        files, or no file in format can be named for it."""
+        holding = self._holding(source)
+        path = self._path_beside(source, format)
+        return f"{holding[0][1].start_of(source)}{path}" if holding and path else ""
+
+    def saved_beside(self, source: Path, format: str) -> Path | None:
+        """Where a render of the file at source into format is saved in the session the fidelity's practice works in:
+        the file ``file_beside`` places, under the root of the fidelity that holds source. None when its practice works
+        in no session, source is under none of its roots, or no file is placed for it."""
+        session_output = self._fidelity.session_output if self._fidelity is not None else None
+        resolved = source.resolve()
+        for root in (root.resolve() for root in (session_output.roots if session_output is not None else [])):
+            if root in resolved.parents:
+                placed = self.file_beside(resolved.relative_to(root).as_posix(), format)
+                return root / placed if placed else None
+        return None
+
+    def _holding(self, source: str) -> list[tuple[str, DeclaredFile]]:
+        """The declared files source is one of, each with the output that declares it."""
+        return [(label, declared) for label, files in self._files.items() for declared in files if declared.pattern.search(source)]
+
+    def _path_beside(self, source: str, format: str) -> str:
+        """The declared path of the file written in format for source, with each named part read off source: a file of
+        the output that declares source first, then, unless that output is named for what it holds, a file of the
+        output named for format."""
+        holding = self._holding(source)
         parts: dict[str, str] = {}
-        for declared in (declared for files in self._files.values() for declared in files):
+        for _, declared in holding:
             parts.update(declared.parts_of(source))
-        named = (declared.named_with(parts) for declared in self._files.get(format, []))
-        return next((path.rsplit("/", 1)[-1] for path in named if path), "")
+        labels = list(dict.fromkeys(label for label, _ in holding))
+        written = Format(format)
+        candidates = [declared for label in labels for declared in self._files[label] if declared.is_written_in(written)]
+        if all(Format(label).is_offered for label in labels):
+            candidates += self._files.get(format, [])
+        named = (declared.named_with(parts) for declared in candidates)
+        return next((path for path in named if path), "")
 
     def output_paths(self) -> dict[str, list[str]]:
         """Where the fidelity writes each format in the session its practice works in: its declared paths under the

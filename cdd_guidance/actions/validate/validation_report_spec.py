@@ -23,13 +23,15 @@ from cdd_guidance.actions.validate.validation_report import ValidationReport
 
 class _CheckedGraph:
     """The graph a validate checked, as a report reads it: the session it was checked in, its violations, the files it
-    was read from, and nothing held beside them."""
+    was read from, nothing held beside them, and no named path it read no node from."""
 
     def __init__(self, session: Session, violations: list[Violation]) -> None:
         self.session = session
         self._violations = violations
         self.files = [Path("graph.json")]
         self.held_beside: list[str] = []
+        self.edited: list[str] = []
+        self.unread: list[str] = []
 
     def violations(self) -> list[Violation]:
         return list(self._violations)

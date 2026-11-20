@@ -38,7 +38,7 @@ class Render(GuidanceAction):
     def render(
         self, guidance: GuidanceArg, format: str, paths: list[str] | str, content: str = "", source: str | None = None,
     ) -> list:
-        """Convert already-generated content into format. Returns one result per guidance. A drawio, whiteboard, or markdown render of paths is saved beside the first path, under the name the fidelity writes that format to when the path is one of the fidelity's own files or a sketch, else under the path's own name, keeping the layout people gave a drawing already there; its result names the saved file. Any other render returns its content. After the conversion returns, follow place_rendered; for format whiteboard, then follow publish_board.
+        """Convert already-generated content into format. Returns one result per guidance. A drawio, whiteboard, or markdown render of paths is saved beside the first path, under the name the fidelity writes that format to when the path is one of the fidelity's own files or a sketch, else under the path's own name, keeping the layout people gave a drawing already there; its result names the saved file. Any other render, to code or from a saved graph, saves nothing: it returns its content, and as declared_at each path the fidelity declares for that format, for you to write the content at. After the conversion returns, follow place_rendered; for format whiteboard, then follow publish_board.
         format: the target channel, such as python, markdown, or drawio.
         paths: a file, a list of files, or a folder, named from the project's root or absolute. Required on every call. Pass paths so this action reads locally. Do not pass the document body in content on MCP. A path that is not there, or not under the session's root, is refused, and so is an empty file.
         content: in-process text when paths is empty. Leave this empty on an MCP call.
@@ -68,20 +68,26 @@ class Render(GuidanceAction):
         declared = worked.declared if isinstance(worked, FidelityGuidance) else None
         saved = RenderedFile.from_sources(sources, Format(source), Format(format), declared)
         if saved is None:
-            return worked.render_files(format, paths, source)
+            return self._answered(worked, worked.render_files(format, paths, source))
         if not isinstance(worked, FidelityGuidance):
             return saved.save(worked.render_files(format, paths, source, saved.previous))
         return saved.save(self._drawn(worked, worked.files_to_render(format, paths, source, saved.previous)))
 
+    def _answered(self, worked: WorkedGuidance, rendered: dict) -> dict:
+        """A render that saved no file, answered with its content and, as ``declared_at``, each path the fidelity
+        declares for that format in the session, so the answer itself says nothing was saved and where it goes."""
+        declared = worked.declared.output_paths().get(Format(str(rendered.get("format") or "")).name, []) if isinstance(worked, FidelityGuidance) else []
+        return {**rendered, "declared_at": declared} if declared else rendered
+
     def _format_named_by(self, sources: list[Path]) -> str | None:
         """The format the first source's name says it is in, for a call that names no source: a drawing, a whiteboard,
-        or code, by its extension. None for a folder, and for a markdown file, which is a document or a sketch as the
-        fidelity it is rendered at says."""
+        code, or markdown, by its extension, whatever format the fidelity it is rendered at works in. None for a
+        folder, and for a file named as a sketch, such as ``orders-sketch.md``, which the call says is one."""
         first = sources[0] if sources else None
-        if first is None or not first.is_file():
+        if first is None or not first.is_file() or Format("sketch").names(first):
             return None
         named = Format.from_extension(first.suffix)
-        return named.name if named.is_offered and named.group != "markdown" else None
+        return named.name if named.is_offered else None
 
     def _drawn(self, fidelity: FidelityGuidance, request: RenderRequest) -> dict:
         """What request renders to at fidelity: drawn by a worker process for a call that answers a chat when it is a
@@ -93,7 +99,7 @@ class Render(GuidanceAction):
 
     @agent_instructions
     def place_rendered(self) -> str:
-        """A result that names a path was saved there by render: leave it where it is, and do not write it again. A result that carries content is code: fold it into the module the sketch names when that module already has code. Keep the behavior that module already implements. Add the rendered operations and properties onto those types. Join behavior specs into the spec that module already has. When the sketch names no existing module, put each class in the practice model folder for that channel — `{practice}/model/{format}/`. Shared graph types stay on the harness knowledge graph. Do not replace an existing file with the rendered text. Do not re-render. Do not invent types. Then call refresh with exactly the files you wrote, so the session's graph holds them as they are now; nothing watches the files."""
+        """A result that names a path was saved there by render: leave it where it is, and do not write it again. A result that carries content was not saved: write it yourself, at the paths its declared_at names, filling each {name} from the work, such as one file for each aggregate or story. When it is code, fold it into the module the sketch names when that module already has code. Keep the behavior that module already implements. Add the rendered operations and properties onto those types. Join behavior specs into the spec that module already has. When the sketch names no existing module, put each class in the practice model folder for that channel — `{practice}/model/{format}/`. Shared graph types stay on the harness knowledge graph. Do not replace an existing file with the rendered text. Do not re-render. Do not invent types. Then call refresh with exactly the files you wrote, so the session's graph holds them as they are now; nothing watches the files."""
         return "Leave each file render saved where it is; fold rendered code into the module the sketch names, or the practice model folder when that module is new."
 
     @agent_instructions

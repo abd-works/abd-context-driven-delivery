@@ -47,6 +47,10 @@ class FidelityOutput(Protocol):
     def choose_format(self, format: str, is_chosen: bool) -> object:
         """Choose format for the fidelity in the session, or stop choosing it."""
 
+    @property
+    def roots(self) -> list[Path]:
+        """The folders the fidelity writes under in the session."""
+
     def output_paths(self) -> dict[str, list[str]]:
         """Where the fidelity writes each format in the session."""
 

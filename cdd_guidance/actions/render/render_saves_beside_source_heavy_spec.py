@@ -44,11 +44,41 @@ _BOOKSHOP_STORY_MAP = """\
 
 ### (S) Customer --> Place Order
 """
+_THIN_SLICE = """# Thin Slice
+
+## Increments
+
+### Increment 1: Browse
+
+- *Browse Product Catalog*
+"""
+_MODULE_CARD = """# src/{module}
+
+- **Purpose:** let a customer work with the {module}
+- **Seam (terms):** Book
+- **Dependencies (one-way):** none
+"""
+_CLASS_MODEL = """# Ordering
+
+**Module:** `src/ordering`
+
+## Cart
+
+### **Cart** <<Aggregate Root>>
+
++ Cart(customer_id: str)
+------
++ customer_id: str
+"""
 
 
-async def _render(server: SpecServer, project: Path, format: str, path: str = ".context/story-map.md", source: str | None = "markdown") -> tuple[bool, str]:
+async def _render(
+    server: SpecServer, project: Path, format: str, path: str | list[str] = ".context/story-map.md", source: str | None = "markdown",
+    guidance: str = "stories-story-map",
+) -> tuple[bool, str]:
     async with server.chat(project, _CALL_SECONDS) as chat:
-        arguments = {"guidance": "stories-story-map", "format": format, "paths": [path], **({"source": source} if source else {})}
+        paths = [path] if isinstance(path, str) else path
+        arguments = {"guidance": guidance, "format": format, "paths": paths, **({"source": source} if source else {})}
         result = await chat.call_tool("render.render", arguments=arguments)
         return bool(result.isError), result.content[0].text
 
@@ -135,6 +165,50 @@ with description("Render saving what it makes beside its source, called through 
 
             with it("should leave the story map's drawing as it was"):
                 expect(self.drawing.read_text(encoding="utf-8")).to(equal(self.drawn))
+
+    # Exploratory testing, r3-sparky-01: the thin slice, a file the story map fidelity declares, was drawn over the story
+    # map's drawing.
+    with context("a story map whose drawing is there, with its thin slice rendered to drawio"):
+        with before.each:
+            asyncio.run(_render(self.server, self.project.root, "drawio"))
+            self.drawn = self.drawing.read_text(encoding="utf-8")
+            (self.folder / "thin-slice.md").write_text(_THIN_SLICE, encoding="utf-8")
+            self.failed, self.answer = asyncio.run(_render(self.server, self.project.root, "drawio", ".context/thin-slice.md"))
+
+        with it("should answer the chat with the thin slice's own drawing"):
+            expect((self.failed, "thin-slice.drawio" in self.answer, (self.folder / "thin-slice.drawio").is_file())).to(equal((False, True, True)))
+
+        with it("should leave the story map's drawing as it was"):
+            expect(self.drawing.read_text(encoding="utf-8")).to(equal(self.drawn))
+
+    # Exploratory testing, r3-widget-01: one drawing of every module was saved in the first module's own folder.
+    with context("the module cards of two modules rendered to one drawing, with no source named"):
+        with before.each:
+            for module in ("catalogue", "ordering"):
+                card = self.project.root / "src" / module / ".context" / "module-context.md"
+                card.parent.mkdir(parents=True)
+                card.write_text(_MODULE_CARD.format(module=module), encoding="utf-8")
+            cards = ["src/catalogue/.context/module-context.md", "src/ordering/.context/module-context.md"]
+            self.failed, self.answer = asyncio.run(_render(self.server, self.project.root, "drawio", cards, None, "clean-engineering-modules"))
+
+        with it("should save the drawing in the root's .context, where the modules fidelity declares it"):
+            expect((self.failed, (self.folder / "modules.drawio").is_file())).to(equal((False, True)))
+
+        with it("should save no drawing in the first module's folder"):
+            expect((self.project.root / "src" / "catalogue" / ".context" / "modules.drawio").exists()).to(equal(False))
+
+    # Exploratory testing, r3-widget-05: a .md class model with no source named was read as Python by the worker.
+    with context("a class model in markdown rendered to drawio with no source named"):
+        with before.each:
+            self.model = self.project.root / "src" / "ordering" / ".context" / "ordering-model.md"
+            self.model.parent.mkdir(parents=True)
+            self.model.write_text(_CLASS_MODEL, encoding="utf-8")
+            path = "src/ordering/.context/ordering-model.md"
+            self.failed, self.answer = asyncio.run(_render(self.server, self.project.root, "drawio", path, None, "clean-engineering-model"))
+
+        with it("should draw the class the markdown holds, beside the model"):
+            drawing = self.model.with_suffix(".drawio")
+            expect((self.failed, drawing.is_file() and "Cart" in drawing.read_text(encoding="utf-8"))).to(equal((False, True)))
 
     # Exploratory testing, widget-07: render took ../outside.md and wrote story-map.drawio outside the project.
     with context("a story map outside the project, named from it"):

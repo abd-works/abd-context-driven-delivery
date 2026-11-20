@@ -14,7 +14,7 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import contain, equal, expect, raise_error
+from expects import contain, end_with, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from cdd_guidance.actions.render.render import Render
@@ -22,6 +22,7 @@ from cdd_guidance.actions.render.rendered_file import NothingToRender
 from cdd_guidance.actions.render.worker_render import RenderFailed
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.agent_tools.tool_call import ToolCall
+from harness.graph.saved_graph import SavedGraph
 from space.session.session_files import NamedPathNotFoundError
 from space.session.throwaway_project import ThrowawayProject
 from harness.whiteboard import BoardLinks, Whiteboard
@@ -71,6 +72,30 @@ with story("Browse Product Catalog"):
         with then("the kettle is listed"):
             pass
 '''
+_THIN_SLICE = """# Thin Slice
+
+## Increment 1: Browse
+
+- Customer --> Browse Product Catalog
+"""
+_MODULE_CARD = """# src/{module}
+
+- **Purpose:** let a customer work with the {module}
+- **Seam (terms):** Book
+- **Dependencies (one-way):** none
+"""
+_CLASS_MODEL = """# Ordering
+
+**Module:** `src/ordering`
+
+## Cart
+
+### **Cart** <<Aggregate Root>>
+
++ Cart(customer_id: str)
+------
++ customer_id: str
+"""
 
 
 with description("Render"):
@@ -447,6 +472,83 @@ with description("Render asked for a path, in a session") as self:
         with it("should save the drawing beside it"):
             self.action.render("stories-story-map", format="drawio", paths=[".context/story-map.md"], source="markdown")
             expect((self.folder / "story-map.drawio").read_text(encoding="utf-8")).to(contain("Browse Product Catalog"))
+
+    # Exploratory testing, r3-rivet-08: a realization rendered from a saved graph was saved as graph.md beside the graph,
+    # a name no fidelity writes, while the fidelity declares .context/{scope}-bdd-realization.md.
+    with context("that is a saved graph, rendered to the markdown realization"):
+        with before.each:
+            self.graphs = self.project.root / "graphs"
+            self.graphs.mkdir()
+            (self.graphs / "graph.json").write_text(SavedGraph.from_violations([]).text, encoding="utf-8")
+            self.results = self.action.render("bdd-realization", format="markdown", source="graph", paths=["graphs/graph.json"])
+
+        with it("should save no file named after the graph"):
+            expect(sorted(path.name for path in self.graphs.iterdir())).to(equal(["graph.json"]))
+
+        with it("should answer with the realization, which only the agent can name for its scope"):
+            expect("content" in self.results[0]).to(equal(True))
+
+        with it("should say where the fidelity declares the file, for the agent to write it there"):
+            expect(self.results[0]["declared_at"][0]).to(end_with(".context/{scope}-bdd-realization.md"))
+
+    # Exploratory testing, r3-bolt-06 and r3-sparky-07: a render to code answered its content with no word that
+    # nothing was saved, or where the fidelity writes that code.
+    with context("that is a domain model in markdown, rendered to Python"):
+        with before.each:
+            (self.folder / "domain-model.md").write_text(_CLASS_MODEL, encoding="utf-8")
+            self.results = self.action.render("ddd-model", format="python", paths=[".context/domain-model.md"])
+
+        with it("should answer with the code and save no file"):
+            expect(("content" in self.results[0], "path" in self.results[0])).to(equal((True, False)))
+
+        with it("should say where the fidelity declares its Python, for the agent to write each aggregate there"):
+            expect(self.results[0]["declared_at"][0]).to(end_with("{bounded_context}/{aggregate}/{aggregate}.py"))
+
+    # Exploratory testing, r3-sparky-01: the thin slice, a file the story map fidelity declares, was drawn over the story
+    # map's drawing.
+    with context("that is the story map's thin slice, beside the story map's drawing"):
+        with before.each:
+            self.action.render("stories-story-map", format="drawio", paths=[".context/story-map.md"], source="markdown")
+            self.drawn = (self.folder / "story-map.drawio").read_text(encoding="utf-8")
+            (self.folder / "thin-slice.md").write_text(_THIN_SLICE, encoding="utf-8")
+            self.results = self.action.render("stories-story-map", format="drawio", paths=[".context/thin-slice.md"], source="markdown")
+
+        with it("should save the thin slice's drawing under the name the fidelity declares for it"):
+            expect(Path(self.results[0]["path"]).name).to(equal("thin-slice.drawio"))
+
+        with it("should leave the story map's drawing as it was"):
+            expect((self.folder / "story-map.drawio").read_text(encoding="utf-8")).to(equal(self.drawn))
+
+    # Exploratory testing, r3-widget-01: one drawing of every module was saved in the first module's own folder.
+    with context("that is the module card of each of two modules, rendered to one drawing"):
+        with before.each:
+            for module in ("catalogue", "ordering"):
+                card = self.project.root / "src" / module / ".context" / "module-context.md"
+                card.parent.mkdir(parents=True)
+                card.write_text(_MODULE_CARD.format(module=module), encoding="utf-8")
+            cards = ["src/catalogue/.context/module-context.md", "src/ordering/.context/module-context.md"]
+            self.results = self.action.render("clean-engineering-modules", format="drawio", paths=cards)
+
+        with it("should save the drawing in the root's .context, where the modules fidelity declares it"):
+            expect(Path(self.results[0]["path"])).to(equal(self.folder / "modules.drawio"))
+
+        with it("should save no drawing in the first module's folder"):
+            expect((self.project.root / "src" / "catalogue" / ".context" / "modules.drawio").exists()).to(equal(False))
+
+    # Exploratory testing, r3-widget-05 and widget-09: a .md file with no source named was read in the format the
+    # fidelity works in, Python for a class model, and refused as Python that does not parse.
+    with context("that is a class model in markdown, with no source named, at a fidelity that works in Python"):
+        with before.each:
+            model = self.project.root / "src" / "ordering" / ".context" / "ordering-model.md"
+            model.parent.mkdir(parents=True)
+            model.write_text(_CLASS_MODEL, encoding="utf-8")
+            self.results = self.action.render("clean-engineering-model", format="drawio", paths=["src/ordering/.context/ordering-model.md"])
+
+        with it("should read the file as the markdown its name says it is"):
+            expect(Path(self.results[0]["path"]).read_text(encoding="utf-8")).to(contain("Cart"))
+
+        with it("should save the drawing beside the model, under the name the fidelity declares for the module"):
+            expect(Path(self.results[0]["path"])).to(equal(self.project.root / "src" / "ordering" / ".context" / "ordering-model.drawio"))
 
 
 with description("A comment a person left on a board in Claude") as self:

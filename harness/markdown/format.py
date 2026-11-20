@@ -112,12 +112,17 @@ class Format(str):
         """The extension this format's templates end with; empty for a format whose template is found by name."""
         return self.extension if self.is_templated else ""
 
+    def names(self, file: Path) -> bool:
+        """Whether the file's name carries the ending this format's files carry: ``orders-sketch.md`` is named as a
+        sketch. A format whose files carry no ending names no file so."""
+        ending = self._FILE_NAME_ENDINGS.get(self.name, "")
+        return bool(ending) and file.stem.endswith(ending)
+
     def stem_of(self, file: Path) -> str:
         """The name of a file in this format without its extension and without the ending this format's files carry,
         so a file rendered from it can take the same name: ``orders-sketch.md`` is ``orders`` as a sketch."""
         ending = self._FILE_NAME_ENDINGS.get(self.name, "")
-        stem = file.stem
-        return stem[: -len(ending)] if ending and stem.endswith(ending) else stem
+        return file.stem[: -len(ending)] if self.names(file) else file.stem
 
 
 # The folder names a practice's templates are kept under, one for each templated format: `md`, `py`, ...
