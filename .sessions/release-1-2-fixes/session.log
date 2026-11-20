@@ -1744,3 +1744,4 @@
 2026-11-20T19:48:09Z tool call-outcomes.close_month
 2026-11-20T19:48:09Z tool call-outcomes.close_month
 2026-11-20T19:49:06Z tool prompt-queue.set_steps 0441e51a-b582-45e7-aefa-d95fcdc406e3 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\0441e51a-b582-45e7-aefa-d95fcdc406e3.jsonl 1-2897
+2026-11-20T19:49:40Z tool prompt-queue.show 0441e51a-b582-45e7-aefa-d95fcdc406e3 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\0441e51a-b582-45e7-aefa-d95fcdc406e3.jsonl 1-2922

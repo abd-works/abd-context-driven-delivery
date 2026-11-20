@@ -22,8 +22,8 @@ import { card, expect, fixtureRoot, openBoard, resetSessions, test, writeInto } 
 import type { Locator, Page } from '../../../../space/kanban/app/tests/story-ui'
 
 const files = (page: Page) => page.locator('[data-panel="files"]')
-// The story_map fidelity writes the story map in three formats and its thin slice in two, each a tab, generated or not.
-const STORY_MAP_TABS = ['story-map.md', 'story-map.drawio', 'story-map.whiteboard', 'thin-slice.md', 'thin-slice.drawio']
+// The story_map fidelity writes the story map and its thin slice in three formats each, each a tab, generated or not.
+const STORY_MAP_TABS = ['story-map.md', 'story-map.drawio', 'story-map.whiteboard', 'thin-slice.md', 'thin-slice.drawio', 'thin-slice.whiteboard']
 
 async function openStoryMapBar(page: Page, ticket: string, title: string): Promise<Locator> {
   await card(page, ticket).getByRole('button', { name: `Show ${title}` }).click({ position: { x: 4, y: 4 } })

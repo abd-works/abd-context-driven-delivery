@@ -103,7 +103,7 @@ The files panel shows the practice filters and then every file as a tab, both al
 
 *Given* checkout-flow's story map is .context/story-map.md and .context/story-map.drawio is not there
 *When* the Person views checkout-flow's story_map files
-*Then* the tabs along the top show the story map's files, .context/story-map.md, .context/story-map.drawio and .context/story-map.whiteboard, and the thin slice's, .context/thin-slice.md and .context/thin-slice.drawio, all in Stories' color
+*Then* the tabs along the top show the story map's files, .context/story-map.md, .context/story-map.drawio and .context/story-map.whiteboard, and the thin slice's, .context/thin-slice.md, .context/thin-slice.drawio and .context/thin-slice.whiteboard, all in Stories' color
 *And* the .context/story-map.md tab shows # Check Out Order
 *And* the drawio tab says it is not generated yet
 

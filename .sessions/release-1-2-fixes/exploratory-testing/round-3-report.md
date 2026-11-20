@@ -134,3 +134,13 @@ The unit tier, run after each wave, caught three knock-on breaks, each fixed bef
 4. Should the IA drawing show descriptions, content types and notes, and a mockup's drawing its states and interactions (r3-gizmo-02, 04)?
 5. Does a link to a heading that is not there get a callout saying so? It replaces an older scenario that said it carries none (r3-pixel-04).
 6. Do front-end views render between TypeScript and JavaScript (r3-gizmo-05)?
+
+### Tier results on the fixed code (2026-11-20, commit 1194888e0)
+
+- **Unit:** 382 of 382 files, none over the 100 ms budget.
+- **Heavy:** 62 of 63 files. The one failure is the OSS portal pattern's fixture copy, whose paths are too long inside the tier's worktree; that pattern is left out of this work.
+- **E2E, without agent specs:** 7 of 10 files, 270 of 275 Playwright tests.
+  - Four Playwright tests expected five tabs for the story map fidelity and found six, the thin slice's whiteboard being declared now. The spec and its scenario are updated and its 13 tests pass.
+  - `review-files-in-files-app.story.ui_e2e_spec.py` (pixel-09) and the viewer's line 14 test (pixel-10) failed before this session and still do.
+  - `prompt_queue_plugin_e2e_spec.py` fails all 6: it cannot start a headless Claude Code chat on this machine.
+- The whole e2e tier was not run again after the tab fix.
