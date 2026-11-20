@@ -994,9 +994,9 @@ with description("a graph"):
                 expect({slug for slug, _ in violations_in(self.edited, "stories", self.scope)}).not_to(contain("conforms-to-schema"))
 
             with it("should judge each Given by its own step rules"):
-                expect({slug for slug, node_id in violations_in(self.full, "stories", self.scope) if ":Given:" in node_id}).to(
-                    equal({"given-names-complex-state-root-first"})
-                )
+                givens = [node for node in _practice_nodes(self.full, "stories", self.scope) if ":Given:" in node.node_id]
+                expect(len(givens)).to(be_above(0))
+                expect([node.node_id for node in givens if "given-names-complex-state-root-first" not in node.rules.slugs]).to(equal([]))
 
         with context("with an edited story examples file"):
             with before.all:

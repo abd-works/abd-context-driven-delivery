@@ -533,7 +533,7 @@ class Increment(StoryNode):
 @agent_toolset
 class Step(StoryNode):
     _semantic_type_name = "Step"
-    graph_facts = ("keyword", "text", "phase", "concepts", "values", "actor", "continuation", "callees", "body_text")
+    graph_facts = ("keyword", "text", "phase", "concepts", "values", "linked_terms", "actor", "continuation", "callees", "body_text")
 
     def __init__(self, text: "str | Step", step_type: "StepType | None" = None, sequential_order: int = 0) -> None:
         """A step saying text, of step_type, at sequential_order; given a step, a copy of it. What a format reads about
@@ -551,6 +551,7 @@ class Step(StoryNode):
         self._ands = ModelChildren(self, "ands")
         self.concepts: List[str] = []
         self.values: List[str] = []
+        self.linked_terms: List[str] = []
         self.actor = ""
         self.source: Optional["Source"] = None
         self.call_graph = CallGraph([])
@@ -562,6 +563,7 @@ class Step(StoryNode):
         """Take what origin was read with, its code, and a copy of each step chained onto it."""
         self._keyword = origin._keyword
         self.concepts, self.values = list(origin.concepts), list(origin.values)
+        self.linked_terms = list(origin.linked_terms)
         self.actor, self.source = origin.actor, origin.source
         self.call_graph = CallGraph(getattr(origin, "call_graph", None) or [])
         self.take_code_from(origin)

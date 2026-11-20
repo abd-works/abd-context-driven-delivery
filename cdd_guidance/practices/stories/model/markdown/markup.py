@@ -11,6 +11,8 @@ from cdd_guidance.practices.stories.model.story_model import Example, Step
 
 _BOLD_TERM = re.compile(r"\*\*([^*]+)\*\*")
 _ITALIC_VALUE = re.compile(r"(?<!\*)\*([^*\n]+)\*(?!\*)")
+# An underlined term written as a link, ++[cart](domain-model.md#cart-…)++: the label is the term the step names.
+_LINKED_TERM = re.compile(r"\+\+\[([^\]\n]+)\]\([^)\n]*\)\+\+")
 _STEP_CONTINUATION = re.compile(r"^(And|But)\s+", re.IGNORECASE)
 TABLE_LINE = re.compile(r"^\s*\|(.+)\|\s*$")
 
@@ -86,8 +88,10 @@ class MarkdownStep(Step):
     def read_from(self, line: str) -> None:
         """Keep line as the one this step was read from, with the keyword and text it says now, and take the concepts,
         values and actor its markup names: its bold terms are the concepts, the first its actor, and its italic values
-        the values."""
+        the values. The step's text keeps its words without their links, so the underlined terms the line links are
+        kept as its linked terms."""
         self.markdown_line = (self.keyword, self.text, line)
+        self.linked_terms = [term.strip() for term in _LINKED_TERM.findall(line)]
         actor = _BOLD_TERM.search(self.text)
         self.concepts = _BOLD_TERM.findall(self.text)
         self.values = [value.strip("`").strip() for value in _ITALIC_VALUE.findall(self.text) if value]

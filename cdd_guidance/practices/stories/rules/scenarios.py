@@ -161,10 +161,12 @@ class DomainTermsLinkToModel(PracticeGraphRule):
         if not classes:
             return []
         text = _text(node)
+        # The markdown reader keeps the step's words without their links and records the terms its line linked.
+        linked = {self._key(term) for term in node.get_fact("linked_terms", []) or []}
         unlinked = [
             term.strip()
             for term in _UNDERLINED_TERM.findall(text)
-            if not _LINKED_TERM.match(term.strip()) and self._key(term) in classes
+            if not _LINKED_TERM.match(term.strip()) and self._key(term) in classes - linked
         ]
         if not unlinked:
             return []
@@ -255,8 +257,19 @@ class GivenNamesComplexStateRootFirst(PracticeGraphRule):
         for edge in context.edges("steps"):
             if edge.child is step:
                 steps = context.children(edge.parent, "steps")
-                return self._background_steps(edge.parent, context) + steps[: steps.index(step)]
+                before = [each for earlier in steps[: steps.index(step)] for each in self._with_ands(earlier, context)]
+                return self._background_steps(edge.parent, context) + before
+        # An And or But line is held among the ands of the step it continues.
+        for edge in context.edges("ands"):
+            if edge.child is step:
+                ands = context.children(edge.parent, "ands")
+                before = [each for earlier in ands[: ands.index(step)] for each in self._with_ands(earlier, context)]
+                return self._earlier_steps(edge.parent, context) + [edge.parent] + before
         return []
+
+    def _with_ands(self, step: Node, context: RuleCheckContext) -> list[Node]:
+        """The step and every And or But line that continues it."""
+        return [step, *(each for continued in context.children(step, "ands") for each in self._with_ands(continued, context))]
 
     def _background_steps(self, scenario: Node, context: RuleCheckContext) -> list[Node]:
         stories = [edge.parent for edge in context.edges("scenarios") if edge.child is scenario]

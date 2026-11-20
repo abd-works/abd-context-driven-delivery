@@ -24,7 +24,8 @@ from harness.graph.graph import Graph, Node, Source  # noqa: E402
 from harness.graph.saved_graph import NodeIdentity
 from harness.graph.saved_graph import SavedGraph  # noqa: E402
 from harness.graph.rule_context import RuleCheckContext  # noqa: E402
-from harness.graph.rule_fixture import SchemaRuleRun  # noqa: E402
+from harness.graph.rule_fixture import RuleFixture, SchemaRuleRun  # noqa: E402
+from cdd_guidance.practices.stories.stories import Stories  # noqa: E402
 
 
 def _step(keyword: str, text: str, order: int, phase: StepType) -> Step:
@@ -33,20 +34,18 @@ def _step(keyword: str, text: str, order: int, phase: StepType) -> Step:
     return step
 
 
-def _phases(steps: list[tuple[str, str]]) -> list[StepType]:
-    """Each step's phase: its own keyword's, or for an And or But, the phase of the step it continues."""
-    phases: list[StepType] = []
-    for keyword, _ in steps:
-        phases.append(StepType(keyword.lower()) if keyword.lower() in ("given", "when", "then") else phases[-1])
-    return phases
-
-
 def _scenario(steps: list[tuple[str, str]], *, examples: int = 0, outline: bool = False, evidence: tuple = ()) -> Scenario:
+    """A scenario of steps, each a keyword and its words; an And or But continues the step before it, among that
+    step's ands, as the markdown reader holds it."""
     scenario = Scenario("Place the order")
-    scenario.steps = [
-        _step(keyword, text, order, phase)
-        for order, ((keyword, text), phase) in enumerate(zip(steps, _phases(steps)), start=1)
-    ]
+    held: list[Step] = []
+    for keyword, text in steps:
+        if keyword.lower() in ("and", "but") and held:
+            previous = held[-1]
+            previous.ands = [*previous.ands, _step(keyword, text, len(previous.ands) + 1, previous.step_type)]
+        else:
+            held.append(_step(keyword, text, len(held) + 1, StepType(keyword.lower())))
+    scenario.steps = held
     for number in range(examples):
         scenario.examples[f"order {number + 1}"] = f"order {number + 1}"
     scenario.is_outline = outline
@@ -279,3 +278,24 @@ with description("a scenario on a story graph"):
                 with it("should pass"):
                     given = "an ++[order](../domain-model.md#order-aggregate-root-entity)++ holding ++two lamps++"
                     expect(_term_hits(_loaded(_scenario([("Given", given)]), self.graph))).to(equal([]))
+
+        # The markdown reader keeps a step's words without their links, so the rule reads which terms were linked from
+        # what the reader recorded off the line.
+        with context("read from a scenarios file, with a DDD model whose Order aggregate owns line items"):
+            with before.each:
+                self.fixture = RuleFixture(Stories, {
+                    "story-map.md": "# (E) Sell Lamps\n## (E) Take Orders\n### (S) Customer --> Place Order\n",
+                    "story_tests/sell-lamps/take-orders/take_orders_story.test.md": (
+                        "# Sub-epic: Take Orders\n\n## Story: Place Order\n\n#### Scenario: Order two lamps\n\n"
+                        "*Given* an ++[order](../domain-model.md#order-aggregate-root-entity)++ with two lamps\n"
+                        "*And* a ++line item++ for the lamps\n"
+                        "*When* the **Customer** places the order\n"
+                        "*Then* the order is placed\n"
+                    ),
+                })
+                _order_aggregate(self.fixture.practice.reading.graph)
+
+            with it("should be told to link only the term the file left unlinked"):
+                expect(self.fixture.hits(DomainTermsLinkToModel())).to(equal([
+                    "Step 'a ++line item++ for the lamps' names the domain terms ['line item'] without linking them to their headings in the domain model."
+                ]))
