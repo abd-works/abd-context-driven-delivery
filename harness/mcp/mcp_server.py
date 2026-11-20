@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination, ToolsetConfiguration, ToolsetReference, names_alike
 from harness.agent_tools.chat_pointer import ChatPointer
 from harness.process.claude_chat_process import ClaudeChatProcess, is_desktop_spare
-from harness.agent_tools.tool_call import CALLS_BEING_ANSWERED, ToolCall, ToolRequest
+from harness.agent_tools.tool_call import ToolCall, ToolRequest
 from harness.installation.destination import ServerInstallation, SkippedTool, SkippedTools
 from harness.installation.data_class import SentValue, data_of
 from harness.installation.ide_layout import IdeLayout
@@ -642,7 +642,7 @@ class McpHost:
         """The tools a chat working on project is listed, as data: the other lane's when that lane answers project's
         calls, as the dev lane does a ticket's worktree while it serves a feature, so the chat can call every tool the
         feature adds; else this server's own."""
-        other_lane = self._other_lane_answering(ToolCall.sent({}, project, ToolRequest(tool=BUILTIN_LIST_TOOLS, mcp_host=self))) if project else None
+        other_lane = self._other_lane_answering(self._call_sent({}, project, BUILTIN_LIST_TOOLS)) if project else None
         if other_lane is not None:
             return other_lane.tools_for(project)
         return [tool.model_dump(exclude_none=True) for tool in self._tool_list()]
@@ -690,7 +690,21 @@ class McpHost:
         """The call as the chat sent it: the tool it names, the project its header names, and the chat its arguments
         name, answered by this host for that chat."""
         resolved = self._checkout_server.resolve_call_name(name)
-        return ToolCall.sent(arguments, self._requested_project(resolved), ToolRequest(self._requesting_chat(), resolved, self, answers_a_chat=True))
+        return self._call_sent(arguments, self._requested_project(resolved), resolved, self._requesting_chat(), answers_a_chat=True)
+
+    def _call_sent(
+        self, arguments: dict[str, object] | None, project: Path | None, tool: str, chat: ChatPointer | None = None, answers_a_chat: bool = False
+    ) -> ToolCall:
+        """A call this host answers, made from ``tool_call`` as it is now. A restart imports the checkout again but keeps
+        this host, so the ``ToolCall`` this module was first imported with would open the call's session from practices of
+        classes the restarted tools no longer know."""
+        calls = importlib.import_module("harness.agent_tools.tool_call")
+        return calls.ToolCall.sent(arguments, project, calls.ToolRequest(chat, tool, self, answers_a_chat=answers_a_chat))
+
+    @property
+    def _chat_pointers(self) -> Any:
+        """``ChatPointer`` as it is now, for the same reason as ``_call_sent``."""
+        return importlib.import_module("harness.agent_tools.chat_pointer").ChatPointer
 
     def _requesting_chat(self) -> ChatPointer | None:
         """The chat the request comes from, so what it keeps open is its own and never shared with every chat in the
@@ -699,7 +713,7 @@ class McpHost:
         headers = self._request_headers()
         process = self._requesting_process(headers)
         running = process.session_id if process is not None else ""
-        return ChatPointer.from_request(running or headers.get(CHAT_HEADER) or "")
+        return self._chat_pointers.from_request(running or headers.get(CHAT_HEADER) or "")
 
     async def _answer_off_loop(self, call: ToolCall) -> SentValue:
         """Run the call on a worker thread, because a synchronous call on the event loop holds every other chat's
@@ -799,14 +813,15 @@ class McpHost:
         return context.request if context is not None else None
 
     def _folder_of_chat(self, chat_id: str | None) -> Path | None:
-        chat = ChatPointer.from_claude_session(chat_id or "")
+        chat = self._chat_pointers.from_claude_session(chat_id or "")
         return chat.working_folder if chat is not None else None
 
     def _answer_reporting(self, call: ToolCall, reporter: Callable[[str], None] | None) -> object:
         """Answer a chat's call on its worker thread: its progress goes to reporter. The call says it answers a chat
         (``call.request.answers_a_chat``), so work it starts that would hold the interpreter runs in a worker process."""
-        # Read it from its module as it is now: a restart imports it again, and tools read the new one.
+        # Read them from their modules as they are now: a restart imports them again, and tools read the new ones.
         from harness.agent_tools.progress import reporting_to
+        from harness.agent_tools.tool_call import CALLS_BEING_ANSWERED
 
         # The answer is read into JSON while the call is still the one being answered: properties such as a board's
         # active ticket depend on the chat that asked, and read after the call they would answer for no chat.
@@ -818,7 +833,7 @@ class McpHost:
         """Run one tool call made in process on project; one that names no project works on the folder ``CDD_PROJECT``
         names, else the current folder. A true ``ping`` argument answers without entering the tool."""
         resolved = self._checkout_server.resolve_call_name(name)
-        call = ToolCall.sent(arguments, project or self._project_named_outside_a_chat(), ToolRequest(tool=resolved, mcp_host=self))
+        call = self._call_sent(arguments, project or self._project_named_outside_a_chat(), resolved)
         return self.answer(call)
 
     def answer(self, call: ToolCall) -> object:
@@ -924,8 +939,8 @@ class McpHost:
         return JSONResponse(await self._lane_reply(self._call_from_lane(lane_call)))
 
     def _call_from_lane(self, lane_call: LaneCall) -> ToolCall:
-        request = ToolRequest(ChatPointer.from_request(lane_call.chat), lane_call.tool, self, answers_a_chat=True)
-        return ToolCall.sent(lane_call.arguments, lane_call.project or None, request)
+        chat = self._chat_pointers.from_request(lane_call.chat)
+        return self._call_sent(lane_call.arguments, lane_call.project or None, lane_call.tool, chat, answers_a_chat=True)
 
     async def _lane_reply(self, call: ToolCall) -> dict[str, Any]:
         """The reply the other lane reads: the answer, or the failure named by its kind and message, so the chat sees

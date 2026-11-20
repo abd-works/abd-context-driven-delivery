@@ -511,6 +511,26 @@ with description("an MCP host over every toolset of the checkout") as self:
             expect(self.restarted["exceptions"]).to(equal([]))
 
 
+# A restart imports the checkout again but the host stays, so a call the host builds must open its session from the code
+# the tools now run. Built from the code the host was first imported with, the call hands the tool a session whose
+# practices are of classes the tool no longer knows, and generate fails on the first fidelity it works at.
+with description("an MCP host that has been restarted, on a project with a session open") as self:
+    with before.each:
+        self.project = Path(tempfile.mkdtemp(prefix="mcp-host-restarted-"))
+        (self.project / ".git").mkdir()
+        sessions = Sessions(self.project)
+        sessions.opened.open(sessions.create("alpha", self.project))
+        self.host = McpHost.from_refs(("cdd_guidance.actions.generate.generate:Generate",), repo=str(_REPO_ROOT), project=str(self.project))
+        self.host.dispatch("cdd.restart", {})
+
+    with after.each:
+        shutil.rmtree(self.project, ignore_errors=True)
+
+    with it("should still generate the fidelity a call names"):
+        reply = self.host.dispatch("generate.generate", {"guidance": "stories-story-map"}, self.project)
+        expect(reply).to(contain("story-map.md"))
+
+
 with description("an MCP host tool ping") as self:
     with before.each:
         self.host = McpHost.from_refs(
