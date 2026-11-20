@@ -15,7 +15,14 @@ from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
 
 class BddModel(ModelNode):
     _semantic_type_name = "Spec"
-    graph_facts = ("patches_infrastructure", "signature_marker", "developed", "top_level_describes", "private_probe")
+    graph_facts = (
+        "patches_infrastructure",
+        "signature_marker",
+        "developed",
+        "top_level_describes",
+        "private_probe",
+        "imported_classes",
+    )
     _belongs = {("Description", "Spec")}
 
     def __init__(self, graph: Graph | None = None) -> None:
@@ -55,7 +62,7 @@ class BddModel(ModelNode):
         self.patches_infrastructure = bool(_PATCH_DECORATOR.search(text) or _MOCK_PATCH_IMPORT.search(text))
         self.signature_marker = has_signature_marker(text)
         self.developed = is_developed(text)
-        self.top_level_describes = _MAMBA_DESCRIBE.findall(text)
+        self.top_level_describes = [description.name for description in self.descriptions]
         described = {number for description in self.descriptions for number in range(description.line, description.end_line + 1)}
         outside = "\n".join("" if number in described else line for number, line in enumerate(text.splitlines(), start=1))
         self.private_probe = private_probe_in_text(outside, 1)
@@ -75,27 +82,20 @@ class BddModel(ModelNode):
         return "\n\n".join(self._sketch_lines(item) for item in canonical.descriptions)
 
     def _sketch_lines(self, description: Description) -> str:
-        # Spec code often puts `it` straight under the outermost describe, so those observations come before its contexts.
-        lines = [description.name, *self._observation_lines(description.observations, "")]
-        for child in description.contexts:
-            lines.extend(self._sketch_context(child, 1))
-        return "\n".join(lines) + "\n"
+        return "\n".join([description.name, *self._children_lines(description, "")]) + "\n"
 
-    def _sketch_context(self, node: Context, depth: int) -> list[str]:
-        pad = "  " * depth
-        lines = [f"{pad}{node.name}", *self._observation_lines(node.observations, pad)]
-        for child in node.contexts:
-            lines.extend(self._sketch_context(child, depth + 1))
-        return lines
-
-    def _observation_lines(self, observations: list[Observation], pad: str) -> list[str]:
-        """Each observation one level under its parent: a fenced block when it carries a realization, else its line."""
+    def _children_lines(self, block: Description | Context, pad: str) -> list[str]:
+        """The block's observations and contexts one level under it, in the order its file has them. Each observation
+        is a fenced block when it carries a realization, else its line."""
+        inner = f"{pad}  "
         lines: list[str] = []
-        for observation in observations:
-            if observation.surface_lines or observation.call_graph:
-                lines.extend(self._realized_lines(observation, f"{pad}  "))
+        for child in block.children_in_order():
+            if isinstance(child, Context):
+                lines.extend([f"{inner}{child.name}", *self._children_lines(child, inner)])
+            elif child.surface_lines or child.call_graph:
+                lines.extend(self._realized_lines(child, inner))
             else:
-                lines.append(f"{pad}  it {observation.name}")
+                lines.append(f"{inner}it {child.name}")
         return lines
 
     def _realized_lines(self, observation: Observation, pad: str) -> list[str]:
@@ -122,7 +122,6 @@ class BddModel(ModelNode):
 
 _PATCH_DECORATOR = re.compile(r"^\s*@patch\s*\(", re.MULTILINE)
 _MOCK_PATCH_IMPORT = re.compile(r"from unittest\.mock import patch")
-_MAMBA_DESCRIBE = re.compile(r'^with description\("([^"]+)"\)', re.MULTILINE)
 
 
 class _SketchReader:
@@ -171,20 +170,25 @@ class _SketchReader:
         self._fence = []
 
     def _close_fence(self) -> None:
-        """Each `it` in the fence takes the call-graph lines above it as its realization."""
+        """Each `it` in the fence takes the call-graph lines above it as its realization, each at its depth under the
+        fence's own margin, and the lines indented under it as its surface lines."""
         owner, lines, self._fence = self._owner(), self._fence or [], None
-        if owner is None:
+        written = [raw for raw in lines if raw.strip() and not raw.strip().startswith("//")]
+        if owner is None or not written:
             return
-        call_graph = CallGraph()
-        for raw in lines:
-            stripped = raw.strip()
-            if not stripped or stripped.startswith("//"):
-                continue
+        margin = min(self._level(raw) for raw in written)
+        call_graph, observation, observed_at = CallGraph(), None, 0
+        for raw in written:
+            stripped, level = raw.strip(), self._level(raw) - margin
             if stripped.startswith("it "):
-                observation = owner.add_child("it", stripped[3:].strip())
+                observation, observed_at = owner.add_child("it", stripped[3:].strip()), level
                 observation.call_graph, call_graph = call_graph, CallGraph()
-                continue
-            call_graph.add_line(stripped, self._level(raw))
+            elif observation is not None and level > observed_at:
+                arrow = parse_arrow_line(stripped)
+                observation.surface_lines.append(arrow[1] if arrow else stripped)
+            else:
+                observation = None
+                call_graph.add_line(stripped, level)
 
     def _read_surface(self, stripped: str) -> None:
         """A surface line belongs to the observation above it; before any observation it waits for the next one."""

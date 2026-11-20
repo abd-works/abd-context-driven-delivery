@@ -5,9 +5,22 @@ from __future__ import annotations
 import ast
 import re
 import textwrap
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Callable, Iterable, List, Optional, Tuple, Union
 
-from cdd_guidance.practices.clean_engineering.model.code_body import JAVASCRIPT, PYTHON, TYPESCRIPT, BraceCall, CodeBody, CodeLanguage, InsideLines, WrittenBlock
+from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraph
+from cdd_guidance.practices.clean_engineering.model.code_body import (
+    CODE_LANGUAGES,
+    JAVASCRIPT,
+    PYTHON,
+    TYPESCRIPT,
+    BraceCall,
+    CodeBody,
+    CodeLanguage,
+    InsideLines,
+    WrittenBlock,
+)
+from harness.graph.graph import Graph
+
 from cdd_guidance.practices.bdd.model.bdd_model import BddModel
 from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation
 from cdd_guidance.practices.bdd.model.spec_source import SIGNATURE
@@ -34,10 +47,55 @@ class UnreadableSpec(ValueError):
         self.line = error.lineno
 
 
+class KeptLines:
+    """The lines one language keeps for another: a body written in another language stands in a spec as comments under
+    a note naming that language (``CodeBody.lines_in``), and a realization's call graph stands in an `it` as comments
+    above its signature marker. Read back, the comments are the other language's body again, or the call graph, so a
+    spec taken to another language and back is not wrapped in a second layer of comments."""
+
+    def __init__(self, language: CodeLanguage, own_lines: Iterable[str] = ()) -> None:
+        self._language = language
+        # The lines the language writes around what it keeps: its signature markers, or its default imports.
+        self._own_lines = {line.strip() for line in own_lines}
+        self._notes = {
+            language.comment(f"{other.name} body to translate:"): other for other in CODE_LANGUAGES if other is not language
+        }
+
+    def body(self, text: str) -> CodeBody:
+        """The body text holds: the other language's when it is that body kept as comments, else this language's."""
+        lines = [line.strip() for line in text.splitlines() if line.strip() and line.strip() not in self._own_lines]
+        other = self._notes.get(lines[0]) if lines else None
+        if other is None or not self._all_comments(lines):
+            return CodeBody(text, self._language)
+        return CodeBody("\n".join(self._uncommented(lines[1:])), other)
+
+    def call_graph(self, text: str) -> Optional[CallGraph]:
+        """The call graph a realization wrote as comments above the signature marker; none when the lines are a test
+        body, a body kept for another language, or have no marker."""
+        written = [line.strip() for line in text.splitlines() if line.strip()]
+        comments = [line for line in written if line not in self._own_lines]
+        if not comments or len(comments) == len(written) or comments[0] in self._notes or not self._all_comments(comments):
+            return None
+        return CallGraph().read("\n".join(self._uncommented(comments)))
+
+    def _all_comments(self, lines: List[str]) -> bool:
+        return all(line.startswith(self._language.line_comment) for line in lines)
+
+    def _uncommented(self, lines: List[str]) -> List[str]:
+        """Each comment line without its comment sign and the one space after it, its own indent kept."""
+        sign = self._language.line_comment
+        return [line[len(sign) :].removeprefix(" ") for line in lines]
+
+
 class CodeBddModel(BddModel):
     """A spec written as code. Python and TypeScript only spell the lines."""
 
     language: CodeLanguage
+
+    def __init__(self, graph: Optional[Graph] = None) -> None:
+        super().__init__(graph)
+        self._kept_lines = KeptLines(self.language, (self.marker_line(), self.language.comment(SIGNATURE)))
+        self._kept_preamble = KeptLines(self.language, self.default_imports())
 
     def parse(self, text: str) -> "CodeBddModel":
         self.check_readable(text)
@@ -55,7 +113,8 @@ class CodeBddModel(BddModel):
         # WHY: imports from another language name nothing this file can load, so only this language's are kept.
         own = preamble.lines_in(self.language, "", "") if preamble.language is self.language else []
         as_read = written.inside_for(preamble) if written is not None and own else None
-        lines = as_read if as_read is not None else (own or self.default_imports())
+        # Another language's imports stay as a note under this language's, so the trip back finds them.
+        lines = as_read if as_read is not None else (own or self.default_imports() + preamble.lines_in(self.language, "", ""))
         for description in canonical.descriptions:
             lines = lines + self._render_block(description, (), first=False)
         if written is not None:
@@ -86,6 +145,8 @@ class CodeBddModel(BddModel):
         as_read = written.inside_for(body) if written is not None else None
         if as_read is not None:
             return as_read
+        if body.is_empty and written is not None and self._kept_lines.call_graph("\n".join(written.inside)) == observation.call_graph:
+            return written.inside
         if body.language is self.language:
             return body.lines_in(self.language, inner, self.marker_line())
         scaffold = self._realization(observation) if body.is_empty else []
@@ -117,7 +178,7 @@ class CodeBddModel(BddModel):
         """Read the lines inside one block: setup before the first child, each child with the lines above it,
         and return the lines after the last child. Blank lines right above the first child belong to it."""
         setup, leads, closing = InsideLines(self._lines, inside).split([(first, last) for first, last, _ in children])
-        node.setup = CodeBody("\n".join(setup), self.language)
+        node.setup = self._kept_lines.body("\n".join(setup))
         node.written.inside = setup
         for order, ((_first, _last, read), lead) in enumerate(zip(children, leads), 1):
             read(lead, order)
@@ -130,7 +191,7 @@ class CodeBddModel(BddModel):
         as_read = written.inside_for(body) if written is not None and body.language is self.language else None
         setup = as_read if as_read is not None else body.lines_in(self.language, inner, "")
         lines = list(setup)
-        for index, child in enumerate(self._children(node)):
+        for index, child in enumerate(node.children_in_order()):
             lines.extend(self._render_block(child, path, first=index == 0 and not setup))
         if lines or as_read is not None:
             return lines
@@ -152,18 +213,14 @@ class CodeBddModel(BddModel):
 
     def _foreign(self, written_part: Optional[CodeBody], indent: str) -> List[str]:
         """Lines another language wrote around a block, commented out so nothing is lost."""
-        if written_part is None:
+        if written_part is None or written_part.language is None:
             return []
-        return written_part.lines_in(self.language, indent, "")
+        return KeptLines(written_part.language).body(written_part.text).lines_in(self.language, indent, "")
 
     def _kind(self, node: BehaviorBlock, depth: int) -> str:
         if isinstance(node, Observation):
             return "it"
         return "description" if depth == 0 else "context"
-
-    def _children(self, node: Union[Description, Context]) -> List[BehaviorBlock]:
-        """Observations and contexts in the order the file had them; a sketch lists observations first."""
-        return sorted(list(node.observations) + list(node.contexts), key=lambda child: child.sequential_order)
 
     def _realization(self, observation: Observation) -> List[str]:
         """The realization call graph for an it nobody has written: surface lines, then calls, as comments."""
@@ -173,7 +230,19 @@ class CodeBddModel(BddModel):
 
     def _body(self, text: str) -> CodeBody:
         marker = text.strip() in {self.marker_line(), self.language.comment(SIGNATURE)}
-        return CodeBody("" if marker else text, self.language)
+        return CodeBody("", self.language) if marker else self._kept_lines.body(text)
+
+    def _read_observation(self, observation: Observation, inside: List[str]) -> Observation:
+        """What an `it` holds inside: its realization's call graph when its lines are comments above the signature
+        marker, else its test body."""
+        observation.written.inside = inside
+        text = "\n".join(inside)
+        call_graph = self._kept_lines.call_graph(text)
+        if call_graph is None:
+            observation.body = self._body(text)
+        else:
+            observation.call_graph = call_graph
+        return observation
 
     def _inline(self, node: BehaviorBlock, written: WrittenBlock, inline: str) -> BehaviorBlock:
         """A block written on one line: the line is its heading and holds its body."""
@@ -191,7 +260,7 @@ class CodeBddModel(BddModel):
         self.descriptions = []
         self.written = WrittenBlock(self.language, _SPEC, [])
         self.written.closing = self._read_block(self, (0, len(lines)), children)
-        self.preamble, self.setup = self.setup, CodeBody()
+        self.preamble, self.setup = self._kept_preamble.body("\n".join(self.written.inside)), CodeBody()
 
 
 class PythonBddModel(CodeBddModel):
@@ -270,9 +339,7 @@ class PythonBddModel(CodeBddModel):
         node.written = WrittenBlock(self.language, node.name, self._lines[statement.lineno - 1 : heading_last + 1])
         node.written.lead = lead
         if isinstance(node, Observation):
-            node.written.inside = self._lines[slice(*inside)]
-            node.body = self._body("\n".join(node.written.inside))
-            return node
+            return self._read_observation(node, self._lines[slice(*inside)])
         node.written.closing = self._read_block(node, inside, self._child_blocks(statement.body, node))
         return node
 
@@ -324,9 +391,7 @@ class TypeScriptBddModel(CodeBddModel):
         node.written.lead = lead
         node.written.close = call.close_lines
         if isinstance(node, Observation):
-            node.written.inside = call.inside_lines
-            node.body = self._body("\n".join(node.written.inside))
-            return node
+            return self._read_observation(node, call.inside_lines)
         node.written.closing = self._read_block(node, call.inside, self._child_blocks(call.children, node))
         return node
 

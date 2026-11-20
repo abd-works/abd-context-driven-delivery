@@ -26,6 +26,7 @@ export class Cart {
 
 _CART_SPEC = """\
 import { beforeEach, describe, it } from 'vitest'
+import { Cart } from './cart'
 
 describe('a cart', () => {
   it('should start empty', () => {})

@@ -80,3 +80,11 @@ Observed.
 *Given* ++no/such/graph.json++ is not in the project
 *When* Claude Code validates clean-engineering-code with graph ++no/such/graph.json++
 *Then* the call is refused, naming ++no/such/graph.json++ as not there, read from the project's root
+
+#### Scenario: Report two describes that share a subject however the spec quotes them
+
+Observed (`cdd_guidance/practices/bdd/rules/shared_describe_subject_spec.py`). Written after exploratory testing round 3 (defect r3-rivet-10): the rule saw only Python describes written in double quotes.
+
+*Given* a Mamba spec written in single quotes, and a Vitest spec, each hold the top-level describes `a bare agentic toolset registered for deploy` and `a bare agentic toolset with mcp-published operations registered for deploy`
+*When* Claude Code validates each spec at ++bdd-behavior++
+*Then* each spec carries a shared-describe-subject violation naming both describes
