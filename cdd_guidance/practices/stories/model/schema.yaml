@@ -53,7 +53,7 @@ story:
   shownOn?: [screen]
   where:
     - id is the text slugs from the root to this node, joined by dots
-    - scenarios count 1..4; more than 4 and the story is huge
+    - scenarios count 0..7; more than 7 and the story is huge, and a story with none is waiting for its scenarios (story-scenarios-at-most-seven)
     - background only when scenarios share its given
     - one observable interaction at one system boundary
     - invokes is the union of invokes on the steps this story owns

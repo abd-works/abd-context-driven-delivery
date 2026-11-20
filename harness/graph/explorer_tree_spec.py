@@ -7,6 +7,7 @@ from expects import equal, expect
 from mamba import before, description, it
 
 from harness.graph.graph import Graph
+from harness.graph.location import Location
 import cdd_guidance.practices  # noqa: F401 - registers the practices a graph holds
 
 # Deeper than the call stack a node placing its children by calling itself could reach.
@@ -35,3 +36,20 @@ with description("a practice's explorer tree"):
 
         with it("should place the last operation of the chain under its class"):
             expect(self.last.parent).to(equal(self.cart))
+
+    with description("with parts of two kinds its practice lists in source order, written in turn in one file"):
+        with before.all:
+            graph = Graph()
+            self.part = graph.practice("stories").reading.in_graph
+            story = self.part.add_file("Story", "order.md", "Place Order")
+            graph.edges.link("owns", self.part.root, story)
+            placed = [("Scenario", "scenarios", "first", 2), ("Background", "background", "shared", 5), ("Scenario", "scenarios", "second", 8)]
+            for type, kind, name, line in placed:
+                node = self.part.add_file(type, f"{name}.md", name)
+                node.place(Location("order.md", line, line))
+                graph.edges.link(kind, story, node)
+            self.part.root.tree.rebuild()
+            self.story = story
+
+        with it("should place them in the order the file writes them, whatever their kind"):
+            expect([child.name for child in self.story.children]).to(equal(["first", "shared", "second"]))

@@ -230,6 +230,7 @@ with description("a graph"):
                             "demonstrates",
                             "hasParameter",
                             "hasType",
+                            "baseClass",
                             "demonstratedThrough",
                             "invokedBy",
                             "returns",
@@ -265,8 +266,8 @@ with description("a graph"):
                 ]
                 expect(len(copies)).to(be_above(0))
 
-            with it("should list token and customer first on AccountCredentials"):
-                expect(tree_names(self.account)[:2]).to(equal(["token", "customer"]))
+            with it("should list first on AccountCredentials the properties typed as another class, a list of one included, in file order"):
+                expect(tree_names(self.account)[:3]).to(equal(["token", "validationCodeMessages", "customer"]))
 
             with it("should include register on AccountCredentials"):
                 expect(tree_names(self.account)).to(contain("register"))
@@ -730,8 +731,8 @@ with description("a graph"):
             with it("should count two repositories"):
                 expect(tree_count(self.ddd_tree, "Repository")).to(equal(2))
 
-            with it("should offer root, owns, accesses, and associates to filter by, in that order, leaving out the belongsTo back-edge"):
-                expect(PracticeInventory(self.graph, self.ddd).edge_types).to(equal(["root", "owns", "accesses", "associates"]))
+            with it("should offer root, owns, accesses, isA, and associates to filter by, in that order, leaving out the belongsTo back-edge"):
+                expect(PracticeInventory(self.graph, self.ddd).edge_types).to(equal(["root", "owns", "accesses", "isA", "associates"]))
 
             with it("should include only domain stereotypes"):
                 expect(

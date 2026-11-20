@@ -297,6 +297,11 @@ class DiagramStoryModel(StoryModel):
                 story.actors = [actor]
             owner.node.stories.append(story)
 
+    def save_thin_slice(self) -> str:
+        """This map's increments drawn as the format's thin slice: one lane for each increment, holding the stories it
+        delivers under their sub-epics' columns. Each diagram format draws its own."""
+        raise NotImplementedError(f"{type(self).__name__} must draw its thin slice")
+
     def thin_slice_columns(self) -> List[tuple]:
         """The thin slice's columns: one per sub-epic, or per epic with none, with its top epic, in map order."""
         return [(epic, sub) for epic in self.epics for sub in (epic.epics or [epic])]

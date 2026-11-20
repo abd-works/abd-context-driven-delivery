@@ -3,12 +3,14 @@ import { useEffect, useState } from 'react';
 
 // What opens in place under a line: a section another file holds, which a markdown link names (a story map's story opens
 // its scenarios, a scenario's domain term its class in the markdown model), or a call or class the line's code reaches,
-// or a story test's step invokes or observes, in this file or another.
+// or a story test's step invokes or observes, in this file or another. A link to a file or a heading that is not there
+// is missing: it opens only its text, which says what is not there. link is the target a markdown link writes.
 export type SourceCallout = {
   id: string;
-  kind: 'section' | 'call' | 'class' | 'example';
+  kind: 'section' | 'call' | 'class' | 'example' | 'missing';
   line: number;
   title: string;
+  link?: string;
   path: string;
   startLine: number;
   endLine: number;
@@ -73,9 +75,43 @@ export function useCallouts(editor: CalloutEditor | null, callouts: SourceCallou
     return () => editor.changeViewZones((accessor) => zones.forEach((zone) => accessor.removeZone(zone)));
   }, [editor, callouts, open, within, editorLineOf, goTo]);
   useGoToMenu(editor, goTo);
+  useLinkPresses(editor, callouts, editorLineOf, goTo);
+}
+
+// The callout whose link, as the line writes it, holds column: `[Cart](../domain-model.md#cart)` from its first bracket
+// to its last; none for a callout that is no link's, or a link that names something not there.
+export function linkCalloutAt(callouts: SourceCallout[], lineText: string, column: number): SourceCallout | undefined {
+  return callouts.find((callout) => {
+    if (!callout.link || callout.kind === 'missing') return false;
+    const written = `[${callout.title}](${callout.link})`;
+    const start = lineText.indexOf(written);
+    return start >= 0 && start < column && column <= start + written.length + 1;
+  });
+}
+
+// A press on a link with Ctrl or Cmd held follows it, as an editor follows a link: the file it names opens at the
+// section its callout holds.
+function useLinkPresses(editor: CalloutEditor | null, callouts: SourceCallout[], editorLineOf: (fileLine: number) => number, goTo?: GoToFile): void {
+  useEffect(() => {
+    if (!editor || !goTo || !callouts.some((callout) => callout.link)) return;
+    const pressing = editor.onMouseDown((event) => {
+      const at = event.target.position;
+      if (!at || !(event.event.ctrlKey || event.event.metaKey)) return;
+      const onLine = callouts.filter((callout) => editorLineOf(callout.line) === at.lineNumber);
+      const followed = linkCalloutAt(onLine, editor.getModel()?.getLineContent(at.lineNumber) ?? '', at.column);
+      if (!followed) return;
+      event.event.preventDefault();
+      // Once Monaco has finished with the press: opening the file takes this editor away.
+      setTimeout(() => goTo(followed), 0);
+    });
+    return () => pressing.dispose();
+  }, [editor, callouts, editorLineOf, goTo]);
 }
 
 const lineKey = (line: number): string => `L${line}`;
+
+// Where a callout's lines are, as its tooltip says it; for a missing one, what is not there.
+export const calloutPlace = (callout: SourceCallout): string => (callout.kind === 'missing' ? `${callout.title}: ${callout.text}` : `${callout.title}: ${callout.path} lines ${callout.startLine} to ${callout.endLine}`);
 
 // The column of a line's last character, which a callout opens after. Monaco shows a zone only while the position just
 // after it shows: after a line's end that is the next line, which a fold closed under the line hides, as a call's `if`
@@ -92,7 +128,7 @@ function markOf(callouts: SourceCallout[], line: number, isOpen: boolean): monac
     range: { startLineNumber: line, startColumn: LINE_END, endLineNumber: line, endColumn: LINE_END },
     options: {
       glyphMarginClassName: `${CALLOUT_MARK}${isOpen ? ' callout-mark-open' : ''}`,
-      glyphMarginHoverMessage: { value: callouts.map((callout) => `${callout.title}: ${callout.path} lines ${callout.startLine} to ${callout.endLine}`).join('\n\n') },
+      glyphMarginHoverMessage: { value: callouts.map(calloutPlace).join('\n\n') },
       after: isOpen ? undefined : { content: ` ▸ ${named}`, inlineClassName: CALLOUT_LABEL },
     },
   };
@@ -120,7 +156,7 @@ function calloutsBlock(callouts: SourceCallout[], key: string, opening: Opening,
 function calloutSection(callout: SourceCallout, key: string, opening: Opening, stack: string[]): { node: HTMLElement; rows: number } {
   const section = document.createElement('div');
   section.className = `callout-section callout-${callout.kind}`;
-  section.title = `${callout.title}: ${callout.path} lines ${callout.startLine} to ${callout.endLine}`;
+  section.title = calloutPlace(callout);
   calloutOfSection.set(section, callout);
   const inner = opening.within(callout, stack);
   let rows = 0;
@@ -149,7 +185,7 @@ function useGoToMenu(editor: CalloutEditor | null, goTo: GoToFile | undefined): 
     const onContextMenu = (event: MouseEvent) => {
       const under = document.elementsFromPoint(event.clientX, event.clientY).find((element) => calloutOfSection.has(element));
       const callout = under ? calloutOfSection.get(under) : undefined;
-      if (!callout) return;
+      if (!callout || callout.kind === 'missing') return;
       event.preventDefault();
       event.stopPropagation();
       showGoToMenu(event.clientX, event.clientY, () => goTo(callout));

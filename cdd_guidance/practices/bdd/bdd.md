@@ -101,7 +101,7 @@ Start from an agreed sketch and deepen toward green tests and production code. E
 
 ```yaml
 alwaysApply: false
-globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*Spec.java,**/*-sketch.md"
+globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*-sketch.md"
 ```
 
 Whenever you write or reshape describe / that / with / it-should specs, or code that is supported by these specifications. Follow these rules.
@@ -129,7 +129,6 @@ clean_engineering: model
 outputs:
   python: "**/*_spec.py"
   typescript: "**/*spec.ts"
-  java: "**/*Spec.java"
 ```
 
 #### Overview
@@ -139,11 +138,11 @@ Define BDD signatures — describe/it names for every observation, no test bodie
 #### Guidance
 
 - Sketch nesting (subjects → `with`/`that`/events → `it should`) is agreed
-- **Confirm framework** — ask if not stated. Default: Mamba/Python; Jest/TypeScript or JUnit 5/Java when the project uses those.
+- **Confirm framework** — ask if not stated. Default: Mamba/Python; Jest or Vitest/TypeScript when the project uses those. These are the two languages the practice reads, renders, and checks.
 - Convert every sketch hierarchy line to its framework equivalent (see Framework syntax).
 - Process in batches of ~18 describe blocks when the hierarchy is large.
 
-Fill the **behavior** (SIGNATURE) section of `templates/bdd-templates.{ext}` (`.py` / `.java` / `.ts`).
+Fill the **behavior** (SIGNATURE) section of `templates/bdd.py` or `templates/bdd.ts`.
 
 #### Scaffold
 
@@ -155,7 +154,7 @@ Rough behavior index for a **partition** pass or first cut — the subjects unde
 
 ```yaml
 alwaysApply: false
-globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*Spec.java,**/*-sketch.md"
+globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*-sketch.md"
 ```
 
 Whenever you name or re-nest describe/it signatures, change code that relies on those signatures, or change specifications that need this kind of rename. Follow these rules.
@@ -203,8 +202,8 @@ Ask which public operation on the subject under test each observation exercises,
 - **Default on** after **behavior** signatures exist, unless the user says **no realizations**.
 - **Render it from the graph.** The realization is drawn, not written by hand, so it says exactly what the graph and the model say:
   1. Load the knowledge graph for the spec files, the code they test, and the module's model (`graph.load_files` with `bdd` and `clean_engineering`, files naming the module folder). The load reads each folder's `.context/*-model.md` with the code.
-  2. Save it (`graph.save_json`, written to `.context/graph.json`).
-  3. Render it: `render` on this guidance with `format=markdown`, `source=graph`, and `paths` naming the saved graph. Write the result to `.context/{scope}-bdd-realization.md`.
+  2. Save it (`graph.save_json`). The save answers with the path of the file it wrote, the session's own `graph.json`.
+  3. Render it: `render` on this guidance with `format=markdown`, `source=graph`, and `paths` naming that path, so the render draws the graph just loaded and not an older one saved elsewhere. Write the result to `.context/{scope}-bdd-realization.md`.
   4. Read the result for the gaps below, fix the model or the specs where they are wrong, and render again. Do not edit the rendered file by hand, because the next render replaces it.
 - **The tree comes from the graph.** The graph's `Spec`, `Description`, `Context`, and `Observation` nodes are the behavior tree, in each spec file's order, with every heading and `it should` as the spec writes it; one graph per observation, none added or dropped.
 - **Each observation's entry operations come from its `invokes` edges.** The graph links an observation to the operations and properties it reaches: first what its nearest enclosing setup calls (`before.each`, `beforeEach`, `before`), which is the event the observation follows, then what its own body calls or reads. A tool called by name, `call("ticket.move_next", …)`, is that toolset's operation. Spec files and test helpers are never entries, so the graph already shows the domain call a helper delegates to.
@@ -213,7 +212,7 @@ Ask which public operation on the subject under test each observation exercises,
 - Keep Arrange surface lines (`-> subject = new …`, property sets) separate from the nested call graph under the Act that the observation proves.
 - Store graphs on observations in the BDD model: fenced blocks in `templates/bdd-sketch.md`, round-tripped through `practices/bdd/model` (same call-graph conversion as stories and clean engineering).
 
-Fill the **realization** section of `templates/bdd-templates.{ext}` (`.py` / `.java` / `.ts`) — call-graph comments or structured `realization` data beside each `BDD: SIGNATURE` until **development** replaces them with real Arrange / Act / Assert.
+Fill the **realization** section of `templates/bdd.py` or `templates/bdd.ts` — call-graph comments or structured `realization` data beside each `BDD: SIGNATURE` until **development** replaces them with real Arrange / Act / Assert.
 
 #### Scaffold
 
@@ -225,7 +224,7 @@ Rough realization index for a **partition** pass or first cut — under each `it
 
 ```yaml
 alwaysApply: false
-globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*Spec.java,**/*-sketch.md,**/*-bdd-realization.md"
+globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*-sketch.md,**/*-bdd-realization.md"
 ```
 
 Whenever you add or change call graphs on BDD observations, or change production code those graphs describe. Follow these rules.
@@ -254,7 +253,6 @@ clean_engineering: code
 outputs:
   python: "**/*_spec.py"
   typescript: "**/*spec.ts"
-  java: "**/*Spec.java"
 ```
 
 #### Overview
@@ -270,7 +268,7 @@ Implement BDD tests with production code.
 1. **Confirm framework** — inherit from the behavior file.
 2. **Scan markers** — list all `it` blocks still containing `BDD: SIGNATURE`; report count.
 3. **Identify shared setup** — extract to `beforeEach` / `with before.each:` or a factory when three or more siblings share arrangement.
-4. Pick **one** marker. Use the **realization** call graph for Act when present; otherwise derive Act from the observation label and domain model. Fill Arrange-Act-Assert from the DEVELOPMENT TESTS section of `templates/bdd-templates.{ext}` (`.py` / `.java` / `.ts`).
+4. Pick **one** marker. Use the **realization** call graph for Act when present; otherwise derive Act from the observation label and domain model. Fill Arrange-Act-Assert from the DEVELOPMENT TESTS section of `templates/bdd.py` or `templates/bdd.ts`.
 5. Run the test — confirm RED for the right reason.
 6. Write the **minimum** production code until GREEN (PRODUCTION CODE section of the same template).
 7. Refactor only while green. Move to the next marker.
@@ -305,7 +303,7 @@ Rough development index for a **partition** pass or first cut — the spec files
 
 ```yaml
 alwaysApply: false
-globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*Spec.java,**/*-sketch.md"
+globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*-sketch.md"
 ```
 
 Whenever you create, alter, or delete production code supported by BDD specs, or the specs themselves. Follow these rules.

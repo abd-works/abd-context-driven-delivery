@@ -186,8 +186,8 @@ with description("a domain model a person wrote in markdown, taken to another fo
         with before.all:
             self.back = MarkdownBoundedContextMap().render(MarkdownBoundedContextMap().parse(_BOOKSHOP_MODEL))
 
-        with it("should keep the title it was written under"):
-            expect(self.back.splitlines()[0]).to(equal("# Domain Model — Bookshop"))
+        with it("should keep the front matter and the title it was written under"):
+            expect(self.back.splitlines()[:8]).to(equal(_BOOKSHOP_MODEL.splitlines()[:8]))
 
         with it("should bring back every property and operation line as written"):
             expect(_member_lines(self.back)).to(equal(_member_lines(_BOOKSHOP_MODEL)))
@@ -240,3 +240,134 @@ with description("a bounded context map a person wrote in markdown, taken to ano
 
         with it("should keep the title it was written under"):
             expect(self.back.splitlines()[0]).to(equal("# Bounded Context Map — Bookshop"))
+
+
+# A bookshop of three bounded contexts, its map and its domain model as a person writes them after the templates:
+# a sentence under each heading, integrations with every field, events emitted and consumed, notes, calls, invariants.
+_THREE_CONTEXTS = _TRIP / "three-contexts"
+_SHOP_MAP = (_THREE_CONTEXTS / "bounded-context-map.md").read_text(encoding="utf-8")
+_SHOP_MODEL = (_THREE_CONTEXTS / "domain-model.md").read_text(encoding="utf-8")
+
+
+def _written_lines(markdown: str) -> list:
+    """Each line of a document with words on it, without the `---` rules that part its sections."""
+    return [line.strip() for line in markdown.splitlines() if line.strip() and line.strip() != "---"]
+
+
+def _written_over(adapter, markdown: str) -> str:
+    """markdown drawn in the adapter's format, then the drawing written as markdown over the file it was drawn from."""
+    drawn = type(adapter)().parse(adapter.render(MarkdownBoundedContextMap().parse(markdown)))
+    return MarkdownBoundedContextMap().render(drawn, markdown)
+
+
+def _arcs(model) -> list:
+    return [
+        (aggregate.name, [(arc.context, arc.aggregate, arc.entity, arc.pattern) for arc in aggregate.integrations])
+        for aggregate in model.every_aggregate
+        if aggregate.integrations
+    ]
+
+
+def _calls_across(model) -> list:
+    """Each operation that calls a class of another aggregate, with the classes it calls."""
+    found = []
+    for aggregate in model.every_aggregate:
+        local = {card.name for card in aggregate.classes}
+        for card in aggregate.classes:
+            for operation in card.operations:
+                called = [callee.partition(".")[0].strip() for callee in operation.callees]
+                across = [name for name in called if name[:1].isupper() and name not in local]
+                if across:
+                    found.append((card.name, operation.name, across))
+    return found
+
+
+def _arrows(drawio: str) -> list:
+    """Each arrow of a drawing: the cards it joins and what it is labelled."""
+    from xml.etree import ElementTree
+
+    cells = ElementTree.fromstring(drawio).iter("mxCell")
+    return sorted((cell.get("source"), cell.get("target"), cell.get("value")) for cell in cells if cell.get("edge") == "1")
+
+
+with description("a bounded context map of three contexts a person wrote after the template"):
+    with context("that is read and written again as markdown"):
+        with it("should bring back every line the person wrote, and no other"):
+            back = MarkdownBoundedContextMap().render(MarkdownBoundedContextMap().parse(_SHOP_MAP))
+            expect(_written_lines(back)).to(equal(_written_lines(_SHOP_MAP)))
+
+    with context("that is drawn in draw.io, and the drawing written as markdown over the file it was drawn from"):
+        with before.all:
+            self.back = _written_over(DrawIOBoundedContextMap(), _SHOP_MAP)
+
+        with it("should bring back every line the person wrote, and no other"):
+            expect(_written_lines(self.back)).to(equal(_written_lines(_SHOP_MAP)))
+
+    with context("that is drawn on a whiteboard, and the board written as markdown over the file it was drawn from"):
+        with before.all:
+            self.back = _written_over(WhiteboardBoundedContextMap(), _SHOP_MAP)
+
+        with it("should bring back every line the person wrote, and no other"):
+            expect(_written_lines(self.back)).to(equal(_written_lines(_SHOP_MAP)))
+
+    with context("whose drawing lost the arrow of one integration before it is written over the file"):
+        with it("should leave out the integration whose arrow is gone and keep the others whole"):
+            drawn = DrawIOBoundedContextMap().parse(DrawIOBoundedContextMap().render(MarkdownBoundedContextMap().parse(_SHOP_MAP)))
+            next(item for item in drawn.every_aggregate if item.name == "Cart").integrations.clear()
+            back = MarkdownBoundedContextMap().parse(MarkdownBoundedContextMap().render(drawn, _SHOP_MAP))
+            kept = [(aggregate.name, [(arc.pattern, arc.crosses) for arc in aggregate.integrations]) for aggregate in back.every_aggregate]
+            expect(kept).to(equal([
+                ("Cart", []),
+                ("Order", [("Open Host / Published Language", "the paid order's lines and delivery address")]),
+                ("Book", []),
+                ("Shipment", [("Conformist", "the order's identity and delivery address")]),
+            ]))
+
+
+with description("a domain model of three contexts a person wrote after the template"):
+    with context("that is read and written again as markdown"):
+        with it("should bring back every line the person wrote, and no other"):
+            back = MarkdownBoundedContextMap().render(MarkdownBoundedContextMap().parse(_SHOP_MODEL))
+            expect(_written_lines(back)).to(equal(_written_lines(_SHOP_MODEL)))
+
+    with context("that is drawn in draw.io, and the drawing written as markdown over the file it was drawn from"):
+        with before.all:
+            self.back = _written_over(DrawIOBoundedContextMap(), _SHOP_MODEL)
+
+        with it("should bring back every line the person wrote, and no other"):
+            expect(_written_lines(self.back)).to(equal(_written_lines(_SHOP_MODEL)))
+
+    with context("that is drawn on a whiteboard, and the board written as markdown over the file it was drawn from"):
+        with before.all:
+            self.back = _written_over(WhiteboardBoundedContextMap(), _SHOP_MODEL)
+
+        with it("should bring back every line the person wrote, and no other"):
+            expect(_written_lines(self.back)).to(equal(_written_lines(_SHOP_MODEL)))
+
+    with context("whose drawing is read with no markdown beside it"):
+        with before.all:
+            self.written = MarkdownBoundedContextMap().parse(_SHOP_MODEL)
+            self.drawing = DrawIOBoundedContextMap().render(self.written)
+            self.read = DrawIOBoundedContextMap().parse(self.drawing)
+            again = MarkdownBoundedContextMap().parse(MarkdownBoundedContextMap().render(DrawIOBoundedContextMap().parse(self.drawing)))
+            self.drawn_again = DrawIOBoundedContextMap().render(again)
+
+        with it("should read each integration's arrow as an integration to the class it points at, with its pattern"):
+            expect(_arcs(self.read)).to(equal(_arcs(self.written)))
+
+        with it("should read each arrow named by an operation as a call that operation makes to the class it points at"):
+            expect(_calls_across(self.read)).to(equal(_calls_across(self.written)))
+
+        with it("should draw the same arrows again from the markdown it writes"):
+            expect(_arrows(self.drawn_again)).to(equal(_arrows(self.drawing)))
+
+    with context("whose whiteboard is read with no markdown beside it"):
+        with before.all:
+            self.written = MarkdownBoundedContextMap().parse(_SHOP_MODEL)
+            self.read = WhiteboardBoundedContextMap().parse(WhiteboardBoundedContextMap().render(self.written))
+
+        with it("should read each integration's arrow as an integration to the class it points at, with its pattern"):
+            expect(_arcs(self.read)).to(equal(_arcs(self.written)))
+
+        with it("should read each arrow named by an operation as a call that operation makes to the class it points at"):
+            expect(_calls_across(self.read)).to(equal(_calls_across(self.written)))

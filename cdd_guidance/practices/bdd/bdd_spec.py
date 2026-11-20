@@ -100,3 +100,14 @@ with description("a Bdd toolset"):
 
         with it("should read a JavaScript spec with its TypeScript format"):
             expect(type(Bdd().formats.for_file(Path("cart.spec.js"))).__name__).to(equal("TypeScriptBddModel"))
+
+    with context("whose fidelities offer formats to write specs in"):
+        with it("should have a format adapter for every format a fidelity offers"):
+            practice = Bdd()
+            offered = {label for fidelity in practice.fidelities for label in fidelity.outputs}
+            expect(sorted(offered - set(Bdd.format_adapters))).to(equal([]))
+
+    with context("whose realization guidance is read"):
+        with it("should send the render to the graph file the save answers with, not a fixed path"):
+            prose = _expanded(Bdd(fidelity="realization"), "guidance")
+            expect(".context/graph.json" in prose).to(equal(False))

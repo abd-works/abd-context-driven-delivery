@@ -7,6 +7,7 @@ transition, a tab, or a destination names a screen that is already there."""
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any, Optional
 
 from cdd_guidance.practices.ux.model.nodes import (
@@ -22,6 +23,8 @@ from cdd_guidance.practices.ux.model.nodes import (
 )
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 
+# The names a UX map's JSON file goes by.
+_MAP_FILE_NAMES = ("ux-map.json", "ux.json")
 # The kind a Story Demo control's record names, so it reads back as one.
 _STORY_DEMO = "StoryDemoControl"
 
@@ -202,6 +205,11 @@ class JsonNavComponent(NavComponent):
 
 class JsonUxMap(UxMap):
     workspace_files = ("ux-map.json", "**/ux-map.json", "ux.json", "**/ux.json")
+    map_file_suffixes = (".json",)
+
+    def reads_file(self, file: Path, text: str) -> bool:
+        """A JSON file named as a UX map is, ``ux-map.json`` or ``ux.json``; any other JSON file is something else."""
+        return file.name in _MAP_FILE_NAMES
     screen_type = JsonScreen
     region_type = JsonRegion
     control_type = JsonControl

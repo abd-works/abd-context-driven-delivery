@@ -30,6 +30,10 @@ class FileGraphs:
         self._whole_reads: tuple[Graph | None, dict[Path, float]] = (None, {})
         self._whole_lock = threading.Lock()
         self._opened_at = 0.0
+        # When the session's graph last read each file a page lists, for the graph view: a file changed since is read
+        # again before a node's lines in it are answered.
+        self._listed_reads: dict[Path, float] = {}
+        self._listed_lock = threading.Lock()
 
     def opened(self) -> None:
         """The session opened a new knowledge graph now: every file it holds was read at this moment or before."""
@@ -75,6 +79,25 @@ class FileGraphs:
         if not is_current:
             graph.refresh([str(path)])
         return SavedGraph.from_graph(graph)
+
+    def listed(self, paths: list[Path]) -> None:
+        """The session's knowledge graph read the files at paths now, the files a page lists for its graph view."""
+        read_at = time.time()
+        with self._listed_lock:
+            self._listed_reads = {path: read_at for path in paths}
+
+    def listed_file_as_it_is_now(self, path: Path) -> None:
+        """Read the listed file at path into the session's knowledge graph again when it changed since the graph read
+        it, so the lines a node covers are the file's lines as it is now. A file the graph view never listed, or one
+        that has gone, is left as the graph holds it."""
+        modified = path.stat().st_mtime if path.is_file() else -1.0
+        with self._listed_lock:
+            read_at = self._listed_reads.get(path)
+            is_current = read_at is None or modified <= read_at
+            if not is_current:
+                self._listed_reads[path] = max(modified, time.time())
+        if not is_current:
+            self._session.graph.refresh([str(path)])
 
     def _working(self) -> list[str]:
         return sorted(key for key, output in self._session.own_practices.items() if output.enabled)

@@ -5,6 +5,7 @@ from mamba import before, context, description, it
 
 from harness.graph.rule_fixture import RuleFixture
 
+from cdd_guidance.practices.stories.model.fixtures.bookshop_project import BookshopProject
 from cdd_guidance.practices.stories.model.graph_reading import StoryTree
 from cdd_guidance.practices.stories.rules import BY_SLUG
 from cdd_guidance.practices.stories.stories import Stories
@@ -77,3 +78,29 @@ with description("a story map read into the graph with a scenarios file beside i
                 f"Story 'Gift Order' has scenarios in {_SCENARIOS_FILE} and is not on the story map; add it to the map or name the story the scenarios belong to.",
                 f"Story 'Wrap Order' has scenarios in {_SCENARIOS_FILE} and is not on the story map; add it to the map or name the story the scenarios belong to.",
             ]))
+
+
+_ADD_BOOK = "story_tests/fill-cart/add-books/add_book_to_cart_story.test.md"
+
+
+with description("a story map read into the graph with two scenarios files, one with a Background and one without") as self:
+    with before.all:
+        self.project = BookshopProject((".context/story-map.md", "story_tests/fill-cart"), ("stories",))
+        self.backgrounds = self.project.stories.nodes("Background")
+
+    with it("should hold one Background, in the scenarios file that writes it"):
+        expect([node.source.file for node in self.backgrounds]).to(equal([_ADD_BOOK]))
+
+    with it("should place the Background where its steps begin, since its reader names no line for its heading"):
+        expect(self.backgrounds[0].source.start_line).to(equal(37))
+
+    with it("should give the Background only to the story whose scenarios file writes it"):
+        expect([parent for parent, _child in self.project.edges("background")]).to(equal(["stories:Story:.context/story-map.md:Add Book To Cart"]))
+
+    with it("should give the Background its Given step"):
+        given = [edge.child for edge in self.project.graph.edges.from_parent("given", self.backgrounds[0])]
+        expect([(step.type, step.source.start_line) for step in given]).to(equal([("Given", 37)]))
+
+    with it("should chain the Given's And onto it"):
+        given = self.project.graph.edges.from_parent("given", self.backgrounds[0])[0].child
+        expect([edge.child.source.start_line for edge in self.project.graph.edges.from_parent("ands", given)]).to(equal([38]))

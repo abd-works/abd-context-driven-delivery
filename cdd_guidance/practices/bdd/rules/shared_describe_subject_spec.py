@@ -27,6 +27,19 @@ with description("a bare agentic toolset registered for deploy"):
         pass
 """
 
+_SCRIPT_FAULT = """
+describe("a bare agentic toolset registered for deploy", () => {});
+
+describe("a bare agentic toolset with mcp-published operations registered for deploy", () => {});
+"""
+
+_SCRIPT_CLEAN = """
+describe("a bare agentic toolset registered for deploy", () => {
+  describe("with no mcp-published operations", () => {});
+  describe("with mcp-published operations", () => {});
+});
+"""
+
 
 with description("shared-describe-subject rule"):
     # The first fixture loads the practices' guidance and readers; it is read here once, so no example pays for it.
@@ -36,3 +49,11 @@ with description("shared-describe-subject rule"):
     with context("on a spec source pair"):
         with it("should flag repeated top-level describe prefixes"):
             assert_bdd_source_pair("shared-describe-subject", _FAULT, _CLEAN)
+
+    with context("on a spec source pair whose describes are written in single quotes"):
+        with it("should flag repeated top-level describe prefixes"):
+            assert_bdd_source_pair("shared-describe-subject", _FAULT.replace('"', "'"), _CLEAN.replace('"', "'"))
+
+    with context("on a typescript spec source pair"):
+        with it("should flag repeated top-level describe prefixes"):
+            assert_bdd_source_pair("shared-describe-subject", _SCRIPT_FAULT, _SCRIPT_CLEAN, filename="widget.spec.ts")

@@ -386,8 +386,18 @@ with description("Clean Engineering reading the classes its model documents desc
                 }
             )
 
-        with it("should hold one node for the class, the one the code declares"):
-            expect([(node.name, node.source.file) for node in _classes(self.fixture)]).to(equal([("Ledger", "shop/ledger.py")]))
+        with it("should hold a node for the class the document describes and a node for the class the code declares"):
+            expect([(node.name, node.source.file) for node in _classes(self.fixture)]).to(
+                equal([("Ledger", "shop/.context/shop-model.md"), ("Ledger", "shop/ledger.py")])
+            )
+
+        with it("should join the code's class to the document's class it implements"):
+            expect([(edge.parent.source.file, edge.child.source.file) for edge in self.fixture.practice.reading.in_graph.edge_index.of("implements")]).to(
+                equal([("shop/ledger.py", "shop/.context/shop-model.md")])
+            )
+
+        with it("should answer the code's class first for the class's name"):
+            expect(self.fixture.practice.reading.code_index.classes_named("Ledger")[0].source.file).to(equal("shop/ledger.py"))
 
     with context("with a folder whose only file is a DDD domain model"):
         with before.all:

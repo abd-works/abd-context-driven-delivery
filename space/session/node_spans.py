@@ -44,6 +44,12 @@ class NodeSpans:
         named = [text.text.count("\n", 0, offset) + 1 for offset, _end, _level, title in text.headings() if title.split(":", 1)[-1].strip() == self._name]
         return max((line for line in named if line <= start), default=start)
 
+    def file_of(self, node_id: str) -> Path | None:
+        """The file whose lines the node node_id was read from, while it is there; none for a node the graph does not
+        hold or one read from no lines."""
+        node = self._graph.node(node_id)
+        return self._lines_file(node) if node is not None and node.source is not None else None
+
     def collect(self, node_id: str) -> NodeSpans:
         """Widen the spans with the lines node_id covers in its file and the lines of the nodes it is made of, wherever
         they sit, such as a story map's story and its scenarios in their own file, which its own line alone does not
@@ -51,8 +57,9 @@ class NodeSpans:
         relationship group, such as the invokes group a step's calls sit under or the invokedBy group of the steps that
         call an operation, is left closed, so a step opens no operation it calls and an operation no step that calls it.
         A node shown under another as a relationship covers its own lines alone. The walk keeps its own stack, so a deep
-        tree never runs past Python's call stack. A node read from the lines of a file that is no longer there, such as
-        one moved since the graph read it, is refused: it would open nothing, which reads as a node with no lines."""
+        tree never runs past Python's call stack. A node read from a file or a folder that is no longer there, such as
+        one moved since the graph read it, is refused: it would open nothing, which reads as a node with no lines. A
+        folder that is there, such as a package's, is read from no lines and opens the files below it."""
         self._refuse_gone(self._graph.node(node_id))
         pending: list[tuple[str, bool]] = [(node_id, False)]
         while pending:
@@ -76,10 +83,10 @@ class NodeSpans:
         return self._below(node, below_lines=True)
 
     def _used_from_elsewhere(self, node: Node) -> bool:
-        """True for an example declared in a file none of the spans covers yet, such as the examples module a story
-        test imports its fixtures from: the scenario uses it, but it is no part of the scenario, so the scenario's
-        lines open alone."""
-        return node.type == EXAMPLE_TYPE and self._lines_file(node) not in self._spans
+        """True for an example, which a scenario uses from where the story declares it, such as the examples module a
+        story test imports its fixtures from or the Examples table of a markdown story: it is no part of the scenario,
+        so the scenario's lines open alone."""
+        return node.type == EXAMPLE_TYPE
 
     def _widen_with(self, node: Node) -> bool:
         """Widen the spans with the lines node was read from; whether it was read from any."""
@@ -93,7 +100,7 @@ class NodeSpans:
 
     def _refuse_gone(self, node: Node | None) -> None:
         named = self._named_file(node) if node is not None and node.source is not None else None
-        if named is not None and not named.is_file():
+        if named is not None and not named.exists():
             raise NamedPathNotFoundError(node.source.file, Path(node.source.root or self._root))
 
     def _lines_file(self, node: Node) -> Path | None:
@@ -111,11 +118,11 @@ class NodeSpans:
 
     def _below(self, node: Node, below_lines: bool) -> list[tuple[str, bool]]:
         """The nodes the request keeps at their home below node, still to take. A node shown under node only as a
-        relationship adds its own lines here, but nothing below it."""
+        relationship adds its own lines here, but nothing below it; an example node uses adds none."""
         branch = self._graph.explorer.explorer_branch(node.node_id, self._request)
         entries = [child for child in (branch.children if branch is not None else []) if isinstance(child, ExplorerEntry)]
         children = [child for entry in entries if (child := self._graph.node(entry.node_id)) is not None]
-        for related in (child for child in children if not self._at_home_under(child, node)):
+        for related in (child for child in children if not self._at_home_under(child, node) and not self._used_from_elsewhere(child)):
             self._widen_with(related)
         return [(child.node_id, below_lines) for child in children if self._at_home_under(child, node)]
 

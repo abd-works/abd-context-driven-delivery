@@ -15,7 +15,7 @@ A map's text is read by the reading made for its notation (``map_reading``), and
 
 from __future__ import annotations
 
-
+import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Dict, List, Optional
 
@@ -24,7 +24,7 @@ from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryT
 from cdd_guidance.practices.stories.model.story_model import Background, StepType, Scenario
 from cdd_guidance.practices.stories.model.story_map_files import StoryMapFiles, path_from, source_at
 from cdd_guidance.practices.stories.model.markdown.links import StoryMapLinks, unlink
-from cdd_guidance.practices.stories.model.markdown.map_reading import OutlineLines, described, has_map_structure, is_outline, read_at, read_map
+from cdd_guidance.practices.stories.model.markdown.map_reading import OutlineLines, ReplacedOutline, described, has_map_structure, is_outline, read_at, read_map
 from cdd_guidance.practices.stories.model.markdown.markup import MarkdownExample, MarkdownStep, step_line, step_lines, strip_backticks
 from cdd_guidance.practices.stories.model.markdown.scenario_file import SCENARIO_HEADING, ScenarioFileReading, ScenarioFiles
 from cdd_guidance.practices.stories.model.markdown.scenario_parts import HEADING_LINE, STEP_LINE, DocumentPart, StorySection
@@ -38,6 +38,10 @@ if TYPE_CHECKING:
 _SKETCH_SECTION = "## stories:"
 # Markdown has six heading levels; an outline nested deeper writes its headings at the sixth.
 _DEEPEST_HEADING = 6
+# The heading level a story's scenarios section writes its backgrounds, scenarios and Examples at, and a heading at or
+# below it.
+_SECTION_TOP = 3
+_SECTION_HEADING = re.compile(r"^(#{3,6}) (.*)$")
 
 
 class MarkdownScenario(Scenario):
@@ -93,11 +97,14 @@ class MarkdownScenario(Scenario):
 
 def _example_tables(examples: "Examples") -> List[tuple]:
     """The examples as tables, in the order each first appears: (group, headers, each example's cells), one per group
-    and set of columns."""
+    and set of columns. A row that names its example in a column of its own keeps its columns as written, and its
+    group is the heading above its table, not a column."""
     tables: Dict[tuple, tuple] = {}
     for name, example in examples.items():
-        cells = {"example": name, **example.cells()}
-        group = str(cells.get("group") or "")
+        cells = example.cells()
+        group = str(cells.pop("group", None) or "")
+        if not example.is_named_by_its_row:
+            cells = {"example": name, **cells}
         tables.setdefault((group, tuple(cells.keys())), (group, tuple(cells.keys()), []))[2].append(cells)
     return list(tables.values())
 
@@ -174,9 +181,17 @@ class MarkdownStory(Story):
         lines = _outlined(self, heading)
         if not self.scenarios and not self.backgrounds:
             return lines
-        marks = "#" * min(level + 1, _DEEPEST_HEADING)
         section = "\n".join(self._scenario_section_lines()).rstrip()
-        return lines + [""] + [f"{marks} {line[4:]}" if line.startswith("### ") else line for line in section.splitlines()]
+        return lines + [""] + [self._nested_under(level, line) for line in section.splitlines()]
+
+    def _nested_under(self, level: int, line: str) -> str:
+        """A line of this story's scenarios section under its outline heading at level: a heading of the section moves
+        down with it, a group of examples staying below its Examples heading; any other line stays as it is."""
+        heading = _SECTION_HEADING.match(line)
+        if heading is None:
+            return line
+        marks = len(heading.group(1)) + level + 1 - _SECTION_TOP
+        return f"{'#' * min(marks, _DEEPEST_HEADING)} {heading.group(2)}"
 
     def label(self, links: Optional[StoryMapLinks]) -> str:
         """The story's name, linked to its own file when links name one."""
@@ -480,6 +495,9 @@ class MarkdownStoryModel(StoryModel):
         if document is not None:
             return document.text()
         links = StoryMapLinks(story_map, workspace) if workspace else None
+        replaced = self._replaced_outline(previous)
+        if replaced is not None:
+            replaced.lend_to(story_map)
         return self._map_text(story_map, links, previous)
 
     def _map_text(self, story_map: "MarkdownStoryModel", links: Optional[StoryMapLinks], previous: Optional[str]) -> str:
@@ -489,23 +507,19 @@ class MarkdownStoryModel(StoryModel):
             return "\n".join(line for epic in story_map.epics for line in epic.heading_lines(1, links))
         body = "\n".join(line for epic in story_map.epics for line in epic.outline_lines(1, links))
         if story_map.outline is not None and story_map.outline.lines:
-            # A map read with lines above its first epic is written back with them, as it was laid out.
+            # A map read with lines above its first epic is written back with them, as it was laid out; a map read from
+            # a format that holds no title, such as a drawing, has the lines of the file it replaces.
             return "\n".join([*_outlined(story_map, None), body]) + "\n"
-        opening = self._opening_of_replaced_map(previous)
-        if opening:
-            # A map read from a format that holds no title, such as a drawing, keeps the one its file already had.
-            return "\n".join([*opening, body]) + "\n"
         if self._is_discovery_story_map(story_map):
             return self._wrap_story_map_document(body, previous)
         return body
 
-    def _opening_of_replaced_map(self, previous: Optional[str]) -> List[str]:
-        """The lines the story map this render replaces has above its first epic, such as its title and sources; none
-        when it replaces no file, a sketch, or a map with nothing above its first epic."""
+    def _replaced_outline(self, previous: Optional[str]) -> Optional[ReplacedOutline]:
+        """The outline story map this render writes over, whose words a format that holds none, such as a drawing, gets
+        back; none when it replaces no file, a sketch, or a map in another notation."""
         if not previous or _SKETCH_SECTION in previous.lower() or not is_outline(previous.splitlines()):
-            return []
-        replaced = MarkdownStoryModel().parse(previous)
-        return list(replaced.outline.lines) if replaced.outline is not None else []
+            return None
+        return ReplacedOutline(MarkdownStoryModel().parse(previous))
 
     def _should_render_outline(self, story_map: "MarkdownStoryModel", previous: Optional[str]) -> bool:
         """Outline notation is for documents already written that way, or that carry estimates,

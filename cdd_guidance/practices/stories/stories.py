@@ -19,7 +19,7 @@ from cdd_guidance.practices.stories.model.story_map_files import (
     path_from,
     preferred_maps,
 )
-from cdd_guidance.practices.stories.model.story_model import Epic, StoryModel, StoryNode
+from cdd_guidance.practices.stories.model.story_model import NOT_ON_STORY_MAP, Epic, StoryModel, StoryNode
 from cdd_guidance.practices.stories.model.story_recording import StorySource, StorySources
 from cdd_guidance.practices.stories.stories_formats import StoriesFormats
 
@@ -103,14 +103,16 @@ class Stories(PracticeGuidance):
 
     def read_files(self, files: list[Path], project: Path, *, on_file: OnFile = None) -> StoryModel:
         """The story maps and story tests among files, merged into one story map whose nodes name their files as paths
-        from project. With a story map among files, it and the maps beside the rest are read (``_maps_to_read``), a
-        story test's scenarios go on the map's Story of the same name, which it specifies, and a story only a story test
-        in code holds goes under the epics its folders name (``_take_stories_only_code_holds``). With no story map among
-        files, story tests in code under a project's story_tests are the map themselves (``_story_map_of_code``)."""
+        from project. The story maps among files and the map beside or named by each of the rest are read
+        (``_maps_to_read``), a story test's scenarios go on the map's Story of the same name, which it specifies, and a
+        story only a story test in code holds goes under the epics its folders name
+        (``_take_stories_only_code_holds``), so a story test read alone has the place its map gives it. With no story
+        map among files, beside them or named by them, story tests in code under a project's story_tests are the map
+        themselves (``_story_map_of_code``)."""
         project = Path(project).resolve()
         paths = [Path(item).resolve() for item in files]
         tests = [path for path in paths if self._story_test_reader(path) is not None]
-        if not any(is_story_map_file(path) for path in paths):
+        if not self._maps_to_read(paths, tests, project):
             from_code = self._story_map_of_code(tests, project, on_file)
             if from_code.epics:
                 return from_code
@@ -125,11 +127,16 @@ class Stories(PracticeGuidance):
     def _take_stories_only_code_holds(self, merged: StoryModel, tests: list[Path], project: Path) -> None:
         """Each story the story tests in code hold that merged has no story of the same name for, under the epics of
         merged its test's folders name, each epic added where merged has none of that name; a story's own folder,
-        which the code map reads as an epic of the story's name, is not one."""
+        which the code map reads as an epic of the story's name, is not one. When merged was read from a story map,
+        the story is marked as not on it, so the rule scenarios-name-a-story-on-the-map reports its story test: a
+        story taken off the map would otherwise keep its test without a word."""
         held = merged.descendants.stories_by_name()
+        from_a_map = bool(held)
         for story in self._story_map_of_code(tests, project).descendants.stories():
             if story.name not in held:
                 self._epic_along(merged, story).stories.append(story)
+                if from_a_map:
+                    story.set_fact(NOT_ON_STORY_MAP, True)
 
     def _epic_along(self, merged: StoryModel, story: StoryNode) -> StoryNode:
         """The epic of merged at the epic names above story in its code map, made where merged lacks one."""
@@ -172,10 +179,11 @@ class Stories(PracticeGuidance):
         return StorySource(file, path.read_text(encoding="utf-8"))
 
     def _take_story_test(self, merged: StoryModel, test: StorySource, project: Path) -> None:
-        """The story test's scenarios onto merged's Story of the same name, and its text and its examples modules'."""
+        """The story test's scenarios onto merged's Story of the same name, each step with the code the story test
+        gives it, as a story test read with no map has it; and the story test's text and its examples modules'."""
         merged.sources.take(self._story_test_sources(test, project))
         reader = self._story_test_reader(project / test.file)
-        merged.test_scenarios.take(reader.story_type.load_file(test.text, project), test.file)
+        merged.test_scenarios.take(reader.stories_of(test.text, test.file, project)[0], test.file)
 
     def open_file(self, path: Path, project: Path):
         """The story map an edit to the Stories file at path writes back: a markdown story map or scenarios file read
@@ -194,16 +202,26 @@ class Stories(PracticeGuidance):
     def _story_map_of_code(self, tests: list[Path], project: Path, on_file: OnFile = None) -> StoryModel:
         """The story map the story tests in code among tests hold under the project's story_tests, each language read
         by its own format: their folders are its epics and sub-epics, and their stories and scenarios its own, each
-        naming its test as its file. An epic another language already gave is kept from the first. Empty when none sits
-        under story_tests."""
+        naming its test as its file. An epic two languages both give is one epic holding the stories of both. Empty
+        when none sits under story_tests."""
         merged = StoryModel()
         for reader, texts in self._texts_by_reader(tests, project).items():
             read = type(reader)(tests_root=STORY_TESTS_FOLDER).parse(texts, on_file=on_file, project=project)
             merged.sources.take(read.sources)
-            held = {epic.name for epic in merged.epics}
-            for epic in [epic for epic in read.epics if epic.name not in held]:
-                merged.epics.append(epic)
+            self._merge_epics(merged, read.epics)
         return merged
+
+    def _merge_epics(self, holder: StoryNode, epics: list[Epic]) -> None:
+        """Add epics under holder, a story map or an epic: one holder has no epic of the same name for is added whole;
+        one it has gives that epic its stories and, the same way, its sub-epics."""
+        for epic in list(epics):
+            found = next((held for held in holder.epics if held.name == epic.name), None)
+            if found is None:
+                holder.epics.append(epic)
+                continue
+            for story in list(epic.stories):
+                found.stories.append(story)
+            self._merge_epics(found, list(epic.epics))
 
     def _texts_by_reader(self, tests: list[Path], project: Path) -> dict[type, dict[str, str]]:
         """Each story test's text by its path from project, grouped by the code format that reads it."""

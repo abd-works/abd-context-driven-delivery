@@ -91,6 +91,9 @@ The spec, and the sketch format: an indented describe tree, with an observation'
 + developed: bool
 	// no `it` still carries a signature marker and the spec asserts: a finished test, past behavior fidelity, which the behavior-only rules leave alone
 + top_level_describes: list[str]
+	// the name of each outermost describe, as the spec's language model read it
++ imported_classes: list[list[str]]
+	// each class name the spec file imports with the module it names it from, which its observations and describes are linked through
 + private_probe: dict
 ----
 + parse(text: str): BddModel

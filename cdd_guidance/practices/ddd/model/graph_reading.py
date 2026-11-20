@@ -1,7 +1,9 @@
 """How DDD takes part in the graph: its bounded contexts come from the folders that hold ``.context/bounded-context.md``,
 its aggregates from the folders that hold domain classes, and its building blocks from the classes Clean Engineering
 read from code, each seen through the DDD stereotype its declaration gives it, or, in a folder that holds a domain, its
-name; and from each domain model document, the aggregates it describes and the classes in them that no code declares."""
+name; and from the bounded-context map and each domain model document, the contexts, aggregates, classes, integrations
+and events they describe. A class a document describes and the class in code that implements it are two nodes, joined
+by an edge; a building block read from code is joined to the Clean Engineering class it is."""
 
 from __future__ import annotations
 
@@ -11,6 +13,7 @@ from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
 from harness.agent_tools.progress import report_progress
+from harness.annotations.name import Name
 from harness.graph.graph import Node, PracticeNodes
 from harness.graph.saved_graph import NodeIdentity
 from harness.graph.saved_graph import FactValue
@@ -20,14 +23,17 @@ from harness.graph.model_node import schema_sync_paused
 from harness.graph.skipped_folders import skips_folder
 
 from cdd_guidance.practices.clean_engineering.model.code_read import DESCRIBED_FACT
+from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
 from cdd_guidance.practices.clean_engineering.model.markdown.card_lines import CardLines
 from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownBoundedContextMap
-from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContext, ContextMapping
+from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContext, ContextMapping, DomainEvent, Integration
 from cdd_guidance.practices.ddd.model.stereotypes import BUILDING_BLOCK_KINDS, KIND_OF_STEREOTYPE, TacticalClass, kind_named_by, marks_another_system, root_kept_by
 
 if TYPE_CHECKING:
     from harness.guidance.guidance import PracticeGuidance
+
+    from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass
 
 _FOREIGN_KEY = re.compile(r"//\s*foreign\s+(\w+)")
 _DERIVE_PREFIX = re.compile(r"^derive\w*", re.IGNORECASE)
@@ -50,6 +56,10 @@ _SCREEN_MODULE = ".tsx"
 BOUNDED_CONTEXT_MARKER = Path(".context") / "bounded-context.md"
 # The words a document's name holds when it is a domain model, written with a hyphen or an underscore.
 DOMAIN_MODEL_NAMES = ("domain-model", "domain_model")
+# The words a document's name holds when it is the bounded-context map.
+CONTEXT_MAP_NAMES = ("bounded-context-map", "bounded_context_map")
+# What a doc comment or a comment line opens with in Python or TypeScript, before the words it writes.
+_COMMENT_MARKS = "*#/ \t"
 _CONTEXT_FOLDER = ".context"
 # A run of the characters a class name is spelled with: a member's type names a class when its name is one whole run.
 _TYPE_WORD = re.compile(r"[A-Za-z0-9_]+")
@@ -157,8 +167,16 @@ class DddReading(PracticeReading):
 
     def reads_model_document(self, file: Path) -> bool:
         """A domain model in a ``.context`` folder, ``domain-model.md``, which DDD reads in its own markdown format."""
+        return self._is_context_document(file, DOMAIN_MODEL_NAMES)
+
+    def describes_the_domain(self, file: Path) -> bool:
+        """Whether file is a document DDD reads contexts and aggregates from: a domain model or the bounded-context
+        map, in a ``.context`` folder."""
+        return self._is_context_document(file, (*DOMAIN_MODEL_NAMES, *CONTEXT_MAP_NAMES))
+
+    def _is_context_document(self, file: Path, words: tuple[str, ...]) -> bool:
         name = file.name.lower()
-        return file.parent.name == _CONTEXT_FOLDER and file.suffix == ".md" and any(word in name for word in DOMAIN_MODEL_NAMES)
+        return file.parent.name == _CONTEXT_FOLDER and file.suffix == ".md" and any(word in name for word in words)
 
     def own_graph_checks(self) -> dict:
         """DDD's own graph rules, then the rules of the practice it extends, whose part it holds."""
@@ -206,10 +224,6 @@ class _DomainClasses:
             return []
         read_now = self._classes.loading.nodes_read_now("OoadClass")
         return [cls for cls in read_now if not is_test_code(cls.source.file) and not cls.has_fact(DESCRIBED_FACT)]
-
-    def declares(self, name: str) -> bool:
-        """Whether code declares a class called name."""
-        return name in self._names
 
     def holds_a_domain(self, folder: str) -> bool:
         return folder in self._stereotyped_folders
@@ -268,17 +282,19 @@ class _WorkingCopyRead:
         self._root = reading.root
         self._domain = domain
         self._contexts = _ContextFolders()
-        # Each building block a domain model describes, with the class names its card relates it to.
-        self._described: list[tuple[Node, set[str]]] = []
+        self._blocks = _AggregateBlocks(reading)
 
     def read(self) -> None:
+        """Bounded contexts come from the folders that mark one, else from the headings of the documents that describe
+        the domain, else the whole folder is one."""
         marked = self._bounded_contexts()
-        self._read_contexts(marked or [(".", self._unmarked_context(), ".")])
+        described = _DescribedDomain(self._reading, self._contexts, self._documents())
+        self._read_contexts(marked)
+        if not marked and not described.read_contexts():
+            self._read_contexts([(".", self._unmarked_context(), ".")])
         for folder, held in sorted(self._members_by_folder(bool(marked)).items()):
             self._read_aggregate_folder(folder, held)
-        for document in self._domain_models():
-            self._read_domain_model(document)
-        self._relate_described()
+        described.read()
         self._link_blocks()
         self._map_contexts(marked)
 
@@ -336,64 +352,15 @@ class _WorkingCopyRead:
         if aggregate is not None:
             aggregate.set_fact("bare_classes", self._domain.bare_in(folder, self._in_graph.nodes()))
 
-    def _domain_models(self) -> list[Path]:
-        """Each domain model document in a ``.context`` folder under the practice's root."""
+    def _documents(self) -> list["_DomainDocument"]:
+        """Each document that describes the domain, in a ``.context`` folder under the practice's root: the domain
+        models first, whose aggregates hold classes, then the bounded-context maps."""
         found = []
         for dirpath, dirnames, filenames in os.walk(self._root):
             dirnames[:] = [name for name in dirnames if not skips_folder(name) or name == _CONTEXT_FOLDER]
-            found.extend(Path(dirpath) / name for name in filenames if self._reading.reads_model_document(Path(dirpath) / name))
-        return sorted(found)
-
-    def _read_domain_model(self, document: Path) -> None:
-        """Each aggregate a domain model describes, read in DDD's markdown format, with a building block for each of its
-        classes no code declares, placed at the document's lines, under the bounded context around the folder the
-        document describes. A class code declares keeps the building block the code gives it."""
-        text = document.read_text(encoding="utf-8")
-        lines = CardLines(text)
-        relative = self._from_root(document)
-        context = self._contexts.around(folder_of(folder_of(relative))) or self._in_graph.root
-        for described in MarkdownBoundedContextMap().parse(text).every_aggregate:
-            members = self._described_blocks(described.classes)
-            if members:
-                self._described_aggregate(relative, lines, context, described.name, members)
-
-    def _described_blocks(self, classes: list) -> list[tuple[TacticalClass, str]]:
-        """The building blocks of a described aggregate that no code declares, each with the kind its stereotype names,
-        else the one its name says among the aggregate's classes."""
-        names = [cls.name for cls in classes]
-        blocks = []
-        for cls in classes:
-            tactical = TacticalClass(cls)
-            kind = tactical.inferred_kind(names)
-            if kind is not None and not self._domain.declares(tactical.name):
-                blocks.append((tactical, kind))
-        return blocks
-
-    def _described_aggregate(self, relative: str, lines: CardLines, context: Node, name: str, members: list[tuple[TacticalClass, str]]) -> None:
-        """The aggregate a domain model describes, at the document's section for it, holding the building blocks it
-        describes, each at its card and marked as described by the document."""
-        start, end = lines.section_of(name) or (1, 1)
-        node = self._in_graph.add(Aggregate(name, 1), f"ddd:Aggregate:{relative}:{name}", Location(relative, start, end))
-        self._graph.edges.link("owns", context, node)
-        self._graph.edges.relate("belongsTo", node, context)
-        for tactical, kind in members:
-            lines.place(tactical.oclass)
-            oclass = tactical.oclass
-            block = self._block(node, tactical, kind, Location(relative, oclass.line or start, oclass.end_line or start))
-            block.set_fact(DESCRIBED_FACT, True)
-            self._described.append((block, _named_in_card(oclass)))
-
-    def _relate_described(self) -> None:
-        """Each building block a domain model describes depends on every other building block its card relates it to,
-        as a class read from code depends on each class its properties' types name: the classes it composes,
-        aggregates, or associates with, the classes its other members are typed by, and the classes it extends. They
-        are linked once every document is read, so a card can name a class in another aggregate."""
-        by_name = {block.name: block for block in self._in_graph.nodes() if block.type in _BLOCK_KINDS}
-        for block, names in self._described:
-            for name in sorted(names):
-                other = by_name.get(name)
-                if other is not None and other is not block:
-                    self._graph.edges.relate("dependsOn", block, other)
+            found.extend(Path(dirpath) / name for name in filenames if self._reading.describes_the_domain(Path(dirpath) / name))
+        models_first = sorted(found, key=lambda file: (not self._reading.reads_model_document(file), file))
+        return [_DomainDocument(self._from_root(file), file.read_text(encoding="utf-8")) for file in models_first]
 
     def _aggregate(self, folder: str, members: list[tuple[TacticalClass, str]]) -> Node:
         context = self._contexts.around(folder) or self._in_graph.root
@@ -404,47 +371,57 @@ class _WorkingCopyRead:
         self._graph.edges.relate("belongsTo", node, context)
         for tactical, kind in members:
             source = tactical.oclass.source
-            self._block(node, tactical, kind, Location(source.file, source.start_line, source.end_line))
+            block = self._blocks.add(node, tactical, kind, Location(source.file, source.start_line, source.end_line))
+            self._graph.edges.relate("isA", block, tactical.oclass)
         return node
-
-    def _block(self, aggregate: Node, tactical: TacticalClass, kind: str, location: Location) -> Node:
-        """The building block a class is, at location, in the aggregate: its root, or one of its parts."""
-        block = self._in_graph.add(BuildingBlock(self._reading.practice, tactical, kind), f"ddd:{kind}:{location.file}:{tactical.oclass.name}", location)
-        self._graph.edges.link("root" if kind == "EntityRoot" else "owns", aggregate, block)
-        self._graph.edges.relate("belongsTo", block, aggregate)
-        return block
 
     def _link_blocks(self) -> None:
         """Link the building blocks DDD holds, those read now and those it built before: each repository accesses the
         root its name says it keeps, and each entity root associates with every other root it holds a reference to,
-        which it names with a ``// foreign Name`` comment. Both read only a block's name and its lines, which a block
-        read back from a saved graph holds too, so a refreshed root is linked again to the blocks no file in the
-        refresh holds."""
-        blocks = [node for node in self._in_graph.nodes() if node.type in _BLOCK_KINDS]
-        by_name = {block.name: block for block in blocks}
-        for block in blocks:
-            self._link_kept_root(block, by_name)
-            self._link_foreign_roots(block, by_name)
+        which it names with a ``// foreign Name`` comment or reaches by an integration its doc comment keeps. All read
+        only a block's name, its file and its lines, which a block read back from a saved graph holds too, so a
+        refreshed root is linked again to the blocks no file in the refresh holds. Of several blocks with one name,
+        such as a root written in two languages, a block is linked to the one nearest it."""
+        blocks = _NamedBlocks([node for node in self._in_graph.nodes() if node.type in _BLOCK_KINDS])
+        for block in blocks.every:
+            self._link_kept_root(block, blocks)
+            self._link_foreign_roots(block, blocks)
 
-    def _link_kept_root(self, block: Node, by_name: dict[str, Node]) -> None:
-        root = by_name.get(root_kept_by(block.name) or "") if block.type == "Repository" else None
+    def _link_kept_root(self, block: Node, blocks: "_NamedBlocks") -> None:
+        root = blocks.nearest(block, root_kept_by(block.name) or "") if block.type == "Repository" else None
         if root is not None:
             self._graph.edges.relate("accesses", block, root)
 
-    def _link_foreign_roots(self, block: Node, by_name: dict[str, Node]) -> None:
+    def _link_foreign_roots(self, block: Node, blocks: "_NamedBlocks") -> None:
         if block.type != "EntityRoot":
             return
-        for other in _FOREIGN_KEY.findall(block.source.text):
-            if other in by_name and other != block.name:
-                self._graph.edges.relate("associates", block, by_name[other])
+        reached = [(other, "") for other in _FOREIGN_KEY.findall(block.source.text)] + self._integrations_kept_by(block)
+        for other, aggregate in reached:
+            root = blocks.nearest(block, other, aggregate)
+            if root is not None and root is not block:
+                self._graph.edges.relate("associates", block, root)
+
+    def _integrations_kept_by(self, block: Node) -> list[tuple[str, str]]:
+        """Each integration the doc comment of a root's class keeps as a dependency with its target's parts under it
+        (`---<<Customer/Supplier>>--> Book`, then `aggregate: Book`): the class it reaches, and the aggregate that
+        holds that class. A block read now asks its class; a block read back from a saved graph holds only its lines,
+        which write the same dependency."""
+        if isinstance(block, BuildingBlock):
+            dependencies = list(block.ooad_class.dependencies)
+        else:
+            lines = [line.strip().lstrip(_COMMENT_MARKS).rstrip('"').strip() for line in block.source.text.splitlines()]
+            dependencies = Relationship.read_lines(lines)
+        kept = [item for item in dependencies if any(item.details.get(part) for part in Integration.PARTS)]
+        return [(item.details.get("entity") or item.target, item.details.get("aggregate", "")) for item in kept]
 
     def _map_contexts(self, marked: list[tuple[str, BoundedContext, str]]) -> None:
         """Each context mapping a bounded context's file lists, under that context, and linked to the aggregates its two
         sides name. A refresh reads every context's file again, so the mappings of a graph opened from its save are the
         ones its files list now."""
         aggregates: dict[str, Node] = {}
-        for aggregate in self._in_graph.nodes("Aggregate"):
-            aggregates.setdefault(aggregate.name, aggregate)
+        every = self._in_graph.nodes("Aggregate")
+        for aggregate in sorted(every, key=lambda node: node.source.file.endswith(".md")):
+            aggregates.setdefault(Name(aggregate.name).snake, aggregate)
         for rel, context, markdown in marked:
             for mapping in context.mappings:
                 node = self._mapping_node(mapping, self._contexts.at(rel), markdown)
@@ -458,9 +435,13 @@ class _WorkingCopyRead:
         return node
 
     def _link_sides(self, node: Node, mapping: ContextMapping, aggregates: dict[str, Node]) -> None:
+        """Each side to the aggregate it names, whichever case the side and the aggregate's folder spell the name in:
+        a map writes `Cart` and the folder that holds the aggregate is `cart`. A folder's aggregate comes before one a
+        document describes."""
         for side, name in mapping.aggregate_names.items():
-            if name in aggregates:
-                self._graph.edges.relate(side, node, aggregates[name])
+            aggregate = aggregates.get(Name(name).snake)
+            if aggregate is not None:
+                self._graph.edges.relate(side, node, aggregate)
 
     def _from_root(self, path: Path) -> str:
         """path as a path from the practice's root, with forward slashes."""
@@ -471,13 +452,241 @@ class _WorkingCopyRead:
         return f"ddd:Aggregate:{folder}"
 
 
-def _named_in_card(oclass) -> set[str]:
-    """The class names a card relates its class to: each whole word of its members' types, a collection's included,
-    and the classes it extends."""
-    hints = [member.type_hint for member in [*oclass.properties, *oclass.operations] if getattr(member, "type_hint", "")]
-    return {word for hint in hints for word in _TYPE_WORD.findall(hint)} | set(oclass.bases)
-
-
 def folder_of(file: str) -> str:
     """The folder that holds file, from the practice's root, with forward slashes: `.` for a file at the root."""
     return str(PurePosixPath(file.replace("\\", "/")).parent)
+
+
+class _AggregateBlocks:
+    """The building blocks of the aggregates in DDD's part of the graph, each added under its aggregate."""
+
+    def __init__(self, reading: DddReading) -> None:
+        self._reading = reading
+
+    def add(self, aggregate: Node, tactical: TacticalClass, kind: str, location: Location) -> Node:
+        """The building block a class is, at location, in the aggregate: its root, or one of its parts."""
+        block = BuildingBlock(self._reading.practice, tactical, kind)
+        added = self._reading.in_graph.add(block, f"ddd:{kind}:{location.file}:{tactical.oclass.name}", location)
+        self._reading.graph.edges.link("root" if kind == "EntityRoot" else "owns", aggregate, added)
+        self._reading.graph.edges.relate("belongsTo", added, aggregate)
+        return added
+
+
+class _NamedBlocks:
+    """Building blocks by name, several to a name when a class is written in two languages or described in a document
+    as well as declared in code."""
+
+    def __init__(self, blocks: list[Node]) -> None:
+        self.every = blocks
+        self._named: dict[str, list[Node]] = {}
+        for block in blocks:
+            self._named.setdefault(block.name, []).append(block)
+
+    def nearest(self, block: Node, name: str, aggregate: str = "") -> Node | None:
+        """The block called name nearest block: in the folder aggregate names when one is given and some block is
+        there, then in block's own file, else written in its language, else in its folder; none when no block is
+        called name. A block a document describes is near only another block of a document, and code only code."""
+        described = block.has_fact(DESCRIBED_FACT)
+        named = [other for other in self._named.get(name, []) if other.has_fact(DESCRIBED_FACT) == described]
+        placed = [other for other in named if aggregate and Name(Path(folder_of(other.source.file)).name).snake == Name(aggregate).snake]
+        return min(placed or named, key=lambda other: self._distance(block, other), default=None)
+
+    def _distance(self, block: Node, other: Node) -> tuple[bool, bool, bool]:
+        file, other_file = block.source.file, other.source.file
+        return (other_file != file, Path(other_file).suffix != Path(file).suffix, folder_of(other_file) != folder_of(file))
+
+
+class _DomainDocument:
+    """One document that describes the domain, a domain model or the bounded-context map: where it is from the
+    practice's root, the map DDD's markdown format reads from it, and the lines its headings and entries sit on."""
+
+    def __init__(self, relative: str, text: str) -> None:
+        self.relative = relative
+        self.cards = CardLines(text)
+        self.map = MarkdownBoundedContextMap().parse(text)
+        self._lines = text.splitlines()
+
+    def context_lines(self, name: str) -> tuple[int, int]:
+        """The first and last line of the bounded context called name: its `## Name | owner` heading through the line
+        before the next `## ` heading; the document's first line when no heading names it."""
+        headings = [number for number, line in enumerate(self._lines, start=1) if line.startswith("## ")]
+        start = next((number for number in headings if self._lines[number - 1][3:].split("|", 1)[0].strip() == name), None)
+        if start is None:
+            return (1, 1)
+        return (start, next((number - 1 for number in headings if number > start), len(self._lines)))
+
+    def aggregate_lines(self, name: str) -> tuple[int, int]:
+        return self.cards.section_of(name) or (1, 1)
+
+    def line_of(self, entry: str, within: tuple[int, int]) -> int:
+        """The first line within the lines given that opens with entry, once its indent is gone; else their first."""
+        first, last = within
+        found = (number for number in range(first, last + 1) if self._lines[number - 1].strip().startswith(entry))
+        return next(found, first)
+
+    @property
+    def last_line(self) -> int:
+        return max(1, len(self._lines))
+
+
+class _DescribedDomain:
+    """What the documents under the practice's root describe, read into DDD's part of the graph: the bounded contexts
+    they head, each aggregate once, under its context, with a building block for each class a domain model draws, the
+    context mappings their integrations write, the events their event maps list, and the edges between them. A block a
+    document describes stays beside the block code declares, and the code's block is joined to it."""
+
+    def __init__(self, reading: DddReading, contexts: _ContextFolders, documents: list[_DomainDocument]) -> None:
+        self._reading = reading
+        self._in_graph = reading.in_graph
+        self._edges = reading.graph.edges
+        self._contexts = contexts
+        self._documents = documents
+        self._blocks = _AggregateBlocks(reading)
+        # Each aggregate described, by its context's name and its own, and the root block a domain model draws for it.
+        self._aggregates: dict[tuple[str, str], Node] = {}
+        self._roots: dict[tuple[str, str], Node] = {}
+        # Each building block described, with its aggregate's name and the class names its card relates it to.
+        self._described: list[tuple[Node, str, set[str]]] = []
+
+    def read_contexts(self) -> bool:
+        """Hold each bounded context the documents head, once, at the first heading that names it, and known by the
+        folder its name spells, so code in that folder sits under it; whether the documents head any."""
+        seen: set[str] = set()
+        for document in self._documents:
+            for described in document.map.every_context:
+                if described.name not in seen:
+                    seen.add(described.name)
+                    self._read_context(document, described)
+        return bool(seen)
+
+    def _read_context(self, document: _DomainDocument, described: BoundedContext) -> None:
+        context = BoundedContext(described.name, described.sequential_order)
+        context.owner = described.owner
+        location = Location(document.relative, *document.context_lines(described.name))
+        node = self._in_graph.add(context, f"ddd:BoundedContext:{document.relative}:{described.name}", location)
+        self._edges.link("owns", self._in_graph.root, node)
+        self._contexts.add(Name(described.name).snake, node)
+
+    def read(self) -> None:
+        """Once the contexts and the code's aggregates are read: the aggregates the documents describe, then the edges
+        between what they describe, and from the code that implements it."""
+        for document in self._documents:
+            for described in document.map.every_aggregate:
+                key = (described.parent.name, described.name)
+                if key not in self._aggregates:
+                    self._aggregates[key] = self._read_aggregate(document, described)
+        self._relate_blocks()
+        for document in self._documents:
+            self._read_integrations(document)
+            self._read_events(document)
+        self._join_implementations()
+
+    def _context_of(self, document: _DomainDocument, name: str) -> Node:
+        """The bounded context called name, else the one around the folder the document describes, else the root."""
+        named = next((node for node in self._in_graph.nodes("BoundedContext") if node.name == name), None)
+        return named or self._contexts.around(folder_of(folder_of(document.relative))) or self._in_graph.root
+
+    def _read_aggregate(self, document: _DomainDocument, described: Aggregate) -> Node:
+        """The aggregate at the document's section for it, under its bounded context, holding a building block for each
+        class the document draws in it, each at its card and marked as described by the document."""
+        start, end = document.aggregate_lines(described.name)
+        context = self._context_of(document, described.parent.name)
+        node = self._in_graph.add(Aggregate(described.name, 1), f"ddd:Aggregate:{document.relative}:{described.name}", Location(document.relative, start, end))
+        self._edges.link("owns", context, node)
+        self._edges.relate("belongsTo", node, context)
+        names = [oclass.name for oclass in described.classes]
+        for oclass in described.classes:
+            tactical = TacticalClass(oclass)
+            kind = tactical.inferred_kind(names)
+            if kind is not None:
+                self._read_block(document, node, tactical, kind, (described.parent.name, described.name))
+        return node
+
+    def _read_block(self, document: _DomainDocument, aggregate: Node, tactical: TacticalClass, kind: str, key: tuple[str, str]) -> None:
+        oclass = tactical.oclass
+        document.cards.place(oclass)
+        start = aggregate.source.start_line
+        block = self._blocks.add(aggregate, tactical, kind, Location(document.relative, oclass.line or start, oclass.end_line or start))
+        block.set_fact(DESCRIBED_FACT, True)
+        self._described.append((block, key[1], self._named_in_card(oclass)))
+        if kind == "EntityRoot":
+            self._roots[key] = block
+
+    def _named_in_card(self, oclass: OoadClass) -> set[str]:
+        """The class names a card relates its class to: each whole word of its properties' types, a collection's
+        included, and of what its operations return, the classes its operations call, and the classes it extends."""
+        hints = [member.type_hint for member in oclass.properties if getattr(member, "type_hint", "")]
+        hints += [operation.return_type for operation in oclass.operations if operation.return_type]
+        called = {callee.strip().partition(".")[0].partition("(")[0].strip() for operation in oclass.operations for callee in operation.callees}
+        return {word for hint in hints for word in _TYPE_WORD.findall(hint)} | called | set(oclass.bases)
+
+    def _relate_blocks(self) -> None:
+        """Each building block a document describes depends on every other described block its card relates it to, as
+        a class read from code depends on each class its properties' types name: the classes it composes, aggregates,
+        or associates with, the classes its other members are typed by, the classes its operations call, and the
+        classes it extends. They are linked once every document is read, so a card can name a class in another
+        aggregate."""
+        by_name = {block.name: block for block, _aggregate, _names in self._described}
+        for block, _aggregate, names in self._described:
+            for name in sorted(names):
+                other = by_name.get(name)
+                if other is not None and other is not block:
+                    self._edges.relate("dependsOn", block, other)
+
+    def _read_integrations(self, document: _DomainDocument) -> None:
+        """Each integration the document writes under an aggregate, as a context mapping from that aggregate to the
+        aggregate it reaches, once for the two; and the root of the first associates with the root of the second."""
+        for described in document.map.every_aggregate:
+            local = (described.parent.name, described.name)
+            for integration in described.integrations:
+                target = document.map.aggregate_reached_by(integration)
+                remote = (target.parent.name, target.name) if target is not None else None
+                if remote in self._aggregates and remote != local:
+                    self._read_mapping(document, local, remote, integration)
+
+    def _read_mapping(self, document: _DomainDocument, local: tuple[str, str], remote: tuple[str, str], integration: Integration) -> None:
+        mapping = ContextMapping(" · ".join(local), " · ".join(remote), pattern=integration.pattern)
+        entry = f"- {integration.target}"
+        line = document.line_of(entry, document.aggregate_lines(local[1]))
+        if any(self._reaches(node, local, remote) for node in self._in_graph.nodes("ContextMapping")):
+            return
+        node = self._in_graph.add(mapping, f"ddd:ContextMapping:{document.relative}:{line}", Location(document.relative, line, line))
+        self._edges.link("mappedTo", self._edges.direct_parent(self._aggregates[local]) or self._in_graph.root, node)
+        self._edges.relate("local", node, self._aggregates[local])
+        self._edges.relate("remote", node, self._aggregates[remote])
+        if local in self._roots and remote in self._roots:
+            self._edges.relate("associates", self._roots[local], self._roots[remote])
+
+    def _reaches(self, mapping: Node, local: tuple[str, str], remote: tuple[str, str]) -> bool:
+        """Whether a mapping already held joins the two described aggregates."""
+        sides = [[edge.child for edge in self._edges.from_parent(side, mapping)] for side in ("local", "remote")]
+        return sides == [[self._aggregates[local]], [self._aggregates[remote]]]
+
+    def _read_events(self, document: _DomainDocument) -> None:
+        """Each event the document's aggregates emit, once, under the aggregate that emits it, with that aggregate as
+        its producer and each aggregate its event map says consumes it as a consumer."""
+        for described in document.map.every_aggregate:
+            producer = self._aggregates[(described.parent.name, described.name)]
+            for event in described.events:
+                self._read_event(document, producer, event)
+
+    def _read_event(self, document: _DomainDocument, producer: Node, event: DomainEvent) -> None:
+        line = document.line_of(f"- {event.name}:", (1, document.last_line))
+        node = self._in_graph.add(DomainEvent(event.name, 1), f"ddd:DomainEvent:{document.relative}:{event.name}", Location(document.relative, line, line))
+        self._edges.link("owns", producer, node)
+        self._edges.relate("belongsTo", node, producer)
+        self._edges.relate("producer", node, producer)
+        consumers = {consumer.name for consumer in event.consumers}
+        for (_context, name), aggregate in self._aggregates.items():
+            if name in consumers:
+                self._edges.relate("consumers", node, aggregate)
+
+    def _join_implementations(self) -> None:
+        """Join each building block code declares to the described block it implements: the block of the same name in
+        the aggregate the code's folder names, as generate saves an aggregate's code in a folder named for it."""
+        declared = [node for node in self._in_graph.nodes() if node.type in _BLOCK_KINDS and not node.has_fact(DESCRIBED_FACT)]
+        for block, aggregate, _names in self._described:
+            folder = Name(aggregate).snake
+            for code in declared:
+                if code.name == block.name and Name(Path(folder_of(code.source.file)).name).snake == folder:
+                    self._edges.relate("implements", code, block)

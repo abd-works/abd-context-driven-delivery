@@ -23,16 +23,13 @@ export type FilesGraphState = {
   branches: Record<string, ExplorerEntryData>
   openNodes: string[]
   selected: SelectedNode[]
-  // The nodes selected through a connector, such as an operation a step invokes: each opens in place under the line that
-  // uses it, in the file of the node that holds the connector.
-  expanded: string[]
   members: NodeSourceData[]
   log: string[]
   isReading: boolean
   problem: string
 }
 
-export const NO_GRAPH: FilesGraphState = { trees: null, readFor: '', filter: NO_FILTER, choices: NO_CHOICES, branches: {}, openNodes: [], selected: [], expanded: [], members: [], log: [], isReading: false, problem: '' }
+export const NO_GRAPH: FilesGraphState = { trees: null, readFor: '', filter: NO_FILTER, choices: NO_CHOICES, branches: {}, openNodes: [], selected: [], members: [], log: [], isReading: false, problem: '' }
 
 // What the page draws: the session's practices with their toggles, the files its link names, the one open, and what went wrong. The open file is the session's
 // answer itself (text, comments, folds, violations, changes), never a copy kept beside it.

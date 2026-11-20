@@ -123,5 +123,5 @@ with description("a Python shared story file"):
         with it("should write the scenario's steps"):
             expect(self.markdown).to(contain("*When* the Person opens the board"))
 
-        with it("should write the examples its fixtures give"):
-            expect(self.markdown).to(contain("| CHECKOUT_FLOW | SessionSeed | checkout-flow | Checkout flow |"))
+        with it("should write the examples its fixtures give under the kind of fixture they are"):
+            expect(self.markdown).to(contain("##### SessionSeed\n\n| example | name | title |\n| --- | --- | --- |\n| CHECKOUT_FLOW | checkout-flow | Checkout flow |"))

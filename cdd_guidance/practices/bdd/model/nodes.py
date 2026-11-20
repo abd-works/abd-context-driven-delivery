@@ -27,6 +27,11 @@ _BARE_CALL = re.compile(r"(?<![.\w])([A-Za-z_]\w*)\s*\(")
 _TOOL_NAMED = re.compile(r"""\b(\w+)\(\s*["']([a-z][a-z-]*)\.([a-zA-Z_]+)["']""")
 _QUOTED = re.compile(r"""(['"`])(?:\\.|(?!\1).)*\1""")
 _SPEC_STATE = re.compile(r"\bself\.(\w+)")
+# A member reached through a name: `cart.total`, `order.pay(`.
+_RECEIVED = re.compile(r"(?<![.\w$])([A-Za-z_$][\w$]*)\s*\.\s*([\w$]+)")
+# A variable given a new object, `cart = Cart()` or `order = new Order(cart)`, or declared as one, `let cart: Cart`.
+_BUILT = re.compile(r"(?<![.\w$])([A-Za-z_$][\w$]*)\s*(?::\s*[\w$.]+\s*)?=\s*(?:new\s+)?([A-Z][\w$]*)\s*\(")
+_DECLARED = re.compile(r"\b(?:let|const|var)\s+([A-Za-z_$][\w$]*)\s*:\s*([A-Z][\w$]*)")
 
 
 def private_probe_in_text(text: str, start_line: int) -> dict:
@@ -45,12 +50,15 @@ def private_probe_in_text(text: str, start_line: int) -> dict:
 
 
 class Reach(TypedDict):
-    """What a block's lines reach: every member name it calls or reads, in order; the names it only reads; and each
-    tool it calls by its name, as the call carrying it, the toolset, and the operation."""
+    """What a block's lines reach: every member name it calls or reads, in order; the names it only reads; each
+    tool it calls by its name, as the call carrying it, the toolset, and the operation; the variables each member name
+    is reached through; and the class each variable the lines build or declare is."""
 
     names: list[str]
     reads: list[str]
     tools: list[list[str]]
+    receivers: dict[str, list[str]]
+    builds: dict[str, str]
 
 
 def reach_of(text: str) -> Reach:
@@ -61,10 +69,16 @@ def reach_of(text: str) -> Reach:
     code = _SPEC_STATE.sub(r"\1", _QUOTED.sub('""', text))
     calls = _MEMBER_CALL.findall(code) + _BARE_CALL.findall(code)
     found = [(match.start(1), match.group(1)) for pattern in (_MEMBER_CALL, _MEMBER_READ, _BARE_CALL) for match in pattern.finditer(code)]
+    receivers: dict[str, list[str]] = {}
+    for receiver, name in _RECEIVED.findall(code):
+        if receiver not in receivers.setdefault(name, []):
+            receivers[name].append(receiver)
     return {
         "names": list(dict.fromkeys(name for _start, name in sorted(found))),
         "reads": sorted(set(_MEMBER_READ.findall(code)) - set(calls)),
         "tools": tools,
+        "receivers": receivers,
+        "builds": dict(_DECLARED.findall(code) + _BUILT.findall(code)),
     }
 
 
@@ -116,14 +130,20 @@ class DescribeBlock(BehaviorNode):
 
     def add_child(self, kind: str, name: str, order: int | None = None) -> "Context | Observation":
         """A new context (kind ``context``) or observation (kind ``it``) named name, added under this block. order is
-        its place among this block's children as its file has them; by default it comes after the others of its kind."""
+        its place among this block's children as its file has them; by default it comes after every child it has."""
+        order = order or len(self.contexts) + len(self.observations) + 1
         if kind == "it":
-            observation = Observation(name, order or len(self.observations) + 1)
+            observation = Observation(name, order)
             self.observations.append(observation)
             return observation
-        context = Context(name, order or len(self.contexts) + 1)
+        context = Context(name, order)
         self.contexts.append(context)
         return context
+
+    def children_in_order(self) -> "list[Context | Observation]":
+        """Its contexts and observations in the order its file has them, which every format writes them in. Children
+        built with no place of their own keep the observations above the contexts."""
+        return sorted(self.children_blocks(), key=lambda child: (child.sequential_order, isinstance(child, DescribeBlock)))
 
 
 class Description(DescribeBlock):

@@ -1,6 +1,6 @@
 """How Clean Engineering takes part in the graph: it reads each source file with the class model of its language, from
 its own formats, and adds the folders, classes, properties, operations, and parameters it parsed to its graph as nodes;
-it adds each class its model documents describe that no code declares, so the model's rules check a design whose code
+it adds each class its model documents describe, beside the code that implements it, so the rules check a design whose code
 is not written; and it keeps the class models those documents describe, so a realization can follow an interaction the
 model gives a member.
 
@@ -22,26 +22,18 @@ from harness.graph.skipped_folders import skips_folder
 from harness.graph.schema_conformance import EXEMPT_FACT
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, OoadClass
-from cdd_guidance.practices.clean_engineering.model.code_read import PRODUCTION_FACT, CodeRead
+from cdd_guidance.practices.clean_engineering.model.call_links import CallLinks, ClassesInReach, ClassLinks
+from cdd_guidance.practices.clean_engineering.model.code_read import DESCRIBED_FACT, PRODUCTION_FACT, CodeRead
 from cdd_guidance.practices.clean_engineering.model.compared_facts import ComparedFacts
 from cdd_guidance.practices.clean_engineering.model.markdown.card_lines import CardLines
 from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
 
-# A member called on another object (`board.select(`), and a property read on one (`board.shown`, no call after it).
-_ABSTRACT_MARK = re.compile(r"@abstractmethod|^\s*(?:public\s+|protected\s+)?abstract\s", re.MULTILINE)
-_DOCSTRING = re.compile(r'(?s)\A\s*(?:"""|\'\'\').*?(?:"""|\'\'\')')
-# The marker the source view puts after a line for each call on it, `/* call:show */`, which is no code.
-_CALL_MARKER = re.compile(r"\s*/\* call:[^*]*\*/")
-_NO_BODY = {"", "...", "pass", "raise NotImplementedError", "raise NotImplementedError()"}
-_MEMBER_CALL = re.compile(r"\.([A-Za-z_$][\w$]*)\s*\(")
-_MEMBER_READ = re.compile(r"\.([A-Za-z_$][\w$]*)\b(?!\s*\()")
-
 
 class GraphReading(PracticeReading):
     """How Clean Engineering takes part in the graph: it reads the model documents, then the code, and holds each class
-    a document describes that no code declares as it holds the code's. Its classes are the classes the source view
+    a document describes as it holds the code's, each joined to the code class that implements it. Its classes are the classes the source view
     opens and folds, their operations and properties the members it opens a call to, and its checks run on each class
     as a whole. Every practice that links to the code asks its code index; a realization asks its model documents."""
 
@@ -65,12 +57,14 @@ class GraphReading(PracticeReading):
     def read_working_copy(self) -> None:
         """Keep the class model each model document describes, then read each source file with its language's class
         model, adding the folders, classes, properties, operations, and parameters it parsed as nodes, and each class a
-        document describes that no code declares."""
+        document describes."""
         self.code_index.forget()
+        reach = ClassesInReach(self)
         with schema_sync_paused():
             self.model_documents.read()
-            CodeRead(self).read()
-        CallLinks(self).link()
+            CodeRead(self, reach).read()
+        ClassLinks(self, reach).link()
+        CallLinks(self, reach).link()
         ComparedFacts(self).record()
         self._exempt_test_code()
 
@@ -84,71 +78,6 @@ class GraphReading(PracticeReading):
             fields = {requirement.field for requirement in requirements if node.type in requirement.owner.node_types}
             if fields:
                 node.merge_fact(EXEMPT_FACT, list(fields))
-
-
-class CallLinks:
-    """The ``invokes`` edges of the code read: each operation and property to the operations and properties its body
-    calls, found by the name each call ends in (``board.show()`` calls ``show``), a member of its own class before
-    another class's member of that name."""
-
-    def __init__(self, reading: GraphReading) -> None:
-        self._reading = reading
-        self._graph = reading.graph
-
-    def link(self) -> None:
-        """Record an ``invokes`` edge from every member the graph holds to each member it calls."""
-        in_graph = self._reading.in_graph
-        for caller in [*in_graph.nodes("Operation"), *in_graph.nodes("Property")]:
-            called = self._called_by(caller)
-            for member in called:
-                self._graph.edges.relate("invokes", caller, member)
-            if not called and self._calls_nothing_by_design(caller):
-                caller.set_fact(EXEMPT_FACT, ["invokes"])
-
-    def _calls_nothing_by_design(self, caller: Node) -> bool:
-        """Whether caller is a member that has nothing to call: an abstract one, whose subclasses do the work, or one
-        that takes nothing and answers a value, which is a property in all but name."""
-        return self._is_abstract(caller) or not self._graph.edges.from_parent("hasParameter", caller)
-
-    def _is_abstract(self, caller: Node) -> bool:
-        """An abstract member: marked so (`@abstractmethod`, `abstract`), or with no body but `...`, `pass`, or a raise of
-        NotImplementedError under its signature and docstring."""
-        text = caller.source.text if caller.source.file else ""
-        if _ABSTRACT_MARK.search(text) or self._declared_without_body(text):
-            return True
-        return _DOCSTRING.sub("", self._python_body(text)).strip() in _NO_BODY
-
-    def _declared_without_body(self, text: str) -> bool:
-        """A C-family member with no body: its signature ends in `;` and no brace opens a body (an interface's method,
-        `draw(scale: number): void;`, or `void draw(double scale);`)."""
-        code = _CALL_MARKER.sub("", text).strip()
-        return bool(code) and "{" not in code and code.endswith(";")
-
-    def _python_body(self, text: str) -> str:
-        """What follows a Python member's signature, the line that ends its `def` with a colon; none for other code."""
-        lines = text.splitlines()
-        if not any(line.lstrip().startswith(("def ", "async def ")) for line in lines[:4]):
-            return ""
-        end = next((index for index, line in enumerate(lines) if line.rstrip().endswith(":")), len(lines))
-        return "\n".join(lines[end + 1:])
-
-    def _called_by(self, caller: Node) -> list[Node]:
-        """The members caller calls, by the names its callees end in and the members its source calls on another object
-        (``this.board.select()``, which its callees leave out when it shares caller's name), and the properties its
-        source reads (``this.board.shown``); its own class's member of a name when its class has one."""
-        text = caller.source.text if caller.source.file else ""
-        calls = {str(callee).rsplit(".", 1)[-1] for callee in caller.facts.get("callees") or [] if callee}
-        calls.update(_MEMBER_CALL.findall(text))
-        reads = set(_MEMBER_READ.findall(text)) - calls
-        found = [member for name in sorted(calls) for member in self._named(name, caller)]
-        found.extend(member for name in sorted(reads) for member in self._named(name, caller) if member.type == "Property")
-        return found
-
-    def _named(self, name: str, caller: Node) -> list[Node]:
-        """The members called name other than caller, only its own class's when its class has one."""
-        owner = self._graph.edges.direct_parent(caller)
-        members = [member for member in self._reading.code_index.members_named(name) if member is not caller]
-        return [member for member in members if self._graph.edges.direct_parent(member) is owner] or members
 
 
 class CodeIndex:
@@ -175,16 +104,24 @@ class CodeIndex:
         return set(self._class_index())
 
     def members_named(self, name: str) -> list[Node]:
-        """The operations and properties called name, each class's operation before its property."""
+        """The operations and properties called name, each class's operation before its property, the code's before
+        those a model document describes."""
         if self._members is None:
             in_graph = self._reading.in_graph
-            self._members = self._indexed([*in_graph.nodes("Operation"), *in_graph.nodes("Property")])
+            members = [*in_graph.nodes("Operation"), *in_graph.nodes("Property")]
+            self._members = self._indexed(sorted(members, key=lambda node: not self._is_code(node)))
         return self._members.get(name, [])
 
     def _class_index(self) -> dict[str, list[Node]]:
+        """The classes by name, the code's before those a model document describes, then in the order of their ids."""
         if self._classes is None:
-            self._classes = self._indexed(sorted(self._reading.in_graph.nodes("OoadClass"), key=lambda node: node.node_id))
+            classes = sorted(self._reading.in_graph.nodes("OoadClass"), key=lambda node: (node.has_fact(DESCRIBED_FACT), node.node_id))
+            self._classes = self._indexed(classes)
         return self._classes
+
+    def _is_code(self, member: Node) -> bool:
+        """Whether a member is read from code, not from a model document, whose files are markdown."""
+        return not member.source.file.endswith(".md")
 
     def _indexed(self, nodes: list[Node]) -> dict[str, list[Node]]:
         found: dict[str, list[Node]] = {}
@@ -197,7 +134,7 @@ class ModelDocuments:
     """The class models the practice's model documents describe, ``{folder}/.context/*-model.md``, by each document's
     path from the source root; a document another practice reads in a format of its own, such as DDD's domain model,
     is that practice's. A realization follows an interaction into a class the load left out through them, and the code
-    read adds each class they describe that no code declares, placed at the document's lines."""
+    read adds each class they describe, placed at the document's lines."""
 
     def __init__(self, reading: GraphReading) -> None:
         self._reading = reading

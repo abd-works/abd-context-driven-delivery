@@ -23,12 +23,14 @@ from files_app_browser import (
     graph_view,
     line,
     mark_on,
+    marked_lines,
     open_branches,
     open_callout_on,
+    open_files,
     select,
     settled,
 )
-from space.session.graph_view_examples import CHECKOUT_FLOW
+from space.session.graph_view_examples import BOARD_CODE, CHECKOUT_FLOW
 
 # Interaction: the lines of Board.reread, from board.py, as they open in place under the call that names them.
 REREAD_LINES = "    def reread(self) -> None:"
@@ -116,6 +118,38 @@ with description("Story: Open Calls Across Files In Files App") as self:
 
         with it("Then the lines of Board.reread, from board.py, show in place below the call"):
             expect([text.splitlines()[0] for text in callout_texts(self.page)]).to(equal([REREAD_LINES]))
+
+
+with description("Story: Follow Relationships Under Node In Files App") as self:
+    with before.all:
+        self.stack = FilesStack()
+
+    with after.all:
+        self.stack.close()
+
+    with context("Scenario: Selecting a related node opens the related node alone, in its own file"):
+        with context("Given Ticket.delete is selected and ticket.py is open"):
+            with before.all:
+                self.page = self.stack.open(CHECKOUT_FLOW.name, FIDELITIES)
+                graph_view(self.page)
+                open_branches(self.page, "clean_engineering", "kanban", "Ticket", "delete", "invokes")
+                select(self.page, "Operation delete")
+                self.page.locator(f'section.open-file[aria-label="{TICKET_CODE}"]').wait_for(timeout=SHOWN_MILLISECONDS)
+
+            with after.all:
+                self.page.close()
+
+            with context("When the Person selects Board.reread under Ticket.delete's invokes"):
+                with before.all:
+                    self.page.locator('li.graph-entry[data-kind="invokes"] button.graph-node[title="Operation reread"]').first.click()
+                    self.page.locator(f'section.open-file[aria-label="{BOARD_CODE}"]').wait_for(timeout=SHOWN_MILLISECONDS)
+                    line(self.page, REREAD_LINES.strip()).wait_for(timeout=SHOWN_MILLISECONDS)
+
+                with it("Then board.py opens at Board.reread"):
+                    expect(marked_lines(self.page, BOARD_CODE)).to(equal(["    def reread(self) -> None:", "        return None"]))
+
+                with it("But ticket.py, which holds Ticket.delete, is no longer open"):
+                    expect(open_files(self.page)).to(equal([BOARD_CODE]))
 
 
 with description("Story: Filter Graph By Node Type And Connector In Files App") as self:

@@ -117,6 +117,46 @@ with description("Stories"):
             with it("should give its scenarios to the Story of the same name on the map in the root's .context"):
                 expect([len(story.scenarios) for story in self.model.descendants.stories()]).to(equal([1]))
 
+        # A story test is validated alone, without its map among the paths. Its story's place is the one the map gives
+        # it, so a rule that counts a sub-epic's stories counts the map's, not the one story whose test was named.
+        with context("with a story test under story_tests read without the story map it names, whose sub-epic holds two stories"):
+            with before.each:
+                import tempfile
+
+                self.root = Path(tempfile.mkdtemp(prefix="cdd-story-layout-"))
+                story_map = self.root / ".context" / "story-map.md"
+                story_map.parent.mkdir(parents=True)
+                story_map.write_text(
+                    "# (E) Move Work On Board\n\n## (E) Display Board\n\n### (S) Person --> Open Board\n### (S) Person --> Close Board\n\n"
+                    "# (E) Fulfil Order\n\n### (S) Clerk --> Pack Order\n### (S) Clerk --> Ship Order\n",
+                    encoding="utf-8",
+                )
+                story_test = self.root / "story_tests" / "move-work-on-board" / "display-board" / "open-board" / "open_board_story.test.py"
+                story_test.parent.mkdir(parents=True)
+                story_test.write_text(
+                    "# Map: ../../../../.context/story-map.md#s-person----open-board\n"
+                    'with story("Open Board"):\n    with scenario("Open it"):\n        with given("a board"):\n            pass\n',
+                    encoding="utf-8",
+                )
+                flat_test = self.root / "story_tests" / "fulfil-order" / "pack-order" / "pack_order_story.test.py"
+                flat_test.parent.mkdir(parents=True)
+                flat_test.write_text('with story("Pack Order"):\n    with scenario("Pack it"):\n        with given("an order"):\n            pass\n', encoding="utf-8")
+                self.model = Stories().read_files([story_test, flat_test], self.root)
+
+            with after.each:
+                import shutil
+
+                shutil.rmtree(self.root, ignore_errors=True)
+
+            with it("should hold the sub-epic with both stories the map gives it"):
+                expect([story.name for story in self.model.epics[0].epics[0].stories]).to(equal(["Open Board", "Close Board"]))
+
+            with it("should hold a flat epic with no sub-epic of its own name"):
+                expect([sub.name for sub in self.model.epics[1].epics]).to(equal([]))
+
+            with it("should give the story test's scenarios to the map's Story"):
+                expect([scenario.name for scenario in self.model.epics[0].epics[0].stories[0].scenarios]).to(equal(["Open it"]))
+
         # The MCP host serves every project from its own folder, so the paths a call names are read from the project
         # of the session the practice works in, and each node names its file from there.
         with context("that reads a story map named from its session's project, which the host does not run in"):

@@ -17,6 +17,13 @@ from typing import Dict, List, Optional, Tuple
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeLanguage, WrittenBlock, WrittenKey
 from cdd_guidance.practices.stories.model.story_model import Background, Epic, Scenario, Step, Story, StoryType
 
+# The comment that carries a scenario's example rows in a story file, by whether the scenario is an outline.
+SCENARIO_EXAMPLES = "scenario-examples"
+OUTLINE_EXAMPLES = "outline-examples"
+# A name Python, TypeScript, JavaScript and Java can all import.
+_IMPORTABLE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+
+
 class StepClause:
     """One step, the verb it opens with, and the steps a language chains onto it."""
 
@@ -27,11 +34,13 @@ class StepClause:
 
 
 def example_names_of(stories: List[Story]) -> List[str]:
-    """Each example the stories' scenarios use, once, in order: what a new story file imports."""
+    """Each example the stories' scenarios use whose name a language can import, once, in order: what a new story file
+    imports. An example named in words, as a table row of a scenarios file is, is no name in code, so it stays on the
+    scenario's examples comment."""
     names: List[str] = []
     for story in stories:
         for scenario in story.scenarios:
-            names.extend(name for name in scenario.examples if name not in names)
+            names.extend(name for name in scenario.examples if name not in names and _IMPORTABLE.fullmatch(name))
     return names
 
 
@@ -59,6 +68,31 @@ def background_examples_line(story: Story, prefix: str) -> List[str]:
         return []
     payload = {name: example.cells() for name, example in story.backgrounds[0].examples.items()}
     return [f"{prefix}background-examples: {json.dumps(payload, ensure_ascii=False)}"]
+
+
+def scenario_examples_lines(scenario: Scenario) -> List[str]:
+    """The examples of scenario as the comment lines a story file carries them on: their names, then, when a row
+    holds values or the scenario is an outline, each row by its name, marked as an outline's rows or a scenario's.
+    None for a scenario with no examples."""
+    if not scenario.examples:
+        return []
+    rows = {name: example.cells() for name, example in scenario.examples.items()}
+    names = ["examples: " + ", ".join(scenario.examples)]
+    if not scenario.is_outline and not any(rows.values()):
+        return names
+    kind = OUTLINE_EXAMPLES if scenario.is_outline else SCENARIO_EXAMPLES
+    return [*names, f"{kind}: {json.dumps(rows, ensure_ascii=False)}"]
+
+
+def own_backgrounds(scenario: Scenario) -> List[Background]:
+    """The backgrounds scenario holds that its story does not already write once for all its scenarios: those with
+    steps the story's own backgrounds do not hold."""
+    shared = [_step_texts(background) for background in getattr(scenario.parent, "backgrounds", [])]
+    return [background for background in scenario.backgrounds if background.steps and _step_texts(background) not in shared]
+
+
+def _step_texts(background: Background) -> List[tuple]:
+    return [(step.keyword.lower(), step.text) for step in background.steps]
 
 
 class StoryWriting:
@@ -201,10 +235,9 @@ class StoryWriting:
         inner = indent + self.language.indent
         lines = [self._filled(self.scenario_opening, indent=indent, name=self._quoted(scenario.name))]
         lines += scenario.setup.lines_in(self.language, inner, "")
-        for background in scenario.backgrounds:
+        for background in own_backgrounds(scenario):
             lines.extend(self.scenario_background_lines(background, inner))
-        if scenario.examples:
-            lines.append(f"{inner}{self.language.comment('examples: ' + ', '.join(scenario.examples))}")
+        lines.extend(f"{inner}{self.language.comment(line)}" for line in scenario_examples_lines(scenario))
         for clause in self._clauses(scenario.steps):
             lines.extend(self._step_lines(clause, inner))
         if not scenario.steps and scenario.setup.is_empty:

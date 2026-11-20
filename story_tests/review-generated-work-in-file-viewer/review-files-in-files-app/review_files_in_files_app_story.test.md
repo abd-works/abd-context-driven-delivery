@@ -321,6 +321,15 @@ Reported (Nov 18 demo, 2026-11-18): in a plain folder This session listed nothin
 *And* the Stories toggle shows as an outline
 *And* the Files app no longer lists *story-map.md*
 
+#### Scenario: Turn a practice off before any stage is selected
+
+Round 3 of exploratory testing (r3-lens-05): with no stage selected yet the page listed every fidelity its link names, whatever practices were on, so a practice turned off kept its files in the list and its tree in the graph view. The page: `harness/files_app/app/files/files-page.spec.ts`.
+
+*Given* the Files app's link names stories-story-map and ddd-bounded-context, and no stage was selected for checkout-flow yet
+*When* the Person turns DDD off
+*Then* the Files app lists *story-map.md*
+  *But* no longer *bounded-context-map.md*
+
 ## Story: Keep Chat Bar Practices In Sync
 
 #### Scenario: Show a practice turned on in the Files app on the chat bar
@@ -365,6 +374,7 @@ Requested 2026-11-19: scenarios, story maps and domain models are read as pages,
 *When* the Person views *README.md*
 *Then* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows *Checkout* rendered as a heading, not as *# Checkout*
 *And* its Rendered toggle is pressed and its Source toggle is not
+*And* a link to a file that is not there keeps the Files app where it is, *README.md* the one open file
 
 #### Scenario: Switch a rendered file to its source and back
 
@@ -394,6 +404,94 @@ The lines of a node selected in the graph view, its comments and its broken rule
 | *design/cart.svg* | `<svg xmlns="http://www.w3.org/2000/svg"><circle r="4"/><script>alert(1)</script></svg>` | the drawing, its circle and no script |
 | *data/cart.json* | `{"items":[1,2]}` | the object laid out two spaces to a level, *"items": [* on its second line |
 | *data/broken.json* | `{"items":` | its text, and a note that it is not valid JSON |
+
+#### Scenario: Show text in angle brackets that is no HTML tag
+
+Round 3 of exploratory testing (r3-pixel-01): a class model writes a class's stereotypes and what a collection holds in angle brackets, and the page dropped them as HTML tags it did not know. Only the page draws it: `harness/files_app/app/files/file-rendering.spec.ts`.
+
+*Given* checkout-flow's session holds *domain-model.md*, with the heading *#### Cart <<Aggregate Root>> <<Entity>>* and the line *+ carts: Collection<Cart>*
+*When* the Person views *domain-model.md*
+*Then* the Files app shows the heading *Cart <<Aggregate Root>> <<Entity>>* and the line *carts: Collection<Cart>*, as the file writes them
+*But* HTML the file holds in lower case, such as *<details>*, is still drawn as HTML
+
+#### Scenario: Show a file's front matter as its facts, under no heading
+
+Round 3 of exploratory testing (r3-pixel-02): every generated practice file starts with front matter, which the page drew as its biggest heading.
+
+*Given* *story-map.md* starts with the front matter *fidelity: [discovery]*, *artifact: [story-map]*, *format: md* between two *---* rules, then *# Story Map - Bookshop*
+*When* the Person views *story-map.md*
+*Then* the Files app shows the three lines of front matter small above the page
+*And* the page's only heading reads *Story Map - Bookshop*
+
+#### Scenario: Underline a scenario's domain terms and examples
+
+Round 3 of exploratory testing (r3-pixel-09): a scenario marks a domain term and an example with `++`, which the page printed.
+
+*Given* a scenario file's step reads *\*Given\* the Bookshop sells ++Book++ ++Tiny Tales++*
+*When* the Person views it
+*Then* the Files app shows *Book* and *Tiny Tales* underlined, and prints no plus sign
+
+#### Scenario: Keep the levels of an indented tree
+
+Round 3 of exploratory testing (r3-pixel-07): a BDD realization nests its states two spaces a level, each observation's call graph fenced under its state, and the page drew every line at the left edge.
+
+*Given* *bookshop-bdd-realization.md* reads *a shipment*, under it *that has been created for a paid order*, and under that a fenced call graph of two lines
+*When* the Person views it
+*Then* the Files app shows *that has been created for a paid order* indented two spaces under *a shipment*
+*And* the call graph as a block indented four spaces, each of its lines on a line of its own
+
+#### Scenario: Open a callout in place on a rendered page
+
+Answered by the person on 2026-11-20 (round 3 of exploratory testing, r3-pixel-03 to 05): the Rendered view and the Source view both show callouts, and a callout is traversable as the graph tree is. The session answers each file's callouts (`session.file`, Open Linked Sections In Place in `switch_files_app_between_files_and_graph_story.test.md`); the page draws them: `harness/files_app/app/files/rendered-callouts.spec.ts`.
+
+*Given* the Files app shows the story map rendered, its story *Add Book To Cart* linked to its scenario file, whose Given links the domain term *Book* to the domain model
+*When* the Person presses the mark at the end of *Add Book To Cart*'s line
+*Then* the scenario file shows under the story's line, rendered as a page and shaded once, headed by its file and lines
+*When* the Person presses the mark at the end of the Given's line, inside it
+*Then* the *Book* section of the domain model shows under the Given, one shade deeper
+*And* a second press on a mark closes what it opened
+
+#### Scenario: Open what a step observes, then an operation it calls, in place
+
+*Given* the Files app has read the session's graph, and shows the story map rendered with Cross-file on
+*When* the Person opens *Add Book To Cart*'s scenario in place, then the example its Given observes
+*Then* the example's code shows under the Given, with a mark on each line that calls an operation the graph holds
+*When* the Person presses one
+*Then* that operation's code shows under the line that calls it
+
+#### Scenario: Follow a link on a rendered page
+
+Changed by the person's answer on 2026-11-20: a link to another file was left where it was, with nothing to follow.
+
+*Given* the Files app shows the story map rendered
+*When* the Person presses the link *Add Book To Cart*
+*Then* the Files app opens the scenario file at the lines the link names
+*When* the Person presses a link to a web page
+*Then* the web page opens in a tab of its own and the Files app stays where it is
+
+#### Scenario: Say what is not there for a link to a heading or a file that is missing
+
+*Given* a scenario file links *Cart Line* to a heading the domain model does not have
+*When* the Person views it, rendered or as source
+*Then* the line's mark shows as missing, and opened it says *.context/domain-model.md has no heading #cartline-entity*
+*And* pressing the link opens no file
+
+#### Scenario: Show the callouts the file view's filters select
+
+Answered by the person on 2026-11-20: which callouts show follows the file view's filters, the practices chosen and the graph's connectors. Only the page draws it: `harness/files_app/app/files/file-callouts.spec.ts`.
+
+*Given* the Files app shows a scenario file whose Given links the domain model, a file of DDD, and observes an example
+*When* the Person turns DDD off
+*Then* the Given's line no longer carries the callout into the domain model, in the rendered view and the source view alike
+*When* the Person leaves *observes* out of the graph view's connectors
+*Then* the Given's line no longer carries the example it observes
+
+#### Scenario: Follow a link in the source view
+
+*Given* the Files app shows the story map in the source view, *Add Book To Cart*'s line carrying its callout
+*When* the Person presses the link's text with Ctrl held
+*Then* the Files app opens the scenario file at the lines the link names
+*And* Go to file on the open callout does the same
 
 #### Scenario: Show only the source view for a file with no rendered form
 

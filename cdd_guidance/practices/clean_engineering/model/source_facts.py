@@ -9,6 +9,7 @@ import re
 from typing import TYPE_CHECKING, Any
 
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
+from cdd_guidance.practices.clean_engineering.model.property import Property
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import (
     MIN_DELEGATION_LINES,
     CardBullets,
@@ -22,6 +23,8 @@ if TYPE_CHECKING:
 
 # `self.column_name = ...` or `this.columnName: string = ...` in a constructor: a field the class holds.
 _ASSIGNED_FIELD = re.compile(r"(?:self|this)\.(\w+)\s*(?::\s*([^=\n]+?))?\s*=(?!=)")
+# The same assignment with what it assigns, as far as the line holds it: `self.isbn = isbn`.
+_ASSIGNED_FROM = re.compile(r"(?:self|this)\.(\w+)\s*(?::\s*([^=\n]+?))?\s*=(?!=)\s*([^;\n]*)")
 # A body shorter than this, once its whitespace is collapsed, is too small for two copies of it to be a duplication.
 _MIN_FINGERPRINTED_CHARACTERS = 40
 # How many hex digits of the hash a fingerprint keeps: enough that two different bodies never share one in practice.
@@ -101,6 +104,29 @@ class ClassSourceFacts:
                 for name, hint in _ASSIGNED_FIELD.findall(operation.body.text):
                     found.setdefault(name, (hint or "").strip())
         return found
+
+    def constructor_fields(self) -> list[Property]:
+        """A property for each public field the constructor assigns that the class does not declare, in the order it
+        assigns them, each at the line that assigns it: typed as the assignment writes it, else as the parameter it is
+        assigned from."""
+        declared = {prop.name for prop in self._class.properties}
+        found: dict[str, Property] = {}
+        for operation in (item for item in self._class.operations if item.is_constructor):
+            hints = {parameter.name: parameter.type_hint for parameter in operation.parameters}
+            for line, text in self._lines_of(operation):
+                for name, hint, value in _ASSIGNED_FROM.findall(text):
+                    if name in declared or name in found or name.startswith("_"):
+                        continue
+                    found[name] = Property(name, len(declared) + len(found) + 1, (hint or hints.get(value.strip(), "") or "").strip())
+                    found[name].line = line
+        return list(found.values())
+
+    def _lines_of(self, operation: Operation) -> list[tuple[int, str]]:
+        """Each line of its file the operation spans, with its number, from the lines the class keeps."""
+        first = self._class.line or 1
+        start, end = operation.source_lines
+        lines = self.span.text.split("\n")
+        return [(number, lines[number - first]) for number in range(start, end + 1) if 0 <= number - first < len(lines)]
 
     def _shape(self, operation: Operation) -> dict[str, Any]:
         return {

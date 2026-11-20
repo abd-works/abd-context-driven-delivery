@@ -126,4 +126,4 @@ with description("a sketch that carries behavior under headings"):
         named = selected.contexts[0]
         expect(named.name).to(equal("with only a name"))
         expect(named.observations[0].name).to(equal("should reuse the existing session from the environment"))
-        expect(named.observations[0].surface_lines[0]).to(equal("session.select(name)"))
+        expect([entry.text for entry in named.observations[0].call_graph]).to(equal(["session.select(name)"]))

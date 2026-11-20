@@ -59,3 +59,9 @@ with description("an example fixture in an acceptance test"):
             expect(_hits("tests/onboard/customers.examples.ts")).to(equal(
                 ["Example file 'customers.examples.ts' should live under an examples/ folder."]
             ))
+
+    # Markdown is a format the scenarios fidelity writes, and its examples are rows of a table in the scenarios file:
+    # no examples module holds them, so the rule has nothing to say about where they sit.
+    with context("that is a row of an examples table in a markdown scenarios file"):
+        with it("should pass"):
+            expect(_hits("story_tests/fill-cart/add-books/add_book_to_cart_story.test.md")).to(equal([]))

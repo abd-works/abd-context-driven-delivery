@@ -234,10 +234,9 @@ with description("Story: View File In Source View, files with a rendered form") 
         with it("And its Rendered toggle is pressed and its Source toggle is not"):
             expect((_pressed(self.page, "Rendered"), _pressed(self.page, "Source"))).to(equal(("true", "false")))
 
-        with it("And a link to another file keeps the Files app's page where it is"):
-            url = self.page.url
+        with it("And a link to a file that is not there keeps the Files app where it is, README.md the one open file"):
             self.page.locator(".file-rendered a", has_text="cart").click()
-            expect(self.page.url).to(equal(url))
+            expect(self.page.locator("section.open-file").evaluate_all("files => files.map(file => file.getAttribute('aria-label'))")).to(equal([README]))
 
     with context("Scenario: Switch a rendered file to its source and back"):
         with before.all:
@@ -303,3 +302,91 @@ with description("Story: View File In Source View, files with a rendered form") 
 
         with it("Then the Files app shows board.py in the source view, with no Rendered or Source toggle"):
             expect(self.page.locator(".file-render-toggle").count()).to(equal(0))
+
+
+# Seed: a story map whose story links its scenario file, whose Given links the domain term Book to the domain model's
+# Book section and Cart Line to a heading the model does not have (review_files_in_files_app_story.test.md, View File In
+# Source View, the callouts and links of a rendered page).
+NOTES = str(Path(BOARD_CODE).with_name("notes").as_posix())
+LINKED_MAP = f"{NOTES}/story-map.md"
+LINKED_SCENARIOS = f"{NOTES}/add_book_to_cart_story.test.md"
+LINKED_MODEL = f"{NOTES}/domain-model.md"
+LINKED_FILES = {
+    LINKED_MAP: "# Story Map\n\n### (S) Customer --> [Add Book To Cart](add_book_to_cart_story.test.md)\n",
+    LINKED_SCENARIOS: "## Story: Add Book To Cart\n\n*Given* the Bookshop sells ++[Book](domain-model.md#book-entity)++ ++Tiny Tales++\n*And* a ++[Cart Line](domain-model.md#cartline-entity)++\n",
+    LINKED_MODEL: "# Domain Model\n\n#### Book <<Entity>>\n\n+ reprice(amount: Money): void\n",
+}
+RENDERED_MARK = ".file-rendered .rendered-callout-mark"
+
+
+def _open_files(page) -> list[str]:
+    return page.locator("section.open-file").evaluate_all("files => files.map(file => file.getAttribute('aria-label'))")
+
+
+with description("Story: View File In Source View, the callouts and links of a rendered page") as self:
+    with before.all:
+        self.stack = FilesStack()
+        for path, text in LINKED_FILES.items():
+            (self.stack.project / path).parent.mkdir(parents=True, exist_ok=True)
+            (self.stack.project / path).write_text(text, encoding="utf-8")
+
+    with after.all:
+        self.stack.close()
+
+    with context("Scenario: Open a callout in place on a rendered page"):
+        with before.all:
+            self.page = _view(self.stack, LINKED_MAP)
+            self.story = self.page.locator(RENDERED_MARK, has_text="Add Book To Cart").first
+            self.story.wait_for(timeout=SHOWN_MILLISECONDS)
+            self.story.click()
+            self.scenario = self.page.locator(".file-rendered .callout-section").first
+            self.scenario.locator(".rendered-callout-mark", has_text="Book").first.wait_for(timeout=SHOWN_MILLISECONDS)
+
+        with after.all:
+            self.page.close()
+
+        with it("Then the scenario file shows under the story's line, rendered as a page, headed by its file and lines"):
+            shown = (self.scenario.locator(".callout-go-to").first.inner_text(), self.scenario.get_by_role("heading", level=2).inner_text())
+            expect(shown).to(equal((f"{LINKED_SCENARIOS} lines 1 to 4", "Story: Add Book To Cart")))
+
+        with it("And pressing the mark at the end of the Given's line shows the Book section of the domain model under the Given"):
+            self.scenario.locator(".rendered-callout-mark", has_text="Book").first.click()
+            expect(self.scenario.locator(".callout-section").get_by_role("heading", level=4).inner_text()).to(equal("Book <<Entity>>"))
+
+        with it("And a second press on the story's mark closes what it opened"):
+            self.story.click()
+            expect(self.page.locator(".file-rendered .callout-section").count()).to(equal(0))
+
+    with context("Scenario: Follow a link on a rendered page"):
+        with before.all:
+            self.page = _view(self.stack, LINKED_MAP)
+            self.page.locator(".file-rendered a", has_text="Add Book To Cart").click()
+            self.page.locator(f'section.open-file[aria-label="{LINKED_SCENARIOS}"]').wait_for(timeout=SHOWN_MILLISECONDS)
+
+        with after.all:
+            self.page.close()
+
+        with it("Then the Files app opens the scenario file"):
+            expect(_open_files(self.page)).to(contain(LINKED_SCENARIOS))
+
+    with context("Scenario: Say what is not there for a link to a heading or a file that is missing"):
+        with before.all:
+            self.page = _view(self.stack, LINKED_SCENARIOS)
+            self.missing = self.page.locator(f"{RENDERED_MARK}.callout-missing")
+            self.missing.wait_for(timeout=SHOWN_MILLISECONDS)
+            self.missing.click()
+
+        with after.all:
+            self.page.close()
+
+        with it("Then the line's mark, opened, says the domain model has no heading #cartline-entity"):
+            expect(self.page.locator(".file-rendered .callout-section.callout-missing").inner_text()).to(equal(f"{LINKED_MODEL} has no heading #cartline-entity"))
+
+        with it("And pressing the link opens no file"):
+            self.page.locator(".file-rendered a", has_text="Cart Line").click()
+            expect(_open_files(self.page)).to(equal([LINKED_SCENARIOS]))
+
+        with it("And the source view marks the same lines, the Given's and the missing link's"):
+            self.page.get_by_role("button", name="Source", exact=True).click()
+            self.page.locator(".callout-mark").first.wait_for(timeout=SHOWN_MILLISECONDS)
+            expect(self.page.locator(".callout-mark").count()).to(equal(2))

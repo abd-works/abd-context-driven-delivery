@@ -299,7 +299,7 @@ class Example(StoryNode):
     # An example goes by its slug after `example:`, so it never shares a path with a step of its scenario.
     segment_prefix = "example:"
     # The columns an example's row may name it by, in the order a table is read for its name.
-    naming_columns = ("example", "name")
+    naming_columns = ("example", "name", "scenario")
 
     def __init__(self, name: str, example_value: ExampleValue = None) -> None:
         super().__init__(name=name, sequential_order=0)
@@ -396,6 +396,12 @@ class Example(StoryNode):
         """An example's row holds no description, so none is kept: refused with StoryMapEditRefused, and no tool offers
         it."""
         raise StoryMapEditRefused(self, "edit_description", f"{self.name} is a row of its table, which holds no description")
+
+    @property
+    def is_named_by_its_row(self) -> bool:
+        """Whether a column of its own row holds its name, so a table of it needs no example column added."""
+        cells = self.cells()
+        return any(str(cells.get(column, "")) == self.name for column in self.naming_columns)
 
     def _names_it(self, field: str) -> bool:
         """Whether its row names it by field: `example` always does, `name` while it says its name."""
@@ -734,7 +740,7 @@ class Background(StoryNode):
 
     def record(self, recording: StoryRecording, file: str, parent: "Node") -> None:
         """Add this background under parent, its story's node, then its steps."""
-        lines = recording.span_of(self, file)
+        lines = recording.background_span(self, file)
         recording.place(self, lines)
         self.load_map_facts()
         node = recording.add(self, f"stories:Background:{file}:{self.recorded_name}", lines)
@@ -877,6 +883,9 @@ class Scenario(StoryNode):
         self.load_map_facts()
         node = recording.add(self, f"stories:Scenario:{file}:{self.name}", lines)
         node.set_fact("is_outline", bool(self.is_outline))
+        if file != file_of(story):
+            # Its steps and examples read the facts of the file that writes them, not of the story map its Story is in.
+            node.set_facts(recording.source_of(file).facts)
         recording.graph.edges.link("scenarios", parent, node)
         for step in self.steps:
             step.record(recording, file, node)
@@ -1234,9 +1243,11 @@ class Story(StoryNode):
             node.set_fact(NOT_ON_STORY_MAP, True)
         else:
             recording.graph.edges.link("decomposedInto", parent, node)
-        for background in self.backgrounds:
+        # A Background with no step is the place a reader keeps for one, not a Background anybody wrote.
+        own = [background for background in self.backgrounds if background.steps]
+        for background in own:
             background.record(recording, file, node)
-        if not self.backgrounds:
+        if not own:
             # The shared Background is read from the scenarios file, which may not be the story map the story is in.
             for background in self._shared_backgrounds():
                 background.record(recording, file_of(self.scenarios[0]) or file, node)
@@ -1560,20 +1571,21 @@ class StoryTestScenarios:
 
     def __init__(self, story_map: "StoryModel") -> None:
         self._story_map = story_map
+        # The stories that already took a story test's scenarios, which the next story test of the same story adds to.
+        self._specified: set[int] = set()
 
     def take(self, stories: List["Story"], file: str) -> None:
         """Give the scenarios and backgrounds of each of stories, read from the story test file, to every Story of the
-        same name, in place of the ones it holds, each scenario keeping the story test as its source."""
+        same name, each scenario keeping the story test as its source. The first story test a Story takes replaces the
+        scenarios the map itself gave it; each later one adds its own after them, so a story written in a shared story
+        file and a screen spec holds the scenarios of both."""
         for read, story in self._same_named(stories, file):
+            if id(story) in self._specified:
+                story.scenarios = [*story.scenarios, *read.scenarios]
+                continue
+            self._specified.add(id(story))
             story.backgrounds = list(read.backgrounds)
             story.scenarios = list(read.scenarios)
-
-    def add(self, stories: List["Story"], file: str) -> None:
-        """Add the scenarios of each of stories, read from the story file at file, after the ones every Story of the
-        same name holds: a story whose scenarios are written in several files, such as its shared story file and its
-        screen spec, holds them all."""
-        for read, story in self._same_named(stories, file):
-            story.scenarios = [*story.scenarios, *read.scenarios]
 
     def drop(self) -> None:
         """Take every story's scenarios and backgrounds away, leaving the map: at a fidelity whose scenarios come from

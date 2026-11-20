@@ -91,11 +91,14 @@ section: body
 *When* the Person opens Ticket.delete  
 *Then* Ticket.delete shows an invokes group holding Board.reread
 
-#### Scenario: Selecting a related node opens its file beside the open one
+#### Scenario: Selecting a related node opens the related node alone, in its own file
+
+Decided by the person on 2026-11-20 (round 3 of exploratory testing, r3-lens-08): selecting a parent shows the parent in its file, where its children can be opened in place; selecting a child, including a member under a relationship group such as invokes, shows only the child, in the child's own file. The page had opened the node that holds the group instead, so a relationship could not be followed. Browser test: `explore-graph-in-files-app.story.ui_e2e_spec.py`; the page: `harness/files_app/app/files/files-graph.spec.ts`.
 
 *Given* Ticket.delete is selected and ticket.py is open  
 *When* the Person selects Board.reread under Ticket.delete's invokes  
-*Then* board.py opens beside ticket.py, at Board.reread
+*Then* board.py opens at Board.reread  
+  *But* ticket.py, which holds Ticket.delete, is no longer open
 
 ## Story: Filter Graph By Node Type And Connector In Files App
 

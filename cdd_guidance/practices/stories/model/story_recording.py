@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from harness.graph.graph import Source
     from harness.guidance.guidance import PracticeGuidance
 
-    from cdd_guidance.practices.stories.model.story_model import Step, Story, StoryModel, StoryNode
+    from cdd_guidance.practices.stories.model.story_model import Background, Step, Story, StoryModel, StoryNode
 
 _EXPORT_CONST = re.compile(r"export const (\w+)")
 _DOMAIN_CLASS = re.compile(r"\bclass\s+([A-Z]\w*)\b")
@@ -73,6 +73,20 @@ def example_source_file(story_test: str, imported_modules: dict[str, str], name:
         elif part != ".":
             parts.append(part)
     return "/".join(parts) + suffix
+
+
+def imported_files(file: str, imported_modules: dict[str, str]) -> list[str]:
+    """The files the code file at file can import its names from, named from the project like file, with file's own
+    extension. A relative import names one file; a module named from a package root (a Python or Java import) may sit
+    under any folder above file, so each of those is a place it can be, and a reader keeps the ones that are there."""
+    relative = {example_source_file(file, imported_modules, name) for name, module in imported_modules.items() if module.startswith(".")}
+    suffix = PurePosixPath(file).suffix
+    rooted = {
+        (folder / f"{module}{suffix}").as_posix().removeprefix("./")
+        for module in set(imported_modules.values()) if not module.startswith(".")
+        for folder in PurePosixPath(file).parents
+    }
+    return sorted(relative | rooted)
 
 
 def step_checksum(name: str) -> int:
@@ -146,15 +160,7 @@ class StorySource:
         """The files this story test imports names from, named from the project: where its examples can come from. A
         relative import names one file; a module named from a package root (a Python or Java import) may sit under any
         folder above the story test, so each of those is a place it can be, and only the ones that are there are read."""
-        imported = self.imported_modules
-        relative = {self.example_source(name) for name, module in imported.items() if module.startswith(".")}
-        suffix = PurePosixPath(self.file).suffix
-        rooted = {
-            (folder / f"{module}{suffix}").as_posix().removeprefix("./")
-            for module in set(imported.values()) if not module.startswith(".")
-            for folder in PurePosixPath(self.file).parents
-        }
-        return sorted(relative | rooted)
+        return imported_files(self.file, self.imported_modules)
 
     def _script_imports(self) -> list[tuple[str, str]]:
         return [
@@ -316,6 +322,18 @@ class StoryRecording:
             return source_at(file, node.source.start_line, node.source.end_line or node.source.start_line)
         line = self._next_line(file, fallback_text or node.name)
         return source_at(file, line)
+
+    def background_span(self, background: "Background", file: str) -> "Source":
+        """The lines of file background was read from: where its reader named them; else, from its first step's line,
+        the nearest line above that names it in whatever case the file writes its heading (``### Background``), or that
+        step's line when the map kept no text of file; else the next line that holds its name."""
+        first = next((step.source.start_line for step in background.steps if step.source is not None and step.source.start_line), 0)
+        if not first or (background.has_source_file and background.source.start_line):
+            return self.span_of(background, file)
+        name = background.recorded_name.casefold()
+        lines = self.source_of(file).lines
+        heading = next((line for line in range(min(first, len(lines)) - 1, 0, -1) if name in lines[line - 1].casefold()), first)
+        return source_at(file, heading)
 
     def _next_line(self, file: str, text: str) -> int:
         lines = self.source_of(file).lines

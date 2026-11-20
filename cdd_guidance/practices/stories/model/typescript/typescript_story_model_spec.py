@@ -64,8 +64,8 @@ with description("a TypeScript runnable-story Story Map") as self:
             for path in self.leaf_paths:
                 expect(self.tree[path]).to(contain("story('Redeem a voucher', () => {"))
 
-        with it("should include examples/ at epic and sub-epic"):
-            expect(any("/examples/" in p for p in self.tree)).to(be_true)
+        with it("should write no examples file, whose data no story names"):
+            expect(any("/examples/" in p for p in self.tree)).to(equal(False))
 
         with it("should include story-test shared helper"):
             expect("tests/story-test.ts" in self.tree).to(be_true)

@@ -18,7 +18,7 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
 
 import cdd_guidance.practices  # noqa: F401
 from cdd_guidance.practices.ux.model.json.nodes import JsonUxMap
-from cdd_guidance.practices.ux.ux import NoJavascriptPractice, Ux, UxOutsideSession
+from cdd_guidance.practices.ux.ux import NoJavascriptPractice, Ux, UxOutsideSession, ViewNotRendered
 from cdd_guidance.practices.ux.model.nodes import Screen
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 from space.session.sessions import Sessions
@@ -56,8 +56,16 @@ with description("Ux fidelity and format defaults"):
             expect(self.ux.fidelities.current.name).to(equal("mockup"))
 
     with context("Ux constructed with fidelity front_end_code"):
-        with it("should default format to html"):
-            expect(Ux(fidelity="front_end_code").format).to(equal("html"))
+        with before.each:
+            self.ux = Ux(fidelity="front_end_code")
+
+        with it("should default to typescript, a format the fidelity writes"):
+            expect(self.ux.format).to(equal("typescript"))
+
+    with context("at each of its fidelities"):
+        with it("should default to a format that fidelity writes"):
+            strays = [fidelity.name for fidelity in Ux().fidelities if fidelity.default_format.name not in fidelity.outputs]
+            expect(strays).to(equal([]))
 
     with context("Ux constructed with an unsupported fidelity"):
         with it("should raise ValueError"):
@@ -92,6 +100,29 @@ with description("Ux transform tool"):
             expect(
                 lambda: Ux().render("json", "{}", source="yaml")
             ).to(raise_error(ValueError))
+
+
+with description("a front-end view rendered to another format"):
+    with before.each:
+        self.ux = Ux(fidelity="front_end_code")
+        self.view = "export function CheckoutView() {\n  return <main>Checkout</main>;\n}\n"
+
+    with context("from typescript to javascript"):
+        with it("should refuse it as a view, which is written and not rendered, naming the format"):
+            expect(lambda: self.ux.render("javascript", self.view, source="typescript")).to(
+                raise_error(ViewNotRendered, "UX front-end views are written by hand in javascript, not rendered: no render reads or writes one.")
+            )
+
+    with context("with no source format named"):
+        with it("should refuse it as a view, not read it as a mockup page"):
+            expect(lambda: self.ux.render("drawio", self.view)).to(raise_error(ViewNotRendered))
+
+    with context("from a mockup page to typescript"):
+        with it("should refuse it, naming typescript"):
+            def render():
+                self.ux.render("typescript", "<html></html>", source="html")
+
+            expect(render).to(raise_error(ViewNotRendered))
 
 
 with description("Ux ensure_javascript tool"):
@@ -130,3 +161,48 @@ with description("Ux contexts instruction"):
 
         with it("should return non-empty prose"):
             expect(len(self.contexts) > 0).to(be_true)
+
+
+_UX_CONTEXT = (
+    "# UX context\n\n"
+    "Scope: Browse Books, Fill Cart\n\n"
+    "## Invariants\n- A Cart Line shows one Book and its quantity.\n\n"
+    "## Notes\n- A Customer reaches the Cart from every screen through the Main Nav.\n"
+)
+_IA_DRAWING = (
+    '<mxfile host="drawio-ux"><diagram id="site-map" name="Site Map"><mxGraphModel><root>'
+    '<mxCell id="0"/><mxCell id="1" parent="0"/>'
+    '<mxCell id="2" value="Book List" style="rounded=1;" vertex="1" parent="1"><mxGeometry x="40" y="40" width="200" height="48" as="geometry"/></mxCell>'
+    '<mxCell id="3" value="Cart" style="rounded=1;" vertex="1" parent="1"><mxGeometry x="300" y="40" width="200" height="48" as="geometry"/></mxCell>'
+    '<mxCell id="4" value="View cart" style="html=1;" edge="1" source="2" target="3" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>'
+    "</root></mxGraphModel></diagram></mxfile>"
+)
+
+
+with description("a UX map rendered over the other file its fidelity keeps"):
+    with before.each:
+        self.ux = Ux(fidelity="ia")
+
+    with context("from its drawing, which holds no scope or notes, over the UX context a person wrote"):
+        with before.each:
+            self.result = self.ux.render("markdown", _IA_DRAWING, source="drawio", previous=_UX_CONTEXT)
+
+        with it("should keep the scope, the invariants, and the notes the UX context holds"):
+            expect(self.result["content"]).to(equal(_UX_CONTEXT))
+
+    with context("from its UX context, which holds no screens, over the drawing a person made"):
+        with before.each:
+            self.result = self.ux.render("drawio", _UX_CONTEXT, source="markdown", previous=_IA_DRAWING)
+
+        with it("should keep the drawing with its screens and transitions"):
+            expect(self.result["content"]).to(equal(_IA_DRAWING))
+
+    with context("from a map that holds its own scope, over the UX context a person wrote"):
+        with before.each:
+            self.result = self.ux.render("markdown", UxJsonSample().render(), source="json", previous=_UX_CONTEXT)
+
+        with it("should write the map's scope"):
+            expect("Scope: Place New Order" in self.result["content"]).to(be_true)
+
+        with it("should keep the invariants the map does not hold"):
+            expect("- A Cart Line shows one Book and its quantity." in self.result["content"]).to(be_true)

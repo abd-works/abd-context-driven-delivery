@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import TYPE_CHECKING, Iterable, Optional
 
 from harness.graph.model_node import ModelChildren
 from harness.graph.graph import Graph
@@ -13,6 +13,9 @@ from .nodes import ContentType, Control, Interaction, NavComponent, Region, Scre
 from .reference_paths import ReferencePaths
 from .ux_node import UxNode
 
+
+if TYPE_CHECKING:
+    from harness.guidance.guidance import PracticeGuidance
 
 ScreenCopies = dict[int, Screen]
 """Each source screen's copy, by the identity of the source screen, while a map is copied."""
@@ -28,6 +31,7 @@ class ScreenNotOnMap(KeyError):
 
 class UxMap(UxNode):
     _semantic_type_name = "UxMap"
+    graph_facts = ("scope",)
 
     screen_type: type[Screen] = Screen
     region_type: type[Region] = Region
@@ -43,6 +47,19 @@ class UxMap(UxNode):
     """Where this format's map sits in a workspace folder, as glob patterns tried in order; ``{folder}`` is the
     folder's own name. The first pattern that matches a file wins."""
 
+    holds_screens: bool = True
+    """Whether this format's file holds the map's screens; the UX context file holds only the scope and the notes, so
+    a map read from it has none and is not held to having any."""
+
+    map_file_suffixes: tuple[str, ...] = ()
+    """The file endings this format's map is written with, such as ``.drawio``; none for a format no file is read
+    back from. The graph reading opens only the files that end with one."""
+
+    def reads_file(self, file: Path, text: str) -> bool:
+        """Whether file, which holds text, is a UX map in this format: many files share an ending, so each format says
+        which of them are its own. A format no file is read back from reads none."""
+        return False
+
     def __init__(self, name: str = "UxMap", sequential_order: int = 0, graph: Graph | None = None) -> None:
         # A map is the root of its screens, their parts and the stories they show. One made on no graph is detached, as
         # every model object is until a practice adopts it: its screens keep the stories they show by key, and resolve
@@ -57,6 +74,14 @@ class UxMap(UxNode):
         self.nav_components = NavComponents(self)
         self.context = UxContext()
         self.attach(self.context, "context")
+
+    def join(self, practice: PracticeGuidance) -> None:
+        """Make this map and its whole tree practice's nodes, its context with them: the context is the map's one part
+        that sits in no list, so the map brings it along itself."""
+        super().join(practice)
+        # A map made on a graph joins it while it is still being built, before it has its context to bring.
+        if "context" in vars(self):
+            self.attach(self.context, "context")
 
     @classmethod
     def create(cls, name: str | Graph = "UxMap", sequential_order: int = 0, graph: Graph | None = None) -> "UxMap":

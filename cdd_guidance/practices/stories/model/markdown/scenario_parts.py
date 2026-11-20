@@ -122,9 +122,11 @@ class ExamplesTable:
 
     def label(self, fields: Dict[str, str], index: int, shared: bool) -> str:
         """The name an example row is kept under: its example or name column, else, for an example the story's
-        scenarios share, its first column or its group, else its place."""
+        scenarios share, its first column or its group, and for a scenario's own row, such as a row of a Scenario
+        Outline, its scenario column; else its place."""
         first = str(fields.get(self.headers[0], "")).strip("+ ") if shared and self.headers else ""
-        return str(fields.get("example") or fields.get("name") or first or (self.group if shared else "") or f"example-{index}")
+        own = "" if shared else fields.get("scenario")
+        return str(fields.get("example") or fields.get("name") or first or (self.group if shared else "") or own or f"example-{index}")
 
 
 class BackgroundReading:

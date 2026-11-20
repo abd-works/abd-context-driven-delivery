@@ -26,12 +26,18 @@ _EXAMPLES_FILE_ENDINGS = {
 
 
 class DomainFixtureExampleFiles(PracticeGraphRule):
+    """An example a story test in code uses sits in an examples file, named as its language names one, under an
+    examples folder. An example read from a markdown scenarios file is a row of a table there, which no examples
+    module holds, so only an example that comes from code is asked."""
+
     slug = "domain-fixture-example-files"
     node_types = ("Example",)
 
     def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         path = self._fixture_path(node).lower()
         name = path.rsplit("/", 1)[-1]
+        if not Format.from_extension(PurePosixPath(name).suffix).is_code:
+            return []
         if not name.endswith(tuple(_EXAMPLES_FILE_ENDINGS.values())):
             return [f"Example file {name!r} should end with {self._ending_for(name)} under an examples/ folder."]
         if "examples" not in PurePosixPath(path).parent.parts:

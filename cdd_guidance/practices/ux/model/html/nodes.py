@@ -178,6 +178,11 @@ class HtmlUxMap(JsonUxMap):
     written any other way is not a parse source. Its controls are HtmlControls, which write their own markup."""
 
     workspace_files = ("{folder}.html", "index.html", "mockup.html", "ux.html", "*.html")
+    map_file_suffixes = (".html",)
+
+    def reads_file(self, file: Path, text: str) -> bool:
+        """A page this format rendered, which carries its map in a ux-map-json comment; any other page holds no map."""
+        return _MODEL_MARKER in text
     control_type = HtmlControl
     story_demo_control_type = HtmlStoryDemoControl
 

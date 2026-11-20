@@ -1,5 +1,5 @@
 """One read of the code into Clean Engineering's graph: the files it parses, the folders it takes, and the class nodes
-it adds and links, with each class a model document describes that no code declares. The practice makes one for each
+it adds and links, with each class a model document describes, beside the code that implements it. The practice makes one for each
 read (``GraphReading.read_working_copy``), so nothing one read finds stays on the practice for the next."""
 
 from __future__ import annotations
@@ -27,6 +27,7 @@ from cdd_guidance.practices.clean_engineering.model.production_code import is_te
 if TYPE_CHECKING:
     from harness.graph.graph import Node
 
+    from cdd_guidance.practices.clean_engineering.model.call_links import ClassesInReach
     from cdd_guidance.practices.clean_engineering.model.graph_reading import GraphReading
     from cdd_guidance.practices.clean_engineering.model.operation import Operation
     from cdd_guidance.practices.clean_engineering.model.property import Property
@@ -34,7 +35,7 @@ if TYPE_CHECKING:
 
 # The fact a folder's module or package keeps: whether any of its source is production code.
 PRODUCTION_FACT = "holds_production_code"
-# The fact a class keeps when a model document describes it and no code declares it: the design, read from the
+# The fact a class keeps when a model document describes it: the design, read from the
 # document, standing in for code not written yet.
 DESCRIBED_FACT = "described_by_model_document"
 _CLASS_NAMES = re.compile(r"\bclass\s+(\w+)")
@@ -50,8 +51,9 @@ class CodeRead:
     that do not parse, with the reason. Made for each read, so nothing one read finds stays on the practice for the
     next. It holds the folders the read takes and the class nodes it adds."""
 
-    def __init__(self, reading: "GraphReading") -> None:
+    def __init__(self, reading: "GraphReading", reach: "ClassesInReach") -> None:
         self._reading = reading
+        self._reach = reach
         self._root = Path(reading.in_graph.source_root)
         report_progress("clean_engineering · folders")
         self._folders = CodeFolders(reading)
@@ -63,18 +65,18 @@ class CodeRead:
 
     def read(self) -> None:
         """Parse the files, add the folders, classes, and members they hold, and each class a model document describes
-        that no code declares, then link the types and the folders."""
+        then link the types and the folders."""
         self._parse()
         self._record_public_sources()
         declared = self._class_names()
-        classes = ClassNodes(self._reading, set(declared))
+        classes = ClassNodes(self._reading, set(declared), self._reach)
         self._folders.add()
         for file, module in self._modules.items():
             relative = file.relative_to(self._root).as_posix()
             folder = self._folders.take(relative, module)
             for cls in module.classes:
                 classes.add(relative, folder, cls)
-        DescribedClasses(self._reading, classes).add(declared)
+        DescribedClasses(self._reading, classes).add()
         classes.link_types()
         for file, reason in self._unreadable.items():
             self._folders.keep_unreadable(file.relative_to(self._root).as_posix(), reason)
@@ -201,26 +203,20 @@ class OutsideScope:
 
 
 class DescribedClasses:
-    """The classes the practice's model documents describe that no code declares, added as the code's classes are, so
-    the model's rules check the design before its code is written. Each sits at its card in its document, owned by the
-    folder the document describes (the one holding its ``.context``), else the practice's root, and keeps the fact that
-    a document, not code, declares it. A class code declares keeps the code's node alone."""
+    """The classes the practice's model documents describe, added as the code's classes are, so the model's rules
+    check the design whether or not its code is written. Each sits at its card in its document, owned by the folder
+    the document describes (the one holding its ``.context``), else the practice's root, and keeps the fact that a
+    document, not code, declares it. A class code declares too is a node of its own, which the read joins to this one."""
 
     def __init__(self, reading: "GraphReading", classes: "ClassNodes") -> None:
         self._documents = reading.model_documents
         self._in_graph = reading.in_graph
         self._classes = classes
 
-    def add(self, declared: set[str]) -> None:
-        """Add each class the documents read now describe whose name no code class has, the first document's when two
-        describe it; declared holds the classes this read's code declares, and the classes held from before that code
-        declares count too."""
-        taken = declared | {node.name for node in self._in_graph.nodes("OoadClass") if not node.has_fact(DESCRIBED_FACT)}
+    def add(self) -> None:
+        """Add each class the documents read now describe, once for each document that describes it."""
         folders = {node.source.file: node for kind in ("Module", "Package") for node in self._in_graph.nodes(kind)}
         for relative, oclass in self._documents.described_now():
-            if oclass.name in taken:
-                continue
-            taken.add(oclass.name)
             described = Path(relative).parent.parent.as_posix()
             self._classes.add(relative, folders.get(described, self._in_graph.root), oclass)
             oclass.set_fact(DESCRIBED_FACT, True)
@@ -231,20 +227,25 @@ class ClassNodes:
     """The classes one read adds to the graph, with their properties, operations, and parameters, and the class names a
     type hint may name, so the read links each member to the classes its type names once every class is added."""
 
-    def __init__(self, reading: "GraphReading", class_names: set[str]) -> None:
+    def __init__(self, reading: "GraphReading", class_names: set[str], reach: "ClassesInReach") -> None:
         self._graph = reading.graph
         self._in_graph = reading.in_graph
         self._index = reading.code_index
         self._class_names = class_names
+        self._reach = reach
+        # Each relationship a person wrote on a property, as (the class's node, its kind, the class it names).
+        self._written: "list[tuple[Node, str, str]]" = []
 
     def add(self, relative: str, folder: "Node", cls: OoadClass) -> None:
         """Add the class, its properties, and its operations; each is the object the parser built."""
         cls.source_facts.load()
+        cls.properties.extend(cls.source_facts.constructor_fields())
         for member in [*cls.public_properties, *cls.operations]:
             member.keep_owner()
         node = self._in_graph.add(cls, f"clean_engineering:OoadClass:{relative}:{cls.name}", Location(relative, cls.line, cls.end_line))
         self._graph.edges.link("owns", folder, node)
         self._graph.edges.relate("belongsTo", node, folder)
+        self._written.extend((node, prop.relationship.kind, prop.relationship.target) for prop in cls.properties if prop.stereotype and prop.relationship)
         for prop in cls.public_properties:
             self._property(relative, node, prop)
         for operation in cls.operations:
@@ -261,8 +262,12 @@ class ClassNodes:
         for edge in self._in_graph.edge_index.of("properties"):
             self._link_property(edge.parent, edge.child)
         for operation in self._in_graph.nodes("Operation"):
-            for other in self._classes_named_in(operation.get_fact("return_type")):
+            for other in self._classes_named_in(operation.get_fact("return_type"), operation.source.file):
                 self._graph.edges.relate("returns", operation, other)
+        for cls, kind, target in self._written:
+            related = self._reach.class_named(target, cls.source.file)
+            if related is not None:
+                self._graph.edges.relate(kind, cls, related)
 
     def _property(self, relative: str, cls: "Node", prop: "Operation | Property") -> None:
         """A field the class declares, or a getter: the operation that reads it, which is the property's node. Its type
@@ -287,19 +292,19 @@ class ClassNodes:
         if not self._names_in(hint):
             return
         self._graph.edges.link("relative", cls, prop)
-        for other in self._classes_named_in(hint):
+        for other in self._classes_named_in(hint, cls.source.file):
             if other.name != cls.name:
                 self._graph.edges.relate("hasType", prop, other)
                 self._graph.edges.relate("dependsOn", cls, other)
 
-    def _classes_named_in(self, hint: str | None) -> "list[Node]":
-        """The first class the graph holds under each name the hint names."""
-        return [found[0] for found in (self._index.classes_named(name) for name in self._names_in(hint)) if found]
+    def _classes_named_in(self, hint: str | None, file: str) -> "list[Node]":
+        """The class file means by each name the hint names: the one it declares or imports."""
+        return [found for found in (self._reach.class_named(name, file) for name in self._names_in(hint)) if found is not None]
 
     def _names_in(self, hint: str | None) -> list[str]:
-        """The class names a type hint names, each as a whole type, not as a prefix of a longer name; a generic
-        container's hint names none."""
-        if not hint or "[" in hint:
+        """The class names a type hint names, each as a whole type, not as a prefix of a longer name; a collection's
+        hint names the class it holds."""
+        if not hint:
             return []
         words = set(_HINT_WORD.findall(hint))
         return sorted(

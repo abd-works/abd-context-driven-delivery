@@ -262,3 +262,8 @@ with description("a heading a link names by its anchor"):
     with context("that no heading has"):
         with it("should name no lines"):
             expect(self.text.anchored_lines("no-such-heading")).to(be_none)
+
+    with context("that names a heading holding a link, as a story map's story links its scenarios"):
+        with it("should be found by the anchor made from the words the heading shows"):
+            linked = MarkdownText("# Story Map\n\n### (S) Person --> [Delete Ticket](../story_tests/remove_tickets_story.test.md)\n\nThe Person removes a ticket.\n")
+            expect(linked.anchored_lines("s-person----delete-ticket")).to(equal((3, 5)))
