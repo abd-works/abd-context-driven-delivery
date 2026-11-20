@@ -359,3 +359,13 @@ with description("a graph built for a chat's call"):
 
         with it("should pass on the worker's reports, before its own of what the worker built"):
             expect(self.heard.count("Loading saved clean_engineering nodes")).to(equal(2))
+
+    with context("that holds no practice, as the graph of a session with every practice turned off does"):
+        with before.all:
+            self.folder = Path(tempfile.mkdtemp(prefix="cdd-graph-no-practice-"))
+            (self.folder / "cart.py").write_text("class Cart:\n    pass\n", encoding="utf-8")
+            self.none_held = Graph([])
+
+        with it("should build in a worker that holds no practice either, and read no node"):
+            self.none_held.load_files(str(self.folder), [], ["cart.py"], call=_FROM_A_CHAT)
+            expect(list(self.none_held.practices.opened)).to(equal([]))

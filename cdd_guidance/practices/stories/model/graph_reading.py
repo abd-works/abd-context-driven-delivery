@@ -7,7 +7,7 @@ from __future__ import annotations
 import os
 import re
 from functools import cached_property
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
 from harness.agent_tools.progress import report_progress
@@ -286,15 +286,42 @@ class ImportedFiles:
         self._project = project if inside else self._stories_root
         self._imports: dict[str, list[str]] = {}
         self._reached: dict[str, set[Path]] = {}
+        self._texts: dict[str, str] = {}
 
     def reached_from(self, step: "Node") -> set[Path]:
         """Every file the story file of step imports, straight or through the files it imports; the story file's own
         imports come from the facts its nodes keep, the others' from their text."""
-        file = (self._stories_root / step.source.file).relative_to(self._project).as_posix()
+        file = self._named_from_project(step)
         if file not in self._reached:
-            self._imports.setdefault(file, self._imported(file, step.get_fact("imported_modules") or {}))
-            self._reached[file] = {(self._project / found).resolve() for found in self._closure(file)}
+            modules = step.get_fact("imported_modules") or {}
+            self._imports.setdefault(file, self._imported(file, modules))
+            reached = self._closure(file) | self._package_files(file, modules)
+            self._reached[file] = {(self._project / found).resolve() for found in reached}
         return self._reached[file]
+
+    def text_of(self, step: "Node") -> str:
+        """The text of step's story file as it is on disk, read once; empty when the file is gone."""
+        file = self._named_from_project(step)
+        if file not in self._texts:
+            path = self._project / file
+            self._texts[file] = path.read_text(encoding="utf-8", errors="replace") if path.is_file() else ""
+        return self._texts[file]
+
+    def _named_from_project(self, step: "Node") -> str:
+        return (self._stories_root / step.source.file).relative_to(self._project).as_posix()
+
+    def _package_files(self, file: str, modules: dict[str, str]) -> set[str]:
+        """The files, in file's own language, of each package file imports a module of: a story file that imports
+        only a seed or an example from the package of the code it tests gets that package's objects from it, so the
+        package is in its reach. A module named with no folder, such as the story-test library, names no package."""
+        suffix = PurePosixPath(file).suffix
+        unaliased = {name: _PATH_ALIAS_MARK.sub("", module) for name, module in modules.items() if "/" in module.lstrip("./")}
+        folders = {PurePosixPath(found).parent for found in imported_files(file, unaliased)}
+        return {
+            path.relative_to(self._project).as_posix()
+            for folder in folders if (self._project / folder).is_dir()
+            for path in (self._project / folder).iterdir() if path.is_file() and path.suffix == suffix
+        }
 
     def _closure(self, file: str) -> set[str]:
         found: set[str] = set()
@@ -381,7 +408,7 @@ class StoryLinks:
         called = set(step.get_fact("callees") or []) | set(_MEMBER_CALL.findall(body))
         matched = [member for name in sorted(called) for member in self.clean.code_index.members_named(name)]
         matched += [function for function in self._functions_called(body) if function not in matched]
-        matched = [member for member in matched if self._can_call(step, member)]
+        matched = self._of_known_receiver(step, body, [member for member in matched if self._can_call(step, member)])
         step.set_fact("calls_reach", self._calls_reach(step, called | set(_FUNCTION_CALL.findall(body)), matched))
         matched = [member for member in matched if self._is_tested_code(member)]
         epic = self.tree.epic_of(step) if matched else None
@@ -396,9 +423,32 @@ class StoryLinks:
             for example in self._observed_by(step, body):
                 self.graph.edges.relate("observes", step, example)
 
+    def _of_known_receiver(self, step: "Node", body: str, members: list["Node"]) -> list["Node"]:
+        """members, keeping of the operations and properties several classes in reach declare under one name only the
+        one of the class the story file built the call's receiver as (``self.board = Board()``); when no line of the
+        file says which class the receiver is, none of them, since the name alone does not say which is called. A
+        name one class declares, and a module's function, stay."""
+        owners: dict[str, set[tuple[str, str]]] = {}
+        for member in members:
+            if member.get_fact("owner") != MODULE_FUNCTION_HOLDER:
+                owners.setdefault(member.name, set()).add((member.source.file, member.get_fact("owner")))
+        shared = {name for name, declaring in owners.items() if len(declaring) > 1}
+        if not shared:
+            return members
+        built = {name: self._classes_built_for(step, body, name) for name in shared}
+        return [member for member in members if member.name not in shared or member.get_fact("owner") in built[member.name]]
+
+    def _classes_built_for(self, step: "Node", body: str, name: str) -> set[str]:
+        """The class names step's story file builds each receiver of a call to name in body as."""
+        text = self.imported_files.text_of(step)
+        receivers = set(re.findall(rf"((?:[\w$]+\.)*[\w$]+)\.{re.escape(name)}\s*\(", body))
+        built = (re.search(rf"(?<![\w$.]){re.escape(receiver)}\s*(?::[^=\n]+)?=\s*(?:new\s+)?([A-Za-z_$][\w$]*)\s*\(", text) for receiver in receivers)
+        return {found.group(1) for found in built if found is not None}
+
     def _can_call(self, step: "Node", member: "Node") -> bool:
-        """Whether step's story file can call member: member sits in that file, or in a file it imports, straight or
-        through the files it imports. A call is never joined to an operation on its name alone."""
+        """Whether step's story file can call member: member sits in that file, in a file it imports, straight or
+        through the files it imports, or in a package it imports a module of. A call is never joined to an operation
+        on its name alone."""
         if member.source is None or not member.source.file:
             return False
         if member.source.file == step.source.file:

@@ -212,6 +212,8 @@ class _DomainClasses:
 
     def __init__(self, classes: PracticeNodes | None) -> None:
         self._classes = classes
+        # Clean Engineering's module or package node of each folder, read once when first asked for.
+        self._folder_nodes: dict[Path, Node] | None = None
         every = [cls for cls in classes.nodes("OoadClass") if not cls.has_fact(DESCRIBED_FACT)] if classes is not None else []
         self._every = every
         self._names = {cls.name for cls in every}
@@ -227,6 +229,17 @@ class _DomainClasses:
 
     def holds_a_domain(self, folder: str) -> bool:
         return folder in self._stereotyped_folders
+
+    def folder_node(self, folder: Path) -> Node | None:
+        """The node Clean Engineering holds for folder: its Module when the folder has a module card, else its Package
+        when it holds only source; none for a folder it read nothing from, or without Clean Engineering."""
+        if self._classes is None:
+            return None
+        if self._folder_nodes is None:
+            root = Path(self._classes.source_root).resolve()
+            held = [node for kind in ("Package", "Module") for node in self._classes.nodes(kind)]
+            self._folder_nodes = {(root / node.source.file).resolve(): node for node in held if node.source is not None and node.source.file}
+        return self._folder_nodes.get(folder.resolve())
 
     def block_of(self, tactical: TacticalClass, in_domain: bool) -> tuple[TacticalClass, str] | None:
         """The class with the building-block kind it is: its stereotype's, or in a folder that holds a domain the one
@@ -297,6 +310,27 @@ class _WorkingCopyRead:
         described.read()
         self._link_blocks()
         self._map_contexts(marked)
+        self._join_folders()
+
+    def _join_folders(self) -> None:
+        """Join each bounded context and each aggregate a folder holds to the Clean Engineering module or package of
+        that folder (``isA``), as a building block is joined to its class: they are read from one folder and stay two
+        nodes. One a document describes, which no folder holds, is joined to none."""
+        for node in [*self._in_graph.nodes("BoundedContext"), *self._in_graph.nodes("Aggregate")]:
+            folder = self._folder_held_by(node)
+            held = self._domain.folder_node(folder) if folder is not None else None
+            if held is not None:
+                self._graph.edges.relate("isA", node, held)
+
+    def _folder_held_by(self, node: Node) -> Path | None:
+        """The folder a bounded context or an aggregate was read from: the folder its source names, or the one whose
+        ``.context/bounded-context.md`` marks the context; none for one read from a document's heading."""
+        named = self._root / node.source.file
+        if named.is_dir():
+            return named
+        if named.is_file() and PurePosixPath(node.source.file).as_posix().endswith(BOUNDED_CONTEXT_MARKER.as_posix()):
+            return named.parent.parent
+        return None
 
     def _bounded_contexts(self) -> list[tuple[str, BoundedContext, str]]:
         """Each folder that holds ``.context/bounded-context.md`` is a bounded context, read by the DDD model: the

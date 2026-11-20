@@ -261,3 +261,34 @@ with description("a spec read into the graph beside the code it drives"):
             expect(_linked(self.graph, "alignsWith", "src/ordering/order.spec.ts", "an order")).to(
                 equal(["src/ordering/order.ts:Order"])
             )
+
+
+_STATES_AND_OBSERVATIONS_IN_TURN = """\
+from mamba import context, description, it
+
+with description("a shelf"):
+    with it("should start empty"):
+        pass
+
+    with context("with a book"):
+        with it("should hold one book"):
+            pass
+
+    with it("should name its section"):
+        pass
+"""
+
+
+with description("a describe that writes observations and states in turn, read into the graph"):
+    with before.all:
+        self.folder = Path(tempfile.mkdtemp())
+        (self.folder / "shelf_spec.py").write_text(_STATES_AND_OBSERVATIONS_IN_TURN, encoding="utf-8")
+        self.graph = Graph()
+        self.graph.load_files(str(self.folder), ["bdd"], ["shelf_spec.py"])
+
+    with after.all:
+        shutil.rmtree(self.folder, ignore_errors=True)
+
+    with it("should list them in the order the spec writes them, not its observations first"):
+        shelf = next(node for node in self.graph.practice("bdd").reading.in_graph.nodes("Description") if node.name == "a shelf")
+        expect([child.name for child in shelf.children]).to(equal(["should start empty", "with a book", "should name its section"]))
