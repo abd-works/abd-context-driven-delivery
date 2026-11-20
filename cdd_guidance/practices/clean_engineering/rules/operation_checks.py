@@ -106,6 +106,9 @@ class OperationMeasureRule(ProductionCodeRule):
     node_types = ("Operation", "Property")
 
     def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+        """A field is no operation: one a constructor assigns sits inside the constructor, whose measures are not its."""
+        if node.type == "Property" and not node.get_fact("is_property"):
+            return []
         return self.measure(node)
 
     def measure(self, operation: "Node") -> list[str]:

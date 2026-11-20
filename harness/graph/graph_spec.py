@@ -230,6 +230,7 @@ with description("a graph"):
                             "demonstrates",
                             "hasParameter",
                             "hasType",
+                            "baseClass",
                             "demonstratedThrough",
                             "invokedBy",
                             "returns",
@@ -265,8 +266,8 @@ with description("a graph"):
                 ]
                 expect(len(copies)).to(be_above(0))
 
-            with it("should list token and customer first on AccountCredentials"):
-                expect(tree_names(self.account)[:2]).to(equal(["token", "customer"]))
+            with it("should list first on AccountCredentials the properties typed as another class, a list of one included, in file order"):
+                expect(tree_names(self.account)[:3]).to(equal(["token", "validationCodeMessages", "customer"]))
 
             with it("should include register on AccountCredentials"):
                 expect(tree_names(self.account)).to(contain("register"))

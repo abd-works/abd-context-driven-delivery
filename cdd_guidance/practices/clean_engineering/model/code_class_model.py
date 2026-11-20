@@ -97,7 +97,8 @@ class CodeOperation(Operation):
 
     def doc_text(self) -> str:
         """The operation's own description. A description joined from its comments is not documentation."""
-        return "" if self.invariants else self.description
+        joined = "\n".join(invariant.text for invariant in self.invariants)
+        return "" if self.description == joined else self.description
 
     def signature(self, contract: bool) -> List[str]:
         """The lines that open the operation: its doc comment, decorators, and head."""

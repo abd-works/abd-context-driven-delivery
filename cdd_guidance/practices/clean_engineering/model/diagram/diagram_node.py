@@ -272,6 +272,8 @@ class ContainmentForest:
 class DiagramCleanEngineeringModel(CleanEngineeringModel):
     """Shared diagram channel. Draw.io extends this model."""
 
+    writes_prose = False
+
     def load_module_cell(self, source: Module) -> DiagramModule:
         """A module of this channel's own kind for a container module the containment forest made, filled from it."""
         loaded = self.load_module(source)

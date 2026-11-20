@@ -78,6 +78,39 @@ Observed (`cdd_guidance/practices/clean_engineering/model/graph_reading_spec.py`
 *Then* the class BomOnly is in the graph
   *And* no source-parses violation names ++shop/bom.py++
 
+#### Scenario: Join a call to the operation its receiver names
+
+Observed (`cdd_guidance/practices/clean_engineering/model/graph_bookshop_spec.py`). Source: the person's answer 3 of 2026-11-20, "Nothing is joined on a name alone: a call or a link goes to the node the file's own imports, path or link target name"; defect r3-widget-09.
+
+*Given* Cart and Order both have an operation `total`, and Shipment's `dispatch` calls `self.order.total()` where `order` is typed Order
+  *And* ExpressShipment extends Shipment and its constructor calls `super().__init__`
+*When* the Knowledge Graph reads the bookshop project for Clean Engineering
+*Then* `Shipment.dispatch` invokes `Order.total` and not `Cart.total`
+  *And* `ExpressShipment.__init__` invokes `Shipment.__init__` and no other class's constructor
+  *And* a read of `self.order.payment.authorised` is joined to `Order.payment` and `Payment.authorised`, not to every property of those names
+
+#### Scenario: Read a constructor's fields, a base class and a list's class
+
+Observed (`graph_bookshop_spec.py`). Source: `clean_engineering/model/schema.yaml`, class, `baseClass?: class`, `dependsOn?: [class]`, `participants?: [operation | property]`; defect r3-widget-10.
+
+*Given* the bookshop's Python classes assign their fields in `__init__`, such as `self.lines: list[CartLine] = []`
+*When* the Knowledge Graph reads the bookshop project for Clean Engineering
+*Then* each public field a constructor assigns is a property of its class
+  *And* ExpressShipment has a baseClass edge to Shipment
+  *And* Cart depends on CartLine, the class its list holds
+  *And* `Catalogue.search`, which returns `list[Book]`, returns Book
+
+#### Scenario: Hold a model document's class beside the code class that implements it
+
+Observed (`graph_bookshop_spec.py`, `graph_reading_spec.py`). Source: the person's answer 3 of 2026-11-20, "A class in a model document and the class in code that implements it are two nodes with an edge; neither replaces the other when both are loaded"; defect r3-widget-08.
+
+*Given* each module of the bookshop holds a class model in `.context` and the Python that implements it
+*When* the Knowledge Graph reads the bookshop project for Clean Engineering
+*Then* each class a model describes is a node at its card, with the stereotypes the model gives it
+  *And* each code class has an implements edge to the class its own module's model describes under its name
+  *And* a model class has a composition, aggregation or association edge to the class a property of it relates to, as the model writes it
+  *And* the class's name answers the code's class first
+
 ## Story: Read Story Maps And Story Tests
 
 ### Evidence

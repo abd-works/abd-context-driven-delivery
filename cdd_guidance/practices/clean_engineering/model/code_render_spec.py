@@ -214,3 +214,19 @@ with description("a class model rendered to code"):
                     for language in languages
                 ]
                 expect(unfinished).to(equal([True] * len(languages)))
+
+
+with description("a body written in one language and kept as comments in another") as self:
+    with before.each:
+        from cdd_guidance.practices.clean_engineering.model.code_body import PYTHON, TYPESCRIPT, CodeBody
+
+        self.python = CodeBody("self.items.append(item)\nreturn item", PYTHON)
+        self.kept = "\n".join(self.python.lines_in(TYPESCRIPT, "    ", ""))
+        self.read_back = CodeBody.from_written(self.kept, TYPESCRIPT)
+        self.own = CodeBody.from_written("// add the item\nthis.items.push(item);", TYPESCRIPT)
+
+    with it("should read back as the body in the language it was written in"):
+        expect((self.read_back.language.name, self.read_back.text)).to(equal(("python", "self.items.append(item)\nreturn item")))
+
+    with it("should read a body with comments of its own as that language's body"):
+        expect((self.own.language.name, self.own.text)).to(equal(("typescript", "// add the item\nthis.items.push(item);")))

@@ -188,6 +188,7 @@ class OoadClass(OoadNode):
     def update_self(self, source: "OoadNode") -> None:
         """Copy what the class itself says; its properties and operations are reconciled as children."""
         assert isinstance(source, OoadClass)
+        self.name = source.name
         self.intent = source.intent
         self.stereotypes = list(source.stereotypes)
         self.module_path = list(source.module_path)
@@ -325,6 +326,8 @@ class Module(OoadNode):
         # What its module card says: its purpose, its public seam and the terms it names, its constraint, and the
         # modules it depends on. Its parser or a translation fills them.
         self.description = ""
+        # Its language: the lines that open its card and define the terms a caller uses.
+        self.language = ""
         self.seam = ""
         self.constraint = ""
         self.seam_terms: List[str] = []
@@ -392,7 +395,9 @@ class Module(OoadNode):
 
     def update_self(self, source: "OoadNode") -> None:
         assert isinstance(source, Module)
+        self.name = source.name or self.name
         self.description = source.description
+        self.language = source.language
         self.seam = source.seam
         self.constraint = source.constraint
         self.seam_terms = list(source.seam_terms)
@@ -474,6 +479,9 @@ class CleanEngineeringModel(OoadNode):
     _semantic_type_name = "CleanEngineeringModel"
     # The kind of module this model holds; a format's model names its own.
     module_type: type = Module
+    # Whether its format writes a model's prose: a class's intent, and the notes and calls under a member. A drawing
+    # writes none, so a document written from one keeps the prose it already had.
+    writes_prose = True
 
     def __init__(self, name: str | Graph = "", sequential_order: int = 1, graph: Optional[Graph] = None) -> None:
         opened = isinstance(name, Graph)

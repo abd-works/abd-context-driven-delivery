@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple, Union
 
 from cdd_guidance.practices.clean_engineering.model.bracket_structure import BracketStructure
+from cdd_guidance.practices.clean_engineering.model.type_refs import split_top_level
 
 _IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 # An interaction the model writes as a whole call, `CredentialsRepository.create(this)`, up to its closing parenthesis,
@@ -17,6 +18,10 @@ _PROSE = re.compile(
     re.I,
 )
 _PROSE_TOKENS = 3
+# A generic type as either family of languages writes one, `list[CartLine]` or `Collection<Cart>`, and an array, `Cart[]`.
+_GENERIC_TYPE = re.compile(r"^([A-Za-z_][\w.]*)\s*[\[<](.+)[\]>]$")
+_ARRAY_TYPE = re.compile(r"^(.*[\w\]>])\s*\[\]$")
+_LIST_NAMES = frozenset({"list", "List", "Array"})
 _PLACEHOLDERS = frozenset({"...", "pass", "{}"})
 
 
@@ -31,6 +36,9 @@ class CodeSpelling:
     camel_case: bool
     base_constructor: str = "super"
     base_receiver: str = "super"
+    # How it writes a list of a type, and the brackets it puts a generic type's arguments in.
+    list_of: str = "{type}[]"
+    generic_brackets: Tuple[str, str] = ("<", ">")
 
 
 @dataclass(frozen=True, eq=False)
@@ -50,6 +58,10 @@ class CodeLanguage:
     def comment(self, text: str) -> str:
         return f"{self.line_comment} {text}".rstrip()
 
+    def translation_note(self, other: "CodeLanguage") -> str:
+        """The comment this language writes above a body kept in other, which nobody has translated yet."""
+        return self.comment(f"{other.name} body to translate:")
+
     def is_unfinished(self, text: str) -> bool:
         stripped = text.strip()
         return not stripped or stripped in _PLACEHOLDERS or stripped == self.unfinished
@@ -62,7 +74,26 @@ class CodeLanguage:
         return parts[0] + "".join(part[:1].upper() + part[1:] for part in parts[1:] if part)
 
     def type_name(self, hint: str) -> str:
-        return self.type_names.get(hint.strip(), hint.strip())
+        """hint as this language spells it, whichever language wrote it: its own word for a built-in type, a list as
+        it writes one, and a generic type's arguments in its own brackets."""
+        written = hint.strip()
+        if written in self.type_names:
+            return self.type_names[written]
+        marks = BracketStructure(written).top_level_indexes("|")
+        choices = [written[start + 1:end].strip() for start, end in zip([-1, *marks], [*marks, len(written)])]
+        if len(choices) > 1:
+            return " | ".join(self.type_name(choice) for choice in choices)
+        array = _ARRAY_TYPE.match(written)
+        if array:
+            return self.spelling.list_of.format(type=self.type_name(array.group(1)))
+        generic = _GENERIC_TYPE.match(written)
+        if generic is None:
+            return written
+        arguments = [self.type_name(argument) for argument in split_top_level(generic.group(2))]
+        if generic.group(1) in _LIST_NAMES and len(arguments) == 1:
+            return self.spelling.list_of.format(type=arguments[0])
+        opening, closing = self.spelling.generic_brackets
+        return f"{generic.group(1)}{opening}{', '.join(arguments)}{closing}"
 
     def interaction(self, callee: str) -> str:
         end = self.spelling.statement_end
@@ -79,7 +110,9 @@ class CodeLanguage:
             target = self.identifier(tokens[1] if len(tokens) > 1 else head)
             created = self.spelling.construct.format(type=head, arguments=arguments)
             return f"{self.spelling.receiver}.{target} = {created}{end}"
-        return f"{head}({arguments}){end}"
+        owner, *members = head.split(".")
+        called = ".".join([owner, *(self.identifier(member) for member in members)])
+        return f"{called}({arguments}){end}"
 
     def assignment(self, name: str) -> str:
         field_name = self.identifier(name)
@@ -125,9 +158,22 @@ class CodeBody:
         marker = [f"{indent}{unfinished}"] if unfinished else []
         if self.is_empty:
             return marker
-        note = [f"{indent}{language.comment(f'{self.language.name} body to translate:')}"]
+        note = [f"{indent}{language.translation_note(self.language)}"]
         original = [f"{indent}{language.comment(line)}" for line in self.text.splitlines()]
         return note + original + marker
+
+    @classmethod
+    def from_written(cls, text: str, language: CodeLanguage) -> "CodeBody":
+        """The body text holds, as language wrote it: another language's when text is that body kept as comments under
+        a translation note, as ``lines_in`` writes one, else language's own. Read back so, a body taken to another
+        language and back is not wrapped in a second layer of comments."""
+        lines = [line.strip() for line in text.splitlines() if line.strip()]
+        notes = {language.translation_note(other): other for other in CODE_LANGUAGES if other is not language}
+        other = notes.get(lines[0]) if lines else None
+        sign = language.line_comment
+        if other is None or not all(line.startswith(sign) for line in lines):
+            return cls(text, language)
+        return cls("\n".join(line[len(sign):].removeprefix(" ") for line in lines[1:]), other)
 
     def in_language_of(self, other: "CodeBody", language: CodeLanguage) -> "CodeBody":
         if self.language is language or other.language is not language:
@@ -274,6 +320,8 @@ PYTHON_SPELLING = CodeSpelling(
     camel_case=False,
     base_constructor="super().__init__",
     base_receiver="super()",
+    list_of="list[{type}]",
+    generic_brackets=("[", "]"),
 )
 C_FAMILY_SPELLING = CodeSpelling(receiver="this", construct="new {type}({arguments})", statement_end=";", camel_case=True)
 
@@ -283,7 +331,15 @@ PYTHON = CodeLanguage(
     "    ",
     "raise NotImplementedError",
     PYTHON_SPELLING,
-    type_names={},
+    type_names={
+        "string": "str",
+        "number": "float",
+        "boolean": "bool",
+        "void": "None",
+        "null": "None",
+        "undefined": "None",
+        "any": "object",
+    },
     suffixes=(".py",),
 )
 TYPESCRIPT = CodeLanguage(

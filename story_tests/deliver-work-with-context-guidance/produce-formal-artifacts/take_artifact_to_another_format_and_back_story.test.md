@@ -99,6 +99,72 @@ Intended. Evidence still missing: where the prose is kept is the person's decisi
 *When* Claude Code renders ++.context/domain-model.md++ to drawio, then the drawing back to markdown
 *Then* ++.context/domain-model.md++ still holds the invariant, the note and the call
 
+#### Scenario: Name a second class model's own classes in its markdown
+
+Observed (`cdd_guidance/practices/clean_engineering/model/class_model_trip_spec.py`). Source: `PracticeFormats.adapter`, "every render and every read through it uses the same one"; defect r3-widget-04.
+
+*Given* Claude Code rendered the Ordering model's Python (Cart, CartLine, Order, Payment) to markdown
+*When* Claude Code renders the Fulfilment model's drawing to markdown in the same session
+*Then* the markdown names Shipment and ExpressShipment, and none of the Ordering model's classes
+  *And* ExpressShipment still extends Shipment
+
+#### Scenario: Write a class model back from its drawing as the person wrote it
+
+Observed for drawio and whiteboard (`class_model_trip_spec.py`). Source: `clean_engineering.md`, model fidelity, "The same classes, operations, and relationships must appear in every selected representation"; `RenderedFile.previous`, "a document's own words that its source does not hold"; defect widget-08.
+
+*Given* ++src/.context/src-model.md++ is written after the class model template, with front matter, a Module line, descriptions, a group heading, `//` notes and `->` calls
+*When* Claude Code renders it to drawio, then the drawing back to markdown over ++src/.context/src-model.md++
+*Then* ++src/.context/src-model.md++ reads as the person wrote it
+
+#### Scenario: Keep a class's notes and calls when its drawing gains an operation
+
+Observed (`class_model_trip_spec.py`). Defect widget-08.
+
+*Given* a person adds the operation `recall(): None` to Shipment in the Fulfilment model's drawing
+*When* Claude Code renders the drawing to markdown over the model's markdown
+*Then* Shipment holds `recall(): None`
+  *And* `dispatch(): None` still holds its call `-> Order.total` and its note
+  *And* the file still opens with its front matter and the module's description
+
+#### Scenario: Bring a class model back from Python with its relationships, notes and call owners
+
+Observed (`class_model_trip_spec.py`). Source: the Python render itself writes `# << composition >>`, the notes and `Book.is_in_stock()`; defect r3-widget-06.
+
+*Given* the Ordering model's markdown holds `<< composition >> lines: list[CartLine]`, a note under `customer_id`, and the call `-> Book.is_in_stock` under `add`
+*When* Claude Code renders it to python, then the python back to markdown
+*Then* `lines` is still a composition and `customer_id` still holds its note
+  *And* `add` still calls `Book.is_in_stock`, with its note
+  *And* the constructor reads `Cart(customer_id: str)`, and no class holds an `__init__` operation
+
+#### Scenario: Spell types and calls in the language a class model is rendered to
+
+Observed (`class_model_trip_spec.py`). Defects r3-widget-07, r3-bolt-07.
+
+*Given* the Ordering model's markdown holds `lines: list[CartLine]` and `add(book: Book, quantity: int): CartLine`, which calls `Book.is_in_stock`
+*When* Claude Code renders it to typescript
+*Then* the property reads `lines: CartLine[];` and the operation `add(book: Book, quantity: number): CartLine`
+  *And* the call reads `Book.isInStock();`, the name the file gives the operation
+  *And* the TypeScript rendered to python reads `-> bool` and `lines: list[CartLine]`
+
+#### Scenario: Write module cards back from their drawing as the person wrote them
+
+Observed for drawio and whiteboard (`cdd_guidance/practices/clean_engineering/model/module_card_trip_spec.py`). Source: rules `language-opens-the-card` and `named-seam-and-constraint`; defect r3-widget-02.
+
+*Given* three module cards, each with its language, its Purpose, Seam and Dependencies, and a Constraint section
+*When* Claude Code renders the cards to drawio, then the drawing back to markdown over the cards
+*Then* each card reads as the person wrote it
+  *And* a card whose module gained a dependency in the drawing holds the new dependency, with its language and its constraint
+
+#### Scenario: Read back from a modules whiteboard only the modules a person wrote
+
+Observed (`module_card_trip_spec.py`). Source: the drawio modules view, where a box that only groups modules is no module; defect r3-widget-03.
+
+*Given* the modules whiteboard draws `src/catalogue`, `src/ordering` and `src/fulfilment` inside a box for `src`, which no card describes
+*When* Claude Code renders the whiteboard to markdown
+*Then* the markdown holds the three modules and no module `src`
+  *And* no module depends on `src`
+  *And* each module's purpose is written once
+
 #### Scenario: Keep a scenario outline's table through code
 
 Observed for the Stories code adapters (`cdd_guidance/practices/stories/model/code_outline_examples_spec.py`), for Python and TypeScript, with the rows under an `#### Examples` heading as `templates/md/scenarios.md` writes them. Written after defects widget-19 and r3-sparky-06. Evidence still missing: a table written directly under the outline with no Examples heading, and the front matter, Story type, Domain terms and links to the domain model, which no code format holds.

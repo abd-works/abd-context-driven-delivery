@@ -516,9 +516,17 @@ class PythonFunctionBody:
         return self._owner is not None and not self.decorated("staticmethod")
 
     def callees(self) -> list[str]:
-        """The name of each function or member the function calls, in the order the tree holds them."""
+        """The name of each function or member the function calls, in the order the tree holds them; a member called
+        on a class it names is written with that class, `Book.is_in_stock`, as a brace language's is."""
         called = [child.func for child in ast.walk(self._node) if isinstance(child, ast.Call)]
-        return [func.id if isinstance(func, ast.Name) else func.attr for func in called if isinstance(func, (ast.Name, ast.Attribute))]
+        return [self._callee_name(func) for func in called if isinstance(func, (ast.Name, ast.Attribute))]
+
+    def _callee_name(self, func: ast.Name | ast.Attribute) -> str:
+        if isinstance(func, ast.Name):
+            return func.id
+        receiver = func.value
+        on_class = isinstance(receiver, ast.Name) and receiver.id[:1].isupper()
+        return f"{receiver.id}.{func.attr}" if on_class else func.attr
 
     def body_text(self, source: str) -> str:
         """The statements as written in source, with the comments above them; the docstring stays the description."""

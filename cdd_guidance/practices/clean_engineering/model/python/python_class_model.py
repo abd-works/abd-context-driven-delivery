@@ -48,16 +48,14 @@ Function = ast.FunctionDef | ast.AsyncFunctionDef
 
 
 def python_type(hint: str) -> str:
-    """A type written the way Python writes generics and arrays: `Collection<Root>` from another language is
-    `Collection[Root]`, and `Root[]` is `list[Root]`, so the file reads back as Python."""
-    generic = (hint or "").replace("<", "[").replace(">", "]")
-    while _ARRAY.search(generic):
-        generic = _ARRAY.sub(r"list[\1]", generic)
-    return generic
+    """A type, or a `name: Type` parameter, written the way Python writes it: `Collection<Root>` from another language
+    is `Collection[Root]`, `Root[]` is `list[Root]`, and `boolean` is `bool`, so the file reads back as Python."""
+    name, colon, written = (hint or "").partition(":") if _PARAMETER.match(hint or "") else ("", "", hint or "")
+    return f"{name}{colon}{' ' if colon else ''}{PYTHON.type_name(written)}" if written.strip() else (hint or "")
 
 
-# An array as another language writes one, `Root[]` or `list[Root][]`: the type before an empty pair of brackets.
-_ARRAY = re.compile(r"([\w.]+(?:\[[^\[\]]*\])?)\[\]")
+# A parameter as a model line writes one: its name, a colon, then its type.
+_PARAMETER = re.compile(r"^\w+\s*:")
 
 
 class PythonProperty(CodeProperty):
@@ -69,6 +67,18 @@ class PythonProperty(CodeProperty):
         prop = cls(name=node.target.id, sequential_order=order, type_hint=ast.unparse(node.annotation) if node.annotation else "")
         prop.line = node.lineno
         return prop
+
+    def take_comments_above(self, lines: List[str]) -> None:
+        """Keep each `#` comment line right above its declaration as a note, as a brace language keeps its `//` lines:
+        the relationship written on it (`# << composition >>`), its cardinality, where it comes from, or an invariant.
+        lines are its file's."""
+        first = (self.line or 1) - 1
+        start = first
+        while start > 0 and lines[start - 1].strip().startswith("#"):
+            start -= 1
+        for line in lines[start:first]:
+            self.take_note(line.strip().lstrip("#"))
+        self.arrow.derive()
 
     def lines(self, contract: bool) -> List[str]:
         hint = python_type(self.type_hint) or "object"
@@ -87,15 +97,23 @@ class PythonOperation(CodeOperation):
         function = PythonFunctionBody(node, owner)
         operation = cls(node.name, return_type=ast.unparse(node.returns) if node.returns is not None else "")
         operation.take_parameters(function.parameters())
-        operation.description = (ast.get_docstring(node) or "").strip()
         operation.callees = function.callees()
         operation.take_place(node)
         operation.source_facts.take_body_fingerprint("\n".join(ast.unparse(stmt) for stmt in node.body))
-        operation.source_facts.take_body(function.body_text(text), PYTHON)
+        body = function.body_text(text)
+        operation.source_facts.take_body(body, PYTHON)
+        operation.take_comments(body)
+        operation.description = (ast.get_docstring(node) or "").strip() or operation.description
         operation.is_setter = any(isinstance(item, ast.Attribute) and item.attr == "setter" for item in node.decorator_list)
         operation.published_as_tool = any(operation._decorator_name(item) in _TOOL_DECORATORS for item in node.decorator_list)
         operation.measure(function)
         return operation
+
+    def take_comments(self, body: str) -> None:
+        """Keep each `#` comment line of its body as a note, as a brace language keeps its `//` lines."""
+        for line in body.splitlines():
+            if line.strip().startswith("#"):
+                self.add_invariant(line.strip().lstrip("#"))
 
     def _decorator_name(self, decorator: ast.expr) -> str:
         """The name a decorator is written with, with or without arguments: `@mcp`, `@agent_tool(...)`, `@tools.mcp`."""
@@ -365,6 +383,9 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
         ]
         fields = [child for child in node.body if isinstance(child, ast.AnnAssign) and isinstance(child.target, ast.Name)]
         oclass.properties = [PythonProperty.from_annotation(child, order) for order, child in enumerate(fields, start=1)]
+        lines = self._text.split("\n")
+        for prop in oclass.properties:
+            prop.take_comments_above(lines)
         return oclass
 
     def _stereotypes_above(self, node: ast.ClassDef) -> list[str]:

@@ -50,8 +50,8 @@ with description("a markdown class model whose types and headings carry notes, r
     with it("should parse as Python"):
         expect(_class_names(self.python)).to(equal(["AccountCredentials", "NoticeWatcher"]))
 
-    with it("should type the property by the type alone"):
-        expect(self.python).to(contain("    email: string\n"))
+    with it("should type the property by the type alone, in Python's spelling"):
+        expect(self.python).to(contain("    email: str\n"))
 
     with it("should keep the property's note as a comment"):
         expect(self.python).to(contain("# identity"))

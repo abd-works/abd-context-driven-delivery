@@ -238,9 +238,14 @@ class WhiteboardModule(DiagramModule, _PlacedOnBoard):
     holds_sections = False
     """Whether a module it holds is a section too, whose title needs room above it in this module's header."""
 
+    only_groups = False
+    """Whether the module is a box nobody wrote, drawn only to group the modules whose paths it holds; the modules
+    view says. Its element id starts with `nest`, as its draw.io cell's does, so a board reads it back as no module."""
+    GROUPING_ROLE = "nest"
+
     @property
     def element_id(self) -> str:
-        return f"{self.ROLE}.{_key(self.name)}"
+        return f"{self.GROUPING_ROLE if self.only_groups else self.ROLE}.{_key(self.name)}"
 
     @property
     def about_id(self) -> str:
@@ -308,6 +313,7 @@ class _ModulesBoard(ModulesView):
     def draw(self) -> Whiteboard:
         for name, cell in self._cells.items():
             cell.holds_modules = bool(self._forest.children_of.get(name))
+            cell.only_groups = name in self._forest.synthetic
         for name, cell in self._cells.items():
             cell.holds_sections = any(self._cells[child].holds_modules for child in self._forest.children_of.get(name, []))
         layout = _WhiteboardModuleLayout(self._forest, self._cells).lay_out()

@@ -47,6 +47,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
+from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUCTOR_NAMES
 from cdd_guidance.practices.clean_engineering.model.type_refs import split_top_level
 
 if TYPE_CHECKING:
@@ -135,8 +136,8 @@ class MarkdownOoadClass(OoadClass):
         return ClassHeading(self.name, list(self.stereotypes), self.declared_bases(known_names), self._card_note)
 
     def _member_lines(self) -> List[str]:
-        constructors = [operation for operation in self.operations if operation.name in {self.name, "constructor"}]
-        methods = [operation for operation in self.operations if operation.name not in {self.name, "constructor"}]
+        constructors = [operation for operation in self.operations if self._builds_it(operation)]
+        methods = [operation for operation in self.operations if not self._builds_it(operation)]
         lines = [self._public_line(self._constructor_line(constructors))]
         for operation in constructors:
             lines.extend(self._notes_under(operation.callees, operation.invariant_lines()))
@@ -152,6 +153,10 @@ class MarkdownOoadClass(OoadClass):
             lines.extend(self._notes_under(operation.callees, operation.invariant_lines()))
         lines.extend(line for item in self.dependencies for line in item.lines())
         return lines
+
+    def _builds_it(self, operation: Operation) -> bool:
+        """Whether operation is the class's constructor, named after the class or as a code language names one."""
+        return operation.name == self.name or operation.is_constructor
 
     def _constructor_line(self, constructors: List[Operation]) -> str:
         if constructors:
@@ -177,11 +182,11 @@ class MarkdownOoadClass(OoadClass):
         return f"{'#' * level} {self.heading([]).card_text()}\n{body}\n"
 
     def _constructor_signature(self, operation: Operation) -> str:
-        """Markdown names the constructor after the class. Code channels keep the word constructor."""
-        body = operation.save()
-        if operation.name == "constructor" and body.startswith("constructor"):
-            return f"{self.name}{body[len('constructor'):]}"
-        return body
+        """Markdown names the constructor after the class, with its parameters and no return type. A code language
+        keeps its own word for it, `constructor` or `__init__`."""
+        if not operation.is_constructor:
+            return operation.save()
+        return f"{self.name}({', '.join(parameter.save() for parameter in operation.parameters)})"
 
     def _public_line(self, body: str) -> str:
         """Public members lead with +. A leading - is already the private mark."""
@@ -357,7 +362,7 @@ class MarkdownModule(Module):
 
     class_type = MarkdownOoadClass
 
-    _META_HEADINGS = frozenset({"seam", "dependencies", "modules fidelity", "purpose"})
+    _META_HEADINGS = frozenset({"seam", "dependencies", "modules fidelity", "purpose", "constraint"})
 
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         super().__init__(name, sequential_order, graph)
@@ -365,6 +370,10 @@ class MarkdownModule(Module):
         # none for a module no card document held.
         self._card_parts: Optional[list] = None
         self._card_name = ""
+        # The text a plain document wrote it as, and the module as the model wrote it when that text was read; none
+        # for a module no plain document held.
+        self._read_text: Optional[str] = None
+        self._read_as = ""
 
     def start_card(self, heading: str) -> None:
         """Begin the module as a card document writes it, under its heading line."""
@@ -397,23 +406,38 @@ class MarkdownModule(Module):
             self.classes.append(MarkdownOoadClass.read_card(class_heading, class_block[heading.end():].lstrip("\n"), class_order))
             class_order += 1
 
+    def keep_text(self, text: str) -> None:
+        """Remember the text a plain document wrote this module as, so an unchanged module writes it back as it was:
+        the model holds a card's facts, not every word of it."""
+        self._read_text = text
+        self._read_as = self._from_model()
+
     def take_preamble(self, text: str) -> None:
         """The module's description, seam terms, and dependencies, from the prose and bullets under its heading."""
         if not text:
             return
         meta = ModuleMeta(text)
         self.description = meta.purpose or meta.leftover or text
+        self.language = meta.language
         self.seam_terms = meta.seam_terms
         self.dependencies = meta.dependencies
         if meta.seam_terms and not self.seam:
             self.seam = ", ".join(meta.seam_terms)
 
     def render(self) -> str:
+        """The module as its document wrote it while the model has not changed it; otherwise written from the model."""
+        written = self._from_model()
+        return self._read_text if self._read_text is not None and written == self._read_as else written
+
+    def _from_model(self) -> str:
+        bullets = self._modules_fidelity_lines()
+        opening = (self.language if bullets else self.description).strip()
         lines: List[str] = [f"# {self.name}", ""]
-        if self.description:
-            lines.append(self.description)
-            lines.append("")
-        lines.extend(self._modules_fidelity_lines())
+        if opening:
+            lines.extend([opening, ""])
+        lines.extend(bullets)
+        if self.constraint:
+            lines.extend(["## Constraint", "", self.constraint, ""])
         known = [loaded.name for loaded in self.classes]
         for loaded in self.classes:
             lines.append(loaded.render(known_names=known))
@@ -494,8 +518,12 @@ class MarkdownModule(Module):
             "seam": self._take_seam,
             "dependencies": self._take_dependencies,
             "purpose": self._take_purpose,
+            "constraint": self._take_constraint,
         }
         takers[key](body)
+
+    def _take_constraint(self, body: str) -> None:
+        self.constraint = body.strip()
 
     def _take_purpose(self, body: str) -> None:
         self.description = body.strip()
@@ -542,6 +570,8 @@ class ModuleMeta:
             if not self._take_bullet(line.strip()):
                 leftover.append(line)
         self.leftover = "\n".join(leftover).strip()
+        # The prose beside a Purpose bullet is the card's language; with no bullet the prose is the purpose itself.
+        self.language = self.leftover if self.purpose else ""
         # A nested "### Module `path`" block often puts its purpose only in its prose.
         prose = [line.strip() for line in self.leftover.splitlines() if line.strip() and not line.strip().startswith("- **")]
         self.purpose = self.purpose or (prose[0] if prose else "")
@@ -669,7 +699,7 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
         card_levels = [level for _index, level, raw in headings if _CARD_HEADING.match(raw)]
         self.modules = []
         self._cards = None
-        if card_levels and min(card_levels) - 2 >= 2:
+        if card_levels and min(card_levels) - 2 >= 1:
             self._cards = CardDocument(self, min(card_levels))
             self._cards.read(text, headings)
         else:
@@ -684,6 +714,7 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
                 continue
             module = MarkdownModule(name=heading.group(1).strip(), sequential_order=len(self.modules) + 1)
             module.read_body(block.strip()[heading.end():].lstrip("\n"))
+            module.keep_text(block.rstrip("\n") + "\n")
             self.modules.append(module)
 
     def _headings(self, text: str) -> List[tuple]:
@@ -699,12 +730,73 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
                 found.append((index, len(heading.group(1)), line))
         return found
 
-    def render(self, canonical: Optional[CleanEngineeringModel] = None) -> str:
-        """Write this model; handed another model, a markdown one writes itself and any other is translated in first."""
-        if canonical is not None and canonical is not self:
-            if isinstance(canonical, MarkdownCleanEngineeringModel):
-                return canonical.render()
-            self.translate_from(canonical)
+    def render(self, canonical: Optional[CleanEngineeringModel] = None, previous: Optional[str] = None) -> str:
+        """Write this model; handed another model, a markdown one writes itself and any other is written by a model
+        of its own, read from previous, the file this render replaces, so the file keeps its own text around the
+        classes canonical changed. A practice keeps one model per format and renders every model through it, so
+        another model is never translated into this one, whose classes would keep the names and the prose of the
+        model rendered before."""
+        if canonical is None or canonical is self:
+            return self._written()
+        if isinstance(canonical, MarkdownCleanEngineeringModel):
+            return canonical.render()
+        written = type(self)()
+        written.parse(previous or "")
+        unwritten = UnwrittenProse(written)
+        written.translate_from(canonical)
+        if not canonical.writes_prose:
+            unwritten.give_back()
+        return written._written()
+
+    def _written(self) -> str:
         if self._cards is not None:
             return self._cards.render()
         return "\n".join(module.render() for module in self.modules)
+
+
+class UnwrittenProse:
+    """The prose a model document holds that a drawing of it does not: each class's intent, and the `//` notes and
+    `->` calls under each member. It is taken from the document before a drawing's model is translated into it, and
+    given back to the classes and members the drawing still has, so a render back from a drawing loses none of it."""
+
+    def __init__(self, model: "MarkdownCleanEngineeringModel") -> None:
+        self._model = model
+        self._classes = {oclass.name: oclass.clone() for oclass in model.every_class()}
+        self._modules = {module.name: (module.language, module.constraint, module.description) for module in model.modules}
+
+    def give_back(self) -> None:
+        """Give each module and class the document still holds the prose it had, where the drawing gave it none."""
+        for module in self._model.modules:
+            language, constraint, description = self._modules.get(module.name, ("", "", ""))
+            module.language = module.language or language
+            module.constraint = module.constraint or constraint
+            if self._is_cut_short(module.description, description):
+                module.description = description
+        for oclass in self._model.every_class():
+            earlier = self._classes.get(oclass.name)
+            if earlier is not None:
+                self._give_back_to(oclass, earlier)
+
+    def _is_cut_short(self, drawn: str, earlier: str) -> bool:
+        """Whether drawn is the start of earlier, as a drawing writes a long purpose: cut, and ended with three dots."""
+        return drawn.endswith("...") and earlier.startswith(drawn[:-3].rstrip())
+
+    def _give_back_to(self, oclass: OoadClass, earlier: OoadClass) -> None:
+        oclass.intent = oclass.intent or earlier.intent
+        for members, earlier_members in ((oclass.operations, earlier.operations), (oclass.properties, earlier.properties)):
+            had = {self._member_key(earlier, member): member for member in earlier_members}
+            for member in members:
+                self._give_back_to_member(member, had.get(self._member_key(oclass, member)))
+
+    def _member_key(self, oclass: OoadClass, member: Operation | Property) -> str:
+        """The member's name; a constructor is one member whatever its format calls it."""
+        return "constructor" if member.name in {oclass.name, *CONSTRUCTOR_NAMES} else member.name
+
+    def _give_back_to_member(self, member: Operation | Property, earlier: Operation | Property | None) -> None:
+        if earlier is None:
+            return
+        if not member.callees:
+            member.callees = list(earlier.callees)
+        if not member.invariants:
+            member.invariants = [item.clone() for item in earlier.invariants]
+            member.description = earlier.description
