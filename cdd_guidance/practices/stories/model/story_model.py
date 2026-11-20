@@ -1236,8 +1236,23 @@ class Story(StoryNode):
             recording.graph.edges.link("decomposedInto", parent, node)
         for background in self.backgrounds:
             background.record(recording, file, node)
+        if not self.backgrounds:
+            # The shared Background is read from the scenarios file, which may not be the story map the story is in.
+            for background in self._shared_backgrounds():
+                background.record(recording, file_of(self.scenarios[0]) or file, node)
         for scenario in self.scenarios:
             scenario.record(recording, self, node)
+
+    def _shared_backgrounds(self) -> List["Background"]:
+        """The Background every one of this story's scenarios holds a copy of: a Background above the scenarios is the
+        state they share, which the reader gives each scenario. It belongs to the story, so it is recorded once there,
+        and its steps are in the graph with the scenarios'. A Background under one scenario's heading is that
+        scenario's alone and is not one of them."""
+        held = [scenario.backgrounds for scenario in self.scenarios]
+        if not held or not all(held):
+            return []
+        keys = [{background.code_key for background in backgrounds} for backgrounds in held]
+        return [background for background in held[0] if background.steps and all(background.code_key in each for each in keys)]
 
     def clone(self) -> "Story":
         cloned = type(self)(self.name, self.sequential_order, self.story_type)

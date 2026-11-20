@@ -222,6 +222,31 @@ with description("a scenario on a story graph"):
                     steps = [("Given", "an Order for two lamps"), ("And", "its line item for the lamps is backordered")]
                     expect(_given_hits(_read_back(_loaded(_scenario(steps), self.graph)))).to(equal([]))
 
+        # A Background above a story's scenarios is the state they share; the reader copies it into each scenario.
+        with context("read from a scenarios file whose shared Background opens with the Order"):
+            with before.each:
+                self.fixture = RuleFixture(Stories, {
+                    "story-map.md": "# (E) Sell Lamps\n## (E) Take Orders\n### (S) Customer --> Place Order\n",
+                    "story_tests/sell-lamps/take-orders/take_orders_story.test.md": (
+                        "# Sub-epic: Take Orders\n\n## Story: Place Order\n\n"
+                        "### Background\n\n*Given* an Order for two lamps\n\n"
+                        "#### Scenario: Order two lamps\n\n"
+                        "*Given* its line item for the lamps is in stock\n"
+                        "*When* the **Customer** places the order\n*Then* the order is placed\n\n"
+                        "#### Scenario: Order backordered lamps\n\n"
+                        "*Given* its line item for the lamps is backordered\n"
+                        "*When* the **Customer** places the order\n*Then* the order waits for the lamps\n"
+                    ),
+                })
+                _order_aggregate(self.fixture.practice.reading.graph)
+
+            with it("should pass a scenario's Given that names a line item alone"):
+                expect(self.fixture.hits(GivenNamesComplexStateRootFirst())).to(equal([]))
+
+            with it("should read the Background's step from the scenarios file"):
+                steps = [node for node in self.fixture.practice.reading.in_graph.nodes("Given") if node.get_fact("text") == "an Order for two lamps"]
+                expect([node.source.file for node in steps]).to(equal(["story_tests/sell-lamps/take-orders/take_orders_story.test.md"]))
+
         with context("with an And that names a line item before any Given names the Order"):
             with it("should be told to open with the Order root"):
                 steps = [("Given", "a customer named Ann"), ("And", "a line item for two lamps")]
