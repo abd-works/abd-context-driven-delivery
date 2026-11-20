@@ -39,7 +39,16 @@ _COLLECTION = re.compile(r"^(?:[A-Za-z_][\w.]*\s*[\[<]\s*([A-Za-z_]\w*)\s*[\]>]|
 _OPTIONAL = re.compile(r"^(?:Optional\[(.+)\]|(.+?)\s*\|\s*(?:None|null|undefined)|(?:None|null|undefined)\s*\|\s*(.+))$")
 _NAME = re.compile(r"^[A-Za-z_]\w*$")
 _OWN_OBJECT = frozenset({"self", "this", "cls"})
+_SCRIPT_SUFFIXES = frozenset({".ts", ".tsx", ".js", ".jsx", ".mjs"})
+# A local the body assigns: `lane = ...`, `const lane = ...`, `lane: Lane = ...`.
+_ASSIGNED_LOCAL = re.compile(r"(?<![\w$.])([A-Za-z_$][\w$]*)\s*(?::[^=\n]+)?=(?!=)")
 _BASE_OBJECT = frozenset({"super()", "super"})
+
+
+def _language_of(file: str) -> str:
+    """The language family a file is written in, by its extension: every script extension is one family."""
+    suffix = "." + file.rsplit(".", 1)[-1].lower()
+    return "script" if suffix in _SCRIPT_SUFFIXES else suffix
 
 
 class ClassesInReach:
@@ -69,11 +78,33 @@ class ClassesInReach:
         return found or self._in_same_package(candidates, file)
 
     def _in_same_package(self, candidates: "list[Node]", file: str) -> "Node | None":
-        """Java names a class of its own package with no import: the one declared in a file of the same folder."""
-        if not file.endswith(".java"):
-            return None
-        folder = file.rsplit("/", 1)[0]
-        return next((node for node in candidates if node.source.file.rsplit("/", 1)[0] == folder), None)
+        """The class a file names with no import, when exactly one file of its own folder, in its own language,
+        declares it: Java names a class of its package so, and a Python or script file whose annotation names a class
+        it does not import means the one beside it, never a class of that name in another package."""
+        beside = [node for node in candidates if self._beside(node.source.file, file)]
+        return beside[0] if len(beside) == 1 else None
+
+    def only_member_named(self, name: str, file: str, whole: bool) -> "Node | None":
+        """The operation called name a receiver of no known class can be, in a call file makes: the one that exactly
+        one class of file itself declares; else, in a graph that holds the whole working copy (whole), the one that
+        exactly one class in file's reach declares, its reach being the files its imports name and the files of its
+        own folder in its own language. None when no class there declares it or more than one does, since the name
+        alone does not say which is called. A load of some files alone looks no further than the file, so it links
+        what a load of the whole working copy links inside that file."""
+        operations = [member for member in self._index.members_named(name) if member.type == "Operation" and member.get_fact("owner") != MODULE_FUNCTION_HOLDER]
+        own = self._only([member for member in operations if member.source.file == file])
+        if own is not None or not whole or any(member.source.file == file for member in operations):
+            return own
+        imported = {path for reference in self._imports_of(file) for path in reference.files()}
+        return self._only([member for member in operations if member.source.file in imported or self._beside(member.source.file, file)])
+
+    def _only(self, members: "list[Node]") -> "Node | None":
+        """The one of members, when one class alone declares them."""
+        return members[0] if len({(member.source.file, member.get_fact("owner")) for member in members}) == 1 else None
+
+    def _beside(self, other: str, file: str) -> bool:
+        """Whether other is another file of file's folder written in file's language."""
+        return other != file and other.rsplit("/", 1)[0] == file.rsplit("/", 1)[0] and _language_of(other) == _language_of(file)
 
     def _imports_of(self, file: str) -> list[ClassReference]:
         if self._imports is None:
@@ -190,6 +221,8 @@ class CallerBody:
         self._owner = self._class_declaring(caller)
         # The class each local is, by its name; a local that is a collection is kept by what it holds once looped over.
         self._locals: dict[str, "Node"] = {}
+        # The parameters and locals whose class no line of the body or signature gives.
+        self._untyped: set[str] = set()
 
     def called(self) -> "list[Node]":
         """The members its body calls and the properties it reads, in the order the body names them."""
@@ -211,6 +244,8 @@ class CallerBody:
             self._keep_local(name, self._reach.class_named(built, self._file))
         for name, walked in _LOOP_LOCAL.findall(self._code):
             self._keep_local(name, self._held_by(walked.split(".")))
+        parameters = {edge.child.name for edge in self._graph.edges.from_parent("hasParameter", self._caller)}
+        self._untyped = (parameters | set(_ASSIGNED_LOCAL.findall(self._code))) - set(self._locals) - _OWN_OBJECT
 
     def _keep_local(self, name: str, found: "Node | None") -> None:
         if found is not None:
@@ -222,6 +257,10 @@ class CallerBody:
         for chain in _CHAIN.finditer(self._code):
             parts = chain.group(1).split(".")
             holder = self._class_of_head(parts[0])
+            if holder is None and len(parts) == 2 and chain.group(2) and parts[0] in self._untyped:
+                only = self._reach.only_member_named(parts[1], self._file, self._graph.scope.over_whole)
+                if only is not None:
+                    yield only
             for position, name in enumerate(parts[1:], start=1):
                 if holder is None:
                     break

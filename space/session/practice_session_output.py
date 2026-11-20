@@ -6,7 +6,7 @@ import os
 from datetime import datetime, timezone
 from functools import cache
 from pathlib import Path, PurePosixPath
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, Iterable
 
 from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 from harness.agent_tools import agent_tool, agent_toolset
@@ -468,10 +468,17 @@ class WrittenFiles:
         exists, and whether the session's branch changed it, so a page can show only the changed ones."""
         # Asking git what the branch changed is slow, so it is asked only once a file is there.
         changed = cache(self._session.session_files.branch_changes.files)
+        output_paths = self.output_paths()
+        found = self._found_by_pattern(self._listed(path) for paths in output_paths.values() for path in paths)
         return {
-            label: [entry for path in paths for entry in self._declared_files(label, path, changed)]
-            for label, paths in self.output_paths().items()
+            label: [entry for path in paths for entry in self._declared_files(label, path, changed, found)]
+            for label, paths in output_paths.items()
         }
+
+    def _found_by_pattern(self, declared: Iterable[DeclaredFile]) -> dict[str, list[Path]]:
+        """The files each pattern among declared finds in the session's checkout, by its glob, all searched in one go; a
+        path that names one file is looked at where it is, not searched for."""
+        return self._session.session_files.find_each(file.glob for file in declared if not file.names_one_path)
 
     def holds(self, file: Path) -> bool:
         """Whether file, in the session's checkout, is one of this fidelity's, changed by the session or not: the
@@ -498,12 +505,12 @@ class WrittenFiles:
         """Every file this fidelity declares that is in the session's checkout, worked on by the session or not: what a
         reader links to, such as each acceptance test of a story."""
         repo = self._session.repo
+        listed = [(label, self._listed(path)) for label, paths in self.output_paths().items() for path in paths]
+        searched = self._found_by_pattern(declared for _label, declared in listed)
         found: list[Path] = []
-        for label, paths in self.output_paths().items():
-            for path in paths:
-                declared = self._listed(path)
-                named = [repo.root / declared.glob] if declared.names_one_path else self._found(label, declared)
-                found += [file for file in named if file.is_file()]
+        for label, declared in listed:
+            named = [repo.root / declared.glob] if declared.names_one_path else self._found(label, declared, searched)
+            found += [file for file in named if file.is_file()]
         return found
 
     def has_output(self) -> bool:
@@ -513,7 +520,7 @@ class WrittenFiles:
 
     def has_named_output(self) -> bool:
         """Whether a file this fidelity names by its whole path is there: one look each, quick enough for every read."""
-        return any(self._exists(label, file) for label, file in self._declared_outputs() if file.names_one_path)
+        return any(self._exists(file) for _label, file in self._declared_outputs() if file.names_one_path)
 
     def has_found_output(self) -> bool:
         """Whether a pattern this fidelity declares finds a file, which searches the session's folders: slow enough that
@@ -521,7 +528,9 @@ class WrittenFiles:
         repository a pattern also finds other sessions' files."""
         if self._session.work_root == self._session.repo.root:
             return False
-        return any(self._exists(label, file) for label, file in self._declared_outputs() if not file.names_one_path)
+        patterns = [(label, file) for label, file in self._declared_outputs() if not file.names_one_path]
+        searched = self._found_by_pattern(file for _label, file in patterns)
+        return any(self._found(label, file, searched) for label, file in patterns)
 
     def _declared_outputs(self) -> list[tuple[str, DeclaredFile]]:
         return [(label, self._declared(path)) for label, paths in self.output_paths().items() for path in paths]
@@ -540,15 +549,16 @@ class WrittenFiles:
             return DeclaredFile(from_top.as_posix())
         return DeclaredFile(PurePosixPath("**", CONTEXT_FOLDER, "**", *from_top.parts[1:]).as_posix())
 
-    def _declared_files(self, label: str, path: str, changed: Callable[[], set[Path]]) -> list[FileEntry]:
-        """A declared path, or each file the fidelity declares where a pattern searches, each marked when the session's
-        branch changed it; a pattern that finds none lists nothing, a pattern being no file. A path widened to every
-        ``.context`` folder that finds none lists the declared path itself, so a page still shows where it goes."""
+    def _declared_files(self, label: str, path: str, changed: Callable[[], set[Path]], searched: dict[str, list[Path]]) -> list[FileEntry]:
+        """A declared path, or each file the fidelity declares where a pattern searches (searched holds what each
+        pattern found), each marked when the session's branch changed it; a pattern that finds none lists nothing, a
+        pattern being no file. A path widened to every ``.context`` folder that finds none lists the declared path
+        itself, so a page still shows where it goes."""
         repo = self._session.repo
         if path.endswith("/") and Format(label).is_code:
             return self._worked_on_code(label, changed)
         listed, declared = self._listed(path), self._declared(path)
-        found = [] if listed.names_one_path else self._found(label, listed)
+        found = [] if listed.names_one_path else self._found(label, listed, searched)
         if found:
             return [FileEntry(repo.path_from_top(file), True, file.resolve() in changed()).linked(published_link(file)) for file in found]
         if declared.names_one_path:
@@ -569,16 +579,14 @@ class WrittenFiles:
         )
         return [FileEntry(self._session.repo.path_from_top(file), file.exists(), True) for file in worked_on]
 
-    def _found(self, label: str, declared: DeclaredFile) -> list[Path]:
-        """The files a declared pattern's search finds that it declares: a name used twice in one declared path must be
-        the same text both times."""
-        return [file for file in self._session.session_files.find(declared.glob) if self._fidelity.declared.includes(file.as_posix(), label) or declared.pattern.search(file.as_posix())]
+    def _found(self, label: str, declared: DeclaredFile, searched: dict[str, list[Path]]) -> list[Path]:
+        """The files a declared pattern's search found (searched, by glob) that it declares: a name used twice in one
+        declared path must be the same text both times."""
+        return [file for file in searched[declared.glob] if self._fidelity.declared.includes(file.as_posix(), label) or declared.pattern.search(file.as_posix())]
 
-    def _exists(self, label: str, declared: DeclaredFile) -> bool:
-        """Whether a file the declared path names is in the repository."""
-        if declared.names_one_path:
-            return (self._session.repo.root / declared.glob).exists()
-        return bool(self._found(label, declared))
+    def _exists(self, declared: DeclaredFile) -> bool:
+        """Whether the file the declared path names outright is in the repository."""
+        return (self._session.repo.root / declared.glob).exists()
 
     def _output_names(self, declared: str | list[str], chosen_name: str | None) -> list[str]:
         """The file names a declared output writes: the chosen name in place of the declared one for a single-file

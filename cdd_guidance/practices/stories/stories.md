@@ -195,7 +195,7 @@ outputs:
     - "story_tests/{epic}/{epic_slug}.story.server.spec.py"
     - "story_tests/{epic}/{story}/{story_snake}_story.test.py"
     - "story_tests/{epic}/examples/{concept}_examples.py"
-    - "**/story_test.py"
+    - "story_tests/**/story_test.py"
   typescript:
     - "story_tests/{epic}/{sub-epic}/{sub_epic_slug}.story.shared.ts"
     - "story_tests/{epic}/{sub-epic}/{sub_epic_slug}.story.domain.spec.ts"
@@ -208,7 +208,7 @@ outputs:
     - "story_tests/{epic}/{story}/{story_snake}_story.test.ts"
     - "story_tests/{epic}/{epic_slug}.story.ui.spec.ts"
     - "story_tests/{epic}/examples/{concept}.examples.ts"
-    - "**/story-test.ts"
+    - "story_tests/**/story-test.ts"
 ```
 
 #### Overview

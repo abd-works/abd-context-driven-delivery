@@ -9,7 +9,7 @@ from space.kanban.story_test import load_shared, replay
 # fewest scenarios that between them call each tool these scenarios use, and pass a node filter through, once.
 WIRING = [
     "Opening a node shows one level of its children",
-    "Selecting a related node opens its file beside the open one",
+    "Selecting a related node opens the related node alone, in its own file",
     "Choosing a node type keeps only those nodes",
     "An overlay taken off leaves the graph view",
     "A call to an operation in another file opens in place",
