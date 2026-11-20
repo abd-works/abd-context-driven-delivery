@@ -14,6 +14,7 @@ from mamba import before, context, description, it  # noqa: E402
 from cdd_guidance.practices.ddd.ddd import Ddd  # noqa: E402
 from harness.graph.graph import Graph  # noqa: E402
 from harness.graph.rule_fixture import RuleFixture, SchemaRuleRun  # noqa: E402
+from harness.graph.schema_conformance import FRAMEWORK_RULES  # noqa: E402
 
 _SALES = {
     "src/.context/bounded-context.md": "# Sales\n\nMappings:\n- Sales · cart → Billing · invoice\n",
@@ -110,19 +111,6 @@ with description("DDD's reading of a domain model no code realizes yet"):
             source = self.roots[0].source if self.roots else None
             expect((source.file, source.start_line) if source else None).to(equal(("src/.context/domain-model.md", 7)))
 
-    with context("with code that declares the root the domain model describes"):
-        with before.all:
-            self.fixture = RuleFixture(
-                Ddd,
-                {
-                    "src/.context/domain-model.md": _SHOP_DOMAIN_MODEL,
-                    "src/cart/cart.py": "@aggregate_root\nclass Cart:\n    def total(self) -> int:\n        return 1\n",
-                },
-            )
-
-        with it("should hold one building block for the root, the one the code declares"):
-            expect([(root.name, root.source.file) for root in blocks_of(self.fixture, "EntityRoot")]).to(equal([("Cart", "src/cart/cart.py")]))
-
 
 # A domain model whose cards relate their classes: the Cart composes its Lines and associates with a Customer in another
 # aggregate; the Coupon is related to nothing.
@@ -187,3 +175,146 @@ with description("DDD's reading of the relationships a domain model's cards decl
 
     with it("should report no class the document relates to another as orphaned, only the one it relates to none"):
         expect(orphaned_in(self.fixture)).to(equal(["Coupon"]))
+
+
+# A bookshop of three bounded contexts as its two documents write it, after the templates: the bounded-context map
+# with integrations and events, and the domain model whose roots hold one another by identity.
+_THREE_CONTEXTS = Path(__file__).resolve().parent / "_examples" / "trip" / "three-contexts"
+_BOOKSHOP_DOCUMENTS = {
+    ".context/bounded-context-map.md": (_THREE_CONTEXTS / "bounded-context-map.md").read_text(encoding="utf-8"),
+    ".context/domain-model.md": (_THREE_CONTEXTS / "domain-model.md").read_text(encoding="utf-8"),
+}
+
+
+def ddd_nodes(fixture: RuleFixture, kind: str) -> list:
+    return fixture.practice.reading.in_graph.nodes(kind)
+
+
+def reached(fixture: RuleFixture, kind: str, node) -> list[str]:
+    """The names of the nodes an edge of kind leads to from node, in order of name."""
+    return sorted(edge.child.name for edge in fixture.practice.reading.graph.edges.from_parent(kind, node))
+
+
+def held_in(fixture: RuleFixture, kind: str) -> dict:
+    """The nodes of kind, by the name of the node each sits under."""
+    edges = fixture.practice.reading.graph.edges
+    held: dict = {}
+    for node in ddd_nodes(fixture, kind):
+        held.setdefault(edges.direct_parent(node).name, []).append(node.name)
+    return {parent: sorted(names) for parent, names in held.items()}
+
+
+with description("DDD's reading of a bounded context map and a domain model no code realizes yet"):
+    with before.all:
+        self.fixture = RuleFixture(Ddd, _BOOKSHOP_DOCUMENTS)
+
+    with it("should hold each bounded context the documents head, and no context for the folder"):
+        expect(sorted(node.name for node in ddd_nodes(self.fixture, "BoundedContext"))).to(equal(["Catalogue", "Fulfilment", "Ordering"]))
+
+    with it("should hold each aggregate once, under the bounded context that heads it"):
+        expect(held_in(self.fixture, "Aggregate")).to(equal({"Ordering": ["Cart", "Order"], "Catalogue": ["Book"], "Fulfilment": ["Shipment"]}))
+
+    with it("should hold each integration as a context mapping from its aggregate to the aggregate it reaches, with its pattern"):
+        mappings = [
+            (reached(self.fixture, "local", node), reached(self.fixture, "remote", node), node.get_fact("pattern"))
+            for node in ddd_nodes(self.fixture, "ContextMapping")
+        ]
+        expect(sorted(mappings)).to(equal([
+            (["Cart"], ["Book"], "Customer/Supplier"),
+            (["Order"], ["Shipment"], "Open Host / Published Language"),
+            (["Shipment"], ["Order"], "Conformist"),
+        ]))
+
+    with it("should hold each mapping under the bounded context of the aggregate that has the dependency"):
+        expect({parent: len(names) for parent, names in held_in(self.fixture, "ContextMapping").items()}).to(equal({"Ordering": 2, "Fulfilment": 1}))
+
+    with it("should hold each event of the event map, with the aggregate that emits it and the aggregates that consume it"):
+        events = [
+            (node.name, reached(self.fixture, "producer", node), reached(self.fixture, "consumers", node))
+            for node in ddd_nodes(self.fixture, "DomainEvent")
+        ]
+        expect(sorted(events)).to(equal([("CartCheckedOut", ["Cart"], ["Order"]), ("OrderPaid", ["Order"], ["Shipment"])]))
+
+    with it("should associate each root with the root its aggregate's integration reaches"):
+        associated = {root.name: reached(self.fixture, "associates", root) for root in ddd_nodes(self.fixture, "EntityRoot")}
+        expect(associated).to(equal({"Cart": ["Book"], "Order": ["Shipment"], "Book": [], "Shipment": ["Order"]}))
+
+    with it("should relate a root to the classes its members are typed by and the classes its operations call"):
+        cart = next(root for root in ddd_nodes(self.fixture, "EntityRoot") if root.name == "Cart")
+        expect(reached(self.fixture, "dependsOn", cart)).to(equal(["BookRepository", "CartLine", "Order", "OrderRepository"]))
+
+    with it("should find the model conforms to the schema: a root is not required to associate with another"):
+        expect(SchemaRuleRun(FRAMEWORK_RULES["conforms-to-schema"], self.fixture.context).hits()).to(equal([]))
+
+
+_ORDERING_CODE = {
+    "ordering/.context/bounded-context.md": "# Ordering\n\nWhere a Customer fills a Cart.\n\nCart → Catalogue · Book\n",
+    "catalogue/.context/bounded-context.md": "# Catalogue\n\nThe books the shop sells.\n",
+    "ordering/cart/cart.py": (
+        "@aggregate_root\n@entity\nclass Cart:\n"
+        '    """Module: Ordering | custom · Cart\n---<<Customer/Supplier>>--> Book\ncontext: Catalogue\naggregate: Book\nentity: Book\nheld_by: BookId"""\n\n'
+        "    cartId: CartId\n    # << association >>\n    # held by identity — Book lives in Catalogue · Book\n    bookId: BookId\n\n"
+        "    def total(self) -> Money:\n        return 1\n\n\n"
+        "@repository\nclass CartRepository:\n    def load(self, cartId: CartId) -> Cart:\n        return cartId\n"
+    ),
+    "ordering/cart/cart.ts": (
+        "/**\n * Module: Ordering | custom · Cart\n * ---<<Customer/Supplier>>--> Book\n * context: Catalogue\n * aggregate: Book\n * entity: Book\n */\n"
+        "@AggregateRoot()\n@Entity()\nclass Cart {\n  cartId: CartId;\n  total(): Money { return 1; }\n}\n\n"
+        "@Repository()\nclass CartRepository {\n  load(cartId: CartId): Cart { return cartId; }\n}\n"
+    ),
+    "catalogue/book/book.py": (
+        "@aggregate_root\n@entity\nclass Book:\n    bookId: BookId\n\n    def reprice(self, amount: Money) -> None:\n        return None\n\n\n"
+        "@repository\nclass BookRepository:\n    def load(self, bookId: BookId) -> Book:\n        return bookId\n"
+    ),
+    "catalogue/book/book.ts": (
+        "@AggregateRoot()\n@Entity()\nclass Book {\n  bookId: BookId;\n  reprice(amount: Money): void { return; }\n}\n\n"
+        "@Repository()\nclass BookRepository {\n  load(bookId: BookId): Book { return bookId; }\n}\n"
+    ),
+}
+
+
+def files_reached(fixture: RuleFixture, kind: str, node) -> list[str]:
+    return sorted(edge.child.source.file for edge in fixture.practice.reading.graph.edges.from_parent(kind, node))
+
+
+with description("DDD's reading of aggregates written in two languages, in folders named in lower case"):
+    with before.all:
+        self.fixture = RuleFixture(Ddd, _ORDERING_CODE)
+
+    with it("should link a mapping's sides to the aggregates whose folders spell its names in lower case"):
+        mapping = ddd_nodes(self.fixture, "ContextMapping")[0]
+        expect((reached(self.fixture, "local", mapping), reached(self.fixture, "remote", mapping))).to(equal((["cart"], ["book"])))
+
+    with it("should have each repository access the root declared in its own file"):
+        repositories = [block for block in ddd_nodes(self.fixture, "Repository") if block.name == "CartRepository"]
+        accessed = sorted((block.source.file, files_reached(self.fixture, "accesses", block)) for block in repositories)
+        expect(accessed).to(equal([("ordering/cart/cart.py", ["ordering/cart/cart.py"]), ("ordering/cart/cart.ts", ["ordering/cart/cart.ts"])]))
+
+    with it("should associate a root with the root its integration reaches, the one written in its own language"):
+        roots = [block for block in ddd_nodes(self.fixture, "EntityRoot") if block.name == "Cart"]
+        associated = sorted((root.source.file, files_reached(self.fixture, "associates", root)) for root in roots)
+        expect(associated).to(equal([("ordering/cart/cart.py", ["catalogue/book/book.py"]), ("ordering/cart/cart.ts", ["catalogue/book/book.ts"])]))
+
+    with it("should join each building block to the Clean Engineering class read from the same file, which it is"):
+        root = next(block for block in ddd_nodes(self.fixture, "EntityRoot") if block.source.file == "ordering/cart/cart.py")
+        classes = [edge.child.node_id for edge in self.fixture.practice.reading.graph.edges.from_parent("isA", root)]
+        expect(classes).to(equal([root.ooad_class.node_id]))
+
+
+with description("DDD's reading of a domain model beside the code that implements it"):
+    with before.all:
+        self.fixture = RuleFixture(
+            Ddd,
+            {
+                "src/.context/domain-model.md": _SHOP_DOMAIN_MODEL,
+                "src/cart/cart.py": "@aggregate_root\nclass Cart:\n    def total(self) -> int:\n        return 1\n",
+            },
+        )
+        self.roots = {root.source.file: root for root in blocks_of(self.fixture, "EntityRoot")}
+
+    with it("should hold the root the document describes and the root the code declares, neither in place of the other"):
+        expect(sorted(self.roots)).to(equal(["src/.context/domain-model.md", "src/cart/cart.py"]))
+
+    with it("should join the code's root to the document's root it implements, in the aggregate its folder names"):
+        code = self.roots.get("src/cart/cart.py")
+        expect(files_reached(self.fixture, "implements", code) if code else None).to(equal(["src/.context/domain-model.md"]))

@@ -90,6 +90,10 @@ class DrawnBoundedContextMap(BoundedContextMap):
         self.name = _TITLE
 
     @property
+    def holds_document_words(self) -> bool:
+        return False
+
+    @property
     def modules_title(self) -> str:
         """The drawing's title: the map's own name, as its heading gives it, else the modules view's."""
         return self.title or super().modules_title

@@ -43,7 +43,7 @@ class Integration:
     """An arrow from an aggregate to another class: the context, aggregate, and entity it reaches, the identity it holds
     that class by, and its fields. A target that names one class names only its entity."""
 
-    FIELDS = ("pattern", "direction", "crosses", "integration")
+    FIELDS = ("pattern", "direction", "crosses", "integration", "sync")
     """The fields of an arc, in the order its lines write them under its target."""
     PARTS = ("context", "aggregate", "entity", "held_by")
     """The parts of the arc's target, each kept as its own detail when a class model keeps the arc as a dependency."""
@@ -57,6 +57,8 @@ class Integration:
         self.crosses = ""
         self.integration = ""
         self.pattern = ""
+        # Who owns what crosses, what makes it cross, and how stale it may be, as a domain model writes it.
+        self.sync = ""
 
     @classmethod
     def from_aggregate(cls, target: "Aggregate") -> "Integration":
@@ -252,6 +254,10 @@ class Aggregate(DomainNode, Module):
         """Hold a class read from a class model."""
         self.classes.append(oclass)
 
+    def read_arrows_across(self, homes: dict[str, "Aggregate"]) -> None:
+        """Once every aggregate holds its classes, read the arrows a class drawing shows from this aggregate's classes
+        to the classes of another, given the aggregate each class is in; each format's aggregate reads its own."""
+
     def take_root_from_classes(self) -> None:
         """Once its classes are read, make the one marked <<Aggregate Root>> its root."""
         root = next((item for item in self.classes if isinstance(item, Entity) and item.tactical.kind() == "EntityRoot"), None)
@@ -272,12 +278,14 @@ class ContextMapping(DomainNode):
     (`Sales · cart`); the two sides are saved with the graph, so a reader of a graph opened from its save has them."""
 
     _semantic_type_name = "ContextMapping"
-    graph_facts = ("local", "remote")
+    graph_facts = ("local", "remote", "pattern")
 
-    def __init__(self, local: str = "", remote: str = "", line: int = 0) -> None:
+    def __init__(self, local: str = "", remote: str = "", line: int = 0, pattern: str = "") -> None:
         super().__init__(f"{local} → {remote}", line)
         self.local = local
         self.remote = remote
+        # The integration pattern the mapping follows, when the document that lists it names one.
+        self.pattern = pattern
 
     @property
     def aggregate_names(self) -> dict[str, str]:
@@ -380,6 +388,10 @@ class BoundedContextMap:
         self.contexts: list[BoundedContext] = []
         # The map's own name, as its `# ` heading gives it; none for a map that names itself no title.
         self.title = ""
+        # What a document writes round its title: the lines above it, such as front matter, and the lines between it
+        # and the first bounded context, which say what the map is of.
+        self.opening: list[str] = []
+        self.description: list[str] = []
 
     def append_context(self, context: BoundedContext) -> None:
         self.contexts.append(context)
@@ -393,6 +405,12 @@ class BoundedContextMap:
     def every_context(self) -> list[BoundedContext]:
         """Every context on the map, each before the contexts nested in it."""
         return [found for context in self.contexts for found in context.every_context]
+
+    @property
+    def holds_document_words(self) -> bool:
+        """Whether the format this map was read from holds a document's words: the sentence under a heading, a note,
+        an invariant, an integration's fields, the events. A drawing holds none of them."""
+        return True
 
     def aggregate_reached_by(self, integration: Integration) -> Aggregate | None:
         """The aggregate an integration's target names: in the context it names, its entity or its aggregate; with no
@@ -465,6 +483,9 @@ class BoundedContextMap:
             self.context_at([context_name]).aggregate_named(aggregate_name).take_class(oclass)
         for aggregate in self.every_aggregate:
             aggregate.take_root_from_classes()
+        homes = {oclass.name: aggregate for aggregate in self.every_aggregate for oclass in aggregate.classes}
+        for aggregate in self.every_aggregate:
+            aggregate.read_arrows_across(homes)
         return self
 
     def _place_classes(self, model: CleanEngineeringModel) -> list[tuple[str, OoadClass]]:
