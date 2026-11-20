@@ -53,6 +53,13 @@ Cog and Lens saw these first-pass reports again on the combined project: r3-bolt
 5. What is a mockup rendered to Claude Design meant to answer (r3-gizmo-03), and is a finished spec meant to come back from markdown as signatures only (r3-rivet-11)?
 6. Is the HTML mockup meant to run its script in the Files app (r3-pixel-08)?
 
+### Answers from the person, 2026-11-20
+
+1. **Links and callouts in the Files app (r3-pixel-03, 04, 05).** Rendered and Source both show callouts and both follow links. Which callouts show follows the file view's filters: the practices chosen and the graph. A callout is traversable as the graph tree is: from the story map a person opens a scenario, then what it observes, then an operation of the class, each in place.
+2. **Domain terms and UX (r3-sparky-05, r3-gizmo-06).** A step's linked domain term is an edge to the DDD class. UX joins the graph.
+3. **One class in several practices (r3-cog-05).** Several nodes with edges between them. A DDD entity is a kind of class, so the DDD node has an "is a" edge to the Clean Engineering class node of the same file, and selecting the DDD node reveals the Clean Engineering node with its details. A module relates to an aggregate or a bounded context the same way: an ordinary edge, though both come from one file. (Read by the supervisor as two nodes joined by "is a", not one merged node; to confirm.)
+4. **What a relationship's member opens (r3-lens-08).** Not answered yet: explained again to the person.
+
 ## Not reached
 
 Publishing a whiteboard to a board in Claude; a real Claude Design canvas; running the generated Vitest specs and story tests; the sketch, json, java and javascript adapters as formats in their own right; two callers at once; LERN overlays; drag and drop; the Claude desktop app's own chat bar.
