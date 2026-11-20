@@ -24,15 +24,25 @@ with description("a fidelity's declared outputs") as self:
             expect(self.outputs).to(equal({
                 "markdown": ".context/story-map.md", "drawio": ".context/story-map.drawio",
                 "whiteboard": ".context/story-map.whiteboard",
-                "thin_slice": [".context/thin-slice.md", ".context/thin-slice.drawio"],
+                "thin_slice": [".context/thin-slice.md", ".context/thin-slice.drawio", ".context/thin-slice.whiteboard"],
             }))
 
     with context("with a fidelity that writes several files for one format"):
         with before.each:
             self.outputs = Stories().fidelities["acceptance_tests"].outputs
 
-        with it("should list every file pattern for that format: the sub-epic's three tier files and a story's one runnable file"):
-            expect(len(self.outputs["python"])).to(equal(4))
+        with it("should list the sub-epic's three tier files and a story's one runnable file first"):
+            expect([path.rsplit("/", 1)[-1] for path in self.outputs["python"][:4]]).to(equal([
+                "{sub_epic_slug}.story.shared.py", "{sub_epic_slug}.story.domain.spec.py",
+                "{sub_epic_slug}.story.server.spec.py", "{story_snake}_story.test.py",
+            ]))
+
+        with it("should list the same four files for an epic that holds its stories directly, then the examples files and the step library"):
+            expect(self.outputs["python"][4:]).to(equal([
+                "story_tests/{epic}/{epic_slug}.story.shared.py", "story_tests/{epic}/{epic_slug}.story.domain.spec.py",
+                "story_tests/{epic}/{epic_slug}.story.server.spec.py", "story_tests/{epic}/{story}/{story_snake}_story.test.py",
+                "story_tests/{epic}/examples/{concept}_examples.py", "**/story_test.py",
+            ]))
 
     with context("with every practice loaded"):
         with before.each:
@@ -56,12 +66,13 @@ with description("a fidelity's declared outputs") as self:
             ]
             expect(rooted).to(be_empty)
 
-        with it("should keep every markdown and drawio output in a .context folder, or a scenario file in story_tests"):
+        with it("should keep every markdown and drawio output in a .context folder or a scenario file in story_tests"):
             outside = [
                 f"{type(practice).__name__}.{name}.{label}"
                 for practice in self.practices
                 for name, fidelity in practice.fidelities.entries.items()
-                for label, path in fidelity.outputs.items()
+                for label, paths in fidelity.outputs.items()
+                for path in ([paths] if isinstance(paths, str) else paths)
                 if label in ("markdown", "drawio", "realization") and ".context/" not in path and not path.startswith("story_tests/")
             ]
             expect(outside).to(be_empty)

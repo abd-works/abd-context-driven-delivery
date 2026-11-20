@@ -137,7 +137,7 @@ Observed.
 
 #### Scenario: Draw a thin slice as its increments
 
-Observed for what the drawing holds (`cdd_guidance/practices/stories/thin_slice_render_spec.py`), for drawio and whiteboard. Intended for the saved name: `stories.md` declares `.context/thin-slice.drawio` and `.context/thin-slice.whiteboard` for the thin slice, and the name a render saves under is still the story map's; evidence still missing is `DeclaredOutputs.file_name_beside` naming the file declared beside the source (defects r3-sparky-01, widget-06).
+Observed for what the drawing holds (`cdd_guidance/practices/stories/thin_slice_render_spec.py`), for drawio and whiteboard. Observed for the saved name (`harness/guidance/declared_outputs_spec.py`, `cdd_guidance/actions/render/render_saves_beside_source_heavy_spec.py`): `stories.md` declares `.context/thin-slice.drawio` and `.context/thin-slice.whiteboard` for the thin slice, and a file declared in an output named for what it holds is saved as the file that same output declares in the format (defects r3-sparky-01, widget-06).
 
 *Given* ++.context/story-map.md++ holds the story map
   *And* `.context/thin-slice.md` holds two increments that name stories of the story map
@@ -146,3 +146,38 @@ Observed for what the drawing holds (`cdd_guidance/practices/stories/thin_slice_
   *And* no heading of the thin slice is drawn as an epic
   *And* the saved file is `.context/thin-slice.drawio`
   *And* ++.context/story-map.drawio++ is as the person left it
+
+#### Scenario: Save one drawing of every module where the modules fidelity declares it
+
+Observed (`cdd_guidance/actions/render/render_spec.py`, `render_saves_beside_source_heavy_spec.py`). Written after exploratory testing round 3 (defect r3-widget-01): the drawing of all the modules was saved in the first module's own `.context` folder. `clean_engineering.md` declares `.context/modules.drawio` for the modules fidelity.
+
+*Given* `src/catalogue/.context/module-context.md` and `src/ordering/.context/module-context.md` each hold a module card
+*When* Claude Code renders both cards to drawio at ++clean-engineering-modules++
+*Then* the saved file is `.context/modules.drawio` in the project's root, which draws both modules
+  *And* no drawing is saved in `src/catalogue/.context`
+
+#### Scenario: Read a markdown file as markdown at a fidelity that works in code
+
+Observed (`cdd_guidance/actions/render/render_spec.py`, `render_saves_beside_source_heavy_spec.py`). Written after exploratory testing round 3 (defects r3-widget-05, widget-09): a `.md` path with no source named was read in the fidelity's own format, Python, and refused as Python that does not parse. Render's description says to omit source "for a file whose extension says its format".
+
+*Given* `src/ordering/.context/ordering-model.md` holds a class model with the class Cart
+*When* Claude Code renders `src/ordering/.context/ordering-model.md` to drawio at ++clean-engineering-model++, naming no source
+*Then* the saved file is `src/ordering/.context/ordering-model.drawio`, which draws Cart
+
+#### Scenario: Answer a render that saves nothing with its content and where the fidelity declares it
+
+Observed (`cdd_guidance/actions/render/render_spec.py`). Written after exploratory testing round 3 (defects r3-bolt-06, r3-sparky-07, r3-rivet-08): a render to code answered one text with no word of where it goes, and a realization rendered from a saved graph was saved as `graph.md` beside the graph. Render's description says a render other than drawio, whiteboard or markdown "returns its content"; whether a render to code should save one file for each aggregate or story itself waits for the person's decision.
+
+*Given* `.context/domain-model.md` holds a domain model
+*When* Claude Code renders `.context/domain-model.md` to python at ++ddd-model++
+*Then* the answer holds the code and names no saved file
+  *And* the answer names `{bounded_context}/{aggregate}/{aggregate}.py` as where the fidelity declares its Python
+
+#### Scenario: Leave a realization rendered from a saved graph for the agent to name
+
+Observed (`cdd_guidance/actions/render/render_spec.py`). Written after exploratory testing round 3 (defect r3-rivet-08). `bdd.md` tells the agent to write the result to `.context/{scope}-bdd-realization.md`, and only the agent knows the scope.
+
+*Given* `graphs/graph.json` holds a saved graph
+*When* Claude Code renders `graphs/graph.json` to markdown at ++bdd-realization++ with source graph
+*Then* the answer holds the realization and names `.context/{scope}-bdd-realization.md` as where the fidelity declares it
+  *And* no `graph.md` is saved beside `graphs/graph.json`

@@ -98,9 +98,11 @@ step:
   belongsTo: scenario
   ands?: [step]
   shownOn?: [screen]
+  names?: [class]
   where:
     - id is the text slugs from the root to this node, joined by dots
     - ands continue the step they follow
+    - names is the domain model class each domain term the step links names; a step with no linked term has none
     - shownOn is the screen whose showsSteps holds this step
     - but marks a missing state
   rules:

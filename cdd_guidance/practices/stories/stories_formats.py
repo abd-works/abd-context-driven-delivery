@@ -9,8 +9,8 @@ from typing import Any
 from harness.guidance.practice_formats import PracticeFormats, RenderRequest
 
 from cdd_guidance.practices.stories.model.diagram_story_model import DiagramStoryModel
-from cdd_guidance.practices.stories.model.story_map_files import THIN_SLICING_FILES, StoryMapFiles
-from cdd_guidance.practices.stories.model.story_model import StoryModel
+from cdd_guidance.practices.stories.model.story_map_files import STORY_FILE_SUFFIXES, THIN_SLICING_FILES, StoryMapFiles, path_from
+from cdd_guidance.practices.stories.model.story_model import Epic, StoryModel
 
 
 class PracticeOutsideSession(Exception):
@@ -33,6 +33,35 @@ class ThinSlicedMap:
         return diagram(self.story_map).save_thin_slice()
 
 
+class ScenariosOnTheirMap:
+    """The scenarios markdown files a render names, read on the story map above them: each story the files specify sits
+    under the epic and sub-epic the map gives it, so the code written from them is named for those, and the stories
+    of the map the files say nothing of are left out."""
+
+    def __init__(self, map_file: Path, files: list[Path], project: Path) -> None:
+        self._map_file = map_file
+        self._project = project
+        self._files = {path_from(project, file) for file in files}
+
+    def read_by(self, markdown: type) -> StoryModel | None:
+        """The map as markdown, the markdown story model, reads it with its scenarios, holding only the stories the
+        files specify; none when the map holds none of them."""
+        story_map = markdown.from_workspace(self._map_file, project=self._project)
+        if story_map is None:
+            return None
+        story_map.epics.refill([epic for epic in story_map.epics if self._keeps(epic)])
+        return story_map if story_map.epics else None
+
+    def _keeps(self, epic: Epic) -> bool:
+        """Whether epic holds a story the files specify, once the stories and sub-epics that hold none are dropped."""
+        epic.stories = [story for story in epic.stories if any(self._is_read_from_files(scenario) for scenario in story.scenarios)]
+        epic.epics = [sub for sub in epic.epics if self._keeps(sub)]
+        return bool(epic.stories or epic.epics)
+
+    def _is_read_from_files(self, scenario) -> bool:
+        return scenario.source is not None and scenario.source.file in self._files
+
+
 class StoriesFormats(PracticeFormats):
     """The formats Stories reads and writes. A story test in code carries its epic and sub-epic only in its folders,
     under the story map that names them, so a render from code files reads them as files beside that map, not as one
@@ -48,7 +77,7 @@ class StoriesFormats(PracticeFormats):
         them. Paths and node paths are named from the project, as every path in a session is."""
         named = [Path(entry) for entry in ([paths] if isinstance(paths, str) else paths)]
         if not request.source_format.is_code:
-            return self._thin_sliced_map(named, request) or super().read(paths, request)
+            return self._thin_sliced_map(named, request) or self._scenarios_on_their_map(named, request) or super().read(paths, request)
         project = self._project_of(named)
         entries = [project / entry for entry in named]
         files = [found for entry in entries for found in (sorted(entry.rglob("*")) if entry.is_dir() else [entry])]
@@ -72,6 +101,22 @@ class StoriesFormats(PracticeFormats):
         if story_map is None or story_map.suffix.lower() != ".md":
             return None
         return ThinSlicedMap(self.adapter_class("markdown")().opened_from(story_map, project))
+
+    def _scenarios_on_their_map(self, named: list[Path], request: RenderRequest) -> StoryModel | None:
+        """The stories the scenarios markdown files at named specify, on the story map above them, for a render to
+        code, which names each story test for its epic and sub-epic; none for a render to any other format, for files
+        that are not all scenarios files, or with no markdown story map above them that holds their stories."""
+        if not request.format.is_code:
+            return None
+        project = self._project_of(named)
+        entries = [project / entry for entry in named]
+        files = [found for entry in entries for found in (sorted(entry.rglob("*.md")) if entry.is_dir() else [entry])]
+        if not files or not all(file.name.endswith(STORY_FILE_SUFFIXES) and file.suffix.lower() == ".md" for file in files):
+            return None
+        story_map = StoryMapFiles(files[0].parent, top=project).nearest()
+        if story_map is None or story_map.suffix.lower() != ".md":
+            return None
+        return ScenariosOnTheirMap(story_map, files, project).read_by(self.adapter_class("markdown"))
 
     def _project_of(self, named: list[Path]) -> Path:
         """The folder paths are named from: the repository of the session the practice works in. The MCP host serves

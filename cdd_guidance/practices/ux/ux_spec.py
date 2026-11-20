@@ -67,6 +67,26 @@ with description("Ux fidelity and format defaults"):
             strays = [fidelity.name for fidelity in Ux().fidelities if fidelity.default_format.name not in fidelity.outputs]
             expect(strays).to(equal([]))
 
+    # A file list and the graph tree show the files a fidelity declares, so a file no fidelity declares is shown nowhere.
+    with context("with the files a UX project holds beside its mockup"):
+        with it("should hold the mockup's drawing beside its html as the mockup's file"):
+            expect(Ux().fidelities["mockup"].declared.includes("bookshop/buy-a-book.drawio", "mockup_drawing")).to(equal(True))
+
+        with it("should hold the UX map's ux-map.json in an epic's folder as the information architecture's file"):
+            expect(Ux().fidelities["ia"].declared.includes("bookshop/ux-map.json", "json")).to(equal(True))
+
+        with it("should hold the UX map's ux/ux.json as the information architecture's file"):
+            expect(Ux().fidelities["ia"].declared.includes("ux/ux.json", "json")).to(equal(True))
+
+        with it("should offer no drawing as a format of the mockup, which no render draws"):
+            expect("drawio" in Ux().fidelities["mockup"].outputs).to(equal(False))
+
+        with it("should hold a view written in TypeScript as the front end code's file"):
+            expect(Ux().fidelities["front_end_code"].declared.includes("bookshop/src/CartView.tsx", "typescript")).to(equal(True))
+
+        with it("should hold a view written in JavaScript as the front end code's file"):
+            expect(Ux().fidelities["front_end_code"].declared.includes("bookshop/src/CartView.jsx", "javascript")).to(equal(True))
+
     with context("Ux constructed with an unsupported fidelity"):
         with it("should raise ValueError"):
             expect(lambda: Ux(fidelity="nope")).to(raise_error(ValueError))

@@ -179,7 +179,7 @@ class ScenarioFileReading:
         self.section.parts.append(scenario)
         self.section.scenarios.append(scenario)
         self.container = scenario.markdown_parts
-        self.backgrounds.heading("scenario", "", True)
+        self.backgrounds.heading("scenario", "", True, source_at(self.rel, self.number))
         self.examples.heading("scenario", 0, "")
 
     def _open_section(self, name: str, heading: Optional[str]) -> StorySection:
@@ -202,7 +202,7 @@ class ScenarioFileReading:
             self.container = self.section.parts if self.section is not None else self.document_parts
         if not self.examples.heading(kind, level, title):
             named = (match.group(1) or "background").strip() if kind == "story-background" else ""
-            self.backgrounds.heading(kind, named, self.scenario is not None)
+            self.backgrounds.heading(kind, named, self.scenario is not None, source_at(self.rel, self.number))
         self.container.append(self.kept)
 
     def _level(self) -> tuple:

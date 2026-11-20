@@ -1727,3 +1727,10 @@
 2026-11-20T19:26:10Z tool validate.validate space\session\session_file.py, harness\files_app\app\files\markdown-page.ts, harness\files_app\app\files\rendered-callouts.ts, harness\files_app\app\files\file-callouts.ts 0441e51a-b582-45e7-aefa-d95fcdc406e3 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\0441e51a-b582-45e7-aefa-d95fcdc406e3.jsonl 1-2671
 2026-11-20T19:26:42Z validate CleanEngineering code graph-rule never-swallow-exceptions harness/files_app/app/files/file-callouts.ts:37 graph-rule limit-operation-parameters space/session/session_file.py:78 graph-rule limit-operation-parameters space/session/session_file.py:332 graph-rule use-typed-signatures harness/files_app/app/files/markdown-page.ts:124 0441e51a-b582-45e7-aefa-d95fcdc406e3 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\0441e51a-b582-45e7-aefa-d95fcdc406e3.jsonl 1-2671
 2026-11-20T19:28:31Z tool prompt-queue.done 0441e51a-b582-45e7-aefa-d95fcdc406e3 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\0441e51a-b582-45e7-aefa-d95fcdc406e3.jsonl 1-2671
+2026-11-20T19:29:03Z tool prompt-queue.set_steps 0441e51a-b582-45e7-aefa-d95fcdc406e3 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\0441e51a-b582-45e7-aefa-d95fcdc406e3.jsonl 1-2688
+2026-11-20T19:29:20Z tool call-outcomes.close_month
+2026-11-20T19:29:20Z tool call-outcomes.close_month
+2026-11-20T19:29:22Z tool prompt-queue.show 0441e51a-b582-45e7-aefa-d95fcdc406e3 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\0441e51a-b582-45e7-aefa-d95fcdc406e3.jsonl 1-2717
+2026-11-20T19:31:09Z tool prompt-queue.show 0441e51a-b582-45e7-aefa-d95fcdc406e3 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\0441e51a-b582-45e7-aefa-d95fcdc406e3.jsonl 1-2753
+2026-11-20T19:40:34Z tool prompt-queue.show 0441e51a-b582-45e7-aefa-d95fcdc406e3 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\0441e51a-b582-45e7-aefa-d95fcdc406e3.jsonl 1-2772
+2026-11-20T19:41:11Z tool prompt-queue.show 0441e51a-b582-45e7-aefa-d95fcdc406e3 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\0441e51a-b582-45e7-aefa-d95fcdc406e3.jsonl 1-2791

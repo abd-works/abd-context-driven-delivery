@@ -224,10 +224,20 @@ with description("the DDD bounded_context fidelity's formats"):
 
     with it("should save the map as draw.io beside its markdown and whiteboard"):
         expect(self.outputs).to(equal({
-            "markdown": ".context/bounded-context-map.md",
+            "markdown": [".context/bounded-context-map.md", "{bounded_context}/.context/bounded-context.md"],
             "drawio": ".context/bounded-context-map.drawio",
             "whiteboard": ".context/bounded-context-map.whiteboard",
         }))
+
+    # A file list and the graph tree show the files a fidelity declares, and a context's mappings are read from the
+    # file that marks its folder.
+    with it("should hold the bounded-context.md that marks each context's folder as its own file"):
+        declared = PRACTICE_CATALOGUE.create("ddd", fidelity="bounded_context").fidelities.current.declared
+        expect(declared.includes("ordering/.context/bounded-context.md", "markdown")).to(equal(True))
+
+    with it("should still name the map's drawing for a render of the map"):
+        declared = PRACTICE_CATALOGUE.create("ddd", fidelity="bounded_context").fidelities.current.declared
+        expect(declared.file_name_beside(".context/bounded-context-map.md", "drawio")).to(equal("bounded-context-map.drawio"))
 
     with it("should read and write draw.io through the map's draw.io adapter"):
         expect(Ddd.format_adapters["drawio"][1]).to(equal("DrawIOBoundedContextMap"))

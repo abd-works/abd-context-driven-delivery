@@ -106,3 +106,22 @@ Observed (`cdd_guidance/practices/stories/rules/acceptance_tests_spec.py`). Writ
 *Given* a markdown scenarios file written after `templates/md/scenarios.md` holds its examples as rows of a table
 *When* Claude Code validates it at ++stories-scenarios++
 *Then* no example of it carries a domain-fixture-example-files violation
+
+#### Scenario: Name a path the graph read no node from
+
+Observed (`cdd_guidance/actions/validate/validate_spec.py`). Written after exploratory testing round 3 (defects r3-rivet-02, r3-widget-08): a sketch, a tree in markdown, or a class model in markdown gave the graph no node, and the report read "No graph rule violations. All scanned graph rules passed.", the words a file with checked nodes gets. Validate's description says a path's graph rules "run on" the files named; a file no rule ran on is named so.
+
+*Given* `specs/bookshop-sketch.md` holds a BDD sketch, which no graph reading reads a node from
+  *And* ++src/orders/order.ts++ holds class Order, whose place operation takes five parameters
+*When* Claude Code validates clean-engineering-code on `specs/bookshop-sketch.md` and ++src/orders/order.ts++
+*Then* the report says no graph rule ran on `specs/bookshop-sketch.md`
+  *And* the report holds the limit-operation-parameters violation of ++src/orders/order.ts++
+
+#### Scenario: Say no graph rule passed when no named path gave the graph a node
+
+Observed (`cdd_guidance/actions/validate/validate_spec.py`).
+
+*Given* `specs/bookshop-sketch.md` holds a BDD sketch, which no graph reading reads a node from
+*When* Claude Code validates clean-engineering-code on `specs/bookshop-sketch.md`
+*Then* the report says no graph rule ran on `specs/bookshop-sketch.md`
+  *And* the report does not say the graph rules passed
