@@ -75,7 +75,8 @@ class PracticeSelection:
 
 class FormatGroup:
     """One group of formats some fidelities offer, such as markdown, code, or a diagram's drawio and whiteboard, as each
-    of them works in it in the session: chosen while every one of them has a format of the group chosen. The chat bar's
+    of them works in it in the session: chosen while every one of them has a format of the group chosen, and for a
+    diagram every format of it the fidelity writes. The chat bar's
     format chips (*FormatSelection*) and an action bar's chips (*FormatChoice*, space/kanban) each show one."""
 
     def __init__(self, label: str, offering: list[FidelityGuidance]) -> None:
@@ -106,7 +107,7 @@ class FormatGroup:
 
     @property
     def is_chosen(self) -> bool:
-        return all(fidelity.session_output.formats.chosen_from(self.in_group(fidelity)) for fidelity in self._offering)
+        return all(fidelity.session_output.formats.is_chosen_from(self.in_group(fidelity)) for fidelity in self._offering)
 
     def choose(self, is_chosen: bool) -> None:
         """Choose every format each fidelity offering the group would use from it, or leave out every one chosen."""

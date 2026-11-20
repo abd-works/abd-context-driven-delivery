@@ -152,6 +152,7 @@ export function FileSourceView({
         rules={rules}
         activeRule={rule}
         onSelectRule={setChosenRule}
+        onCorrect={actions.correct}
         openAround={shownAround}
         language={monacoLanguageOf(file)}
         keepGlyphMargin

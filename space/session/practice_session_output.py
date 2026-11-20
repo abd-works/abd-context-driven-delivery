@@ -459,7 +459,7 @@ class WrittenFiles:
         name a file per format for a single-file output."""
         chosen, roots = self._output.chosen_outputs, self._output.roots
         return {
-            label: list(dict.fromkeys(self._under_root(name, root) for root in roots for name in self._output_names(declared, chosen.get(label))))
+            label: list(dict.fromkeys(path for root in roots for name in self._output_names(declared, chosen.get(label)) if (path := self._under_root(name, root))))
             for label, declared in self._fidelity.outputs.items()
         }
 
@@ -600,11 +600,14 @@ class WrittenFiles:
         ``harness/.context/stories``, holds the practice's documents itself, so a declared ``.context/story-map.md``
         lands in it as ``story-map.md`` rather than in a ``.context`` within the ``.context``; a declared
         ``story_tests/...`` lands in the ``story_tests`` beside that ``.context``, or, for a root inside ``story_tests``
-        such as one epic's folder, under that root."""
+        such as one epic's folder, under that root; empty when the root names a folder deeper than the declared path
+        goes."""
         folder_mark = "/" if name.endswith("/") else ""
         declared = PurePosixPath(name)
         if STORY_TESTS_FOLDER in root.parts and declared.parts[:1] == (STORY_TESTS_FOLDER,):
-            return f"{(root / self._below_named(declared, root)).as_posix()}{folder_mark}"
+            below = self._below_named(declared, root)
+            # An epic's own stories' file is not below a sub-epic's folder: the root already names more folders than it does.
+            return f"{(root / below).as_posix()}{folder_mark}" if below.parts else ""
         if CONTEXT_FOLDER in root.parts and declared.parts[:1] == (STORY_TESTS_FOLDER,):
             return f"{(self._beside_context(root) / declared).as_posix()}{folder_mark}"
         if CONTEXT_FOLDER in root.parts and declared.parts[:1] == (CONTEXT_FOLDER,):
@@ -669,9 +672,20 @@ class FidelityFormats:
         """The formats chosen for this fidelity from group, in the order chosen."""
         return [name for name in self._output.chosen_formats if name in group]
 
+    def is_chosen_from(self, group: list[str]) -> bool:
+        """Whether group is chosen for this fidelity: every format of a diagram it writes, the draw.io file and the
+        Claude Whiteboard board, else any format of the group."""
+        chosen = self.chosen_from(group)
+        if group and Format(group[0]).is_written_with_its_group:
+            return all(name in chosen for name in group)
+        return bool(chosen)
+
     def wanted_from(self, group: list[str]) -> list[str]:
-        """What choosing group chooses: the project's default formats for this fidelity in it, else its default format
-        when group holds it, else group's first."""
+        """What choosing group chooses: every format of a diagram this fidelity writes; for any other group the
+        project's default formats for this fidelity in it, else its default format when group holds it, else group's
+        first."""
+        if group and Format(group[0]).is_written_with_its_group:
+            return list(group)
         defaults = [name for name in self.default_formats if name in group]
         own = self._fidelity.default_format.name if self._fidelity.default_format else ""
         return defaults or [own if own in group else group[0]]

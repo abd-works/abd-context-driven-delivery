@@ -7,7 +7,7 @@ import type { CddApi } from '@cdd/cdd-shared'
 import type { GuidanceSelectionData } from '@cdd/space/session/session'
 
 import { FilesLink } from './files-link'
-import { FilesPage, filesShown } from './files-page'
+import { FilesPage, filesShown, selectedFormatsOf } from './files-page'
 import { drawioEditorUrl, drawioPageOf, missingNoteOf, revealLabelOf } from './files-paths'
 import { calloutsOf, rulesOf } from './source-of-file'
 
@@ -68,7 +68,7 @@ class FakeFilesServer implements CddApi {
       practices: PRACTICES.map(practice => ({ ...practice, is_selected: this.practices.includes(practice.key) })),
       formats: [
         { label: 'markdown', formats: ['markdown'], offered: fidelities.length, is_selected: this.formats.includes('markdown') },
-        { label: 'diagram', formats: ['drawio'], offered: fidelities.length, is_selected: this.formats.includes('diagram') },
+        { label: 'diagram', formats: ['drawio', 'whiteboard'], offered: fidelities.length, is_selected: this.formats.includes('diagram') },
       ],
       fidelities,
     } as GuidanceSelectionData
@@ -361,6 +361,16 @@ describe('Filter Files By Format In Files App', () => {
     const shown = filesShown(files, ['stories-story-map'], ['markdown', 'drawio'])
     expect(shown.map(each => each.path)).toEqual(['.context/story-map.md', '.context/story-map.version-2.whiteboard'])
   })
+
+  // A diagram is a draw.io file and a Claude Whiteboard board, so the diagram filter shows a board not yet published
+  // too; requested 2026-11-20: "whiteboard isn't a separate format, there's only a button for 'diagram'".
+  it('should show the whiteboard beside the draw.io file while the diagram is selected', () => {
+    const server = new FakeFilesServer()
+    server.formats = ['diagram']
+    const files = [{ slug: 'stories-story-map', entries: [entry('.context/story-map.md'), entry('.context/story-map.drawio'), entry('.context/story-map.whiteboard')], formatOf: { '.context/story-map.md': 'markdown', '.context/story-map.drawio': 'drawio', '.context/story-map.whiteboard': 'whiteboard' } }]
+    const shown = filesShown(files, ['stories-story-map'], selectedFormatsOf(server.selection()))
+    expect(shown.map(each => each.path)).toEqual(['.context/story-map.drawio', '.context/story-map.whiteboard'])
+  })
 })
 
 describe('Open Diagram In Files App', () => {
@@ -558,6 +568,92 @@ describe('Open Whiteboard In Claude Desktop', () => {
     await started(page)
     expect(await page.openPublished(board)).toBe(false)
     expect(server.posted('/send').filter(post => post.body.kind === 'submit')).toHaveLength(0)
+  })
+})
+
+// Correct on a broken rule's banner reaches the chat the way a comment does: a comment on the rule's lines, saying what
+// to fix, sent to the chat that opened the page; requested 2026-11-20: Correct must work "the same as comments".
+describe('Correct Broken Rule As A Comment', () => {
+  const CORRECTION = {
+    rule: 'limit-operation-parameters',
+    message: "Operation 'place' takes 4 parameters (maximum 2).",
+    nodeName: 'order.py',
+    nodeType: 'File',
+    file: 'src/order.py',
+    startLine: 2,
+    endLine: 3,
+    excerpt: 'class Order:\n    def place(self, cart, user, store, day):\n        return self',
+  }
+
+  // A session with src/order.py open, which keeps each comment added and answers it sent once sent, as file-comments does.
+  class CommentingServer extends FakeFilesServer {
+    comments: { anchor: string; range: object; text: string; state: string }[] = []
+    isChatDown = false
+
+    override async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
+      if (path.endsWith('/file')) return { path: 'src/order.py', text: CORRECTION.excerpt, language: 'python', comments: this.comments, changes: [], folds: [] } as Result
+      if (!path.includes('/file-comments/')) return super.post<Result>(path, body)
+      this.posts.push({ path, body })
+      if (path.endsWith('/add')) this.comments.push({ anchor: `${body.path}:L${body.start_line}-L${body.end_line}`, range: {}, text: String(body.text), state: 'not_sent' })
+      if (path.endsWith('/send') && this.isChatDown) throw new Error("chat 'chat-1' is not connected: is the cdd-board mod loaded in it?")
+      if (path.endsWith('/send')) this.comments = this.comments.map(comment => (comment.anchor === body.anchor ? { ...comment, state: 'sent' } : comment))
+      return { session_file: 'release-2', comments: this.comments } as Result
+    }
+  }
+
+  async function corrected(server = new CommentingServer(), link = STAGE_LINK) {
+    const page = new FilesPage(server, new FilesLink(`${link}&file=src/order.py`))
+    await started(page)
+    const outcome = await page.comments.correct(CORRECTION)
+    return { page, server, outcome }
+  }
+
+  const commentPosts = (server: FakeFilesServer, ending: string) => server.posts.filter(post => post.path.includes('/file-comments/') && post.path.endsWith(ending)).map(post => post.body)
+
+  describe('with the chat that opened the page connected', () => {
+    it("should comment on the rule's lines of the open file", async () => {
+      const { server } = await corrected()
+      expect(commentPosts(server, '/add')).toEqual([expect.objectContaining({ path: 'src/order.py', start_line: 2, end_line: 3 })])
+    })
+
+    it('should say in the comment which rule is broken, what is wrong, and to fix it test first', async () => {
+      const text = String(commentPosts((await corrected()).server, '/add')[0]?.text)
+      expect(text).toContain('Rule: limit-operation-parameters')
+      expect(text).toContain("Violation: Operation 'place' takes 4 parameters (maximum 2).")
+      expect(text).toContain('test-driven')
+    })
+
+    it('should leave the lines out of the comment, since a sent comment quotes them', async () => {
+      expect(String(commentPosts((await corrected()).server, '/add')[0]?.text)).not.toContain('def place')
+    })
+
+    it('should send the comment to the chat that opened the page', async () => {
+      expect(commentPosts((await corrected()).server, '/send')).toEqual([{ anchor: 'src/order.py:L2-L3', chat: 'chat-1' }])
+    })
+
+    it('should answer that it was sent to the chat', async () => {
+      expect((await corrected()).outcome).toEqual({ isSent: true, words: 'Sent to chat' })
+    })
+  })
+
+  describe('with a chat that is not connected', () => {
+    it('should answer that it was not sent', async () => {
+      const server = new CommentingServer()
+      server.isChatDown = true
+      expect((await corrected(server)).outcome).toEqual({ isSent: false, words: 'Not sent' })
+    })
+
+    it('should say why in a toast', async () => {
+      const server = new CommentingServer()
+      server.isChatDown = true
+      expect((await corrected(server)).page.state.toasts).toContain("The comment src/order.py:L2-L3 was not sent: chat 'chat-1' is not connected: is the cdd-board mod loaded in it?")
+    })
+  })
+
+  describe('with no chat that opened the page', () => {
+    it('should answer that it was not sent', async () => {
+      expect((await corrected(new CommentingServer(), STAGE_LINK.replace('&chat=chat-1', ''))).outcome).toEqual({ isSent: false, words: 'Not sent' })
+    })
   })
 })
 

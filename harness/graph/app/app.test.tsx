@@ -1066,9 +1066,7 @@ it('should expose the violation message when hovering a violating rule', async (
   );
 });
 
-it('should show the violation banner, highlight the source, and copy a Correct prompt', async () => {
-  const writeText = vi.fn().mockResolvedValue(undefined);
-  vi.spyOn(navigator.clipboard, 'writeText').mockImplementation(writeText);
+it('should show the violation banner, highlight the source, and say Correct was not sent with no chat to send it to', async () => {
   const user = userEvent.setup();
   await openFolder(user);
   await expand(user, 'clean_engineering');
@@ -1086,12 +1084,39 @@ it('should show the violation banner, highlight the source, and copy a Correct p
   const editor = await screen.findByTestId('source-editor');
   await waitFor(() => expect(editor.querySelector('.violation-highlight')).toBeTruthy());
   await user.click(screen.getByTestId('violation-correct'));
-  expect(writeText).toHaveBeenCalledOnce();
-  const copied = String(writeText.mock.calls[0][0]);
-  expect(copied).toContain('Clean Engineering');
-  expect(copied).toContain('test-driven');
-  expect(copied).toContain(registerText);
-  expect(copied).toContain("Violation: Operation 'failure' takes 4 parameters (maximum 2).");
+  expect((await screen.findByTestId('violation-correct-outcome')).textContent).toBe('Not sent');
+});
+
+// Correct hands the page the broken rule to correct, and shows on the banner what the page answered.
+it('should hand Correct the rule, its lines, and their text, and show that it was sent', async () => {
+  const onCorrect = vi.fn().mockResolvedValue({ isSent: true, words: 'Sent to chat' });
+  const user = userEvent.setup();
+  const violation = { rule: 'limit-operation-parameters', message: "Operation 'failure' takes 4 parameters (maximum 2).", startLine: 2, endLine: 3 };
+  render(<SourceView source={longLine} violation={violation} rules={[]} activeRule="" onCorrect={onCorrect} />);
+  await user.click(screen.getByTestId('violation-correct'));
+  expect(onCorrect).toHaveBeenCalledWith({
+    rule: violation.rule,
+    message: violation.message,
+    nodeName: longLine.name,
+    nodeType: longLine.type,
+    file: longLine.file,
+    startLine: 2,
+    endLine: 3,
+    excerpt: longLine.text,
+  });
+  const outcome = await screen.findByTestId('violation-correct-outcome');
+  expect(outcome.textContent).toBe('Sent to chat');
+  expect(outcome.className).toContain('is-sent');
+});
+
+it('should show that Correct was not sent when the page answers so', async () => {
+  const user = userEvent.setup();
+  const violation = { rule: 'limit-operation-parameters', message: 'Too many parameters.', startLine: 2, endLine: 3 };
+  render(<SourceView source={longLine} violation={violation} rules={[]} activeRule="" onCorrect={async () => ({ isSent: false, words: 'Not sent' })} />);
+  await user.click(screen.getByTestId('violation-correct'));
+  const outcome = await screen.findByTestId('violation-correct-outcome');
+  expect(outcome.textContent).toBe('Not sent');
+  expect(outcome.className).toContain('is-failed');
 });
 
 it('should build a Correct prompt with the rule, excerpt, and violation message', () => {

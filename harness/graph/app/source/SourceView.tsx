@@ -5,10 +5,8 @@ import { CallCatalog, type FoldMember } from './call-expansion';
 import { useCallouts, type CalloutsWithin, type GoToFile, type SourceCallout } from './source-callouts';
 import { foldMarkdownHeadings, useOpenAround, type SourceLines } from './source-folding';
 import type { NodeSourceData } from '@cdd/harness/graph/graph';
-import { buildViolationCorrectPrompt } from './violation-prompt';
+import type { CorrectionOutcome, CorrectViolation, ViolationCorrection } from './violation-prompt';
 import type { ViolationFocus } from '../graph/graph-selection';
-import { reasonOf } from '../graph/graph-failures';
-import { failures } from '../graph/graph-page';
 import './source.css';
 
 const LINE_HEIGHT = 20;
@@ -62,13 +60,15 @@ type SourceViewProps = SourceHostProps & {
   rules: SourceRule[];
   activeRule: string;
   onSelectRule?: (name: string) => void;
+  // What Correct on the broken rule's banner does; with none, the banner has no Correct.
+  onCorrect?: CorrectViolation;
 };
 
-export function SourceView({ source, note = '', violation, rules = [], activeRule = '', onSelectRule = () => undefined, ...host }: SourceViewProps) {
+export function SourceView({ source, note = '', violation, rules = [], activeRule = '', onSelectRule = () => undefined, onCorrect, ...host }: SourceViewProps) {
   return (
     <div className="panel" data-testid="source-file">
       {source ? (
-        <SourceEditor source={source} violation={violation} rules={rules} activeRule={activeRule} onSelectRule={onSelectRule} {...host} />
+        <SourceEditor source={source} violation={violation} rules={rules} activeRule={activeRule} onSelectRule={onSelectRule} onCorrect={onCorrect} {...host} />
       ) : (
         <p className="empty-state">{note || 'Select a node'}</p>
       )}
@@ -82,9 +82,10 @@ type SourceEditorProps = SourceHostProps & {
   rules: SourceRule[];
   activeRule: string;
   onSelectRule?: (name: string) => void;
+  onCorrect?: CorrectViolation;
 };
 
-function SourceEditor({ source, violation, rules, activeRule, onSelectRule, openAround = NO_LINES, language = '', keepGlyphMargin = false, wordWrap = false, callouts = NO_CALLOUTS, expandLines = NO_LINE_NUMBERS, onGoToFile, opensCalls = true, onEditor }: SourceEditorProps) {
+function SourceEditor({ source, violation, rules, activeRule, onSelectRule, onCorrect, openAround = NO_LINES, language = '', keepGlyphMargin = false, wordWrap = false, callouts = NO_CALLOUTS, expandLines = NO_LINE_NUMBERS, onGoToFile, opensCalls = true, onEditor }: SourceEditorProps) {
   const file = source.file ?? '';
   const text = source.text ?? '';
   const origin = source.start_line || 1;
@@ -106,7 +107,7 @@ function SourceEditor({ source, violation, rules, activeRule, onSelectRule, open
   return (
     <section className="knowledge-graph-panel source-snippet" data-open="true" data-file={file}>
       <SourceRulesView rules={rules} activeRule={activeRule} onSelectRule={onSelectRule} />
-      {violation ? <ViolationBannerView violation={violation} source={source} /> : null}
+      {violation ? <ViolationBannerView key={violationKeyOf(violation)} violation={violation} source={source} onCorrect={onCorrect} /> : null}
       <p className="source-path">{file || source.name}</p>
       <div className="panel-source" data-testid="source-excerpt">
         <Editor
@@ -189,9 +190,18 @@ function SourceRulesView({ rules, activeRule, onSelectRule }: { rules: SourceRul
   );
 }
 
-function ViolationBannerView({ violation, source }: { violation: ViolationFocus; source: NodeSourceData }) {
-  async function copyCorrectPrompt() {
-    const prompt = buildViolationCorrectPrompt({
+// A banner shows one broken rule on its lines; another rule, or the same rule on other lines, starts a fresh banner.
+const violationKeyOf = (violation: ViolationFocus): string => `${violation.rule}:${violation.startLine ?? ''}-${violation.endLine ?? ''}`;
+
+// The broken rule chosen and what it says is wrong, with Correct, which hands the page the correction and then shows
+// what came of it beside the button: sent to the chat, or not sent, the page's toast saying why.
+function ViolationBannerView({ violation, source, onCorrect }: { violation: ViolationFocus; source: NodeSourceData; onCorrect?: CorrectViolation }) {
+  const [isSending, setSending] = useState(false);
+  const [outcome, setOutcome] = useState<CorrectionOutcome | null>(null);
+  async function correct(send: CorrectViolation) {
+    setSending(true);
+    setOutcome(null);
+    const correction: ViolationCorrection = {
       rule: violation.rule,
       message: violation.message,
       nodeName: source.name,
@@ -200,12 +210,9 @@ function ViolationBannerView({ violation, source }: { violation: ViolationFocus;
       startLine: violation.startLine ?? source.start_line,
       endLine: violation.endLine ?? source.end_line,
       excerpt: source.text ?? '',
-    });
-    try {
-      await navigator.clipboard.writeText(prompt);
-    } catch (cause) {
-      failures.fail(`The prompt was not copied: ${reasonOf(cause)}`, `Copy the correction prompt for ${violation.rule} in the Graph app`);
-    }
+    };
+    setOutcome(await send(correction));
+    setSending(false);
   }
   return (
     <div className="violation-banner" data-testid="violation-banner">
@@ -213,9 +220,18 @@ function ViolationBannerView({ violation, source }: { violation: ViolationFocus;
         <p className="violation-rule">{violation.rule}</p>
         <p className="violation-message">{violation.message}</p>
       </div>
-      <button type="button" className="copy-prompt" data-testid="violation-correct" onClick={() => void copyCorrectPrompt()}>
-        Correct
-      </button>
+      {onCorrect ? (
+        <div className="violation-correct">
+          {outcome ? (
+            <span className={`violation-correct-outcome ${outcome.isSent ? 'is-sent' : 'is-failed'}`} data-testid="violation-correct-outcome" role="status">
+              {outcome.words}
+            </span>
+          ) : null}
+          <button type="button" className="copy-prompt" data-testid="violation-correct" disabled={isSending} title="Send the correction to the chat that opened the page" onClick={() => void correct(onCorrect)}>
+            {isSending ? 'Sending…' : 'Correct'}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
