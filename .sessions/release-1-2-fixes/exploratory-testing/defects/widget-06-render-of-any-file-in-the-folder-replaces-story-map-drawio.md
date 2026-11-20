@@ -23,6 +23,8 @@ Unit (`render_spec.py`): every example renders the file named story-map.md; none
 ## Also seen by
 - Widget, round 2: with UX turned on, a render at `ux-ia` to drawio of `.context/story-map.md` also answers the path of `.context/story-map.drawio` and writes over the story map's drawing, though ux-ia declares its drawio as `{epic}/.context/information-architecture.drawio`.
 
+- Sparky, round 3 (build 4d47fdf8e): still fails. A render at `stories-story-map` to drawio of `.context/thin-slice.md`, a file the fidelity itself names as an output, answers `story-map.drawio` and replaces the map's 24 cells with two epics named after the thin slice's headings. See r3-sparky-01.
+
 ## Confirmation (Sparky, round 2)
 - Result: confirmed
 - What I ran and saw: Run through a sandbox cdd server on port 48933, on a fresh repository of my own (`C:\dev\_et\sparky\confirm\widget\wz.py`; the report's `drv` files are not in the report). `story-map.drawio` rendered from the story map: 3,013 characters, 8 cells. After `render.render` of `.context/empty.md` the answer names `story-map.drawio` with no error, and the file is 218 characters with no card; no `empty.drawio` is made. Differs: my `broken.md` (stray bytes that are not UTF-8) was refused with a 1,815-character worker traceback and left the drawing alone, so the report's broken file was a different one.

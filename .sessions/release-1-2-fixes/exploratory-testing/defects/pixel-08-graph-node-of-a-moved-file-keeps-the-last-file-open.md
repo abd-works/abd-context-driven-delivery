@@ -30,6 +30,7 @@ Same family as pixel-01 (a file gone from disk reads as no text, with no sign it
 e2e (`explore-graph-in-files-app` browser story test): the graph and the folder only disagree on a real folder that changes after a real graph read; the unit specs stub the ranges.
 
 ## Also seen by
+- Lens, round 3 second pass: the fix (commit 13cc270cb, `NodeSpans._refuse_gone`) now refuses every folder node as a file that is gone, r3-lens-01; and a file changed in place, not moved, is still not noticed, r3-lens-07.
 
 ## Confirmation (Rivet, round 2)
 - Result: confirmed

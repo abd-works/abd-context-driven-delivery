@@ -33,6 +33,7 @@ Heavy (`render_worker_heavy_spec.py`): no example sends a file whose format diff
 
 ## Also seen by
 - Widget: the same with a drawing, `render.render {"guidance": "stories-story-map", "format": "markdown", "paths": [".context/story-map.drawio"]}` -> `MarkdownParseError: Not a valid Markdown story map: no recognised structure found` (one line, no traceback, still no word about `source`).
+- Gizmo (round 3, at HEAD 4d47fdf8e): at UX ia the file is read as the fidelity's default format, drawio, not as markdown. `render.render {"guidance": "ux-ia", "format": "drawio", "paths": ["bookshop/.context/ux-context.md"]}` -> `RenderFailed: the render's worker process exited with 1: cdd_guidance.practices.ux.model.drawio.nodes.UnreadableDrawio: draw.io content is not valid XML: not well-formed (invalid token): line 1, column 1`. With `"source": "markdown"` it renders. The render skill says to omit source "for a file whose extension says its format".
 
 ## Confirmation (Sparky, round 2)
 - Result: confirmed

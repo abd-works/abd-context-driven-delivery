@@ -32,3 +32,7 @@ As listed. Also seen in the same runs:
 
 ## Tier that should catch it
 Once answered, heavy (`graph_build_heavy_spec.py`).
+
+## Also seen by
+- Bolt, round 3: item 3 seen again with `graph.load_files` on a three-context Bookshop map and model; all four roots are EntityRoot nodes now. Reported with the missing integrations, events and dependencies as r3-bolt-01.
+- Cog, round 3 second pass: round 3, five practices with chosen roots: item 2 seen again (files named from each practice's root); code story tests and the DDD root's own code are left out (r3-cog-03).

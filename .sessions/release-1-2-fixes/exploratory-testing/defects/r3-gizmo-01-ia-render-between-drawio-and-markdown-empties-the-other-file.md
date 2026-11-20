@@ -9,7 +9,7 @@
 ## Steps
 Sandbox `C:\dev\_et\round3\gizmo\work`, session `main`, driver `C:\dev\_et\round3\gizmo\drv\run.py` (batches `a5.json`, `a6.json`). The two files of the ia fidelity, at the places `generate` names:
 
-- `bookshop/.context/information-architecture.drawio`: 6 screens, 14 regions, 7 transitions (copy in `C:\dev\_et\round3\gizmo\orig\ia`).
+- `bookshop/.context/information-architecture.drawio`: 6 screens, 13 regions, 7 transitions (copy in `C:\dev\_et\round3\gizmo\orig\ia`).
 - `bookshop/.context/ux-context.md`:
 
       # UX context

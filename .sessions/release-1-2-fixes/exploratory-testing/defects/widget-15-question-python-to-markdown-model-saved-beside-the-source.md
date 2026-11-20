@@ -19,3 +19,6 @@ The answer names `src\order.md`. The model fidelity declares markdown as `{modul
 
 ## Tier that should catch it
 Once the person answers, a unit example that states the answer.
+
+## Also seen by
+- Widget, round 3 (build 4d47fdf8e): unchanged. `src/ordering/ordering.py` and `src/ordering/ordering.ts` rendered to markdown are both saved as `src\ordering\ordering.md`, not `src/ordering/.context/ordering-model.md`. See also r3-widget-01 for the modules fidelity.
