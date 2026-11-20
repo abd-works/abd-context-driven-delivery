@@ -6,6 +6,7 @@ import { SessionClientGenerated, type FileEntryData, type GuidanceSelectionData,
 import { ChatContext } from './chat-context'
 import { FileBar, publishedOf } from './file-bar'
 import { FileBrowser } from './file-browser'
+import { FileCallouts } from './file-callouts'
 import { FileCommentsActions } from './file-comments-actions'
 import { FileMenu } from './file-menu'
 import type { FilesLink } from './files-link'
@@ -26,9 +27,12 @@ export const SENT_REFRESH_MILLISECONDS = 2_000
 const reasonOf = (failure: unknown): string => (failure instanceof Error ? failure.message : String(failure))
 
 // The fidelities whose files the page lists: those the session's guidance selection lists, its stages selected by its
-// practices selected, none selected meaning every one; before any stage was selected, the ones the link names.
-export const listedBy = (selection: GuidanceSelectionData | null, linked: string[]): string[] =>
-  selection?.is_stage_chosen ? selection.fidelities : linked
+// practices selected, none selected meaning every one; before any stage was selected, the ones the link names that the
+// selection lists, so a practice turned off hides its files then too.
+export const listedBy = (selection: GuidanceSelectionData | null, linked: string[]): string[] => {
+  if (!selection) return linked
+  return selection.is_stage_chosen ? selection.fidelities : linked.filter(slug => selection.fidelities.includes(slug))
+}
 
 // The formats of the format groups selected, each once; none selected, every format shows.
 export const selectedFormatsOf = (selection: GuidanceSelectionData | null): string[] =>
@@ -70,6 +74,7 @@ export class FilesPage {
   readonly graph: FilesGraph
   readonly openFiles = new OpenFiles(this.store)
   readonly foldKeys: FilesFoldKeys
+  readonly callouts: FileCallouts
   private refreshTimer: ReturnType<typeof setTimeout> | null = null
 
   constructor(
@@ -79,6 +84,7 @@ export class FilesPage {
     this.session = SessionClientGenerated.named(api, link.sessionFile)
     this.notices = new FilesNotices(this.store, api, link.chat)
     this.foldKeys = new FilesFoldKeys(this.session, this.notices)
+    this.callouts = new FileCallouts(this.store, this.session, this.notices)
     this.chatContext = new ChatContext(this.session, link.chat, this.notices)
     this.menu = new FileMenu(this.store, this.chatContext, new FileBrowser(api, this.notices))
     this.comments = new FileCommentsActions(this)

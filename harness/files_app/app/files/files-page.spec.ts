@@ -214,6 +214,16 @@ describe('Select Guidance In Files App', () => {
       stop()
       expect(paths(page)).toEqual(['.context/stories-story-map.md', '.context/stories-story-map.drawio', '.context/ddd-bounded-context.md', '.context/ddd-bounded-context.drawio'])
     })
+
+    describe('that has DDD turned off in the Files app', () => {
+      it("should list only Stories' files among those its link names", async () => {
+        const { page, stop } = await following(new FakeFilesServer())
+        await page.guidance.togglePractice('ddd')
+        await settled()
+        stop()
+        expect(paths(page)).toEqual(['.context/stories-story-map.md', '.context/stories-story-map.drawio'])
+      })
+    })
   })
 })
 

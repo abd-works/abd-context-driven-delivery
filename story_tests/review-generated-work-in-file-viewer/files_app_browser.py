@@ -308,6 +308,22 @@ def lines_in_order(page: Page, path: str) -> list[str]:
     return [text.replace(NBSP, " ") for _, text in sorted(tops)]
 
 
+def open_files(page: Page) -> list[str]:
+    """The files open in the file view, top to bottom."""
+    return page.locator("section.open-file").evaluate_all("files => files.map(file => file.getAttribute('aria-label'))")
+
+
+def marked_lines(page: Page, path: str) -> list[str]:
+    """The lines the open file path shows marked as selected, top to bottom: the mark sits in the editor's margin, level
+    with the line it marks."""
+    read = """file => {
+        const marked = new Set([...file.querySelectorAll('.file-selected-range')].map(mark => mark.parentElement.style.top))
+        return [...file.querySelectorAll('.view-lines .view-line')].filter(line => marked.has(line.style.top)).map(line => [line.offsetTop, line.innerText])
+    }"""
+    tops = page.locator(f'section.open-file[aria-label="{path}"]').evaluate(read)
+    return [text.replace(NBSP, " ") for _, text in sorted(tops)]
+
+
 def mark_on(page: Page, text: str):
     """The callout mark beside the line reading text, none when the line opens nothing in place."""
     row = line(page, text).bounding_box()

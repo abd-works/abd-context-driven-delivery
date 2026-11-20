@@ -25,9 +25,13 @@ from space.session.graph_view_examples import (
     BOARD_CODE,
     CHECKOUT_FLOW_IN_SPACE,
     CHECKOUT_FLOW_READING_NO_CODE,
+    EXAMPLES_SCENARIOS,
+    EXAMPLES_SCENARIOS_SECOND_LINES,
+    EXAMPLES_SCENARIOS_TEXT,
     LISTED,
     STORY_MAP,
     STORY_MAP_TEXT,
+    STORY_MAP_WITH_REOPEN_TEXT,
     RESTORE_TEST,
     SCENARIOS,
     SCENARIOS_GIVEN_LINE,
@@ -390,6 +394,28 @@ def _(s):
         expect(world.lines).to(equal([(SCENARIOS, SCENARIOS_SCENARIO_LINE, SCENARIOS_THEN_LINE)]))
 
 
+# Seed: the Files app listing the story map and Reopen Ticket's scenarios.
+REOPEN_LISTED = [STORY_MAP, EXAMPLES_SCENARIOS]
+
+
+@shared_stories.scenario("Open Story Scenarios Across Files", "Selecting a markdown story's second scenario spans its own lines, not the examples the story declares")
+def _(s):
+    @s.given("the Files app shows the Stories tree of Reopen Ticket's scenarios, whose Examples table both of its scenarios use")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+        world.project.seed_file(EXAMPLES_SCENARIOS, EXAMPLES_SCENARIOS_TEXT)
+        world.project.seed_file(STORY_MAP, STORY_MAP_WITH_REOPEN_TEXT)
+
+    @s.when("the Person selects the scenario Refuse a ticket still open")
+    def _(world):
+        ranges = world.data_of(session_of(world).graph_node_ranges(node_id=node_id_of(world, "Refuse a ticket still open", REOPEN_LISTED), paths=REOPEN_LISTED))
+        world.lines = [(found["path"], found["start_line"], found["end_line"]) for found in ranges]
+
+    @s.then("the scenarios file opens at lines 20 to 24, its heading through its Then, but not from the first scenario or the Examples table")
+    def _(world):
+        expect(world.lines).to(equal([(EXAMPLES_SCENARIOS, *EXAMPLES_SCENARIOS_SECOND_LINES)]))
+
+
 # --- Open Linked Sections In Place --------------------------------------------------------------------------------
 
 BROKEN_LINKS = "notes/broken-links.md"
@@ -400,11 +426,38 @@ BROKEN_LINKS_TEXT = (
     "See the [missing file](../nowhere/gone.md#board).\n"
 )
 
+# A story map written with headings, as Stories writes it: Delete Ticket's heading, on line 3, holds a link.
+HEADED_MAP = "notes/headed-map.md"
+HEADED_MAP_TEXT = "# Story Map\n\n### (S) Person --> [Delete Ticket](../story_tests/manage-tickets/remove-tickets/remove_tickets_story.test.md)\n\nThe Person removes a ticket.\n\n### (S) Person --> Restore Ticket\n"
+LINKS_TO_HEADED_MAP = "notes/links-to-headed-map.md"
+LINKS_TO_HEADED_MAP_TEXT = "See the [story map](headed-map.md#s-person----delete-ticket) for where this story sits.\n"
+# A story test in Python whose Given, on line 5, links a domain term, and whose When calls code that reads as a link.
+LINKING_STORY_TEST = "story_tests/manage-tickets/remove-tickets/linking_story.test.py"
+LINKING_STORY_TEST_TEXT = (
+    "from story_test import given, scenario, story, when\n"
+    "\n"
+    'with story("Delete Ticket"):\n'
+    '    with scenario("a ticket is deleted"):\n'
+    '        with given("a [board](../../../space/kanban/.context/kanban-model.md#board) with a ticket"):\n'
+    "            pass\n"
+    '        with when("the Person deletes it"):\n'
+    "            handlers[name](event)\n"
+    "# Model: ../../../space/kanban/.context/kanban-model.md\n"
+)
+LINKING_STORY_TEST_GIVEN_LINE = 5
+LINKING_STORY_TEST_MODEL_LINE = 9
+
 
 def callouts_of(world, path: str) -> list[tuple[int, str, int, int]]:
-    """Each callout session.file answers for path: the line it sits on, and the file and lines of the section it opens."""
+    """Each callout session.file answers for path that opens something: the line it sits on, and the file and lines it opens."""
     found = world.data_of(session_of(world).file(path=path))["callouts"]
-    return [(callout["line"], callout["section"]["path"], callout["section"]["start_line"], callout["section"]["end_line"]) for callout in found]
+    return [(callout["line"], callout["section"]["path"], callout["section"]["start_line"], callout["section"]["end_line"]) for callout in found if not callout["missing"]]
+
+
+def missing_of(world, path: str) -> list[tuple[int, str]]:
+    """Each callout session.file answers for path whose link names something not there: its line and what it says is missing."""
+    found = world.data_of(session_of(world).file(path=path))["callouts"]
+    return [(callout["line"], callout["missing"]) for callout in found if callout["missing"]]
 
 
 @shared_stories.scenario("Open Linked Sections In Place", "A story map story opens its scenarios in place")
@@ -434,10 +487,42 @@ def _(s):
 
     @s.then("line 9 carries a callout to the model's lines 3 to 5, the Board section")
     def _(world):
-        expect(world.callouts).to(equal([(SCENARIOS_THEN_LINE, KANBAN_MODEL, 3, 5)]))
+        expect([callout for callout in world.callouts if callout[0] == SCENARIOS_THEN_LINE]).to(equal([(SCENARIOS_THEN_LINE, KANBAN_MODEL, 3, 5)]))
 
 
-@shared_stories.scenario("Open Linked Sections In Place", "A link to a heading no file holds carries no callout")
+@shared_stories.scenario("Open Linked Sections In Place", "A link to a whole file opens the file in place")
+def _(s):
+    @s.given("Delete Ticket's Given links the ticket to space/kanban/ticket.py, naming no heading")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+
+    @s.when("the Person views the scenarios file")
+    def _(world):
+        world.callouts = callouts_of(world, SCENARIOS)
+
+    @s.then("line 7 carries a callout to ticket.py's lines 1 to 9, the whole file")
+    def _(world):
+        expect([callout for callout in world.callouts if callout[0] == SCENARIOS_GIVEN_LINE]).to(equal([(SCENARIOS_GIVEN_LINE, TICKET_CODE, 1, 9)]))
+
+
+@shared_stories.scenario("Open Linked Sections In Place", "A link to a heading that holds a link opens the heading's section")
+def _(s):
+    @s.given("a story map's heading for Delete Ticket holds a link to its scenarios, and a markdown file links to that heading")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+        world.project.seed_file(HEADED_MAP, HEADED_MAP_TEXT)
+        world.project.seed_file(LINKS_TO_HEADED_MAP, LINKS_TO_HEADED_MAP_TEXT)
+
+    @s.when("the Person views the linking file")
+    def _(world):
+        world.callouts = callouts_of(world, LINKS_TO_HEADED_MAP)
+
+    @s.then("line 1 carries a callout to the map's lines 3 to 5, the heading's section")
+    def _(world):
+        expect(world.callouts).to(equal([(1, HEADED_MAP, 3, 5)]))
+
+
+@shared_stories.scenario("Open Linked Sections In Place", "A link to a heading or a file not there says what is not there")
 def _(s):
     @s.given("a markdown file links to a heading its target does not have, and to a file not there")
     def _(world):
@@ -446,11 +531,36 @@ def _(s):
 
     @s.when("the Person views it")
     def _(world):
-        world.callouts = callouts_of(world, BROKEN_LINKS)
+        world.missing = missing_of(world, BROKEN_LINKS)
 
-    @s.then("neither line carries a callout")
+    @s.then("line 3's callout says the kanban model has no heading no-such-heading, and line 4's that nowhere/gone.md is not there")
     def _(world):
-        expect(world.callouts).to(equal([]))
+        expect(world.missing).to(equal([(3, f"{KANBAN_MODEL} has no heading #no-such-heading"), (4, "nowhere/gone.md is not there")]))
+
+
+@shared_stories.scenario("Open Linked Sections In Place", "A story test in code opens the domain term a step links")
+def _(s):
+    @s.given("a Python story test's Given links the board to the Board section of the kanban's class model, its When calls handlers[name](event), and its last line reads # Model: with the model's path")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+        world.project.seed_file(LINKING_STORY_TEST, LINKING_STORY_TEST_TEXT)
+
+    @s.when("the Person views the story test")
+    def _(world):
+        world.callouts = callouts_of(world, LINKING_STORY_TEST)
+        world.missing = missing_of(world, LINKING_STORY_TEST)
+
+    @s.then("the Given's line carries a callout to the model's lines 3 to 5, the Board section")
+    def _(world):
+        expect(world.callouts[0]).to(equal((LINKING_STORY_TEST_GIVEN_LINE, KANBAN_MODEL, 3, 5)))
+
+    @s.and_("its `# Model:` line, which names the kanban's class model, carries a callout to the model's lines 1 to 9, the whole file")
+    def _(world):
+        expect(world.callouts[1:]).to(equal([(LINKING_STORY_TEST_MODEL_LINE, KANBAN_MODEL, 1, 9)]))
+
+    @s.and_("the call's line carries none, since code that reads as a link to no file is not one")
+    def _(world):
+        expect(world.missing).to(equal([]))
 
 
 # --- Follow Story Steps To Code -----------------------------------------------------------------------------------

@@ -190,6 +190,38 @@ WITH_STORY_TEXT = (
     "            self.ticket.delete(self.board)\n"
 )
 WITH_LISTED = [WITH_STORY, TICKET_CODE, BOARD_CODE]
+# Seed: Reopen Ticket's scenarios, in markdown, with an Examples table the story's two scenarios share: the table's
+# examples on lines 9 and 10, its first scenario on lines 14 to 18 and its second on lines 20 to 24.
+EXAMPLES_SCENARIOS = "story_tests/manage-tickets/reopen-tickets/reopen_ticket_story.test.md"
+EXAMPLES_SCENARIOS_TEXT = (
+    "## Story: Reopen Ticket\n"
+    "\n"
+    "### Examples\n"
+    "\n"
+    "#### ticket\n"
+    "\n"
+    "| ticket | example | stage |\n"
+    "| --- | --- | --- |\n"
+    "| ticket | closed ticket | done |\n"
+    "| ticket | open ticket | doing |\n"
+    "\n"
+    "### Behaviors\n"
+    "\n"
+    "#### Scenario: Reopen a closed ticket\n"
+    "\n"
+    "*Given* the board holds ++closed ticket++  \n"
+    "*When* the Person reopens it  \n"
+    "*Then* the ticket is back in doing\n"
+    "\n"
+    "#### Scenario: Refuse a ticket still open\n"
+    "\n"
+    "*Given* the board holds ++open ticket++  \n"
+    "*When* the Person reopens it  \n"
+    "*Then* the board refuses, since the ticket is still open\n"
+)
+EXAMPLES_SCENARIOS_SECOND_LINES = (20, 24)
+# Seed: checkout-flow's story map with Reopen Ticket on it, linked to those scenarios, so the graph places them.
+STORY_MAP_WITH_REOPEN_TEXT = STORY_MAP_TEXT + f"        (S) Person --> [Reopen Ticket](../{EXAMPLES_SCENARIOS}#story-reopen-ticket)\n"
 
 
 def seed_checkout_flow_with_graph_files(world, seed: SessionSeed = CHECKOUT_FLOW) -> None:

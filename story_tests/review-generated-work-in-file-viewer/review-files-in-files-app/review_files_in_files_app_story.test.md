@@ -321,6 +321,15 @@ Reported (Nov 18 demo, 2026-11-18): in a plain folder This session listed nothin
 *And* the Stories toggle shows as an outline
 *And* the Files app no longer lists *story-map.md*
 
+#### Scenario: Turn a practice off before any stage is selected
+
+Round 3 of exploratory testing (r3-lens-05): with no stage selected yet the page listed every fidelity its link names, whatever practices were on, so a practice turned off kept its files in the list and its tree in the graph view. The page: `harness/files_app/app/files/files-page.spec.ts`.
+
+*Given* the Files app's link names stories-story-map and ddd-bounded-context, and no stage was selected for checkout-flow yet
+*When* the Person turns DDD off
+*Then* the Files app lists *story-map.md*
+  *But* no longer *bounded-context-map.md*
+
 ## Story: Keep Chat Bar Practices In Sync
 
 #### Scenario: Show a practice turned on in the Files app on the chat bar

@@ -74,7 +74,7 @@ def _(s):
         expect([child["name"] for child in opened["children"] if "children_left_out" in child]).to(equal(["reread"]))
 
 
-@shared_stories.scenario("Follow Relationships Under Node In Files App", "Selecting a related node opens its file beside the open one")
+@shared_stories.scenario("Follow Relationships Under Node In Files App", "Selecting a related node opens the related node alone, in its own file")
 def _(s):
     @s.given("Ticket.delete is selected and ticket.py is open")
     def _(world):
@@ -89,7 +89,7 @@ def _(s):
         ranges = world.data_of(session_of(world).graph_node_ranges(node_id=world.invoked["node_id"], paths=LISTED))
         world.lines = [(found["path"], found["start_line"], found["end_line"]) for found in ranges]
 
-    @s.then("board.py opens beside ticket.py, at Board.reread")
+    @s.then("board.py opens at Board.reread, but ticket.py, which holds Ticket.delete, is no longer open")
     def _(world):
         expect(world.lines).to(equal([(BOARD_CODE, 2, 3)]))
 

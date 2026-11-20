@@ -643,8 +643,8 @@ describe('Show A Graph Read That Failed', () => {
   })
 })
 
-describe('Open Connectors In Place', () => {
-  describe("with Delete Ticket's When step invoking Ticket.close, shown under its invokes connector", () => {
+describe("Open A Relationship's Member In Its Own File", () => {
+  describe("with Delete Ticket's When step invoking Ticket.close, shown under its invokes group", () => {
     async function selectedInvokedClose() {
       const shown = await showingGraph()
       for (const name of ['Delete Ticket', 'when the Person deletes it', 'invokes']) await shown.page.graph.toggle(entryNamed(shown.page, name))
@@ -654,16 +654,16 @@ describe('Open Connectors In Place', () => {
       return shown
     }
 
-    it("should keep the step's file open at the step, never jumping to ticket.py, when the Person selects close there", async () => {
+    it('should open ticket.py at the lines close covers when the Person selects close there', async () => {
       const { page, stop } = await selectedInvokedClose()
       stop()
-      expect([page.state.openPath, page.selectedLinesIn(STORY_MAP)]).toEqual([STORY_MAP, [{ start: 316, end: 318 }]])
+      expect([page.state.openPath, page.selectedLinesIn(TICKET_CODE)]).toEqual([TICKET_CODE, [{ start: 538, end: 555 }]])
     })
 
-    it("should expand close's fold-out under the step", async () => {
+    it("should mark no line of the step's own file", async () => {
       const { page, stop } = await selectedInvokedClose()
       stop()
-      expect(page.state.graph.expanded).toEqual(['ticket-close'])
+      expect(page.selectedLinesIn(STORY_MAP)).toEqual([])
     })
   })
 })
@@ -691,7 +691,7 @@ describe('Go To A Fold-out File', () => {
       await page.graph.goToFile(CLOSE_FOLD_OUT)
       await settled()
       stop()
-      expect([page.state.openPath, page.selectedLinesIn(TICKET_CODE), page.state.graph.expanded]).toEqual([TICKET_CODE, [{ start: 538, end: 555 }], []])
+      expect([page.state.openPath, page.selectedLinesIn(TICKET_CODE)]).toEqual([TICKET_CODE, [{ start: 538, end: 555 }]])
     })
   })
 

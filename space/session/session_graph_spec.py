@@ -3,8 +3,11 @@ graph_branch, graph_node_ranges): what they answer for no file, an unknown node,
 needs from them, scenario by scenario, is proved by the story tests in
 story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/ and
 explore-graph-in-files-app/."""
+import os
+import shutil
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -30,6 +33,10 @@ TICKET_FILE = "work/kanban/ticket.py"
 TICKET_TEXT = "class Ticket:\n    def activate(self) -> None:\n        return None\n\n    def close(self) -> None:\n        return None\n"
 BOARD_FILE = "work/kanban/board.py"
 BOARD_TEXT = "class Board:\n    def reread(self) -> None:\n        return None\n"
+# Seconds past now a changed file is stamped, so its change is later than the graph's read on any clock.
+A_MOMENT_LATER = 5
+# The node the graph reads for the folder both files sit in: a package, read from no file's lines.
+KANBAN_PACKAGE = "clean_engineering:Package:work/kanban"
 
 
 def _session_with_code():
@@ -79,9 +86,47 @@ with description("a session's graph"):
         with it("should answer no tree"):
             expect(self.session.graph_trees([])).to(equal([]))
 
+    with context("asked for the trees of both code files with every practice turned off"):
+        with before.each:
+            self.session.own_practices["clean_engineering"].enable(False)
+
+        with it("should answer no tree, since no practice reads the files"):
+            expect(self.session.graph_trees([TICKET_FILE, BOARD_FILE])).to(equal([]))
+
     with context("asked for the lines of a node it no longer holds"):
         with it("should answer none"):
             expect(self.session.graph_node_ranges("no-such-node", [TICKET_FILE])).to(equal([]))
+
+    with context("asked for the lines of the folder both code files sit in"):
+        with before.each:
+            self.session.graph_trees([TICKET_FILE, BOARD_FILE])
+            ranges = self.session.graph_node_ranges(KANBAN_PACKAGE, [TICKET_FILE, BOARD_FILE])
+            self.lines = {each.path: (each.start_line, each.end_line) for each in ranges}
+
+        with it("should answer each listed file below the folder, at the lines of the classes it holds"):
+            expect(self.lines).to(equal({TICKET_FILE: (1, 6), BOARD_FILE: (1, 3)}))
+
+    with context("asked for the lines of that folder once it has gone since the graph read it"):
+        with before.each:
+            self.session.graph_trees([TICKET_FILE, BOARD_FILE])
+            shutil.rmtree(Path(self.session.repo_path) / "work" / "kanban")
+
+        with it("should refuse, naming the folder that is not there"):
+            ranges = lambda: self.session.graph_node_ranges(KANBAN_PACKAGE, [TICKET_FILE, BOARD_FILE])
+            expect(ranges).to(raise_error(NamedPathNotFoundError, contain("work/kanban")))
+
+    with context("asked for the lines of an operation whose file gained two lines above it since the graph read it"):
+        with before.each:
+            self.session.graph_trees([TICKET_FILE, BOARD_FILE])
+            self.close = next(member.node_id for member in self.session.graph_members() if member.name == "close")
+            ticket = Path(self.session.repo_path) / TICKET_FILE
+            ticket.write_text("# one\n# two\n" + TICKET_TEXT, encoding="utf-8")
+            os.utime(ticket, (time.time() + A_MOMENT_LATER, time.time() + A_MOMENT_LATER))
+            ranges = self.session.graph_node_ranges(self.close, [TICKET_FILE, BOARD_FILE])
+            self.lines = [(each.path, each.start_line, each.end_line) for each in ranges]
+
+        with it("should answer the operation's lines as the file is now, two lines lower"):
+            expect(self.lines).to(equal([(TICKET_FILE, 7, 8)]))
 
     with context("asked for the lines of a class whose file has gone since the graph read it"):
         with before.each:
