@@ -19,6 +19,17 @@ with description("a format") as self:
         with it("should be the format that extension belongs to"):
             expect(Format.from_extension(".ts").name).to(equal("typescript"))
 
+    with description("whose files carry an ending before their extension"):
+        with it("should name a file that carries the ending"):
+            expect(Format("sketch").names(Path("orders-sketch.md"))).to(equal(True))
+
+        with it("should not name a file without the ending"):
+            expect(Format("sketch").names(Path("orders.md"))).to(equal(False))
+
+    with description("whose files carry no ending"):
+        with it("should name no file by an ending"):
+            expect(Format("markdown").names(Path("orders.md"))).to(equal(False))
+
     with description("that is a code format"):
         with it("should say it is code"):
             expect(Format("java").is_code).to(equal(True))

@@ -101,18 +101,27 @@ class ValidationReport:
 
     def _summary_lines(self) -> list[str]:
         """How many graph violations the report holds, across how many rules, and how many rules the AI judges; with
-        no graph checked, that the judgment covers the files alone."""
+        no graph checked, that the judgment covers the files alone; and each named path the graph read no node from."""
         violations = self._checked.violations()
+        unread = self._checked.unread
         lines = ["## Summary", ""]
         if not self._checked.files:
             lines.append("**No graph checked.** The judgment covers the checked files.")
-        elif not violations:
-            lines.append("**No graph rule violations.** All scanned graph rules passed.")
-        else:
+        elif violations:
             lines.append(f"**Total graph violations:** {len(violations)}")
             lines.append(f"**Rules with graph hits:** {len(Violation.by_rule(violations))}")
+        elif len(unread) < len(self._checked.edited) or not unread:
+            lines.append("**No graph rule violations.** All scanned graph rules passed.")
+        if unread:
+            lines.append(self._unread_line(unread))
         lines.extend([f"**AI rules in scope:** {len(self._rules_in_scope())}", ""])
         return lines
+
+    def _unread_line(self, unread: list[str]) -> str:
+        """That no graph rule ran on the named paths the graph read no node from, so nobody reads a report with no
+        violation as those files passing the graph rules."""
+        named = ", ".join(f"`{path}`" for path in unread)
+        return f"**No graph rule ran on:** {named}. The graph read no node from them, so only the AI rules judge them."
 
     def _rules_in_scope(self) -> list[Rule]:
         """The rules the judge judges: the one the call names, else every rule the listed guidance checks."""

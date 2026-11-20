@@ -107,6 +107,18 @@ class CheckedGraph:
         return [violation for violation in found if violation.node_id not in outside]
 
     @property
+    def unread(self) -> list[str]:
+        """The paths the call names that gave the graph it built from them no node of a listed practice, such as a
+        sketch or a document no graph reading reads: no graph rule ran on them, so a report with no violation says
+        nothing about them. None for a graph the call did not build from paths it names."""
+        if not self.edited or self._checked is None or self._named not in (None, True):
+            return []
+        keys = [fidelity.practice_guidance.key for fidelity in self._fidelities]
+        practices = [self._checked.practices[key] for key in keys if key in self._checked.practices]
+        files = {node.file.replace("\\", "/") for practice in practices for node in practice.nodes}
+        return [path for path in self.edited if not any(file == path or file.startswith(f"{path}/") for file in files)]
+
+    @property
     def held_beside(self) -> list[str]:
         """The folders of the other files the session's graph held when this call checked its files, which a rule over a
         whole practice compared them with; none for a graph this call did not build."""

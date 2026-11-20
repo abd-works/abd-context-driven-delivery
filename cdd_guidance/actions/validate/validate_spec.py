@@ -40,6 +40,19 @@ import cdd_guidance.actions  # noqa: F401 - registers the actions with the actio
 
 # Five parameters, over the three limit-operation-parameters allows.
 _OVER_LIMIT = "export class {name} {{\n  place(a: string, b: string, c: string, d: string, e: string): void {{}}\n}}\n"
+# A BDD sketch, which no graph reading reads a node from.
+_BDD_SKETCH = """Fidelity: behavior
+
+## behavior driven development:
+
+### a cart
+
+#### when the cart is new
+
+```
+it should hold no lines
+```
+"""
 # "Boarding Stuff" opens with a gerund, which verb-noun-format rejects. A word missing from the verb list passes, so the fixture needs an opening the rule flags.
 _STORY_MAP = "# (E) Move Work On Board\n\n## (E) Display Board\n\n### (S) Person --> Open Board\n\n### (S) Person --> Boarding Stuff\n"
 # The scenarios of the story map's Open Board story, in the file a story's heading links to.
@@ -270,6 +283,36 @@ with description("a validate action on practice guidance") as self:
 
         with it("should not write the workspace graph"):
             expect((self.edited / ".context" / "graph.json").exists()).to(equal(False))
+
+    # Exploratory testing, r3-rivet-02 and r3-widget-08: a file the graph read no node from validated as "All scanned
+    # graph rules passed", the same words a file with 26 checked nodes gets.
+    with context("with an edited file the graph reads no node from"):
+        with before.all:
+            self.unread_project = ThrowawayProject()
+            self.unread = Path(tempfile.mkdtemp(prefix="cdd-validate-"))
+            _write(self.unread, "specs/bookshop-sketch.md", _BDD_SKETCH)
+            _write(self.unread, "src/orders/order.ts", _OVER_LIMIT.format(name="Order"))
+            action = Validate(session=working_in(self.unread_project, self.unread, self.unread))
+            self.unread_report = action.validate(guidance=["clean-engineering-code"], paths=["specs/bookshop-sketch.md"])
+            action = Validate(session=working_in(self.unread_project, self.unread, self.unread))
+            self.partly_read_report = action.validate(guidance=["clean-engineering-code"], paths=["specs/bookshop-sketch.md", "src/orders/order.ts"])
+
+        with after.all:
+            self.unread_project.close()
+            shutil.rmtree(self.unread, ignore_errors=True)
+
+        with it("should name the file and say no graph rule ran on it"):
+            expect(self.unread_report).to(contain("**No graph rule ran on:** `specs/bookshop-sketch.md`"))
+
+        with it("should not say the graph rules passed"):
+            expect(self.unread_report).not_to(contain("All scanned graph rules passed"))
+
+        with context("that is named beside a file the graph reads"):
+            with it("should still name the file no graph rule ran on"):
+                expect(self.partly_read_report).to(contain("**No graph rule ran on:** `specs/bookshop-sketch.md`"))
+
+            with it("should report the violations of the file it read"):
+                expect(self.partly_read_report).to(contain("[src/orders/order.ts]("))
 
     with context("with an edited story map markdown file"):
         with before.all:

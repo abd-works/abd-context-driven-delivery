@@ -26,8 +26,9 @@ class NothingToRender(ValueError):
 
 
 class RenderedFile:
-    """The file one render saves beside its source: the name the fidelity writes the format to, else the source's own
-    name in the format, in the folder the source is in. It reads the file as it is before the render, so a diagram keeps
+    """The file one render saves: where the fidelity declares the format for a source that is one of its own files, in
+    a session; else beside the source, under the name the fidelity writes the format to, or the source's own name in
+    the format. It reads the file as it is before the render, so a diagram keeps
     the layout people gave it and a document keeps the words its source does not hold, and it writes the render there. A whiteboard saved this way also answers with the writes
     that put it on its board in Claude."""
 
@@ -50,10 +51,14 @@ class RenderedFile:
 
     @classmethod
     def from_sources(cls, sources: list[Path], source: Format, format: Format, declared: DeclaredOutputs | None) -> RenderedFile | None:
-        """The file a render of sources, written in source, into format saves, beside the first of them: the name the
-        fidelity writes format to when the first source is one of the fidelity's own files, a sketch, or a folder; else
-        the first source's own name in format, so a render of another file never writes over the fidelity's file. None
-        for a format a render does not save, or when no name can be given to it without writing over a source. An
+        """The file a render of sources, written in source, into format saves. For a first source that is one of the
+        fidelity's own files, in a session, it is the file the fidelity declares in format for it, where the fidelity
+        declares it (``DeclaredOutputs.saved_beside``): one drawing of every module is saved in the root's ``.context``,
+        not in the first module's folder. Otherwise it is beside the first source: under the name the fidelity writes
+        format to for one of its own files, a sketch, or a folder; else under the first source's own name in format, so
+        a render of another file never writes over the fidelity's file. None
+        for a format a render does not save, for a source that is data rather than a document, such as a saved graph,
+        or when no name can be given to it without writing over a source. An
         empty source file raises *NothingToRender*."""
         if format.group not in SAVED_GROUPS or not sources:
             return None
@@ -61,14 +66,16 @@ class RenderedFile:
         empty = next((file for file in sources if file.is_file() and not file.read_text(encoding="utf-8", errors="replace").strip()), None)
         if empty is not None:
             raise NothingToRender(empty)
-        # A folder names no one file, so only a file lends its own name.
-        own_name = f"{source.stem_of(first)}{format.extension}" if first.is_file() else ""
+        # A folder names no one file, so only a file lends its own name; and only a document, a drawing, or code does:
+        # a saved graph is read into the fidelity's file, which the agent names for the work it realizes.
+        own_name = f"{source.stem_of(first)}{format.extension}" if first.is_file() and (not source or source.is_offered) else ""
         # A file that is neither one the fidelity declares nor a sketch belongs to no file of the fidelity.
         belongs = declared is not None and (first.is_dir() or source.name == _SKETCH or declared.includes(first.as_posix()))
+        placed = declared.saved_beside(first, format.name) if belongs and first.is_file() else None
         name = (declared.file_name_beside(first.as_posix(), format.name) if belongs else "") or own_name
-        if not name:
+        if placed is None and not name:
             return None
-        target = (first if first.is_dir() else first.parent) / name
+        target = placed or (first if first.is_dir() else first.parent) / name
         return None if target in sources else cls(target, format, source)
 
     def save(self, rendered: dict) -> dict:
