@@ -1,4 +1,5 @@
 import { FileCommentsClientGenerated, type FileCommentData } from '@cdd/space/session/file-comments'
+import { buildViolationCorrectComment, NOT_SENT, SENT_TO_CHAT, type CorrectViolation } from '@source-view/violation-prompt'
 
 import type { FilesPage } from './files-page'
 
@@ -20,16 +21,24 @@ export class FileCommentsActions {
     return this.page.state.file?.path ?? ''
   }
 
-  // Enter finishes a comment: it is kept on the selected lines, then added to the chat's queue.
-  async addAndSend(lines: CommentLines, text: string): Promise<void> {
+  // Enter finishes a comment: it is kept on the selected lines, then added to the chat's queue. Answers whether the chat
+  // has it.
+  async addAndSend(lines: CommentLines, text: string): Promise<boolean> {
     const path = this.path
-    if (!path || !text.trim()) return
+    if (!path || !text.trim()) return false
     let added: FileCommentData | undefined
     const kept = await this.page.attempt(`The comment on ${path} was not kept`, async () => {
       const answered = await this.comments.add(path, lines.start, lines.end, text.trim())
       added = answered?.comments.at(-1)
     })
-    if (kept && added) await this.send(added.anchor)
+    return kept && added ? this.send(added.anchor) : false
+  }
+
+  // Correct on a broken rule's banner: a comment on the rule's lines saying what to fix, sent to the chat as any comment
+  // is, so it shows on the file as a sent comment does.
+  readonly correct: CorrectViolation = async correction => {
+    const isSent = await this.addAndSend({ start: correction.startLine, end: correction.endLine }, buildViolationCorrectComment(correction))
+    return isSent ? SENT_TO_CHAT : NOT_SENT
   }
 
   async add(lines: CommentLines, text: string): Promise<void> {
@@ -51,10 +60,14 @@ export class FileCommentsActions {
     await this.page.attempt(`The comment ${anchor} was not deleted`, () => this.comments.remove(anchor))
   }
 
-  async send(anchor: string): Promise<void> {
+  // Answers whether the chat has the comment.
+  async send(anchor: string): Promise<boolean> {
     const chat = this.page.link.chat
-    if (!chat) return this.page.notices.fail(NO_CHAT, 'Sending a comment from the Files app')
-    await this.page.attempt(`The comment ${anchor} was not sent`, () => this.comments.send(anchor, chat))
+    if (!chat) {
+      this.page.notices.fail(NO_CHAT, 'Sending a comment from the Files app')
+      return false
+    }
+    return this.page.attempt(`The comment ${anchor} was not sent`, () => this.comments.send(anchor, chat))
   }
 
   async sendOpen(): Promise<void> {
