@@ -189,3 +189,14 @@ the Stories root's .context, not under it. Fixed on file-manager (2026-11-16): i
 practice's fidelities write their declared outputs in, up to the first part a name fills in
 (`PracticeSessionOutput.output_folders`), which brings in story_tests. Not walked in the Files app yet: needs main and a
 repin.
+
+## No chat bar and no queue above the prompt after a dev lane repin and /reload-plugins
+
+Reported 2026-11-19 (screenshot: the prompt box with only the hint line under it, "cdd-board
+abd-cdd-release-1-2-fixes\release-1-..."), in the release-1-2-fixes chat in the Claude desktop app, after the dev lane
+was repinned to 57d4e4249 and the person ran /reload-plugins ("prompt-queue@cdd-home re-read from its folder"). The hint
+line is the cdd-board mod's own, so the mod loaded; neither its chat bar nor the prompt-queue mod's queue is drawn above
+the prompt, and no red "chat bar failed to draw" line shows. Not explained: harness/chat-ui has no commit between the
+old pin (302efe378) and the new one, the published mod's files equal the dev runtime's, and the queue mod's one change
+(e40748768) is a filter in robotPromptsOf. Open: whether the bars come back on the next prompt or a restart of the app,
+and whether a draw that throws in the queue mod, which has no try/catch as the chat bar's has, takes both bars away.

@@ -18,3 +18,34 @@ Out of scope for every charter: the Claude desktop app itself (theme 7 needs a p
 ## Round 2
 
 Written after round 1's recap, from what it finds: one robot reproduces every round 1 defect from its report alone, and the others take the areas round 1 shows are still at risk.
+
+## Round 3
+
+Asked for by the person on 2026-11-19, after the dev lane was repinned to commit 57d4e4249: every fidelity of every practice in every format, from generate to the Files app. Each charter checks these six things for what it covers and reports each one that fails as its own defect:
+
+1. **Generate** writes a file for the fidelity in each format the fidelity offers.
+2. **Render** turns that file into every other format the fidelity offers, and back, without losing or changing what it holds.
+3. **Display**: each format opens and reads correctly where a person views it (the Files app, the draw.io viewer, the whiteboard), and shows a callout for each link to another file and to another practice.
+4. **Graph**: the knowledge graph holds a node for each thing in the file and an edge for each relationship, inside the practice and across practices.
+5. **Graph tree**: the Files app's graph view shows that graph as a tree a person can open and follow.
+6. **Node files**: selecting a node shows the files related to it, each with its own tree.
+
+Every robot works on the same product, the Bookshop (a customer browses books, fills a cart, checks out, and the shop fulfils the order), so the practices' files name the same things and the links across practices are real. Files of the round are in `C:\dev\_et\round3\<robot>\work`; the combined project of the second pass is `C:\dev\_et\round3\combined\work`.
+
+### First pass: one robot per practice
+
+| Robot | Charter | Checks | Ports |
+|---|---|---|---|
+| Sparky | Explore Stories (story_map, scenarios, acceptance_tests) as an agent that generates each fidelity in every format it offers and renders each to every other, to discover a format that is not written, a trip that loses content, and things missing from the graph. | 1, 2, 4 | none |
+| Bolt | The same for DDD (bounded_context, model, tactics). | 1, 2, 4 | none |
+| Gizmo | The same for UX (ia, mockup, front_end_code). | 1, 2, 4 | none |
+| Widget | The same for Clean Engineering (modules, model, code). | 1, 2, 4 | none |
+| Rivet | The same for BDD (behavior, realization, development). | 1, 2, 4 | none |
+
+### Second pass: the five practices in one project
+
+| Robot | Charter | Checks | Ports |
+|---|---|---|---|
+| Cog | Explore the knowledge graph of the combined project as a person who expects every link, to discover nodes and edges that are missing, doubled, or pointing at nothing, inside each practice and from each practice to each other. | 4 | none |
+| Pixel | Explore how each file of the combined project is displayed, in every format, in a real browser, to discover a format that does not open or reads wrongly, and a link to another file or practice with no callout. | 3 | 8911 to 8914 |
+| Lens | Explore the Files app's graph view on the combined project in a real browser, to discover a tree that leaves out or misplaces nodes, and a node whose related files are missing, wrong, or shown without their trees. | 5, 6 | 8915 to 8919 |
