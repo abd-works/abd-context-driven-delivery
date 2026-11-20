@@ -114,6 +114,12 @@ class PracticeReading:
         """Read this practice's nodes and edges into its graph, and link them to the nodes of the practices it reads
         after. A practice that reads no files from the working copy reads nothing."""
 
+    def read_with(self, files: list[Path]) -> list[Path]:
+        """The other files a refresh of files reads again with them, because this practice reads them as one: a story
+        map and the story tests that give its stories their scenarios, say. A refresh drops their nodes too and reads
+        them all, so the graph holds what a load of them holds. A practice that reads each file by itself names none."""
+        return []
+
     def reads_model_document(self, file: Path) -> bool:
         """Whether this practice reads file, a model document in a ``.context`` folder, in a model format of its own,
         such as DDD's domain model; another practice whose documents share its name pattern then leaves it alone, as

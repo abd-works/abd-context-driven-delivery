@@ -343,13 +343,13 @@ class GraphBuild:
         return GraphLoaded("Loaded the working copies.")
 
     def refresh(self, paths: list[str], call: ToolCall | None, checked: CheckedFiles | None = None) -> GraphLoaded:
-        """Read again exactly the files at paths in the graph's folder; with checked, write the nodes read from the files
-        it names, whether or not anything was refreshed."""
+        """Read again the files at paths in the graph's folder, and the files a practice reads together with them; with
+        checked, write the nodes read from the files it names, whether or not anything was refreshed."""
         graph = self.graph
         scope = graph.scope.refreshing(paths)
         if scope.named and graph.practices.chosen:
             report_progress(f"Refreshing {len(scope.named)} files")
-            graph.scope = scope
+            graph.scope = scope.also_naming(self._read_with(scope.named))
             self.run(BuildTask(BuildStep.REFRESH, checked=checked), call)
             return GraphLoaded(f"Refreshed {len(scope.named)} files.")
         if checked is not None:
@@ -357,6 +357,12 @@ class GraphBuild:
         if scope.folder is None or not graph.practices.chosen:
             return GraphLoaded("No graph is open, so nothing was refreshed.")
         return GraphLoaded("None of those files is in the graph's folder, so nothing was refreshed.")
+
+    def _read_with(self, files: list[Path]) -> list[Path]:
+        """The files each chosen practice reads together with files, which a refresh of files then reads again too: a
+        practice that builds one tree from several files, read from only some of them, would leave a different graph
+        than the load that read them all."""
+        return [path for practice in self.graph.practices.chosen for path in practice.reading.read_with(files)]
 
     def run(self, task: BuildTask, call: ToolCall | None, state: SavedGraph | None = None) -> None:
         """Carry task out on the graph's scope, from state when one is given, else from what the graph holds now. A call

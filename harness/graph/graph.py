@@ -775,13 +775,31 @@ class NodeTree:
 
     def _placements(self) -> Iterator[tuple[Node, Node]]:
         """Each node an edge leads to from the node, with the node it goes under: the node for a direct edge, else the
-        node named for the edge's kind, made when the first such edge is placed. A kind no one filters by, the
-        belongsTo back-edge and scopes, is no part of the explorer tree."""
+        node named for the edge's kind, made when the first such edge is placed. Edges are placed kind by kind, but for
+        the parts its practice lists in source order, which are placed in the order their file writes them. A kind no
+        one filters by, the belongsTo back-edge and scopes, is no part of the explorer tree."""
         offered = self._node.practice.reading.in_graph.edge_index.types.values()
         types = sorted((edge_type for edge_type in offered if edge_type.is_offered), key=lambda edge_type: edge_type.order)
+        written = self._parts_in_source_order([edge_type.kind for edge_type in types])
         for edge_type in types:
             for edge in self._edges_in_source_order(edge_type.kind):
-                yield edge.child, self._node if edge.display == "direct" else self._holder_for(edge.kind)
+                if not self._is_written_part(edge):
+                    yield edge.child, self._node if edge.display == "direct" else self._holder_for(edge.kind)
+                    continue
+                # The node's parts of every kind are placed together, where the first of them comes.
+                for part in written:
+                    yield part.child, self._node
+                written = []
+
+    def _parts_in_source_order(self, kinds: list[str]) -> list[Edge]:
+        """The direct edges of kinds to the node's parts its practice lists in source order, in the order their file
+        writes them, whatever their kind: a describe's states and observations, or a story's background and scenarios,
+        read as the file has them, not kind by kind."""
+        parts = [edge for kind in kinds for edge in self._node.graph.edges.from_parent(kind, self._node) if self._is_written_part(edge)]
+        return sorted(parts, key=self._source_position)
+
+    def _is_written_part(self, edge: Edge) -> bool:
+        return edge.display == "direct" and self._follows_source(edge)
 
     def _holder_for(self, kind: str) -> Node:
         """The child named for kind that grouped and relationship edges of that kind sit under, made the first time."""

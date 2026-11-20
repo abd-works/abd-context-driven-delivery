@@ -75,3 +75,56 @@ Observed (`graph_reading_spec.py`).
 *Given* ++src/ordering/order_spec.py++ describes `an order`
 *When* the Knowledge Graph reads the bookshop project for BDD and Clean Engineering
 *Then* the describe `an order` aligns with the Order in ++src/ordering/order.py++
+
+#### Scenario: Link a step to the operations of the module its story test imports
+
+Observed (`cdd_guidance/practices/stories/model/story_tests_on_map_spec.py`). Defect r3-sparky-09. The files are the bookshop fixture `cdd_guidance/practices/stories/model/fixtures/bookshop`: `story_tests/fulfil-order/pack-order/pack_order_story.test.py` imports OrderRepository from `src.bookshop.order`; `src/bookshop/order.ts` and `ordering/order/order.py` each hold another OrderRepository with `create` and `load`.
+
+*Given* the When "the Shop Clerk packs the Order" of `pack_order_story.test.py` calls `orders.load("1001").pack()`
+*When* the Knowledge Graph reads the bookshop project for Stories and Clean Engineering
+*Then* the When invokes `load` of OrderRepository and `pack` of Order in `src/bookshop/order.py`
+  *And* it invokes nothing in `src/bookshop/order.ts` or `ordering/order/order.py`
+
+#### Scenario: Link a step to the class its linked domain term names
+
+Observed (`cdd_guidance/practices/stories/model/term_links_spec.py`). Source: the person's answer 2, 2026-11-20, "A step's linked domain term is an edge from the step to the DDD class it links to"; defect r3-sparky-05.
+
+*Given* a When of `add_book_to_cart_story.test.md` links Book to `domain-model.md#book-aggregate-root-entity` and Cart to `domain-model.md#cart-aggregate-root-entity`
+*When* the Knowledge Graph reads the bookshop project for Stories and DDD
+*Then* the When names the root Book and the root Cart of `.context/domain-model.md`
+  *And* each of those roots is named by the When
+
+#### Scenario: Leave a link to a heading the domain model does not hold without an edge
+
+Observed (`term_links_spec.py`).
+
+*Given* a When links Cart to `domain-model.md#basket-aggregate-root-entity`, a heading `.context/domain-model.md` does not hold
+*When* the Knowledge Graph reads the bookshop project for Stories and DDD
+*Then* the When names no class for that link
+  *And* it still names the root Book, whose link names a heading the model holds
+
+## Story: Link Examples To Classes And Steps
+
+### Evidence
+
+| Source | Note |
+|--------|------|
+| The person's answer 2, 2026-11-20 (`closing-brief-round-3.md`), and the lead's card for Cog | an example's demonstrates edge follows the link as a step's does, never a name alone |
+| Defect r3-sparky-05 | the example Tiny Tales, a Book, had no `demonstrates` edge to the model's Book |
+
+#### Scenario: Have an example demonstrate the class of the linked term written before it
+
+Observed (`cdd_guidance/practices/stories/model/term_links_spec.py`).
+
+*Given* a When of `add_book_to_cart_story.test.md` writes the example Tiny Tales straight after the term Book, linked to `domain-model.md#book-aggregate-root-entity`
+*When* the Knowledge Graph reads the bookshop project for Stories and DDD
+*Then* the example Tiny Tales demonstrates the root Book of `.context/domain-model.md`
+
+#### Scenario: Have an example a story test in code names demonstrate the linked class
+
+Observed (`term_links_spec.py`).
+
+*Given* a Given of `pack_order_story.test.py` says "the Bookshop keeps Order paid order", with Order linked to `domain-model.md#order-aggregate-root-entity`
+*When* the Knowledge Graph reads the bookshop project for Stories and DDD
+*Then* the example `paid_order` demonstrates the root Order of `.context/domain-model.md`
+

@@ -148,7 +148,7 @@ function useSourceCallouts(source: NodeSourceData, language: string, callouts: S
     const own = opensCalls && isCode ? catalog.calloutsIn(source.text ?? '', source.start_line || 1, language, [source.node_id], source.file) : [];
     return [...callouts, ...own];
   }, [catalog, callouts, opensCalls, isCode, source, language]);
-  const within = useCallback<CalloutsWithin>((callout, stack) => (callout.kind === 'section' ? [] : catalog.calloutsIn(callout.text, callout.startLine, languageFor(callout.path), stack, callout.path)), [catalog]);
+  const within = useMemo(() => calloutsWithin(catalog), [catalog]);
   return { shown, within };
 }
 
@@ -218,6 +218,12 @@ function ViolationBannerView({ violation, source }: { violation: ViolationFocus;
       </button>
     </div>
   );
+}
+
+// The callouts inside an open callout, among catalog's members: the calls and classes its code reaches; none for a
+// section a link opens, whose own file holds its callouts, or for a missing one.
+export function calloutsWithin(catalog: CallCatalog): CalloutsWithin {
+  return (callout, stack) => (callout.kind === 'section' || callout.kind === 'missing' ? [] : catalog.calloutsIn(callout.text, callout.startLine, languageFor(callout.path), stack, callout.path));
 }
 
 function languageFor(file: string): string {

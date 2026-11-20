@@ -16,7 +16,9 @@ from harness.guidance.practice_reading import PracticeReading
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER
 from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel
-from cdd_guidance.practices.stories.model.story_map_files import StoryMapFiles
+from cdd_guidance.practices.stories.model.story_recording import StorySource, imported_files
+from cdd_guidance.practices.stories.model.term_links import TermLinks
+from cdd_guidance.practices.stories.model.story_map_files import STORY_FILE_SUFFIXES, StoryMapFiles, is_story_map_file
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
@@ -27,6 +29,8 @@ _MEMBER_CALL = re.compile(r"\.([\w$]+)\s*\(")
 # A call by name alone, with no object before it: `seed_ticket(world)`, not `board.reread()` or `def seed_ticket(`.
 _FUNCTION_CALL = re.compile(r"(?<![\w$.])(?<!def )(?<!function )([A-Za-z_$][\w$]*)\s*\(")
 _STEP_TYPES = frozenset({"Step", "Given", "When", "Then"})
+# What a module named through a path alias starts with: `@src/customer`, `@/customer`, `~/customer`.
+_PATH_ALIAS_MARK = re.compile(r"^(?:@/|~/|@)")
 # An examples module a story test imports its seeds and fixtures from, such as ticket_story_examples.py or
 # customers-examples.ts: test code, which a step never invokes.
 _EXAMPLES_MODULE_FILE = re.compile(r"examples\.\w+$")
@@ -46,10 +50,11 @@ _EPIC_TYPES = frozenset({"Epic", "SubEpic"})
 class StoriesReading(PracticeReading):
     """How Stories takes part in the graph: it reads the story tests under its root, through the TypeScript format
     Stories holds, or the story maps there when there are none, with edited files only what they touch; writes the
-    story map onto its graph; and links each step to the Clean Engineering operations it calls and each example to the
-    classes and properties it shows, so it reads after Clean Engineering."""
+    story map onto its graph; links each step to the Clean Engineering operations it calls and each example to the
+    classes and properties it shows; and links each step to the DDD class each of its linked domain terms names
+    (*TermLinks*), so it reads after Clean Engineering and DDD."""
 
-    reads_after = ("clean_engineering",)
+    reads_after = ("clean_engineering", "ddd")
     source_ordered_types = frozenset({"Background", "Scenario", "Step", "Story"})
     rule_types = {
         "SubEpic": ("Epic", "StoryNode"),
@@ -94,6 +99,33 @@ class StoriesReading(PracticeReading):
         loaded = self.graph.practices.loaded(Ddd) if self.graph is not None else None
         return loaded.reading if loaded is not None else None
 
+    def read_with(self, files: list[Path]) -> list[Path]:
+        """Every file Stories' nodes were read from, when one of files is a story map, a scenarios file, a story test,
+        or a file one of its nodes was read from: a story takes its scenarios from its story tests and its place from
+        the map, so a refresh of one of them reads them all, as the load did. A refresh of any other file reads none."""
+        held = self._files_held()
+        if not any(path in held or self._is_story_file(path) for path in files):
+            return []
+        return sorted(held)
+
+    def _files_held(self) -> set[Path]:
+        """The files Stories' nodes in the graph were read from, a file that is gone since among them."""
+        root = self.root.resolve()
+        files = {(root / node.source.file).resolve() for node in self.in_graph.nodes() if node.source is not None and node.source.file}
+        return {path for path in files if not path.is_dir()}
+
+    def _is_story_file(self, path: Path) -> bool:
+        """Whether Stories reads the file at path: a story map, a story's scenarios in markdown, or a story test in a
+        code format the practice reads."""
+        if is_story_map_file(path) or path.name.endswith(STORY_FILE_SUFFIXES):
+            return True
+        return any(reader.is_story_file(path.as_posix()) for reader in self._code_readers)
+
+    @property
+    def _code_readers(self) -> list[CodeStoryModel]:
+        """The code formats the practice reads story tests in."""
+        return [reader for reader in (self.practice.formats.adapter(name) for name in self.practice.formats) if isinstance(reader, CodeStoryModel)]
+
     def read_working_copy(self) -> None:
         """Read the story tests, or the story maps when there are none, write the story map onto its graph, and link
         each step to the operations it calls and each example to the classes and properties it shows."""
@@ -104,6 +136,9 @@ class StoriesReading(PracticeReading):
         clean = self.object_model
         if clean is not None:
             StoryLinks(self, clean, self.story_tree).link()
+        domain = self.domain_model
+        if domain is not None:
+            TermLinks(self, domain).link()
 
     def _link_background_givens(self) -> None:
         """Record the ``given`` edge from each background to the Given steps it holds: the step its schema says it is
@@ -122,6 +157,10 @@ class StoriesReading(PracticeReading):
         if not self._reads_markdown_scenarios:
             model.test_scenarios.drop()
             self._take_code_scenarios(model)
+        elif self.graph.scope.edited_files is None:
+            # A read of named files gave each story its story tests' scenarios already; a read of the whole folder
+            # read only the map and its markdown, so the story tests in code are taken here.
+            self._take_code_scenarios(model)
         return model
 
     @property
@@ -135,8 +174,9 @@ class StoriesReading(PracticeReading):
     def _take_code_scenarios(self, model: "StoryModel") -> None:
         """Give each story of model the scenarios its story files in code under the root hold, in each code format the
         practice reads: its story tests, its shared stories, and its screen specs, by the files each format names its
-        story files; with edited files, only those among them."""
-        readers = [reader for reader in (self.practice.formats.adapter(name) for name in self.practice.formats) if isinstance(reader, CodeStoryModel)]
+        story files; with edited files, only those among them. A story's first story file in code replaces the
+        scenarios the map's markdown gave it, and each later one adds its own, as a read of named files gives them."""
+        readers = self._code_readers
         suffixes = {Path(suffix).suffix for reader in readers for suffix in reader.story_file_suffixes}
         edited = self.graph.scope.edited_files
         project = Path(self.graph.scope.folder) if self.graph.scope.folder is not None else self.root
@@ -147,7 +187,7 @@ class StoriesReading(PracticeReading):
             text = path.read_text(encoding="utf-8")
             file = os.path.relpath(path, self.root).replace("\\", "/")
             model.sources.add(file, text)
-            model.test_scenarios.add(reader.stories_of(text, file, project)[0], file)
+            model.test_scenarios.take(reader.stories_of(text, file, project)[0], file)
 
     def _story_tests(self) -> "StoryModel":
         files = self._typescript_texts()
@@ -231,6 +271,53 @@ class StoryTree:
         return [edge.child for edge in self.stories.graph.edges.from_parent(kind, parent) if edge.child.type in node_types]
 
 
+class ImportedFiles:
+    """The files a story file's steps can call code in: the files its imports name and the files those import in turn, found
+    in the project the graph reads. A step invokes an operation only in one of them, so an operation of the same name
+    in a module the story file never imports, or in another language, is not one it calls. A module named from a
+    package root is looked for under each folder above the importing file, with the mark a path alias starts with
+    (``@src/customer``, ``@/customer``, ``~/customer``) taken off. Each file's imports are read once."""
+
+    def __init__(self, stories_root: Path, project: Path | None) -> None:
+        self._stories_root = stories_root.resolve()
+        project = project.resolve() if project is not None else None
+        inside = project is not None and (project == self._stories_root or project in self._stories_root.parents)
+        # The folder files are named from: the project, or the folder Stories reads when that lies outside it.
+        self._project = project if inside else self._stories_root
+        self._imports: dict[str, list[str]] = {}
+        self._reached: dict[str, set[Path]] = {}
+
+    def reached_from(self, step: "Node") -> set[Path]:
+        """Every file the story file of step imports, straight or through the files it imports; the story file's own
+        imports come from the facts its nodes keep, the others' from their text."""
+        file = (self._stories_root / step.source.file).relative_to(self._project).as_posix()
+        if file not in self._reached:
+            self._imports.setdefault(file, self._imported(file, step.get_fact("imported_modules") or {}))
+            self._reached[file] = {(self._project / found).resolve() for found in self._closure(file)}
+        return self._reached[file]
+
+    def _closure(self, file: str) -> set[str]:
+        found: set[str] = set()
+        pending = [file]
+        while pending:
+            for imported in self._imported_by(pending.pop()):
+                if imported not in found:
+                    found.add(imported)
+                    pending.append(imported)
+        return found
+
+    def _imported_by(self, file: str) -> list[str]:
+        if file not in self._imports:
+            text = (self._project / file).read_text(encoding="utf-8", errors="replace")
+            self._imports[file] = self._imported(file, StorySource(file, text).imported_modules)
+        return self._imports[file]
+
+    def _imported(self, file: str, modules: dict[str, str]) -> list[str]:
+        """The files of the project that file imports modules from."""
+        unaliased = {name: _PATH_ALIAS_MARK.sub("", module) for name, module in modules.items()}
+        return [found for found in imported_files(file, unaliased) if (self._project / found).is_file()]
+
+
 class StoryLinks:
     """The edges between the Stories practice and Clean Engineering: a step invokes the operations it calls, an epic
     uses the modules those operations sit in, and an example demonstrates the classes it names and retrieves the
@@ -243,6 +330,7 @@ class StoryLinks:
         self.clean = clean
         self.tree = tree
         self.graph = stories.graph
+        self.imported_files = ImportedFiles(Path(stories.in_graph.source_root), self.graph.scope.folder)
 
     @cached_property
     def modules(self) -> set:
@@ -293,6 +381,7 @@ class StoryLinks:
         called = set(step.get_fact("callees") or []) | set(_MEMBER_CALL.findall(body))
         matched = [member for name in sorted(called) for member in self.clean.code_index.members_named(name)]
         matched += [function for function in self._functions_called(body) if function not in matched]
+        matched = [member for member in matched if self._can_call(step, member)]
         step.set_fact("calls_reach", self._calls_reach(step, called | set(_FUNCTION_CALL.findall(body)), matched))
         matched = [member for member in matched if self._is_tested_code(member)]
         epic = self.tree.epic_of(step) if matched else None
@@ -306,6 +395,20 @@ class StoryLinks:
         if step.get_fact("phase"):
             for example in self._observed_by(step, body):
                 self.graph.edges.relate("observes", step, example)
+
+    def _can_call(self, step: "Node", member: "Node") -> bool:
+        """Whether step's story file can call member: member sits in that file, or in a file it imports, straight or
+        through the files it imports. A call is never joined to an operation on its name alone."""
+        if member.source is None or not member.source.file:
+            return False
+        if member.source.file == step.source.file:
+            return True
+        return (self._clean_root / member.source.file).resolve() in self.imported_files.reached_from(step)
+
+    @cached_property
+    def _clean_root(self) -> Path:
+        """The folder Clean Engineering's nodes name their files from."""
+        return Path(self.clean.in_graph.source_root).resolve()
 
     def _link_example(self, example: "Node") -> None:
         names = set(example.get_fact("source_names") or [])

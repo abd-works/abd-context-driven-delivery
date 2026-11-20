@@ -1587,13 +1587,6 @@ class StoryTestScenarios:
             story.backgrounds = list(read.backgrounds)
             story.scenarios = list(read.scenarios)
 
-    def add(self, stories: List["Story"], file: str) -> None:
-        """Add the scenarios of each of stories, read from the story file at file, after the ones every Story of the
-        same name holds: a story whose scenarios are written in several files, such as its shared story file and its
-        screen spec, holds them all."""
-        for read, story in self._same_named(stories, file):
-            story.scenarios = [*story.scenarios, *read.scenarios]
-
     def drop(self) -> None:
         """Take every story's scenarios and backgrounds away, leaving the map: at a fidelity whose scenarios come from
         other files, the ones the map's own story tests hold are not read."""

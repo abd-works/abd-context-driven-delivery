@@ -730,8 +730,8 @@ with description("a graph"):
             with it("should count two repositories"):
                 expect(tree_count(self.ddd_tree, "Repository")).to(equal(2))
 
-            with it("should offer root, owns, accesses, and associates to filter by, in that order, leaving out the belongsTo back-edge"):
-                expect(PracticeInventory(self.graph, self.ddd).edge_types).to(equal(["root", "owns", "accesses", "associates"]))
+            with it("should offer root, owns, accesses, isA, and associates to filter by, in that order, leaving out the belongsTo back-edge"):
+                expect(PracticeInventory(self.graph, self.ddd).edge_types).to(equal(["root", "owns", "accesses", "isA", "associates"]))
 
             with it("should include only domain stereotypes"):
                 expect(

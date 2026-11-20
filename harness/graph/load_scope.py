@@ -56,6 +56,10 @@ class LoadScope:
         refreshed = self.of_paths(self.folder, paths, _REFRESH_SKIPPED_FOLDERS)
         return LoadScope(refreshed.folder, refreshed.named, over_whole=self.over_whole)
 
+    def also_naming(self, files: Iterable[Path]) -> LoadScope:
+        """This scope naming files as well: the files a practice reads together with the ones a refresh names."""
+        return LoadScope(self.folder, [*(self.named or []), *files], over_whole=self.over_whole)
+
     def source_files(self, root: Path, suffixes: set[str]) -> list[Path]:
         """The files with these suffixes under root; only the edited ones when the scope names files."""
         if self.edited_files is None:
