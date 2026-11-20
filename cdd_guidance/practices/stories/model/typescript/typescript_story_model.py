@@ -9,7 +9,7 @@ from typing import Dict, Optional
 from cdd_guidance.practices.clean_engineering.model.code_body import TYPESCRIPT, CodeLanguage
 from cdd_guidance.practices.stories.model.brace_story import BraceStoryModel, BraceStoryWriting
 from cdd_guidance.practices.stories.model.brace_story_file import BraceStoryFile
-from cdd_guidance.practices.stories.model.story_model import Epic, StoryModel
+from cdd_guidance.practices.stories.model.story_model import StoryModel
 from cdd_guidance.practices.stories.model.typescript.screen_spec_file import SCREEN_SPEC_SUFFIX, is_screen_spec
 from cdd_guidance.practices.stories.model.typescript.nodes import TypeScriptEpic, TypeScriptStory, _story_test_text
 
@@ -25,7 +25,7 @@ class TypeScriptStoryWriting(BraceStoryWriting):
         self.helpers = helpers
 
     def story_test_import(self, parent: str) -> str:
-        return f'import {{ scenario, story }} from "{self.helpers}";'
+        return f'import {{ background, scenario, story }} from "{self.helpers}";'
 
 
 class TypeScriptStoryModel(BraceStoryModel):
@@ -87,11 +87,4 @@ class TypeScriptStoryModel(BraceStoryModel):
     def writing(self) -> TypeScriptStoryWriting:
         """How TypeScript writes this model's story files, importing the helpers from its step library folder."""
         return TypeScriptStoryWriting(self.language, self.story_test_import_path)
-
-    def _folder_files(self, epic: Epic, folder: str, files: Dict[str, str]) -> None:
-        """A new epic folder starts with example aggregates; a folder read from code already has its own."""
-        if self.read_from_code:
-            return
-        name, text = epic.examples_file()
-        files.setdefault(f"{folder}/examples/{name}", text)
 

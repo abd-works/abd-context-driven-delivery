@@ -15,11 +15,11 @@ from cdd_guidance.practices.stories.model.markdown.links import unlink
 from cdd_guidance.practices.stories.model.markdown.markup import strip_backticks
 from cdd_guidance.practices.stories.model.markdown.scenario_file import HEADING_PATTERN
 from cdd_guidance.practices.stories.model.story_map_files import source_at
-from cdd_guidance.practices.stories.model.story_model import StoryType
+from cdd_guidance.practices.stories.model.story_model import Story, StoryType
 
 if TYPE_CHECKING:
     from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
-    from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryNode
+    from cdd_guidance.practices.stories.model.story_model import Epic, StoryNode
 
 _BULLET_PATTERN = re.compile(r"^(\s*)-\s+(.+)$")
 _NUMBERED_PATTERN = re.compile(r"^(\s*)\d+\.\s+(.+)$")
@@ -233,6 +233,38 @@ class OutlineLines:
         if heading is None:
             return under
         return [self.heading if unlink(self.heading).strip() == heading else heading, *under]
+
+
+class ReplacedOutline:
+    """The outline story map a render writes over, read as it is before the render. A format that holds no words under
+    a heading, such as a drawing, hands back a map without them; each node of that map takes the lines the replaced
+    map's node of the same kind and name was read with, so a description, a story's link to its scenarios file and the
+    lines after the last story come back as the person wrote them."""
+
+    def __init__(self, replaced: "MarkdownStoryModel") -> None:
+        self._map = replaced
+        self._read: dict[tuple, list] = {}
+        for node in [*replaced.descendants.epics(), *replaced.descendants.stories()]:
+            self._read.setdefault(self._key(node), []).append(node)
+
+    def lend_to(self, story_map: "MarkdownStoryModel") -> None:
+        """Give story_map, and each of its epics and stories read with no lines of its own, the lines of the replaced
+        map's node of the same kind and name, each replaced node lending once, in map order."""
+        self._lend(self._map, story_map)
+        for node in [*story_map.descendants.epics(), *story_map.descendants.stories()]:
+            waiting = self._read.get(self._key(node), [])
+            if waiting:
+                self._lend(waiting.pop(0), node)
+
+    def _lend(self, read: "StoryNode", node: "StoryNode") -> None:
+        if node.outline is not None or read.outline is None:
+            return
+        node.outline = read.outline
+        if not node.description_text.strip():
+            node.description_text = read.outline.description
+
+    def _key(self, node: "StoryNode") -> tuple:
+        return (isinstance(node, Story), node.name)
 
 
 def described(description: str) -> List[str]:

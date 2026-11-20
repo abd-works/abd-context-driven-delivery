@@ -22,6 +22,7 @@ render writes another map in this language and parse reads a tree into a new map
 
 from __future__ import annotations
 
+import json
 import re
 from functools import cached_property
 from pathlib import Path
@@ -44,7 +45,7 @@ from cdd_guidance.practices.stories.model.story_model import (
 from cdd_guidance.practices.stories.model.story_map_files import source_at
 from cdd_guidance.practices.stories.model.story_recording import StorySources
 from cdd_guidance.practices.stories.model.story_file import CodeBlock, flat_steps, read_step_code
-from cdd_guidance.practices.stories.model.story_writing import StoryWriting, as_read
+from cdd_guidance.practices.stories.model.story_writing import OUTLINE_EXAMPLES, SCENARIO_EXAMPLES, StoryWriting, as_read
 
 if TYPE_CHECKING:
     from cdd_guidance.practices.stories.model.story_file import StoryFile
@@ -62,6 +63,10 @@ _BACKGROUND_STEP = re.compile(r"\s*(?:#|//|\*)\s*background-step:\s*(\w+)\s*\|\s
 # A story test names its tier after the story; the tier is not part of the story's name.
 _TIER_NEUTRAL = re.compile(r"\s*\(tier-neutral\)\.?\s*$")
 _STEP_TYPES = {"given": StepType.GIVEN, "when": StepType.WHEN, "then": StepType.THEN}
+
+
+# The comment that carries a scenario's example rows, by name, and says whether the scenario is an outline.
+_EXAMPLE_ROWS = re.compile(rf"(?P<kind>{SCENARIO_EXAMPLES}|{OUTLINE_EXAMPLES}):\s*(?P<rows>\{{.*\}})")
 
 
 def unescaped(quoted: str) -> str:
@@ -93,7 +98,7 @@ class StorySyntax:
     # language whose story files import no examples.
     import_pattern: Optional[re.Pattern] = None
     # The comment line that lists the examples a story file uses.
-    examples_line: re.Pattern = re.compile(r"examples:\s*(.+)")
+    examples_line: re.Pattern = re.compile(r"(?<![-\w])examples:\s*(.+)")
     # What opens a line of the comment that describes a story in this language.
     description_mark = r"\*\s*"
     # Where a file's next story starts, and what a piece of the file holds when it is a story.
@@ -207,6 +212,17 @@ class CodeScenario(Scenario, CodeStoryNode):
         for name in example_names or []:
             if re.search(rf"\b{re.escape(name)}\b", body):
                 self.examples[name] = name
+        self._take_example_rows(body)
+
+    def _take_example_rows(self, body: str) -> None:
+        """The rows its examples comment carries, each example by name with its values; rows marked as an outline's
+        make this scenario an outline."""
+        rows = _EXAMPLE_ROWS.search(body)
+        if rows is None:
+            return
+        self.is_outline = rows.group("kind") == OUTLINE_EXAMPLES
+        for name, cells in json.loads(rows.group("rows")).items():
+            self.examples[name] = cells or name
 
     def _take_background_comments(self, body: str) -> str:
         """The body without its background comments, which become this scenario's background."""
@@ -319,8 +335,6 @@ class CodeStory(Story, CodeStoryNode):
         self.scenarios.append(scenario)
 
     def _take_background_examples(self, content: str) -> None:
-        import json
-
         match = re.search(r"background-examples:\s*(\{.*\})", content)
         if match is None or not self.backgrounds:
             return
@@ -474,17 +488,12 @@ class CodeStoryModel(StoryModel):
         blocks, whose stories are written generically."""
         return None
 
-    def _folder_files(self, epic: Epic, folder: str, files: Dict[str, str]) -> None:
-        """Files an epic folder holds besides its sub-epics; none unless a language adds them."""
-        return
-
     def _write_epic(self, epic: Epic, parent: str, files: Dict[str, str]) -> None:
         """An epic with child epics is a folder its children write into; a sub-epic with stories is one file."""
         if not epic.epics:
             self._write_stories(epic, parent, files)
             return
         folder = f"{parent}/{epic.slug}"
-        self._folder_files(epic, folder, files)
         for child in epic.epics:
             self._write_epic(child, folder, files)
         self._write_stories(epic, folder, files)

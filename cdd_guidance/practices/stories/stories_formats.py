@@ -8,9 +8,29 @@ from typing import Any
 
 from harness.guidance.practice_formats import PracticeFormats, RenderRequest
 
+from cdd_guidance.practices.stories.model.diagram_story_model import DiagramStoryModel
+from cdd_guidance.practices.stories.model.story_map_files import THIN_SLICING_FILES, StoryMapFiles
+from cdd_guidance.practices.stories.model.story_model import StoryModel
+
 
 class PracticeOutsideSession(Exception):
     """Raised when a practice is asked to read files by path but works in no session that names their project."""
+
+
+class ThinSlicedMap:
+    """A story map read with the increments of the thin slice beside it, to be drawn as that thin slice: one lane for
+    each increment, holding the stories it delivers under their sub-epics. A render of ``thin-slice.md`` to a drawing
+    reads this, so the drawing shows the increments rather than the thin slice's headings read as epics."""
+
+    def __init__(self, story_map: StoryModel) -> None:
+        self.story_map = story_map
+
+    def semantic_type(self) -> str:
+        return "ThinSlice"
+
+    def drawn_by(self, diagram: type[DiagramStoryModel]) -> str:
+        """Its increments drawn in the format of diagram, a story model that draws thin slices."""
+        return diagram(self.story_map).save_thin_slice()
 
 
 class StoriesFormats(PracticeFormats):
@@ -26,13 +46,32 @@ class StoriesFormats(PracticeFormats):
     def read(self, paths: list[str] | str, request: RenderRequest) -> Any:
         """The story map in the files at paths when they are code: the story tests, merged onto the story maps beside
         them. Paths and node paths are named from the project, as every path in a session is."""
-        if not request.source_format.is_code:
-            return super().read(paths, request)
         named = [Path(entry) for entry in ([paths] if isinstance(paths, str) else paths)]
+        if not request.source_format.is_code:
+            return self._thin_sliced_map(named, request) or super().read(paths, request)
         project = self._project_of(named)
         entries = [project / entry for entry in named]
         files = [found for entry in entries for found in (sorted(entry.rglob("*")) if entry.is_dir() else [entry])]
         return self._practice.read_files([path for path in files if path.is_file()], project)
+
+    def render(self, request: RenderRequest) -> dict:
+        """What request renders to; a thin slice read for a drawing is drawn as its increments' lanes."""
+        if isinstance(request.content, ThinSlicedMap):
+            return {"format": request.format, "content": request.content.drawn_by(self.adapter_class(request.format))}
+        return super().render(request)
+
+    def _thin_sliced_map(self, named: list[Path], request: RenderRequest) -> ThinSlicedMap | None:
+        """The markdown story map beside the thin slice named alone, with that thin slice's increments, when the
+        render is to a format that draws thin slices; none for any other files or format, or with no story map
+        beside it."""
+        draws = request.format in self and issubclass(self.adapter_class(request.format), DiagramStoryModel)
+        if not draws or len(named) != 1 or named[0].name not in THIN_SLICING_FILES:
+            return None
+        project = self._project_of(named)
+        story_map = StoryMapFiles((project / named[0]).parent).nearest()
+        if story_map is None or story_map.suffix.lower() != ".md":
+            return None
+        return ThinSlicedMap(self.adapter_class("markdown")().opened_from(story_map, project))
 
     def _project_of(self, named: list[Path]) -> Path:
         """The folder paths are named from: the repository of the session the practice works in. The MCP host serves

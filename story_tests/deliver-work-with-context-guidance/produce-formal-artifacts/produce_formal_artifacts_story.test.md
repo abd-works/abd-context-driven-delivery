@@ -134,3 +134,15 @@ Observed.
 *Given* ++.context/story-map.whiteboard++ holds the story map's whiteboard
 *When* Claude Code renders ++.context/story-map.whiteboard++ to drawio at ++stories-story-map++, naming no source
 *Then* the saved file is ++.context/story-map.drawio++, which draws Place Order
+
+#### Scenario: Draw a thin slice as its increments
+
+Observed for what the drawing holds (`cdd_guidance/practices/stories/thin_slice_render_spec.py`), for drawio and whiteboard. Intended for the saved name: `stories.md` declares `.context/thin-slice.drawio` and `.context/thin-slice.whiteboard` for the thin slice, and the name a render saves under is still the story map's; evidence still missing is `DeclaredOutputs.file_name_beside` naming the file declared beside the source (defects r3-sparky-01, widget-06).
+
+*Given* ++.context/story-map.md++ holds the story map
+  *And* `.context/thin-slice.md` holds two increments that name stories of the story map
+*When* Claude Code renders `.context/thin-slice.md` to drawio at ++stories-story-map++
+*Then* the drawing holds one lane for each increment, with the stories it delivers under their sub-epics
+  *And* no heading of the thin slice is drawn as an epic
+  *And* the saved file is `.context/thin-slice.drawio`
+  *And* ++.context/story-map.drawio++ is as the person left it
