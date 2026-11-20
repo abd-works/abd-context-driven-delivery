@@ -58,7 +58,7 @@ Cog and Lens saw these first-pass reports again on the combined project: r3-bolt
 1. **Links and callouts in the Files app (r3-pixel-03, 04, 05).** Rendered and Source both show callouts and both follow links. Which callouts show follows the file view's filters: the practices chosen and the graph. A callout is traversable as the graph tree is: from the story map a person opens a scenario, then what it observes, then an operation of the class, each in place.
 2. **Domain terms and UX (r3-sparky-05, r3-gizmo-06).** A step's linked domain term is an edge to the DDD class. UX joins the graph.
 3. **One class in several practices (r3-cog-05).** Several nodes with edges between them. A DDD entity is a kind of class, so the DDD node has an "is a" edge to the Clean Engineering class node of the same file, and selecting the DDD node reveals the Clean Engineering node with its details. A module relates to an aggregate or a bounded context the same way: an ordinary edge, though both come from one file. (Read by the supervisor as two nodes joined by "is a", not one merged node; to confirm.)
-4. **What a relationship's member opens (r3-lens-08).** Not answered yet: explained again to the person.
+4. **What a relationship's member opens (r3-lens-08).** Selecting the parent shows the parent in its file, where its children can be opened in place. Selecting the child shows only the child, in the child's own file: selecting `authorise` under `check_out`'s invokes group shows `payment.py` at `authorise`, not `cart.py`.
 
 ## Not reached
 
