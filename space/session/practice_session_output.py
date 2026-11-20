@@ -664,9 +664,20 @@ class FidelityFormats:
         """The formats chosen for this fidelity from group, in the order chosen."""
         return [name for name in self._output.chosen_formats if name in group]
 
+    def is_chosen_from(self, group: list[str]) -> bool:
+        """Whether group is chosen for this fidelity: every format of a diagram it writes, the draw.io file and the
+        Claude Whiteboard board, else any format of the group."""
+        chosen = self.chosen_from(group)
+        if group and Format(group[0]).is_written_with_its_group:
+            return all(name in chosen for name in group)
+        return bool(chosen)
+
     def wanted_from(self, group: list[str]) -> list[str]:
-        """What choosing group chooses: the project's default formats for this fidelity in it, else its default format
-        when group holds it, else group's first."""
+        """What choosing group chooses: every format of a diagram this fidelity writes; for any other group the
+        project's default formats for this fidelity in it, else its default format when group holds it, else group's
+        first."""
+        if group and Format(group[0]).is_written_with_its_group:
+            return list(group)
         defaults = [name for name in self.default_formats if name in group]
         own = self._fidelity.default_format.name if self._fidelity.default_format else ""
         return defaults or [own if own in group else group[0]]

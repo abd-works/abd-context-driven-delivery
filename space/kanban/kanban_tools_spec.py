@@ -895,8 +895,28 @@ with description("the board tools") as self:
                 with it("should show both chips chosen"):
                     expect([chip["label"] for chip in self.diagram_on if chip["is_chosen"]]).to(equal(["diagram", "markdown"]))
 
-                with it("should keep both chosen for the story map in the session, in the order chosen"):
-                    expect(self.markdown_kept["chosen_formats"]).to(equal(["markdown", "drawio"]))
+                # Requested 2026-11-20: "whiteboard isn't a separate format, there's only a button for 'diagram'".
+                with it("should keep markdown and both diagram formats chosen for the story map in the session, in the order chosen"):
+                    expect(self.markdown_kept["chosen_formats"]).to(equal(["markdown", "drawio", "whiteboard"]))
+
+            with context("whose session kept only drawio of its diagram"):
+                with before.all:
+                    def drawio_only(project: ProjectTools) -> tuple[list, dict]:
+                        sign_up(project)
+                        project.call("fidelity-session-output.choose_format", session=session_file_of("sign-up"), practice="stories", fidelity="story_map", format="drawio", is_chosen=True)
+                        shown = project.call("ticket.format_choices", ticket="sign-up", fidelities=["stories-story-map"])
+                        project.call("ticket.choose_formats", ticket="sign-up", fidelities=["stories-story-map"], label="diagram", is_chosen=True)
+                        output = project.call("fidelity-session-output.choose_format", session=session_file_of("sign-up"), practice="stories", fidelity="story_map", format="markdown", is_chosen=True)
+                        return shown, output
+
+                    self.drawio_shown, self.drawio_turned_on = ProjectTools.answer_of(drawio_only)
+
+                with it("should show the diagram chip not chosen, since its whiteboard is not"):
+                    expect([chip["label"] for chip in self.drawio_shown if chip["is_chosen"]]).to(equal(["markdown"]))
+
+                with context("that turns the diagram chip on"):
+                    with it("should choose the whiteboard as well"):
+                        expect(self.drawio_turned_on["chosen_formats"]).to(equal(["markdown", "drawio", "whiteboard"]))
 
             with context("in a project whose defaults draw every diagram in drawio and whiteboard"):
                 with before.all:

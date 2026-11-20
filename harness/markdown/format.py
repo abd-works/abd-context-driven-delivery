@@ -31,6 +31,9 @@ class Format(str):
         "code": ("python", "typescript", "javascript", "java", "html"),
         "canvas": ("claude_design",),
     }
+    # The groups a fidelity writes in every format of at once: a diagram is both a draw.io file and a Claude Whiteboard
+    # board, so a person picks the diagram, never one of them. In any other group a person picks one of its formats.
+    WRITTEN_TOGETHER = frozenset({"diagram"})
     # The order a fidelity's files are shown in, by group: prose first, then the code, then the diagrams drawn from them,
     # then the canvas played from them.
     FILE_ORDER: tuple[str, ...] = ("markdown", "code", "diagram", "canvas")
@@ -76,6 +79,11 @@ class Format(str):
         than how it is written, such as the story map's ``thin_slice`` or the scenarios' ``realization``, names files its
         fidelity writes, never a format a chip or a toggle offers."""
         return any(self.name in members for members in self.GROUPS.values())
+
+    @property
+    def is_written_with_its_group(self) -> bool:
+        """Whether choosing this format's group chooses every format of it a fidelity writes, as a diagram does."""
+        return self.group in self.WRITTEN_TOGETHER
 
     @property
     def group_order(self) -> int:

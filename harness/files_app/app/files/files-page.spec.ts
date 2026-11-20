@@ -7,7 +7,7 @@ import type { CddApi } from '@cdd/cdd-shared'
 import type { GuidanceSelectionData } from '@cdd/space/session/session'
 
 import { FilesLink } from './files-link'
-import { FilesPage, filesShown } from './files-page'
+import { FilesPage, filesShown, selectedFormatsOf } from './files-page'
 import { drawioEditorUrl, drawioPageOf, missingNoteOf, revealLabelOf } from './files-paths'
 import { calloutsOf, rulesOf } from './source-of-file'
 
@@ -68,7 +68,7 @@ class FakeFilesServer implements CddApi {
       practices: PRACTICES.map(practice => ({ ...practice, is_selected: this.practices.includes(practice.key) })),
       formats: [
         { label: 'markdown', formats: ['markdown'], offered: fidelities.length, is_selected: this.formats.includes('markdown') },
-        { label: 'diagram', formats: ['drawio'], offered: fidelities.length, is_selected: this.formats.includes('diagram') },
+        { label: 'diagram', formats: ['drawio', 'whiteboard'], offered: fidelities.length, is_selected: this.formats.includes('diagram') },
       ],
       fidelities,
     } as GuidanceSelectionData
@@ -350,6 +350,16 @@ describe('Filter Files By Format In Files App', () => {
     const files = [{ slug: 'stories-story-map', entries: [entry('.context/story-map.md'), board], formatOf: { '.context/story-map.md': 'markdown', '.context/story-map.version-2.whiteboard': 'whiteboard' } }]
     const shown = filesShown(files, ['stories-story-map'], ['markdown', 'drawio'])
     expect(shown.map(each => each.path)).toEqual(['.context/story-map.md', '.context/story-map.version-2.whiteboard'])
+  })
+
+  // A diagram is a draw.io file and a Claude Whiteboard board, so the diagram filter shows a board not yet published
+  // too; requested 2026-11-20: "whiteboard isn't a separate format, there's only a button for 'diagram'".
+  it('should show the whiteboard beside the draw.io file while the diagram is selected', () => {
+    const server = new FakeFilesServer()
+    server.formats = ['diagram']
+    const files = [{ slug: 'stories-story-map', entries: [entry('.context/story-map.md'), entry('.context/story-map.drawio'), entry('.context/story-map.whiteboard')], formatOf: { '.context/story-map.md': 'markdown', '.context/story-map.drawio': 'drawio', '.context/story-map.whiteboard': 'whiteboard' } }]
+    const shown = filesShown(files, ['stories-story-map'], selectedFormatsOf(server.selection()))
+    expect(shown.map(each => each.path)).toEqual(['.context/story-map.drawio', '.context/story-map.whiteboard'])
   })
 })
 

@@ -17,10 +17,11 @@ class FormatChoice:
     from it, how many of those fidelities offer it and have output in it already, and whether it is chosen for them in
     the session."""
 
-    # A fidelity uses from a group the formats the session chose there; with none chosen, the project's default formats
-    # in the group (drawio and whiteboard for a diagram), else its default format when the group holds it, else the
-    # first format it offers there. A chip shows what the session keeps chosen (FidelitySessionOutput.chosen_formats),
-    # so the chat bar, the board and the Story UI show one choice, and a chip standing for several formats does them all.
+    # A fidelity uses from a group the formats the session chose there; with none chosen, every format of a diagram it
+    # writes (the draw.io file and the Claude Whiteboard board), and for any other group the project's default formats
+    # in it, else its default format when the group holds it, else the first format it offers there. A chip shows what
+    # the session keeps chosen (FidelitySessionOutput.chosen_formats), so the chat bar, the board and the Story UI show
+    # one choice, and a chip standing for several formats does them all.
 
     def __init__(self, group: FormatGroup, files: dict[str, dict[str, list[FileEntry]]]) -> None:
         self._group = group
@@ -61,8 +62,8 @@ class FormatChoice:
     @property
     @data_field
     def is_chosen(self) -> bool:
-        """Whether every fidelity the chip covers has a format of the group chosen in the session: what the chip shows,
-        the same choice the Story UI's toggles show."""
+        """Whether every fidelity the chip covers has a format of the group chosen in the session, and for a diagram
+        each format of it the fidelity writes: what the chip shows, the same choice the Story UI's toggles show."""
         return self._group.is_chosen
 
     def choose(self, is_chosen: bool) -> None:
