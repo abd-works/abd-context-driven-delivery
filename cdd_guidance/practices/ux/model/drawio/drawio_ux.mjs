@@ -389,6 +389,20 @@ function layout(screens) {
 // The VS Code draw.io extension requires sequential numeric cell IDs.
 // We thread a plain counter object { v: number } through all helpers.
 
+// What the drawing keeps for its reader beside what it shows: a style key such as uxLayout=sidebar, which draw.io
+// carries untouched. A value holds no ';' or '=', which end a style key.
+function keep(key, value) {
+  if (value === undefined || value === null || value === '') return ''
+  return `${key}=${esc(String(value).replace(/[;=]/g, ' '))};`
+}
+
+// The type of each control a row or an action strip shows, in the order it shows them: uxControls=number,button.
+// A control of no type keeps its place, so the types stay beside their labels.
+function keepControls(kinds) {
+  if (!Array.isArray(kinds) || kinds.length === 0) return ''
+  return `uxControls=${esc(kinds.map(kind => String(kind || '').replace(/[;=,]/g, ' ')).join(','))};`
+}
+
 function mkCell(counter, { value, style, vertex, edge, source, target, parent, x, y, w, h, waypoints }) {
   const id = String(++counter.v)
   const parts = [
@@ -425,7 +439,7 @@ function renderRegion(r, cells, counter, sid, rx, ry, rw) {
   if (r.type === 'chrome') {
     cells.push(mkCell(counter, {
       value: r.name,
-      style: r.dimmed ? S.chromeDimmed : S.chrome,
+      style: (r.dimmed ? S.chromeDimmed : S.chrome) + keep('uxArea', r.uxArea),
       vertex: true, parent: sid,
       x: rx, y: ry, w: rw, h: CHROME_H,
     }).xml)
@@ -436,14 +450,14 @@ function renderRegion(r, cells, counter, sid, rx, ry, rw) {
     const vH  = verbRowH(r.actions, rw - 8)
     const rh  = LIST_HDR_H + vH + ROW_H * ROW_COUNT
     cells.push(mkCell(counter, {
-      value: `<b>${r.name}</b>`, style: S.listRegion,
+      value: `<b>${r.name}</b>`, style: S.listRegion + keep('uxArea', r.uxArea),
       vertex: true, parent: sid,
       x: rx, y: ry, w: rw, h: rh,
     }).xml)
     // Actions strip immediately below region header label (wraps as needed)
     const actions = (r.actions || []).join(' · ')
     cells.push(mkCell(counter, {
-      value: actions, style: S.verbRow,
+      value: actions, style: S.verbRow + keepControls((r.actions || []).map(() => 'button')),
       vertex: true, parent: sid,
       x: rx + 4, y: ry + LIST_HDR_H, w: rw - 8, h: vH,
     }).xml)
@@ -451,7 +465,7 @@ function renderRegion(r, cells, counter, sid, rx, ry, rw) {
     const fields = (r.fields || []).join(' · ')
     for (let i = 0; i < ROW_COUNT; i++) {
       cells.push(mkCell(counter, {
-        value: fields, style: S.row,
+        value: fields, style: S.row + keepControls(r.fieldKinds),
         vertex: true, parent: sid,
         x: rx + 4, y: ry + LIST_HDR_H + vH + i * ROW_H, w: rw - 8, h: ROW_H,
       }).xml)
@@ -463,13 +477,13 @@ function renderRegion(r, cells, counter, sid, rx, ry, rw) {
     const fieldCount = r.fields?.length || 3
     const rh = LIST_HDR_H + FORM_ROW_H * fieldCount
     cells.push(mkCell(counter, {
-      value: `<b>${r.name}</b>`, style: S.formRegion,
+      value: `<b>${r.name}</b>`, style: S.formRegion + keep('uxArea', r.uxArea),
       vertex: true, parent: sid,
       x: rx, y: ry, w: rw, h: rh,
     }).xml)
     for (let i = 0; i < fieldCount; i++) {
       cells.push(mkCell(counter, {
-        value: (r.fields || [])[i] || '', style: S.formRow,
+        value: (r.fields || [])[i] || '', style: S.formRow + keepControls(r.fieldKinds && i < r.fieldKinds.length ? [r.fieldKinds[i]] : null),
         vertex: true, parent: sid,
         x: rx + 4, y: ry + LIST_HDR_H + i * FORM_ROW_H, w: rw - 8, h: FORM_ROW_H,
       }).xml)
@@ -497,7 +511,7 @@ function generateXml(state) {
 
     const sid     = screenNumId[screen.name]
     const tmplObj = getTemplate(screen.layout || 'stack')
-    const style   = tmplObj.rounded ? S.screenModal : S.screen
+    const style   = (tmplObj.rounded ? S.screenModal : S.screen) + keep('uxLayout', screen.uxLayout)
 
     // Push screen cell directly with its pre-assigned id (don't call mkCell which auto-increments)
     const geoParts = `x="${pos.x}" y="${pos.y}" width="${pos.w}" height="${pos.h}" as="geometry"`
@@ -703,9 +717,9 @@ function generateSiteMapPage(state) {
     const baseStyle = conn.dashed
       ? 'html=1;strokeColor=#000000;endArrow=block;endFill=1;fontSize=10;dashed=1;'
       : 'html=1;strokeColor=#000000;endArrow=block;endFill=1;fontSize=10;'
-    const style = isBidi
+    const style = (isBidi
       ? baseStyle.replace('endArrow=block', 'startArrow=block;startFill=1;endArrow=block')
-      : baseStyle
+      : baseStyle) + keep('uxNav', conn.navType)
     cells.push(
       `                <mxCell id="${id}" value="${esc(label)}" style="${style}" edge="1" source="${srcId}" target="${tgtId}" parent="1">`,
       `                    <mxGeometry relative="1" as="geometry"/>`,

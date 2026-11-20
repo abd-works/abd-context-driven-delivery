@@ -191,7 +191,7 @@ If this change will not stay here, follow `practices/ux/ux-ia.mdc`.
 ### front_end_code
 
 ```yaml
-default_format: html
+default_format: typescript
 stage: implementation
 outputs:
   typescript: "**/*View.tsx"

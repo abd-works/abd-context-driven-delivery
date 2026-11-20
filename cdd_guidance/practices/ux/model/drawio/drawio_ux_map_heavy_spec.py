@@ -12,7 +12,7 @@ if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 from cdd_guidance.practices.ux.model.drawio.nodes import DrawioCliTimedOut, DrawioUxMap, UnreadableDrawio
-from cdd_guidance.practices.ux.model.nodes import Region, Screen, Transition
+from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen, Transition
 from cdd_guidance.practices.ux.model.ux_map_spec_fixture import made
 
 
@@ -40,6 +40,32 @@ class SpecFixture:
             made(Transition, "selects Abilities tab", 0, from_screen=sheet, to_screen=abilities, trigger="selects Abilities tab", nav_type="action")
         )
         return ux_map
+
+
+    def mockup(self) -> DrawioUxMap:
+        """Book Details, whose Add To Cart region holds a number and two buttons, and Checkout, whose Payment region is
+        a form."""
+        ux_map = DrawioUxMap.create()
+        details = Screen("Book Details", 0)
+        details.append_region(made(Region, "Book Summary", 0, area="body"))
+        add = made(Region, "Add To Cart", 1, area="body")
+        for order, (name, kind) in enumerate([("Quantity", "number"), ("Add to cart", "button"), ("Back to list", "button")]):
+            add.append_control(made(Control, name, order, control_type=kind))
+        details.append_region(add)
+        checkout = Screen("Checkout", 1)
+        payment = made(Region, "Payment", 0, area="body")
+        for order, (name, kind) in enumerate([("Street", "text"), ("Country", "dropdown"), ("Save this card", "checkbox"), ("Pay", "button")]):
+            payment.append_control(made(Control, name, order, control_type=kind))
+        checkout.append_region(payment)
+        ux_map.append_screen(details)
+        ux_map.append_screen(checkout)
+        ux_map.transitions.append(made(Transition, "Check out", 0, from_screen=details, to_screen=checkout, trigger="Check out", nav_type="top nav"))
+        return ux_map
+
+
+def controls_of(ux_map: DrawioUxMap, screen: str, region: str) -> list[tuple[str, str]]:
+    held = next(found for found in ux_map.find_screen(screen).regions if found.name == region)
+    return [(control.name, control.control_type) for control in held.controls]
 
 
 fixture = SpecFixture()
@@ -81,6 +107,40 @@ with description("a UX map drawn as a draw.io information architecture"):
             graph = Graph()
             self.parsed.join(graph.practice("ux"))
             expect(self.parsed.find_screen("Character Sheet").regions[0].graph).to(be(graph))
+
+        with it("should read back the stories the drawing shows under the screen"):
+            expect(self.parsed.find_screen("Character Sheet").story_keys).to(equal(["Update Ability Rank"]))
+
+        with it("should read back the domain terms the drawing shows under the screen"):
+            expect(self.parsed.find_screen("Character Sheet").domain_terms).to(equal(["Character"]))
+
+        with it("should read back the screen's layout"):
+            expect(self.parsed.find_screen("Character Sheet").layout).to(equal("sidebar"))
+
+        with it("should read back the area each region fills"):
+            expect([region.area for region in self.parsed.find_screen("Character Sheet").regions]).to(equal(["panel", "body"]))
+
+    with context("of a mockup whose regions hold controls, that is read back"):
+        with before.each:
+            self.parsed = DrawioUxMap.create().parse(DrawioUxMap.create().render(fixture.mockup()))
+
+        with it("should read back only the regions the mockup has"):
+            expect([region.name for region in self.parsed.find_screen("Book Details").regions]).to(
+                equal(["Book Summary", "Add To Cart"])
+            )
+
+        with it("should read back a region's controls with their types, its buttons last"):
+            expect(controls_of(self.parsed, "Book Details", "Add To Cart")).to(
+                equal([("Quantity", "number"), ("Add to cart", "button"), ("Back to list", "button")])
+            )
+
+        with it("should read back a form's fields and its button"):
+            expect(controls_of(self.parsed, "Checkout", "Payment")).to(
+                equal([("Street", "text"), ("Country", "dropdown"), ("Save this card", "checkbox"), ("Pay", "button")])
+            )
+
+        with it("should read back a transition's kind of navigation"):
+            expect(self.parsed.transitions[0].nav_type).to(equal("top nav"))
 
     with context("that is not XML"):
         with it("should refuse it as an unreadable diagram"):

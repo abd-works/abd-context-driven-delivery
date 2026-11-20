@@ -2,9 +2,12 @@
 
 Render copies the UxMap into a DrawioUxMap, whose screens and regions spell their own part of the drawio-ux
 command line's state, and invokes `drawio_ux.mjs write`.
-Parse prefers the Site Map page for screens/transitions; region titles come
-from the Detailed IA page when present. The diagram carries screens, their regions, and transitions;
-layouts, story names, and controls stay in the JSON and HTML formats.
+Parse prefers the Site Map page for screens/transitions; each screen's layout, regions, controls, stories, and
+domain terms come from the Detailed IA page when present. The diagram shows screens, their regions, the labels of the
+controls a region holds, transitions, and each screen's stories and domain terms; beside what it shows it keeps, as
+style keys on its cells (``uxLayout``, ``uxArea``, ``uxControls``, ``uxNav``), a screen's layout, a region's area, each
+control's type, and a transition's kind of navigation, so a drawing reads back what was drawn. A control's states and
+interactions, descriptions, content types, nav components, and the map's name are not drawn.
 """
 
 from __future__ import annotations
@@ -18,7 +21,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from harness.installation.json_file import JsonFile
-from cdd_guidance.practices.ux.model.nodes import Region, Screen
+from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen, Transition
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 
 _CLI = Path(__file__).with_name("drawio_ux.mjs")
@@ -26,6 +29,22 @@ _CLI = Path(__file__).with_name("drawio_ux.mjs")
 _CLI_TIMEOUT_SECONDS = 60
 # A Site Map edge drawn both ways carries both triggers in one label, "there / back".
 _BOTH_WAYS = " / "
+# What joins the labels one cell shows: a row's controls, an action strip's buttons, a callout's stories.
+_BESIDE = " · "
+# The style keys the drawing keeps for its reader beside what it shows.
+_LAYOUT_KEY, _AREA_KEY, _CONTROLS_KEY, _NAV_KEY = "uxLayout", "uxArea", "uxControls", "uxNav"
+# The control types the command line draws as a form's rows, and as a list's.
+_FORM_TYPES = frozenset({"text", "dropdown", "checkbox"})
+_LIST_TYPES = frozenset({"list", "tree"})
+_BUTTON = "button"
+# The kind of navigation a transition has when its edge says no other.
+_ACTION = "action"
+# The fill the command line gives a region's action strip.
+_ACTION_STRIP_FILL = "#f0f0f0"
+_STORIES, _TERMS = "stories:", "domain terms:"
+# What a draw.io file holds when it is a UX map: the command line's own mark, or one of the two pages it draws.
+_UX_DRAWING_MARKS = ('host="drawio-ux"', 'name="Site Map"', 'name="Detailed IA"')
+_LINE_BREAK = re.compile(r"<br\s*/?>")
 
 
 class DrawioCliMissing(FileNotFoundError):
@@ -59,33 +78,102 @@ _CLI_LAYOUTS = {
 }
 
 
+class CellStyle:
+    """One cell's draw.io style, read as its keys: ``strokeColor=none;uxArea=panel;`` holds ``strokeColor`` and
+    ``uxArea``."""
+
+    def __init__(self, cell: ET.Element) -> None:
+        pairs = (part.partition("=") for part in cell.get("style", "").split(";") if part)
+        self._keys = {key: held for key, _equals, held in pairs}
+
+    def __contains__(self, key: str) -> bool:
+        return key in self._keys
+
+    def get(self, key: str) -> str:
+        return self._keys.get(key, "")
+
+    @property
+    def is_action_strip(self) -> bool:
+        return self.get("fillColor") == _ACTION_STRIP_FILL
+
+    @property
+    def draws_controls(self) -> bool:
+        """Whether the cell shows a region's controls, not a region: it names their types, it is an unframed row, or
+        it is the grey action strip."""
+        return _CONTROLS_KEY in self or self.get("strokeColor") == "none" or self.is_action_strip
+
+    @property
+    def control_types(self) -> list[str]:
+        """The type of each control the cell shows, in the order it shows them; none for a cell that keeps none."""
+        return self.get(_CONTROLS_KEY).split(",") if _CONTROLS_KEY in self else []
+
+
+class DrawioControl(Control):
+    """A control as the Detailed IA page shows it: its label, in a row of its region or on the region's action strip."""
+
+    @classmethod
+    def from_cell(cls, cell: ET.Element) -> list["DrawioControl"]:
+        """The controls one cell shows, each with the type the cell keeps for it. Where the cell keeps none, a control
+        on an action strip, or one a form shows in brackets as ``[Pay]``, is a button."""
+        style = CellStyle(cell)
+        labels = [label.strip() for label in _plain_text(cell.get("value", "")).split(_BESIDE) if label.strip()]
+        kinds = style.control_types
+        controls = []
+        for index, label in enumerate(labels):
+            kind = kinds[index] if index < len(kinds) else (_BUTTON if style.is_action_strip else "")
+            if label.startswith("[") and label.endswith("]") and kind in ("", _BUTTON):
+                label, kind = label[1:-1].strip(), _BUTTON
+            control = cls(label, index)
+            control.control_type = kind
+            controls.append(control)
+        return controls
+
+    @property
+    def row_label(self) -> str:
+        """What a form's row shows for this control: a button in brackets."""
+        return f"[{self.label}]" if self.control_type == _BUTTON else self.label
+
+
 class DrawioRegion(Region):
     """A region on the Detailed IA page: a form, a list with its actions, or chrome, by the controls it holds."""
 
     @classmethod
     def from_cell(cls, cell: ET.Element, index: int) -> Optional["DrawioRegion"]:
-        """The region a cell inside a screen's box draws; none for a cell that draws no region (an unframed label,
-        an annotation, or one with no text)."""
+        """The region a cell inside a screen's box draws; none for a cell that draws no region (a cell that shows
+        controls, an annotation, or one with no text)."""
         name = _plain_text(cell.get("value", ""))
-        if cell.get("vertex") != "1" or "strokeColor=none" in cell.get("style", "") or not name or _is_annotation(name):
+        style = CellStyle(cell)
+        if cell.get("vertex") != "1" or style.draws_controls or not name or _is_annotation(name):
             return None
-        return cls(name, index)
+        region = cls(name, index)
+        region.area = style.get(_AREA_KEY)
+        return region
+
+    def read_controls(self, cell: ET.Element, control_type: type[DrawioControl]) -> None:
+        """Take the controls cell shows, each once, since a list's row is drawn twice. Its buttons come after its other
+        controls, as the drawing shows them apart."""
+        shown = [control for control in control_type.from_cell(cell) if all(held.name != control.name for held in self.controls)]
+        ordered = sorted([*self.controls, *shown], key=lambda control: control.control_type == _BUTTON)
+        self.controls.refill(ordered)
+        self._renumber(self.controls)
 
     def cli_record(self) -> Dict[str, Any]:
-        """This region in the drawio-ux command line's state."""
-        area = self.area or "body"
+        """This region in the drawio-ux command line's state: every control it holds is shown, a form's one to a row,
+        a list's in its rows with its buttons on the action strip, each with its type kept beside it."""
+        record = {"name": self.name, "area": self.area or "body", "uxArea": self.area}
         controls = list(self.controls)
-        buttons = [control for control in controls if control.control_type == "button"]
-        fields = [control for control in controls if control.control_type in {"text", "dropdown", "checkbox"}]
-        lists = [control for control in controls if control.control_type in {"list", "tree"}]
-        if fields and not lists:
-            return {"name": self.name, "type": "form", "area": area,
-                    "fields": [control.label for control in fields] + [f"[{control.label}]" for control in buttons]}
-        if lists or buttons:
-            labels = [control.label for control in lists] or [control.label for control in controls if control.control_type != "button"]
-            return {"name": self.name, "type": "list", "area": area, "fields": labels or [self.name],
-                    "actions": [control.label for control in buttons]}
-        return {"name": self.name, "type": "chrome", "area": area, "dimmed": False}
+        if not controls:
+            return {**record, "type": "chrome", "dimmed": False}
+        buttons = [control for control in controls if control.control_type == _BUTTON]
+        shown = [control for control in controls if control.control_type != _BUTTON]
+        kinds = {control.control_type for control in shown}
+        if kinds & _FORM_TYPES and not kinds & _LIST_TYPES:
+            rows = shown + buttons
+            return {**record, "type": "form", "fields": [control.row_label for control in rows],
+                    "fieldKinds": [control.control_type for control in rows]}
+        return {**record, "type": "list", "fields": [control.label for control in shown],
+                "fieldKinds": [control.control_type for control in shown],
+                "actions": [control.label for control in buttons]}
 
 
 class DrawioScreen(Screen):
@@ -99,19 +187,40 @@ class DrawioScreen(Screen):
             return None
         return cls(name, index)
 
-    def read_regions(self, detailed: ET.Element, region_type: type[DrawioRegion]) -> None:
-        """Its regions: the cells inside its own box on the Detailed IA page, the box titled with its name; a region
-        drawn twice is read once."""
-        boxes = {
-            cell.get("id", "")
+    def read_detail(self, detailed: ET.Element, ux_map: "DrawioUxMap") -> None:
+        """What the Detailed IA page draws of this screen, in the box titled with its name: its layout, its regions
+        with the controls each shows, and the stories and domain terms in the callout under the box. Its regions and
+        controls are made of ux_map's node types."""
+        boxes = [
+            cell
             for cell in detailed.iter("mxCell")
             if cell.get("vertex") == "1" and cell.get("parent") == "1" and _plain_text(cell.get("value", "")) == self.name
-        }
+        ]
+        if not boxes:
+            return
+        self.layout = CellStyle(boxes[0]).get(_LAYOUT_KEY)
+        self._read_regions(detailed, {box.get("id", "") for box in boxes}, ux_map)
+        callout = Callout.under(boxes[0], detailed)
+        if callout is not None:
+            callout.annotate(self)
+
+    def _read_regions(self, detailed: ET.Element, boxes: set[str], ux_map: "DrawioUxMap") -> None:
+        """Its regions, the framed cells inside its boxes, each with the controls the cells after it show; a region
+        drawn twice is read once."""
+        region: Optional[DrawioRegion] = None
         for cell in detailed.iter("mxCell"):
             if cell.get("parent", "") not in boxes:
                 continue
-            region = region_type.from_cell(cell, len(self.regions))
-            if region is not None and all(held.name != region.name for held in self.regions):
+            if CellStyle(cell).draws_controls:
+                if region is not None:
+                    region.read_controls(cell, ux_map.control_type)
+                continue
+            found = ux_map.region_type.from_cell(cell, len(self.regions))
+            if found is None:
+                continue
+            region = next((held for held in self.regions if held.name == found.name), None)
+            if region is None:
+                region = found
                 self.append_region(region)
 
     def cli_record(self, column: int) -> Dict[str, Any]:
@@ -119,6 +228,7 @@ class DrawioScreen(Screen):
         return {
             "name": self.name,
             "layout": _CLI_LAYOUTS.get((self.layout or "").strip().lower(), "stack"),
+            "uxLayout": self.layout,
             "tabOf": self.chrome_of.name if self.chrome_of else None,
             "col": column,
             "row": 0,
@@ -128,9 +238,50 @@ class DrawioScreen(Screen):
         }
 
 
+class Callout:
+    """The note the Detailed IA page draws under a screen: the stories the screen shows and the domain terms it names,
+    one line each."""
+
+    def __init__(self, cell: ET.Element) -> None:
+        self._lines = [_plain_text(line) for line in _LINE_BREAK.split(cell.get("value", ""))]
+
+    @classmethod
+    def under(cls, box: ET.Element, detailed: ET.Element) -> Optional["Callout"]:
+        """The callout drawn under box: the annotation whose left edge is the box's, nearest below the box's top; none
+        when the page draws none there."""
+        left, top = cls._corner(box)
+        below = [
+            (cls._corner(cell)[1], order, cell)
+            for order, cell in enumerate(detailed.iter("mxCell"))
+            if cell.get("vertex") == "1" and cell.get("parent") == "1" and _is_annotation(_plain_text(cell.get("value", "")))
+            and cls._corner(cell)[0] == left and cls._corner(cell)[1] >= top
+        ]
+        return cls(min(below, key=lambda found: found[:2])[2]) if below else None
+
+    @classmethod
+    def _corner(cls, cell: ET.Element) -> tuple[float, float]:
+        """Where a cell's top left corner is drawn; the page's own corner for a cell with no geometry."""
+        geometry = cell.find("mxGeometry")
+        if geometry is None:
+            return (0.0, 0.0)
+        return (float(geometry.get("x", 0) or 0), float(geometry.get("y", 0) or 0))
+
+    def annotate(self, screen: Screen) -> None:
+        """Show on screen each story the callout lists, and attach each domain term it lists."""
+        for story in self._listed(_STORIES):
+            screen.show_story(story)
+        for term in self._listed(_TERMS):
+            screen.attach_domain_term(term)
+
+    def _listed(self, heading: str) -> list[str]:
+        line = next((line for line in self._lines if line.lower().startswith(heading)), "")
+        return [item.strip() for item in line[len(heading):].split(_BESIDE) if item.strip()]
+
+
 class DrawioUxMap(UxMap):
     screen_type = DrawioScreen
     region_type = DrawioRegion
+    control_type = DrawioControl
     workspace_files = (
         ".context/information-architecture.drawio",
         ".context/ia.drawio",
@@ -141,6 +292,12 @@ class DrawioUxMap(UxMap):
         "*.drawio",
     )
     cli_timeout_seconds: float = _CLI_TIMEOUT_SECONDS
+    map_file_suffixes = (".drawio",)
+
+    def reads_file(self, file: Path, text: str) -> bool:
+        """A drawing the drawio-ux command line wrote, or one that has its Site Map or Detailed IA page; any other
+        drawing is another practice's, such as a story map."""
+        return any(mark in text for mark in _UX_DRAWING_MARKS)
 
     def parse(self, content: str) -> UxMap:
         """A new map of this format, read from a draw.io file."""
@@ -156,8 +313,9 @@ class DrawioUxMap(UxMap):
             raise UnreadableDrawio(f"draw.io content is not valid XML: {error}") from error
 
     def read_pages(self, root_element: ET.Element) -> None:
-        """Read the diagram's pages into this map: its screens from the Site Map page, each screen's regions from the
-        Detailed IA page, then the transitions drawn between screens."""
+        """Read the diagram's pages into this map: its screens from the Site Map page, what the Detailed IA page draws
+        of each screen (its layout, regions, controls, stories, and domain terms), then the transitions drawn between
+        screens."""
         site_map = self._page_named(root_element, "Site Map")
         detailed = self._page_named(root_element, "Detailed IA")
         source = site_map if site_map is not None else root_element
@@ -165,7 +323,7 @@ class DrawioUxMap(UxMap):
             screens = self._read_screens(source)
             if detailed is not None:
                 for screen in self.screens:
-                    screen.read_regions(detailed, self.region_type)
+                    screen.read_detail(detailed, self)
             self._read_transitions(source, screens)
 
     def _page_named(self, root_element: ET.Element, name: str) -> Optional[ET.Element]:
@@ -188,18 +346,31 @@ class DrawioUxMap(UxMap):
             if cell.get("edge") != "1" or origin is None or target is None:
                 continue
             trigger = _plain_text(cell.get("value", "")) or f"{origin.name} -> {target.name}"
+            nav_type = self._nav_type_of(cell)
             if _BOTH_WAYS not in trigger:
-                self._append_transition(trigger, origin, target)
+                self._append_transition(trigger, origin, target).nav_type = nav_type
                 continue
             there, back = [part.strip() for part in trigger.split(_BOTH_WAYS, 1)]
-            self._append_transition(there, origin, target)
-            self._append_transition(back, target, origin)
+            self._append_transition(there, origin, target).nav_type = nav_type
+            self._append_transition(back, target, origin).nav_type = nav_type
 
-    def _append_transition(self, trigger: str, origin: Screen, target: Screen) -> None:
-        self.transitions.append(self.transition_type(trigger, len(self.transitions)).joining(origin, target))
+    def _nav_type_of(self, edge: ET.Element) -> str:
+        """The kind of navigation an edge draws: the one it keeps, else a tab for a dashed line, else an action, the
+        kind a transition is made with."""
+        style = CellStyle(edge)
+        return style.get(_NAV_KEY) or ("tab" if style.get("dashed") == "1" else _ACTION)
 
-    def render(self, canonical: UxMap) -> str:
-        """canonical as Detailed IA + Site Map: copied into a draw.io map with this map's timeout, which draws itself."""
+    def _append_transition(self, trigger: str, origin: Screen, target: Screen) -> Transition:
+        transition = self.transition_type(trigger, len(self.transitions)).joining(origin, target)
+        self.transitions.append(transition)
+        return transition
+
+    def render(self, canonical: UxMap, previous: Optional[str] = None) -> str:
+        """canonical as Detailed IA + Site Map: copied into a draw.io map with this map's timeout, which draws itself.
+        previous is the drawing as it is now: a source that holds no screen, such as the UX context file, has nothing
+        to draw, so a drawing that holds screens stays as it is rather than being written over with an empty one."""
+        if previous and not canonical.screens and self.parse(previous).screens:
+            return previous
         drawn = self.copy_of(canonical)
         drawn.cli_timeout_seconds = self.cli_timeout_seconds
         return drawn.save()
@@ -215,6 +386,7 @@ class DrawioUxMap(UxMap):
                     "to": transition.to_screen.name if transition.to_screen else "",
                     "label": transition.trigger or transition.name,
                     "dashed": transition.nav_type == "tab",
+                    "navType": transition.nav_type,
                 }
                 for transition in self.transitions
             ],
@@ -245,7 +417,8 @@ class DrawioUxMap(UxMap):
 
 def _is_annotation(name: str) -> bool:
     lower = name.lower()
-    return lower.startswith("stories:") or "domain terms:" in lower
+    return lower.startswith(_STORIES) or _TERMS in lower
+
 
 
 def _plain_text(markup: str) -> str:

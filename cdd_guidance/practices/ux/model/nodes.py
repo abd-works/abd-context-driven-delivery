@@ -44,6 +44,7 @@ class Interaction(UxNode):
     the interaction once it is made."""
 
     _semantic_type_name = "Interaction"
+    graph_facts = ("trigger", "effect")
 
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         super().__init__(name, sequential_order, graph)
@@ -66,6 +67,7 @@ class Control(UxNode):
     control once it is made."""
 
     _semantic_type_name = "Control"
+    graph_facts = ("control_type", "label", "bound_field", "states")
 
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         super().__init__(name, sequential_order, graph)
@@ -99,6 +101,7 @@ class StoryDemoControl(Control):
     """
 
     _semantic_type_name = "StoryDemoControl"
+    graph_facts = (*Control.graph_facts, "story_step_labels", "set_input", "item_value", "item_label")
 
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         super().__init__(name, sequential_order, graph)
@@ -107,6 +110,11 @@ class StoryDemoControl(Control):
         self.item_story_steps: List[StoryStep] = []
         self.item_value = ""
         self.item_label = ""
+
+    @property
+    def story_step_labels(self) -> List[str]:
+        """The text of each story step this control runs, as Stories wrote it."""
+        return [step.label for step in self.story_steps]
 
     def take_story_fields(self, source: "StoryDemoControl") -> None:
         """Run the steps source runs, fill the input it fills, and show its items the way it does."""
@@ -119,6 +127,7 @@ class StoryDemoControl(Control):
 
 class Region(UxNode):
     _semantic_type_name = "Region"
+    graph_facts = ("area",)
 
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         super().__init__(name, sequential_order, graph)
@@ -139,6 +148,7 @@ class Screen(UxNode):
     """
 
     _semantic_type_name = "Screen"
+    graph_facts = ("slug", "layout", "description", "story_keys", "scenario_keys", "step_keys", "domain_terms")
 
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         """A screen called name; its slug, layout, description, and the screen it is the chrome of are set on it once
@@ -270,6 +280,7 @@ class UxComponent(UxNode):
 
 class Transition(UxComponent):
     _semantic_type_name = "Transition"
+    graph_facts = ("trigger", "nav_type")
 
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         """A transition called name; the screens it joins, its trigger, and its kind of navigation are set on it once
@@ -298,6 +309,7 @@ class Transition(UxComponent):
 
 class ContentType(UxComponent):
     _semantic_type_name = "ContentType"
+    graph_facts = ("hierarchy", "key_actions")
 
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         super().__init__(name, sequential_order, graph)
@@ -307,6 +319,7 @@ class ContentType(UxComponent):
 
 class NavComponent(UxComponent):
     _semantic_type_name = "NavComponent"
+    graph_facts = ("ux_type",)
 
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         super().__init__(name, sequential_order, graph)
@@ -318,6 +331,7 @@ class UxContext(UxNode):
     """Optional notes - invariants / thinking not on screens."""
 
     _semantic_type_name = "UxContext"
+    graph_facts = ("notes", "invariants")
 
     def __init__(self, name: str = "context", sequential_order: int = 0, graph: Optional[Graph] = None) -> None:
         super().__init__(name, sequential_order, graph)

@@ -5,8 +5,10 @@ from __future__ import annotations
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
 from harness.guidance.guidance import SketchLens
-from harness.guidance.practice_reading import PracticeReading
+from harness.guidance.practice_formats import PracticeFormats, RenderRequest
+from harness.markdown.format import Format
 
+from cdd_guidance.practices.ux.model.graph_reading import UxReading
 from cdd_guidance.practices.ux.model.ux_node import UxNode
 
 
@@ -19,22 +21,38 @@ class UxOutsideSession(ValueError):
     own to render the JavaScript through."""
 
 
-class UxReading(PracticeReading):
-    """How UX takes part in the graph: it checks its screen rules on the UX maps put on a graph and offers the explorer
-    the node types a UX map is made of. A working-copy load reads no UX files yet."""
+class ViewNotRendered(ValueError):
+    """A render was asked to read or write a front-end view. A view is production code a person or an agent writes by
+    hand at the front-end code fidelity; no UX format reads one into the UX map or writes one from it."""
 
-    node_types = (
-        "UxMap",
-        "Screen",
-        "Region",
-        "Control",
-        "StoryDemoControl",
-        "Interaction",
-        "Transition",
-        "ContentType",
-        "NavComponent",
-        "UxContext",
-    )
+    def __init__(self, format: Format) -> None:
+        super().__init__(f"UX front-end views are written by hand in {format}, not rendered: no render reads or writes one.")
+        self.format = format
+
+
+class UxFormats(PracticeFormats):
+    """The formats UX reads and writes: the UX map's, each through its adapter, and the view formats its front-end code
+    fidelity writes by hand (typescript, javascript), which the practice works in but no render converts."""
+
+    @property
+    def view_formats(self) -> frozenset[Format]:
+        """The formats a UX fidelity writes that no adapter reads: its front-end views."""
+        written = {Format(name) for fidelity in self._practice.fidelities for name in fidelity.outputs}
+        return frozenset(written - super().supported)
+
+    @property
+    def supported(self) -> frozenset[Format]:
+        """The formats UX works in: those its adapters read and write, and its view formats."""
+        return super().supported | self.view_formats
+
+    def render(self, request: RenderRequest) -> dict:
+        """What request renders to; a render to or from a view format is refused as *ViewNotRendered*, before a view's
+        text is read as a mockup page or a format list is searched for it."""
+        views = self.view_formats
+        asked = next((format for format in (request.format, request.source_format) if format in views), None)
+        if asked is not None:
+            raise ViewNotRendered(asked)
+        return super().render(request)
 
 
 @agent_toolset
@@ -43,6 +61,7 @@ class Ux(PracticeGuidance):
 
     sketch_lens = SketchLens(("ux:", "user experience:"))
     reading_type = UxReading
+    formats_type = UxFormats
     SHORT_NAME = "UX"
     COLOUR = "#E84393"
 
