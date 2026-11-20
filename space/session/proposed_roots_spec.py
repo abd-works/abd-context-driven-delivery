@@ -45,6 +45,11 @@ with description("a fidelity's proposed roots"):
             holding = self.proposed("stories", "scenarios").holding(self.changed("story_tests/manage-orders/refund-order/refund_order_story.test.md"))
             expect(holding).to(equal(["story_tests/manage-orders/refund-order"]))
 
+        # An epic that holds its stories directly has no sub-epic folder, so the epic's folder is the piece.
+        with it("should propose the epic's folder for a story test of a story directly under an epic"):
+            changed = self.changed("story_tests/fulfil-order/pack-order/pack_order_story.test.py", "story_tests/fulfil-order/fulfil-order.story.shared.py")
+            expect(self.proposed("stories", "acceptance_tests").holding(changed)).to(equal(["story_tests/fulfil-order"]))
+
         with it("should propose nothing for a file the fidelity does not write"):
             holding = self.proposed("stories", "scenarios").holding(self.changed("src/orders/refund/refund_policy.py"))
             expect(holding).to(equal([]))

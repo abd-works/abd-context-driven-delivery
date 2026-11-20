@@ -6,7 +6,7 @@ import os
 
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterable
 
 from harness.git.git import Git
 from space.session.file_manager import FileEntry, FileManager, FileText
@@ -70,6 +70,13 @@ class SessionFiles:
         """The files pattern names, written from the top of the session's checkout, wherever they are in it: the
         file manager named from the project's top searches it."""
         return self._from_project.find(pattern)
+
+    def find_each(self, patterns: Iterable[str]) -> dict[str, list[Path]]:
+        """The files each of patterns names, by pattern, as ``find`` finds them, with the session's roots worked out
+        once for all of them: worked out again for each pattern, a fidelity that declares twenty patterns took a
+        quarter of a second to list."""
+        searched = self._from_project
+        return {pattern: searched.find(pattern) for pattern in dict.fromkeys(patterns)}
 
     @property
     def _own_folders(self) -> tuple[Path, ...]:

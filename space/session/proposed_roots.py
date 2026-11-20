@@ -75,7 +75,7 @@ class ProposedRoots:
         per module."""
         globs = [DeclaredFile(template).glob for template in self._declared_files()]
         globs += [f"**/*{extension}" for extension in self._code_extensions()]
-        return [file for glob in dict.fromkeys(globs) for file in self._session.session_files.find(glob)]
+        return [file for found in self._session.session_files.find_each(globs).values() for file in found]
 
     def _piece_folder(self, path: str) -> str | None:
         """The narrowest folder holding the piece path is part of, path being from the project: through the deepest
@@ -91,20 +91,26 @@ class ProposedRoots:
         return None
 
     def _piece_name(self, template: str) -> str:
-        """The group naming the deepest named folder template shares with every declared path of this fidelity under
-        the same fixed folders, such as ``sub_epic`` for ``story_tests/{epic}/{sub-epic}/{story}/...``; empty when it
-        shares none. A path with one folder below the fixed ones, such as an epic's own stories' file, is left out when
-        template has more, so that layout does not pull a sub-epic's piece up to the epic's folder."""
+        """The group naming the folder of the piece a file at template is part of: template's deepest named folder,
+        or the named folder above it while that one holds other declared paths of this fidelity and nothing is
+        declared below the deeper one. So ``story_tests/{epic}/{sub-epic}/{story}/...`` names ``sub_epic``, whose
+        folder also holds the sub-epic's tier files, a story directly under an epic
+        (``story_tests/{epic}/{story}/...``) names ``epic``, and ``{bounded_context}/{aggregate}/...`` names
+        ``aggregate``, whose context holds nothing else. Empty when template names no folder."""
+        folders = PurePosixPath(template).parts[:-1]
         head = _fixed_head(template)
-        below = len(PurePosixPath(template).parts) - 1 - len(head)
-        siblings = [
-            PurePosixPath(other).parts[:-1]
-            for other in self._declared_files()
-            if _fixed_head(other) == head and (below <= 1 or len(PurePosixPath(other).parts) - 1 - len(head) >= 2)
-        ]
-        shared = [parts[0] for parts in zip(*siblings) if len(set(parts)) == 1]
-        named = [part for part in shared if _NAMED_FOLDER.match(part)]
-        return re.sub(r"\W", "_", named[-1].strip("{}")) if named else ""
+        siblings = [PurePosixPath(other).parts[:-1] for other in self._declared_files() if _fixed_head(other) == head]
+        named = [index for index, part in enumerate(folders) if _NAMED_FOLDER.match(part)]
+        while len(named) > 1 and named[-2] == named[-1] - 1 and self._is_part_of_folder_above(folders[: named[-1] + 1], siblings):
+            named.pop()
+        return re.sub(r"\W", "_", folders[named[-1]].strip("{}")) if named else ""
+
+    def _is_part_of_folder_above(self, folder: tuple[str, ...], declared: list[tuple[str, ...]]) -> bool:
+        """Whether folder, a declared path's folders down to a named one, is part of the piece the folder above it
+        names: nothing is declared below folder, and the folder above holds other declared paths."""
+        below = [folders for folders in declared if folders[: len(folder)] == folder and folders != folder]
+        beside = [folders for folders in declared if folders[: len(folder) - 1] == folder[:-1] and folders[: len(folder)] != folder]
+        return not below and bool(beside)
 
     def _declared_files(self) -> list[str]:
         """The files this fidelity's outputs declare, each once; a folder declared per module names no file."""

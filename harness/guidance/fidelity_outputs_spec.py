@@ -41,7 +41,7 @@ with description("a fidelity's declared outputs") as self:
             expect(self.outputs["python"][4:]).to(equal([
                 "story_tests/{epic}/{epic_slug}.story.shared.py", "story_tests/{epic}/{epic_slug}.story.domain.spec.py",
                 "story_tests/{epic}/{epic_slug}.story.server.spec.py", "story_tests/{epic}/{story}/{story_snake}_story.test.py",
-                "story_tests/{epic}/examples/{concept}_examples.py", "**/story_test.py",
+                "story_tests/{epic}/examples/{concept}_examples.py", "story_tests/**/story_test.py",
             ]))
 
     with context("with every practice loaded"):

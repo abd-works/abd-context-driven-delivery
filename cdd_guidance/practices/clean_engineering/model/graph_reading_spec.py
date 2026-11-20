@@ -439,3 +439,45 @@ with description("Clean Engineering marking members that call nothing by design"
 
     with it("should still hold a member that takes a value and calls nothing to invoking something"):
         expect(_exempt(self.fixture, "keep")).to(equal([]))
+
+
+# The shape of the Files app's own example project: Ticket.delete takes a board its annotation names, and ticket.py
+# imports no Board, which sits in board.py of the same package.
+_KANBAN = {
+    "space/kanban/ticket.py": (
+        "class Ticket:\n"
+        "    def delete(self, board: Board) -> None:\n"
+        "        board.reread()\n\n"
+        "    def close(self, lane) -> None:\n"
+        "        lane.reread()\n\n"
+        "    def move(self, lane) -> None:\n"
+        "        lane.clear()\n"
+    ),
+    "space/kanban/board.py": "class Board:\n    def reread(self) -> None:\n        return None\n\n    def clear(self) -> None:\n        return None\n",
+    "space/kanban/lane.py": "class Lane:\n    def clear(self) -> None:\n        return None\n",
+    "space/archive/board.py": "class Board:\n    def reread(self) -> None:\n        return None\n",
+}
+
+
+def _invoked_by(fixture, operation: str) -> list[str]:
+    """What the operation called operation invokes, each as its file and its class's member."""
+    graph = fixture.practice.reading.graph
+    caller = next(node for node in fixture.practice.reading.in_graph.nodes("Operation") if node.name == operation and node.source.file == "space/kanban/ticket.py")
+    return [f"{edge.child.source.file}:{edge.child.get_fact('owner')}.{edge.child.name}" for edge in graph.edges.from_parent("invokes", caller)]
+
+
+with description("Clean Engineering linking a call on a receiver whose class its file does not import"):
+    with before.all:
+        self.fixture = practice_from_files(_KANBAN)
+
+    with context("with a parameter whose annotation names a class of the file's own package"):
+        with it("should invoke the operation of that package's class, not a class of the same name in another package"):
+            expect(_invoked_by(self.fixture, "delete")).to(equal(["space/kanban/board.py:Board.reread"]))
+
+    with context("with a parameter that has no annotation, and one class of the file's package that declares the operation"):
+        with it("should invoke that class's operation"):
+            expect(_invoked_by(self.fixture, "close")).to(equal(["space/kanban/board.py:Board.reread"]))
+
+    with context("with a parameter that has no annotation, and two classes of the file's package that declare the operation"):
+        with it("should invoke neither"):
+            expect(_invoked_by(self.fixture, "move")).to(equal([]))
