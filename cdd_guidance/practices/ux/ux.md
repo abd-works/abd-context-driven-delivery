@@ -70,6 +70,7 @@ stage: discovery
 outputs:
   drawio: "{epic}/.context/information-architecture.drawio"
   markdown: "{epic}/.context/ux-context.md"
+  json: ["{epic}/ux-map.json", "ux/ux.json"]
 ```
 
 #### Overview
@@ -129,6 +130,7 @@ default_format: html
 stage: specification
 outputs:
   html: "{epic}/{user_goal}.html"
+  mockup_drawing: "{epic}/{user_goal}.drawio"
   claude_design: "design-canvas/{version}/project/canvas.json"
 ```
 

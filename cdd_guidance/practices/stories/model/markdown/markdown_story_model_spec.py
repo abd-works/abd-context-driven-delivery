@@ -531,3 +531,60 @@ with description("a Markdown story map format that has read a map"):
             markdown = MarkdownStoryModel()
             markdown.parse("# (E) Place Order\n## (S) Customer --> Pay With Card\n", "map.md")
             expect(sorted(name for name in vars(markdown) if name in _READ_PLACES)).to(equal([]))
+
+
+_BACKGROUND_SCENARIOS = """## Story: Add Book To Cart
+
+### Background
+
+*Given* the Bookshop sells Tiny Tales
+
+### Scenario: Add a book already in the Cart
+
+*When* the Customer adds Tiny Tales again
+*Then* the Cart holds two copies
+
+### Scenario: Add a first book
+
+### Background
+
+*Given* the Cart is empty
+
+*When* the Customer adds Tiny Tales
+*Then* the Cart holds Tiny Tales
+"""
+
+_STORY_BACKGROUND_SCENARIOS = """## Story: Add Book To Cart
+
+### Story Background: stock
+
+*Given* the Bookshop holds two copies
+
+### Scenario: Add a first book
+
+*When* the Customer adds Tiny Tales
+*Then* the Cart holds Tiny Tales
+"""
+
+
+with description("a markdown scenarios file read from a file, whose backgrounds each sit under a heading") as self:
+    with before.each:
+        self.story = MarkdownStoryModel().parse(_BACKGROUND_SCENARIOS, "story_tests/add_book_to_cart_story.test.md").descendants.stories()[0]
+
+    with it("should read the background its scenarios share on its heading's line, not its first step's"):
+        expect(self.story.scenarios[0].backgrounds[0].source.start_line).to(equal(3))
+
+    with it("should read a scenario's own background on its heading's line"):
+        expect(self.story.scenarios[1].backgrounds[0].source.start_line).to(equal(14))
+
+    with it("should give the story that shared background on its heading's line"):
+        expect(self.story.backgrounds[0].source.start_line).to(equal(3))
+
+    with context("with a background of the story's own, under a Story Background heading"):
+        with before.each:
+            reading = ScenarioFileReading(_STORY_BACKGROUND_SCENARIOS, "story_tests/add_book_to_cart_story.test.md", MarkdownScenario)
+            reading.read()
+            self.section = next(part for part in reading.document_parts if getattr(part, "story_backgrounds", None))
+
+        with it("should read the story's own background on its heading's line"):
+            expect(self.section.story_backgrounds[0].source.start_line).to(equal(3))

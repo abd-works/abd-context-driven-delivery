@@ -72,7 +72,7 @@ default_format: markdown
 stage: discovery
 clean_engineering: modules
 outputs:
-  markdown: ".context/bounded-context-map.md"
+  markdown: [".context/bounded-context-map.md", "{bounded_context}/.context/bounded-context.md"]
   drawio: ".context/bounded-context-map.drawio"
   whiteboard: ".context/bounded-context-map.whiteboard"
 ```

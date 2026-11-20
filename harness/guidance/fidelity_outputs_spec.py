@@ -24,33 +24,25 @@ with description("a fidelity's declared outputs") as self:
             expect(self.outputs).to(equal({
                 "markdown": ".context/story-map.md", "drawio": ".context/story-map.drawio",
                 "whiteboard": ".context/story-map.whiteboard",
-                "thin_slice": [".context/thin-slice.md", ".context/thin-slice.drawio"],
+                "thin_slice": [".context/thin-slice.md", ".context/thin-slice.drawio", ".context/thin-slice.whiteboard"],
             }))
 
     with context("with a fidelity that writes several files for one format"):
         with before.each:
             self.outputs = Stories().fidelities["acceptance_tests"].outputs
 
-        with it("should list every file pattern for that format: the sub-epic's three tier files, a story's one runnable file, and an epic's own stories' file"):
-            expect(len(self.outputs["python"])).to(equal(5))
+        with it("should list the sub-epic's three tier files and a story's one runnable file first"):
+            expect([path.rsplit("/", 1)[-1] for path in self.outputs["python"][:4]]).to(equal([
+                "{sub_epic_slug}.story.shared.py", "{sub_epic_slug}.story.domain.spec.py",
+                "{sub_epic_slug}.story.server.spec.py", "{story_snake}_story.test.py",
+            ]))
 
-    with context("with a story that sits directly under an epic, and an epic with a sub-epic"):
-        with before.each:
-            self.scenarios = Stories().fidelities["scenarios"].declared
-            self.acceptance_tests = Stories().fidelities["acceptance_tests"].declared
-
-        with it("should declare the markdown scenarios an epic holds for its own stories, in the epic's folder"):
-            expect(self.scenarios.includes("story_tests/increase-credit-limit/increase_credit_limit_story.test.md", "markdown")).to(equal(True))
-
-        with it("should declare the code scenarios an epic holds for its own stories, in the epic's folder"):
-            expect(all(self.scenarios.includes(f"story_tests/increase-credit-limit/increase_credit_limit_story.test.{ext}", label)
-                       for label, ext in (("python", "py"), ("typescript", "ts")))).to(equal(True))
-
-        with it("should declare the story test an epic holds for its own stories, in the epic's folder"):
-            expect(self.acceptance_tests.includes("story_tests/increase-credit-limit/increase_credit_limit_story.test.py", "python")).to(equal(True))
-
-        with it("should still declare a sub-epic's scenarios in the sub-epic's folder"):
-            expect(self.scenarios.includes("story_tests/fill-cart/add-books/add_books_story.test.md", "markdown")).to(equal(True))
+        with it("should list the same four files for an epic that holds its stories directly, then the examples files and the step library"):
+            expect(self.outputs["python"][4:]).to(equal([
+                "story_tests/{epic}/{epic_slug}.story.shared.py", "story_tests/{epic}/{epic_slug}.story.domain.spec.py",
+                "story_tests/{epic}/{epic_slug}.story.server.spec.py", "story_tests/{epic}/{story}/{story_snake}_story.test.py",
+                "story_tests/{epic}/examples/{concept}_examples.py", "**/story_test.py",
+            ]))
 
     with context("with every practice loaded"):
         with before.each:
@@ -74,7 +66,7 @@ with description("a fidelity's declared outputs") as self:
             ]
             expect(rooted).to(be_empty)
 
-        with it("should keep every markdown and drawio output in a .context folder, or a scenario file in story_tests"):
+        with it("should keep every markdown and drawio output in a .context folder or a scenario file in story_tests"):
             outside = [
                 f"{type(practice).__name__}.{name}.{label}"
                 for practice in self.practices

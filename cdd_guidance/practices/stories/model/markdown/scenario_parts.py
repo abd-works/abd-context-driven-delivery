@@ -6,6 +6,8 @@ from __future__ import annotations
 import re
 from typing import Dict, List, Optional
 
+from harness.graph.graph import Source
+
 from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraph
 from cdd_guidance.practices.stories.model.markdown.markup import TABLE_LINE, strip_markup
 from cdd_guidance.practices.stories.model.story_model import Background, Scenario, Step, Story
@@ -147,15 +149,18 @@ class BackgroundReading:
         self.shared, self.local, self.story = shared, None, None
         self.took_step = self.open = self.story_open = False
 
-    def heading(self, kind: str, name: str, in_scenario: bool) -> None:
-        """A heading of kind: a Story Background (called name) opens the story's own; a Background opens a scenario's
-        own under its heading, else the one its story's scenarios share; a scenario heading ends both; any other
-        heading ends the background being read, while the story's own stays open."""
+    def heading(self, kind: str, name: str, in_scenario: bool, read_at: Source) -> None:
+        """A heading of kind, read at read_at: a Story Background (called name) opens the story's own; a Background
+        opens a scenario's own under its heading, else the one its story's scenarios share; a scenario heading ends
+        both; any other heading ends the background being read, while the story's own stays open. A background names
+        the line of the heading that opens it as where it was read, so it is found there and not on its first step."""
         if kind == "story-background":
             self.story, self.story_open, self.open = Background(name, 1), True, False
+            self.story.source = read_at
         elif kind == "background":
             self.open, self.took_step = True, False
             self.local = Background("background", 1) if in_scenario else self.local
+            (self.local if in_scenario else self.shared).source = read_at
         else:
             self.open = False
             self.story_open = self.story_open and kind != "scenario"
@@ -199,4 +204,10 @@ class BackgroundReading:
             if not local.examples and self.shared.examples:
                 local.examples = self.shared.examples.clone(local)
             return [local]
-        return [self.shared.clone()] if self.shared.steps or self.shared.examples else []
+        return [self._shared_copy()] if self.shared.steps or self.shared.examples else []
+
+    def _shared_copy(self) -> Background:
+        """A copy of the shared background for one scenario, read where the shared one was."""
+        copy = self.shared.clone()
+        copy.source = self.shared.source
+        return copy

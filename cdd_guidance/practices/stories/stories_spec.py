@@ -580,3 +580,62 @@ with description("a Python story test file"):
             tree = loader.StoryNodeTransformer().visit(ast.parse(source))
             ast.fix_missing_locations(tree)
             expect(compile(tree, "get_sim_story.test.py", "exec").co_filename).to(equal("get_sim_story.test.py"))
+
+
+def _declaring(path: str) -> list:
+    """The Stories fidelities that declare the file at path, named from the project's root, as one of their own."""
+    return [name for name, fidelity in Stories().fidelities.entries.items() if fidelity.declared.includes(path)]
+
+
+# A file list and the graph tree show the files a fidelity declares, so a file no fidelity declares is shown nowhere.
+with description("a file Stories writes under story_tests"):
+    with context("that is the story test of a story directly under an epic, in Python"):
+        with it("should be a file of the scenarios and the acceptance tests fidelities"):
+            expect(_declaring("story_tests/fulfil-order/pack-order/pack_order_story.test.py")).to(equal(["scenarios", "acceptance_tests"]))
+
+    with context("that is the story test of a story directly under an epic, in TypeScript"):
+        with it("should be a file of the scenarios and the acceptance tests fidelities"):
+            expect(_declaring("story_tests/browse-books/search-books/search_books_story.test.ts")).to(equal(["scenarios", "acceptance_tests"]))
+
+    with context("that is the shared story file of an epic that holds its stories directly"):
+        with it("should be a file of the acceptance tests fidelity"):
+            expect(_declaring("story_tests/fulfil-order/fulfil-order.story.shared.py")).to(equal(["acceptance_tests"]))
+
+    with context("that is the domain tier of an epic that holds its stories directly"):
+        with it("should be a file of the acceptance tests fidelity"):
+            expect(_declaring("story_tests/fulfil-order/fulfil-order.story.domain.spec.py")).to(equal(["acceptance_tests"]))
+
+    with context("that is the server tier of an epic that holds its stories directly"):
+        with it("should be a file of the acceptance tests fidelity"):
+            expect(_declaring("story_tests/fulfil-order/fulfil-order.story.server.spec.py")).to(equal(["acceptance_tests"]))
+
+    with context("that is a Python examples file in an epic's examples folder"):
+        with it("should be a file of the acceptance tests fidelity"):
+            expect(_declaring("story_tests/fulfil-order/examples/order_examples.py")).to(equal(["acceptance_tests"]))
+
+    with context("that is a TypeScript examples file in a sub-epic's examples folder"):
+        with it("should be a file of the acceptance tests fidelity"):
+            expect(_declaring("story_tests/check-out/confirm-order/examples/order.examples.ts")).to(equal(["acceptance_tests"]))
+
+    with context("that is the Python step library the story tests import"):
+        with it("should be a file of the acceptance tests fidelity"):
+            expect(_declaring("story_tests/story_test.py")).to(equal(["acceptance_tests"]))
+
+    with context("that is the TypeScript step library the story tests import"):
+        with it("should be a file of the acceptance tests fidelity"):
+            expect(_declaring("story_tests/story-test.ts")).to(equal(["acceptance_tests"]))
+
+    with context("that is production code beside the story tests"):
+        with it("should be no Stories fidelity's file"):
+            expect(_declaring("src/bookshop/order.py")).to(equal([]))
+
+
+# A step's linked domain term is an edge, names, from the step to the class the link names (the person's answer of
+# 2026-11-20). The schema says which edges a type has, so validate takes an edge it declares as the type's own.
+with description("the Stories schema"):
+    with before.each:
+        schema = (Path(__file__).resolve().parent / "model" / "schema.yaml").read_text(encoding="utf-8")
+        self.step = schema.split("\nstep:\n", 1)[1].split("\n\n", 1)[0].splitlines()
+
+    with it("should give a step the classes its linked domain terms name, which a step with no link lacks"):
+        expect(self.step).to(contain("  names?: [class]"))
