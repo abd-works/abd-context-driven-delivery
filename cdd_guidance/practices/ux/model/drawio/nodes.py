@@ -24,7 +24,8 @@ from typing import Any, Dict, Optional
 
 from harness.installation.json_file import JsonFile
 from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen, ServesStories, Transition
-from cdd_guidance.practices.ux.model.story_link import KEY_SEPARATOR, StoryLink
+from cdd_guidance.practices.stories.model.story_tree import KEY_SEPARATOR
+from cdd_guidance.practices.ux.model.story_link import StoryLink
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 
 _CLI = Path(__file__).with_name("drawio_ux.mjs")

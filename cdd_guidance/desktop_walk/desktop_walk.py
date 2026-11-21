@@ -8,17 +8,13 @@ through the end-to-end review's walk (`e2e-review.walk`, `record_verdict`), so a
 as a browser walk is."""
 from __future__ import annotations
 
-import itertools
 import re
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 
-from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownScenario
-from cdd_guidance.practices.stories.model.markdown.scenario_file import ScenarioFileReading
-from cdd_guidance.practices.stories.model.story_file import flat_steps
-from cdd_guidance.practices.stories.model.story_map_files import STORY_TESTS_FOLDER, StoryMapFiles
+from cdd_guidance.practices.stories.stories import STORY_TESTS_FOLDER, Stories
 from harness.agent_tools import agent_instructions, agent_toolset, tools
 from harness.agent_tools.agent_tools import agent_tool, tool_subject
 from harness.annotations.name import Name
@@ -28,10 +24,11 @@ from harness.installation.files import skill
 from harness.mcp.mcp_annotations import mcp
 from space.repo.new_repository import NewRepository
 
+if TYPE_CHECKING:
+    from cdd_guidance.practices.stories.model.desktop_story_test import DesktopStoryScenario, DesktopStoryTest
+
 # What a desktop story test writes under a step: what the agent does on the screen, and what it must see there.
 _DIRECTION = re.compile(r"^\s*[-*]\s+\**(Do|See)\**\s*:\**\s*(.+?)\s*$", re.IGNORECASE)
-# A line that ends the lines below a step: the next step, or a heading.
-_ENDS_STEP = re.compile(r"^\s*(\*(Given|When|Then|And|But)\*\s|#)", re.IGNORECASE)
 # The folder under the system's temporary folder that holds each walk's throwaway repository.
 TEST_CHATS_FOLDER = "cdd-desktop-walk"
 # How a walk's test chat is told apart from the person's own chats: this word and when the chat was opened.
@@ -91,11 +88,11 @@ class DesktopStep:
 class DesktopScenario:
     """One scenario of a desktop story test, with the story and file it was read from and its steps."""
 
-    def __init__(self, story: str, name: str, file: str) -> None:
-        self._story = story
-        self._name = name
-        self._file = file
-        self._steps: list[DesktopStep] = []
+    def __init__(self, test: DesktopStoryTest, scenario: DesktopStoryScenario) -> None:
+        self._story = test.story
+        self._name = scenario.name
+        self._file = test.file
+        self._steps = [DesktopStep(self, number, step.keyword, step.text, _directions(step.lines_below)) for number, step in enumerate(scenario.steps, start=1)]
 
     @property
     @data_field
@@ -128,15 +125,6 @@ class DesktopScenario:
     @data_field
     def steps(self) -> list[DesktopStep]:
         return list(self._steps)
-
-    def read_steps(self, steps: list, lines: list[str]) -> None:
-        """Take each of steps, its chained steps after it, with the Do and See lines the file holds below it, up to the
-        next step or heading."""
-        for number, step in enumerate(flat_steps(steps), start=1):
-            below = itertools.takewhile(lambda line: not _ENDS_STEP.match(line), lines[step.source.start_line:])
-            found = [_DIRECTION.match(line) for line in below]
-            directions = [(match.group(1).lower(), match.group(2)) for match in found if match]
-            self._steps.append(DesktopStep(self, number, step.keyword, step.text, directions))
 
     def is_under(self, target: str) -> bool:
         """Whether target names this scenario's story, or a folder under story_tests its file sits in."""
@@ -199,7 +187,7 @@ class DesktopWalk:
         """The scenarios of the project's desktop story tests under target, each step with its key, its words, what to
         do on the screen and what must be seen. target is an epic's or a sub-epic's folder under story_tests
         (`<epic>` or `<epic>/<sub-epic>`) or a story's name; with none, every desktop story test."""
-        held = [scenario for file in StoryMapFiles(self.project / STORY_TESTS_FOLDER).desktop_story_tests_below() for scenario in self._scenarios_in(file)]
+        held = [DesktopScenario(test, scenario) for test in Stories.desktop_story_tests(self.project) for scenario in test.scenarios]
         found = [scenario for scenario in held if not target or scenario.is_under(target)]
         if target and not found:
             raise NoDesktopStoryTest(target, sorted({scenario.story for scenario in held}))
@@ -234,14 +222,8 @@ class DesktopWalk:
         """Step 7 - End the walk. Close what the walk opened on the screen, and leave the test chat and its throwaway folder for the person to look at; name both. For each sub-epic walked, name its run folder and count the steps that meet and miss their intent. List every missed step with its reason, and add each one that is a defect of the chat bar, rather than of the test's own do or see lines, to .sessions/_backlog/chat-ui-defects.md. Tell the person the walk has ended and their screen is theirs again. Accept nothing: only the person accepts a walk as the reference, with e2e-review.accept."""
         return "Desktop walk recorded; the person reviews its report."
 
-    def _scenarios_in(self, file: Path) -> list[DesktopScenario]:
-        """The scenarios the desktop story test at file holds, each with its steps and their Do and See lines."""
-        text = file.read_text(encoding="utf-8")
-        named = file.relative_to(self.project).as_posix()
-        found: list[DesktopScenario] = []
-        for section in ScenarioFileReading(text, named, MarkdownScenario).read():
-            for read in section.scenarios:
-                scenario = DesktopScenario(section.name.strip(), read.name, named)
-                scenario.read_steps(read.steps, text.splitlines())
-                found.append(scenario)
-        return found
+
+def _directions(lines_below: list[str]) -> list[tuple[str, str]]:
+    """The Do and See lines among the lines a desktop story test holds below a step, in order."""
+    found = [_DIRECTION.match(line) for line in lines_below]
+    return [(match.group(1).lower(), match.group(2)) for match in found if match]

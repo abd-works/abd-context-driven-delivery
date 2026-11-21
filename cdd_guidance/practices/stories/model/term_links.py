@@ -8,13 +8,13 @@ from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from harness.graph.practice_reading import PracticeReading
 from harness.markdown.markdown import MarkdownText
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
+    from harness.graph.practice_reading import PracticeReading
 
-    from cdd_guidance.practices.stories.model.graph_reading import StoryTree
+    from cdd_guidance.practices.stories.model.story_tree import StoryTree
 
 # A term linked to a heading of a model document, `[Cart](../.context/domain-model.md#cart-aggregate-root-entity)`, and
 # the words written after it up to the next link, where the example of that term is named (`++Tiny Tales++`).
@@ -31,15 +31,15 @@ class TermLinks:
     its name, so a class of the same name in another document, or in code, gets no edge. Each link is read from the
     step's name and the lines of its file, which any process holding the graph can read."""
 
-    def __init__(self, stories: PracticeReading, model: PracticeReading, tree: "StoryTree") -> None:
-        self.stories = stories
-        self.model = model
+    def __init__(self, tree: StoryTree, model: PracticeReading) -> None:
         self.tree = tree
-        self.graph = stories.graph
+        self.stories = tree.stories
+        self.model = model
+        self.graph = tree.stories.graph
         self._heading_lines: dict[Path, MarkdownText | None] = {}
 
     def link(self) -> None:
-        for step in self.tree.all_steps():
+        for step in self.tree.every_step():
             self._link_step(step)
 
     def _link_step(self, step: "Node") -> None:
@@ -80,11 +80,8 @@ class TermLinks:
 
     @cached_property
     def _examples_by_file(self) -> dict[str, list["Node"]]:
-        """The examples of the Stories graph by the story file each is recorded for: a step means its own file's."""
-        by_file: dict[str, list["Node"]] = {}
-        for example in self.stories.in_graph.nodes("Example"):
-            by_file.setdefault(example.source.file, []).append(example)
-        return by_file
+        """The examples of the Stories graph by the story file each is recorded for, read once."""
+        return self.tree.examples_by_file()
 
     @cached_property
     def _nodes_by_file(self) -> dict[Path, list["Node"]]:

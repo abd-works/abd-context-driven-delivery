@@ -6,7 +6,7 @@ from mamba import before, context, description, it
 from harness.graph.rule_fixture import RuleFixture
 
 from cdd_guidance.practices.stories.model.fixtures.bookshop_project import BookshopProject
-from cdd_guidance.practices.stories.model.graph_reading import StoryTree
+from cdd_guidance.practices.stories.model.story_tree import StoryTree
 from cdd_guidance.practices.stories.rules import BY_SLUG
 from cdd_guidance.practices.stories.stories import Stories
 

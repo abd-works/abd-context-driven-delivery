@@ -5156,17 +5156,37 @@ How Stories takes part in the graph: it reads the story tests under its root, or
 
 ## StoryTree
 
-The story map as the graph holds it: each epic's sub-epics and stories, each story's scenarios, each scenario's steps.
+The story map as the graph holds it (`stories/model/story_tree.py`): each epic's sub-epics and stories, each story's scenarios, each scenario's steps, and the one definition of the step and epic node types (`STEP_TYPES`, `EPIC_TYPES`, `LINKED_TYPES`, `STORY_MAP_TYPES`) and of a node's key (`KEY_SEPARATOR`). UX and the Validate action ask it rather than keeping copies.
 
 + StoryTree(stories: PracticeReading)
 ------
 + stories: PracticeReading
 ----
++ StoryTree.of_graph(graph): StoryTree | None
 + epic_of(node): Node | None
 + sub_epics(epic): list
 + stories_under(epic): list
 + scenarios(story): list
 + steps(scenario): list
++ every_step(): list
++ examples(): list
++ examples_by_file(): dict[str, list]
++ scenario_of(step): Node | None
++ story_of(node): Node | None
++ background_steps(story): list
++ area_of(node): Node
++ step_text(step), step_phase(step), step_body(step): str
++ steps_saying(text): list
++ StoryTree.key_of(node): str
++ nodes_keyed(kind, key): list
++ written_nodes(): WrittenStoryNodes
+	// the nodes by the file each was read from, for a run of links that each name a file and a heading
+
+## WrittenStoryNodes
+
++ WrittenStoryNodes(tree: StoryTree)
+----
++ node_written_at(kind, target, key, written_in): Node | None
 
 ## StoryModel : StoryNode
 

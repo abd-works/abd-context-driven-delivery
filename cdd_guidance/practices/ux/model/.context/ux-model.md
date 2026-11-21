@@ -120,8 +120,10 @@ A story, scenario, or step a screen shows: the Stories node once it is on the sc
 	// the node's key once it holds the node, else the key it was given
 ----
 + from_item(kind: str, item: Story | Scenario | Step | str): StoryLink
-+ resolved_on(graph: Graph): Story | Scenario | Step | None
-	// finds the node with its key on graph and holds it from then on
++ resolved_in(story_tree: StoryTree | None, written_in): Story | Scenario | Step | None
+	// finds the node its target or key names in Stories' StoryTree and holds it from then on
++ found_in(written: WrittenStoryNodes, story_tree: StoryTree, written_in): Story | Scenario | Step | None
+	// the node it names, through the nodes by file a run of links shares
 + names(node: Story | Scenario | Step): bool
 
 ## Region : UxNode

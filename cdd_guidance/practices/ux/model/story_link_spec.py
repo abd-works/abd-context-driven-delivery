@@ -15,7 +15,7 @@ from harness.graph.graph import Graph
 from cdd_guidance.practices.stories.model.story_model import Epic, Scenario, Step, Story, StoryModel
 from cdd_guidance.practices.ux.model.json.nodes import JsonUxMap
 from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen
-from cdd_guidance.practices.ux.model.story_link import key_of
+from cdd_guidance.practices.stories.model.story_tree import StoryTree
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 from cdd_guidance.practices.ux.ux import Ux
 
@@ -117,7 +117,7 @@ with description("a screen that shows stories"):
             stories = fresh.practices.named("stories")
             self.scenario = stories.reading.in_graph.nodes("Scenario")[0]
             self.step = stories.reading.story_tree.steps(self.scenario)[0]
-            self.keys = (key_of(self.scenario), key_of(self.step))
+            self.keys = (StoryTree.key_of(self.scenario), StoryTree.key_of(self.step))
             self.reopened = Graph()
             self.reopened.reads.open_saved(self.working_copy)
             self.screen = Screen("Catalog", 0, graph=self.reopened)

@@ -5,7 +5,7 @@ The UX map is written as draw.io, a Claude Whiteboard board, HTML, markdown, JSO
 
 - **Purpose:** Keep screens, navigation, and interactions in one hierarchy that the diagram, the mockup, and the front-end code all follow, in the domain's words.
 - **Seam (terms):** Ux, UxFormats, ViewNotRendered, ViewSyntaxNotConverted, `ux.instructions`, `ux-ia`, `ux-mockup`, `ux-front-end-code`, `render`, `ensure_javascript`
-- **Dependencies (one-way):** `cdd_guidance/practices/ux/model` (the UX map and its formats, loaded by format name), `cdd_guidance/practices/stories` (*Stories* and its story model), `harness/guidance` (*PracticeGuidance*, *PracticeCatalogue*), `harness/graph` (its screen rules, and the graph *UxReading* reads UX map files into), `harness/agent_tools`. Stories imports nothing of UX.
+- **Dependencies (one-way):** `cdd_guidance/practices/ux/model` (the UX map and its formats, loaded by format name), `cdd_guidance/practices/stories` (*Stories*, its story model, and *StoryTree*, which a story link asks for the node it names), `harness/guidance` (*PracticeGuidance*, *PracticeCatalogue*), `harness/graph` (its screen rules, and the graph *UxReading* reads UX map files into), `harness/agent_tools`. Stories imports nothing of UX.
 
 ## Constraint
 

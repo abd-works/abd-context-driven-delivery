@@ -11,6 +11,7 @@ from harness.guidance.guidance import PracticeGuidance
 from harness.guidance.practice_formats import FormatAdapter
 
 from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel
+from cdd_guidance.practices.stories.model.desktop_story_test import DesktopStoryTest
 from cdd_guidance.practices.stories.model.graph_reading import StoriesReading
 from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
 from cdd_guidance.practices.stories.model.sketch.sketch_story_model import SketchStoryModel
@@ -241,6 +242,12 @@ class Stories(PracticeGuidance):
             if reader is not None:
                 held[path_from(project, path)] = [story.name for story in reader.story_type.load_file(path.read_text(encoding="utf-8"), project)]
         return held
+
+    @staticmethod
+    def desktop_story_tests(project: Path) -> list[DesktopStoryTest]:
+        """Each story of every desktop story test under project's story_tests folder: its file, its scenarios, and
+        each step with the lines the file holds below it, which a walk in the Claude desktop app follows."""
+        return DesktopStoryTest.every_one_in(Path(project))
 
     def _story_test_reader(self, path: Path):
         """The code format whose story type reads the story test at path; none for any other file."""

@@ -22,6 +22,7 @@ from cdd_guidance.practices.stories.model.modelled_areas import ExampleObservati
 from cdd_guidance.practices.stories.model.script_story_model import ScriptStoryModel
 from cdd_guidance.practices.stories.model.story_recording import StorySource, imported_files
 from cdd_guidance.practices.stories.model.term_links import TermLinks
+from cdd_guidance.practices.stories.model.story_tree import StoryTree
 from cdd_guidance.practices.stories.model.story_map_files import DESKTOP_STORY_FILE_SUFFIX, STORY_FILE_SUFFIXES, StoryMapFiles, is_story_map_file
 
 if TYPE_CHECKING:
@@ -32,7 +33,6 @@ if TYPE_CHECKING:
 _MEMBER_CALL = re.compile(r"\.([\w$]+)\s*\(")
 # A call by name alone, with no object before it: `seed_ticket(world)`, not `board.reread()` or `def seed_ticket(`.
 _FUNCTION_CALL = re.compile(r"(?<![\w$.])(?<!def )(?<!function )([A-Za-z_$][\w$]*)\s*\(")
-_STEP_TYPES = frozenset({"Step", "Given", "When", "Then"})
 # What a module named through a path alias starts with: `@src/customer`, `@/customer`, `~/customer`.
 _PATH_ALIAS_MARK = re.compile(r"^(?:@/|~/|@)")
 # An examples module a story test imports its seeds and fixtures from, such as ticket_story_examples.py or
@@ -48,7 +48,6 @@ CALLS_REACH_TESTED = "tested"
 CALLS_REACH_UNREAD = "unread"
 # A story map's epic is recorded as an Epic, or as a SubEpic under another epic; a map built on a graph without being
 # recorded calls every epic an Epic.
-_EPIC_TYPES = frozenset({"Epic", "SubEpic"})
 # Where a project with no story map keeps the story tests that are its map: its `tests` folder. A project with a story
 # map keeps them in `story_tests` beside it, where the map's stories take their scenarios from them.
 _MAP_LESS_TESTS_FOLDER = "tests"
@@ -78,7 +77,7 @@ class StoriesReading(PracticeReading):
     given, when, and then types are each a Step), so each carries Step's rules; its check says which kind it judges."""
 
     @cached_property
-    def story_tree(self) -> "StoryTree":
+    def story_tree(self) -> StoryTree:
         """The story map as this practice's graph holds it, read through its edges and saved facts: what every reader of
         Stories' nodes asks for an epic's stories, a story's scenarios, or a scenario's steps."""
         return StoryTree(self)
@@ -138,14 +137,14 @@ class StoriesReading(PracticeReading):
         report_progress("stories · record")
         story_map.record(self.practice, on_node=lambda detail: report_progress(f"stories · record · {detail}"))
         self._link_background_givens()
-        ExampleObservations(self, self.story_tree).link()
+        ExampleObservations(self.story_tree).link()
         clean = self.object_model
         if clean is not None:
-            StoryLinks(self, clean, self.story_tree).link()
+            StoryLinks(self.story_tree, clean).link()
         domain = self.domain_model
         if domain is not None:
-            TermLinks(self, domain, self.story_tree).link()
-        ModelledAreas(self, self.story_tree).record()
+            TermLinks(self.story_tree, domain).link()
+        ModelledAreas(self.story_tree).record()
 
     def _link_background_givens(self) -> None:
         """Record the ``given`` edge from each background to the Given steps it holds: the step its schema says it is
@@ -254,61 +253,6 @@ class StoriesReading(PracticeReading):
         return [path for path in found if path in edited or any(story in path.parents for story in stories)]
 
 
-class StoryTree:
-    """The story map as the graph holds it: each epic's sub-epics and stories, each story's scenarios, each scenario's
-    steps, and the epic above any of them, read through the edges Stories records and the facts each node saves. It
-    answers the same for the objects a read parsed and for the plain nodes of a graph opened from its save, so every
-    reader of Stories' nodes, in this practice or another, asks it rather than a parsed object's attributes."""
-
-    def __init__(self, stories: PracticeReading) -> None:
-        self.stories = stories
-
-    def epic_of(self, node: "Node") -> "Node | None":
-        """The epic of the story map whose tree holds node, the outermost found up the graph's own edges; none for a
-        node under no epic."""
-        epic = None
-        above = self.stories.graph.edges.direct_parent(node)
-        while above is not None:
-            epic = above if self.is_epic(above) else epic
-            above = self.stories.graph.edges.direct_parent(above)
-        return epic
-
-    def sub_epics(self, epic: "Node") -> list["Node"]:
-        """The sub-epics directly under epic, in the order the map lists them."""
-        return self._below(epic, "decomposedInto", _EPIC_TYPES)
-
-    def stories_under(self, epic: "Node") -> list["Node"]:
-        """The stories directly under epic or a sub-epic, in the order the map lists them."""
-        return self._below(epic, "decomposedInto", {"Story"})
-
-    def scenarios(self, story: "Node") -> list["Node"]:
-        """The story's scenarios, in the order its story test or map lists them."""
-        return self._below(story, "scenarios", {"Scenario"})
-
-    def steps(self, scenario: "Node") -> list["Node"]:
-        """The scenario's own steps, without the steps chained onto them, in order."""
-        return [edge.child for edge in self.stories.graph.edges.from_parent("steps", scenario)]
-
-    def all_steps(self) -> list["Node"]:
-        """Every step the Stories graph holds, a Given, When, Then, or plain Step, with the steps chained onto them."""
-        return [node for node in self.stories.in_graph.nodes() if self.is_step(node)]
-
-    def is_step(self, node: "Node") -> bool:
-        """Whether node is a step, recorded as the Given, When, or Then it is, or as a Step with none of them."""
-        return node.type in _STEP_TYPES
-
-    def is_epic(self, node: "Node") -> bool:
-        """Whether node is an epic of the story map, recorded as an Epic, or as a SubEpic under another epic."""
-        return node.type in _EPIC_TYPES
-
-    def step_body(self, step: "Node") -> str:
-        """The step's own text and the body its story test gives it."""
-        return f"{step.name}\n{step.get_fact('body_text') or ''}"
-
-    def _below(self, parent: "Node", kind: str, node_types: frozenset[str] | set[str]) -> list["Node"]:
-        return [edge.child for edge in self.stories.graph.edges.from_parent(kind, parent) if edge.child.type in node_types]
-
-
 class ImportedFiles:
     """The files a story file's steps can call code in: the files its imports name and the files those import in turn, found
     in the project the graph reads. A step invokes an operation only in one of them, so an operation of the same name
@@ -390,12 +334,12 @@ class StoryLinks:
     names its source holds) and from the graph's own edges, never from the parsed object behind a node: a refresh in a
     worker process holds the steps and examples it did not read again as plain nodes, and links them the same way."""
 
-    def __init__(self, stories: PracticeReading, clean: PracticeReading, tree: "StoryTree") -> None:
-        self.stories = stories
-        self.clean = clean
+    def __init__(self, tree: StoryTree, clean: PracticeReading) -> None:
         self.tree = tree
-        self.graph = stories.graph
-        self.imported_files = ImportedFiles(Path(stories.in_graph.source_root), self.graph.scope.folder)
+        self.stories = tree.stories
+        self.clean = clean
+        self.graph = tree.stories.graph
+        self.imported_files = ImportedFiles(Path(self.stories.in_graph.source_root), self.graph.scope.folder)
 
     @cached_property
     def modules(self) -> set:
@@ -405,10 +349,10 @@ class StoryLinks:
     @cached_property
     def examples(self) -> list:
         """The examples on the Stories graph, read once."""
-        return self.stories.in_graph.nodes("Example")
+        return self.tree.examples()
 
     def link(self) -> None:
-        steps = self.tree.all_steps()
+        steps = self.tree.every_step()
         for index, step in enumerate(steps, start=1):
             report_progress(f"stories · steps · {index}/{len(steps)} · {step.name}")
             self._link_step(step)

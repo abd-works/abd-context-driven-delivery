@@ -38,7 +38,28 @@ _CONTINUING_THEN_WORDS = 12
 _OWNED_PART_TYPES = ("Entity", "ValueObject")
 
 
-class AndChaining(PracticeGraphRule):
+class StepRule(PracticeGraphRule):
+    """A rule that reads steps: a step's keyword, words, and phase are facts on its node, so a graph read back from its
+    save is checked the same way as one just read."""
+
+    def keyword(self, step: Node) -> str:
+        """given, when, then, and, or but, as the step's model wrote it, in lower case."""
+        return str(step.get_fact("keyword", "") or "").casefold()
+
+    def text(self, step: Node) -> str:
+        """The step's words after its keyword."""
+        return str(step.get_fact("text", "") or "")
+
+    def phase(self, step: Node) -> str:
+        """given, when, or then from the step's type; an And or But line carries the phase of the line it continues."""
+        return str(step.get_fact("phase", "") or "")
+
+    def is_a(self, step: Node, phase: str) -> bool:
+        """Whether step opens with phase's keyword, or with none."""
+        return self.keyword(step) in {phase, ""}
+
+
+class AndChaining(StepRule):
     slug = "and-chaining"
     node_types = ("Scenario",)
 
@@ -58,29 +79,29 @@ class AndChaining(PracticeGraphRule):
         return []
 
     def _step_keyword(self, step: Node) -> str:
-        return _keyword(step).casefold() or _phase(step)
+        return self.keyword(step) or self.phase(step)
 
-class ButMarksMissingState(PracticeGraphRule):
+class ButMarksMissingState(StepRule):
     slug = "but-marks-missing-state"
     node_types = ("Step", "Given", "When", "Then")
 
     def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        if _keyword(node).casefold() != "but":
+        if self.keyword(node) != "but":
             return []
-        text = _text(node).casefold()
+        text = self.text(node).casefold()
         if any(word in text for word in ("not ", "without ", "absent", "missing", "no ")):
             return []
-        return [f"But step should mark missing or absent state, not a consequence: {_text(node)!r}."]
+        return [f"But step should mark missing or absent state, not a consequence: {self.text(node)!r}."]
 
-class WhenHoldsTheOperation(PracticeGraphRule):
+class WhenHoldsTheOperation(StepRule):
     slug = "when-holds-the-operation"
     node_types = ("When", "Step")
 
     def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        if _keyword(node).casefold() not in {"when", ""}:
+        if not self.is_a(node, "when"):
             if node.type not in {"When"}:
                 return []
-        text = _text(node)
+        text = self.text(node)
         if not text or " and " in text.casefold():
             return []
         if len(text.split()) < 2:
@@ -146,7 +167,7 @@ _LINKED_TERM = re.compile(r"^\[[^\]]+\]\([^)]*\)$")
 _DOMAIN_CLASS_TYPES = ("EntityRoot", "Entity", "ValueObject")
 
 
-class DomainTermsLinkToModel(PracticeGraphRule):
+class DomainTermsLinkToModel(StepRule):
     """Which underlined terms are domain terms comes from the DDD model loaded beside the stories: a term that names one
     of its classes, as the class (LineItem) or as words (line item). Without a DDD model there is no heading to link
     to, so the rule passes."""
@@ -158,7 +179,7 @@ class DomainTermsLinkToModel(PracticeGraphRule):
         classes = self._class_keys(context)
         if not classes:
             return []
-        text = _text(node)
+        text = self.text(node)
         # The markdown reader keeps the step's words without their links and records the terms its line linked.
         linked = {self._key(term) for term in node.get_fact("linked_terms", []) or []}
         unlinked = [
@@ -186,33 +207,31 @@ class DomainTermsLinkToModel(PracticeGraphRule):
         return key[:-1] if key.endswith("s") and len(key) > 3 else key
 
 
-class WhenNamesIntentNotInterfaceGesture(PracticeGraphRule):
+class WhenNamesIntentNotInterfaceGesture(StepRule):
     slug = "when-names-intent-not-interface-gesture"
     node_types = ("When", "Step")
 
     def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        kw = _keyword(node).casefold()
-        if kw not in {"when", ""} and node.type != "When":
+        if not self.is_a(node, "when") and node.type != "When":
             return []
-        text = _text(node)
+        text = self.text(node)
         if _GESTURE.search(text):
             return [f"When step {text!r} names a UI gesture; state the domain intent instead."]
         return []
 
-class BehavioralAndSystemObservableOutcomes(PracticeGraphRule):
+class BehavioralAndSystemObservableOutcomes(StepRule):
     slug = "behavioral-and-system-observable-outcomes"
     node_types = ("Then", "Step")
 
     def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        kw = _keyword(node).casefold()
-        if kw not in {"then", ""} and node.type != "Then":
+        if not self.is_a(node, "then") and node.type != "Then":
             return []
-        text = _text(node)
+        text = self.text(node)
         if _INLINE_CONDITIONAL.search(text):
             return [f"Then step {text!r} embeds a conditional guard; assert an observable outcome instead."]
         return []
 
-class ThenObservesAnExample(PracticeGraphRule):
+class ThenObservesAnExample(StepRule):
     """Whether a model is written for a Then's area of the story map is a fact the Stories reading records on the
     Then (*ModelledAreas*); with none written the rule passes, so scenarios can be written before any model."""
 
@@ -220,10 +239,10 @@ class ThenObservesAnExample(PracticeGraphRule):
     node_types = ("Then", "Step")
 
     def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        if _phase(node) != "then" or not node.get_fact(MODEL_WRITTEN_FACT) or context.targets(node, "observes"):
+        if self.phase(node) != "then" or not node.get_fact(MODEL_WRITTEN_FACT) or context.targets(node, "observes"):
             return []
         return [
-            f"Then {_text(node)!r} observes no Example, though a model is written for its area of the story map; "
+            f"Then {self.text(node)!r} observes no Example, though a model is written for its area of the story map; "
             "name an example in it, or in a Given of its scenario or of its story's Background."
         ]
 
@@ -244,7 +263,7 @@ class FlaggedWritesIntendedGwt(PracticeGraphRule):
         raw = node.facts.get("evidence")
         return [str(item) for item in raw] if isinstance(raw, list) else []
 
-class GivenNamesComplexStateRootFirst(PracticeGraphRule):
+class GivenNamesComplexStateRootFirst(StepRule):
     """Which concept is an aggregate root and which are its owned parts comes from the DDD model loaded beside the
     stories. Without a DDD model the graph cannot tell a root from an owned part, so the rule passes."""
 
@@ -252,10 +271,10 @@ class GivenNamesComplexStateRootFirst(PracticeGraphRule):
     node_types = ("Given", "Step")
 
     def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        if _keyword(node).casefold() not in {"given", ""} and node.type != "Given":
+        if not self.is_a(node, "given") and node.type != "Given":
             return []
-        text = _text(node)
-        earlier = " ".join(_text(step) for step in self._earlier_steps(node, context))
+        text = self.text(node)
+        earlier = " ".join(self.text(step) for step in self._earlier_steps(node, context))
         for part, root in self._owned_parts(context).items():
             part_at = self._first_mention(part, text)
             if part_at is None or self._first_mention(root, earlier) is not None:
@@ -272,7 +291,8 @@ class GivenNamesComplexStateRootFirst(PracticeGraphRule):
             if edge.child is step:
                 steps = context.targets(edge.parent, "steps")
                 before = [each for earlier in steps[: steps.index(step)] for each in self._with_ands(earlier, context)]
-                return self._background_steps(edge.parent, context) + before
+                tree = context.practice.reading.story_tree
+                return tree.background_steps(tree.story_of(edge.parent)) + before
         # An And or But line is held among the ands of the step it continues.
         for edge in context.edges("ands"):
             if edge.child is step:
@@ -284,15 +304,6 @@ class GivenNamesComplexStateRootFirst(PracticeGraphRule):
     def _with_ands(self, step: Node, context: RuleCheckContext) -> list[Node]:
         """The step and every And or But line that continues it."""
         return [step, *(each for continued in context.targets(step, "ands") for each in self._with_ands(continued, context))]
-
-    def _background_steps(self, scenario: Node, context: RuleCheckContext) -> list[Node]:
-        stories = [edge.parent for edge in context.edges("scenarios") if edge.child is scenario]
-        return [
-            step
-            for story in stories
-            for background in context.targets(story, "background")
-            for step in context.targets(background, "steps")
-        ]
 
     def _owned_parts(self, context: RuleCheckContext) -> dict[str, str]:
         """Each entity and value object an aggregate in the DDD model owns, mapped to the name of that aggregate's root."""
@@ -319,14 +330,14 @@ class GivenNamesComplexStateRootFirst(PracticeGraphRule):
         return found.start() if found else None
 
 
-class ScenarioNamesContinuation(PracticeGraphRule):
+class ScenarioNamesContinuation(StepRule):
     slug = "scenario-names-continuation"
     node_types = ("Then", "Step")
 
     def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        if _keyword(node).casefold() not in {"then", ""} and node.type != "Then":
+        if not self.is_a(node, "then") and node.type != "Then":
             return []
-        text = _text(node)
+        text = self.text(node)
         if "next story" in text.casefold() or "continues in" in text.casefold():
             return []
         if re.search(r"\bstory\b", text, re.I) and len(text.split()) > _CONTINUING_THEN_WORDS:
@@ -352,7 +363,7 @@ class ScenariosNameAStoryOnTheMap(PracticeGraphRule):
         ]
 
 
-class ScenariosShape(PracticeGraphRule):
+class ScenariosShape(StepRule):
     slug = "scenarios-shape"
     node_types = ("Scenario",)
 
@@ -371,7 +382,7 @@ class ScenariosShape(PracticeGraphRule):
         return []
 
     def _scenario_phases(self, scenario_node: Node, context: RuleCheckContext, steps: list[Node]) -> set[str]:
-        phases = {_phase(step) for step in steps if _phase(step)}
+        phases = {self.phase(step) for step in steps if self.phase(step)}
         if "given" in phases:
             return phases
         if self._background_provides_given(scenario_node, context):
@@ -380,49 +391,16 @@ class ScenariosShape(PracticeGraphRule):
 
 
     def _background_provides_given(self, scenario_node: Node, context: RuleCheckContext) -> bool:
-        story = self._parent_story(scenario_node, context)
-        if story is None:
-            return False
-        for background in context.targets(story, "background"):
-            for step in context.targets(background, "steps"):
-                if _phase(step) == "given":
-                    return True
-        return False
+        tree = context.practice.reading.story_tree
+        return any(self.phase(step) == "given" for step in tree.background_steps(tree.story_of(scenario_node)))
 
 
-    def _parent_story(self, node: Node, context: RuleCheckContext) -> Node | None:
-        parent = getattr(node, "parent", None)
-        while parent is not None:
-            if parent.type == "Story":
-                return parent
-            parent = getattr(parent, "parent", None)
-        for edge in context.edges("scenarios"):
-            if edge.child is node:
-                return edge.parent
-        return None
-
-
-def _keyword(step: Node) -> str:
-    """Given, When, Then, And, or But, as the step's model wrote it."""
-    return str(step.get_fact("keyword", "") or "")
-
-
-def _text(step: Node) -> str:
-    """The step's words after its keyword."""
-    return str(step.get_fact("text", "") or "")
-
-
-def _phase(step: Node) -> str:
-    """given, when, or then from the step's type; an And or But line carries the phase of the line it continues."""
-    return str(step.get_fact("phase", "") or "")
-
-
-class PlainEnglishGwtSteps(PracticeGraphRule):
+class PlainEnglishGwtSteps(StepRule):
     slug = "plain-english-gwt-steps"
     node_types = ("Step", "Given", "When", "Then")
 
     def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        text = _text(node).strip()
+        text = self.text(node).strip()
         if not text:
             return []
         if " " not in text and _CAMEL_STEP.match(text):
@@ -431,12 +409,12 @@ class PlainEnglishGwtSteps(PracticeGraphRule):
             return [f"Step {text!r} looks like an identifier; write plain English GWT phrasing."]
         return []
 
-class GwtStepsTraceToDomainOperations(PracticeGraphRule):
+class GwtStepsTraceToDomainOperations(StepRule):
     slug = "gwt-steps-trace-to-domain-operations"
     node_types = ("Step", "Given", "When", "Then")
 
     def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        name = _text(node).strip()
+        name = self.text(node).strip()
         classes = node.get_fact("domain_class_names", [])
         if name.isidentifier() or (name.replace("_", "").isalnum() and " " not in name):
             return [f"Step {name!r} does not trace to a domain operation; use the domain type in the step phrase."]
