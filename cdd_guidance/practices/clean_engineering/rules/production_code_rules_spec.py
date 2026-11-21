@@ -20,8 +20,8 @@ from cdd_guidance.practices.clean_engineering.model.typescript.typescript_class_
     TypeScriptCleanEngineeringModel,
 )
 from cdd_guidance.practices.clean_engineering.rules import RULES
+from cdd_guidance.practices.clean_engineering.rules import BY_SLUG
 from cdd_guidance.practices.clean_engineering.rules.rule_examples import (
-    ce_rule_by_slug,
     module_example_pair,
     practice_from_files,
     practice_from_source,
@@ -35,7 +35,7 @@ def _fixture(source: str, filename: str = "example.py"):
 
 
 def _hits(slug: str, fixture) -> list[str]:
-    return fixture.hits(ce_rule_by_slug(slug))
+    return fixture.hits(BY_SLUG[slug])
 
 
 def _every_rule_hits(fixture) -> dict[str, list[str]]:

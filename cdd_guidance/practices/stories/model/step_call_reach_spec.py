@@ -75,7 +75,7 @@ _FILES = {
 
 def _invoked_by(graph: Graph, when: str) -> list[str]:
     """What the When called when invokes, each as its file and its class's operation."""
-    stories = graph.practice("stories").reading.in_graph
+    stories = graph.practices.named("stories").reading.in_graph
     step = next(node for node in stories.nodes("When") if node.name == when)
     return sorted(f"{edge.child.source.file}:{edge.child.get_fact('owner')}.{edge.child.name}" for edge in graph.edges.from_parent("invokes", step))
 

@@ -115,7 +115,7 @@ class ThrowawayApp:
         self.folder = Path(tempfile.mkdtemp(prefix="cdd-app-"))
         self.port = free_port()
         self._ports = ports
-        self._replaced = App.load(example.label, project=self.folder)
+        self._replaced = App.load(example.label)
         self._listener: socket.socket | None = None
         server = AppServer(NodeScript(self.folder, "serve.js"), (self.port,), ports)
         self.app = App(example.label, AppPackage(self.folder, npm=self.npm), AppPage(server, example.page)).register()

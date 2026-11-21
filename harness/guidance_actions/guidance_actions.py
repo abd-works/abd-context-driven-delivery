@@ -771,11 +771,6 @@ class GuidanceAction:
         """The Guidance this action works on (``WorkList.listed``)."""
         return self.work.listed()
 
-    @property
-    def practice_slugs(self) -> list[str]:
-        """The slug of each practice this action works with, in catalogue order: the words a call names one by."""
-        return [practice.slug for practice in self.work.practice_set()]
-
     def session_practice(self, practice: WorkedGuidance) -> Any:
         """What practice, one of this action's practices, has in the session it works in (its PracticeSessionOutput);
         none when the action works in no session or practice is no practice of the session."""

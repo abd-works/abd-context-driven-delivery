@@ -22,7 +22,7 @@ from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 
 def _Node(name: str, node_type: str, facts: dict) -> Node:
     """A stories graph node carrying the given facts, held by its practice as a read holds it."""
-    node = Node(Graph().practice("stories"), NodeIdentity(type=node_type, node_id=f"stories:{node_type}:{name}", name=name), Source(".", 1, 1))
+    node = Node(Graph().practices.named("stories"), NodeIdentity(type=node_type, node_id=f"stories:{node_type}:{name}", name=name), Source(".", 1, 1))
     for key, value in facts.items():
         node.set_fact(key, value)
     node.practice.reading.in_graph.hold(node)
@@ -31,7 +31,7 @@ def _Node(name: str, node_type: str, facts: dict) -> Node:
 
 def _hits(rule, node: Node) -> list[str]:
     """What the rule reports on node where validate runs it: only when the schema gives node's type the rule."""
-    return SchemaRuleRun(rule, RuleCheckContext(node.practice, None)).node_hits(node)
+    return SchemaRuleRun(rule, RuleCheckContext(node.practice)).node_hits(node)
 
 
 def _story_node(name: str, scenario_count: int, *, band: str = "") -> Node:

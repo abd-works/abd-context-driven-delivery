@@ -24,7 +24,7 @@ _VIEW_CONFIRMATION = "story_tests/check-out/confirm-order/view-order-confirmatio
 with description("a story map read into the graph with the story tests in code of its stories") as self:
     with before.all:
         self.project = BookshopProject()
-        self.tree = StoryTree(self.project.graph.practice("stories").reading)
+        self.tree = StoryTree(self.project.graph.practices.named("stories").reading)
         self.map_story = lambda name: self.project.node_named("Story", name, ".context/story-map.md")[0]
 
     with context("with a Python story test whose When calls the operation it tests"):
@@ -85,7 +85,7 @@ def _without_submit_order() -> BookshopProject:
 with description("a story test in code whose story the story map does not hold") as self:
     with before.all:
         self.project = _without_submit_order()
-        self.tree = StoryTree(self.project.graph.practice("stories").reading)
+        self.tree = StoryTree(self.project.graph.practices.named("stories").reading)
         self.off_map = self.project.node_named("Story", "Submit Order")
 
     with it("should keep the story, read from its story test"):
@@ -100,7 +100,7 @@ with description("a story test in code whose story the story map does not hold")
         expect([self.tree.epic_of(story).name for story in self.off_map]).to(equal(["Check Out"]))
 
     with it("should report the story as not on the story map, naming its story test"):
-        expect(SchemaRuleRun(BY_SLUG["scenarios-name-a-story-on-the-map"], RuleCheckContext(self.project.graph.practice("stories"), self.project.root)).hits()).to(
+        expect(SchemaRuleRun(BY_SLUG["scenarios-name-a-story-on-the-map"], RuleCheckContext(self.project.graph.practices.named("stories"))).hits()).to(
             equal([
                 f"Story 'Submit Order' has scenarios in {_SUBMIT_ORDER} and is not on the story map; add it to the map or name the story the scenarios belong to."
             ])
@@ -123,7 +123,7 @@ with description("the whole working copy of a project with a story map, scenario
     with before.all:
         self.project, self.graph = _whole_working_copy()
         self.files_load = BookshopProject()
-        self.stories = self.graph.practice("stories").reading.in_graph
+        self.stories = self.graph.practices.named("stories").reading.in_graph
 
     with it("should hold the scenarios the load of the same files holds, those written in code among them"):
         expect(sorted(node.node_id for node in self.stories.nodes("Scenario"))).to(

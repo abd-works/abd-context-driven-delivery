@@ -21,7 +21,7 @@ _DECLARED = {
 @functools.cache
 def _stories_practice():
     """The Stories practice of a graph, made once: every example reads facts through it and none changes it."""
-    return Graph().practice("stories")
+    return Graph().practices.named("stories")
 
 
 def _facts(name: str) -> dict:

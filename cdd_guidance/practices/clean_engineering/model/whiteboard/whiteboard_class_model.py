@@ -18,8 +18,7 @@ import math
 import re
 from typing import Dict, List, Optional, Tuple
 
-from harness.whiteboard import BoardElement, Box, Whiteboard, WhiteboardNode
-from harness.whiteboard.whiteboard import MAX_SIDE, UnreadableBoard
+from harness.whiteboard import MAX_SIDE, BoardElement, Box, UnreadableBoard, Whiteboard, WhiteboardNode
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass, UnreadableSource
 from cdd_guidance.practices.clean_engineering.model.diagram.class_layout import PAGE_MARGIN, ArrowRouter, DiagramArrow

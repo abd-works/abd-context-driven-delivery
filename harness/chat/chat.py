@@ -151,7 +151,7 @@ class ChatLinks:
     def open_new(self, folder: str, prompt: str) -> str:
         """Open a new chat on folder with prompt filled in, and answer the link it opened."""
         link = self.link_to_new(folder, prompt)
-        self.hand_over(link)
+        self._hand_over(link)
         return link
 
     def link_to_new(self, folder: str, prompt: str) -> str:
@@ -183,7 +183,7 @@ class ChatLinks:
             "otherwise leave it where the app put it."
         )
 
-    def hand_over(self, link: str) -> None:
+    def _hand_over(self, link: str) -> None:
         if sys.platform == "win32":
             os.startfile(link)  # noqa: S606 - the link names the desktop app's own scheme
         else:
@@ -197,7 +197,7 @@ class RecordedChatLinks(ChatLinks):
     def __init__(self, file: Path) -> None:
         self._file = file
 
-    def hand_over(self, link: str) -> None:
+    def _hand_over(self, link: str) -> None:
         self._file.parent.mkdir(parents=True, exist_ok=True)
         with self._file.open("a", encoding="utf-8") as kept:
             kept.write(f"{link}\n")

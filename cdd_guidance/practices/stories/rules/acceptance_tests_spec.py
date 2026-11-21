@@ -19,12 +19,12 @@ from harness.graph.rule_fixture import SchemaRuleRun  # noqa: E402
 
 def _hits(file: str, *, imported_from: str | None = None) -> list[str]:
     """What the rule says about the example validCustomer, read from file or imported into file from a module."""
-    practice = Graph().practice("stories")
+    practice = Graph().practices.named("stories")
     node = Node(practice, NodeIdentity(type="Example", node_id=f"stories:Example:{file}:validCustomer", name="validCustomer"), Source(file, 1, 1))
     if imported_from is not None:
         node.set_fact("imported_modules", {"validCustomer": imported_from})
     practice.reading.in_graph.hold(node)
-    return SchemaRuleRun(DomainFixtureExampleFiles(), RuleCheckContext(practice, None)).node_hits(node)
+    return SchemaRuleRun(DomainFixtureExampleFiles(), RuleCheckContext(practice)).node_hits(node)
 
 
 with description("an example fixture in an acceptance test"):

@@ -603,7 +603,7 @@ with description("a guidance action that wrote files"):
 
     with it("should refresh its session's graph with those files"):
         graph = self.session.graph
-        classes = graph.practice("clean_engineering").reading.in_graph.nodes("OoadClass")
+        classes = graph.practices.named("clean_engineering").reading.in_graph.nodes("OoadClass")
         expect([node.name for node in classes]).to(equal(["Order"]))
 
     with it("should work on the graph its session holds"):

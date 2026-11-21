@@ -27,10 +27,9 @@ import copy
 import json
 import xml.etree.ElementTree as ET
 
-from harness.guidance.practice_formats import Reshaped
+from harness.guidance.practice_formats import NO_LONGER_IN_MODEL, Reshaped
 from harness.markdown.format import Format
 
-NO_LONGER_IN_MODEL = "no longer in the model"
 _HEADING = f"## Kept from this file, {NO_LONGER_IN_MODEL}"
 _HEADING_NOTE = "The lines below were in this file and the render did not write them. Move each to where it belongs, then delete it from here."
 # The two cells every draw.io page holds, which no one draws.

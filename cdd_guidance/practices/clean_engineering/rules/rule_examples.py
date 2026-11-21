@@ -30,10 +30,6 @@ def source_suffix(language: str) -> str:
     return _SUFFIX[language]
 
 
-def ce_rule_by_slug(slug: str):
-    return BY_SLUG[slug]
-
-
 def practice_from_files(files: dict[str, str]) -> RuleFixture:
     """The files, read by Clean Engineering from a folder of their own."""
     return RuleFixture(CleanEngineering, files)
@@ -58,12 +54,12 @@ def practice_from_source(source: str, *, lang: str = "python", filename: str | N
 
 def rule_pair(slug: str, fault_source: str, clean_source: str, *, lang: str = "python") -> RulePair:
     """The rule's failing and repaired fixture, each one source file in lang."""
-    return RulePair(ce_rule_by_slug(slug), practice_from_source(fault_source, lang=lang), practice_from_source(clean_source, lang=lang))
+    return RulePair(BY_SLUG[slug], practice_from_source(fault_source, lang=lang), practice_from_source(clean_source, lang=lang))
 
 
 def files_rule_pair(slug: str, fault_files: dict[str, str], clean_files: dict[str, str]) -> RulePair:
     """The rule's failing and repaired fixture, each a tree of files."""
-    return RulePair(ce_rule_by_slug(slug), practice_from_files(fault_files), practice_from_files(clean_files))
+    return RulePair(BY_SLUG[slug], practice_from_files(fault_files), practice_from_files(clean_files))
 
 
 def assert_rule_pair(slug: str, fault_source: str, clean_source: str, *, lang: str = "python") -> None:

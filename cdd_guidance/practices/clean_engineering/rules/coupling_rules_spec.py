@@ -10,8 +10,8 @@ if str(_REPO_ROOT) not in sys.path:
 from expects import contain, equal, expect
 from mamba import before, context, description, it
 
+from cdd_guidance.practices.clean_engineering.rules import BY_SLUG
 from cdd_guidance.practices.clean_engineering.rules.rule_examples import (
-    ce_rule_by_slug,
     files_rule_pair,
     practice_from_files,
     rule_pair,
@@ -19,7 +19,7 @@ from cdd_guidance.practices.clean_engineering.rules.rule_examples import (
 
 
 def _hits(slug: str, fixture) -> list[str]:
-    return fixture.hits(ce_rule_by_slug(slug))
+    return fixture.hits(BY_SLUG[slug])
 
 
 _PAYMENT_DATA = "class PaymentData:\n    amount: int\n    source: str\n    destination: str\n"

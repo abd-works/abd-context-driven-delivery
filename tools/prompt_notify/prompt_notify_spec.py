@@ -24,7 +24,8 @@ from harness.hooks.hook_server import HookPayload
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 
-_prompt_notify = PromptNotify()
+# No toolset carries a @Toast here, so these examples read the catalogue alone and never load the checkout's toolsets.
+_prompt_notify = PromptNotify(echo_toolsets=[])
 
 
 class SpecFixture:
@@ -308,43 +309,38 @@ class EchoPracticeChild(EchoPractice):
 with description("prompt echo @Toast annotation"):
     with context("that inherits @Toast on begin"):
         with it("should toast the action by its name when a recipe runs"):
-            kind, label = _prompt_notify.detect_echo(
-                HookPayload({"tool_name": "echo-action.enact", "tool_input": {}}),
-                toolsets=[EchoAction()],
+            kind, label = PromptNotify(echo_toolsets=[EchoAction()]).detect_echo(
+                HookPayload({"tool_name": "echo-action.enact", "tool_input": {}})
             )
             expect(kind).to(equal("action"))
             expect(label).to(equal("echo-action"))
 
         with it("should not toast open_workspace from the begin annotation"):
             expect(
-                _prompt_notify.detect_echo(
-                    HookPayload({"tool_name": "echo-action.open_workspace", "tool_input": {}}),
-                    toolsets=[EchoAction()],
+                PromptNotify(echo_toolsets=[EchoAction()]).detect_echo(
+                    HookPayload({"tool_name": "echo-action.open_workspace", "tool_input": {}})
                 )
             ).to(equal(None))
 
     with context("that annotates a specific recipe"):
         with it("should toast that member when it is invoked"):
-            kind, label = _prompt_notify.detect_echo(
-                HookPayload({"tool_name": "echo-action.spotlight", "tool_input": {}}),
-                toolsets=[EchoAction()],
+            kind, label = PromptNotify(echo_toolsets=[EchoAction()]).detect_echo(
+                HookPayload({"tool_name": "echo-action.spotlight", "tool_input": {}})
             )
             expect(kind).to(equal("action"))
             expect(label).to(equal("spotlight"))
 
     with context("that annotates practice instructions"):
         with it("should toast the practice from the instructions member"):
-            kind, label = _prompt_notify.detect_echo(
-                HookPayload({"tool_name": "echo-practice.instructions", "tool_input": {}}),
-                toolsets=[EchoPractice()],
+            kind, label = PromptNotify(echo_toolsets=[EchoPractice()]).detect_echo(
+                HookPayload({"tool_name": "echo-practice.instructions", "tool_input": {}})
             )
             expect(kind).to(equal("practice"))
             expect(label).to(equal("echo-practice"))
 
     with context("that inherits @Toast on practice instructions"):
-            kind, label = _prompt_notify.detect_echo(
-                HookPayload({"tool_name": "echo-practice-child.instructions", "tool_input": {}}),
-                toolsets=[EchoPracticeChild()],
+            kind, label = PromptNotify(echo_toolsets=[EchoPracticeChild()]).detect_echo(
+                HookPayload({"tool_name": "echo-practice-child.instructions", "tool_input": {}})
             )
             expect(kind).to(equal("practice"))
             expect(label).to(equal("echo-practice-child"))

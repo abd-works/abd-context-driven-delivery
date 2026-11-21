@@ -21,7 +21,7 @@ from __future__ import annotations
 from collections import Counter
 from typing import TYPE_CHECKING, List, Optional, Sequence
 
-from harness.guidance.practice_formats import Reshaped
+from harness.guidance.practice_formats import NO_LONGER_IN_MODEL, Reshaped
 
 from cdd_guidance.practices.stories.model.story_file import CodeBlock, flat_steps
 from cdd_guidance.practices.stories.model.story_writing import StepClause
@@ -29,9 +29,6 @@ from cdd_guidance.practices.stories.model.story_writing import StepClause
 if TYPE_CHECKING:
     from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel
     from cdd_guidance.practices.stories.model.story_model import Scenario, Step, Story
-
-# What marks a member kept in a file though its scenarios no longer hold it; the Render action reads the same words.
-NO_LONGER_IN_MODEL = "no longer in the model"
 
 
 class ReshapedStoryFile:

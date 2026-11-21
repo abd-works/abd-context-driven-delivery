@@ -61,7 +61,7 @@ def _steps_read(folder: tempfile.TemporaryDirectory) -> list[str]:
     """The steps the graph holds after loading the whole working copy in folder."""
     graph = Graph()
     graph.load_working_copy(folder.name, {"stories": folder.name}, force=True)
-    part = graph.practice("stories").reading.in_graph
+    part = graph.practices.named("stories").reading.in_graph
     return [f"{node.type}: {node.name}" for node in part.nodes() if node.type in ("Given", "When", "Then")]
 
 

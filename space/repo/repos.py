@@ -89,7 +89,7 @@ class NewChat:
     def open(self) -> str:
         """Hand the link to the desktop app; when the system cannot open it, say how to start the chat instead."""
         try:
-            links_of_run().hand_over(self.link)
+            links_of_run().open_new(str(self._root), self.first_prompt)
         except (OSError, subprocess.SubprocessError):
             return self.instructions
         return f"Opened a new chat on {self._root} in the Claude app: send its first prompt there to open the session {self._session}."

@@ -18,7 +18,7 @@ _LERN = tuple(pattern.graph_overlay for pattern in PatternOverlays(["lern_domain
 with description("schema rules on a node"):
     with before.each:
         self.graph = Graph()
-        self.practice = self.graph.practice("clean_engineering")
+        self.practice = self.graph.practices.named("clean_engineering")
         self.operation = Node(
             self.practice,
             NodeIdentity(type="Operation", node_id="clean_engineering:Operation:op", name="save"),
@@ -117,7 +117,7 @@ with description("a rule label"):
 with description("a practice's schema in a graph"):
     with before.all:
         self.graph = Graph()
-        self.practice = self.graph.practice("ddd")
+        self.practice = self.graph.practices.named("ddd")
         self.own_storage = set(vars(self.practice))
         self.schema = self.practice.reading.in_graph.rule_run.schema
 
@@ -128,7 +128,7 @@ with description("a practice's schema in a graph"):
         expect(set(vars(self.practice)) - self.own_storage).to(equal(set()))
 
     with it("should read the extended practice's schema from that practice's part of the same graph"):
-        clean = self.graph.practice("clean_engineering")
+        clean = self.graph.practices.named("clean_engineering")
         expect(self.schema.anchor_type("ValueObject")).to(equal("OoadClass"))
         overlays = self.graph.applied_patterns.overlays_for(clean)
         expect(clean.reading.in_graph.rule_run.schema_with(overlays)).to(be(clean.reading.in_graph.rule_run.schema))

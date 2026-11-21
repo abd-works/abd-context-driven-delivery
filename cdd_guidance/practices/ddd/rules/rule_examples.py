@@ -21,10 +21,6 @@ from cdd_guidance.practices.ddd.rules import BY_SLUG
 _EXAMPLES = Path(__file__).resolve().parents[1] / "model" / "python" / "_examples"
 
 
-def ddd_rule_by_slug(slug: str):
-    return BY_SLUG[slug]
-
-
 # The bounded-context card that marks the fixture's folder as a domain's.
 _BOUNDED_CONTEXT = {f"{FIXTURE_FOLDER}/.context/bounded-context.md": "# Example\n"}
 
@@ -63,7 +59,7 @@ class DddExamplePair:
 
     def __init__(self, slug: str, fault_class: str | None = None, *, clean_class: str | None = None) -> None:
         root = _EXAMPLES / slug
-        rule = ddd_rule_by_slug(slug)
+        rule = BY_SLUG[slug]
         self.slug, self.fault_class = slug, fault_class
         self.fault_hits = violations_for_ddd_rule(rule, (root / "faulty" / "faultyAsset.py").read_text(encoding="utf-8"), class_name=fault_class)
         self.clean_hits = violations_for_ddd_rule(rule, (root / "repaired" / "repairedAsset.py").read_text(encoding="utf-8"), class_name=clean_class or fault_class)

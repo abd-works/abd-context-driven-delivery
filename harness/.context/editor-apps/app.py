@@ -77,7 +77,7 @@ class App:
 
     @classmethod
     @tool_subject
-    def load(cls, app: str, *, project: Path) -> App:
+    def load(cls, app: str) -> App:
         # a label no module registered is refused with AppNotRegistered
         # -> APPS.registered
         ...

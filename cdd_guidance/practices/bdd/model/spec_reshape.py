@@ -20,13 +20,11 @@ import ast
 from typing import TYPE_CHECKING, Callable, Iterator
 
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeLanguage
-from harness.guidance.practice_formats import Reshaped
+from harness.guidance.practice_formats import NO_LONGER_IN_MODEL, Reshaped
 
 if TYPE_CHECKING:
     from cdd_guidance.practices.bdd.model.code_spec_model import DescribeCall, DescribeCalls
 
-# What marks a block kept in a spec though its describe tree no longer holds it, as the Render action marks a member.
-NO_LONGER_IN_MODEL = "no longer in the model"
 BlockPath = tuple[str, ...]
 ScriptCalls = Callable[[str], object]
 """What reads a script spec's describe, context, it and test calls from its text: *DescribeCalls*."""

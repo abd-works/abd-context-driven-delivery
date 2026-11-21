@@ -10,15 +10,15 @@ if str(_REPO_ROOT) not in sys.path:
 from expects import contain, equal, expect
 from mamba import before, context, description, it
 
+from cdd_guidance.practices.clean_engineering.rules import BY_SLUG
 from cdd_guidance.practices.clean_engineering.rules.rule_examples import (
-    ce_rule_by_slug,
     practice_from_source,
     rule_pair,
 )
 
 
 def _hits(fixture) -> list[str]:
-    return fixture.hits(ce_rule_by_slug("limit-operation-parameters"))
+    return fixture.hits(BY_SLUG["limit-operation-parameters"])
 
 
 with description("an operation's parameters"):

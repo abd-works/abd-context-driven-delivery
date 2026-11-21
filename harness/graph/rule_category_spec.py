@@ -28,7 +28,7 @@ with description("rule categories"):
         with before.each:
             self.graph = Graph()
             self.graph.reads.open(Path("."))
-            self.practice = self.graph.practice("clean_engineering")
+            self.practice = self.graph.practices.named("clean_engineering")
             self.failure = Node(self.practice, NodeIdentity(type="Operation", node_id="clean_engineering:Operation:failure", name="failure"), Source(".", 1, 2))
             self.register = Node(self.practice, NodeIdentity(type="Operation", node_id="clean_engineering:Operation:register", name="register"), Source(".", 3, 4))
             self.account = Node(self.practice, NodeIdentity(type="OoadClass", node_id="clean_engineering:OoadClass:AccountCredentials", name="AccountCredentials"), Source(".", 1, 8))

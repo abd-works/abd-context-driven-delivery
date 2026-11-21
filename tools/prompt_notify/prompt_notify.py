@@ -49,6 +49,11 @@ class PromptNotify:
     # Each hook event is handled by the hook server's one instance, so nothing about one event is kept on it: two
     # events at once would read each other's values.
 
+    def __init__(self, echo_toolsets: list | None = None) -> None:
+        """A notifier that looks for @Toast annotations on echo_toolsets; given none, on the toolsets of the CDD
+        checkout it runs from, loaded the first time a tool call asks."""
+        self._given_echo_toolsets = echo_toolsets
+
     @property
     def catalog(self) -> list[tuple[str, str]]:
         """Every name a tool call can mention, longest first, with its kind: each practice and fidelity CDD has, each
@@ -78,32 +83,27 @@ class PromptNotify:
     def on_pre_tool_use(self, payload: HookPayload) -> dict:
         """Toast what the tool call uses in every workspace folder of the chat that made it."""
         self.install_ide_toast_extension()
-        result = self.handle(payload, toolsets=self.echo_toolsets)
+        result = self.handle(payload)
         message = result.get("user_message")
         if message:
             self.show_toast(str(message), payload.workspace_roots)
         return result
 
-    def handle(self, payload: HookPayload, toolsets: list | None = None) -> dict:
+    def handle(self, payload: HookPayload) -> dict:
         if not payload.tool_name:
             return {"permission": "allow"}
-        detected = self._detected(payload, toolsets)
+        detected = self.detect_echo(payload) or self.detect(payload)
         if not detected:
             return {"permission": "allow"}
         kind, label = detected
         self._log_echo(payload.tool_name, kind, label)
         return {"permission": "allow", "user_message": f"{kind.title()}{TOAST_ARROW}{label}"}
 
-    def detect_echo(
-        self, payload: HookPayload, toolsets: list | None = None
-    ) -> tuple[str, str] | None:
+    def detect_echo(self, payload: HookPayload) -> tuple[str, str] | None:
         invoked = payload.invoked_tool
         if not invoked:
             return None
-        searched = self._walk_toolsets(
-            toolsets if toolsets is not None else self.echo_toolsets
-        )
-        for toolset in searched:
+        for toolset in self._walk_toolsets(self.echo_toolsets):
             found = self._echo_on_toolset(invoked, toolset)
             if found is not None:
                 return found
@@ -119,6 +119,8 @@ class PromptNotify:
         annotations say which tool calls toast whichever project the event came from; loaded once by the
         hook server's one notifier. A toolset that fails to load raises, so a broken toolset is seen rather than silently
         not toasting."""
+        if self._given_echo_toolsets is not None:
+            return self._given_echo_toolsets
         references = RepositoryToolsets(RUNNING_CHECKOUT).references()
         return AgentToolSet.from_items([reference.toolset_class for reference in references])
 
@@ -139,13 +141,6 @@ class PromptNotify:
         shutil.copytree(source, dest, dirs_exist_ok=True)
         type(self)._installed_extension = dest
         return dest
-
-    def _detected(self, payload: HookPayload, toolsets: list | None) -> tuple[str, str] | None:
-        if toolsets is not None:
-            annotated = self.detect_echo(payload, toolsets=toolsets)
-            if annotated:
-                return annotated
-        return self.detect(payload)
 
     def _log_echo(self, tool_name: str, kind: str, label: str) -> None:
         stamp = LogTimestamp.now()

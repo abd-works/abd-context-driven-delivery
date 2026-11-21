@@ -37,7 +37,7 @@ def checks(practice, *patterns):
     """The graph rules practice checks in a graph that applies patterns."""
     graph = Graph()
     graph.overlays = PatternOverlays(list(patterns)).paths
-    return graph.practice(practice).reading.checks()
+    return graph.practices.named(practice).reading.checks()
 
 
 def test_setup_text(root):
@@ -47,7 +47,7 @@ def test_setup_text(root):
 
 def tier_node(name, node_type, facts, file="src/a/a-node.ts"):
     """A graph node carrying the facts the LERN recorder would set on it."""
-    node = Node(Graph().practice("ddd"), NodeIdentity(type=node_type, node_id=f"ddd:{node_type}:{file}", name=name), Source(file, 1, 1))
+    node = Node(Graph().practices.named("ddd"), NodeIdentity(type=node_type, node_id=f"ddd:{node_type}:{file}", name=name), Source(file, 1, 1))
     for key, value in facts.items():
         node.set_fact(key, value)
     return node

@@ -211,7 +211,7 @@ with description("the registry of apps") as self:
     # Each spec registers its app under the Graph app's label, so putting the apps held before back leaves none behind.
     with it("should load a registered app by its label"):
         registered = App("Graph", AppPackage(self.folder), AppPage(AppServer(NodeScript(self.folder, "serve.js"), (free_port(),)))).register()
-        expect(App.load("Graph", project=self.folder)).to(equal(registered))
+        expect(App.load("Graph")).to(equal(registered))
 
     with it("should replace an app registered again under its label rather than list it twice"):
         again = App("Graph", AppPackage(self.folder), AppPage(AppServer(NodeScript(self.folder, "serve.js"), (free_port(),)))).register()
@@ -219,7 +219,7 @@ with description("the registry of apps") as self:
 
     with it("should load a registered app by its label in any case"):
         registered = App("Graph", AppPackage(self.folder), AppPage(AppServer(NodeScript(self.folder, "serve.js"), (free_port(),)))).register()
-        expect([App.load(label, project=self.folder) for label in ("graph", "GRAPH", " Graph ")]).to(equal([registered] * 3))
+        expect([App.load(label) for label in ("graph", "GRAPH", " Graph ")]).to(equal([registered] * 3))
 
     with it("should refuse a label no module registered"):
-        expect(lambda: App.load("Nowhere", project=self.folder)).to(raise_error(AppNotRegistered))
+        expect(lambda: App.load("Nowhere")).to(raise_error(AppNotRegistered))

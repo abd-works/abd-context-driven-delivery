@@ -206,7 +206,7 @@ def _member(node) -> str:
 
 
 def _linked(graph: Graph, kind: str, spec: str, block: str) -> list[str]:
-    nodes = graph.practice("bdd").reading.in_graph.nodes()
+    nodes = graph.practices.named("bdd").reading.in_graph.nodes()
     node = next(node for node in nodes if node.name == block and node.source.file == spec)
     return [_member(edge.child) for edge in graph.edges.from_parent(kind, node)]
 
@@ -290,5 +290,5 @@ with description("a describe that writes observations and states in turn, read i
         shutil.rmtree(self.folder, ignore_errors=True)
 
     with it("should list them in the order the spec writes them, not its observations first"):
-        shelf = next(node for node in self.graph.practice("bdd").reading.in_graph.nodes("Description") if node.name == "a shelf")
+        shelf = next(node for node in self.graph.practices.named("bdd").reading.in_graph.nodes("Description") if node.name == "a shelf")
         expect([child.name for child in shelf.children]).to(equal(["should start empty", "with a book", "should name its section"]))

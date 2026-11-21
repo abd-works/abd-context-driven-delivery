@@ -42,7 +42,7 @@ with description("a UX map written as JSON"):
             from harness.graph.graph import Graph
 
             graph = Graph()
-            self.parsed.join(graph.practice("ux"))
+            self.parsed.join(graph.practices.named("ux"))
             control = self.parsed.find_screen("Catalog").regions[0].controls[0]
             expect(control.interactions[0].graph).to(be(graph))
 

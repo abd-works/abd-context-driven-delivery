@@ -20,18 +20,18 @@ _CART = "export class Cart {\n  total() { return 1; }\n  place(a, b, c, d, e, f)
 
 
 def _nodes(graph: Graph) -> list[tuple]:
-    practice = graph.practice("clean_engineering")
+    practice = graph.practices.named("clean_engineering")
     found = practice.reading.in_graph.nodes()
     return sorted((node.node_id, node.name, node.type, node.source.file, node.source.start_line, node.source.end_line, node.stage) for node in found)
 
 
 def _edges(graph: Graph) -> list[tuple]:
-    practice = graph.practice("clean_engineering")
+    practice = graph.practices.named("clean_engineering")
     return sorted((edge.parent.node_id, edge.child.node_id, edge.kind, edge.type.order, edge.display) for edge in practice.reading.in_graph.edge_index.of())
 
 
 def _violations(graph: Graph) -> list[tuple]:
-    practice = graph.practice("clean_engineering")
+    practice = graph.practices.named("clean_engineering")
     found = [violation for node in practice.reading.in_graph.nodes() for violation in node.rules.violations]
     return sorted((violation.rule, violation.node_id, violation.subject, violation.location, violation.line, violation.message) for violation in found)
 
@@ -61,8 +61,8 @@ with description("a saved graph"):
             expect(_violations(self.restored)).to(equal(_violations(self.graph)))
 
         with it("should keep the facts about the practice as a whole on its root"):
-            expect(self.restored.practice("clean_engineering").reading.in_graph.root.data).to(
-                equal(self.graph.practice("clean_engineering").reading.in_graph.root.facts)
+            expect(self.restored.practices.named("clean_engineering").reading.in_graph.root.data).to(
+                equal(self.graph.practices.named("clean_engineering").reading.in_graph.root.facts)
             )
 
     with context("as its document"):
@@ -102,7 +102,7 @@ with description("a saved graph"):
 with description("a graph's pattern overlays asked which rules a practice checks with the overlays a saved graph keeps"):
     with before.all:
         self.graph = Graph()
-        self.practice = self.graph.practice("ddd")
+        self.practice = self.graph.practices.named("ddd")
         saved = SavedGraph(PatternOverlays(["lern_domain_driven"]).paths, {})
         pattern_class = type(PatternOverlays(["lern_domain_driven"]).patterns[0])
         self.made = []

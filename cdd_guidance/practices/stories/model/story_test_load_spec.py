@@ -17,7 +17,7 @@ with description("a TypeScript story test read alone"):
     with before.all:
         self.graph = Graph()
         self.graph.load_files(str(_SAMPLE), ["clean_engineering", "stories"], [_STORY])
-        self.stories = self.graph.practice("stories").reading.in_graph
+        self.stories = self.graph.practices.named("stories").reading.in_graph
 
     with it("should read the examples the story test imports"):
         expect([node.name for node in self.stories.nodes("Example")]).to(contain("emailedValidationCode"))
@@ -27,7 +27,7 @@ with description("a TypeScript story test read alone"):
         expect(example.get_fact("source_names")).to(contain("AccountCredentials"))
 
     with it("should read none of the domain code its steps call"):
-        expect(self.graph.practice("clean_engineering").reading.in_graph.nodes("OoadClass")).to(be_empty)
+        expect(self.graph.practices.named("clean_engineering").reading.in_graph.nodes("OoadClass")).to(be_empty)
 
     with it("should give its background the Given steps it holds"):
         background = self.stories.nodes("Background")[0]

@@ -455,7 +455,7 @@ class StoryTestProject:
             path.write_text(text, encoding="utf-8")
         self.graph = Graph()
         self.graph.load_working_copy(str(self.root), {key: str(self.root) for key in _PRACTICES}, force=True)
-        self.stories = self.graph.practice("stories").reading.in_graph
+        self.stories = self.graph.practices.named("stories").reading.in_graph
 
     ## where the story files sit
 

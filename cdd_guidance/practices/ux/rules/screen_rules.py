@@ -20,7 +20,7 @@ class ScreenStoryBudget(PracticeGraphRule):
     soft_max = 4
 
     def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        count = context.child_count(node, ("shows",))
+        count = len(context.targets(node, "shows"))
         if count <= self.soft_max:
             return []
         return [

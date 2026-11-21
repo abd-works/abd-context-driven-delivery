@@ -186,14 +186,14 @@ class Source:
             self.end_line = closed
         self._text = None
 
-    def align_to_example_export(self, root: str, name: str, files: Iterable[Path]) -> None:
-        """Point this slice at the fixture named ``name`` in one of ``files``, the TypeScript files under ``root`` the
+    def align_to_example_export(self, name: str, files: Iterable[Path]) -> None:
+        """Point this slice at the fixture named ``name`` in one of ``files``, the TypeScript files under its root the
         read is scoped to: a fixture function, or an exported constant such as ``export const DONE = {...}``. A story
         test imports both from its examples file, so an example it names belongs there, not at the test that uses it.
         Only the files given are searched, so a read limited to the files being edited never opens any other file."""
-        if not root or not name:
+        if not self.root or not name:
             return
-        root_path = Path(root)
+        root_path = Path(self.root)
         function = re.compile(rf"(?:export\s+)?function\s+{re.escape(name)}\b")
         constant = re.compile(rf"\bexport\s+const\s+{re.escape(name)}\b")
         for path in sorted(files):
@@ -203,25 +203,24 @@ class Source:
             for index, line in enumerate(lines):
                 if function.search(line) or constant.search(line):
                     end = self._call_end(lines, index) if function.search(line) else self._declaration_end(lines, index)
-                    self._point_at(root, Location(path.relative_to(root_path).as_posix(), index + 1, end))
+                    self._point_at(Location(path.relative_to(root_path).as_posix(), index + 1, end))
                     return
 
-    def align_to_declaration(self, root: str, declared_in: Path, start_line: int, end_line: int) -> None:
-        """Point this slice at lines start_line to end_line of declared_in, a file under root its reader already read,
-        such as the examples module a Python story test imports a fixture from; a file outside root leaves it where it
-        is, since a node names its file from root."""
-        if not root:
+    def align_to_declaration(self, declared_in: Path, start_line: int, end_line: int) -> None:
+        """Point this slice at lines start_line to end_line of declared_in, a file under its root its reader already
+        read, such as the examples module a Python story test imports a fixture from; a file outside the root leaves it
+        where it is, since a node names its file from its root."""
+        if not self.root:
             return
         try:
-            relative = Path(declared_in).resolve().relative_to(Path(root).resolve())
+            relative = Path(declared_in).resolve().relative_to(Path(self.root).resolve())
         except ValueError:
             return
-        self._point_at(root, Location(relative.as_posix(), start_line, end_line))
+        self._point_at(Location(relative.as_posix(), start_line, end_line))
 
-    def _point_at(self, root: str, location: Location) -> None:
-        """Point this slice at the lines location names, in its file under root."""
+    def _point_at(self, location: Location) -> None:
+        """Point this slice at the lines location names, in its file under its root."""
         self.file = location.file
-        self.root = root
         self.start_line, self.end_line = location.line, location.end_line
         self._text = None
 
@@ -1324,7 +1323,7 @@ class PracticeRuleRun:
         checks = list(practice.reading.checks().values())
         if not checks:
             return
-        context = RuleCheckContext(practice, self._part.source_root_path)
+        context = RuleCheckContext(practice)
         for index, check in enumerate(checks, start=1):
             report_progress(f"{practice.key} · rule {check.slug} · {index}/{len(checks)}")
             for node_id, message in check.check_practice(context):

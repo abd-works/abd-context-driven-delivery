@@ -39,6 +39,11 @@ class FormatAdapter(Protocol):
         """model written in this format."""
 
 
+# What marks a member kept in a file though its model no longer holds it. Every format that writes a render onto a file
+# already there, and the Render action, write these words and read them back, so a later render leaves the member be.
+NO_LONGER_IN_MODEL = "no longer in the model"
+
+
 @dataclass(frozen=True)
 class Reshaped:
     """A rendered shape written onto the text a file already holds, as a format's adapter answers it from

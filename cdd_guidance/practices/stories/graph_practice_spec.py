@@ -24,8 +24,8 @@ with description("story tests read into the graph beside the Clean Engineering m
     with before.all:
         self.graph = Graph()
         self.graph.load_files(str(_SAMPLE), ["clean_engineering", "stories"], ["."])
-        self.stories = self.graph.practice("stories")
-        self.clean = self.graph.practice("clean_engineering")
+        self.stories = self.graph.practices.named("stories")
+        self.clean = self.graph.practices.named("clean_engineering")
 
     with it("should record each step an operation is invoked by under invokedBy"):
         expect(len(self.clean.reading.in_graph.edge_index.of("invokedBy")) > 0).to(be_true)

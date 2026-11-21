@@ -35,7 +35,7 @@ with description("pattern overlays") as self:
     with it("should rebuild the tree from edges that still point at the practice root"):
         graph = Graph()
         graph.reads.open(Path("."))
-        practice = graph.practice("ddd")
+        practice = graph.practices.named("ddd")
         root = practice.reading.in_graph.root
         child = Node(
             practice,
@@ -57,21 +57,21 @@ with description("pattern overlays") as self:
             data_of(self.graph.load_working_copy(str(sample), roots, database=str(sample), overlays=["lern_domain_driven"], force=True))
 
         with it("should add the lern nodes"):
-            names = {node.type for node in self.graph.practice("ddd").reading.in_graph.nodes()}
+            names = {node.type for node in self.graph.practices.named("ddd").reading.in_graph.nodes()}
             expect("NodeRoot" in names).to(equal(True))
             expect("ClientRoot" in names).to(equal(True))
-            story_types = {node.type for node in self.graph.practice("stories").reading.in_graph.nodes()}
+            story_types = {node.type for node in self.graph.practices.named("stories").reading.in_graph.nodes()}
             expect("StoryShared" in story_types).to(equal(True))
 
         with it("should load the full source file for a lern domain node"):
-            domain_nodes = [node for node in self.graph.practice("ddd").reading.in_graph.nodes() if node.type == "NodeRoot"]
+            domain_nodes = [node for node in self.graph.practices.named("ddd").reading.in_graph.nodes() if node.type == "NodeRoot"]
             expect(len(domain_nodes) > 0).to(equal(True))
             node = domain_nodes[0]
             expect(node.source.end_line > 1).to(equal(True))
             expect(len(node.source.text.splitlines()) > 1).to(equal(True))
 
         with it("should parent lern tier files on their aggregate in the explorer tree"):
-            ddd_tree = data_of(self.graph.practice("ddd").reading.in_graph.root.tree.serialize())
+            ddd_tree = data_of(self.graph.practices.named("ddd").reading.in_graph.root.tree.serialize())
 
             def walk(node):
                 yield node

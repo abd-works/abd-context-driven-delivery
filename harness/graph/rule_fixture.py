@@ -38,7 +38,7 @@ class RuleFixture:
     @property
     def context(self) -> RuleCheckContext:
         """What a rule check reads: this fixture's practice and folder."""
-        return RuleCheckContext(self.practice, self.root)
+        return RuleCheckContext(self.practice)
 
     def hits(self, rule) -> list[str]:
         """Each message the rule reports where validate keeps it."""

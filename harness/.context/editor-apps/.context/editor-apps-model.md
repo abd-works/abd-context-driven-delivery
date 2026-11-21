@@ -19,7 +19,7 @@ This increment adds **three new types and three named failures** and extends **t
 | `harness/diagnostics` | *App*, *AppStatus*, *AppNotStarted*, *AppNotRegistered* | *ServerHealth* | `kanban_app_port`, `kanban_app_url`, `graph_app_port`, `reports_graph_app_on`, `reports_kanban_app_on` |
 | `harness/guidance` | — | *PracticeGuidance*, *FidelityGuidance* | — |
 | `harness/graph` | — | *Graph* | — |
-| `space/session` | *FormatNotOffered* | *Session*, *FidelitySessionOutput* | `kept_format`, `keep_format` |
+| `space/session` | *FormatNotOfferedError* | *Session*, *FidelitySessionOutput* | `kept_format`, `keep_format` |
 | `space/kanban` | — | *Ticket*, *FidelityProgress*, *FormatChoice* | `starts_picked`; *BoardPage* and its `rebuild` (moved onto *App*) |
 | `cdd_guidance/practices/stories/model` | *OpenedStoryMap*, *StoryMapEditRefused*, *StoryNodeNotFound* | *StoryNode*, *StoryModel*, *Epic*, *Story*, *Scenario*, *Step* | — |
 | `cdd_guidance/practices/stories/app` | the Story UI editor's page: *StoryMapClient*, *StoryMapApi*, its views | — | the Story UI's TypeScript domain (`stories.ts`, `stories-server.ts`, the JSON and MongoDB stores) |
@@ -56,7 +56,7 @@ One CDD web app a person opens beside the chat: the Story UI editor, the Graph a
 ----
 + register() -> App
 	// registering a label again replaces the earlier app rather than listing it twice
-+ load(app: str, *, project: Path) -> App  <<classmethod>> <<tool_subject>>
++ load(app: str) -> App  <<classmethod>> <<tool_subject>>
 	// the registered app whose label the call names (the adapter's identity, as Ticket.load names a ticket); a label no module registered is refused with AppNotRegistered
 + open() -> App  <<mcp>> <<agent_tool>>
 	-> self.install
@@ -196,13 +196,13 @@ Canonical: `space/session/practice_session_output.py`. It kept the one format a 
 ----
 + load(session: str, practice: str, fidelity: str, *, call) -> FidelitySessionOutput  <<classmethod>> <<tool_subject>>
 + choose_format(format: str, is_chosen: bool) -> FidelitySessionOutput  <<mcp>> <<agent_tool>>
-	// replaces keep_format (deleted); a format chosen again keeps its place; a format the fidelity does not offer is refused with FormatNotOffered
+	// replaces keep_format (deleted); a format chosen again keeps its place; a format the fidelity does not offer is refused with FormatNotOfferedError
 
-### FormatNotOffered
+### FormatNotOfferedError
 
 <<Domain Exception>>
 
-+ FormatNotOffered(fidelity: FidelityGuidance, format: str)
++ FormatNotOfferedError(fidelity: FidelityGuidance, format: str)
 
 **Invariants**
 

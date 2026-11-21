@@ -35,8 +35,6 @@ The toolset the graph tools run on. A session holds one (`Session.graph`), with 
 	// what the graph reads and when, each read run alone; every load tool hands its call to it in one line
 + for_call(call): Graph
 	// the call's session's graph, so every graph tool a call in that session makes runs on it
-+ practice(key): PracticeGuidance
-	// -> practices.named(key): the one lookup by key, for a call that names a practice by the key it sent
 + node(node_id): Node | None
 + link(kind, parent, child, display="direct"): None
 	// -> record(EdgeType.from_kind(kind, display), parent, child)
@@ -326,7 +324,7 @@ The text the explorer's source view shows.
 + whole_file(relative, root): Source
 + align_to_label(label): None
 + widen_to_call_close(): None
-+ align_to_example_export(root, name): None
++ align_to_example_export(name, files): None
 
 ## Call
 
@@ -428,10 +426,7 @@ One rule an overlay checks on several practices' nodes, such as TDD's `one-outco
 ## RuleCheckContext
 
 + practice: PracticeGuidance
-+ source_root: Path | None
 ----
-+ child_count(node, edge_kinds): int
-+ children(node, edge_kind): list[Node]
 + node_data(node): dict
 
 ## GraphRulesCollection

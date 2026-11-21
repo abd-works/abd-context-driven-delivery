@@ -15,7 +15,7 @@ from cdd_guidance.practices.stories.stories import Stories
 
 def _working_at(graph: Graph, key: str, fidelity: str):
     """The graph's practice called key, working at fidelity, as a session sets it."""
-    practice = graph.practice(key)
+    practice = graph.practices.named(key)
     practice.fidelities.current = practice.fidelities.entries[fidelity]
     return practice
 
@@ -54,7 +54,7 @@ def stories_fixture(files: dict[str, str]) -> RuleFixture:
 
 def _gaps(practice) -> list[str]:
     """Each gap the rule finds in practice, as it records them."""
-    return [message for _, message in ConformsToSchema().check_practice(RuleCheckContext(practice, None))]
+    return [message for _, message in ConformsToSchema().check_practice(RuleCheckContext(practice))]
 
 
 with description("conforms to schema"):
@@ -125,7 +125,7 @@ with description("conforms to schema"):
 
         with description("on a graph that reads Clean Engineering beside it"):
             with it("should fail for the demonstrates it lacks"):
-                self.graph.practice("clean_engineering")
+                self.graph.practices.named("clean_engineering")
                 expect([gap for gap in _gaps(self.practice) if "demonstrates" in gap]).to(have_len(1))
 
     with description("a when step invoking nothing, on a graph that reads Clean Engineering beside it"):
@@ -133,7 +133,7 @@ with description("conforms to schema"):
             graph = Graph()
             practice = _working_at(graph, "stories", "acceptance_tests")
             _node(practice, "When", "the Shopper pays")
-            graph.practice("clean_engineering")
+            graph.practices.named("clean_engineering")
             expect([gap for gap in _gaps(practice) if "invokes" in gap]).to(be_empty)
 
     with description("a relationship a schema requires of the steps of one phase"):
@@ -141,7 +141,7 @@ with description("conforms to schema"):
             self.graph = Graph()
             self.practice = _working_at(self.graph, "stories", "acceptance_tests")
             self.required = RequiredRelationship(SchemaKey("when"), "invokes", ("Operation",), "stories practice", None, None)
-            self.context = RuleCheckContext(self.practice, None)
+            self.context = RuleCheckContext(self.practice)
 
         with description("with a step that keeps its phase as a saved fact, as a graph restored from its file holds it"):
             with before.each:

@@ -21,12 +21,10 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from harness.guidance.practice_formats import Reshaped
+from harness.guidance.practice_formats import NO_LONGER_IN_MODEL, Reshaped
 
 from cdd_guidance.practices.ux.model.view.front_end_view import Edit, FrontEndView, TypeAnnotations
 
-# What marks a member kept in a file though its model no longer holds it; a later render reads it to leave the member be.
-NO_LONGER_IN_MODEL = "no longer in the model"
 _COMMENT_STARTS = ("//", "/*", "*")
 _FUNCTION = re.compile(r"[ \t]*(?:async[ \t]+)?function[ \t]+(?P<name>[\w$]+)[^(\n]*\(")
 _DECLARED = re.compile(r"[ \t]*(?:const|let)[ \t]+(?P<pattern>[\w$]+|\[[^\]\n]*\]|\{[^}\n]*\})")

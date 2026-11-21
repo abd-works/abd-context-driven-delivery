@@ -251,9 +251,9 @@ class StoryRecording:
         elif node.type == "Example" and PurePosixPath(node.source.file or "").suffix.lower() == ".md":
             node.source.align_to_table_row(node.name)
         elif node.type == "Example" and story_object.declaration is not None:
-            node.source.align_to_declaration(self._in_graph.source_root, *story_object.declaration)
+            node.source.align_to_declaration(*story_object.declaration)
         elif node.type == "Example":
-            node.source.align_to_example_export(self._in_graph.source_root, node.name, self._example_files)
+            node.source.align_to_example_export(node.name, self._example_files)
 
     def source_of(self, file: str) -> StorySource:
         """The file the map was read from at file; an empty one when it was read from none there."""

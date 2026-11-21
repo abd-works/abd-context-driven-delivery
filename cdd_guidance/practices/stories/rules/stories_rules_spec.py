@@ -46,19 +46,19 @@ def _record_steps(practice, scenario: Node, steps: list[Node]) -> None:
 with description("ScenariosShape"):
     with context("with When and Then only"):
         with before.each:
-            self.practice = Graph().practice("stories")
+            self.practice = Graph().practices.named("stories")
             self.scenario = _scenario(self.practice)
             when = _step(self.practice, "When", "the User proceeds", 1)
             then = _step(self.practice, "Then", "the User can enter account credentials", 2)
             _record_steps(self.practice, self.scenario, [when, then])
-            self.context = RuleCheckContext(self.practice, None)
+            self.context = RuleCheckContext(self.practice)
 
         with it("should not require Given"):
             expect(SchemaRuleRun(ScenariosShape(), self.context).node_hits(self.scenario)).to(equal([]))
 
     with context("with a second When before Then"):
         with before.each:
-            self.practice = Graph().practice("stories")
+            self.practice = Graph().practices.named("stories")
             self.scenario = _scenario(self.practice)
             steps = [
                 _step(self.practice, "When", "first", 1),
@@ -66,7 +66,7 @@ with description("ScenariosShape"):
                 _step(self.practice, "Then", "outcome", 3),
             ]
             _record_steps(self.practice, self.scenario, steps)
-            self.context = RuleCheckContext(self.practice, None)
+            self.context = RuleCheckContext(self.practice)
 
         with it("should flag and-chaining"):
             hits = SchemaRuleRun(AndChaining(), self.context).node_hits(self.scenario)
@@ -74,7 +74,7 @@ with description("ScenariosShape"):
 
     with context("with When then When then"):
         with before.each:
-            self.practice = Graph().practice("stories")
+            self.practice = Graph().practices.named("stories")
             self.scenario = _scenario(self.practice)
             steps = [
                 _step(self.practice, "When", "first", 1),
@@ -83,7 +83,7 @@ with description("ScenariosShape"):
                 _step(self.practice, "Then", "second", 4),
             ]
             _record_steps(self.practice, self.scenario, steps)
-            self.context = RuleCheckContext(self.practice, None)
+            self.context = RuleCheckContext(self.practice)
 
         with it("should allow a second interaction after Then"):
             expect(SchemaRuleRun(AndChaining(), self.context).node_hits(self.scenario)).to(equal([]))

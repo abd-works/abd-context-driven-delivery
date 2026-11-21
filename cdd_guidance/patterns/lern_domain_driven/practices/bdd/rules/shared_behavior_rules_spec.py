@@ -33,11 +33,11 @@ def checks(practice, *patterns):
     """The graph rules practice checks in a graph that applies patterns."""
     graph = Graph()
     graph.overlays = PatternOverlays(list(patterns)).paths
-    return graph.practice(practice).reading.checks()
+    return graph.practices.named(practice).reading.checks()
 
 
 def behavior_file(text, node_type):
-    node = Node(Graph().practice("bdd"), NodeIdentity(type=node_type, node_id=f"bdd:{node_type}:tests/x", name="x.behavior.ts"), Source("tests/x/x.behavior.ts", 1, 1))
+    node = Node(Graph().practices.named("bdd"), NodeIdentity(type=node_type, node_id=f"bdd:{node_type}:tests/x", name="x.behavior.ts"), Source("tests/x/x.behavior.ts", 1, 1))
     for key, value in TierFile(text).behavior_facts().items():
         node.set_fact(key, value)
     return node

@@ -373,7 +373,7 @@ Sessions, a session, and its log
 	// data field: the formats chosen for the fidelity in the session, in the order chosen; its default until one is chosen
 ----
 + choose_format(format: str, is_chosen: bool): FidelitySessionOutput
-	// mcp; refuses a format the fidelity does not write with FormatNotOffered
+	// mcp; refuses a format the fidelity does not write with FormatNotOfferedError
 + output_paths(): dict[str, list[str]]
 	// declared paths under the fidelity's root
 + files(): dict[str, list[FileEntry]]

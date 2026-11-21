@@ -11,15 +11,15 @@ from expects import equal, expect
 from mamba import before, context, description, it
 
 
+from cdd_guidance.practices.clean_engineering.rules import BY_SLUG
 from cdd_guidance.practices.clean_engineering.rules.rule_examples import (
-    ce_rule_by_slug,
     files_rule_pair,
     practice_from_files,
 )
 
 
 def _hits(slug: str, fixture) -> list[str]:
-    return fixture.hits(ce_rule_by_slug(slug))
+    return fixture.hits(BY_SLUG[slug])
 
 
 def _module(folder: str, files: dict[str, str]) -> dict[str, str]:

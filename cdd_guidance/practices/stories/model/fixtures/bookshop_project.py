@@ -35,7 +35,7 @@ class BookshopProject:
     @property
     def stories(self):
         """Stories' part of the graph: its nodes and edges."""
-        return self.graph.practice("stories").reading.in_graph
+        return self.graph.practices.named("stories").reading.in_graph
 
     def held(self) -> tuple[set[str], set[tuple[str, str, str]]]:
         """What the graph holds now: the id of every node of every practice, and every edge as its parent, kind and

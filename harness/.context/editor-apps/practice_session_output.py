@@ -11,7 +11,7 @@ from harness.installation.data_class import data_field, language_adapter
 from harness.mcp.mcp_server import mcp
 
 
-class FormatNotOffered(ValueError):
+class FormatNotOfferedError(ValueError):
     def __init__(self, fidelity: FidelityGuidance, format: str) -> None:
         self.fidelity = fidelity
         self.format = format
@@ -35,7 +35,7 @@ class FidelitySessionOutput:
     @mcp
     @agent_tool
     def choose_format(self, format: str, is_chosen: bool) -> FidelitySessionOutput:
-        # raises FormatNotOffered for a format the fidelity does not offer
+        # raises FormatNotOfferedError for a format the fidelity does not offer
         # -> self.chosen_formats
         ...
 

@@ -11,7 +11,7 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from typing import Dict, Iterator, List, Optional, Tuple
 
-from harness.whiteboard.whiteboard import Box
+from harness.whiteboard import Box
 
 from cdd_guidance.practices.stories.model.diagram_story_model import (
     DiagramEpic,

@@ -93,9 +93,9 @@ class Ux(PracticeGuidance):
         """Ensure Stories or Clean Engineering JS exists - transform via that practice if needed.
         practice: 'stories' | 'clean_engineering', the practice's catalogue key: story steps come from Stories, the
         object model from Clean Engineering. content: the practice's text in source_format. Returns {format: javascript, content: ...}."""
-        return self.javascript_practice(practice).render("javascript", content, source=source_format)
+        return self._javascript_practice(practice).render("javascript", content, source=source_format)
 
-    def javascript_practice(self, key: str) -> PracticeGuidance:
+    def _javascript_practice(self, key: str) -> PracticeGuidance:
         """The practice key, which writes the JavaScript a mockup imports: the session's own, with the fidelity and
         format it works at there."""
         if self.session is None:

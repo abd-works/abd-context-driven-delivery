@@ -13,7 +13,7 @@ from mamba import before, context, description, it
 from harness.graph.rule_fixture import SchemaRuleRun
 
 from cdd_guidance.practices.bdd.rules import BY_SLUG
-from cdd_guidance.practices.bdd.rules.rule_examples import assert_bdd_source_pair, bdd_rule_by_slug, spec_fixture
+from cdd_guidance.practices.bdd.rules.rule_examples import assert_bdd_source_pair, spec_fixture
 
 _EXAMPLES = _REPO / "cdd_guidance/practices/bdd/model/python/_examples"
 _LAYER_FAULT = (_EXAMPLES / "layer-isolation/widget_spec.py").read_text(encoding="utf-8")
@@ -156,7 +156,7 @@ with description("BDD example specs"):
     with context("observable-behavior across the describe tree"):
         with it("should report a probe inside an it once"):
             source = _spec('with description("a cart"):', '    with it("should hold the lamp"):', "        expect(subject._lines).to(equal(1))")
-            expect(spec_fixture(source).hits(bdd_rule_by_slug("observable-behavior"))).to(have_len(1))
+            expect(spec_fixture(source).hits(BY_SLUG["observable-behavior"])).to(have_len(1))
 
         with it("should report a probe in a context's setup on that context"):
             source = _spec(

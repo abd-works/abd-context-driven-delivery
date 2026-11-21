@@ -3,13 +3,14 @@
 from expects import equal, expect
 from mamba import before, context, description, it
 
-from cdd_guidance.practices.clean_engineering.rules.rule_examples import ce_rule_by_slug, practice_from_files
+from cdd_guidance.practices.clean_engineering.rules import BY_SLUG
+from cdd_guidance.practices.clean_engineering.rules.rule_examples import practice_from_files
 
 _CLASS = "class Cart:\n    def add(self) -> None:\n        return None\n"
 
 
 def _missing_card_hits(fixture) -> list[str]:
-    return fixture.hits(ce_rule_by_slug("missing-module-context"))
+    return fixture.hits(BY_SLUG["missing-module-context"])
 
 
 with description("a folder of classes"):

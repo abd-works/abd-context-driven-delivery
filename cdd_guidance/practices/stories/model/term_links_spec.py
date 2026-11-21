@@ -34,7 +34,7 @@ with description("a step that links a domain term to its heading in the domain m
             expect(_named_by(self.project, self.when)).to(equal([_BOOK, _CART]))
 
         with it("should be named by the class in turn"):
-            book = self.project.graph.practice("ddd").reading.in_graph.node(_BOOK)
+            book = self.project.graph.practices.named("ddd").reading.in_graph.node(_BOOK)
             expect([edge.child.node_id for edge in self.project.graph.edges.from_parent("namedBy", book)]).to(contain(self.when.node_id))
 
         with it("should have the example written after a linked term demonstrate that term's class"):

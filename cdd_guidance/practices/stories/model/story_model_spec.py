@@ -877,7 +877,7 @@ with description("a story map on a graph") as self:
         expect(self.scenario.graph).to(be(self.graph))
 
     with it("should record decomposedInto from the epic through the story"):
-        practice = self.graph.practice("stories")
+        practice = self.graph.practices.named("stories")
         pairs = [
             (edge.parent.name, edge.child.name)
             for edge in practice.reading.in_graph.edge_index.of("decomposedInto")
@@ -888,7 +888,7 @@ with description("a story map on a graph") as self:
         ))
 
     with it("should record scenarios and steps for the story"):
-        practice = self.graph.practice("stories")
+        practice = self.graph.practices.named("stories")
         scenario_pairs = [
             (edge.parent.name, edge.child.name)
             for edge in practice.reading.in_graph.edge_index.of("scenarios")
@@ -898,7 +898,7 @@ with description("a story map on a graph") as self:
         expect(step_names).to(contain("the User creates their account", "the account is unconfirmed"))
 
     with it("should record belongsTo back to the owning epic"):
-        practice = self.graph.practice("stories")
+        practice = self.graph.practices.named("stories")
         pairs = [
             (edge.parent.name, edge.child.name)
             for edge in practice.reading.in_graph.edge_index.of("belongsTo")
@@ -913,7 +913,7 @@ with description("a story map on a graph") as self:
         self.scenario.steps[0].continue_with("and", "the email is saved")
         pairs = [
             (edge.parent.name, edge.child.name)
-            for edge in self.graph.practice("stories").reading.in_graph.edge_index.of("ands")
+            for edge in self.graph.practices.named("stories").reading.in_graph.edge_index.of("ands")
         ]
         expect(pairs).to(contain(("the User creates their account", "the email is saved")))
 
@@ -938,8 +938,8 @@ with description("a story map on a graph") as self:
         Screen("Create Account", 0, graph=self.graph).show_story("Create Account")
         Observation("Create account", graph=self.graph)
 
-        stories = self.graph.practice("stories")
-        clean = self.graph.practice("clean_engineering")
+        stories = self.graph.practices.named("stories")
+        clean = self.graph.practices.named("clean_engineering")
         invokes = [(edge.parent.name, edge.child.name) for edge in stories.reading.in_graph.edge_index.of("invokes")]
         observes = [(edge.parent.name, edge.child.name) for edge in stories.reading.in_graph.edge_index.of("observes")]
         demonstrates = [(edge.parent.name, edge.child.name) for edge in stories.reading.in_graph.edge_index.of("demonstrates")]
@@ -988,10 +988,10 @@ with description("Story name opening") as self:
         from harness.graph.rule_fixture import SchemaRuleRun
 
         def _story(name, kind):
-            node = Node(Graph().practice("stories"), NodeIdentity(type="Story", node_id=f"stories:Story:{name}", name=name), Source(".", 1, 1))
+            node = Node(Graph().practices.named("stories"), NodeIdentity(type="Story", node_id=f"stories:Story:{name}", name=name), Source(".", 1, 1))
             node.set_fact("opening_class", kind)
             node.practice.reading.in_graph.hold(node)
-            return SchemaRuleRun(VerbNounFormat(), RuleCheckContext(node.practice, None)).node_hits(node)
+            return SchemaRuleRun(VerbNounFormat(), RuleCheckContext(node.practice)).node_hits(node)
 
         expect(_story("Carry Plan From Marketing Link", "unlisted")).to(equal([]))
         expect(_story("Customer Login", "actor-noun")).to(have_len(1))

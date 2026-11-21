@@ -72,9 +72,9 @@ def _loaded(scenario: Scenario, graph: Graph | None = None) -> RuleCheckContext:
     epic.stories.append(story)
     model = StoryModel()
     model.epics.append(epic)
-    practice = (graph or Graph()).practice("stories")
+    practice = (graph or Graph()).practices.named("stories")
     model.record(practice)
-    return RuleCheckContext(practice, None)
+    return RuleCheckContext(practice)
 
 
 def _read_back(context: RuleCheckContext) -> RuleCheckContext:
@@ -82,7 +82,7 @@ def _read_back(context: RuleCheckContext) -> RuleCheckContext:
     from saved."""
     restored = Graph()
     restored.restored_from(SavedGraph.from_graph(context.graph))
-    return RuleCheckContext(restored.practice(context.practice.key), None)
+    return RuleCheckContext(restored.practices.named(context.practice.key))
 
 
 def _scenario_hits(rule, context: RuleCheckContext) -> list[str]:
@@ -100,7 +100,7 @@ def _term_hits(context: RuleCheckContext) -> list[str]:
 
 def _order_aggregate(graph: Graph) -> None:
     """A DDD model whose Order aggregate has the Order root and owns LineItem and ShippingAddress."""
-    ddd = graph.practice("ddd")
+    ddd = graph.practices.named("ddd")
 
     def add(kind: str, name: str) -> Node:
         node = Node(ddd, NodeIdentity(type=kind, node_id=f"ddd:{kind}:order:{name}", name=name), Source("order", 1, 1))

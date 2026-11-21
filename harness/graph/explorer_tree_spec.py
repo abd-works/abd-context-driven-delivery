@@ -18,7 +18,7 @@ with description("a practice's explorer tree"):
     with description("with a chain of operations each invoking the next"):
         with before.all:
             graph = Graph()
-            practice = graph.practice("clean_engineering")
+            practice = graph.practices.named("clean_engineering")
             self.part = practice.reading.in_graph
             cart = self.part.add_file("OoadClass", "cart.py", "Cart")
             graph.edges.link("owns", self.part.root, cart)
@@ -40,7 +40,7 @@ with description("a practice's explorer tree"):
     with description("with parts of two kinds its practice lists in source order, written in turn in one file"):
         with before.all:
             graph = Graph()
-            self.part = graph.practice("stories").reading.in_graph
+            self.part = graph.practices.named("stories").reading.in_graph
             story = self.part.add_file("Story", "order.md", "Place Order")
             graph.edges.link("owns", self.part.root, story)
             placed = [("Scenario", "scenarios", "first", 2), ("Background", "background", "shared", 5), ("Scenario", "scenarios", "second", 8)]

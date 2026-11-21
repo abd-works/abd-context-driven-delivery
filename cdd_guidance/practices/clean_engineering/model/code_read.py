@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 from harness.agent_tools.progress import report_progress
 from harness.graph.skipped_folders import scanned_files, skips_folder
 from harness.graph.location import Location
-from harness.whiteboard.whiteboard import UnreadableBoard
+from harness.whiteboard import UnreadableBoard
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     Module,

@@ -154,7 +154,7 @@ class Bookshop:
             path.write_text(text, encoding="utf-8")
         self.graph = Graph()
         self.graph.load_working_copy(str(self.root), {key: str(self.root) for key in practices}, force=True)
-        self.ux = self.graph.practice("ux").reading.in_graph
+        self.ux = self.graph.practices.named("ux").reading.in_graph
 
     def names(self, node_type: str, file: str = _MAP_FILE) -> list[str]:
         return [node.name for node in self.ux.nodes(node_type) if node.source.file == file]
@@ -256,7 +256,7 @@ with description("a UX map read into the graph") as self:
             expect(self.shop.linked("shows", self.shop.node("Screen", "Book List"))).to(equal([("Story", "Browse Book List")]))
 
         with it("should join each story to the screens it is shown on"):
-            story = next(node for node in self.shop.graph.practice("stories").reading.in_graph.nodes("Story") if node.name == "View Book")
+            story = next(node for node in self.shop.graph.practices.named("stories").reading.in_graph.nodes("Story") if node.name == "View Book")
             expect(self.shop.linked("shownOn", story)).to(equal([("Screen", "Home")]))
 
         with it("should join no screen to a story the story map does not hold"):
@@ -273,7 +273,7 @@ with description("a UX map read into the graph") as self:
             expect([(edge.child.type, edge.child.get_fact("text")) for edge in steps]).to(equal([("Then", "every book is listed")]))
 
         with it("should join each scenario to the controls and screens it is shown on"):
-            scenario = next(node for node in self.shop.graph.practice("stories").reading.in_graph.nodes("Scenario") if node.name == "List every book")
+            scenario = next(node for node in self.shop.graph.practices.named("stories").reading.in_graph.nodes("Scenario") if node.name == "List every book")
             expect(sorted(self.shop.linked("shownOn", scenario))).to(equal([("Control", "Open book"), ("Control", "Search"), ("Control", "Search"), ("Screen", "Book Details")]))
 
         with it("should join a screen to the story a link written from the project's folder names"):

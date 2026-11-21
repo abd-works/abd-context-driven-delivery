@@ -45,7 +45,7 @@ class AndChaining(PracticeGraphRule):
     def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         """Flag a second When before the previous When has its Then, and a When the scenario never answers."""
         pending_when = False
-        for step in context.children(node, "steps"):
+        for step in context.targets(node, "steps"):
             keyword = self._step_keyword(step)
             if keyword == "when" and pending_when:
                 return [
@@ -94,7 +94,7 @@ class OutlineRequiresManyPermutations(PracticeGraphRule):
     def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         if not self._is_outline(node):
             return []
-        examples = context.child_count(node, ("examples",))
+        examples = len(context.targets(node, "examples"))
         if examples <= _ALTERNATIVES_WITHOUT_AN_OUTLINE:
             return [
                 f"Scenario outline {node.name!r} needs more than two example rows (found {examples})."
@@ -114,7 +114,7 @@ class ExamplesTraceDomainModel(PracticeGraphRule):
 
     def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         concepts = self._named_concepts(node, context)
-        if not concepts or context.child_count(node, ("examples",)):
+        if not concepts or len(context.targets(node, "examples")):
             return []
         return [f"Scenario {node.name!r} names domain concepts {sorted(concepts)} but has no examples table."]
 
@@ -122,8 +122,8 @@ class ExamplesTraceDomainModel(PracticeGraphRule):
         """The domain concepts a scenario's steps and their And continuations name."""
         steps = [
             each
-            for step in context.children(scenario, "steps")
-            for each in (step, *context.children(step, "ands"))
+            for step in context.targets(scenario, "steps")
+            for each in (step, *context.targets(step, "ands"))
         ]
         return self.domain_concepts(steps)
 
@@ -235,7 +235,7 @@ class FlaggedWritesIntendedGwt(PracticeGraphRule):
     def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         if not any("intended" in item.casefold() for item in self._evidence(node)):
             return []
-        if context.child_count(node, ("steps",)) == 0:
+        if len(context.targets(node, "steps")) == 0:
             return [f"Scenario {node.name!r} is marked intended but has no GWT steps written."]
         return []
 
@@ -270,28 +270,28 @@ class GivenNamesComplexStateRootFirst(PracticeGraphRule):
         open, so a later step may name that root's parts alone."""
         for edge in context.edges("steps"):
             if edge.child is step:
-                steps = context.children(edge.parent, "steps")
+                steps = context.targets(edge.parent, "steps")
                 before = [each for earlier in steps[: steps.index(step)] for each in self._with_ands(earlier, context)]
                 return self._background_steps(edge.parent, context) + before
         # An And or But line is held among the ands of the step it continues.
         for edge in context.edges("ands"):
             if edge.child is step:
-                ands = context.children(edge.parent, "ands")
+                ands = context.targets(edge.parent, "ands")
                 before = [each for earlier in ands[: ands.index(step)] for each in self._with_ands(earlier, context)]
                 return self._earlier_steps(edge.parent, context) + [edge.parent] + before
         return []
 
     def _with_ands(self, step: Node, context: RuleCheckContext) -> list[Node]:
         """The step and every And or But line that continues it."""
-        return [step, *(each for continued in context.children(step, "ands") for each in self._with_ands(continued, context))]
+        return [step, *(each for continued in context.targets(step, "ands") for each in self._with_ands(continued, context))]
 
     def _background_steps(self, scenario: Node, context: RuleCheckContext) -> list[Node]:
         stories = [edge.parent for edge in context.edges("scenarios") if edge.child is scenario]
         return [
             step
             for story in stories
-            for background in context.children(story, "background")
-            for step in context.children(background, "steps")
+            for background in context.targets(story, "background")
+            for step in context.targets(background, "steps")
         ]
 
     def _owned_parts(self, context: RuleCheckContext) -> dict[str, str]:
@@ -357,7 +357,7 @@ class ScenariosShape(PracticeGraphRule):
     node_types = ("Scenario",)
 
     def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        steps = context.children(node, "steps")
+        steps = context.targets(node, "steps")
         if not steps:
             return [f"Scenario {node.name!r} has no steps."]
         phases = self._scenario_phases(node, context, steps)
@@ -383,8 +383,8 @@ class ScenariosShape(PracticeGraphRule):
         story = self._parent_story(scenario_node, context)
         if story is None:
             return False
-        for background in context.children(story, "background"):
-            for step in context.children(background, "steps"):
+        for background in context.targets(story, "background"):
+            for step in context.targets(background, "steps"):
                 if _phase(step) == "given":
                     return True
         return False

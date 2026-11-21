@@ -10,7 +10,8 @@ if str(_REPO) not in sys.path:
 from expects import equal, expect, have_len
 from mamba import before, context, description, it
 
-from cdd_guidance.practices.ddd.rules.rule_examples import DddExamplePair, ddd_fixture, ddd_rule_by_slug, violations_for_ddd_rule
+from cdd_guidance.practices.ddd.rules import BY_SLUG
+from cdd_guidance.practices.ddd.rules.rule_examples import DddExamplePair, ddd_fixture, violations_for_ddd_rule
 from harness.graph.rule_fixture import SchemaRuleRun
 
 # A toolkit folder with no DDD model, shaped like the harness folders the scanner once misread: a class whose name ends
@@ -42,7 +43,7 @@ with description("DDD tactical rules (python .examples)") as self:
 
         with it("should name the bare class on its aggregate"):
             source = "# <<Aggregate Root>> <<Entity>>\nclass Subscription:\n    pass\n\n\nclass Plan:\n    pass\n"
-            expect(violations_for_ddd_rule(ddd_rule_by_slug("every-class-carries-ddd-stereotype"), source)).to(equal(
+            expect(violations_for_ddd_rule(BY_SLUG["every-class-carries-ddd-stereotype"], source)).to(equal(
                 ["Class 'Plan' in aggregate 'example' lacks a DDD stereotype (<<Entity>>, <<Repository>>, or code @entity / @repository on the class)."]
             ))
 
@@ -58,7 +59,7 @@ with description("DDD tactical rules (python .examples)") as self:
 
             with it("should report no bare class"):
                 fixture = ddd_fixture(_TOOLKIT, in_bounded_context=False)
-                expect(SchemaRuleRun(ddd_rule_by_slug("every-class-carries-ddd-stereotype"), fixture.context).hits()).to(equal([]))
+                expect(SchemaRuleRun(BY_SLUG["every-class-carries-ddd-stereotype"], fixture.context).hits()).to(equal([]))
 
         with context("in a folder whose classes carry a DDD stereotype, with no bounded context marked"):
             with it("should still make a building block of a class its name's convention names"):
@@ -76,7 +77,7 @@ export class OnboardingStepScreen {
 }
 """
             hits = violations_for_ddd_rule(
-                ddd_rule_by_slug("every-class-carries-ddd-stereotype"),
+                BY_SLUG["every-class-carries-ddd-stereotype"],
                 source,
                 filename="onboarding-step-screen.tsx",
                 beside={"onboarding.ts": _ONBOARDING_ROOT},
@@ -94,7 +95,7 @@ export class CardAuthorization {
 }
 """
             hits = violations_for_ddd_rule(
-                ddd_rule_by_slug("every-class-carries-ddd-stereotype"), source, lang="typescript", filename="payment.ts", beside={"onboarding.ts": _ONBOARDING_ROOT}
+                BY_SLUG["every-class-carries-ddd-stereotype"], source, lang="typescript", filename="payment.ts", beside={"onboarding.ts": _ONBOARDING_ROOT}
             )
             expect(hits).to(equal([]))
 
@@ -109,7 +110,7 @@ export class PaymentMethod {
 }
 """
             hits = violations_for_ddd_rule(
-                ddd_rule_by_slug("every-class-carries-ddd-stereotype"), source, lang="typescript", filename="billing.ts", beside={"onboarding.ts": _ONBOARDING_ROOT}
+                BY_SLUG["every-class-carries-ddd-stereotype"], source, lang="typescript", filename="billing.ts", beside={"onboarding.ts": _ONBOARDING_ROOT}
             )
             expect(hits).to(equal([]))
 
@@ -123,7 +124,7 @@ export class PaymentMethod {
 
         with it("should flag an aggregate whose folder is named for a manager"):
             hits = violations_for_ddd_rule(
-                ddd_rule_by_slug("domain-concepts-not-technical-names"),
+                BY_SLUG["domain-concepts-not-technical-names"],
                 "# <<Entity>>\nclass Cart:\n    pass\n",
                 class_name="cart_manager",
                 filename="cart_manager/cart.py",
@@ -146,7 +147,7 @@ export class Identity {
 }
 """
             hits = violations_for_ddd_rule(
-                ddd_rule_by_slug("flaccid-data-object-no-behavior"), source, class_name="Identity", lang="typescript", filename="identity.ts"
+                BY_SLUG["flaccid-data-object-no-behavior"], source, class_name="Identity", lang="typescript", filename="identity.ts"
             )
             expect(hits).to(equal([]))
 
@@ -166,7 +167,7 @@ export class Sim {
   }
 }
 """
-            hits = violations_for_ddd_rule(ddd_rule_by_slug("flaccid-data-object-no-behavior"), source, class_name="Sim", lang="typescript", filename="sim.ts")
+            hits = violations_for_ddd_rule(BY_SLUG["flaccid-data-object-no-behavior"], source, class_name="Sim", lang="typescript", filename="sim.ts")
             expect(hits).to(equal([]))
 
     with context("private-method-naming"):
@@ -212,7 +213,7 @@ export class DeviceWalletMerchantCredentialRepository {
 }
 """
             hits = violations_for_ddd_rule(
-                ddd_rule_by_slug("load-with-identity-in-hand"),
+                BY_SLUG["load-with-identity-in-hand"],
                 source,
                 class_name="DeviceWalletMerchantCredentialRepository",
                 lang="typescript",
@@ -238,7 +239,7 @@ export class DeviceWalletMerchantCredentialRepository {
 
         with it("should flag a domain service that opens and shows like a screen"):
             source = "# <<Domain Service>>\nclass SimPickerService:\n    def open(self):\n        return None\n\n    def isShowing(self):\n        return True\n"
-            hits = violations_for_ddd_rule(ddd_rule_by_slug("screen-interface-not-a-domain-object"), source, class_name="SimPickerService")
+            hits = violations_for_ddd_rule(BY_SLUG["screen-interface-not-a-domain-object"], source, class_name="SimPickerService")
             expect(hits).to(have_len(1))
 
     with context("private-method-naming on TypeScript aggregates"):
@@ -261,7 +262,7 @@ export class AccountCredentials {
 }
 """
             hits = violations_for_ddd_rule(
-                ddd_rule_by_slug("private-method-naming"), source, class_name="AccountCredentials", lang="typescript", filename="account.ts"
+                BY_SLUG["private-method-naming"], source, class_name="AccountCredentials", lang="typescript", filename="account.ts"
             )
             expect([message for message in hits if "constructor" in message]).to(equal([]))
 
@@ -297,7 +298,7 @@ export class AccountRepository {
 }
 """
             hits = violations_for_ddd_rule(
-                ddd_rule_by_slug("private-method-naming"), source, class_name="AccountRepository", lang="typescript", filename="account.ts"
+                BY_SLUG["private-method-naming"], source, class_name="AccountRepository", lang="typescript", filename="account.ts"
             )
             expect(hits).to(equal([]))
 
@@ -314,7 +315,7 @@ export class Subscription {
 }
 """
             hits = violations_for_ddd_rule(
-                ddd_rule_by_slug("private-method-naming"), source, class_name="Subscription", lang="typescript", filename="subscription.ts"
+                BY_SLUG["private-method-naming"], source, class_name="Subscription", lang="typescript", filename="subscription.ts"
             )
             expect(hits).to(equal([]))
 
@@ -331,6 +332,6 @@ export class CustomerProfileRepository {
 }
 """
             hits = violations_for_ddd_rule(
-                ddd_rule_by_slug("private-method-naming"), source, class_name="CustomerProfileRepository", lang="typescript", filename="customer-profile.ts"
+                BY_SLUG["private-method-naming"], source, class_name="CustomerProfileRepository", lang="typescript", filename="customer-profile.ts"
             )
             expect(hits).to(equal([]))

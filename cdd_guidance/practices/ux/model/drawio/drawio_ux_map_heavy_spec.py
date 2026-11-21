@@ -132,7 +132,7 @@ with description("a UX map drawn as a draw.io information architecture"):
             from harness.graph.graph import Graph
 
             graph = Graph()
-            self.parsed.join(graph.practice("ux"))
+            self.parsed.join(graph.practices.named("ux"))
             expect(self.parsed.find_screen("Character Sheet").regions[0].graph).to(be(graph))
 
         with it("should read back the stories the drawing shows under the screen"):

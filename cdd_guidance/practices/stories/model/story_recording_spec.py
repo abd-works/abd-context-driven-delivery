@@ -35,7 +35,7 @@ with description("a story map recorded on a graph"):
         model.epics.append(epic)
         graph = Graph()
         graph.reads.open(Path(str(self.root)))
-        practice = graph.practice("stories")
+        practice = graph.practices.named("stories")
         model.record(practice)
         self.practice = practice
 
@@ -73,7 +73,7 @@ with description("a merged story map whose two maps each hold a story a story te
         model.test_scenarios.take([read], "tests/submit_order_story.test.ts")
         graph = Graph()
         graph.reads.open(Path(self.tmp.name))
-        self.practice = graph.practice("stories")
+        self.practice = graph.practices.named("stories")
         model.record(self.practice)
 
     with after.each:
@@ -96,7 +96,7 @@ def _imports_of(root: Path, file: str, text: str) -> dict:
     model.sources.add(file, text)
     graph = Graph()
     graph.reads.open(Path(str(root)))
-    practice = graph.practice("stories")
+    practice = graph.practices.named("stories")
     model.record(practice)
     return practice.reading.in_graph.nodes("Story")[0].get_fact("imported_modules")
 

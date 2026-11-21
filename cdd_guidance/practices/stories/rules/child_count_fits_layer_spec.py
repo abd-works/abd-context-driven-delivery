@@ -36,11 +36,11 @@ def _hits(epic: Epic) -> list[str]:
     """What child-count-fits-layer reports on the epic once its map facts are loaded, as validate runs it."""
     epic.load_map_facts()
     node_type = "SubEpic" if epic.is_sub_epic else "Epic"
-    node = Node(Graph().practice("stories"), NodeIdentity(type=node_type, node_id=f"stories:{node_type}:{epic.name}", name=epic.name), Source(".", 1, 1))
+    node = Node(Graph().practices.named("stories"), NodeIdentity(type=node_type, node_id=f"stories:{node_type}:{epic.name}", name=epic.name), Source(".", 1, 1))
     for fact in ("child_count", "child_label", "child_band", "child_target"):
         node.set_fact(fact, getattr(epic, fact))
     node.practice.reading.in_graph.hold(node)
-    return SchemaRuleRun(ChildCountFitsLayer(), RuleCheckContext(node.practice, None)).node_hits(node)
+    return SchemaRuleRun(ChildCountFitsLayer(), RuleCheckContext(node.practice)).node_hits(node)
 
 
 with description("child count fits layer") as self:

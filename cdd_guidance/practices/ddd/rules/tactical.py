@@ -43,7 +43,7 @@ class FlaccidDataObject(PracticeGraphRule):
         if node.type == "ValueObject" or not node.has_fact("operation_shapes"):
             return []
         public_ops = [name for name in node.get_fact("public_operation_names", []) if name not in CONSTRUCTOR_NAMES]
-        props = len(node.get_fact("property_names", [])) or context.child_count(node, ("properties",))
+        props = len(node.get_fact("property_names", [])) or len(context.targets(node, "properties"))
         if props and not public_ops:
             return [f"{node.type} '{node.name}' has properties but no public operations."]
         return []

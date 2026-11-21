@@ -45,7 +45,7 @@ def _violations(rule, kind):
     graph.load_working_copy(str(root), roots, database=str(root), overlays=["oss_portal_domain_driven"], force=True)
     found = {}
     for practice in ("ddd", "stories"):
-        for node in graph.practice(practice).reading.in_graph.nodes():
+        for node in graph.practices.named(practice).reading.in_graph.nodes():
             for violation in node.rules.violations:
                 found.setdefault(violation.rule, []).append(violation.message)
     return found

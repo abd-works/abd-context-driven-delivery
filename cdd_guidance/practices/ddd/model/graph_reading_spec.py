@@ -56,7 +56,7 @@ def blocks_of(fixture: RuleFixture, kind: str) -> list:
 def mappings_of(graph: Graph) -> list[tuple]:
     """Each context mapping on graph's DDD practice: its name, its line, the context it sits under, and the aggregates
     its sides name."""
-    ddd = graph.practice("ddd").reading
+    ddd = graph.practices.named("ddd").reading
     found = []
     for mapping in ddd.in_graph.nodes("ContextMapping"):
         sides = tuple((side, [edge.child.name for edge in graph.edges.from_parent(side, mapping)]) for side in ("local", "remote"))
@@ -76,7 +76,7 @@ with description("DDD's reading of a working copy into the graph"):
             ]))
 
         with it("should save the two sides the mapping names"):
-            mapping = self.graph.practice("ddd").reading.in_graph.nodes("ContextMapping")[0]
+            mapping = self.graph.practices.named("ddd").reading.in_graph.nodes("ContextMapping")[0]
             expect((mapping.get_fact("local"), mapping.get_fact("remote"))).to(equal(("Sales · cart", "Billing · invoice")))
 
         with context("that is opened again from its saved graph"):

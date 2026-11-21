@@ -22,7 +22,8 @@ def _unlisted(practice) -> list[str]:
     """Each of the practice's own rules, with each node type its check judges that the practice's schema does not list
     the rule on."""
     listed = PracticeSchema(practice).applicable
-    own = rules_in(f"{practice.reading.package}.rules")
+    package = type(practice).__module__.rsplit(".", 1)[0]
+    own = rules_in(f"{package}.rules")
     return sorted(
         f"{practice.key}: {slug} on {node_type}"
         for slug, rule in own.items()

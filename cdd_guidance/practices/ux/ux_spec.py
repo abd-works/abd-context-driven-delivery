@@ -23,6 +23,9 @@ from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 from space.session.sessions import Sessions
 
+# A story map small enough to render in an example: one epic holding one story.
+_STORY_MAP = "# Story Map\n\n## Epic: Sign Up\n\n- Story: Enter Email\n"
+
 
 class UxJsonSample:
     def render(self) -> str:
@@ -204,7 +207,8 @@ with description("Ux ensure_javascript tool"):
             shutil.rmtree(self.project, ignore_errors=True)
 
         with it("should get the JavaScript from that session's own Stories practice"):
-            expect(self.ux.javascript_practice("stories")).to(be(self.session.practices["stories"].guidance))
+            stories = self.session.practices["stories"].guidance
+            expect(self.ux.ensure_javascript("stories", "markdown", _STORY_MAP)).to(equal(stories.render("javascript", _STORY_MAP, source="markdown")))
 
 
 with description("Ux contexts instruction"):

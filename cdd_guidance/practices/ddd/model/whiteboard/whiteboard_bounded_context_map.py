@@ -11,7 +11,7 @@ each bounded context a larger section round its aggregates' sections, titled wit
 
 from __future__ import annotations
 
-from harness.whiteboard.whiteboard import Whiteboard
+from harness.whiteboard import Whiteboard
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import Module
 from cdd_guidance.practices.clean_engineering.model.class_stereotypes import module_path_in

@@ -359,7 +359,7 @@ class App:
 
     @classmethod
     @tool_subject
-    def load(cls, app: str, *, project: Path | str) -> App:
+    def load(cls, app: str) -> App:
         """The registered app whose label is app, such as Kanban; one no module registered is refused."""
         return APPS.named(app)
 

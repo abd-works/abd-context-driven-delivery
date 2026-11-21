@@ -241,7 +241,7 @@ in_graph: HeldNodes | None
 	// the practice's nodes and edges in the graph that holds it, named by a protocol harness/graph's PracticeNodes answers
 graph_checks: dict[str, PracticeGraphRule]
 	// read once
-package: str
+_package: str
 ----
 held_in(graph: HoldingGraph, nodes: HeldNodes): None
 read(): None

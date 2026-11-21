@@ -30,11 +30,9 @@ from __future__ import annotations
 import re
 from typing import Callable
 
-from harness.guidance.practice_formats import Reshaped
+from harness.guidance.practice_formats import NO_LONGER_IN_MODEL, Reshaped
 from harness.markdown.format import Format
 
-# What marks a member kept in a file though its model no longer holds it; a later render reads it to leave the member be.
-NO_LONGER_IN_MODEL = "no longer in the model"
 _PYTHON = "python"
 _PYTHON_MEMBER = re.compile(r"^(\s*)(?:async\s+)?(def|class)\s+(\w+)")
 _BRACE_CLASS = re.compile(r"^(\s*)(?:export\s+)?(?:default\s+)?(?:abstract\s+)?class\s+(\w+)")

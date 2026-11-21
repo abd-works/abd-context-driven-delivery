@@ -371,7 +371,7 @@ with description("a clean engineering model on a graph"):
         expect(self.place.graph).to(be(self.graph))
 
     with it("should record participants and belongsTo"):
-        practice = self.graph.practice("clean_engineering")
+        practice = self.graph.practices.named("clean_engineering")
         participants = [(edge.parent.name, edge.child.name) for edge in practice.reading.in_graph.edge_index.of("participants")]
         belongs = [(edge.parent.name, edge.child.name) for edge in practice.reading.in_graph.edge_index.of("belongsTo")]
         expect(participants).to(contain(("orders", "Order"), ("Order", "place")))

@@ -264,7 +264,7 @@ class OutputRootRefused(ValueError):
         self.path = path
 
 
-class FormatNotOffered(ValueError):
+class FormatNotOfferedError(ValueError):
     """A format was chosen for a fidelity that does not write it."""
 
     def __init__(self, fidelity: FidelityGuidance, format: str) -> None:
@@ -385,7 +385,7 @@ class FidelitySessionOutput:
         session.json. A format the fidelity does not write is refused."""
         named = Format(format).name
         if named not in self.offered_formats:
-            raise FormatNotOffered(self._fidelity, format)
+            raise FormatNotOfferedError(self._fidelity, format)
         others = [each for each in self.chosen_formats if each != named]
         chosen = self.chosen_formats if is_chosen and named in self.chosen_formats else others + ([named] if is_chosen else [])
         self._practice.save(formats={**self._practice.saved.get("formats", {}), self._fidelity.name: chosen})

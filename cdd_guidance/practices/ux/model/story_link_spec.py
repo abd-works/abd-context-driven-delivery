@@ -23,7 +23,7 @@ _STORY_TESTS = _REPO / "cdd_guidance/practices/stories/model/_examples/actual/fr
 
 
 def edge_pairs(graph, practice, kind):
-    return [(edge.parent.name, edge.child.name) for edge in graph.practice(practice).reading.in_graph.edge_index.of(kind)]
+    return [(edge.parent.name, edge.child.name) for edge in graph.practices.named(practice).reading.in_graph.edge_index.of(kind)]
 
 
 def story_map_on(graph):
@@ -114,7 +114,7 @@ with description("a screen that shows stories"):
             fresh = Graph()
             fresh.load_working_copy(str(self.working_copy), {"stories": "."})
             fresh.save_json()
-            stories = fresh.practice("stories")
+            stories = fresh.practices.named("stories")
             self.scenario = stories.reading.in_graph.nodes("Scenario")[0]
             self.step = stories.reading.story_tree.steps(self.scenario)[0]
             self.keys = (key_of(self.scenario), key_of(self.step))

@@ -66,7 +66,7 @@ with description("a saved graph of a spec and the code it tests"):
         (self.folder / "src" / ".context" / "cart-model.md").write_text(_CART_MODEL, encoding="utf-8")
         graph = Graph()
         graph.load_files(str(self.folder), ["bdd", "clean_engineering"], ["src"])
-        self.clean = graph.practice("clean_engineering")
+        self.clean = graph.practices.named("clean_engineering")
         self.saved = SavedGraph.from_graph(graph).text
 
     with after.all:

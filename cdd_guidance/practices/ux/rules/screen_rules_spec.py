@@ -40,7 +40,7 @@ class ScreenExample:
 
     def violations(self, rule) -> list[str]:
         """What the rule reports on the screen where validate runs it."""
-        return SchemaRuleRun(rule, RuleCheckContext(self.screen.practice, None)).node_hits(self.screen)
+        return SchemaRuleRun(rule, RuleCheckContext(self.screen.practice)).node_hits(self.screen)
 
 
 with description("a screen checked against the screen-story-budget rule"):
@@ -49,7 +49,7 @@ with description("a screen checked against the screen-story-budget rule"):
             self.example = ScreenExample("Catalog", 5)
 
         with it("should record that it shows each story"):
-            practice = self.example.graph.practice("ux")
+            practice = self.example.graph.practices.named("ux")
             expect([edge.child.name for edge in practice.reading.in_graph.edge_index.of("shows")]).to(have_len(5))
 
         with it("should be over the budget"):

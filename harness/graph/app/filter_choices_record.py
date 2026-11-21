@@ -58,7 +58,7 @@ class FixtureGraph:
     def __init__(self, graph: Graph, fixture: dict[str, Any]) -> None:
         self.graph = graph
         for key, held in fixture["practices"].items():
-            self._fill(self.graph.practice(key), held, fixture["edges_of_type"])
+            self._fill(self.graph.practices.named(key), held, fixture["edges_of_type"])
 
     def _fill(self, practice: PracticeGuidance, held: dict[str, Any], edges_of_type: dict[str, list[str]]) -> None:
         part = practice.reading.in_graph

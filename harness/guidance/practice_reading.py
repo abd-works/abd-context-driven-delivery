@@ -132,13 +132,13 @@ class PracticeReading:
         return self.own_graph_checks()
 
     @property
-    def package(self) -> str:
+    def _package(self) -> str:
         """The Python package that holds the practice, such as ``cdd_guidance.practices.stories``."""
         return type(self.practice).__module__.rsplit(".", 1)[0]
 
     def own_graph_checks(self) -> dict[str, Any]:
         """The graph rules the practice's ``rules`` package lists; a practice that checks more overrides this."""
-        return rules_in(f"{self.package}.rules")
+        return rules_in(f"{self._package}.rules")
 
     def checks(self) -> dict[str, Any]:
         """The graph rules this practice checks, with those the pattern overlays its graph applies add to it, by slug;

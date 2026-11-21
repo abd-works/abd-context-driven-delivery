@@ -111,7 +111,7 @@ class DomainTier:
             ports=ports,
             apps=apps,
             chat=chat,
-            open_app=lambda label: chat.opened(data_of(App.load(label, project=project).open()), report),
+            open_app=lambda label: chat.opened(data_of(App.load(label).open()), report),
             report=report,
         )
 
