@@ -77,7 +77,17 @@ class CheckedGraph:
         return self.files
 
     def violations(self) -> list[Violation]:
-        """The listed practices' violations in the graph this call checks."""
+        """The listed practices' violations in the graph this call checks that nobody accepted: what the call reports,
+        counts, and logs."""
+        return self.session.accepted_violations.open_among(self.found())
+
+    def accepted(self) -> list[Violation]:
+        """The violations the graph found that a person accepted as they are, which the call leaves out of its report
+        and counts there."""
+        return self.session.accepted_violations.accepted_among(self.found())
+
+    def found(self) -> list[Violation]:
+        """The listed practices' violations in the graph this call checks, accepted or not."""
         keys = [fidelity.practice_guidance.key for fidelity in self._fidelities]
         found = self._checked.violations(keys) if self._checked is not None else []
         if self.prefixes:
@@ -133,10 +143,11 @@ class CheckedGraph:
             return
         destination.write_text(self._checked.violated.text, encoding="utf-8")
 
-    def violations_of(self, fidelity: FidelityGuidance) -> list[Violation]:
-        """The violations this call reports that fidelity's practice found, which fidelity's report lists."""
+    def found_by(self, fidelity: FidelityGuidance) -> list[Violation]:
+        """The violations fidelity's practice found in the graph this call checks, accepted or not: what the session's
+        violation history records, so an accepted violation is never recorded as fixed."""
         key = fidelity.practice_guidance.key
-        return [violation for violation in self.violations() if violation.practice == key]
+        return [violation for violation in self.found() if violation.practice == key]
 
     def judged_files(self, on_graph: bool) -> str:
         """Each checked format and its files, for the fidelities judged on this call's graph (on_graph) or on their

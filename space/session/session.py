@@ -17,6 +17,7 @@ from harness.installation.files import command, skill
 from harness.mcp.mcp_annotations import long_call, mcp
 from harness.installation.context_config import CONTEXT_FOLDER, ContextConfig
 from space.repo.repo import Repo
+from space.session.accepted_violations import ACCEPTED_VIOLATIONS_FILE, AcceptedViolations
 from space.session.chat_injections import ChatInjections
 from space.session.decision_records import FORMAT_FILE, DecisionRecords
 from space.session.file_manager import FileEntry, FileText
@@ -588,6 +589,15 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionAl
             return root.as_posix()
         relative = root.relative_to(checkout).as_posix()
         return "" if relative == "." else relative
+
+    @property
+    def accepted_violations(self) -> AcceptedViolations:
+        """The violations a person accepted as they are, kept for the whole project in
+        ``.context/violations-accepted.json`` under the folder the session works in, where its decision records are, so
+        the file is committed with the work and every session on that folder leaves the same violations out. Made from
+        wherever the session works now, since its workpath can change."""
+        root = self.work_root
+        return AcceptedViolations(root / CONTEXT_FOLDER / ACCEPTED_VIOLATIONS_FILE, [root, self.paths.resolved(self.repo_path)])
 
     @property
     def reports_folder(self) -> Path:

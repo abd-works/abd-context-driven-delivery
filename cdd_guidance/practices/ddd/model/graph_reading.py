@@ -8,6 +8,7 @@ by an edge; a building block read from code is joined to the Clean Engineering c
 from __future__ import annotations
 
 import os
+import posixpath
 import re
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
@@ -19,6 +20,7 @@ from harness.graph.saved_graph import NodeIdentity
 from harness.graph.saved_graph import FactValue
 from harness.graph.location import Location
 from harness.guidance.practice_reading import PracticeReading
+from harness.markdown.markdown import MarkdownText
 from harness.graph.model_node import schema_sync_paused
 from harness.graph.skipped_folders import skips_folder
 
@@ -27,7 +29,7 @@ from cdd_guidance.practices.clean_engineering.model.field_types import Relations
 from cdd_guidance.practices.clean_engineering.model.markdown.card_lines import CardLines
 from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownBoundedContextMap
-from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContext, ContextMapping, DomainEvent, Integration
+from cdd_guidance.practices.ddd.model.nodes import TARGET_SEGMENT, Aggregate, AggregateLink, BoundedContext, ContextMapping, DomainEvent, Integration
 from cdd_guidance.practices.ddd.model.stereotypes import BUILDING_BLOCK_KINDS, KIND_OF_STEREOTYPE, TacticalClass, kind_named_by, marks_another_system, root_kept_by
 
 if TYPE_CHECKING:
@@ -61,6 +63,8 @@ CONTEXT_MAP_NAMES = ("bounded-context-map", "bounded_context_map")
 # What a doc comment or a comment line opens with in Python or TypeScript, before the words it writes.
 _COMMENT_MARKS = "*#/ \t"
 _CONTEXT_FOLDER = ".context"
+# The parts a mapping's side writes when it names the context before the aggregate: `Catalogue · Book`.
+_PLACED_SIDE_PARTS = 2
 # A run of the characters a class name is spelled with: a member's type names a class when its name is one whole run.
 _TYPE_WORD = re.compile(r"[A-Za-z0-9_]+")
 
@@ -284,6 +288,41 @@ class _ContextFolders:
         return self._by_folder.get(innermost) or self._by_folder.get(".")
 
 
+class _LinkedAggregates:
+    """The aggregates each bounded context's own file names as links to their headings in a domain model. A link says
+    which aggregate the context means by the heading it opens, so a context that writes links holds exactly the
+    aggregates its links open, and a name its mappings write means the aggregate the link of that name opens. A
+    context that names its aggregates in plain words writes none, and is read by name."""
+
+    def __init__(self) -> None:
+        # Each link with the context that writes it and the document it opens, named from the practice's root.
+        self._written: list[tuple[Node, AggregateLink, str]] = []
+        # The aggregate each link opens, by the context that writes it and the words the link shows.
+        self._opened: dict[tuple[str, str], Node] = {}
+
+    def add(self, context: Node, file: str, links: list[AggregateLink]) -> None:
+        """Hold the links the context's file, at file from the practice's root, writes."""
+        folder = folder_of(file)
+        self._written.extend((context, link, posixpath.normpath(posixpath.join(folder, link.file))) for link in links)
+
+    def written_by(self, context: Node) -> bool:
+        return any(writer is context for writer, _link, _document in self._written)
+
+    def opening(self, document: "_DomainDocument", start: int) -> tuple[Node, AggregateLink] | None:
+        """The link that opens the heading at line start of document, with the context that writes it; none when no
+        link does."""
+        found = ((context, link) for context, link, opened in self._written if opened == document.relative and document.line_anchored(link.anchor) == start)
+        return next(found, None)
+
+    def hold(self, context: Node, link: AggregateLink, aggregate: Node) -> None:
+        """Hold the aggregate read at the heading the context's link opens, under the words the link shows."""
+        self._opened[(context.node_id, Name(link.name).snake)] = aggregate
+
+    def aggregate_named(self, context: Node, name: str) -> Node | None:
+        """The aggregate the context means by name: the one its link showing that name opens; none without such a link."""
+        return self._opened.get((context.node_id, Name(name).snake))
+
+
 class _WorkingCopyRead:
     """One read of the practice's folder into its part of the graph: the bounded contexts its folders mark, the
     aggregates its folders hold with their building blocks, the links between the blocks, and each context mapping."""
@@ -295,13 +334,14 @@ class _WorkingCopyRead:
         self._root = reading.root
         self._domain = domain
         self._contexts = _ContextFolders()
+        self._links = _LinkedAggregates()
         self._blocks = _AggregateBlocks(reading)
 
     def read(self) -> None:
         """Bounded contexts come from the folders that mark one, else from the headings of the documents that describe
         the domain, else the whole folder is one."""
         marked = self._bounded_contexts()
-        described = _DescribedDomain(self._reading, self._contexts, self._documents())
+        described = _DescribedDomain(self._reading, self._contexts, self._documents(), self._links)
         self._read_contexts(marked)
         if not marked and not described.read_contexts():
             self._read_contexts([(".", self._unmarked_context(), ".")])
@@ -363,6 +403,7 @@ class _WorkingCopyRead:
             if parent is not None:
                 self._graph.edges.relate("belongsTo", node, parent)
             self._contexts.add(rel, node)
+            self._links.add(node, markdown, context.aggregate_links)
 
     def _members_by_folder(self, marked: bool) -> dict[str, list[tuple[TacticalClass, str]]]:
         """The production classes the Clean Engineering practice read now, by folder, each building block among them
@@ -459,7 +500,7 @@ class _WorkingCopyRead:
         for rel, context, markdown in marked:
             for mapping in context.mappings:
                 node = self._mapping_node(mapping, self._contexts.at(rel), markdown)
-                self._link_sides(node, mapping, aggregates)
+                self._link_sides(node, mapping, self._contexts.at(rel), aggregates)
 
     def _mapping_node(self, mapping: ContextMapping, context: Node, markdown: str) -> Node:
         """The mapping on the graph, under its context, at the line of the context's file that lists it."""
@@ -468,14 +509,24 @@ class _WorkingCopyRead:
         self._graph.edges.link("mappedTo", context, node)
         return node
 
-    def _link_sides(self, node: Node, mapping: ContextMapping, aggregates: dict[str, Node]) -> None:
-        """Each side to the aggregate it names, whichever case the side and the aggregate's folder spell the name in:
-        a map writes `Cart` and the folder that holds the aggregate is `cart`. A folder's aggregate comes before one a
-        document describes."""
+    def _link_sides(self, node: Node, mapping: ContextMapping, context: Node, aggregates: dict[str, Node]) -> None:
+        """Each side to the aggregate it names. Where the context a side speaks of links its aggregates, the side means
+        the aggregate the link of that name opens. Else it means the aggregate of that name, whichever case the side
+        and the aggregate's folder spell it in: a map writes `Cart` and the folder that holds the aggregate is `cart`,
+        and a folder's aggregate comes before one a document describes."""
         for side, name in mapping.aggregate_names.items():
-            aggregate = aggregates.get(Name(name).snake)
+            spoken_of = self._context_a_side_names(getattr(mapping, side)) or context
+            aggregate = self._links.aggregate_named(spoken_of, name) or aggregates.get(Name(name).snake)
             if aggregate is not None:
                 self._graph.edges.relate(side, node, aggregate)
+
+    def _context_a_side_names(self, written: str) -> Node | None:
+        """The bounded context a mapping's side names before its aggregate (`Catalogue · Book`); none for a side that
+        names its aggregate alone, which speaks of the context that lists the mapping."""
+        parts = [part.strip() for part in TARGET_SEGMENT.split(written)]
+        if len(parts) < _PLACED_SIDE_PARTS:
+            return None
+        return next((node for node in self._in_graph.nodes("BoundedContext") if node.name == parts[-_PLACED_SIDE_PARTS]), None)
 
     def _from_root(self, path: Path) -> str:
         """path as a path from the practice's root, with forward slashes."""
@@ -539,6 +590,7 @@ class _DomainDocument:
         self.cards = CardLines(text)
         self.map = MarkdownBoundedContextMap().parse(text)
         self._lines = text.splitlines()
+        self._text = MarkdownText(text)
 
     def context_lines(self, name: str) -> tuple[int, int]:
         """The first and last line of the bounded context called name: its `## Name | owner` heading through the line
@@ -551,6 +603,11 @@ class _DomainDocument:
 
     def aggregate_lines(self, name: str) -> tuple[int, int]:
         return self.cards.section_of(name) or (1, 1)
+
+    def line_anchored(self, anchor: str) -> int | None:
+        """The line of the heading a link names by anchor, as the Files app opens it; none when no heading has it."""
+        found = self._text.anchored_lines(anchor)
+        return found[0] if found is not None else None
 
     def line_of(self, entry: str, within: tuple[int, int]) -> int:
         """The first line within the lines given that opens with entry, once its indent is gone; else their first."""
@@ -569,12 +626,13 @@ class _DescribedDomain:
     context mappings their integrations write, the events their event maps list, and the edges between them. A block a
     document describes stays beside the block code declares, and the code's block is joined to it."""
 
-    def __init__(self, reading: DddReading, contexts: _ContextFolders, documents: list[_DomainDocument]) -> None:
+    def __init__(self, reading: DddReading, contexts: _ContextFolders, documents: list[_DomainDocument], links: _LinkedAggregates) -> None:
         self._reading = reading
         self._in_graph = reading.in_graph
         self._edges = reading.graph.edges
         self._contexts = contexts
         self._documents = documents
+        self._links = links
         self._blocks = _AggregateBlocks(reading)
         # Each aggregate described, by its context's name and its own, and the root block a domain model draws for it.
         self._aggregates: dict[tuple[str, str], Node] = {}
@@ -616,16 +674,22 @@ class _DescribedDomain:
         self._join_implementations()
 
     def _context_of(self, document: _DomainDocument, name: str) -> Node:
-        """The bounded context called name, else the one around the folder the document describes, else the root."""
-        named = next((node for node in self._in_graph.nodes("BoundedContext") if node.name == name), None)
+        """The bounded context an aggregate no context's file links sits under: the one called name, unless its file
+        links its aggregates, which then leaves this one out; else the one around the folder the document describes,
+        else the root."""
+        named = next((node for node in self._in_graph.nodes("BoundedContext") if node.name == name and not self._links.written_by(node)), None)
         return named or self._contexts.around(folder_of(folder_of(document.relative))) or self._in_graph.root
 
     def _read_aggregate(self, document: _DomainDocument, described: Aggregate) -> Node:
-        """The aggregate at the document's section for it, under its bounded context, holding a building block for each
-        class the document draws in it, each at its card and marked as described by the document."""
+        """The aggregate at the document's section for it, under the bounded context whose own file links that section,
+        else under the context its heading names, holding a building block for each class the document draws in it,
+        each at its card and marked as described by the document."""
         start, end = document.aggregate_lines(described.name)
-        context = self._context_of(document, described.parent.name)
+        linked = self._links.opening(document, start)
+        context = linked[0] if linked is not None else self._context_of(document, described.parent.name)
         node = self._in_graph.add(Aggregate(described.name, 1), f"ddd:Aggregate:{document.relative}:{described.name}", Location(document.relative, start, end))
+        if linked is not None:
+            self._links.hold(*linked, node)
         self._edges.link("owns", context, node)
         self._edges.relate("belongsTo", node, context)
         names = [oclass.name for oclass in described.classes]

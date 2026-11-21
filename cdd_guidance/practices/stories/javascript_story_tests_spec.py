@@ -13,7 +13,7 @@ from harness.graph.graph import Graph
 
 _CODE_LANGUAGES = ["javascript", "python", "typescript"]
 # The formats a fidelity writes that are no programming language.
-_OTHER_FORMATS = {"markdown", "drawio", "whiteboard", "thin_slice", "realization", "json", "miro", "sketch"}
+_OTHER_FORMATS = {"markdown", "drawio", "whiteboard", "thin_slice", "realization", "json", "miro", "sketch", "desktop"}
 
 _STORY_MAP = """\
 # Story Map — Shop

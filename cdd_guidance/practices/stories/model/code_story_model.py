@@ -43,6 +43,8 @@ from cdd_guidance.practices.stories.model.story_model import (
     StoryType,
 )
 from cdd_guidance.practices.stories.model.story_map_files import source_at
+from cdd_guidance.practices.stories.model.reshaped_story_file import ReshapedStoryFile
+from harness.guidance.practice_formats import Reshaped
 from cdd_guidance.practices.stories.model.story_recording import StorySources
 from cdd_guidance.practices.stories.model.story_file import CodeBlock, flat_steps, read_step_code
 from cdd_guidance.practices.stories.model.story_writing import OUTLINE_EXAMPLES, SCENARIO_EXAMPLES, StoryFilePlace, StoryWriting, as_read
@@ -459,6 +461,13 @@ class CodeStoryModel(StoryModel):
     def copy_of(self, source: Optional[StoryModel]) -> "CodeStoryModel":
         """source in this language, with this model's settings; an empty map when source is None."""
         return type(self)(source, tests_root=self._tests_root)
+
+    def reshape(self, rendered: str, existing: str) -> Reshaped:
+        """rendered, the text a render made for one story file, written onto existing, the text that file holds now:
+        the file keeps every line it has, gains the steps, scenarios and stories only the render holds, each empty,
+        and marks those only the file holds as no longer in the model (*ReshapedStoryFile*). The Render action asks
+        it of the format's adapter before it writes onto a story file already there."""
+        return ReshapedStoryFile(self, rendered, existing).reshaped()
 
     language: Optional[CodeLanguage] = None
 

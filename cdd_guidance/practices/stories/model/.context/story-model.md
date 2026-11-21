@@ -459,6 +459,16 @@ The `python` format: Mamba story tests. Nodes: PythonEpic, PythonStory, PythonSc
 
 The model TypeScript and JavaScript share; they write with a *BraceStoryWriting*. Nodes: BraceStory, BraceScenario. Its blocks are found by *BraceStoryFile*.
 
+## ReshapedStoryFile
+
+The scenarios a render brings, written onto the story file already there (`CodeStoryModel.reshape(rendered, existing)`, which the Render action asks of a format's adapter). The file is edited where it stands, matched story to story, scenario to scenario and step to step by their words: a member both hold stays as the file has it; one only the render holds is written in empty; one only the file holds stays with its code under a line saying it is no longer in the model. Only lines are added, so the same scenarios written onto the result change nothing. A file the language finds no story block in, such as a step library, is left as it is.
+
+------
++ reshaped(): Reshaped
+	// the text to save, the members kept and the members added, each named story.scenario.step
++ kept: list[str]
++ added: list[str]
+
 ## ScriptStoryModel : BraceStoryModel
 
 The story tree of a script language, TypeScript or JavaScript, which hold the same story files: a story test (`_story.test`), a shared story file (`.story.shared`), a screen spec (`.story.ui.spec`, read by *ScreenSpecFile* as one story for each `test.describe`), and the step library every story file imports. Nodes: ScriptStory. A language names its extension, its code language, its step library seed, and how a story file imports the step library.

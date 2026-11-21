@@ -200,3 +200,19 @@ the prompt, and no red "chat bar failed to draw" line shows. Not explained: harn
 old pin (302efe378) and the new one, the published mod's files equal the dev runtime's, and the queue mod's one change
 (e40748768) is a filter in robotPromptsOf. Open: whether the bars come back on the next prompt or a restart of the app,
 and whether a draw that throws in the queue mod, which has no try/catch as the chat bar's has, takes both bars away.
+
+## The chat bar's tests and scenarios named in documents are not there
+
+Noticed 2026-11-21 while writing the chat bar's desktop story tests (release-1-2-fixes), by reading, not by a walk:
+
+- `.context/story-map.md`, under Move Work Forward From Chat Bar, says "Acceptance tests are under
+  `harness/chat-ui/pane/test/move-work-forward-from-chat-bar/`". That folder does not exist: the stubbed tests were
+  removed in 8c56ab052, and the scenarios are under `story_tests/move-work-forward-from-chat-bar/`.
+- `harness/diagnostics/server_health_spec.py` says each of its signatures has a test of the same name in
+  `harness/chat-ui/pane/hooks/register.test.ts`. No such file exists, and the server health band, panel and toasts
+  (`health/server-health-client.ts`, `server-health-view.tsx`) have no plugin test; only `install-on-start.test.ts` is
+  left in that folder. The desktop walk question's dialog, added on 2026-11-21, has none either.
+- `harness/chat-ui/.context/` holds only `cdr/`: the mod has no `module-context.md`.
+- Display Stage Strip, Display Session Fidelity Dots, Show Active Session On Status Line, Debug A Failure From Chat Bar
+  and the failure line's Fix button have no scenario in any `*_story.test.md`, so they have no desktop story test yet:
+  a desktop story test repeats scenarios, and these have none to repeat.

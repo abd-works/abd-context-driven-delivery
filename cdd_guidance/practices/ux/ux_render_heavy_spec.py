@@ -46,6 +46,33 @@ def mockup_page() -> str:
     return HtmlUxMap.create().render(ux_map)
 
 
+_VIEW = "bookshop/src/CheckoutView.tsx"
+_VIEW_MODEL = '''import { useState } from "react";
+
+export function CheckoutView({ cart, onPaid }: CheckoutProps) {
+  const [city, setCity] = useState<string>("");
+
+  async function handlePay(): Promise<void> {
+    onPaid(city);
+  }
+
+  return (
+    <main>
+      <button onClick={handlePay}>Pay {cart.total}</button>
+    </main>
+  );
+}
+'''
+_PERSONS_LINE = '    track("paid");'
+
+
+async def _render_view(server: SpecServer, project: Path) -> tuple[bool, str]:
+    async with server.chat(project, _CALL_SECONDS) as chat:
+        arguments = {"guidance": "ux-front-end-code", "format": "javascript", "paths": [_VIEW], "source": "typescript"}
+        result = await chat.call_tool("render.render", arguments=arguments)
+        return bool(result.isError), result.content[0].text
+
+
 async def _render(server: SpecServer, project: Path, format: str) -> tuple[bool, str]:
     async with server.chat(project, _CALL_SECONDS) as chat:
         arguments = {"guidance": "ux-mockup", "format": format, "paths": [_MOCKUP], "source": "html"}
@@ -98,3 +125,47 @@ with description("a mockup rendered to its diagram through a cdd server") as sel
 
         with it("should leave the mockup page as it was"):
             expect((self.project.root / _MOCKUP).read_text(encoding="utf-8")).to(contain("Book Details"))
+
+
+with description("a view rendered to JavaScript through a cdd server, onto the JavaScript file a person wrote into") as self:
+    with before.all:
+        self.server = SpecServer((_RENDER, _SESSIONS))
+        self.server.start()
+        self.project = ThrowawayProject()
+        self.source = self.project.root / _VIEW
+        self.source.parent.mkdir(parents=True)
+        self.source.write_text(_VIEW_MODEL, encoding="utf-8")
+        self.first = asyncio.run(_render_view(self.server, self.project.root))
+        self.file = self.source.with_suffix(".jsx")
+        self.file.write_text(self.file.read_text(encoding="utf-8").replace("    onPaid(city);", f"{_PERSONS_LINE}\n    onPaid(city);"), encoding="utf-8")
+        # The model gains the handler handleClear, and its handler handlePay is renamed handleCheckout.
+        changed = _VIEW_MODEL.replace("handlePay", "handleCheckout").replace("  return (", '  function handleClear(): void {\n    setCity("");\n  }\n\n  return (')
+        self.source.write_text(changed, encoding="utf-8")
+        self.failed, self.answer = asyncio.run(_render_view(self.server, self.project.root))
+        self.text = self.file.read_text(encoding="utf-8")
+        self.again = asyncio.run(_render_view(self.server, self.project.root))
+
+    with after.all:
+        OPEN_PROJECTS.close_all()
+        self.server.stop()
+
+    with it("should have saved the view beside its source the first time"):
+        expect((self.first[0], json.loads(self.first[1])[0]["paths"][0].replace("\\", "/"))).to(equal((False, self.file.as_posix())))
+
+    with it("should keep the line the person wrote in the handler the model renamed"):
+        expect(self.text).to(contain(f"  async function handlePay() {{\n{_PERSONS_LINE}\n    onPaid(city);"))
+
+    with it("should mark that handler as no longer in the model"):
+        expect(self.text).to(contain("no longer in the model: CheckoutView.handlePay"))
+
+    with it("should write each handler the model gained empty, before what the component returns"):
+        expect(self.text).to(contain("  async function handleCheckout() {}\n\n  function handleClear() {}\n\n  return ("))
+
+    with it("should answer what to migrate: the kept handler, and the added ones that may have replaced it"):
+        migrate = json.loads(self.answer)[0]["migrate"]
+        expect([(entry["kept"], entry["may_have_replaced_it"]) for entry in migrate]).to(
+            equal([("CheckoutView.handlePay", ["CheckoutView.handleCheckout", "CheckoutView.handleClear"])])
+        )
+
+    with it("should change nothing when the same view is rendered again"):
+        expect((self.again[0], self.file.read_text(encoding="utf-8"))).to(equal((False, self.text)))

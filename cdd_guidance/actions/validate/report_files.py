@@ -58,12 +58,12 @@ class ReportFiles:
     def save(self, report: str, graph: CheckedGraph) -> None:
         """Save the report into each claimed file, so the board can link to it, with the violations of the graph the
         call checked (its *CheckedGraph*) kept beside each under the same name, and record each in the session's
-        violation history: the hits its fidelity's practice found in the files the call checked."""
+        violation history: the hits its fidelity's practice found in the files the call checked, accepted or not."""
         history = self._session.folder.violation_history
         for fidelity, path in self._claimed_for:
             path.write_text(report, encoding="utf-8")
             graph.save_at(path.with_suffix(".json"))
-            history.record(path, graph.violations_of(fidelity), graph.prefixes)
+            history.record(path, graph.found_by(fidelity), graph.prefixes)
             self._drop_older_checked_graphs(path)
 
     def where(self) -> str:

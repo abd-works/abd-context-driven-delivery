@@ -20,7 +20,7 @@ from cdd_guidance.practices.stories.model.modelled_areas import ExampleObservati
 from cdd_guidance.practices.stories.model.script_story_model import ScriptStoryModel
 from cdd_guidance.practices.stories.model.story_recording import StorySource, imported_files
 from cdd_guidance.practices.stories.model.term_links import TermLinks
-from cdd_guidance.practices.stories.model.story_map_files import STORY_FILE_SUFFIXES, StoryMapFiles, is_story_map_file
+from cdd_guidance.practices.stories.model.story_map_files import DESKTOP_STORY_FILE_SUFFIX, STORY_FILE_SUFFIXES, StoryMapFiles, is_story_map_file
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
@@ -123,9 +123,9 @@ class StoriesReading(PracticeReading):
         return {path for path in files if not path.is_dir()}
 
     def _is_story_file(self, path: Path) -> bool:
-        """Whether Stories reads the file at path: a story map, a story's scenarios in markdown, or a story test in a
-        code format the practice reads."""
-        if is_story_map_file(path) or path.name.endswith(STORY_FILE_SUFFIXES):
+        """Whether Stories reads the file at path: a story map, a story's scenarios in markdown, its desktop story test,
+        or a story test in a code format the practice reads."""
+        if is_story_map_file(path) or path.name.endswith((*STORY_FILE_SUFFIXES, DESKTOP_STORY_FILE_SUFFIX)):
             return True
         return any(reader.is_story_file(path.as_posix()) for reader in self._code_readers)
 

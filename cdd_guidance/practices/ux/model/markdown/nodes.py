@@ -64,26 +64,47 @@ class MarkdownUxMap(UxMap):
 
     def render(self, canonical: UxMap, previous: Optional[str] = None) -> str:
         """canonical's context: copied into a markdown map, which writes itself. previous is the context file as it is
-        now: a source that holds no scope, invariant, or note, such as the drawing, leaves it as it is, and the scope,
-        invariants, or notes a source lacks stay as the file holds them, so a render never empties what a person wrote."""
+        now, which the render writes onto instead of replacing: every line a person wrote stays where it is, the
+        invariants and notes the file lacks are added after the ones it holds, and the scope line says the scope
+        canonical has. A source that holds no scope, invariant, or note, such as the drawing, leaves the file as it is."""
         written = self.copy_of(canonical)
         if not previous:
             return written.save()
-        if written.holds_no_context:
-            return previous
-        written.keep_missing_from(self.parse(previous))
-        return written.save()
+        return written.written_onto(previous, self.parse(previous))
 
-    @property
-    def holds_no_context(self) -> bool:
-        """Whether this map has nothing a context file writes: no scope, no invariant, and no note."""
-        return not (self.scope or self.context.invariants or self.context.notes)
+    def written_onto(self, previous: str, held: UxMap) -> str:
+        """previous, the context file's text, with what this map holds and held, the map read from that text, lacks."""
+        lines = previous.splitlines()
+        if self.scope and self.scope != held.scope:
+            lines = self._with_scope(lines)
+        gained = [item for item in self.context.invariants if item not in held.context.invariants]
+        lines = self._with_items(lines, _INVARIANTS, gained)
+        known = [*held.context.notes, *held.context.invariants]
+        lines = self._with_items(lines, _NOTES, [item for item in self.context.notes if item not in known])
+        return "\n".join(lines) + "\n"
 
-    def keep_missing_from(self, kept: UxMap) -> None:
-        """Take from kept, the context file as it was, the scope, the invariants, and the notes this map has none of."""
-        self.scope = self.scope or kept.scope
-        self.context.invariants = self.context.invariants or list(kept.context.invariants)
-        self.context.notes = self.context.notes or list(kept.context.notes)
+    def _with_scope(self, lines: List[str]) -> List[str]:
+        """lines with this map's scope on the scope line; with no such line, on a line of its own under the title."""
+        at = next((index for index, line in enumerate(lines) if line.strip().startswith(_SCOPE)), -1)
+        if at >= 0:
+            return [*lines[:at], f"{_SCOPE}{self.scope}", *lines[at + 1:]]
+        under = next((index + 1 for index, line in enumerate(lines) if line.strip() == _TITLE), 0)
+        return [*lines[:under], "", f"{_SCOPE}{self.scope}", *lines[under:]]
+
+    def _with_items(self, lines: List[str], heading: str, items: List[str]) -> List[str]:
+        """lines with items as bullets after the last line under heading; with no such heading, under a new one after
+        what the file holds."""
+        if not items:
+            return lines
+        bullets = [f"{_ITEM}{item}" for item in items]
+        at = next((index for index, line in enumerate(lines) if line.strip() == f"{_SECTION}{heading}"), -1)
+        if at < 0:
+            while lines and not lines[-1].strip():
+                lines = lines[:-1]
+            return [*lines, "", f"{_SECTION}{heading}", *bullets]
+        following = next((index for index in range(at + 1, len(lines)) if lines[index].startswith(_SECTION)), len(lines))
+        last = max(index for index in range(at, following) if lines[index].strip()) + 1
+        return [*lines[:last], *bullets, *lines[last:]]
 
     def save(self) -> str:
         lines = [_TITLE, ""]

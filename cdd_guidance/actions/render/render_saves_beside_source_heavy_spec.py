@@ -72,6 +72,22 @@ An order is a cart a customer submitted.
 ----
 + submit(): void
 """
+_CART_MODEL = """# Ordering
+
+**Module:** `src/ordering`
+
+## Cart
+
+### **Cart** <<Aggregate Root>>
+
++ Cart(customer_id: str)
+------
++ customer_id: str
+----
++ total(): int
+"""
+_EMPTY_TOTAL = "    def total(self) -> int:\n        raise NotImplementedError"
+_TOTAL_WITH_CODE = "    def total(self) -> int:\n        # tax is added at checkout\n        return sum(line.subtotal for line in self.lines)"
 _THIN_SLICE = """# Thin Slice
 
 ## Increments
@@ -166,6 +182,30 @@ with description("Render saving what it makes beside its source, called through 
 
         with it("should answer the chat with the saved files rather than the code"):
             expect((self.failed, "cart.py" in self.answer, "class Cart" in self.answer)).to(equal((False, True, False)))
+
+    # The person's answer (2026-11-21): a render reshapes an existing file and loses nothing. Their example, through
+    # the cdd server: a class that already has code, an operation added in the markdown model, rendered again.
+    with context("a class model whose class already has code, with an operation added in the markdown, rendered again"):
+        with before.each:
+            self.model = self.project.root / "src" / "ordering" / ".context" / "ordering-model.md"
+            self.model.parent.mkdir(parents=True)
+            self.model.write_text(_CART_MODEL, encoding="utf-8")
+            asyncio.run(_render(self.server, self.project.root, "python", "src/ordering/.context/ordering-model.md", None, "clean-engineering-model"))
+            self.code = self.project.root / "src" / "ordering" / "ordering.py"
+            self.code.write_text(self.code.read_text(encoding="utf-8").replace(_EMPTY_TOTAL, _TOTAL_WITH_CODE), encoding="utf-8")
+            self.model.write_text(_CART_MODEL.replace("+ total(): int", "+ subtotal(): int") + "+ check_out(): int\n", encoding="utf-8")
+            self.failed, self.answer = asyncio.run(_render(self.server, self.project.root, "python", "src/ordering/.context/ordering-model.md", None, "clean-engineering-model"))
+            self.written = self.code.read_text(encoding="utf-8")
+
+        with it("should keep the code the class had, marked as no longer in the model since total was renamed"):
+            expect(self.written.index("no longer in the model: Cart.total") < self.written.index("return sum(line.subtotal for line in self.lines)")).to(equal(True))
+
+        with it("should add the operations the model gained, empty"):
+            expect(self.written).to(contain("    def subtotal(self) -> int:\n        raise NotImplementedError", "    def check_out(self) -> int:\n        raise NotImplementedError"))
+
+        with it("should answer the chat what to migrate: total, and the added operations that may have replaced it"):
+            migrate = json.loads(self.answer)[0]["migrate"]
+            expect([(each["kept"], each["may_have_replaced_it"]) for each in migrate]).to(equal([("Cart.total", ["Cart.check_out", "Cart.subtotal"])]))
 
     with context("a story map whose drawing a person moved a card on"):
         with before.each:

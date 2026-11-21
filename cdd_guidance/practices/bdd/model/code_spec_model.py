@@ -21,6 +21,8 @@ from cdd_guidance.practices.clean_engineering.model.code_body import (
 )
 from harness.graph.graph import Graph
 
+from cdd_guidance.practices.bdd.model.spec_reshape import SpecReshape
+from harness.guidance.practice_formats import Reshaped
 from cdd_guidance.practices.bdd.model.bdd_model import BddModel
 from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation
 from cdd_guidance.practices.bdd.model.spec_source import SIGNATURE
@@ -288,6 +290,10 @@ class PythonBddModel(CodeBddModel):
         self._read_spec(self._lines, self._child_blocks(descriptions, self))
         return self
 
+    def reshape(self, rendered: str, existing: str) -> Reshaped:
+        """rendered, a describe tree, written onto existing, a mamba spec already there, which keeps every line it holds."""
+        return SpecReshape(self.language, python_kinds=_MAMBA_BLOCKS).onto(existing, rendered)
+
     def default_imports(self) -> List[str]:
         return ["from mamba import description, context, it", "from expects import expect"]
 
@@ -366,6 +372,10 @@ class TypeScriptBddModel(CodeBddModel):
 
     def default_imports(self) -> List[str]:
         return ['import { describe, it } from "vitest";']
+
+    def reshape(self, rendered: str, existing: str) -> Reshaped:
+        """rendered, a describe tree, written onto existing, a script spec already there, which keeps every line it holds."""
+        return SpecReshape(self.language, script_calls=DescribeCalls).onto(existing, rendered)
 
     def block_open(self, kind: str, name: str) -> str:
         call = "it" if kind == "it" else "describe"

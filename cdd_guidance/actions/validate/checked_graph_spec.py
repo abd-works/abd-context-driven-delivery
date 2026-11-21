@@ -111,3 +111,25 @@ with description("a validate call's checked graph"):
             expect([violation.rule for violation in self.graph.violations()]).to(
                 equal(["limit-operation-parameters", "load-with-identity-in-hand"])
             )
+
+    with context("that checks a graph one of whose violations a person accepted"):
+        with before.each:
+            self.graph, self.throwaway = _checked(str(_SAVED_GRAPH))
+            self.accepted = self.graph.found()[0]
+            self.graph.session.accepted_violations.accept(self.accepted)
+
+        with after.each:
+            self.throwaway.close()
+
+        with it("should leave the accepted violation out of the violations it reports"):
+            expect([violation.rule for violation in self.graph.violations()]).to(equal(["load-with-identity-in-hand"]))
+
+        with it("should name the accepted violation as accepted"):
+            expect(self.graph.accepted()).to(equal([self.accepted]))
+
+        with it("should still find it, so the session's history never records it as fixed"):
+            expect([violation.rule for violation in self.graph.found()]).to(equal(["limit-operation-parameters", "load-with-identity-in-hand"]))
+
+        with it("should report it again once the acceptance is taken back"):
+            self.graph.session.accepted_violations.reopen(self.accepted)
+            expect([violation.rule for violation in self.graph.violations()]).to(equal(["limit-operation-parameters", "load-with-identity-in-hand"]))

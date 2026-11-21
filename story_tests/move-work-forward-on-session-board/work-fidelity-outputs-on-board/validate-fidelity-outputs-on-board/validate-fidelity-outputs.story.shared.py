@@ -17,7 +17,9 @@ from __future__ import annotations
 
 import re
 
-from expects import contain, equal, expect
+import json
+
+from expects import contain, equal, expect, raise_error
 
 from cdd_guidance.practices.stories.stories import Stories
 from space.kanban.session_board_examples import (
@@ -33,6 +35,8 @@ from space.kanban.session_board_examples import (
     STORY_MAP_TEXT,
     ReportSeed,
     generated,
+    saved_graph,
+    saved_practice,
     seed_checkout_flow_held_on_violations,
     seed_checkout_flow_open,
 )
@@ -49,6 +53,22 @@ EARLIER_TACTICS_GRAPH =f"{REPORTS}/ddd-tactics-20200101T000000.json"
 EARLIER_TACTICS_GRAPH_TEXT = "[]"
 # Validate dates each report by the clock, so a report's name is matched, not spelled out.
 TACTICS_REPORT_NAME = re.compile(r"^ddd-tactics-\d{8}T\d{6}\.md$")
+ACCEPTED_FILE = ".context/violations-accepted.json"
+# The one hit of checkout-flow's story map report, as the report panel shows it and sends it back to accept it.
+STORY_MAP_HIT = {"rule": "verb-noun-format", "message": "Name the story with a verb", "location": STORY_MAP_FILE, "line": 6, "node_id": "node-1"}
+# A later validate of the story map that finds the same rule on the same node, saying something else.
+REWORDED_REPORT = ReportSeed(
+    "stories-story-map-20261101T120000",
+    graph=saved_graph(saved_practice("stories", "node-1", STORY_MAP_FILE, 6, ("verb-noun-format", "Name the story with a verb and a noun"))),
+)
+# The story map's report with no graph hit and the judgment the validating agent adds: one rule failed on line 7.
+JUDGED_FINDING = {"rule": "do-not-invent-requirements", "message": "`Confirm Order`: no source names this story.", "location": STORY_MAP_FILE, "line": 7, "node_id": ""}
+JUDGED_REPORT = ReportSeed(
+    STORY_MAP_REPORT,
+    text="# Graph rule validation\n\n## Judgment — `.context/story-map.md`\n\n### `do-not-invent-requirements` — Fail\n- story-map.md:7 `Confirm Order`: no source names this story.\n",
+    graph=saved_graph(saved_practice("stories", "node-1", STORY_MAP_FILE, 6)),
+)
+UNREADABLE_ACCEPTED = "{ accepted: ["
 
 
 def seed_checkout_flow_with_outdated_report(project) -> None:
@@ -278,3 +298,184 @@ def _(s):
     @s.then("the story_map bar shows no report link")
     def _(world):
         expect(progress_in(world.read, STORY_MAP)["report_file"]).to(equal(""))
+
+
+def accepted_in(project) -> list[dict]:
+    """Each acceptance the project's violations-accepted.json keeps."""
+    return json.loads((project.root / ACCEPTED_FILE).read_text(encoding="utf-8"))["accepted"]
+
+
+def story_map_report(world) -> dict:
+    """checkout-flow's story_map report as the report panel reads it."""
+    return world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).work.progress_of(STORY_MAP).report())
+
+
+def listed_in(report: dict, kind: str = "rules") -> list[tuple[str, int]]:
+    """Each rule of report's open rules, or of its accepted ones, with how many violations it lists."""
+    return [(rule["rule"]["slug"], len(rule["violations"])) for rule in report[kind]]
+
+
+def seed_story_map_hit_accepted(world) -> None:
+    """checkout-flow held on its story map's one violation, which the Person accepted on the report."""
+    seed_checkout_flow_held_on_violations(world.project)
+    world.Ticket.load(CHECKOUT_FLOW.name).work.progress_of(STORY_MAP).accept_violation(**STORY_MAP_HIT)
+
+
+@shared_stories.scenario("Accept Report Violation", "Accept a violation as it is")
+def _(s):
+    @s.given("checkout-flow's story_map report lists verb-noun-format at .context/story-map.md line 6, on the story node-1, saying Name the story with a verb")
+    def _(world):
+        seed_checkout_flow_held_on_violations(world.project)
+
+    @s.when("the Person accepts that violation")
+    def _(world):
+        world.report = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).work.progress_of(STORY_MAP).accept_violation(**STORY_MAP_HIT))
+
+    @s.then(".context/violations-accepted.json keeps verb-noun-format on node-1 with the message Name the story with a verb")
+    def _(world):
+        kept = [(entry["rule"], entry["node_id"], entry["message"]) for entry in accepted_in(world.project)]
+        expect(kept).to(equal([("verb-noun-format", "node-1", "Name the story with a verb")]))
+
+    @s.and_("the story_map report lists no rules and says it leaves out 1 accepted violation")
+    def _(world):
+        report = story_map_report(world)
+        expect((world.report["rules"], report["rules"], report["violation_count"], report["accepted_count"], listed_in(report, "accepted"))).to(
+            equal(([], [], 0, 1, [("verb-noun-format", 1)]))
+        )
+
+    @s.and_("the story_map tile marks Validate ✓ with no violations")
+    def _(world):
+        progress = progress_in(world.data_of(world.Ticket.load(CHECKOUT_FLOW.name)), STORY_MAP)
+        expect((progress["actions"]["validate"], progress["state"], progress["has_violations"], progress["violation_count"])).to(equal(("done", "done", False, 0)))
+
+
+@shared_stories.scenario("Accept Report Violation", "Leave an accepted violation out of the next validation")
+def _(s):
+    @s.given("the session checkout-flow has an entity root with a private-method-naming violation")
+    def _(world):
+        world.project.seed_graph_example(ENTITY_ROOT_FILE)
+        seed_checkout_flow_open(world.project)
+
+    @s.and_("Claude Code validated ddd-tactics on that file")
+    def _(world):
+        world.first = str(world.Validate().validate(guidance=["ddd-tactics"], paths=[ENTITY_ROOT_FILE]))
+
+    @s.and_("the Person accepted every private-method-naming violation of the ddd-tactics report")
+    def _(world):
+        progress = world.Ticket.load(CHECKOUT_FLOW.name).work.progress_of("ddd-tactics")
+        rule = next(rule for rule in world.data_of(progress.report())["rules"] if rule["rule"]["slug"] == "private-method-naming")
+        world.accepted = rule["violations"]
+        for violation in world.accepted:
+            progress.accept_violation(**{name: violation[name] for name in ("rule", "message", "location", "line", "node_id")})
+
+    @s.when("Claude Code validates ddd-tactics on that file again")
+    def _(world):
+        world.again = str(world.Validate().validate(guidance=["ddd-tactics"], paths=[ENTITY_ROOT_FILE]))
+        world.saved = sorted((world.project.root / REPORTS).glob("ddd-tactics-*.md"))[-1].read_text(encoding="utf-8")
+
+    @s.then("the validation report names no private-method-naming violation")
+    def _(world):
+        named = [any(violation["message"] in text for violation in world.accepted) for text in (world.first, world.again, world.saved)]
+        expect(named).to(equal([True, False, False]))
+
+    @s.and_("it says how many accepted violations it leaves out, kept in .context/violations-accepted.json")
+    def _(world):
+        expect(world.saved).to(contain(f"**Accepted violations left out:** {len(world.accepted)}"))
+        expect(world.saved).to(contain(ACCEPTED_FILE))
+
+    @s.and_("the session log's validate line names no private-method-naming violation")
+    def _(world):
+        last = [line for line in (world.project.sessions / CHECKOUT_FLOW.name / "session.log").read_text(encoding="utf-8").splitlines() if " validate " in line][-1]
+        expect("graph-rule private-method-naming" in last).to(equal(False))
+
+
+@shared_stories.scenario("Accept Report Violation", "Show an accepted violation again once its finding changes")
+def _(s):
+    @s.given("the Person accepted verb-noun-format on node-1 saying Name the story with a verb")
+    def _(world):
+        seed_story_map_hit_accepted(world)
+
+    @s.when("Claude Code validates the story map again and finds verb-noun-format on node-1 saying Name the story with a verb and a noun")
+    def _(world):
+        world.project.seed_report(CHECKOUT_FLOW, REWORDED_REPORT)
+
+    @s.then("the story_map report lists verb-noun-format with one violation again")
+    def _(world):
+        report = story_map_report(world)
+        expect((listed_in(report), report["accepted_count"])).to(equal(([("verb-noun-format", 1)], 0)))
+
+    @s.and_("the story_map tile marks Validate as violations")
+    def _(world):
+        expect_held_on_violations(world.data_of(world.Ticket.load(CHECKOUT_FLOW.name)), STORY_MAP)
+
+
+@shared_stories.scenario("Accept Report Violation", "Accept a judged finding on a line of a file")
+def _(s):
+    @s.given("checkout-flow's story_map report's judgment fails do-not-invent-requirements at story-map.md line 7, which reads - Confirm Order")
+    def _(world):
+        world.project.seed_file(STORY_MAP_FILE, STORY_MAP_TEXT)
+        world.project.seed_session(CHECKOUT_FLOW)
+        world.project.seed_report(CHECKOUT_FLOW, JUDGED_REPORT)
+
+    @s.when("the Person accepts that finding")
+    def _(world):
+        world.Ticket.load(CHECKOUT_FLOW.name).work.progress_of(STORY_MAP).accept_violation(**JUDGED_FINDING)
+
+    @s.then(".context/violations-accepted.json keeps do-not-invent-requirements on .context/story-map.md with the judged content - Confirm Order and no line number")
+    def _(world):
+        kept = [(entry["rule"], entry["file"], entry["content"], "line" in entry) for entry in accepted_in(world.project)]
+        expect(kept).to(equal([("do-not-invent-requirements", STORY_MAP_FILE, "- Confirm Order", False)]))
+
+    @s.and_("the story_map report lists no rules")
+    def _(world):
+        report = story_map_report(world)
+        expect((report["rules"], report["accepted_count"])).to(equal(([], 1)))
+
+
+@shared_stories.scenario("Accept Report Violation", "Take an acceptance back")
+def _(s):
+    @s.given("the Person accepted verb-noun-format on node-1 saying Name the story with a verb")
+    def _(world):
+        seed_story_map_hit_accepted(world)
+
+    @s.and_("the story_map report lists that violation among the accepted ones")
+    def _(world):
+        world.accepted = story_map_report(world)["accepted"][0]["violations"][0]
+
+    @s.when("the Person takes that acceptance back")
+    def _(world):
+        asked = {name: world.accepted[name] for name in ("rule", "message", "location", "line", "node_id")}
+        world.report = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).work.progress_of(STORY_MAP).reopen_violation(**asked))
+
+    @s.then("the story_map report lists verb-noun-format with one violation again")
+    def _(world):
+        expect((listed_in(world.report), listed_in(story_map_report(world)), world.report["accepted_count"])).to(
+            equal(([("verb-noun-format", 1)], [("verb-noun-format", 1)], 0))
+        )
+
+    @s.and_(".context/violations-accepted.json keeps no acceptance")
+    def _(world):
+        expect(accepted_in(world.project)).to(equal([]))
+
+
+@shared_stories.scenario("Accept Report Violation", "Refuse accepted violations that are not readable JSON")
+def _(s):
+    @s.given("checkout-flow's story map has violations")
+    def _(world):
+        seed_checkout_flow_held_on_violations(world.project)
+
+    @s.and_(".context/violations-accepted.json is not readable JSON")
+    def _(world):
+        world.project.seed_file(ACCEPTED_FILE, UNREADABLE_ACCEPTED)
+
+    @s.when("the Person opens checkout-flow's story_map report")
+    def _(world):
+        world.opening = lambda: story_map_report(world)
+
+    @s.then("the report is refused, naming .context/violations-accepted.json and how to repair it")
+    def _(world):
+        expect(world.opening).to(raise_error(Exception, contain("violations-accepted.json", "Repair it")))
+
+    @s.and_("the file is left as it was")
+    def _(world):
+        expect((world.project.root / ACCEPTED_FILE).read_text(encoding="utf-8")).to(equal(UNREADABLE_ACCEPTED))

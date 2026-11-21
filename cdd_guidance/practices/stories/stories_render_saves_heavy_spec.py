@@ -123,3 +123,36 @@ with description("A Stories render called through a cdd server") as self:
 
         with it("should refuse nothing"):
             expect(self.failed).to(equal(False))
+
+    # The person's answer of 2026-11-21: a render reshapes an existing file and loses nothing. The scenarios gained a
+    # step and renamed one; the story test a person wrote keeps its code, and the new steps come in empty.
+    with context("of scenarios that changed, onto the Python story test a person already wrote"):
+        with before.all:
+            self.project = _project_written_as("python")
+            scenarios = PACK_ORDERS_FILES["markdown"][f"{_PACK_ORDERS}/pack_order_story.test.md"]
+            changed = scenarios.replace(
+                "*Then* the Order paid order has status packed\n",
+                "*Then* the Order paid order has status packed\n  *And* the Shop Clerk sees the Order in the packed list\n",
+            ).replace("*Given* the Shop keeps Order unpaid order\n*When* the Shop Clerk packs the Order", "*Given* the Shop keeps Order unpaid order\n*When* the Shop Clerk packs the unpaid Order")
+            (self.project.root / _PACK_ORDERS / "pack_order_story.test.md").write_text(changed, encoding="utf-8")
+            self.story_test = self.project.root / _PACK_ORDERS / "pack-order" / "pack_order_story.test.py"
+            self.before = self.story_test.read_text(encoding="utf-8")
+            named = [f"{_PACK_ORDERS}/pack_order_story.test.md"]
+            self.failed, self.answer = asyncio.run(_render(self.server, self.project.root, "stories-acceptance-tests", "python", named))
+            self.after = self.story_test.read_text(encoding="utf-8")
+
+        with it("should refuse nothing"):
+            expect(self.failed).to(equal(False))
+
+        with it("should keep every line the story test held"):
+            held = self.after.splitlines()
+            expect([line for line in self.before.splitlines() if line.strip() and not any(line.strip() in kept for kept in held)]).to(equal([]))
+
+        with it("should write the step the scenarios gained into the story test, with no code yet"):
+            expect(self.after).to(contain('with and_("the Shop Clerk sees the Order in the packed list"):\n            pass'))
+
+        with it("should keep the step the scenarios renamed, with its code, marked as no longer in the model"):
+            expect(self.after).to(contain('no longer in the model: step the Shop Clerk packs the Order of scenario Refuse to pack an unpaid order'))
+
+        with it("should tell the chat which step to migrate"):
+            expect(self.answer).to(contain("the Shop Clerk packs the unpaid Order"))

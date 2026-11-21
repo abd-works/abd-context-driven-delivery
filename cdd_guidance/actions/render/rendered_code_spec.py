@@ -13,6 +13,8 @@ from expects import contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
 from cdd_guidance.actions.render.rendered_code import RenderedCode, RenderHasNoDeclaredPlace
+from cdd_guidance.actions.render.reshaped_code import RenderWouldLoseContent
+from harness.guidance.practice_formats import Reshaped
 from harness.markdown.format import Format
 
 AGGREGATE_FILE = "{bounded_context}/{aggregate}/{aggregate}.py"
@@ -59,24 +61,70 @@ with description("a render to code that is saved") as self:
         with it("should answer no content for an agent to save"):
             expect("content" in self.code.save({"format": "python", "content": MODEL_CODE})).to(equal(False))
 
-        with context("that a person changed a file of"):
+        with context("that a person filled a file of with code, rendered again"):
             with before.each:
                 self.code.save({"format": "python", "content": MODEL_CODE})
                 self.cart = self.root / "ordering/cart/cart.py"
                 self.cart.write_text("class Cart:\n    def total(self):\n        return 5\n", encoding="utf-8")
                 self.result = self.code.save({"format": "python", "content": MODEL_CODE})
 
-            with it("should keep the file as the person wrote it"):
+            with it("should keep the code the person wrote"):
                 expect(self.cart.read_text(encoding="utf-8")).to(contain("return 5"))
 
-            with it("should name the file as kept, not as saved"):
-                expect(([Path(path).name for path in self.result["kept"]], _saved(self.root, self.result))).to(equal((["cart.py"], ["ordering/order_line/order_line.py"])))
+            with it("should name every file as holding the render"):
+                expect(_saved(self.root, self.result)).to(equal(["ordering/cart/cart.py", "ordering/order_line/order_line.py"]))
+
+            with it("should name total, which the model does not hold, as waiting to be migrated in that file"):
+                expect([(Path(each["file"]).name, each["kept"], each["may_have_replaced_it"]) for each in self.result["migrate"]]).to(equal([("cart.py", "Cart.total", [])]))
+
+        with context("that a file of holds a class the section does not, rendered with the class in it"):
+            with before.each:
+                self.code.save({"format": "python", "content": MODEL_CODE})
+                self.cart = self.root / "ordering/cart/cart.py"
+                self.cart.write_text("class Cart:\n    def old_total(self):\n        return 5\n", encoding="utf-8")
+                rendered = MODEL_CODE.replace("class Cart:\n    pass", "class Cart:\n    def total(self):\n        raise NotImplementedError")
+                self.result = self.code.save({"format": "python", "content": rendered})
+
+            with it("should list the added operation as what may have replaced the one kept"):
+                expect([(each["kept"], each["may_have_replaced_it"]) for each in self.result["migrate"]]).to(equal([("Cart.old_total", ["Cart.total"])]))
+
+        with context("that a file of holds an operation of, whose opening line the section changed"):
+            with before.each:
+                self.code.save({"format": "python", "content": MODEL_CODE})
+                self.cart = self.root / "ordering/cart/cart.py"
+                self.cart.write_text("class Cart:" + chr(10) + "    def total(self):" + chr(10) + "        return 5" + chr(10), encoding="utf-8")
+                rendered = MODEL_CODE.replace("class Cart:" + chr(10) + "    pass", "class Cart:" + chr(10) + "    def total(self, tax: int) -> int:" + chr(10) + "        raise NotImplementedError")
+                self.result = self.code.save({"format": "python", "content": rendered})
+
+            with it("should list the operation as one whose signature in the model now differs, with the model's"):
+                listed = [(Path(each["file"]).name, each["signature_differs"], each["model_has"]) for each in self.result["migrate"]]
+                expect(listed).to(equal([("cart.py", "Cart.total", "def total(self, tax: int) -> int:")]))
 
         with context("that is rendered again unchanged"):
-            with it("should name every file as saved and none as kept"):
+            with it("should name every file as saved and nothing to migrate"):
                 self.code.save({"format": "python", "content": MODEL_CODE})
                 result = self.code.save({"format": "python", "content": MODEL_CODE})
-                expect((len(result["paths"]), result["kept"])).to(equal((2, [])))
+                expect((len(result["paths"]), result["migrate"])).to(equal((2, [])))
+
+        with context("whose format writes onto the existing text itself and drops a line the file held"):
+            with before.each:
+                lossy = lambda rendered, existing: Reshaped(rendered, [], [])
+                self.code = RenderedCode(self.root, [AGGREGATE_FILE], Format("python"), reshape=lossy)
+                self.code.save({"format": "python", "content": MODEL_CODE})
+                self.cart = self.root / "ordering/cart/cart.py"
+                self.written = "class Cart:\n    def total(self):\n        return 5\n"
+                self.cart.write_text(self.written, encoding="utf-8")
+                self.save = lambda: self.code.save({"format": "python", "content": MODEL_CODE})
+
+            with it("should fail, naming the line the render would lose"):
+                expect(self.save).to(raise_error(RenderWouldLoseContent, contain("return 5")))
+
+            with it("should leave the file as it was"):
+                try:
+                    self.save()
+                except RenderWouldLoseContent:
+                    pass
+                expect(self.cart.read_text(encoding="utf-8")).to(equal(self.written))
 
     with context("with a section whose names do not fill the declared path"):
         with it("should refuse, naming the section and the declared path, and save nothing"):

@@ -59,6 +59,9 @@ export const fixTitleOn = (board: BoardClient): string => (board.sendsFixesDirec
 export const falseTitleOn = (board: BoardClient): string =>
   board.sendsFixesDirectly ? 'Say this violation is false: the chat investigates the rule' : "Say this violation is false: put the request to investigate the rule in the chat's prompt"
 
+export const ACCEPT_TITLE = 'Accept this violation as it is: no later validation reports it while it stays the same'
+export const TAKE_BACK_TITLE = 'Take this acceptance back: the violation is reported again'
+
 // A report as the side panel reads it, for the ticket whose report it is. ReportData has no generated class, because
 // Python returns it as a plain result.
 export class ReportClient {
@@ -77,6 +80,25 @@ export class ReportClient {
   // The person says the finding is wrong: the chat investigates the rule, in the same place a fix would go.
   reportFalseViolation(rule: ReportRuleData, violation: ViolationData): Promise<void> {
     return this.deliver(falseViolationPrompt(rule, violation))
+  }
+
+  // The person accepts the finding as it is. Python keeps the acceptance, by the rule and the id of the node the
+  // violation is on, and decides what it covers; the page names the violation as the report showed it and reads the
+  // open report again.
+  async acceptViolation(rule: ReportRuleData, violation: ViolationData): Promise<void> {
+    const kept = await this.progressOf(rule)?.acceptViolation(rule.rule.slug, violation.message, violation.location, violation.line ?? 0, violation.node_id)
+    if (kept) await this.page.panels.reload()
+  }
+
+  // The person takes an acceptance back, so the violation is reported again.
+  async reopenViolation(rule: ReportRuleData, violation: ViolationData): Promise<void> {
+    const reopened = await this.progressOf(rule)?.reopenViolation(rule.rule.slug, violation.message, violation.location, violation.line ?? 0, violation.node_id)
+    if (reopened) await this.page.panels.reload()
+  }
+
+  // A rule names its fidelity, since a ticket's report lists the rules of several; the fidelity's progress keeps its report.
+  private progressOf(rule: ReportRuleData) {
+    return this.ticket.work.progressNamed(rule.fidelity.slug)
   }
 
   fixRule(rule: ReportRuleData): Promise<void> {
@@ -112,8 +134,17 @@ export class ReportClient {
     return this.report.is_out_of_date
   }
 
-  // Graph hits and judged findings together, as Python counts them.
+  // Graph hits and judged findings together, as Python counts them, without the ones a person accepted.
   get violationCount(): number {
     return this.report.violation_count
+  }
+
+  // The violations a person accepted, under the rule each breaks, which Python leaves out of the rules and the count.
+  get accepted(): ReportRuleData[] {
+    return this.report.accepted
+  }
+
+  get acceptedCount(): number {
+    return this.report.accepted_count
   }
 }

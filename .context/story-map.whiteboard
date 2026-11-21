@@ -141,7 +141,7 @@
   "story.user.f9e6c4f480",
   "subepic.1.9e7b610d57",
   "story.user.a46f440319",
-  "story.user.ce5c477cb0",
+  "story.user.bd5a869fad",
   "story.user.860eb2797d",
   "story.user.e8f39c7137",
   "story.user.a8f26e9c69",
@@ -174,7 +174,6 @@
   "story.user.666b0edbaa",
   "story.user.4545dd6e3c",
   "story.user.7b2dd736e1",
-  "subepic.1.c603802d88",
   "subepic.1.1207510dad",
   "story.user.d42528467a",
   "story.user.b734ef6993",
@@ -238,7 +237,7 @@
   "story.user.d65d06fcaf",
   "story.user.1bbb34b588",
   "story.user.a8ec628bcf",
-  "story.user.9de2bc0be1",
+  "story.user.2463149ea5",
   "subepic.1.20c8f70760",
   "story.user.45727726d0",
   "story.user.0152071ea7",
@@ -340,6 +339,7 @@
   "story.user.6c8c3e2d62",
   "story.user.eaa9ec5d5a",
   "story.user.9730a38c1b",
+  "story.user.9790669599",
   "subepic.0.6df390b88d",
   "story.user.e14937b255",
   "story.user.7da1473cd6",
@@ -348,6 +348,7 @@
   "story.user.86d5084a9b",
   "story.user.67317cec1c",
   "story.user.d192f7f2a0",
+  "story.user.57b9c89f66",
   "subepic.0.73fd39b03d",
   "story.user.6fa8d4fce9",
   "story.user.9b93d851d4",
@@ -363,6 +364,8 @@
   "story.user.ea3aa222bc",
   "story.user.6c96c3aaef",
   "story.user.a9d296a4a5",
+  "subepic.0.84692a35ca",
+  "story.user.611941f6e7",
   "epic.ae0fb74ed4",
   "subepic.0.801529e407",
   "story.user.fac9664ee5",
@@ -371,11 +374,17 @@
   "story.user.90d2bbf9ca",
   "story.user.caeb2fd905",
   "story.user.e484483db6",
-  "story.user.59d23f9458",
-  "story.user.e9554286e7",
+  "story.user.25b2ba1072",
+  "story.user.317c722861",
   "subepic.0.caa57dedfa",
-  "story.user.21a3b8b97f",
-  "story.user.56bdf764eb",
+  "story.user.81f883df9c",
+  "story.user.48b654f573",
+  "story.user.31c035dd35",
+  "story.user.acda6e2f1b",
+  "story.user.7df9df4737",
+  "story.user.8088b20db4",
+  "story.user.9c65bbd558",
+  "story.user.3b05ef9669",
   "subepic.0.57a98af1ae",
   "story.user.b9b5bee800",
   "story.user.d2b0fff9fc",
@@ -475,7 +484,7 @@
   "story.user.10526eb05b",
   "story.system.1c843b7df2",
   "story.system.0b1d7b1cf5",
-  "story.user.35c10b332e",
+  "story.user.41d645e6e8",
   "story.user.0971e1ff78",
   "story.user.9b47cc320b",
   "subepic.0.8a2a830f9b",
@@ -860,10 +869,10 @@
    "text": "*Person*\nChoose Where To Install",
    "kind": "rounded",
    "size": "small",
-   "x": 2672,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 2672.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.user.84a943ec1b": {
    "type": "shape",
@@ -871,10 +880,10 @@
    "text": "*Person*\nRefresh The Installer's Own Commands",
    "kind": "rounded",
    "size": "small",
-   "x": 2848,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 2848.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.user.74f1a20825": {
    "type": "shape",
@@ -882,10 +891,10 @@
    "text": "*Person*\nInstall The Latest Release",
    "kind": "rounded",
    "size": "small",
-   "x": 3024,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 3024.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.system.ffdcc260af": {
    "type": "shape",
@@ -893,10 +902,10 @@
    "text": "*Installer*\nPublish Mods For Every Chat",
    "kind": "rounded",
    "size": "small",
-   "x": 3200,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 3200.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "subepic.0.927e18c177": {
    "type": "shape",
@@ -1267,10 +1276,10 @@
    "text": "*Agent*\nTake Artifact To Another Format And Back",
    "kind": "rounded",
    "size": "small",
-   "x": 7962,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 7962.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.user.0961b6449c": {
    "type": "shape",
@@ -2173,16 +2182,16 @@
    "w": 152.0,
    "h": 152.0
   },
-  "story.user.ce5c477cb0": {
+  "story.user.bd5a869fad": {
    "type": "shape",
    "color": "yellow",
-   "text": "*Board App*\nRun Work Type Flows",
+   "text": "*Board App*\nDisplay Work Type Flows On Board",
    "kind": "rounded",
    "size": "small",
-   "x": 19236.0,
-   "y": 339.0,
-   "w": 152.0,
-   "h": 152.0
+   "x": 20116,
+   "y": 339,
+   "w": 152,
+   "h": 152
   },
   "story.user.860eb2797d": {
    "type": "shape",
@@ -2536,17 +2545,6 @@
    "w": 152.0,
    "h": 152.0
   },
-  "subepic.1.c603802d88": {
-   "type": "shape",
-   "color": "green",
-   "text": "Review Files In Viewer",
-   "kind": "rounded",
-   "size": "body",
-   "x": 24152.0,
-   "y": 263.0,
-   "w": 168.0,
-   "h": 60.0
-  },
   "subepic.1.1207510dad": {
    "type": "shape",
    "color": "green",
@@ -2706,10 +2704,10 @@
    "text": "*Person*\nCreate Git Repository First",
    "kind": "rounded",
    "size": "small",
-   "x": 26990,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 26990.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.user.538df2706b": {
    "type": "shape",
@@ -3239,16 +3237,16 @@
    "w": 152.0,
    "h": 152.0
   },
-  "story.user.9de2bc0be1": {
+  "story.user.2463149ea5": {
    "type": "shape",
    "color": "yellow",
-   "text": "*Person*\nRun Fidelity Action With Overlays",
+   "text": "*Person*\nApply Chosen Overlays To Fidelity Action",
    "kind": "rounded",
    "size": "small",
-   "x": 33678.0,
-   "y": 339.0,
-   "w": 152.0,
-   "h": 152.0
+   "x": 34558,
+   "y": 339,
+   "w": 152,
+   "h": 152
   },
   "subepic.1.20c8f70760": {
    "type": "shape",
@@ -3575,10 +3573,10 @@
    "text": "Build Prompt Queue",
    "kind": "rounded",
    "size": "body",
-   "x": 38956,
-   "y": 195,
-   "w": 1752,
-   "h": 60
+   "x": 38956.0,
+   "y": 195.0,
+   "w": 1752.0,
+   "h": 60.0
   },
   "story.user.b82918a533": {
    "type": "shape",
@@ -3586,10 +3584,10 @@
    "text": "*Person*\nQueue Draft Prompt",
    "kind": "rounded",
    "size": "small",
-   "x": 38968,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 38968.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.user.dcce064ebf": {
    "type": "shape",
@@ -3597,10 +3595,10 @@
    "text": "*Person*\nPlace Draft Into Plan",
    "kind": "rounded",
    "size": "small",
-   "x": 39144,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 39144.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.user.203f79d6ec": {
    "type": "shape",
@@ -3608,10 +3606,10 @@
    "text": "*Person*\nPlan Queue From Conversation",
    "kind": "rounded",
    "size": "small",
-   "x": 39320,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 39320.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.user.7b6a212fbf": {
    "type": "shape",
@@ -3619,10 +3617,10 @@
    "text": "*Person*\nAttach Images To Queued Prompt",
    "kind": "rounded",
    "size": "small",
-   "x": 39496,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 39496.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.user.fc7a6e9885": {
    "type": "shape",
@@ -3630,10 +3628,10 @@
    "text": "*Person*\nOpen Prompt Queue",
    "kind": "rounded",
    "size": "small",
-   "x": 39672,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 39672.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.user.c1f6b989a5": {
    "type": "shape",
@@ -3641,10 +3639,10 @@
    "text": "*Person*\nEdit Queued Prompt",
    "kind": "rounded",
    "size": "small",
-   "x": 39848,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 39848.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.user.db1bdd2f34": {
    "type": "shape",
@@ -3652,10 +3650,10 @@
    "text": "*Person*\nReorder Queued Prompts",
    "kind": "rounded",
    "size": "small",
-   "x": 40024,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 40024.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.user.3452bdee3b": {
    "type": "shape",
@@ -3663,10 +3661,10 @@
    "text": "*Person*\nRemove Queued Prompts",
    "kind": "rounded",
    "size": "small",
-   "x": 40200,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 40200.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.user.6e8033e0e4": {
    "type": "shape",
@@ -3674,10 +3672,10 @@
    "text": "*Agent*\nRefuse Queue File That Holds No Queue",
    "kind": "rounded",
    "size": "small",
-   "x": 40376,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 40376.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.user.a96efd8b7b": {
    "type": "shape",
@@ -3685,10 +3683,10 @@
    "text": "*Agent*\nName Queue By Chat Id",
    "kind": "rounded",
    "size": "small",
-   "x": 40552,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 40552.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "subepic.0.6acd4a5851": {
    "type": "shape",
@@ -3740,10 +3738,10 @@
    "text": "*Person*\nPlay Prompt Queue",
    "kind": "rounded",
    "size": "small",
-   "x": 41256,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 41256.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.user.f43a6983aa": {
    "type": "shape",
@@ -3751,10 +3749,10 @@
    "text": "*Person*\nPause Prompt Queue",
    "kind": "rounded",
    "size": "small",
-   "x": 41432,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 41432.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.user.06fb3668ce": {
    "type": "shape",
@@ -3762,10 +3760,10 @@
    "text": "*Prompt Queue*\nWait For Answer Before Moving On",
    "kind": "rounded",
    "size": "small",
-   "x": 41608,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 41608.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.user.01be353bb7": {
    "type": "shape",
@@ -3773,10 +3771,10 @@
    "text": "*Person*\nSend Queued Prompt Now",
    "kind": "rounded",
    "size": "small",
-   "x": 41784,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 41784.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.user.817410c78e": {
    "type": "shape",
@@ -3784,10 +3782,10 @@
    "text": "*Person*\nMove Queue Pointer",
    "kind": "rounded",
    "size": "small",
-   "x": 41960,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 41960.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "subepic.0.e8160f6d15": {
    "type": "shape",
@@ -3850,10 +3848,10 @@
    "text": "*Prompt Queue*\nAdd Interruption To Working Prompt",
    "kind": "rounded",
    "size": "small",
-   "x": 42840,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 42840.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.user.40c409218c": {
    "type": "shape",
@@ -3872,10 +3870,10 @@
    "text": "*Person*\nEdit Prompt Steps",
    "kind": "rounded",
    "size": "small",
-   "x": 43192,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 43192.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.user.6b850dddd4": {
    "type": "shape",
@@ -3883,10 +3881,10 @@
    "text": "*Person*\nSend Prompt Step Now",
    "kind": "rounded",
    "size": "small",
-   "x": 43368,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 43368.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.user.e294169809": {
    "type": "shape",
@@ -3894,10 +3892,10 @@
    "text": "*Person*\nMove Step Pointer",
    "kind": "rounded",
    "size": "small",
-   "x": 43544,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 43544.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "subepic.0.d4d0691137": {
    "type": "shape",
@@ -3905,10 +3903,10 @@
    "text": "Share Queue Among Robots",
    "kind": "rounded",
    "size": "body",
-   "x": 43708,
-   "y": 195,
-   "w": 872,
-   "h": 60
+   "x": 43708.0,
+   "y": 195.0,
+   "w": 872.0,
+   "h": 60.0
   },
   "story.user.a9d526b241": {
    "type": "shape",
@@ -3916,10 +3914,10 @@
    "text": "*Person*\nGroup Queue Into Robots",
    "kind": "rounded",
    "size": "small",
-   "x": 43720,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 43720.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.system.e95b4dece1": {
    "type": "shape",
@@ -3927,10 +3925,10 @@
    "text": "*Cdd Server*\nAssign Queued Prompt To Robot",
    "kind": "rounded",
    "size": "small",
-   "x": 43896,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 43896.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.user.24254ae8ec": {
    "type": "shape",
@@ -3938,10 +3936,10 @@
    "text": "*Person*\nSend Queued Prompts To Sub-Agents",
    "kind": "rounded",
    "size": "small",
-   "x": 44072,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 44072.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.user.49dd8838dc": {
    "type": "shape",
@@ -3949,10 +3947,10 @@
    "text": "*Person*\nRename Robot",
    "kind": "rounded",
    "size": "small",
-   "x": 44248,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 44248.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.user.6e75c6323f": {
    "type": "shape",
@@ -3960,10 +3958,10 @@
    "text": "*Person*\nCollapse Robot Queue",
    "kind": "rounded",
    "size": "small",
-   "x": 44424,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 44424.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "epic.aca4c68578": {
    "type": "shape",
@@ -4360,6 +4358,17 @@
    "w": 152.0,
    "h": 152.0
   },
+  "story.user.9790669599": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Person*\nSend Failure To Be Fixed",
+   "kind": "rounded",
+   "size": "small",
+   "x": 49714,
+   "y": 339,
+   "w": 152,
+   "h": 152
+  },
   "subepic.0.6df390b88d": {
    "type": "shape",
    "color": "green",
@@ -4447,6 +4456,17 @@
    "y": 339.0,
    "w": 152.0,
    "h": 152.0
+  },
+  "story.user.57b9c89f66": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Files App*\nFilter Callouts Like The Graph",
+   "kind": "rounded",
+   "size": "small",
+   "x": 51122,
+   "y": 339,
+   "w": 152,
+   "h": 152
   },
   "subepic.0.73fd39b03d": {
    "type": "shape",
@@ -4613,6 +4633,28 @@
    "w": 152.0,
    "h": 152.0
   },
+  "subepic.0.84692a35ca": {
+   "type": "shape",
+   "color": "green",
+   "text": "Align Formats In Files App",
+   "kind": "rounded",
+   "size": "body",
+   "x": 53574,
+   "y": 195,
+   "w": 168,
+   "h": 60
+  },
+  "story.user.611941f6e7": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Person*\nDiagnose And Align Session Formats",
+   "kind": "rounded",
+   "size": "small",
+   "x": 53586,
+   "y": 339,
+   "w": 152,
+   "h": 152
+  },
   "epic.ae0fb74ed4": {
    "type": "shape",
    "color": "purple",
@@ -4701,27 +4743,27 @@
    "w": 152.0,
    "h": 152.0
   },
-  "story.user.59d23f9458": {
+  "story.user.25b2ba1072": {
    "type": "shape",
    "color": "yellow",
-   "text": "*Story Designer*\nManage Increments",
+   "text": "*Story Designer*\nAdd, Rename, Reorder And Remove Increments",
    "kind": "rounded",
    "size": "small",
-   "x": 50604.0,
-   "y": 339.0,
-   "w": 152.0,
-   "h": 152.0
+   "x": 54652,
+   "y": 339,
+   "w": 152,
+   "h": 152
   },
-  "story.user.e9554286e7": {
+  "story.user.317c722861": {
    "type": "shape",
    "color": "yellow",
-   "text": "*Story Designer*\nManage Increment Stories",
+   "text": "*Story Designer*\nAssign Stories To Increments",
    "kind": "rounded",
    "size": "small",
-   "x": 50780.0,
-   "y": 339.0,
-   "w": 152.0,
-   "h": 152.0
+   "x": 54828,
+   "y": 339,
+   "w": 152,
+   "h": 152
   },
   "subepic.0.caa57dedfa": {
    "type": "shape",
@@ -4734,27 +4776,93 @@
    "w": 344.0,
    "h": 60.0
   },
-  "story.user.21a3b8b97f": {
+  "story.user.81f883df9c": {
    "type": "shape",
    "color": "yellow",
-   "text": "*Story Designer*\nAdd, Rename, Remove And Reorder Scenarios",
+   "text": "*Story Designer*\nAdd Scenario To Story",
    "kind": "rounded",
    "size": "small",
-   "x": 50956.0,
-   "y": 339.0,
-   "w": 152.0,
-   "h": 152.0
+   "x": 55004,
+   "y": 339,
+   "w": 152,
+   "h": 152
   },
-  "story.user.56bdf764eb": {
+  "story.user.48b654f573": {
    "type": "shape",
    "color": "yellow",
-   "text": "*Story Designer*\nAdd, Edit, Remove And Reorder Steps",
+   "text": "*Story Designer*\nRename Scenario Inline",
    "kind": "rounded",
    "size": "small",
-   "x": 51132.0,
-   "y": 339.0,
-   "w": 152.0,
-   "h": 152.0
+   "x": 55180,
+   "y": 339,
+   "w": 152,
+   "h": 152
+  },
+  "story.user.31c035dd35": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Story Designer*\nRemove Scenario From Story",
+   "kind": "rounded",
+   "size": "small",
+   "x": 55356,
+   "y": 339,
+   "w": 152,
+   "h": 152
+  },
+  "story.user.acda6e2f1b": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Story Designer*\nReorder Scenarios By Dragging",
+   "kind": "rounded",
+   "size": "small",
+   "x": 55532,
+   "y": 339,
+   "w": 152,
+   "h": 152
+  },
+  "story.user.7df9df4737": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Story Designer*\nAdd Step To Scenario",
+   "kind": "rounded",
+   "size": "small",
+   "x": 55708,
+   "y": 339,
+   "w": 152,
+   "h": 152
+  },
+  "story.user.8088b20db4": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Story Designer*\nEdit Step Keyword And Text",
+   "kind": "rounded",
+   "size": "small",
+   "x": 55884,
+   "y": 339,
+   "w": 152,
+   "h": 152
+  },
+  "story.user.9c65bbd558": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Story Designer*\nRemove Step From Scenario",
+   "kind": "rounded",
+   "size": "small",
+   "x": 56060,
+   "y": 339,
+   "w": 152,
+   "h": 152
+  },
+  "story.user.3b05ef9669": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Story Designer*\nReorder Steps By Dragging",
+   "kind": "rounded",
+   "size": "small",
+   "x": 56236,
+   "y": 339,
+   "w": 152,
+   "h": 152
   },
   "subepic.0.57a98af1ae": {
    "type": "shape",
@@ -5844,16 +5952,16 @@
    "w": 152.0,
    "h": 152.0
   },
-  "story.user.35c10b332e": {
+  "story.user.41d645e6e8": {
    "type": "shape",
    "color": "yellow",
-   "text": "*Person*\nRun A Scenario's Thens On The Canvas",
+   "text": "*Person*\nTest A Scenario's Thens On The Canvas",
    "kind": "rounded",
    "size": "small",
-   "x": 65056.0,
-   "y": 339.0,
-   "w": 152.0,
-   "h": 152.0
+   "x": 70160,
+   "y": 339,
+   "w": 152,
+   "h": 152
   },
   "story.user.0971e1ff78": {
    "type": "shape",

@@ -7,6 +7,7 @@ import re
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
+from cdd_guidance.actions.render.kept_document import KeptDocument
 from cdd_guidance.actions.render.rendered_code import RenderHasNoDeclaredPlace, own_name
 from harness.annotations.name import Name
 from harness.graph.saved_graph import SavedGraph
@@ -133,13 +134,15 @@ class RenderedFile:
 
     def save(self, rendered: dict) -> dict:
         """Write the render into the file, and answer with the file rather than its text, so the agent has nothing to
-        place; a whiteboard also answers with its board and the writes that put it there."""
-        content = str(rendered["content"])
+        place; a whiteboard also answers with its board and the writes that put it there. What only the file already
+        there held is put back first (*KeptDocument*), and named in the answer as ``migrate``, each with the file, for
+        whoever decides where it belongs."""
+        kept = KeptDocument(self.format).onto(self._before, str(rendered["content"]))
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(content, encoding="utf-8")
-        saved: dict = {"format": rendered["format"], "path": str(self.path)}
+        self.path.write_text(kept.text, encoding="utf-8")
+        saved: dict = {"format": rendered["format"], "path": str(self.path), "migrate": [{"file": str(self.path), "kept": each} for each in kept.kept]}
         if self.format.name == WHITEBOARD:
-            saved.update(self._board_writes(content))
+            saved.update(self._board_writes(kept.text))
         return saved
 
     def _board_writes(self, content: str) -> dict:

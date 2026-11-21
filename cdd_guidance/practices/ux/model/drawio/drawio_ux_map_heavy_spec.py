@@ -192,6 +192,26 @@ with description("a UX map drawn as a draw.io information architecture"):
         with it("should still read back only the regions the mockup has"):
             expect([region.name for region in self.details.regions]).to(equal(["Book Summary", "Add To Cart"]))
 
+    with context("of a mockup, drawn again over a drawing that shows what the mockup does not"):
+        with before.each:
+            held = fixture.mockup_serving_stories()
+            held.find_screen("Book Details").regions[0].append_control(made(Control, "Cover", 0, control_type="image"))
+            held.append_screen(Screen("Wish List", 2))
+            previous = DrawioUxMap.create().render(held)
+            self.parsed = DrawioUxMap.create().parse(DrawioUxMap.create().render(fixture.mockup(), previous=previous))
+            self.details = self.parsed.find_screen("Book Details")
+
+        with it("should keep the screen only the drawing showed"):
+            expect([screen.name for screen in self.parsed.screens]).to(equal(["Book Details", "Checkout", "Wish List"]))
+
+        with it("should keep the control only the drawing showed, in its region"):
+            expect(controls_of(self.parsed, "Book Details", "Book Summary")).to(equal([("Cover", "image")]))
+
+        with it("should keep what the drawing said a screen and a control serve"):
+            expect((served_by(self.details), served_by(self.details.regions[1].controls[0]))).to(
+                equal((([_STORY_LINK, "View Book & Cover"], [_SCENARIO_LINK], [_STEP_LINK]), ([], [], [_STEP_LINK])))
+            )
+
     with context("that is not XML"):
         with it("should refuse it as an unreadable diagram"):
             expect(lambda: DrawioUxMap.create().parse("<mxfile><diagram>")).to(raise_error(UnreadableDrawio))

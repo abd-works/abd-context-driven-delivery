@@ -112,3 +112,32 @@ The story below is not on the story map yet.
 *When* Claude Code loads the project into the graph
 *Then* the DDD practice holds the ++described block++ Cart and the ++declared block++ Cart
   *And* the ++declared block++ has an `implements` edge to the ++described block++, because its folder `cart` is named for the aggregate the document draws the class in
+
+#### Scenario: Give a bounded context the aggregates its file links
+
+Observed (`cdd_guidance/practices/ddd/model/graph_reading_spec.py`). Written after the person's answer of 2026-11-21: a bounded context's file names each aggregate as a link to its heading in the domain model.
+
+*Given* `ordering/.context/bounded-context.md` names, under `Aggregates:`, the link `[Cart](../../.context/domain-model.md#shopping-cart)`
+  *And* `.context/domain-model.md` heads the aggregates Shopping Cart and Order under `## Ordering | custom`
+*When* Claude Code loads the project into the graph
+*Then* the bounded context Ordering owns the aggregate Shopping Cart, the one at the heading its link opens
+  *And* it does not own Order, which its file does not link, though the domain model heads it under the context's name
+  *And* the context mapping `Cart → Catalogue · Book` its file lists has a `local` edge to Shopping Cart, the aggregate its link shows as Cart
+
+#### Scenario: Give a bounded context an aggregate the domain model heads under another name
+
+Observed (`cdd_guidance/practices/ddd/model/graph_reading_spec.py`).
+
+*Given* `catalogue/.context/bounded-context.md` names the link `[Book](../../.context/domain-model.md#book)`
+  *And* `.context/domain-model.md` heads the aggregate Book under `## Library | custom`
+*When* Claude Code loads the project into the graph
+*Then* the bounded context Catalogue owns the aggregate Book
+
+#### Scenario: Read a bounded context that names its aggregates in plain words by name
+
+Observed (`cdd_guidance/practices/ddd/model/graph_reading_spec.py`).
+
+*Given* `ordering/.context/bounded-context.md` names its aggregates in plain words and writes no link
+  *And* `.context/domain-model.md` heads the aggregates Shopping Cart and Order under `## Ordering | custom`
+*When* Claude Code loads the project into the graph
+*Then* the bounded context Ordering owns Shopping Cart and Order, the aggregates the domain model heads under its name

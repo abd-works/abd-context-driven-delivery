@@ -14,7 +14,8 @@ from cdd_guidance.practices.stories.model.story_map_files import source_at
 
 
 # One block of a story file as its language finds it (a story, background, scenario, or step call): a BraceBlock or a
-# PythonBlock. Each answers `name` (its call's name), `line_span` (its first and last line, from 0), `inside_lines`,
+# PythonBlock. Each answers `name` (its call's name), `line_span` (its first and last line, from 0), `opening_line`
+# (the line its call is written on), `is_chained` (a step chained onto the one before it), `inside_lines`,
 # `body` (the code inside it, as a step holds it), `body_text` (that code as written), `text` (the whole block as
 # written), `written(lead)` (its lines as read, the lead above it included),
 # `split_inside(children)`, `scenarios()`, `backgrounds(scenarios)`, `steps(skip)`, and `setup(children)` (the lines

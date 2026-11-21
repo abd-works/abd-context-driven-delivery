@@ -95,6 +95,11 @@ with description("a file an alignment rendered") as self:
         with it("should say it still goes on its board in Claude"):
             expect(AlignedFile(".context/story-map.whiteboard", "whiteboard", STORY_MAP).follow_up).to(contain("render.publish_board"))
 
+    with context("that is code keeping a member its model no longer holds"):
+        with it("should say which member waits to be migrated, and that it is deleted only after"):
+            aligned = AlignedFile("src/ordering/ordering.py", "python", STORY_MAP, ["Cart.total"])
+            expect(aligned.follow_up).to(contain("Migrate in src/ordering/ordering.py: Cart.total", "then delete it"))
+
     with context("that is a drawing"):
         with it("should leave nothing to do"):
             expect(AlignedFile(DRAWING, "drawio", STORY_MAP).follow_up).to(equal(""))

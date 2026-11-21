@@ -105,6 +105,26 @@ class ViewText:
         """Whether the character at position is part of a string in quotes, which a type may be written with."""
         return self._is_string[position]
 
+    def edited(self, edits: list["Edit"]) -> str:
+        """The text with each of edits made, in the order of their places; an edit that starts inside one already
+        made is left out."""
+        text, last = [], 0
+        for edit in sorted(edits, key=lambda edit: edit.start):
+            if edit.start < last:
+                continue
+            text.extend([self.text[last:edit.start], edit.replacement])
+            last = edit.end
+        return "".join([*text, self.text[last:]])
+
+    def line_start(self, position: int) -> int:
+        """The place the line that holds position starts."""
+        return self.text.rfind("\n", 0, position) + 1
+
+    def line_end(self, position: int) -> int:
+        """The place after the end of the line that holds position, its line end included."""
+        end = self.text.find("\n", position)
+        return len(self.text) if end < 0 else end + 1
+
     def closing(self, opening: int) -> int:
         """The place of the bracket that closes the one at opening; the end of the code when none does."""
         code = self.code
@@ -255,14 +275,27 @@ class TypeAnnotations:
             *self._type_statements(), *self._function_annotations(), *self._declaration_annotations(),
             *self._class_annotations(), *self._type_arguments(), *self._casts(), *self._non_null_marks(),
         ])
-        edits = sorted([*removed, *self._import_edits(removed)], key=lambda edit: edit.start)
-        text, last = [], 0
-        for edit in edits:
-            if edit.start < last:
-                continue
-            text.extend([self._text[last:edit.start], edit.replacement])
-            last = edit.end
-        return "".join([*text, self._text[last:]])
+        return self._view.edited([*removed, *self._import_edits(removed)])
+
+    def arrow_after(self, closing: int) -> int:
+        """The place after the `=>` of the function whose parameters close at closing, past the annotation of its
+        result; -1 when no `=>` follows them."""
+        code = self._code
+        after = self._view.past_space(closing + 1)
+        if code[after:after + 1] == ":":
+            after = self._type_end(after + 1, frozenset({"=>", ";", "\n", ","}))
+        return after + 2 if code.startswith("=>", after) else -1
+
+    def body_after(self, closing: int) -> int:
+        """The place of the brace that opens the body of the function whose parameters close at closing, declared
+        with `function` or followed by `=>`; -1 for a function with no body in braces."""
+        code = self._code
+        after = self.arrow_after(closing)
+        if after < 0:
+            after = self._view.past_space(closing + 1)
+            after = self._type_end(after + 1, frozenset("{;\n")) if code[after:after + 1] == ":" else after
+        after = self._view.past_space(after)
+        return after if code[after:after + 1] == "{" else -1
 
     def _merged(self, edits: list[Edit]) -> list[Edit]:
         """The removals with those that overlap joined into one."""
@@ -613,6 +646,20 @@ class FrontEndView:
         return "FrontEndView"
 
     @property
+    def scanned(self) -> ViewText:
+        """The view's text with its code told apart from what a screen shows."""
+        return self._view
+
+    def taken_apart(self, opening: int) -> list[str]:
+        """The props the component whose parameters open at opening takes apart in braces; none for a component that
+        takes its props whole."""
+        inner = self._view.past_space(opening + 1)
+        if self._view.code[inner:inner + 1] != "{":
+            return []
+        taken = self._top_level_parts(self._view.code[inner + 1:self._view.closing(inner)])
+        return [re.split(r"[:=]", part, 1)[0].strip().lstrip(".") for part in taken if part.strip()]
+
+    @property
     def without_types(self) -> str:
         """The view as JavaScript: its own text when it is written without types, else its text with every type
         annotation dropped."""
@@ -621,13 +668,13 @@ class FrontEndView:
     @property
     def components(self) -> list[str]:
         """The name of each component the view declares, in the order it declares them."""
-        return [name for name, _parameters in self._declared_components()]
+        return [name for name, _parameters in self.declared_components()]
 
     @property
     def props(self) -> dict[str, list[str]]:
         """The props each component takes: the names it takes apart in its parameter, or, for a component that takes
         its props whole, each one it reads from them."""
-        return {name: self._props_of(parameters) for name, parameters in self._declared_components()}
+        return {name: self._props_of(parameters) for name, parameters in self.declared_components()}
 
     @property
     def handlers(self) -> list[str]:
@@ -643,7 +690,7 @@ class FrontEndView:
                 found.append(handler)
         return found
 
-    def _declared_components(self) -> list[tuple[str, int]]:
+    def declared_components(self) -> list[tuple[str, int]]:
         """Each component's name with the place its parameters open, in the order of the text."""
         code = self._view.code
         found = [(match.start(), match.group("name"), match.end() - 1) for pattern in (_FUNCTION_COMPONENT, _ARROW_COMPONENT) for match in pattern.finditer(code)]
@@ -653,12 +700,11 @@ class FrontEndView:
         code = self._view.code
         inner = self._view.past_space(opening + 1)
         if code[inner:inner + 1] == "{":
-            taken = self._top_level_parts(code[inner + 1:self._view.closing(inner)])
-            return [re.split(r"[:=]", part, 1)[0].strip().lstrip(".") for part in taken if part.strip()]
+            return self.taken_apart(opening)
         whole = _IDENTIFIER.match(code, inner)
         if whole is None:
             return []
-        following = [start for _name, start in self._declared_components() if start > opening]
+        following = [start for _name, start in self.declared_components() if start > opening]
         body = code[opening:following[0] if following else len(code)]
         read: list[str] = []
         for prop in re.finditer(rf"(?<![\w$.]){re.escape(whole.group())}\.([\w$]+)", body):
@@ -675,25 +721,3 @@ class FrontEndView:
                 parts.append(held[start:position])
                 start = position + 1
         return [*parts, held[start:]]
-
-
-class TypeScriptView:
-    """The ``typescript`` format of a front-end view: it reads a view written with types, and writes a view as
-    TypeScript, which for a view read from JavaScript is that JavaScript as it is."""
-
-    def parse(self, content: str) -> FrontEndView:
-        return FrontEndView(content or "", typed=True)
-
-    def render(self, view: FrontEndView) -> str:
-        return view.text
-
-
-class JavaScriptView:
-    """The ``javascript`` format of a front-end view: it reads a view written without types, and writes a view as
-    JavaScript, its type annotations dropped."""
-
-    def parse(self, content: str) -> FrontEndView:
-        return FrontEndView(content or "", typed=False)
-
-    def render(self, view: FrontEndView) -> str:
-        return view.without_types

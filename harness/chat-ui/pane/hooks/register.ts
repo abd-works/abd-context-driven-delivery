@@ -17,6 +17,8 @@ import { currentChatBarView } from './chat-bar/session-dialogs-client'
 import { closeOptionListsOutside } from './chat-bar/option-lists-client'
 import { currentFailure, shownAsFailure } from './error-display/failure-client'
 import {
+  answerDesktopWalk,
+  currentDesktopWalkQuestion,
   currentHealthView,
   currentInstall,
   currentServerHealth,
@@ -28,6 +30,7 @@ import {
   refreshHealthSoon,
   runInstall,
 } from './health/server-health-client'
+import { DesktopWalkQuestionView } from './health/desktop-walk-question-view'
 import { ServerHealthBandView, ServerHealthIconsView, ServerHealthPanelView } from './health/server-health-view'
 import { askToUpdate, cancelUpdate, checkVersionSoon, currentCddVersion, readVersionAfterTurn, updateToLatest } from './health/cdd-version-client'
 import { UpdateDialogView, VersionBadgeView } from './health/cdd-version-view'
@@ -197,7 +200,12 @@ export const register: Register = on => {
       view: await currentChatBarView($),
       picker: await currentActionPicker($),
       busy: await currentBusy($),
-      health: { band: ServerHealthBandView(elements, band, CARD_SCOPE), panel: ServerHealthPanelView(elements, band), icons: ServerHealthIconsView(elements, band) },
+      health: {
+        band: ServerHealthBandView(elements, band, CARD_SCOPE),
+        panel: ServerHealthPanelView(elements, band),
+        icons: ServerHealthIconsView(elements, band),
+        walkQuestion: DesktopWalkQuestionView(elements, await currentDesktopWalkQuestion($), { answer: (isYes: boolean) => answerDesktopWalk($, isYes) }),
+      },
       version: { label: version.label, badge: VersionBadgeView(elements, version, versionActions), dialog: UpdateDialogView(elements, version, versionActions) },
       push: { buttons: PushButtonsView(elements, repo, pushActions), dialog: PushDialogView(elements, repo, pushActions) },
       width: e.props.bodyColumns,

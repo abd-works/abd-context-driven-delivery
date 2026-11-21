@@ -16,6 +16,33 @@ from space.session.validation_judgment import JUDGMENT_SECTION, Judgment
 if TYPE_CHECKING:
     from space.repo.repo import Repo
     from space.session import Session
+    from space.session.accepted_violations import AcceptedViolations
+
+
+class ViolationNotInReport(LookupError):
+    """A person accepted, or took back the acceptance of, a violation the fidelity's latest report does not list, such
+    as one a newer validate no longer finds. It names the rule and the place asked for, and the report read."""
+
+    def __init__(self, shown: Violation, report: Path) -> None:
+        self.rule = shown.rule
+        self.location = shown.location
+        self.line = shown.line
+        self.report = report
+        super().__init__(f"{report.name} lists no violation of {shown.rule} at {shown.location}:{shown.line or ''} saying {shown.message!r}; read the report again")
+
+
+class ListedViolation:
+    """One violation of a report as its finder names it (found), which is what an acceptance is matched on, and as the
+    report shows it (shown), named from the project with the lines around it."""
+
+    def __init__(self, found: Violation, shown: Violation) -> None:
+        self.found = found
+        self.shown = shown
+
+    def is_shown_as(self, asked: Violation) -> bool:
+        """Whether asked, a violation a page sends back, is this one as the report showed it."""
+        shown = self.shown
+        return (shown.rule, shown.node_id, shown.message, shown.location, shown.line) == (asked.rule, asked.node_id, asked.message, asked.location, asked.line)
 
 
 class ReportRule:
@@ -83,6 +110,7 @@ class Report:
         self._path = source.path
         self._text = source.text
         self._rules = list(rules or [])
+        self._accepted: list[ReportRule] = []
         self._has_saved_graph = standing.has_saved_graph
         self._is_out_of_date = standing.is_out_of_date
 
@@ -90,8 +118,14 @@ class Report:
     def from_reports(cls, folder: str, reports: list[Report]) -> Report:
         """Every rule broken in reports, each listed once though two fidelities' reports share it, the latest first."""
         rules = {rule.identity: rule for report in reversed(reports) for rule in report.rules}
+        accepted = {rule.identity: rule for report in reversed(reports) for rule in report.accepted}
         standing = SavedGraphStanding(all(report.has_saved_graph for report in reports), any(report.is_out_of_date for report in reports))
-        return cls(ReportSource(folder), list(reversed(rules.values())), standing)
+        return cls(ReportSource(folder), list(reversed(rules.values())), standing).leaving_out(list(reversed(accepted.values())))
+
+    def leaving_out(self, accepted: list[ReportRule]) -> Report:
+        """This report saying which violations it leaves out because a person accepted them, under the rule each breaks."""
+        self._accepted = list(accepted)
+        return self
 
     @property
     @data_field
@@ -122,9 +156,21 @@ class Report:
     @property
     @data_field
     def violation_count(self) -> int:
-        """Graph hits and judged findings together."""
+        """Graph hits and judged findings together, without the ones a person accepted."""
         return sum(rule.count for rule in self._rules)
 
+    @property
+    @data_field
+    def accepted(self) -> list[ReportRule]:
+        """The violations a person accepted as they are, under the rule each breaks: left out of the rules and the
+        count, and listed so a person can take an acceptance back."""
+        return list(self._accepted)
+
+    @property
+    @data_field
+    def accepted_count(self) -> int:
+        """How many violations the report leaves out because a person accepted them."""
+        return sum(rule.count for rule in self._accepted)
 
 
 class ReportFile:
@@ -160,9 +206,10 @@ class ReportFile:
     @property
     def version(self) -> str:
         """What changes whenever what this report counts can change: the report itself, which the agent's judgment is
-        added to after Validate saves it, the graph saved beside it, and the session's reports folder, which a newer
-        report of an earlier fidelity joins and so takes over that fidelity's rules."""
-        stamps = [self._changed_at(path) for path in (self._file, self._graph, self._file.parent)]
+        added to after Validate saves it, the graph saved beside it, the session's reports folder, which a newer
+        report of an earlier fidelity joins and so takes over that fidelity's rules, and the project's accepted
+        violations, which leave a violation out of the count or bring it back."""
+        stamps = [self._changed_at(path) for path in (self._file, self._graph, self._file.parent, self._accepted_violations.file)]
         return ":".join([self._file.name, *map(str, stamps)])
 
     @property
@@ -176,22 +223,68 @@ class ReportFile:
 
     @property
     def is_judged_failing(self) -> bool:
-        return bool(Judgment.from_report(self.text))
+        """Whether the judgment fails a rule with a finding nobody accepted. The judged files are read, for the content
+        an acceptance is matched on, only once the project holds an acceptance: the board asks this on every read."""
+        text = self.text
+        if not Judgment.from_report(text):
+            return False
+        if not self._accepted_violations.holds_any:
+            return True
+        judged = [listed.found for findings in self._judged(text).values() for listed in findings]
+        return bool(self._accepted_violations.open_among(judged))
 
     def report(self) -> Report:
         """The rules broken on the nodes of the saved graph, then each rule the agent's judgment fails that the graph did
-        not hit. A saved graph in a shape the graph no longer writes gives no rules, and the report says it is out of date."""
+        not hit, each without the violations a person accepted, which the report lists apart. A saved graph in a shape
+        the graph no longer writes gives no rules, and the report says it is out of date."""
         text = self.text
         has_graph = self._graph.is_file()
         try:
-            graph_rules = self._graph_rules() if has_graph else []
+            graph_hits = self._graph_hits() if has_graph else {}
             is_out_of_date = False
         except SavedGraphOutdated:
-            graph_rules, is_out_of_date = [], True
+            graph_hits, is_out_of_date = {}, True
+        graph_rules, accepted_hits = self._open_and_accepted(graph_hits)
         hit = {rule.rule.slug for rule in graph_rules}
-        judged = [rule for rule in self._judged_rules(text) if rule.rule.slug not in hit]
+        judged, accepted_findings = self._open_and_accepted({rule: findings for rule, findings in self._judged(text).items() if rule not in hit})
         source = ReportSource(self._repo.path_from_top(self._file), text)
-        return Report(source, graph_rules + judged, SavedGraphStanding(has_graph, is_out_of_date))
+        return Report(source, graph_rules + judged, SavedGraphStanding(has_graph, is_out_of_date)).leaving_out(accepted_hits + accepted_findings)
+
+    def accept(self, asked: Violation) -> None:
+        """Accept the violation this report shows as asked, so no later report, validate, or count names it while it
+        stays the same. *ViolationNotInReport* when the report lists no such violation."""
+        self._accepted_violations.accept(self._listed_as(asked).found)
+
+    def reopen(self, asked: Violation) -> None:
+        """Take back the acceptance of the violation this report shows as asked, so it is reported again."""
+        self._accepted_violations.reopen(self._listed_as(asked).found)
+
+    def _listed_as(self, asked: Violation) -> ListedViolation:
+        """The violation of this report, a graph hit or a judged finding, shown as asked."""
+        graph_hits = self._graph_hits() if self._graph.is_file() else {}
+        every = [listed for by_rule in (graph_hits, self._judged(self.text)) for violations in by_rule.values() for listed in violations]
+        found = next((listed for listed in every if listed.is_shown_as(asked)), None)
+        if found is None:
+            raise ViolationNotInReport(asked, self._file)
+        return found
+
+    def _open_and_accepted(self, by_rule: dict[str, list[ListedViolation]]) -> tuple[list[ReportRule], list[ReportRule]]:
+        """The rules of by_rule with the violations nobody accepted, and the same rules with the accepted ones; a rule
+        with none of a kind is left out of that kind."""
+        still_open: list[ReportRule] = []
+        accepted: list[ReportRule] = []
+        for name, listed in by_rule.items():
+            left_out = self._accepted_violations.accepted_among([violation.found for violation in listed])
+            is_left_out = [any(violation.found is found for found in left_out) for violation in listed]
+            for rules, wanted in ((still_open, False), (accepted, True)):
+                shown = [violation.shown for violation, out in zip(listed, is_left_out) if out is wanted]
+                if shown:
+                    rules.append(ReportRule(self._fidelity, self._rule_named(name), shown))
+        return still_open, accepted
+
+    @cached_property
+    def _accepted_violations(self) -> AcceptedViolations:
+        return self._session.accepted_violations
 
     @property
     def _practice(self) -> PracticeGuidance:
@@ -244,8 +337,9 @@ class ReportFile:
         describes has its name alone."""
         return next((rule for rule in reversed(self._described_rules) if rule.slug == name), None) or Rule(name, "")
 
-    def _graph_rules(self) -> list[ReportRule]:
-        return [ReportRule(self._fidelity, self._rule_named(name), [self._violation_of(hit) for hit in hits]) for name, hits in self._hits_by_rule().items()]
+    def _graph_hits(self) -> dict[str, list[ListedViolation]]:
+        """Each graph hit this report answers for, under its rule, as the saved graph names it and as the report shows it."""
+        return {name: [ListedViolation(hit, self._violation_of(hit)) for hit in hits] for name, hits in self._hits_by_rule().items()}
 
     @cached_property
     def _checked_graph(self) -> SavedGraph:
@@ -268,12 +362,14 @@ class ReportFile:
         scanner deleted since it was saved. The session's graph answers, with the patterns it already holds."""
         return set(self._session.graph.applied_patterns.checks_of(self._practice, self._checked_graph.overlays))
 
-    def _judged_rules(self, text: str) -> list[ReportRule]:
-        """Each rule the judgment fails, once however many judged files fail it, with its findings at the judged files' lines."""
-        findings: dict[str, list[Violation]] = {}
+    def _judged(self, text: str) -> dict[str, list[ListedViolation]]:
+        """Each rule the judgment fails, once however many judged files fail it, with its findings at the judged files'
+        lines. A finding is shown as its judge names it, so that is also what its acceptance is matched on."""
+        findings: dict[str, list[ListedViolation]] = {}
         for judgment in Judgment.from_report(text):
-            findings.setdefault(judgment.rule, []).extend(self._judged_violation(judgment.file, finding) for finding in judgment.findings)
-        return [ReportRule(self._fidelity, self._rule_named(rule), violations) for rule, violations in findings.items()]
+            shown = [self._judged_violation(judgment.file, finding) for finding in judgment.findings]
+            findings.setdefault(judgment.rule, []).extend(ListedViolation(violation, violation) for violation in shown)
+        return findings
 
     def _judged_violation(self, judged_file: str, finding: Violation) -> Violation:
         """A finding names the judged file by its name alone, or no file; one that names another file keeps that file's path."""

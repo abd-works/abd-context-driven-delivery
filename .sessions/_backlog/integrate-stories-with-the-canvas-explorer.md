@@ -39,7 +39,7 @@ What needs testing depends on the screen's state from Sync Design Canvas With Pr
 | Slice | What it proves | Where it runs | Effort | Stories |
 |---|---|---|---|---|
 | **A. Results overlay** | Latest pass or fail per scenario, tied to bundle hash | Published with the canvas, no run needed | Small | Package End-To-End Results With The Canvas; Mark Each Explorer Scenario Passed Or Failed; Label Stale Test Results |
-| **B. Run Thens in the canvas** | The packaged domain and fixtures still satisfy the specs | Browser, on press | Small to medium | Run A Scenario's Thens On The Canvas |
+| **B. Run Thens in the canvas** | The packaged domain and fixtures still satisfy the specs | Browser, on press | Small to medium | Test A Scenario's Thens On The Canvas |
 | **C. Play the UI steps** | A screen, including a detached one, responds as the story says | Browser, on press | Large | Play A Story's UI Steps On A Screen |
 | **D. Local runner** | Full Playwright against a canvas | Local command, results published back | Medium | Check Screen Logic Against Scenarios From A Command |
 
@@ -66,7 +66,7 @@ Slice A.
 Slice A.
 - A result is stale if the bundle hash differs from the run's, and is labelled so.
 
-#### Story: Run A Scenario's Thens On The Canvas
+#### Story: Test A Scenario's Thens On The Canvas
 
 Slice B.
 - Add a second story host that runs `beforeEach` and `it` bodies rather than recording them.

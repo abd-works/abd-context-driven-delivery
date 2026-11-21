@@ -10,9 +10,11 @@ from __future__ import annotations
 import re
 from collections.abc import Iterator
 from pathlib import Path
+from typing import NamedTuple
 
 from harness.graph.model_node import ModelChildren, ModelNode
 from harness.graph.graph import Graph
+from harness.markdown.markdown import heading_anchor
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass
 from cdd_guidance.practices.clean_engineering.model.class_stereotypes import joined_module_path, module_path_in
@@ -25,6 +27,11 @@ from cdd_guidance.practices.ddd.model.stereotypes import TacticalClass
 _CONTEXT_TITLE = re.compile(r"^\s*#\s+(.+?)\s*$", re.M)
 # A `Local → Remote` line of a bounded context's file: a context mapping, each side naming an aggregate.
 _CONTEXT_ARROW = re.compile(r"^[\s\-*>]*(.+?)\s*→\s*(.+?)\s*$")
+# An aggregate a bounded context's file names as a link to its heading in the domain model: a list entry that is one
+# link, `- [Cart](../../.context/domain-model.md#cart)`.
+_AGGREGATE_LINK = re.compile(r"^\s*[-*]\s*\[([^\]]+)\]\(([^)\s#]+)#([^)\s]+)\)\s*$")
+# The line a bounded context's file writes above the aggregates it names.
+_AGGREGATES_LABEL = "Aggregates:"
 # `Context · Aggregate · Entity`: the parts of a target as DDD's notations write it, the outermost first.
 TARGET_SEGMENT = re.compile(r"[·•]")
 
@@ -293,6 +300,79 @@ class ContextMapping(DomainNode):
         return {side: TARGET_SEGMENT.split(written)[-1].strip() for side, written in (("local", self.local), ("remote", self.remote))}
 
 
+class AggregateLink(NamedTuple):
+    """An aggregate as a bounded context's file names it: the words of the link, the domain model it opens, written
+    from the context's file, the anchor of the aggregate's heading there, and the line of the file the link is on."""
+
+    name: str
+    file: str
+    anchor: str
+    line: int
+
+
+class ContextFile:
+    """A bounded context's own file, `.context/bounded-context.md`, whose folder is the context in code. Its `# Title`
+    names the context; under `Aggregates:` it names each aggregate as a link to that aggregate's heading in the domain
+    model, which the Files app opens in place, as a story opens its scenarios; and each `Local → Remote` line is a
+    context mapping. It never changes once made: the file naming a context's aggregates is a new one (``naming``)."""
+
+    def __init__(self, text: str = "") -> None:
+        self.text = text
+        self._lines = text.splitlines()
+
+    @property
+    def title(self) -> str:
+        """The context's name as the file's `# Title` gives it; empty for a file with no title."""
+        found = _CONTEXT_TITLE.search(self.text)
+        return found.group(1).strip() if found else ""
+
+    @property
+    def line_count(self) -> int:
+        return max(1, len(self._lines))
+
+    @property
+    def mappings(self) -> list[ContextMapping]:
+        """Each `Local → Remote` line of the file, as the mapping it lists."""
+        found = ((index, _CONTEXT_ARROW.match(line.strip())) for index, line in enumerate(self._lines, start=1))
+        return [ContextMapping(match.group(1).strip(), match.group(2).strip(), index) for index, match in found if match is not None]
+
+    @property
+    def aggregate_links(self) -> list[AggregateLink]:
+        """Each aggregate the file names as a link to a heading. A link in a sentence, or to a whole file, names none."""
+        found = ((index, _AGGREGATE_LINK.match(line)) for index, line in enumerate(self._lines, start=1))
+        return [AggregateLink(*match.groups(), index) for index, match in found if match is not None]
+
+    def naming(self, context: "BoundedContext", domain_model: str) -> "ContextFile":
+        """The file naming each of context's aggregates as a link to its heading in domain_model, the domain model's
+        path as written from this file: every other line the file holds is kept, and an aggregate it named in plain
+        words or by an earlier link is named once, by the new link. A file with no text is written new, with the
+        context's title and what the domain model says the context is."""
+        links = [_AGGREGATES_LABEL, *(f"- [{aggregate.name}]({domain_model}#{heading_anchor(aggregate.name)})" for aggregate in context.aggregates)]
+        if not self.text.strip():
+            opening = [f"# {context.name}", "", *([context.description, ""] if context.description else [])]
+            return ContextFile("\n".join([*opening, *links]) + "\n")
+        named = {aggregate.name for aggregate in context.aggregates}
+        kept = [line for line in self._lines if not self._names_an_aggregate(line, named)]
+        at = self._aggregates_at(named)
+        above = "\n".join(kept[:at]).rstrip("\n").splitlines()
+        below = "\n".join(kept[at:]).strip("\n").splitlines()
+        return ContextFile("\n".join([*above, "", *links, *(["", *below] if below else [])]) + "\n")
+
+    def _names_an_aggregate(self, line: str, named: set[str]) -> bool:
+        """Whether line is one the aggregates' links replace: their label, a link to an aggregate's heading, or a list
+        entry that is the name of one of the context's aggregates."""
+        written = line.strip()
+        return written == _AGGREGATES_LABEL or _AGGREGATE_LINK.match(line) is not None or (written[:1] in ("-", "*") and written[1:].strip() in named)
+
+    def _aggregates_at(self, named: set[str]) -> int:
+        """How many of the lines kept come before the aggregates: those above where the file named them before, else
+        those above its first context mapping, else all of them."""
+        replaced = [self._names_an_aggregate(line, named) for line in self._lines]
+        if any(replaced):
+            return replaced.index(True)
+        return next((index for index, line in enumerate(self._lines) if _CONTEXT_ARROW.match(line.strip())), len(self._lines))
+
+
 class BoundedContext(DomainNode, Module):
     """A module of aggregates. A nested context is a context whose parent is a context."""
 
@@ -314,6 +394,8 @@ class BoundedContext(DomainNode, Module):
         self.aggregates = ModelChildren(self, "aggregates")
         self.context_file_lines = 1
         self.mappings: list[ContextMapping] = []
+        # The aggregates the context's own file names as links to their headings in the domain model.
+        self.aggregate_links: list[AggregateLink] = []
 
     @property
     def label(self) -> str:
@@ -324,17 +406,18 @@ class BoundedContext(DomainNode, Module):
         """Read the folder that holds this context in code: its name is the title of `.context/bounded-context.md`,
         else the folder's own name, its context mappings are the `Local → Remote` lines that file lists, and it owns
         the facts every code folder carries."""
-        text = (folder / ".context" / "bounded-context.md").read_text(encoding="utf-8")
-        title = _CONTEXT_TITLE.search(text)
-        self.name = title.group(1).strip() if title else folder.name
-        self.context_file_lines = max(1, text.count("\n") if text.endswith("\n") else text.count("\n") + 1)
-        self.mappings = self._mappings_in(text)
+        file = ContextFile((folder / ".context" / "bounded-context.md").read_text(encoding="utf-8"))
+        self.name = file.title or folder.name
+        self.context_file_lines = file.line_count
+        self.mappings = file.mappings
+        self.aggregate_links = file.aggregate_links
         self.source_facts.load_folder(folder)
 
-    def _mappings_in(self, text: str) -> list[ContextMapping]:
-        """Each `Local → Remote` line of the context's file, as the mapping it lists."""
-        found = ((index, _CONTEXT_ARROW.match(line.strip())) for index, line in enumerate(text.splitlines(), start=1))
-        return [ContextMapping(match.group(1).strip(), match.group(2).strip(), index) for index, match in found if match is not None]
+    def context_file(self, domain_model: str, previous: str = "") -> str:
+        """The text of this context's own file, naming each of its aggregates as a link to its heading in
+        domain_model, the domain model's path as written from that file; previous is the file as it is now, whose
+        other lines are kept."""
+        return ContextFile(previous).naming(self, domain_model).text
 
     def append_context(self, context: "BoundedContext") -> None:
         self.contexts.append(context)

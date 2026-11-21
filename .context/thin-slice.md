@@ -138,10 +138,16 @@ section: body
 - *Expand And Collapse Story Cards*
 - *Add, Remove And Rename Map Nodes*
 - *Rearrange Map Nodes By Dragging*
-- *Manage Increments*
-- *Manage Increment Stories*
-- *Add, Rename, Remove And Reorder Scenarios*
-- *Add, Edit, Remove And Reorder Steps*
+- *Add, Rename, Reorder And Remove Increments*
+- *Assign Stories To Increments*
+- *Add Scenario To Story*
+- *Rename Scenario Inline*
+- *Remove Scenario From Story*
+- *Reorder Scenarios By Dragging*
+- *Add Step To Scenario*
+- *Edit Step Keyword And Text*
+- *Remove Step From Scenario*
+- *Reorder Steps By Dragging*
 - *Add And Remove Examples On Scenario*
 - *Add And Remove Example Fields*
 - *Add, Edit, Remove And Reorder Example Lines*
@@ -395,7 +401,7 @@ section: body
 - *Package End-To-End Results With The Canvas*
 - *Mark Each Explorer Scenario Passed Or Failed*
 - *Label Stale Test Results*
-- *Run A Scenario's Thens On The Canvas*
+- *Test A Scenario's Thens On The Canvas*
 - *Play A Story's UI Steps On A Screen*
 - *Check Screen Logic Against Scenarios From A Command*
 - *Give Each Map Card A Stable Node Id*
@@ -508,7 +514,7 @@ section: body
 - *Write Column Policies*
 - *Collapse Column Policies*
 - *Configure Todo List*
-- *Run Work Type Flows*
+- *Display Work Type Flows On Board*
 - *Display Board From Customized Workflow*
 - *Move Ticket Along Customized Workflow*
 - *Approve Ticket Out Of Human Review Column*

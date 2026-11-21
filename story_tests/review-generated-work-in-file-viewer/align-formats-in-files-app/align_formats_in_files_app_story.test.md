@@ -94,12 +94,32 @@ Answered 2026-11-20, the person: "all renders should result in the final output 
 *Then* the alignment saves `ordering/cart/cart.py` and `ordering/order/order.py`, each holding its aggregate's classes
 *And* the diagnosis afterwards holds no Python gap
 
-#### Scenario: Keep a code file that is already there
+#### Scenario: Reshape a code file that already has code
 
-*Given* a session whose domain model was rendered to Python, and a person then wrote a body into `ordering/cart/cart.py`
-*When* the domain model is rendered to Python again
-*Then* `ordering/cart/cart.py` is left as the person wrote it and named as kept
-*And* the render answers no code for an agent to save
+Answered 2026-11-21, the person: "render should match files to the new shape, but existing code, comments, whatever exists only in one shape must be preserved".
+
+*Given* a session whose class model holds the class Cart with the operation total, rendered to Python, and a person wrote total's body in `src/ordering/ordering.py`
+*And* the operation check_out is added to Cart in `src/ordering/.context/ordering-model.md`
+*When* the class model is rendered to Python again
+*Then* `src/ordering/ordering.py` holds total with the body the person wrote
+*And* it holds check_out, empty
+*And* the render lists nothing to migrate
+
+#### Scenario: Keep a member the model no longer holds, for migration
+
+*Given* a session whose class Cart has total with a body in `src/ordering/ordering.py`
+*And* total is renamed to subtotal in the class model
+*When* the class model is rendered to Python again
+*Then* `src/ordering/ordering.py` still holds total and its body, in the class Cart, under a line saying it is no longer in the model
+*And* it holds subtotal, empty
+*And* the render lists Cart.total to migrate, with Cart.subtotal as what may have replaced it
+
+#### Scenario: Fail a render that would lose a line
+
+*Given* a format that writes onto the existing text itself, and answers a text without a line the file holds
+*When* the render is saved
+*Then* the render fails, naming the line it would lose
+*And* the file is left as it was
 
 #### Scenario: Report a drawing that cannot be read
 

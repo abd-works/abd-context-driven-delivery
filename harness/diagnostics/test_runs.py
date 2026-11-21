@@ -20,6 +20,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Callable, Iterator
 
+from harness.diagnostics.desktop_walk_question import DesktopWalkQuestion
 from harness.installation.data_class import data_field
 from harness.git.git import Git, RepoConnectError
 from harness.process.process import BackgroundStart, PythonInterpreter, RunningProcess
@@ -491,7 +492,8 @@ def _review_screens(checkout: Path, run_name: str) -> list[str]:
 class TestCadence:
     """Runs heavy every hour and e2e every day on the main checkout its record is of. Nothing keeps time: ``start_due``
     is called whenever the health report is read, and starts the overdue tier, one run at a time, e2e first since it is
-    the one that runs least."""
+    the one that runs least. An e2e run it starts on its timer asks the person, through ``walk_question``, whether to
+    walk the desktop story tests too; the run starts at once and records how they answered."""
 
     __test__ = False
 
@@ -507,6 +509,7 @@ class TestCadence:
         self._clock = clock
         self._review = review or _review_screens
         self._process = RunningProcess(os.getpid())
+        self.walk_question = DesktopWalkQuestion(record.folder, self.checkout, clock)
 
     @property
     def latest_runs(self) -> list[TestRun]:
@@ -539,6 +542,8 @@ class TestCadence:
                 run.outcome = RunOutcome.ABANDONED
                 run._summary = f"The run did not start: {not_started}"
             self.record.save(run)
+            if run.tier is TestTier.E2E and run.outcome is RunOutcome.RUNNING:
+                self.walk_question.ask(run.run_id)
             return run
 
     def run_now(self, tier: TestTier, recorded_start: datetime | None = None) -> TestRun:
@@ -551,6 +556,8 @@ class TestCadence:
             run_name = e2e_run_name(started)
             exit_code, output = self._runner.run(started, {"E2E_RELEASE": SCHEDULED_RELEASE, "E2E_RUN": run_name})
             output += "".join(f"\nscreen review: {line}" for line in self._reviewed(run_name))
+            walk = self.walk_question.closed_for(started.run_id)
+            output += f"\n{walk}" if walk else ""
         else:
             exit_code, output = self._runner.run(started)
         with self._claim():

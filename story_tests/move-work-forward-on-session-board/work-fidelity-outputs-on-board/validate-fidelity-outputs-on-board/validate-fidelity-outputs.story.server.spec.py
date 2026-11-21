@@ -1,5 +1,5 @@
-"""Validate Fidelity Outputs at the server tier: the shared scenarios through the cdd tools ticket.report and
-ticket.violations and the validate.validate prompt, on a cdd server started on a throwaway project."""
+"""Validate Fidelity Outputs at the server tier: the shared scenarios through the cdd tools ticket.report,
+ticket.violations, fidelity-progress.accept_violation and fidelity-progress.reopen_violation, and the validate.validate prompt, on a cdd server started on a throwaway project."""
 
 from space.kanban.session_board_tiers import ServerTier
 from space.kanban.story_test import load_shared, replay
@@ -14,6 +14,8 @@ WIRING = [
     "Open a fidelity's latest report",
     'Save the report and the graph it checked',
     "Show every fidelity's violations at once",
+    "Accept a violation as it is",
+    "Take an acceptance back",
 ]
 
 globals().update(replay(load_shared(__file__, "validate-fidelity-outputs"), ServerTier(), LEFT_OUT, only=WIRING))

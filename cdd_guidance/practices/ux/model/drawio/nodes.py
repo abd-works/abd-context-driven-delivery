@@ -425,10 +425,15 @@ class DrawioUxMap(UxMap):
     def render(self, canonical: UxMap, previous: Optional[str] = None) -> str:
         """canonical as Detailed IA + Site Map: copied into a draw.io map with this map's timeout, which draws itself.
         previous is the drawing as it is now: a source that holds no screen, such as the UX context file, has nothing
-        to draw, so a drawing that holds screens stays as it is rather than being written over with an empty one."""
-        if previous and not canonical.screens and self.parse(previous).screens:
+        to draw, so a drawing that holds screens stays as it is rather than being written over with an empty one. A
+        drawing that holds what canonical does not (a screen, a region, a control, a transition, a story or a domain
+        term a person drew) keeps it: the drawing is laid out again, and nothing it showed is left out."""
+        held = self.parse(previous) if previous else None
+        if held is not None and not canonical.screens and held.screens:
             return previous
         drawn = self.copy_of(canonical)
+        if held is not None:
+            drawn.keep_what_only(held)
         drawn.cli_timeout_seconds = self.cli_timeout_seconds
         return drawn.save()
 

@@ -23,11 +23,13 @@ from cdd_guidance.actions.validate.validation_report import ValidationReport
 
 class _CheckedGraph:
     """The graph a validate checked, as a report reads it: the session it was checked in, its violations, the files it
-    was read from, nothing held beside them, and no named path it read no node from."""
+    was read from, nothing held beside them, no named path it read no node from, and the violations a person accepted,
+    which it leaves out."""
 
-    def __init__(self, session: Session, violations: list[Violation]) -> None:
+    def __init__(self, session: Session, violations: list[Violation], accepted: list[Violation] | None = None) -> None:
         self.session = session
         self._violations = violations
+        self._accepted = accepted or []
         self.files = [Path("graph.json")]
         self.held_beside: list[str] = []
         self.edited: list[str] = []
@@ -35,6 +37,9 @@ class _CheckedGraph:
 
     def violations(self) -> list[Violation]:
         return list(self._violations)
+
+    def accepted(self) -> list[Violation]:
+        return list(self._accepted)
 
 
 with description("a validation report"):
@@ -68,3 +73,10 @@ with description("a validation report"):
             )
             expect(report_md).not_to(contain("vscode://"))
             expect(report_md).not_to(contain("file://"))
+
+        with it("should say how many accepted violations it leaves out and the file that keeps them"):
+            session = Session(Sessions(self.root))
+            session.workpath = self.root
+            session.work_folder = self.session_dir
+            report_md = ValidationReport([], _CheckedGraph(session, [], self.violations)).for_saving()
+            expect(report_md).to(contain("**Accepted violations left out:** 1. A person accepted them as they are, in `.context/violations-accepted.json`"))

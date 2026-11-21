@@ -56,6 +56,9 @@ A spec file's suffix names its tier, and the tier is about speed:
 | unit | `*_spec`, story tiers | Examples that run in microseconds to milliseconds, with a fake at every architecture boundary |
 | heavy | `*_heavy_spec` | Examples that need a real resource: git, a server, a daemon, an installer, a worker process, a big load |
 | e2e | `*_e2e_spec`, `*_agent_spec`, `*.story.ui.spec.ts` and the other Playwright specs | Examples that drive a real browser or a real agent |
+| desktop | `*_story.desktop.md` | Desktop story tests: scenarios an agent walks in the real desktop app by computer control, clicking and typing on the person's own screen, for a panel no browser test reaches, such as the CDD chat bar in the Claude app |
+
+The desktop tier is no part of the other three. No runner starts it, because a walk takes the person's screen and keyboard: an agent in a chat walks it from `/desktop-walk`, and `scripts/test.ps1 -Suite desktop` only prints how to start it.
 
 ### Make slow tests fast first
 
@@ -78,6 +81,7 @@ Stay off the person's thread. In the foreground run only what proves the change 
 | unit, whole tier | While the person tries the change, and before a push | A sub-task off the person's thread (about 20 s); nobody waits on it |
 | heavy | Every hour, and once at the end of multi-pass work | A background process; push without waiting, report its result when it comes back |
 | e2e | Every day, before every release, and at the end of work that touches a browser or an agent; its screens are reviewed against the last accepted run before its result counts | The daily scheduled run and the release command |
+| desktop | Only when the person asks. When the daily e2e run starts, the chat bar asks the person whether to run the desktop walk now, and walks only on a yes; on no, or no answer within ten minutes, the e2e run goes on without it and its summary says the walk was not run | An agent in a chat of the Claude desktop app, with computer control |
 
 Read the runner's slow list after every whole-tier unit run and fix each example in the same pass, optimizing first. Keep the runner's timings (`.pycache/spec-seconds.json`): they order the next run's batches, longest first.
 
@@ -117,7 +121,7 @@ The tests Stories acceptance tests and BDD development write share their tiers, 
 
 ```yaml
 alwaysApply: false
-globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*spec.js,**/*.spec.shared.js,**/*.story.*,**/*_story.test.*"
+globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*spec.js,**/*.spec.shared.js,**/*.story.*,**/*_story.test.*,**/*_story.desktop.md"
 ```
 
 Whenever you create, alter, or delete acceptance tests or BDD specs. Follow these rules.
@@ -127,6 +131,7 @@ Whenever you create, alter, or delete acceptance tests or BDD specs. Follow thes
 - **`unit-tier-fakes-every-boundary`** — A unit spec reaches no real resource: a fake sits at every architecture boundary.
 - **`heavy-tier-holds-a-real-resource`** — A heavy spec uses a real resource (git, a server, a daemon, an installer, a worker, a big load); without one it belongs in the unit tier.
 - **`e2e-tier-drives-browser-or-agent`** — An e2e spec drives a real browser or a real agent, and no other tier does.
+- **`desktop-walk-runs-only-on-a-yes`** — A desktop story test (`*_story.desktop.md`) is walked only when the person asked for it, or said yes to the question the daily e2e run puts on the chat bar; no tier, runner or scheduled run starts one by itself. A walk moves the person's pointer and types on their keyboard, so one started unasked takes the computer out of their hands.
 - **`slow-example-moves-not-the-file`** — An example over budget moves out alone, never the whole file: its stub stays in the unit spec and its real run goes to the heavy spec beside it, under the same described subject.
 - **`no-skipped-or-empty-test`** — No test is skipped, commented out, or left without an assertion.
 

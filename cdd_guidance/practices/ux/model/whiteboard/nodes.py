@@ -237,10 +237,20 @@ class WhiteboardUxMap(UxMap):
         return '"screen.' in text
 
     def render(self, canonical: UxMap, previous: Optional[str] = None) -> str:
-        """canonical drawn as a board; the elements a previous board held stay where people put them."""
-        board = self.copy_of(canonical).board()
-        if previous:
-            board.keep_places(Whiteboard.from_text(previous))
+        """canonical drawn as a board. Drawn over a previous board, it loses nothing that board holds: each element
+        stays where people put it, a card keeps the stories, scenarios, and steps a person wrote on it beside what
+        canonical's control serves, and every element canonical does not draw (a card or a screen a person added or
+        canonical has since lost, a note stuck on the board) stays as it was."""
+        drawn = self.copy_of(canonical)
+        if not previous:
+            return drawn.board().save()
+        before = Whiteboard.from_text(previous)
+        if any(element.role == "screen" for element in before.sections):
+            drawn.keep_served_by(self.parse(previous))
+        board = drawn.board().keep_places(before)
+        for element in before.elements:
+            if board.element(element.id) is None:
+                board.add(element)
         return board.save()
 
     def save(self) -> str:

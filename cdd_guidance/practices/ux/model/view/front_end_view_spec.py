@@ -10,11 +10,8 @@ _REPO = Path(__file__).resolve().parents[5]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from cdd_guidance.practices.ux.model.view.front_end_view import (  # noqa: E402
-    JavaScriptView,
-    TypeScriptView,
-    ViewSyntaxNotConverted,
-)
+from cdd_guidance.practices.ux.model.view.front_end_view import ViewSyntaxNotConverted  # noqa: E402
+from cdd_guidance.practices.ux.model.view.view_formats import JavaScriptView, TypeScriptView  # noqa: E402
 
 _TYPED = '''import React, { useState } from "react";
 import type { Order } from "./api";

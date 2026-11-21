@@ -20,7 +20,7 @@ _VERBS = frozenset({
     "access", "activate", "add", "allow", "apply", "approve", "assign",
     "attach", "authenticate", "authorize", "block", "browse", "build", "cancel",
     "capture", "change", "check", "choose", "clear", "close", "collect",
-    "compare", "complete", "compose", "confirm", "connect", "convert", "create",
+    "comment", "compare", "complete", "compose", "confirm", "connect", "convert", "create",
     "delete", "deliver", "deny", "deploy", "detect", "determine", "disable",
     "display", "download", "draft", "drop", "edit", "email", "enable", "enter",
     "expire", "export", "extend", "extract", "fetch", "filter", "fix", "flag",

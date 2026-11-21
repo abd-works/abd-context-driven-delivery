@@ -1,7 +1,7 @@
 import { useBoard } from '../shared/board-context'
 import type { ReportPanel } from '../shared/board-store'
 import { fixTitleOn } from './report-client'
-import { RuleView } from './report-rule-view'
+import { AcceptedViolationsView, RuleView } from './report-rule-view'
 
 export function ReportPanelHeadView({ panel }: { panel: ReportPanel }) {
   const { page } = useBoard()
@@ -28,6 +28,12 @@ export function ReportStatsView({ panel }: { panel: ReportPanel }) {
         <span className="report-number">{panel.report.rules.length}</span>
         <span className="panel-subtitle">rules hit</span>
       </div>
+      {panel.report.acceptedCount ? (
+        <div className="report-stat">
+          <span className="report-number">{panel.report.acceptedCount}</span>
+          <span className="panel-subtitle">accepted</span>
+        </div>
+      ) : null}
     </>
   )
 }
@@ -76,6 +82,7 @@ export function ReportPanelBodyView({ panel }: { panel: ReportPanel }) {
       {panel.report.rules.map(rule => (
         <RuleView key={`${rule.fidelity.slug}/${rule.rule.slug}`} panel={panel} rule={rule} isOff={isOff} />
       ))}
+      <AcceptedViolationsView panel={panel} />
     </div>
   )
 }

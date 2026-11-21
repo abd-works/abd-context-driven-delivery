@@ -223,6 +223,43 @@ Observed (`front_end_view_spec.py`, "and back to TypeScript"; `ux_spec.py`).
 *Then* the render holds the ++view++ as it is written, with no type annotation made up for it
   *And* it has the component CheckoutView, the props cart, onPaid and note, and the handlers handleCity and handlePay
 
+#### Scenario: Render a view onto the view file a person wrote into, losing nothing
+
+Observed (`cdd_guidance/practices/ux/model/view/view_reshape_spec.py`, the same examples for a file in TypeScript and a file in JavaScript; through a real cdd server in `cdd_guidance/practices/ux/ux_render_heavy_spec.py`). The person, 2026-11-21: "re-render must not ever remove what is already there".
+
+*Given* `bookshop/src/CheckoutView.jsx` holds the Checkout ++view++ an earlier render wrote, with a line a person wrote in the body of the handler handlePay
+  *And* in ++bookshop/src/CheckoutView.tsx++ the handler handlePay is now named handleCheckout, and the view has gained the handler handleClear
+*When* Claude Code renders ++bookshop/src/CheckoutView.tsx++ to javascript
+*Then* `bookshop/src/CheckoutView.jsx` still holds handlePay with the person's line, under a comment that says it is no longer in the model
+  *And* it holds handleCheckout and handleClear with empty bodies, before what the component returns
+  *And* every line the file held is still in it
+  *And* the render answers handlePay as kept, with handleCheckout and handleClear as the added members that may have replaced it
+  *And* rendering the same ++view++ again changes nothing
+
+#### Scenario: Add a prop or a hook the view gained, and mark one it lost
+
+Observed (`view_reshape_spec.py`).
+
+*Given* a view file whose component CheckoutView takes the props cart and onPaid
+*When* Claude Code renders onto it a ++view++ whose component takes cart, onPaid and note, and declares one more hook
+*Then* the component takes note beside cart and onPaid, and its opening line as it was is kept above as a comment
+  *And* the hook is declared after the hooks the component had
+*When* Claude Code renders onto it a ++view++ whose component takes cart alone
+*Then* the component still takes onPaid, under a comment that says the prop is no longer in the model
+
+#### Scenario: Keep what only the UX context, the board or the drawing holds when a map is rendered onto it
+
+Observed (`cdd_guidance/practices/ux/model/render_onto_existing_spec.py`; the drawing through the command line in `drawio_ux_map_heavy_spec.py`).
+
+*Given* ++bookshop/.context/ux-context.md++ holds a line and a heading `Open questions` a person wrote
+  *And* the ++board++ holds a card, a screen and a note a person added, a story a person wrote on a control's card, and Checkout where a person moved it
+  *And* the drawing shows a screen and a control the mockup does not hold
+*When* Claude Code renders the map onto each of them
+*Then* ++bookshop/.context/ux-context.md++ keeps every line the person wrote, with the map's new invariant and note after its own
+  *And* the ++board++ keeps the person's card in its region, the screen, the note, the story on the card, and Checkout where it was moved
+  *And* the drawing still shows the screen and the control only it held
+  *And* rendering the same map again changes none of the three
+
 #### Scenario: Refuse to render a view that declares what JavaScript cannot hold without its type
 
 Observed (`front_end_view_spec.py`, "that declares an enum", "whose constructor declares a member in its parameters").

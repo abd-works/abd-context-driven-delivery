@@ -222,3 +222,37 @@ Observed (`stories_render_saves_heavy_spec.py`, `scenarios_code_render_spec.py`)
 *Given* the Pack Orders project holds its story tests in TypeScript
 *When* Claude Code renders `story_tests` to markdown at ++stories-scenarios++
 *Then* render saves `pack_order_story.test.md` and `cancel_order_story.test.md` in `story_tests/fulfil-order/pack-orders`, as the scenarios fidelity declares them
+
+#### Scenario Outline: Write changed scenarios onto a story test already there, losing nothing
+
+Observed (`cdd_guidance/practices/stories/model/reshaped_story_file_spec.py`, run for Python, TypeScript and JavaScript; `cdd_guidance/practices/stories/stories_render_saves_heavy_spec.py` through the Render action). The person's answer of 2026-11-21: "render should match files to the new shape, but existing code, comments, whatever exists only in one shape must be preserved".
+
+*Given* the Pack Order story test holds code in each step, and a comment and a helper between its two scenarios
+  *And* the scenarios of Pack Order now have <change>
+*When* Claude Code renders the scenarios to the story test's language
+*Then* every line the story test held is still in it, the comment and the helper where they were
+  *And* <what the story test gains>
+  *And* the result names <what to migrate>
+
+| change | what the story test gains | what to migrate |
+| --- | --- | --- |
+| a step more | the step in its scenario, with no code yet | the step as added |
+| a step fewer | a line above the step saying it is no longer in the model | the step as kept |
+| a step under new words | the step under its new words with no code yet, and the line above the step under its old words | one step kept and one added |
+| a scenario more | the scenario after the scenarios the story had, its steps with no code yet | the scenario as added |
+
+#### Scenario: Change nothing when the same scenarios are rendered onto a story test again
+
+Observed (`reshaped_story_file_spec.py`).
+
+*Given* the scenarios of Pack Order were rendered onto its story test, which gained a step and a marking line
+*When* Claude Code renders the same scenarios onto the story test again
+*Then* the story test is as the first render left it
+
+#### Scenario: Leave a step library a person changed as it is
+
+Observed (`reshaped_story_file_spec.py`). Before, a render onto a project's own `story-test.ts` wrote the seeded step library and set the 68 lines only the project's file held apart as comments.
+
+*Given* a project's `story-test.ts` holds helpers the seeded step library does not
+*When* Claude Code renders scenarios to typescript in that project
+*Then* `story-test.ts` is as it was

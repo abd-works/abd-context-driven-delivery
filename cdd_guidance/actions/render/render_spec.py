@@ -101,6 +101,24 @@ _REALIZATION = """# Bookshop BDD realization
 Cart.total()
 ```
 """
+_CART_MODEL = """# Ordering
+
+**Module:** `src/ordering`
+
+## Cart
+
+### **Cart** <<Aggregate Root>>
+
++ Cart(customer_id: str)
+------
++ customer_id: str
+----
++ total(): int
+"""
+_EMPTY_TOTAL = "    def total(self) -> int:\n        raise NotImplementedError"
+_TOTAL_WITH_CODE = "    def total(self) -> int:\n        # tax is added at checkout\n        return sum(line.subtotal for line in self.lines)"
+_NOTE_CELL = '<mxCell id="person-note" value="Ask Dana before changing this" style="text;html=1;" vertex="1" parent="1"><mxGeometry x="900" y="900" width="200" height="40" as="geometry" /></mxCell>'
+_DRAWN_STORY_MAP: list[str] = []
 _WORKER_TRACEBACK = """Traceback (most recent call last):
   File "<frozen runpy>", line 198, in _run_module_as_main
   File "nodes.py", line 535, in parse
@@ -588,11 +606,52 @@ with description("Render asked for a path, in a session") as self:
                 self.cart.write_text("class Cart:" + chr(10) + "    def total(self):" + chr(10) + "        return 5" + chr(10), encoding="utf-8")
                 self.results = self.action.render("ddd-model", format="python", paths=[".context/domain-model.md"])
 
-            with it("should keep the file as the person wrote it"):
+            with it("should keep the code the person wrote"):
                 expect(self.cart.read_text(encoding="utf-8")).to(contain("return 5"))
 
-            with it("should name the file as kept"):
-                expect([Path(path).name for path in self.results[0]["kept"]]).to(equal(["cart.py"]))
+            with it("should name the file among those that hold the render"):
+                expect("cart.py" in [Path(path).name for path in self.results[0]["paths"]]).to(equal(True))
+
+    # The person's answer (2026-11-21): a render reshapes an existing file and loses nothing. Their example: a class
+    # that already has code, an operation added in the markdown model, rendered again.
+    with context("that is a class model whose class already has code, with an operation added in the markdown, rendered again"):
+        with before.each:
+            self.model = self.project.root / "src" / "ordering" / ".context" / "ordering-model.md"
+            self.model.parent.mkdir(parents=True)
+            self.model.write_text(_CART_MODEL, encoding="utf-8")
+            self.action.render("clean-engineering-model", format="python", paths=["src/ordering/.context/ordering-model.md"])
+            self.code = self.project.root / "src" / "ordering" / "ordering.py"
+            self.code.write_text(self.code.read_text(encoding="utf-8").replace(_EMPTY_TOTAL, _TOTAL_WITH_CODE), encoding="utf-8")
+            self.model.write_text(_CART_MODEL + "+ check_out(): int" + chr(10), encoding="utf-8")
+            self.results = self.action.render("clean-engineering-model", format="python", paths=["src/ordering/.context/ordering-model.md"])
+            self.written = self.code.read_text(encoding="utf-8")
+
+        with it("should put the code back in the class"):
+            expect(self.written).to(contain(_TOTAL_WITH_CODE))
+
+        with it("should add the new operation empty"):
+            expect(self.written).to(contain("    def check_out(self) -> int:" + chr(10) + "        raise NotImplementedError"))
+
+        with it("should name the file as holding the render, with nothing to migrate"):
+            expect((len(self.results[0]["paths"]), self.results[0]["migrate"])).to(equal((1, [])))
+
+        with context("then with total renamed to subtotal in the markdown, rendered again"):
+            with before.each:
+                self.model.write_text(_CART_MODEL.replace("+ total(): int", "+ subtotal(): int"), encoding="utf-8")
+                self.results = self.action.render("clean-engineering-model", format="python", paths=["src/ordering/.context/ordering-model.md"])
+                self.migrate = self.results[0]["migrate"]
+
+            with it("should list total as kept, and subtotal among what may have replaced it"):
+                kept = next(each for each in self.migrate if each["kept"] == "Cart.total")
+                expect("Cart.subtotal" in kept["may_have_replaced_it"]).to(equal(True))
+
+            with it("should keep total's code in the file, marked as no longer in the model"):
+                written = self.code.read_text(encoding="utf-8")
+                expect(written.index("no longer in the model: Cart.total") < written.index("return sum(line.subtotal for line in self.lines)")).to(equal(True))
+
+    with context("that tells the agent what to do after a render kept members no longer in the model"):
+        with it("should tell it to move each kept body into the member that replaced it, and only then delete it"):
+            expect(Render.place_rendered.__doc__).to(contain("migrate as your next step", "move its body into the member that replaced it", "Delete the kept member and its marking line only once"))
 
     with context("that is the class model of one module in markdown, rendered to Python"):
         with before.each:
@@ -642,6 +701,28 @@ with description("Render asked for a path, in a session") as self:
         with it("should save the code beside the sketch, as a module named for the sketch"):
             saved = [Path(path).relative_to(self.project.root).as_posix() for path in self.results[0]["paths"]]
             expect(saved).to(equal(["design/cart/cart.py"]))
+
+    # The person's answer (2026-11-21): a render must not ever remove what is already there. On the Bookshop a note a
+    # person added to a story map's drawing was gone after the next render.
+    with context("that is a story map rendered to drawio"):
+        with it("should save the drawing beside the story map"):
+            self.action.render("stories-story-map", format="drawio", paths=[".context/story-map.md"], source="markdown")
+            _DRAWN_STORY_MAP.append((self.folder / "story-map.drawio").read_text(encoding="utf-8"))
+            expect(_DRAWN_STORY_MAP[0]).to(contain("<mxfile"))
+
+    with context("that is a story map whose drawing a person added a note to, rendered to drawio again"):
+        with before.each:
+            # The drawing a person then adds a note to is the same for every example: it is drawn once, by the context
+            # before this one, so each example here renders once and stays inside the unit budget.
+            self.drawing = self.folder / "story-map.drawio"
+            self.drawing.write_text(_DRAWN_STORY_MAP[0].replace("</root>", _NOTE_CELL + "</root>", 1), encoding="utf-8")
+            self.results = self.action.render("stories-story-map", format="drawio", paths=[".context/story-map.md"], source="markdown")
+
+        with it("should keep the note in the drawing"):
+            expect(self.drawing.read_text(encoding="utf-8")).to(contain('id="person-note"', "Ask Dana before changing this"))
+
+        with it("should name the note as kept, for whoever decides where it belongs"):
+            expect([(Path(each["file"]).name, each["kept"]) for each in self.results[0]["migrate"]]).to(equal([("story-map.drawio", "person-note 'Ask Dana before changing this'")]))
 
     with context("that tells the agent what to do with what it rendered"):
         with it("should not tell the agent to write rendered content itself"):

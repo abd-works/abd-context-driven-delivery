@@ -26,10 +26,11 @@ piece of it is placed by the fidelity's declared paths for the format alone:
 A piece the declared paths cannot place is refused with *RenderHasNoDeclaredPlace*, and nothing is saved: a file
 written under a name nobody declared is read by no practice.
 
-What is kept of a code file already there: all of it. Code holds bodies a person or an agent wrote, which the render
-does not hold, so a file that is there and differs from the render is left as it is and named in the result's ``kept``;
-only a file that is not there yet is written, and one that already holds exactly the rendered text counts as saved.
-Whoever wants the kept file to follow the model edits that file.
+A code file already there is never replaced: the render is written onto it (*ReshapedCode*, ``reshaped_code.py``). The
+file takes the new shape, a member the source added arriving empty, and keeps everything only it holds: bodies,
+comments, imports, helpers, decorators, the text between members. A member the model no longer holds stays in the file,
+marked, and the result lists it under ``migrate`` with the added members that may have replaced it, for whoever moves
+its body there. A file that already holds exactly the rendered text is left as it is.
 """
 
 from __future__ import annotations
@@ -38,7 +39,9 @@ import re
 from pathlib import Path, PurePosixPath
 
 from harness.annotations.name import Name
+from cdd_guidance.actions.render.reshaped_code import Reshape, ReshapedCode
 from harness.guidance.declared_outputs import DeclaredFile
+from harness.guidance.practice_formats import Reshaped
 from harness.installation.context_config import CONTEXT_FOLDER
 from harness.markdown.format import Format
 
@@ -93,7 +96,10 @@ class RenderedCode:
     """The files one render to code saves under a fidelity's root: where each piece of the rendered code goes by the
     paths the fidelity declares for the format, and the write that keeps a code file already there."""
 
-    def __init__(self, root: Path, declared: list[str], format: Format, source: Path | None = None, source_declared: list[str] | None = None, source_name: str = "") -> None:
+    def __init__(
+        self, root: Path, declared: list[str], format: Format, source: Path | None = None, source_declared: list[str] | None = None,
+        source_name: str = "", reshape: Reshape | None = None,
+    ) -> None:
         self._root = root
         # The paths the fidelity declares for the format, as it writes them, such as ``{module}/{class}.py``.
         self._declared = list(declared)
@@ -103,24 +109,40 @@ class RenderedCode:
         self._source_declared = list(source_declared or [])
         # The source's name without what its format's files end with: ``cart`` for the sketch ``cart-sketch.md``.
         self._source_name = source_name
+        # The format's own way to write a rendered shape onto a file already there, when its adapter has one.
+        self._reshape = reshape
 
     def save(self, rendered: dict) -> dict:
         """Write each piece of the rendered code at its declared path and answer the files: ``paths`` the files that
-        now hold the render, ``kept`` the files already there that differ and were left as they are. Every piece is
-        placed before any is written, so a render that cannot be placed whole saves nothing."""
-        placed = self._placed(rendered["content"])
-        saved, kept = [], []
-        for file, text in placed.items():
-            (kept if self._keeps(file, text) else saved).append(str(file))
-        return {"format": rendered["format"], "paths": saved, "kept": kept}
+        now hold the render, and ``migrate`` what waits for a person or an agent in a file already there: each
+        member it keeps though its model no longer holds it (``kept``, with ``may_have_replaced_it``, the members added
+        beside it), and each member whose opening line the model now writes otherwise (``signature_differs``, with
+        ``model_has``, the model's line; the file's own line stays). A piece whose file is already there is written onto it,
+        losing nothing. Every piece is placed, and every file's new text made, before any is written, so a render that
+        cannot be placed whole, or that would lose a line a file holds, saves nothing."""
+        written = {file: self._written_onto(file, text) for file, text in self._placed(rendered["content"]).items()}
+        for file, reshaped in written.items():
+            file.parent.mkdir(parents=True, exist_ok=True)
+            file.write_text(reshaped.text, encoding="utf-8")
+        migrate = [self._migration(file, kept, reshaped) for file, reshaped in written.items() for kept in reshaped.kept]
+        migrate += [
+            {"file": str(file), "signature_differs": member, "model_has": line}
+            for file, reshaped in written.items() for member, line in reshaped.changed.items()
+        ]
+        return {"format": rendered["format"], "paths": [str(file) for file in written], "migrate": migrate}
 
-    def _keeps(self, file: Path, text: str) -> bool:
-        """Leave file as it is when it is there and differs from text; else write text there. True when it was left."""
-        if file.is_file():
-            return file.read_text(encoding="utf-8") != text
-        file.parent.mkdir(parents=True, exist_ok=True)
-        file.write_text(text, encoding="utf-8")
-        return False
+    def _written_onto(self, file: Path, text: str) -> Reshaped:
+        """What file holds once text is rendered to it: text itself for a file not there yet, else the file in text's
+        shape."""
+        if not file.is_file():
+            return Reshaped(text, [], [])
+        return ReshapedCode(self._format, self._reshape).onto(file.read_text(encoding="utf-8"), text)
+
+    def _migration(self, file: Path, kept: str, reshaped: Reshaped) -> dict:
+        """One member to migrate: the file, the member kept, and the members added to the same class, else to the file."""
+        owner = kept.rpartition(".")[0]
+        beside = [added for added in reshaped.added if owner and added.rpartition(".")[0] == owner]
+        return {"file": str(file), "kept": kept, "may_have_replaced_it": beside or ([] if owner else list(reshaped.added))}
 
     def _placed(self, content: object) -> dict[Path, str]:
         """Each piece of content with the file it goes to."""

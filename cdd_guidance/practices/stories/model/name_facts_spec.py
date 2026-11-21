@@ -37,3 +37,17 @@ with description("a story name read for a one-time task"):
     with context("that does not mention once"):
         with it("should read the name as a repeatable behaviour"):
             expect(_one_time("Delete Ticket", "")).to(equal([False, False]))
+
+
+with description("a story name read for its opening word"):
+    with context("that opens with a verb ending the way a nominalisation ends"):
+        with it("should read comment as a verb, since Comment On A Story Card says what the person does"):
+            from cdd_guidance.practices.stories.model.name_facts import opening_of
+
+            expect(opening_of("Comment On A Story Card")).to(equal(("comment", "verb")))
+
+    with context("that opens with a noun made from a verb"):
+        with it("should read payment as a nominalisation"):
+            from cdd_guidance.practices.stories.model.name_facts import opening_of
+
+            expect(opening_of("Payment Of An Order")).to(equal(("payment", "nominalisation")))

@@ -491,7 +491,7 @@ Intended (`.sessions/_backlog/customize-board-workflow.md` "configurable todo li
 
 Requested (2026-11-10): the board draws one column per stage of the ticket's workflow, in the workflow's order, with its human review columns and each column's policies, in place of the fixed stages.
 
-#### (S) Board App --> Run Work Type Flows
+#### (S) Board App --> Display Work Type Flows On Board
 
 Intended (`.sessions/_backlog/customize-board-workflow.md` "work type based flows; multi flow shows up on board"): each work type has its own flow, and the board shows several flows at once.
 
@@ -581,6 +581,10 @@ Observed: `fidelity-progress.report` opens the latest report in a side panel.
 
 Observed: Fix sends the chat the rule, the error at its file and line, and the content that failed; Fix all sends every violation of the rule in one message.
 
+#### (S) Person --> [Accept Report Violation](../story_tests/move-work-forward-on-session-board/work-fidelity-outputs-on-board/validate-fidelity-outputs-on-board/validate_fidelity_outputs_on_board_story.test.md#story-accept-report-violation)
+
+Requested (2026-11-21, "we need a way to accept violations so we dont see them again if we click accept; a simple violations accepted json which match acceptances to node id; ignore these exact same on subsequent passes"). Built (2026-11-21): Accept beside Fix and False on the board's report keeps the acceptance in the project's `.context/violations-accepted.json` by the violation's rule, the id of its node and its message (`space/session/accepted_violations.py` *AcceptedViolations*); that violation is left out of every later report, count and validation while it stays the same, and Take back shows it again. The Files app and the Graph app still mark an accepted violation.
+
 #### (S) Board App --> [Display Violations Band](../story_tests/move-work-forward-on-session-board/work-fidelity-outputs-on-board/validate-fidelity-outputs-on-board/validate_fidelity_outputs_on_board_story.test.md#story-display-violations-band)
 
 Observed: the band shows the active ticket's violations, only when it has some, and sends them to satisfy.
@@ -614,10 +618,6 @@ Intended (`.sessions/_backlog/review-work-in-board-files.md` "include ticket con
 #### (S) Person --> [Open Session Files From Details](../story_tests/move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-fidelity-outputs-on-board/review_fidelity_outputs_on_board_story.test.md#story-open-session-files-from-details)
 
 Intended (`.sessions/_backlog/review-work-in-board-files.md` "session information -> link to file or folders"): each file or folder the session information names opens from where it is named. Built today (checked 2026-11-10): the details open the session folder, the stage's files and the latest handoff (`details-view.tsx:37-55`). Missing: the workpath link opens the root chooser rather than the folder. Requested (2026-11-12, "clicking on a session button when the button is in session mode eg no expand no main; opens the file view on .session/session"): pressing a ticket's session button, not main and not expanded, opens the file view on its .sessions/<session> folder.
-
-### (E) Review Files In Viewer
-
-Moved (2026-11-15) to [Review Generated Work In File Viewer](#e-review-generated-work-in-file-viewer): the Files app is the one place a session's files are viewed and commented on. The board's own files panel (`space/kanban/app/src/kanban/ticket/file-viewer-view.tsx`) still draws the same behaviour; its UI spec stays in `story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review-files-in-viewer.story.ui.spec.ts`.
 
 ### (E) Integrate Practice Content Editor Apps On Board
 
@@ -696,6 +696,10 @@ Observed: pressing the Kanban app or the Graph app on the server health panel op
 ### (S) Person --> Restart Parts From Chat Bar
 
 Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "restart buttons not on panel"): the restart controls sit on the chat bar itself, not only inside the server health panel.
+
+### (S) Person --> Answer Desktop Walk Question From Chat Bar
+
+Built (2026-11-21), never drawn or tested: the chat bar shows the question with Not now and Run the walk; yes runs `/desktop-walk` in that chat (`server-health.answer_desktop_walk`).
 
 ## (E) See Work In Chat Bar
 
@@ -856,7 +860,7 @@ Observed: `Generate` and `Session.fidelity_outputs` take the outputs the fidelit
 Observed: pressing the button on validate, render, iterate, sketch or document puts `/actions-<action> <guidance>` in the prompt box for the person to send (`fidelity-client.ts` `runAction`).
 
 
-#### (S) Person --> [Run Fidelity Action With Overlays](../story_tests/move-work-forward-from-chat-bar/generate-fidelity-outputs-in-chat-bar/generate_fidelity_outputs_in_chat_bar_story.test.md)
+#### (S) Person --> [Apply Chosen Overlays To Fidelity Action](../story_tests/move-work-forward-from-chat-bar/generate-fidelity-outputs-in-chat-bar/generate_fidelity_outputs_in_chat_bar_story.test.md#story-apply-chosen-overlays-to-fidelity-action)
 
 Requested (2026-11-11, "doesnt result in LERN being passed in as a param? shouldnt it?"): the command the action button puts in the prompt names the session's chosen overlays in an `overlays=` word beside `format=` (`overlay-choices-client.ts` `overlayArgumentOf`); an action run with that word chooses those overlays on the session first (`WorkList.take`), and Generate adds each overlay's shared rules on top of the practices' rules (`Generate._overlay_rules`).
 ### (E) Review Fidelity Outputs In Chat Bar
@@ -1115,7 +1119,7 @@ Built (2026-11-17, commits 3320efd56, 8594772f9): pressing a robot collapses its
 
 # (E) Review Generated Work In File Viewer
 
-The file viewer is the Files app (`harness/files_app/`): a page of its own, opened beside the chat, where a person reads, filters and comments on the files a session generated, and, once its graph view is built, works the session's graph on those same files. Moved back (2026-11-15) from the Files app's own map, where release-2 had gathered every story about viewing a session's files on 2026-11-14 (commit 5aa8569f3); the person: "move the file viewer stories back to the main map under its own epic". Scenarios: [review_files_in_files_app_story.test.md](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md). Evidence words as there: **Observed** walked in the browser pane on 2026-11-14, **Built** in code and specs but not walked, **Intended** asked for and not done yet.
+The file viewer is the Files app (`harness/files_app/`): a page of its own, opened beside the chat, where a person reads, filters and comments on the files a session generated, and, once its graph view is built, works the session's graph on those same files. Moved back (2026-11-15) from the Files app's own map, where release-2 had gathered every story about viewing a session's files on 2026-11-14 (commit 5aa8569f3); the person: "move the file viewer stories back to the main map under its own epic". Scenarios: [review_files_in_files_app_story.test.md](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md). Evidence words as there: **Observed** walked in the browser pane on 2026-11-14, **Built** in code and specs but not walked, **Intended** asked for and not done yet. The board's Review Files In Viewer sub-epic moved here on 2026-11-15: the board's own files panel (`space/kanban/app/src/kanban/ticket/file-viewer-view.tsx`) still draws the same behaviour, and its UI spec stays in `story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review-files-in-viewer.story.ui.spec.ts`.
 
 Requested (2026-11-15): the file viewer becomes where the graph is worked too. A toggle at its top switches between its files and the graph; the graph view does what the Graph app does, but on the files the Files app lists, opening every file a person selects and folding them to the nodes selected. The person: "the actual file viewer is going to have a toggle that can switch from folder files and graph ... we basically ingest all of the stories and functionality that the Graph application can do except for you're now selecting file(s), eg more than one file opens; expand and collapse in file viewer based on the nodes in the graph; graph filtered like file filter is". Once these stories work, the Graph app's own epics (Explore Graph In Graph App, Filter Graph In Graph App, Review Violations In Graph App) retire into them.
 
@@ -1424,7 +1428,7 @@ This epic is the app's own story map, `C:/dev/story-ui/.context/story-map.md`; i
 - Observed: an empty Epic or SubEpic accepts a dropped node (`makeEmptyParentDropZone`).
 - Observed: the dragged card shows full-size at the spot it would land, with no browser drag image (`useDragVisuals`, `computeDisplayIds`, `suppressNativeDragImage`).
 
-### (S) Story Designer --> Manage Increments
+### (S) Story Designer --> Add, Rename, Reorder And Remove Increments
 
 **Acceptance criteria:**
 - Observed: in Increment View "+ Increment" appends a new increment lane at the bottom (stories.ts `appendIncrement`).
@@ -1432,27 +1436,51 @@ This epic is the app's own story map, `C:/dev/story-ui/.context/story-map.md`; i
 - Observed: dragging an increment label up or down saves the new increment order (stories.ts `reorderIncrements`).
 - Observed: the − on an increment label deletes it and its Stories return to the unassigned spine (stories.ts `removeIncrement`; DELETE `/increments/:incrementId`).
 
-### (S) Story Designer --> Manage Increment Stories
+### (S) Story Designer --> Assign Stories To Increments
 
 **Acceptance criteria:**
 - Observed: dropping a Story card on an increment lane moves it into that increment, out of any other, while it stays under its SubEpic column (stories.ts `assignStoryToIncrement`).
 - Observed: dropping a Story card on the Unassigned zone, shown only in Increment View, removes it from its increment (stories.ts `unassignStoryFromIncrement`).
 
 ## (E) Author Scenarios And Steps
-### (S) Story Designer --> Add, Rename, Remove And Reorder Scenarios
+### (S) Story Designer --> Add Scenario To Story
 
 **Acceptance criteria:**
 - Observed: the + beside Scenarios in an expanded card adds "New Scenario" at the end (`handleAppendScenario`; stories.ts `StoryModel.appendScenario`).
+
+### (S) Story Designer --> Rename Scenario Inline
+
+**Acceptance criteria:**
 - Observed: the Scenario name is an inline field saved on Enter, Tab or leaving it, Escape restoring the old name (`ScenarioPanel` `saveScenarioName`).
+
+### (S) Story Designer --> Remove Scenario From Story
+
+**Acceptance criteria:**
 - Observed: the − on a Scenario deletes it and renumbers the rest (stories.ts `StoryModel.removeScenario`).
+
+### (S) Story Designer --> Reorder Scenarios By Dragging
+
+**Acceptance criteria:**
 - Observed: dragging a Scenario by its handle saves the new order (`StoryCard` `makeDragHandlers`; stories.ts `reorderScenarios`).
 
-### (S) Story Designer --> Add, Edit, Remove And Reorder Steps
+### (S) Story Designer --> Add Step To Scenario
 
 **Acceptance criteria:**
 - Observed: the + beside Steps adds "Given New step" at the end of the Scenario (`handleAddStep`; stories.ts `ScenarioModel.addStep`).
+
+### (S) Story Designer --> Edit Step Keyword And Text
+
+**Acceptance criteria:**
 - Observed: each Step has a Given/When/Then/And/But selector and a text field, saved on Enter or Tab and restored on Escape (`StepEditor`; stories.ts `updateStep`).
+
+### (S) Story Designer --> Remove Step From Scenario
+
+**Acceptance criteria:**
 - Observed: the − on a Step deletes it and renumbers the rest (stories.ts `ScenarioModel.removeStep`).
+
+### (S) Story Designer --> Reorder Steps By Dragging
+
+**Acceptance criteria:**
 - Observed: dragging a Step by its handle saves the new order (stories.ts `reorderSteps`).
 
 ## (E) Author Examples
@@ -1827,7 +1855,7 @@ Intended (integrate-stories-with-the-canvas-explorer.md slice A): each explorer 
 
 Intended (integrate-stories-with-the-canvas-explorer.md slice A and "Done means"): a result whose bundle hash differs from the canvas's bundle is labelled stale.
 
-### (S) Person --> Run A Scenario's Thens On The Canvas
+### (S) Person --> Test A Scenario's Thens On The Canvas
 
 Intended (integrate-stories-with-the-canvas-explorer.md slice B): a Test button per scenario and per story runs the `beforeEach` and `it` bodies through a second story host with a real `expect` in a test build, and shows passed or failed for each step with the failing assertion's message.
 
@@ -2400,6 +2428,18 @@ Intended (ticket, "Walk report"): `report.ts` reduced to one run writes one self
 
 Intended (ticket, Flow A step 2, `person-accepts-the-baseline`): the person reviews the walk report, and accepting it makes the walk the reference the sub-epic's e2e tests are compared with. A walk with a step that misses its intent is not accepted.
 
+### (S) Agent --> Walk Desktop Story Tests By Computer Control
+
+Requested (2026-11-21, "can we also use computer control to test the chat ui panel"; "e2e tests matching our acceptance tests and story map, run only when asked for"). Built (2026-11-21), not walked: `/desktop-walk` (`cdd_guidance/desktop_walk`) hands the agent each step's Do and See lines; the agent drives a separate test chat in the Claude desktop app by computer control and records each step's screenshot and verdict through the e2e review's walk. No test tier runs it.
+
+### (S) Author --> Write Desktop Story Test
+
+Built (2026-11-21): a story's scenarios repeated word for word in `{story_snake}_story.desktop.md` beside its scenarios, with a Do line and a See line under each step; Stories reads it as the same scenarios, so a scenario worded differently shows as a second one.
+
+### (S) Agent --> Open Test Chat For A Walk
+
+Built (2026-11-21), not walked: a walk opens a throwaway git repository and a new chat found by its mark, and never types in the chat that runs the walk (`desktop-walk.open_test_chat`).
+
 ## (E) Capture End-To-End Steps
 
 Intended (ticket, Flow A step 3 and "Compare reports"): the e2e test that captures a walked path records the same steps, and is compared with the accepted walk.
@@ -2447,6 +2487,14 @@ Intended (ticket, step 5 of the review): once every changed pair is intended, th
 ### (S:system) CDD Server --> Review The Daily E2E Run
 
 Intended (ticket, "Daily run"): when the daily e2e run ends, the cdd server starts the regression review in a background agent session and raises a toast for each step judged missed by the tests; the fix happens in a ticket.
+
+### (S:system) Test Cadence --> Ask Before Desktop Walk On Timed E2E Run
+
+Requested (2026-11-21, "on a timed e2e run put a dialog out to user before running"). Built (2026-11-21), not seen on a real timed run: when the cadence starts an e2e run in a checkout that holds desktop story tests, the health report carries a question; the first answer from any chat wins, within ten minutes (`harness/diagnostics/desktop_walk_question.py`).
+
+### (S:system) Test Cadence --> Record Desktop Walk Not Run
+
+Built (2026-11-21): on no, or no answer, the e2e run's summary says the desktop walk was not run and why.
 
 ## (E) Read E2E Reports
 

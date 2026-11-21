@@ -117,3 +117,31 @@ Intended. Evidence still missing: where a drawing keeps the ++document's words++
   *And* a person deleted ++.context/domain-model.md++
 *When* Claude Code renders the drawing to markdown
 *Then* ++.context/domain-model.md++ holds its title, its notes, its invariants and each integration's fields
+
+#### Scenario Outline: Name each aggregate in a bounded context's file as a link to the domain model
+
+Observed (`cdd_guidance/practices/ddd/model/context_file_spec.py`, `cdd_guidance/practices/ddd/context_links_alignment_heavy_spec.py`). Written after the person's answer of 2026-11-21. The domain model is created in one format, then checked by the same examples.
+
+*Given* the Bookshop's domain model, whose context Ordering holds the aggregates Cart and Order, is <created>
+*When* the Ordering context's own file is written from it
+*Then* the file is titled Ordering and names, under `Aggregates:`, `[Cart](../../.context/domain-model.md#cart)` and `[Order](../../.context/domain-model.md#order)`
+  *And* each link opens a heading the domain model holds
+  *And* the session's diagnosis reports no edge between the context's file and the domain model that no callout shows
+
+| created |
+| --- |
+| written as markdown |
+| taken through a drawing and back |
+| taken through a whiteboard and back |
+| taken through Python and back |
+| taken through TypeScript and back |
+| taken through JavaScript and back |
+
+#### Scenario: Keep what a person wrote in a bounded context's file when its aggregates become links
+
+Observed (`cdd_guidance/practices/ddd/model/context_file_spec.py`).
+
+*Given* `ordering/.context/bounded-context.md` holds a sentence a person wrote, the aggregates Cart and Order named in plain words, and the context mapping `Cart → Catalogue · Book`
+*When* the file is written again from the domain model
+*Then* it keeps the sentence and the context mapping
+  *And* it names Cart and Order once each, as links to their headings in the domain model

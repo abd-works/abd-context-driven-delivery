@@ -4,7 +4,7 @@ import { countOf } from '../shared/board-brand'
 import { useBoard } from '../shared/board-context'
 import type { ReportPanel } from '../shared/board-store'
 import { ChevronIcon } from '../shared/icons'
-import { falseTitleOn, fixTitleOn, locationOf, type ReportClient } from './report-client'
+import { ACCEPT_TITLE, falseTitleOn, fixTitleOn, locationOf, TAKE_BACK_TITLE, type ReportClient } from './report-client'
 
 function SourceLineView({ violation, entry }: { violation: ViolationData; entry: SourceLineData }) {
   return (
@@ -59,6 +59,9 @@ function ViolationView({ panel, rule, violation, isOff }: { panel: ReportPanel; 
           <button className="ghost-button false-button" aria-label={`False ${locationOf(violation)}`} disabled={isOff} title={isOff ? 'Connect a chat to send this' : falseTitleOn(page.board)} onClick={() => void panel.report.reportFalseViolation(rule, violation)}>
             False
           </button>
+          <button className="ghost-button accept-button" aria-label={`Accept ${locationOf(violation)}`} disabled={panel.ticket.isLocked} title={ACCEPT_TITLE} onClick={() => void panel.report.acceptViolation(rule, violation)}>
+            Accept
+          </button>
         </div>
       </div>
       {hasSource ? <ViolationSourceView panel={panel} rule={rule} violation={violation} /> : null}
@@ -95,5 +98,37 @@ export function RuleView({ panel, rule, isOff }: { panel: ReportPanel; rule: Rep
       <RuleHeadView report={panel.report} rule={rule} place={place} isOpen={isOpen} isOff={isOff} />
       {isOpen ? rule.violations.map((violation, index) => <ViolationView key={`${violation.location}-${violation.line}-${index}`} panel={panel} rule={rule} violation={violation} isOff={isOff} />) : null}
     </section>
+  )
+}
+
+function AcceptedViolationView({ panel, rule, violation }: { panel: ReportPanel; rule: ReportRuleData; violation: ViolationData }) {
+  return (
+    <li className="accepted-violation">
+      <div className="violation-words">
+        <span className="file-location">
+          {rule.rule.slug} · {locationOf(violation)}
+        </span>
+        <div className="accepted-message">{violation.message}</div>
+      </div>
+      <button className="ghost-button" aria-label={`Take back ${rule.rule.slug} ${locationOf(violation)}`} disabled={panel.ticket.isLocked} title={TAKE_BACK_TITLE} onClick={() => void panel.report.reopenViolation(rule, violation)}>
+        Take back
+      </button>
+    </li>
+  )
+}
+
+// The violations a person accepted, which Python leaves out of the rules above: listed closed, so a person can take one back.
+export function AcceptedViolationsView({ panel }: { panel: ReportPanel }) {
+  const { report } = panel
+  if (!report.acceptedCount) return null
+  return (
+    <details className="accepted-violations">
+      <summary>{countOf(report.acceptedCount, 'accepted violation')} left out</summary>
+      <ul>
+        {report.accepted.flatMap(rule =>
+          rule.violations.map((violation, index) => <AcceptedViolationView key={`${rule.fidelity.slug}/${rule.rule.slug}/${violation.location}-${violation.line}-${index}`} panel={panel} rule={rule} violation={violation} />),
+        )}
+      </ul>
+    </details>
   )
 }

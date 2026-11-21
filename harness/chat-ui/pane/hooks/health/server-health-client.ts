@@ -4,11 +4,13 @@ import type { EngineInterface } from 'claude-code'
 import type { AppData } from '@cdd/harness/diagnostics/app'
 import type { ServerHealthData } from '@cdd/harness/diagnostics/server-health'
 
-import type { E2eReviewJson, HealthViewJson, InstallJson, ServerHealthJson, TestRunJson, ToastedRunsJson } from '../../types'
+import type { DesktopWalkQuestionJson, E2eReviewJson, HealthViewJson, InstallJson, ServerHealthJson, TestRunJson, ToastedRunsJson } from '../../types'
 import { showFailure, shownAsFailure } from '../error-display/failure-client'
 import { callTool, CddToolFailed } from '../shared/cdd-tool'
+import { commandOf } from '../shared/chat-command'
 
 export const REPORT_TOOL = 'server-health.report'
+export const ANSWER_WALK_TOOL = 'server-health.answer_desktop_walk'
 // The CDD Kanban's label, which App.load takes as its identity: the board the chat checks in with.
 export const KANBAN = 'Kanban'
 export const RECONNECT_TRIES = 3
@@ -66,6 +68,11 @@ export class ServerHealthClient {
     return ((this.json as { e2e_review?: E2eReviewJson | null } | null)?.e2e_review) ?? null
   }
 
+  // The question a timed e2e run asks before its desktop walk, while it waits for the person's answer; else none.
+  get desktopWalkQuestion(): DesktopWalkQuestionJson | null {
+    return ((this.json as { desktop_walk_question?: DesktopWalkQuestionJson | null } | null)?.desktop_walk_question) ?? null
+  }
+
   // Each step the review judged missed by the tests, named by its review so the chat raises its toast once.
   get missedSteps(): string[] {
     const review = this.e2eReview
@@ -107,6 +114,27 @@ export async function reconnect($: EngineInterface, onRestored: () => Promise<vo
   }
   await recordAnswer($, answer)
   if (answer.connection === 'connected') await onRestored()
+}
+
+// The desktop walk question the last health report held, which the chat bar draws as a dialog; null when none is open.
+export async function currentDesktopWalkQuestion($: EngineInterface): Promise<DesktopWalkQuestionJson | null> {
+  const { report } = await read($, serverHealth)
+  return new ServerHealthClient(report as ServerHealthData | null).desktopWalkQuestion
+}
+
+// The person's answer to the desktop walk question, from its dialog. The dialog closes at once; cdd takes the first
+// answer any chat gives, and only the chat whose yes it took runs the walk's command, so one walk starts however many
+// chats showed the question. The walk takes the screen and keyboard, so nothing but the person's yes starts it.
+export async function answerDesktopWalk($: EngineInterface, isYes: boolean): Promise<void> {
+  const question = await currentDesktopWalkQuestion($)
+  if (!question) return
+  await update($, serverHealth, health => ({ ...health, report: health.report ? { ...health.report, desktop_walk_question: null } : null }))
+  try {
+    const startsWalk = await callTool<boolean>($, ANSWER_WALK_TOOL, { run_id: question.run_id, is_yes: isYes })
+    if (startsWalk) await $.command.run(commandOf(question.command))
+  } catch (failure) {
+    await shownAsFailure($, 'The desktop walk did not start', `Answering the desktop walk question on the chat bar, calling ${ANSWER_WALK_TOOL}`)(failure)
+  }
 }
 
 export async function openDetails($: EngineInterface): Promise<void> {

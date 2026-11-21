@@ -6,6 +6,7 @@ from pathlib import Path
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.diagnostics.app import APPS, App
+from harness.diagnostics.desktop_walk_question import DesktopWalkQuestion
 from harness.diagnostics.test_runs import SCHEDULED_RELEASE, TestCadence, TestRun, TestRunRecord, default_record_folder, main_checkout
 from harness.e2e_review.e2e_review import E2eReview, E2eRunReview
 from harness.installation.data_class import data_field, language_adapter
@@ -40,6 +41,22 @@ class ServerHealth:
         Reading it is the cadence's clock: a tier overdue on main starts in the background."""
         self._cadence.start_due()
         return self
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def answer_desktop_walk(self, run_id: str, is_yes: bool) -> bool:
+        """Take the person's answer to the desktop walk question asked for the timed e2e run run_id, as the chat bar's
+        dialog gives it. Answers whether the chat that calls starts the walk, by running the question's command: only
+        for a yes, and only for the first answer given while the question is open."""
+        return self._cadence.walk_question.answer(run_id, is_yes)
+
+    @property
+    @data_field
+    def desktop_walk_question(self) -> DesktopWalkQuestion | None:
+        """The question a timed e2e run asks before its desktop walk, while it waits for the person's answer: the chat
+        bar shows it as a dialog. None when no question is open."""
+        return self._cadence.walk_question.open
 
     @property
     @data_field

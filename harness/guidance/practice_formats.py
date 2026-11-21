@@ -5,7 +5,7 @@ import importlib
 import inspect
 import json
 from collections.abc import Callable, Iterable, Iterator
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol
 
@@ -37,6 +37,22 @@ class FormatAdapter(Protocol):
 
     def render(self, model: ObjectModel, **options: Any) -> Any:
         """model written in this format."""
+
+
+@dataclass(frozen=True)
+class Reshaped:
+    """A rendered shape written onto the text a file already holds, as a format's adapter answers it from
+    ``reshape(rendered, existing)``: the text to save, which holds every line existing held, the members only the
+    existing file holds, kept in the text and marked as no longer in the model (``Cart.empty``), the members only the
+    render holds, added empty (``Cart.add_line``), and the members whose opening line the render writes otherwise. A format with no ``reshape`` leaves the writing to the Render
+    action."""
+
+    text: str
+    kept: list[str]
+    added: list[str]
+    # Each member both hold whose opening line the render writes otherwise than the file, with the render's line
+    # (``Cart.total``: ``def total(self, tax: int) -> int:``); the file's own line stays in the text.
+    changed: dict[str, str] = field(default_factory=dict)
 
 
 # What a render converts: text or data in a source format, an object model, or the practice itself, whose own model is

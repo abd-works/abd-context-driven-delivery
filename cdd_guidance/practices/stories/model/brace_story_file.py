@@ -83,6 +83,21 @@ class BraceBlock:
         return self.file.line(self.call.start), self.file.line(self.call.end - 1)
 
     @property
+    def opening_line(self) -> int:
+        """The line, counted from 0, its call is written on: for a step chained onto another, the line of its
+        ``.and``, which may be the line the step before it closes on."""
+        text = self.file.text
+        start = self.call.start
+        while start < len(text) and text[start].isspace():
+            start += 1
+        return self.file.line(start)
+
+    @property
+    def is_chained(self) -> bool:
+        """Whether it is a step chained onto the one before it (``.and(...)``), not a statement of its own."""
+        return self.file.text[self.call.start :].lstrip().startswith(".")
+
+    @property
     def inside_lines(self) -> List[str]:
         return self.file.lines[slice(*self._inside)]
 

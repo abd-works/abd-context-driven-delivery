@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import type { ReportRuleData } from '@cdd/space/kanban/ticket'
@@ -351,6 +354,62 @@ describe('Fix Report Violations', () => {
 
     it("should name the ticket's session", async () => {
       expect((await sent()).commands[0]!.text).toContain(SESSION)
+    })
+  })
+
+  // Python keeps the acceptance and answers the report without the violation; the page draws that answer.
+  describe('with Accept pressed on one violation', () => {
+    async function accepted() {
+      const { page } = await board.page()
+      const rule = await brokenRule(page)
+      await reportPanel(page).report.acceptViolation(rule, rule.violations[0]!)
+      return { page, rule, report: reportPanel(page).report }
+    }
+
+    it('should list the violation no longer', async () => {
+      expect((await accepted()).report.rules).toEqual([])
+    })
+
+    it('should count no open violation', async () => {
+      expect((await accepted()).report.violationCount).toBe(0)
+    })
+
+    it('should say one accepted violation is left out', async () => {
+      expect((await accepted()).report.acceptedCount).toBe(1)
+    })
+
+    it('should list the accepted violation under its rule, to take back', async () => {
+      const { rule, report } = await accepted()
+      expect(report.accepted.map(entry => [entry.rule.slug, entry.violations.map(violation => violation.message)])).toEqual([[rule.rule.slug, [rule.violations[0]!.message]]])
+    })
+
+    it("should keep it in the project's .context/violations-accepted.json by its rule and its node's id", async () => {
+      const { rule } = await accepted()
+      const kept = JSON.parse(readFileSync(join(board.root, '.context', 'violations-accepted.json'), 'utf8')).accepted
+      expect(kept.map((entry: { rule: string; node_id: string }) => [entry.rule, entry.node_id])).toEqual([[rule.rule.slug, rule.violations[0]!.node_id]])
+    })
+
+    it("should leave the ticket's story map with no violations on the next board read", async () => {
+      const { page } = await accepted()
+      await page.reader.refresh()
+      expect([storyMapOn(page).hasViolations, storyMapOn(page).violationCount]).toEqual([false, 0])
+    })
+
+    describe('that is then taken back', () => {
+      async function takenBack() {
+        const { page, report } = await accepted()
+        const rule = report.accepted[0]!
+        await report.reopenViolation(rule, rule.violations[0]!)
+        return { page, report: reportPanel(page).report }
+      }
+
+      it('should list the violation again', async () => {
+        expect((await takenBack()).report.rules.map(rule => [rule.rule.slug, rule.count])).toEqual([['verb-noun-format', 1]])
+      })
+
+      it('should say no accepted violation is left out', async () => {
+        expect((await takenBack()).report.acceptedCount).toBe(0)
+      })
     })
   })
 

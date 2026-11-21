@@ -84,8 +84,8 @@ class Ux(PracticeGuidance):
         "markdown": ("cdd_guidance.practices.ux.model.markdown.nodes", "MarkdownUxMap"),
         "json": ("cdd_guidance.practices.ux.model.json.nodes", "JsonUxMap"),
         "claude_design": ("cdd_guidance.practices.ux.model.claude_design.nodes", "ClaudeDesignUxMap"),
-        "typescript": ("cdd_guidance.practices.ux.model.view.front_end_view", "TypeScriptView"),
-        "javascript": ("cdd_guidance.practices.ux.model.view.front_end_view", "JavaScriptView"),
+        "typescript": ("cdd_guidance.practices.ux.model.view.view_formats", "TypeScriptView"),
+        "javascript": ("cdd_guidance.practices.ux.model.view.view_formats", "JavaScriptView"),
     }
 
     @agent_tool

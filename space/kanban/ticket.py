@@ -27,6 +27,8 @@ from space.kanban.board import (
     Help,
     Stage,
 )
+from harness.graph.location import Location
+from harness.graph.violation import FoundBy, FoundOn, Violation
 from space.kanban.report import Report, ReportFile
 from space.kanban.ticket_choices import TicketChoices
 from space.kanban.ticket_checkout import LeaveChoices, TicketCheckout
@@ -34,7 +36,7 @@ from space.kanban.ticket_tree import NotAChildError, ParentLoopError, TicketTree
 from space.repo.repo import Branch
 from space.session import Session
 from space.session.session import MAIN_SESSION_NAME
-from space.session.progress_cache import HAS_OUTPUT, VIOLATION_COUNT
+from space.session.progress_cache import ACCEPTED_COUNT, HAS_OUTPUT, VIOLATION_COUNT
 from space.session.session_log import LogEntry
 from space.session.file_manager import FileEntry
 
@@ -860,6 +862,17 @@ class StageMarks:
 
 
 
+class NoReportToAcceptIn(LookupError):
+    """A person accepted, or took back the acceptance of, a violation of a fidelity that has no validation report. It
+    names the fidelity and the violation asked for."""
+
+    def __init__(self, fidelity: str, rule: str, location: str) -> None:
+        self.fidelity = fidelity
+        self.rule = rule
+        self.location = location
+        super().__init__(f"{fidelity} has no validation report, so it lists no violation of {rule} at {location}; validate it first")
+
+
 class LoggedWork:
     """What a ticket's session log says was done on one fidelity: the actions done, whether its latest validate left
     violations, and how many lines name the fidelity. Generate and Validate each write one, so a change in that count
@@ -874,6 +887,10 @@ class LoggedWork:
         """This work with its latest validate failed, so validate is to do again."""
         return LoggedWork([action for action in self.done_actions if action == GENERATE], True, self.lines_logged)
 
+    def validated(self, steps: list[str]) -> LoggedWork:
+        """This work with its latest validate passed, its done actions in the order of steps, its stage's."""
+        return LoggedWork([action for action in steps if action in (*self.done_actions, VALIDATE)], False, self.lines_logged)
+
 
 @identity("ticket", "fidelity")
 @language_adapter(language="typescript")
@@ -882,7 +899,8 @@ class FidelityProgress:
     """*FidelityProgress* is how far one fidelity has got through its stage's actions on one ticket."""
 
     # Validate is done when its latest line names no graph-rule violations and the latest report's judgment fails no
-    # rule; a fidelity whose latest validate passes is done.
+    # rule, or when a person accepted every violation its latest report names; a fidelity whose latest validate passes
+    # is done.
 
     def __init__(self, required: RequiredFidelity, logged: LoggedWork, ticket: Ticket) -> None:
         self._required = required
@@ -908,7 +926,8 @@ class FidelityProgress:
         done_verbs |= {VALIDATE} if validated else set()
         logged = LoggedWork([action for action in required.stage.steps if action in done_verbs], has_violations, len(naming))
         read = cls(required, logged, ticket)
-        return read.with_violations() if read._is_judged_failing else read
+        judged = read.with_violations() if read._is_judged_failing else read
+        return judged.with_accepted_left_out()
 
     @classmethod
     @tool_subject
@@ -1063,11 +1082,59 @@ class FidelityProgress:
     @cached_property
     def _violation_count(self) -> int:
         """Counted once per reading of the progress, since the board and its stage's work both ask, and counted again
-        only once Validate writes a report in the session or the latest report or its saved graph changes."""
+        only once Validate writes a report in the session, the latest report or its saved graph changes, or a person
+        accepts a violation or takes an acceptance back."""
+        return self._counted(VIOLATION_COUNT, lambda: self._latest_read.violation_count)
+
+    @cached_property
+    def _accepted_count(self) -> int:
+        """How many violations its latest report leaves out because a person accepted them, kept as its count is."""
+        return self._counted(ACCEPTED_COUNT, lambda: self._latest_read.accepted_count)
+
+    def _counted(self, question: str, count: Callable[[], int]) -> int:
+        """What count answers about its latest report, kept in its session's progress cache until the report can read
+        otherwise; none while it has no violations."""
         latest = self.latest_report
         if not self._has_violations or latest is None:
             return 0
-        return self._ticket.session.progress_cache.of(self._fidelity.slug).answer(VIOLATION_COUNT, latest.version, lambda: latest.report().violation_count)
+        return self._ticket.session.progress_cache.of(self._fidelity.slug).answer(question, latest.version, count)
+
+    @cached_property
+    def _latest_read(self) -> Report:
+        """Its latest report read once per reading of the progress, for each count taken from it."""
+        return self.latest_report.report()
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def accept_violation(self, rule: str, message: str, location: str, line: int = 0, node_id: str = "") -> Report:
+        """Accept one violation of this fidelity's latest validation report as it is, and return the report without it. Name the violation as the report shows it: its rule, message, location, line (0 when it has none), and node_id (empty when it is on no node). It is kept in the project's .context/violations-accepted.json, by its rule, the id of its node, and its message, so no later validate, report, or count names it; a finding on no node is kept by its rule, its file, and the content of its line. It shows again when its message, its node's id, or that content changes. Refused when the report lists no such violation."""
+        self.latest_report_or_refuse(rule, location).accept(self._shown_as(rule, message, Location(location, line or None), node_id))
+        return self._report_read_again()
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def reopen_violation(self, rule: str, message: str, location: str, line: int = 0, node_id: str = "") -> Report:
+        """Take back the acceptance of one violation this fidelity's latest validation report lists under accepted, and return the report with it open again. Name the violation as the report shows it: its rule, message, location, line (0 when it has none), and node_id (empty when it is on no node). Refused when the report lists no such violation."""
+        self.latest_report_or_refuse(rule, location).reopen(self._shown_as(rule, message, Location(location, line or None), node_id))
+        return self._report_read_again()
+
+    def latest_report_or_refuse(self, rule: str, location: str) -> ReportFile:
+        """Its latest report; *NoReportToAcceptIn*, naming the violation asked for, while it has none."""
+        latest = self.latest_report
+        if latest is None:
+            raise NoReportToAcceptIn(self._fidelity.slug, rule, location)
+        return latest
+
+    def _shown_as(self, rule: str, message: str, location: Location, node_id: str) -> Violation:
+        """The violation a page names by what its report showed of it."""
+        return Violation(FoundBy(rule, "", FoundOn(node_id)), message, location)
+
+    def _report_read_again(self) -> Report:
+        """Its latest report read after an acceptance changed, with what its ticket worked out before forgotten."""
+        self._ticket.forget_reads()
+        return FidelityProgress(self._required, self._logged, self._ticket).report()
 
     @mcp
     @agent_tool
@@ -1095,6 +1162,13 @@ class FidelityProgress:
     def with_violations(self) -> FidelityProgress:
         """This progress with its latest validate failed, so validate is to do again."""
         return FidelityProgress(self._required, self._logged.failed_again(), self._ticket)
+
+    def with_accepted_left_out(self) -> FidelityProgress:
+        """This progress with its latest validate passed when a person accepted every violation its latest report
+        names, so an accepted violation holds no fidelity back; itself while any is still open."""
+        if not self._has_violations or self._violation_count or not self._accepted_count:
+            return self
+        return FidelityProgress(self._required, self._logged.validated(self._stage.steps), self._ticket)
 
     @property
     def _is_judged_failing(self) -> bool:

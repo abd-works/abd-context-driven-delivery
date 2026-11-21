@@ -41,7 +41,7 @@ Requested on 2026-11-10: the board displays itself from the customized workflow,
 
 ### Feature: Customize Board Workflow → Run Tickets Through Customized Workflow
 
-#### Story: Run Work Type Flows
+#### Story: Display Work Type Flows On Board
 
 *Board App*. Intended (`.sessions/_backlog/customize-board-workflow.md` "work type based flows; multi flow shows up on board"): each work type has its own flow, and the board shows several flows at once.
 

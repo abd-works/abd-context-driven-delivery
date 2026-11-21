@@ -61,6 +61,14 @@ class PythonBlock:
         return self.node.lineno - 1, self.node.end_lineno - 1
 
     @property
+    def opening_line(self) -> int:
+        """The line, counted from 0, its ``with`` is written on."""
+        return self.node.lineno - 1
+
+    is_chained = False
+    """A Python step is a block of its own, never chained onto the step before it."""
+
+    @property
     def inside_lines(self) -> List[str]:
         return self.file.lines[slice(*self._inside)]
 

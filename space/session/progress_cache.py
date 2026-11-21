@@ -14,6 +14,7 @@ PROGRESS_CACHE_FILE = "progress-cache.json"
 # The questions it keeps answers to for each fidelity.
 HAS_OUTPUT = "has_output"
 VIOLATION_COUNT = "violation_count"
+ACCEPTED_COUNT = "accepted_count"
 # How long after its first new answer the file is written: one board read works out many answers, and they go into one
 # write rather than one each, which Windows refuses when it comes too fast.
 SAVE_SECONDS = 1.0
@@ -26,12 +27,12 @@ KeptAnswers = dict[str, dict[str, dict[str, object]]]
 class ProgressCache:
     """*ProgressCache* holds, for each fidelity a session works on, the answers that make reading the board slow:
     whether a file the fidelity declares is already there, which walks the session's folders, and how many violations
-    its latest report names, which opens the graph saved beside the report. The board reads every session every two
+    its latest report names and how many it leaves out as accepted, which opens the graph saved beside the report. The board reads every session every two
     seconds, so working these out on each read made the board take over ten seconds to show a move.
 
     Each answer is kept with the key it was worked out from, and worked out again only when its key changes. The keys
     are what Generate and Validate change: the log lines naming the fidelity, the paths the session declares for it,
-    and the latest report with its saved graph. A move changes none of them, so moving a ticket never works them out
+    and the latest report with its saved graph and the project's accepted violations. A move changes none of them, so moving a ticket never works them out
     again.
 
     The session holds one for its work folder, as ``progress-cache.json`` there, so a closed session takes it along; the session

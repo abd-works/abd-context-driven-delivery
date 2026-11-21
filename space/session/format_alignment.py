@@ -20,9 +20,9 @@ Which format is the source when two differ:
 Align saves through the Render action alone, so a drawing keeps the layout people gave it and a document the words its
 source does not hold, as every render does. A chosen code format with no file is rendered too, from the first chosen
 format whose file is there, a document before a drawing, into the files the fidelity declares for that format. A code
-file already there is never rewritten: the Render action keeps it whole, since code holds bodies the model does not,
-and when a render saves nothing because every file it would write is kept, that is answered as a failure. Code that
-is there is not compared with the documents, so no gap says a code file lacks what a document holds.
+file already there is never replaced: the Render action writes the new shape onto it and keeps every line it held, and
+each aligned file names the members that wait to be migrated in it. Code that is there is not compared with the
+documents, so no gap says a code file lacks what a document holds.
 """
 
 from __future__ import annotations
@@ -59,7 +59,6 @@ NOT_COMPARED = "not_compared"
 UNREADABLE_FORMAT = "unreadable_format"
 # The kinds of failure an alignment answers.
 RENDER_FAILED = "render_failed"
-KEPT_AS_WRITTEN = "kept_as_written"
 # The format group written as a document, which the graph reads and so leads a comparison.
 _DOCUMENT_GROUP = "markdown"
 # How many names a gap's message spells out before it counts the rest.
@@ -150,8 +149,8 @@ class AlignmentFailure:
     @property
     @data_field
     def kind(self) -> str:
-        """``render_failed`` when the render raised, such as code the fidelity's declared paths cannot place;
-        ``kept_as_written`` when the render saved nothing because each code file it would write is there and differs."""
+        """``render_failed``: the render raised, such as code the fidelity's declared paths cannot place, or a render
+        that would lose a line a file holds."""
         return self._kind
 
     @property
@@ -169,10 +168,11 @@ class AlignedFile:
     """One file an alignment rendered: the file saved, its format, the file it was rendered from, and what is left for
     an agent to do with it, such as publishing a whiteboard to its board."""
 
-    def __init__(self, file: str, format: str, source: str) -> None:
+    def __init__(self, file: str, format: str, source: str, migrate: list[str] | None = None) -> None:
         self._file = file
         self._format = format
         self._source = source
+        self._migrate = list(migrate or [])
 
     @property
     @data_field
@@ -191,8 +191,18 @@ class AlignedFile:
 
     @property
     @data_field
+    def migrate(self) -> list[str]:
+        """The members the file keeps though its model no longer holds them, such as ``Cart.total``: each waits for its
+        body to be moved into the member that replaced it."""
+        return list(self._migrate)
+
+    @property
+    @data_field
     def follow_up(self) -> str:
-        """What the render leaves to an agent: a whiteboard file is put on its board in Claude by render.publish_board."""
+        """What the render leaves to an agent: a whiteboard file is put on its board in Claude by render.publish_board,
+        and a code file's members no longer in the model are migrated."""
+        if self._migrate:
+            return f"Migrate in {self._file}: {', '.join(self._migrate)} is no longer in the model and is kept there, marked; move its body into the member that replaced it, then delete it."
         return f"Publish {self._file} to its board in Claude (render.publish_board)." if self._format == "whiteboard" else ""
 
 
@@ -502,10 +512,8 @@ class SessionAlignment:
                 raise
             return [AlignmentFailure(RENDER_FAILED, gap.file, f"Rendering {gap.source} to {gap.format} failed: {type(failure).__name__}: {failure}")]
         saved = [path for result in results for path in ([result["path"]] if result.get("path") else result.get("paths", []))]
-        kept = [self._session.paths.from_project(path) for result in results for path in result.get("kept", [])]
-        if not saved:
-            return [AlignmentFailure(KEPT_AS_WRITTEN, gap.file, f"Rendering {gap.source} to {gap.format} saved no file: {', '.join(kept) or 'the code'} is there already and differs, so it was left as written.")]
-        return [AlignedFile(self._session.paths.from_project(path), gap.format, gap.source) for path in saved]
+        waiting = [(each["file"], each.get("kept") or each.get("signature_differs")) for result in results for each in result.get("migrate", [])]
+        return [AlignedFile(self._session.paths.from_project(path), gap.format, gap.source, [kept for file, kept in waiting if file == path]) for path in saved]
 
     def _files_of(self, covered: Iterable[FidelityGuidance]) -> list[str]:
         """The files that are there of the chosen formats of the fidelities covered, each once, named from the project."""

@@ -128,11 +128,14 @@ class UxMap(UxNode):
         copy = screens[id(screen)]
         copy.chrome_of = screens.get(id(screen.chrome_of)) if screen.chrome_of is not None else None
         for region in screen.regions:
-            region_copy = self.region_type(region.name, region.sequential_order)
-            region_copy.area = region.area
-            for control in region.controls:
-                region_copy.append_control(self._control_copy(control, screens))
-            copy.append_region(region_copy)
+            copy.append_region(self._region_copy(region, screens))
+
+    def _region_copy(self, region: Region, screens: ScreenCopies) -> Region:
+        copy = self.region_type(region.name, region.sequential_order)
+        copy.area = region.area
+        for control in region.controls:
+            copy.append_control(self._control_copy(control, screens))
+        return copy
 
     def _control_copy(self, control: Control, screens: ScreenCopies) -> Control:
         demo = isinstance(control, StoryDemoControl)
@@ -167,6 +170,63 @@ class UxMap(UxNode):
             copy.ux_type = nav.ux_type
             copy.destinations = [screens[id(screen)] for screen in nav.destinations if id(screen) in screens]
             self.nav_components.append(copy)
+
+    def keep_served_by(self, held: "UxMap") -> None:
+        """Take from held, the map a file already holds, what its screens and controls serve and the domain terms its
+        screens name, for each screen and control this map holds too: a control is the one of the same name on the
+        same screen, in whichever region. What this map holds comes first; nothing it holds is replaced."""
+        for mine, theirs in self._screens_also_in(held):
+            mine.show_what(theirs)
+            for term in theirs.domain_terms:
+                mine.attach_domain_term(term)
+            mine.layout = mine.layout or theirs.layout
+            own = {control.name: control for region in mine.regions for control in region.controls}
+            for control in (control for region in theirs.regions for control in region.controls if control.name in own):
+                own[control.name].show_what(control)
+                own[control.name].control_type = own[control.name].control_type or control.control_type
+
+    def keep_what_only(self, held: "UxMap") -> None:
+        """Take from held, the map a file already holds, everything only it holds, so drawing this map over that file
+        loses nothing: what its screens and controls serve (``keep_served_by``), and each screen, region, control, and
+        transition this map lacks, after this map's own."""
+        with self.batch_schema_sync():
+            self.keep_served_by(held)
+            screens: ScreenCopies = {id(theirs): mine for mine, theirs in self._screens_also_in(held)}
+            for mine, theirs in self._screens_also_in(held):
+                self._keep_parts_only(mine, theirs, screens)
+            for theirs in [screen for screen in held.screens if id(screen) not in screens]:
+                screens[id(theirs)] = self._screen_copy(theirs)
+                self.append_screen(screens[id(theirs)])
+                self._take_screen_parts(theirs, screens)
+            self._keep_transitions_only(held, screens)
+
+    def _screens_also_in(self, held: "UxMap") -> list[tuple[Screen, Screen]]:
+        """Each screen of this map with the screen of the same name held holds."""
+        own = {screen.name: screen for screen in self.screens}
+        return [(own[theirs.name], theirs) for theirs in held.screens if theirs.name in own]
+
+    def _keep_parts_only(self, mine: Screen, theirs: Screen, screens: ScreenCopies) -> None:
+        """Give mine each region only theirs holds, and each of mine's regions the controls only theirs holds in the
+        region of the same name."""
+        own = {region.name: region for region in mine.regions}
+        for region in theirs.regions:
+            if region.name not in own:
+                mine.append_region(self._region_copy(region, screens))
+                continue
+            own[region.name].area = own[region.name].area or region.area
+            named = {control.name for held_region in mine.regions for control in held_region.controls}
+            for control in (control for control in region.controls if control.name not in named):
+                own[region.name].append_control(self._control_copy(control, screens))
+
+    def _keep_transitions_only(self, held: "UxMap", screens: ScreenCopies) -> None:
+        """Give this map each transition only held holds, joining this map's own screens."""
+        own = {(transition.trigger, _name_of(transition.from_screen), _name_of(transition.to_screen)) for transition in self.transitions}
+        for transition in held.transitions:
+            if (transition.trigger, _name_of(transition.from_screen), _name_of(transition.to_screen)) in own:
+                continue
+            copy = self.transition_type(transition.name, len(self.transitions))
+            copy.trigger, copy.nav_type = transition.trigger, transition.nav_type
+            self.transitions.append(copy.joining(screens.get(id(transition.from_screen)), screens.get(id(transition.to_screen))))
 
     @classmethod
     def from_workspace(cls, root: Path) -> Optional["UxMap"]:
@@ -214,3 +274,7 @@ class UxMap(UxNode):
             if screen.name == name:
                 return screen
         raise ScreenNotOnMap(name)
+
+
+def _name_of(screen: Optional[Screen]) -> str:
+    return screen.name if screen is not None else ""

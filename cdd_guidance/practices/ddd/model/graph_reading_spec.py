@@ -8,7 +8,7 @@ _REPO = Path(__file__).resolve().parents[4]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from expects import equal, expect  # noqa: E402
+from expects import contain, equal, expect  # noqa: E402
 from mamba import before, context, description, it  # noqa: E402
 
 from cdd_guidance.practices.ddd.ddd import Ddd  # noqa: E402
@@ -336,3 +336,54 @@ with description("DDD's reading of a domain model beside the code that implement
     with it("should join the code's root to the document's root it implements, in the aggregate its folder names"):
         code = self.roots.get("src/cart/cart.py")
         expect(files_reached(self.fixture, "implements", code) if code else None).to(equal(["src/.context/domain-model.md"]))
+
+
+# A bounded context's own file names each aggregate as a link to that aggregate's heading in the domain model. Here
+# the links say what the names alone would not: Ordering's link is titled Cart and opens the heading Shopping Cart, the
+# domain model heads Book under Library while Catalogue's file links it, and Ordering's file links no Order.
+_LINK = "../../.context/domain-model.md"
+_LINKED_SHOP = {
+    "ordering/.context/bounded-context.md": f"# Ordering\n\nAggregates:\n- [Cart]({_LINK}#shopping-cart)\n\nCart → Catalogue · Book\n",
+    "catalogue/.context/bounded-context.md": f"# Catalogue\n\nAggregates:\n- [Book]({_LINK}#book)\n",
+    ".context/domain-model.md": (
+        "# Domain Model — Bookshop\n\n"
+        "## Ordering | custom\n\n"
+        "### Shopping Cart\n\n#### Cart <<Aggregate Root>> <<Entity>>\n\n------\n+ cartId: CartId\n----\n+ total(): Money\n\n"
+        "### Order\n\n#### Order <<Aggregate Root>> <<Entity>>\n\n------\n+ orderId: OrderId\n----\n+ submit(): void\n\n"
+        "## Library | custom\n\n"
+        "### Book\n\n#### Book <<Aggregate Root>> <<Entity>>\n\n------\n+ isbn: Isbn\n----\n+ price(): Money\n"
+    ),
+}
+
+
+def aggregates_owned_by(fixture: RuleFixture, context_name: str) -> list[str]:
+    """The aggregates the graph puts under the bounded context called context_name, in order of name."""
+    owner = next(node for node in ddd_nodes(fixture, "BoundedContext") if node.name == context_name)
+    owned = fixture.practice.reading.graph.edges.from_parent("owns", owner)
+    return sorted(edge.child.name for edge in owned if edge.child.type == "Aggregate")
+
+
+with description("DDD's reading of bounded contexts whose files link their aggregates to the domain model"):
+    with before.all:
+        self.fixture = RuleFixture(Ddd, _LINKED_SHOP)
+
+    with it("should give a context the aggregate at the heading its link opens, whatever words the link shows"):
+        expect(aggregates_owned_by(self.fixture, "Ordering")).to(equal(["Shopping Cart"]))
+
+    with it("should give a context the aggregate its link opens, though the domain model heads it under another context"):
+        expect(aggregates_owned_by(self.fixture, "Catalogue")).to(equal(["Book"]))
+
+    with it("should not give a context that writes links an aggregate its file does not link, though the domain model heads it under the context's name"):
+        expect(aggregates_owned_by(self.fixture, "Ordering")).not_to(contain("Order"))
+
+    with it("should link a mapping's sides to the aggregates the two contexts' links open by those names"):
+        mapping = ddd_nodes(self.fixture, "ContextMapping")[0]
+        expect((reached(self.fixture, "local", mapping), reached(self.fixture, "remote", mapping))).to(equal((["Shopping Cart"], ["Book"])))
+
+    with context("beside a context whose file names its aggregates in plain words"):
+        with before.all:
+            plain = {**_LINKED_SHOP, "ordering/.context/bounded-context.md": "# Ordering\n\nAggregates:\n- Shopping Cart\n- Order\n"}
+            self.fixture = RuleFixture(Ddd, plain)
+
+        with it("should give that context the aggregates the domain model heads under its name, as it always has"):
+            expect(aggregates_owned_by(self.fixture, "Ordering")).to(equal(["Order", "Shopping Cart"]))

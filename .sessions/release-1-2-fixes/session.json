@@ -8,6 +8,45 @@
     "stages": [
       "discovery"
     ],
-    "version": 1
+    "version": 7
+  },
+  "practices": {
+    "stories": {
+      "formats": {
+        "story_map": [
+          "drawio",
+          "whiteboard"
+        ]
+      }
+    },
+    "ddd": {
+      "formats": {
+        "bounded_context": [
+          "drawio",
+          "whiteboard"
+        ]
+      }
+    },
+    "ux": {
+      "formats": {
+        "ia": [
+          "drawio",
+          "whiteboard"
+        ]
+      }
+    },
+    "clean_engineering": {
+      "formats": {
+        "modules": [
+          "drawio",
+          "whiteboard"
+        ]
+      }
+    },
+    "bdd": {
+      "formats": {
+        "behavior": []
+      }
+    }
   }
 }

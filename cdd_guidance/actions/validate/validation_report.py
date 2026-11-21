@@ -100,9 +100,11 @@ class ValidationReport:
         return lines
 
     def _summary_lines(self) -> list[str]:
-        """How many graph violations the report holds, across how many rules, and how many rules the AI judges; with
-        no graph checked, that the judgment covers the files alone; and each named path the graph read no node from."""
+        """How many graph violations the report holds, across how many rules, how many it leaves out because a person
+        accepted them, and how many rules the AI judges; with no graph checked, that the judgment covers the files
+        alone; and each named path the graph read no node from."""
         violations = self._checked.violations()
+        accepted = self._checked.accepted()
         unread = self._checked.unread
         lines = ["## Summary", ""]
         if not self._checked.files:
@@ -112,10 +114,18 @@ class ValidationReport:
             lines.append(f"**Rules with graph hits:** {len(Violation.by_rule(violations))}")
         elif len(unread) < len(self._checked.edited) or not unread:
             lines.append("**No graph rule violations.** All scanned graph rules passed.")
+        if accepted:
+            lines.append(self._accepted_line(accepted))
         if unread:
             lines.append(self._unread_line(unread))
         lines.extend([f"**AI rules in scope:** {len(self._rules_in_scope())}", ""])
         return lines
+
+    def _accepted_line(self, accepted: list[Violation]) -> str:
+        """That the report leaves out the violations a person accepted, how many, and the file that keeps them, so a
+        judge does not report them again and a reader can find and take back an acceptance."""
+        kept = self._shown(self._session.accepted_violations.file.resolve())
+        return f"**Accepted violations left out:** {len(accepted)}. A person accepted them as they are, in `{kept}`; do not report them again."
 
     def _unread_line(self, unread: list[str]) -> str:
         """That no graph rule ran on the named paths the graph read no node from, so nobody reads a report with no
