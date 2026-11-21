@@ -16,6 +16,9 @@ class Checkout:
     def __init__(self, folder: Path | str) -> None:
         self.folder = Path(folder).resolve()
         self._read: GitFolder | None = None
+        # What it answers while it is no clone, and while only git reads its refs, each made once.
+        self._no_facts = NoGitFacts(self.folder)
+        self._asked = AskedOfGit(Git(self.folder))
 
     @classmethod
     def holding(cls, folder: Path | str) -> Checkout:
@@ -73,8 +76,10 @@ class Checkout:
         read from its files from then on."""
         if self._read is not None:
             return self._read
+        if not self.is_clone:
+            return self._no_facts
         folder = GitFolder(self.folder)
         if folder.is_readable:
             self._read = folder
             return folder
-        return AskedOfGit(Git(self.folder)) if self.is_clone else NoGitFacts(self.folder)
+        return self._asked

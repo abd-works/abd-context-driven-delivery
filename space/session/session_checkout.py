@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from space.repo.repo import Branch, Repo
+from space.session.answer_reads import HeldForAnswer
 
 if TYPE_CHECKING:
     from space.session.session import Session
@@ -31,6 +32,8 @@ class SessionCheckout:
 
     def __init__(self, session: Session) -> None:
         self._session = session
+        # Its branch, found once for each answer that asks: every part of one answer works on the same Branch.
+        self._branch = HeldForAnswer[Branch]()
 
     @property
     def _main_clone(self) -> Repo:
@@ -46,7 +49,11 @@ class SessionCheckout:
     def branch(self) -> Branch:
         """The session's own branch, whether or not the repository has it yet: the recorded branch while the repository
         has it, else the one named as the session, else the one branch whose name holds the session's name as a whole
-        word. With several such branches none is chosen, and the one named as the session comes back, not there yet."""
+        word. With several such branches none is chosen, and the one named as the session comes back, not there yet. It
+        is found once for each answer that asks."""
+        return self._branch.get(self._session.answer, self._found_branch)
+
+    def _found_branch(self) -> Branch:
         repo = self._main_clone
         recorded = self._session.record.fields.branch
         if recorded and repo.branch_named(recorded).exists:
