@@ -30,11 +30,6 @@ class Sketch(GuidanceAction):
         """A sketch made for session and call, which finds its template in this sketch's agent_dir."""
         return type(self)(agent_dir=self._agent_dir, session=session, call=call)
 
-    @property
-    def sketch_template(self) -> str:
-        """The sketch template for this instance's agent_dir (tiered discovery)."""
-        return self.find_template()
-
     def _grill_context(self) -> GrillContext:
         """The grill this sketch runs: made for this sketch's session and working on what it lists."""
         return self._inside(GrillContext)

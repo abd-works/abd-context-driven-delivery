@@ -104,10 +104,6 @@ class WhiteboardEpic(LaidOutEpic, _BoardStoryNode):
         element_id = f"subepic.{self.depth}.{self.board_key}" if nested else f"epic.{self.board_key}"
         return self.board_shape(element_id, kind="rounded", color="green" if nested else "purple", size="body", text=self.name)
 
-    def bars(self) -> List[BoardElement]:
-        """This bar and the bars of every sub-epic under it: the backbone of the map without its stories."""
-        return [self.bar(), *(bar for child in self.epics for bar in child.bars())]
-
 
 class WhiteboardStoryModel(DiagramStoryModel):
     """Whiteboard story-map I/O. IS the format-typed tree root: render draws it on a board, parse reads one back."""
@@ -135,10 +131,6 @@ class WhiteboardStoryModel(DiagramStoryModel):
 
     def parse(self, text: str) -> "WhiteboardStoryModel":
         """The format-adapter entry point Stories renders through: the story map a board's text holds."""
-        return self.take_board(Whiteboard.from_text(text))
-
-    def load(self, text: str) -> "WhiteboardStoryModel":
-        """The story map a saved board holds, as every story-map format loads its file."""
         return self.take_board(Whiteboard.from_text(text))
 
     def take_board(self, board: Whiteboard) -> "WhiteboardStoryModel":

@@ -20,7 +20,7 @@ from harness.design_canvas.look import BACKGROUND, FONTS, LOOK
 from cdd_guidance.practices.ux.model.claude_design.nodes import ClaudeDesignUxMap
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 from harness.annotations.name import Name
-from cdd_guidance.practices.ux.model.story_link import key_of
+from cdd_guidance.practices.ux.model.story_link import KEY_SEPARATOR, key_of
 
 from cdd_guidance.practices.stories.model.diagram_story_model import (
     DiagramEpic,
@@ -150,7 +150,7 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
         self.sources = dict(setup.sources)
         self.canvas = DesignCanvas(self.name if self.name and self.name != "StoryModel" else "Story Map", setup.project)
 
-    def render(self, canonical: Optional[StoryModel] = None, previous: Optional[str] = None, setup: Optional["StoryCanvasSetup"] = None) -> str:
+    def render(self, canonical: Optional[StoryModel] = None, setup: Optional["StoryCanvasSetup"] = None) -> str:
         """The canvas files as JSON, drawn on a new canvas of canonical (else of this map) made with setup, so this
         canvas keeps its own."""
         source = canonical if canonical is not None else self
@@ -288,7 +288,7 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
             place = {"story": story.name}
             if scenario is not None and scenario in story.scenarios:
                 place.update({"scenario": scenario.name, "step": step.text})
-            caption = f"{scenario.name} › {step.text}" if scenario is not None else story.name
+            caption = f"{scenario.name}{KEY_SEPARATOR}{step.text}" if scenario is not None else story.name
             top = self.thumbs_top + row * (ClaudeDesignStory.thumb_px + ClaudeDesignStory.thumb_gap_px)
             href = f"{self.explorer_href}#{urlencode(place, quote_via=quote)}"
             cells.append(Place(left, top, ClaudeDesignStory.width_px, ClaudeDesignStory.thumb_px).thumbnail(caption, screen.image, href))

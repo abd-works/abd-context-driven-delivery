@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from cdd_guidance.practices.clean_engineering.model.code_body import TYPESCRIPT, CodeLanguage
+from cdd_guidance.practices.clean_engineering.model.code_body import TYPESCRIPT
 from cdd_guidance.practices.stories.model.brace_story import BraceStoryWriting
 from cdd_guidance.practices.stories.model.script_story_model import ScriptStoryModel, script_story_file_suffixes
 from cdd_guidance.practices.stories.model.typescript.nodes import TypeScriptEpic, TypeScriptStory
@@ -15,10 +15,6 @@ class TypeScriptStoryWriting(BraceStoryWriting):
     named from the workspace root (helpers), as a path alias resolves it."""
 
     file_name_template = "{snake}_story.test.ts"
-
-    def __init__(self, language: CodeLanguage, helpers: str) -> None:
-        super().__init__(language)
-        self.helpers = helpers
 
     def story_test_import(self, parent: str) -> str:
         return f'import {{ background, scenario, story }} from "{self.helpers}";'

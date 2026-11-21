@@ -5,7 +5,7 @@
 Each format is a *UxMap* subclass, listed by `Ux` under `formats`: drawio, html, markdown, json, claude_design. A format names the node types that write it its own way, and reads with `parse(content)` into a new map of its class and writes with `render(canonical)`. The UX practice registers itself on *UxNode*, so the model never imports its practice. JSON and HTML carry the whole map. Draw.io carries screens, their regions, and transitions. Markdown carries the scope and the context. Claude Design places the prototype screens on a canvas and is never read back.
 
 ```
-ux_map = JsonUxMap.from_workspace(folder)       # ux-map.json or ux.json in the folder
+ux_map = JsonUxMap.create().parse(text)         # the text of ux-map.json or ux.json
 drawio = DrawioUxMap.create().render(ux_map)
 ```
 
@@ -42,16 +42,15 @@ Every node of the map. Each child belongs to its owner on the graph: a screen, t
 	// composition
 + context: UxContext
 	// composition — the map has one context
-+ workspace_files: tuple[str]
-	// class field: where this format's map sits in a folder, as glob patterns tried in order
++ map_file_suffixes: tuple[str]
+	// class field: the file endings this format's map is written with; none for a format no file is read back from
++ not_a_map_failures: tuple[type[Exception]]
+	// class field: what reading a file fails with when the file is not this format's map after all
 ----
 + create(name: str | Graph = "UxMap", sequential_order: int = 0, graph: Graph | None = None): UxMap
 	// class operation: a new map; given a graph in place of a name, a map whose nodes live on that graph
-+ from_workspace(root: Path): UxMap | None
-	// class operation: the map this format reads from its file in root; none when the folder has no such file
-	-> workspace_file(root)
-	-> parse
-+ workspace_file(root: Path): Path | None
++ reads_file(file: Path, text: str): bool
+	// each format: whether file, which holds text, is a UX map in this format
 + parse(content: str): UxMap
 	// each format: a new map of this class read from content
 + render(canonical: UxMap): str
@@ -75,6 +74,8 @@ Every node of the map. Each child belongs to its owner on the graph: a screen, t
 + description: str
 + chrome_of: Screen | None
 	// the screen whose chrome this tab shares
++ chrome_of_name: str
+	// that screen's name; blank while it is the chrome of none
 + inactive_tabs: list[str]
 + shows: list[Story]
 	// the stories on the screen's graph it shows; each records shownOn this screen
@@ -176,6 +177,8 @@ A story step a control runs: its kind (given, when, then) and the step text Stor
 ----
 + from_value(value: StoryStep | Mapping): StoryStep
 	// class operation: a step from a file's {kind, label} object, or the step itself
++ from_values(steps: Iterable[StoryStep | Mapping] | None): list[StoryStep]
+	// class operation: each step a file lists, in its order
 + as_dict(): dict
 
 ## Interaction : UxNode
@@ -188,6 +191,8 @@ A story step a control runs: its kind (given, when, then) and the step text Stor
 + effect: str
 + destination: Screen | None
 	// association to a screen on the same map
++ destination_name: str
+	// that screen's name; blank while it goes to none
 
 ## UxComponent : UxNode
 
@@ -200,6 +205,9 @@ A structural peer of the screens on the map: a transition, a content type, or a 
 ------
 + from_screen: Screen | None
 + to_screen: Screen | None
++ from_name: str
++ to_name: str
+	// the names of the screens it joins; blank for a screen it lacks
 + trigger: str
 + nav_type: str
 	// "tab" draws dashed on the site map
@@ -233,8 +241,6 @@ One kind of *UxComponent* on the map. Appending records the map's edge to the co
 ----
 + append(component: UxComponent): None
 	// raises TypeError for a component of another kind
-+ remove(name: str): UxComponent
-+ find(name: str): UxComponent
 
 ## ReferencePaths
 
@@ -244,14 +250,13 @@ Ordered paths to story or object-model JavaScript, each stored once.
 ----
 + add(path: str): None
 + replace(paths: Iterable[str]): None
-+ clear(): None
 + as_list(): list[str]
 
 ---
 
 ## Formats
 
-Each format class below is a *UxMap* subclass. It overrides `parse`, `save`, and `workspace_files`, and names the node types it is made of (`screen_type`, `region_type`, `control_type`, `story_demo_control_type`, `transition_type`, `content_type_type`, `nav_component_type`), which its reading and `copy_of` make. `render(canonical)` asks the format's own map to copy the map it is given (`copy_of`, an instance method as a story map's is); the copy is detached, keeping the stories each screen shows by key, and writes itself with `save`. Each format's map reads its own file in `parse`, and its screens, regions, and other nodes read their own part of it.
+Each format class below is a *UxMap* subclass. It overrides `parse` and `save`, says which files are its own (`map_file_suffixes`, `reads_file`) and what reading a file that is no map fails with (`not_a_map_failures`), and names the node types it is made of (`screen_type`, `region_type`, `control_type`, `story_demo_control_type`, `transition_type`, `content_type_type`, `nav_component_type`), which its reading and `copy_of` make. `render(canonical)` asks the format's own map to copy the map it is given (`copy_of`, an instance method as a story map's is); the copy is detached, keeping the stories each screen shows by key, and writes itself with `save`. Each format's map reads its own file in `parse`, and its screens, regions, and other nodes read their own part of it.
 
 ## JsonUxMap : UxMap
 
@@ -259,15 +264,15 @@ The `json` format: the whole map as one JSON document; every other format can ro
 
 ----
 + parse(content: str | dict): UxMap
-	-> read_record(data)
-+ read_record(data: dict): None
+	-> _read_record(data)
+- _read_record(data: dict): None
 	// its own fields, then each part reading its own record
 	-> JsonScreen.from_record, JsonScreen.read_record, JsonTransition.from_record, JsonContentType.from_record, JsonNavComponent.from_record
 	Invariant: every screen is on the map before any link to a screen is read, so a transition, a tab, or a destination names a screen that is already there
 + screen_named(name: str): Screen | None
 + render(canonical: UxMap): str
 	-> copy_of(canonical).save
-+ map_record(): dict
+- _map_record(): dict
 	// this map: each screen, transition, content type, and navigation component writes its own record; a link to a screen is written as that screen's name
 
 Its nodes are JsonScreen, JsonRegion, JsonControl, JsonStoryDemoControl, JsonTransition, JsonContentType, and
@@ -276,7 +281,7 @@ controls subclass the JSON controls, since the page carries the JSON document.
 
 ## HtmlUxMap : JsonUxMap
 
-The `html` format: the mockup review page, product screens on the left and the story explorer on the right, with the JSON map embedded in a `ux-map-json` comment. It is the JSON format inside a page: parse and render ask the JSON format for the document the page carries. Files: `{folder}.html`, `index.html`, `mockup.html`, `ux.html`.
+The `html` format: the mockup review page, product screens on the left and the story explorer on the right, with the JSON map embedded in a `ux-map-json` comment. It is the JSON format inside a page: parse and render ask the JSON format for the document the page carries. Files: any `.html` page that carries the comment.
 
 ----
 + parse(content: str): UxMap
@@ -321,31 +326,31 @@ The HTML page's controls: `html()` writes a visible affordance for the control t
 
 ## DrawioUxMap : UxMap
 
-The `drawio` format: a Site Map page and a Detailed IA page, written through the vendored drawio-ux command line (`drawio_ux.mjs`). Files: `information-architecture.drawio`, `ia.drawio`, `site-map.drawio`, any `.drawio` in the folder.
+The `drawio` format: a Site Map page and a Detailed IA page, written through the vendored drawio-ux command line (`drawio_ux.mjs`). Files: any `.drawio` the command line wrote, or one with a Site Map or Detailed IA page.
 
 ------
 + cli_timeout_seconds: float
 ----
 + parse(content: str): UxMap
 	// raises UnreadableDrawio when content is not XML; JSON content is read with source json
-	-> read_pages
-+ read_pages(root_element: Element): None
+	-> _read_pages
+- _read_pages(root_element: Element): None
 	// screens from the Site Map page (DrawioScreen.from_cell), then each screen reads its regions from its own box on the Detailed IA page (DrawioScreen.read_regions, DrawioRegion.from_cell), then the transitions drawn between screens. An edge labelled "there / back" is two transitions
 + render(canonical: UxMap): str
 	// copies ux_map into a DrawioUxMap (DrawioScreen, DrawioRegion), which draws itself
-+ cli_state(target: str): dict
+- _cli_state(target: str): dict
 	// its screens' and regions' own cli_record parts, and its transitions
 + save(): str
 	// raises DrawioCliMissing, DrawioCliFailed, or DrawioCliTimedOut
 
 ## MarkdownUxMap : UxMap
 
-The `markdown` format: the scope, then the invariants and notes as bullet lists under their own headings. It carries no screens. Files: `.context/ux-context.md`, `ux-context.md`, `.context/context.md`, `context.md`.
+The `markdown` format: the scope, then the invariants and notes as bullet lists under their own headings. It carries no screens. Files: `ux-context.md`.
 
 ----
 + parse(content: str): UxMap
-	-> read_text
-+ read_text(content: str): None
+	-> _read_context
+- _read_context(content: str): None
 	// any line outside the scope, or a bullet under any other heading, is a note
 + render(canonical: UxMap): str
 

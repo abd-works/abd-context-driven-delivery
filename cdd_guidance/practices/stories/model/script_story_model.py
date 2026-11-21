@@ -78,7 +78,7 @@ class ScriptStoryModel(BraceStoryModel):
         return f"{self._story_test_folder}/story-test" if self._story_test_folder else "story-test"
 
     @property
-    def story_test_file_path(self) -> str:
+    def _story_test_file_path(self) -> str:
         """Where the step library a new tree is seeded with is written."""
         return f"{self.story_test_import_path}{self.LEAF_EXTENSION}"
 
@@ -89,7 +89,7 @@ class ScriptStoryModel(BraceStoryModel):
 
     def save(self) -> Dict[str, str]:
         # WHY: a tree read from code already brings its own step library; only a new tree needs the seed.
-        seed = {} if self.read_from_code else {self.story_test_file_path: self.seed_file.read_text(encoding="utf-8")}
+        seed = {} if self.read_from_code else {self._story_test_file_path: self.seed_file.read_text(encoding="utf-8")}
         return self._write_epics(seed)
 
     def copy_of(self, source: Optional[StoryModel]) -> "ScriptStoryModel":

@@ -8,8 +8,11 @@ from typing import Callable, Optional
 
 from harness.agent_tools.agent_tools import agent_toolset
 from harness.guidance.guidance import PracticeGuidance
+from harness.guidance.practice_formats import FormatAdapter
 
+from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel
 from cdd_guidance.practices.stories.model.graph_reading import StoriesReading
+from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
 from cdd_guidance.practices.stories.model.sketch.sketch_story_model import SketchStoryModel
 from cdd_guidance.practices.stories.model.story_map_files import (
     STORY_FILE_SUFFIXES,
@@ -189,14 +192,12 @@ class Stories(PracticeGuidance):
         by itself (``MarkdownStoryModel.opened_from``), so a save keeps every line it does not change; a story map in
         another format read by the format that reads its extension; a story test, which is read and not edited, merged
         onto its story map (``read_files``)."""
-        from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
-
         if self._story_test_reader(Path(path)) is not None:
             return self.read_files([path], project)
         adapter = self.formats.for_file(Path(path))
         if isinstance(adapter, MarkdownStoryModel):
             return adapter.opened_from(Path(path), project)
-        return adapter.from_workspace(Path(path), project=project) or adapter
+        return self._read_by(adapter, Path(path), project) or adapter
 
     def _story_map_of_code(self, tests: list[Path], project: Path, on_file: OnFile = None) -> StoryModel:
         """The story map the story tests in code among tests hold under the project's story_tests, each language read
@@ -243,14 +244,20 @@ class Stories(PracticeGuidance):
 
     def _story_test_reader(self, path: Path):
         """The code format whose story type reads the story test at path; none for any other file."""
-        from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel
-
         adapters = (self.formats.adapter(name) for name in self.formats)
         return next((adapter for adapter in adapters if isinstance(adapter, CodeStoryModel) and adapter.is_story_file(path)), None)
 
     def _story_map_file(self, path: Path, project: Path, on_file: OnFile = None) -> StoryModel:
         """The story map in the file at path, read by the format that reads its extension."""
-        return self.formats.for_file(path).from_workspace(path, on_file=on_file, project=project) or StoryModel()
+        return self._read_by(self.formats.for_file(path), path, project, on_file) or StoryModel()
+
+    def _read_by(self, adapter: FormatAdapter, path: Path, project: Path, on_file: OnFile = None) -> StoryModel | None:
+        """The story map in the file at path as adapter, the format that reads its extension, reads it: by the
+        format's own read of a file, which names each node's file as a path from project; a format with none, such
+        as a whiteboard, reads the file's text."""
+        if hasattr(adapter, "from_workspace"):
+            return adapter.from_workspace(path, on_file=on_file, project=project)
+        return adapter.parse(path.read_text(encoding="utf-8"))
 
     def _maps_beside(self, tests: list[Path], project: Path) -> list[Path]:
         """The story map each story test belongs to: in its own folder, or the nearest folder above it inside project,

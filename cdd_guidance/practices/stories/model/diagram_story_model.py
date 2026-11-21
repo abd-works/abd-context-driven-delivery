@@ -89,44 +89,6 @@ class DiagramStoryNode:
             offset += sibling.width + spacing
         return offset
 
-    def place(self, side: str, destination: "DiagramStoryNode") -> None:
-        self._place_side = side
-        self._place_destination = destination
-
-    def add(self, child: "DiagramStoryNode") -> None:
-        children = self._placed_children()
-        previous = children[-1] if children else None
-        if isinstance(child, Epic):
-            self.epics.append(child)
-        elif isinstance(child, Story):
-            self.stories.append(child)
-        child.place("below", self)
-        if previous is not None:
-            child.place("after", previous)
-        self.stretch()
-
-    def stretch(self) -> None:
-        parent = getattr(self, "parent", None)
-        if isinstance(parent, DiagramStoryNode):
-            parent.stretch()
-
-    def role(self) -> str:
-        if isinstance(self, Story):
-            story_type = getattr(self, "story_type", StoryType.USER)
-            value = getattr(story_type, "value", story_type)
-            return f"story:{value}"
-        if isinstance(self, Epic):
-            if isinstance(self.parent, Epic):
-                return f"subepic:{self.depth}"
-            return "epic"
-        return ""
-
-    def _placed_children(self) -> list:
-        children = []
-        children.extend(getattr(self, "epics", []))
-        children.extend(getattr(self, "stories", []))
-        return children
-
 
 class DiagramStoryCell:
     """One story-map element as it sits on a drawn map: its role (``epic``, ``subepic``, ``story`` or ``actor``), its

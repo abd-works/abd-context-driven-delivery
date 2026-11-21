@@ -10,7 +10,7 @@ from harness.guidance.practice_formats import PracticeFormats, RenderRequest
 
 from cdd_guidance.practices.stories.model.diagram_story_model import DiagramStoryModel
 from cdd_guidance.practices.stories.model.story_map_files import STORY_FILE_SUFFIXES, STORY_TESTS_FOLDER, THIN_SLICING_FILES, StoryMapFiles, path_from
-from cdd_guidance.practices.stories.model.story_model import Epic, StoryModel
+from cdd_guidance.practices.stories.model.story_model import Epic, Scenario, Story, StoryModel
 
 
 class PracticeOutsideSession(Exception):
@@ -52,7 +52,7 @@ class SpecifiedStories:
         epic.epics = [sub for sub in epic.epics if self._keeps(sub)]
         return bool(epic.stories or epic.epics)
 
-    def _is_read_from_files(self, node) -> bool:
+    def _is_read_from_files(self, node: Story | Scenario) -> bool:
         return node.source is not None and node.source.file in self._files
 
 

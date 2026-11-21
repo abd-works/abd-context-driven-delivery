@@ -518,8 +518,6 @@ interface ColumnLayout {
   subEpicCols: Map<string, { start: number; span: number }>;
   storyCol: Map<string, number>;
   totalCols: number;
-  /** Column indices (1-based) that are narrow leading-plus slots, not card slots. */
-  leadCols: Set<number>;
 }
 
 // Card-width columns an empty SubEpic or Epic reserves: a single column is too narrow to
@@ -529,8 +527,8 @@ const EMPTY_PARENT_COLUMNS = 2;
 /** Lays out the map's columns left to right as the drag under way would leave them: each Story one column, each
  *  SubEpic and Epic spanning the columns of its Stories. */
 class ColumnLayoutBuilder {
-  // no dedicated lead columns — all columns are card-width
-  private readonly layout: ColumnLayout = { epicCols: new Map(), subEpicCols: new Map(), storyCol: new Map(), totalCols: 1, leadCols: new Set<number>() };
+  // every column is card-width
+  private readonly layout: ColumnLayout = { epicCols: new Map(), subEpicCols: new Map(), storyCol: new Map(), totalCols: 1 };
   private col = 1;
 
   constructor(private readonly storyMap: StoryMapViewModel, private readonly preview: DragPreview) {}
@@ -563,7 +561,7 @@ function computeColumnLayout(storyMap: StoryMapViewModel, preview: DragPreview):
   return new ColumnLayoutBuilder(storyMap, preview).laidOut();
 }
 
-function colTemplate(totalCols: number, _leadCols: Set<number>): string {
+function colTemplate(totalCols: number): string {
   // Keep columns text-fit while allowing expansion states to grow the track when needed.
   return Array.from({ length: totalCols }, () => 'minmax(max-content, auto)').join(' ');
 }
@@ -676,8 +674,8 @@ export function StoryHierarchyView({
 
   const dragVisuals = useDragVisuals();
   const { dragState, dropEdge } = dragVisuals;
-  const { epicCols, subEpicCols, storyCol, totalCols, leadCols } = computeColumnLayout(storyMap, dragVisuals);
-  const gridCols = colTemplate(totalCols, leadCols);
+  const { epicCols, subEpicCols, storyCol, totalCols } = computeColumnLayout(storyMap, dragVisuals);
+  const gridCols = colTemplate(totalCols);
 
   // Grid row constants — keep in sync with test assertions
   const ROW_EPICS = 1;

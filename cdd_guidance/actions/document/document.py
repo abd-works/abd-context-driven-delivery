@@ -1,4 +1,4 @@
-"""Document — observe existing state on each provided context tool."""
+"""Document — observe existing state on each listed guidance."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ DOCUMENT_RANK_ON_STAGE = 6
 
 @agent_toolset
 class Document(GuidanceAction):
-    """Document existing state for provided context tools."""
+    """Document existing state for the listed guidance."""
 
     # Document records what is there without correcting it, so an edit it makes is no work the rules should steer.
     injects_rules = False

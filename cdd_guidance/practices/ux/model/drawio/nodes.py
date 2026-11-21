@@ -92,6 +92,7 @@ class CellStyle:
     ``uxArea``."""
 
     def __init__(self, cell: ET.Element) -> None:
+        self._cell = cell
         pairs = (part.partition("=") for part in cell.get("style", "").split(";") if part)
         self._keys = {key: held for key, _equals, held in pairs}
 
@@ -115,6 +116,14 @@ class CellStyle:
     def control_types(self) -> list[str]:
         """The type of each control the cell shows, in the order it shows them; none for a cell that keeps none."""
         return self.get(_CONTROLS_KEY).split(",") if _CONTROLS_KEY in self else []
+
+    @property
+    def corner(self) -> tuple[float, float]:
+        """Where the cell's top left corner is drawn; the page's own corner for a cell with no geometry."""
+        geometry = self._cell.find("mxGeometry")
+        if geometry is None:
+            return (0.0, 0.0)
+        return (float(geometry.get("x", 0) or 0), float(geometry.get("y", 0) or 0))
 
 
 class DrawnServed(ServesStories):
@@ -299,22 +308,14 @@ class Callout:
     def under(cls, box: ET.Element, detailed: ET.Element) -> Optional["Callout"]:
         """The callout drawn under box: the annotation whose left edge is the box's, nearest below the box's top; none
         when the page draws none there."""
-        left, top = cls._corner(box)
+        left, top = CellStyle(box).corner
         below = [
-            (cls._corner(cell)[1], order, cell)
+            (CellStyle(cell).corner[1], order, cell)
             for order, cell in enumerate(detailed.iter("mxCell"))
             if cell.get("vertex") == "1" and cell.get("parent") == "1" and _is_annotation(_plain_text(cell.get("value", "")))
-            and cls._corner(cell)[0] == left and cls._corner(cell)[1] >= top
+            and CellStyle(cell).corner[0] == left and CellStyle(cell).corner[1] >= top
         ]
         return cls(min(below, key=lambda found: found[:2])[2]) if below else None
-
-    @classmethod
-    def _corner(cls, cell: ET.Element) -> tuple[float, float]:
-        """Where a cell's top left corner is drawn; the page's own corner for a cell with no geometry."""
-        geometry = cell.find("mxGeometry")
-        if geometry is None:
-            return (0.0, 0.0)
-        return (float(geometry.get("x", 0) or 0), float(geometry.get("y", 0) or 0))
 
     def annotate(self, screen: "DrawioScreen") -> None:
         """Give screen each story, scenario, and step the callout lists for it, attach each domain term it lists, and
@@ -339,17 +340,9 @@ class DrawioUxMap(UxMap):
     screen_type = DrawioScreen
     region_type = DrawioRegion
     control_type = DrawioControl
-    workspace_files = (
-        ".context/information-architecture.drawio",
-        ".context/ia.drawio",
-        "information-architecture.drawio",
-        "ia.drawio",
-        "site-map.drawio",
-        ".context/*.drawio",
-        "*.drawio",
-    )
     cli_timeout_seconds: float = _CLI_TIMEOUT_SECONDS
     map_file_suffixes = (".drawio",)
+    not_a_map_failures = (UnreadableDrawio,)
 
     def reads_file(self, file: Path, text: str) -> bool:
         """A drawing the drawio-ux command line wrote, or one that has its Site Map or Detailed IA page; any other
@@ -359,7 +352,7 @@ class DrawioUxMap(UxMap):
     def parse(self, content: str) -> UxMap:
         """A new map of this format, read from a draw.io file."""
         ux_map = type(self).create()
-        ux_map.read_pages(self._diagram_of(content))
+        ux_map._read_pages(self._diagram_of(content))
         return ux_map
 
     def _diagram_of(self, content: str) -> ET.Element:
@@ -369,7 +362,7 @@ class DrawioUxMap(UxMap):
         except ET.ParseError as error:
             raise UnreadableDrawio(f"draw.io content is not valid XML: {error}") from error
 
-    def read_pages(self, root_element: ET.Element) -> None:
+    def _read_pages(self, root_element: ET.Element) -> None:
         """Read the diagram's pages into this map: its screens from the Site Map page, what the Detailed IA page draws
         of each screen (its layout, regions, controls, stories, and domain terms), then the transitions drawn between
         screens."""
@@ -437,15 +430,15 @@ class DrawioUxMap(UxMap):
         drawn.cli_timeout_seconds = self.cli_timeout_seconds
         return drawn.save()
 
-    def cli_state(self, target: str) -> Dict[str, Any]:
+    def _cli_state(self, target: str) -> Dict[str, Any]:
         """This map as the state drawio_ux.mjs writes to target: its screens in columns and its transitions."""
         return {
             "target": target,
             "screens": [screen.cli_record(index) for index, screen in enumerate(self.screens)],
             "connections": [
                 {
-                    "from": transition.from_screen.name if transition.from_screen else "",
-                    "to": transition.to_screen.name if transition.to_screen else "",
+                    "from": transition.from_name,
+                    "to": transition.to_name,
                     "label": transition.trigger or transition.name,
                     "dashed": transition.nav_type == "tab",
                     "navType": transition.nav_type,
@@ -461,7 +454,7 @@ class DrawioUxMap(UxMap):
             raise DrawioCliMissing(f"drawio-ux CLI missing: {_CLI}")
         with tempfile.TemporaryDirectory(prefix="ux-drawio-") as folder:
             out_path = Path(folder) / "information-architecture.drawio"
-            state_path = JsonFile(Path(folder) / "state.json").write(self.cli_state(str(out_path)))
+            state_path = JsonFile(Path(folder) / "state.json").write(self._cli_state(str(out_path)))
             self._run_cli(["node", str(_CLI), "write", str(out_path), str(state_path)])
             if not out_path.is_file():
                 raise DrawioCliFailed(f"drawio-ux write produced no diagram at {out_path}")

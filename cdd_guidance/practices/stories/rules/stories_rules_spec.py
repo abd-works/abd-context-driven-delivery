@@ -92,7 +92,7 @@ with description("ScenariosShape"):
 with description("ExamplesTraceDomainModel concepts"):
     with it("should not count the actor a step names as a domain concept"):
         from cdd_guidance.practices.stories.model.story_model import Step, StepType
-        from cdd_guidance.practices.stories.rules.scenarios import scenario_domain_concepts
+        from cdd_guidance.practices.stories.rules.scenarios import ExamplesTraceDomainModel
 
         steps = [
             Step("**My Paradise** provides the device wallet merchant certificate", StepType.WHEN, 1),
@@ -100,4 +100,4 @@ with description("ExamplesTraceDomainModel concepts"):
         ]
         steps[0].concepts, steps[0].actor = ["My Paradise"], "My Paradise"
         steps[1].concepts, steps[1].actor = ["Customer", "certificate"], "Customer"
-        expect(scenario_domain_concepts(steps)).to(equal({"certificate"}))
+        expect(ExamplesTraceDomainModel().domain_concepts(steps)).to(equal({"certificate"}))

@@ -160,6 +160,9 @@ class WhiteboardRegion(Region, DrawnNode):
 class WhiteboardScreen(Screen, ServedOnCard, DrawnNode):
     """A screen's section: the card of what the screen serves, then its regions one under another."""
 
+    _serves_box = Box(0, 0, 0, 0)
+    """Where the card of what the screen serves is drawn, once the screen is laid out."""
+
     @property
     def serves_text(self) -> str:
         """The words of the card of what this screen serves and names; none for a screen that serves and names
@@ -228,7 +231,6 @@ class WhiteboardUxMap(UxMap):
     story_demo_control_type = WhiteboardStoryDemoControl
     transition_type = WhiteboardTransition
     map_file_suffixes = (Whiteboard.SUFFIX,)
-    workspace_files = ("*.whiteboard", ".context/*.whiteboard")
     first_left = 80
     first_top = 120
 
@@ -271,10 +273,10 @@ class WhiteboardUxMap(UxMap):
     def parse(self, content: str) -> UxMap:
         """A new map of this format, read from a board's text by where its elements sit."""
         ux_map = type(self).create()
-        ux_map.take_board(Whiteboard.from_text(content).holding({"screen"}, "UX screen"))
+        ux_map._take_board(Whiteboard.from_text(content).holding({"screen"}, "UX screen"))
         return ux_map
 
-    def take_board(self, board: Whiteboard) -> None:
+    def _take_board(self, board: Whiteboard) -> None:
         """Read board into this map: its screens left to right, each with the regions that sit in it and the controls
         that sit in each region, what each serves, and the arrows between screens as transitions."""
         self.name = board.title.strip() or self.name

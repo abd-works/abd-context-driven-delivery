@@ -93,14 +93,14 @@ export class StoryDemoPage {
   }
 
   /**
-   * Interactive — product control runs When via story_steps.
+   * Interactive — product control runs When via storySteps.
    * @returns {boolean} true when a When ran
    */
   onControlTrigger(control, root) {
     if (this.mode !== "Interactive") return false;
     const scenario = this.runner.scenario;
     if (!scenario) return false;
-    const whenStep = scenario.stepMatching(control.story_steps, { kind: "when" });
+    const whenStep = scenario.stepMatching(control.storySteps, { kind: "when" });
     if (!whenStep) return false;
     this._playGivensBefore(scenario, whenStep);
     this._takeInputs(scenario, control, root);

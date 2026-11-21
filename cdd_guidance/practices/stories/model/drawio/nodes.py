@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Callable, Dict, Iterator, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 from cdd_guidance.practices.stories.model.diagram_story_model import (
     DiagramStoryCell,
@@ -142,16 +142,6 @@ class DrawIOEpic(LaidOutEpic):
             "fontColor=#000000;fontSize=11;"
         )
 
-    def story_xs(self) -> Dict[str, List[int]]:
-        """Each story name's columns, left to right; one name can sit under several sub-epics."""
-        found: Dict[str, List[int]] = {}
-        for story in self.stories:
-            found.setdefault(story.name, []).append(story.x)
-        for child in self.epics:
-            for name, xs in child.story_xs().items():
-                found.setdefault(name, []).extend(xs)
-        return found
-
     def cells(self) -> List["DrawIOStoryModel.Vertex"]:
         if not isinstance(self.parent, Epic):
             return self._epic_cells()
@@ -282,19 +272,29 @@ class _KeptPlaces:
     """Where each cell of a story map drawn before stands, by its cell id: the drawing a person may have moved cards on,
     which the next render keeps them where they put them."""
 
-    def __init__(self, places: Dict[str, Dict[str, str]]) -> None:
-        self._places = places
+    def __init__(self) -> None:
+        self._places: Dict[str, Dict[str, str]] = {}
 
     @classmethod
     def from_text(cls, drawio: Optional[str]) -> "_KeptPlaces":
         """The places a draw.io file holds; none for no file, or text that is no draw.io file."""
+        kept = cls()
         if not drawio:
-            return cls({})
+            return kept
         try:
             root = ET.fromstring(drawio)
         except ET.ParseError:
-            return cls({})
-        return cls({cell_id: geometry.attrib for cell_id, geometry in _drawn_geometries(root)})
+            return kept
+        kept._take_drawn_geometries(root)
+        return kept
+
+    def _take_drawn_geometries(self, root: ET.Element) -> None:
+        """Keep each drawn cell's geometry by its id; a linked cell's id is on the ``UserObject`` round it."""
+        for holder in root.iter():
+            cell = holder.find("mxCell") if holder.tag == "UserObject" else holder if holder.tag == "mxCell" else None
+            geometry = cell.find("mxGeometry") if cell is not None else None
+            if geometry is not None and holder.get("id"):
+                self._places[holder.get("id")] = geometry.attrib
 
     def place(self, vertex: "DrawIOStoryModel.Vertex") -> None:
         """Put vertex where its cell stood before, at the size it had; a cell new to the map stays where it was laid out.
@@ -311,15 +311,6 @@ class _KeptPlaces:
             vertex.width = kept_width
 
 
-def _drawn_geometries(root: ET.Element) -> Iterator[Tuple[str, ET.Element]]:
-    """Each drawn cell's id and geometry in a draw.io file; a linked cell's id is on the ``UserObject`` round it."""
-    for holder in root.iter():
-        cell = holder.find("mxCell") if holder.tag == "UserObject" else holder if holder.tag == "mxCell" else None
-        geometry = cell.find("mxGeometry") if cell is not None else None
-        if geometry is not None and holder.get("id"):
-            yield holder.get("id"), geometry
-
-
 class DrawIOStoryModel(DiagramStoryModel):
     suffixes = (".drawio",)
     epic_type = DrawIOEpic
@@ -327,7 +318,7 @@ class DrawIOStoryModel(DiagramStoryModel):
     increment_type = DrawIOIncrement
     """DrawIO story-map I/O. IS the format-typed tree root.
 
-    load reads a file into these nodes. save writes the nodes you edited.
+    parse reads a file into these nodes. save writes the nodes you edited.
     The thin-slice view is save_thin_slice and load_thin_slice, over this map's own increments.
     """
 
@@ -420,10 +411,6 @@ class DrawIOStoryModel(DiagramStoryModel):
             page.add(vertex)
         return page.text()
 
-    def parse(self, text: str) -> "DrawIOStoryModel":
-        """Format-adapter entry point used by PracticeGuidance.render; same as load."""
-        return self.load(text)
-
     @classmethod
     def from_workspace(cls, path: Path, *, on_file: Optional[Callable[[str], None]] = None, project: Optional[Path] = None) -> "DrawIOStoryModel":
         """The story map drawn in the .drawio file at path, each epic and everything under it naming that file as a
@@ -433,15 +420,15 @@ class DrawIOStoryModel(DiagramStoryModel):
         if on_file is not None:
             on_file(file)
         text = path.read_text(encoding="utf-8")
-        loaded = cls().load(text)
+        loaded = cls().parse(text)
         loaded.sources.add(file, text)
         loaded.descendants.place_in(file)
         return loaded
 
-    def load(self, text: str) -> "DrawIOStoryModel":
+    def parse(self, text: str) -> "DrawIOStoryModel":
         """Read the story map by where its cells sit, not their order in the file: draw.io saves cells back to
         front, so bringing a cell forward or sending it back moves it in the file but not on screen."""
-        cells = self.placed_cells(text)
+        cells = self._placed_cells(text)
         story_map = DrawIOStoryModel()
         owners = story_map.place_cells(cells)
         for cell in cells:
@@ -450,7 +437,7 @@ class DrawIOStoryModel(DiagramStoryModel):
                 owner.node.estimate = cell.estimate
         return story_map
 
-    def placed_cells(self, text: str) -> List[_PlacedCell]:
+    def _placed_cells(self, text: str) -> List[_PlacedCell]:
         """Each vertex a draw.io story map draws, as it sits on screen."""
         return [_PlacedCell(element) for element in self._vertices(self._graph_model(text))]
 
@@ -502,14 +489,7 @@ class DrawIOStoryModel(DiagramStoryModel):
     def load_thin_slice(self, text: str) -> "DrawIOStoryModel":
         """Read a thin-slicing.drawio document into this map's increments, each delivering the map's own stories
         that its lane names, and return this map."""
-        try:
-            root_el = ET.fromstring(text)
-        except ET.ParseError as err:
-            raise DrawIOParseError(f"Not valid Draw.io XML: {err}") from err
-        tree = root_el if root_el.tag == "mxGraphModel" else root_el.find(".//mxGraphModel")
-        if tree is None:
-            raise DrawIOParseError("No mxGraphModel found")
-        names, lanes = self._lanes_in(tree)
+        names, lanes = self._lanes_in(self._graph_model(text))
         self.increments.refill([
             DrawIOIncrement(names[slug], order, lanes[slug]) for order, slug in enumerate((slug for slug in lanes if slug in names), start=1)
         ])

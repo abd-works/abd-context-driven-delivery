@@ -16,7 +16,7 @@ _SATISFY_MARKDOWN = Path(__file__).with_name("satisfy.md").read_text(encoding="u
 
 @agent_toolset
 class Satisfy(GuidanceAction):
-    """Satisfy artifacts for provided context tools."""
+    """Satisfy artifacts for the listed guidance."""
 
     @mcp
     @skill

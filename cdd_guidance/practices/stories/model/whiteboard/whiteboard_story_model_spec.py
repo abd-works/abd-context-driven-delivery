@@ -15,7 +15,7 @@ from cdd_guidance.practices.stories.model.whiteboard.nodes import WhiteboardStor
 with description("a story map drawn on a Claude whiteboard") as self:
     with before.each:
         self.story_map = WhiteboardStoryModel(round_trip_story_map())
-        self.read = WhiteboardStoryModel().load(self.story_map.save())
+        self.read = WhiteboardStoryModel().parse(self.story_map.save())
 
     with it("should read back every epic, story held by any epic, kind, and actor"):
         expect(outline(self.read, with_scenarios=False)).to(equal(outline(self.story_map, with_scenarios=False)))
@@ -58,7 +58,7 @@ with description("a story map drawn on a Claude whiteboard") as self:
 
     with context("that is read from a board with no story-map elements"):
         with it("should refuse the board"):
-            expect(lambda: WhiteboardStoryModel().load(Whiteboard("Empty").save())).to(raise_error(UnreadableBoard))
+            expect(lambda: WhiteboardStoryModel().parse(Whiteboard("Empty").save())).to(raise_error(UnreadableBoard))
 
 
 with description("a story map's thin slice drawn on a Claude whiteboard") as self:

@@ -43,23 +43,22 @@ def _epic_name(text: str) -> str:
     return headed.group(1) if headed else text
 
 
-def read_sketch_lines(raws: List[str]) -> "SketchLines":
-    """The lines raws write, each at the depth its indent gives: four spaces a level, or two when the indent is not a
-    multiple of four."""
-    return SketchLines([(raw.strip(), _depth(raw)) for raw in raws])
-
-
-def _depth(raw: str) -> int:
-    indent = len(raw) - len(raw.lstrip(" "))
-    return indent // _NESTING_INDENT if indent % _NESTING_INDENT == 0 else indent // 2
-
-
 class SketchLines:
     """Lines of a sketch's stories section that one node holds, each with how deep its indent puts it. An entry of
     these lines is itself a SketchLines: the line that names a node, then the lines nested under it."""
 
     def __init__(self, lines: List[Tuple[str, int]]) -> None:
         self._lines = lines
+
+    @classmethod
+    def from_raw(cls, raws: List[str]) -> "SketchLines":
+        """The lines raws write, each at the depth its indent gives: four spaces a level, or two when the indent is not a
+        multiple of four."""
+        lines: List[Tuple[str, int]] = []
+        for raw in raws:
+            indent = len(raw) - len(raw.lstrip(" "))
+            lines.append((raw.strip(), indent // _NESTING_INDENT if indent % _NESTING_INDENT == 0 else indent // 2))
+        return cls(lines)
 
     @property
     def text(self) -> str:
@@ -286,7 +285,7 @@ class SketchStoryModel(StoryModel):
                 self.increments.append(Increment(increment.group(1), len(self.increments) + 1))
             elif not in_increments:
                 lines.append(raw)
-        return read_sketch_lines(lines)
+        return SketchLines.from_raw(lines)
 
     def render(self, canonical: StoryModel | None = None, previous: str | None = None) -> str:
         """Write canonical (this map when none is given) as a sketch: copied into a sketch map, which writes itself.

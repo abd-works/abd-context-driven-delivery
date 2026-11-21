@@ -269,31 +269,6 @@ class StoryCatalog {
   }
 }
 
-function paintCharacterTree(character, root) {
-  const tree = root.querySelector("[data-character-tree]");
-  if (!tree || !character) return;
-  tree.querySelectorAll(".tree-node:not([data-role='folder'])").forEach((node) => node.remove());
-  const node = document.createElement("div");
-  node.className = "tree-node selected";
-  node.textContent = `· ${character.name || "Hero"}`;
-  tree.appendChild(node);
-}
-
-function paintAbilities(character, root) {
-  const list = root.querySelector("[data-ability-list]");
-  if (!list || !character?.abilities) return;
-  list.innerHTML = "";
-  for (const [name, ability] of Object.entries(character.abilities)) {
-    if (name === "pointContribution") continue;
-    const row = document.createElement("div");
-    row.className = "control";
-    row.dataset.type = "list";
-    row.dataset.name = name;
-    row.textContent = `${name} · ${ability.rank ?? 0}`;
-    list.appendChild(row);
-  }
-}
-
 function boundFieldText(element, snapshot) {
   const path = element.getAttribute("data-bound-field");
   const boundValue = readBound(snapshot, path);
@@ -483,9 +458,6 @@ class ProductPanel {
   paint() {
     const scenario = this.mockup.page.runner.scenario;
     const snapshot = scenario?.expose?.() ?? {};
-    const character = readBound(snapshot, "character");
-    paintCharacterTree(character, this.mockup.root);
-    paintAbilities(character, this.mockup.root);
     this._paintBoundLists(snapshot);
     paintBoundFields(snapshot, this.mockup.root);
     if (scenario?.currentStep) this.mockup.frame.emphasis.emphasize(scenario.currentStep);
@@ -660,7 +632,7 @@ class GeneratedMockup {
   }
 
   _activateStoryForControl(control) {
-    const whenLabel = (control.story_steps || []).find((s) => s.kind === "when")?.label;
+    const whenLabel = (control.storySteps || []).find((s) => s.kind === "when")?.label;
     if (!whenLabel) return;
     const storyIndex = this.catalog.storyIndexForWhen(whenLabel);
     const carry = this._carryInputsFrom(control);

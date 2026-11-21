@@ -6,6 +6,7 @@ DDD's own nodes, which DDD's reading makes."""
 from __future__ import annotations
 
 import re
+from functools import cached_property
 from pathlib import Path
 
 from harness.graph.edge import EdgeType
@@ -14,13 +15,18 @@ from harness.graph.pattern_overlays import GraphOverlay
 from harness.graph.skipped_folders import scanned_files
 
 from cdd_guidance.patterns.lern_domain_driven.tier_facts import AggregateFolder, TierFile
+from cdd_guidance.practices.bdd.bdd import Bdd
 from cdd_guidance.practices.clean_engineering.model.code_body import CODE_LANGUAGES, TYPESCRIPT
+from cdd_guidance.practices.ddd.ddd import Ddd
+from cdd_guidance.practices.stories.stories import Stories
 
 _VIEW_EXPORT = re.compile(r"export\s+function\s+(\w+View)\s*\(")
 _VIEW_SKIP_SUFFIXES = ("-form", "-fields", "-banner", "-messages", "-footer", "-loaded", "-client")
 _TIER_FILES = (("{slug}-node.ts", "NodeRoot"), ("{slug}-client.tsx", "ClientRoot"), ("{slug}-routes.ts", "Route"), ("{slug}.json", "JsonStore"))
 # LERN is TypeScript everywhere: code in any other language, such as a Python class, carries none of its rules.
 _OTHER_CODE_LANGUAGES = frozenset(language.name for language in CODE_LANGUAGES if language is not TYPESCRIPT)
+# The test setup files a reset repository instance can be named in, besides the story test folder's repositories file.
+_TEST_SETUP_GLOBS = ("tests/**/vitest.setup.ts", "tests/**/repositories.ts", "tests/vitest.setup.ts")
 _BEHAVIOR_TIERS = {
     "spec.shared.ts": "BehaviorShared",
     "behavior.domain.spec.ts": "BehaviorDomain",
@@ -57,14 +63,33 @@ class _LernReading:
         self.overlay = overlay
         self.graph = graph
         self.root = root
+        # The DDD and Stories parts of the graph, held once read finds both practices loaded.
+        self.ddd: PracticeNodes | None = None
+        self.story_nodes: PracticeNodes | None = None
+
+    @cached_property
+    def _files(self) -> list[Path]:
+        """Every scanned file of the working copy, walked once for the whole reading."""
+        return list(scanned_files(self.root))
+
+    @cached_property
+    def setup_text(self) -> str:
+        """The text of every test setup file of the working copy, which a reset repository instance is named in,
+        including the repositories file in the pattern's story test folder."""
+        seen: set[Path] = set()
+        parts: list[str] = []
+        for glob in (*_TEST_SETUP_GLOBS, f"{self.overlay.pattern.story_test_folder}/repositories.ts"):
+            for path in self.root.glob(glob):
+                if path in seen or not path.is_file():
+                    continue
+                seen.add(path)
+                parts.append(path.read_text(encoding="utf-8"))
+        return "\n".join(parts)
 
     def link(self, kind: str, parent: Node, child: Node) -> None:
         self.graph.edges.record(EdgeType.from_kind(kind, self.overlay.display_of(kind)), parent, child)
 
     def read(self) -> None:
-        from cdd_guidance.practices.ddd.ddd import Ddd
-        from cdd_guidance.practices.stories.stories import Stories
-
         self._behaviors()
         ddd = self.graph.practices.loaded(Ddd)
         stories = self.graph.practices.loaded(Stories)
@@ -72,22 +97,19 @@ class _LernReading:
             return
         self.ddd = self.graph.practices.part_of(ddd)
         self.story_nodes = self.graph.practices.part_of(stories)
-        self.setup_text = self.overlay.pattern.test_setup_text(self.root)
         self._tier_folders()
         aggregates = {node.source.file.replace("\\", "/"): node for node in self.ddd.nodes("Aggregate")}
         for folder, aggregate in sorted(aggregates.items()):
             self._aggregate(folder, aggregate)
         self._story_files()
-        _record_screen_stories(self.story_nodes)
+        self._record_screen_stories()
 
     def _behaviors(self) -> None:
         """LERN behavior files on the BDD practice, each carrying the facts its tier rules read."""
-        from cdd_guidance.practices.bdd.bdd import Bdd
-
         bdd = self.graph.practices.loaded(Bdd)
         if bdd is None:
             return
-        for file in scanned_files(self.root):
+        for file in self._files:
             semantic = _BEHAVIOR_TIERS.get(".".join(file.name.split(".")[1:]))
             if semantic is not None:
                 behavior = TierFile.at(self.root, file)
@@ -95,7 +117,7 @@ class _LernReading:
 
     def _tier_folders(self) -> None:
         """A folder holding its slug's routes or node is an aggregate, even with no domain class: a CDD-backed one has none."""
-        for file in scanned_files(self.root):
+        for file in self._files:
             folder = file.parent.relative_to(self.root).as_posix()
             is_tier_file = file.name in (f"{file.parent.name}-routes.ts", f"{file.parent.name}-node.ts")
             if is_tier_file and folder.startswith("src/"):
@@ -105,7 +127,7 @@ class _LernReading:
         _AggregateTiers(self, folder, aggregate).read()
 
     def _story_files(self) -> None:
-        for file in scanned_files(self.root):
+        for file in self._files:
             semantic = self._story_semantic(file)
             if semantic is None:
                 continue
@@ -143,6 +165,18 @@ class _LernReading:
 
     def folder_of(self, file_path: str) -> str:
         return str(Path(file_path).parent).replace("\\", "/")
+
+    def _record_screen_stories(self) -> None:
+        """Whether a Playwright file's describe names each story (``has_screen_story``), which the screen-story rule
+        reads: the screen story that drives the page the domain and server specs cannot see."""
+        specs = self.story_nodes.nodes("PlaywrightSpec")
+        driven = {self._story_key(name) for spec in specs for name in spec.get_fact("screen_stories", [])}
+        for story in self.story_nodes.nodes("Story"):
+            story.set_fact("has_screen_story", self._story_key(story.name) in driven)
+
+    def _story_key(self, name: str) -> str:
+        """A story's name as a describe may write it: lower case, with its words one space apart."""
+        return " ".join(name.lower().split())
 
 
 class _AggregateTiers:
@@ -242,15 +276,3 @@ class _AggregateTiers:
             return False
         return not any(filename.endswith(f"{suffix}.tsx") for suffix in _VIEW_SKIP_SUFFIXES)
 
-
-def _record_screen_stories(story_nodes: PracticeNodes) -> None:
-    """Whether a Playwright file's describe names each story (``has_screen_story``), which the screen-story rule reads:
-    the screen story that drives the page the domain and server specs cannot see."""
-    driven = {_story_key(name) for spec in story_nodes.nodes("PlaywrightSpec") for name in spec.get_fact("screen_stories", [])}
-    for story in story_nodes.nodes("Story"):
-        story.set_fact("has_screen_story", _story_key(story.name) in driven)
-
-
-def _story_key(name: str) -> str:
-    """A story's name as a describe may write it: lower case, with its words one space apart."""
-    return " ".join(name.lower().split())

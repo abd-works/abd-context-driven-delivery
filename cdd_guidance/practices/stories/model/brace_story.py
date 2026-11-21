@@ -5,6 +5,7 @@ import posixpath
 import re
 from typing import List, Optional
 
+from cdd_guidance.practices.clean_engineering.model.code_body import CodeLanguage
 from cdd_guidance.practices.stories.model.brace_story_file import BraceStoryFile
 from cdd_guidance.practices.stories.model.code_story_model import CodeScenario, CodeStory, CodeStoryModel, StorySyntax, unescaped
 from cdd_guidance.practices.stories.model.story_model import Background, Story
@@ -129,6 +130,11 @@ class BraceStoryWriting(StoryWriting):
     and_verbs = (".and", ".but")
     and_body_depth = 2
     chains_repeated_phase = True
+
+    def __init__(self, language: CodeLanguage, helpers: str) -> None:
+        """helpers is the step library a story file imports, named from the workspace root without its extension."""
+        super().__init__(language)
+        self.helpers = helpers
 
     def file_header(self, place: StoryFilePlace) -> List[str]:
         names = example_names_of(place.stories)

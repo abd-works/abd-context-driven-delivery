@@ -75,9 +75,6 @@ class StoriesReading(PracticeReading):
     """A step is recorded as the Given, When, or Then it is, while the schema keeps every step's rules on Step (its
     given, when, and then types are each a Step), so each carries Step's rules; its check says which kind it judges."""
 
-    recorded_map = None
-    """The story map this practice last wrote onto its graph, whose nodes its links start from."""
-
     @cached_property
     def story_tree(self) -> "StoryTree":
         """The story map as this practice's graph holds it, read through its edges and saved facts: what every reader of
@@ -137,9 +134,9 @@ class StoriesReading(PracticeReading):
     def read_working_copy(self) -> None:
         """Read the story tests, or the story maps when there are none, write the story map onto its graph, and link
         each step to the operations it calls and each example to the classes and properties it shows."""
-        self.recorded_map = self._story_map()
+        story_map = self._story_map()
         report_progress("stories · record")
-        self.recorded_map.record(self.practice, on_node=lambda detail: report_progress(f"stories · record · {detail}"))
+        story_map.record(self.practice, on_node=lambda detail: report_progress(f"stories · record · {detail}"))
         self._link_background_givens()
         ExampleObservations(self, self.story_tree).link()
         clean = self.object_model
@@ -147,8 +144,8 @@ class StoriesReading(PracticeReading):
             StoryLinks(self, clean, self.story_tree).link()
         domain = self.domain_model
         if domain is not None:
-            TermLinks(self, domain).link()
-        ModelledAreas(self).record()
+            TermLinks(self, domain, self.story_tree).link()
+        ModelledAreas(self, self.story_tree).record()
 
     def _link_background_givens(self) -> None:
         """Record the ``given`` edge from each background to the Given steps it holds: the step its schema says it is
@@ -272,7 +269,7 @@ class StoryTree:
         epic = None
         above = self.stories.graph.edges.direct_parent(node)
         while above is not None:
-            epic = above if above.type in _EPIC_TYPES else epic
+            epic = above if self.is_epic(above) else epic
             above = self.stories.graph.edges.direct_parent(above)
         return epic
 
@@ -291,6 +288,22 @@ class StoryTree:
     def steps(self, scenario: "Node") -> list["Node"]:
         """The scenario's own steps, without the steps chained onto them, in order."""
         return [edge.child for edge in self.stories.graph.edges.from_parent("steps", scenario)]
+
+    def all_steps(self) -> list["Node"]:
+        """Every step the Stories graph holds, a Given, When, Then, or plain Step, with the steps chained onto them."""
+        return [node for node in self.stories.in_graph.nodes() if self.is_step(node)]
+
+    def is_step(self, node: "Node") -> bool:
+        """Whether node is a step, recorded as the Given, When, or Then it is, or as a Step with none of them."""
+        return node.type in _STEP_TYPES
+
+    def is_epic(self, node: "Node") -> bool:
+        """Whether node is an epic of the story map, recorded as an Epic, or as a SubEpic under another epic."""
+        return node.type in _EPIC_TYPES
+
+    def step_body(self, step: "Node") -> str:
+        """The step's own text and the body its story test gives it."""
+        return f"{step.name}\n{step.get_fact('body_text') or ''}"
 
     def _below(self, parent: "Node", kind: str, node_types: frozenset[str] | set[str]) -> list["Node"]:
         return [edge.child for edge in self.stories.graph.edges.from_parent(kind, parent) if edge.child.type in node_types]
@@ -395,7 +408,7 @@ class StoryLinks:
         return self.stories.in_graph.nodes("Example")
 
     def link(self) -> None:
-        steps = [node for node in self.stories.in_graph.nodes() if node.type in _STEP_TYPES]
+        steps = self.tree.all_steps()
         for index, step in enumerate(steps, start=1):
             report_progress(f"stories · steps · {index}/{len(steps)} · {step.name}")
             self._link_step(step)
@@ -429,7 +442,7 @@ class StoryLinks:
         return CALLS_REACH_UNREAD if called - resolved - seeds else CALLS_REACH_TEST
 
     def _link_step(self, step: "Node") -> None:
-        body = self._step_body(step)
+        body = self.tree.step_body(step)
         called = set(step.get_fact("callees") or []) | set(_MEMBER_CALL.findall(body))
         matched = [member for name in sorted(called) for member in self.clean.code_index.members_named(name)]
         matched += [function for function in self._functions_called(body) if function not in matched]
@@ -500,10 +513,6 @@ class StoryLinks:
         module answers a bare call, never a class's operation, which is called on an object."""
         names = sorted(set(_FUNCTION_CALL.findall(body)))
         return [member for name in names for member in self.clean.code_index.members_named(name) if member.get_fact("owner") == MODULE_FUNCTION_HOLDER]
-
-    def _step_body(self, step: "Node") -> str:
-        """The step's own text and the body its story test gives it."""
-        return f"{step.name}\n{step.get_fact('body_text') or ''}"
 
     def _module_of(self, operation: "Node") -> "Node | None":
         """The Clean Engineering module that holds the operation: the nearest module above it in the graph."""

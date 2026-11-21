@@ -138,7 +138,7 @@ with description("a Miro Story Map (story-map fidelity)") as self:
     with context("that has been rendered and parsed back without edits"):
         with before.each:
             self.original = fixture.story_map_with_4_epics_and_3_epics_and_1_story()
-            self.parsed = self.miro.load(self.original.save())
+            self.parsed = self.miro.parse(self.original.save())
 
         with it("should preserve Story structure - scenarios are NOT embedded in the story-map view"):
             first_story = self.parsed.epics[0].epics[0].stories[0]
@@ -147,7 +147,7 @@ with description("a Miro Story Map (story-map fidelity)") as self:
     with context("that is not a valid Miro story map SVG"):
         with context("the parse"):
             with it("should be rejected"):
-                expect(lambda: self.miro.load("<not-svg/>")).to(
+                expect(lambda: self.miro.parse("<not-svg/>")).to(
                     raise_error(MiroParseError)
                 )
 
@@ -187,7 +187,7 @@ with description("a Miro Story Map (story-map fidelity)") as self:
             expect(float(d1[0].get("y", 0)) < float(d2[0].get("y", 0))).to(be_true)
 
         with it("should round-trip nested hierarchy"):
-            parsed = self.miro.load(self.text)
+            parsed = self.miro.parse(self.text)
             compose = parsed.epics[0].epics[0]
             expect(compose.name).to(equal("Compose Powers"))
             expect(compose.epics).to(have_len(2))
@@ -249,7 +249,7 @@ with description("a Miro Story Map (story-map fidelity)") as self:
             expect(len(ids)).to(equal(len(set(ids))))
 
         with it("should preserve each story actor when parsed back"):
-            parsed = self.miro.load(self.text)
+            parsed = self.miro.parse(self.text)
             stories = parsed.epics[0].epics[0].stories
             expect([story.actors for story in stories]).to(
                 equal([["Prospect"], ["System"], ["System"]])

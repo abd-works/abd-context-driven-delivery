@@ -111,7 +111,7 @@ with description("a DrawIO Story Map") as self:
     with context("that has been rendered and parsed back without edits"):
         with before.each:
             self.original = DrawIOStoryModelFixture().with_4_epics_and_3_epics_and_1_story()
-            self.parsed = self.drawio.load(self.original.save())
+            self.parsed = self.drawio.parse(self.original.save())
 
         with it("should preserve Story structure - scenarios are NOT embedded in the story-map view"):
             first_story = self.parsed.epics[0].epics[0].stories[0]
@@ -119,7 +119,7 @@ with description("a DrawIO Story Map") as self:
 
         with it("should preserve the actor shown above a Story"):
             self.original.epics[0].epics[0].stories[0].actors = ["Customer"]
-            parsed = self.drawio.load(self.original.save())
+            parsed = self.drawio.parse(self.original.save())
             expect(parsed.epics[0].epics[0].stories[0].actors).to(
                 equal(["Customer"])
             )
@@ -130,7 +130,7 @@ with description("a DrawIO Story Map") as self:
             story = DrawIOStory("Story 2.1", 1, StoryType.USER)
             story.actors = ["Customer"]
             self.source.epics[1].stories.append(story)
-            self.parsed = self.drawio.load(self.source.save())
+            self.parsed = self.drawio.parse(self.source.save())
 
         with it("should draw the Story under its Epic"):
             expect([story.name for story in self.parsed.epics[1].stories]).to(equal(["Story 2.1"]))
@@ -188,7 +188,7 @@ with description("a DrawIO Story Map") as self:
             self.text = self.source.save()
 
         with it("should draw the actor above the Story"):
-            expect(self.drawio.load(self.text).epics[0].epics[0].epics[0].stories[0].actors).to(equal(["Customer"]))
+            expect(self.drawio.parse(self.text).epics[0].epics[0].epics[0].stories[0].actors).to(equal(["Customer"]))
 
     # draw.io saves cells back to front, so bringing one forward or back moves it in the file without moving it on screen.
     with context("that has been rendered and saved with its cells in reverse order"):
@@ -203,7 +203,7 @@ with description("a DrawIO Story Map") as self:
             for cell in cells:
                 root.remove(cell)
             root.extend(reversed(cells))
-            self.parsed = self.drawio.load(ET.tostring(tree, encoding="unicode"))
+            self.parsed = self.drawio.parse(ET.tostring(tree, encoding="unicode"))
 
         with it("should read every Epic in left-to-right order"):
             expect([epic.name for epic in self.parsed.epics]).to(equal(["Epic 1", "Epic 2", "Epic 3", "Epic 4"]))
@@ -220,7 +220,7 @@ with description("a DrawIO Story Map") as self:
     with context("that is not a valid DrawIO document"):
         with context("the parse"):
             with it("should be rejected"):
-                expect(lambda: self.drawio.load("<not-drawio/>")).to(
+                expect(lambda: self.drawio.parse("<not-drawio/>")).to(
                     raise_error(DrawIOParseError)
                 )
 
@@ -385,7 +385,7 @@ with description("a DrawIO Story Map") as self:
             )
 
         with it("should round-trip nested hierarchy"):
-            parsed = self.drawio.load(self.text)
+            parsed = self.drawio.parse(self.text)
             compose = parsed.epics[0].epics[0]
             expect(compose.name).to(equal("Compose Powers"))
             expect(compose.epics).to(have_len(2))
@@ -441,7 +441,7 @@ with description("a DrawIO Story Map") as self:
 
         with context("parsed back from the diagram"):
             with before.each:
-                self.parsed = self.drawio.load(self.text)
+                self.parsed = self.drawio.parse(self.text)
 
             with it("should round-trip estimates on epic and sub-epics"):
                 expect(self.parsed.epics[0].estimate).to(
@@ -527,7 +527,7 @@ with description("a DrawIO Story Map rendered in a workspace") as self:
             expect(_code_links_by_label(self.text)["Select Sim"]).to(equal(("../onboard/get-sim/select_sim_story.test.md", "0")))
 
         with it("should read linked cells back into the same hierarchy"):
-            parsed = DrawIOStoryModel().load(self.text)
+            parsed = DrawIOStoryModel().parse(self.text)
             stories = parsed.epics[0].epics[0].stories
             expect([story.name for story in stories]).to(equal(["Select Sim", "Activate Sim"]))
             expect(stories[0].actors).to(equal(["Customer"]))

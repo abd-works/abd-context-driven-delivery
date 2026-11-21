@@ -50,8 +50,8 @@ class ReshapedStoryFile:
         # that marks the member on that line, so a marking line stays directly above what it marks.
         self._above: dict[int, List[str]] = {}
         self._markings: dict[int, List[str]] = {}
-        self.kept: List[str] = []
-        self.added: List[str] = []
+        self._kept: List[str] = []
+        self._added: List[str] = []
 
     def reshaped(self) -> Reshaped:
         """The file's text with the render's new members written in and its lost members marked."""
@@ -67,9 +67,9 @@ class ReshapedStoryFile:
                 self._mark(block, f"story {block.name}", block.name)
         for story in self._rendered_stories:
             if story.name not in by_name:
-                self.added.append(story.name)
+                self._added.append(story.name)
                 self._write_above(len(self._lines), ["", *self._writing.story_lines(story)])
-        return Reshaped(self._text(), self.kept, self.added)
+        return Reshaped(self._text(), self._kept, self._added)
 
     def _story_blocks(self) -> List[CodeBlock]:
         """The story blocks the language finds in the file; none for a file it reads no block of."""
@@ -89,7 +89,7 @@ class ReshapedStoryFile:
         indent = self._indent_of(scenarios[0]) if scenarios else self._writing.scenario_indent
         for scenario in story.scenarios:
             if scenario.name not in by_name:
-                self.added.append(f"{story.name}.{scenario.name}")
+                self._added.append(f"{story.name}.{scenario.name}")
                 self._write_above(self._end_of(block), [*self._writing.scenario_gap, *self._writing._scenario_lines(scenario, indent)])
 
     def _reshape_scenario(self, block: CodeBlock, scenario: "Scenario", name: str) -> None:
@@ -107,7 +107,7 @@ class ReshapedStoryFile:
             if held[step.text] > 0:
                 held[step.text] -= 1
                 continue
-            self.added.append(f"{name}.{step.text}")
+            self._added.append(f"{name}.{step.text}")
             self._write_above(self._line_after(steps, rendered[:place], block), self._empty_step(step, indent))
 
     def _line_after(self, steps: Sequence[CodeBlock], before: Sequence["Step"], scenario: CodeBlock) -> int:
@@ -126,13 +126,12 @@ class ReshapedStoryFile:
         under the verb of its phase, so a step the scenarios chain with And stands as a statement of its own."""
         alone = type(step)(step.text, step.step_type, step.sequential_order)
         alone.keyword = step.keyword
-        verb = self._writing.verbs.get(step.keyword) or self._writing.default_verb or step.step_type.value
-        return self._writing._step_lines(StepClause(alone, verb), indent)
+        return self._writing._step_lines(StepClause(alone, self._writing.verb_alone(alone)), indent)
 
     def _mark(self, block: CodeBlock, member: str, name: str) -> None:
         """Say above block that its member is no longer in the model, once: a member an earlier render marked keeps
         its line."""
-        self.kept.append(name)
+        self._kept.append(name)
         line = block.opening_line
         if line > 0 and NO_LONGER_IN_MODEL in self._lines[line - 1]:
             return

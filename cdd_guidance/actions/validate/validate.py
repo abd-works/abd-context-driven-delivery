@@ -1,4 +1,4 @@
-"""Validate and create_rule — run on each provided context tool."""
+"""Validate and create_rule — run on each listed guidance."""
 
 from __future__ import annotations
 
@@ -39,7 +39,7 @@ class UnknownRule(ValueError):
 
 @agent_toolset
 class Validate(GuidanceAction):
-    """Validate artifacts for provided context tools."""
+    """Validate artifacts for the listed guidance."""
 
     def __init__(self, session: Session | None = None, call: ToolCall | None = None) -> None:
         super().__init__(session, call)
@@ -145,7 +145,7 @@ class Validate(GuidanceAction):
             return ""
         return f"Judge the work against these overlaid patterns' rules too, as you judge the practices' rules.\n\n{overlay_rules}"
 
-    def _fidelities(self) -> list:
+    def _fidelities(self) -> list[FidelityGuidance]:
         """The fidelity each listed guidance is validated at. A listed practice is the one this action's session holds,
         so its fidelity's reports go to that session; an item with no current fidelity, or no practice a session works
         on, has none."""

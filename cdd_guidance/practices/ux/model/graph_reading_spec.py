@@ -132,15 +132,23 @@ _FILES = {
     _SAVED_BOARD_FILE: _MOCKUP_BOARD,
 }
 _MAP_FILE = "bookshop/ux-map.json"
+# Files named or marked as a UX map that are no map after all: a drawing that is not XML, a page whose map is not JSON,
+# a JSON map that is not JSON, and one whose navigation goes to a screen it lacks.
+_NOT_MAPS = {
+    "broken/.context/information-architecture.drawio": '<mxfile host="drawio-ux"><diagram name="Site Map">',
+    "broken/mockup.html": "<html><!-- ux-map-json: {not json --></html>",
+    "broken/ux-map.json": "{not json",
+    "broken/ux.json": json.dumps({"name": "Lost", "screens": [], "nav_components": [{"name": "Top", "destinations": ["Nowhere"]}]}),
+}
 
 
 class Bookshop:
     """The bookshop project in a folder of its own, read into one graph by the practices named."""
 
-    def __init__(self, practices: tuple[str, ...]) -> None:
+    def __init__(self, practices: tuple[str, ...], more_files: dict[str, str] | None = None) -> None:
         self._folder = tempfile.TemporaryDirectory()
         self.root = Path(self._folder.name).resolve()
-        for relative, text in _FILES.items():
+        for relative, text in {**_FILES, **(more_files or {})}.items():
             path = self.root / relative
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(text, encoding="utf-8")
@@ -308,3 +316,14 @@ with description("a UX map read into the graph") as self:
 
         with it("should join the new screen to the story it shows"):
             expect(self.shop.linked("shows", self.shop.node("Screen", "Cart"))).to(equal([("Story", "View Book")]))
+
+    with context("from a project that also holds files named as a UX map that are no map"):
+        with before.all:
+            self.shop = Bookshop(("ux",), _NOT_MAPS)
+
+        with it("should keep each such file among the files it could not read"):
+            unread = self.shop.ux.root.get_fact("unread_files") or []
+            expect(sorted(entry["file"] for entry in unread)).to(equal(sorted(_NOT_MAPS)))
+
+        with it("should still hold the map of each file that is one"):
+            expect(self.shop.names("Screen")).to(equal(["Book List", "Home", "Book Details"]))

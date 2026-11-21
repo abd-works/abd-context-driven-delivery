@@ -23,7 +23,6 @@ class MarkdownUxMap(UxMap):
     A hand-written context file reads too: any other line, or a bullet under any other heading, is a note.
     """
 
-    workspace_files = (".context/ux-context.md", "ux-context.md", ".context/context.md", "context.md")
     map_file_suffixes = (".md",)
     holds_screens = False
 
@@ -34,10 +33,10 @@ class MarkdownUxMap(UxMap):
     def parse(self, content: str) -> UxMap:
         """A new map of this format, read from a markdown context file."""
         ux_map = type(self).create()
-        ux_map.read_context(content)
+        ux_map._read_context(content)
         return ux_map
 
-    def read_context(self, content: str) -> None:
+    def _read_context(self, content: str) -> None:
         """Read the file line by line into this map's scope and context: a bullet goes in the list of the heading it
         is under, and any other line is a note."""
         under: Optional[List[str]] = None
@@ -70,9 +69,9 @@ class MarkdownUxMap(UxMap):
         written = self.copy_of(canonical)
         if not previous:
             return written.save()
-        return written.written_onto(previous, self.parse(previous))
+        return written._written_onto(previous, self.parse(previous))
 
-    def written_onto(self, previous: str, held: UxMap) -> str:
+    def _written_onto(self, previous: str, held: UxMap) -> str:
         """previous, the context file's text, with what this map holds and held, the map read from that text, lacks."""
         lines = previous.splitlines()
         if self.scope and self.scope != held.scope:

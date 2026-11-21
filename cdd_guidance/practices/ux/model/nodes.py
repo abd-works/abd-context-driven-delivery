@@ -31,12 +31,13 @@ class StoryStep:
             return step
         return cls(str(step.get("kind", "") or ""), str(step.get("label", "") or ""))
 
+    @classmethod
+    def from_values(cls, steps: Iterable["StoryStep | Mapping[str, Any]"] | None) -> List["StoryStep"]:
+        """Each step a file lists, in its order; none for a file that lists none."""
+        return [cls.from_value(step) for step in steps or ()]
+
     def as_dict(self) -> dict:
         return {"kind": self.kind, "label": self.label}
-
-
-def story_steps_from(values: Iterable["StoryStep | Mapping[str, Any]"] | None) -> List[StoryStep]:
-    return [StoryStep.from_value(value) for value in values or ()]
 
 
 class Interaction(UxNode):
@@ -60,6 +61,11 @@ class Interaction(UxNode):
     @trigger.setter
     def trigger(self, trigger: str) -> None:
         self._trigger = trigger
+
+    @property
+    def destination_name(self) -> str:
+        """The name of the screen it goes to; blank while it goes to none."""
+        return self.destination.name if self.destination is not None else ""
 
 
 class ServesStories(UxNode):
@@ -266,6 +272,11 @@ class Screen(ServesStories):
     def slug(self, slug: str) -> None:
         self._slug = slug
 
+    @property
+    def chrome_of_name(self) -> str:
+        """The name of the screen it is the chrome of; blank while it is the chrome of none."""
+        return self.chrome_of.name if self.chrome_of is not None else ""
+
     def append_region(self, region: Region) -> None:
         self.regions.append(region)
         self._renumber(self.regions)
@@ -309,6 +320,16 @@ class Transition(UxComponent):
         self.from_screen = from_screen
         self.to_screen = to_screen
         return self
+
+    @property
+    def from_name(self) -> str:
+        """The name of the screen it leaves; blank while it leaves none."""
+        return self.from_screen.name if self.from_screen is not None else ""
+
+    @property
+    def to_name(self) -> str:
+        """The name of the screen it goes to; blank while it goes to none."""
+        return self.to_screen.name if self.to_screen is not None else ""
 
     @property
     def trigger(self) -> str:

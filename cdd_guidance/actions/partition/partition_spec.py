@@ -401,6 +401,10 @@ with description("a Segment"):
         with it("should include PASS in the completeness report"):
             expect("PASS" in self.segment.completeness_report()).to(be_true)
 
+        with it("should give the line that says so as many cells as the report table's header"):
+            table = [line for line in self.segment.completeness_report().splitlines() if line.startswith("|")]
+            expect(table[-1].count("|")).to(equal(table[0].count("|")))
+
     with context("that has an expected entry with a missing header"):
         with before.each:
             self.segment = Segment.from_text(

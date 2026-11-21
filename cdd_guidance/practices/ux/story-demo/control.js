@@ -40,8 +40,8 @@ export class StoryDemoControl extends Control {
     fromBoundList = false,
   } = {}) {
     super({ name, controlType, label });
-    this.bound_field = boundField;
-    this.story_steps = storySteps;
+    this.boundField = boundField;
+    this.storySteps = storySteps;
     /** The mockup element this control was read from or painted as; null for a control with no page. */
     this.element = element;
     /** A list line painted from the scenario's exposed list; it is dropped when the next story loads. */
@@ -68,7 +68,7 @@ export class StoryDemoControl extends Control {
     const trigger = element.getAttribute("data-trigger");
     if (trigger) {
       control.appendInteraction({
-        trigger: trigger === "create character" ? "click" : trigger,
+        trigger,
         effect: element.getAttribute("data-effect") || "",
       });
     }
@@ -116,7 +116,7 @@ export class StoryDemoControl extends Control {
 
   matchesStep(step) {
     if (!step) return false;
-    return this.story_steps.some(
+    return this.storySteps.some(
       (s) => s.kind === step.kind && s.label === step.label,
     );
   }

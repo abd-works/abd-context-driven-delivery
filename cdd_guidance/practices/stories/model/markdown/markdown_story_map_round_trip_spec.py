@@ -46,7 +46,7 @@ _BOOKSHOP_MAP = (
 with description("a story map a person wrote in story-map.md, drawn in draw.io and written back over that file") as self:
     with before.each:
         drawn = DrawIOStoryModel().render(MarkdownStoryModel().parse(_BOOKSHOP_MAP))
-        self.back = MarkdownStoryModel().render(DrawIOStoryModel().load(drawn), previous=_BOOKSHOP_MAP)
+        self.back = MarkdownStoryModel().render(DrawIOStoryModel().parse(drawn), previous=_BOOKSHOP_MAP)
 
     with it("should keep the title the person wrote above the first epic"):
         expect(self.back.splitlines()[0]).to(equal("# Story Map — Bookshop"))
@@ -96,7 +96,7 @@ _DESCRIBED_MAP = (
 def _back_through(diagram) -> str:
     """The described map drawn by diagram, a diagram format's story model, and written back over its own file."""
     drawn = diagram().render(MarkdownStoryModel().parse(_DESCRIBED_MAP))
-    return MarkdownStoryModel().render(diagram().load(drawn), previous=_DESCRIBED_MAP)
+    return MarkdownStoryModel().render(diagram().parse(drawn), previous=_DESCRIBED_MAP)
 
 
 with description("a story map with descriptions, a story linked to its scenarios file, and a scope boundary") as self:
@@ -110,7 +110,7 @@ with description("a story map with descriptions, a story linked to its scenarios
 
     with context("that has a story added in the drawing before it is written back"):
         with before.each:
-            drawn = DrawIOStoryModel().load(DrawIOStoryModel().render(MarkdownStoryModel().parse(_DESCRIBED_MAP)))
+            drawn = DrawIOStoryModel().parse(DrawIOStoryModel().render(MarkdownStoryModel().parse(_DESCRIBED_MAP)))
             drawn.epics[0].epics[0].stories.append(type(drawn.epics[0].epics[0].stories[0])("Remove Book From Cart", 3))
             self.back = MarkdownStoryModel().render(drawn, previous=_DESCRIBED_MAP)
 

@@ -11,7 +11,7 @@ from expects import contain, equal, expect
 from mamba import after, before, context, description, it
 
 from cdd_guidance.actions.render.render import Render
-from cdd_guidance.actions.render.worker_render import RenderFailed
+from cdd_guidance.actions.render.render_order import RenderFailed
 from cdd_guidance.practices.clean_engineering.model.diagram.class_layout import ArrowRouter
 from harness.agent_tools.tool_call import ToolCall, ToolRequest
 from harness.agent_tools.worker_process import WorkerProcess

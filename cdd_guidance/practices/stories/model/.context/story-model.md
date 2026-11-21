@@ -112,7 +112,6 @@ Where a story map was opened in a session: its file, the session's stories, its 
 + epics: list[Epic]
 + stories: list[Story]
 + examples: Examples
-+ has_epics: bool
 + depth: int
 + is_sub_epic: bool
 	// its parent is an epic; it records as a SubEpic
@@ -143,7 +142,7 @@ How many story columns an epic spans on a drawn map, and how deep its sub-epics 
 
 ## Increment : StoryNode
 
-+ Increment(name: str | Increment, sequential_order: int = 0, stories: list[Story] | None = None, story_class: type | None = None)
++ Increment(name: str | Increment, sequential_order: int = 0, stories: list[Story] | None = None)
 ------
 + outcome: str
 + slicing_notes: str
@@ -263,7 +262,6 @@ How many story columns an epic spans on a drawn map, and how deep its sub-epics 
 	// the node that shares this example: a background, a scenario, a sub-epic, an epic, or the story map
 ----
 + cells(): dict
-+ as_code(): str
 + clone(): Example
 
 ## Examples : dict
@@ -287,7 +285,7 @@ Each format class below is a *StoryModel* subclass. Its node subclasses (`Markdo
 
 ## SketchStoryModel : StoryModel
 
-The `sketch` format: the stories section of an integrated sketch. Nodes: SketchEpic, SketchStory, SketchScenario, SketchBackground, and SketchStep, which write their own sketch lines (`sketch_lines`) and read the lines nested under their own (`read_lines`, from the *SketchLines* the module function `read_sketch_lines(raws)` reads: each entry `under()` gives is the line naming a node, `text`, then the lines `nested` under it).
+The `sketch` format: the stories section of an integrated sketch. Nodes: SketchEpic, SketchStory, SketchScenario, SketchBackground, and SketchStep, which write their own sketch lines (`sketch_lines`) and read the lines nested under their own (`read_lines`, from the *SketchLines* that `SketchLines.from_raw(raws)` reads: each entry `under()` gives is the line naming a node, `text`, then the lines `nested` under it).
 
 ------
 + epic_type: SketchEpic
@@ -351,15 +349,6 @@ The layout shared by the diagram formats. Nodes: DiagramEpic, DiagramStory, Diag
 + y: int
 + width: int
 + height: int
-----
-+ place(side: str, destination: DiagramStoryNode): None
-	// side is above, below, after, or before
-+ add(child: DiagramStoryNode): None
-	// the child sits under its parent and to the right of the previous child, then stretch()
-+ stretch(): None
-	// width becomes the sum of the children's widths, then the parent stretches
-+ role(): str
-	// epic, subepic:{depth}, story:{type}, actor, or estimate
 
 ## DrawIOStoryModel : DiagramStoryModel
 
@@ -367,8 +356,6 @@ The `drawio` format. Nodes: DrawIOEpic, DrawIOStory, DrawIOIncrement.
 
 ----
 + parse(text: str): DrawIOStoryModel
-	-> load(text)
-+ load(text: str): DrawIOStoryModel
 	// reads cells by where they sit, not their order in the file
 + render(canonical: StoryModel | None = None, previous: str | None = None, workspace: str | None = None): str
 	// in a workspace folder, each cell links to its story-map.md entry
@@ -380,8 +367,6 @@ The `miro` format: a canvas-composer SVG, with increments as a thin-slice table.
 
 ----
 + parse(text: str): MiroStoryModel
-	-> load(text)
-+ load(text: str): MiroStoryModel
 + render(canonical: StoryModel | None = None, previous: str | None = None): str
 	-> save
 + save(): str
@@ -430,8 +415,9 @@ How one language writes stories (`story_writing.py`): the one generic render, wh
 ----
 + story_file(epic, parent, written): tuple[str, str]
 	// the path and text of the file holding a sub-epic's stories
-+ story_text(story): str
 + story_lines(story): list[str]
++ verb_alone(step): str
+	// the verb a step opens with when written as a statement of its own: the one listed for its keyword, else its phase
 + file_header, story_open, story_background_lines, scenario_background_lines
 	// the parts a language spells as its own operation, with the protected `_step_lines(clause: StepClause, indent)`, `_clauses(steps)` and `_quoted(text)` it spells them with
 
@@ -466,8 +452,6 @@ The scenarios a render brings, written onto the story file already there (`CodeS
 ------
 + reshaped(): Reshaped
 	// the text to save, the members kept and the members added, each named story.scenario.step
-+ kept: list[str]
-+ added: list[str]
 
 ## ScriptStoryModel : BraceStoryModel
 
@@ -478,7 +462,7 @@ The story tree of a script language, TypeScript or JavaScript, which hold the sa
 	// the step library folder: the stories workspace root, else the deploy root, unless named
 + story_test_import_path: str
 	// property: the step library as a path from the workspace root, without its extension
-+ story_test_file_path: str
+- _story_test_file_path: str
 	// property: where the step library a new tree is seeded with is written
 + seed_file: Path
 	// the step library a new tree in this language is seeded with

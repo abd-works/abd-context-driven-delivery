@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterable, Optional
+from typing import TYPE_CHECKING, Iterable
 
 from harness.graph.model_node import ModelChildren
 from harness.graph.graph import Graph
@@ -43,10 +43,6 @@ class UxMap(UxNode):
     """The node types this format's map is made of; a format that writes a node its own way names its subclass here,
     and every reader and copy of the map makes its nodes through them."""
 
-    workspace_files: tuple[str, ...] = ()
-    """Where this format's map sits in a workspace folder, as glob patterns tried in order; ``{folder}`` is the
-    folder's own name. The first pattern that matches a file wins."""
-
     holds_screens: bool = True
     """Whether this format's file holds the map's screens; the UX context file holds only the scope and the notes, so
     a map read from it has none and is not held to having any."""
@@ -54,6 +50,10 @@ class UxMap(UxNode):
     map_file_suffixes: tuple[str, ...] = ()
     """The file endings this format's map is written with, such as ``.drawio``; none for a format no file is read
     back from. The graph reading opens only the files that end with one."""
+
+    not_a_map_failures: tuple[type[Exception], ...] = ()
+    """What reading a file fails with when the file is not this format's map after all, such as text that is not its
+    format. The graph reading keeps such a file, with the reason, among the files it could not read."""
 
     def reads_file(self, file: Path, text: str) -> bool:
         """Whether file, which holds text, is a UX map in this format: many files share an ending, so each format says
@@ -157,9 +157,7 @@ class UxMap(UxNode):
 
     def _take_components(self, source: "UxMap", screens: ScreenCopies) -> None:
         for transition in source.transitions:
-            copy = self.transition_type(transition.name, transition.sequential_order)
-            copy.trigger, copy.nav_type = transition.trigger, transition.nav_type
-            self.transitions.append(copy.joining(screens.get(id(transition.from_screen)), screens.get(id(transition.to_screen))))
+            self.transitions.append(self._transition_copy(transition, screens, transition.sequential_order))
         for content_type in source.content_types:
             copy = self.content_type_type(content_type.name, content_type.sequential_order)
             copy.hierarchy = content_type.hierarchy
@@ -170,6 +168,12 @@ class UxMap(UxNode):
             copy.ux_type = nav.ux_type
             copy.destinations = [screens[id(screen)] for screen in nav.destinations if id(screen) in screens]
             self.nav_components.append(copy)
+
+    def _transition_copy(self, transition: Transition, screens: ScreenCopies, order: int) -> Transition:
+        """transition as one of this map's own, at order, joining the copies of the screens it joins."""
+        copy = self.transition_type(transition.name, order)
+        copy.trigger, copy.nav_type = transition.trigger, transition.nav_type
+        return copy.joining(screens.get(id(transition.from_screen)), screens.get(id(transition.to_screen)))
 
     def keep_served_by(self, held: "UxMap") -> None:
         """Take from held, the map a file already holds, what its screens and controls serve and the domain terms its
@@ -220,32 +224,10 @@ class UxMap(UxNode):
 
     def _keep_transitions_only(self, held: "UxMap", screens: ScreenCopies) -> None:
         """Give this map each transition only held holds, joining this map's own screens."""
-        own = {(transition.trigger, _name_of(transition.from_screen), _name_of(transition.to_screen)) for transition in self.transitions}
+        own = {(transition.trigger, transition.from_name, transition.to_name) for transition in self.transitions}
         for transition in held.transitions:
-            if (transition.trigger, _name_of(transition.from_screen), _name_of(transition.to_screen)) in own:
-                continue
-            copy = self.transition_type(transition.name, len(self.transitions))
-            copy.trigger, copy.nav_type = transition.trigger, transition.nav_type
-            self.transitions.append(copy.joining(screens.get(id(transition.from_screen)), screens.get(id(transition.to_screen))))
-
-    @classmethod
-    def from_workspace(cls, root: Path) -> Optional["UxMap"]:
-        """The map this format reads from its file in the workspace folder root; none when the folder has no such file."""
-        loader = cls.create()
-        text = loader.workspace_text(Path(root))
-        return None if text is None else loader.parse(text)
-
-    def workspace_text(self, root: Path) -> Optional[str]:
-        """The text of this format's map file in the workspace folder root; none when the folder has no such file."""
-        found = self.workspace_file(root)
-        return None if found is None else found.read_text(encoding="utf-8")
-
-    def workspace_file(self, root: Path) -> Optional[Path]:
-        for pattern in self.workspace_files:
-            matches = sorted(path for path in root.glob(pattern.format(folder=root.name)) if path.is_file())
-            if matches:
-                return matches[0]
-        return None
+            if (transition.trigger, transition.from_name, transition.to_name) not in own:
+                self.transitions.append(self._transition_copy(transition, screens, len(self.transitions)))
 
     @property
     def story_references(self) -> ReferencePaths:
@@ -274,7 +256,3 @@ class UxMap(UxNode):
             if screen.name == name:
                 return screen
         raise ScreenNotOnMap(name)
-
-
-def _name_of(screen: Optional[Screen]) -> str:
-    return screen.name if screen is not None else ""

@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
 from harness.graph.saved_graph import GRAPH_FILE_NAME
+from harness.installation.context_config import CONTEXT_FOLDER
 from harness.guidance.guidance import FidelityGuidance
 
 if TYPE_CHECKING:
@@ -18,17 +19,7 @@ if TYPE_CHECKING:
 
 # Where, in the session's work folder, the whole graph a call builds is written for its judge to read: a graph of its own for
 # each report, ignored by git as every saved graph is (``graph.json``), and only the latest of each fidelity kept.
-_CONTEXT_FOLDER = ".context"
 _CHECKED_GRAPHS_FOLDER = "checked-graphs"
-
-
-def _writable_then_retried(remove: Callable[[str], Any], path: str, error: BaseException) -> None:
-    """Delete path again once it may be written: Windows refuses to delete a file or folder marked read-only, and an
-    earlier checked graph can carry that mark, which would fail the whole validate."""
-    if not isinstance(error, PermissionError):
-        raise error
-    os.chmod(path, stat.S_IWRITE | stat.S_IREAD)
-    remove(path)
 
 
 class ReportFiles:
@@ -64,7 +55,7 @@ class ReportFiles:
             path.write_text(report, encoding="utf-8")
             graph.save_at(path.with_suffix(".json"))
             history.record(path, graph.found_by(fidelity), graph.prefixes)
-            self._drop_older_checked_graphs(path)
+            self._drop_older_checked_graphs(fidelity, path)
 
     def where(self) -> str:
         """The saved reports, or the session's work folder when the call claimed none."""
@@ -72,16 +63,23 @@ class ReportFiles:
 
     @property
     def _checked_graphs(self) -> Path:
-        return Path(self._session.work_folder) / _CONTEXT_FOLDER / _CHECKED_GRAPHS_FOLDER
+        return Path(self._session.work_folder) / CONTEXT_FOLDER / _CHECKED_GRAPHS_FOLDER
 
-    def _drop_older_checked_graphs(self, report: Path) -> None:
-        """Remove the whole graphs built for the earlier reports of report's fidelity: their judges have judged them, and
-        each runs to a hundred megabytes for a whole repository."""
-        fidelity = report.stem.rsplit("-", 1)[0]
-        folders = self._checked_graphs.glob(f"{fidelity}-*") if self._checked_graphs.is_dir() else []
+    def _drop_older_checked_graphs(self, fidelity: FidelityGuidance, report: Path) -> None:
+        """Remove the whole graphs built for the earlier reports of fidelity, whose report this call saved: their judges
+        have judged them, and each runs to a hundred megabytes for a whole repository."""
+        folders = self._checked_graphs.glob(f"{fidelity.slug}-*") if self._checked_graphs.is_dir() else []
         for folder in folders:
-            if folder.is_dir() and folder.name.rsplit("-", 1)[0] == fidelity and folder.name < report.stem:
-                shutil.rmtree(folder, onexc=_writable_then_retried)
+            if folder.is_dir() and folder.name.rsplit("-", 1)[0] == fidelity.slug and folder.name < report.stem:
+                shutil.rmtree(folder, onexc=self._writable_then_retried)
+
+    def _writable_then_retried(self, remove: Callable[[str], Any], path: str, error: BaseException) -> None:
+        """Delete path again once it may be written: Windows refuses to delete a file or folder marked read-only, and an
+        earlier checked graph can carry that mark, which would fail the whole validate."""
+        if not isinstance(error, PermissionError):
+            raise error
+        os.chmod(path, stat.S_IWRITE | stat.S_IREAD)
+        remove(path)
 
     def _claimed(self, dated: Path) -> Path:
         """Create the report file under a name no other call holds. A report's name is dated to the second, so a call

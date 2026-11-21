@@ -20,8 +20,6 @@ if TYPE_CHECKING:
 
 _CAMEL_STEP = re.compile(r"^[a-z]+(?:[A-Z][a-z0-9]*)+$")
 
-_PLAIN_ENGLISH = re.compile(r"^[a-z].*(?:\s+[a-z].*)+$", re.IGNORECASE)
-
 _INLINE_CONDITIONAL = re.compile(
     r"\bwhen\s+[<{]?\w+[>}]?\s+is\s+(?:true|false)\b", re.I
 )
@@ -107,18 +105,6 @@ class OutlineRequiresManyPermutations(PracticeGraphRule):
         """The scenario's node records it as an outline."""
         return bool(node.facts.get("is_outline"))
 
-def scenario_domain_concepts(steps: list[Node]) -> set[str]:
-    """The bold terms the steps name, less their actors: who acts (Customer, My Paradise) is not a concept to give an
-    example of."""
-    concepts: set[str] = set()
-    actors: set[str] = set()
-    for step in steps:
-        concepts.update(step.get_fact("concepts") or [])
-        if step.get_fact("actor"):
-            actors.add(step.get_fact("actor"))
-    return concepts - actors
-
-
 class ExamplesTraceDomainModel(PracticeGraphRule):
     """A scenario's examples edges hold its own examples and those its own and its story's Backgrounds hold, so the
     rule reads only the graph."""
@@ -139,7 +125,18 @@ class ExamplesTraceDomainModel(PracticeGraphRule):
             for step in context.children(scenario, "steps")
             for each in (step, *context.children(step, "ands"))
         ]
-        return scenario_domain_concepts(steps)
+        return self.domain_concepts(steps)
+
+    def domain_concepts(self, steps: list[Node]) -> set[str]:
+        """The bold terms the steps name, less their actors: who acts (Customer, My Paradise) is not a concept to give an
+        example of."""
+        concepts: set[str] = set()
+        actors: set[str] = set()
+        for step in steps:
+            concepts.update(step.get_fact("concepts") or [])
+            if step.get_fact("actor"):
+                actors.add(step.get_fact("actor"))
+        return concepts - actors
 
 
 # An underlined term in a step, ++cart++, and the same term written as a link, ++[cart](domain-model.md#cart-…)++.
@@ -432,8 +429,6 @@ class PlainEnglishGwtSteps(PracticeGraphRule):
             return [f"Step {text!r} looks like code; write plain English GWT phrasing."]
         if text.isidentifier() or (text.replace("_", "").isalnum() and " " not in text):
             return [f"Step {text!r} looks like an identifier; write plain English GWT phrasing."]
-        if len(text.split()) >= 2 or _PLAIN_ENGLISH.match(text):
-            return []
         return []
 
 class GwtStepsTraceToDomainOperations(PracticeGraphRule):

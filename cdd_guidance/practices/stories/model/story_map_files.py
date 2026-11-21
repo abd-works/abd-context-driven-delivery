@@ -41,6 +41,8 @@ STORY_FILE_SUFFIXES = ("_story.test.md", "_story.spec.md")
 DESKTOP_STORY_FILE_SUFFIX = "_story.desktop.md"
 # The markdown a map's increments are written in, in the order a folder is searched for them.
 THIN_SLICING_FILES = ("thin-slicing.md", "thin-slice.md", "thin-slices.md", "increments.md")
+# The name a map's first thin slice is written under, in a folder that holds none yet.
+NEW_THIN_SLICE_FILE = "thin-slice.md"
 
 
 def is_story_map_file(path: Path | str) -> bool:

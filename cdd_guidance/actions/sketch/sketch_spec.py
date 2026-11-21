@@ -51,12 +51,7 @@ with description("Sketch toolset") as self:
             expect("save_sketch" in sketch.tools).to(be_true)
             expect("review_sketch" in sketch.tools).to(be_true)
 
-    with context("sketch_template property"):
-        with it("returns the default template when agent_dir was not set at construction"):
-            sketcher = Sketch()
-            content = sketcher.sketch_template
-            expect(content).to(contain("heading-and-indent notation"))
-
+    with context("find_template tool"):
         with it("returns the agent-dir template when agent_dir was set at construction"):
             import tempfile
             with tempfile.TemporaryDirectory() as agent_dir:
@@ -65,10 +60,9 @@ with description("Sketch toolset") as self:
                 template_path = templates_dir / "test-sketch.md"
                 template_path.write_text("# constructed agent template\n", encoding="utf-8")
                 sketcher = Sketch(agent_dir=agent_dir)
-                content = sketcher.sketch_template
+                content = sketcher.find_template()
                 expect(content).to(contain("constructed agent template"))
 
-    with context("find_template tool"):
         with it("falls back to the default template when no agent_dir template exists"):
             sketcher = Sketch()
             content = sketcher.find_template(agent_dir="")

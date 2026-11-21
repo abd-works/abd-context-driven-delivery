@@ -22,14 +22,14 @@ from typing import TYPE_CHECKING, Callable, Dict, List, Optional
 from cdd_guidance.practices.sketch_document.discovery_document import DiscoveryDocument
 from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryType
 from cdd_guidance.practices.stories.model.story_model import Background, StepType, Scenario
-from cdd_guidance.practices.stories.model.story_map_files import StoryMapFiles, path_from, source_at
+from cdd_guidance.practices.stories.model.story_map_files import STORY_FILE_SUFFIXES, StoryMapFiles, path_from, source_at
 from cdd_guidance.practices.stories.model.markdown.links import StoryMapLinks, unlink
 from cdd_guidance.practices.stories.model.markdown.map_reading import OutlineLines, ReplacedOutline, described, has_map_structure, is_outline, read_at, read_map
 from cdd_guidance.practices.stories.model.markdown.markup import MarkdownExample, MarkdownStep, step_line, step_lines, strip_backticks
 from cdd_guidance.practices.stories.model.markdown.scenario_file import SCENARIO_HEADING, ScenarioFileReading, ScenarioFiles
 from cdd_guidance.practices.stories.model.markdown.scenario_parts import HEADING_LINE, STEP_LINE, DocumentPart, StorySection
 from cdd_guidance.practices.stories.model.story_model import StoryModel
-from cdd_guidance.practices.stories.model.markdown.thin_slice import MarkdownIncrement, thin_slice_in
+from cdd_guidance.practices.stories.model.markdown.thin_slice import MarkdownIncrement, ThinSlice
 
 if TYPE_CHECKING:
     from cdd_guidance.practices.stories.model.story_model import Examples, Step, StoryNode
@@ -45,7 +45,7 @@ _SECTION_HEADING = re.compile(r"^(#{3,6}) (.*)$")
 
 
 # How a story's own scenarios file ends, after the story's name in snake case.
-_SCENARIOS_FILE_SUFFIX = "_story.test.md"
+_SCENARIOS_FILE_SUFFIX = STORY_FILE_SUFFIXES[0]
 
 
 class MarkdownScenario(Scenario):
@@ -408,7 +408,7 @@ class MarkdownStoryModel(StoryModel):
         path = Path(path).resolve()
         story_map = self._parsed_file(path.read_text(encoding="utf-8"), path_from(Path(project).resolve(), path))
         if story_map.scenario_document is None:
-            story_map.slicing = thin_slice_in(path.parent, story_map, project)
+            story_map.slicing = ThinSlice.from_folder(path.parent, story_map, project)
         return story_map
 
 
@@ -467,7 +467,7 @@ class MarkdownStoryModel(StoryModel):
             story.load_scenarios(sections)
         self._keep_unplaced([section for section in sections if not any(section.names(story) for story in placed)])
         if not self.increments and StoryMapFiles(root).thin_slicing() is not None:
-            self.slicing = thin_slice_in(root, self, root)
+            self.slicing = ThinSlice.from_folder(root, self, root)
 
     def _keep_unplaced(self, sections: List[StorySection]) -> None:
         """Keep the story each of sections specifies as one this map does not hold, once for each name, with the

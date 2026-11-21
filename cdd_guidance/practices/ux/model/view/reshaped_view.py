@@ -166,14 +166,14 @@ class Component:
         empty = self._empty_function_from(assigned.end())
         return ComponentMember(name, self._lead_of(start), start, end, False, f"{self._text.text[start:empty]} {{}};") if empty >= 0 else None
 
-    def _empty_function_from(self, value: int) -> int:
-        """Where the function assigned at value stops being its heading and starts being its body: after its `=>`, or
-        before the brace of one written with `function`; -1 when the value is no function."""
+    def _empty_function_from(self, assigned_at: int) -> int:
+        """Where the function assigned at assigned_at stops being its heading and starts being its body: after its
+        `=>`, or before the brace of one written with `function`; -1 when what is assigned there is no function."""
         code = self._text.code
-        of_one = _ARROW_OF_ONE.match(code, value)
+        of_one = _ARROW_OF_ONE.match(code, assigned_at)
         if of_one is not None:
             return of_one.end()
-        parameters = _ARROW_PARAMETERS.match(code, value) or _FUNCTION_VALUE.match(code, value)
+        parameters = _ARROW_PARAMETERS.match(code, assigned_at) or _FUNCTION_VALUE.match(code, assigned_at)
         if parameters is None:
             return -1
         closing = self._text.closing(parameters.end() - 1)

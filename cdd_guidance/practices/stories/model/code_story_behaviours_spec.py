@@ -95,7 +95,7 @@ def _name_read_back(model_type, name: str) -> str:
     story = Story(name, 1)
     story.actors = ["Customer"]
     model = model_type()
-    return model.story_type.load_all(model.writing.story_text(model.story_type(story)))[0].name
+    return model.story_type.load_all("\n".join(model.writing.story_lines(model.story_type(story)) + [""]))[0].name
 
 
 with shared_context("a story map written as story tests and read back"):

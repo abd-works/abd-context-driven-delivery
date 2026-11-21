@@ -70,12 +70,6 @@ def _class_of(token: str) -> str:
     return next((label for label, holds in _OPENINGS if holds(token)), "unlisted")
 
 
-def opens_with_verb(name: str) -> bool:
-    """The name's first word is a verb the story map knows, generic or not."""
-    token = next(iter((name or "").split()), "").lower()
-    return token in _VERBS or token in _GENERIC_VERBS
-
-
 def names_generic_handler(name: str) -> bool:
     """A generic verb such as Handle or Process followed by its object: the name hides what happens."""
     words = (name or "").split()

@@ -82,12 +82,6 @@ class CodeStoryNode:
     def snake(self) -> str:
         return Name(self.name).title_snake or "unnamed"
 
-    def pascal(self) -> str:
-        return Name(self.name).title_pascal or "Unnamed"
-
-    def camel(self) -> str:
-        return Name(self.name).title_camel or "unnamed"
-
 
 class StorySyntax:
     """How one language's story files write stories, scenarios and steps: the patterns its story tests are read by.
@@ -269,7 +263,7 @@ class CodeStory(Story, CodeStoryNode):
     syntax = CodeScenario.syntax
     """How this language writes its story files: the syntax its scenarios read their text through."""
 
-    def read_description(self, content: str) -> None:
+    def _read_description(self, content: str) -> None:
         """The actor, kind, domain terms, and evidence the story's comment names; a story whose comment names no kind
         is a user story."""
         mark = self.syntax.description_mark
@@ -304,8 +298,8 @@ class CodeStory(Story, CodeStoryNode):
         """The story the text of one story holds: its name, its description, then its backgrounds and scenarios, one
         for each of scenario_blocks when its story file found them, else as the text writes them."""
         story = cls(cls.syntax.story_name(content), 1)
-        story.read_description(content)
-        story.fill(content, scenario_blocks)
+        story._read_description(content)
+        story._fill(content, scenario_blocks)
         return story
 
     @classmethod
@@ -331,7 +325,7 @@ class CodeStory(Story, CodeStoryNode):
         written.key = self.code_key
         self.written = written
 
-    def add_scenario(self, name: str, body: str, example_names: List[str]) -> None:
+    def _add_scenario(self, name: str, body: str, example_names: List[str]) -> None:
         scenario = self.scenario_type(name=name, sequential_order=len(self.scenarios) + 1)
         scenario.read(body, example_names)
         self.scenarios.append(scenario)
@@ -352,7 +346,7 @@ class CodeStory(Story, CodeStoryNode):
             return self.syntax.scenario_blocks(content)
         return [(item.name, item.body_text) for item in scenario_blocks]
 
-    def fill(self, content: str, scenario_blocks: Optional[List[CodeBlock]] = None) -> None:
+    def _fill(self, content: str, scenario_blocks: Optional[List[CodeBlock]] = None) -> None:
         examples = self.syntax.example_names(content)
         backgrounds = self.syntax.backgrounds_in(content)
         for background in backgrounds:
@@ -362,7 +356,7 @@ class CodeStory(Story, CodeStoryNode):
         self.backgrounds = backgrounds
         self._take_background_examples(content)
         for name, body in self._scenario_texts(content, scenario_blocks):
-            self.add_scenario(name, body, examples)
+            self._add_scenario(name, body, examples)
         if self.backgrounds and self.backgrounds[0].examples:
             self._share_background_examples()
 

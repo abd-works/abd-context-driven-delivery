@@ -23,9 +23,6 @@ class ReferencePaths:
         for path in paths:
             self.add(path)
 
-    def clear(self) -> None:
-        self._paths.clear()
-
     def as_list(self) -> List[str]:
         return list(self._paths)
 

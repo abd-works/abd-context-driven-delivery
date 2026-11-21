@@ -11,7 +11,7 @@ import json
 import sys
 from pathlib import Path
 
-from cdd_guidance.actions.render.worker_render import RenderOrder
+from cdd_guidance.actions.render.render_order import RenderOrder
 from harness.agent_tools.progress import reporting_to
 from harness.guidance_actions import GuidanceCommand, WorkList
 from harness.mcp.tool_calls import ThrottledReporter

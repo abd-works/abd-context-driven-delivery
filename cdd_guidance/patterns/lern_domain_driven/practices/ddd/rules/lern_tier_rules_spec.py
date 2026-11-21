@@ -20,6 +20,7 @@ from cdd_guidance.patterns.lern_domain_driven.practices.stories.rules.shared_sto
     OutlineEntriesLoopOverExamples,
     TierBoundRepositoryAccessor,
 )
+from cdd_guidance.patterns.lern_domain_driven.graph_overlay import _LernReading
 from cdd_guidance.patterns.lern_domain_driven.lern_domain_driven import LernDomainDriven
 from cdd_guidance.patterns.lern_domain_driven.tier_facts import (
     AggregateFolder,
@@ -37,6 +38,11 @@ def checks(practice, *patterns):
     graph = Graph()
     graph.overlays = PatternOverlays(list(patterns)).paths
     return graph.practice(practice).reading.checks()
+
+
+def test_setup_text(root):
+    """The test setup text a LERN reading of the working copy at root finds."""
+    return _LernReading(LernDomainDriven().graph_overlay, Graph(), root).setup_text
 
 
 def tier_node(name, node_type, facts, file="src/a/a-node.ts"):
@@ -158,17 +164,17 @@ with description("the lern_domain_driven pattern rules"):
 
         with it("should flag a repository instance the test setup never resets"):
             (self.root / "tests" / "vitest.setup.ts").write_text("otherRepository._reset();\n", encoding="utf-8")
-            expect(ResetEveryRepository().check(node_root(self.node_text, LernDomainDriven().test_setup_text(self.root)), None)).to(have_len(1))
+            expect(ResetEveryRepository().check(node_root(self.node_text, test_setup_text(self.root)), None)).to(have_len(1))
 
         with it("should pass once the repositories file lists it"):
             (self.root / "tests" / "repositories.ts").write_text("export const all = [subscriptionRepositoryNode];\n", encoding="utf-8")
-            expect(ResetEveryRepository().check(node_root(self.node_text, LernDomainDriven().test_setup_text(self.root)), None)).to(equal([]))
+            expect(ResetEveryRepository().check(node_root(self.node_text, test_setup_text(self.root)), None)).to(equal([]))
 
         with it("should pass once the step library's repositories file lists it"):
             library = self.root / "test-utils" / "story-test"
             library.mkdir(parents=True)
             (library / "repositories.ts").write_text("export const all = [subscriptionRepositoryNode];\n", encoding="utf-8")
-            expect(ResetEveryRepository().check(node_root(self.node_text, LernDomainDriven().test_setup_text(self.root)), None)).to(equal([]))
+            expect(ResetEveryRepository().check(node_root(self.node_text, test_setup_text(self.root)), None)).to(equal([]))
 
     with description("shared story rules"):
         with it("should flag a context cast and pass the tier-bound accessor"):

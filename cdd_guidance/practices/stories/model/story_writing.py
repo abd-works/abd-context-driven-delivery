@@ -172,16 +172,13 @@ class StoryWriting:
             path, lines = written.path, list(written.inside)
         else:
             story = place.stories[0]
-            path = f"{place.folder}/{self._filled(self.file_name_template, snake=story.snake(), pascal=story.pascal())}"
+            path = f"{place.folder}/{self._filled(self.file_name_template, snake=story.snake())}"
             lines = self.file_header(place)
         opened = len(lines)
         for story in place.stories:
             gap = [] if len(lines) == opened else [""]
             lines = (lines if self._is_as_read(story) else self._spaced(lines, gap)) + self.story_lines(story)
         return path, "\n".join(lines + (written.closing if written is not None else [""]))
-
-    def story_text(self, story: "Story") -> str:
-        return "\n".join(self.story_lines(story) + [""])
 
     def story_lines(self, story: "Story") -> List[str]:
         """Read in this language and unchanged: every line as read. Each scenario decides for itself."""
@@ -217,7 +214,16 @@ class StoryWriting:
         return clauses
 
     def _verb(self, step: "Step") -> str:
-        return self.verbs.get(step.keyword) or self.default_verb or step.keyword.lower()
+        return self._listed_verb(step) or step.keyword.lower()
+
+    def verb_alone(self, step: "Step") -> str:
+        """The verb step opens with when it is written as a statement of its own: the verb the language lists for its
+        keyword, else the verb of its phase, since a step the scenarios chain with And has no clause to chain onto."""
+        return self._listed_verb(step) or step.step_type.value
+
+    def _listed_verb(self, step: "Step") -> str:
+        """The verb the language lists for step's keyword, else its default verb; empty when it has neither."""
+        return self.verbs.get(step.keyword) or self.default_verb
 
     def _step_lines(self, clause: StepClause, indent: str) -> List[str]:
         """One step and the steps chained onto it, each with its body. A body not written yet gets the placeholder."""

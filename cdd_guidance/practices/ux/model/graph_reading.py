@@ -21,10 +21,8 @@ from harness.graph.schema_conformance import EXEMPT_FACT
 from harness.graph.skipped_folders import skips_folder
 from harness.guidance.practice_reading import PracticeReading
 
-from cdd_guidance.practices.ux.model.drawio.nodes import UnreadableDrawio
-from cdd_guidance.practices.ux.model.html.nodes import UxMapNotEmbedded
 from cdd_guidance.practices.ux.model.nodes import Interaction, NavComponent, Screen, Transition
-from cdd_guidance.practices.ux.model.story_link import KEY_SEPARATOR, StoryLink, StoryTargets, key_of
+from cdd_guidance.practices.ux.model.story_link import KEY_SEPARATOR, STEP_TYPES, StoryLink, StoryTargets, key_of
 from cdd_guidance.practices.ux.model.ux_map import ScreenNotOnMap, UxMap
 from cdd_guidance.practices.ux.model.ux_node import UxNode
 
@@ -35,15 +33,11 @@ if TYPE_CHECKING:
 _CONTEXT_FOLDER = ".context"
 # The fact the practice's root keeps of each UX file it could not read as a map, with the reason.
 UNREAD_FILES_FACT = "unread_files"
-# What a UX file that is not a map after all fails with: text that is not its format, or a link to a screen it lacks.
-_NOT_A_MAP = (json.JSONDecodeError, UnreadableDrawio, UxMapNotEmbedded, ScreenNotOnMap)
 # How a file writes a node's own name: a JSON record's name field, the text of a drawing's cell, plain or bold, or the
 # words of a board's section or the first line of its card.
 _NAME_MARKS = ('"name": "{}"', 'value="{}"', 'value="&lt;b&gt;{}&lt;/b&gt;"', '"text": "{}"', '"text": "**{}**')
 # An aggregate groups the classes it holds and is named for its root, so a domain term names the root, not the group.
 _GROUP_TYPES = frozenset({"Aggregate"})
-# The node types Stories records a step as.
-_STEP_TYPES = ("Step", "Given", "When", "Then")
 # What joins the parts of a bound field's path: `order.shippingAddress.city`.
 _PATH_SEPARATOR = "."
 # The kind of story node a screen or a control serves under each of its edges, and the fact that keeps what it serves
@@ -83,23 +77,24 @@ class UxReading(PracticeReading):
         read links again too, since the stories it names may have been read again."""
         if not self.root.is_dir():
             return
-        files = list(UxMapFiles(self).found())
+        map_files = _UxMapFiles(self)
+        files = list(map_files.found())
         unread: list[dict[str, str]] = []
         with schema_sync_paused():
             for index, file in enumerate(files, start=1):
                 report_progress(f"ux · maps · {index}/{len(files)} · {file.relative}")
                 try:
-                    RecordedMap(self, file).record()
-                except _NOT_A_MAP as reason:
+                    _RecordedMap(self, file).record()
+                except map_files.not_a_map_failures as reason:
                     unread.append({"file": file.relative, "reason": str(reason)})
         if unread:
             self.in_graph.root.set_fact(UNREAD_FILES_FACT, unread)
-        ServedStoryLinks(self).link()
-        DomainTermLinks(self).link()
-        StoryDemoControlLinks(self).link()
+        _ServedStoryLinks(self).link()
+        _DomainTermLinks(self).link()
+        _StoryDemoControlLinks(self).link()
 
 
-class UxMapFile:
+class _UxMapFile:
     """One file a UX map is written in: where it is, its text, and the format that reads it."""
 
     def __init__(self, relative: str, text: str, format: UxMap) -> None:
@@ -141,7 +136,7 @@ class UxMapFile:
         )
 
 
-class UxMapFiles:
+class _UxMapFiles:
     """The files under a UX reading's root that hold a UX map: on a load of the whole folder, every file one of the
     practice's formats says is its own, in the folders a scan enters and in each folder's `.context`; on a load of
     edited files or a refresh, those among the files named."""
@@ -154,12 +149,18 @@ class UxMapFiles:
             if isinstance(adapter, UxMap) and adapter.map_file_suffixes
         ]
 
-    def found(self) -> Iterator[UxMapFile]:
+    @property
+    def not_a_map_failures(self) -> tuple[type[Exception], ...]:
+        """What reading a UX file that is not a map after all fails with: what each format says its own reading fails
+        with for text that is not its format, and a link to a screen the map lacks."""
+        return (*(failure for format in self._formats for failure in format.not_a_map_failures), ScreenNotOnMap)
+
+    def found(self) -> Iterator[_UxMapFile]:
         root = self._reading.root.resolve()
         for path in self._candidates(root):
             format = self._format_of(path)
             if format is not None:
-                yield UxMapFile(path.relative_to(root).as_posix(), format[1], format[0])
+                yield _UxMapFile(path.relative_to(root).as_posix(), format[1], format[0])
 
     def _candidates(self, root: Path) -> list[Path]:
         """Each file under root with an ending some format reads, in a fixed order."""
@@ -186,11 +187,11 @@ class UxMapFiles:
         return None if reader is None else (reader, text)
 
 
-class RecordedMap:
+class _RecordedMap:
     """One UX map file's map on the graph: every node of the map named for its file and its place in the map, placed
     at the line of the file that names it, with the edges between the nodes of the map."""
 
-    def __init__(self, reading: UxReading, file: UxMapFile) -> None:
+    def __init__(self, reading: UxReading, file: _UxMapFile) -> None:
         self._reading = reading
         self._file = file
         self._ids: set[str] = set()
@@ -245,7 +246,7 @@ class RecordedMap:
         return []
 
 
-class LinksAcrossPractices:
+class _LinksAcrossPractices:
     """The edges one kind of UX node has to the nodes of the other practices its graph reads, made for one UX reading."""
 
     def __init__(self, reading: UxReading) -> None:
@@ -253,7 +254,7 @@ class LinksAcrossPractices:
         self._graph = reading.graph
 
 
-class ServedStoryLinks(LinksAcrossPractices):
+class _ServedStoryLinks(_LinksAcrossPractices):
     """The edges from UX's screens and controls to the stories, scenarios, and steps each serves, each of which is
     shown on that screen or control. An association written as a link is followed to the file its target names, the
     path taken from the folder of the UX file it is written in (and, for a file in a `.context`, the folder that `.context` belongs to), then from the folders the graph reads, and to the node
@@ -293,7 +294,7 @@ class ServedStoryLinks(LinksAcrossPractices):
         return [folder, folder.parent] if folder.name == _CONTEXT_FOLDER else [folder]
 
 
-class DomainTermLinks(LinksAcrossPractices):
+class _DomainTermLinks(_LinksAcrossPractices):
     """The edges from UX's screens to the domain model: a screen's domain terms lead to the domain class each names.
     They are read from the facts every screen saves with the graph, as what it serves is."""
 
@@ -326,7 +327,7 @@ class DomainTermLinks(LinksAcrossPractices):
         return [practice for practice in loaded if practice is not None]
 
 
-class StoryDemoControlLinks(LinksAcrossPractices):
+class _StoryDemoControlLinks(_LinksAcrossPractices):
     """The edges from UX's Story Demo controls to the other practices: a control runs the story steps whose text it
     holds, and shows the property its bound field names. They are read from the facts every control saves with the
     graph, as a screen's links are."""
@@ -349,7 +350,7 @@ class StoryDemoControlLinks(LinksAcrossPractices):
         if stories is None:
             return []
         read = stories.reading.in_graph
-        steps = [step for kind in _STEP_TYPES for step in read.nodes(kind) if (step.get_fact("text") or step.name) == label]
+        steps = [step for kind in STEP_TYPES for step in read.nodes(kind) if (step.get_fact("text") or step.name) == label]
         shown = {StoryLink.from_shown("Story", written).key for written in self._screen_of(control).get_fact("story_keys") or []}
         on_screen = [step for step in steps if key_of(step).split(KEY_SEPARATOR)[0] in shown]
         return on_screen or (steps if len(steps) == 1 else [])

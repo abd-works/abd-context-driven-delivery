@@ -10,7 +10,6 @@ the map keeps; nothing is read from disk again.
 from __future__ import annotations
 
 import re
-import zlib
 from functools import cached_property
 from typing import TYPE_CHECKING, Callable, Iterator, Optional
 from pathlib import Path, PurePosixPath
@@ -47,11 +46,6 @@ _IDENTIFIER = re.compile(r"\w+")
 _MEMBER_READ = re.compile(r"\.(\w+)")
 
 _EVIDENCE_LINE = re.compile(r"\*\s*Evidence:\s*([A-Za-z][A-Za-z ,-]*)")
-
-# A step's graph id ends in a 24-bit checksum of its name: short enough to read in an id, long enough that two steps
-# on one line of one file do not share it.
-_STEP_CHECKSUM_MASK = 0xFFFFFF
-
 
 def example_source_file(story_test: str, imported_modules: dict[str, str], name: str) -> str:
     """The file the example called name comes from, named from the project like story_test: the module story_test
@@ -90,12 +84,6 @@ def imported_files(file: str, imported_modules: dict[str, str]) -> list[str]:
         for folder in PurePosixPath(file).parents
     }
     return sorted(relative | rooted)
-
-
-def step_checksum(name: str) -> int:
-    """A checksum of a step's name for its graph id. A checksum, never ``hash``: Python salts ``hash`` per process, and
-    a step must keep its id in the worker that refreshes the graph and in the server."""
-    return zlib.crc32(name.encode("utf-8")) & _STEP_CHECKSUM_MASK
 
 
 class StorySource:
@@ -224,6 +212,7 @@ class StoryRecording:
         self.story_map = story_map
         self.practice = practice
         self.graph = practice.reading.graph
+        self._in_graph = practice.reading.in_graph
         self.on_node = on_node
         self.story_at = 0
         self.story_total = len(story_map.descendants.stories())
@@ -231,7 +220,7 @@ class StoryRecording:
 
     def write(self) -> None:
         for epic in self.story_map.epics:
-            epic.record(self, self.practice.reading.in_graph.root)
+            epic.record(self, self._in_graph.root)
         for story in self.story_map.unplaced_stories:
             story.record(self, None)
 
@@ -243,10 +232,10 @@ class StoryRecording:
     def add(self, story_object: "StoryNode", node_id: str, lines: "Source") -> Node:
         """story_object added as the graph node node_id, called by its recorded name and of its recorded type, at
         lines; the node already called node_id when two objects share it."""
-        if not self.practice.reading.in_graph.holds(node_id):
+        if not self._in_graph.holds(node_id):
             story_object.name = story_object.recorded_name
             story_object.type = story_object.recorded_type
-        node = self.practice.reading.in_graph.add(story_object, node_id, Location(lines.file or ".", lines.start_line, lines.end_line or lines.start_line))
+        node = self._in_graph.add(story_object, node_id, Location(lines.file or ".", lines.start_line, lines.end_line or lines.start_line))
         self._align(node, story_object)
         return node
 
@@ -262,9 +251,9 @@ class StoryRecording:
         elif node.type == "Example" and PurePosixPath(node.source.file or "").suffix.lower() == ".md":
             node.source.align_to_table_row(node.name)
         elif node.type == "Example" and story_object.declaration is not None:
-            node.source.align_to_declaration(self.practice.reading.in_graph.source_root, *story_object.declaration)
+            node.source.align_to_declaration(self._in_graph.source_root, *story_object.declaration)
         elif node.type == "Example":
-            node.source.align_to_example_export(self.practice.reading.in_graph.source_root, node.name, self._example_files)
+            node.source.align_to_example_export(self._in_graph.source_root, node.name, self._example_files)
 
     def source_of(self, file: str) -> StorySource:
         """The file the map was read from at file; an empty one when it was read from none there."""
@@ -274,7 +263,7 @@ class StoryRecording:
     def _example_files(self) -> list[Path]:
         """The code files an example's export is looked for in: the ones the story map was read from, so a read of the
         files being edited opens no file it did not read, and nothing outside the folders a read scans."""
-        root = self.practice.reading.in_graph.source_root
+        root = self._in_graph.source_root
         if not root:
             return []
         return [Path(root) / source.file for source in self.story_map.sources if source.declares_examples]
@@ -356,17 +345,3 @@ def file_of(node: "StoryNode") -> str:
     if not node.has_source_file:
         return ""
     return str(node.source.file).replace("\\", "/")
-
-
-def folder_of(file: str, levels_up: int) -> str:
-    """The folder file sits in, levels_up more folders above it."""
-    parts = [part for part in file.split("/") if part][:-1]
-    if levels_up and len(parts) >= levels_up:
-        parts = parts[:-levels_up]
-    return "/".join(parts) or "."
-
-
-def step_semantic(step: "Step") -> str:
-    """Given, When, or Then from the step's phase, else from its keyword; a step with neither is a Step."""
-    phase = step.phase or (step.keyword or "").casefold()
-    return phase.capitalize() if phase in ("given", "when", "then") else "Step"

@@ -15,9 +15,6 @@ if TYPE_CHECKING:
 
     from cdd_guidance.practices.stories.model.graph_reading import StoryTree
 
-_STEP_TYPES = frozenset({"Step", "Given", "When", "Then"})
-# A story map's epic is recorded as an Epic, or as a SubEpic under another epic.
-_EPIC_TYPES = frozenset({"Epic", "SubEpic"})
 # The relationships the Stories schema requires of an example that lead to a model: what an example is held to only in
 # an area a model is written for.
 _EXAMPLE_MODEL_RELATIONSHIPS = ["demonstrates", "retrievedUsing"]
@@ -49,14 +46,14 @@ class ExampleObservations:
         return self.stories.in_graph.nodes("Example")
 
     def link(self) -> None:
-        for step in [node for node in self.stories.in_graph.nodes() if node.type in _STEP_TYPES and node.get_fact("phase")]:
+        for step in [step for step in self.tree.all_steps() if step.get_fact("phase")]:
             for example in self._observed_by(step):
                 self.graph.edges.relate("observes", step, example)
 
     def _observed_by(self, step: "Node") -> list["Node"]:
-        texts = [self._step_body(step)]
+        texts = [self.tree.step_body(step)]
         if step.get_fact("phase") == "then":
-            texts.extend(self._step_body(given) for given in self._givens_of(step))
+            texts.extend(self.tree.step_body(given) for given in self._givens_of(step))
         named = [example for example in self.examples if any(self._names(text, example, step) for text in texts)]
         return self._of_story_file(step, named)
 
@@ -95,10 +92,6 @@ class ExampleObservations:
         story = self.graph.edges.direct_parent(scenario)
         return [] if story is None else [edge.child for edge in self.graph.edges.from_parent("background", story)]
 
-    def _step_body(self, step: "Node") -> str:
-        """The step's own text and the body its story test gives it."""
-        return f"{step.name}\n{step.get_fact('body_text') or ''}"
-
 
 class ModelledAreas:
     """The areas of the story map a model is written for. An area is the stories directly under one sub-epic or
@@ -108,8 +101,9 @@ class ModelledAreas:
     invokes an operation, or an example demonstrates a class. Only there must a Then observe an Example
     (then-observes-an-example) and an example show a class and what retrieves it (the Stories schema)."""
 
-    def __init__(self, stories: PracticeReading) -> None:
+    def __init__(self, stories: PracticeReading, tree: "StoryTree") -> None:
         self.stories = stories
+        self.tree = tree
         self.graph = stories.graph
 
     def record(self) -> None:
@@ -119,12 +113,12 @@ class ModelledAreas:
         for node in self.stories.in_graph.nodes():
             if node.type == "Example":
                 self._record(node, EXEMPT_FACT, [] if self._is_modelled(node) else _EXAMPLE_MODEL_RELATIONSHIPS)
-            elif node.type in _STEP_TYPES and node.get_fact("phase") == "then":
+            elif self.tree.is_step(node) and node.get_fact("phase") == "then":
                 self._record(node, MODEL_WRITTEN_FACT, self._is_modelled(node))
 
-    def _record(self, node: "Node", fact: str, value: list[str] | bool) -> None:
-        if value or node.has_fact(fact):
-            node.set_fact(fact, value)
+    def _record(self, node: "Node", fact: str, held: list[str] | bool) -> None:
+        if held or node.has_fact(fact):
+            node.set_fact(fact, held)
 
     def _is_modelled(self, node: "Node") -> bool:
         return self._area_of(node) in self._modelled
@@ -136,12 +130,12 @@ class ModelledAreas:
         if not models:
             return set()
         joined = [edge.parent for edge in self.stories.in_graph.edge_index.of() if edge.child.practice in models]
-        return {self._area_of(node) for node in joined if node.type == "Example" or node.type in _STEP_TYPES}
+        return {self._area_of(node) for node in joined if node.type == "Example" or self.tree.is_step(node)}
 
     def _area_of(self, node: "Node") -> "Node":
         """The nearest sub-epic or epic above node; for a node under none, the topmost node above it, its story."""
         above = node
-        while above.type not in _EPIC_TYPES:
+        while not self.tree.is_epic(above):
             parent = self.graph.edges.direct_parent(above)
             if parent is None:
                 return above

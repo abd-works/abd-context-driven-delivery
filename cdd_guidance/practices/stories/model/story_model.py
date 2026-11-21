@@ -6,6 +6,7 @@ A nested epic is an epic whose parent is an epic. Each node type implements clon
 from __future__ import annotations
 
 import os
+import zlib
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import TYPE_CHECKING, Annotated, Any, Callable, Dict, List, Optional
@@ -28,7 +29,7 @@ from . import name_facts
 from .opened_story_map import OpenedStoryMap, StoryMapEditRefused, UnopenedStoryMap
 from .story_copies import StoryCopies
 from .story_map_files import source_at
-from .story_recording import StoryRecording, StorySources, file_of, folder_of, step_checksum, step_semantic
+from .story_recording import StoryRecording, StorySources, file_of
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -42,6 +43,9 @@ if TYPE_CHECKING:
 
 # A step goes by its text, cut to this many characters, so a long step still reads as one name.
 _STEP_NAME_LENGTH = 80
+# A step's graph id ends in a 24-bit checksum of its name: short enough to read in an id, long enough that two steps
+# on one line of one file do not share it.
+_STEP_CHECKSUM_MASK = 0xFFFFFF
 # A leaf epic with an estimate widens by a column for about this many characters of the estimate: wider for an epic
 # that has stories beside it, as its estimate shares their columns.
 _ESTIMATE_CHARACTERS_PER_COLUMN = 18
@@ -349,16 +353,6 @@ class Example(StoryNode):
             for name, item in items
             if not name.startswith("_")
         }
-
-    def as_code(self) -> str:
-        """A code literal for this value: a field map, a class, or a constructor call."""
-        value = self.value
-        if isinstance(value, dict):
-            return repr(value)
-        if isinstance(value, type):
-            return f"{value.__name__}()"
-        arguments = ", ".join(f"{name}={item!r}" for name, item in self.cells().items())
-        return f"{type(value).__name__}({arguments})"
 
     @property
     @data_field(key="fields")
@@ -679,8 +673,9 @@ class Step(StoryNode):
 
     @property
     def recorded_type(self) -> str:
-        """Given, When, or Then; a step with none of them is a Step."""
-        return step_semantic(self)
+        """Given, When, or Then from the step's phase, else from its keyword; a step with neither is a Step."""
+        phase = self.phase or (self.keyword or "").casefold()
+        return phase.capitalize() if phase in ("given", "when", "then") else "Step"
 
     def record(self, recording: StoryRecording, file: str, parent: "Node") -> None:
         """Add this step under parent, its scenario's or background's node (``steps``) or the step it continues
@@ -694,7 +689,13 @@ class Step(StoryNode):
 
     def _node_id(self, lines: "Source") -> str:
         """Its graph id: its kind, file, line, and a checksum of its name, so it keeps the same id in every process."""
-        return f"stories:{self.recorded_type}:{lines.file}:{lines.start_line}:{step_checksum(self.recorded_name)}"
+        return f"stories:{self.recorded_type}:{lines.file}:{lines.start_line}:{self._name_checksum}"
+
+    @property
+    def _name_checksum(self) -> int:
+        """A checksum of the step's recorded name for its graph id. A checksum, never ``hash``: Python salts ``hash``
+        per process, and a step must keep its id in the worker that refreshes the graph and in the server."""
+        return zlib.crc32(self.recorded_name.encode("utf-8")) & _STEP_CHECKSUM_MASK
 
     def clone(self) -> "Step":
         """A copy of this step, its code, and a copy of each step chained onto it."""
@@ -996,10 +997,6 @@ class Epic(StoryNode):
         return self.story_map.opened.save()
 
     @property
-    def has_epics(self) -> bool:
-        return len(self.epics) > 0
-
-    @property
     def is_sub_epic(self) -> bool:
         """An epic nested under another epic."""
         return isinstance(self.parent, Epic)
@@ -1017,7 +1014,7 @@ class Epic(StoryNode):
         """Add this epic or sub-epic under parent, the practice's root or its epic's node, then its sub-epics and its
         stories. An epic sits on the line that names it in the first file any story under it was read from."""
         story_file = self._first_story_file() or file_of(self)
-        folder = folder_of(story_file, levels_up=1 if not self.is_sub_epic and self.epics else 0)
+        folder = self._folder_above(story_file)
         self.source = recording.name_span(story_file, self.name, folder)
         self.load_map_facts()
         self.evidence = self._evidence_in(recording, story_file)
@@ -1027,6 +1024,14 @@ class Epic(StoryNode):
             child.record(recording, node)
         for story in self.stories:
             story.record(recording, node)
+
+    def _folder_above(self, story_file: str) -> str:
+        """The folder this epic is recorded in: the one story_file sits in, and for a top epic that holds sub-epics the
+        folder above that, since its first story file sits in a sub-epic's folder."""
+        parts = [part for part in story_file.split("/") if part][:-1]
+        if not self.is_sub_epic and self.epics and parts:
+            parts = parts[:-1]
+        return "/".join(parts) or "."
 
     def _first_story_file(self) -> str:
         """The first file any story under this epic was read from; empty when none names a file."""

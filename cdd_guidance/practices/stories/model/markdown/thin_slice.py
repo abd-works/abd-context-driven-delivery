@@ -12,7 +12,7 @@ from typing import Dict, List, Optional
 
 from cdd_guidance.practices.stories.model.markdown.map_reading import described
 from cdd_guidance.practices.stories.model.markdown.markup import strip_markup
-from cdd_guidance.practices.stories.model.story_map_files import StoryMapFiles, path_from, source_at
+from cdd_guidance.practices.stories.model.story_map_files import NEW_THIN_SLICE_FILE, StoryMapFiles, path_from, source_at
 from cdd_guidance.practices.stories.model.story_model import Increment, Story, StoryModel
 
 _INCREMENT_H3 = re.compile(r"^###\s+Increment\s+(\d+)\s*:\s*(.+?)\s*$", re.IGNORECASE)
@@ -95,6 +95,18 @@ class ThinSlice:
         self.first_number = reading.first_number
         self.text_as_read = text
 
+    @classmethod
+    def from_folder(cls, folder: Path, story_map: StoryModel, project: Path) -> "ThinSlice":
+        """The thin slice in folder (``StoryMapFiles.thin_slicing``), its increments read onto story_map, each delivering
+        story_map's own stories and naming its file from project; a new `thin-slice.md` in folder when it holds none."""
+        found = StoryMapFiles(folder).thin_slicing()
+        path = found if found is not None else Path(folder) / NEW_THIN_SLICE_FILE
+        text = found.read_text(encoding="utf-8") if found is not None else ""
+        reading = _ThinSliceReading(story_map, path_from(Path(project).resolve(), path))
+        for increment in reading.read(text.splitlines() if found is not None else list(_NEW_THIN_SLICE)):
+            story_map.increments.append(increment)
+        return cls(path, reading, text)
+
     def text(self, increments: List[MarkdownIncrement]) -> str:
         """The thin slice delivering increments: its lines above them, then each increment in order, one added since
         apart from the one before it."""
@@ -116,16 +128,6 @@ class ThinSlice:
         return [self.path]
 
 
-def thin_slice_in(folder: Path, story_map: StoryModel, project: Path) -> ThinSlice:
-    """The thin slice in folder (``StoryMapFiles.thin_slicing``), its increments read onto story_map, each delivering
-    story_map's own stories and naming its file from project; a new `thin-slice.md` in folder when it holds none."""
-    found = StoryMapFiles(folder).thin_slicing()
-    path = found if found is not None else Path(folder) / "thin-slice.md"
-    text = found.read_text(encoding="utf-8") if found is not None else ""
-    reading = _ThinSliceReading(story_map, path_from(Path(project).resolve(), path))
-    for increment in reading.read(text.splitlines() if found is not None else list(_NEW_THIN_SLICE)):
-        story_map.increments.append(increment)
-    return ThinSlice(path, reading, text)
 
 
 class _ThinSliceReading:

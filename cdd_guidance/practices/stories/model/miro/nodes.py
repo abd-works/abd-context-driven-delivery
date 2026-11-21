@@ -41,7 +41,7 @@ _TABLE_COLUMN_PAD = 20
 
 
 @dataclass
-class MiroShape:
+class _MiroShape:
     """One card a Miro story map draws: its box, colours, text, and the role its kind of node reads it back by."""
 
     id: str
@@ -90,15 +90,15 @@ class MiroStory(LaidOutStory):
     actor_height = size
     column_pad = 5
 
-    def shapes(self, parent_id: str) -> List[MiroShape]:
+    def shapes(self, parent_id: str) -> List[_MiroShape]:
         parent = self.parent
         index = parent.stories.index(self) + 1 if isinstance(parent, Epic) else 1
         actor = self.actors[0].strip() if self.actors else ""
         story_id = f"{parent_id}/story-{index}-{self.slug}"
-        shapes: List[MiroShape] = []
+        shapes: List[_MiroShape] = []
         if actor and actor != self._previous_actor(index):
             shapes.append(self._actor_shape(story_id, actor))
-        shapes.append(MiroShape(
+        shapes.append(_MiroShape(
             id=story_id, box=Box(self.x, self.y, self.size, self.size), rx=0,
             fill=self.fill, stroke=self.stroke, stroke_width=1,
             content=self.name, role=f"story:{self.story_type.value}", font_size=_STORY_FONT_SIZE, actor=actor,
@@ -112,8 +112,8 @@ class MiroStory(LaidOutStory):
         prior = self.parent.stories[index - 2]
         return prior.actors[0].strip() if prior.actors else ""
 
-    def _actor_shape(self, story_id: str, actor: str) -> MiroShape:
-        return MiroShape(
+    def _actor_shape(self, story_id: str, actor: str) -> _MiroShape:
+        return _MiroShape(
             id=f"{story_id}/actor", box=Box(self.x, self.y - self.actor_height - self.actor_gap, self.size, self.actor_height),
             rx=0, fill=self.actor_fill, stroke=self.actor_stroke, stroke_width=1,
             content=actor, role="actor", font_size=_ACTOR_FONT_SIZE,
@@ -140,30 +140,30 @@ class MiroEpic(LaidOutEpic):
             return DiagramEpic.fill
         return f"#{max(red - darken, 0xa0):02x}{max(green - darken, 0xc0):02x}{max(blue - darken, 0xa0):02x}"
 
-    def shapes(self, parent_id: str = "") -> List[MiroShape]:
+    def shapes(self, parent_id: str = "") -> List[_MiroShape]:
         if not isinstance(self.parent, Epic):
             return self._top_shapes()
         siblings = self.parent.epics if self.parent is not None else [self]
         index = siblings.index(self) + 1
         sub_epic_id = f"{parent_id}/sub-{index}-{self.slug}-d{self.depth}"
-        shapes: List[MiroShape] = [MiroShape(
+        shapes: List[_MiroShape] = [_MiroShape(
             id=sub_epic_id, box=Box(self.x + self.tighten, self.y, self.width - self.tighten, self.height),
             rx=_SUB_EPIC_CORNER, fill=self.fill, stroke=self.stroke, stroke_width=1,
             content=self.name, role=f"subepic:{self.depth}", font_size=_SUB_EPIC_FONT_SIZE,
         )]
         return shapes + self._children_shapes(sub_epic_id)
 
-    def _top_shapes(self) -> List[MiroShape]:
+    def _top_shapes(self) -> List[_MiroShape]:
         index = self.parent.epics.index(self) + 1 if self.parent is not None else 1
         epic_id = f"epic-{index}-{self.slug}"
-        shapes: List[MiroShape] = [MiroShape(
+        shapes: List[_MiroShape] = [_MiroShape(
             id=epic_id, box=Box(self.x, self.y, self.width, self.height), rx=_EPIC_CORNER,
             fill=self.fill, stroke=self.stroke, stroke_width=_EPIC_STROKE_WIDTH,
             content=self.name, role="epic", font_size=_EPIC_FONT_SIZE,
         )]
         return shapes + self._children_shapes(epic_id)
 
-    def _children_shapes(self, own_id: str) -> List[MiroShape]:
+    def _children_shapes(self, own_id: str) -> List[_MiroShape]:
         """The cards of its stories, then of its sub-epics, drawn under the card called own_id."""
         stories = [shape for story in self.stories for shape in story.shapes(own_id)]
         return stories + [shape for child in self.epics for shape in child.shapes(own_id)]
@@ -222,17 +222,13 @@ class MiroStoryModel(DiagramStoryModel):
     increment_type = MiroIncrement
     """Miro story-map I/O. IS the format-typed tree root.
 
-    load reads a file into these nodes. save writes the nodes you edited.
+    parse reads a file into these nodes. save writes the nodes you edited.
     The thin-slice table is save_thin_slice and load_thin_slice, over this map's own increments.
     """
 
     def render(self, canonical: StoryModel | None = None, previous: str | None = None) -> str:
         """Draw canonical, or this story map when none is given, as a Miro canvas-composer SVG."""
         return self.copy_of(canonical if canonical is not None else self).save()
-
-    def parse(self, text: str) -> "MiroStoryModel":
-        """Read a canvas-composer SVG into a Miro story map; the format-adapter entry point Stories renders through."""
-        return self.load(text)
 
     def save_thin_slice(self) -> str:
         """This map's increments as a thin-slice table: one column per epic or sub-epic, one row per increment."""
@@ -300,8 +296,8 @@ class MiroStoryModel(DiagramStoryModel):
         """One SVG rect line per epic, sub-epic, story, and actor. Each node places itself."""
         return [shape.svg_line() for epic in self.epics for shape in epic.shapes()]
 
-    def load(self, text: str) -> "MiroStoryModel":
-        """Read a canvas-composer SVG into a Miro story map."""
+    def parse(self, text: str) -> "MiroStoryModel":
+        """Read a canvas-composer SVG into a Miro story map; the format-adapter entry point Stories renders through."""
         tagged = list(self._cards_in_order(self._svg_root(text)))
         if not tagged:
             raise MiroParseError("No story-map nodes found in SVG (missing data-role attributes)")

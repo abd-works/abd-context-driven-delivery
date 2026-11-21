@@ -387,9 +387,6 @@ with description("a Story Map") as self:
                     with it("should hold 1 nested Epic"):
                         expect(self.first_epic.epics[0].epics).to(have_len(1))
 
-                    with it("should report hasEpics as true"):
-                        expect(self.first_epic.epics[0].has_epics).to(be_true)
-
             with context(
                 "with the first Epic moved from the first Epic to the second Epic"
             ):

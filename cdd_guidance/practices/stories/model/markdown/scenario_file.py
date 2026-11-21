@@ -50,12 +50,12 @@ _HEADINGS = (
 )
 
 
-def heading_of(raw: str) -> tuple:
+def _heading_of(raw: str) -> tuple:
     """The kind of heading a line is, with its match; ("", None) for a line that is no heading."""
     return next(((kind, match) for kind, pattern in _HEADINGS for match in [pattern.match(raw)] if match), ("", None))
 
 
-def inferred_story_name(lines: List[str], path: Path) -> str:
+def _inferred_story_name(lines: List[str], path: Path) -> str:
     """The story a file's scenarios belong to before any story heading: a Story heading near the top, else its title,
     else the folder or file it is in."""
     found = _first_match(_STORY_HEADING, lines[:_STORY_HEADING_LINES]) or _first_match(_H1, lines[:_TITLE_LINES])
@@ -122,7 +122,7 @@ class ScenarioFileReading:
         self.scenario = None
         self.scenario_level = 0
         self.number, self.raw, self.kept = 0, "", ""
-        self.story_name = inferred_story_name(self.lines, Path(rel))
+        self.story_name = _inferred_story_name(self.lines, Path(rel))
         self.backgrounds = BackgroundReading()
         self.examples = ExamplesTable()
         self.fence = RealizationFence()
@@ -143,7 +143,7 @@ class ScenarioFileReading:
         elif self.fence.accept(self.raw):
             self.container.append(self.kept)
         else:
-            kind, match = heading_of(self.raw)
+            kind, match = _heading_of(self.raw)
             self._read_heading(kind, match) if kind else self._read_text()
 
     def _read_heading(self, kind: str, match: re.Match) -> None:

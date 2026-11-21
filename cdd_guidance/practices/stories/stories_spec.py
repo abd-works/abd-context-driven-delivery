@@ -46,6 +46,29 @@ with description("Stories"):
         with it("should select story_map"):
             expect(self.stories.fidelities.current.name).to(equal("story_map"))
 
+    # A whiteboard is a format the story map is drawn in and read back from, so the file an edit opens may be one.
+    with context("with a story map saved as a whiteboard file that is opened for an edit"):
+        with before.each:
+            import tempfile
+
+            from cdd_guidance.practices.stories.model.story_model import Epic, StoryModel
+            from cdd_guidance.practices.stories.model.whiteboard.nodes import WhiteboardStoryModel
+
+            self.root = Path(tempfile.mkdtemp(prefix="cdd-story-whiteboard-"))
+            story_map = StoryModel()
+            story_map.epics.append(Epic("Move Work On Board", 1))
+            board = self.root / "story-map.whiteboard"
+            board.write_text(WhiteboardStoryModel().render(story_map), encoding="utf-8")
+            self.opened = Stories().open_file(board, self.root)
+
+        with after.each:
+            import shutil
+
+            shutil.rmtree(self.root, ignore_errors=True)
+
+        with it("should hold the epics the whiteboard draws"):
+            expect([epic.name for epic in self.opened.epics]).to(equal(["Move Work On Board"]))
+
     with context("that is constructed with fidelity story_map"):
         with before.each:
             self.stories = Stories(fidelity="story_map")

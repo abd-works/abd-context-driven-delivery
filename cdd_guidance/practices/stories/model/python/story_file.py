@@ -27,19 +27,7 @@ class PythonStoryFile(StoryFile):
     def story_blocks(self) -> Optional[List[CodeBlock]]:
         if self._tree is None:
             return None
-        return [PythonBlock(self, item) for item in self._tree.body if call_of(item) == "story"]
-
-
-def call_of(statement: ast.AST) -> str:
-    """The block's call: story, scenario, given, ... ; background for `with background.<scope>`."""
-    if not isinstance(statement, ast.With) or not statement.items:
-        return ""
-    expression = statement.items[0].context_expr
-    if isinstance(expression, ast.Attribute) and isinstance(expression.value, ast.Name):
-        return "background" if expression.value.id == "background" else ""
-    if isinstance(expression, ast.Call) and isinstance(expression.func, ast.Name):
-        return expression.func.id
-    return ""
+        return [block for block in (PythonBlock(self, item) for item in self._tree.body) if block.call == "story"]
 
 
 class PythonBlock:
@@ -48,6 +36,19 @@ class PythonBlock:
     def __init__(self, file: PythonStoryFile, node: ast.With) -> None:
         self.file = file
         self.node = node
+
+    @property
+    def call(self) -> str:
+        """The block's call: story, scenario, given, ... ; background for `with background.<scope>`; empty for a
+        statement that is no `with` block of a story file."""
+        if not isinstance(self.node, ast.With) or not self.node.items:
+            return ""
+        expression = self.node.items[0].context_expr
+        if isinstance(expression, ast.Attribute) and isinstance(expression.value, ast.Name):
+            return "background" if expression.value.id == "background" else ""
+        if isinstance(expression, ast.Call) and isinstance(expression.func, ast.Name):
+            return expression.func.id
+        return ""
 
     @property
     def name(self) -> str:
@@ -100,7 +101,7 @@ class PythonBlock:
         return [item for item in self._within("background") if not item._is_inside(scenarios)]
 
     def steps(self, skip: Sequence[CodeBlock]) -> List[CodeBlock]:
-        found = [PythonBlock(self.file, item) for item in ast.walk(self.node) if call_of(item) in _STEP_CALLS]
+        found = [block for block in self._walked() if block.call in _STEP_CALLS]
         return [item for item in found if not item._is_inside(skip)]
 
     def setup(self, children: Sequence[CodeBlock]) -> CodeBody:
@@ -111,9 +112,13 @@ class PythonBlock:
         kept = [lines[index] for index in range(first, last) if index not in covered and not _OWN_COMMENT.match(lines[index])]
         return CodeBody("\n".join(kept), self.file.language)
 
+    def _walked(self) -> List["PythonBlock"]:
+        """Every statement at or under this block, each as the block it would be."""
+        return [PythonBlock(self.file, item) for item in ast.walk(self.node)]
+
     def _within(self, call: str) -> List["PythonBlock"]:
         """The blocks of one kind inside this block, outermost first and in file order."""
-        found = [PythonBlock(self.file, item) for item in ast.walk(self.node) if item is not self.node and call_of(item) == call]
+        found = [block for block in self._walked() if block.node is not self.node and block.call == call]
         found.sort(key=lambda item: item.node.lineno)
         return [item for item in found if not item._is_inside([other for other in found if other is not item])]
 

@@ -39,8 +39,6 @@ class ChildCountFitsLayer(PracticeGraphRule):
     node_types = ("Epic", "SubEpic")
 
     def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        if node.type in {"Story", "Scenario"}:
-            return []
         severity = node.get_fact("child_band") or ""
         if severity != "error":
             return []

@@ -14,10 +14,11 @@ from harness.markdown.markdown import MarkdownText
 if TYPE_CHECKING:
     from harness.graph.graph import Node
 
+    from cdd_guidance.practices.stories.model.graph_reading import StoryTree
+
 # A term linked to a heading of a model document, `[Cart](../.context/domain-model.md#cart-aggregate-root-entity)`, and
 # the words written after it up to the next link, where the example of that term is named (`++Tiny Tales++`).
 _TERM_LINK = re.compile(r"\[(?P<term>[^\]\n]+)\]\((?P<file>[^)\s#]+\.md)#(?P<anchor>[^)\s]+)\)(?P<after>[^\[\n]*)")
-_STEP_TYPES = frozenset({"Step", "Given", "When", "Then"})
 # What stands between a linked term and the example named after it: the underline marks around each, and spaces.
 _BEFORE_EXAMPLE = "+ "
 
@@ -30,14 +31,15 @@ class TermLinks:
     its name, so a class of the same name in another document, or in code, gets no edge. Each link is read from the
     step's name and the lines of its file, which any process holding the graph can read."""
 
-    def __init__(self, stories: PracticeReading, model: PracticeReading) -> None:
+    def __init__(self, stories: PracticeReading, model: PracticeReading, tree: "StoryTree") -> None:
         self.stories = stories
         self.model = model
+        self.tree = tree
         self.graph = stories.graph
         self._heading_lines: dict[Path, MarkdownText | None] = {}
 
     def link(self) -> None:
-        for step in [node for node in self.stories.in_graph.nodes() if node.type in _STEP_TYPES]:
+        for step in self.tree.all_steps():
             self._link_step(step)
 
     def _link_step(self, step: "Node") -> None:

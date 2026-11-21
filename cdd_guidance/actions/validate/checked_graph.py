@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from harness.agent_tools.tool_call import ToolCall
+from harness.guidance.declared_outputs import DeclaredFile
 from harness.guidance.guidance import FidelityGuidance
 from harness.graph.saved_graph import SavedGraph
 from harness.graph.violation import Violation
@@ -41,15 +42,15 @@ class CheckedGraph:
     its formats is written. Validate checks one format of each fidelity, so the declared files of its other formats are
     left out of the report: the formats mirror each other, and judging both reports every finding twice."""
 
-    def __init__(self, session: Session, fidelities: list[Any], to_check: NamedToCheck) -> None:
+    def __init__(self, session: Session, fidelities: list[FidelityGuidance], to_check: NamedToCheck) -> None:
         self.session = session
         self._call = to_check.call
         self._fidelities = fidelities
         # Read once, so another call changing a fidelity's format mid-way never changes which files this call checks.
         self._formats = [fidelity.format for fidelity in fidelities]
         self._named = to_check.graph
-        self.unchecked_files = self._other_format_files()
-        self.checked_files = self._checked_format_files()
+        self.unchecked_files = self._declared_files(in_checked_format=False)
+        self.checked_files = self._declared_files(in_checked_format=True)
         # Read now, so a path that is not there is refused before the call claims any report file.
         self._names_paths = bool(to_check.paths)
         self.edited = self._edited_in_checked_format(to_check.paths)
@@ -218,27 +219,18 @@ class CheckedGraph:
         from nothing, and its empty report would read as a clean validate."""
         return [self.session.session_files.from_root(item) for item in paths or []]
 
-    def _other_format_files(self) -> set[str]:
-        """The declared files of every format validate does not check, as graph node files record them."""
-        others = [
+    def _declared_files(self, in_checked_format: bool) -> set[str]:
+        """The declared files of the format validate checks (in_checked_format), or of every format it does not check,
+        as graph node files record them. A declared path that names no one file is left out."""
+        declared = [
             self.session.paths.path_named(path)
             for fidelity, checked in zip(self._fidelities, self._formats)
             for format, paths in fidelity.declared.output_paths().items()
-            if format != checked
+            if (format == checked) == in_checked_format
             for path in paths
-            if "{" not in path
+            if DeclaredFile(path).names_one_path
         ]
-        return {self.session.session_files.from_root(path) for path in others if path.exists() and self.session.session_files.in_root(path)}
-
-    def _checked_format_files(self) -> set[str]:
-        """The declared files of the format validate checks, as graph node files record them."""
-        checked = [
-            self.session.paths.path_named(path)
-            for fidelity, format in zip(self._fidelities, self._formats)
-            for path in fidelity.declared.output_paths().get(format, [])
-            if "{" not in path
-        ]
-        return {self.session.session_files.from_root(path) for path in checked if path.exists() and self.session.session_files.in_root(path)}
+        return {self.session.session_files.from_root(path) for path in declared if path.exists() and self.session.session_files.in_root(path)}
 
     def _written_outputs(self) -> list[str]:
         """The folders holding what each listed fidelity declares in its checked format and has already written. The

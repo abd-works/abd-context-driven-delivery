@@ -1,4 +1,4 @@
-"""Generate — run generate on each provided context tool."""
+"""Generate — run generate on each listed guidance."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ _NOT_ONE_FOLDER = re.compile(r"[{*?]")
 
 @agent_toolset
 class Generate(GuidanceAction):
-    """Generate artifacts for provided context tools."""
+    """Generate artifacts for the listed guidance."""
 
     @on_stage(1, STEP, TAKES_FORMATS)
     @mcp
@@ -55,9 +55,14 @@ class Generate(GuidanceAction):
     def _process_first(self) -> str:
         """The order of work the listed fidelities' supplements give, each once, ahead of every rule: a long reply is read
         from the top, and the process says what to do first."""
-        worked = [self.work.fidelity_of(item) for item in self.listed() if isinstance(item, PracticeGuidance)]
-        processes = dict.fromkeys(fidelity.process for fidelity in worked if fidelity is not None and fidelity.process)
+        processes = dict.fromkeys(fidelity.process for fidelity in self._listed_fidelities if fidelity.process)
         return "\n\n".join(processes)
+
+    @property
+    def _listed_fidelities(self) -> list[FidelityGuidance]:
+        """The fidelity this generate works at on each listed practice; a practice with none is left out."""
+        worked = [self.work.fidelity_of(item) for item in self.listed() if isinstance(item, PracticeGuidance)]
+        return [fidelity for fidelity in worked if fidelity is not None]
 
     def _validate(self) -> Validate:
         """Validate as a tool, so its rules are injected again when it is called."""
@@ -112,8 +117,7 @@ class Generate(GuidanceAction):
         return "\n\n".join(part.strip() for part in (text, worked.generate_output()) if part and part.strip())
 
     def _where_outputs_go(self) -> str:
-        worked = [self.work.fidelity_of(item) for item in self.listed() if isinstance(item, PracticeGuidance)]
-        outputs = [fidelity.declared.output_paths() for fidelity in worked if fidelity is not None]
+        outputs = [fidelity.declared.output_paths() for fidelity in self._listed_fidelities]
         places = [f"{label}: {', '.join(paths)}" for listed in outputs for label, paths in listed.items()]
         if not places:
             return ""
@@ -123,14 +127,12 @@ class Generate(GuidanceAction):
         """The folder of each file a listed fidelity writes, once each; the pattern overlays record their patterns at
         the root of each. A templated path's folder, or one a wildcard names, such as harness/**/.context, is no one
         folder, so it is left to the agent."""
-        worked = [self.work.fidelity_of(item) for item in self.listed() if isinstance(item, PracticeGuidance)]
-        paths = [path for fidelity in worked if fidelity is not None for listed in fidelity.declared.output_paths().values() for path in listed]
+        paths = [path for fidelity in self._listed_fidelities for listed in fidelity.declared.output_paths().values() for path in listed]
         return list(dict.fromkeys(self.session.paths.path_named(path).parent for path in paths if not _NOT_ONE_FOLDER.search(path)))
 
     def _writes_whiteboard(self) -> bool:
         """Whether a listed fidelity writes a whiteboard, which goes on its board in Claude once written."""
-        worked = [self.work.fidelity_of(item) for item in self.listed() if isinstance(item, PracticeGuidance)]
-        return any(Format(label).name == WHITEBOARD for fidelity in worked if fidelity is not None for label in fidelity.declared.output_paths())
+        return any(Format(label).name == WHITEBOARD for fidelity in self._listed_fidelities for label in fidelity.declared.output_paths())
 
     @agent_instructions
     def generate_fixes_from_validate(self) -> str:

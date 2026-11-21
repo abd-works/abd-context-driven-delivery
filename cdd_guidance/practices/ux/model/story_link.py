@@ -16,12 +16,13 @@ _WRITTEN_LINK = re.compile(r"^\[(?P<key>[^\]]+)\]\((?P<target>[^)\s]+)\)$")
 # What parts a link target's file from the heading it names in that file.
 _ANCHOR_MARK = "#"
 
-# The Stories node types a link of each kind can hold; a background is a scenario a story runs first, and the Stories
-# graph types each step by its phase.
+# The node types the Stories graph records a step as: it types each step by its phase.
+STEP_TYPES = ("Step", "Given", "When", "Then")
+# The Stories node types a link of each kind can hold; a background is a scenario a story runs first.
 _NODE_TYPES = {
     "Story": ("Story",),
     "Scenario": ("Scenario", "Background"),
-    "Step": ("Step", "Given", "When", "Then"),
+    "Step": STEP_TYPES,
 }
 
 

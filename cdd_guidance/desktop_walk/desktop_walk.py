@@ -117,6 +117,11 @@ class DesktopScenario:
     @data_field
     def sub_epic(self) -> str:
         """`<epic>/<sub-epic>`, the folders the file sits in under story_tests: what e2e-review.walk takes."""
+        return self._folders
+
+    @property
+    def _folders(self) -> str:
+        """The folders the file sits in under story_tests, such as `<epic>/<sub-epic>`."""
         return "/".join(Path(self._file).parts[1:-1])
 
     @property
@@ -135,7 +140,7 @@ class DesktopScenario:
 
     def is_under(self, target: str) -> bool:
         """Whether target names this scenario's story, or a folder under story_tests its file sits in."""
-        folders = "/".join(Path(self._file).parts[1:-1])
+        folders = self._folders
         named = target.replace("\\", "/").strip("/")
         if named.startswith(f"{STORY_TESTS_FOLDER}/"):
             named = named[len(STORY_TESTS_FOLDER) + 1:]

@@ -25,15 +25,15 @@ export class StoryDemoFrame {
 
   controlFor(whenLabel) {
     return this.controls.find((c) =>
-      c.story_steps?.some((s) => s.kind === "when" && s.label === whenLabel),
+      c.storySteps?.some((s) => s.kind === "when" && s.label === whenLabel),
     );
   }
 
   bind(snapshot) {
     this._lastSnapshot = snapshot;
     for (const control of this.controls) {
-      if (!control.bound_field) continue;
-      const value = snapshot?.[control.bound_field];
+      if (!control.boundField) continue;
+      const value = snapshot?.[control.boundField];
       control.show(value);
     }
   }

@@ -20,7 +20,7 @@ from mamba import after, before, context, description, it
 from cdd_guidance.actions.render.render import Render
 from cdd_guidance.actions.render.rendered_code import RenderHasNoDeclaredPlace
 from cdd_guidance.actions.render.rendered_file import NothingToRender
-from cdd_guidance.actions.render.worker_render import RenderFailed
+from cdd_guidance.actions.render.render_order import RenderFailed
 from cdd_guidance.practices.stories.stories import Stories
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.agent_tools.tool_call import ToolCall

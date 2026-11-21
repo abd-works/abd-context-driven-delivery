@@ -5,7 +5,7 @@ from __future__ import annotations
 import posixpath
 from pathlib import Path
 
-from cdd_guidance.practices.clean_engineering.model.code_body import JAVASCRIPT, CodeLanguage
+from cdd_guidance.practices.clean_engineering.model.code_body import JAVASCRIPT
 from cdd_guidance.practices.stories.model.brace_story import BraceStoryWriting
 from cdd_guidance.practices.stories.model.javascript.nodes import JavaScriptEpic, JavaScriptStory
 from cdd_guidance.practices.stories.model.script_story_model import ScriptStoryModel, script_story_file_suffixes
@@ -17,10 +17,6 @@ class JavaScriptStoryWriting(BraceStoryWriting):
     import is written."""
 
     file_name_template = "{snake}_story.test.js"
-
-    def __init__(self, language: CodeLanguage, helpers: str) -> None:
-        super().__init__(language)
-        self.helpers = helpers
 
     def story_test_import(self, parent: str) -> str:
         relative = posixpath.relpath(f"{self.helpers}.js", parent or ".")

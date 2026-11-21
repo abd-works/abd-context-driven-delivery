@@ -1,10 +1,10 @@
-"""Render — convert already-generated content on each provided context tool."""
+"""Render — convert already-generated content on each listed guidance."""
 
 from __future__ import annotations
 
 from cdd_guidance.actions.render.rendered_code import RenderedCode, RenderHasNoDeclaredPlace
 from cdd_guidance.actions.render.rendered_file import SAVED_GROUPS, WHITEBOARD, RenderedFile
-from cdd_guidance.actions.render.worker_render import WorkerRender
+from cdd_guidance.actions.render.render_order import WorkerRender
 from harness.guidance_actions import GuidanceArg, GuidanceAction, WorkedGuidance
 from harness.guidance.guidance import FidelityGuidance
 from harness.guidance.practice_formats import RenderRequest
@@ -34,7 +34,7 @@ class BoardNotKept(LookupError):
 
 @agent_toolset
 class Render(GuidanceAction):
-    """Render already-generated output for provided context tools."""
+    """Render already-generated output for the listed guidance."""
 
     @on_stage(5, TAKES_FORMATS)
     @mcp

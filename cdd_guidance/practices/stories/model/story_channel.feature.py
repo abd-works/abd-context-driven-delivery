@@ -227,7 +227,7 @@ def load_source(name: str) -> StoryModel:
     if name == "markdown":
         return Stories().read_folder(EXPECTED)
     if name == "drawio":
-        return DrawIOStoryModel().load((EXPECTED / "story-map.drawio").read_text(encoding="utf-8"))
+        return DrawIOStoryModel().parse((EXPECTED / "story-map.drawio").read_text(encoding="utf-8"))
     return TypeScriptStoryModel().load(_expected_typescript())
 
 
@@ -268,11 +268,11 @@ def _read_channel(folder: Path, target: str) -> StoryModel:
     if target == "json":
         return JsonStoryModel().parse((folder / "story-graph.json").read_text(encoding="utf-8"))
     if target == "drawio":
-        return DrawIOStoryModel().load((folder / "story-map.drawio").read_text(encoding="utf-8"))
+        return DrawIOStoryModel().parse((folder / "story-map.drawio").read_text(encoding="utf-8"))
     if target == "miro":
-        return MiroStoryModel().load((folder / "story-map.svg").read_text(encoding="utf-8"))
+        return MiroStoryModel().parse((folder / "story-map.svg").read_text(encoding="utf-8"))
     if target == "whiteboard":
-        return WhiteboardStoryModel().load((folder / "story-map.whiteboard").read_text(encoding="utf-8"))
+        return WhiteboardStoryModel().parse((folder / "story-map.whiteboard").read_text(encoding="utf-8"))
     return _CODE_MAPS[target]().load(_read_tree(folder))
 
 

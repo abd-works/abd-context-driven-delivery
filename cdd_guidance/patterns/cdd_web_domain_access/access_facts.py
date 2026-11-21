@@ -37,19 +37,19 @@ class AccessFile:
     def tier(self) -> tuple[str, dict] | None:
         """The DDD node type this file becomes and the facts it carries; none for a file that does not reach the domain."""
         if self.name.endswith("-routes.ts"):
-            return "AccessRoute", self.route_facts()
-        if self.is_hand_written_adapter():
+            return "AccessRoute", self._route_facts()
+        if self._is_hand_written_adapter():
             return "AccessHandWrittenAdapter", {}
         if self.name.endswith("-node.ts"):
-            return "AccessNode", self.node_facts()
-        if self.name.endswith(".py") and self.is_annotated():
+            return "AccessNode", self._node_facts()
+        if self.name.endswith(".py") and self._is_annotated():
             return "AccessAnnotatedToolset", self.annotated_toolset_facts()
         return None
 
-    def route_facts(self) -> dict:
+    def _route_facts(self) -> dict:
         return {"tool_calls": self._source.hits(_TOOL_CALL)}
 
-    def node_facts(self) -> dict:
+    def _node_facts(self) -> dict:
         reaches_cdd = bool(_ADAPTER_IMPORT.search(self._source.text))
         return {
             "tool_calls": self._source.hits(_TOOL_CALL),
@@ -58,13 +58,13 @@ class AccessFile:
             "store_imports": self._source.hits(_STORE_IMPORT) if reaches_cdd else [],
         }
 
-    def is_hand_written_adapter(self) -> bool:
+    def _is_hand_written_adapter(self) -> bool:
         """A file named like generated code that reaches cdd; an adapter for anything else is the application's own port."""
         if not _HAND_WRITTEN_ADAPTER.search(self.name):
             return False
         return self.name.startswith("cdd-connection") or bool(_ADAPTER_IMPORT.search(self._source.text) or _TOOL_CALL.search(self._source.text))
 
-    def is_annotated(self) -> bool:
+    def _is_annotated(self) -> bool:
         return bool(_MARK.search(self._source.text))
 
     def annotated_toolset_facts(self) -> dict:

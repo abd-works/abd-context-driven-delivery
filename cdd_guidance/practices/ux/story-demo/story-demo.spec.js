@@ -129,7 +129,7 @@ describe("a story demo page", () => {
       assert.equal(page.runner.scenario.index, 1);
     });
 
-    it("should paint expose data onto story demo controls via bound_field", () => {
+    it("should paint expose data onto story demo controls via boundField", () => {
       const { page } = pageWithCreateControl("Play");
       page.explorerFrame.playNextControl.trigger("click"); // given
       page.explorerFrame.playNextControl.trigger("click"); // when
@@ -185,11 +185,11 @@ describe("a story demo page in interactive mode", () => {
       const playCountBefore = page.playNextInvocations;
       page.storyDemoFrame.controlFor(WHEN_CREATE).trigger("click");
 
-      it("should run the when step fn bound by story_steps", () => {
+      it("should run the when step fn bound by storySteps", () => {
         assert.equal(page.runner.scenario.expose().character?.name, "Hero");
       });
 
-      it("should paint expose data onto story demo controls via bound_field", () => {
+      it("should paint expose data onto story demo controls via boundField", () => {
         assert.equal(createBtn.value?.name, "Hero");
       });
 
@@ -418,7 +418,7 @@ describe("a story demo control read from the mockup page", () => {
   describe("whose story steps the UX map wrote", () => {
     it("should hold those steps", () => {
       const control = StoryDemoControl.fromElement(element('[{"kind":"when","label":"the customer pays"}]'));
-      assert.deepEqual(control.story_steps, [{ kind: "when", label: "the customer pays" }]);
+      assert.deepEqual(control.storySteps, [{ kind: "when", label: "the customer pays" }]);
     });
   });
 
