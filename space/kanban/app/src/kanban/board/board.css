@@ -243,6 +243,7 @@ a:hover { color: #C64514; }
 .ghost-button:hover:not(:disabled) { background: var(--raised); }
 .board-root .fix-button { flex-shrink: 0; padding: 6px 12px; background: var(--accent); color: var(--bg); border: 1px solid var(--accent); border-radius: 4px; font: 600 12px var(--mono); }
 .fix-button:hover:not(:disabled) { background: #C64514; border-color: #C64514; }
+.board-root .violation-actions { display: flex; flex-shrink: 0; gap: 6px; align-items: flex-start; }
 .violation { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
 .violation-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
 .violation-words { display: flex; flex-direction: column; gap: 4px; min-width: 0; }

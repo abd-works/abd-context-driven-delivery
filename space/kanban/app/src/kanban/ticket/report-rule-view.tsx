@@ -4,7 +4,7 @@ import { countOf } from '../shared/board-brand'
 import { useBoard } from '../shared/board-context'
 import type { ReportPanel } from '../shared/board-store'
 import { ChevronIcon } from '../shared/icons'
-import { fixTitleOn, locationOf, type ReportClient } from './report-client'
+import { falseTitleOn, fixTitleOn, locationOf, type ReportClient } from './report-client'
 
 function SourceLineView({ violation, entry }: { violation: ViolationData; entry: SourceLineData }) {
   return (
@@ -52,9 +52,14 @@ function ViolationView({ panel, rule, violation, isOff }: { panel: ReportPanel; 
           {hasSource ? null : <ViolationLocationView panel={panel} rule={rule} violation={violation} />}
           <div className="violation-message">{violation.message}</div>
         </div>
-        <button className="fix-button" aria-label={`Fix ${locationOf(violation)}`} disabled={isOff} title={isOff ? 'Connect a chat to send fixes' : fixTitleOn(page.board)} onClick={() => void panel.report.fixViolation(rule, violation)}>
-          Fix
-        </button>
+        <div className="violation-actions">
+          <button className="fix-button" aria-label={`Fix ${locationOf(violation)}`} disabled={isOff} title={isOff ? 'Connect a chat to send fixes' : fixTitleOn(page.board)} onClick={() => void panel.report.fixViolation(rule, violation)}>
+            Fix
+          </button>
+          <button className="ghost-button false-button" aria-label={`False ${locationOf(violation)}`} disabled={isOff} title={isOff ? 'Connect a chat to send this' : falseTitleOn(page.board)} onClick={() => void panel.report.reportFalseViolation(rule, violation)}>
+            False
+          </button>
+        </div>
       </div>
       {hasSource ? <ViolationSourceView panel={panel} rule={rule} violation={violation} /> : null}
     </article>

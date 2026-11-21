@@ -31,6 +31,21 @@ function fixPrompt(rule: ReportRuleData, violations: ViolationData[]): string {
 
 const fixViolationPrompt = (rule: ReportRuleData, violation: ViolationData): string => fixPrompt(rule, [violation])
 
+// A finding the person says is wrong is a defect in the rule or the check behind it, so the chat looks there and
+// leaves the judged content alone.
+function falseViolationPrompt(rule: ReportRuleData, violation: ViolationData): string {
+  const slug = rule.fidelity.slug
+  return [
+    `This violation of the ${slug} rule is false. Investigate the rule for errors.`,
+    '',
+    `${rule.rule.slug}: ${rule.rule.body}`,
+    '',
+    errorOf(violation).join('\n'),
+    '',
+    `Find why ${rule.rule.slug} reported this: read the rule's text and the check that judges it, and run it on the content marked >. Say whether the rule's wording, its check, or what the check read is wrong, then correct that test first. Change none of the content the finding names. If the finding turns out to be right, say why and change nothing.`,
+  ].join('\n')
+}
+
 const fixRulePrompt = (report: ReportClient, rule: ReportRuleData): string =>
   `Fix all violations of ${rule.rule.slug} found in this report: ${report.path}. ${EVERY_FORMAT}`
 
@@ -39,6 +54,10 @@ const fixReportPrompt = (report: ReportClient): string => `Fix all violations fo
 
 // A Fix button's title says where the fix goes, as the repository's board sends fixes.
 export const fixTitleOn = (board: BoardClient): string => (board.sendsFixesDirectly ? 'Send this fix to the chat' : "Put this fix in the chat's prompt to edit and send")
+
+// A False button's title says what it asks and where that goes.
+export const falseTitleOn = (board: BoardClient): string =>
+  board.sendsFixesDirectly ? 'Say this violation is false: the chat investigates the rule' : "Say this violation is false: put the request to investigate the rule in the chat's prompt"
 
 // A report as the side panel reads it, for the ticket whose report it is. ReportData has no generated class, because
 // Python returns it as a plain result.
@@ -53,6 +72,11 @@ export class ReportClient {
   // edit before sending, unless the repository's board sends fixes directly.
   fixViolation(rule: ReportRuleData, violation: ViolationData): Promise<void> {
     return this.deliver(fixViolationPrompt(rule, violation))
+  }
+
+  // The person says the finding is wrong: the chat investigates the rule, in the same place a fix would go.
+  reportFalseViolation(rule: ReportRuleData, violation: ViolationData): Promise<void> {
+    return this.deliver(falseViolationPrompt(rule, violation))
   }
 
   fixRule(rule: ReportRuleData): Promise<void> {

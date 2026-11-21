@@ -123,6 +123,14 @@ section: body
 *When* the Person fixes that violation
 *Then* the chat's prompt is filled with one message, for the person to edit and send, naming the verb-noun-format rule, the error at .context/story-map.md:6, and the content that failed, with instructions to fix it
 
+#### Scenario: Say a violation is false
+
+*Given* checkout-flow's story_map report lists verb-noun-format at .context/story-map.md line 6
+*And* a chat is connected
+*When* the Person says that violation is false
+*Then* the chat's prompt is filled with one message, for the person to edit and send, saying the violation is false and asking to investigate the rule for errors, naming the verb-noun-format rule, the finding at .context/story-map.md:6, and the content it judged
+*And* the message asks that none of the content the finding names be changed
+
 #### Scenario: Fix every violation of a rule
 
 *Given* checkout-flow's story_map report lists verb-noun-format

@@ -83,6 +83,7 @@ describe('List Ticket Files', () => {
       ['.context/story-map.whiteboard', false],
       ['.context/thin-slice.md', false],
       ['.context/thin-slice.drawio', false],
+      ['.context/thin-slice.whiteboard', false],
     ])
   })
 
@@ -308,6 +309,48 @@ describe('Fix Report Violations', () => {
     // A fix in one format alone leaves the fidelity's other formats still breaking the rule.
     it('should ask for the fix in every format of the fidelity', async () => {
       expect((await sent()).commands[0]!.text).toContain(EVERY_FORMAT)
+    })
+  })
+
+  describe('with False pressed on one violation', () => {
+    async function sent() {
+      const { page } = await board.page()
+      const chat = await board.connectChat(page)
+      const rule = await brokenRule(page)
+      const violation = rule.violations[0]!
+      await reportPanel(page).report.reportFalseViolation(rule, violation)
+      return { rule, violation, commands: await chat.checkIn() }
+    }
+
+    it('should say the violation is false and ask for the rule to be investigated for errors', async () => {
+      const { rule, commands } = await sent()
+      expect(commands[0]!.text).toContain(`This violation of the ${rule.fidelity.slug} rule is false. Investigate the rule for errors.`)
+    })
+
+    // The person edits the message in the chat's prompt before sending it, as with a fix.
+    it("should fill the chat's prompt rather than send", async () => {
+      expect((await sent()).commands[0]!.kind).toBe('fill')
+    })
+
+    it('should name the rule and what it requires', async () => {
+      const { rule, commands } = await sent()
+      expect(commands[0]!.text).toContain(`${rule.rule.slug}: ${rule.rule.body}`)
+    })
+
+    it('should give the finding at its file and line with the content it judged', async () => {
+      const { violation, commands } = await sent()
+      const failing = violation.source.find(entry => entry.number === violation.line)!
+      const text = commands[0]!.text
+      expect([text.includes(`.context/story-map.md:6: ${violation.message}`), text.includes(`> ${failing.number} | ${failing.text}`)]).toEqual([true, true])
+    })
+
+    // A false finding is a defect in the rule or its check, so the content it names stays as it is.
+    it('should ask for the judged content to be left unchanged', async () => {
+      expect((await sent()).commands[0]!.text).toContain('Change none of the content the finding names.')
+    })
+
+    it("should name the ticket's session", async () => {
+      expect((await sent()).commands[0]!.text).toContain(SESSION)
     })
   })
 
