@@ -226,6 +226,10 @@ with description("the board tools") as self:
             with it("should show the stage over its limit"):
                 expect(self.limited["is_over_limit"]).to(be_true)
 
+            with it("should count every ticket in the stage but main, which draws no card"):
+                shown = [ticket for ticket in [*self.limited["in_progress"], *self.limited["done"]] if ticket["name"] != "main"]
+                expect(self.limited["ticket_count"]).to(equal(len(shown)))
+
         with context("that sets a WIP limit on a column that is not a stage"):
             with it("should refuse it, naming the column"):
                 expect(lambda: self.project.call("stage.set_wip_limit", stage="Backlog", limit=2)).to(raise_error(NotAStageError))

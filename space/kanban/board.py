@@ -681,8 +681,15 @@ class Stage(Column):
 
     @property
     @data_field
+    def ticket_count(self) -> int:
+        """How many tickets the stage's head shows: every card in it but main's, which is no ticket of its own and draws
+        no card. Its limit is compared with this number."""
+        return len([ticket for ticket in self.cards if not ticket.is_main])
+
+    @property
+    @data_field
     def is_over_limit(self) -> bool:
-        return len(self.cards) > self.wip_limit
+        return self.ticket_count > self.wip_limit
 
     @property
     @data_field
