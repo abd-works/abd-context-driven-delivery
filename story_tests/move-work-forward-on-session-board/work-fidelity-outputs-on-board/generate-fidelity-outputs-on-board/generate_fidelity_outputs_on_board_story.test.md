@@ -135,7 +135,7 @@ section: body
 *Given* billing-report's story map is .context/story-map.md, in markdown
 *And* a chat is connected
 *When* the Person renders story_map into the diagram format
-*Then* the chat receives the command /actions-render stories-story-map format=drawio
+*Then* the chat receives the command /actions-render stories-story-map format=drawio,whiteboard
 
 #### Scenario: Keep render off with nothing to render
 

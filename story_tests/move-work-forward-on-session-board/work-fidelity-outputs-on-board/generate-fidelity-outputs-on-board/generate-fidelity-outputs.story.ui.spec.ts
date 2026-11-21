@@ -218,8 +218,8 @@ test.describe('with a chat connected', () => {
         await runOf(bar).click()
       })
 
-      test('Then the chat receives the command /actions-render stories-story-map format=drawio', async () => {
-        await expect.poll(() => receivedBy(chat)).toContain('/actions-render stories-story-map session=.sessions/billing-report/session.json format=drawio')
+      test('Then the chat receives the command /actions-render stories-story-map format=drawio,whiteboard', async () => {
+        await expect.poll(() => receivedBy(chat)).toContain('/actions-render stories-story-map session=.sessions/billing-report/session.json format=drawio,whiteboard')
       })
     })
 
