@@ -3371,7 +3371,7 @@ The one *Session* a checkout's sessions hold for each session folder (`sessions.
 ----
 + load(folder: Path): Session
 	// one Session is held for each session folder, so every call in a session, from any chat, works on the same object
-	-> SessionRoots.root_of
+	-> Session.placed
 + at(folder: Path): Session
 + moved(session: Session, moved_from: Path): None
 + removed(session: Session): None
@@ -3439,15 +3439,18 @@ The sessions of every project this process serves, each made once and held while
 
 One named piece of work in a project, its record (session.json, idea file) kept in the main clone's `.sessions/{name}/` and everything else it writes in its work folder, the same folder in its ticket's worktree when it has one. It holds where it works, the practices it uses, and its title; its log, files, handoffs, decision records, and chat injections are objects of their own, made with it. It holds no chat: a line a call logs points at that call's chat.
 
-+ Session(sessions: Sessions)
++ Session(sessions: Sessions, record_folder: Path)
 ------
 + name: str
+	// its record folder's name
 + << association >> sessions: Sessions
 + << association >> repo: Repo
-+ repo_path: Path
++ << composition >> checkout: SessionCheckout
++ << composition >> record: SessionRecord
 + << composition >> context_config: ContextConfig
+	// the config.json of its checkout, made again when it is placed in another
 + workpath: Path | None
-+ record_folder: Path | None
++ record_folder: Path
 + work_folder: Path | None
 + is_closed: bool
 + is_repository: bool
@@ -3473,12 +3476,17 @@ One named piece of work in a project, its record (session.json, idea file) kept 
 ----
 + from_file(session: str, call: ToolCall): Session
 	-> ToolCall.session_named
++ placed(): Session
+	// derives its checkout, then its work folder, then its workpath, in that one order
+	-> SessionCheckout.own_worktree
 + context_folder(module: str = ''): Path
 + path_named(named: str | Path): Path
 + document_named(content: str = '', paths: list[str] | str | None = None): str
 + from_project(path: Path | str): str
 	-> Repo.path_from_top
-+ save_fields(**values): None
++ update(change: Callable[[SessionFields], object], said: str): None
+	// changes the fields as session.json holds them now and queues the save on main
++ extra(owner: str): OwnedFields
 + save(): None
 + hook_log(filename: str): HookLog
 + keep_file(file: Path): Path
@@ -3690,9 +3698,8 @@ What one practice has in one session: the session's one instance of the practice
 + session_file: str
 + << composition >> guidance: PracticeGuidance
 + fidelities: GuidanceCollection
-+ saved: dict
++ fields: PracticeFields
 + enabled: bool
-+ chosen_outputs: dict
 + folder: Path
 + output_root: Path
 + root: str
@@ -3702,7 +3709,7 @@ What one practice has in one session: the session's one instance of the practice
 	-> ToolCall.session_named
 	-> Session.practice
 + of_fidelity(fidelity: FidelityGuidance): FidelitySessionOutput
-+ save(**values): None
++ change(change: Callable[[PracticeFields], object], said: str): None
 + enable(is_enabled: bool): PracticeSessionOutput
 + choose_root(path: str): PracticeSessionOutput
 + root_named(path: str): Path
@@ -3730,13 +3737,15 @@ Where one fidelity writes in one session: its output paths by format, the files 
 + reports_folder: Path
 + root: Path
 + chosen_formats: list[str]
-+ chosen_outputs: dict
++ fields: FidelityFields
 + << composition >> formats: FidelityFormats
 + << composition >> validation_reports: ValidationReports
 + << composition >> written: WrittenFiles
 ----
 + load(session: str, practice: str, fidelity: str, call: ToolCall): FidelitySessionOutput
 + choose_root(path: str): FidelitySessionOutput
++ add_root(path: str): FidelitySessionOutput
++ keep_roots(roots: list[Path]): None
 + choose_format(format: str, is_chosen: bool): FidelitySessionOutput
 ---<<holds>>--> WrittenFiles
 
@@ -4040,7 +4049,7 @@ Show one work session as a unit of delivery and move it through the stages. Its 
 + branch(): Branch
 + work_branch(): Branch
 + assign_chat(chat: str = ''): Ticket
-	-> TicketCheckout.assign_chat
+	-> SessionCheckout.assign_chat
 + format_choices(fidelities: list[str]): list[FormatChoice]
 	-> FormatChoice.offered_by
 + close_choices(): LeaveChoices
@@ -4099,6 +4108,60 @@ A ticket's progress on each fidelity the board requires whose practice its sessi
 ---<<asks which fidelities it requires>>--> Stage
 ---<<raises>>--> FidelityNotFoundError
 
+## SessionCheckout
+
+The one checkout a session works in, and the one reader and writer of the branch, worktree, and chat its session.json records.
+
++ SessionCheckout(session: Session)
+------
++ << association >> branch: Branch
+	// recorded, else named as the session, else the one branch holding its name as a whole word
++ candidate_branches: list[Branch]
++ << association >> own_worktree: Repo | None
++ << association >> repo: Repo
+	// its own worktree, else the checkout whose sessions hold it
++ root: Path
++ assigned_chat: str
+----
++ assign_chat(chat: str): None
+	-> SessionRecord.update
++ record_opened(): None
+	-> SessionRecord.update
+---<<lists through>>--> CheckoutWorktrees
+
+## CheckoutWorktrees
+
+The linked worktrees and branches of the repository a checkout's sessions work in, listed once and again after two seconds.
+
++ CheckoutWorktrees(sessions: Sessions)
+------
+----
++ of_branch(name: str): Path | None
++ branch_names(): list[str]
++ forget(): None
++ in_checkout(checkout: Path, path: Path | str): Path
+
+## SessionFields
+
+What one session.json holds, typed; a file in an older shape is upgraded as it is read.
+
+------
++ name: str
++ title: str
++ scope: str
++ workpath: str
++ tags: list[str]
++ overlays: list[str]
++ parent: str
++ pulled_out: bool
++ branch: str
++ worktree: str
++ chat: str
++ << composition >> guidance: SelectionFields
+----
++ practice(key: str): PracticeFields
++ as_dict(): dict
+
 ## TicketCheckout
 
 Where one ticket's work sits in git: its own branch, the worktree that branch is open in, and the chat working there. It answers what opening and leaving the ticket can do now and does it, so a dialog offers only what will be done.
@@ -4106,19 +4169,17 @@ Where one ticket's work sits in git: its own branch, the worktree that branch is
 + TicketCheckout(ticket: Ticket)
 ------
 + << association >> branch: Branch
-+ candidate_branches: list[Branch]
+	-> SessionCheckout.branch
 + work_branch: Branch
 + worktree: str
 + << association >> chat: Chat | None
-+ assigned_chat: str
+	-> SessionCheckout.assigned_chat
 + close_choices: LeaveChoices
 ----
-+ assign_chat(chat: str): None
-	-> SessionRecord.save_fields
 + open(): None
 	// opens the ticket in its own worktree, the one it has or a new one on its own branch; a folder in the way raises TicketWorktreeBlockedError
 	-> Branch.open_in_worktree
-	-> SessionRecord.save_fields
+	-> SessionCheckout.record_opened
 + keep_landing_release(leaving: list[str]): None
 + write_handoff(leaving: list[str]): None
 + save_work(leaving: list[str]): None

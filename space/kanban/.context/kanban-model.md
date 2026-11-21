@@ -451,7 +451,7 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	-> TicketCheckout.save_work
 + assign_chat(chat: str): Ticket
 	// `ticket.assign_chat`: keeps the chat's id in its session.json, committed on main and pushed
-	-> TicketCheckout.assign_chat
+	-> SessionCheckout.assign_chat
 + archive(): Ticket
 	// `ticket.archive`, from *TicketEnding*: its session closes and its folder moves to `_archive/`, off the board; the move is committed on main and pushed
 	-> SessionFolder.move_to_archive
@@ -477,7 +477,7 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	-> SessionHierarchy.mark_pulled_out
 + reassign_parent(parent: Ticket | None): Ticket
 	// `ticket.reassign_parent`, from *TicketTreeTools*: parent, or none, becomes its parent, and it is no longer pulled out; raises `ParentLoopError` when parent is it or one of its children; the tool names parent as it names any ticket
-	-> TicketTree.can_be_child_of
+	-> SessionHierarchy.can_take_parent
 	-> SessionHierarchy.set_parent
 + move_before(other: Ticket): Ticket
 	// `ticket.move_before`: keeps it just above other in their column; the tool names other as it names any ticket
@@ -492,18 +492,15 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 
 + TicketTree(ticket: Ticket)
 ------
-+ << association >> ancestors: list[Ticket]
-	// its parent, its parent's parent, and so on
-	-> Ticket.parent
 + is_stacked: bool
 	// an open child, not pulled out, of an open parent
 + parent_choices: list[str]
 	// any ticket on the board but its parent, itself, and the tickets under it; none for main
 	-> Board.tickets
+	-> SessionHierarchy.can_take_parent
 + furthest_back_child_stage: Stage
 	// the stage of its child furthest back on the board, which a parent's column is
 ----
-+ can_be_child_of(parent: Ticket): bool
 + refuse_moving_a_parent()
 	// raises `ParentMovesWithChildrenError` for a ticket with children
 
@@ -566,10 +563,9 @@ A ticket's progress on each fidelity the board requires whose practice its sessi
 
 + TicketCheckout(ticket: Ticket)
 ------
-+ << composition >> branch: Branch
-	// made once, found among the branches the board lists once per read: the recorded branch, else the one named as the ticket, else the one branch holding its name as a whole word; a Branch reads whether it is checked out from git each time
-	-> Board.branches
-	-> Repo.branch_named
++ << association >> branch: Branch
+	// its session's checkout's branch: the recorded branch, else the one named as the ticket, else the one branch holding its name as a whole word
+	-> SessionCheckout.branch
 + work_branch: Branch
 	// its own branch while it is checked out, else the default branch while the checkout is on it; any other checkout gives its own branch, not checked out
 + worktree: str
@@ -585,10 +581,7 @@ A ticket's progress on each fidelity the board requires whose practice its sessi
 	-> SessionSaves.now
 	-> Branch.open_in_worktree
 	-> CardPlacement.reread
-	-> SessionRecord.save_fields
-+ assign_chat(chat: str)
-	// keeps chat's id in the ticket's session.json, committed on main and pushed
-	-> SessionRecord.save_fields
+	-> SessionCheckout.record_opened
 + keep_landing_release(leaving: list[str])
 	// a ticket closed with its branch merged keeps its end-to-end results only
 	-> LatestRelease.keep
@@ -602,25 +595,32 @@ Where a move puts a ticket that stays on a stage: the stage, and whether in its 
 
 ## StageMarks
 
-The moves and marks a person made on one ticket's stages, made once with the ticket. Its session's log answers them (`SessionLog.latest`); a move or mark is written through the ticket's work.
+The moves and marks a person made on one ticket's stages, made once with the ticket. They are the board's own fields in its session's session.json (`stage`, `stage_mark`, through `record.extra("ticket")`); a ticket moved before that record existed is read from its log (`SessionLog.latest`). A move or mark is also written to the log through the ticket's work.
 
 + StageMarks(ticket: Ticket)
 ------
 + moved_into: Stage
-	// the stage named by its latest `move` line; none before a person has moved it
+	// the stage session.json records, else the one named by its latest `move` line; none before a person has moved it
+	-> OwnedFields.get
 	-> SessionLog.latest
 ----
-+ latest_in(stage: Stage): str
-	// the latest `done` or `in-progress` mark in stage since its latest `move` into it; none when there is none
-	-> SessionLog.latest
++ latest_in(stage: Stage): StageMark
+	// the mark in stage since it was last moved there; none when there is none
 + enter(stage: Stage): Ticket
-	// writes `move <stage>`
+	// keeps the stage with no mark and writes `move <stage>`
+	-> OwnedFields.save
 	-> TicketWork.record
-+ mark(mark: str, stage: Stage): Ticket
-	// writes `done <stage>` or `in-progress <stage>` to session.json and the log, then commits on main and pushes
-	-> TicketWork.record
-+ place(stage: Stage, mark: str): Ticket
-	// enters stage unless the ticket is there, then marks it there: one commit on main, pushed, for both
++ mark(mark: StageMark, stage: Stage): Ticket
+	// keeps `done` or `in-progress` in stage, writes it to the log, then commits on main and pushes
++ place(stage: Stage, mark: StageMark): Ticket
+	// enters stage unless the ticket is there, then marks it there
+
+## StageMark
+
+<< enumeration >> The mark a person gives a ticket in a stage; its value is the word the log and session.json keep.
+
++ DONE = "done"
++ IN_PROGRESS = "in-progress"
 
 ## FidelityProgress
 

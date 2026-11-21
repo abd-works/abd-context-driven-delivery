@@ -3,7 +3,6 @@ can do with them."""
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -25,8 +24,6 @@ LEAVE_DELETE_WORKTREE = "delete_worktree"
 LEAVE_HANDOFF = "handoff"
 # What leaving does to the branch itself, beyond saving the work on it.
 LEAVE_BRANCH_STEPS = {LEAVE_MERGE, LEAVE_DELETE_BRANCH, LEAVE_DELETE_WORKTREE}
-# The session.json field that keeps the chat a person assigned to a ticket.
-ASSIGNED_CHAT = "chat"
 
 
 class TicketCheckout:
@@ -34,40 +31,18 @@ class TicketCheckout:
     the chat working there. It answers what opening and leaving the ticket can do now and does it, so a dialog offers
     only what will be done. Made once per ticket, holding the ticket's *Branch*.
 
-    The ticket's session records its branch and worktree, which are read first. A record git no longer agrees with,
-    or none, is found again from git and recorded: the branch named as the ticket, else the one branch whose name holds
-    the ticket's name as a whole word, as the Claude desktop app names one (``claude/chat-ui-defects-cef4bc``). With
-    several such branches none is chosen, and they are named instead."""
+    Its branch, the worktree that branch is open in, and the chat a person assigned to it are its session's checkout's
+    (*SessionCheckout*), which reads and records them; with several branches that could each be the ticket's none is
+    chosen, and opening names them instead."""
 
     def __init__(self, ticket: Ticket) -> None:
         self._ticket = ticket
         self._repo = ticket.board.repo
-        # The ticket's own branch, whether or not the repository has it yet; a Branch reads its state from git each time.
-        self.branch: Branch = self._found_branch()
 
     @property
-    def _recorded(self) -> dict:
-        return self._ticket.session.record.fields
-
-    def _found_branch(self) -> Branch:
-        """The recorded branch while the repository has it, else the ticket's branch found in git and recorded."""
-        existing = {branch.name for branch in self._ticket.board.branches}
-        recorded = self._recorded.get("branch", "")
-        if recorded and recorded in existing:
-            return self._repo.branch_named(recorded)
-        named = self._repo.branch_named(self._ticket.name)
-        if named.name in existing:
-            return named
-        candidates = self.candidate_branches
-        return candidates[0] if len(candidates) == 1 else named
-
-    @property
-    def candidate_branches(self) -> list[Branch]:
-        """The branches whose name holds the ticket's name as a whole word, such as claude/chat-ui-defects-cef4bc. A
-        branch named as another ticket is that ticket's own, so performance never claims repo-performance."""
-        word = re.compile(rf"(^|[/_-]){re.escape(self._ticket.name)}($|[/_-])")
-        board = self._ticket.board
-        return [branch for branch in board.branches if branch.name not in board.ticket_names and word.search(branch.name)]
+    def branch(self) -> Branch:
+        """The ticket's own branch, whether or not the repository has it yet, as its session's checkout finds it."""
+        return self._ticket.session.checkout.branch
 
     @property
     def work_branch(self) -> Branch:
@@ -93,21 +68,11 @@ class TicketCheckout:
         opens for it, else the one working in its worktree or a folder inside it. None while no such chat is connected,
         and the board offers to open one."""
         chats = self._ticket.board.chats
-        assigned = self.assigned_chat
+        assigned = self._ticket.session.checkout.assigned_chat
         if assigned:
             return next((chat for chat in chats if chat.id == assigned), None)
         named = self._ticket.board.reads.chat_named(self._ticket.name)
         return named or self._chat_in_worktree(chats)
-
-    @property
-    def assigned_chat(self) -> str:
-        """The id of the chat a person assigned to the ticket; empty while none is."""
-        return str(self._ticket.session.record.fields.get(ASSIGNED_CHAT, "") or "")
-
-    def assign_chat(self, chat: str) -> None:
-        """Make chat, a chat's id, the ticket's chat from now on; an empty chat gives it back to the chat named after
-        it. The record is committed on main and pushed."""
-        self._ticket.session.record.save_fields(**{ASSIGNED_CHAT: chat})
 
     def _chat_in_worktree(self, chats: list[Chat]) -> Chat | None:
         worktree = self.worktree
@@ -140,7 +105,7 @@ class TicketCheckout:
             board.sessions.saves.now(f"sessions: save before opening {self._ticket.name}")
             self._open_worktree()
             board.placement.reread()
-        self._ticket.session.record.save_fields(branch=self.branch.name, worktree=self.worktree)
+        self._ticket.session.checkout.record_opened()
         board.sessions.saves.now(f"sessions: open {self._ticket.name}")
 
     def _open_worktree(self) -> None:
@@ -150,7 +115,7 @@ class TicketCheckout:
             raise TicketWorktreeBlockedError(self._ticket.name, taken.folder) from taken
 
     def _refuse_unclear_branch(self) -> None:
-        candidates = [] if self.branch.exists else self.candidate_branches
+        candidates = [] if self.branch.exists else self._ticket.session.checkout.candidate_branches
         if len(candidates) > 1:
             raise TicketBranchUnclearError(self._ticket.name, [branch.name for branch in candidates])
 

@@ -28,10 +28,9 @@ from space.session.session_log import REPORT_DATE_FORMAT
 if TYPE_CHECKING:
     from harness.guidance.guidance import FidelityGuidance, GuidanceCollection, PracticeGuidance
     from space.session.session import Session
+    from space.session.session_record import FidelityFields, PracticeFields
 
 _OUTPUT_PATTERN_MARKS = {"*", "{"}
-ChosenOutputs = dict[str, object]
-"""What session.json keeps for one practice under `outputs`: the root a person chose, and each fidelity's own choices."""
 
 
 @identity("session_file", "name")
@@ -86,15 +85,14 @@ class PracticeSessionOutput:
         return self._guidance.fidelities
 
     @property
-    def saved(self) -> dict:
-        """What session.json's ``practices`` keeps for this practice: whether it is on, and the formats chosen for each
-        fidelity, which each fidelity's FidelitySessionOutput reads and saves for itself."""
-        return dict(self._session.record.fields.get("practices", {}).get(self.name, {}))
+    def fields(self) -> PracticeFields:
+        """What session.json keeps for this practice: whether it is on, the root a person chose, and what each of its
+        fidelities keeps, which each fidelity's FidelitySessionOutput reads and saves for itself."""
+        return self._session.record.fields.practice(self.name)
 
-    def save(self, **values: object) -> None:
-        """Merge values into what session.json's ``practices`` keeps for this practice."""
-        saved = self._session.record.fields.get("practices", {})
-        self._session.record.save_fields(practices={**saved, self.name: {**self.saved, **values}})
+    def change(self, change: Callable[[PracticeFields], object], said: str) -> None:
+        """Change what session.json keeps for this practice, as the file holds it now; said names the change."""
+        self._session.record.update(lambda fields: change(fields.practice(self.name)), f"{self.name} {said}")
 
     @property
     @data_field
@@ -119,32 +117,22 @@ class PracticeSessionOutput:
     @data_field
     def enabled(self) -> bool:
         """Whether the session works on this practice: true until a person turns it off."""
-        return self.saved.get("enabled", True)
+        return self.fields.enabled
 
     @mcp
     @agent_tool
     @noSessionLog
     def enable(self, is_enabled: bool) -> PracticeSessionOutput:
         """Turn this practice on or off for its session, saved in its session.json; its guidance selection changes."""
-        self.save(enabled=is_enabled)
+        self.change(lambda fields: setattr(fields, "enabled", is_enabled), f"enabled {is_enabled}")
         self._session.guidance_version.changed()
         return self
-
-    @property
-    def chosen_outputs(self) -> ChosenOutputs:
-        """What session.json's ``outputs`` keeps for this practice: the root a person chose, and under each fidelity's
-        name what that fidelity keeps for itself."""
-        return dict(self._session.record.fields.get("outputs", {}).get(self.name, {}))
-
-    def _save_chosen_outputs(self, chosen: ChosenOutputs) -> None:
-        outputs = dict(self._session.record.fields.get("outputs", {}))
-        self._session.record.save_fields(outputs={**outputs, self.name: chosen})
 
     @property
     def _chosen_or_configured_root(self) -> str | None:
         """Where this practice writes, relative to the session's root, when someone said: the root a person chose in
         this session, else the folder the project's ``.context/config.json`` names for the practice."""
-        return self.chosen_outputs.get("root") or self._configured_folder.get(
+        return self.fields.root or self._configured_folder.get(
             self._session.answer, lambda: self._session.context_config.practice_folder(self.name)
         )
 
@@ -192,7 +180,7 @@ class PracticeSessionOutput:
     @data_field
     def is_root_chosen(self) -> bool:
         """Whether a person chose this practice's root, rather than it being the default."""
-        return bool(self.chosen_outputs.get("root"))
+        return bool(self.fields.root)
 
     @property
     def is_root_default(self) -> bool:
@@ -213,7 +201,7 @@ class PracticeSessionOutput:
         to a file raise *OutputRootRefused*. A folder that is not there yet is a root the practice writes into."""
         if not str(path or "").strip():
             raise OutputRootRefused(path, "an empty path names no folder")
-        root = self._session.repo_path / path
+        root = self._session.checkout.root / path
         if root.is_file():
             raise OutputRootRefused(path, f"{path} is a file")
         return root
@@ -221,29 +209,15 @@ class PracticeSessionOutput:
     def keep_root(self, root: Path) -> None:
         """Write this practice's files under root, kept in session.json relative to the workpath, so the root still
         names the same folder after the workpath moves."""
-        relative = os.path.relpath(Path(root).resolve(), self._session.work_root)
-        self._save_chosen_outputs({**self.chosen_outputs, "root": Path(relative).as_posix()})
-
-    def keep_fidelity_root(self, fidelity: str, root: Path) -> None:
-        """Write the files of fidelity, one of this practice's by name, under root, apart from the practice's own root;
-        kept in session.json relative to the workpath. It replaces every root the fidelity had."""
-        self.keep_fidelity_roots(fidelity, [root])
-
-    def keep_fidelity_roots(self, fidelity: str, roots: list[Path]) -> None:
-        """Write the files of fidelity under each of roots, such as the folders of the sub-epics a ticket works on in
-        story_tests: one root is kept as ``root``, several as ``roots``, in session.json relative to the workpath."""
-        relative = list(dict.fromkeys(Path(os.path.relpath(Path(root).resolve(), self._session.work_root)).as_posix() for root in roots))
-        chosen = self.chosen_outputs
-        kept = {key: value for key, value in chosen.get(fidelity, {}).items() if key not in ("root", "roots")}
-        kept.update({"root": relative[0]} if len(relative) == 1 else {"roots": relative})
-        self._save_chosen_outputs({**chosen, fidelity: kept})
+        relative = Path(os.path.relpath(Path(root).resolve(), self._session.work_root)).as_posix()
+        self.change(lambda fields: setattr(fields, "root", relative), f"root {relative}")
 
     @mcp
     @agent_tool
     @noSessionLog
     def use_default_root(self) -> PracticeSessionOutput:
         """Write this practice's files under its default root again: the workpath plus the practice's own folder."""
-        self._save_chosen_outputs({key: value for key, value in self.chosen_outputs.items() if key != "root"})
+        self.change(lambda fields: setattr(fields, "root", ""), "root default")
         return self
 
     def _fixed_folder(self, path: str) -> Path:
@@ -347,18 +321,15 @@ class FidelitySessionOutput:
         """The formats chosen for this fidelity in the session, in the order chosen: what a story map edit renders to
         and what a chip shows picked. Until a person or an action chooses, the project's defaults for it, else its
         default format."""
-        chosen = self._practice.saved.get("formats", {}).get(self._fidelity.name)
-        if chosen is None:
-            return self.formats.default_formats
-        # A session saved before formats were chosen kept the one format its fidelity was last given.
-        return [chosen] if isinstance(chosen, str) else list(chosen)
+        chosen = self.fields.formats
+        return self.formats.default_formats if chosen is None else chosen
 
     @mcp
     @agent_tool
     @noSessionLog
     def choose_root(self, path: str) -> FidelitySessionOutput:
         """Write this fidelity's files under path, a folder in the repository, apart from its practice's root; an empty path and a file are refused: such as the stories scenarios and acceptance tests of one epic in story_tests/<epic>, while the story map stays in the practice's root, the project's .context."""
-        self._practice.keep_fidelity_root(self._fidelity.name, self._practice.root_named(path))
+        self.keep_roots([self._practice.root_named(path)])
         return self
 
     @mcp
@@ -366,8 +337,7 @@ class FidelitySessionOutput:
     @noSessionLog
     def add_root(self, path: str) -> FidelitySessionOutput:
         """Write this fidelity's files under path as well, a folder in the repository, beside the roots it has; an empty path and a file are refused: such as one more sub-epic's folder in story_tests that the session's ticket works on, so the session holds that sub-epic's scenarios and story tests and no other's."""
-        roots = [*self.roots, self._practice.root_named(path)]
-        self._practice.keep_fidelity_roots(self._fidelity.name, roots)
+        self.keep_roots([*self.roots, self._practice.root_named(path)])
         return self
 
     @mcp
@@ -388,7 +358,7 @@ class FidelitySessionOutput:
             raise FormatNotOfferedError(self._fidelity, format)
         others = [each for each in self.chosen_formats if each != named]
         chosen = self.chosen_formats if is_chosen and named in self.chosen_formats else others + ([named] if is_chosen else [])
-        self._practice.save(formats={**self._practice.saved.get("formats", {}), self._fidelity.name: chosen})
+        self._change(lambda fields: setattr(fields, "formats", chosen), f"formats {', '.join(chosen)}")
         self._session.guidance_version.changed()
         return self
 
@@ -419,10 +389,20 @@ class FidelitySessionOutput:
         return self._session.reports_folder
 
     @property
-    def chosen_outputs(self) -> dict:
-        """What session.json's ``outputs`` keeps for this fidelity: its own root, and a file name per format for a
-        single-file output."""
-        return dict(self._practice.chosen_outputs.get(self._fidelity.name, {}))
+    def fields(self) -> FidelityFields:
+        """What session.json keeps for this fidelity: the formats chosen, its own roots, and a file name per format for
+        a single-file output."""
+        return self._practice.fields.fidelity(self._fidelity.name)
+
+    def _change(self, change: Callable[[FidelityFields], object], said: str) -> None:
+        self._practice.change(lambda fields: change(fields.fidelity(self._fidelity.name)), f"{self._fidelity.name} {said}")
+
+    def keep_roots(self, roots: list[Path]) -> None:
+        """Write this fidelity's files under each of roots, such as the folders of the sub-epics a ticket works on in
+        story_tests, apart from its practice's root; kept in session.json relative to the workpath, in place of every
+        root it had."""
+        relative = list(dict.fromkeys(Path(os.path.relpath(Path(root).resolve(), self._session.work_root)).as_posix() for root in roots))
+        self._change(lambda fields: setattr(fields, "roots", relative), f"roots {', '.join(relative)}")
 
     @property
     def root(self) -> Path:
@@ -433,8 +413,7 @@ class FidelitySessionOutput:
     def roots(self) -> list[Path]:
         """The folders this fidelity writes under: its own roots when session.json names them, as ``roots`` or one
         ``root``, else its practice's output root."""
-        chosen = self.chosen_outputs
-        named = list(chosen.get("roots") or ([chosen["root"]] if chosen.get("root") else []))
+        named = self.fields.roots
         return [self._session.paths.folder_under_root(root) for root in named] or [self._practice.output_root]
 
 
@@ -456,7 +435,7 @@ class WrittenFiles:
     def output_paths(self) -> dict[str, list[str]]:
         """Where this fidelity writes each format in the session: its declared paths under its root. session.json can
         name a file per format for a single-file output."""
-        chosen, roots = self._output.chosen_outputs, self._output.roots
+        chosen, roots = self._output.fields.file_names, self._output.roots
         return {
             label: list(dict.fromkeys(path for root in roots for name in self._output_names(declared, chosen.get(label)) if (path := self._under_root(name, root))))
             for label, declared in self._fidelity.outputs.items()

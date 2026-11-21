@@ -90,6 +90,6 @@ class ChatInjections:
 
     def _retire_shared_inject(self) -> None:
         """Remove the always-apply rule older installs shared between every chat."""
-        shared = self._session.repo_path / ".cursor" / "rules" / "practices" / "chat-inject.mdc"
+        shared = self._session.checkout.root / ".cursor" / "rules" / "practices" / "chat-inject.mdc"
         shared.unlink(missing_ok=True)
         shared.with_suffix(".sent").unlink(missing_ok=True)

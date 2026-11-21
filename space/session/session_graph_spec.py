@@ -109,7 +109,7 @@ with description("a session's graph"):
     with context("asked for the lines of that folder once it has gone since the graph read it"):
         with before.each:
             self.session.graph_trees([TICKET_FILE, BOARD_FILE])
-            shutil.rmtree(Path(self.session.repo_path) / "work" / "kanban")
+            shutil.rmtree(Path(self.session.checkout.root) / "work" / "kanban")
 
         with it("should refuse, naming the folder that is not there"):
             ranges = lambda: self.session.graph_node_ranges(KANBAN_PACKAGE, [TICKET_FILE, BOARD_FILE])
@@ -119,7 +119,7 @@ with description("a session's graph"):
         with before.each:
             self.session.graph_trees([TICKET_FILE, BOARD_FILE])
             self.close = next(member.node_id for member in self.session.graph_members() if member.name == "close")
-            ticket = Path(self.session.repo_path) / TICKET_FILE
+            ticket = Path(self.session.checkout.root) / TICKET_FILE
             ticket.write_text("# one\n# two\n" + TICKET_TEXT, encoding="utf-8")
             os.utime(ticket, (time.time() + A_MOMENT_LATER, time.time() + A_MOMENT_LATER))
             ranges = self.session.graph_node_ranges(self.close, [TICKET_FILE, BOARD_FILE])
@@ -133,7 +133,7 @@ with description("a session's graph"):
             trees = self.session.graph_trees([TICKET_FILE, BOARD_FILE])
             _opened_down_to(self.session, trees, [TICKET_FILE, BOARD_FILE])
             self.ticket_class = next(member.node_id for member in self.session.graph_members() if member.name == "Ticket")
-            (Path(self.session.repo_path) / TICKET_FILE).unlink()
+            (Path(self.session.checkout.root) / TICKET_FILE).unlink()
 
         with it("should refuse, naming the file that is not there"):
             ranges = lambda: self.session.graph_node_ranges(self.ticket_class, [TICKET_FILE, BOARD_FILE])
@@ -141,21 +141,21 @@ with description("a session's graph"):
 
     with context("asked, as the viewer asks, for a file that has gone since a page listed it"):
         with before.each:
-            (Path(self.session.repo_path) / TICKET_FILE).unlink()
+            (Path(self.session.checkout.root) / TICKET_FILE).unlink()
 
         with it("should refuse, naming the file that is not there"):
             expect(lambda: self.session.file(TICKET_FILE)).to(raise_error(NamedPathNotFoundError, contain(TICKET_FILE)))
 
     with context("asked, as the viewer asks, for a file one line longer than the viewer shows"):
         with before.each:
-            (Path(self.session.repo_path) / BOARD_FILE).write_text("pass" + chr(10) * VIEWER_SHOWS_LINES + "pass", encoding="utf-8")
+            (Path(self.session.checkout.root) / BOARD_FILE).write_text("pass" + chr(10) * VIEWER_SHOWS_LINES + "pass", encoding="utf-8")
 
         with it("should refuse it, naming the file, its lines and the most the viewer shows"):
             expect(lambda: self.session.file(BOARD_FILE)).to(raise_error(FileTooLongToShowError, contain(BOARD_FILE, f"{VIEWER_SHOWS_LINES + 1:,} lines", f"{VIEWER_SHOWS_LINES:,}")))
 
     with context("asked, as the viewer asks, for a file as long as the viewer shows"):
         with before.each:
-            (Path(self.session.repo_path) / BOARD_FILE).write_text("pass" + chr(10) * (VIEWER_SHOWS_LINES - 1) + "pass", encoding="utf-8")
+            (Path(self.session.checkout.root) / BOARD_FILE).write_text("pass" + chr(10) * (VIEWER_SHOWS_LINES - 1) + "pass", encoding="utf-8")
 
         with it("should answer its text"):
             expect(self.session.file(BOARD_FILE).text.count(chr(10))).to(equal(VIEWER_SHOWS_LINES - 1))

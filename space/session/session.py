@@ -38,7 +38,9 @@ from space.session.session_folder import COMPLETE_FOLDER, SessionFolder
 from space.session.session_hierarchy import SessionHierarchy
 from space.session.session_log import SessionLog
 from space.session.session_paths import SessionPaths
+from space.session.session_checkout import SessionCheckout
 from space.session.session_record import SESSION_FILE, SessionRecord
+from space.work_state import SESSIONS_FOLDER
 
 if TYPE_CHECKING:
     # Named only for typing: a toolset the module holds at run time would be published again as this toolset's tools.
@@ -48,7 +50,6 @@ if TYPE_CHECKING:
 MAIN_SESSION_NAME = "main"
 _REPORT_FOLDER = "validation-reports"
 _DECISION_RECORDS_FOLDER = "cdr"
-_TAGS_FIELD = "tags"
 
 
 class SessionNotFoundError(LookupError):
@@ -343,39 +344,31 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionAl
     with it. It holds the *Sessions* that loaded it and their repository, which keep one Session for each session
     folder, so every call made in the session, from any chat, works on this one object: its graph and its one instance
     of each practice. Every tool on it acts on the session whose ``session.json`` its ``session`` argument names; a
-    line a call logs points at that call's chat, which the call holds, never the session."""
+    line a call logs points at that call's chat, which the call holds, never the session.
 
-    def __init__(self, sessions: Sessions) -> None:
-        self._session_name = ""
+    A session is made for its record folder, named by it, and is whole from then on; ``placed()`` derives where it works
+    now, in one order: its checkout, then its work folder, then its workpath."""
+
+    def __init__(self, sessions: Sessions, record_folder: Path) -> None:
         # The sessions of the checkout that loaded this one, and their repository, which holds this session's ``.sessions``.
         self._sessions = sessions
         self.repo: Repo = sessions.repo
-        # The checkout this session works in: its sessions' until it is placed, then its ticket's own worktree when
-        # it has one. Its ``.context/config.json``, which names the folder each practice writes in and the formats
-        # each fidelity is chosen in by default, is that checkout's, read again when the session moves to another.
-        self._repo_path: Path = sessions.root
-        self.context_config = ContextConfig(self._repo_path)
+        # The root of the checkout it was last placed in, whose ``.context/config.json`` names the folder each practice
+        # writes in and the formats each fidelity is chosen in by default, read again when the session moves to another.
+        self._checkout_root: Path = sessions.root
+        self.context_config = ContextConfig(self._checkout_root)
         self._workpath: Path | None = None
-        self._record_folder: Path | None = None
+        self._record_folder = record_folder
         self._work_folder: Path | None = None
         self._make_parts()
-
-    @property
-    def repo_path(self) -> Path:
-        """The checkout the session works in: its ticket's own worktree, else the checkout whose sessions hold it."""
-        return self._repo_path
-
-    @repo_path.setter
-    def repo_path(self, checkout: Path) -> None:
-        if checkout == self._repo_path:
-            return
-        self._repo_path = checkout
-        self.context_config = ContextConfig(checkout)
+        self.record.kept_in(record_folder)
+        self.work_folder = record_folder
 
     def _make_parts(self) -> None:
         """The parts the session holds, each made once with it: what it reads and writes is theirs to keep."""
         self.paths = SessionPaths(self)
         self.record = SessionRecord(self)
+        self.checkout = SessionCheckout(self)
         self.folder = SessionFolder(self)
         self.hierarchy = SessionHierarchy(self)
         self.file_graphs = FileGraphs(self)
@@ -402,12 +395,35 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionAl
     @property
     @data_field
     def name(self) -> str:
-        """Named work session (not the toolset slug)."""
-        return self._session_name
+        """Named work session (not the toolset slug): the name of its record folder."""
+        return self._record_folder.name
 
-    @name.setter
-    def name(self, value: str) -> None:
-        self._session_name = (value or "").strip()
+    def placed(self) -> Session:
+        """This session working where it derives now, never saved on a switch: in its checkout (its own worktree, else
+        the checkout whose sessions hold it), writing its work in its work folder (its worktree's ``.sessions``, else its
+        record folder), at its workpath (a folder a person chose in that checkout, else the checkout). The work folder is
+        set before the workpath, so a graph made again for a new workpath is kept in the new work folder."""
+        worktree = self.checkout.own_worktree
+        root = worktree.root if worktree is not None else self._sessions.root
+        if root != self._checkout_root:
+            self._checkout_root = root
+            self.context_config = ContextConfig(root)
+        is_own = worktree is not None and worktree.root.resolve() != self.repo.main_clone.root.resolve()
+        self.work_folder = worktree.root / SESSIONS_FOLDER / self.name if is_own else self.record_folder
+        workpath = self._chosen_workpath(root)
+        if self.workpath is None or self.work_root != workpath:
+            self.workpath = workpath
+        return self
+
+    def _chosen_workpath(self, checkout: Path) -> Path:
+        """A workpath a person chose by hand in its session.json, in checkout, while that folder is there; else checkout.
+        A chosen workpath that lies in another checkout of the repository names the same folder in this one."""
+        stored = str(self.record.fields.workpath or "").strip()
+        chosen = self._sessions.worktrees.in_checkout(checkout, checkout / stored) if stored else None
+        # WHY: older switches saved the checkout itself, or a worktree since removed, as the workpath; neither was chosen.
+        if chosen is not None and chosen.is_dir() and chosen not in (self._sessions.root, self.repo.main_clone.root, checkout):
+            return chosen
+        return checkout
 
     @property
     def sessions(self) -> Sessions:
@@ -428,7 +444,7 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionAl
         self.practice_outputs.forget()
 
     @property
-    def record_folder(self) -> Path | None:
+    def record_folder(self) -> Path:
         """The folder of the session's record on main, ``<main clone>/.sessions/{name}/`` (``_complete``, ``_archive``
         or ``_backlog`` once it moves there): its session.json, from which the board lists its ticket and tracks where it
         stands, and its idea file. Every checkout of the repository reads the same record. None for a session not yet
@@ -436,7 +452,8 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionAl
         return self._record_folder
 
     @record_folder.setter
-    def record_folder(self, folder: Path | None) -> None:
+    def record_folder(self, folder: Path) -> None:
+        """Keep the session's record in folder from now on, the folder it moved to, such as ``.sessions/_complete``."""
         self._record_folder = folder
         self.record.kept_in(folder)
 
@@ -480,7 +497,7 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionAl
         """The folder the session works in: its workpath, or the whole repository when it chose none. Actions write
         their sketches, grill answers, and partitions under it, each practice's folder is kept relative to it, and the
         file manager reads under it."""
-        return self.paths.resolved(Path(self.workpath or self.repo_path))
+        return self.paths.resolved(Path(self.workpath or self.checkout.root))
 
     @property
     def graph(self) -> Graph:
@@ -496,7 +513,7 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionAl
     @data_field
     def title(self) -> str:
         """The title a person gave the session's ticket; empty when it has none."""
-        return self.record.fields.get("title", "")
+        return self.record.fields.title
 
     @property
     @data_field
@@ -507,8 +524,9 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionAl
     @property
     @data_field
     def branch(self) -> str:
-        """The branch the session works on, as its session.json names it, else the session's own name."""
-        return self.record.fields.get("branch") or self.name
+        """The branch the session works on: its checkout's branch, as its session.json records it, else named as the
+        session, else the one branch holding its name."""
+        return self.checkout.branch.name
 
     @property
     @data_field
@@ -527,7 +545,7 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionAl
     @data_field
     def scope(self) -> str:
         """feature, story, or slice; empty when no one said."""
-        return self.record.fields.get("scope", "")
+        return self.record.fields.scope
 
     @property
     @data_field
@@ -538,13 +556,13 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionAl
     @property
     def tags(self) -> list[str]:
         """The words a person tagged this session with, in the order they were added."""
-        return list(self.record.fields.get(_TAGS_FIELD, []))
+        return list(self.record.fields.tags)
 
     def add_tag(self, word: str) -> None:
         """Tag this session with word, once however often it is added."""
         tags = self.tags
         if word not in tags:
-            self.record.save_fields(**{_TAGS_FIELD: [*tags, word]})
+            self.record.update(lambda fields: setattr(fields, "tags", [*tags, word]), f"tags {word}")
 
     @property
     def idea_file(self) -> IdeaFile:
@@ -572,7 +590,7 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionAl
     def overlays(self) -> list[str]:
         """The patterns this session overlays on its graph, by name, as its session.json keeps them; none until a
         person chooses some."""
-        return list(self.record.fields.get("overlays", []))
+        return list(self.record.fields.overlays)
 
     def choose_overlays(self, overlays: list[str]) -> None:
         """Overlay the patterns named on this session's graph from now on, in place of those chosen before: kept in its
@@ -582,7 +600,7 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionAl
         unknown = [name for name in overlays if name not in patterns]
         if unknown:
             raise NotAPatternError(unknown, patterns)
-        self.record.save_fields(overlays=list(overlays))
+        self.record.update(lambda fields: setattr(fields, "overlays", list(overlays)), f"overlays {', '.join(overlays)}")
         self.practice_outputs.overlay(overlays)
 
     @property
@@ -598,7 +616,7 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionAl
         top, so a ticket working in its own worktree shows the folder it chose there, and it can never name a folder in
         another checkout of the repository; empty for the whole checkout, and absolute when it lies outside it."""
         root = self.work_root
-        checkout = self.paths.resolved(self.repo_path)
+        checkout = self.paths.resolved(self.checkout.root)
         if not root.is_relative_to(checkout):
             return root.as_posix()
         relative = root.relative_to(checkout).as_posix()
@@ -611,7 +629,7 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionAl
         the file is committed with the work and every session on that folder leaves the same violations out. Made from
         wherever the session works now, since its workpath can change."""
         root = self.work_root
-        return AcceptedViolations(root / CONTEXT_FOLDER / ACCEPTED_VIOLATIONS_FILE, [root, self.paths.resolved(self.repo_path)])
+        return AcceptedViolations(root / CONTEXT_FOLDER / ACCEPTED_VIOLATIONS_FILE, [root, self.paths.resolved(self.checkout.root)])
 
     @property
     def reports_folder(self) -> Path:
@@ -667,7 +685,8 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionAl
         # and still names the same folder.
         # The practices on the new workpath are kept again with it, so each root is kept by the practice that works there.
         chosen = {key: practice.folder for key, practice in self.practices.items() if practice.is_root_chosen}
-        self.workpath = self._sessions.roots.in_checkout(self.repo_path, self.repo_path / path)
+        checkout = self.checkout.root
+        self.workpath = self._sessions.worktrees.in_checkout(checkout, checkout / path)
         self.record.save()
         moved = self.practices
         for key, root in chosen.items():

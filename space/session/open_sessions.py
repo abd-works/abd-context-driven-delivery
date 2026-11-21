@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from harness.agent_tools.tool_call import CALLS_BEING_ANSWERED, ToolCall
 from harness.annotations.name import Name
 from space.session.session import MAIN_SESSION_NAME, Session
+from space.session.session_checkout import names_ticket
 from space.session.session_record import SESSION_FILE
 from space.work_state import WorkState
 from tools.prompt_queue.prompt_queue import PromptQueue
@@ -122,7 +123,7 @@ class OpenSessions:
         if branch in tickets:
             return sessions.named(branch)
         # The Claude desktop app names a branch around the ticket's name, such as claude/checkout-flow-cef4bc.
-        holding = [name for name in tickets if sessions.roots.is_branch_of(branch, name)]
+        holding = [name for name in tickets if names_ticket(branch, name)]
         return sessions.named(holding[0]) if len(holding) == 1 else None
 
     def switch(self, name: str, workpath: Path | None, call: ToolCall | None) -> str:
@@ -175,7 +176,8 @@ class OpenSessions:
         session has none."""
         if call is None or call.project is None or session.name == MAIN_SESSION_NAME:
             return ""
-        worktree = self._sessions.roots.worktree_of(session.name)
+        own = session.checkout.own_worktree
+        worktree = own.root if own is not None else None
         if worktree is None or worktree == call.project or worktree in call.project.parents:
             return ""
         return _OUTSIDE_WORKTREE_NOTE.format(chat=call.project, session=session.name, worktree=worktree)

@@ -47,7 +47,13 @@ WorkedGuidance = ListedGuidance | str
 class _SessionRecord(Protocol):
     """A session's record, the session.json it keeps, as an action reads it."""
 
-    fields: Mapping[str, Any]
+    fields: Any
+
+
+class _SessionCheckout(Protocol):
+    """The one checkout a session works in, as an action reads it."""
+
+    root: Path
 
 
 class ActionSession(Protocol):
@@ -62,7 +68,7 @@ class ActionSession(Protocol):
     log: Any
     graph: Any
     work_root: Path
-    repo_path: Path
+    checkout: _SessionCheckout
     paths: Any
     session_files: Any
     record_folder: Path | None
@@ -660,12 +666,12 @@ class SessionBrief:
             "## Session",
             "",
             f"Session {session.name}, kept in {session.session_file.resolve().as_posix()}.",
-            f"Name paths from the project's root, {session.repo_path.as_posix()}, or absolute.",
+            f"Name paths from the project's root, {session.checkout.root.as_posix()}, or absolute.",
             f"The session's root is {session.work_root.as_posix()}.",
             *(["", "Where each listed practice writes:", *writes] if writes else []),
             "",
             "```json",
-            json.dumps(session.record.fields, indent=2),
+            json.dumps(session.record.fields.as_dict(), indent=2),
             "```",
         ])
 

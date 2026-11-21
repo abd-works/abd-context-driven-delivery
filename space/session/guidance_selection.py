@@ -157,9 +157,9 @@ class GuidanceSelection:
 
     def __init__(self, session: Session) -> None:
         self._session = session
-        saved = dict(session.record.fields.get(GUIDANCE_FIELD, {}))
-        self._version = int(saved.get("version", 0))
-        self._stages: list[str] | None = saved.get("stages")
+        saved = session.record.fields.guidance
+        self._version = saved.version
+        self._stages: list[str] | None = saved.stages
 
     @property
     @data_field
@@ -208,7 +208,3 @@ class GuidanceSelection:
     def _outputs(self) -> list[PracticeSessionOutput]:
         return list(self._session.own_practices.values())
 
-
-# Where session.json keeps the selection: the stages selected and the version. Practices are each practice's own
-# ``enabled``, and formats each fidelity's own chosen formats, so every other reader of those sees the same choice.
-GUIDANCE_FIELD = "guidance"

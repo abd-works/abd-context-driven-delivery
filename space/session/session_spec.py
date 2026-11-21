@@ -179,7 +179,7 @@ with description("a session"):
             session = Sessions(self.called).current()
             expect(session.name).to(equal("alpha"))
             expect(session.workpath).to(equal(self.work))
-            expect(session.repo_path).to(equal(self.repo.resolve()))
+            expect(session.checkout.root).to(equal(self.repo.resolve()))
             expect(session.record_folder).to(equal(self.repo.resolve() / ".sessions" / "alpha"))
 
         with it("should write --- 1 as the first line of a new session.log"):
@@ -246,7 +246,7 @@ with description("a session"):
             with it("should bind the existing session from the environment"):
                 session = Sessions(self.called).current()
                 expect(session.name).to(equal("alpha"))
-                expect(session.repo_path).to(equal(self.repo.resolve()))
+                expect(session.checkout.root).to(equal(self.repo.resolve()))
                 expect(session.record_folder).to(equal(self.repo.resolve() / ".sessions" / "alpha"))
 
             with it("should use the workpath stored on that session"):
@@ -307,7 +307,7 @@ with description("a session"):
                     self.session = Sessions(self.called).current()
                     self.session.mark_loop(ToolCall())
                     self.handoff = Path(self.session.write_handoff("Next steps"))
-                    self.session.record.save_fields(stage="Specification")
+                    self.session.record.extra("ticket").save(stage="Specification")
 
                 with it("should log into its work folder"):
                     expect((self.worktree / ".sessions" / "alpha" / "session.log").read_text(encoding="utf-8")).to(contain("--- 1"))
@@ -385,14 +385,14 @@ with description("a session"):
                     expect(self.session.work_root).to(equal(self.worktree.resolve() / "harness"))
 
                 with it("should take the ticket's worktree as its repository"):
-                    expect(self.session.repo_path).to(equal(self.worktree.resolve()))
+                    expect(self.session.checkout.root).to(equal(self.worktree.resolve()))
 
                 with context("that is saved"):
                     with before.each:
                         self.session.record.save()
 
                     with it("should keep its workpath from the repository's top"):
-                        expect(self.session.record.fields["workpath"]).to(equal("harness"))
+                        expect(self.session.record.fields.workpath).to(equal("harness"))
 
                     with it("should keep working in that folder in the ticket's worktree"):
                         expect(Sessions(self.repo).named("alpha").work_root).to(equal(self.worktree.resolve() / "harness"))
@@ -716,7 +716,7 @@ with description("a session"):
 
         with it("should read the repo path and the workpath from that session"):
             session = Sessions(self.repo).held.load(self.record_folder)
-            expect(session.repo_path).to(equal(self.repo.resolve()))
+            expect(session.checkout.root).to(equal(self.repo.resolve()))
             expect(session.workpath).to(equal(self.work.resolve()))
 
     # (S) Session --> Select Existing Session
@@ -733,7 +733,7 @@ with description("a session"):
             Sessions(self.work).switch("alpha", self.work)
             session = Sessions(self.called).current()
             expect(session.workpath).to(equal(self.work.resolve()))
-            expect(session.repo_path).to(equal(self.repo.resolve()))
+            expect(session.checkout.root).to(equal(self.repo.resolve()))
 
 
 # (E) Open Work Session

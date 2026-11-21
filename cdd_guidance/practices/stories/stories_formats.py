@@ -152,7 +152,7 @@ class StoriesFormats(PracticeFormats):
         paths and names its files from the folder those paths share."""
         session = self._practice.session
         if session is not None:
-            return session.repo_path
+            return session.checkout.root
         if not named or not all(path.is_absolute() for path in named):
             raise PracticeOutsideSession(
                 f"{type(self._practice).__name__} works in no session, so it has no project to read {[str(path) for path in named]} from"

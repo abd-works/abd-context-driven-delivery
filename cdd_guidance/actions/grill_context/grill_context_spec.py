@@ -33,7 +33,7 @@ def _import_format_adapters() -> None:
 
 def _session_at(folder: Path) -> Session:
     """A session that works in folder and keeps no log."""
-    session = Session(Sessions(folder))
+    session = Sessions(folder).named("main")
     session.workpath = Path(folder)
     return session
 

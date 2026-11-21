@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from functools import cached_property
 from pathlib import Path
+from enum import Enum
 from typing import TYPE_CHECKING, Callable, TypeVar
 
 from harness.agent_tools import agent_toolset
@@ -38,6 +39,7 @@ from space.session import Session
 from space.session.session import MAIN_SESSION_NAME
 from space.session.progress_cache import ACCEPTED_COUNT, HAS_OUTPUT, VIOLATION_COUNT
 from space.session.session_log import LogEntry
+from space.session.session_record import OwnedFields
 from space.session.file_manager import FileEntry
 
 if TYPE_CHECKING:
@@ -45,13 +47,22 @@ if TYPE_CHECKING:
 
 GRAPH_RULE_VIOLATION = "graph-rule"
 MOVED_INTO = "move"
-MARKED_DONE = "done"
-MARKED_IN_PROGRESS = "in-progress"
-# The session.json fields that record a ticket's stage and its mark there.
+
+
+class StageMark(Enum):
+    """The mark a person gives a ticket in a stage: done, or in progress. Its value is the word its session's log and
+    session.json keep."""
+
+    DONE = "done"
+    IN_PROGRESS = "in-progress"
+
+
+# The session.json fields the board keeps for a ticket: its stage and its mark there (``record.extra("ticket")``).
 _STAGE_FIELD = "stage"
 # What a ticket worked out about itself and keeps until it next writes something.
 Remembered = TypeVar("Remembered")
 _STAGE_MARK_FIELD = "stage_mark"
+_TICKET_FIELDS = "ticket"
 # The actions that check or convert a fidelity's output, so they wait until there is some.
 ONCE_THERE_IS_OUTPUT = (VALIDATE, RENDER)
 
@@ -92,6 +103,7 @@ class TicketCheckoutTools:
     do. Each asks the ticket's *TicketCheckout*."""
 
     checkout: TicketCheckout
+    session: Session
     forget_reads: Callable[[], None]
 
     @mcp
@@ -112,7 +124,7 @@ class TicketCheckoutTools:
     @agent_tool
     def assign_chat(self, chat: str = "") -> Ticket:
         """Make chat, the id of a connected chat, ticket's chat, kept in its session.json, so every command the board sends for ticket goes there and no chat named after it is looked for; an empty chat gives ticket back to the chat named after it."""
-        self.checkout.assign_chat(chat)
+        self.session.checkout.assign_chat(chat)
         self.forget_reads()
         return self
 
@@ -208,7 +220,7 @@ class TicketTreeTools:
     @noSessionLog
     def reassign_parent(self, parent: Ticket | None = None) -> Ticket:
         """Make parent ticket's parent, as dragging ticket onto it does, or none, so ticket is a ticket of its own (Alt-dragging it out of its parent); either way it is no longer pulled out. Committed on main and pushed."""
-        if parent is not None and not self.tree.can_be_child_of(parent):
+        if parent is not None and not self.session.hierarchy.can_take_parent(parent.session):
             raise ParentLoopError(self.name, parent.name)
         self.session.hierarchy.set_parent(parent.session if parent is not None else None)
         self.forget_reads()
@@ -522,7 +534,7 @@ class Ticket(TicketCheckoutTools, TicketChoices, TicketMoveTools, TicketTreeTool
             return all(child.is_done for child in children_here)
         marked = self.marks.latest_in(column)
         if marked is not None:
-            return marked == MARKED_DONE
+            return marked is StageMark.DONE
         return all(progress.is_done for progress in self.work.enabled if progress.stage is column)
 
     @property
@@ -658,7 +670,7 @@ class TicketMoves:
         place = self.next_place
         if place is None:
             return ticket if ticket.is_main else ticket.close([])
-        return ticket.marks.mark(MARKED_DONE, column) if place.is_done else ticket.marks.enter(place.stage)
+        return ticket.marks.mark(StageMark.DONE, column) if place.is_done else ticket.marks.enter(place.stage)
 
     @property
     def next_place(self) -> StagePlace | None:
@@ -682,11 +694,11 @@ class TicketMoves:
         if not isinstance(column, Stage):
             reopened, final = ticket.board.placement.ticket_of(ticket.session.folder.reopen()), ticket.board.stages[-1]
             reopened.marks.enter(final)
-            return reopened.marks.mark(MARKED_DONE, final)
+            return reopened.marks.mark(StageMark.DONE, final)
         place = self.previous_place
         if place is None:
             return ticket if ticket.is_main else ticket.to_backlog()
-        return ticket.marks.place(place.stage, MARKED_DONE) if place.is_done else ticket.marks.mark(MARKED_IN_PROGRESS, column)
+        return ticket.marks.place(place.stage, StageMark.DONE) if place.is_done else ticket.marks.mark(StageMark.IN_PROGRESS, column)
 
     @property
     def previous_place(self) -> StagePlace | None:
@@ -710,7 +722,7 @@ class TicketMoves:
             return ticket.to_backlog()
         target = ticket.board.stage(stage)
         moved = ticket if isinstance(ticket.column, Stage) else ticket.board.placement.ticket_of(ticket.session.folder.reopen())
-        return moved.marks.place(target, MARKED_DONE if done else MARKED_IN_PROGRESS)
+        return moved.marks.place(target, StageMark.DONE if done else StageMark.IN_PROGRESS)
 
 
 class TicketWork:
@@ -813,12 +825,17 @@ class TicketWork:
 
 class StageMarks:
     """*StageMarks* are the moves and marks a person made on one ticket's stages: the stage it was last moved into, and
-    in that stage whether it was last marked done or in progress. They are the ticket's record, kept in its session.json
-    (``stage``, ``stage_mark``), so the stage never depends on which log lines a branch has. Each move or mark is also a
-    log line, the history agentic improvement reads; a ticket moved before the record existed is read from its log."""
+    in that stage whether it was last marked done or in progress. They are the board's own fields in the ticket's
+    session.json (``stage``, ``stage_mark``, through ``record.extra("ticket")``), so the stage never depends on which
+    log lines a branch has. Each move or mark is also a log line, the history agentic improvement reads; a ticket moved
+    before the record existed is read from its log."""
 
     def __init__(self, ticket: Ticket) -> None:
         self._ticket = ticket
+
+    @property
+    def _fields(self) -> OwnedFields:
+        return self._ticket.session.record.extra(_TICKET_FIELDS)
 
     @property
     def moved_into(self) -> Stage | None:
@@ -829,41 +846,42 @@ class StageMarks:
             name = moved.stage if moved is not None else ""
         return next((stage for stage in self._ticket.board.stages if stage.name == name), None)
 
-    def latest_in(self, stage: Stage) -> str | None:
+    def latest_in(self, stage: Stage) -> StageMark | None:
         """The latest mark a person made in stage since entering it; none when they have made none."""
         if self._recorded_stage is not None:
-            mark = str(self._ticket.session.record.fields.get(_STAGE_MARK_FIELD, "") or "")
-            return mark if self._recorded_stage == stage.name and mark else None
-        latest = self._ticket.session.log.latest(MOVED_INTO, MARKED_DONE, MARKED_IN_PROGRESS, stage=stage.name)
-        return latest.verb if latest is not None and latest.verb != MOVED_INTO else None
+            mark = str(self._fields.get(_STAGE_MARK_FIELD) or "")
+            return StageMark(mark) if self._recorded_stage == stage.name and mark else None
+        latest = self._ticket.session.log.latest(MOVED_INTO, *(mark.value for mark in StageMark), stage=stage.name)
+        return StageMark(latest.verb) if latest is not None and latest.verb != MOVED_INTO else None
 
     @property
     def _recorded_stage(self) -> str | None:
         """The stage session.json records; none for a ticket whose moves are only in its log."""
-        recorded = self._ticket.session.record.fields.get(_STAGE_FIELD)
+        recorded = self._fields.get(_STAGE_FIELD)
         return str(recorded) if recorded else None
 
     def enter(self, stage: Stage) -> Ticket:
         """Move the ticket into stage's In progress."""
-        return self.mark(MOVED_INTO, stage)
+        self._write(None, stage)
+        return self._ticket
 
-    def mark(self, mark: str, stage: Stage) -> Ticket:
-        """Mark the ticket done or in progress in stage, or move it into stage, keeping the result in session.json, which
-        is committed on main and pushed."""
+    def mark(self, mark: StageMark, stage: Stage) -> Ticket:
+        """Mark the ticket done or in progress in stage, keeping the result in session.json, which is committed on main
+        and pushed."""
         self._write(mark, stage)
         return self._ticket
 
-    def place(self, stage: Stage, mark: str) -> Ticket:
+    def place(self, stage: Stage, mark: StageMark) -> Ticket:
         """Put the ticket in stage, entering it first unless it is there, then mark it there: one commit on main, pushed,
         for both."""
         if self._ticket.column is not stage:
-            self._write(MOVED_INTO, stage)
+            self._write(None, stage)
         return self.mark(mark, stage)
 
-    def _write(self, mark: str, stage: Stage) -> None:
-        self._ticket.session.record.save_fields(**{_STAGE_FIELD: stage.name, _STAGE_MARK_FIELD: "" if mark == MOVED_INTO else mark})
-        self._ticket.work.record(f"{mark} {stage.name}")
-
+    def _write(self, mark: StageMark | None, stage: Stage) -> None:
+        """Keep the ticket in stage with mark, none when it was only moved there, and log the move or the mark."""
+        self._fields.save(**{_STAGE_FIELD: stage.name, _STAGE_MARK_FIELD: mark.value if mark is not None else ""})
+        self._ticket.work.record(f"{mark.value if mark is not None else MOVED_INTO} {stage.name}")
 
 
 class NoReportToAcceptInError(LookupError):

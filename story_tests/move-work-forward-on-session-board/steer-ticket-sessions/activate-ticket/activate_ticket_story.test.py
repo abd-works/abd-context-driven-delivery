@@ -60,7 +60,7 @@ with story("Activate Ticket"):
         with but_("checkout-flow's session records no branch or worktree"):
             pass
         with when("the Person activates checkout-flow"):
-            # TicketCheckout -> Repo.branches, Worktrees.of(branch) -> SessionRecord.save_fields(branch, worktree)
+            # TicketCheckout -> Repo.branches, Worktrees.of(branch) -> SessionCheckout.record_opened(branch, worktree)
             pass
         with then("checkout-flow opens in that worktree, creating nothing"):
             pass

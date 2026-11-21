@@ -115,7 +115,7 @@ class OpenedStoryMap:
     @functools.cached_property
     def _acceptance_tests(self) -> dict[str, list[str]]:
         """The session's story tests with the stories each holds, read once for the map."""
-        return self._stories.story_tests(self._session.repo_path)
+        return self._stories.story_tests(self._session.checkout.root)
 
     def _write(self, format: Format, path: Path) -> Path:
         path.write_text(self._rendered(format, path), encoding="utf-8")

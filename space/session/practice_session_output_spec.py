@@ -79,7 +79,7 @@ with description("a fidelity's root in a session") as self:
                 self.tests.choose_root("")
             except OutputRootRefused:
                 pass
-            expect("acceptance_tests" in self.refund.session.practice("stories").chosen_outputs).to(equal(False))
+            expect(self.refund.session.practice("stories").fields.fidelity("acceptance_tests").roots).to(equal([]))
 
     with context("that has one root, with a file added beside it"):
         with before.each:

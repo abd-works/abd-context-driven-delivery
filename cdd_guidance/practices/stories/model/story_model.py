@@ -1343,7 +1343,7 @@ class StoryModel(StoryNode):
         files = session.session_files.file_manager
         files.read(os.path.relpath(path, files.workpath))
         stories = session.graph.practices.of(cls.practice_class)
-        model = stories.open_file(path, session.repo_path)
+        model = stories.open_file(path, session.checkout.root)
         model.opened = OpenedStoryMap(model, path, session)
         return model
 
