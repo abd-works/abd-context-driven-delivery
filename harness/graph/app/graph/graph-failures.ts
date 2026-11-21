@@ -1,3 +1,4 @@
+import { reasonOf } from '@cdd/cdd-page-failures';
 import type { CddApi } from '@cdd/cdd-shared';
 import { ChatClientGenerated } from '@cdd/harness/chat/chat';
 
@@ -5,8 +6,6 @@ import { ChatClientGenerated } from '@cdd/harness/chat/chat';
 export const TOAST_MILLISECONDS = 8_000;
 // The query the chat bar puts in every app link it opens: the chat that opened the page.
 const CHAT_QUERY = 'chat';
-
-export const reasonOf = (failure: unknown): string => (failure instanceof Error ? failure.message : String(failure));
 
 // The chat that opened the page, as its link names it; none for a page no chat opened.
 export function chatOfPage(): string {

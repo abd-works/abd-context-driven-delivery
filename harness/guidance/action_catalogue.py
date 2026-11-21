@@ -59,9 +59,9 @@ class Action:
         """The toolset's own folder, which holds its guide and module context."""
         return class_folder(self._toolset_class)
 
-    def run_on(self, fidelity: WorkedFidelity, **arguments: Any) -> Any:
+    def _run_on(self, fidelity: WorkedFidelity, **arguments: Any) -> Any:
         """Run this action on fidelity with arguments, through the runner its catalogue holds."""
-        return self._catalogue.runner.run(self, fidelity, arguments)
+        return self._catalogue._registered_runner.run(self, fidelity, arguments)
 
     def __repr__(self) -> str:
         return f"Action({self._name!r}, {self._toolset_class.__name__})"
@@ -86,14 +86,14 @@ class FidelityAction:
         return self.action.name
 
     def __call__(self, **arguments: Any) -> Any:
-        return self.action.run_on(self.fidelity, **arguments)
+        return self.action._run_on(self.fidelity, **arguments)
 
 
 class FidelityActions:
     """The actions of catalogue that work on one fidelity, each held for it and made once, by the action's name."""
 
     def __init__(self, fidelity: WorkedFidelity, catalogue: ActionCatalogue) -> None:
-        self._held = {action.name: FidelityAction(action, fidelity) for action in catalogue.fidelity_actions}
+        self._held = {action.name: FidelityAction(action, fidelity) for action in catalogue._fidelity_actions}
 
     def __getattr__(self, name: str) -> FidelityAction:
         held = self.__dict__.get("_held", {})
@@ -131,14 +131,14 @@ class ActionCatalogue:
         self._runner = runner
 
     @property
-    def runner(self) -> ActionRunner:
+    def _registered_runner(self) -> ActionRunner:
         """The runner the module that defines how actions run registered when it was imported."""
         if self._runner is None:
             raise ActionsNotRegistered()
         return self._runner
 
     @property
-    def fidelity_actions(self) -> tuple[Action, ...]:
+    def _fidelity_actions(self) -> tuple[Action, ...]:
         """The actions that work on a fidelity, in catalogue order; none while no runner is registered."""
         runner = self._runner
         return tuple(action for action in self.actions if runner is not None and runner.works_on_fidelities(action))
@@ -164,13 +164,6 @@ class ActionCatalogue:
     @property
     def names(self) -> tuple[str, ...]:
         return tuple(action.name for action in self.actions)
-
-    def has(self, name: str) -> bool:
-        return name in self.names
-
-    def action(self, name: str) -> Action | None:
-        """The action called name, such as repair; none when no toolset installs it."""
-        return next((action for action in self.actions if action.name == name), None)
 
 
 # The actions are classes' operations, and a class is defined once per process, so the catalogue of them is one per

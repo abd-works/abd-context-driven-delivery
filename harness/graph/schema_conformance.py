@@ -61,7 +61,7 @@ class RequiredRelationship:
         (``when``) holds a ``Step`` only when the step is of that phase."""
         phase, general = self.owner.phase, self.owner.node_type
         nodes = [node for node_type in self.owner.node_types for node in context.nodes(node_type)]
-        return [node for node in nodes if not phase or node.type != general or getattr(node, "phase", "") == phase]
+        return [node for node in nodes if not phase or node.type != general or node.get_fact("phase", "") == phase]
 
     def gap_on(self, node: Node, context: RuleCheckContext) -> str:
         """What node lacks of this relationship: none when an edge of the field leads from it to a node of a target type,

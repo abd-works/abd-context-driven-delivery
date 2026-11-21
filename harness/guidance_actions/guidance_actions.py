@@ -44,6 +44,12 @@ ListedGuidance = Guidance | AgentToolSet
 WorkedGuidance = ListedGuidance | str
 
 
+class _SessionRecord(Protocol):
+    """A session's record, the session.json it keeps, as an action reads it."""
+
+    fields: Mapping[str, Any]
+
+
 class ActionSession(Protocol):
     """The session an action works in, as space/session's *Session* answers it: the framework never imports its class,
     so this names what an action asks of it."""
@@ -51,7 +57,8 @@ class ActionSession(Protocol):
     name: str
     practices: Mapping[str, Any]
     overlays: Sequence[str]
-    fields: Mapping[str, Any]
+    stories: Sequence[str]
+    record: _SessionRecord
     log: Any
     graph: Any
     work_root: Path
@@ -84,10 +91,6 @@ _SESSION_WORD = "session="
 _OVERLAYS_WORD = "overlays="
 # What an action works on before it names any guidance; None cannot stand for it, since naming None keeps what it had.
 _NOTHING_WORKED_ON = object()
-PATHS_NOTE = (
-    "paths: a file, a list of files, or a folder. Pass paths on an MCP call. "
-    "This action reads them locally. Leave the document body out of the call."
-)
 
 
 @dataclass(frozen=True)
@@ -372,13 +375,13 @@ class WorkList:
         overlays the command names are chosen on the session first, so the action runs with them."""
         if command.overlays is not None and self._session is not None:
             self._session.choose_overlays(list(command.overlays))
-        argument = GuidanceArgument(command, self.practice_set, self.session_name)
+        argument = GuidanceArgument(command, self.practice_set, self._session_name)
         self.worked_on = command.written
         self._listed = None
         self.text = argument.text
         self._items = argument.items if self.text is None else []
 
-    def take_listed(self, worked_on: str | list[ListedGuidance]) -> None:
+    def _take_listed(self, worked_on: str | list[ListedGuidance]) -> None:
         """Work on what another action already took: its text, or the Guidance it listed, as the same objects. A
         fidelity ``each`` handed it is its practice, worked at that fidelity."""
         self.worked_on = worked_on
@@ -420,10 +423,10 @@ class WorkList:
         return listed
 
     @property
-    def session_name(self) -> str:
+    def _session_name(self) -> str:
         """The name of the session whose practices the list works with; empty when it works with every practice."""
         if self._outer is not None:
-            return self._outer.session_name
+            return self._outer._session_name
         return getattr(self._session, "name", "") if self._session is not None else ""
 
     def practice_set(self) -> PracticeSet:
@@ -804,7 +807,7 @@ class GuidanceAction:
         its recipe without the agent doing its work."""
         inner = action_type(session=self._session, call=self.call)
         inner.work = WorkList(self._session, outer=self.work)
-        inner.work.take_listed(guidance if guidance is not None else self.work.text if self.work.text is not None else self.listed())
+        inner.work._take_listed(guidance if guidance is not None else self.work.text if self.work.text is not None else self.listed())
         return inner
 
     def _tool_inside(self, action_type: type[GuidanceAction]) -> GuidanceAction:

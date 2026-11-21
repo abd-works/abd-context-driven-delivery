@@ -29,7 +29,7 @@ Display = str
 
 # Where each edge kind's group sits under a node in the explorer tree, lowest first. A practice orders its groups
 # by these numbers, and graph.json saves them on each edge, so every loader and model reads them through EdgeType.
-EDGE_ORDER: dict[str, int] = {
+_EDGE_ORDER: dict[str, int] = {
     "decomposedInto": 1,
     "relative": 1,
     "root": 1,
@@ -93,9 +93,9 @@ class EdgeType:
 
     @classmethod
     def from_kind(cls, kind: str, display: Display = "direct") -> EdgeType:
-        """The edge type of kind, at the place ``EDGE_ORDER`` gives it, or after its display's other kinds."""
+        """The edge type of kind, at the place ``_EDGE_ORDER`` gives it, or after its display's other kinds."""
         default = _DIRECT_KIND_ORDER if display == "direct" else _RELATIONSHIP_KIND_ORDER
-        return cls(kind, EDGE_ORDER.get(kind, default), display)
+        return cls(kind, _EDGE_ORDER.get(kind, default), display)
 
 
 class Edge(Generic[End]):

@@ -103,7 +103,7 @@ class RenderRequest:
         """The Clean Engineering fidelity that accompanies the fidelity this render works at; none when it has none."""
         return self.fidelity.clean_engineering if self.fidelity is not None else None
 
-    def keeping_sketch_wording(self) -> RenderRequest:
+    def _keeping_sketch_wording(self) -> RenderRequest:
         """This request, keeping a sketch's own wording when it renders a sketch to a document format: the sketch is the
         file as it is now. Code is never read from a sketch, so a render to code keeps the request as it is."""
         content = self.content
@@ -209,7 +209,7 @@ class PracticeFormats:
             return self._companion_render(request, source)
         model = self._object_model(request.content, source)
         target = self.adapter(request.format)
-        return {"format": request.format, "content": self._call_render(target, self.model_for(target, model), request.keeping_sketch_wording())}
+        return {"format": request.format, "content": self._call_render(target, self.model_for(target, model), request._keeping_sketch_wording())}
 
     def parse(self, format: Format, content: TextOrData) -> ObjectModel:
         """The model format's adapter reads from content. A model that says it holds only classes, such as a DDD map

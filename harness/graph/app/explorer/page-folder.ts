@@ -1,4 +1,5 @@
-import { useState, type Dispatch, type SetStateAction } from 'react';
+import { useState } from 'react';
+import type { Held } from './held';
 import { api } from '../graph/graph-page';
 
 const LAST_FOLDER = 'cdd-graph-folder';
@@ -8,7 +9,7 @@ const FOLDER_QUERY = 'folder';
 // names the session's workpath) starts on that folder; one opened on a project (?project=, from a ticket's graph widget)
 // on the project; a page opened with neither on the folder a person last chose.
 export class PageFolder {
-  constructor(private readonly held: [string, Dispatch<SetStateAction<string>>]) {}
+  constructor(private readonly held: Held<string>) {}
 
   get value(): string {
     return this.held[0];

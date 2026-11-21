@@ -16,7 +16,7 @@ from harness.guidance.practice_reading import PracticeReading
 from harness.guidance.rule import Rule, RulesCollection
 from harness.guidance.schema import Schema
 from harness.guidance.stages import STAGES, ApproachStage
-from harness.guidance.worked_session import FidelityOutput, NamedPaths, PracticeOutput
+from harness.guidance.worked_session import FidelityOutput, NamedPaths, PracticeOutput, WorkedSession
 from harness.guidance.working_set import COMPANION_PRACTICE, WorkingSet
 from harness.agent_tools.agent_tools import (
     collect,
@@ -41,6 +41,7 @@ from harness.markdown import (
 from harness.markdown.format import Format
 
 if TYPE_CHECKING:
+    from harness.guidance.practice_supplement import PracticeSupplement
     from harness.hooks.hook_server import HookPayload
 
 
@@ -86,7 +87,7 @@ class Guidance:
     def rules(self) -> RulesCollection:
         """Shared rules as a collection."""
 
-    session: Any = None
+    session: WorkedSession | None = None
     """The Session this guidance works in, which its work_in gives it; none until a session works on it."""
 
     def __init__(self, format: str | None = None) -> None:
@@ -466,13 +467,13 @@ class PracticeGuidance(Guidance):
         if scoped:
             instructions(scoped)
         if examples:
-            instructions(f"{self.EXAMPLES_PREAMBLE}\n\n{examples}")
+            instructions(f"{self._EXAMPLES_PREAMBLE}\n\n{examples}")
         if templates:
             instructions(templates)
         # The practice's own Guidance section, then its current fidelity's guidance and companion text, which that
         # fidelity answers.
         current = self.fidelities.current
-        parts = [self.section_text("guidance").strip(), *(current.guidance_parts() if current is not None else ())]
+        parts = [self.section_text("guidance").strip(), *(current._guidance_parts() if current is not None else ())]
         return "\n\n".join(part for part in parts if part)
 
     @property
@@ -498,7 +499,7 @@ class PracticeGuidance(Guidance):
 
     # What the examples the guidance shows are for, set above them: an agent shown one example copies its structure
     # into every artifact unless it is told the structure belongs to the example's own domain.
-    EXAMPLES_PREAMBLE = (
+    _EXAMPLES_PREAMBLE = (
         "## Examples\n\n"
         "These examples show notation, naming, depth, and tone. Their structure, such as how many epics, modules, or "
         "screens they have and how those nest, belongs to their own domain: take the structure of what you write from "
@@ -525,7 +526,7 @@ class PracticeGuidance(Guidance):
         current = self.fidelities.current
         current_name = current.name if current is not None else None
         shown = [fidelity for fidelity in self.fidelities if self.shows_every_fidelity or current_name in (None, fidelity.name)]
-        parts.extend(fidelity.titled_section for fidelity in shown)
+        parts.extend(fidelity._titled_section for fidelity in shown)
         return "\n\n".join(part for part in parts if part.strip())
 
 
@@ -775,7 +776,7 @@ class FidelityGuidance(Guidance):
         return practice.document.fidelity_block(self.name) if practice is not None else ""
 
     @property
-    def titled_section(self) -> str:
+    def _titled_section(self) -> str:
         """Its block under its own ``### {name}`` heading, as a practice's scoped markdown shows it; empty when the
         practice document has no block for it."""
         body = self.section
@@ -797,7 +798,7 @@ class FidelityGuidance(Guidance):
         return list({id(collection): collection for collection in collections if collection is not None}.values())
 
     @property
-    def supplements(self) -> list[Any]:
+    def supplements(self) -> list[PracticeSupplement]:
         """The supplements of its practice that supplement this fidelity, such as TDD for BDD development."""
         practice = self.practice_guidance
         held = practice.working_set.supplements if practice is not None else ()
@@ -859,7 +860,7 @@ class FidelityGuidance(Guidance):
             return str(path)
         return str(path.parent) if path.parent.is_dir() else ""
 
-    def guidance_parts(self) -> list[str]:
+    def _guidance_parts(self) -> list[str]:
         """Its own guidance, then its Clean Engineering companion's instructions: what a practice working at this
         fidelity adds to its own guidance."""
         return [self.section_text("guidance").strip(), self.companion_instructions.strip()]

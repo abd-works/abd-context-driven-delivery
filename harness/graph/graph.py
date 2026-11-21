@@ -24,7 +24,7 @@ from harness.graph.graph_reads import FilesRead, GraphReads, WorkingCopyRead
 from harness.graph.graph_rules_collection import GraphRulesCollection
 from harness.graph.load_scope import LoadScope
 from harness.graph.location import Location
-from harness.graph.pattern_overlays import GraphOverlay, PatternOverlays
+from harness.graph.pattern_overlays import GraphChecks, GraphOverlay, PatternOverlays
 from harness.graph.rule_context import RuleCheckContext
 from harness.graph.schema_edges import SchemaEdges
 from harness.graph.schema_rules import PracticeSchema
@@ -44,36 +44,13 @@ class GraphFailure(Exception):
 class Call:
     """A call found in source. operation is the callee text Monaco marks."""
 
-    def __init__(self, line: int, order: int, operation: str) -> None:
+    def __init__(self, line: int, operation: str) -> None:
         self.line = line
-        self.order = order
         self.operation = operation
 
 
 # The files a slice reads as markdown sections rather than code: a story map's and a scenario file's text.
 MARKDOWN_SUFFIXES = frozenset({".md", ".markdown"})
-
-
-def _under_any(file: str, folders: set[str]) -> bool:
-    """Whether file, a path from a practice's source root, lies under one of folders, given from the same root."""
-    return any(folder == "." or file.startswith(f"{folder}/") for folder in folders)
-
-
-def _decorated_end(lines: list[str], after: int) -> int:
-    """The last line of the function or class a Python decorator ending on line after (counted from 1) decorates: the
-    last line indented under its def. After decorators stacked below, or no def at all, the decorator's own line."""
-    found = next((index for index in range(after, len(lines)) if not lines[index].lstrip().startswith("@")), None)
-    if found is None or not re.match(r"\s*(async\s+)?(def|class)\b", lines[found]):
-        return after
-    indent = len(lines[found]) - len(lines[found].lstrip())
-    end = found
-    for index in range(found + 1, len(lines)):
-        if not lines[index].strip():
-            continue
-        if len(lines[index]) - len(lines[index].lstrip()) <= indent:
-            break
-        end = index
-    return end + 1
 
 
 class _BracketDepth:
@@ -155,20 +132,16 @@ class Source:
     def text(self) -> str:
         if self._text is None:
             raw = self._read()
-            self.load_calls(raw)
-            self._text = self.insert_calls(raw)
+            self._load_calls(raw)
+            self._text = self._insert_calls(raw)
         return self._text
 
-    @property
-    def contents(self) -> str:
-        return self.text
-
-    def load_calls(self, raw: str) -> None:
+    def _load_calls(self, raw: str) -> None:
         self.calls = []
         for index, line in enumerate(raw.splitlines()):
             self._calls_on_line(line, index + 1)
 
-    def insert_calls(self, raw: str) -> str:
+    def _insert_calls(self, raw: str) -> str:
         lines = raw.splitlines()
         for call in self.calls:
             index = call.line - 1
@@ -295,8 +268,24 @@ class Source:
         for index in range(start, len(lines)):
             depth.read(lines[index])
             if depth.opened_call and depth.closed:
-                return _decorated_end(lines, index + 1) if lines[start].lstrip().startswith("@") else index + 1
+                return self._decorated_end(lines, index + 1) if lines[start].lstrip().startswith("@") else index + 1
         return max(self.end_line, start + 1)
+
+    def _decorated_end(self, lines: list[str], after: int) -> int:
+        """The last line of the function or class a Python decorator ending on line after (counted from 1) decorates: the
+        last line indented under its def. After decorators stacked below, or no def at all, the decorator's own line."""
+        found = next((index for index in range(after, len(lines)) if not lines[index].lstrip().startswith("@")), None)
+        if found is None or not re.match(r"\s*(async\s+)?(def|class)\b", lines[found]):
+            return after
+        indent = len(lines[found]) - len(lines[found].lstrip())
+        end = found
+        for index in range(found + 1, len(lines)):
+            if not lines[index].strip():
+                continue
+            if len(lines[index]) - len(lines[index].lstrip()) <= indent:
+                break
+            end = index
+        return end + 1
 
     def _read(self) -> str:
         lines = self._file_lines()
@@ -307,15 +296,13 @@ class Source:
         return "\n".join(lines[max(0, self.start_line - 1) : self.end_line])
 
     def _calls_on_line(self, line: str, line_number: int) -> None:
-        order = 0
         for found in re.finditer(r"\b([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)?)\s*\(", line):
             name = found.group(1)
             receiver = name.split(".", 1)[0] if "." in name else ""
             method = name.rsplit(".", 1)[-1]
             if method in self._SKIP or receiver in self._SKIP_RECEIVER or self._declares(line, found.start()):
                 continue
-            order += 1
-            self.calls.append(Call(line_number, order, name))
+            self.calls.append(Call(line_number, name))
 
     def _declares(self, line: str, start: int) -> bool:
         return re.search(r"(?:async|function|def|public|private|protected|static|get|set)\s+$", line[:start]) is not None
@@ -676,7 +663,7 @@ class Node:
         return self.practice.reading.graph
 
     @property
-    def schema(self):
+    def schema(self) -> PracticeSchema:
         """This node's practice's schema, with its graph's pattern overlays applied."""
         return self.practice.reading.in_graph.rule_run.schema
 
@@ -718,11 +705,6 @@ class Node:
     @property
     def failed_rules(self) -> list[str]:
         return self.rules.failed_slugs
-
-    @property
-    def passing_rules(self) -> list[str]:
-        """Rules that apply to this node and did not fail."""
-        return self.rules.passing_slugs
 
     def place(self, location: Location) -> None:
         """Put this node at the lines location names, in its file under its practice's source root. A node its
@@ -888,7 +870,7 @@ class Inventory:
     @property
     @data_field
     def practices(self) -> dict[str, PracticeInventory]:
-        return {key: PracticeInventory(self._graph, practice) for key, practice in self._graph.practices.opened.items()}
+        return {key: PracticeInventory(practice) for key, practice in self._graph.practices.opened.items()}
 
     @property
     @data_field
@@ -1066,7 +1048,11 @@ class _HeldNodes:
     def sort(self) -> None:
         """Hold the nodes of each type in the order their files and lines give them."""
         for kind, group in self._by_type.items():
-            self._by_type[kind] = sorted(group, key=_where_it_sits)
+            self._by_type[kind] = sorted(group, key=self._where_it_sits)
+
+    def _where_it_sits(self, node: Node) -> tuple:
+        """Where node sits: its file, its lines, then its id, which tells apart two nodes on one line."""
+        return (node.source.file or "", node.source.start_line, node.source.end_line, node.node_id)
 
     def clear(self) -> None:
         self._changed()
@@ -1242,8 +1228,12 @@ class PracticeLoading:
         return self.forget({
             id(node)
             for node in self._held.of_type(None)
-            if node.source.file in read_from or (root is not None and _under_any(node.source.file or "", read_from) and not (root / node.source.file).is_file())
+            if node.source.file in read_from or (root is not None and self._under_any(node.source.file or "", read_from) and not (root / node.source.file).is_file())
         })
+
+    def _under_any(self, file: str, folders: set[str]) -> bool:
+        """Whether file, a path from the practice's source root, lies under one of folders, given from the same root."""
+        return any(folder == "." or file.startswith(f"{folder}/") for folder in folders)
 
     def forget(self, dropped: set[int]) -> set[int]:
         """Drop the nodes whose ``id`` is in dropped; answer dropped."""
@@ -1307,7 +1297,7 @@ class PracticeRuleRun:
         return schema
 
     @property
-    def checks(self) -> dict:
+    def checks(self) -> GraphChecks:
         """The graph rules the practice checks in this graph, by slug: its own and those the graph's pattern overlays
         add to it."""
         return self._part.graph.applied_patterns.checks_of(self._part.practice)
@@ -1373,7 +1363,7 @@ class PracticeRuleRun:
                 if not rule.runs or rule.slug in skipped:
                     continue
                 for message in rule.check(context):
-                    node.rules.record_violation(rule.slug, message)
+                    rule.record(message)
 
     def _inside(self, node: Node, spans: dict[str, list[tuple[int, int]]]) -> bool:
         """Whether node's lines overlap one of the class spans of its file."""
@@ -1504,11 +1494,6 @@ class GraphEdges:
         return self._graph.practices.part_of(child.practice).edge_index.direct_parent(child)
 
 
-def _where_it_sits(node: Node) -> tuple:
-    """Where node sits: its file, its lines, then its id, which tells apart two nodes on one line."""
-    return (node.source.file or "", node.source.start_line, node.source.end_line, node.node_id)
-
-
 @language_adapter(language="typescript")
 @agent_toolset
 class Graph:
@@ -1587,7 +1572,7 @@ class Graph:
         """Hold every practice saved keeps, with the overlays it was saved with: each practice's nodes first, then the
         edges between them, which may cross practices, and the violations on them."""
         self.overlays = list(saved.overlays)
-        self.practices.hold(saved, self.scope.folder)
+        self.practices.hold(saved)
 
     ## loading and refreshing: each is one of the graph's reads (``reads``)
 

@@ -10,6 +10,7 @@ from harness.markdown.format import Format
 
 if TYPE_CHECKING:
     from harness.guidance.guidance import FidelityGuidance
+    from harness.guidance.worked_session import SessionFile
 
 
 _DECLARED_PART = re.compile(r"(\{[^{}/]+\}/?|\*\*/|\*)")
@@ -60,7 +61,7 @@ class DeclaredFile:
             return ""
         return re.sub(r"\{([^{}/]+)\}", lambda token: parts[self._group(token.group(1))], self._declared)
 
-    def is_written_in(self, format: Format) -> bool:
+    def _is_written_in(self, format: Format) -> bool:
         """Whether the declared path ends with format's extension, such as ``.drawio``: an output named for what it
         holds, such as the thin slice, declares one file for each format it is written in."""
         return bool(format.extension) and self._declared.endswith(format.extension)
@@ -173,7 +174,7 @@ class DeclaredOutputs:
             parts.update(declared.parts_of(source))
         labels = list(dict.fromkeys(label for label, _ in holding))
         written = Format(format)
-        candidates = [declared for label in labels for declared in self._files[label] if declared.is_written_in(written)]
+        candidates = [declared for label in labels for declared in self._files[label] if declared._is_written_in(written)]
         if all(Format(label).is_offered for label in labels):
             candidates += self._files.get(format, [])
         named = (declared.named_with(parts) for declared in candidates)
@@ -185,7 +186,7 @@ class DeclaredOutputs:
         session_output = self._fidelity.session_output
         return session_output.written.output_paths() if session_output is not None else {}
 
-    def files(self) -> dict[str, list]:
+    def files(self) -> dict[str, list[SessionFile]]:
         """The files the fidelity declares, by format, in the session its practice works in, each with its path from the
         project and whether it exists; none when its practice works in no session."""
         session_output = self._fidelity.session_output
@@ -197,13 +198,13 @@ class DeclaredOutputs:
         session_output = self._fidelity.session_output
         return session_output is not None and session_output.written.has_output()
 
-    def files_to_review(self) -> dict[str, list]:
+    def files_to_review(self) -> dict[str, list[SessionFile]]:
         """The files a person reviews for the fidelity, by format: its own, or those of the fidelities of its practice it
         reviews files of, in the order it names them, each file once."""
         practice = self._fidelity.practice_guidance
         if not self._fidelity.reviews_files_of or practice is None:
             return self.files()
-        reviewed: dict[str, list] = {}
+        reviewed: dict[str, list[SessionFile]] = {}
         for name in self._fidelity.reviews_files_of:
             fidelity = practice.fidelities.entries.get(name)
             for label, entries in (fidelity.declared.files() if fidelity is not None else {}).items():

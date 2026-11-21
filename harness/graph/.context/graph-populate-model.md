@@ -2,7 +2,7 @@
 
 `Graph` reads a working copy into the practices it holds: the `PracticeGuidance` objects it is given, which a session gives from its own practices and a graph no session holds makes with `PRACTICE_CATALOGUE.create_all`. Each practice holds the graph (`practice.graph`), and the graph keeps every practice's nodes and edges itself, indexed by the practice. The graph names no practice: each practice's `PracticeGuidance` class says what the graph reads from it, and each pattern is a *PracticeGuidance* that makes its `GraphOverlay` once and keeps it as `graph_overlay`; the graph holds one *PatternOverlays* (`graph.applied_patterns`), which makes each pattern its overlays name once, when its overlays are set, so the practices depend on the graph and never the other way round.
 
-A practice reader parses its files with the practice's own model and adds each parsed object (a class, an operation, a story, a spec's observation) to its practice in the graph as the node itself (`practice.reading.in_graph.add(node, ...)`), so a rule reads its measurements from the same object the explorer shows. A node with no parsed object behind it, such as a story's example or a LERN tier file, is a plain `Node` made with `practice.reading.in_graph.add_named`. Edges are recorded through the graph's *GraphEdges* (`graph.edges.link`, `.relate`, `.group`), on the parent's practice; an edge's place under its parent in the explorer tree comes from `EDGE_ORDER`.
+A practice reader parses its files with the practice's own model and adds each parsed object (a class, an operation, a story, a spec's observation) to its practice in the graph as the node itself (`practice.reading.in_graph.add(node, ...)`), so a rule reads its measurements from the same object the explorer shows. A node with no parsed object behind it, such as a story's example or a LERN tier file, is a plain `Node` made with `practice.reading.in_graph.add_named`. Edges are recorded through the graph's *GraphEdges* (`graph.edges.link`, `.relate`, `.group`), on the parent's practice; an edge's place under its parent in the explorer tree comes from `_EDGE_ORDER`.
 
 A load runs in this order (`GraphBuild._read_working_copy` in `graph_build.py`): each practice's reading part `read`s, in the order its `reads_after` needs, and links its nodes to the nodes of the practices it read after; then each applied overlay `read`s; then each practice's `reading.in_graph.rule_run.check()` runs its checks and records each finding as a `Violation` on its node; then each practice `rebuild_tree`s. `save_json` writes the result to `{folder}/.context/graph.json`, and a later `load_working_copy` reads that file back instead of parsing when it is still current.
 
@@ -110,7 +110,7 @@ a refresh, and a write alone, since calls in one session can arrive at once.
 ----
 + named(key), of(kind), loaded(kind), part_of(practice)
 	// of opens the practice of that class; loaded answers it only when open; part_of refuses a practice another graph holds
-+ choose(roots), roots_by_key, open_chosen(), reopen(saved, folder), hold(saved, folder), take(changes)
++ choose(roots), roots_by_key, open_chosen(), reopen(saved), hold(saved), take(changes)
 + rebuild_trees()
 
 ## LoadScope (load_scope.py)
@@ -167,7 +167,7 @@ One loaded practice as the explorer's inventory shows it, read from the graph th
 + edge_count: int
 + node_types: list[str]
 + edge_types: list[str]
-	// in EDGE_ORDER
+	// in _EDGE_ORDER
 + rules: list[str]
 	// -> practice.reading.in_graph.rule_run.rule_labels
 	// no tree: graph.explorer_trees answers each practice's tree as the explorer's filter leaves it; a whole
@@ -201,7 +201,6 @@ A parsed object a practice reader added, or a plain node read back from `graph.j
 + file_language: str | None
 	// python, typescript, javascript, drawio, or graph
 + failed_rules: list[str]
-+ passing_rules: list[str]
 + fidelity: FidelityGuidance | None
 + fidelities: list[FidelityGuidance]
 	// the practice's fidelities its schema.yaml says create this node type, and every higher one
@@ -278,7 +277,7 @@ its references there.
 	// direct | grouped | relationship
 ----
 + from_kind(kind, display="direct"): EdgeType
-	// the order EDGE_ORDER gives the kind; a kind only an overlay schema names sits at 2 when direct, 7 otherwise
+	// the order _EDGE_ORDER gives the kind; a kind only an overlay schema names sits at 2 when direct, 7 otherwise
 
 ## Edge
 
@@ -290,7 +289,7 @@ its references there.
 + stage: str
 	// the child's
 
-## EDGE_ORDER
+## _EDGE_ORDER
 
 Where each kind's group sits under a node in the explorer tree, lowest first. `EdgeType.from_kind(kind, display)` reads it.
 
@@ -451,7 +450,6 @@ Extends `RulesCollection` (harness/guidance). The rules that apply to one node, 
 + record_violation(slug, message): None
 	// a slug the node has no rule for records nothing
 + restore(violation): None
-+ clear_violations(): None
 
 ## GraphRule
 

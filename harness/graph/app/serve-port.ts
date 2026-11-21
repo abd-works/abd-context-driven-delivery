@@ -3,8 +3,8 @@
 // `--cdd-home H` when the cdd server it talks to serves the dev lane, whose apps answer on ports of their own
 // (harness/mcp/server_lanes.py, DEV_APP_PORT_OFFSET) and talk to the dev lane's server; the stable lane names neither,
 // so the server falls back to its env variables, then to the first port its ports file gives it.
-export const PORT_ARGUMENT = '--port'
-export const CDD_HOME_ARGUMENT = '--cdd-home'
+const PORT_ARGUMENT = '--port'
+const CDD_HOME_ARGUMENT = '--cdd-home'
 
 export function servePort(argv: readonly string[], fallback: number): number {
   const named = argument(argv, PORT_ARGUMENT)

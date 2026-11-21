@@ -111,8 +111,7 @@ class PracticeInventory:
     ``graph.explorer_trees``, as the explorer's filter leaves it: a whole repository's tree runs to hundreds of
     megabytes, which no page reads and no call sends within its ten minutes."""
 
-    def __init__(self, graph: Graph, practice: PracticeGuidance) -> None:
-        self._graph = graph
+    def __init__(self, practice: PracticeGuidance) -> None:
         self._practice = practice
 
     @property

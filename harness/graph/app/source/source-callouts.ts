@@ -20,10 +20,10 @@ export type SourceCallout = {
 // The callouts a callout's own lines hold, a call inside an operation opened in place; none for a section.
 export type CalloutsWithin = (callout: SourceCallout, stack: string[]) => SourceCallout[];
 
-export const CALLOUT_MARK = 'callout-mark';
-export const CALLOUT_LABEL = 'callout-label';
+const CALLOUT_MARK = 'callout-mark';
+const CALLOUT_LABEL = 'callout-label';
 const CALLOUT_INNER_MARK = 'callout-inner-mark';
-const LINE_HEIGHT = 20;
+export const LINE_HEIGHT = 20;
 const LINE_END = Number.MAX_SAFE_INTEGER;
 
 type CalloutEditor = Pick<monaco.IStandaloneCodeEditor, 'createDecorationsCollection' | 'onMouseDown' | 'changeViewZones' | 'getModel' | 'getDomNode'>;
@@ -173,7 +173,7 @@ function calloutSection(callout: SourceCallout, key: string, opening: Opening, s
   return { node: section, rows };
 }
 
-export const CALLOUT_MENU = 'callout-menu';
+const CALLOUT_MENU = 'callout-menu';
 
 // A right-click over an open callout shows Go to file for the innermost one under the pointer. The editor's text layer
 // lies over the callouts, so the click reaches the editor, not the callout: the editor's own node hears it first, before

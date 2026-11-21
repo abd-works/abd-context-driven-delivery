@@ -1,6 +1,7 @@
 import { ChatClientGenerated } from '@cdd/harness/chat/chat';
 
-import { reasonOf, type GraphFailures } from '../graph/graph-failures';
+import { reasonOf } from '@cdd/cdd-page-failures';
+import type { GraphFailures } from '../graph/graph-failures';
 import { buildViolationCorrectPrompt, NOT_SENT, SENT_TO_CHAT, type CorrectViolation } from './violation-prompt';
 
 const NO_CHAT = 'No chat opened this page, so the correction was not sent: open the Graph app from the chat bar.';

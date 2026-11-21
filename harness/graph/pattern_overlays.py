@@ -21,7 +21,7 @@ from harness.graph.schema_conformance import FRAMEWORK_RULES
 from harness.guidance.practice_reading import rules_in
 
 if TYPE_CHECKING:
-    from harness.graph.graph import Graph
+    from harness.graph.graph import Graph, Node
     from harness.guidance.guidance import PracticeGuidance
 
 # A practice's graph rules by slug.
@@ -55,7 +55,7 @@ class GraphOverlay:
     def read(self, graph: Graph) -> None:
         """Add this pattern's nodes and edges to the practices ``graph`` holds."""
 
-    def adds_rules_to(self, node: Any) -> bool:
+    def adds_rules_to(self, node: Node) -> bool:
         """Whether node carries the rules this overlay adds: every node does, unless the pattern is constrained to a
         language, as LERN is to TypeScript."""
         return True
@@ -141,7 +141,7 @@ class PatternOverlays:
         for path in paths:
             name = Path(path).name
             if self._registered.has(name) and self._holds_practices(self._folder_of(name)):
-                pattern = self._pattern(name)
+                pattern = self.pattern_named(name)
                 if pattern not in patterns:
                     patterns.append(pattern)
         return patterns
@@ -154,7 +154,7 @@ class PatternOverlays:
     @property
     def every_graph_overlay(self) -> list[GraphOverlay]:
         """The overlay of every registered pattern that holds a practice, applied or not."""
-        return [self._pattern(name).graph_overlay for name in self.available]
+        return [self.pattern_named(name).graph_overlay for name in self.available]
 
     def checks_of(self, practice: PracticeGuidance, overlays: list[str] | None = None) -> GraphChecks:
         """The graph rules practice checks with these overlays applied, or with the overlays named, such as those a
@@ -253,10 +253,6 @@ class PatternOverlays:
     def pattern_named(self, name: str) -> PracticeGuidance:
         """The guidance of the registered pattern name, whether its folder holds practices or not, made the first time
         this object wants it: what an action reads a pattern's own rules from."""
-        return self._pattern(name)
-
-    def _pattern(self, name: str) -> PracticeGuidance:
-        """The guidance of the registered pattern name, made the first time this object wants it."""
         if name not in self._made:
             self._made[name] = self._registered.named(name)()
         return self._made[name]

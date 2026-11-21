@@ -18,7 +18,7 @@ const EVERY_LEVEL = 100;
 
 // Where each markdown heading's section runs: from its heading to the line before the next heading of its level or
 // above, a heading in a code block being no heading.
-export function headingRanges(lines: string[]): SourceLines[] {
+function headingRanges(lines: string[]): SourceLines[] {
   const open: { level: number; start: number }[] = [];
   const ranges: SourceLines[] = [];
   const close = (level: number, end: number) => {

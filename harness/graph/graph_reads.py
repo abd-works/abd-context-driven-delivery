@@ -74,7 +74,7 @@ class GraphReads:
             if saved is None:
                 return
             graph.overlays = list(saved.overlays)
-            graph.practices.reopen(saved, folder)
+            graph.practices.reopen(saved)
             if saved.holds(graph.practices.roots_by_key, graph.overlays):
                 graph.scope = LoadScope(folder)
 

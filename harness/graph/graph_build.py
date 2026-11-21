@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from harness.guidance.guidance import PracticeGuidance
 
 # The module a worker process runs, which carries out one order.
-WORKER_MODULE = "harness.graph.graph_worker"
+_WORKER_MODULE = "harness.graph.graph_worker"
 # How much of a failed worker's error output the failure names.
 _ERROR_TAIL_CHARACTERS = 4000
 # The part of a worker build the server does itself, writing what its graph holds into the order and reading the
@@ -298,7 +298,7 @@ class WorkerBuild:
         if changes_file.is_file():
             self._take(GraphChanges.from_text(changes_file.read_text(encoding="utf-8")))
         else:
-            self._graph.practices.hold(SavedGraph.from_file(answer), self._graph.scope.folder)
+            self._graph.practices.hold(SavedGraph.from_file(answer))
 
     def _take(self, changes: GraphChanges) -> None:
         """Change what the open practices hold as a worker's changes say: every practice's nodes first, then the edges,
@@ -315,7 +315,7 @@ class WorkerBuild:
             practice.reading.in_graph.root.tree.rebuild()
 
     def _run(self, arguments: list[str], errors: IO[str]) -> int:
-        return WorkerProcess(WORKER_MODULE).run(arguments, errors)
+        return WorkerProcess(_WORKER_MODULE).run(arguments, errors)
 
 
 class GraphBuild:
@@ -383,10 +383,7 @@ class GraphBuild:
             self._answer.keep(answer)
             return
         with BuildReads():
-            if state is not None:
-                self._hold(state)
-            self._carry_out(task.step)
-            self._finish(task)
+            self._build(task, state)
 
     def carry_out(self, order: BuildOrder) -> SavedGraph:
         """Carry order out on the graph, as a worker process does for a graph the cdd server holds, save it and write
@@ -398,15 +395,19 @@ class GraphBuild:
         graph.practices.choose({held[key]: root for key, root in order.roots.items()})
         graph.overlays = order.overlays
         graph.schema_edges.syncs = False
-        task = order.task
         with BuildReads():
-            self._hold(order.state)
-            self._carry_out(task.step)
-            self._finish(task)
+            self._build(order.task, order.state)
             return SavedGraph.from_graph(graph)
 
+    def _build(self, task: BuildTask, state: SavedGraph | None) -> None:
+        """Carry task out in this process, from state when one is given, else from what the graph holds now."""
+        if state is not None:
+            self._hold(state)
+        self._carry_out(task.step)
+        self._finish(task)
+
     def _hold(self, saved: SavedGraph) -> None:
-        self.graph.practices.hold(saved, self.graph.scope.folder)
+        self.graph.practices.hold(saved)
 
     def _finish(self, task: BuildTask) -> None:
         if task.saves:

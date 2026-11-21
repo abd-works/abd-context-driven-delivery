@@ -88,9 +88,6 @@ class GraphRule(Rule):
         if restored not in self._violations:
             self._violations.append(restored)
 
-    def clear_violations(self) -> None:
-        self._violations.clear()
-
     @property
     def is_failing(self) -> bool:
         return bool(self._violations)
@@ -189,7 +186,3 @@ class GraphRulesCollection(RulesCollection):
         entry = self.entries.get(violation.rule)
         if isinstance(entry, GraphRule):
             entry.restore(violation)
-
-    def clear_violations(self) -> None:
-        for rule in self.graph_rules:
-            rule.clear_violations()

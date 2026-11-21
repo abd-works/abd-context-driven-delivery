@@ -36,30 +36,30 @@ with description("a shared rules section containing rule bullets") as self:
             expect(self.guidance.rules.applies_to.matches("pkg/foo_sample_bar.py")).to(equal(True))
             expect(self.guidance.rules.applies_to.matches("pkg/other.py")).to(equal(False))
 
-        with it("should match any file when always_apply and the bag has no glob"):
+        with it("should match any file when always_apply and the collection has no glob"):
             from harness.guidance.rule import AppliesTo, RulesCollection
 
-            bag = RulesCollection(applies_to=AppliesTo(always_apply=True))
-            expect(bag.applies_to.matches("pkg/notes.md")).to(equal(True))
-            expect(bag.applies_to.matches("C:/dev/repo/src/app.py")).to(equal(True))
+            collection = RulesCollection(applies_to=AppliesTo(always_apply=True))
+            expect(collection.applies_to.matches("pkg/notes.md")).to(equal(True))
+            expect(collection.applies_to.matches("C:/dev/repo/src/app.py")).to(equal(True))
 
         with it("should not treat a trailing directory ** as every filename"):
             from harness.guidance.rule import AppliesTo, RulesCollection
 
-            bag = RulesCollection(
+            collection = RulesCollection(
                 applies_to=AppliesTo(globs="**/*agent_spec*,**/.agent_bdd_sessions/**")
             )
-            expect(bag.applies_to.matches("harness/guidance/rule.py")).to(equal(False))
-            expect(bag.applies_to.matches("foo/bar_agent_spec.py")).to(equal(True))
+            expect(collection.applies_to.matches("harness/guidance/rule.py")).to(equal(False))
+            expect(collection.applies_to.matches("foo/bar_agent_spec.py")).to(equal(True))
 
         with it("should not match by filename alone when the glob names a path prefix"):
             from harness.guidance.rule import AppliesTo, RulesCollection
 
-            bag = RulesCollection(
+            collection = RulesCollection(
                 applies_to=AppliesTo(globs="packages/**/*-server.ts")
             )
-            expect(bag.applies_to.matches("packages/onboard/carts/cart-server.ts")).to(equal(True))
-            expect(bag.applies_to.matches("src/customer/customer-server.ts")).to(equal(False))
+            expect(collection.applies_to.matches("packages/onboard/carts/cart-server.ts")).to(equal(True))
+            expect(collection.applies_to.matches("src/customer/customer-server.ts")).to(equal(False))
 
         with it("should not inject AgentBdd rules for a production python file"):
             from cdd_guidance.practices.agent_bdd.agent_bdd import AgentBdd

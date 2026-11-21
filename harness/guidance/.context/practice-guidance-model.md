@@ -332,7 +332,7 @@ includes(path: str, format: str = ""): bool
 	// a file one of its outputs names, in format when one is named; DeclaredFile matches the end of the path
 output_paths(): dict[str, list[str]]
 	-> fidelity.session_output.written.output_paths
-files(): dict[str, list]
+files(): dict[str, list[SessionFile]]
 	-> fidelity.session_output.written.files
 has_output(): bool
 files_to_review(): dict[str, list]
@@ -353,7 +353,7 @@ shared: bool
 ----
 validate(): str
 	// the instructions to check the current context against this rule
-from_bullet(text: str, fidelity: str | None): Rule
+_from_bullet(text: str, fidelity: str | None): Rule
 
 ## RulesCollection : MarkdownCollection
 
@@ -442,16 +442,14 @@ toolsets: tuple[type, ...]
 actions: tuple[Action, ...]
 	// made once from the registered toolsets, each holding this catalogue
 names: tuple[str, ...]
-runner: ActionRunner
+_registered_runner: ActionRunner
 	// ActionsNotRegistered while no runner is registered
-fidelity_actions: tuple[Action, ...]
+_fidelity_actions: tuple[Action, ...]
 	// the actions the runner runs on a fidelity
 ----
 register(*toolset_classes: type)
 	// called by cdd_guidance/actions when it is imported
 run_actions_with(runner: ActionRunner): None
-has(name: str): bool
-action(name: str): Action | None
 
 ## Action
 
@@ -466,9 +464,9 @@ operation: Callable
 folder: Path
 	// the toolset's folder under cdd_guidance/actions
 ----
-run_on(fidelity: WorkedFidelity, **arguments): Any
+_run_on(fidelity: WorkedFidelity, **arguments): Any
 	// through the runner the catalogue that made it holds
-	-> ActionCatalogue.runner
+	-> ActionCatalogue._registered_runner
 
 ## ApproachStages
 
@@ -517,16 +515,13 @@ checks: bool
 
 How much of the solution a stage's work covers, from the whole solution (Discovery) to one story (Implementation).
 
-StageScope(shape: str, name: str, reach: str)
+StageScope(shape: str, name: str, reach: str, covers: str = "")
 ------
 shape: str
 name: str
 reach: str
 covers: str
-	// empty unless the scope was made covering what its work decides
-----
-covering(covers: str): StageScope
-	// this scope with what its work decides, such as `outcomes · scope · boundaries`
+	// what its work decides, such as `outcomes · scope · boundaries`; empty unless the scope was made with it
 
 
 ## Schema
@@ -539,7 +534,7 @@ Schema.load(path: Path): Schema
 ------
 types: dict[str, SchemaType]
 ----
-fidelities(): dict[str, str]
+_fidelities(): dict[str, str]
 rules(): dict[str, tuple[str, ...]]
 
 ## SchemaType

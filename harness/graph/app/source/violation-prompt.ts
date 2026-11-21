@@ -28,26 +28,26 @@ const HOW_TO_FIX = [
 
 // The whole correction, for a chat that is told nothing else: the node, the file and lines, the rule, the code, and
 // what is wrong with it.
-export function buildViolationCorrectPrompt(input: ViolationCorrection): string {
-  const fileSpan = input.startLine >= 1 ? `${input.file}:${input.startLine}-${input.endLine}` : input.file;
+export function buildViolationCorrectPrompt(correction: ViolationCorrection): string {
+  const fileSpan = correction.startLine >= 1 ? `${correction.file}:${correction.startLine}-${correction.endLine}` : correction.file;
   return [
     ...HOW_TO_FIX,
     '',
-    `Node: ${input.nodeName} (${input.nodeType})`,
+    `Node: ${correction.nodeName} (${correction.nodeType})`,
     fileSpan ? `File: ${fileSpan}` : '',
-    `Rule: ${input.rule}`,
+    `Rule: ${correction.rule}`,
     '',
     'Erroneous code:',
     '```',
-    input.excerpt,
+    correction.excerpt,
     '```',
     '',
-    `Violation: ${input.message}`,
+    `Violation: ${correction.message}`,
   ].join('\n');
 }
 
 // The correction as the words of a comment on the rule's lines: the file, the lines, and what they hold are left out,
 // since a comment sent to the chat already names the file and lines and quotes them.
-export function buildViolationCorrectComment(input: ViolationCorrection): string {
-  return [...HOW_TO_FIX, '', `Rule: ${input.rule}`, `Violation: ${input.message}`].join('\n');
+export function buildViolationCorrectComment(correction: ViolationCorrection): string {
+  return [...HOW_TO_FIX, '', `Rule: ${correction.rule}`, `Violation: ${correction.message}`].join('\n');
 }

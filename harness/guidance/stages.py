@@ -73,16 +73,13 @@ class StageScope:
     """How much of the solution a stage's work covers, drawn as a shape that narrows and deepens along the board:
     Discovery takes in the whole solution wide and shallow, Implementation one story narrow and deep."""
 
-    def __init__(self, shape: str, name: str, reach: str) -> None:
+    def __init__(self, shape: str, name: str, reach: str, covers: str = "") -> None:
         self._shape = shape
         self._name = name
         self._reach = reach
-        self._covers = ""
-
-    def covering(self, covers: str) -> StageScope:
-        """This scope with what its work decides, such as `outcomes · scope · boundaries`; a scope made without it
-        decides nothing it names."""
-        return _CoveredScope(self, covers)
+        # What its work decides, such as `outcomes · scope · boundaries`; a scope made without it decides nothing it
+        # names.
+        self._covers = covers
 
     @property
     @data_field
@@ -107,14 +104,6 @@ class StageScope:
     def covers(self) -> str:
         """What the work decides, such as `outcomes · scope · boundaries`."""
         return self._covers
-
-
-class _CoveredScope(StageScope):
-    """A stage's scope with what its work decides, which ``StageScope.covering`` makes."""
-
-    def __init__(self, scope: StageScope, covers: str) -> None:
-        super().__init__(scope.shape, scope.name, scope.reach)
-        self._covers = covers
 
 
 class ApproachStage:
@@ -200,7 +189,7 @@ class ApproachStages:
 
 
 STAGES = ApproachStages((
-    ApproachStage(DISCOVERY, StageScope("solution", "Whole solution", "wide / shallow").covering("outcomes · scope · boundaries"), ACTION_CATALOGUE),
-    ApproachStage(SPECIFICATION, StageScope("sprint", "Sprint", "narrow / deeper").covering("behaviour · design · logic"), ACTION_CATALOGUE),
-    ApproachStage(IMPLEMENTATION, StageScope("story", "Story", "narrowest / deep").covering("tests · code · interface"), ACTION_CATALOGUE),
+    ApproachStage(DISCOVERY, StageScope("solution", "Whole solution", "wide / shallow", "outcomes · scope · boundaries"), ACTION_CATALOGUE),
+    ApproachStage(SPECIFICATION, StageScope("sprint", "Sprint", "narrow / deeper", "behaviour · design · logic"), ACTION_CATALOGUE),
+    ApproachStage(IMPLEMENTATION, StageScope("story", "Story", "narrowest / deep", "tests · code · interface"), ACTION_CATALOGUE),
 ))

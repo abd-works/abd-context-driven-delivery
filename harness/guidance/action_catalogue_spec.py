@@ -6,7 +6,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from expects import be_false, be_none, be_true, contain, equal, expect
+from expects import be_false, be_true, contain, equal, expect
 from mamba import before, description, it
 
 from harness.guidance.action_catalogue import ACTION_CATALOGUE
@@ -14,6 +14,10 @@ import cdd_guidance.practices  # noqa: F401 - registers the practices with the p
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 
 _ACTIONS_FOLDER = _REPO_ROOT / "cdd_guidance" / "actions"
+
+
+def _action_named(name: str):
+    return next(action for action in ACTION_CATALOGUE.actions if action.name == name)
 
 
 with description("the action catalogue"):
@@ -41,15 +45,12 @@ with description("the action catalogue"):
     with it("should leave out the folder of examples"):
         expect("CarStory" in [toolset.__name__ for toolset in ACTION_CATALOGUE.toolsets]).to(be_false)
 
-    with description("that is asked for one action"):
+    with description("that holds each action"):
         with it("should give the toolset that installs it"):
-            expect(ACTION_CATALOGUE.action("verify_fix").toolset_class.__name__).to(equal("Improvement"))
+            expect(_action_named("verify_fix").toolset_class.__name__).to(equal("Improvement"))
 
         with it("should give the toolset's folder"):
-            expect(ACTION_CATALOGUE.action("grill").folder.name).to(equal("grill_context"))
+            expect(_action_named("grill").folder.name).to(equal("grill_context"))
 
-        with it("should give nothing for a name no toolset publishes"):
-            expect(ACTION_CATALOGUE.action("astrology")).to(be_none)
-
-        with it("should say whether a toolset publishes the name"):
-            expect((ACTION_CATALOGUE.has("repair"), ACTION_CATALOGUE.has("review"))).to(equal((True, False)))
+        with it("should list no name that no toolset publishes"):
+            expect(("repair" in self.names, "review" in self.names)).to(equal((True, False)))

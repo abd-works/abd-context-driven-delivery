@@ -2,14 +2,13 @@ import Editor, { type Monaco, type OnMount } from '@monaco-editor/react';
 import type { editor as monaco } from 'monaco-editor';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CallCatalog, type FoldMember } from './call-expansion';
-import { useCallouts, type CalloutsWithin, type GoToFile, type SourceCallout } from './source-callouts';
+import { LINE_HEIGHT, useCallouts, type CalloutsWithin, type GoToFile, type SourceCallout } from './source-callouts';
 import { foldMarkdownHeadings, useOpenAround, type SourceLines } from './source-folding';
 import type { NodeSourceData } from '@cdd/harness/graph/graph';
 import type { CorrectionOutcome, CorrectViolation, ViolationCorrection } from './violation-prompt';
 import type { ViolationFocus } from '../graph/graph-selection';
 import './source.css';
 
-const LINE_HEIGHT = 20;
 // The room the editor keeps above and below its lines.
 const SOURCE_PADDING = 16;
 
@@ -31,7 +30,7 @@ export type SourceEditorInstance = Parameters<OnMount>[0];
 // SOURCE_MARK) and menu actions, such as the Files app's comments, and bind its shortcuts. The file folds as Monaco folds
 // its language, by its classes, functions and blocks, and markdown by its headings. The callouts on the lines expandLines
 // names open as the page asks, such as a node selected in the graph through a connector.
-export type SourceHostProps = {
+type SourceHostProps = {
   openAround?: SourceLines[];
   language?: string;
   keepGlyphMargin?: boolean;

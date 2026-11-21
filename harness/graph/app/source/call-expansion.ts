@@ -67,7 +67,6 @@ export type FoldMember = {
   file: string;
   start_line: number;
   end_line: number;
-  classes?: string[];
 };
 
 type Body = { id: string; name: string; label: string; text: string; file: string; start: number; end: number; owner: string };

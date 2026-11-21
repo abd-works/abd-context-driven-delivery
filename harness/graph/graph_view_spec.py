@@ -44,10 +44,10 @@ with description("a graph"):
             expect(self.failure.failed_rules).to(equal(["limit-operation-parameters"]))
 
         with it("should list the rule that did not fail"):
-            expect(self.register.passing_rules).to(contain("limit-operation-parameters"))
+            expect(self.register.rules.passing_slugs).to(contain("limit-operation-parameters"))
 
         with it("should leave the failed rule out of the passing rules"):
-            expect("limit-operation-parameters" in self.failure.passing_rules).to(equal(False))
+            expect("limit-operation-parameters" in self.failure.rules.passing_slugs).to(equal(False))
 
         with it("should return the operation that fails"):
             import json

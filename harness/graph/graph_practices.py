@@ -77,17 +77,19 @@ class GraphPractices:
         for practice in self.chosen:
             self._open(practice, practice.reading.in_graph.source_root_path)
 
-    def reopen(self, saved: SavedGraph, folder: Path) -> None:
+    def reopen(self, saved: SavedGraph) -> None:
         """Choose and hold every practice saved keeps of those the graph holds, each on the source root it was saved
-        with."""
+        with, under the folder of the graph's scope."""
+        folder = self._graph.scope.folder
         kept = saved.of_practices(list(self.held))
         self.choose({self.held[key]: record.root_in(folder) for key, record in kept.practices.items()})
-        self.hold(kept, folder)
+        self.hold(kept)
 
-    def hold(self, saved: SavedGraph, folder: Path | None) -> None:
-        """Hold exactly the practices saved keeps, of those the graph holds, each on the source root it was saved with:
-        their nodes, then the edges between them, which may cross practices, and the violations on them, then each
-        practice's tree."""
+    def hold(self, saved: SavedGraph) -> None:
+        """Hold exactly the practices saved keeps, of those the graph holds, each on the source root it was saved with,
+        under the folder of the graph's scope: their nodes, then the edges between them, which may cross practices, and
+        the violations on them, then each practice's tree."""
+        folder = self._graph.scope.folder
         self._close_all()
         kept = {self.held[key]: record for key, record in saved.practices.items() if key in self.held}
         for practice, record in kept.items():

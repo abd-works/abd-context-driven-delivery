@@ -1,11 +1,10 @@
-import { useState, type Dispatch, type SetStateAction } from 'react';
+import { useState } from 'react';
+import type { Held } from './held';
 import type { GraphRuleData, NodeSourceData } from '@cdd/harness/graph/graph';
-import { reasonOf } from '../graph/graph-failures';
+import { reasonOf } from '@cdd/cdd-page-failures';
 import { failures, graphs } from '../graph/graph-page';
 import { childrenOf, isRule, ruleHits, selectionForRule, type GraphSelection, type TreeItem, type ViolationFocus } from '../graph/graph-selection';
 import type { SourceRule } from '../source/SourceView';
-
-type Held<T> = [T, Dispatch<SetStateAction<T>>];
 
 interface SourcePaneState {
   selectedId: Held<string>;

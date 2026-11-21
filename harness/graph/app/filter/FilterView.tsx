@@ -1,5 +1,5 @@
 import type { FilterSelection } from './filter-selection';
-import { overlayCatalogLabel, overlayPathLabel } from '../labels/overlay-labels';
+import { overlayCatalogLabel, overlayId, overlayPathLabel } from '../labels/overlay-labels';
 
 type FilterViewProps = {
   open: boolean;
@@ -51,7 +51,7 @@ export function FilterView({
         {availableOverlays.length > 0 ? (
           <div className="overlay-catalog" data-testid="overlay-catalog">
             {availableOverlays
-              .filter((name) => !selection.overlays.some((item) => overlayLabel(item) === name))
+              .filter((name) => !selection.overlays.some((item) => overlayId(item) === name))
               .map((name) => (
                 <button
                   key={name}
@@ -145,16 +145,6 @@ export function NodeFilterLists({ selection, nodeTypes, relationships, rules, on
       </div>
     </>
   );
-}
-
-function overlayId(path: string): string {
-  const trimmed = path.replace(/[/\\]+$/, '');
-  const parts = trimmed.split(/[/\\]/);
-  return parts[parts.length - 1] || path;
-}
-
-function overlayLabel(path: string): string {
-  return overlayCatalogLabel(overlayId(path));
 }
 
 function FilterSelect({

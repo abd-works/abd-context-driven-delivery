@@ -221,7 +221,7 @@ with description("a graph"):
                 ).to(equal(True))
 
             with it("should offer relative, owns, properties, hasParameter, hasType, invokedBy, invokes, and dependsOn to filter by, in that order"):
-                expect(PracticeInventory(self.graph, self.clean).edge_types).to(
+                expect(PracticeInventory(self.clean).edge_types).to(
                     equal(
                         [
                             "relative",
@@ -732,7 +732,7 @@ with description("a graph"):
                 expect(tree_count(self.ddd_tree, "Repository")).to(equal(2))
 
             with it("should offer root, owns, accesses, isA, and associates to filter by, in that order, leaving out the belongsTo back-edge"):
-                expect(PracticeInventory(self.graph, self.ddd).edge_types).to(equal(["root", "owns", "accesses", "isA", "associates"]))
+                expect(PracticeInventory(self.ddd).edge_types).to(equal(["root", "owns", "accesses", "isA", "associates"]))
 
             with it("should include only domain stereotypes"):
                 expect(
@@ -896,7 +896,7 @@ with description("a graph"):
                 expect(tree_count(self.bdd_tree, "Description")).to(equal(0))
 
             with it("should have only the owns edge type"):
-                expect(PracticeInventory(self.graph, self.graph.practice("bdd")).edge_types).to(equal(["owns"]))
+                expect(PracticeInventory(self.graph.practice("bdd")).edge_types).to(equal(["owns"]))
 
             with context("with the practice selected"):
                 with before.all:
@@ -938,7 +938,7 @@ with description("a graph"):
                 expect(tree_names(self.ux_tree)).to(equal([]))
 
             with it("should have no edge types"):
-                expect(PracticeInventory(self.graph, self.graph.practice("ux")).edge_types).to(equal([]))
+                expect(PracticeInventory(self.graph.practice("ux")).edge_types).to(equal([]))
 
     with context("loaded from only the edited files of a working copy that every graph practice reads"):
         with before.all:

@@ -15,8 +15,16 @@ import cdd_guidance.actions  # noqa: F401 - registers the actions with the actio
 
 
 def _fidelity_errors(practice) -> list[str]:
-    """What is wrong between the practice's schema and its fidelities."""
-    return practice.schema.fidelity_errors(list(practice.fidelities.entries))
+    """What is wrong between the practice's schema and its fidelities: a schema with no node fidelity, or a node
+    fidelity that is none of the practice's. Empty when they agree."""
+    created = {key: kind.fidelity for key, kind in practice.schema.types.items() if kind.fidelity}
+    if not created:
+        return ["schema defines no node fidelity entries"]
+    known = sorted(practice.fidelities.entries)
+    return [
+        f"{node} maps to fidelity {fidelity!r}, which is not under ## Fidelities (have {known!r})"
+        for node, fidelity in sorted(created.items()) if fidelity not in known
+    ]
 
 
 def _node_fidelities(practice) -> dict[str, list[str]]:

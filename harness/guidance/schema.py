@@ -100,7 +100,7 @@ class Schema:
             return ""
         return f"Guide this action so the output conforms to this schema.\n\n{self.text}"
 
-    def fidelities(self) -> dict[str, str]:
+    def _fidelities(self) -> dict[str, str]:
         """Each type key mapped to the fidelity that creates it, for the types that name one."""
         return {key: kind.fidelity for key, kind in self.types.items() if kind.fidelity}
 
@@ -108,20 +108,9 @@ class Schema:
         """Each type key with the fidelity that creates it and every one after it in order, the fidelities of the
         practice from lowest to highest: a node a low fidelity creates also belongs to the higher ones, which build it
         out rather than replace it. A type whose fidelity is not in order is left out."""
-        created = self.fidelities()
+        created = self._fidelities()
         return {node: order[order.index(fidelity):] for node, fidelity in created.items() if fidelity in order}
 
-    def fidelity_errors(self, declared: list[str]) -> list[str]:
-        """What is wrong between this schema and declared, the fidelities of its practice: a schema with no node
-        fidelity, or a node fidelity that is none of them. Empty when they agree."""
-        created = self.fidelities()
-        if not created:
-            return ["schema defines no node fidelity entries"]
-        known = sorted(declared)
-        return [
-            f"{node} maps to fidelity {fidelity!r}, which is not under ## Fidelities (have {known!r})"
-            for node, fidelity in sorted(created.items()) if fidelity not in known
-        ]
 
     def rules(self) -> dict[str, tuple[str, ...]]:
         """Each type key mapped to the rule slugs its ``rules:`` block lists, for the types that have one."""

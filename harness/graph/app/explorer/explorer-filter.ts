@@ -1,14 +1,13 @@
-import { useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
+import { useRef, useState, type MutableRefObject } from 'react';
+import type { Held } from './held';
 import type { ExplorerEntryData, FilterData } from '@cdd/harness/graph/graph';
 import { NO_CHOICES, NO_FILTER, chosen, nodeFilter, type FilterSelection } from '../filter/filter-selection';
-import { reasonOf } from '../graph/graph-failures';
+import { reasonOf } from '@cdd/cdd-page-failures';
 import { failures, graphs } from '../graph/graph-page';
 import { withBranch } from '../graph/graph-selection';
 import type { LoadStatus } from './load-status';
 import type { PageFolder } from './page-folder';
 
-
-type Held<T> = [T, Dispatch<SetStateAction<T>>];
 
 interface ExplorerFilterState {
   selection: Held<FilterSelection>;

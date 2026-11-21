@@ -1,7 +1,7 @@
 import React, { Component, useEffect, type ErrorInfo, type ReactNode } from 'react';
 import { App } from './App';
 import { FailureToasts } from './graph/FailureToasts';
-import { reasonOf } from './graph/graph-failures';
+import { reasonOf } from '@cdd/cdd-page-failures';
 import { failures } from './graph/graph-page';
 
 const UNCAUGHT = 'An uncaught failure in the Graph page';

@@ -359,8 +359,9 @@ with description("practice guidance with fidelities examples and templates besid
     with context("with the guidance instruction expanded"):
         with it("should show the examples under a heading that takes structure from the sources, not from them"):
             text = self.guidance.instruction("guidance").expand({}).instructions
-            expect(text).to(contain(f"{PracticeGuidance.EXAMPLES_PREAMBLE}\n\n"))
-            expect(text.index(PracticeGuidance.EXAMPLES_PREAMBLE) < text.index("example file not inlined")).to(equal(True))
+            heading = "## Examples\n\nThese examples show notation, naming, depth, and tone."
+            takes_structure = "take the structure of what you write from your sources, never from an example.\n\n"
+            expect(text.index(heading) < text.index(takes_structure) < text.index("example file not inlined")).to(equal(True))
 
     with context("with a markdown-backed property read as HTML on practice guidance"):
         with it("should return HTML formatted from that property extract"):

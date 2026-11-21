@@ -241,7 +241,6 @@ const engineeringTree = {
                       name: 'limit-operation-parameters',
                       node_id: 'op-1:rules:limit-operation-parameters',
                       status: 'passing',
-                      violation: '',
                       children: [],
                     },
                   ],
@@ -998,6 +997,22 @@ it('should apply overlays through the api when a folder is chosen', async () => 
     ).toBe(true),
   );
   expect(screen.getByTestId('overlay-list').textContent).toMatch(/Lern domain driven|lern_domain_driven/i);
+});
+
+it('should take an overlay applied from its folder out of the catalog', async () => {
+  const user = userEvent.setup();
+  await openFolder(user);
+  await user.click(screen.getByTestId('overlay-add'));
+  await waitFor(() => expect(screen.getByTestId('overlay-remove-lern_domain_driven')).toBeTruthy());
+  expect(screen.queryByTestId('overlay-add-lern_domain_driven')).toBeNull();
+});
+
+it('should take an overlay applied by its name out of the catalog', async () => {
+  const user = userEvent.setup();
+  await openFolder(user);
+  await user.click(screen.getByTestId('overlay-add-lern_domain_driven'));
+  await waitFor(() => expect(activeOverlays).toEqual(['lern_domain_driven']));
+  await waitFor(() => expect(screen.queryByTestId('overlay-add-lern_domain_driven')).toBeNull());
 });
 
 it('should remove an overlay when its remove control is clicked', async () => {

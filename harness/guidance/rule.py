@@ -107,7 +107,7 @@ class Rule:
         )
 
     @classmethod
-    def from_bullet(cls, text: str, fidelity: str | None = None) -> Rule:
+    def _from_bullet(cls, text: str, fidelity: str | None = None) -> Rule:
         line = text.strip().lstrip("-*").strip()
         slug = ""
         body = line
@@ -209,7 +209,7 @@ class RulesCollection(MarkdownCollection[Owner]):
             stripped = raw.strip()
             if not re.match(r"^[-*]\s+", stripped):
                 continue
-            rule = Rule.from_bullet(stripped, fidelity=fidelity)
+            rule = Rule._from_bullet(stripped, fidelity=fidelity)
             entries[rule.slug] = rule
         collection = cls(entries, applies_to=applies_to, parent=parent)
         collection.markdown = text
@@ -250,20 +250,20 @@ class RuleInjection:
         """The rules that apply to the file tool_use edits, as context for the agent's next step; nothing while the
         hook is disabled, though the session still notes which rules applied."""
         path = tool_use.edited_path() if tool_use.is_edit else ""
-        bags = self._bags_for_path(path) if path else []
-        if bags:
-            self._note_session_injected_rules(tool_use, path, bags)
-        parts = self._bodies(bags)
+        collections = self._collections_for_path(path) if path else []
+        if collections:
+            self._note_session_injected_rules(tool_use, path, collections)
+        parts = self._bodies(collections)
         if Hook.disabled_on(type(self._rules).inject_rules) or not parts:
             return {}
-        body = self._inject_context(path, bags, parts)
-        notice = self._read_only_notice(bags)
+        body = self._inject_context(path, collections, parts)
+        notice = self._read_only_notice(collections)
         if notice and (tool_use.get("conversation_id") or tool_use.get("workspace_roots")):
             return {"additional_context": body, "toast": notice}
         return {"additional_context": body}
 
-    def _note_session_injected_rules(self, tool_use: HookPayload, path: str, bags: list[RulesCollection]) -> None:
-        """Note bags in the log of the session open in the project the hook fired in, so that session's next log line
+    def _note_session_injected_rules(self, tool_use: HookPayload, path: str, collections: list[RulesCollection]) -> None:
+        """Note collections in the log of the session open in the project the hook fired in, so that session's next log line
         names the rules the agent was given; nothing for a hook that names no project."""
         practice = self._practice
         if practice is None:
@@ -271,72 +271,62 @@ class RuleInjection:
         session = practice.session if practice.session is not None else tool_use.session
         if session is None:
             return
-        for bag in bags:
-            session.log.injected_rules.note(bag, path)
+        for collection in collections:
+            session.log.injected_rules.note(collection, path)
 
-    def _rule_bags(self) -> list[RulesCollection]:
+    def _rule_collections(self) -> list[RulesCollection]:
         practice = self._practice
         if practice is None:
             return [self._rules]
-        bags: list[RulesCollection] = []
-        shared = getattr(practice, "rules", None)
-        if isinstance(shared, RulesCollection):
-            bags.append(shared)
-        fidelities = getattr(practice, "fidelities", None)
-        if fidelities is None:
-            return bags or [self._rules]
-        for child in fidelities:
-            child_rules = getattr(child, "rules", None)
-            if isinstance(child_rules, RulesCollection):
-                bags.append(child_rules)
-        return bags
+        collections = [practice.rules, *(fidelity.rules for fidelity in practice.fidelities)]
+        return [collection for collection in collections if isinstance(collection, RulesCollection)]
 
-    def _bags_for_path(self, path: str) -> list[RulesCollection]:
-        bags = self._rule_bags()
-        matched = [bag for bag in bags if bag.applies_to.matches(path)]
+    def _collections_for_path(self, path: str) -> list[RulesCollection]:
+        collections = self._rule_collections()
+        matched = [collection for collection in collections if collection.applies_to.matches(path)]
         if not matched:
             return []
-        return self._unique_bags(self._matched_and_shared(bags, matched) + self._upstream_of(matched))
+        return self._unique_collections(self._matched_and_shared(collections, matched) + self._upstream_of(matched))
 
     def _matched_and_shared(
-        self, bags: list[RulesCollection], matched: list[RulesCollection]
+        self, collections: list[RulesCollection], matched: list[RulesCollection]
     ) -> list[RulesCollection]:
-        return [bag for bag in bags if bag in matched or not bag.applies_to.patterns]
+        return [collection for collection in collections if collection in matched or not collection.applies_to.patterns]
 
-    def _unique_bags(self, bags: list[RulesCollection]) -> list[RulesCollection]:
+    def _unique_collections(self, collections: list[RulesCollection]) -> list[RulesCollection]:
         included: list[RulesCollection] = []
         seen: set[int] = set()
-        for bag in bags:
-            key = id(bag)
+        for collection in collections:
+            key = id(collection)
             if key in seen:
                 continue
             seen.add(key)
-            included.append(bag)
+            included.append(collection)
         return included
 
     def _upstream_of(self, matched: list[RulesCollection]) -> list[RulesCollection]:
         practice = self._practice
-        fidelities = getattr(practice, "fidelities", None) if practice is not None else None
-        names = list(getattr(fidelities, "entries", {}) or {})
-        if not names:
+        if practice is None:
             return []
+        fidelities = practice.fidelities
+        names = list(fidelities.entries)
         indexes = []
-        for bag in matched:
-            name = getattr(bag.parent, "name", None)
-            if name in getattr(fidelities, "entries", {}):
+        for collection in matched:
+            name = getattr(collection.parent, "name", None)
+            if name in names:
                 indexes.append(names.index(name))
         if not indexes:
             return []
         last = max(indexes)
         return [fidelities[name].rules for name in names[:last]]
 
-    def _bodies(self, bags: list[RulesCollection]) -> list[str]:
-        return [body for bag in bags if (body := (bag.markdown or "").strip())]
+    def _bodies(self, collections: list[RulesCollection]) -> list[str]:
+        return [body for collection in collections if (body := (collection.markdown or "").strip())]
 
-    def _matched_globs(self, bags: list[RulesCollection]) -> list[str]:
-        return list(dict.fromkeys(pattern for bag in bags for pattern in bag.applies_to.patterns))
+    def _matched_globs(self, collections: list[RulesCollection]) -> list[str]:
+        return list(dict.fromkeys(pattern for collection in collections for pattern in collection.applies_to.patterns))
 
-    def _inject_echo_instruction(self, path: str, bags: list[RulesCollection]) -> str:
+    def _inject_echo_instruction(self, path: str, collections: list[RulesCollection]) -> str:
         """What tells the agent it just edited path and is to fix what the rules after it find; rules reach it only
         after an edit, so there is always one to name."""
         lines = [
@@ -344,18 +334,18 @@ class RuleInjection:
             "The full rule text follows.",
             "Fix any violations from the edit you just made.",
         ]
-        for pattern in self._matched_globs(bags):
+        for pattern in self._matched_globs(collections):
             lines.append(pattern)
         return "\n".join(lines)
 
-    def _read_only_notice(self, bags: list[RulesCollection]) -> str:
-        return "\n".join(self._chat_lines(bags))
+    def _read_only_notice(self, collections: list[RulesCollection]) -> str:
+        return "\n".join(self._chat_lines(collections))
 
-    def _chat_lines(self, bags: list[RulesCollection]) -> list[str]:
+    def _chat_lines(self, collections: list[RulesCollection]) -> list[str]:
         practice = self._practice
         lines: list[str] = []
-        for bag in bags:
-            parent = bag.parent
+        for collection in collections:
+            parent = collection.parent
             if parent is None or parent is practice:
                 continue
             skill = getattr(parent, "slug", None)
@@ -365,10 +355,8 @@ class RuleInjection:
                     lines.append(line)
         if lines:
             return lines
-        if practice is not None:
-            slug = getattr(practice, "slug", None)
-            if isinstance(slug, str) and slug.strip():
-                return [f"rules injected for {slug.strip()}"]
+        if practice is not None and practice.slug.strip():
+            return [f"rules injected for {practice.slug.strip()}"]
         return ["rules injected"]
 
     def _edited_label(self, path: str) -> str:
@@ -379,8 +367,8 @@ class RuleInjection:
         sep = "\\" if "\\" in path else "/"
         return f"{parent}{sep}{file.name}"
 
-    def _inject_context(self, path: str, bags: list[RulesCollection], parts: list[str]) -> str:
-        preamble = self._inject_echo_instruction(path, bags).strip()
+    def _inject_context(self, path: str, collections: list[RulesCollection], parts: list[str]) -> str:
+        preamble = self._inject_echo_instruction(path, collections).strip()
         rules = "\n\n".join(parts).strip()
         if preamble and rules:
             return f"{preamble}\n\n{rules}"

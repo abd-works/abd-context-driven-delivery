@@ -7,7 +7,8 @@ from mamba import before, description, it
 from harness.graph.graph import Graph
 from harness.graph.rule_context import RuleCheckContext
 from harness.graph.rule_fixture import RuleFixture
-from harness.graph.schema_conformance import ConformsToSchema
+from harness.graph.schema_conformance import ConformsToSchema, RequiredRelationship
+from harness.graph.schema_edges import SchemaKey
 import cdd_guidance.patterns  # noqa: F401 - registers the patterns with the graph's overlays
 from cdd_guidance.practices.stories.stories import Stories
 
@@ -134,6 +135,26 @@ with description("conforms to schema"):
             _node(practice, "When", "the Shopper pays")
             graph.practice("clean_engineering")
             expect([gap for gap in _gaps(practice) if "invokes" in gap]).to(be_empty)
+
+    with description("a relationship a schema requires of the steps of one phase"):
+        with before.each:
+            self.graph = Graph()
+            self.practice = _working_at(self.graph, "stories", "acceptance_tests")
+            self.required = RequiredRelationship(SchemaKey("when"), "invokes", ("Operation",), "stories practice", None, None)
+            self.context = RuleCheckContext(self.practice, None)
+
+        with description("with a step that keeps its phase as a saved fact, as a graph restored from its file holds it"):
+            with before.each:
+                self.pays = _node(self.practice, "Step", "the Shopper pays")
+                self.pays.set_fact("phase", "when")
+                self.holds = _node(self.practice, "Step", "the cart holds a book")
+                self.holds.set_fact("phase", "given")
+
+            with it("should hold the step of that phase to it"):
+                expect(self.required.owners(self.context)).to(contain(self.pays))
+
+            with it("should leave out the step of another phase"):
+                expect(self.holds in self.required.owners(self.context)).to(equal(False))
 
     with description("a story with no scenarios"):
         with before.each:
