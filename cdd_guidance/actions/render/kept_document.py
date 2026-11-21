@@ -10,9 +10,12 @@ before it writes the file, whatever the adapter did:
   cell both draw keeps the place the file gave it, since people lay a drawing out by hand.
 - **A whiteboard**: the same, for its elements.
 
-A drawing rendered with fewer than half of the file's cells was written by a format that names its cells anew on every render;
-adding the file's cells would draw everything twice, so that drawing is saved as rendered and its format has to keep
-its own cells.
+A cell or element the render does not draw under the name the file gives it is the person's, with one exception: a
+format that names its cells anew on every render draws the same cards again under other names, and adding the file's
+cells back would draw them twice. So a file's cell is left out when the render drew a cell saying the same words under
+another name. A cell with no words on it, such as an arrow, cannot be told apart that way: it is kept when the render
+drew at least half of the file's other cells under the names the file gives them, which is a format that keeps its
+names, and left out otherwise.
 
 What is kept this way is named in the result, for whoever decides where it belongs: a note a person added stays, and
 a card whose thing the model no longer holds is deleted from the drawing by hand.
@@ -71,20 +74,28 @@ class KeptDocument:
         old_root, new_root = before.find(".//root"), after.find(".//root")
         drawn = {cell.get("id"): cell for cell in new_root if cell.get("id")}
         held = {cell.get("id"): cell for cell in old_root if cell.get("id") and cell.get("id") not in _PAGE_CELLS}
-        if not self._are_mostly_drawn(held, drawn):
-            return Reshaped(rendered, [], [])
-        only_in_file = [cell for name, cell in held.items() if name not in drawn]
+        said = {self._words_of(cell) for cell in drawn.values()}
+        keeps_names = self._are_mostly_drawn(held, drawn)
+        only_in_file = [cell for name, cell in held.items() if name not in drawn and self._is_the_persons(self._words_of(cell), said, keeps_names)]
         moved = [self._placed_as(cell, drawn[name]) for name, cell in held.items() if name in drawn]
         if not only_in_file and not any(moved):
             return Reshaped(rendered, [], [])
         new_root.extend(copy.deepcopy(cell) for cell in only_in_file)
-        kept = [f"{cell.get('id')} '{cell.get('value') or cell.get('label') or ''}'" for cell in only_in_file]
+        kept = [f"{cell.get('id')} '{self._words_of(cell)}'" for cell in only_in_file]
         return Reshaped(ET.tostring(after, encoding="unicode"), kept, [])
 
     def _are_mostly_drawn(self, held: dict, drawn: dict) -> bool:
         """Whether the render drew at least half of what the file holds under the names the file gives it: a format that
-        keeps its names. One that names its cells anew draws few or none of them, and is left as rendered."""
+        keeps its names. One that names its cells anew draws few or none of them."""
         return bool(held) and 2 * sum(1 for name in held if name in drawn) >= len(held)
+
+    def _is_the_persons(self, words: str, said: set[str], keeps_names: bool) -> bool:
+        """Whether a cell only the file holds is a person's and goes back into the drawing: one whose words no drawn
+        cell says; one with no words only when the format keeps its names."""
+        return words not in said if words else keeps_names
+
+    def _words_of(self, cell: ET.Element) -> str:
+        return cell.get("value") or cell.get("label") or ""
 
     def _placed_as(self, held: ET.Element, drawn: ET.Element) -> bool:
         """Give the drawn cell the place the file's cell has; true when that moved it."""
@@ -98,9 +109,12 @@ class KeptDocument:
     def _whiteboard(self, existing: str, rendered: str) -> Reshaped:
         before, after = json.loads(existing), json.loads(rendered)
         held, drawn = before["elements"], after["elements"]
-        if not self._are_mostly_drawn(held, drawn):
-            return Reshaped(rendered, [], [])
-        only_in_file = [name for name in before.get("order", list(held)) if name in held and name not in drawn]
+        said = {str(element.get("text") or "") for element in drawn.values()}
+        keeps_names = self._are_mostly_drawn(held, drawn)
+        only_in_file = [
+            name for name in before.get("order", list(held))
+            if name in held and name not in drawn and self._is_the_persons(str(held[name].get("text") or ""), said, keeps_names)
+        ]
         moved = [name for name in held if name in drawn and any(held[name].get(side) != drawn[name].get(side) for side in _PLACE if side in held[name])]
         if not only_in_file and not moved:
             return Reshaped(rendered, [], [])

@@ -119,6 +119,7 @@ _EMPTY_TOTAL = "    def total(self) -> int:\n        raise NotImplementedError"
 _TOTAL_WITH_CODE = "    def total(self) -> int:\n        # tax is added at checkout\n        return sum(line.subtotal for line in self.lines)"
 _NOTE_CELL = '<mxCell id="person-note" value="Ask Dana before changing this" style="text;html=1;" vertex="1" parent="1"><mxGeometry x="900" y="900" width="200" height="40" as="geometry" /></mxCell>'
 _DRAWN_STORY_MAP: list[str] = []
+_NOTE_ONLY_DRAWING = f'<mxfile><diagram name="Story Map" id="story-map"><mxGraphModel><root><mxCell id="0" /><mxCell id="1" parent="0" />{_NOTE_CELL}</root></mxGraphModel></diagram></mxfile>'
 _WORKER_TRACEBACK = """Traceback (most recent call last):
   File "<frozen runpy>", line 198, in _run_module_as_main
   File "nodes.py", line 535, in parse
@@ -723,6 +724,20 @@ with description("Render asked for a path, in a session") as self:
 
         with it("should name the note as kept, for whoever decides where it belongs"):
             expect([(Path(each["file"]).name, each["kept"]) for each in self.results[0]["migrate"]]).to(equal([("story-map.drawio", "person-note 'Ask Dana before changing this'")]))
+
+    # The coordinator, 2026-11-21: a drawing that held only a person's note, and no card of the map, was saved as
+    # rendered and the note was gone.
+    with context("that is a story map whose drawing holds only a note a person wrote, rendered to drawio"):
+        with before.each:
+            self.drawing = self.folder / "story-map.drawio"
+            self.drawing.write_text(_NOTE_ONLY_DRAWING, encoding="utf-8")
+            self.results = self.action.render("stories-story-map", format="drawio", paths=[".context/story-map.md"], source="markdown")
+
+        with it("should keep the note beside the cards the render drew"):
+            expect(self.drawing.read_text(encoding="utf-8")).to(contain('id="person-note"', "Browse Product Catalog"))
+
+        with it("should name the note as kept"):
+            expect([each["kept"] for each in self.results[0]["migrate"]]).to(equal(["person-note 'Ask Dana before changing this'"]))
 
     with context("that tells the agent what to do with what it rendered"):
         with it("should not tell the agent to write rendered content itself"):

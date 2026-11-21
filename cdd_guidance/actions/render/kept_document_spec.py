@@ -24,6 +24,11 @@ def _drawing(cart_x: str, *more: str) -> str:
     return f'<mxfile><diagram name="Model" id="model"><mxGraphModel><root><mxCell id="0" /><mxCell id="1" parent="0" />{cart}{"".join(more)}</root></mxGraphModel></diagram></mxfile>'
 
 
+def _drawing_of(*cells: str) -> str:
+    return f'<mxfile><diagram name="Model" id="model"><mxGraphModel><root><mxCell id="0" /><mxCell id="1" parent="0" />{"".join(cells)}</root></mxGraphModel></diagram></mxfile>'
+
+
+ARROW_CELL = '<mxCell id="person-arrow" style="endArrow=classic;" edge="1" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>'
 NOTE_CELL = f'<mxCell id="person-note" value="{NOTE}" style="text;html=1;" vertex="1" parent="1"><mxGeometry x="900" y="900" width="200" height="40" as="geometry" /></mxCell>'
 ORDER_CELL = '<mxCell id="order" value="Order" vertex="1" parent="1"><mxGeometry x="200" y="40" width="120" height="60" as="geometry" /></mxCell>'
 
@@ -85,17 +90,40 @@ with description("a document rendered onto one that is already there") as self:
             rendered = _drawing("20", ORDER_CELL)
             expect(KeptDocument(Format("drawio")).onto(_drawing("20"), rendered).text).to(equal(rendered))
 
-    with context("as a draw.io drawing rendered with none of the file's cells, by a format that names its cells anew"):
-        with it("should write the drawing as rendered, since adding the file's cells would draw everything twice"):
-            rendered = _drawing("20").replace('id="cart"', 'id="cart-2"')
-            kept = KeptDocument(Format("drawio")).onto(_drawing("7777", NOTE_CELL), rendered)
-            expect((kept.text, kept.kept)).to(equal((rendered, [])))
+    with context("as a draw.io drawing whose file holds only a note a person wrote, and none of the render's cells"):
+        with before.each:
+            self.kept = KeptDocument(Format("drawio")).onto(_drawing_of(NOTE_CELL), _drawing("20", ORDER_CELL))
 
-    with context("as a draw.io drawing rendered with one in three of the file's cells"):
-        with it("should write the drawing as rendered, since the format names most of its cells anew"):
-            rendered = _drawing("20")
-            kept = KeptDocument(Format("drawio")).onto(_drawing("7777", NOTE_CELL, ORDER_CELL), rendered)
-            expect((kept.text, kept.kept)).to(equal((rendered, [])))
+        with it("should keep the note, since a cell the render does not draw is the person's"):
+            expect(self.kept.text).to(contain('id="person-note"', 'id="cart"', 'id="order"'))
+
+        with it("should name the note as kept"):
+            expect(self.kept.kept).to(equal([f"person-note '{NOTE}'"]))
+
+    with context("as a draw.io drawing rendered by a format that names its cells anew, whose file holds a note a person wrote"):
+        with before.each:
+            self.rendered = _drawing("20", ORDER_CELL).replace('id="cart"', 'id="cart-2"').replace('id="order"', 'id="order-2"')
+            self.kept = KeptDocument(Format("drawio")).onto(_drawing("7777", ORDER_CELL, NOTE_CELL), self.rendered)
+
+        with it("should keep the note"):
+            expect(self.kept.kept).to(equal([f"person-note '{NOTE}'"]))
+
+        with it("should not draw a second time the cards the render drew under other names"):
+            expect((self.kept.text.count('value="Cart"'), self.kept.text.count('value="Order"'))).to(equal((1, 1)))
+
+    with context("as a draw.io drawing whose file holds an arrow with no words on it, which the render does not draw"):
+        with it("should keep the arrow when the render drew the file's other cells under the names the file gives them"):
+            kept = KeptDocument(Format("drawio")).onto(_drawing("20", ARROW_CELL), _drawing("20", ORDER_CELL))
+            expect(kept.kept).to(equal(["person-arrow ''"]))
+
+        with it("should leave the arrow out when the render named every cell anew, since it is then the format's own earlier arrow"):
+            rendered = _drawing("20").replace('id="cart"', 'id="cart-2"')
+            expect(KeptDocument(Format("drawio")).onto(_drawing("20", ARROW_CELL), rendered).kept).to(equal([]))
+
+    with context("as a whiteboard whose file holds only a note a person wrote, and none of the render's elements"):
+        with it("should keep the note"):
+            only_note = json.dumps({"v": 1, "title": "Model", "order": ["note"], "elements": {"note": NOTE_ELEMENT}})
+            expect(KeptDocument(Format("whiteboard")).onto(only_note, _board(20)).kept).to(equal([f"note '{NOTE}'"]))
 
     with context("as a whiteboard, whose file holds a note a person added and a card they moved"):
         with before.each:
