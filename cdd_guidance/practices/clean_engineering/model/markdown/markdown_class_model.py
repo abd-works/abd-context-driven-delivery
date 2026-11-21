@@ -47,7 +47,6 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
-from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUCTOR_NAMES
 from cdd_guidance.practices.source_code import split_top_level
 
 if TYPE_CHECKING:
@@ -742,61 +741,14 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
             return canonical.render()
         written = type(self)()
         written.parse(previous or "")
-        unwritten = UnwrittenProse(written)
+        # Translation overwrites the parsed objects in place, so the words the document held are kept apart first.
+        earlier = written.clone()
         written.translate_from(canonical)
         if not canonical.writes_prose:
-            unwritten.give_back()
+            written.take_words_from(earlier)
         return written._written()
 
     def _written(self) -> str:
         if self._cards is not None:
             return self._cards.render()
         return "\n".join(module.render() for module in self.modules)
-
-
-class UnwrittenProse:
-    """The prose a model document holds that a drawing of it does not: each class's intent, and the `//` notes and
-    `->` calls under each member. It is taken from the document before a drawing's model is translated into it, and
-    given back to the classes and members the drawing still has, so a render back from a drawing loses none of it."""
-
-    def __init__(self, model: "MarkdownCleanEngineeringModel") -> None:
-        self._model = model
-        self._classes = {oclass.name: oclass.clone() for oclass in model.every_class()}
-        self._modules = {module.name: (module.language, module.constraint, module.description) for module in model.modules}
-
-    def give_back(self) -> None:
-        """Give each module and class the document still holds the prose it had, where the drawing gave it none."""
-        for module in self._model.modules:
-            language, constraint, description = self._modules.get(module.name, ("", "", ""))
-            module.language = module.language or language
-            module.constraint = module.constraint or constraint
-            if self._is_cut_short(module.description, description):
-                module.description = description
-        for oclass in self._model.every_class():
-            earlier = self._classes.get(oclass.name)
-            if earlier is not None:
-                self._give_back_to(oclass, earlier)
-
-    def _is_cut_short(self, drawn: str, earlier: str) -> bool:
-        """Whether drawn is the start of earlier, as a drawing writes a long purpose: cut, and ended with three dots."""
-        return drawn.endswith("...") and earlier.startswith(drawn[:-3].rstrip())
-
-    def _give_back_to(self, oclass: OoadClass, earlier: OoadClass) -> None:
-        oclass.intent = oclass.intent or earlier.intent
-        for members, earlier_members in ((oclass.operations, earlier.operations), (oclass.properties, earlier.properties)):
-            had = {self._member_key(earlier, member): member for member in earlier_members}
-            for member in members:
-                self._give_back_to_member(member, had.get(self._member_key(oclass, member)))
-
-    def _member_key(self, oclass: OoadClass, member: Operation | Property) -> str:
-        """The member's name; a constructor is one member whatever its format calls it."""
-        return "constructor" if member.name in {oclass.name, *CONSTRUCTOR_NAMES} else member.name
-
-    def _give_back_to_member(self, member: Operation | Property, earlier: Operation | Property | None) -> None:
-        if earlier is None:
-            return
-        if not member.callees:
-            member.callees = list(earlier.callees)
-        if not member.invariants:
-            member.invariants = [item.clone() for item in earlier.invariants]
-            member.description = earlier.description

@@ -261,6 +261,13 @@ class Aggregate(DomainNode, Module):
         """The aggregate as a module nested in its context's module: `Sales | custom/ShoppingCart`."""
         return f"{self.parent.module_path}{_PATH}{self.name}"
 
+    def take_words_from(self, earlier: "Aggregate") -> None:
+        """Keep the sentence, group, and consumed events it has, and take earlier's where it has none, as an aggregate
+        read from a drawing takes what the document it is written onto held."""
+        self.description = self.description or earlier.description
+        self.group = self.group or earlier.group
+        self.consumed_events = self.consumed_events or list(earlier.consumed_events)
+
     def take_class(self, oclass: OoadClass) -> None:
         """Hold a class read from a class model."""
         self.classes.append(oclass)
@@ -429,6 +436,15 @@ class BoundedContext(DomainNode, Module):
         domain_model, the domain model's path as written from that file; previous is the file as it is now, whose
         other lines are kept."""
         return ContextFile(previous).naming(self, domain_model).text
+
+    def take_words_from(self, earlier: "BoundedContext") -> None:
+        """Keep the sentence, notes, module, and group notes it has, and take earlier's where it has none, as a context
+        read from a drawing takes what the document it is written onto held."""
+        self.description = self.description or earlier.description
+        self.notes = self.notes or list(earlier.notes)
+        self.module_name = self.module_name or earlier.module_name
+        self.module_notes = self.module_notes or list(earlier.module_notes)
+        self.group_notes = self.group_notes or dict(earlier.group_notes)
 
     def append_context(self, context: "BoundedContext") -> None:
         self.contexts.append(context)

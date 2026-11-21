@@ -30,7 +30,7 @@ from __future__ import annotations
 import re
 from typing import Callable
 
-from harness.guidance.practice_formats import NO_LONGER_IN_MODEL, Reshaped
+from harness.guidance.practice_formats import KeptMark, Reshaped
 from harness.markdown.format import Format
 
 _PYTHON = "python"
@@ -234,14 +234,14 @@ class ReshapedCode:
         """The rendered shape, then the lines only the existing file holds as comments under one line saying so; lines
         an earlier render set apart are carried over as they are, so a second render changes nothing."""
         lines = existing.splitlines()
-        marked = next((index for index, line in enumerate(lines) if NO_LONGER_IN_MODEL in line), len(lines))
+        marked = next((index for index, line in enumerate(lines) if KeptMark.marks(line)), len(lines))
         carried = lines[marked + 1:]
         shape = rendered.splitlines()
         unplaced = [line for line in lines[:marked] if line.strip() and not any(line.strip() in kept for kept in shape)]
         apart = carried + [f"{self._comment} {line}" for line in unplaced]
         if not apart:
             return Reshaped(rendered, [], [])
-        heading = f"{self._comment} ---- {NO_LONGER_IN_MODEL}: the lines below were in this file and the render did not write them. Move each into the member it belongs to, then delete it. ----"
+        heading = f"{self._comment} ---- {KeptMark.WORDS}: the lines below were in this file and the render did not write them. Move each into the member it belongs to, then delete it. ----"
         text = "\n".join([*shape, "", heading, *apart]) + "\n"
         return Reshaped(text, [f"{len(apart)} line(s) set apart"], [])
 
@@ -337,7 +337,7 @@ class _FileEdit:
 
     def _is_marked(self, operation: Member) -> bool:
         """Whether an earlier render set the operation apart: its marking line is among the comments above it."""
-        return any(NO_LONGER_IN_MODEL in line for line in self._file.lines[operation.lead:operation.start])
+        return KeptMark.marks(self._file.lines[operation.lead:operation.start])
 
     def _set_apart(self, owner: Member, operation: Member) -> list[str]:
         """The operation's own lines under its marking line: the one it already has, else one saying where it was."""
@@ -345,7 +345,7 @@ class _FileEdit:
         if self._is_marked(operation):
             return lines[operation.lead:operation.end]
         marking = (
-            f"{operation.indent}{self._comment} ---- {NO_LONGER_IN_MODEL}: {owner.name}.{operation.name}, kept from lines "
+            f"{operation.indent}{self._comment} ---- {KeptMark.WORDS}: {owner.name}.{operation.name}, kept from lines "
             f"{operation.lead + 1} to {operation.end}. Move its body into the member that replaced it, then delete it. ----"
         )
         return [marking, *lines[operation.lead:operation.end]]

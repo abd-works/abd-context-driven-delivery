@@ -21,7 +21,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from harness.guidance.practice_formats import NO_LONGER_IN_MODEL, Reshaped
+from harness.guidance.practice_formats import KeptMark, Reshaped
 
 from cdd_guidance.practices.ux.model.view.front_end_view import Edit, FrontEndView, TypeAnnotations
 
@@ -111,7 +111,7 @@ class Component:
 
     def marked(self, member: ComponentMember) -> bool:
         """Whether an earlier render set the member apart: its marking line is among the comments above it."""
-        return NO_LONGER_IN_MODEL in self._text.text[member.lead:member.start]
+        return KeptMark.marks(self._text.text[member.lead:member.start])
 
     def indent_of(self, position: int) -> str:
         line = self._text.text[self._text.line_start(position):]
@@ -236,7 +236,7 @@ class ReshapedView:
         """Name member as kept, and mark it where it is unless an earlier render marked it."""
         self.kept.append(f"{held.name}.{member.name}")
         if not held.marked(member):
-            marking = f"{NO_LONGER_IN_MODEL}: {held.name}.{member.name}. Move its body into the member that replaced it, then delete it."
+            marking = f"{KeptMark.WORDS}: {held.name}.{member.name}. Move its body into the member that replaced it, then delete it."
             self._edits.append(Edit(member.lead, member.lead, f"{held.indent_of(member.start)}// ---- {marking} ----\n"))
 
     def _add(self, held: Component, member: ComponentMember) -> None:
@@ -256,8 +256,8 @@ class ReshapedView:
         for prop in (prop for prop in held.props if prop not in shape.props):
             self.kept.append(f"{held.name}.{prop}")
             named = f"{held.name}.{prop}"
-            if not any(NO_LONGER_IN_MODEL in line and named in line for line in held.marks.splitlines()):
-                marking = f"{NO_LONGER_IN_MODEL}: {named}, a prop. Take it out of the component's props once nothing reads it."
+            if not any(KeptMark.marks(line) and named in line for line in held.marks.splitlines()):
+                marking = f"{KeptMark.WORDS}: {named}, a prop. Take it out of the component's props once nothing reads it."
                 self._edits.append(Edit(held.start, held.start, f"{held.indent_of(held.start)}// ---- {marking} ----\n"))
         gained = [prop for prop in shape.props if prop not in held.props]
         self.added.extend(f"{held.name}.{prop}" for prop in gained)

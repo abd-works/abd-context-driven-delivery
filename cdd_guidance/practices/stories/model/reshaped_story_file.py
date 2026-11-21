@@ -21,7 +21,7 @@ from __future__ import annotations
 from collections import Counter
 from typing import TYPE_CHECKING, List, Optional, Sequence
 
-from harness.guidance.practice_formats import NO_LONGER_IN_MODEL, Reshaped
+from harness.guidance.practice_formats import KeptMark, Reshaped
 
 from cdd_guidance.practices.stories.model.story_file import CodeBlock, flat_steps
 from cdd_guidance.practices.stories.model.story_writing import StepClause
@@ -130,10 +130,10 @@ class ReshapedStoryFile:
         its line."""
         self._kept.append(name)
         line = block.opening_line
-        if line > 0 and NO_LONGER_IN_MODEL in self._lines[line - 1]:
+        if line > 0 and KeptMark.marks(self._lines[line - 1]):
             return
         indent = self._indent_of(block)
-        marking = f"---- {NO_LONGER_IN_MODEL}: {member}. Move its code into the member that replaced it, then delete it. ----"
+        marking = KeptMark.line_for(member, "Move its code into the member that replaced it, then delete it.")
         self._markings.setdefault(line, []).append(f"{indent}{self._language.comment(marking)}")
 
     def _indent_of(self, block: CodeBlock) -> str:

@@ -42,11 +42,7 @@ class ReplacedDocument:
 
     def _give_context(self, was: MarkdownBoundedContext, context: MarkdownBoundedContext) -> None:
         """The context's sentence, notes, module, and group notes, then each of its aggregates' words."""
-        context.description = context.description or was.description
-        context.notes = context.notes or list(was.notes)
-        context.module_name = context.module_name or was.module_name
-        context.module_notes = context.module_notes or list(was.module_notes)
-        context.group_notes = context.group_notes or dict(was.group_notes)
+        context.take_words_from(was)
         was_named = {aggregate.name: aggregate for aggregate in was.aggregates}
         for aggregate in context.aggregates:
             if aggregate.name in was_named:
@@ -76,9 +72,7 @@ class _ReplacedAggregate:
 
     def give_its_words(self) -> None:
         was, aggregate = self._was, self._aggregate
-        aggregate.description = aggregate.description or was.description
-        aggregate.group = aggregate.group or was.group
-        aggregate.consumed_events = aggregate.consumed_events or list(was.consumed_events)
+        aggregate.take_words_from(was)
         aggregate.integrations = self._integrations()
         self._give_root()
         was_named = {card.name: card for card in was.classes}
