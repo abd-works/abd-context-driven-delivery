@@ -55,9 +55,9 @@ export function PracticeDotView($: EngineInterface, elements: ElementTable, dot:
   const { Box } = elements
   const violating = dot.violating
   return (
-    <Box key={`practice-${dot.key}`} flexDirection="row" gap={0} backgroundColor={dot.isOn ? BRAND.selectedTint : undefined}>
-      {GlyphButtonView(elements, `dot-${dot.key}`, '■', dot.shade, () => togglePractice($, dot.sessionFile, dot.practice), dot.isOn)}
-      {violating ? GlyphButtonView(elements, `violations-${dot.key}`, String(dot.violationCount), BRAND.error, () => openReport($, violating)) : null}
+    <Box key={`practice-${dot.practice}`} flexDirection="row" gap={0} backgroundColor={dot.isOn ? BRAND.selectedTint : undefined}>
+      {GlyphButtonView(elements, `dot-${dot.practice}`, '■', dot.shade, () => togglePractice($, dot.sessionFile, dot.practice), dot.isOn)}
+      {violating ? GlyphButtonView(elements, `violations-${dot.practice}`, String(dot.violationCount), BRAND.error, () => openReport($, violating)) : null}
       {PracticeTipView($, elements, dot)}
     </Box>
   )

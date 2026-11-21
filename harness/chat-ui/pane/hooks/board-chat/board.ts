@@ -10,14 +10,9 @@ export const FOLDER_QUERY = 'folder'
 // CHAT_QUERY; the mod takes only types from the language adapter, so the word is spelled here as PROJECT_QUERY is).
 export const CHAT_QUERY = 'chat'
 
-// One call on a chat tool (chat.check_in, chat.confirm, chat.finish, chat.select, chat.show, chat.show_stages, chat.list_stages), each with
-// the body that tool takes.
+// One call on a chat tool (chat.check_in, chat.confirm, chat.finish), each with the body that tool takes.
 export type ChatRequest = { chat: string } & (
   | { operation: 'check-in'; body: { is_busy: boolean; name: string; folder: string } }
-  | { operation: 'select'; body: { selected_fidelities: string[] } }
-  | { operation: 'show'; body: Record<string, never> }
-  | { operation: 'show-stages'; body: { shown_stages: string[] } }
-  | { operation: 'list-stages'; body: { stages: Record<string, string[]> } }
   | { operation: 'confirm'; body: { message: string; is_shown: boolean; reason: string } }
   | { operation: 'finish'; body: { message: string } }
 )

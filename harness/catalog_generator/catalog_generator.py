@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
-from harness.agent_tools.agent_tools import tool_subject
+from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, tool_subject
 from harness.catalog_generator.approach_copy import APPROACH_MARKDOWN, ApproachCopy
 from harness.catalog_generator.approach_page import ApproachGrids, ApproachPage
 from harness.catalog_generator.brand import Brand
@@ -96,7 +96,7 @@ class LifecycleAction:
 
     def __init__(self, action: Action) -> None:
         self.action = action
-        self._toolset: object | None = None
+        self._toolset: AgentToolSet | None = None
 
     @classmethod
     def load_all(cls) -> list[LifecycleAction]:
@@ -110,18 +110,18 @@ class LifecycleAction:
         return self.action.name
 
     @property
-    def toolset(self) -> object:
+    def toolset(self) -> AgentToolSet:
         """The toolset that defines the action, built once."""
         if self._toolset is None:
             self._toolset = self.action.toolset_class()
         return self._toolset
 
     @property
-    def tool(self) -> object | None:
+    def tool(self) -> AgentTool | None:
         """The toolset's live tool for this action; none when it has no such tool or annotates it ``@noCatalog``."""
         tools = self.toolset.tools
         tool = tools[self.name] if self.name in tools else None
-        if tool is None or noCatalog.annotates(getattr(tool, "callable", tool)):
+        if tool is None or noCatalog.annotates(tool.callable):
             return None
         return tool
 

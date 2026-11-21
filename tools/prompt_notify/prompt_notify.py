@@ -21,10 +21,13 @@ from typing import Callable, ClassVar
 from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, agent_toolset
 from harness.annotations.name import Name
 from harness.annotations.annotation import noCatalog
+from harness.guidance.action_catalogue import ACTION_CATALOGUE
+from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
 from harness.hooks.hook_server import HOOK_TOASTS, TOAST_ARROW, HookPayload, rules_toast
 from harness.hooks.hooks import Toast, hook
 from harness.installation.ide_layout import installed_guidance_kind
+from harness.installation.repository_toolsets import RUNNING_CHECKOUT, RepositoryToolsets
 from space.session.session_log import LogTimestamp
 
 TOAST_NOTICE = ".cursor/prompt-notify-toast.json"
@@ -59,8 +62,6 @@ class PromptNotify:
     def _practice_names(self) -> dict[str, str]:
         """Each practice's slug, each fidelity's slug, and each practice rule file's name, which joins the two
         (``bdd-bdd-behavior``)."""
-        from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
-
         names: dict[str, str] = {}
         for practice in PRACTICE_CATALOGUE.create_all():
             names[practice.slug] = "practice"
@@ -71,8 +72,6 @@ class PromptNotify:
 
     def _action_names(self) -> dict[str, str]:
         """Each action in the action catalogue, such as generate, grill, and create-rule."""
-        from harness.guidance.action_catalogue import ACTION_CATALOGUE
-
         return {self._compact(name): "action" for name in ACTION_CATALOGUE.names}
 
     @hook("preToolUse")
@@ -120,21 +119,15 @@ class PromptNotify:
         annotations say which tool calls toast whichever project the event came from; loaded once by the
         hook server's one notifier. A toolset that fails to load raises, so a broken toolset is seen rather than silently
         not toasting."""
-        from harness.agent_tools.agent_tools import AgentToolSet
-        from harness.installation.repository_toolsets import RUNNING_CHECKOUT, RepositoryToolsets
-
         references = RepositoryToolsets(RUNNING_CHECKOUT).references()
         return AgentToolSet.from_items([reference.toolset_class for reference in references])
 
-    def show_toast(self, toast: str, workspace_roots: list[Path]) -> list[Path]:
-        """Show toast in every workspace folder of the chat it is for, the toast files written. The hook server hands
-        each hook's toast here, so a hook names its toast and never this notifier."""
-        return self.show_ide_toast(toast, workspace_roots)
-
-    def show_ide_toast(self, echo: str, workspace_roots: list[Path | str]) -> list[Path]:
-        """Write echo as the toast of each workspace folder, joined with a toast written there in the same burst."""
+    def show_toast(self, toast: str, workspace_roots: list[Path | str]) -> list[Path]:
+        """Show toast in every workspace folder of the chat it is for, joined with a toast written there in the same
+        burst, and answer the toast files written. The hook server hands each hook's toast here, so a hook names its
+        toast and never this notifier."""
         now = datetime.now(timezone.utc)
-        return [ToastFile(folder).show(echo, now) for folder in self._toast_folders(workspace_roots)]
+        return [ToastFile(folder).show(toast, now) for folder in self._toast_folders(workspace_roots)]
 
     def install_ide_toast_extension(self) -> Path:
         """Every preToolUse asks for this, so copy the tree once per process."""

@@ -7,8 +7,7 @@ import type { FileBar } from './file-bar'
 import type { FilesNotices } from './files-notices'
 import type { FilesStore, SelectedNode } from './files-state'
 import type { SourceCallout } from '@source-view/source-callouts'
-
-const reasonOf = (failure: unknown): string => (failure instanceof Error ? failure.message : String(failure))
+import { reasonOf, saidBy } from './reason'
 
 // Where this browser remembers whether the person opened the graph view's node filter.
 const STORED_FILTERS_SHOWN = 'cdd-files-graph-filters-shown'
@@ -32,12 +31,6 @@ export function choicesAnswered(answer: unknown): FilterData {
   const lists = ['node_types', 'offered_node_types', 'relationships', 'rules'] as const
   if (typeof answer === 'object' && lists.every(list => Array.isArray((answer as Record<string, unknown>)[list]))) return answer as FilterData
   throw new Error(`session.graph_filter_choices answered no choices: ${saidBy(answer)}`)
-}
-
-const saidBy = (answer: unknown): string => {
-  if (typeof answer === 'string') return answer
-  const error = (answer as { error?: unknown } | null)?.error
-  return error !== undefined ? String(error) : JSON.stringify(answer)
 }
 
 // An entry below another is a node's entry; the rules a node lists sit beside them and show with the violations.
@@ -108,6 +101,12 @@ export class FilesGraph {
       this.notices.fail(`The Files app did not read the session's graph: ${reasonOf(failure)}`, 'Showing the graph view, calling session.graph_trees', { kind: 'graph_view' })
       return
     }
+    await this.readMembers(readFor)
+    await this.readFilterChoices(readFor)
+  }
+
+  // The members a call in a shown file opens. A read that fails leaves none, and is told to the page.
+  private async readMembers(readFor: string): Promise<void> {
     try {
       const members = listAnswered<NodeSourceData>('session.graph_members', await this.session.graphMembers())
       this.store.change(({ graph }) => (graph.readFor === readFor ? { graph: { ...graph, members } } : {}))
@@ -115,6 +114,10 @@ export class FilesGraph {
       this.store.change(({ graph }) => ({ graph: { ...graph, members: [] } }))
       this.notices.fail(`The Files app did not read the graph's members: ${reasonOf(failure)}`, 'Showing the graph view, calling session.graph_members', { kind: 'graph_view' })
     }
+  }
+
+  // What the node filter offers for the filter in use. A read that fails leaves no choices, and is told to the page.
+  private async readFilterChoices(readFor: string): Promise<void> {
     try {
       const { filter } = this.store.state.graph
       const choices = choicesAnswered(await this.session.graphFilterChoices(filter.practices, filter.node_types))

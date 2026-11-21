@@ -4,7 +4,7 @@ import json
 import tempfile
 from pathlib import Path
 
-from mamba import description, context, it, before, after
+from mamba import description, context, it, before
 from expects import equal, expect, have_keys
 
 from harness.design_canvas.canvas import DesignCanvas, stem
@@ -29,17 +29,6 @@ with description("Design canvas") as self:
             expect(canvas["order"]).to(equal(["Main.dc.html", "screens/pick-number.dc.html"]))
             expect(canvas["launch"]).to(equal({"view": "canvas", "page": "story-map"}))
             expect([page["name"] for page in canvas["pages"]]).to(equal(["Story map", "Screens"]))
-
-    with context("writing to a folder"):
-        with before.each:
-            self.folder = tempfile.TemporaryDirectory()
-
-        with after.each:
-            self.folder.cleanup()
-
-        with it("puts each file under the folder at its project path"):
-            self.canvas.write(self.folder.name)
-            expect((Path(self.folder.name) / "project" / "Main.dc.html").read_text(encoding="utf-8")).to(equal("<map>"))
 
     with context("artboard names"):
         with it("names a dc-import by the file's stem, and its live flag in camel case"):

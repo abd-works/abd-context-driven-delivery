@@ -51,10 +51,6 @@ class FailureKinds:
         self._kinds = {kind.name: kind for kind in kinds}
         self._unnamed = FailureKind("", "this failure")
 
-    @property
-    def every(self) -> list[FailureKind]:
-        return list(self._kinds.values())
-
     def named(self, name: str) -> FailureKind:
         """The kind called name; a failure that names no kind has no known causes."""
         if not name:

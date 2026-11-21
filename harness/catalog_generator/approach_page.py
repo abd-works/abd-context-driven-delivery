@@ -361,7 +361,7 @@ class ApproachPage:
     """The approach page's body and the pages it opens, for one catalog's practices. Its examples (*CatalogExamples*) name the catalog's
     folder; on a project's approach page the stage examples are the project's own, staged there."""
 
-    def __init__(self, copy: ApproachCopy, practices: list, examples: CatalogExamples) -> None:
+    def __init__(self, copy: ApproachCopy, practices: list[CatalogPractice], examples: CatalogExamples) -> None:
         self.copy = copy
         self.catalog_root = Path(examples.catalog_root)
         self.project_examples = examples.project

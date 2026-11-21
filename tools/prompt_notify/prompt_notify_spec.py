@@ -188,7 +188,7 @@ with description("prompt echo detection"):
 
         with it("should write that echo to the workspace toast notice"):
             with TemporaryDirectory() as tmp:
-                [dest] = _prompt_notify.show_ide_toast(
+                [dest] = _prompt_notify.show_toast(
                     _spec._echo(HookPayload({"tool_name": "validate.validate", "tool_input": {}})), [Path(tmp)]
                 )
                 expect(json.loads(dest.read_text(encoding="utf-8"))["message"]).to(
@@ -201,7 +201,7 @@ with description("prompt echo detection"):
                 other = Path(tmp) / "app"
                 repo.mkdir()
                 other.mkdir()
-                _prompt_notify.show_ide_toast("chat edit \u2192 rules : code", [repo, str(other)])
+                _prompt_notify.show_toast("chat edit \u2192 rules : code", [repo, str(other)])
                 copied = other / ".cursor" / "prompt-notify-toast.json"
                 expect((repo / ".cursor" / "prompt-notify-toast.json").is_file()).to(equal(True))
                 expect(copied.is_file()).to(equal(True))
@@ -218,26 +218,26 @@ with description("prompt echo detection"):
                 resolved = other.resolve()
                 rest = resolved.as_posix().split(":", 1)[1]
                 slash_drive = f"/{resolved.drive[0].lower()}:{rest}"
-                _prompt_notify.show_ide_toast("chat edit \u2192 rules : code", [slash_drive])
+                _prompt_notify.show_toast("chat edit \u2192 rules : code", [slash_drive])
                 copied = other / ".cursor" / "prompt-notify-toast.json"
                 expect(copied.is_file()).to(equal(True))
 
         with it("should not rewrite practice echoes into a rules toast"):
             with TemporaryDirectory() as tmp:
-                _prompt_notify.show_ide_toast("Practice \u2192 ddd", [Path(tmp)])
-                [dest] = _prompt_notify.show_ide_toast("Practice \u2192 stories", [Path(tmp)])
+                _prompt_notify.show_toast("Practice \u2192 ddd", [Path(tmp)])
+                [dest] = _prompt_notify.show_toast("Practice \u2192 stories", [Path(tmp)])
                 expect(json.loads(dest.read_text(encoding="utf-8"))["message"]).to(
                     equal("Practice \u2192 ddd; Practice \u2192 stories")
                 )
 
         with it("should stack rules notices from the same burst"):
             with TemporaryDirectory() as tmp:
-                _prompt_notify.show_ide_toast(
+                _prompt_notify.show_toast(
                     "rules injected for clean-engineering-code\n"
                     "rules injected for clean-engineering-modules",
                     [Path(tmp)],
                 )
-                [dest] = _prompt_notify.show_ide_toast(
+                [dest] = _prompt_notify.show_toast(
                     "rules injected for ddd-tactics\nrules injected for ddd-bounded-context", [Path(tmp)]
                 )
                 message = json.loads(dest.read_text(encoding="utf-8"))["message"]
@@ -252,8 +252,8 @@ with description("prompt echo detection"):
 
         with it("should keep both inject toasts from the same burst"):
             with TemporaryDirectory() as tmp:
-                _prompt_notify.show_ide_toast(rules_toast("chat edit", ["agent bdd"]), [Path(tmp)])
-                [dest] = _prompt_notify.show_ide_toast(
+                _prompt_notify.show_toast(rules_toast("chat edit", ["agent bdd"]), [Path(tmp)])
+                [dest] = _prompt_notify.show_toast(
                     rules_toast("chat edit", ["clean engineering code", "ddd tactics"]), [Path(tmp)]
                 )
                 message = json.loads(dest.read_text(encoding="utf-8"))["message"]

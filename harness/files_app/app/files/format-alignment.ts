@@ -1,6 +1,5 @@
 import type { AlignedFileData, AlignmentDiagnosisData, AlignmentFailureData, AlignmentGapData, AlignmentResultData } from '@cdd/space/session/session'
-
-const reasonOf = (failure: unknown): string => (failure instanceof Error ? failure.message : String(failure))
+import { reasonOf } from './reason'
 
 // What the page asks of the session: its diagnosis and its alignment (session.diagnose_alignment, session.align_formats).
 export type AlignmentSession = {

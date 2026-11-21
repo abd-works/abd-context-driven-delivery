@@ -65,7 +65,7 @@ class CanvasVersions:
         return cls(Path(practice_root) / DESIGN_CANVAS_FOLDER)
 
     @property
-    def numbers(self) -> List[int]:
+    def _numbers(self) -> List[int]:
         if not self.root.is_dir():
             return []
         found = (_VERSION.match(path.name) for path in self.root.iterdir() if path.is_dir())
@@ -74,7 +74,7 @@ class CanvasVersions:
     @property
     def latest(self) -> int:
         """The newest version, or 0 when there is none yet."""
-        return self.numbers[-1] if self.numbers else 0
+        return self._numbers[-1] if self._numbers else 0
 
     def folder(self, number: int) -> Path:
         """The version's folder: it holds ``project/`` exactly as the canvas publishes it."""

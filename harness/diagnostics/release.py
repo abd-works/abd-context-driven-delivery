@@ -16,7 +16,8 @@ PYPROJECT = "pyproject.toml"
 TAG_PATTERN = "v*"
 # Where a ticket's session folder moves when its ticket is complete: each folder added there is a completed story.
 COMPLETE_SESSIONS = ".sessions/_complete"
-_VERSION_LINE = re.compile(r'^version\s*=\s*"([^"]*)"', re.MULTILINE)
+# The version line of pyproject.toml's [project] table: the one line /version rewrites and /release reads.
+VERSION_LINE = re.compile(r'^version\s*=\s*"([^"]*)"', re.MULTILINE)
 # The release tiers, in the order /release runs them.
 RELEASE_TIERS = (TestTier.E2E, TestTier.HEAVY)
 # How much of a commit hash release notes show: enough to find the commit, short enough to read.
@@ -90,8 +91,8 @@ class CddRelease:
         self._github_cli = github_cli
         self._test_runs = test_runs
         self._notes = ReleaseNotes(git)
-        self.url = ""
-        self.is_published = False
+        self._url = ""
+        self._is_published = False
         self._published_notes = ""
 
     def check_green(self) -> CddRelease:
@@ -128,16 +129,16 @@ class CddRelease:
             notes_file = Path(folder) / "notes.md"
             notes_file.write_text(notes, encoding="utf-8")
             answer = self._github_cli.run("release", "create", tag, "--title", f"CDD {tag}", "--notes-file", str(notes_file), "--verify-tag")
-        self.url = answer.strip().splitlines()[-1] if answer.strip() else ""
+        self._url = answer.strip().splitlines()[-1] if answer.strip() else ""
         self._published_notes = notes
-        self.is_published = True
+        self._is_published = True
         return self
 
     @property
     @data_field
     def version(self) -> str:
         """The version this releases, as /version set it in pyproject.toml, such as 1.5.0."""
-        return _VERSION_LINE.search((self._project / PYPROJECT).read_text(encoding="utf-8")).group(1)
+        return VERSION_LINE.search((self._project / PYPROJECT).read_text(encoding="utf-8")).group(1)
 
     @property
     @data_field
@@ -154,9 +155,9 @@ class CddRelease:
     @data_field
     def release_url(self) -> str:
         """The release's page on the repository, once published."""
-        return self.url
+        return self._url
 
     @property
     @data_field
     def published(self) -> bool:
-        return self.is_published
+        return self._is_published

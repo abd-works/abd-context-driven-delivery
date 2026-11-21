@@ -8,7 +8,7 @@ from enum import Enum
 from pathlib import Path
 
 from harness.agent_tools import agent_toolset
-from harness.diagnostics.release import CddRelease
+from harness.diagnostics.release import PYPROJECT, VERSION_LINE, CddRelease
 from harness.diagnostics.test_runs import TestRunRecord, default_record_folder
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.installation.data_class import data_field, language_adapter
@@ -19,11 +19,8 @@ from harness.diagnostics.github_cli import GitHubCli
 
 # The checkout the cdd server runs its code from: the one whose version every chat it answers runs.
 SERVED_CHECKOUT = Path(__file__).resolve().parents[2]
-PYPROJECT = "pyproject.toml"
 # A release is a tag such as v2.0.0 that /release pushes; commits on main after it are not released.
 RELEASE_TAG = re.compile(r'^v(\d+)\.(\d+)(\.\d+)?$')
-# The version line of pyproject.toml's [project] table, the one line /version rewrites.
-_VERSION_LINE = re.compile(r'^version\s*=\s*"[^"]*"', re.MULTILINE)
 _VERSION_TEXT = re.compile(r'^\d+\.\d+(\.\d+)?$')
 # Short enough that the fetch ends inside the cdd tool's own time limit, so a slow network reads the last fetch instead.
 FETCH_SECONDS = 8
@@ -136,7 +133,7 @@ class CddVersion:
         file = self._project / PYPROJECT
         text = file.read_text(encoding="utf-8")
         next_version = self._next_version_from(version, Release.from_pyproject(text))
-        file.write_text(_VERSION_LINE.sub(f'version = "{next_version}"', text, count=1), encoding="utf-8")
+        file.write_text(VERSION_LINE.sub(f'version = "{next_version}"', text, count=1), encoding="utf-8")
         self._project_git.run("commit", "-m", f"Version {Release.from_pyproject(file.read_text(encoding='utf-8')).label}", "--", PYPROJECT)
         self._project_git.run("push", "origin", "HEAD")
         return self

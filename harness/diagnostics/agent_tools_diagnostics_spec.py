@@ -26,7 +26,6 @@ from harness.mcp.mcp_server import McpHost
 from harness.diagnostics.agent_tools_probe import (
     AGENT_TOOLS_PROBE_SECTION,
     AgentToolsProbe,
-    agent_tools_toolset_ref,
 )
 
 _AGENT_TOOLS_DIAGNOSTICS_REF = (
@@ -63,21 +62,20 @@ with description("mcp tools diagnostics"):
         OPEN_PROJECTS.close_all()
 
     with it("should scope toolsets to space, harness, and tools only"):
-        expect(agent_tools_toolset_ref("space.repo.repo:Repo")).to(equal(True))
-        expect(agent_tools_toolset_ref("harness.graph.graph:Graph")).to(equal(True))
-        expect(agent_tools_toolset_ref("tools.echo.echo:Echo")).to(equal(True))
-        expect(agent_tools_toolset_ref("cdd_guidance.practices.bdd.bdd:Bdd")).to(equal(False))
-        expect(agent_tools_toolset_ref("cdd_guidance.builders.create_agent_toolset.create_agent_toolset:CreateAgentToolset")).to(
-            equal(False)
-        )
-        expect(agent_tools_toolset_ref("harness.guidance.guidance:Guidance")).to(equal(False))
-        expect(agent_tools_toolset_ref("harness.diagnostics.guidance_diagnostics:GuidanceDiagnostics")).to(
-            equal(False)
-        )
-        expect(agent_tools_toolset_ref("harness.guidance_actions.guidance_actions:GuidanceAction")).to(
-            equal(False)
-        )
-        expect(agent_tools_toolset_ref("harness.graph.graph:Graph")).to(equal(True))
+        covered = ["space.repo.repo:Repo", "harness.graph.graph:Graph", "tools.echo.echo:Echo"]
+        left_out = [
+            "cdd_guidance.practices.bdd.bdd:Bdd",
+            "cdd_guidance.builders.create_agent_toolset.create_agent_toolset:CreateAgentToolset",
+            "harness.guidance.guidance:Guidance",
+            "harness.diagnostics.guidance_diagnostics:GuidanceDiagnostics",
+            "harness.guidance_actions.guidance_actions:GuidanceAction",
+        ]
+        tree = Path(tempfile.mkdtemp())
+        try:
+            probe = AgentToolsProbe(_installer(tree, [], toolset_items=[*left_out, *covered]))
+            expect(probe.toolset_refs).to(equal(tuple(covered)))
+        finally:
+            shutil.rmtree(tree, ignore_errors=True)
 
     with it("should enroll agent-tools-diagnostics as an MCP tool not a prompt"):
         host = McpHost.from_refs(

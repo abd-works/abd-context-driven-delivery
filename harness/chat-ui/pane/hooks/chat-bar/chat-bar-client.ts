@@ -5,7 +5,7 @@ import type { BoardOverviewData, BoardPracticeData } from '@cdd/space/kanban/boa
 import type { FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
 import type { TicketData } from '@cdd/space/kanban/ticket'
 
-import type { ChatBarJson } from '../../types'
+import type { ChatBarJson, FormatChoiceJson } from '../../types'
 import { shownAsFailure } from '../error-display/failure-client'
 import { reasonOf } from '../shared/reason'
 import { callTool } from '../shared/cdd-tool'
@@ -114,13 +114,9 @@ export class ChatBarClient {
     return Object.values(this.ticket?.session.practices ?? {}).find(practice => practice.design_view)?.design_view ?? ''
   }
 
-  get ticketName(): string {
-    return this.ticket?.name ?? ''
-  }
-
   // The whole path of the folder the session works in, which the Graph app opens on; empty with no session.
   get sessionPath(): string {
-    return (this.ticket as (TicketData & { session_path?: string }) | null)?.session_path ?? ''
+    return this.ticket?.session_path ?? ''
   }
 
   // The actions of the shown stage whose command takes the formats the chips pick, generate and render.
@@ -166,7 +162,7 @@ export class ChatBarClient {
   }
 
   // The format chips: each format group the selected fidelities offer, selected or not, as the session holds them.
-  get formatChoices(): { label: string; formats: string[]; offered: number; made: number; is_chosen: boolean }[] {
+  get formatChoices(): FormatChoiceJson[] {
     return (this.guidance?.formats ?? []).map(format => ({ label: format.label, formats: format.formats, offered: format.offered, made: 0, is_chosen: format.is_selected }))
   }
 
@@ -187,11 +183,6 @@ export class ChatBarClient {
   // The fidelity whose next action the action button names: the ticket's next among those selected, else the first.
   get actionFidelity(): FidelityProgressClient | null {
     return this.fidelities.find(fidelity => fidelity.slug === this.ticket?.next?.fidelity.slug) ?? this.fidelities[0] ?? null
-  }
-
-  // Every fidelity an action runs on: all the selected stages' fidelities of the practices selected.
-  get actionFidelities(): FidelityProgressClient[] {
-    return this.fidelities
   }
 
   // The repository the board shows, by its folder's name.

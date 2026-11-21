@@ -7,8 +7,8 @@ from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.diagnostics.app import APPS, App
 from harness.diagnostics.desktop_walk_question import DesktopWalkQuestion
-from harness.diagnostics.test_runs import SCHEDULED_RELEASE, TestCadence, TestRun, TestRunRecord, default_record_folder, main_checkout
-from harness.e2e_review.e2e_review import E2eReview, E2eRunReview
+from harness.diagnostics.test_runs import TestCadence, TestRun, TestRunRecord, default_record_folder, main_checkout
+from harness.e2e_review.e2e_review import E2eReview, E2eRunReview, ScheduledReview
 from harness.installation.data_class import data_field, language_adapter
 from harness.mcp.mcp_annotations import mcp
 
@@ -25,7 +25,7 @@ class ServerHealth:
         self._repo_root = Path(repo_root).resolve()
         self._cadence = cadence if cadence is not None else TestCadence(TestRunRecord(default_record_folder(), main_checkout(self._repo_root)))
         # The scheduled e2e run's screens are reviewed in the main checkout it runs in.
-        self._e2e_review = e2e_review if e2e_review is not None else E2eReview(self._cadence.checkout or self._repo_root, SCHEDULED_RELEASE)
+        self._e2e_review = e2e_review if e2e_review is not None else E2eReview(self._cadence.checkout or self._repo_root, ScheduledReview.RELEASE)
 
     @classmethod
     @tool_subject

@@ -138,10 +138,6 @@ export class PracticeDotClient {
     readonly isOn: boolean,
   ) {}
 
-  get key(): string {
-    return this.practice
-  }
-
   // The session.json of the ticket's session, which a press on the dot turns the practice on or off in.
   get sessionFile(): string {
     return this.least.sessionFile

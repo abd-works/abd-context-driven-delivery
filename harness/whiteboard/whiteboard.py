@@ -305,7 +305,7 @@ class Whiteboard:
     def __init__(self, title: str = "", elements: Iterable[BoardElement] = ()) -> None:
         self.title = title
         # The store version each record was read at, by element id and ``meta``; a board drawn by a practice has none.
-        self.versions: Dict[str, int] = {}
+        self._versions: Dict[str, int] = {}
         self._elements: Dict[str, BoardElement] = {}
         for element in elements:
             self.add(element)
@@ -382,15 +382,15 @@ class Whiteboard:
         return self._elements.get(element_id)
 
     @property
-    def meta(self) -> Dict[str, object]:
+    def _meta(self) -> Dict[str, object]:
         return {"v": 1, "title": self.title, "order": self.order}
 
     def save(self) -> str:
         """The board as a ``.whiteboard`` file: its meta, every element's record, and the versions they were read at."""
-        board = dict(self.meta)
+        board = dict(self._meta)
         board["elements"] = {element.id: element.record for element in self.elements}
-        if self.versions:
-            board["versions"] = dict(self.versions)
+        if self._versions:
+            board["versions"] = dict(self._versions)
         return json.dumps(board, indent=1, ensure_ascii=False)
 
     @classmethod
@@ -406,7 +406,7 @@ class Whiteboard:
         order = [key for key in board.get("order", []) if key in records]
         order += [key for key in records if key not in order]
         loaded = cls(str(board.get("title", "")))
-        loaded.versions = {str(key): int(value) for key, value in board.get("versions", {}).items()}
+        loaded._versions = {str(key): int(value) for key, value in board.get("versions", {}).items()}
         for key in order:
             loaded._elements[key] = BoardElement.from_record(key, records[key])
         return loaded
@@ -420,7 +420,7 @@ class Whiteboard:
                 self._elements[key] = element.placed_at(before.place)
         return self
 
-    def writes(self, previous: Optional["Whiteboard"] = None) -> List[StoreWrite]:
+    def _writes(self, previous: Optional["Whiteboard"] = None) -> List[StoreWrite]:
         """The store writes that turn previous, the board as it is in Claude, into this board: its meta, then each
         element a practice drew that this board no longer holds deleted, then each new element set and each changed
         element updated with only its changed fields. The deletes go first so a board people watch while the writes
@@ -428,12 +428,12 @@ class Whiteboard:
         left alone and kept at the back of the order."""
         before = previous or Whiteboard()
         kept = [element.id for element in before.elements if isinstance(element, OtherElement)]
-        meta = {**self.meta, "order": kept + self.order}
-        return [StoreWrite("set", "board", "meta", meta, before.versions.get("meta")), *self._deletes(before), *self._element_writes(before)]
+        meta = {**self._meta, "order": kept + self.order}
+        return [StoreWrite("set", "board", "meta", meta, before._versions.get("meta")), *self._deletes(before), *self._element_writes(before)]
 
     def batches(self, previous: Optional["Whiteboard"] = None) -> List[List[Dict[str, object]]]:
         """The writes against previous as ArtifactData ``batch`` entries, at most fifty a batch, in order."""
-        entries = [write.entry for write in self.writes(previous)]
+        entries = [write.entry for write in self._writes(previous)]
         return [entries[start:start + BATCH_SIZE] for start in range(0, len(entries), BATCH_SIZE)]
 
     def _element_writes(self, before: "Whiteboard") -> List[StoreWrite]:
@@ -446,12 +446,12 @@ class Whiteboard:
             changed = {name: value for name, value in element.record.items() if had.record.get(name) != value}
             changed.update({name: CLEARED for name in had.record if name not in element.record})
             if changed:
-                found.append(StoreWrite("update", "elements", element.id, changed, before.versions.get(element.id)))
+                found.append(StoreWrite("update", "elements", element.id, changed, before._versions.get(element.id)))
         return found
 
     def _deletes(self, before: "Whiteboard") -> List[StoreWrite]:
         return [
-            StoreWrite("delete", "elements", element.id, None, before.versions.get(element.id)) for element in before.elements
+            StoreWrite("delete", "elements", element.id, None, before._versions.get(element.id)) for element in before.elements
             if self.element(element.id) is None and not isinstance(element, OtherElement)
         ]
 

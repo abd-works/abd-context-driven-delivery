@@ -18,12 +18,11 @@ import { FilesStore, type FidelityFiles, type SelectedNode } from './files-state
 import { formatGlyphOf } from './format-chips'
 import { GuidanceSelector } from './guidance-selector'
 import { OpenFiles } from './open-files'
+import { reasonOf } from './reason'
 
 // While a comment on the open file is with a chat, the file is read again this often, so the chat's change and the
 // comment's processed state show without a reload. Nothing else is read again: never the list, never a board.
 export const SENT_REFRESH_MILLISECONDS = 2_000
-
-const reasonOf = (failure: unknown): string => (failure instanceof Error ? failure.message : String(failure))
 
 // The fidelities whose files the page lists: those the session's guidance selection lists, its stages selected by its
 // practices selected, none selected meaning every one; before any stage was selected, the ones the link names that the

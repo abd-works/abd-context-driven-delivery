@@ -17,16 +17,16 @@ export type OverlayChips = { ticket: string; choices: OverlayChoiceJson[]; chose
 // The overlays as last read for the session the bar shows; drawing only reads.
 export async function currentOverlayChips($: EngineInterface, chatBar: ChatBarClient): Promise<OverlayChips> {
   const held = (await read($, overlayChoices)) ?? { ticket: '', choices: [], isOpen: false }
-  const choices = held.ticket === chatBar.ticketName ? held.choices : []
-  return { ticket: chatBar.ticketName, choices, chosen: choices.filter(choice => choice.is_chosen), isOpen: held.isOpen && choices.length > 0 }
+  const choices = held.ticket === chatBar.sessionName ? held.choices : []
+  return { ticket: chatBar.sessionName, choices, chosen: choices.filter(choice => choice.is_chosen), isOpen: held.isOpen && choices.length > 0 }
 }
 
 // Read the overlay choices again when the bar shows another session; called from events, never a draw.
 export async function loadOverlayChoices($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
   const held = await read($, overlayChoices)
-  if (!chatBar.ticketName || held?.ticket === chatBar.ticketName) return
-  const choices = await callTool<OverlayChoiceJson[]>($, 'ticket.overlay_choices', { ticket: chatBar.ticketName })
-  await update($, overlayChoices, () => ({ ticket: chatBar.ticketName, choices, isOpen: false }))
+  if (!chatBar.sessionName || held?.ticket === chatBar.sessionName) return
+  const choices = await callTool<OverlayChoiceJson[]>($, 'ticket.overlay_choices', { ticket: chatBar.sessionName })
+  await update($, overlayChoices, () => ({ ticket: chatBar.sessionName, choices, isOpen: false }))
 }
 
 // What a command adds for the overlays the session has chosen, so the action runs with them; nothing with none chosen.

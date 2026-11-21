@@ -41,11 +41,14 @@ with describe(Failure):
             expect([part in details for part in ("src/order.py did not open: it is not there", OPENING, *self.failure.causes)]).to(equal([True] * (2 + len(self.failure.causes))))
 
     with describe("that names each kind a page or an action can meet"):
+        with before.each:
+            self.kinds = [FAILURE_KINDS.named(name) for name in ("file_display", "missing_link", "graph_view", "render", "generate", "session_roots")]
+
         with it("should offer a link that leads nowhere, a graph view, a render, a generate and the session's roots beside a file"):
-            expect([kind.name for kind in FAILURE_KINDS.every]).to(equal(["file_display", "missing_link", "graph_view", "render", "generate", "session_roots"]))
+            expect([kind.name for kind in self.kinds]).to(equal(["file_display", "missing_link", "graph_view", "render", "generate", "session_roots"]))
 
         with it("should list several causes for every kind"):
-            expect([len(kind.causes) >= 3 for kind in FAILURE_KINDS.every]).to(equal([True] * 6))
+            expect([len(kind.causes) >= 3 for kind in self.kinds]).to(equal([True] * 6))
 
     with describe("that names a kind no failure has"):
         with it("should refuse the kind by name"):

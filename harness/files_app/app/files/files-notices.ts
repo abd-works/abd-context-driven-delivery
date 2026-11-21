@@ -3,10 +3,9 @@ import { ChatClientGenerated } from '@cdd/harness/chat/chat'
 
 import { FailureFixes, type FailureKindName } from './failure-fixes'
 import type { FilesStore } from './files-state'
+import { reasonOf } from './reason'
 
 const TOAST_MILLISECONDS = 8_000
-
-const reasonOf = (failure: unknown): string => (failure instanceof Error ? failure.message : String(failure))
 
 // What the page tells the person: a toast for what happened, and every failure, which stays on the page with its Fix
 // button (fixes) and also goes to the chat that opened the page, so the chat bar shows it as it shows its own.

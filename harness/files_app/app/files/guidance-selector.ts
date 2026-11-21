@@ -1,12 +1,12 @@
 import type { GuidanceSelectionData } from '@cdd/space/session/session'
 
 import type { FilesPage } from './files-page'
+import { reasonOf } from './reason'
 
 // How long the page waits before reading the selection again after a read failed, so a cdd server restarting for a
 // repin is not asked many times a second.
 const RETRY_MILLISECONDS = 1_000
 
-const reasonOf = (failure: unknown): string => (failure instanceof Error ? failure.message : String(failure))
 const wait = (milliseconds: number) => new Promise(resolve => setTimeout(resolve, milliseconds))
 
 // The session's guidance selection as the page shows and changes it: the stages, practices, and formats selected, the

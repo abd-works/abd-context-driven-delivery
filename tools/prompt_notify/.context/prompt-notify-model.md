@@ -45,11 +45,9 @@ detect(payload: HookPayload): tuple[str, str] | None
 	// names a rule when the path is a rules path
 echo_toolsets: list
 	// the toolsets RepositoryToolsets lists in the CDD checkout, loaded once by the hook server's notifier and kept; a toolset that fails to load raises
-show_toast(toast: str, workspace_roots: list[Path]): list[Path]
+show_toast(toast: str, workspace_roots: list[Path | str]): list[Path]
 	// the operation the hook server calls for each merged toast, on the one PromptNotify it registered
-	-> PromptNotify.show_ide_toast
-show_ide_toast(echo: str, workspace_roots: list[Path | str]): list[Path]
-	-> ToastFile(folder).show(echo, now) for each workspace folder
+	-> ToastFile(folder).show(toast, now) for each workspace folder
 install_ide_toast_extension(): Path
 	// copies ide_toast into the Cursor extensions folder once per process
 

@@ -4,8 +4,7 @@ import type { SessionFileData } from '@cdd/space/session/session'
 import { FailureClientGenerated, type FailureData } from '@cdd/tools/error_display/failure'
 
 import type { FilesStore } from './files-state'
-
-const reasonOf = (failure: unknown): string => (failure instanceof Error ? failure.message : String(failure))
+import { reasonOf } from './reason'
 
 // The kinds of failure Python knows the common causes of (tools/error_display FailureKind), by the names
 // failure.describe takes; a failure of none of these names no kind.

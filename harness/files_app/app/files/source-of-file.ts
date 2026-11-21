@@ -5,6 +5,7 @@ import type { SourceCallout } from '@source-view/source-callouts'
 import type { SourceLines } from '@source-view/source-folding'
 import type { ViolationFocus } from '@graph-app/graph/graph-selection'
 import { MODULE_OWNER, codeOf, withoutCallMarkers } from '@source-view/call-expansion'
+import { saidBy } from './reason'
 
 // The node type the source view is handed for a whole file, which it opens with every fold open.
 const FILE_NODE = 'File'
@@ -34,12 +35,6 @@ export function fileAnswered(answer: unknown): SessionFileData | null {
 }
 
 const listOf = <Item>(list: unknown): Item[] => (Array.isArray(list) ? (list as Item[]) : [])
-
-const saidBy = (answer: unknown): string => {
-  if (typeof answer === 'string') return answer
-  const error = (answer as { error?: unknown } | null)?.error
-  return error !== undefined ? String(error) : JSON.stringify(answer)
-}
 
 // How the graph explorer's source view reads a session's file: the whole file as one source, from its first line, so
 // each line the editor shows is that line of the file, with the members of the session's graph, from which a call opens

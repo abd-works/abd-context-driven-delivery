@@ -21,7 +21,9 @@ from pathlib import Path
 from typing import Callable, Iterator
 
 from harness.diagnostics.desktop_walk_question import DesktopWalkQuestion
+from harness.e2e_review.e2e_review import RUN_STAMP_FORMAT, ScheduledReview
 from harness.installation.data_class import data_field
+from harness.mcp.cdd_home import CddHome
 from harness.git.git import Git, RepoConnectError
 from harness.process.process import BackgroundStart, PythonInterpreter, RunningProcess
 from harness.process.starter_bound_job import StarterBoundJob
@@ -68,16 +70,6 @@ class TestTier(str, Enum):
 
 # The line test.ps1 ends every whole run with: how many spec files passed of how many it ran.
 FILES_PASSED = re.compile(r"^(\d+)/(\d*) files passed\s*$", re.MULTILINE)
-
-
-def _counted_every_file_passed(output: str) -> bool:
-    """test.ps1 reached its count, and every file it counted passed. A run cut short prints no total ("0/ files
-    passed") and can still exit 0, so its exit code alone would record a pass for specs that never ran."""
-    counts = FILES_PASSED.findall(output)
-    if not counts:
-        return False
-    passed, total = counts[-1]
-    return bool(total) and int(total) > 0 and passed == total
 
 
 class RunOutcome(str, Enum):
@@ -137,11 +129,37 @@ class TestRun:
 
     def finished(self, exit_code: int, output: str, previous: TestRun | None, now: datetime) -> TestRun:
         """This run ended with exit_code, having printed output; previous is the tier's run before it."""
-        outcome = RunOutcome.PASSED if exit_code == 0 and _counted_every_file_passed(output) else RunOutcome.FAILED
+        outcome = RunOutcome.PASSED if exit_code == 0 and self._counted_every_file_passed(output) else RunOutcome.FAILED
         is_new = outcome is RunOutcome.FAILED and (previous is None or previous.outcome is not RunOutcome.FAILED)
         last_lines = "\n".join(output.strip().splitlines()[-SUMMARY_LINES:])
         return TestRun(self.tier, self.commit, self.started_at, outcome, checkout=self.checkout, pid=self.pid,
                        process_started=self.process_started, finished_at=now, summary=last_lines, is_new_failure=is_new)
+
+    def _counted_every_file_passed(self, output: str) -> bool:
+        """test.ps1 reached its count, and every file it counted passed. A run cut short prints no total ("0/ files
+        passed") and can still exit 0, so its exit code alone would record a pass for specs that never ran."""
+        counts = FILES_PASSED.findall(output)
+        if not counts:
+            return False
+        passed, total = counts[-1]
+        return bool(total) and int(total) > 0 and passed == total
+
+    def not_started(self, reason: OSError) -> TestRun:
+        """The process that was to run this never started: it is abandoned, and its summary says why."""
+        self.outcome = RunOutcome.ABANDONED
+        self._summary = f"The run did not start: {reason}"
+        return self
+
+    def settled(self) -> TestRun:
+        """This run as it stands now: abandoned when it is recorded as running and its process is gone."""
+        if self.outcome is RunOutcome.RUNNING and not self.is_live:
+            self.outcome = RunOutcome.ABANDONED
+        return self
+
+    @property
+    def folder_name(self) -> str:
+        """The folder the scheduled e2e run's screenshots are kept under: run- and when it started."""
+        return f"run-{self.started_at.strftime(RUN_STAMP_FORMAT)}"
 
     def is_due(self, now: datetime) -> bool:
         """Its interval has passed since it started; at once when it was abandoned, since it gave no result."""
@@ -336,8 +354,7 @@ class TestRunRecord:
 
 
 # What the scheduled e2e run captures in its worktree, brought back to the checkout where its screens are reviewed.
-SCHEDULED_RELEASE = "scheduled"
-CAPTURED_BY_RUN = Path(".sessions") / SCHEDULED_RELEASE
+CAPTURED_BY_RUN = Path(".sessions") / ScheduledReview.RELEASE
 
 
 class RunWorktree:
@@ -478,14 +495,7 @@ def _say(line: str) -> None:
     print(line, flush=True)
 
 
-def e2e_run_name(run: TestRun) -> str:
-    """The folder name the scheduled e2e run's screenshots are kept under: run- and when it started."""
-    return f"run-{run.started_at.strftime('%Y-%m-%d-%H-%M-%S')}"
-
-
 def _review_screens(checkout: Path, run_name: str) -> list[str]:
-    from harness.e2e_review.e2e_review import ScheduledReview
-
     return ScheduledReview(checkout, run_name).start()
 
 
@@ -515,7 +525,7 @@ class TestCadence:
     def latest_runs(self) -> list[TestRun]:
         """The latest run of each tier that has run, a run whose process is gone read as abandoned."""
         runs = [self.record.latest(tier) for tier in TestTier]
-        return [self._settled(run) for run in runs if run is not None]
+        return [run.settled() for run in runs if run is not None]
 
     def due(self) -> list[TestTier]:
         """The tiers whose interval has passed since they last started, or that never ran; none while a run is live,
@@ -539,8 +549,7 @@ class TestCadence:
             try:
                 run.taken_by(self._runner.start(run))
             except OSError as not_started:
-                run.outcome = RunOutcome.ABANDONED
-                run._summary = f"The run did not start: {not_started}"
+                run.not_started(not_started)
             self.record.save(run)
             if run.tier is TestTier.E2E and run.outcome is RunOutcome.RUNNING:
                 self.walk_question.ask(run.run_id)
@@ -553,8 +562,8 @@ class TestCadence:
         started = self._started(tier, recorded_start)
         if tier is TestTier.E2E:
             # Each browser story step is screenshotted into this run's folder under .sessions/scheduled/, then reviewed.
-            run_name = e2e_run_name(started)
-            exit_code, output = self._runner.run(started, {"E2E_RELEASE": SCHEDULED_RELEASE, "E2E_RUN": run_name})
+            run_name = started.folder_name
+            exit_code, output = self._runner.run(started, {"E2E_RELEASE": ScheduledReview.RELEASE, "E2E_RUN": run_name})
             output += "".join(f"\nscreen review: {line}" for line in self._reviewed(run_name))
             walk = self.walk_question.closed_for(started.run_id)
             output += f"\n{walk}" if walk else ""
@@ -613,11 +622,6 @@ class TestCadence:
         except Exception as not_reviewed:  # the tests' result stands whatever the review does
             return [f"not started: {not_reviewed}"]
 
-    def _settled(self, run: TestRun) -> TestRun:
-        if run.outcome is RunOutcome.RUNNING and not run.is_live:
-            run.outcome = RunOutcome.ABANDONED
-        return run
-
     def _head(self) -> str:
         try:
             return self._git.run("rev-parse", "HEAD") if self._git else ""
@@ -651,8 +655,6 @@ def main(argv: list[str] | None = None) -> int:
 
 def default_record_folder() -> Path:
     """The cdd home, where the one cdd server keeps the record every chat's health report reads."""
-    from harness.mcp.cdd_home import CddHome
-
     return CddHome().folder
 
 

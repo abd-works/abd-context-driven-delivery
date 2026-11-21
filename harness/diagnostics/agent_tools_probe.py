@@ -12,10 +12,10 @@ from typing import TYPE_CHECKING
 
 from harness.diagnostics.probe_arguments import OperationArguments, ProbeArguments
 from harness.diagnostics.probe_outcome import ProbeOutcome, ProbeSection, raised_by_a_bug
+from harness.mcp.mcp_server import McpHost
 
 if TYPE_CHECKING:
     from harness.installation.installer import Installer
-    from harness.mcp.mcp_server import McpHost
 
 AGENT_TOOLS_PROBE_SECTION = "agent_tools"
 AGENT_TOOLS_TOOLSET_PREFIXES = ("space.", "harness.", "tools.")
@@ -45,14 +45,6 @@ class ProbeCallTimedOut(TimeoutError):
         self.tool = tool
 
 
-def agent_tools_toolset_ref(ref: str) -> bool:
-    """True when the toolset is one this probe covers: a space, harness, or tools toolset other than guidance."""
-    module = ref.split(":", 1)[0]
-    if any(module.startswith(prefix) for prefix in AGENT_TOOLS_TOOLSET_EXCLUDES):
-        return False
-    return any(module.startswith(prefix) for prefix in AGENT_TOOLS_TOOLSET_PREFIXES)
-
-
 class AgentToolsProbe:
     """A probe of the workspace MCP tools one install deployed (space, harness, and tools): ping each, call the light
     ones with probe arguments, and call session and graph tools with ``cdd-diagnostic`` fixtures. Made for its
@@ -74,8 +66,6 @@ class AgentToolsProbe:
     def host(self) -> McpHost:
         """The host this probe calls through."""
         if self._mcp_host is None:
-            from harness.mcp.mcp_server import McpHost
-
             refs = tuple(str(reference) for reference in self.installer.toolsets.references())
             self._mcp_host = McpHost.from_refs(refs, repo=str(self.installer.repo), project=str(self.installer.path))
         return self._mcp_host
@@ -83,11 +73,18 @@ class AgentToolsProbe:
     @property
     def toolset_refs(self) -> tuple[str, ...]:
         """The deployed space, harness, and tools toolsets; every such toolset in the repository before an install."""
-        refs = [ref for ref in self.installer.diagnostics.installed_items("toolset") if agent_tools_toolset_ref(ref)]
+        refs = [ref for ref in self.installer.diagnostics.installed_items("toolset") if self._covers(ref)]
         if refs:
             return tuple(refs)
         refs = (str(reference) for reference in self.installer.toolsets.references())
-        return tuple(ref for ref in refs if agent_tools_toolset_ref(ref))
+        return tuple(ref for ref in refs if self._covers(ref))
+
+    def _covers(self, toolset_ref: str) -> bool:
+        """True when the toolset is one this probe covers: a space, harness, or tools toolset other than guidance."""
+        module = toolset_ref.split(":", 1)[0]
+        if any(module.startswith(prefix) for prefix in AGENT_TOOLS_TOOLSET_EXCLUDES):
+            return False
+        return any(module.startswith(prefix) for prefix in AGENT_TOOLS_TOOLSET_PREFIXES)
 
     @property
     def published(self) -> list[str]:

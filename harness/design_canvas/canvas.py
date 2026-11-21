@@ -51,7 +51,7 @@ class DesignCanvas:
         self._files: Dict[str, str] = {}
 
     @property
-    def launch_page(self) -> Optional[str]:
+    def _launch_page(self) -> Optional[str]:
         return self._pages[0]["id"] if self._pages else None
 
     def add_page(self, page_id: str, name: str) -> None:
@@ -98,22 +98,12 @@ class DesignCanvas:
         """Every file the canvas writes, ``canvas.json`` included, by path."""
         return {**self._files, f"{PROJECT}/canvas.json": self._canvas_json()}
 
-    def write(self, root: str | Path) -> List[str]:
-        """Write the files under *root* (the folder that holds ``project/``); returns the paths written."""
-        written = []
-        for path, text in self.files().items():
-            target = Path(root) / path
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(text, encoding="utf-8")
-            written.append(path)
-        return sorted(written)
-
     def _canvas_json(self) -> str:
         return json.dumps({
             "v": 3,
             "createdOnFiles": {"v": 1, "at": FILES_CREATED_AT},
             "title": self.title,
-            "launch": {"view": "canvas", "page": self.launch_page},
+            "launch": {"view": "canvas", "page": self._launch_page},
             "pages": self._pages,
             "boards": self._boards,
             "order": self._order,

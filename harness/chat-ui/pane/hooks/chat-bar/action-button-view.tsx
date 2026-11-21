@@ -41,7 +41,7 @@ async function pressAction($: EngineInterface, { chatBar, formats, overlays }: C
   await clearChosenAction($)
   if (action === 'advance') return moveNext($, chatBar)
   if (!fidelity) return
-  await promptCommand($, commandOn(chatBar.actionFidelities, action) + formatArgumentOf(chatBar, formats, action) + overlayArgumentOf(overlays))
+  await promptCommand($, commandOn(chatBar.fidelities, action) + formatArgumentOf(chatBar, formats, action) + overlayArgumentOf(overlays))
 }
 
 // The orange chip of the canvas, an orange Box holding the next action's icon, then the ▾ that opens
@@ -51,7 +51,7 @@ export function ActionButtonView($: EngineInterface, elements: ElementTable, dra
   const { Box, Text } = elements
   const action = shownActionOf(chatBar, picker.chosenAction)
   if (!action) return null
-  const target = action === 'advance' ? `move ${chatBar.sessionName} on` : `${action} ${chatBar.actionFidelities.map(fidelity => fidelity.slug).join(' ')}`
+  const target = action === 'advance' ? `move ${chatBar.sessionName} on` : `${action} ${chatBar.fidelities.map(fidelity => fidelity.slug).join(' ')}`
   return (
     <Box key="action-anchor">
       <Box key="action" flexDirection="row" gap={0} paddingX={1} backgroundColor={BRAND.accent}>

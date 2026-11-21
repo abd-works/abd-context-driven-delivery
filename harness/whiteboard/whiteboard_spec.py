@@ -3,11 +3,12 @@
 from expects import be_below, equal, expect, raise_error
 from mamba import before, context, description, it
 
+import json
 import tempfile
 from pathlib import Path
 
-from harness.whiteboard import BoardElement, BoardLinks, Box, Whiteboard, WhiteboardNode
-from harness.whiteboard.whiteboard import StoreWrite, UnreadableBoard
+from harness.whiteboard import BoardElement, BoardLinks, Box, UnreadableBoard, Whiteboard, WhiteboardNode
+from harness.whiteboard.whiteboard import StoreWrite
 
 
 class CardNode(WhiteboardNode):
@@ -32,6 +33,11 @@ def board_of_two_cards(first_box: tuple[float, float, float, float] = (20, 40, 6
     board.draw(CardNode("story.b2", (100, 40, 60, 50), second_text))
     board.add(BoardElement.arrow("arrow.ab", from_id="story.a1", to_id="story.b2", from_side="right", to_side="left", label="then"))
     return board
+
+
+def read_at(board: Whiteboard, versions: dict[str, int]) -> Whiteboard:
+    """The board as it is read from Claude, each record at the store version given for it."""
+    return Whiteboard.from_text(json.dumps({**json.loads(board.save()), "versions": versions}))
 
 
 with description("a whiteboard") as self:
@@ -120,49 +126,49 @@ with description("a whiteboard") as self:
             self.board = board.keep_places(previous)
 
         with it("should keep the moved shape at the person's place"):
-            expect(self.board.element("story.a1").place).to(equal(Box(500, 300, 60, 50)))
+            expect(self.board.element("story.a1").box).to(equal(Box(500, 300, 60, 50)))
 
         with it("should keep a new shape where the render placed it"):
-            expect(self.board.element("story.c3").place).to(equal(Box(180, 40, 60, 50)))
+            expect(self.board.element("story.c3").box).to(equal(Box(180, 40, 60, 50)))
 
     with context("that writes itself against the previous board"):
         with before.each:
             previous = board_of_two_cards()
             previous.draw(CardNode("story.gone", (260, 40, 60, 50)))
-            previous.versions = {"meta": 3, "story.b2": 7, "story.gone": 9}
+            previous = read_at(previous, {"meta": 3, "story.b2": 7, "story.gone": 9})
             board = board_of_two_cards(second_text="Pay Order")
             board.draw(CardNode("story.new", (180, 40, 60, 50)))
             self.board = board
-            self.writes = board.writes(previous)
-            self.by_key = {f"{write.collection}/{write.doc_id}": write for write in self.writes}
+            self.entries = board.batches(previous)[0]
+            self.by_key = {f"{entry['collection']}/{entry['doc_id']}": entry for entry in self.entries}
 
         with it("should set the board meta with the title and order, pinned to the version read"):
-            expect(self.writes[0]).to(equal(StoreWrite(
+            expect(self.entries[0]).to(equal(StoreWrite(
                 "set", "board", "meta", {"v": 1, "title": "Orders", "order": ["story.a1", "story.b2", "arrow.ab", "story.new"]}, 3,
-            )))
+            ).entry))
 
         with it("should set each element the previous board did not hold as a store batch entry"):
-            expect(self.by_key["elements/story.new"].entry).to(equal({
+            expect(self.by_key["elements/story.new"]).to(equal({
                 "op": "set", "collection": "elements", "doc_id": "story.new", "data": self.board.element("story.new").record,
             }))
 
         with it("should update only the changed fields of a changed element, pinned to the version read"):
-            expect(self.by_key["elements/story.b2"]).to(equal(StoreWrite("update", "elements", "story.b2", {"text": "Pay Order"}, 7)))
+            expect(self.by_key["elements/story.b2"]).to(equal(StoreWrite("update", "elements", "story.b2", {"text": "Pay Order"}, 7).entry))
 
         with it("should delete each element the board no longer holds, pinned to the version read"):
-            expect(self.by_key["elements/story.gone"]).to(equal(StoreWrite("delete", "elements", "story.gone", None, 9)))
+            expect(self.by_key["elements/story.gone"]).to(equal(StoreWrite("delete", "elements", "story.gone", None, 9).entry))
 
         with it("should delete before it sets or updates, so a watched board never shows both drawings"):
-            ops = [write.op for write in self.writes[1:]]
+            ops = [entry["op"] for entry in self.entries[1:]]
             expect(ops.index("delete")).to(be_below(min(ops.index("set"), ops.index("update"))))
 
         with it("should clear a field the element no longer has"):
             previous = Whiteboard("Orders")
             previous.add(BoardElement.section("lane.l1", Box(0, 0, 200, 120), text="Release 1"))
-            previous.versions = {"meta": 1, "lane.l1": 4}
+            previous = read_at(previous, {"meta": 1, "lane.l1": 4})
             board = Whiteboard("Orders")
             board.add(BoardElement.section("lane.l1", Box(0, 0, 200, 120)))
-            expect(board.writes(previous)[1]).to(equal(StoreWrite("update", "elements", "lane.l1", {"text": {"__delete__": True}}, 4)))
+            expect(board.batches(previous)[0][1]).to(equal(StoreWrite("update", "elements", "lane.l1", {"text": {"__delete__": True}}, 4).entry))
 
         with it("should write nothing for an element that did not change"):
             expect("elements/story.a1" in self.by_key).to(equal(False))

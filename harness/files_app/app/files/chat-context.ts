@@ -1,8 +1,7 @@
 import type { SessionClientGenerated } from '@cdd/space/session/session'
 
 import type { FilesNotices } from './files-notices'
-
-const reasonOf = (failure: unknown): string => (failure instanceof Error ? failure.message : String(failure))
+import { reasonOf } from './reason'
 
 // The context of the chat that opened the page: a file, or lines of it, the session puts in that chat's prompt box, to go
 // with the person's next prompt, as Claude's own file viewer does.

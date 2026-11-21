@@ -36,6 +36,8 @@ REVIEW_VERDICTS = ("intended", "regression caught", "missed by the tests", "nois
 # What the daily review's agent may do: read the screenshots, list the changed pairs, and record a verdict on each.
 REVIEW_AGENT_TOOLS = "Read,mcp__plugin_cdd_cdd__e2e-review_changed_pairs,mcp__plugin_cdd_cdd__e2e-review_record_verdict"
 AGENT_RUNS_OFF = "CDD_AGENT_RUNS_OFF"
+# A run's folder is named for when it started, to the second: `run-` or `walk-` and this.
+RUN_STAMP_FORMAT = "%Y-%m-%d-%H-%M-%S"
 
 
 class E2eReviewRefused(ValueError):
@@ -235,7 +237,7 @@ class E2eReview:
         scenario of the sub-epic's story markdown in the running app; after each Given, When and Then save the page's
         screenshot under the run folder's screens/ and call record_verdict with the step's key (`Story › Scenario ›
         <number> <step text>`), its text, the screenshot, and meets the intent or misses the intent with the reason."""
-        folder = self.sub_epic_folder(target) / f"walk-{_stamp()}"
+        folder = self.sub_epic_folder(target) / f"walk-{self._stamp()}"
         (folder / "screens").mkdir(parents=True, exist_ok=True)
         (folder / RESULTS_FILE).write_text("[]\n", encoding="utf-8")
         return E2eRun(folder)
@@ -249,7 +251,7 @@ class E2eReview:
         spec_folder = self.project / STORY_TESTS / target
         if not spec_folder.is_dir():
             raise E2eReviewRefused(f"no story tests at {spec_folder}")
-        name = f"run-{_stamp()}"
+        name = f"run-{self._stamp()}"
         folder = self.sub_epic_folder(target) / name
         folder.mkdir(parents=True, exist_ok=True)
         env = {**os.environ, "E2E_RELEASE": self.release, "E2E_RUN": name}
@@ -267,7 +269,7 @@ class E2eReview:
         args = ["pairs", str(found.folder)] + (["--against", str(self.run_of(against).folder)] if against else [])
         pairs = json.loads(self._tool.run("review.ts", *args))
         (found.folder / CHANGED_FILE).write_text(json.dumps([pair["key"] for pair in pairs], indent=2) + "\n", encoding="utf-8")
-        base = self.run_of(against).folder if against else self._baseline_of(found.folder.parent)
+        base = self.run_of(against).folder if against else self.baseline_of(found.folder.parent)
         for pair in pairs:
             pair["ours"] = str(found.folder / pair["ours"]) if pair.get("ours") else ""
             pair["theirs"] = str(base / pair["theirs"]) if pair.get("theirs") and base else ""
@@ -301,7 +303,7 @@ class E2eReview:
         person accepts, so by names them."""
         found = self.run_of(run)
         self._tool.run("review.ts", "accept", str(found.folder), "--by", by)
-        self._tool.run("report.ts", str(found.folder))
+        self.write_report(found)
         return found
 
     def latest(self) -> E2eRunReview | None:
@@ -313,9 +315,17 @@ class E2eReview:
         newest = max(folders, key=lambda folder: ((folder / RESULTS_FILE).stat().st_mtime, folder.name)).name
         return E2eRunReview(newest, [E2eRun(folder) for folder in sorted(folders) if folder.name == newest], self.results_root / "story-map.html")
 
-    def _baseline_of(self, sub_epic: Path) -> Path | None:
+    def baseline_of(self, sub_epic: Path) -> Path | None:
+        """The folder of the run accepted as sub_epic's baseline; none before any run was accepted."""
         file = sub_epic / BASELINE_FILE
         return sub_epic / json.loads(file.read_text(encoding="utf-8"))["run"] if file.exists() else None
+
+    def write_report(self, run: E2eRun, against: Path | None = None) -> None:
+        """Write run's report pages, comparing its screens with the run in against when one is given."""
+        self._tool.run("report.ts", str(run.folder), *(["--against", str(against)] if against else []))
+
+    def _stamp(self) -> str:
+        return datetime.now(timezone.utc).strftime(RUN_STAMP_FORMAT)
 
 
 class ScheduledReview:
@@ -341,12 +351,13 @@ class ScheduledReview:
         done: list[str] = []
         to_judge: list[E2eRun] = []
         for run in self.runs:
-            if self.review._baseline_of(run.folder.parent) is None:
-                self.review._tool.run("report.ts", str(run.folder))
+            baseline = self.review.baseline_of(run.folder.parent)
+            if baseline is None:
+                self.review.write_report(run)
                 done.append(f"{run.sub_epic}: no accepted run yet, so nothing to compare; accept {run.name} to start")
                 continue
             changed = self.review.changed_pairs(str(run.folder))
-            self.review._tool.run("report.ts", str(run.folder), "--against", str(self.review._baseline_of(run.folder.parent)))
+            self.review.write_report(run, baseline)
             done.append(f"{run.sub_epic}: {len(changed)} changed step(s)")
             if changed:
                 to_judge.append(run)
@@ -362,10 +373,6 @@ class ScheduledReview:
                 f"record_verdict with one of intended (cite the commit on main since the baseline), regression caught (cite the "
                 f"failing test), missed by the tests, or noise, each with its reason. Change no file and accept nothing: the fix "
                 f"happens in a ticket, and only the person accepts a baseline.\n{folders}")
-
-
-def _stamp() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%d-%H-%M-%S")
 
 
 def _start_in_background(command: list[str], cwd: Path, env: dict[str, str], log_path: Path) -> int:

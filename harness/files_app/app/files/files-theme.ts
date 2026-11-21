@@ -1,5 +1,6 @@
 import { loader } from '@monaco-editor/react'
 import type { editor } from 'monaco-editor'
+import { reasonOf } from './reason'
 
 // The Files app's look: the dark engineering look by default, the light one when the person turns it off. Kept in this
 // browser only, as the Graph app keeps its own; the source view reads it from the page's data-theme.
@@ -104,8 +105,6 @@ export function wearCursorLooks(monacoApi: { editor: Pick<typeof editor, 'define
   monacoApi.editor.defineTheme('vs', cursorLook('vs', CURSOR_LIGHT))
   monacoApi.editor.defineTheme('vs-dark', cursorLook('vs-dark', CURSOR_DARK))
 }
-
-const reasonOf = (failure: unknown): string => (failure instanceof Error ? failure.message : String(failure))
 
 // The look kept in this browser. A browser whose storage refuses to be read is told to the page's fail, and the page
 // shows the dark engineering look, the one a person who never chose sees.

@@ -278,7 +278,7 @@ class Chat:
     @agent_tool
     @noSessionLog
     def send(self, kind: CommandKind, text: str) -> Chat:
-        """Send chat a command: a fill puts text in its prompt for the person to review, a submit sends it, a command runs a slash command, an open_file shows the file text names, a path from the project, in its chat bar's file viewer, a refresh has its chat bar read the board again, as after a page such as the Files app changed the session, and a select has its chat bar select the fidelities text names, slugs separated by commas, none to clear the selection, as a practice pressed in the Files app does, and a failure shows a page's failure on its chat bar as the bar shows its own, text a JSON object with the failure and the context it happened in. A fill waits until the chat's turn has ended."""
+        """Send chat a command: a fill puts text in its prompt for the person to review, a submit sends it, a command runs a slash command, an open_file shows the file text names, a path from the project, in its chat bar's file viewer, a refresh has its chat bar read the board again, as after a page such as the Files app changed the session, and a failure shows a page's failure on its chat bar as the bar shows its own, text a JSON object with the failure and the context it happened in. A fill waits until the chat's turn has ended."""
         self.mailbox.queue(kind, text)
         return self
 
