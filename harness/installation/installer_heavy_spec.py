@@ -822,12 +822,9 @@ with description("a practice guidance class") as self:
 
             overview = "sample preamble"
             writer = SkillInstallation.into(InstallTarget(IdeLayout("Cursor"), self.tree))
-            text = writer._skill_front_matter(
-                "sample-tool",
-                writer._skill_overview(
-                    type("Host", (), {"overview": overview})(),
-                    [overview, "Use MCP tool: `sample-tool.instructions()`"],
-                ),
+            tool = type("Tool", (), {"toolset": type("Host", (), {"overview": overview})()})()
+            text = writer.front_matter(
+                tool, Path("skills") / "sample-tool" / "SKILL.md", [overview, "Use MCP tool: `sample-tool.instructions()`"], ""
             )
             expect(text).to(contain("sample preamble"))
             expect(text).not_to(contain("Use MCP tool:"))
@@ -1570,7 +1567,7 @@ with description("Repo branch commands installed into Cursor") as self:
         self._tmp = tempfile.mkdtemp()
         self.tree = Path(self._tmp)
         self.mcp = Installer.create(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
-            ["space.repo.repo:Repo"]
+            [ToolsetReference.parsed("space.repo.repo:Repo")]
         ).of(McpInstallation)
 
     with after.each:
