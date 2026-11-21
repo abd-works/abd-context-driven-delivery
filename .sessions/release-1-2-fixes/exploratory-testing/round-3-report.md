@@ -182,3 +182,11 @@ Heavy and e2e on the third wave (commit 5c3b22e83):
   - `explore-graph-in-files-app.story.ui_e2e_spec.py` failed in the tier run and passed its 13 examples run alone straight after; not explained.
   - The board's render test expected `format=drawio` from the diagram chip and received `format=drawio,whiteboard`. The test and its scenario now say both; whether the diagram chip is meant to render both drawings is for the person to confirm.
   - Still failing from before: `review-files-in-files-app.story.ui_e2e_spec.py` (pixel-09), the viewer's line 14 test (pixel-10), and `prompt_queue_plugin_e2e_spec.py`, which cannot start a headless Claude Code chat on this machine.
+
+### Third answers from the person, 2026-11-20
+
+1. Every render ends in its final output saved as a file, code included; a whiteboard goes on to its board as well.
+2. The diagram format is both drawio and whiteboard, on the board's chip and for a mockup.
+3. Java model classes and Java support are removed everywhere for now, Clean Engineering's reading of Java production code included.
+4. Not understood as asked; explained again in the chat.
+5. JavaScript story tests are brought level with TypeScript. Most tests are on the graph the model creates, written once as shared behaviours and reused for each language.

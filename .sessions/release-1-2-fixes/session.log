@@ -1781,3 +1781,11 @@
 2026-11-21T01:00:00Z tool stories-scenarios
 2026-11-21T01:00:11Z tool generate.generate
 2026-11-21T01:00:11Z generate C:\dev\abd-cdd-release-1-2-fixes no-chat
+2026-11-21T01:24:55Z tool prompt-queue.set_steps 0441e51a-b582-45e7-aefa-d95fcdc406e3 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\0441e51a-b582-45e7-aefa-d95fcdc406e3.jsonl 1-3498
+2026-11-21T01:25:10Z tool prompt-queue.show 0441e51a-b582-45e7-aefa-d95fcdc406e3 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\0441e51a-b582-45e7-aefa-d95fcdc406e3.jsonl 1-3509
+2026-11-21T03:27:22Z tool prompt-queue.show 0441e51a-b582-45e7-aefa-d95fcdc406e3 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\0441e51a-b582-45e7-aefa-d95fcdc406e3.jsonl 1-3509
+2026-11-21T03:27:23Z tool prompt-queue.add_interruption 0441e51a-b582-45e7-aefa-d95fcdc406e3 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\0441e51a-b582-45e7-aefa-d95fcdc406e3.jsonl 1-3511
+2026-11-21T03:27:34Z tool prompt-queue.show 0441e51a-b582-45e7-aefa-d95fcdc406e3 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\0441e51a-b582-45e7-aefa-d95fcdc406e3.jsonl 1-3529
+2026-11-21T03:28:32Z tool prompt-queue.show 0441e51a-b582-45e7-aefa-d95fcdc406e3 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\0441e51a-b582-45e7-aefa-d95fcdc406e3.jsonl 1-3529
+2026-11-21T03:28:33Z tool prompt-queue.add_interruption 0441e51a-b582-45e7-aefa-d95fcdc406e3 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\0441e51a-b582-45e7-aefa-d95fcdc406e3.jsonl 1-3531
+2026-11-21T03:28:49Z tool prompt-queue.set_steps 0441e51a-b582-45e7-aefa-d95fcdc406e3 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\0441e51a-b582-45e7-aefa-d95fcdc406e3.jsonl 1-3548
