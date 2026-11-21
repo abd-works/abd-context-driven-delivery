@@ -159,13 +159,6 @@ MIN_MUTATION_BODY = 30
 MIN_DELEGATION_LINES = 12
 
 
-def names_call_io_and_domain(callees: list[str]) -> bool:
-    """True when the operations called include both I/O, such as `save`, and a domain calculation, such as `total`: the
-    last part of each callee's name is the operation it calls."""
-    called = "\n".join(f"{callee.split('.')[-1]}(" for callee in callees if callee)
-    return bool(_IO_CALL.search(called) and _DOMAIN_CALL.search(called))
-
-
 class SourceText:
     """A span of source in any language, an operation body or a class, and what the rules measure in its code.
     Brace-language measures count `{` blocks; Python measures count indentation."""

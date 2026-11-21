@@ -20,6 +20,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     UnreadableSource,
 )
 from cdd_guidance.practices.clean_engineering.model.code_class_model import CodeCleanEngineeringModel
+from cdd_guidance.practices.clean_engineering.model.folder_facts import folders_of
 from cdd_guidance.practices.clean_engineering.model.module_context_files import ModuleContext
 from cdd_guidance.practices.clean_engineering.model.script_imports import ScriptImports, imported_files
 from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
@@ -185,7 +186,7 @@ class OutsideScope:
     def _files(self) -> list[Path]:
         if self._graph.scope.edited_files is None:
             return []
-        held = {node.source.file for kind in ("Module", "Package") for node in self._in_graph.nodes(kind)}
+        held = {node.source.file for node in folders_of(self._in_graph)}
         return [
             path
             for path in scanned_files(self._root, self._suffixes)
@@ -215,7 +216,7 @@ class DescribedClasses:
 
     def add(self) -> None:
         """Add each class the documents read now describe, once for each document that describes it."""
-        folders = {node.source.file: node for kind in ("Module", "Package") for node in self._in_graph.nodes(kind)}
+        folders = {node.source.file: node for node in folders_of(self._in_graph)}
         for relative, oclass in self._documents.described_now():
             described = Path(relative).parent.parent.as_posix()
             self._classes.add(relative, folders.get(described, self._in_graph.root), oclass)
@@ -372,7 +373,7 @@ class CodeFolders:
 
     def link(self) -> None:
         """Each folder is owned by the folder that encloses it, and depends on each folder its files import from."""
-        held = {node.source.file: node for kind in ("Module", "Package") for node in self._in_graph.nodes(kind)}
+        held = {node.source.file: node for node in folders_of(self._in_graph)}
         held.update(self._nodes)
         for relative in sorted(self._modules, key=lambda item: (item.count("/"), item)):
             folder = self._nodes[relative]

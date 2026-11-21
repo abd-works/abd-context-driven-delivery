@@ -26,7 +26,7 @@ from harness.graph.skipped_folders import skips_folder
 
 from cdd_guidance.practices.clean_engineering.model.code_read import DESCRIBED_FACT
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
-from cdd_guidance.practices.clean_engineering.model.markdown.card_lines import CardLines
+from cdd_guidance.practices.clean_engineering.model.card_lines import CardLines
 from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownBoundedContextMap
 from cdd_guidance.practices.ddd.model.nodes import TARGET_SEGMENT, Aggregate, AggregateLink, BoundedContext, ContextMapping, DomainEvent, Integration

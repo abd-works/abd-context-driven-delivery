@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
 
+from cdd_guidance.practices.clean_engineering.model.folder_facts import FOLDER_TYPES
 from cdd_guidance.practices.clean_engineering.rules.production_code_rule import ProductionCodeRule
 
 if TYPE_CHECKING:
@@ -94,7 +95,7 @@ class LayerSeparation(PracticeGraphRule):
         ]
         folders = [
             (folder.node_id, f"Module '{folder.name}' only forwards to '{other}'; collapse the pass-through module.")
-            for kind in ("Module", "Package")
+            for kind in FOLDER_TYPES
             for folder in context.nodes(kind)
             for other in [folder.get_fact("forwards_to_module") or ""]
             if other

@@ -12,7 +12,8 @@ if TYPE_CHECKING:
     from harness.graph.graph import Node, PracticeNodes
     from harness.graph.saved_graph import FactValue
 
-_FOLDER_TYPES = ("Module", "Package")
+# The node types a folder of code is read as: a module, which has a module card, or a package, which has none.
+FOLDER_TYPES = ("Module", "Package")
 
 
 def record_fact(node: "Node", key: str, fact: "FactValue") -> None:
@@ -37,7 +38,7 @@ def parent_folder(path: str) -> str:
 
 def folders_of(in_graph: "PracticeNodes") -> list["Node"]:
     """Every folder the practice holds: its modules, then its packages."""
-    return [folder for kind in _FOLDER_TYPES for folder in in_graph.nodes(kind)]
+    return [folder for kind in FOLDER_TYPES for folder in in_graph.nodes(kind)]
 
 
 def imported_folders(folder: "Node") -> list["Node"]:

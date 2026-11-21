@@ -20,6 +20,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import MODU
 from cdd_guidance.practices.clean_engineering.model.imported_classes import ImportedClasses
 from cdd_guidance.practices.clean_engineering.model.production_code import is_spec_file, is_test_code
 from cdd_guidance.practices.clean_engineering.model.script_imports import ClassReference, ScriptImports
+from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUCTOR_NAMES
 
 if TYPE_CHECKING:
     from cdd_guidance.practices.bdd.model.bdd_model import BddModel
@@ -28,8 +29,6 @@ if TYPE_CHECKING:
 _BEHAVIOR_EDGES = {"Description": "descriptions", "Context": "contexts", "Observation": "observations"}
 # The language a node read from Python names; a script spec drives script code.
 _PYTHON = "python"
-# What a class's constructor is called in the code of each language family.
-_CONSTRUCTORS = ("__init__", "constructor")
 _ARTICLES = ("a ", "an ", "the ")
 
 
@@ -212,7 +211,7 @@ class ImportedCode:
         files = {node.source.file for node in self.classes if node.name == class_name}
         return [
             member
-            for constructor in _CONSTRUCTORS
+            for constructor in sorted(CONSTRUCTOR_NAMES)
             for member in self.members_named(constructor)
             if member.get_fact("owner") == class_name and member.source.file in files
         ]

@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
+from cdd_guidance.practices.clean_engineering.model.folder_facts import FOLDER_TYPES
 from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 from cdd_guidance.practices.clean_engineering.rules.production_code_rule import ProductionCodeRule
 
@@ -70,7 +71,7 @@ class NoModulePerClass(ProductionCodeRule):
         """A folder above folders of code of its own, modules with a card or packages without one, may hold only the base
         they share, or the class that names the whole: Bdd in `bdd/` above its `model/` and `rules/` packages. It groups
         those folders, so it is not a module of one class."""
-        return any(child.type in ("Module", "Package") for child in context.children(folder_node, "owns"))
+        return any(child.type in FOLDER_TYPES for child in context.children(folder_node, "owns"))
 
     def _public_classes_in(self, folder_node: "Node", context: "RuleCheckContext") -> list["Node"]:
         """The classes the folder owns that its production files declare under public names; a spec's classes are not

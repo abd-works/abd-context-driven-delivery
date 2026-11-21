@@ -35,7 +35,7 @@ def tier_of(file: str) -> str | None:
     return next((tier for tier, suffix in TIER_SUFFIXES if name.endswith(suffix)), None)
 
 
-def is_test_code(file: str) -> bool:
+def is_code_file(file: str) -> bool:
     """Whether file is code a test can live in."""
     return file.replace("\\", "/").endswith(TEST_CODE_SUFFIXES)
 

@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
 
+from cdd_guidance.practices.clean_engineering.model.folder_facts import FOLDER_TYPES
 from cdd_guidance.practices.clean_engineering.rules.production_code_rule import ProductionCodeRule
 
 if TYPE_CHECKING:
@@ -17,7 +18,6 @@ _MAX_SIBLING_IMPORTS = 8
 _MAX_SEAM_SHARE = 0.35
 # A module of fewer methods than this cannot hide much behind any interface, so it is not measured.
 _MIN_MEASURED_METHODS = 10
-_FOLDER_TYPES = ("Module", "Package")
 
 
 class OneWayDeps(PracticeGraphRule):
@@ -32,10 +32,10 @@ class OneWayDeps(PracticeGraphRule):
     """
 
     slug = "one-way-deps"
-    node_types = ("Module", "Package")
+    node_types = FOLDER_TYPES
 
     def check_practice(self, context: "RuleCheckContext") -> list[tuple[str, str]]:
-        folders = _folders(context)
+        folders = self._folders(context)
         return [hit for folder in folders for hit in self._folder_cycles(folder)] + [
             hit for folder in folders for hit in self._file_cycles(folder)
         ]
@@ -60,6 +60,9 @@ class OneWayDeps(PracticeGraphRule):
             )
             for importer, imported, size in folder.get_fact("file_import_cycles") or []
         ]
+
+    def _folders(self, context: "RuleCheckContext") -> list["Node"]:
+        return [folder for kind in FOLDER_TYPES for folder in context.nodes(kind)]
 
 
 class LowCoupling(ProductionCodeRule):
@@ -150,7 +153,7 @@ class SourceParses(PracticeGraphRule):
     The module that holds the file reports it, or the folder that holds it when no module does. Specs are judged too: a spec that does not parse cannot run, and nothing else reports it."""
 
     slug = "source-parses"
-    node_types = _FOLDER_TYPES
+    node_types = FOLDER_TYPES
 
     def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
         if not node.has_fact("unreadable_sources"):
@@ -160,7 +163,3 @@ class SourceParses(PracticeGraphRule):
             f"Source file {entry}; fix it so its classes can be checked."
             for entry in node.get_fact("unreadable_sources", []) or []
         ]
-
-
-def _folders(context: "RuleCheckContext") -> list["Node"]:
-    return [folder for kind in _FOLDER_TYPES for folder in context.nodes(kind)]

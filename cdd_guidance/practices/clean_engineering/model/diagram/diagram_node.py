@@ -59,11 +59,6 @@ class DiagramNode(ABC):
 _INTERACTION_WORDS = re.compile('«[^»]*»')
 
 
-def _names_in(listed: str) -> List[str]:
-    """The property names an arrow lists, written `lines, history`."""
-    return [name.strip() for name in listed.split(',') if name.strip()]
-
-
 class DiagramClass(OoadClass, DiagramNode):
     """OoadClass on a page: name, members, height. Channel fills the label."""
 
@@ -94,11 +89,15 @@ class DiagramClass(OoadClass, DiagramNode):
         says. Inheritance and a dependency stand for no property."""
         if (kind or "").lower() in {"inheritance", "dependency"}:
             return
-        named = _names_in(_INTERACTION_WORDS.sub('', label))
+        named = self._names_in(_INTERACTION_WORDS.sub('', label))
         reaching = [prop for prop in self.properties if target in pascal_type_names(prop.type_hint or "")]
         for prop in [prop for prop in reaching if prop.name in named] or reaching:
-            if prop.name not in _names_in(unmarked):
+            if prop.name not in self._names_in(unmarked):
                 prop.arrow.take_kind(kind)
+
+    def _names_in(self, listed: str) -> List[str]:
+        """The property names an arrow lists, written `lines, history`."""
+        return [name.strip() for name in listed.split(',') if name.strip()]
 
 
 class ImportedClass(DiagramClass):

@@ -12,6 +12,7 @@ from harness.graph.schema_conformance import EXEMPT_FACT
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER
 from cdd_guidance.practices.clean_engineering.model.code_read import DESCRIBED_FACT
+from cdd_guidance.practices.clean_engineering.model.folder_facts import folders_of
 from cdd_guidance.practices.clean_engineering.model.script_imports import ClassReference
 
 if TYPE_CHECKING:
@@ -43,12 +44,6 @@ _SCRIPT_SUFFIXES = frozenset({".ts", ".tsx", ".js", ".jsx", ".mjs"})
 # A local the body assigns: `lane = ...`, `const lane = ...`, `lane: Lane = ...`.
 _ASSIGNED_LOCAL = re.compile(r"(?<![\w$.])([A-Za-z_$][\w$]*)\s*(?::[^=\n]+)?=(?!=)")
 _BASE_OBJECT = frozenset({"super()", "super"})
-
-
-def _language_of(file: str) -> str:
-    """The language family a file is written in, by its extension: every script extension is one family."""
-    suffix = "." + file.rsplit(".", 1)[-1].lower()
-    return "script" if suffix in _SCRIPT_SUFFIXES else suffix
 
 
 class ClassesInReach:
@@ -104,16 +99,20 @@ class ClassesInReach:
 
     def _beside(self, other: str, file: str) -> bool:
         """Whether other is another file of file's folder written in file's language."""
-        return other != file and other.rsplit("/", 1)[0] == file.rsplit("/", 1)[0] and _language_of(other) == _language_of(file)
+        return other != file and other.rsplit("/", 1)[0] == file.rsplit("/", 1)[0] and self._language_of(other) == self._language_of(file)
+
+    def _language_of(self, file: str) -> str:
+        """The language family a file is written in, by its extension: every script extension is one family."""
+        suffix = "." + file.rsplit(".", 1)[-1].lower()
+        return "script" if suffix in _SCRIPT_SUFFIXES else suffix
 
     def _imports_of(self, file: str) -> list[ClassReference]:
         if self._imports is None:
             self._imports = {}
-            for kind in ("Module", "Package"):
-                for folder in self._in_graph.nodes(kind):
-                    kept = folder.get_fact("imported_classes_by_file") if folder.has_fact("imported_classes_by_file") else {}
-                    for relative, references in kept.items():
-                        self._imports[relative] = [ClassReference(*reference) for reference in references]
+            for folder in folders_of(self._in_graph):
+                kept = folder.get_fact("imported_classes_by_file") if folder.has_fact("imported_classes_by_file") else {}
+                for relative, references in kept.items():
+                    self._imports[relative] = [ClassReference(*reference) for reference in references]
         return self._imports.get(file, [])
 
 

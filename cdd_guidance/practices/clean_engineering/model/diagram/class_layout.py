@@ -393,12 +393,9 @@ class _RouteGrid:
                 reached = (cell[0] + heading[0] * distance + heading[1] * across, cell[1] + heading[1] * distance + heading[0] * across)
                 table.setdefault(reached, set()).add(owner)
 
-    def is_held_against(self, cell: Point, step: Heading, owner: int) -> bool:
-        approach = self._approach_vertical if step[0] == 0 else self._approach_horizontal
-        return any(holders and owner not in holders for holders in (self._held_for.get(cell), approach.get(cell)))
-
     def cells_held_against(self, owner: int) -> Tuple[Set[Point], Set[Point]]:
-        """The cells `is_held_against` closes to owner's arrow, for a vertical step and for a horizontal one."""
+        """The cells another arrow's port or its approach closes to owner's arrow, for a vertical step and for a
+        horizontal one."""
         ports = {cell for cell, holders in self._held_for.items() if owner not in holders}
         vertical = ports | {cell for cell, holders in self._approach_vertical.items() if owner not in holders}
         horizontal = ports | {cell for cell, holders in self._approach_horizontal.items() if owner not in holders}
@@ -408,18 +405,6 @@ class _RouteGrid:
         left, right = int(box.x - clearance) // GRID_STEP, int(box.x + box.width + clearance) // GRID_STEP
         top, bottom = int(box.y - clearance) // GRID_STEP, int(box.y + box.height + clearance) // GRID_STEP
         return {(x, y) for x in range(left, right + 1) for y in range(top, bottom + 1)}
-
-    def is_open_for(self, cells: List[Point], owner: int, own_cards: Set[Point]) -> bool:
-        """True when a line laid along these cells stays out of every card but its own two, keeps clear of other
-        arrows' ports, and runs along no arrow already drawn."""
-        for before, here in zip(cells, cells[1:]):
-            step = (here[0] - before[0], here[1] - before[1])
-            along = self.horizontal if step[0] else self.vertical
-            if not self.contains(here) or (here in self.blocked and here not in own_cards):
-                return False
-            if self.is_held_against(here, step, owner) or here in along:
-                return False
-        return True
 
     def claim(self, cells: List[Point]) -> None:
         """Keep other arrows clear of this one's runs, so two parallel arrows never sit on each other."""
@@ -432,9 +417,6 @@ class _RouteGrid:
 
     def contains(self, cell: Point) -> bool:
         return 0 <= cell[0] < self.columns and 0 <= cell[1] < self.lines
-
-    def carries_arrow(self, cell: Point) -> bool:
-        return cell in self.horizontal or cell in self.vertical
 
 
 class _SearchedArrow(NamedTuple):
@@ -562,7 +544,7 @@ class _ArrowSearch:
         heapq.heappush(self._frontier, (total + ESTIMATE_WEIGHT * distance, total, following, step))
 
     def _cells_held_against(self) -> Tuple[Set[Point], Set[Point]]:
-        """The cells `is_held_against` closes to this arrow, for a vertical step and for a horizontal one; none when
+        """The cells other arrows' ports and approaches close to this arrow, for a vertical step and for a horizontal one; none when
         the arrow may pass other arrows' ports."""
         if not self._attempt.respect_held_ports:
             return set(), set()

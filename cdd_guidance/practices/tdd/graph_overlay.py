@@ -6,7 +6,7 @@ from pathlib import Path
 
 from cdd_guidance.practices.bdd.bdd import Bdd
 from cdd_guidance.practices.stories.stories import Stories
-from cdd_guidance.practices.tdd.tiers import is_test_code, real_resources_in, tier_of
+from cdd_guidance.practices.tdd.tiers import is_code_file, real_resources_in, tier_of
 from harness.graph.graph import Graph, Node
 from harness.graph.pattern_overlays import GraphOverlay
 
@@ -26,7 +26,7 @@ class TddOverlay(GraphOverlay):
             if practice is None or practice.reading.in_graph is None:
                 continue
             for node in practice.reading.in_graph.nodes(node_type):
-                if is_test_code(node.source.file or ""):
+                if is_code_file(node.source.file or ""):
                     self._record(node, root / node.source.file)
 
     def _record(self, node: Node, path: Path) -> None:

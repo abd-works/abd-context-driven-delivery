@@ -37,6 +37,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import Clea
 from cdd_guidance.practices.clean_engineering.model.class_stereotypes import marks_in
 from cdd_guidance.practices.clean_engineering.model.diagram.class_layout import ArrowRouter, CardSpacing, DiagramArrow
 from cdd_guidance.practices.clean_engineering.model.diagram.class_view import (
+    DEPENDENCY_LABEL,
     ClassView,
     ClassViewPage,
     cell_slug as _cell_slug,
@@ -74,8 +75,6 @@ MODULE_TITLE_STYLE = 'text;html=1;align=center;verticalAlign=middle;fontSize=18;
 MODULE_SUBTITLE_STYLE = 'text;html=1;align=center;verticalAlign=middle;fontSize=11;fontStyle=2;'
 _MODULE_MARKER = 'fillColor=#1a3a6e'
 _MODULE_CHILD_MARKER = 'fillColor=#dae8fc'
-# The interaction a dependency names, written on its arrow as `«runs»` on `Repo ---<<runs>>--> Git`.
-_DEPENDENCY_LABEL = re.compile('«([^»]+)»')
 
 
 
@@ -275,10 +274,27 @@ class _ClassDiagramReader:
             oclass.properties = props
             oclass.operations = ops
             oclass.stereotypes = stereotypes + [item for item in marks_in(name) if item not in stereotypes]
-            for folded in _folded_classes(cell.get('value', '')):
+            for folded in self._folded_classes(cell.get('value', '')):
                 oclass.fold(folded)
             cards.append((cell, oclass))
         return cards
+
+    def _folded_classes(self, card_html: str) -> List[DrawIOClass]:
+        """The classes drawn inside a class card below its own operations, each under its own heading with its
+        stereotypes, its properties, and its operations."""
+        sections = re.split('<hr\\s+size="1"\\s*/?>', html.unescape(card_html), flags=re.IGNORECASE)
+        folded = []
+        for start in range(_CARD_PARTS, len(sections) - _CARD_PARTS + 1, _CARD_PARTS):
+            heading, properties, operations = sections[start:start + _CARD_PARTS]
+            name = class_name_in(heading)
+            if not name:
+                continue
+            oclass = DrawIOClass(name=_plain_class_name(name), sequential_order=1)
+            oclass.stereotypes = marks_in(heading)
+            oclass.properties = [Property.from_signature(line) or Property(name=line.strip()) for line in _card_lines(properties)]
+            oclass.operations = [found for found in (Operation.from_signature(line) for line in _card_lines(operations)) if found is not None]
+            folded.append(oclass)
+        return folded
 
     def _read_arrows(self, page: DrawioPage) -> None:
         """Each arrow marks the property it stands for with its kind; the properties then derive their relationships."""
@@ -293,7 +309,7 @@ class _ClassDiagramReader:
             if kind == 'inheritance' and target_name not in source.bases:
                 source.bases.append(target_name)
             words = html.unescape(cell.get('value', '') or '')
-            for label in _DEPENDENCY_LABEL.findall(words):
+            for label in DEPENDENCY_LABEL.findall(words):
                 source.arrows.depend_on(target_name, label.strip())
             source.take_arrow(target_name, kind, words, style_value(cell.get('style', ''), UNMARKED_STYLE_KEY))
         for oclass in self._classes_by_cell.values():
@@ -545,24 +561,6 @@ def _class_card_members(card_html: str) -> Tuple[Optional[str], List[str], List[
 
 # A class card's own parts: its heading, its properties, its operations. Each class folded into it adds three more.
 _CARD_PARTS = 3
-
-
-def _folded_classes(card_html: str) -> List[DrawIOClass]:
-    """The classes drawn inside a class card below its own operations, each under its own heading with its
-    stereotypes, its properties, and its operations."""
-    sections = re.split('<hr\\s+size="1"\\s*/?>', html.unescape(card_html), flags=re.IGNORECASE)
-    folded = []
-    for start in range(_CARD_PARTS, len(sections) - _CARD_PARTS + 1, _CARD_PARTS):
-        heading, properties, operations = sections[start:start + _CARD_PARTS]
-        name = class_name_in(heading)
-        if not name:
-            continue
-        oclass = DrawIOClass(name=_plain_class_name(name), sequential_order=1)
-        oclass.stereotypes = marks_in(heading)
-        oclass.properties = [Property.from_signature(line) or Property(name=line.strip()) for line in _card_lines(properties)]
-        oclass.operations = [found for found in (Operation.from_signature(line) for line in _card_lines(operations)) if found is not None]
-        folded.append(oclass)
-    return folded
 
 
 def _card_lines(section: str) -> List[str]:

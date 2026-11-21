@@ -23,7 +23,7 @@ from harness.whiteboard.whiteboard import MAX_SIDE, UnreadableBoard
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass, UnreadableSource
 from cdd_guidance.practices.clean_engineering.model.diagram.class_layout import PAGE_MARGIN, ArrowRouter, DiagramArrow
-from cdd_guidance.practices.clean_engineering.model.diagram.class_view import ClassView, ClassViewPage
+from cdd_guidance.practices.clean_engineering.model.diagram.class_view import DEPENDENCY_LABEL, ClassView, ClassViewPage
 from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import (
     DiagramClass,
     DiagramCleanEngineeringModel,
@@ -73,7 +73,6 @@ ABOUT_INSET_Y = 12
 """How far in from a section's left and top edges its purpose and seam terms are written, below its title."""
 INHERITANCE = "inheritance"
 KINDS = ("inheritance", "composition", "aggregation", "association", "dependency")
-_DEPENDENCY_LABEL = re.compile("«([^»]+)»")
 
 
 def _key(*names: str) -> str:
@@ -676,7 +675,7 @@ class _ClassReader:
                 continue
             if arrow.role == INHERITANCE and target_name not in source.bases:
                 source.bases.append(target_name)
-            for label in _DEPENDENCY_LABEL.findall(arrow.label):
+            for label in DEPENDENCY_LABEL.findall(arrow.label):
                 source.arrows.depend_on(target_name, label.strip())
             source.take_arrow(target_name, arrow.role, arrow.label)
         for oclass in self._classes.values():

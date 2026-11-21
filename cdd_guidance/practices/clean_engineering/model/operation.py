@@ -11,7 +11,7 @@ from harness.graph.model_node import ModelChildren
 from cdd_guidance.practices.clean_engineering.model.ooad_node import OoadNode
 from cdd_guidance.practices.clean_engineering.model.property import InvariantHolder
 from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUCTOR_NAMES, OperationSourceFacts
-from cdd_guidance.practices.clean_engineering.model.type_refs import name_with_type, split_top_level
+from cdd_guidance.practices.clean_engineering.model.type_refs import name_with_type, parse_parameter, split_top_level
 
 # `save(cart: Cart, note: str = ""): Receipt` as a model line writes an operation.
 _SIGNATURE = re.compile(r"^(_?\w+)\s*\((.*)\)\s*(?::\s*(.+))?$")
@@ -233,8 +233,6 @@ class Operation(InvariantHolder, OoadNode):
 
     def take_parameters(self, parameters: list) -> None:
         """Take its parameters as written, each a `name: Type` line or a parameter to copy."""
-        from cdd_guidance.practices.clean_engineering.model.type_refs import parse_parameter
-
         taken: List[Parameter] = []
         for index, item in enumerate(parameters, start=1):
             if isinstance(item, Parameter):

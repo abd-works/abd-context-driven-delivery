@@ -17,10 +17,13 @@ Everything else in the file is left where it was, since the only changes made ar
 from __future__ import annotations
 
 import ast
-from typing import Callable, Iterator
+from typing import TYPE_CHECKING, Callable, Iterator
 
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeLanguage
 from harness.guidance.practice_formats import Reshaped
+
+if TYPE_CHECKING:
+    from cdd_guidance.practices.bdd.model.code_spec_model import DescribeCall, DescribeCalls
 
 # What marks a block kept in a spec though its describe tree no longer holds it, as the Render action marks a member.
 NO_LONGER_IN_MODEL = "no longer in the model"
@@ -107,10 +110,10 @@ class SpecOutline:
         named = call.args[0]
         return named.value if isinstance(named, ast.Constant) and isinstance(named.value, str) else None
 
-    def _script_blocks(self, calls) -> list[SpecBlock]:
+    def _script_blocks(self, calls: DescribeCalls) -> list[SpecBlock]:
         return [self._script_block(call, ()) for call in calls.roots]
 
-    def _script_block(self, call, under: BlockPath) -> SpecBlock:
+    def _script_block(self, call: DescribeCall, under: BlockPath) -> SpecBlock:
         first, last = call.first_line, call.last_line
         indent = self._indent_of(first)
         block = SpecBlock(under + (call.name,), self._lead_of(first, indent), first, last, call.inside[1], indent)

@@ -25,7 +25,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import Clea
 from cdd_guidance.practices.clean_engineering.model.call_links import CallLinks, ClassesInReach, ClassLinks
 from cdd_guidance.practices.clean_engineering.model.code_read import DESCRIBED_FACT, PRODUCTION_FACT, CodeRead
 from cdd_guidance.practices.clean_engineering.model.compared_facts import ComparedFacts
-from cdd_guidance.practices.clean_engineering.model.markdown.card_lines import CardLines
+from cdd_guidance.practices.clean_engineering.model.card_lines import CardLines
 from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property

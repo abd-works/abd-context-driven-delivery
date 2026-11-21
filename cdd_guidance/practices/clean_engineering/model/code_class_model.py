@@ -41,12 +41,6 @@ class CodeProperty(Property):
 _NOTE_DASH = " — "
 
 
-def _without_note(written: str) -> tuple:
-    """(the type written before a note's dash, the note after it); the note is empty when there is none."""
-    type_hint, _dash, note = (written or "").partition(_NOTE_DASH)
-    return type_hint.strip(), note.strip()
-
-
 class CodeOperation(Operation):
     """An operation as one language writes it. A brace-language parser gives it the statements inside its braces, and
     it measures them itself once its class holds it, so it reads its own class, body, and parameters."""
@@ -251,7 +245,7 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
             for operation in oclass.operations:
                 operation.return_type = self._type_alone(operation, operation.return_type)
                 for parameter in operation.parameters:
-                    parameter.type_hint = _without_note(parameter.type_hint)[0]
+                    parameter.type_hint = self._without_note(parameter.type_hint)[0]
 
     def _keep_class_name_alone(self, oclass: OoadClass) -> None:
         """Name oclass by the identifier its heading starts with, keeping the rest in its description, and its
@@ -265,12 +259,17 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
             if operation.name == written:
                 operation.name = oclass.name
 
-    def _type_alone(self, member, written: str) -> str:
+    def _type_alone(self, member: Operation | Property, written: str) -> str:
         """written without the note after its dash, which member keeps as a note."""
-        type_hint, note = _without_note(written)
+        type_hint, note = self._without_note(written)
         if note:
             member.add_invariant(note)
         return type_hint
+
+    def _without_note(self, written: str) -> tuple:
+        """(the type written before a note's dash, the note after it); the note is empty when there is none."""
+        type_hint, _dash, note = (written or "").partition(_NOTE_DASH)
+        return type_hint.strip(), note.strip()
 
     def operation_body(self, class_name: str, operation_name: str) -> CodeBody:
         """The body this model read for one operation; "constructor" finds the constructor in any language."""

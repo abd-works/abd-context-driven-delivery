@@ -324,7 +324,7 @@ class AgentSession:
         log.write(f"creating new session for {session_file.name} in {workspace} ...")
         chat_id = cli.create_chat(str(workspace.resolve()))
         session = cls(chat_id=chat_id, session_file=session_file)
-        session.record.save()
+        session.save()
         log.write(f"session created: {session.chat_id}")
         return session
 

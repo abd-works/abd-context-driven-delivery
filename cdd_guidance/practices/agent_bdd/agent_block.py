@@ -29,6 +29,7 @@ from cdd_guidance.practices.agent_bdd.agent_bdd_common import (
     ToolsetRequest,
     _ShellCapture,
 )
+from cdd_guidance.practices.agent_bdd.spec_helpers import generate_similar_prompt, generate_similar_rubric
 
 
 class AgentBlock:
@@ -113,8 +114,6 @@ class AgentBlock:
     def generate_and_judge(self, pass_path: str | Path, rubric: str | None = None, *,
                            timeout_seconds: int = INSTRUCT_TIMEOUT_SECONDS) -> str:
         """Generate something similar to the pass fixture, judge it, and return the artifact for human review."""
-        from cdd_guidance.practices.agent_bdd.spec_helpers import generate_similar_prompt, generate_similar_rubric
-
         artifact = self.instruct(generate_similar_prompt(pass_path), timeout_seconds=timeout_seconds).text
         self.ai_judge(artifact, rubric or generate_similar_rubric(pass_path))
         return artifact

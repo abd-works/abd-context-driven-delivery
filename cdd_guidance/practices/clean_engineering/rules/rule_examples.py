@@ -86,10 +86,6 @@ def python_example_pair(slug: str) -> RulePair:
     return rule_pair(slug, faulty_path.read_text(encoding="utf-8"), repaired_path.read_text(encoding="utf-8"), lang="python")
 
 
-def assert_python_example_pair(slug: str) -> None:
-    python_example_pair(slug).check()
-
-
 def _example_files(folder: Path) -> dict[str, str]:
     """The example's asset plus its `.context` files, placed in one fixture folder."""
     files: dict[str, str] = {}
@@ -104,7 +100,3 @@ def module_example_pair(slug: str) -> RulePair:
     """The rule's faulty and repaired example folders, each with its ``.context`` files."""
     root_path = _PRACTICE / "model" / "python" / "_examples" / slug
     return files_rule_pair(slug, _example_files(root_path / "faulty"), _example_files(root_path / "repaired"))
-
-
-def assert_module_example_pair(slug: str) -> None:
-    module_example_pair(slug).check()

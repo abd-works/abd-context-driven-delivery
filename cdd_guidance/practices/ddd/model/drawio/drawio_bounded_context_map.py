@@ -45,11 +45,10 @@ class DrawIOBoundedContextMap(DrawnBoundedContextMap, DrawIOCleanEngineeringMode
     def _read_title(self, cell: ET.Element) -> None:
         """The map's own name, from the title it was drawn under; a modules view's title names its system instead."""
         super()._read_title(cell)
-        if cell.get("id") == "title" and not self.name_from_modules_title(cell):
+        if cell.get("id") == "title" and not self._names_the_modules_title(cell):
             self.title = html.unescape(cell.get("value", "")).strip()
 
-    @staticmethod
-    def name_from_modules_title(cell: ET.Element) -> bool:
+    def _names_the_modules_title(self, cell: ET.Element) -> bool:
         return html.unescape(cell.get("value", "")).rstrip().endswith(MODULES_TITLE_ENDING)
 
     def parse(self, text: str) -> "DrawIOBoundedContextMap":

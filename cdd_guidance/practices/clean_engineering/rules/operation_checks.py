@@ -120,13 +120,6 @@ def operation_label(operation: "Node") -> str:
     return f"{operation.type} '{operation.name}'"
 
 
-def operation_line_count(operation: "Node") -> int:
-    """The parser's count, read from the node's own facts (an ancestor's count is another member's); for a node without
-    one, the lines its source span covers."""
-    span = operation.source.end_line - operation.source.start_line + 1
-    return operation.facts.get("line_count") or (span if span > 1 else 0)
-
-
 class KeepOperationsSmall(OperationMeasureRule):
     """Counts the statements of the body, as the rule says: a call, list, or string written over several lines is one
     statement, and the signature and docstring are none. An operation whose body the graph did not keep, such as one a
@@ -145,10 +138,16 @@ class KeepOperationsSmall(OperationMeasureRule):
         return [f"{operation_label(operation)} is {statements} statements (max {self.limit})."]
 
     def _measure_lines(self, operation: "Node") -> list[str]:
-        size = operation_line_count(operation)
+        size = self._line_count(operation)
         if size <= self.limit:
             return []
         return [f"{operation_label(operation)} is {size} lines (max {self.limit})."]
+
+    def _line_count(self, operation: "Node") -> int:
+        """The parser's count, read from the node's own facts (an ancestor's count is another member's); for a node
+        without one, the lines its source span covers."""
+        span = operation.source.end_line - operation.source.start_line + 1
+        return operation.facts.get("line_count") or (span if span > 1 else 0)
 
 
 class SimplifyControlFlow(OperationMeasureRule):

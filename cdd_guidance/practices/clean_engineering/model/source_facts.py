@@ -14,7 +14,6 @@ from cdd_guidance.practices.clean_engineering.model.operation_metrics import (
     MIN_DELEGATION_LINES,
     CardBullets,
     SourceText,
-    names_call_io_and_domain,
 )
 
 if TYPE_CHECKING:
@@ -83,7 +82,7 @@ class ClassSourceFacts:
         """Each fact by the name the class keeps it under."""
         oclass = self._class
         operations = list(oclass.operations)
-        constructor = next((op for op in operations if op.name in CONSTRUCTOR_NAMES), None)
+        constructor = next((op for op in operations if op.is_constructor), None)
         span = self.span
         return {
             "method_count": len(operations),
@@ -113,13 +112,17 @@ class ClassSourceFacts:
         found: dict[str, Property] = {}
         for operation in (item for item in self._class.operations if item.is_constructor):
             hints = {parameter.name: parameter.type_hint for parameter in operation.parameters}
-            for line, text in self._lines_of(operation):
-                for name, hint, value in _ASSIGNED_FROM.findall(text):
-                    if name in declared or name in found or name.startswith("_"):
-                        continue
-                    found[name] = Property(name, len(declared) + len(found) + 1, (hint or hints.get(value.strip(), "") or "").strip())
-                    found[name].line = line
+            for line, name, hint, value in self._assignments_in(operation):
+                if name in declared or name in found or name.startswith("_"):
+                    continue
+                found[name] = Property(name, len(declared) + len(found) + 1, (hint or hints.get(value.strip(), "") or "").strip())
+                found[name].line = line
         return list(found.values())
+
+    def _assignments_in(self, operation: Operation) -> list[tuple[int, str, str, str]]:
+        """Each field the operation's lines assign, in the order they assign them: the line's number, the field's name,
+        the type the assignment writes, and what it assigns."""
+        return [(line, *assigned) for line, text in self._lines_of(operation) for assigned in _ASSIGNED_FROM.findall(text)]
 
     def _lines_of(self, operation: Operation) -> list[tuple[int, str]]:
         """Each line of its file the operation spans, with its number, from the lines the class keeps."""
@@ -188,7 +191,9 @@ class OperationSourceFacts:
         }
 
     def _delegates_io_and_domain(self) -> bool:
-        """A long operation that calls both I/O and domain calculations does two jobs, even when it only delegates."""
+        """A long operation that calls both I/O, such as `save`, and a domain calculation, such as `total`, does two
+        jobs, even when it only delegates: the last part of each callee's name is the operation it calls."""
         if (self._operation.line_count or 0) < MIN_DELEGATION_LINES:
             return False
-        return names_call_io_and_domain(self._operation.callees)
+        called = "\n".join(f"{callee.split('.')[-1]}(" for callee in self._operation.callees if callee)
+        return SourceText(called).calls_io_and_domain()

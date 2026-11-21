@@ -30,6 +30,8 @@ from cdd_guidance.practices.clean_engineering.model.field_types import RELATIONS
 from cdd_guidance.practices.clean_engineering.model.property import Property
 
 CLASSES_ON_ONE_PAGE = 40
+# The interaction a dependency names, written on its arrow as `«runs»` on `Repo ---<<runs>>--> Git`.
+DEPENDENCY_LABEL = re.compile("«([^»]+)»")
 
 Relationships = List[Tuple[str, str, str]]
 
