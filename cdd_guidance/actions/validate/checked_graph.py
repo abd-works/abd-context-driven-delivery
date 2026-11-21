@@ -159,7 +159,7 @@ class CheckedGraph:
             for fidelity, format in zip(self._fidelities, self._formats)
             if (bool(self.files) and fidelity.is_judged_on_graph) == on_graph
         ]
-        return "; ".join(f"{format}: {', '.join(self.edited or fidelity.declared.output_paths().get(format, []))}" for fidelity, format in judged)
+        return "; ".join(f"{format}: {', '.join(self.edited or fidelity.session_output.written.output_paths().get(format, []))}" for fidelity, format in judged)
 
     def _files(self, reports: ReportFiles) -> list[Path]:
         if self.prefixes and self._named in (None, True) and self._fidelities:
@@ -225,7 +225,7 @@ class CheckedGraph:
         declared = [
             self.session.paths.path_named(path)
             for fidelity, checked in zip(self._fidelities, self._formats)
-            for format, paths in fidelity.declared.output_paths().items()
+            for format, paths in fidelity.session_output.written.output_paths().items()
             if (format == checked) == in_checked_format
             for path in paths
             if DeclaredFile(path).names_one_path
@@ -235,7 +235,7 @@ class CheckedGraph:
     def _written_outputs(self) -> list[str]:
         """The folders holding what each listed fidelity declares in its checked format and has already written. The
         folder, not the file, because a story map's stories keep their scenarios in files beside it."""
-        declared = [path for fidelity, checked in zip(self._fidelities, self._formats) for path in fidelity.declared.output_paths().get(checked, [])]
+        declared = [path for fidelity, checked in zip(self._fidelities, self._formats) for path in fidelity.session_output.written.output_paths().get(checked, [])]
         found = [path for named in declared for path in self._written_at(named)]
         folders = {path.parent if path.is_file() else path for path in found if path.exists()}
         return sorted(str(folder) for folder in folders if self.session.session_files.in_root(folder))

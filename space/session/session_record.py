@@ -251,8 +251,8 @@ class SessionRecord:
         self._session = session
         # Its session.json, read again only once the file changes; none before the session has a folder.
         self._held: HeldJsonFile | None = None
-        # What its session.json holds, read once for each answer that asks.
-        self._fields = HeldForAnswer[dict]()
+        # What its session.json holds, read into its typed fields once for each answer that asks.
+        self._fields = HeldForAnswer[SessionFields]()
 
     def kept_in(self, folder: Path | None) -> None:
         """Read the session.json of folder from now on, the session's folder since it was given one or moved."""
@@ -265,7 +265,7 @@ class SessionRecord:
         held = self._held
         if held is None:
             return SessionFields({})
-        return SessionFields(dict(self._fields.get(self._session.answer, held.read)))
+        return self._fields.get(self._session.answer, lambda: SessionFields(held.read()))
 
     @property
     def fields_on_disk(self) -> SessionFields:

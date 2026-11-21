@@ -1355,7 +1355,7 @@ class StoryModel(StoryNode):
         declares there, so a page that follows the open session shows the ticket activated last."""
         stories = call.session.graph.practices.of(cls.practice_class)
         story_map = next(iter(stories.fidelities))
-        made = [entry.path for entries in story_map.declared.files().values() for entry in entries if entry.exists]
+        made = [entry.path for entries in story_map.session_output.written.files().values() for entry in entries if entry.exists]
         if not made:
             raise StoryNodeNotFound(f"{call.session.name}: no story map", cls)
         return cls.load(made[0], call=call)

@@ -103,7 +103,7 @@ class Generate(GuidanceAction):
 
     def _existing_files(self, fidelity: FidelityGuidance) -> dict[str, list[str]]:
         """The files fidelity has in this session, by the format it declares them in, each a path from the project."""
-        return {label: [entry.path for entry in entries if entry.exists] for label, entries in fidelity.declared.files().items()}
+        return {label: [entry.path for entry in entries if entry.exists] for label, entries in fidelity.session_output.written.files().items()}
 
 
     def _generate_item(self, worked: Guidance | str) -> str:
@@ -117,7 +117,7 @@ class Generate(GuidanceAction):
         return "\n\n".join(part.strip() for part in (text, worked.generate_output()) if part and part.strip())
 
     def _where_outputs_go(self) -> str:
-        outputs = [fidelity.declared.output_paths() for fidelity in self._listed_fidelities]
+        outputs = [fidelity.session_output.written.output_paths() for fidelity in self._listed_fidelities]
         places = [f"{label}: {', '.join(paths)}" for listed in outputs for label, paths in listed.items()]
         if not places:
             return ""
@@ -127,12 +127,12 @@ class Generate(GuidanceAction):
         """The folder of each file a listed fidelity writes, once each; the pattern overlays record their patterns at
         the root of each. A templated path's folder, or one a wildcard names, such as harness/**/.context, is no one
         folder, so it is left to the agent."""
-        paths = [path for fidelity in self._listed_fidelities for listed in fidelity.declared.output_paths().values() for path in listed]
+        paths = [path for fidelity in self._listed_fidelities for listed in fidelity.session_output.written.output_paths().values() for path in listed]
         return list(dict.fromkeys(self.session.paths.path_named(path).parent for path in paths if not _NOT_ONE_FOLDER.search(path)))
 
     def _writes_whiteboard(self) -> bool:
         """Whether a listed fidelity writes a whiteboard, which goes on its board in Claude once written."""
-        return any(Format(label).name == WHITEBOARD for fidelity in self._listed_fidelities for label in fidelity.declared.output_paths())
+        return any(Format(label).name == WHITEBOARD for fidelity in self._listed_fidelities for label in fidelity.session_output.written.output_paths())
 
     @agent_instructions
     def generate_fixes_from_validate(self) -> str:

@@ -234,7 +234,7 @@ class Stories(PracticeGuidance):
         """Each story test its fidelities declare in the session it works in, by its path from project, with the names
         of the stories it holds: the acceptance tests a story map links each story to."""
         project = Path(project).resolve()
-        outputs = [fidelity.session_output for fidelity in self.fidelities if fidelity.session_output is not None]
+        outputs = [fidelity.session_output for fidelity in self.fidelities]
         held = {}
         for path in sorted({file.resolve() for output in outputs for file in output.written.every_file()}):
             reader = self._story_test_reader(path)

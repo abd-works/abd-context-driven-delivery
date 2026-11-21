@@ -46,6 +46,8 @@ class PracticeSessionOutput:
         self._session = session
         # The folder the project's ``.context/config.json`` names for this practice, read once for each answer.
         self._configured_folder = HeldForAnswer[str | None]()
+        # What each fidelity has in this session, held once it is first asked for.
+        self._fidelity_outputs: dict[FidelityGuidance, FidelitySessionOutput] = {}
 
     @classmethod
     @tool_subject
@@ -76,8 +78,21 @@ class PracticeSessionOutput:
         return self._guidance
 
     def of_fidelity(self, fidelity: FidelityGuidance) -> FidelitySessionOutput:
-        """What fidelity, one of this practice's, has in this session."""
-        return FidelitySessionOutput(self, fidelity)
+        """What fidelity, one of this practice's, has in this session: made the first time it is asked for, then held,
+        so each fidelity has one output in the session."""
+        held = self._fidelity_outputs.get(fidelity)
+        if held is None:
+            held = self._fidelity_outputs[fidelity] = FidelitySessionOutput(self, fidelity)
+        return held
+
+    @property
+    def fidelity_outputs(self) -> list[FidelitySessionOutput]:
+        """What each of the practice's fidelities has in this session, each held once."""
+        return [self.of_fidelity(fidelity) for fidelity in self.fidelities]
+
+    def holds(self, file: Path) -> bool:
+        """Whether file is one of the files a fidelity of this practice writes in this session."""
+        return any(output.written.holds(file) for output in self.fidelity_outputs)
 
     @property
     def fidelities(self) -> GuidanceCollection:
@@ -497,6 +512,32 @@ class WrittenFiles:
             named = [repo.root / declared.glob] if declared.names_one_path else self._found(label, declared, searched)
             found += [file for file in named if file.is_file()]
         return found
+
+    def saved_beside(self, source: Path, format: str) -> Path | None:
+        """Where a render of the file at source into format is saved in the session: the file the fidelity's declared
+        outputs place for it (``DeclaredOutputs.file_beside``), under the root of this fidelity that holds source. None
+        when source is under none of its roots, or no file is placed for it."""
+        resolved = source.resolve()
+        for root in (root.resolve() for root in self._output.roots):
+            if root in resolved.parents:
+                placed = self._fidelity.declared.file_beside(resolved.relative_to(root).as_posix(), format)
+                return root / placed if placed else None
+        return None
+
+    def files_to_review(self) -> dict[str, list[FileEntry]]:
+        """The files a person reviews for the fidelity, by format: its own, or those of the fidelities of its practice it
+        reviews files of, in the order it names them, each file once."""
+        names = self._fidelity.reviews_files_of
+        if not names:
+            return self.files()
+        practice = self._output.practice
+        reviewed: dict[str, list[FileEntry]] = {}
+        for name in names:
+            fidelity = practice.fidelities.entries.get(name)
+            for label, entries in (practice.of_fidelity(fidelity).written.files() if fidelity is not None else {}).items():
+                known = {entry.path for entry in reviewed.get(label, [])}
+                reviewed.setdefault(label, []).extend(entry for entry in entries if entry.path not in known)
+        return reviewed
 
     def has_output(self) -> bool:
         """Whether a file this fidelity declares is already in the session, such as one a person wrote. Unlike

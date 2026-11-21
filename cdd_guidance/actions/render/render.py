@@ -74,7 +74,8 @@ class Render(GuidanceAction):
         sources = self.files.paths_to_read(paths)
         source = source or self._format_named_by(sources)
         declared = worked.declared if isinstance(worked, FidelityGuidance) else None
-        saved = RenderedFile.from_sources(sources, Format(source), Format(format), declared)
+        written = worked.session_output.written if isinstance(worked, FidelityGuidance) else None
+        saved = RenderedFile.from_sources(sources, Format(source), Format(format), declared, written)
         if saved is None and (Format(format).is_code or Format(format).group in SAVED_GROUPS):
             return self._saved_by_declared_paths(worked, Format(format), sources, paths, source)
         if saved is None:
@@ -110,7 +111,7 @@ class Render(GuidanceAction):
         """Where a render of sources into a code format is saved: under the first root of the fidelity worked at, by
         the paths it declares for format. Guidance that is no fidelity, or one working in no session, declares no path
         under any root, so its code has no place and is refused."""
-        if not isinstance(worked, FidelityGuidance) or worked.session_output is None:
+        if not isinstance(worked, FidelityGuidance) or not worked.session_output.roots:
             raise RenderHasNoDeclaredPlace("code", format, [], "name a fidelity in a session, which declares where its code is written")
         outputs = {label: [names] if isinstance(names, str) else list(names) for label, names in worked.declared.outputs.items()}
         source = sources[0] if len(sources) == 1 and sources[0].is_file() else None

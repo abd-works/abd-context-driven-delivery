@@ -322,21 +322,19 @@ work_in(session_output: FidelitySessionOutput): None
 
 ## DeclaredOutputs
 
-The files one fidelity declares, made from its outputs. The fidelity holds it (`fidelity.declared`).
+The files one fidelity declares, made from its outputs: declarations only. The fidelity holds it (`fidelity.declared`). What the fidelity has written in a session (`output_paths`, `files`, `has_output`, `saved_beside`, `files_to_review`) is asked of `fidelity.session_output.written`, a *WrittenOutput*; a fidelity whose practice works in no session holds *NoSessionOutput*, which answers empty.
 
-DeclaredOutputs(fidelity: FidelityGuidance, outputs: dict[str, str | list[str]])
+DeclaredOutputs(outputs: dict[str, str | list[str]])
 ------
 outputs: dict[str, str | list[str]]
 ----
 includes(path: str, format: str = ""): bool
 	// a file one of its outputs names, in format when one is named; DeclaredFile matches the end of the path
-output_paths(): dict[str, list[str]]
-	-> fidelity.session_output.written.output_paths
-files(): dict[str, list[SessionFile]]
-	-> fidelity.session_output.written.files
-has_output(): bool
-files_to_review(): dict[str, list]
-	// its fidelity's own files, or those of the fidelities it reviews files of, each file once
+paths_in(format: str): list[str]
+	// the one reading of a declaration of one path or of several
+declared_files(format: str): list[DeclaredFile]
+file_name_beside(source: str, format: str): str
+file_beside(source: str, format: str): str
 
 ## Rule
 

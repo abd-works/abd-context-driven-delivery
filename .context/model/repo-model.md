@@ -1759,17 +1759,17 @@ A path a fidelity declares as its output, as a glob over the session's current r
 
 ## DeclaredOutputs
 
-The files one fidelity declares, made from its outputs: whether a path is one of them, and where they are in the session its practice works in.
+The files one fidelity declares, made from its outputs: declarations only, answered from the patterns alone. Where they are in a session, and which are there, the fidelity's session output answers (`fidelity.session_output.written`).
 
-+ DeclaredOutputs(fidelity: FidelityGuidance, outputs: dict[str, str | list[str]])
++ DeclaredOutputs(outputs: dict[str, str | list[str]])
 ------
 + outputs: dict[str, str | list[str]]
 ----
 + includes(path: str, format: str = ''): bool
-+ output_paths(): dict[str, list[str]]
-+ files(): dict[str, list]
-+ has_output(): bool
-+ files_to_review(): dict[str, list]
++ paths_in(format: str): list[str]
++ declared_files(format: str): list[DeclaredFile]
++ code_folders(): list[str]
++ file_beside(source: str, format: str): str
 + file_name_beside(source: str, format: str): str
 	// the file a render of source into format is saved as, beside source
 ---<<matches with>>--> DeclaredFile
@@ -3757,6 +3757,9 @@ The files one fidelity writes in a session (`session_output.written`): where it 
 ------
 ----
 + output_paths(): dict[str, list[str]]
++ saved_beside(source: Path, format: str): Path | None
+	// the file DeclaredOutputs.file_beside places for source, under the root of this fidelity that holds it
++ files_to_review(): dict[str, list[FileEntry]]
 + files(): dict[str, list[FileEntry]]
 	-> SessionFiles.find
 + holds(file: Path): bool

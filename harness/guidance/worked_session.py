@@ -144,8 +144,9 @@ class SessionFile(Protocol):
         """The file's path from the project."""
 
 
-class _WrittenFiles(Protocol):
-    """The files one fidelity writes in a session."""
+class WrittenOutput(Protocol):
+    """The files one fidelity writes in a session: where each format goes, which are there, where a render of one of
+    them is saved, and which a person reviews."""
 
     def output_paths(self) -> dict[str, list[str]]:
         """Where the fidelity writes each format in the session."""
@@ -155,6 +156,15 @@ class _WrittenFiles(Protocol):
 
     def has_output(self) -> bool:
         """Whether a file the fidelity declares is already in the session."""
+
+    def saved_beside(self, source: Path, format: str) -> Path | None:
+        """Where a render of the file at source into format is saved in the session."""
+
+    def files_to_review(self) -> dict[str, list[SessionFile]]:
+        """The files a person reviews for the fidelity, by format."""
+
+    def every_file(self) -> list[Path]:
+        """Every file the fidelity declares that is in the session."""
 
 
 class FidelityOutput(Protocol):
@@ -173,8 +183,46 @@ class FidelityOutput(Protocol):
         """The folders the fidelity writes under in the session."""
 
     @property
-    def written(self) -> _WrittenFiles:
+    def written(self) -> WrittenOutput:
         """The files the fidelity writes in the session."""
+
+
+class _NoWrittenFiles:
+    """The files a fidelity writes in no session: none."""
+
+    def output_paths(self) -> dict[str, list[str]]:
+        return {}
+
+    def files(self) -> dict[str, list[SessionFile]]:
+        return {}
+
+    def every_file(self) -> list[Path]:
+        return []
+
+    def has_output(self) -> bool:
+        return False
+
+    def saved_beside(self, source: Path, format: str) -> Path | None:
+        return None
+
+    def files_to_review(self) -> dict[str, list[SessionFile]]:
+        return {}
+
+
+class NoSessionOutput:
+    """What a fidelity has while its practice works in no session: no format chosen, no root, and no file written, so a
+    caller asks the same questions in a session or out of one and is never handed none."""
+
+    chosen_formats: list[str] = []
+    roots: list[Path] = []
+    written = _NoWrittenFiles()
+
+    def choose_format(self, format: str, is_chosen: bool) -> object:
+        """Nothing is chosen outside a session."""
+        return self
+
+
+NO_SESSION_OUTPUT = NoSessionOutput()
 
 
 class PracticeOutput(Protocol):
