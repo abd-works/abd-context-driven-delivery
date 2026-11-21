@@ -742,3 +742,179 @@ def _(s):
     @s.then("the scenarios file opens at the When's own line alone")
     def _(world):
         expect(world.lines).to(equal([(SCENARIOS, SCENARIOS_WHEN_LINE, SCENARIOS_WHEN_LINE)]))
+
+
+# --- Filter Callouts Like The Graph -------------------------------------------------------------------------------
+
+# Seed: a note of no practice that links to another, and one that links to a heading the kanban's class model lacks.
+READING_NOTE = "notes/reading.md"
+READING_NOTE_TEXT = "See the [plain note](plain.md).\n"
+PLAIN_NOTE = "notes/plain.md"
+MISLINKED_NOTE = "notes/mislinked.md"
+MISLINKED_NOTE_TEXT = "See the [swimlane](../space/kanban/.context/kanban-model.md#no-such-heading).\n"
+# Seed: a note at the project's top that links to a file not there.
+GONE_LINK_NOTE = "gone-link.md"
+GONE_LINK_NOTE_TEXT = "See [what was here](nowhere/gone.md).\n"
+# Interaction: the files the page lists with Clean Engineering turned off, and with it on.
+STORIES_LISTED = [STORY_MAP, SCENARIOS]
+STORIES_AND_CODE_LISTED = [STORY_MAP, SCENARIOS, TICKET_CODE, KANBAN_MODEL]
+STEP_STORY_THEN_LINE = 17
+
+
+def shown_callouts_of(world, path: str, paths: list[str] | None) -> list[tuple[int, str]]:
+    """Each callout session.file answers for path with the files at paths listed: its line and the file it opens."""
+    found = world.data_of(session_of(world).file(path=path, paths=paths))["callouts"]
+    return [(callout["line"], callout["section"]["path"]) for callout in found]
+
+
+def reached_by_steps(world, paths: list[str] | None = STEP_LISTED, node_filter: dict | None = None) -> dict[int, list[str]]:
+    """What each step of Delete Ticket's shared story test carries, by the step's line, as session.file answers it for
+    the files at paths and node_filter: the names it invokes, then those it observes."""
+    steps = world.data_of(session_of(world).file(path=STEP_STORY, rules=True, paths=paths, node_filter=node_filter))["steps"]
+    return {step["line"]: [target["name"] for target in [*step["invokes"], *step["observes"]]] for step in steps}
+
+
+def seed_step_story_graph(world) -> None:
+    """Seed: checkout-flow's files, and its graph read from Delete Ticket's shared story test and the code it reaches."""
+    seed_checkout_flow_with_graph_files(world)
+    session_of(world).graph_trees(paths=STEP_LISTED)
+
+
+@shared_stories.scenario("Filter Callouts Like The Graph", "A practice turned off leaves out the callouts into its files")
+def _(s):
+    @s.given("Delete Ticket's Given links the ticket to space/kanban/ticket.py and its Then links the board to the kanban's class model, both files of Clean Engineering")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+
+    @s.when("the Person views the scenarios file with Clean Engineering turned off, then on again")
+    def _(world):
+        world.turned_off = shown_callouts_of(world, SCENARIOS, STORIES_LISTED)
+        world.turned_on = shown_callouts_of(world, SCENARIOS, STORIES_AND_CODE_LISTED)
+
+    @s.then("with it off, the scenarios file carries no callout")
+    def _(world):
+        expect(world.turned_off).to(equal([]))
+
+    @s.then("with it on again, line 7 carries its callout into ticket.py and line 9 its callout into the class model")
+    def _(world):
+        expect(world.turned_on).to(equal([(SCENARIOS_GIVEN_LINE, TICKET_CODE), (SCENARIOS_THEN_LINE, KANBAN_MODEL)]))
+
+
+@shared_stories.scenario("Filter Callouts Like The Graph", "A callout into a file no practice declares shows whatever is turned off")
+def _(s):
+    @s.given("a note, notes/reading.md, links to notes/plain.md, and no fidelity declares either")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+        world.project.seed_file(READING_NOTE, READING_NOTE_TEXT)
+        world.project.seed_file(PLAIN_NOTE, "# Plain\n")
+
+    @s.when("the Person views notes/reading.md with every practice turned off, so no file is listed")
+    def _(world):
+        world.callouts = shown_callouts_of(world, READING_NOTE, [])
+
+    @s.then("line 1 carries its callout into notes/plain.md")
+    def _(world):
+        expect(world.callouts).to(equal([(1, PLAIN_NOTE)]))
+
+
+@shared_stories.scenario("Filter Callouts Like The Graph", "A link to a heading not there, in a file left out, says nothing")
+def _(s):
+    @s.given("a markdown file of no practice links to a heading the kanban's class model does not have")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+        world.project.seed_file(MISLINKED_NOTE, MISLINKED_NOTE_TEXT)
+
+    @s.when("the Person views it with Clean Engineering turned off, then with the class model listed")
+    def _(world):
+        session = session_of(world)
+        world.turned_off = world.data_of(session.file(path=MISLINKED_NOTE, paths=STORIES_LISTED))["callouts"]
+        world.listed = world.data_of(session.file(path=MISLINKED_NOTE, paths=STORIES_AND_CODE_LISTED))["callouts"]
+
+    @s.then("with Clean Engineering off, the line carries no callout")
+    def _(world):
+        expect(world.turned_off).to(equal([]))
+
+    @s.then("with the class model listed, the line's callout says the model has no heading no-such-heading")
+    def _(world):
+        expect([callout["missing"] for callout in world.listed]).to(equal([f"{KANBAN_MODEL} has no heading #no-such-heading"]))
+
+
+@shared_stories.scenario("Filter Callouts Like The Graph", "A link to a file not there says so whatever is turned off")
+def _(s):
+    @s.given("a markdown file links to nowhere/gone.md, a file not there")
+    def _(world):
+        seed_checkout_flow_with_graph_files(world)
+        world.project.seed_file(GONE_LINK_NOTE, GONE_LINK_NOTE_TEXT)
+
+    @s.when("the Person views it with every practice turned off, so no file is listed")
+    def _(world):
+        world.callouts = world.data_of(session_of(world).file(path=GONE_LINK_NOTE, paths=[]))["callouts"]
+
+    @s.then("the line's callout says nowhere/gone.md is not there")
+    def _(world):
+        expect([callout["missing"] for callout in world.callouts]).to(equal(["nowhere/gone.md is not there"]))
+
+
+@shared_stories.scenario("Filter Callouts Like The Graph", "A connector left out of the node filter leaves out what a step reaches by it")
+def _(s):
+    @s.given("the Files app shows checkout-flow's graph of Delete Ticket's Python shared story test, whose When invokes Ticket.delete and whose Then observes CHECKOUT_TICKET")
+    def _(world):
+        seed_step_story_graph(world)
+
+    @s.when("the Person views the shared story test with observes left out of the graph view's connectors, then with invokes left out instead")
+    def _(world):
+        world.without_observes = reached_by_steps(world, node_filter={"relationships": ["invokes"]})
+        world.without_invokes = reached_by_steps(world, node_filter={"relationships": ["observes"]})
+
+    @s.then("with observes left out, the When's line carries delete, and the Then's line carries nothing")
+    def _(world):
+        expect(world.without_observes).to(equal({STEP_STORY_WHEN_LINE: ["delete"]}))
+
+    @s.then("with invokes left out, the Then's line carries CHECKOUT_TICKET, and the When's line carries nothing")
+    def _(world):
+        expect(world.without_invokes).to(equal({STEP_STORY_THEN_LINE: ["CHECKOUT_TICKET"]}))
+
+
+@shared_stories.scenario("Filter Callouts Like The Graph", "A node type left out of the node filter leaves out the nodes of that type a step reaches")
+def _(s):
+    @s.given("the Files app shows checkout-flow's graph of Delete Ticket's Python shared story test, whose When invokes Ticket.delete, an operation, and whose Then observes CHECKOUT_TICKET, an example")
+    def _(world):
+        seed_step_story_graph(world)
+
+    @s.when("the Person views the shared story test with the node filter narrowed to operations")
+    def _(world):
+        world.reached = reached_by_steps(world, node_filter={"types": ["Operation"]})
+
+    @s.then("the When's line carries delete, and the Then's line carries nothing")
+    def _(world):
+        expect(world.reached).to(equal({STEP_STORY_WHEN_LINE: ["delete"]}))
+
+
+@shared_stories.scenario("Filter Callouts Like The Graph", "A step keeps what it reaches in a file no practice declares")
+def _(s):
+    @s.given("the Files app shows checkout-flow's graph of Delete Ticket's Python shared story test, whose Then observes CHECKOUT_TICKET in ticket_story_examples.py, a file no fidelity declares")
+    def _(world):
+        seed_step_story_graph(world)
+
+    @s.when("the Person views the shared story test with only the story test listed")
+    def _(world):
+        world.reached = reached_by_steps(world, paths=[STEP_STORY])
+
+    @s.then("the Then's line carries CHECKOUT_TICKET, and the When's line carries nothing, since ticket.py is Clean Engineering's and is not listed")
+    def _(world):
+        expect(world.reached).to(equal({STEP_STORY_THEN_LINE: ["CHECKOUT_TICKET"]}))
+
+
+@shared_stories.scenario("Filter Callouts Like The Graph", "A read that sends no filter holds every callout")
+def _(s):
+    @s.given("the Files app shows checkout-flow's graph of Delete Ticket's Python shared story test")
+    def _(world):
+        seed_step_story_graph(world)
+
+    @s.when("an agent reads the shared story test, sending no files listed and no node filter")
+    def _(world):
+        world.reached = reached_by_steps(world, paths=None)
+
+    @s.then("the When's line carries delete and the Then's line carries CHECKOUT_TICKET")
+    def _(world):
+        expect(world.reached).to(equal({STEP_STORY_WHEN_LINE: ["delete"], STEP_STORY_THEN_LINE: ["CHECKOUT_TICKET"]}))

@@ -123,15 +123,3 @@ with description("a story read from a story test that imports its examples"):
                 {"valid_customer": "./examples/customers_examples", "lapsed_customer": "./examples/customers_examples"}
             ))
 
-    with context("that is Java"):
-        with it("should map a static import to its class file and a class import to itself"):
-            text = (
-                "import static shop.onboard.examples.CustomersExamples.validCustomer;\n"
-                "import shop.onboard.examples.LapsedExamples;\n"
-            )
-            expect(_imports_of(self.root, "tests/OnboardStoryTest.java", text)).to(equal(
-                {
-                    "validCustomer": "shop/onboard/examples/CustomersExamples",
-                    "LapsedExamples": "shop/onboard/examples/LapsedExamples",
-                }
-            ))

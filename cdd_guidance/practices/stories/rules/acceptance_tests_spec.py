@@ -44,10 +44,6 @@ with description("an example fixture in an acceptance test"):
         with it("should pass"):
             expect(_hits("tests/onboard/examples/customers_examples.py")).to(equal([]))
 
-    with context("that sits in a Java examples class"):
-        with it("should pass"):
-            expect(_hits("tests/onboard/examples/CustomersExamples.java")).to(equal([]))
-
     with context("that sits in a Python file not named for examples"):
         with it("should be told the Python examples-file ending"):
             expect(_hits("tests/onboard/examples/customers.py")).to(equal(

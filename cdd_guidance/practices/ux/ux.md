@@ -6,7 +6,7 @@ UX maps how users see and act on the product: screens, regions, controls, and th
 
 **Canonical model.** Reuse `UxMap` → `Screen` → `Region` → `Control` → `Interaction`, plus `Transition`, `ContentType`, and `NavComponent` on the map. Optional `UxContext` holds notes and invariants that are not visible on screens. Do not invent a second page or control model in freehand HTML.
 
-**Primary path.** Start from grill and sketch. Draw information architecture in drawio, deepen to html mockups, then ship real frontend at **front_end_code**. Markdown is optional context (thinking, invariants, interaction notes), not the main artifact. Channels are drawio, html, markdown, json, and claude_design — peers at the same fidelity; `transform` moves sideways. The html channel deepens in place: interactions and optional brand at **mockup**, production UI at **front_end_code**. Templates for generate live under `templates/`. Scanners read the canonical model, never file syntax.
+**Primary path.** Start from grill and sketch. Draw information architecture in drawio, deepen to html mockups, then ship real frontend at **front_end_code**. Markdown is optional context (thinking, invariants, interaction notes), not the main artifact. Channels are drawio, whiteboard, html, markdown, json, and claude_design — peers at the same fidelity; `transform` moves sideways. The html channel deepens in place: interactions and optional brand at **mockup**, production UI at **front_end_code**. Templates for generate live under `templates/`. Scanners read the canonical model, never file syntax.
 
 **Layout (mirror Stories; colocated):**
 
@@ -40,8 +40,8 @@ Before drawing a screen's artboard in the design canvas, drawio regions, or bran
 | Fidelity | Default format | Output |
 |---|---|---|
 | **ia** | drawio | Site map + per-screen regions/nav (html optional via transform) |
-| **mockup** | html | Wired greybox; one HTML per concrete user goal; drawio remains a peer channel |
-| **front_end_code** | html (or host FE stack) | Production UI wired to a real backend |
+| **mockup** | html | Wired greybox; one HTML per concrete user goal; drawio and whiteboard remain peer channels, which show the stories each screen and control serves |
+| **front_end_code** | typescript | Production UI wired to a real backend; a view renders between typescript and javascript |
 
 ## Shared rules
 
@@ -131,6 +131,7 @@ stage: specification
 outputs:
   html: "{epic}/{user_goal}.html"
   mockup_drawing: "{epic}/{user_goal}.drawio"
+  mockup_board: "{epic}/{user_goal}.whiteboard"
   claude_design: "design-canvas/{version}/project/canvas.json"
 ```
 
@@ -145,6 +146,16 @@ Lock screens as runnable greybox — typed controls and key interactions.
 Ask what the person does on this screen to accomplish the outcome, and what they need to see there. Write the controls from those answers.
 
 #### Guidance
+
+**Say which stories each screen and each control serves.** A screen or a control serves a story, a scenario, or a step when a person does or sees that part of the story there. Write each one as a markdown link whose text names it and whose target is the place it is written, so the knowledge graph follows the link to that story, scenario, or step instead of guessing from a name that two stories may share:
+
+- a story: `[Add Book To Cart](../story_tests/sell-books/fill-cart/fill_cart_story.test.md#story-add-book-to-cart)`, linked to its heading in its story file or in the story map;
+- a scenario: `[Add Book To Cart › Add one book](../story_tests/sell-books/fill-cart/fill_cart_story.test.md#scenario-add-one-book)`, its story's name, then ` › `, then its own, linked to the scenario's heading;
+- a step: `[Add Book To Cart › Add one book › the Customer adds 2 copies](../story_tests/sell-books/fill-cart/fill_cart_story.test.md#scenario-add-one-book)`, the same with the step's text last, linked to its scenario's heading, since a step has no heading of its own.
+
+Write the target as any markdown link's: the path from the folder of the file you are writing in, or from the project's root. For story tests written in code, which have no headings, link the file alone (`[Add Book To Cart › Add one book](../story_tests/sell-books/fill-cart/fill_cart_story.test.py)`), and the scenario with that name in that file is the one meant. A name with no link is still read, and is joined to the story, scenario, or step with exactly that key.
+
+Every format keeps these links. In the UX map's JSON they are `story_names`, `scenario_names`, and `step_names` on a screen and on a control. On the whiteboard a screen's card and each control's card list them under `Stories:`, `Scenarios:`, and `Steps:`, separated by ` · `; a person can add or change a line on a card and the next read takes it. The drawio drawing lists the same under each screen, one line for the screen and one line for each control (`Add To Cart › Quantity serves steps: …`). The drawing and the whiteboard show screens, regions, controls with their types, transitions, and these links; they hold no state, interaction, or description, which stay in the html and the JSON.
 
 1. Ensure story/domain JS via Stories / CE `transform` when missing (`ensure_javascript`).
 2. Deepen regions with typed controls, states, and interactions.
@@ -215,6 +226,7 @@ Ask what the person can complete here against the real product, what they see wh
 - Call CE **code**-fidelity backend / Production collaborators — not Fake factory or in-browser demo domain alone.
 - Story Demo may still exist as a review/exploration shell; it is not the product UI at this fidelity.
 - Carry IA vocabulary and control decisions forward; do not redecide screens under a new product name.
+- Write each view in one of the two formats and render it to the other when the project needs both (`render` with `format=javascript` from a `*View.tsx`, or `format=typescript` from a `*View.jsx`). To JavaScript the type annotations are dropped and the components, their props, and their handlers stay as written. To TypeScript the JavaScript is kept as it is, since no annotation can be known from it; add the types by hand. A view that declares an enum, a namespace, or a constructor parameter marked `private` or `readonly` is refused, because dropping the type would drop code the view runs; write those as plain values first.
 
 #### Scaffold
 

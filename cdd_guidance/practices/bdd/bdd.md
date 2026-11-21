@@ -101,7 +101,7 @@ Start from an agreed sketch and deepen toward green tests and production code. E
 
 ```yaml
 alwaysApply: false
-globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*-sketch.md"
+globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*spec.js,**/*.spec.shared.js,**/*-sketch.md"
 ```
 
 Whenever you write or reshape describe / that / with / it-should specs, or code that is supported by these specifications. Follow these rules.
@@ -129,6 +129,7 @@ clean_engineering: model
 outputs:
   python: "**/*_spec.py"
   typescript: "**/*spec.ts"
+  javascript: "**/*spec.js"
 ```
 
 #### Overview
@@ -138,11 +139,11 @@ Define BDD signatures — describe/it names for every observation, no test bodie
 #### Guidance
 
 - Sketch nesting (subjects → `with`/`that`/events → `it should`) is agreed
-- **Confirm framework** — ask if not stated. Default: Mamba/Python; Jest or Vitest/TypeScript when the project uses those. These are the two languages the practice reads, renders, and checks.
+- **Confirm framework** — ask if not stated. Default: Mamba/Python; Jest or Vitest in TypeScript or JavaScript when the project uses those. These are the three languages the practice reads, renders, and checks.
 - Convert every sketch hierarchy line to its framework equivalent (see Framework syntax).
 - Process in batches of ~18 describe blocks when the hierarchy is large.
 
-Fill the **behavior** (SIGNATURE) section of `templates/bdd.py` or `templates/bdd.ts`.
+Fill the **behavior** (SIGNATURE) section of `templates/bdd.py`, `templates/bdd.ts`, or `templates/bdd.js`.
 
 #### Scaffold
 
@@ -154,7 +155,7 @@ Rough behavior index for a **partition** pass or first cut — the subjects unde
 
 ```yaml
 alwaysApply: false
-globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*-sketch.md"
+globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*spec.js,**/*.spec.shared.js,**/*-sketch.md"
 ```
 
 Whenever you name or re-nest describe/it signatures, change code that relies on those signatures, or change specifications that need this kind of rename. Follow these rules.
@@ -184,6 +185,7 @@ clean_engineering: model
 outputs:
   python: "**/*_spec.py"
   typescript: "**/*spec.ts"
+  javascript: "**/*spec.js"
   markdown: ".context/{scope}-bdd-realization.md"
 ```
 
@@ -212,7 +214,7 @@ Ask which public operation on the subject under test each observation exercises,
 - Keep Arrange surface lines (`-> subject = new …`, property sets) separate from the nested call graph under the Act that the observation proves.
 - Store graphs on observations in the BDD model: fenced blocks in `templates/bdd-sketch.md`, round-tripped through `practices/bdd/model` (same call-graph conversion as stories and clean engineering).
 
-Fill the **realization** section of `templates/bdd.py` or `templates/bdd.ts` — call-graph comments or structured `realization` data beside each `BDD: SIGNATURE` until **development** replaces them with real Arrange / Act / Assert.
+Fill the **realization** section of `templates/bdd.py`, `templates/bdd.ts`, or `templates/bdd.js` — call-graph comments or structured `realization` data beside each `BDD: SIGNATURE` until **development** replaces them with real Arrange / Act / Assert.
 
 #### Scaffold
 
@@ -224,7 +226,7 @@ Rough realization index for a **partition** pass or first cut — under each `it
 
 ```yaml
 alwaysApply: false
-globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*-sketch.md,**/*-bdd-realization.md"
+globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*spec.js,**/*.spec.shared.js,**/*-sketch.md,**/*-bdd-realization.md"
 ```
 
 Whenever you add or change call graphs on BDD observations, or change production code those graphs describe. Follow these rules.
@@ -253,6 +255,7 @@ clean_engineering: code
 outputs:
   python: "**/*_spec.py"
   typescript: "**/*spec.ts"
+  javascript: "**/*spec.js"
 ```
 
 #### Overview
@@ -268,7 +271,7 @@ Implement BDD tests with production code.
 1. **Confirm framework** — inherit from the behavior file.
 2. **Scan markers** — list all `it` blocks still containing `BDD: SIGNATURE`; report count.
 3. **Identify shared setup** — extract to `beforeEach` / `with before.each:` or a factory when three or more siblings share arrangement.
-4. Pick **one** marker. Use the **realization** call graph for Act when present; otherwise derive Act from the observation label and domain model. Fill Arrange-Act-Assert from the DEVELOPMENT TESTS section of `templates/bdd.py` or `templates/bdd.ts`.
+4. Pick **one** marker. Use the **realization** call graph for Act when present; otherwise derive Act from the observation label and domain model. Fill Arrange-Act-Assert from the DEVELOPMENT TESTS section of `templates/bdd.py`, `templates/bdd.ts`, or `templates/bdd.js`.
 5. Run the test — confirm RED for the right reason.
 6. Write the **minimum** production code until GREEN (PRODUCTION CODE section of the same template).
 7. Refactor only while green. Move to the next marker.
@@ -303,7 +306,7 @@ Rough development index for a **partition** pass or first cut — the spec files
 
 ```yaml
 alwaysApply: false
-globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*-sketch.md"
+globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*spec.js,**/*.spec.shared.js,**/*-sketch.md"
 ```
 
 Whenever you create, alter, or delete production code supported by BDD specs, or the specs themselves. Follow these rules.

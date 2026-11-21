@@ -523,3 +523,76 @@ Requested 2026-11-16: selecting STORY_MAP in a step's observes group opened the 
 *Given* checkout-flow works with Clean Engineering off, and Archive Ticket's Python story test's `with when` block calls Ticket.delete  
 *When* the Person views the story test with the rules the whole working copy breaks  
 *Then* the When carries no conforms-to-schema finding, since no operation is read for it to invoke
+
+## Story: Filter Callouts Like The Graph
+
+### Evidence
+
+| Source | Note |
+|--------|------|
+| the person, 2026-11-20 | "Which callouts show follows the file view's filters: the practices chosen and the graph's connectors." |
+| the person, 2026-11-20, third wave | Which callouts a file shows is decided in Python by the same filter that narrows the knowledge graph, as `session.graph_trees` applies it with the node filter and the file list. The page sends its filter with the read of the file and draws what comes back. |
+| `harness/graph/graph.py` `Filter`, `space/session/file_view_filter.py` `FileViewFilter` | the graph's filter, narrowed by the files listed and the node filter, decides each callout |
+| walk of the Files app on a copy of round 3's combined project, 2026-11-20 (`round-3-fix-shots/pixel-wave3/`) | Observed: with DDD turned off the scenario's callouts into the domain model leave the rendered view and the source view, and come back with DDD on; with observes left out of the graph view's connectors the steps no longer carry the examples they observe, and carry them again once no connector is left out. |
+
+The file view's filters are the files the page lists for the stages, practices and formats chosen, and the graph view's node filter. The page sends both with each read of a file (`session.file` `paths` and `node_filter`), and the session answers only the callouts they show. The page's part, sending them and reading the open files again when one changes: `harness/files_app/app/files/file-callouts.spec.ts`, `files-page.spec.ts`; in a real browser: `switch-files-app-between-files-and-graph.story.ui_e2e_spec.py`.
+
+#### Scenario: A practice turned off leaves out the callouts into its files
+
+*Given* Delete Ticket's Given links the ticket to space/kanban/ticket.py and its Then links the board to the kanban's class model, both files of Clean Engineering
+*When* the Person views the scenarios file with Clean Engineering turned off, so the files listed are the story map and the scenarios
+*Then* the scenarios file carries no callout, in the rendered view and the source view alike
+*When* the Person turns Clean Engineering on again, so ticket.py and the class model are listed too
+*Then* line 7 carries its callout into ticket.py and line 9 its callout into the class model
+
+#### Scenario: A callout into a file no practice declares shows whatever is turned off
+
+A note belongs to no practice, so no practice turned off can hide it.
+
+*Given* a note, notes/reading.md, links to notes/plain.md, and no fidelity declares either
+*When* the Person views notes/reading.md with every practice turned off, so no file is listed
+*Then* line 1 carries its callout into notes/plain.md
+
+#### Scenario: A link to a heading not there, in a file left out, says nothing
+
+*Given* a markdown file of no practice links to a heading the kanban's class model does not have
+*When* the Person views it with Clean Engineering turned off
+*Then* the line carries no callout
+  *But* with the class model listed, the line's callout says the model has no heading no-such-heading
+
+#### Scenario: A link to a file not there says so whatever is turned off
+
+A file that is not there is in no list of files, so no filter hides the callout that says it is missing.
+
+*Given* a markdown file links to nowhere/gone.md, a file not there
+*When* the Person views it with every practice turned off, so no file is listed
+*Then* the line's callout says nowhere/gone.md is not there
+
+#### Scenario: A connector left out of the node filter leaves out what a step reaches by it
+
+*Given* the Files app shows checkout-flow's graph of Delete Ticket's Python shared story test, whose When invokes Ticket.delete and whose Then observes CHECKOUT_TICKET
+*When* the Person views the shared story test with observes left out of the graph view's connectors
+*Then* the When's line carries delete, and the Then's line carries nothing
+*When* the Person leaves invokes out instead
+*Then* the Then's line carries CHECKOUT_TICKET, and the When's line carries nothing
+
+#### Scenario: A node type left out of the node filter leaves out the nodes of that type a step reaches
+
+*Given* the Files app shows checkout-flow's graph of Delete Ticket's Python shared story test, whose When invokes Ticket.delete, an operation, and whose Then observes CHECKOUT_TICKET, an example
+*When* the Person views the shared story test with the node filter narrowed to operations
+*Then* the When's line carries delete, and the Then's line carries nothing
+
+#### Scenario: A step keeps what it reaches in a file no practice declares
+
+*Given* the Files app shows checkout-flow's graph of Delete Ticket's Python shared story test, whose Then observes CHECKOUT_TICKET in ticket_story_examples.py, a file no fidelity declares
+*When* the Person views the shared story test with only the story test listed
+*Then* the Then's line carries CHECKOUT_TICKET
+  *But* the When's line carries nothing, since ticket.py is Clean Engineering's and is not listed
+
+#### Scenario: A read that sends no filter holds every callout
+
+An agent, or a page that lists no session's files, reads a file without the file view's filters.
+
+*Given* the Files app shows checkout-flow's graph of Delete Ticket's Python shared story test
+*When* an agent reads the shared story test, sending no files listed and no node filter
+*Then* the When's line carries delete and the Then's line carries CHECKOUT_TICKET

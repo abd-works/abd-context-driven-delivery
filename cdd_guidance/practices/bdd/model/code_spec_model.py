@@ -88,7 +88,7 @@ class KeptLines:
 
 
 class CodeBddModel(BddModel):
-    """A spec written as code. Python and TypeScript only spell the lines."""
+    """A spec written as code. Python, TypeScript and JavaScript only spell the lines."""
 
     language: CodeLanguage
 
@@ -356,8 +356,8 @@ class TypeScriptBddModel(CodeBddModel):
     """Vitest / Jest specs: `describe(...)`, `it(...)`, `test(...)` blocks found by bracket matching."""
 
     language = TYPESCRIPT
-    # The spec files this model reads: a JavaScript spec's describe tree is written the same way.
-    suffixes = language.suffixes + JAVASCRIPT.suffixes
+    # The spec files this model reads.
+    suffixes = language.suffixes
 
     def parse_code(self, text: str) -> "TypeScriptBddModel":
         self._lines = text.split("\n")
@@ -394,6 +394,14 @@ class TypeScriptBddModel(CodeBddModel):
             return self._read_observation(node, call.inside_lines)
         node.written.closing = self._read_block(node, call.inside, self._child_blocks(call.children, node))
         return node
+
+
+class JavaScriptBddModel(TypeScriptBddModel):
+    """Vitest / Jest specs written in JavaScript: the describe tree is spelled as a TypeScript spec spells it, in
+    `.spec.js` files, and a test body is JavaScript."""
+
+    language = JAVASCRIPT
+    suffixes = language.suffixes
 
 
 class DescribeCall(BraceCall):

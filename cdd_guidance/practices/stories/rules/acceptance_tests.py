@@ -16,12 +16,11 @@ if TYPE_CHECKING:
     from harness.graph.rule_context import RuleCheckContext
 
 # How each language Stories writes acceptance tests in names an examples file, lower-cased: TypeScript and JavaScript
-# `account-credentials.examples.ts`, Python `account_credentials_examples.py`, Java `AccountCredentialsExamples.java`.
+# `account-credentials.examples.ts`, Python `account_credentials_examples.py`.
 _EXAMPLES_FILE_ENDINGS = {
     "typescript": ".examples.ts",
     "javascript": ".examples.js",
     "python": "_examples.py",
-    "java": "examples.java",
 }
 
 

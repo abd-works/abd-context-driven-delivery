@@ -2,6 +2,8 @@ import type { FilterData, NodeSourceData } from '@cdd/harness/graph/graph'
 import { NO_CHOICES, NO_FILTER, type FilterSelection } from '@graph-app/filter/filter-selection'
 import type { ExplorerEntryData, FileEntryData, GuidanceSelectionData, RangeData, SessionFileData } from '@cdd/space/session/session'
 
+import type { ShownFailure } from './failure-fixes'
+
 // One fidelity's files as the link names them, kept by fidelity so a practice turned off hides its own, with the format
 // each file is in, so a format chip turned on shows only its own.
 export type FidelityFiles = { slug: string; entries: FileEntryData[]; formatOf?: Record<string, string> }
@@ -60,6 +62,8 @@ export type FilesState = {
   collapsedFiles: string[]
   graph: FilesGraphState
   problem: string
+  // Every failure the page met and still shows, each with its Fix button, until a person dismisses it.
+  failures: ShownFailure[]
   toasts: string[]
   // The file or folder a person right-clicked and where, whose menu shows there; none while no menu shows.
   menu: { path: string; x: number; y: number } | null
@@ -88,6 +92,7 @@ export const NO_FILES: FilesState = {
   collapsedFiles: [],
   graph: NO_GRAPH,
   problem: '',
+  failures: [],
   toasts: [],
   menu: null,
   fileBar: { isOpen: true, view: 'folders', closedFolders: [], width: FILE_BAR_WIDTH.usual },

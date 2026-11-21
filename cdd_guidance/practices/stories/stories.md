@@ -103,6 +103,9 @@ outputs:
   typescript:
     - "story_tests/{epic}/{sub-epic}/{story}/{story_snake}_story.test.ts"
     - "story_tests/{epic}/{story}/{story_snake}_story.test.ts"
+  javascript:
+    - "story_tests/{epic}/{sub-epic}/{story}/{story_snake}_story.test.js"
+    - "story_tests/{epic}/{story}/{story_snake}_story.test.js"
   markdown:
     - "story_tests/{epic}/{sub-epic}/{story_snake}_story.test.md"
     - "story_tests/{epic}/{epic_snake}_story.test.md"
@@ -163,7 +166,8 @@ If this change will not stay here, follow `practices/stories/stories-story-map.m
 - **`outline-requires-many-permutations`** - Use a Scenario Outline when many data combinations follow the same steps. Use separate steps or Scenarios for two alternatives or a changed flow, and keep only example fields that affect behaviour, because examples should show variation rather than conceal structure.
 - **`plain-english-gwt-steps`** - Write each step as a readable sentence with a named actor and observable behaviour. Use the plain-English example name rather than a code identifier, because test reports must make sense without source code.
 - **`seed-prior-story-as-given`** - Seed a later Story from examples produced by prior Stories instead of replaying their When steps. Reuse fixtures from the owning domain concept and keep the boundary under test real, because each Story must run independently while proving its own behaviour.
-- **`domain-terms-link-to-model`** - Link each domain term in Given, When, and Then text and in example tables to its definition in the domain model markdown, `domain-model.md` (DDD) or `class-model.md` (Clean Engineering), anchored at the class or term heading (`domain-model.md#sim-aggregate-root-entity`). With no model file, write the term without a link, because a step that leads to its definition keeps the Scenario and the model on one meaning, and a link to a missing file misleads.
+- **`domain-terms-link-to-model`** - Link each domain term in Given, When, and Then text and in example tables to its definition in the domain model markdown, `domain-model.md` (DDD) or `class-model.md` (Clean Engineering), anchored at the class or term heading (`domain-model.md#sim-aggregate-root-entity`). A step that leads to its definition keeps the Scenario and the model on one meaning. Where no model is written yet, write the term without a link, or link it to the heading the model will give it: the knowledge graph records an edge from the step to the class only when the link reaches a class it read, and reports nothing for a link that reaches none, because Scenarios are often written before the model they will join.
+- **`then-observes-an-example`** - Where a domain model or a class model is written for the Story's area of the map, name in each Then, or in a Given of its Scenario or of its Story's Background, the example whose outcome the Then observes. A Story's area is the Stories directly under its sub-epic or epic, with their Scenarios, steps, and examples. A model is written for the area when the knowledge graph joins one of those steps or examples to a class of the domain model (DDD) or the class model (Clean Engineering): a linked domain term leads to a class heading the graph read, a step calls an operation of a class, or an example is built as a class. Where no model is written for the area, a Then needs no example and an example needs no class, because an outcome with no example cannot be checked against the model, while asking for a model nobody has written stops Scenarios from being written first.
 
 #### Scenario realizations (default on)
 
@@ -211,6 +215,11 @@ outputs:
     - "story_tests/{epic}/{epic_slug}.story.ui.spec.ts"
     - "story_tests/{epic}/examples/{concept}.examples.ts"
     - "story_tests/**/story-test.ts"
+  javascript:
+    - "story_tests/{epic}/{sub-epic}/{story}/{story_snake}_story.test.js"
+    - "story_tests/{epic}/{story}/{story_snake}_story.test.js"
+    - "story_tests/{epic}/examples/{concept}.examples.js"
+    - "story_tests/**/story-test.js"
 ```
 
 #### Overview

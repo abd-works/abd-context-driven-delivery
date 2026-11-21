@@ -1246,7 +1246,7 @@ with description("the board tools") as self:
                 "ticket.edit_text", "ticket.tag", "ticket.delete", "ticket.add_child", "ticket.pull_out", "ticket.reassign_parent", "ticket.move_before",
                 "fidelity-progress.report", "fidelity-progress.files", "fidelity-progress.help",
                 "sessions.current", "sessions.switch", "session.close", "session.append_log", "session.mark_loop", "session.read_loop",
-                "session.choose_workpath", "session.folder_files", "session.workpath_files", "session.read_file", "session.write_file", "session.file", "session.graph_trees", "session.graph_branch", "session.graph_filter_choices", "session.graph_node_ranges", "session.graph_members", "session.add_to_chat_context", "session.show",
+                "session.choose_workpath", "session.folder_files", "session.workpath_files", "session.read_file", "session.write_file", "session.file", "session.graph_trees", "session.graph_branch", "session.graph_filter_choices", "session.graph_node_ranges", "session.graph_members", "session.diagnose_alignment", "session.align_formats", "session.add_to_chat_context", "session.show",
                 "session.guidance_selection", "session.update_guidance_selection", "session.guidance_selection_after",
                 "session.write_handoff", "session.read_handoff_format", "session.read_cdr_format", "session.list_cdrs", "session.write_cdr",
                 "practice-session-output.enable", "practice-session-output.choose_root", "practice-session-output.use_default_root", "fidelity-session-output.choose_root", "fidelity-session-output.add_root", "fidelity-session-output.propose_roots", "fidelity-session-output.choose_format",

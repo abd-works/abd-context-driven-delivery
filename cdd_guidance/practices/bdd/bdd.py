@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from cdd_guidance.practices.bdd.model.bdd_model import BddModel
-from cdd_guidance.practices.bdd.model.code_spec_model import PythonBddModel, TypeScriptBddModel
+from cdd_guidance.practices.bdd.model.code_spec_model import JavaScriptBddModel, PythonBddModel, TypeScriptBddModel
 from cdd_guidance.practices.bdd.model.graph_bdd_model import GraphBddModel
 from cdd_guidance.practices.bdd.model.graph_reading import BddGraphReading
 from cdd_guidance.practices.bdd.model.nodes import BehaviorNode
@@ -41,6 +41,7 @@ class Bdd(PracticeGuidance):
         "markdown": BddModel,
         "python": PythonBddModel,
         "typescript": TypeScriptBddModel,
+        "javascript": JavaScriptBddModel,
         # A saved knowledge graph, read only: rendering from it draws the realization fidelity.
         "graph": GraphBddModel,
     }

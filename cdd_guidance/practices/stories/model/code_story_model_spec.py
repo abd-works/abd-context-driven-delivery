@@ -1,11 +1,10 @@
 """Mamba spec for `a code Story Map`: the folder and file layout every language shares, observed through Python
-story tests. The code inside each file is covered by the TypeScript, Python, JavaScript, and Java specs."""
+story tests. The code inside each file is covered by the TypeScript, Python, and JavaScript specs."""
 
 from expects import be_false, be_true, equal, expect, have_len, raise_error
 from mamba import before, context, description, it
 
 from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModelError
-from cdd_guidance.practices.stories.model.java.java_story_model import JavaStoryModel
 from cdd_guidance.practices.stories.model.javascript.javascript_story_model import JavaScriptStoryModel
 from cdd_guidance.practices.stories.model.python.python_story_model import PythonStoryModel
 from cdd_guidance.practices.stories.model.story_model import Epic, Scenario, Story, StoryModel, StoryType
@@ -214,20 +213,12 @@ with description("a code Story Map under a tests root two folders deep") as self
         with it("should read each epic from the folder below the tests root"):
             expect(epic_names_read_back(JavaScriptStoryModel("stories/tests"))).to(equal(["Epic 1", "Epic 2", "Epic 3", "Epic 4"]))
 
-    with context("in Java"):
-        with it("should read each epic from the folder below the tests root"):
-            expect(epic_names_read_back(JavaStoryModel("stories/tests"))).to(equal(["Epic 1", "Epic 2", "Epic 3", "Epic 4"]))
-
     with context("in TypeScript"):
         with it("should read each epic from the folder below the tests root"):
             expect(epic_names_read_back(TypeScriptStoryModel("stories/tests"))).to(equal(["Epic 1", "Epic 2", "Epic 3", "Epic 4"]))
 
 
 with description("a code Story Map asked which files are its story files") as self:
-    with context("in Java"):
-        with it("should leave out a helper beside a story file"):
-            expect(JavaStoryModel().is_story_file("tests/checkout/PaymentHelper.java")).to(be_false)
-
     with context("in TypeScript"):
         with it("should leave out a story file under an examples folder"):
             expect(TypeScriptStoryModel().is_story_file("tests/checkout/examples/card_story.test.ts")).to(be_false)

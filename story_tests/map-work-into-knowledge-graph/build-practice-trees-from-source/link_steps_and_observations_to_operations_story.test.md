@@ -157,3 +157,43 @@ Observed (`term_links_spec.py`).
 *When* the Knowledge Graph reads the bookshop project for Stories and DDD
 *Then* the example `paid_order` demonstrates the root Order of `.context/domain-model.md`
 
+#### Scenario: Have a Then observe the examples its text and its Background name, with no code read
+
+Observed (`cdd_guidance/practices/stories/model/modelled_areas_spec.py`). Written after exploratory testing round 3 (defect r3-sparky-04): a Then had an `observes` edge only when Clean Engineering was read beside Stories, and "the Cart total is 5", which names no example, could never have one.
+
+*Given* `add_book_to_cart_story.test.md` holds the examples Tiny Tales, Grand Atlas and empty cart, and its Background names Tiny Tales and empty cart
+*When* the Knowledge Graph reads the bookshop project for Stories and DDD
+*Then* the Then "the Bookshop refuses with Grand Atlas is out of stock" observes Grand Atlas
+  *And* the Then "the Cart total is 5" observes Tiny Tales and empty cart
+
+#### Scenario: Report a Then that observes no example where a model is written for its area
+
+Observed (`modelled_areas_spec.py`, and the example pair of `then-observes-an-example`). The person's answer of 2026-11-20: a Then must observe an Example "only if a domain model or class model has been written for that area of the story graph".
+
+*Given* a step of a story under the sub-epic Confirm Order links the term Order to `domain-model.md#order-aggregate-root-entity`
+  *And* a Then of that sub-epic, "the Bookshop refuses with order 9999 is not found", names no example, and no Given of its scenario names one
+*When* the Knowledge Graph checks the Stories rules on the bookshop project read for Stories and DDD
+*Then* that Then carries a then-observes-an-example violation
+  *And* the violation says a model is written for its area
+
+#### Scenario: Hold no Then to an example where no model is written for its area
+
+Observed (`modelled_areas_spec.py`). Written after defect r3-sparky-04: scenarios written after the template failed validate with one violation for each Then.
+
+*Given* the story test of Search Books, under the epic Browse Books, links no domain term to a model
+  *And* the stories of the sub-epic Add Books link Cart and Book to `domain-model.md`
+*When* the Knowledge Graph checks the Stories rules on the bookshop project read for Stories and DDD
+*Then* no Then of Search Books carries a then-observes-an-example violation
+  *And* the Thens of the areas whose steps link to the model are still held to it
+
+#### Scenario: Report nothing for a term linked to a model document that is not there
+
+Observed (`modelled_areas_spec.py`). The person's answer of 2026-11-20: "scenarios may link to terms it comes up with but the graph doesn't need to connect".
+
+*Given* the steps of `add_book_to_cart_story.test.md` link Cart and Book to `domain-model.md`
+  *But* the bookshop project holds no `.context/domain-model.md`
+*When* the Knowledge Graph checks the Stories rules on the bookshop project read for Stories and DDD
+*Then* no step of that file has a `names` edge
+  *And* no step that holds such a link carries a violation
+  *And* no example of the project is held to demonstrate a class
+

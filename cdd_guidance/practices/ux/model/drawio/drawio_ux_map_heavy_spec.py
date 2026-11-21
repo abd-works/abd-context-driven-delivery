@@ -63,6 +63,33 @@ class SpecFixture:
         return ux_map
 
 
+    def mockup_serving_stories(self) -> DrawioUxMap:
+        """The mockup, whose Book Details serves a linked story, a scenario and a step, and whose Quantity and Add to
+        cart controls serve a step and a scenario of their own."""
+        ux_map = self.mockup()
+        details = ux_map.find_screen("Book Details")
+        details.show_story(_STORY_LINK)
+        details.show_story("View Book & Cover")
+        details.show_scenario(_SCENARIO_LINK)
+        details.show_step(_STEP_LINK)
+        quantity, add_to_cart, _back = details.regions[1].controls
+        quantity.show_step(_STEP_LINK)
+        add_to_cart.show_story(_STORY_LINK)
+        add_to_cart.show_scenario(_SCENARIO_LINK)
+        add_to_cart.show_scenario("Add Book To Cart › Add a second book")
+        return ux_map
+
+
+_STORY_FILE = "story_tests/shop/fill-cart/fill_cart_story.test.md"
+_STORY_LINK = f"[Add Book To Cart]({_STORY_FILE}#story-add-book-to-cart)"
+_SCENARIO_LINK = f"[Add Book To Cart › Add one book]({_STORY_FILE}#scenario-add-one-book)"
+_STEP_LINK = f"[Add Book To Cart › Add one book › the Customer adds 2 copies]({_STORY_FILE}#scenario-add-one-book)"
+
+
+def served_by(node) -> tuple[list[str], list[str], list[str]]:
+    return (node.story_keys, node.scenario_keys, node.step_keys)
+
+
 def controls_of(ux_map: DrawioUxMap, screen: str, region: str) -> list[tuple[str, str]]:
     held = next(found for found in ux_map.find_screen(screen).regions if found.name == region)
     return [(control.name, control.control_type) for control in held.controls]
@@ -141,6 +168,29 @@ with description("a UX map drawn as a draw.io information architecture"):
 
         with it("should read back a transition's kind of navigation"):
             expect(self.parsed.transitions[0].nav_type).to(equal("top nav"))
+
+    with context("of a mockup whose screen and controls serve stories, scenarios and steps, that is read back"):
+        with before.each:
+            self.parsed = DrawioUxMap.create().parse(DrawioUxMap.create().render(fixture.mockup_serving_stories()))
+            self.details = self.parsed.find_screen("Book Details")
+            self.controls = {control.name: control for control in self.details.regions[1].controls}
+
+        with it("should read back what the screen serves, each linked one with its target"):
+            expect(served_by(self.details)).to(equal(([_STORY_LINK, "View Book & Cover"], [_SCENARIO_LINK], [_STEP_LINK])))
+
+        with it("should read back the step a control serves"):
+            expect(served_by(self.controls["Quantity"])).to(equal(([], [], [_STEP_LINK])))
+
+        with it("should read back the story and the scenarios another control serves"):
+            expect(served_by(self.controls["Add to cart"])).to(
+                equal(([_STORY_LINK], [_SCENARIO_LINK, "Add Book To Cart › Add a second book"], []))
+            )
+
+        with it("should give a control that serves nothing no story, scenario or step"):
+            expect(served_by(self.controls["Back to list"])).to(equal(([], [], [])))
+
+        with it("should still read back only the regions the mockup has"):
+            expect([region.name for region in self.details.regions]).to(equal(["Book Summary", "Add To Cart"]))
 
     with context("that is not XML"):
         with it("should refuse it as an unreadable diagram"):

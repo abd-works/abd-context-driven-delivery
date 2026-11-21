@@ -37,7 +37,6 @@ _FORMAT_ADAPTERS = {
     "whiteboard": ("cdd_guidance.practices.stories.model.whiteboard.nodes", "WhiteboardStoryModel"),
     "python": ("cdd_guidance.practices.stories.model.python.python_story_model", "PythonStoryModel"),
     "typescript": ("cdd_guidance.practices.stories.model.typescript.typescript_story_model", "TypeScriptStoryModel"),
-    "java": ("cdd_guidance.practices.stories.model.java.java_story_model", "JavaStoryModel"),
     "javascript": ("cdd_guidance.practices.stories.model.javascript.javascript_story_model", "JavaScriptStoryModel"),
 }
 

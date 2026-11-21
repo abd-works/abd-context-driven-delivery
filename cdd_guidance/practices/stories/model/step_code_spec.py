@@ -1,11 +1,9 @@
-"""A step read from a story test in code holds the code its story test gives it, in each language whose story tests hold
-code, so the graph links the step to the operations that code calls. A Java story test is a doc comment of steps with no
-code, so a Java step holds none."""
+"""A step read from a story test in code holds the code its story test gives it, in each language story tests are
+written in, so the graph links the step to the operations that code calls."""
 
-from expects import be_empty, contain, expect
+from expects import contain, expect
 from mamba import description, it
 
-from cdd_guidance.practices.stories.model.java.java_story_model import JavaStoryModel
 from cdd_guidance.practices.stories.model.javascript.javascript_story_model import JavaScriptStoryModel
 from cdd_guidance.practices.stories.model.python.python_story_model import PythonStoryModel
 from cdd_guidance.practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
@@ -50,14 +48,6 @@ def _(s):
         world.order = world.cart.checkout()
 """
 
-_JAVA_TEST = """\
-/** Story: Pay For Order
- * SCENARIO: Pay by card
- * WHEN: the Shopper pays
- */
-"""
-
-
 def _when_code(model, path: str, text: str) -> str:
     """The code the When step of the one scenario read from text at path holds."""
     story = next(found for epic in model.parse({path: text}).descendants.epics() for found in epic.stories)
@@ -80,7 +70,3 @@ with description("a step read from a story test in code"):
     with description("written in a Python shared story file"):
         with it("should hold the code that calls the operation"):
             expect(_when_code(PythonStoryModel(), "tests/place-orders/check-out.story.shared.py", _PYTHON_SHARED)).to(contain("world.cart.checkout()"))
-
-    with description("written in Java"):
-        with it("should hold no code, since a Java story test writes none"):
-            expect(_when_code(JavaStoryModel(), "tests/place-orders/CheckOutStory.java", _JAVA_TEST)).to(be_empty)

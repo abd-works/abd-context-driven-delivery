@@ -31,11 +31,9 @@ _DOMAIN_CLASS = re.compile(r"\bclass\s+([A-Z]\w*)\b")
 _NAMED_IMPORT = re.compile(r"import\s*(?:type\s*)?\{(?P<names>[^}]+)\}\s*from\s*['\"](?P<module>[^'\"]+)['\"]")
 # Python `from .examples.customers_examples import valid_customer, (a as b)`.
 _PYTHON_FROM_IMPORT = re.compile(r"^\s*from\s+(?P<module>\.*[\w.]*)\s+import\s+(?P<names>\([^)]*\)|[^#\r\n]+)", re.M)
-# Java `import static shop.onboard.examples.CustomersExamples.validCustomer;` or `import shop.onboard.examples.CustomersExamples;`.
-_JAVA_IMPORT = re.compile(r"^\s*import\s+(?P<static>static\s+)?(?P<path>[\w.]+)\s*;", re.M)
 
 # What each language declares an example as, by the suffix of the file: a TypeScript or JavaScript function or constant,
-# a Python module-level function or constant, a Java static method or field (of an `*Examples` class).
+# a Python module-level function or constant.
 _SCRIPT_DECLARATION = re.compile(r"\bfunction\s+([\w$]+)\b|\b(?:const|let|var)\s+([\w$]+)\s*[:=]")
 _EXAMPLE_DECLARATIONS = {
     ".ts": _SCRIPT_DECLARATION,
@@ -44,7 +42,6 @@ _EXAMPLE_DECLARATIONS = {
     ".jsx": _SCRIPT_DECLARATION,
     ".mjs": _SCRIPT_DECLARATION,
     ".py": re.compile(r"^(?:async\s+)?def\s+(\w+)|^([A-Za-z_]\w*)\s*(?::[^=\n]+)?=(?!=)", re.M),
-    ".java": re.compile(r"\bstatic\s+(?:final\s+)?[\w<>\[\],.?]+(?:\s*<[^>]*>)?\s+(\w+)\s*[(=;]"),
 }
 _IDENTIFIER = re.compile(r"\w+")
 _MEMBER_READ = re.compile(r"\.(\w+)")
@@ -77,7 +74,7 @@ def example_source_file(story_test: str, imported_modules: dict[str, str], name:
 
 def imported_files(file: str, imported_modules: dict[str, str]) -> list[str]:
     """The files the code file at file can import its names from, named from the project like file, with file's own
-    extension. A relative import names one file; a module named from a package root (a Python or Java import) may sit
+    extension. A relative import names one file; a module named from a package root (a Python import) may sit
     under any folder above file, so each of those is a place it can be, and a reader keeps the ones that are there."""
     relative = {example_source_file(file, imported_modules, name) for name, module in imported_modules.items() if module.startswith(".")}
     suffix = PurePosixPath(file).suffix
@@ -111,10 +108,10 @@ class StorySource:
     @cached_property
     def imported_modules(self) -> dict[str, str]:
         """Each name the file imports, mapped to the module it comes from, written as a path without its extension the
-        way the story test's language names it: TypeScript and JavaScript as the import says, Python and Java with their
-        dots turned into folders."""
+        way the story test's language names it: TypeScript and JavaScript as the import says, Python with its dots
+        turned into folders."""
         imported: dict[str, str] = {}
-        for name, module in [*self._script_imports(), *self._python_imports(), *self._java_imports()]:
+        for name, module in [*self._script_imports(), *self._python_imports()]:
             if name and name != "*":
                 imported.setdefault(name, module)
         return imported
@@ -158,7 +155,7 @@ class StorySource:
 
     def imported_example_files(self) -> list[str]:
         """The files this story test imports names from, named from the project: where its examples can come from. A
-        relative import names one file; a module named from a package root (a Python or Java import) may sit under any
+        relative import names one file; a module named from a package root (a Python import) may sit under any
         folder above the story test, so each of those is a place it can be, and only the ones that are there are read."""
         return imported_files(self.file, self.imported_modules)
 
@@ -178,15 +175,6 @@ class StorySource:
             module = folders if level == 0 else ("./" if level == 1 else "../" * (level - 1)) + folders
             for part in match.group("names").strip("()").split(","):
                 found.append((part.strip().split(" as ")[-1].strip(), module))
-        return found
-
-    def _java_imports(self) -> list[tuple[str, str]]:
-        """A static import names a member of a class file; any other import names the class file itself."""
-        found = []
-        for match in _JAVA_IMPORT.finditer(self.text):
-            parts = match.group("path").split(".")
-            file_parts = parts[:-1] if match.group("static") else parts
-            found.append((parts[-1], "/".join(file_parts)))
         return found
 
     def _opening_docblock(self) -> str:
@@ -301,7 +289,7 @@ class StoryRecording:
 
         - ``source_names`` and ``source_reads``: every identifier, and every name read as a member (``.name``), in the
           first code file the map was read from that declares name as its language declares an example (a TypeScript or
-          JavaScript function or constant, a Python function or constant, a Java static method or field), so an example
+          JavaScript function or constant, a Python function or constant), so an example
           is linked to the classes it shows and the properties it reads;
         - ``export_names``: the names exported by the file the example comes from, when that is another file the map
           read (an examples module the story test imports); otherwise the story file's own apply."""

@@ -150,7 +150,9 @@ function getTemplate(layoutName) {
 
 const SCREEN_W   = 720   // screen box width
 const CALLOUT_GAP = 6    // space between a screen and its stories callout
-const CALLOUT_H  = 52    // stories callout height
+const CALLOUT_H  = 52    // stories callout height, for up to two lines
+const CALLOUT_LINE_H = 18 // height of each line of a longer callout
+const CALLOUT_PAD = 16   // space above and below a longer callout's lines
 const LANE_GAP   = 30    // space between the screens and the first transition lane above them
 const LANE_STEP  = 24    // space between transition lanes
 const SCREEN_HDR = 32    // height of bold name bar at top of screen
@@ -553,15 +555,20 @@ function generateXml(state) {
     }
 
     // Callout annotation
+    // What the screen serves, one line for each kind, its domain terms, then one line for each kind of thing each
+    // control serves. A served story, scenario or step arrives as label markup: a link when it has a target.
     const lines = [
-      screen.stories?.length ? `<b>Stories:</b> ${screen.stories.join(' · ')}` : '',
-      screen.terms?.length   ? `<b>Domain terms:</b> ${screen.terms.join(' · ')}` : '',
+      screen.stories?.length   ? `<b>Stories:</b> ${screen.stories.join(' · ')}` : '',
+      screen.scenarios?.length ? `<b>Scenarios:</b> ${screen.scenarios.join(' · ')}` : '',
+      screen.steps?.length     ? `<b>Steps:</b> ${screen.steps.join(' · ')}` : '',
+      screen.terms?.length     ? `<b>Domain terms:</b> ${screen.terms.join(' · ')}` : '',
+      ...(screen.served || []).map(line => `<b>${esc(line.by)} serves ${line.kind}:</b> ${line.items.join(' · ')}`),
     ].filter(Boolean)
     if (lines.length) {
       cells.push(mkCell(counter, {
         value: lines.join('<br>'),
         style: S.callout, vertex: true, parent: '1',
-        x: pos.x, y: pos.y + pos.h + CALLOUT_GAP, w: pos.w, h: CALLOUT_H,
+        x: pos.x, y: pos.y + pos.h + CALLOUT_GAP, w: pos.w, h: Math.max(CALLOUT_H, lines.length * CALLOUT_LINE_H + CALLOUT_PAD),
       }).xml)
     }
   }

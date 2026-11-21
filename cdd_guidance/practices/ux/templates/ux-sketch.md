@@ -28,6 +28,8 @@ Journeys, touchpoints, and screens nest through markdown headings, so each folds
 
 Under a screen heading, one fenced block holds, in order: the screen's **outbound links**, its **canvas** artboard, its **Stories**, its **Domain terms**, and its **key**. A screen reached from more than one touchpoint is drawn under the touchpoint that owns it and referenced by name from the others.
 
+At **mockup**, a list headed `Serves (mockup):` follows the block, outside the fence so its links open: one line for the screen and one for each control, named by its region and its own name, each listing the stories, scenarios, and steps a person does or sees there as markdown links to where each is written (a step links to its scenario's heading). The mockup's JSON, whiteboard, and drawing keep the same links, and the knowledge graph follows each to its story, scenario, or step; `ux.md`, mockup, Guidance says how each is written.
+
 Nav tags: `[Quick Action]` · `[top nav]` · `[drawer nav]` · `[secondary nav]` · `[action]` · `[system]`
 
 ---
@@ -55,6 +57,11 @@ Fidelity: ia | mockup | specification | front_end_code
     on [ Edit ] → {destination or effect}
     // stub/brand notes (specification only)
 ```
+
+Serves (mockup):
+
+- screen: [{Story}]({path to the story file}#story-{story-heading}) · [{Story} › {Scenario}]({path}#scenario-{scenario-heading})
+- {Region} › {Control}: [{Story} › {Scenario} › {step text}]({path}#scenario-{scenario-heading})
 
 ##### [ {next screen at this touchpoint} ]            {layout}
 

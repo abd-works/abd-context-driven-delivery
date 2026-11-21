@@ -1,6 +1,6 @@
 # Story tests: the code formats
 
-The code formats write a story map as runnable story tests and read those tests back into the same map. The classes are *CodeStoryModel* and its language subclasses in `practices/stories/model/` (`code_story_model.py`, `brace_story.py`, `python/`, `typescript/`, `javascript/`, `java/`), described in `practices/stories/model/.context/story-model.md`. This document explains the layout they write and why the code inside a story test survives regeneration.
+The code formats write a story map as runnable story tests and read those tests back into the same map. The classes are *CodeStoryModel* and its language subclasses in `practices/stories/model/` (`code_story_model.py`, `brace_story.py`, `python/`, `typescript/`, `javascript/`), described in `practices/stories/model/.context/story-model.md`. This document explains the layout they write and why the code inside a story test survives regeneration.
 
 ## Layout
 
@@ -20,7 +20,6 @@ The code formats write a story map as runnable story tests and read those tests 
 | TypeScript | `{sub_epic}_story.test.ts` (also reads `_story.spec.ts`) | *TypeScriptStoryModel* |
 | JavaScript | `{sub_epic}_story.test.js` | *JavaScriptStoryModel* |
 | Python | `{sub_epic}_story.test.py` | *PythonStoryModel* |
-| Java | `{SubEpic}Story.java` | *JavaStoryModel* |
 
 Each story file opens with a comment naming its epic and its order on the map, imports `story` and `scenario` from the step library and the example values it uses, then holds one `story(...)` block per story with its backgrounds and `scenario(...)` blocks, each step written as a Given, When, Then, And, or But call with its code inside. Java writes no step library: each story is a doc comment listing its steps, with no code to keep.
 

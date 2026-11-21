@@ -16,6 +16,7 @@ from harness.guidance.practice_reading import PracticeReading
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER
 from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel
+from cdd_guidance.practices.stories.model.modelled_areas import ExampleObservations, ModelledAreas
 from cdd_guidance.practices.stories.model.story_recording import StorySource, imported_files
 from cdd_guidance.practices.stories.model.term_links import TermLinks
 from cdd_guidance.practices.stories.model.story_map_files import STORY_FILE_SUFFIXES, StoryMapFiles, is_story_map_file
@@ -50,9 +51,11 @@ _EPIC_TYPES = frozenset({"Epic", "SubEpic"})
 class StoriesReading(PracticeReading):
     """How Stories takes part in the graph: it reads the story tests under its root, through the TypeScript format
     Stories holds, or the story maps there when there are none, with edited files only what they touch; writes the
-    story map onto its graph; links each step to the Clean Engineering operations it calls and each example to the
-    classes and properties it shows; and links each step to the DDD class each of its linked domain terms names
-    (*TermLinks*), so it reads after Clean Engineering and DDD."""
+    story map onto its graph; links each Then to the examples it observes (*ExampleObservations*), each step to the
+    Clean Engineering operations it calls and each example to the classes and properties it shows, and each step to
+    the DDD class each of its linked domain terms names (*TermLinks*), so it reads after Clean Engineering and DDD;
+    and says which areas of the map a model is written for (*ModelledAreas*), where alone a Then must observe an
+    Example."""
 
     reads_after = ("clean_engineering", "ddd")
     source_ordered_types = frozenset({"Background", "Scenario", "Step", "Story"})
@@ -133,12 +136,14 @@ class StoriesReading(PracticeReading):
         report_progress("stories · record")
         self.recorded_map.record(self.practice, on_node=lambda detail: report_progress(f"stories · record · {detail}"))
         self._link_background_givens()
+        ExampleObservations(self, self.story_tree).link()
         clean = self.object_model
         if clean is not None:
             StoryLinks(self, clean, self.story_tree).link()
         domain = self.domain_model
         if domain is not None:
             TermLinks(self, domain).link()
+        ModelledAreas(self).record()
 
     def _link_background_givens(self) -> None:
         """Record the ``given`` edge from each background to the Given steps it holds: the step its schema says it is
@@ -419,9 +424,6 @@ class StoryLinks:
             if module is not None and epic is not None:
                 self.graph.edges.relate("usedBy", module, epic)
                 self.graph.edges.relate("uses", epic, module)
-        if step.get_fact("phase"):
-            for example in self._observed_by(step, body):
-                self.graph.edges.relate("observes", step, example)
 
     def _of_known_receiver(self, step: "Node", body: str, members: list["Node"]) -> list["Node"]:
         """members, keeping of the operations and properties several classes in reach declare under one name only the
@@ -478,33 +480,6 @@ class StoryLinks:
         module answers a bare call, never a class's operation, which is called on an object."""
         names = sorted(set(_FUNCTION_CALL.findall(body)))
         return [member for name in names for member in self.clean.code_index.members_named(name) if member.get_fact("owner") == MODULE_FUNCTION_HOLDER]
-
-    def _observed_by(self, step: "Node", body: str) -> list["Node"]:
-        """The examples step observes: those its own text and body name, and for a Then, those its scenario's Givens
-        name, the state whose outcome it observes."""
-        texts = [body]
-        if step.get_fact("phase") == "then":
-            texts.extend(self._step_body(given) for given in self._givens_of(step))
-        named = [example for example in self.examples if any(re.search(rf"\b{re.escape(example.name)}\b", text) for text in texts)]
-        return self._of_story_file(step, named)
-
-    def _of_story_file(self, step: "Node", examples: list["Node"]) -> list["Node"]:
-        """examples, keeping of those that share a name only the one recorded for step's own story file: each story file
-        records the examples it uses, so two files that each use a LISTED hold two nodes of that name, and a step means
-        its own file's. A name no example of its file has keeps every example of that name."""
-        own_id = lambda example: f"stories:Example:{step.source.file}:{example.name}"
-        own_names = {example.name for example in examples if example.node_id == own_id(example)}
-        return [example for example in examples if example.name not in own_names or example.node_id == own_id(example)]
-
-    def _givens_of(self, step: "Node") -> list["Node"]:
-        """The Given steps of the scenario step sits in, with the steps chained onto them."""
-        scenario = self.graph.edges.direct_parent(step)
-        while scenario is not None and scenario.type != "Scenario":
-            scenario = self.graph.edges.direct_parent(scenario)
-        if scenario is None:
-            return []
-        givens = [found for found in self.tree.steps(scenario) if found.get_fact("phase") == "given"]
-        return [*givens, *(edge.child for given in givens for edge in self.graph.edges.from_parent("ands", given))]
 
     def _step_body(self, step: "Node") -> str:
         """The step's own text and the body its story test gives it."""

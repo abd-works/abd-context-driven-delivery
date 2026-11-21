@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
 
+from cdd_guidance.practices.stories.model.modelled_areas import MODEL_WRITTEN_FACT
 from cdd_guidance.practices.stories.model.story_model import NOT_ON_STORY_MAP
 
 if TYPE_CHECKING:
@@ -213,6 +214,22 @@ class BehavioralAndSystemObservableOutcomes(PracticeGraphRule):
         if _INLINE_CONDITIONAL.search(text):
             return [f"Then step {text!r} embeds a conditional guard; assert an observable outcome instead."]
         return []
+
+class ThenObservesAnExample(PracticeGraphRule):
+    """Whether a model is written for a Then's area of the story map is a fact the Stories reading records on the
+    Then (*ModelledAreas*); with none written the rule passes, so scenarios can be written before any model."""
+
+    slug = "then-observes-an-example"
+    node_types = ("Then", "Step")
+
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+        if _phase(node) != "then" or not node.get_fact(MODEL_WRITTEN_FACT) or context.targets(node, "observes"):
+            return []
+        return [
+            f"Then {_text(node)!r} observes no Example, though a model is written for its area of the story map; "
+            "name an example in it, or in a Given of its scenario or of its story's Background."
+        ]
+
 
 class FlaggedWritesIntendedGwt(PracticeGraphRule):
     slug = "flagged-writes-intended-gwt"

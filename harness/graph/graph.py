@@ -508,6 +508,11 @@ class Filter:
             above = above.parent
         return False
 
+    def lists(self, file: str) -> bool:
+        """True when file, named as a viewer lists it, is one of the chosen paths or sits under one: the same test a
+        node's file passes to stay in the trees, for a file a link names, which no node stands for."""
+        return self._under_paths(file)
+
     def _source_listed(self, source: Source) -> bool:
         return self._under_paths(source.file) or self._under_paths(self._named_from_folder(source))
 

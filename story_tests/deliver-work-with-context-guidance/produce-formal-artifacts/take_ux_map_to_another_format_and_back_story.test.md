@@ -9,7 +9,7 @@ section: body
 
 Story map: [Produce Formal Artifacts](../../../.context/story-map.md#e-produce-formal-artifacts). Session release-1-2-fixes.
 
-**Evidence modes.** *Observed* scenarios hold for the UX format adapters today (`cdd_guidance/practices/ux/model`) and each names the spec that runs it. *Intended* scenarios say what a trip should keep where a format cannot hold it yet; each names the evidence still missing. They were written after round 3 of exploratory testing (defects r3-gizmo-01, 02, 04, 05) showed that no scenario covered a UX map's trip between the formats its fidelity offers.
+**Evidence modes.** *Observed* scenarios hold for the UX format adapters today (`cdd_guidance/practices/ux/model`) and each names the spec that runs it. Every scenario here is Observed since the person's second answers of 2026-11-20 settled the two that were Intended: what a mockup's drawing and board hold, and that a view renders between typescript and javascript. They were written after round 3 of exploratory testing (defects r3-gizmo-01, 02, 04, 05) showed that no scenario covered a UX map's trip between the formats its fidelity offers.
 
 These scenarios belong to the story Take Artifact To Another Format And Back, whose other scenarios are in `take_artifact_to_another_format_and_back_story.test.md`; they are kept in a file of their own because they are about the UX map.
 
@@ -19,6 +19,8 @@ These scenarios belong to the story Take Artifact To Another Format And Back, wh
 - ++UX context++ — `ux-context.md`: the UX map's scope, invariants and notes, which hold no screen.
 - ++callout++ — the note the drawing shows under a screen: the stories the screen shows and the domain terms it names.
 - ++view++ — a front-end screen in production code, `*View.tsx` or `*View.jsx`, written at the front-end code fidelity.
+- ++board++ — a mockup drawn in Claude Whiteboard: a section for each screen and each region, and a card for each control.
+- ++served link++ — a story, scenario or step a screen or a control serves, written as a markdown link to the file and heading it is written at.
 
 > In steps: the bookshop's files are the examples below.
 
@@ -31,7 +33,18 @@ These scenarios belong to the story Take Artifact To Another Format And Back, wh
 | ++bookshop/.context/information-architecture.drawio++ | the drawing of the ++UX map++: Book List, Book Details, Cart, Checkout, their regions, and the transitions between them |
 | ++bookshop/.context/ux-context.md++ | the ++UX context++: `Scope: Browse Books, Fill Cart`, one invariant, one note |
 | ++bookshop/buy-a-book.html++ | the mockup: on Book Details the region Add To Cart with Quantity (number) and the buttons Add to cart and Back to list; on Checkout the region Payment with Street (text), Country (dropdown), Save this card (checkbox) and the button Pay |
-| ++bookshop/src/CheckoutView.tsx++ | the Checkout ++view++ |
+| ++bookshop/src/CheckoutView.tsx++ | the Checkout ++view++, written in TypeScript: the component CheckoutView, which takes the props cart, onPaid and note, and hands its events the handlers handleCity and handlePay |
+
+### what the mockup's Book Details serves
+
+| served by | kind | ++served link++ |
+| --- | --- | --- |
+| the screen Book Details | story | `[Add Book To Cart](story_tests/shop/fill-cart/fill_cart_story.test.md#story-add-book-to-cart)` |
+| the screen Book Details | story | `View Book`, a name with no link |
+| the screen Book Details | scenario | `[Add Book To Cart › Add one book](story_tests/shop/fill-cart/fill_cart_story.test.md#scenario-add-one-book)` |
+| the control Quantity in Add To Cart | step | `[Add Book To Cart › Add one book › the Customer adds 2 copies](story_tests/shop/fill-cart/fill_cart_story.test.md#scenario-add-one-book)` |
+| the control Add to cart in Add To Cart | scenario | the scenario link above, and `Add Book To Cart › Add a second book`, a name with no link |
+| the control Back to list in Add To Cart | | nothing |
 
 ## Story: Take Artifact To Another Format And Back
 
@@ -42,6 +55,7 @@ These scenarios belong to the story Take Artifact To Another Format And Back, wh
 | `cdd_guidance/practices/ux/ux.md`, Guidance | the channels are "peers at the same fidelity"; ia holds "Screens, layouts, named regions, transitions, nav components, content types. Story names and domain terms attach as traces"; at mockup "drawio remains a peer channel" |
 | `cdd_guidance/actions/render/rendered_file.py` `RenderedFile` | a render reads the file as it is before the render, so "a document keeps the words its source does not hold" |
 | `cdd_guidance/practices/ux/ux.md`, `front_end_code` | the fidelity writes `typescript` and `javascript` |
+| The person's second answers of 2026-11-20 (`closing-brief-round-3.md`, the third wave) | "mockup in whiteboard just needs a way to associate screens and widgets to stories, scenarios, steps": a mockup's whiteboard and drawing show each screen and each control with what it serves, read back without loss; nothing more is asked of the drawings. Front-end views render between TypeScript and JavaScript both ways |
 | Defects r3-gizmo-01, 02, 04, 05 | each render between the drawing and the UX context emptied the other file; a drawing read back had none of the stories, domain terms, layouts, areas or controls it was drawn from, and a region named after two buttons; the front-end code fidelity's default format was one it does not write, and a render of a view failed with a list of other formats |
 
 #### Scenario: Keep the UX context when the drawing is rendered to markdown
@@ -108,13 +122,68 @@ Observed (`drawio_ux_map_spec.py`).
 *When* Claude Code renders the drawing to JSON
 *Then* Add To Cart holds Quantity with no type, then the buttons Add to cart and Back to list
 
-#### Scenario: Keep what a drawing does not show
+#### Scenario: Show on the drawing what each screen and each control serves
 
-Intended. Evidence still missing: where the drawing keeps them is the person's decision. A drawing shows no state or interaction of a control, no story step a control runs, no description of a screen, no content type or nav component, and not the map's name, so a mockup read back from its drawing has none of them.
+Observed (`drawio_ux_map_spec.py`, "a screen of a UX map drawn as draw.io"; drawn through the command line in `drawio_ux_map_heavy_spec.py`). The person decided that the drawing holds no state, interaction or description of a control; those stay in the html and the JSON.
 
-*Given* ++bookshop/buy-a-book.html++ holds controls with states, interactions and story steps
-*When* Claude Code renders ++bookshop/buy-a-book.html++ to drawio, then the drawing back to html
-*Then* each control still has its states, its interactions and its story steps
+*Given* the mockup's Book Details serves what the table above lists
+*When* Claude Code renders the mockup to drawio
+*Then* the ++callout++ under Book Details lists the screen's stories, then its scenarios, then its steps, each ++served link++ as a link to its target and `View Book` as its name
+  *And* it has the line `Add To Cart › Quantity serves steps:` with the step's link
+  *And* it has no line for Back to list
+
+#### Scenario: Read back from the drawing what each screen and each control serves
+
+Observed (`drawio_ux_map_spec.py`; `drawio_ux_map_heavy_spec.py`, "of a mockup whose screen and controls serve stories, scenarios and steps, that is read back").
+
+*Given* the drawing of the mockup, with the ++callout++ under Book Details
+*When* Claude Code renders the drawing to JSON
+*Then* Book Details serves the story Add Book To Cart with its link's target, and the story View Book by name
+  *And* it serves the scenario and the step the ++callout++ lists, each with its target
+  *And* Quantity serves the step, and Add to cart serves the linked scenario and the scenario named with no link
+  *And* Back to list serves nothing
+  *And* Book Details has the regions Book Summary and Add To Cart, and no other
+
+#### Scenario: Show on the board what each screen and each control serves
+
+Observed (`cdd_guidance/practices/ux/model/whiteboard/whiteboard_ux_map_spec.py`).
+
+*Given* the mockup's Book Details serves what the table above lists
+*When* Claude Code renders the mockup to whiteboard
+*Then* the ++board++ has a section for Book Details and one for Checkout, and inside Book Details a section for each of its regions
+  *And* the card of what Book Details serves lists `Stories:`, `Scenarios:` and `Steps:`, each ++served link++ as a markdown link, then `Domain terms:`
+  *And* the card of Quantity shows its name, its type number, and `Steps:` with the step's link
+  *And* the card of Back to list shows its name and its type alone
+  *And* each transition is an arrow between its screens' sections, labelled with its trigger
+
+#### Scenario: Read back from the board what each screen and each control serves
+
+Observed (`whiteboard_ux_map_spec.py`, "that is read back"; through the practice's render in `ux_spec.py`, "a mockup rendered to its board and back").
+
+*Given* the ++board++ of the mockup
+*When* Claude Code renders the ++board++ to JSON
+*Then* each screen has its regions with their areas, and each region its controls with their types
+  *And* Book Details and each of its controls serve the stories, scenarios and steps the table above lists, each link with its target
+  *And* each transition joins the screens it joined, with its kind of navigation
+  *And* rendering the map read back to whiteboard gives the same ++board++
+
+#### Scenario: Read a control where a person moved its card on the board
+
+Observed (`whiteboard_ux_map_spec.py`, "on which a person moved a control's card to another region and wrote a story on it").
+
+*Given* a person moved the card of Back to list into the section of Book Summary on the ++board++
+  *And* wrote `Stories:` with the link of Add Book To Cart on the card
+*When* Claude Code renders the ++board++ to JSON
+*Then* Book Summary holds the control Back to list
+  *And* Back to list serves the story Add Book To Cart, with its link's target
+
+#### Scenario: Keep where a person put a screen when the board is drawn again
+
+Observed (`whiteboard_ux_map_spec.py`, "that is drawn again over a board on which a person moved a screen").
+
+*Given* a person moved the section of Checkout on the ++board++
+*When* Claude Code renders the mockup to whiteboard again
+*Then* the section of Checkout is where the person put it
 
 #### Scenario: Start the front-end code fidelity in a format it writes
 
@@ -124,19 +193,39 @@ Observed (`ux_spec.py`, "Ux fidelity and format defaults").
 *When* the session moves UX to the front-end code fidelity
 *Then* UX works in typescript, one of the formats that fidelity writes
 
-#### Scenario: Refuse to render a view
+#### Scenario: Render a view from typescript to javascript
+
+Observed (`cdd_guidance/practices/ux/model/view/front_end_view_spec.py`, "a front-end view written in TypeScript"; through the practice's render in `ux_spec.py`, "a front-end view rendered to another format").
+
+*Given* ++bookshop/src/CheckoutView.tsx++ holds the Checkout ++view++, with an interface for its props, typed parameters and results, type arguments, a cast, and an import used only for a type
+*When* Claude Code renders ++bookshop/src/CheckoutView.tsx++ to javascript
+*Then* the render holds the same ++view++ with every type annotation dropped, and the interface and the type-only import gone
+  *And* it has the component CheckoutView, the props cart, onPaid and note, and the handlers handleCity and handlePay
+  *And* the words the screen shows, `Total: {cart.total} as charged`, are as they were
+
+#### Scenario: Render a view from javascript to typescript
+
+Observed (`front_end_view_spec.py`, "and back to TypeScript"; `ux_spec.py`).
+
+*Given* the Checkout ++view++ written in JavaScript
+*When* Claude Code renders it to typescript
+*Then* the render holds the ++view++ as it is written, with no type annotation made up for it
+  *And* it has the component CheckoutView, the props cart, onPaid and note, and the handlers handleCity and handlePay
+
+#### Scenario: Refuse to render a view that declares what JavaScript cannot hold without its type
+
+Observed (`front_end_view_spec.py`, "that declares an enum", "whose constructor declares a member in its parameters").
+
+*Given* a ++view++ written in TypeScript that declares `enum Step`
+*When* Claude Code renders it to javascript
+*Then* the render is refused, naming `enum Step`
+  *And* no JavaScript is written without it
+
+#### Scenario: Refuse to render between a view and a UX map
 
 Observed (`ux_spec.py`, "a front-end view rendered to another format").
 
 *Given* ++bookshop/src/CheckoutView.tsx++ holds the Checkout ++view++
-*When* Claude Code renders ++bookshop/src/CheckoutView.tsx++ to javascript
-*Then* the render is refused: UX front-end views are written by hand, not rendered
+*When* Claude Code renders ++bookshop/src/CheckoutView.tsx++ to drawio
+*Then* the render is refused: a front-end view is rendered between typescript and javascript only
   *And* ++bookshop/src/CheckoutView.tsx++ is not read as a mockup page
-
-#### Scenario: Render a view between typescript and javascript
-
-Intended. Evidence still missing: whether a view is rendered at all, and by which practice, is the person's decision (defect r3-gizmo-05); today the render is refused, as the scenario above says.
-
-*Given* ++bookshop/src/CheckoutView.tsx++ holds the Checkout ++view++
-*When* Claude Code renders ++bookshop/src/CheckoutView.tsx++ to javascript
-*Then* `bookshop/src/CheckoutView.jsx` holds the same ++view++

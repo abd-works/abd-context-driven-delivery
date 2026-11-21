@@ -1255,6 +1255,10 @@ Requested (2026-11-15, "on right click of file we also need an add to context op
 
 Built (2026-11-15): Add to context on a file's or folder's right-click menu in the file bar, and beside Add comment on the source view's right-click menu for selected lines, calls `session.add_to_chat_context` (`Session.add_to_chat_context`), which queues a fill for the chat that opened the Files app: `@path ` for a whole file, the path, the range and each line quoted (`Range.context`) for a selection. A chat not connected refuses it, and the page says so in a toast.
 
+### (S) Person --> [Send Failure To Be Fixed](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/send_failure_to_be_fixed_story.test.md#story-send-failure-to-be-fixed)
+
+Requested (2026-11-20, "error in display or rendering / generation action or session roots --> fix button with most common causes listed to send to ai to fix"). Built (2026-11-20): a failure the Files app shows stays in its failure band with a Fix button; Fix lists the most common causes of that kind of failure, which Python holds (`tools/error_display/failure.py` *FailureKinds*), and sends the failure with those causes to the chat that opened the page (`FailureFixes`). The board's fidelity outputs do not raise these failures yet.
+
 ## (E) Switch Files App Between Files And Graph
 
 [Scenarios](../story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md).
@@ -1296,6 +1300,10 @@ Requested (2026-11-16, "should have callout to expand and see story scenarios; s
 ### (S) Person --> [Follow Story Steps To Code](../story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md#story-follow-story-steps-to-code)
 
 Requested (2026-11-16, "observes and invokes do not reach the Python code; tested for TypeScript but not Python"; "class callouts in tests should be placed next to steps if they are step relationships"): a Python story test's step invokes the functions it calls by name as well as the operations it calls on an object (`StoryLinks._functions_called`), and in the source view a story test's callouts sit on the step whose invokes and observes they are, never on a line that only names a class in prose.
+
+### (S) Files App --> [Filter Callouts Like The Graph](../story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md#story-filter-callouts-like-the-graph)
+
+Requested (2026-11-20, "callout filtering should be done exactly the same way knowledge graph filtering is done"). Built (2026-11-20): the session answers only the callouts the file view's filters show: the files listed for the stages, practices and formats chosen, and the graph view's node filter, decided in Python by the graph's own filter (`space/session/file_view_filter.py` *FileViewFilter*); the page sends its filters with `session.file` and draws what comes back.
 
 ## (E) Explore Graph In Files App
 
@@ -1362,6 +1370,14 @@ Requested (2026-11-06, "default is to have a graph and just read the violations"
 ### (S) Board App --> [Count Fidelity Violations From Live Graph](../story_tests/review-generated-work-in-file-viewer/review-graph-violations-in-files-app/review_graph_violations_in_files_app_story.test.md#story-count-fidelity-violations-from-live-graph)
 
 Requested (2026-11-06, "default is to have a graph and just read the violations"; "board and chat generate"): a tile's violation count comes from the session's live graph, not from the last validation report. Also Intended (`.sessions/_backlog/fully-integrated-app-flow.md` "better graph integration - load up front on session open, show all violations as a result of graph, no need for explicit run"). Takes in Read Fidelity Violations From Latest Graph and Generate And Judge Fidelity From Board.
+
+## (E) Align Formats In Files App
+
+[Scenarios](../story_tests/review-generated-work-in-file-viewer/align-formats-in-files-app/align_formats_in_files_app_story.test.md).
+
+### (S) Person --> [Diagnose And Align Session Formats](../story_tests/review-generated-work-in-file-viewer/align-formats-in-files-app/align_formats_in_files_app_story.test.md#story-diagnose-and-align-session-formats)
+
+Requested (2026-11-20, "we need a diagnose and align button that goes on context viewer through graph and selected stages, fidelities, formats and determines gaps and then syncs, failures can be fixed; check graphs for alignment; check callouts match"). Built (2026-11-20): Diagnose goes through the session's selected stages, practices and chosen formats and its graph and lists each gap in plain words: a chosen format with no file, formats of one document whose graph readings differ, callouts that match no edge (`session.diagnose_alignment`). Align renders the format that lacks from the one that holds more through the Render action; formats that conflict wait for the person; each failure can be sent to be fixed (`session.align_formats`).
 
 # (E) Author Story Maps
 

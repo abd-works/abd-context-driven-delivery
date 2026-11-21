@@ -71,6 +71,40 @@ _DRAWN_WITHOUT_TYPES = drawing(
     edge_style="html=1;dashed=1;",
 )
 
+_STORY_FILE = "story_tests/shop/fill-cart/fill_cart_story.test.md"
+_STORY_LINK = f"[Add Book To Cart]({_STORY_FILE}#story-add-book-to-cart)"
+_SCENARIO_LINK = f"[Add Book To Cart › Add one book]({_STORY_FILE}#scenario-add-one-book)"
+_STEP_LINK = f"[Add Book To Cart › Add one book › the Customer adds 2 copies]({_STORY_FILE}#scenario-add-one-book)"
+
+
+def anchor(link: str) -> str:
+    """A markdown link as the drawing's cell value writes it: an HTML anchor, escaped once more for the XML."""
+    text, target = link[1:-1].split("](")
+    return f"&lt;a href=&quot;{target}&quot;&gt;{text}&lt;/a&gt;"
+
+
+# Book Details as the command line draws a mockup whose screen and controls serve stories, scenarios and steps: the
+# callout lists what the screen serves, one line for each kind, then what each control serves.
+_DRAWN_WITH_SERVED = drawing(
+    cell("2", "Book Details", "strokeWidth=2;", x=50, y=200)
+    + cell("5", "&lt;b&gt;Add To Cart&lt;/b&gt;", _FRAMED + "uxArea=body;", parent="2")
+    + cell("6", "Add to cart · Back to list", _STRIP + "uxControls=button,button;", parent="2")
+    + cell("7", "Quantity", _ROW + "uxControls=number;", parent="2")
+    + cell("9", f"&lt;b&gt;Stories:&lt;/b&gt; {anchor(_STORY_LINK)} · View Book"
+           f"&lt;br&gt;&lt;b&gt;Scenarios:&lt;/b&gt; {anchor(_SCENARIO_LINK)}"
+           f"&lt;br&gt;&lt;b&gt;Steps:&lt;/b&gt; {anchor(_STEP_LINK)}"
+           "&lt;br&gt;&lt;b&gt;Domain terms:&lt;/b&gt; Book"
+           f"&lt;br&gt;&lt;b&gt;Add To Cart › Quantity serves steps:&lt;/b&gt; {anchor(_STEP_LINK)}"
+           f"&lt;br&gt;&lt;b&gt;Add To Cart › Add to cart serves stories:&lt;/b&gt; {anchor(_STORY_LINK)}"
+           f"&lt;br&gt;&lt;b&gt;Add To Cart › Add to cart serves scenarios:&lt;/b&gt; {anchor(_SCENARIO_LINK)} · Add Book To Cart › Add a second book",
+           "text;html=1;strokeColor=none;fillColor=none;", x=50, y=420),
+)
+
+
+def control_named(ux_map: DrawioUxMap, screen: str, name: str):
+    return next(control for region in ux_map.find_screen(screen).regions for control in region.controls if control.name == name)
+
+
 
 def controls_of(ux_map: DrawioUxMap, screen: str, region: str) -> list[tuple[str, str]]:
     held = next(found for found in ux_map.find_screen(screen).regions if found.name == region)
@@ -120,6 +154,40 @@ with description("a UX map drawn as a draw.io information architecture"):
                 equal([("Street", "text"), ("Country", "dropdown"), ("Pay", "button")])
             )
 
+    with context("of a mockup whose screen and controls serve stories, scenarios and steps, that is read back"):
+        with before.each:
+            self.parsed = DrawioUxMap.create().parse(_DRAWN_WITH_SERVED)
+            self.details = self.parsed.find_screen("Book Details")
+
+        with it("should read back the stories the screen serves, a linked one with its target"):
+            expect(self.details.story_keys).to(equal([_STORY_LINK, "View Book"]))
+
+        with it("should read back the scenarios the screen serves"):
+            expect(self.details.scenario_keys).to(equal([_SCENARIO_LINK]))
+
+        with it("should read back the steps the screen serves"):
+            expect(self.details.step_keys).to(equal([_STEP_LINK]))
+
+        with it("should read back the domain terms beside them"):
+            expect(self.details.domain_terms).to(equal(["Book"]))
+
+        with it("should read back the step a control serves"):
+            expect(control_named(self.parsed, "Book Details", "Quantity").step_keys).to(equal([_STEP_LINK]))
+
+        with it("should read back the story a control serves"):
+            expect(control_named(self.parsed, "Book Details", "Add to cart").story_keys).to(equal([_STORY_LINK]))
+
+        with it("should read back each scenario a control serves, linked or named"):
+            expect(control_named(self.parsed, "Book Details", "Add to cart").scenario_keys).to(
+                equal([_SCENARIO_LINK, "Add Book To Cart › Add a second book"])
+            )
+
+        with it("should give a control that serves nothing no story"):
+            expect(control_named(self.parsed, "Book Details", "Back to list").story_keys).to(equal([]))
+
+        with it("should read no region from the callout"):
+            expect([region.name for region in self.details.regions]).to(equal(["Add To Cart"]))
+
     with context("drawn without the types of its controls, that is read back"):
         with before.each:
             self.parsed = DrawioUxMap.create().parse(_DRAWN_WITHOUT_TYPES)
@@ -158,3 +226,33 @@ with description("a region of a UX map drawn as draw.io"):
         with it("should be drawn as chrome in its area"):
             record = made(DrawioRegion, "Main Nav", 0, area="header").cli_record()
             expect((record["type"], record["uxArea"])).to(equal(("chrome", "header")))
+
+
+with description("a screen of a UX map drawn as draw.io"):
+    with context("that serves a linked story and a scenario, and holds a control that serves a step"):
+        with before.each:
+            ux_map = UxMap.create()
+            screen = Screen("Book Details", 0)
+            screen.show_story(_STORY_LINK)
+            screen.show_story("View <Book>")
+            screen.show_scenario(_SCENARIO_LINK)
+            region = made(Region, "Add To Cart", 0, area="body")
+            quantity = made(Control, "Quantity", 0, control_type="number")
+            quantity.show_step(_STEP_LINK)
+            region.append_control(quantity)
+            region.append_control(made(Control, "Add to cart", 1, control_type="button"))
+            screen.append_region(region)
+            ux_map.append_screen(screen)
+            self.record = DrawioUxMap.create().copy_of(ux_map).screens[0].cli_record(0)
+
+        with it("should draw a linked story as a link to its target, and a named one as its name"):
+            expect(self.record["stories"]).to(equal([f'<a href="{_STORY_FILE}#story-add-book-to-cart">Add Book To Cart</a>', "View &lt;Book&gt;"]))
+
+        with it("should draw the scenarios the screen serves"):
+            expect(self.record["scenarios"]).to(equal([f'<a href="{_STORY_FILE}#scenario-add-one-book">Add Book To Cart › Add one book</a>']))
+
+        with it("should draw what each control serves under the control's region and name, and nothing for a control that serves nothing"):
+            expect(self.record["served"]).to(equal([{
+                "by": "Add To Cart › Quantity", "kind": "steps",
+                "items": [f'<a href="{_STORY_FILE}#scenario-add-one-book">Add Book To Cart › Add one book › the Customer adds 2 copies</a>'],
+            }]))

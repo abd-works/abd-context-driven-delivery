@@ -17,6 +17,7 @@ from cdd_guidance.practices.ux.model.nodes import (
     NavComponent,
     Region,
     Screen,
+    ServesStories,
     StoryDemoControl,
     Transition,
     story_steps_from,
@@ -29,7 +30,23 @@ _MAP_FILE_NAMES = ("ux-map.json", "ux.json")
 _STORY_DEMO = "StoryDemoControl"
 
 
-class JsonControl(Control):
+class JsonServesStories(ServesStories):
+    """What a screen or a control serves as the JSON document writes it: the stories, scenarios, and steps, each a
+    list of names or of markdown links."""
+
+    def read_served(self, record: dict[str, Any]) -> None:
+        for story in record.get("story_names", []):
+            self.show_story(story)
+        for scenario in record.get("scenario_names", []):
+            self.show_scenario(scenario)
+        for step in record.get("step_names", []):
+            self.show_step(step)
+
+    def served_record(self) -> dict[str, Any]:
+        return {"story_names": self.story_keys, "scenario_names": self.scenario_keys, "step_names": self.step_keys}
+
+
+class JsonControl(Control, JsonServesStories):
     """A control as the JSON document writes it: its fields, its states, and each interaction, a link to a screen
     written as that screen's name."""
 
@@ -40,6 +57,7 @@ class JsonControl(Control):
         control = (ux_map.story_demo_control_type if demo else cls)(record.get("name", f"Control {index}"), index)
         control.control_type, control.label = record.get("control_type", ""), record.get("label", "")
         control.bound_field = record.get("bound_field", "")
+        control.read_served(record)
         if demo:
             control.read_story_fields(record)
         control.read_states_and_interactions(record, ux_map)
@@ -61,6 +79,7 @@ class JsonControl(Control):
             "label": self.label,
             "bound_field": self.bound_field,
             "states": list(self.states),
+            **self.served_record(),
             "interactions": [
                 {"name": interaction.name, "trigger": interaction.trigger, "effect": interaction.effect,
                  "destination": _name_of(interaction.destination)}
@@ -108,7 +127,7 @@ class JsonRegion(Region):
         return {"name": self.name, "area": self.area, "controls": [control.as_record() for control in self.controls]}
 
 
-class JsonScreen(Screen):
+class JsonScreen(Screen, JsonServesStories):
     """A screen as the JSON document writes it: its fields, what it shows, and each region's record."""
 
     @classmethod
@@ -124,12 +143,7 @@ class JsonScreen(Screen):
         shows, and its regions."""
         self.chrome_of = ux_map.screen_named(record.get("chrome_of", ""))
         self.inactive_tabs = list(record.get("inactive_tabs", []))
-        for story in record.get("story_names", []):
-            self.show_story(story)
-        for scenario in record.get("scenario_names", []):
-            self.show_scenario(scenario)
-        for step in record.get("step_names", []):
-            self.show_step(step)
+        self.read_served(record)
         self.domain_terms = list(record.get("domain_terms", []))
         self.domain_concepts = list(record.get("domain_concepts", []))
         self.image = record.get("image", "")
@@ -145,9 +159,7 @@ class JsonScreen(Screen):
             "description": self.description,
             "chrome_of": _name_of(self.chrome_of),
             "inactive_tabs": list(self.inactive_tabs),
-            "story_names": self.story_keys,
-            "scenario_names": self.scenario_keys,
-            "step_names": self.step_keys,
+            **self.served_record(),
             "domain_terms": list(self.domain_terms),
             "domain_concepts": list(self.domain_concepts),
             "image": self.image,

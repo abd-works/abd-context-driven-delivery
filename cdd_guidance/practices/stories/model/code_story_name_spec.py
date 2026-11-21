@@ -3,13 +3,12 @@
 from expects import equal, expect
 from mamba import description, it
 
-from cdd_guidance.practices.stories.model.java.java_story_model import JavaStoryModel
 from cdd_guidance.practices.stories.model.javascript.javascript_story_model import JavaScriptStoryModel
 from cdd_guidance.practices.stories.model.python.python_story_model import PythonStoryModel
 from cdd_guidance.practices.stories.model.story_model import Story
 from cdd_guidance.practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
 
-_LANGUAGES = (TypeScriptStoryModel, JavaScriptStoryModel, PythonStoryModel, JavaStoryModel)
+_LANGUAGES = (TypeScriptStoryModel, JavaScriptStoryModel, PythonStoryModel)
 
 
 def _read_back(model_type, name: str) -> str:

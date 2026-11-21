@@ -19,7 +19,7 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
 import cdd_guidance.practices  # noqa: F401
 from cdd_guidance.practices.ux.model.json.nodes import JsonUxMap
 from cdd_guidance.practices.ux.ux import NoJavascriptPractice, Ux, UxOutsideSession, ViewNotRendered
-from cdd_guidance.practices.ux.model.nodes import Screen
+from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 from space.session.sessions import Sessions
 
@@ -72,14 +72,18 @@ with description("Ux fidelity and format defaults"):
         with it("should hold the mockup's drawing beside its html as the mockup's file"):
             expect(Ux().fidelities["mockup"].declared.includes("bookshop/buy-a-book.drawio", "mockup_drawing")).to(equal(True))
 
+        with it("should hold the mockup's board beside its html as the mockup's file"):
+            expect(Ux().fidelities["mockup"].declared.includes("bookshop/buy-a-book.whiteboard", "mockup_board")).to(equal(True))
+
         with it("should hold the UX map's ux-map.json in an epic's folder as the information architecture's file"):
             expect(Ux().fidelities["ia"].declared.includes("bookshop/ux-map.json", "json")).to(equal(True))
 
         with it("should hold the UX map's ux/ux.json as the information architecture's file"):
             expect(Ux().fidelities["ia"].declared.includes("ux/ux.json", "json")).to(equal(True))
 
-        with it("should offer no drawing as a format of the mockup, which no render draws"):
-            expect("drawio" in Ux().fidelities["mockup"].outputs).to(equal(False))
+        with it("should offer neither the drawing nor the board as a format a person picks for the mockup: a render draws them"):
+            outputs = Ux().fidelities["mockup"].outputs
+            expect(("drawio" in outputs, "whiteboard" in outputs)).to(equal((False, False)))
 
         with it("should hold a view written in TypeScript as the front end code's file"):
             expect(Ux().fidelities["front_end_code"].declared.includes("bookshop/src/CartView.tsx", "typescript")).to(equal(True))
@@ -122,27 +126,60 @@ with description("Ux transform tool"):
             ).to(raise_error(ValueError))
 
 
+with description("a mockup rendered to its board and back"):
+    with before.each:
+        self.link = "[Browse Product Catalog › Products are listed](story_tests/order/browse_story.test.md#scenario-products-are-listed)"
+        ux_map = UxMap.create(name="demo")
+        screen = Screen("Catalog", 0)
+        region = Region("product list", 0)
+        control = Control("Products", 0)
+        control.show_scenario(self.link)
+        region.append_control(control)
+        screen.append_region(region)
+        ux_map.append_screen(screen)
+        self.ux = Ux(fidelity="mockup")
+        board = self.ux.render("whiteboard", JsonUxMap.create().render(ux_map), source="json")["content"]
+        self.back = JsonUxMap.create().parse(self.ux.render("json", board, source="whiteboard")["content"])
+
+    with it("should keep the scenario a control serves, with the place it is written at"):
+        expect(self.back.screens[0].regions[0].controls[0].scenario_keys).to(equal([self.link]))
+
+
 with description("a front-end view rendered to another format"):
     with before.each:
         self.ux = Ux(fidelity="front_end_code")
-        self.view = "export function CheckoutView() {\n  return <main>Checkout</main>;\n}\n"
+        self.typed = "export function CheckoutView({ total }: { total: number }): JSX.Element {\n  return <main>Total: {total}</main>;\n}\n"
+        self.untyped = "export function CheckoutView({ total }) {\n  return <main>Total: {total}</main>;\n}\n"
 
     with context("from typescript to javascript"):
-        with it("should refuse it as a view, which is written and not rendered, naming the format"):
-            expect(lambda: self.ux.render("javascript", self.view, source="typescript")).to(
-                raise_error(ViewNotRendered, "UX front-end views are written by hand in javascript, not rendered: no render reads or writes one.")
+        with it("should be the same view with its type annotations dropped"):
+            expect(self.ux.render("javascript", self.typed, source="typescript")).to(equal({"format": "javascript", "content": self.untyped}))
+
+    with context("from javascript to typescript"):
+        with it("should be the view as it is written, with no type annotation made up for it"):
+            expect(self.ux.render("typescript", self.untyped, source="javascript")).to(equal({"format": "typescript", "content": self.untyped}))
+
+    with context("from typescript with no source format named, at the fidelity that works in typescript"):
+        with it("should read it as typescript"):
+            expect(self.ux.render("javascript", self.typed)["content"]).to(equal(self.untyped))
+
+    with context("that starts with a brace, as a JSON document does"):
+        with it("should still be read as a view"):
+            view = "{\n  const total = 1;\n}\nexport function CartView() {\n  return <p>Cart</p>;\n}\n"
+            expect(self.ux.render("javascript", view, source="typescript")["content"]).to(equal(view))
+
+    with context("to a format of the UX map"):
+        with it("should refuse it, since no UX map is read from a view, naming both formats"):
+            expect(lambda: self.ux.render("drawio", self.typed)).to(
+                raise_error(ViewNotRendered, "A front-end view is rendered between typescript and javascript only: no render makes drawio from typescript.")
             )
 
-    with context("with no source format named"):
-        with it("should refuse it as a view, not read it as a mockup page"):
-            expect(lambda: self.ux.render("drawio", self.view)).to(raise_error(ViewNotRendered))
-
     with context("from a mockup page to typescript"):
-        with it("should refuse it, naming typescript"):
+        with it("should refuse it, since no view is written from a UX map"):
             def render():
                 self.ux.render("typescript", "<html></html>", source="html")
 
-            expect(render).to(raise_error(ViewNotRendered))
+            expect(render).to(raise_error(ViewNotRendered, "A front-end view is rendered between typescript and javascript only: no render makes typescript from html."))
 
 
 with description("Ux ensure_javascript tool"):

@@ -144,10 +144,13 @@ then:
   is: step
   id: dotPath
   order: number
-  observes: example
+  observes?: [example]
   where:
     - id is the text slugs from the root to this node, joined by dots
+    - observes is the examples its own text names and those the Givens of its scenario and of its story's Background name
+    - observes is required only where a model is written for the story's area of the map (then-observes-an-example)
   rules:
+    - then-observes-an-example
     - behavioral-and-system-observable-outcomes
     - scenario-names-continuation
     - browser-then-asserts-screen-widgets
@@ -173,6 +176,7 @@ example:
   retrievedUsing: [operation | property]
   where:
     - id is the text slugs from the root to this node, joined by dots
+    - demonstrates and retrievedUsing are required only where a model is written for the story's area of the map
   rules:
     - examples-declare-seed-vs-interaction
     - examples-trace-domain-model

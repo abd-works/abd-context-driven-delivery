@@ -228,5 +228,22 @@ Observed (`cdd_guidance/practices/bdd/bdd_spec.py`). Written after exploratory t
 
 *Given* Claude Code generates at ++bdd-behavior++ or ++bdd-development++
 *When* the answer names the formats to save
-*Then* it names python and typescript, each of which BDD has a format adapter for
+*Then* it names python, typescript and javascript, each of which BDD has a format adapter for
   *And* it names no java path
+
+#### Scenario: Offer JavaScript for specs and story tests wherever TypeScript is offered
+
+Observed (`cdd_guidance/practices/bdd/bdd_spec.py`, `cdd_guidance/practices/stories/javascript_story_tests_spec.py`). Written after the person's answer of 2026-11-20: "Java: remove for now; we can create when we need it; restrict to python and typescript or js".
+
+*Given* a fidelity of BDD or Stories offers typescript among the formats it writes
+*When* Claude Code generates at that fidelity
+*Then* the answer names a javascript path beside the typescript one
+  *And* no fidelity of BDD or Stories names java
+
+#### Scenario: Bring a JavaScript spec back from TypeScript as it was written
+
+Observed (`cdd_guidance/practices/bdd/model/code_spec_render_spec.py`).
+
+*Given* a finished JavaScript spec of a cart, with its imports, its `beforeEach` and one test body
+*When* Claude Code renders it to typescript and renders that back to javascript
+*Then* the spec comes back as it was written

@@ -2,7 +2,7 @@
 
 *StoryModel* is one story map: epics, the sub-epics nested under them, the stories in each, and the increments that slice them, then each story's backgrounds and scenarios down to steps and examples. A nested epic is an epic whose parent is an epic. An increment is a thin slice: a name, an outcome, slicing notes, a decision, and the stories in that slice. Every node is a graph node (*ModelNode*), so a loaded model is also the stories practice's part of the knowledge graph.
 
-Each format is a *StoryModel* subclass with its own node subclasses, listed by `Stories` under `formats`: sketch, markdown, json, drawio, miro, python, typescript, java, javascript. `StoryModel(source)` copies any model into the subclass's node types, and a format's `copy_of(source)` makes that copy with the format's own settings (it is asked of a model, not its class, because a code format copies with its own `tests_root`; a UX map's `copy_of` is asked the same way); each story, scenario, and background makes its parts through its format's `scenario_type`, `background_type`, and `step_type`. `parse` reads text in that format and `render(canonical, previous)` writes a model out. *StoryMapFiles* (`story_map_files.py`) is the one place that knows a story map's file name and a story's own file name, and finds the story map in or above a folder (`nearest`), the story map saved as JSON in it (`story_graph_text`, read by `JsonStoryModel.from_workspace`), the markdown maps below it (`markdown_below`), each story's own file below it (`story_files_below`), and the files scenarios are written in (`scenario_files_below`), entering each folder's `.context` and no folder a working-copy scan never enters (`skips_folder`). The Stories practice names itself on *StoryNode* (`StoryNode.practice_class = Stories`), so the model never imports its practice. Markdown, JSON, and the code formats carry scenarios, steps, and examples; the diagram formats (drawio, miro) stop at stories and still read increments. The Claude Design story canvas, which shows the stories on their screens, is a *DiagramStoryModel* the UX practice draws (`practices/ux/model/claude_design/story_canvas.py`).
+Each format is a *StoryModel* subclass with its own node subclasses, listed by `Stories` under `formats`: sketch, markdown, json, drawio, miro, python, typescript, javascript. `StoryModel(source)` copies any model into the subclass's node types, and a format's `copy_of(source)` makes that copy with the format's own settings (it is asked of a model, not its class, because a code format copies with its own `tests_root`; a UX map's `copy_of` is asked the same way); each story, scenario, and background makes its parts through its format's `scenario_type`, `background_type`, and `step_type`. `parse` reads text in that format and `render(canonical, previous)` writes a model out. *StoryMapFiles* (`story_map_files.py`) is the one place that knows a story map's file name and a story's own file name, and finds the story map in or above a folder (`nearest`), the story map saved as JSON in it (`story_graph_text`, read by `JsonStoryModel.from_workspace`), the markdown maps below it (`markdown_below`), each story's own file below it (`story_files_below`), and the files scenarios are written in (`scenario_files_below`), entering each folder's `.context` and no folder a working-copy scan never enters (`skips_folder`). The Stories practice names itself on *StoryNode* (`StoryNode.practice_class = Stories`), so the model never imports its practice. Markdown, JSON, and the code formats carry scenarios, steps, and examples; the diagram formats (drawio, miro) stop at stories and still read increments. The Claude Design story canvas, which shows the stories on their screens, is a *DiagramStoryModel* the UX practice draws (`practices/ux/model/claude_design/story_canvas.py`).
 
 ```
 story_map = Stories().read_folder(folder)       # story-map.md (or .json), increments, scenarios
@@ -400,7 +400,7 @@ A story map written as test code: one file per sub-epic holding its stories, und
 + story_file_suffixes: tuple[str, ...]
 	// how a story file in this language ends; the first is the one it writes
 + not_story_paths: re.Pattern
-	// a path that ends like a story file but holds none: Java's specs, TypeScript's examples folders
+	// a path that ends like a story file but holds none: TypeScript's examples folders
 ----
 + is_story_file(path): bool
 	// a file this language reads stories from, by its suffixes and the paths it leaves out
@@ -409,7 +409,7 @@ A story map written as test code: one file per sub-epic holding its stories, und
 + load(external: dict[str, str], on_file=None): CodeStoryModel
 	// the one load for every language: each story file under the tests root is one sub-epic
 	-> story_file(text).stories(story_type, path)
-	// each file read once: a story made from each story block; a file the language cannot read in blocks (Java's, or Python that does not parse) is read from its text (`story_type.load_all`)
+	// each file read once: a story made from each story block; a file the language cannot read in blocks (Python that does not parse) is read from its text (`story_type.load_all`)
 + render(canonical: StoryModel, previous: dict[str, str] | None = None): dict[str, str]
 	Invariant: previous is the path-to-content map already on disk, never one text
 	// each epic, story, scenario, and step without code in this language takes the previous tree's code for the same names
@@ -418,7 +418,7 @@ A story map written as test code: one file per sub-epic holding its stories, und
 + save(): dict[str, str]
 + adopt_code(kept: CodeStoryModel): None
 + story_file(content: str): StoryFile | None
-	// the file as this language finds its blocks; None for Java, whose stories are written generically
+	// the file as this language finds its blocks; None for a language whose stories are read from their text
 + read_from_code: bool
 	// property: some sub-epic or story in this tree was read from a file in this language
 
@@ -475,10 +475,6 @@ The `typescript` format. Nodes: TypeScriptEpic, TypeScriptStory, TypeScriptScena
 
 The `javascript` format. Nodes: JavaScriptEpic, JavaScriptStory, JavaScriptScenario.
 
-## JavaStoryModel : CodeStoryModel
-
-The `java` format. Nodes: JavaEpic, JavaStory, JavaScenario.
-
 ## CodeStory : Story, CodeStoryNode
 
 A story read from a story file. Each language gives its patterns (`_NAME`, `_STORY_START`, `_STORY_MARK`); reading is one way for every language.
@@ -487,7 +483,7 @@ A story read from a story file. Each language gives its patterns (`_NAME`, `_STO
 + from_block(block: CodeBlock, lead: list[str], text: str): CodeStory
 	// class operation: the story one story block holds, with one scenario per scenario block, its code read from the same block
 + load_all(content: str): list[CodeStory]
-	// class operation: a file read from its text, split where each story starts (Java's files, and a file the language cannot read in blocks)
+	// class operation: a file read from its text, split where each story starts (a file the language cannot read in blocks)
 + load(content: str, scenario_blocks: list[CodeBlock] | None = None): CodeStory
 	// class operation: name, description (actor, kind, domain terms, evidence), backgrounds, and scenarios
 + read_code(block: CodeBlock, lead: list[str], scenarios: list[CodeBlock]): None

@@ -117,7 +117,7 @@ The tests Stories acceptance tests and BDD development write share their tiers, 
 
 ```yaml
 alwaysApply: false
-globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*Spec.java,**/*.story.*,**/*_story.test.*"
+globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*spec.js,**/*.spec.shared.js,**/*.story.*,**/*_story.test.*"
 ```
 
 Whenever you create, alter, or delete acceptance tests or BDD specs. Follow these rules.

@@ -12,8 +12,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from expects import equal, expect
 from mamba import after, before, context, description, it
 
-from files_app_browser import SHOWN_MILLISECONDS, TICKET_CODE, FilesStack, graph_view, line, lines_in_order, mark_on, open_branches, select, settled, shown_lines
-from space.session.graph_view_examples import BOARD_CODE, CHECKOUT_FLOW, STEP_STORY
+from files_app_browser import GRAPH_READ_MILLISECONDS, SHOWN_MILLISECONDS, TICKET_CODE, FilesStack, all_session_files, graph_view, line, lines_in_order, mark_on, open_branches, select, settled, shown_lines
+from space.session.graph_view_examples import BOARD_CODE, CHECKOUT_FLOW, EXAMPLES_SCENARIOS, EXAMPLES_SCENARIOS_TEXT, SCENARIOS, SCENARIOS_TEXT, STEP_STORY, STORY_MAP, STORY_MAP_WITH_REOPEN_TEXT
 
 FIDELITIES = "stories-acceptance-tests,clean-engineering-code"
 GIVEN_STEP_LINES = ['    @s.given("a ticket on the board")', "    def _(world):", "        world.ticket = ticket_on_board(world)"]
@@ -37,6 +37,52 @@ def open_files(page) -> list[str]:
 
 def heads_expanded(page) -> list[str]:
     return page.locator(".open-file-head").evaluate_all("heads => heads.map(head => head.getAttribute('aria-expanded'))")
+
+
+# Interaction: the fidelities the page lists for Filter Callouts Like The Graph: the story map, the scenarios and the code.
+STORIES_AND_CODE_FIDELITIES = "stories-story-map,stories-scenarios,stories-acceptance-tests,clean-engineering-code"
+# Interaction: the words of Delete Ticket's link to ticket.py, which name its callout on the rendered page.
+TICKET_LINK = "ticket"
+# Interaction: the examples Reopen Ticket's steps observe, which name their callouts on the rendered page.
+OBSERVED_EXAMPLES = ["closed ticket", "open ticket"]
+
+
+def show_every_format(page) -> None:
+    """Turns off each format selected, such as code, which the seed's session selects: no format selected shows every
+    format, the markdown scenarios beside the code."""
+    page.locator(".format-toggle").first.wait_for(timeout=SHOWN_MILLISECONDS)
+    selected = page.locator('.format-toggle[aria-pressed="true"]')
+    while selected.count():
+        selected.first.click()
+        page.wait_for_timeout(500)
+
+
+def listed_entry(page, path: str):
+    """The file bar's entry of path, once every file under the session's root is listed, in every format."""
+    all_session_files(page)
+    show_every_format(page)
+    entry = page.locator(f'button.file-entry[title="{path}"]')
+    entry.wait_for(timeout=SHOWN_MILLISECONDS)
+    return entry
+
+
+def rendered_marks(page) -> list[str]:
+    """What the callout marks of the rendered page name, each name once, in order."""
+    return sorted(set(page.locator(".markdown-page .rendered-callout-mark").all_inner_texts()))
+
+
+def practice_toggle(page, short_name: str):
+    return page.locator(".practice-toggle", has_text=short_name).first
+
+
+def leave_out_connector(page, connector: str) -> None:
+    """Chooses every connector the graph view's node filter offers but connector."""
+    if page.locator('[data-testid="filter-connector"]').count() == 0:
+        page.locator(".graph-filters-toggle").click()
+    connectors = page.locator('[data-testid="filter-connector"]')
+    connectors.locator(f'option[value="{connector}"]').wait_for(state="attached", timeout=GRAPH_READ_MILLISECONDS)
+    offered = connectors.locator("option").evaluate_all("options => options.map(option => option.value)")
+    connectors.select_option([each for each in offered if each != connector])
 
 
 def callout_state(page) -> tuple[int, int]:
@@ -211,6 +257,59 @@ with description("Fold Open Files To Selected Nodes and Open Several Files From 
 
         with it("And a second press closes them again"):
             expect(self.closed_again).to(equal(self.closed))
+
+    # Each read of a file sends the file view's filters and the session answers the callouts they show (session.file
+    # paths and node_filter); here the page, its server and the cdd server do it for real.
+    with context("Story: Filter Callouts Like The Graph"):
+        with before.all:
+            for path, text in ((STORY_MAP, STORY_MAP_WITH_REOPEN_TEXT), (SCENARIOS, SCENARIOS_TEXT), (EXAMPLES_SCENARIOS, EXAMPLES_SCENARIOS_TEXT)):
+                (self.stack.project / path).parent.mkdir(parents=True, exist_ok=True)
+                (self.stack.project / path).write_text(text, encoding="utf-8")
+
+        with context("Scenario: A practice turned off leaves out the callouts into its files"):
+            with before.all:
+                self.page = self.stack.open(CHECKOUT_FLOW.name, STORIES_AND_CODE_FIDELITIES)
+                listed_entry(self.page, SCENARIOS).click()
+                self.turned_on = settled(lambda: rendered_marks(self.page), lambda marks: TICKET_LINK in marks, SHOWN_MILLISECONDS / 1000)
+                practice_toggle(self.page, "CE").click()
+                self.turned_off = settled(lambda: rendered_marks(self.page), lambda marks: TICKET_LINK not in marks)
+                practice_toggle(self.page, "CE").click()
+                self.turned_on_again = settled(lambda: rendered_marks(self.page), lambda marks: TICKET_LINK in marks)
+
+            with after.all:
+                self.page.close()
+
+            with it("Given the scenarios file carries its callout into ticket.py, a file of Clean Engineering"):
+                expect(TICKET_LINK in self.turned_on).to(equal(True))
+
+            with it("Then with Clean Engineering turned off the Given's line carries no callout into ticket.py"):
+                expect(TICKET_LINK in self.turned_off).to(equal(False))
+
+            with it("Then with Clean Engineering on again the Given's line carries its callout into ticket.py"):
+                expect(TICKET_LINK in self.turned_on_again).to(equal(True))
+
+        with context("Scenario: A connector left out of the node filter leaves out what a step reaches by it"):
+            with before.all:
+                self.page = self.stack.open(CHECKOUT_FLOW.name, STORIES_AND_CODE_FIDELITIES)
+                listed_entry(self.page, EXAMPLES_SCENARIOS)
+                graph_view(self.page)
+                self.page.get_by_role("button", name="Rules", exact=True).click()
+                self.page.get_by_role("button", name="List", exact=True).click()
+                self.page.locator(f'button.file-entry[title="{EXAMPLES_SCENARIOS}"]').click()
+                self.every_connector = settled(lambda: rendered_marks(self.page), lambda marks: marks == OBSERVED_EXAMPLES, SHOWN_MILLISECONDS / 1000)
+                self.page.get_by_role("button", name="Graph", exact=True).click()
+                leave_out_connector(self.page, "observes")
+                self.page.get_by_role("button", name="List", exact=True).click()
+                self.without_observes = settled(lambda: rendered_marks(self.page), lambda marks: marks == [], SHOWN_MILLISECONDS / 1000)
+
+            with after.all:
+                self.page.close()
+
+            with it("Given the steps' lines carry the examples they observe, closed ticket and open ticket"):
+                expect(self.every_connector).to(equal(OBSERVED_EXAMPLES))
+
+            with it("Then with observes left out of the graph view's connectors no step carries the example it observes"):
+                expect(self.without_observes).to(equal([]))
 
 
 with description("Switch Files App Between Files And Graph, in a real browser, opened on another project") as self:

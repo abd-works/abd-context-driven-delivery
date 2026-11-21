@@ -478,7 +478,7 @@ Changed by the person's answer on 2026-11-20: a link to another file was left wh
 
 #### Scenario: Show the callouts the file view's filters select
 
-Answered by the person on 2026-11-20: which callouts show follows the file view's filters, the practices chosen and the graph's connectors. Only the page draws it: `harness/files_app/app/files/file-callouts.spec.ts`.
+Answered by the person on 2026-11-20: which callouts show follows the file view's filters, the practices chosen and the graph's connectors. Changed the same day, in the third wave: the session decides it, by the filter that narrows the graph view's trees, and the page sends its filters with the read of the file and draws what comes back. What the session answers for each filter: Filter Callouts Like The Graph in `../switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md`. What the page sends, and that it reads its open files again when a filter changes: `harness/files_app/app/files/file-callouts.spec.ts`, `files-page.spec.ts`.
 
 *Given* the Files app shows a scenario file whose Given links the domain model, a file of DDD, and observes an example
 *When* the Person turns DDD off

@@ -13,10 +13,11 @@ from harness.graph.rule_context import RuleCheckContext
 class RuleFixture:
     """Fixture files written to a folder of their own and read by one practice, the way a live load reads a working
     copy: its language model parses each file and every node loads its own facts. A practice that extends another,
-    such as DDD reading Clean Engineering's classes, is read with that practice, as a live load reads them. The fixture
+    such as DDD reading Clean Engineering's classes, is read with that practice, as a live load reads them, and so is
+    each practice of ``beside``, for a rule that reads the edges from one practice's nodes to another's. The fixture
     keeps the folder, which goes when the fixture does."""
 
-    def __init__(self, practice_class: type, files: dict[str, str]) -> None:
+    def __init__(self, practice_class: type, files: dict[str, str], beside: tuple[type, ...] = ()) -> None:
         self._folder = tempfile.TemporaryDirectory()
         self.root = Path(self._folder.name)
         for relative, text in files.items():
@@ -26,7 +27,7 @@ class RuleFixture:
         graph = Graph()
         practice = graph.practices.of(practice_class)
         extended = practice.working_set.extended
-        read = [practice, *([extended] if extended is not None else [])]
+        read = [practice, *([extended] if extended is not None else []), *(graph.practices.of(other) for other in beside)]
         graph.load_working_copy(str(self.root), {each.key: str(self.root) for each in read}, force=True)
         self.practice = practice
 

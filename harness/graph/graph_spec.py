@@ -984,8 +984,10 @@ with description("a graph"):
             with it("should find the same story rule violations"):
                 # A Given is judged against the DDD aggregates read from the domain code, which a load of the story
                 # file alone does not read; and conforms-to-schema runs only on a graph holding the whole working copy,
-                # since a load of named files alone cannot judge links across practices. Both are compared by a full load.
-                read_elsewhere = {"given-names-complex-state-root-first", "conforms-to-schema"}
+                # since a load of named files alone cannot judge links across practices; and a Then must observe an
+                # Example only where a step of its area is joined to a model, which the story file alone does not
+                # read. All three are compared by a full load.
+                read_elsewhere = {"given-names-complex-state-root-first", "conforms-to-schema", "then-observes-an-example"}
                 edited = {hit for hit in violations_in(self.edited, "stories", self.scope) if hit[0] not in read_elsewhere}
                 full = {hit for hit in violations_in(self.full, "stories", self.scope) if hit[0] not in read_elsewhere}
                 expect(len(edited)).to(be_above(0))

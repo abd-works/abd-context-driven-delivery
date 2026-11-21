@@ -18,7 +18,9 @@ const shownFailure = atom({ plugin: 'cdd-board', key: 'failure' } as const, null
 const queueFailure = atom({ plugin: 'prompt-queue', key: 'failure' } as const, null as QueueFailureJson)
 const handledQueueFailure = atom({ plugin: 'cdd-board', key: 'handledQueueFailure' } as const, 0)
 
-type ShownFailureData = FailureData & { is_fixing?: boolean; queue_failure_id?: number }
+// The chat bar shows what failed and its context; the causes of a failure's kind and its fix command are for a page
+// that asks failure.describe, such as the Files app.
+type ShownFailureData = Pick<FailureData, 'failure' | 'context'> & { is_fixing?: boolean; queue_failure_id?: number }
 
 export class FailureClient {
   constructor(private readonly json: ShownFailureData) {}
@@ -51,7 +53,7 @@ export class FailureClient {
 // The board's own failure first; otherwise the prompt queue's latest, unless Fix or ✕ already handled it.
 export async function currentFailure($: EngineInterface): Promise<FailureClient | null> {
   const json = await read($, shownFailure)
-  if (json) return new FailureClient(json as FailureData)
+  if (json) return new FailureClient(json as ShownFailureData)
   const queued = await read($, queueFailure)
   if (!queued || queued.id === (await read($, handledQueueFailure))) return null
   return new FailureClient({ failure: queued.failure, context: queued.context, queue_failure_id: queued.id })

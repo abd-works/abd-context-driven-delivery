@@ -1,13 +1,15 @@
-"""How UX takes part in the graph: each file a UX map is written in (its drawing, its JSON, the mockup page that carries
-it, its UX context) is read by its format into a map, whose screens, regions, controls, interactions, transitions,
-content types, nav components, and context are added to the graph that holds UX as they are; then each screen is
-linked to the stories it shows and to the domain classes its domain terms name."""
+"""How UX takes part in the graph: each file a UX map is written in (its drawing, its board, its JSON, the mockup page
+that carries it, its UX context) is read by its format into a map, whose screens, regions, controls, interactions,
+transitions, content types, nav components, and context are added to the graph that holds UX as they are; then each
+screen and each control is linked to the stories, scenarios, and steps it serves, and each screen to the domain classes
+its domain terms name."""
 
 from __future__ import annotations
 
 import html
 import json
 import os
+from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterator
 
@@ -22,7 +24,7 @@ from harness.guidance.practice_reading import PracticeReading
 from cdd_guidance.practices.ux.model.drawio.nodes import UnreadableDrawio
 from cdd_guidance.practices.ux.model.html.nodes import UxMapNotEmbedded
 from cdd_guidance.practices.ux.model.nodes import Interaction, NavComponent, Screen, Transition
-from cdd_guidance.practices.ux.model.story_link import KEY_SEPARATOR, StoryLink, key_of
+from cdd_guidance.practices.ux.model.story_link import KEY_SEPARATOR, StoryLink, StoryTargets, key_of
 from cdd_guidance.practices.ux.model.ux_map import ScreenNotOnMap, UxMap
 from cdd_guidance.practices.ux.model.ux_node import UxNode
 
@@ -35,22 +37,26 @@ _CONTEXT_FOLDER = ".context"
 UNREAD_FILES_FACT = "unread_files"
 # What a UX file that is not a map after all fails with: text that is not its format, or a link to a screen it lacks.
 _NOT_A_MAP = (json.JSONDecodeError, UnreadableDrawio, UxMapNotEmbedded, ScreenNotOnMap)
-# How a file writes a node's own name: a JSON record's name field, or the text of a drawing's cell, plain or bold.
-_NAME_MARKS = ('"name": "{}"', 'value="{}"', 'value="&lt;b&gt;{}&lt;/b&gt;"')
+# How a file writes a node's own name: a JSON record's name field, the text of a drawing's cell, plain or bold, or the
+# words of a board's section or the first line of its card.
+_NAME_MARKS = ('"name": "{}"', 'value="{}"', 'value="&lt;b&gt;{}&lt;/b&gt;"', '"text": "{}"', '"text": "**{}**')
 # An aggregate groups the classes it holds and is named for its root, so a domain term names the root, not the group.
 _GROUP_TYPES = frozenset({"Aggregate"})
 # The node types Stories records a step as.
 _STEP_TYPES = ("Step", "Given", "When", "Then")
 # What joins the parts of a bound field's path: `order.shippingAddress.city`.
 _PATH_SEPARATOR = "."
-# The kind of story node a screen shows under each of its edges, and the fact that keeps the keys it shows them by.
+# The kind of story node a screen or a control serves under each of its edges, and the fact that keeps what it serves
+# as its file writes it.
 _SHOWN = (("Story", "shows", "story_keys"), ("Scenario", "showsScenarios", "scenario_keys"), ("Step", "showsSteps", "step_keys"))
+# The node types that serve stories: a screen, and each kind of control on it.
+_SERVING_TYPES = ("Screen", "Control", "StoryDemoControl")
 
 
 class UxReading(PracticeReading):
     """How UX takes part in the graph: it reads each file a UX map is written in, after the practices its screens link
-    to, adds the map's nodes to its graph, and links each screen to the stories it shows and the domain classes its
-    domain terms name. It checks its screen rules on those nodes."""
+    to, adds the map's nodes to its graph, and links each screen and control to the stories, scenarios, and steps it
+    serves and each screen to the domain classes its domain terms name. It checks its screen rules on those nodes."""
 
     reads_after = ("stories", "clean_engineering", "ddd")
     node_types = (
@@ -72,9 +78,9 @@ class UxReading(PracticeReading):
         return Path(self.in_graph.source_root)
 
     def read_working_copy(self) -> None:
-        """Read each UX map file under the root, or among the edited files, onto the graph, then link every screen the
-        graph holds to its stories and domain classes: a screen kept from an earlier read links again too, since the
-        stories it names may have been read again."""
+        """Read each UX map file under the root, or among the edited files, onto the graph, then link every screen and
+        control the graph holds to what it serves, and every screen to its domain classes: a node kept from an earlier
+        read links again too, since the stories it names may have been read again."""
         if not self.root.is_dir():
             return
         files = list(UxMapFiles(self).found())
@@ -88,7 +94,8 @@ class UxReading(PracticeReading):
                     unread.append({"file": file.relative, "reason": str(reason)})
         if unread:
             self.in_graph.root.set_fact(UNREAD_FILES_FACT, unread)
-        ScreenLinks(self).link()
+        ServedStoryLinks(self).link()
+        DomainTermLinks(self).link()
         StoryDemoControlLinks(self).link()
 
 
@@ -246,28 +253,47 @@ class LinksAcrossPractices:
         self._graph = reading.graph
 
 
-class ScreenLinks(LinksAcrossPractices):
-    """The edges from UX's screens to the other practices: a screen shows the stories, scenarios, and steps it names,
-    each of which is shown on the screen, and its domain terms lead to the domain class each names. They are read from
-    the facts every screen saves with the graph, so a screen kept from an earlier read, a plain node in a worker
-    process, links the same way as one just parsed."""
+class ServedStoryLinks(LinksAcrossPractices):
+    """The edges from UX's screens and controls to the stories, scenarios, and steps each serves, each of which is
+    shown on that screen or control. An association written as a link is followed to the file its target names, the
+    path taken from the folder of the UX file it is written in, then from the folders the graph reads, and to the node
+    read from the heading the target names; one written as a key alone leads to the node with that key. A graph that
+    reads no Stories, or not the file a link names, gets no edge. They are read from the facts every screen and control
+    saves with the graph, so a node kept from an earlier read, a plain node in a worker process, links the same way as
+    one just parsed."""
+
+    @cached_property
+    def _targets(self) -> StoryTargets:
+        """Where each link's target leads on this graph, read once for every screen and control."""
+        return StoryTargets(self._graph)
+
+    def link(self) -> None:
+        for node_type in _SERVING_TYPES:
+            for node in self._reading.in_graph.nodes(node_type):
+                self._link_served(node)
+
+    def _link_served(self, node: Node) -> None:
+        folders = [(self._reading.root / node.source.file).parent] if node.source is not None and node.source.file else []
+        for kind, edge, fact in _SHOWN:
+            for written in node.get_fact(fact) or []:
+                link = StoryLink.from_shown(kind, written)
+                shown = self._targets.node_at(link, folders) if link.target else link.resolved_on(self._graph)
+                if shown is not None:
+                    self._graph.edges.relate(edge, node, shown)
+                    self._graph.edges.relate("shownOn", shown, node)
+
+
+class DomainTermLinks(LinksAcrossPractices):
+    """The edges from UX's screens to the domain model: a screen's domain terms lead to the domain class each names.
+    They are read from the facts every screen saves with the graph, as what it serves is."""
 
     def link(self) -> None:
         for screen in self._reading.in_graph.nodes("Screen"):
-            self._link_shown(screen)
             for term in screen.get_fact("domain_terms") or []:
                 named = self._class_named(term)
                 if named is not None:
                     self._graph.edges.relate("domainTerms", screen, named)
                     self._graph.edges.relate("domainTerms", named, screen)
-
-    def _link_shown(self, screen: Node) -> None:
-        for kind, edge, fact in _SHOWN:
-            for key in screen.get_fact(fact) or []:
-                shown = StoryLink(kind, key).resolved_on(self._graph)
-                if shown is not None:
-                    self._graph.edges.relate(edge, screen, shown)
-                    self._graph.edges.relate("shownOn", shown, screen)
 
     def _class_named(self, term: str) -> Node | None:
         """The one class a domain term names: the DDD class of that name when the graph reads DDD and holds one, else
@@ -314,7 +340,7 @@ class StoryDemoControlLinks(LinksAcrossPractices):
             return []
         read = stories.reading.in_graph
         steps = [step for kind in _STEP_TYPES for step in read.nodes(kind) if (step.get_fact("text") or step.name) == label]
-        shown = set(self._screen_of(control).get_fact("story_keys") or [])
+        shown = {StoryLink.from_shown("Story", written).key for written in self._screen_of(control).get_fact("story_keys") or []}
         on_screen = [step for step in steps if key_of(step).split(KEY_SEPARATOR)[0] in shown]
         return on_screen or (steps if len(steps) == 1 else [])
 

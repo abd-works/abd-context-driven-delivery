@@ -20,7 +20,7 @@ from cdd_guidance.practices.stories.model.story_model import Background, Epic, S
 # The comment that carries a scenario's example rows in a story file, by whether the scenario is an outline.
 SCENARIO_EXAMPLES = "scenario-examples"
 OUTLINE_EXAMPLES = "outline-examples"
-# A name Python, TypeScript, JavaScript and Java can all import.
+# A name Python, TypeScript and JavaScript can all import.
 _IMPORTABLE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 
 

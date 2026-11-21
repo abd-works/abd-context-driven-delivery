@@ -18,7 +18,6 @@ import { FilesStore, type FidelityFiles, type SelectedNode } from './files-state
 import { formatGlyphOf } from './format-chips'
 import { GuidanceSelector } from './guidance-selector'
 import { OpenFiles } from './open-files'
-import { fileAnswered } from './source-of-file'
 
 // While a comment on the open file is with a chat, the file is read again this often, so the chat's change and the
 // comment's processed state show without a reload. Nothing else is read again: never the list, never a board.
@@ -122,15 +121,44 @@ export class FilesPage {
     }
   }
 
-  // Follows the session's guidance selection, which a link naming a ticket's files shows, and reads the graph view again
-  // whenever the files it lists change. Answers what stops both.
+  // Follows the session's guidance selection, which a link naming a ticket's files shows, reads the graph view again
+  // whenever the files it lists change, and reads the open files again whenever the file view's filters change. Answers
+  // what stops all three.
   private follow(): () => void {
     const stopGuidance = this.link.isSessionFolder || !this.link.namesFiles ? () => undefined : this.guidance.follow()
     const stopGraph = this.graph.follow()
+    const stopCallouts = this.followFilters()
     return () => {
       stopGuidance()
       stopGraph()
+      stopCallouts()
     }
+  }
+
+  // Reads the open files again whenever the file view's filters change, such as a practice turned off or a connector
+  // left out of the graph view's node filter: which callouts each holds for them is the session's answer. While the
+  // graph view reads the session's graph, the files wait for it, since what a step invokes and observes comes from that
+  // graph; they are read once its trees arrive. Answers what stops it.
+  private followFilters(): () => void {
+    let readFor = this.callouts.readFor
+    let trees = this.state.graph.trees
+    return this.store.subscribe(() => {
+      const { graph } = this.state
+      const now = this.callouts.readFor
+      if (graph.isReading || (now === readFor && graph.trees === trees)) return
+      readFor = now
+      trees = graph.trees
+      void this.readOpenAgain()
+    })
+  }
+
+  // The open file and each file open beside it, read again as the session answers them now.
+  private async readOpenAgain(): Promise<void> {
+    await this.refreshOpen()
+    const beside = this.state.moreFiles.map(file => file.path)
+    if (!beside.length) return
+    const read = await Promise.all(beside.map(path => this.readBeside(path)))
+    this.store.change(() => ({ moreFiles: read.filter((file): file is SessionFileData => file !== null) }))
   }
 
   // The header: the repository, the branch, and the session's root; the link's subject until the session answers.
@@ -144,7 +172,7 @@ export class FilesPage {
       const session = await this.session.show()
       if (session) this.store.change(() => ({ place: [session.repoName, session.branch, session.root].filter(Boolean).join(' · '), isRepository: session.isRepository !== false }))
     } catch (failure) {
-      this.notices.fail(`The Files app did not read where the session works: ${reasonOf(failure)}`, 'Opening the Files app, calling session.show')
+      this.notices.fail(`The Files app did not read where the session works: ${reasonOf(failure)}`, 'Opening the Files app, calling session.show', { kind: 'session_roots' })
     }
   }
 
@@ -158,7 +186,7 @@ export class FilesPage {
       if (first) await this.open(first)
     } catch (failure) {
       this.store.change(() => ({ isListing: false, problem: `The files did not list: ${reasonOf(failure)}` }))
-      this.notices.fail(`The Files app did not list the files: ${reasonOf(failure)}`, `Opening the Files app on ${this.link.subject}`, { isShownOnPage: true })
+      this.notices.fail(`The Files app did not list the files: ${reasonOf(failure)}`, `Opening the Files app on ${this.link.subject}`, { isShownOnPage: true, kind: 'session_roots' })
     }
   }
 
@@ -184,7 +212,7 @@ export class FilesPage {
       const rootFiles = (await TicketClientGenerated.named(this.api, this.link.ticket).rootFiles()) ?? []
       this.store.change(state => ({ rootFiles, entries: this.shownFrom({ ...state, rootFiles }) }))
     } catch (failure) {
-      this.notices.fail(`The Files app did not list the files under the session's root: ${reasonOf(failure)}`, 'Opening the Files app, calling ticket.root_files')
+      this.notices.fail(`The Files app did not list the files under the session's root: ${reasonOf(failure)}`, 'Opening the Files app, calling ticket.root_files', { kind: 'session_roots' })
     }
   }
 
@@ -212,7 +240,7 @@ export class FilesPage {
       this.store.change(state => ({ byFidelity: [...state.byFidelity, ...read.filter(each => !state.byFidelity.some(held => held.slug === each.slug))] }))
       this.store.change(state => ({ entries: this.shownFrom(state) }))
     } catch (failure) {
-      this.notices.fail(`The Files app did not list the files of ${missing.join(', ')}: ${reasonOf(failure)}`, 'Showing the stages and practices selected')
+      this.notices.fail(`The Files app did not list the files of ${missing.join(', ')}: ${reasonOf(failure)}`, 'Showing the stages and practices selected', { kind: 'session_roots' })
     }
   }
 
@@ -230,7 +258,7 @@ export class FilesPage {
       const byFidelity = await this.filesByFidelity(this.state.byFidelity.map(each => each.slug))
       this.store.change(state => ({ byFidelity, entries: this.shownFrom({ ...state, byFidelity }) }))
     } catch (failure) {
-      this.notices.fail(`The Files app did not list the files again: ${reasonOf(failure)}`, 'Pressing This session or All session files, calling ticket.fidelity_files')
+      this.notices.fail(`The Files app did not list the files again: ${reasonOf(failure)}`, 'Pressing This session or All session files, calling ticket.fidelity_files', { kind: 'session_roots' })
     }
     await this.readRootFiles()
   }
@@ -278,9 +306,9 @@ export class FilesPage {
   // A file opened below the first: one that does not read, or answers no file, is shown and told, and the others open.
   private async readBeside(path: string): Promise<SessionFileData | null> {
     try {
-      return this.withRulesAsked(fileAnswered(await this.session.file(path, true, this.state.reads.crossFile)))
+      return this.withRulesAsked(await this.callouts.file(path, true, this.state.reads.crossFile))
     } catch (failure) {
-      this.notices.fail(`The Files app did not open ${path}: ${reasonOf(failure)}`, `Opening ${path} in the Files app`)
+      this.notices.fail(`The Files app did not open ${path}: ${reasonOf(failure)}`, `Opening ${path} in the Files app`, { kind: 'file_display' })
       return null
     }
   }
@@ -305,13 +333,14 @@ export class FilesPage {
     try {
       const { rules, crossFile } = this.state.reads
       // A file opened from the graph view needs the folds its graph places, which only a read with rules answers.
-      const file = this.withRulesAsked(fileAnswered(await this.session.file(path, rules || this.state.graph.selected.length > 0, crossFile)))
+      const file = this.withRulesAsked(await this.callouts.file(path, rules || this.state.graph.selected.length > 0, crossFile))
       if (this.state.openPath !== path) return
       this.store.change(() => ({ file, problem: '' }))
+      if (file) this.notices.fixes.showMissingLinksOf(file)
       if (file?.comments.some(comment => comment.state === 'sent')) this.refreshTimer = setTimeout(() => void this.refreshOpen(), SENT_REFRESH_MILLISECONDS)
     } catch (failure) {
       this.store.change(() => ({ problem: `${path} did not open: ${reasonOf(failure)}` }))
-      this.notices.fail(`The Files app did not open ${path}: ${reasonOf(failure)}`, `Opening ${path} in the Files app`, { isShownOnPage: true })
+      this.notices.fail(`The Files app did not open ${path}: ${reasonOf(failure)}`, `Opening ${path} in the Files app, calling session.file`, { isShownOnPage: true, kind: 'file_display' })
     }
   }
 

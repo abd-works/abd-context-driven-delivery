@@ -141,6 +141,7 @@ class UxMap(UxNode):
         if demo:
             copy.take_story_fields(control)
         copy.states = list(control.states)
+        copy.show_what(control)
         for interaction in control.interactions:
             copy.append_interaction(self._interaction_copy(interaction, screens))
         return copy

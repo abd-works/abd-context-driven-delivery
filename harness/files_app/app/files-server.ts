@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import type { CddConnection, ProjectConnections } from '@cdd/cdd-connection'
 import { CddRequestError, PROJECT_HEADER, cddProgressRoutes, type CddRoute } from '@cdd/cdd-shared'
 import { ChatAdapter, chatRoutes } from '@cdd/harness/chat/chat'
-import type { FailureData } from '@cdd/tools/error_display/failure'
+import { failureRoutes, type FailureData } from '@cdd/tools/error_display/failure'
 import { fidelityProgressRoutes } from '@cdd/space/kanban/fidelity-progress'
 import { ticketRoutes } from '@cdd/space/kanban/ticket'
 import { fileCommentsRoutes } from '@cdd/space/session/file-comments'
@@ -21,21 +21,22 @@ const BAD_REQUEST = 400
 const FORBIDDEN = 403
 const FAILED = 500
 
-// The one chat route the page needs: telling the chat that opened it a failure. The stages, practices and formats
+// The one chat route the page needs: telling the chat that opened it a failure, and sending it a failure's fix. The stages, practices and formats
 // selected are the session's guidance selection, reached through its routes. Opening or removing chats stays with the board.
 const CHAT_ROUTES = ['/chat/:chat/send']
 // The ticket route the page lists its files through: every fidelity's files in one call.
 const TICKET_ROUTES = ['/ticket/:ticket/fidelity-files', '/ticket/:ticket/root-files']
 
 // The Files app reads a session's files, a fidelity's files, and the comments on them, follows the cdd server's progress
-// while its graph view reads the graph, turns the session's practices on or off, and tells the chat that opened it; it
-// never reads the board.
+// while its graph view reads the graph, turns the session's practices on or off, tells the chat that opened it, and
+// asks for the most common causes of a failure its Fix button sends that chat (failure.describe); it never reads the board.
 export const filesRoutes: CddRoute[] = [
   ...sessionRoutes,
   ...cddProgressRoutes,
   ...fileCommentsRoutes,
   ...fidelityProgressRoutes,
   ...practiceSessionOutputRoutes,
+  ...failureRoutes,
   ...chatRoutes.filter(route => CHAT_ROUTES.includes(route.path)),
   ...ticketRoutes.filter(route => TICKET_ROUTES.includes(route.path)),
 ]
@@ -75,7 +76,7 @@ function onlyThisMachine(port: number) {
 
 // A failure the server meets serving the page, sent to the chat that opened it, which shows it on its chat bar. A chat
 // that cannot be told is written to the server's log beside the failure the tab already shows.
-async function tellChat(projects: ProjectConnections, request: Request, failure: FailureData): Promise<void> {
+async function tellChat(projects: ProjectConnections, request: Request, failure: Pick<FailureData, 'failure' | 'context'>): Promise<void> {
   const chat = String(request.query.chat ?? '')
   if (!chat) return
   await new ChatAdapter(projects.of(request), chat)

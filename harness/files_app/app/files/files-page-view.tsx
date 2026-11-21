@@ -5,6 +5,8 @@ import type { FileEntryData, SessionFileData } from '@cdd/space/session/session'
 import { publishedOf, type FileFolder, type PublishedFile } from './file-bar'
 import type { SourceCallout } from '@source-view/source-callouts'
 
+import { FailureBandView } from './failure-band-view'
+import { FormatAlignmentView } from './format-alignment-view'
 import { FileView } from './file-view'
 import { FilesGraphView } from './files-graph-view'
 import type { FilesPage } from './files-page'
@@ -556,6 +558,8 @@ export function FilesPageView({ page }: { page: FilesPage }) {
     <main className="files-page">
       <FilesHeadView page={page} />
       {problem ? <div className="files-problem" role="alert">{problem}</div> : null}
+      <FailureBandView page={page} />
+      <FormatAlignmentView page={page} />
       <div className={`files-body ${fileBar.isOpen ? '' : 'is-bar-collapsed'}`} style={fileBar.isOpen ? { gridTemplateColumns: `${fileBar.width}px auto 1fr` } : undefined}>
         <nav className="files-side">
           <FileBarButtonsView page={page} />

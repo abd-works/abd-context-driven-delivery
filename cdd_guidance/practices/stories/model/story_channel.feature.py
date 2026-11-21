@@ -19,7 +19,6 @@ from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownScenario
 from cdd_guidance.practices.stories.model.miro.nodes import MiroStoryModel
 from cdd_guidance.practices.stories.model.story_model import StoryModel
 from cdd_guidance.practices.stories.stories import Stories
-from cdd_guidance.practices.stories.model.java.java_story_model import JavaStoryModel
 from cdd_guidance.practices.stories.model.javascript.javascript_story_model import JavaScriptStoryModel
 from cdd_guidance.practices.stories.model.python.python_story_model import PythonStoryModel
 from cdd_guidance.practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
@@ -30,7 +29,7 @@ EXPECTED = Path(__file__).resolve().parent / "_examples" / "expected"
 ACTUAL = Path(__file__).resolve().parent / "_examples" / "actual"
 
 _DIAGRAM = ("drawio", "miro", "whiteboard")
-_CODE = ("typescript", "python", "javascript", "java")
+_CODE = ("typescript", "python", "javascript")
 _FLUENT = ("typescript", "javascript")
 
 
@@ -212,7 +211,7 @@ def _write_markdown(source: StoryModel, folder: Path) -> None:
 
 
 _SOURCES = ("markdown", "drawio", "typescript")
-_CHANNELS = ("markdown", "json", "drawio", "miro", "whiteboard", "typescript", "python", "javascript", "java")
+_CHANNELS = ("markdown", "json", "drawio", "miro", "whiteboard", "typescript", "python", "javascript")
 
 
 def _expected_typescript() -> dict:
@@ -236,7 +235,6 @@ _CODE_MAPS = {
     "typescript": TypeScriptStoryModel,
     "python": PythonStoryModel,
     "javascript": JavaScriptStoryModel,
-    "java": JavaStoryModel,
 }
 
 
@@ -450,15 +448,6 @@ with describe("a story map"):
                 with it("should bring that story back"):
                     names = _story_names(_as_loaded(self, walk(self.loaded)))
                     expect(_kebab(_STORY_WITHOUT_SCENARIOS) in names).to(equal(True))
-        with describe("to java"):
-            with before.all:
-                _open(self, "markdown", "java")
-            with included_context("a story map saved through a channel"):
-                pass
-            with context("with a story that has no scenarios"):
-                with it("should bring that story back"):
-                    names = _story_names(_as_loaded(self, walk(self.loaded)))
-                    expect(_kebab(_STORY_WITHOUT_SCENARIOS) in names).to(equal(True))
 
     with describe("from drawio"):
         with describe("to markdown"):
@@ -501,11 +490,6 @@ with describe("a story map"):
                 _open(self, "drawio", "javascript")
             with included_context("a story map saved through a channel"):
                 pass
-        with describe("to java"):
-            with before.all:
-                _open(self, "drawio", "java")
-            with included_context("a story map saved through a channel"):
-                pass
 
     with describe("from typescript"):
         with describe("to markdown"):
@@ -546,10 +530,5 @@ with describe("a story map"):
         with describe("to javascript"):
             with before.all:
                 _open(self, "typescript", "javascript")
-            with included_context("a story map saved through a channel"):
-                pass
-        with describe("to java"):
-            with before.all:
-                _open(self, "typescript", "java")
             with included_context("a story map saved through a channel"):
                 pass

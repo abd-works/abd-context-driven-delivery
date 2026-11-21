@@ -20,6 +20,7 @@ from cdd_guidance.practices.stories.rules.scenarios import (
     ScenarioNamesContinuation,
     ScenariosNameAStoryOnTheMap,
     ScenariosShape,
+    ThenObservesAnExample,
     WhenHoldsTheOperation,
     WhenNamesIntentNotInterfaceGesture,
 )
@@ -62,6 +63,7 @@ RULES: tuple = (
     GivenNamesComplexStateRootFirst(),
     ScenarioNamesContinuation(),
     ScenariosNameAStoryOnTheMap(),
+    ThenObservesAnExample(),
 )
 
 BY_SLUG = {rule.slug: rule for rule in RULES}

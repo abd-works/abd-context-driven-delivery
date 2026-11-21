@@ -5,7 +5,7 @@ from __future__ import annotations
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
 from harness.guidance.guidance import SketchLens
-from harness.guidance.practice_formats import PracticeFormats, RenderRequest
+from harness.guidance.practice_formats import PracticeFormats, RenderRequest, TextOrData
 from harness.markdown.format import Format
 
 from cdd_guidance.practices.ux.model.graph_reading import UxReading
@@ -22,37 +22,39 @@ class UxOutsideSession(ValueError):
 
 
 class ViewNotRendered(ValueError):
-    """A render was asked to read or write a front-end view. A view is production code a person or an agent writes by
-    hand at the front-end code fidelity; no UX format reads one into the UX map or writes one from it."""
+    """A render was asked to make a UX map's format from a front-end view, or a view from a UX map's format. A view is
+    production code, rendered between typescript and javascript only; no UX format reads one into the UX map or writes
+    one from it."""
 
-    def __init__(self, format: Format) -> None:
-        super().__init__(f"UX front-end views are written by hand in {format}, not rendered: no render reads or writes one.")
+    def __init__(self, format: Format, source: Format) -> None:
+        super().__init__(f"A front-end view is rendered between typescript and javascript only: no render makes {format} from {source}.")
         self.format = format
+        self.source = source
 
 
 class UxFormats(PracticeFormats):
-    """The formats UX reads and writes: the UX map's, each through its adapter, and the view formats its front-end code
-    fidelity writes by hand (typescript, javascript), which the practice works in but no render converts."""
+    """The formats UX reads and writes: the UX map's, each through its adapter, and the view formats of its front-end
+    code fidelity (typescript, javascript), which render into each other and into no format of the UX map."""
 
     @property
     def view_formats(self) -> frozenset[Format]:
-        """The formats a UX fidelity writes that no adapter reads: its front-end views."""
-        written = {Format(name) for fidelity in self._practice.fidelities for name in fidelity.outputs}
-        return frozenset(written - super().supported)
-
-    @property
-    def supported(self) -> frozenset[Format]:
-        """The formats UX works in: those its adapters read and write, and its view formats."""
-        return super().supported | self.view_formats
+        """The formats a front-end view is written in: the code formats among UX's."""
+        return frozenset(format for format in self.supported if format.is_code)
 
     def render(self, request: RenderRequest) -> dict:
-        """What request renders to; a render to or from a view format is refused as *ViewNotRendered*, before a view's
-        text is read as a mockup page or a format list is searched for it."""
+        """What request renders to: a view to the other view format, a UX map to another of its formats. A render
+        between a view format and a format of the UX map is refused as *ViewNotRendered*, before a view's text is
+        read as a mockup page."""
         views = self.view_formats
-        asked = next((format for format in (request.format, request.source_format) if format in views), None)
-        if asked is not None:
-            raise ViewNotRendered(asked)
+        source = request.source_format
+        if (request.format in views) != (source in views):
+            raise ViewNotRendered(request.format, source)
         return super().render(request)
+
+    def _incoming(self, format: Format, content: TextOrData) -> TextOrData:
+        """content as format's adapter reads it: a view is its text as it is, though it start with a brace as a JSON
+        document does."""
+        return content
 
 
 @agent_toolset
@@ -81,10 +83,13 @@ class Ux(PracticeGuidance):
     default_workspace_folder = "ux"
     format_adapters = {
         "drawio": ("cdd_guidance.practices.ux.model.drawio.nodes", "DrawioUxMap"),
+        "whiteboard": ("cdd_guidance.practices.ux.model.whiteboard.nodes", "WhiteboardUxMap"),
         "html": ("cdd_guidance.practices.ux.model.html.nodes", "HtmlUxMap"),
         "markdown": ("cdd_guidance.practices.ux.model.markdown.nodes", "MarkdownUxMap"),
         "json": ("cdd_guidance.practices.ux.model.json.nodes", "JsonUxMap"),
         "claude_design": ("cdd_guidance.practices.ux.model.claude_design.nodes", "ClaudeDesignUxMap"),
+        "typescript": ("cdd_guidance.practices.ux.model.view.front_end_view", "TypeScriptView"),
+        "javascript": ("cdd_guidance.practices.ux.model.view.front_end_view", "JavaScriptView"),
     }
 
     @agent_tool

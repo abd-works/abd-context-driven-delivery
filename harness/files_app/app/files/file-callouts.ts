@@ -1,47 +1,46 @@
 import type { SessionClientGenerated, SessionFileData } from '@cdd/space/session/session'
+import { nodeFilter } from '@graph-app/filter/filter-selection'
 import type { SourceCallout } from '@source-view/source-callouts'
 
 import type { FilesStore } from './files-state'
 import { calloutsOf, fileAnswered } from './source-of-file'
 
-// The connector of the session's graph a step's callout follows: what the step invokes, or the example it observes.
-const CONNECTOR_OF: Partial<Record<SourceCallout['kind'], string>> = { call: 'invokes', example: 'observes' }
+// The file view's filters as the page sends them with each read of a file: the files its stages, practices and formats
+// list, none until the session's files are read, and the graph view's node filter as the session's graph takes it.
+export type FileViewFilters = { paths: string[] | null; nodeFilter: Record<string, unknown> }
 
-// The callouts a file view shows, in the rendered view and the source view alike: those the session answers for the
-// file (session.file), narrowed by the file view's filters as the graph view's trees are. A callout into a file of a
-// practice, stage or format turned off is left out, and so is a step's callout while the graph's node filter leaves out
-// its connector. The page keeps none of it: the files listed and the connectors chosen are the session's own answers.
+// The files a file view shows, read through the session with the file view's filters (session.file), in the rendered
+// view and the source view alike. Which callouts a file holds for those filters is the session's answer, decided in
+// Python by the filter that narrows the graph view's trees: the page sends the filters, draws the callouts answered,
+// and reads the open files again when a filter changes. It keeps no rule of its own.
 export class FileCallouts {
   constructor(
     private readonly store: FilesStore,
     private readonly session: SessionClientGenerated,
   ) {}
 
-  // What the filters are made of, each the same object until a filter changes, so a view draws again only then.
-  get filters(): readonly unknown[] {
+  // The filters sent with a read: the files the page lists and the node filter the person chose in the graph view.
+  get filters(): FileViewFilters {
     const { entries, rootFiles, graph } = this.store.state
-    return [entries, rootFiles, graph.filter.relationships]
+    return { paths: rootFiles ? entries.map(entry => entry.path) : null, nodeFilter: nodeFilter(graph.filter) }
   }
 
-  // The callouts of file the filters show.
-  shownOf(file: SessionFileData): SourceCallout[] {
-    return calloutsOf(file).filter(callout => this.shows(callout))
+  // What a file was read for: the same text until a filter changes, so the page reads its open files again only then.
+  get readFor(): string {
+    return JSON.stringify(this.filters)
   }
 
-  // The callouts of the file at path the filters show, read as the open file is read, with or without its rules. A
-  // session that does not answer the file fails the read, which the callout asking for it shows.
+  // The file at path as the session answers it for the filters, with its own rules, the working copy's, or neither. A
+  // session that does not answer the file fails the read.
+  async file(path: string, rules: boolean, crossFile: boolean): Promise<SessionFileData | null> {
+    const { paths, nodeFilter: chosen } = this.filters
+    return fileAnswered(await this.session.file(path, rules, crossFile, false, paths, chosen))
+  }
+
+  // The callouts of the file at path, read as the open file is read, which a section opened in place shows on its lines.
   async in(path: string): Promise<SourceCallout[]> {
     const { rules, crossFile } = this.store.state.reads
-    const file = fileAnswered(await this.session.file(path, rules, crossFile))
-    return file ? this.shownOf(file) : []
-  }
-
-  private shows(callout: SourceCallout): boolean {
-    const { entries, rootFiles, graph } = this.store.state
-    const connector = CONNECTOR_OF[callout.kind]
-    const connectors = graph.filter.relationships
-    if (connector && connectors.length && !connectors.includes(connector)) return false
-    const isOfAPractice = (rootFiles ?? []).some(entry => entry.path === callout.path && entry.fidelities.length > 0)
-    return !isOfAPractice || entries.some(entry => entry.path === callout.path)
+    const file = await this.file(path, rules, crossFile)
+    return file ? calloutsOf(file) : []
   }
 }

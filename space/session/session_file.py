@@ -23,6 +23,7 @@ from harness.markdown.markdown import MarkdownText
 from space.session.file_comments import PROCESSED, FileComment
 from space.session.file_manager import FileText
 from space.session.file_range import LineSpan, Range
+from space.session.file_view_filter import FileViewFilter
 from space.session.session_files import NamedPathNotFoundError
 
 if TYPE_CHECKING:
@@ -240,11 +241,13 @@ class SessionFile:
     session's knowledge graph holds the whole working copy and adds the rules only it finds, linking files and
     practices. Either read gives the folds. A file that is not there, such as one deleted or moved since a page listed
     it, is refused with *NamedPathNotFoundError*: a viewer shown no text would take it for an empty file. A file of more than
-    VIEWER_SHOWS_LINES lines is refused with *FileTooLongToShowError*."""
+    VIEWER_SHOWS_LINES lines is refused with *FileTooLongToShowError*. Its callouts and what its steps reach are those
+    shown, the file view's filters deciding which (*FileViewFilter*); a read that sends none holds every one."""
 
-    def __init__(self, session: Session, path: str, reads: RuleReads | None = None) -> None:
+    def __init__(self, session: Session, path: str, reads: RuleReads | None = None, shown: FileViewFilter | None = None) -> None:
         reads = reads or RuleReads()
         self._session = session
+        self._shown = shown or FileViewFilter(session)
         self._reads_rules = reads.rules
         self._cross_file = reads.cross_file
         self._reads_graph = reads.reads_graph
@@ -308,9 +311,9 @@ class SessionFile:
     @property
     @data_field
     def steps(self) -> list[FileStep]:
-        """Each step of a story test in this file that invokes or observes something, in line order, as the session's
-        graph links it; none while the viewer reads no rules, which never reads a graph, or while the graph holds no
-        Stories."""
+        """Each step of a story test in this file that invokes or observes something the file view's filters show, in
+        line order, as the session's graph links it; none while the viewer reads no rules, which never reads a graph,
+        or while the graph holds no Stories."""
         if not (self._reads_rules or self._cross_file):
             return []
         graph = self._session.graph
@@ -320,8 +323,10 @@ class SessionFile:
         return sorted((step for step in found if step.invokes or step.observes), key=lambda step: step.line)
 
     def _sources(self, graph: Graph, kind: str, node: Node) -> list[NodeSource]:
-        """What node reaches by kind, each with its source and the class it belongs to; a module's function belongs to none."""
-        owners = ((edge.child, str(edge.child.get_fact("owner", "") or "")) for edge in graph.edges.from_parent(kind, node) if edge.child.source is not None)
+        """What node reaches by kind that the file view's filters show, each with its source and the class it belongs
+        to; a module's function belongs to none."""
+        reached = (edge.child for edge in graph.edges.from_parent(kind, node) if edge.child.source is not None and self._shown.shows(kind, edge.child))
+        owners = ((child, str(child.get_fact("owner", "") or "")) for child in reached)
         return [NodeSource(child, owner="" if owner == MODULE_FUNCTION_HOLDER else owner) for child, owner in owners]
 
     def _holds(self, source: Source) -> bool:
@@ -331,8 +336,9 @@ class SessionFile:
     @property
     @data_field
     def callouts(self) -> list[FileCallout]:
-        """A callout for each markdown link in this file to another file, in line order: the section of the heading it
-        names, or the whole file when it names none, and what is missing when the file or the heading is not there.
+        """A callout for each markdown link in this file to another file the file view's filters show, in line order:
+        the section of the heading it names, or the whole file when it names none, and what is missing when the file
+        or the heading is not there.
         A file in another language, such as a story test whose steps link their domain terms, carries a callout only
         for a link to a file that is there, since its code can read as a link (``handlers[name](event)``)."""
         lines = enumerate(self.text.splitlines(), start=1)
@@ -344,14 +350,17 @@ class SessionFile:
         return [callout for callout in found if callout is not None]
 
     def _callout(self, link: FileLink) -> FileCallout | None:
-        """The callout of link, whose file is named from this one; none for a link out of the project, or one in code
-        to a file not there."""
+        """The callout of link, whose file is named from this one; none for a link out of the project, one in code to a
+        file not there, or one into a file the file view's filters leave out. A file not there is in no list, so no
+        filter hides the callout that says so."""
         target = posixpath.normpath(posixpath.join(posixpath.dirname(self._path), link.file))
         if target.startswith(".."):
             return None
         linked = self._session.session_files.read(target)
         if not linked.exists:
             return FileCallout(link, Range(target, LineSpan(0, 0), ""), f"{target} is not there") if self.language == "markdown" else None
+        if not self._shown.shows_file(target):
+            return None
         lines = self._lines_linked(linked, link.anchor)
         if lines is None:
             return FileCallout(link, Range(linked.path, LineSpan(0, 0), ""), f"{linked.path} has no heading #{link.anchor}")

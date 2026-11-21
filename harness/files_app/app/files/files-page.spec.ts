@@ -745,6 +745,74 @@ describe('Browse Files Without Reading Rules', () => {
   })
 })
 
+// Which callouts a file holds is the session's answer for the file view's filters (session.file paths and node_filter):
+// the page sends them with each read and reads its open files again when one changes.
+describe("Show The Callouts The File View's Filters Select", () => {
+  const lastRead = (server: FakeFilesServer) => server.posted('/file').at(-1)?.body
+
+  async function opened(): Promise<{ page: FilesPage; server: FakeFilesServer; stop: () => void }> {
+    const server = new FakeFilesServer()
+    server.rootFiles = ROOT_FILES
+    const page = new FilesPage(server, new FilesLink(`${STAGE_LINK}&file=.context/stories-story-map.md`))
+    const stop = page.start()
+    await settled()
+    return { page, server, stop }
+  }
+
+  describe('with a file open and the files of both practices listed', () => {
+    it('should send the files listed with the read of the open file', async () => {
+      const { page, server, stop } = await opened()
+      stop()
+      expect(lastRead(server)?.paths).toEqual(paths(page))
+    })
+  })
+
+  describe('that has DDD turned off', () => {
+    it("should read the open file again with the files then listed, DDD's left out", async () => {
+      const { page, server, stop } = await opened()
+      await page.guidance.togglePractice('ddd')
+      await settled()
+      stop()
+      expect([lastRead(server)?.paths, paths(page)].map(listed => (listed as string[]).includes('.context/ddd-bounded-context.md'))).toEqual([false, false])
+    })
+  })
+
+  describe("that has observes left out of the graph view's connectors", () => {
+    it('should read the open file again with the node filter chosen', async () => {
+      const { page, server, stop } = await opened()
+      await page.graph.filterTo({ ...page.state.graph.filter, relationships: ['invokes'] })
+      await settled()
+      stop()
+      expect(lastRead(server)?.node_filter).toEqual({ relationships: ['invokes'] })
+    })
+  })
+
+  describe('that has the graph view reading the graph for a connector left out', () => {
+    // The graph view's read as the page's state holds it: under way with the connector chosen, then its trees arrived.
+    async function reading(): Promise<{ page: FilesPage; server: FakeFilesServer; readsBefore: number; stop: () => void }> {
+      const { page, server, stop } = await opened()
+      const readsBefore = server.posted('/file').length
+      page.store.change(({ graph }) => ({ graph: { ...graph, isReading: true, filter: { ...graph.filter, relationships: ['invokes'] } } }))
+      await settled()
+      return { page, server, readsBefore, stop }
+    }
+
+    it('should wait for the graph, whose links say what a step invokes and observes', async () => {
+      const { server, readsBefore, stop } = await reading()
+      stop()
+      expect(server.posted('/file')).toHaveLength(readsBefore)
+    })
+
+    it('should read the open file again once the trees arrive', async () => {
+      const { page, server, readsBefore, stop } = await reading()
+      page.store.change(({ graph }) => ({ graph: { ...graph, isReading: false, trees: [] } }))
+      await settled()
+      stop()
+      expect(server.posted('/file').slice(readsBefore).map(post => post.body.node_filter)).toEqual([{ relationships: ['invokes'] }])
+    })
+  })
+})
+
 describe('View File In Source View', () => {
   // A cdd server lane older than the page, such as the pinned stable lane: its session.file answers what it knew then.
   class OlderLaneFilesServer extends FakeFilesServer {

@@ -4,14 +4,17 @@ import { calloutsWithin } from '@source-view/SourceView'
 import { CallCatalog, type FoldMember } from '@source-view/call-expansion'
 import type { SourceCallout } from '@source-view/source-callouts'
 
+import type { FileCallouts } from './file-callouts'
 import { FileSourceView } from './file-source-view'
 import { opensRendered, renderedFormOf, renderingOf, type RenderedForm, type Rendering } from './file-rendering'
 import { FILE_PATH, RenderedCallouts } from './rendered-callouts'
+import { calloutsOf } from './source-of-file'
 
 const NO_CALLOUTS: SourceCallout[] = []
 const NO_MEMBERS: FileViewProps['members'] = []
 
-type FileViewProps = ComponentProps<typeof FileSourceView>
+// What the source view takes, and callouts, which reads another file's callouts for a section opened in place.
+type FileViewProps = ComponentProps<typeof FileSourceView> & { callouts: FileCallouts }
 
 // Rendered and Source, the two ways a file with a rendered form shows; the one showing is pressed.
 function RenderedToggleView({ rendered, onChoose }: { rendered: boolean; onChoose: (rendered: boolean) => void }) {
@@ -61,8 +64,8 @@ function RenderedFileView({ path, rendering, shown, rendered }: { path: string; 
   )
 }
 
-// What opens the callouts of a rendered page in place: the callouts of another file as the file view's filters show
-// them, the calls the graph's members let an open callout reach, and Go to file. Made once for the open file and asking
+// What opens the callouts of a rendered page in place: the callouts of another file as the session answers them for the
+// file view's filters, the calls the graph's members let an open callout reach, and Go to file. Made once for the open file and asking
 // what the page holds now, so the graph's members arriving close no callout a person opened.
 function useRenderedCallouts({ callouts, members = NO_MEMBERS, onGoToFile }: Pick<FileViewProps, 'callouts' | 'members' | 'onGoToFile'>): RenderedCallouts {
   const within = useMemo(() => calloutsWithin(new CallCatalog(members as FoldMember[])), [members])
@@ -71,7 +74,7 @@ function useRenderedCallouts({ callouts, members = NO_MEMBERS, onGoToFile }: Pic
   return useMemo(() => new RenderedCallouts({ calloutsIn: path => now.current.callouts.in(path), within: (callout, stack) => now.current.within(callout, stack), goTo: callout => now.current.onGoToFile?.(callout) }), [])
 }
 
-function RenderableFileView({ form, ...props }: FileViewProps & { form: RenderedForm }) {
+function RenderableFileView({ form, callouts, ...props }: FileViewProps & { form: RenderedForm }) {
   const around = props.openAround ?? []
   const [isRendered, setRendered] = useState(() => opensRendered(form, around))
   // Lines asked to show once the file is open, such as a node selected in the graph view, show in the source view; the
@@ -80,11 +83,11 @@ function RenderableFileView({ form, ...props }: FileViewProps & { form: Rendered
   useEffect(() => {
     if (asked) setRendered(false)
   }, [asked])
-  const { file, callouts } = props
-  // The callouts the file view's filters show, on the rendered page as in the source view.
-  const shown = useMemo(() => (isRendered && form === 'markdown' ? callouts.shownOf(file) : NO_CALLOUTS), [isRendered, form, file, callouts, ...callouts.filters])
+  const { file } = props
+  // The callouts the session answered for the file view's filters, on the rendered page as in the source view.
+  const shown = useMemo(() => (isRendered && form === 'markdown' ? calloutsOf(file) : NO_CALLOUTS), [isRendered, form, file])
   const rendering = useMemo(() => (isRendered ? renderingOf(form, file.text, [...new Set(shown.map(callout => callout.line))]) : null), [isRendered, form, file.text, shown])
-  const rendered = useRenderedCallouts(props)
+  const rendered = useRenderedCallouts({ callouts, members: props.members, onGoToFile: props.onGoToFile })
   const toggle = <RenderedToggleView rendered={isRendered} onChoose={setRendered} />
   if (!rendering) return <FileSourceView {...props} toggle={toggle} />
   return (
@@ -98,8 +101,8 @@ function RenderableFileView({ form, ...props }: FileViewProps & { form: Rendered
 // An open file: a file with a rendered form (markdown, HTML, SVG, JSON) opens rendered, unless lines of it are asked to
 // show, with Rendered and Source to switch between the two; any other file opens in the source view alone. Both views
 // show the file's callouts and follow its links.
-export function FileView(props: FileViewProps) {
+export function FileView({ callouts, ...props }: FileViewProps) {
   const form = renderedFormOf(props.file.path)
   if (!form) return <FileSourceView {...props} />
-  return <RenderableFileView {...props} form={form} />
+  return <RenderableFileView {...props} callouts={callouts} form={form} />
 }

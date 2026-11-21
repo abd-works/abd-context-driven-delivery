@@ -4,7 +4,9 @@ Render copies the UxMap into a DrawioUxMap, whose screens and regions spell thei
 command line's state, and invokes `drawio_ux.mjs write`.
 Parse prefers the Site Map page for screens/transitions; each screen's layout, regions, controls, stories, and
 domain terms come from the Detailed IA page when present. The diagram shows screens, their regions, the labels of the
-controls a region holds, transitions, and each screen's stories and domain terms; beside what it shows it keeps, as
+controls a region holds, transitions, and, in the callout under each screen, the stories, scenarios, and steps the
+screen and each of its controls serve, each a link to where it is written when it has one, with the screen's domain
+terms; beside what it shows it keeps, as
 style keys on its cells (``uxLayout``, ``uxArea``, ``uxControls``, ``uxNav``), a screen's layout, a region's area, each
 control's type, and a transition's kind of navigation, so a drawing reads back what was drawn. A control's states and
 interactions, descriptions, content types, nav components, and the map's name are not drawn.
@@ -21,7 +23,8 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from harness.installation.json_file import JsonFile
-from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen, Transition
+from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen, ServesStories, Transition
+from cdd_guidance.practices.ux.model.story_link import KEY_SEPARATOR, StoryLink
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 
 _CLI = Path(__file__).with_name("drawio_ux.mjs")
@@ -41,7 +44,13 @@ _BUTTON = "button"
 _ACTION = "action"
 # The fill the command line gives a region's action strip.
 _ACTION_STRIP_FILL = "#f0f0f0"
-_STORIES, _TERMS = "stories:", "domain terms:"
+_TERMS = "domain terms:"
+# The heading a callout line lists each kind of thing served under, in the order the callout lists them.
+_SERVED_HEADINGS = {"stories": "Story", "scenarios": "Scenario", "steps": "Step"}
+# A callout line that lists what one control serves: `Add To Cart › Quantity serves steps: ...`.
+_CONTROL_LINE = re.compile(r"^(?P<by>.+?) serves (?P<kind>stories|scenarios|steps):\s*(?P<items>.*)$", re.IGNORECASE)
+# A link as a cell's label draws it, which reads back as the markdown link the other formats write.
+_ANCHOR = re.compile(r"<a\s+href=\"(?P<target>[^\"]*)\"[^>]*>(?P<text>.*?)</a>", re.IGNORECASE)
 # What a draw.io file holds when it is a UX map: the command line's own mark, or one of the two pages it draws.
 _UX_DRAWING_MARKS = ('host="drawio-ux"', 'name="Site Map"', 'name="Detailed IA"')
 _LINE_BREAK = re.compile(r"<br\s*/?>")
@@ -108,8 +117,28 @@ class CellStyle:
         return self.get(_CONTROLS_KEY).split(",") if _CONTROLS_KEY in self else []
 
 
-class DrawioControl(Control):
-    """A control as the Detailed IA page shows it: its label, in a row of its region or on the region's action strip."""
+class DrawnServed(ServesStories):
+    """What a screen or a control serves as the callout draws it: each story, scenario, and step a link to where it is
+    written when it has a target, else its key."""
+
+    def drawn(self, kind: str) -> list[str]:
+        """The label markup of each thing of kind this node serves."""
+        return [self._markup(link) for link in self.links_of(kind)]
+
+    def serve_listed(self, kind: str, items: str) -> None:
+        """Serve each thing of kind a callout line lists in items."""
+        for item in (item.strip() for item in items.split(_BESIDE)):
+            if item:
+                self._show(kind, item)
+
+    def _markup(self, link: StoryLink) -> str:
+        text = html.escape(link.key, quote=False)
+        return f'<a href="{html.escape(link.target)}">{text}</a>' if link.target else text
+
+
+class DrawioControl(Control, DrawnServed):
+    """A control as the Detailed IA page shows it: its label, in a row of its region or on the region's action strip,
+    and what it serves, in the callout under its screen."""
 
     @classmethod
     def from_cell(cls, cell: ET.Element) -> list["DrawioControl"]:
@@ -176,7 +205,7 @@ class DrawioRegion(Region):
                 "actions": [control.label for control in buttons]}
 
 
-class DrawioScreen(Screen):
+class DrawioScreen(Screen, DrawnServed):
     """A screen on the Site Map and Detailed IA pages, laid out in its column with the CLI layout its own is closest to."""
 
     @classmethod
@@ -233,17 +262,38 @@ class DrawioScreen(Screen):
             "col": column,
             "row": 0,
             "regions": [region.cli_record() for region in self.regions],
-            "stories": self.story_keys,
+            "stories": self.drawn("Story"),
+            "scenarios": self.drawn("Scenario"),
+            "steps": self.drawn("Step"),
             "terms": list(self.domain_terms or self.domain_concepts),
+            "served": self._served_by_controls(),
         }
+
+    def _served_by_controls(self) -> list[Dict[str, Any]]:
+        """One callout line for each kind of thing each control serves, under the control's region and name."""
+        return [
+            {"by": f"{region.name}{KEY_SEPARATOR}{control.name}", "kind": heading, "items": control.drawn(kind)}
+            for region in self.regions
+            for control in region.controls
+            for heading, kind in _SERVED_HEADINGS.items()
+            if control.links_of(kind)
+        ]
+
+    def control_at(self, place: str) -> Optional[Control]:
+        """The control a callout line names by its region and its own name, `Add To Cart › Quantity`."""
+        return next(
+            (control for region in self.regions for control in region.controls
+             if f"{region.name}{KEY_SEPARATOR}{control.name}" == place),
+            None,
+        )
 
 
 class Callout:
-    """The note the Detailed IA page draws under a screen: the stories the screen shows and the domain terms it names,
-    one line each."""
+    """The note the Detailed IA page draws under a screen: the stories, scenarios, and steps the screen serves and the
+    domain terms it names, one line each, then a line for each kind of thing each of its controls serves."""
 
     def __init__(self, cell: ET.Element) -> None:
-        self._lines = [_plain_text(line) for line in _LINE_BREAK.split(cell.get("value", ""))]
+        self._lines = [_plain_text(_ANCHOR.sub(r"[\g<text>](\g<target>)", line)) for line in _LINE_BREAK.split(cell.get("value", ""))]
 
     @classmethod
     def under(cls, box: ET.Element, detailed: ET.Element) -> Optional["Callout"]:
@@ -266,16 +316,23 @@ class Callout:
             return (0.0, 0.0)
         return (float(geometry.get("x", 0) or 0), float(geometry.get("y", 0) or 0))
 
-    def annotate(self, screen: Screen) -> None:
-        """Show on screen each story the callout lists, and attach each domain term it lists."""
-        for story in self._listed(_STORIES):
-            screen.show_story(story)
-        for term in self._listed(_TERMS):
-            screen.attach_domain_term(term)
+    def annotate(self, screen: "DrawioScreen") -> None:
+        """Give screen each story, scenario, and step the callout lists for it, attach each domain term it lists, and
+        give each control of screen what its own lines list."""
+        for heading, kind in _SERVED_HEADINGS.items():
+            screen.serve_listed(kind, self._listed(f"{heading}:"))
+        for term in self._listed(_TERMS).split(_BESIDE):
+            screen.attach_domain_term(term.strip())
+        for line in self._lines:
+            served = _CONTROL_LINE.match(line)
+            control = screen.control_at(served.group("by").strip()) if served is not None else None
+            if isinstance(control, DrawnServed):
+                control.serve_listed(_SERVED_HEADINGS[served.group("kind").lower()], served.group("items"))
 
-    def _listed(self, heading: str) -> list[str]:
+    def _listed(self, heading: str) -> str:
+        """What the line that starts with heading lists after it; nothing when the callout has no such line."""
         line = next((line for line in self._lines if line.lower().startswith(heading)), "")
-        return [item.strip() for item in line[len(heading):].split(_BESIDE) if item.strip()]
+        return line[len(heading):]
 
 
 class DrawioUxMap(UxMap):
@@ -416,8 +473,11 @@ class DrawioUxMap(UxMap):
 
 
 def _is_annotation(name: str) -> bool:
+    """Whether a cell's text is a callout's: it starts with what a screen serves, or lists domain terms or what a
+    control serves."""
     lower = name.lower()
-    return lower.startswith(_STORIES) or _TERMS in lower
+    starts = any(lower.startswith(f"{heading}:") for heading in _SERVED_HEADINGS)
+    return starts or _TERMS in lower or any(f" serves {heading}:" in lower for heading in _SERVED_HEADINGS)
 
 
 

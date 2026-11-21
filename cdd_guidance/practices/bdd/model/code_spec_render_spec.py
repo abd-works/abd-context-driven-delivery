@@ -38,6 +38,26 @@ with description("a cart"):
             expect(self.cart.items).to(equal(["apple"]))
 '''
 
+_CART_JAVASCRIPT = """\
+import { beforeEach, describe, expect, it } from "vitest";
+
+import { Cart } from "../src/cart.js";
+
+describe("a cart", () => {
+  let cart;
+
+  beforeEach(() => {
+    cart = new Cart();
+  });
+
+  describe("that has been created", () => {
+    it("should hold no items", () => {
+      expect(cart.items).toEqual([]);
+    });
+  });
+});
+"""
+
 _CART_TYPESCRIPT = """\
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -164,6 +184,34 @@ with description("a spec rendered to code"):
             with context("that is rendered back to python"):
                 with it("should write the spec back as it was read"):
                     expect(_render("python", _HAND_WRITTEN_PYTHON, "python")).to(equal(_HAND_WRITTEN_PYTHON))
+
+        with context("that is rendered to javascript"):
+            with before.each:
+                self.rendered = _render("javascript", _CART_PYTHON, "python")
+
+            with it("should carry each python test body commented out inside its it"):
+                expect(self.rendered).to(contain(f"      // {_PYTHON_ASSERT}"))
+
+            with it("should open with javascript imports, not the python ones"):
+                expect(self.rendered.splitlines()[0]).to(equal('import { describe, it } from "vitest";'))
+
+            with it("should mark each it as still to write"):
+                expect(self.rendered.count("// BDD: SIGNATURE")).to(equal(2))
+
+    with context("that was read from a javascript spec"):
+        with context("that is rendered back to javascript"):
+            with it("should write the spec back as it was read"):
+                expect(_render("javascript", _CART_JAVASCRIPT, "javascript")).to(equal(_CART_JAVASCRIPT))
+
+        with context("that is taken to typescript and back"):
+            with it("should come back to javascript as it was written"):
+                typescript = _render("typescript", _CART_JAVASCRIPT, "javascript")
+                expect(_render("javascript", typescript, "typescript")).to(equal(_CART_JAVASCRIPT))
+
+        with context("that is rendered to python"):
+            with it("should keep the describe tree"):
+                python = _render("python", _CART_JAVASCRIPT, "javascript")
+                expect(python).to(contain('with description("a cart"):\n'))
 
     with context("that was read from a typescript spec"):
         with context("that is rendered back to typescript"):

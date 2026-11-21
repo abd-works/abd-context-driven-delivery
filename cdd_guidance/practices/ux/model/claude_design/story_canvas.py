@@ -204,7 +204,7 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
         found: List[str] = []
         for screen in self.screen_map.screens:
             if screen.prototype and Path(screen.prototype).name == Path(name).name:
-                found += [story for story in screen.story_keys if story not in found]
+                found += [link.key for link in screen.story_links if link.key not in found]
         return found
 
     def _context_panel(self, focus: List[str], height: int) -> str:

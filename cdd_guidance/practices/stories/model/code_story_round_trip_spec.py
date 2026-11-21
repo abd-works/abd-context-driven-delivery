@@ -7,7 +7,6 @@ from expects import equal, expect
 from mamba import before, context, description, it
 
 from cdd_guidance.practices.stories.model.fixtures.round_trip_story_map import outline, round_trip_story_map
-from cdd_guidance.practices.stories.model.java.java_story_model import JavaStoryModel
 from cdd_guidance.practices.stories.model.javascript.javascript_story_model import JavaScriptStoryModel
 from cdd_guidance.practices.stories.model.python.python_story_model import PythonStoryModel
 from cdd_guidance.practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
@@ -33,7 +32,3 @@ with description("a story map written as story tests") as self:
     with context("in JavaScript"):
         with it("should read back every epic, story, kind, actor, background, and scenario"):
             expect(_read_back(JavaScriptStoryModel)).to(equal(self.expected))
-
-    with context("in Java"):
-        with it("should read back every epic, story, kind, actor, background, and scenario"):
-            expect(_read_back(JavaStoryModel)).to(equal(self.expected))

@@ -77,10 +77,14 @@ control:
   controlType: string
   label?: string
   states?: [string]
+  shows?: [story]
+  showsScenarios?: [scenario]
+  showsSteps?: [step]
   interactions?: [interaction]
   where:
     - id is the region id, then this control name, joined by dots
     - controlType is the widget kind on the screen
+    - shows, showsScenarios and showsSteps are the stories, scenarios and steps this control serves; each one records shownOn this control
   rules:
     - controls-match-interaction-decisions
     - brand-is-opt-in

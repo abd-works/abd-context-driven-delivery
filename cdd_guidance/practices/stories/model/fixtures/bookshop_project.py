@@ -27,6 +27,9 @@ class BookshopProject:
         self.root = Path(self._folder.name).resolve() / "bookshop"
         shutil.copytree(_BOOKSHOP, self.root)
         self.graph = Graph()
+        self._load(files, practices)
+
+    def _load(self, files: tuple[str, ...], practices: tuple[str, ...]) -> None:
         self.graph.load_files(str(self.root), list(practices), list(files))
 
     @property
@@ -49,3 +52,40 @@ class BookshopProject:
     def node_named(self, type: str, name: str, file: str = ""):
         """Stories' nodes of type called name, read from file when one is given."""
         return [node for node in self.stories.nodes(type) if node.name == name and (not file or node.source.file == file)]
+
+
+class BookshopWorkingCopy(BookshopProject):
+    """A copy of the Bookshop project whose graph loaded the whole working copy, as a session's graph does, so every
+    rule validate runs is checked on it, the rule that content conforms to its schema among them. ``rewritten`` changes the copy before the load: each
+    file named from the project's root, with the text to take out and the text to put in its place; ``removed`` names
+    the files the copy is to be without."""
+
+    def __init__(
+        self,
+        practices: tuple[str, ...] = PRACTICES,
+        rewritten: dict[str, tuple[str, str]] | None = None,
+        removed: tuple[str, ...] = (),
+    ) -> None:
+        self._rewritten = rewritten or {}
+        self._removed = removed
+        super().__init__(practices=practices)
+
+    def _load(self, files: tuple[str, ...], practices: tuple[str, ...]) -> None:
+        for file, (old, new) in self._rewritten.items():
+            path = self.root / file
+            path.write_text(path.read_text(encoding="utf-8").replace(old, new), encoding="utf-8")
+        for file in self._removed:
+            (self.root / file).unlink()
+        self.graph.load_working_copy(str(self.root), {key: str(self.root) for key in practices}, force=True)
+
+    def findings(self, rule: str) -> list[str]:
+        """Each message the rule called rule recorded on Stories' nodes, after the graph has checked the practice as
+        validate does."""
+        self.stories.rule_run.check()
+        entries = (node.rules.entries.get(rule) for node in self.stories.nodes())
+        return [violation.message for entry in entries for violation in getattr(entry, "violations", [])]
+
+    def observed_by(self, step_name: str, file: str) -> list[str]:
+        """The names of the examples the step called step_name in file observes."""
+        steps = [node for node in self.stories.nodes() if node.name == step_name and node.source.file == file]
+        return sorted(edge.child.name for step in steps for edge in self.graph.edges.from_parent("observes", step))

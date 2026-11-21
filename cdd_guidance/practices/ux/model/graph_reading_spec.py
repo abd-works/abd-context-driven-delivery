@@ -25,6 +25,18 @@ _DOMAIN_MODEL = (
     "#### Book <<Aggregate Root>> <<Entity>>\n\n------\n+ title: str\n----\n+ rename(title: str): Book\n"
 )
 
+_STORY_FILE = "story_tests/sell-books/browse-books/browse_books_story.test.md"
+# Each association as a mockup writes it: a markdown link whose target is taken from the folder of the file it is in.
+_STORY_LINK = f"[Browse Book List](../{_STORY_FILE}#story-browse-book-list)"
+_SCENARIO_LINK = f"[Browse Book List › List every book](../{_STORY_FILE}#scenario-list-every-book)"
+_STEP_LINK = f"[Browse Book List › List every book › every book is listed](../{_STORY_FILE}#scenario-list-every-book)"
+# The same scenario's name with a target no story file is at, and with the heading of another scenario.
+_LINK_TO_NO_FILE = "[Browse Book List › List every book](../story_tests/sell-books/none_story.test.md#scenario-list-every-book)"
+_LINK_TO_NO_HEADING = f"[Browse Book List › List every book](../{_STORY_FILE}#scenario-list-no-book)"
+# A target written from the project's folder, and one that names the story's file with no heading.
+_LINK_FROM_PROJECT = f"[Browse Book List]({_STORY_FILE}#story-browse-book-list)"
+_LINK_TO_FILE = f"[Browse Book List › List every book](../{_STORY_FILE})"
+
 _UX_MAP = {
     "name": "Bookshop",
     "scope": "Browse Books",
@@ -45,6 +57,9 @@ _UX_MAP = {
                             "name": "Open book",
                             "control_type": "button",
                             "label": "Open",
+                            "story_names": [_STORY_LINK],
+                            "scenario_names": [_SCENARIO_LINK, _LINK_TO_NO_FILE, _LINK_TO_NO_HEADING],
+                            "step_names": [_STEP_LINK],
                             "interactions": [{"name": "open", "trigger": "click", "effect": "shows the book", "destination": "Book Details"}],
                         },
                         {
@@ -62,7 +77,7 @@ _UX_MAP = {
             ],
         },
         {"name": "Home", "layout": "stack", "story_names": ["View Book", "Wish For Book"], "domain_terms": ["Shelf"], "regions": []},
-        {"name": "Book Details", "layout": "stack", "regions": []},
+        {"name": "Book Details", "layout": "stack", "story_names": [_LINK_FROM_PROJECT], "scenario_names": [_LINK_TO_FILE], "regions": []},
     ],
     "transitions": [{"name": "Open book", "from_screen": "Book List", "to_screen": "Book Details", "trigger": "Open book", "nav_type": "action"}],
     "content_types": [{"name": "Book Card", "hierarchy": "Book List > Book"}],
@@ -88,6 +103,17 @@ _SCENARIOS = (
     "*Given* a Customer\n*When* the Customer opens the book list\n*Then* every book is listed\n"
 )
 
+# A mockup's board: the screen Book List, whose region Books holds the control Search, which serves a scenario.
+_MOCKUP_BOARD = json.dumps({
+    "v": 1, "title": "Browse Books", "order": ["screen.a", "region.body.b", "control.c"],
+    "elements": {
+        "screen.a": {"type": "container", "text": "Book List", "x": 0, "y": 0, "w": 400, "h": 400},
+        "region.body.b": {"type": "container", "text": "Books", "x": 20, "y": 60, "w": 360, "h": 300},
+        "control.c": {"type": "shape", "text": f"**Search**\n*text*\nScenarios: {_SCENARIO_LINK}", "x": 40, "y": 120, "w": 300, "h": 80},
+    },
+}, indent=1)
+_BOARD_FILE = "bookshop/browse-books.whiteboard"
+
 _BOOK_CODE = "class Book:\n    @property\n    def title(self) -> str:\n        return self._title\n"
 
 _FILES = {
@@ -100,6 +126,7 @@ _FILES = {
     "bookshop/.context/ux-context.md": "# UX context\n\nScope: Browse Books\n\n## Notes\n- Deferred epic: Review Books.\n",
     "bookshop/.context/story-map.drawio": _STORY_MAP_DRAWING,
     "bookshop/package.json": '{"name": "bookshop"}\n',
+    _BOARD_FILE: _MOCKUP_BOARD,
 }
 _MAP_FILE = "bookshop/ux-map.json"
 
@@ -144,8 +171,19 @@ with description("a UX map read into the graph") as self:
 
         with it("should hold a map for each file a UX map is written in"):
             expect(sorted(node.source.file for node in self.shop.ux.nodes("UxMap"))).to(equal([
-                "bookshop/.context/information-architecture.drawio", "bookshop/.context/ux-context.md", _MAP_FILE,
+                "bookshop/.context/information-architecture.drawio", "bookshop/.context/ux-context.md", _BOARD_FILE, _MAP_FILE,
             ]))
+
+        with it("should hold the screen, region and control a mockup's board draws"):
+            expect((self.shop.names("Screen", _BOARD_FILE), self.shop.names("Region", _BOARD_FILE), self.shop.names("Control", _BOARD_FILE))).to(
+                equal((["Book List"], ["Books"], ["Search"]))
+            )
+
+        with it("should keep what a control serves as the file writes it"):
+            expect(self.shop.node("Control", "Open book").get_fact("scenario_keys")).to(equal([_SCENARIO_LINK, _LINK_TO_NO_FILE, _LINK_TO_NO_HEADING]))
+
+        with it("should join a control to no scenario while the graph reads no Stories"):
+            expect(self.shop.linked("showsScenarios", self.shop.node("Control", "Open book"))).to(equal([]))
 
         with it("should read no map from a drawing or a JSON file of another kind"):
             files = {node.source.file for node in self.shop.ux.nodes()}
@@ -212,6 +250,29 @@ with description("a UX map read into the graph") as self:
 
         with it("should join no screen to a story the story map does not hold"):
             expect(self.shop.linked("shows", self.shop.node("Screen", "Home"))).to(equal([("Story", "View Book")]))
+
+        with it("should join a control to the story its link is written at"):
+            expect(self.shop.linked("shows", self.shop.node("Control", "Open book"))).to(equal([("Story", "Browse Book List")]))
+
+        with it("should join a control to the scenario its link is written at, and to none for a link to no file or to no heading"):
+            expect(self.shop.linked("showsScenarios", self.shop.node("Control", "Open book"))).to(equal([("Scenario", "List every book")]))
+
+        with it("should join a control to the step with its text under the scenario its link is written at"):
+            steps = self.shop.graph.edges.from_parent("showsSteps", self.shop.node("Control", "Open book"))
+            expect([(edge.child.type, edge.child.get_fact("text")) for edge in steps]).to(equal([("Then", "every book is listed")]))
+
+        with it("should join each scenario to the controls and screens it is shown on"):
+            scenario = next(node for node in self.shop.graph.practice("stories").reading.in_graph.nodes("Scenario") if node.name == "List every book")
+            expect(sorted(self.shop.linked("shownOn", scenario))).to(equal([("Control", "Open book"), ("Control", "Search"), ("Screen", "Book Details")]))
+
+        with it("should join a screen to the story a link written from the project's folder names"):
+            expect(self.shop.linked("shows", self.shop.node("Screen", "Book Details"))).to(equal([("Story", "Browse Book List")]))
+
+        with it("should join a screen to the scenario of a linked file that has its key, when the link names no heading"):
+            expect(self.shop.linked("showsScenarios", self.shop.node("Screen", "Book Details"))).to(equal([("Scenario", "List every book")]))
+
+        with it("should join a control drawn on a mockup's board to the scenario it serves"):
+            expect(self.shop.linked("showsScenarios", self.shop.node("Control", "Search", _BOARD_FILE))).to(equal([("Scenario", "List every book")]))
 
         with it("should join a screen to the domain class each of its domain terms names"):
             expect([name for _kind, name in self.shop.linked("domainTerms", self.shop.node("Screen", "Book List"))]).to(equal(["Book"]))

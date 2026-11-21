@@ -42,7 +42,7 @@ class Render(GuidanceAction):
         format: the target channel, such as python, markdown, or drawio.
         paths: a file, a list of files, or a folder, named from the project's root or absolute. Required on every call. Pass paths so this action reads locally. Do not pass the document body in content on MCP. A path that is not there, or not under the session's root, is refused, and so is an empty file.
         content: in-process text when paths is empty. Leave this empty on an MCP call.
-        source: the format content is already in. Use sketch for a sketch file. Otherwise markdown, python, typescript, java, javascript, json, or drawio. md is markdown. Omit source when content is already the current format, or for a file whose extension says its format, such as .drawio, .whiteboard, or .py."""
+        source: the format content is already in. Use sketch for a sketch file. Otherwise markdown, python, typescript, javascript, json, or drawio. md is markdown. Omit source when content is already the current format, or for a file whose extension says its format, such as .drawio, .whiteboard, or .py."""
         self._work_on(guidance)
 
         def on(worked: WorkedGuidance) -> object:

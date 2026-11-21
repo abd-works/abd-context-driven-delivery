@@ -105,7 +105,7 @@ export class FilesGraph {
       await this.readOpenBranches(readFor)
     } catch (failure) {
       this.store.change(({ graph }) => ({ graph: { ...graph, trees: [], isReading: false, problem: `The graph did not read: ${reasonOf(failure)}` } }))
-      this.notices.fail(`The Files app did not read the session's graph: ${reasonOf(failure)}`, 'Showing the graph view, calling session.graph_trees')
+      this.notices.fail(`The Files app did not read the session's graph: ${reasonOf(failure)}`, 'Showing the graph view, calling session.graph_trees', { kind: 'graph_view' })
       return
     }
     try {
@@ -113,7 +113,7 @@ export class FilesGraph {
       this.store.change(({ graph }) => (graph.readFor === readFor ? { graph: { ...graph, members } } : {}))
     } catch (failure) {
       this.store.change(({ graph }) => ({ graph: { ...graph, members: [] } }))
-      this.notices.fail(`The Files app did not read the graph's members: ${reasonOf(failure)}`, 'Showing the graph view, calling session.graph_members')
+      this.notices.fail(`The Files app did not read the graph's members: ${reasonOf(failure)}`, 'Showing the graph view, calling session.graph_members', { kind: 'graph_view' })
     }
     try {
       const { filter } = this.store.state.graph
@@ -121,7 +121,7 @@ export class FilesGraph {
       this.store.change(({ graph }) => (graph.readFor === readFor ? { graph: { ...graph, choices } } : {}))
     } catch (failure) {
       this.store.change(({ graph }) => ({ graph: { ...graph, choices: NO_CHOICES } }))
-      this.notices.fail(`The Files app did not read the graph's node filter: ${reasonOf(failure)}`, 'Showing the graph view, calling session.graph_filter_choices')
+      this.notices.fail(`The Files app did not read the graph's node filter: ${reasonOf(failure)}`, 'Showing the graph view, calling session.graph_filter_choices', { kind: 'graph_view' })
     }
   }
 
@@ -146,7 +146,7 @@ export class FilesGraph {
       const filter = isNewTypes ? chosen(next, choices) : next
       this.store.change(({ graph }) => ({ graph: { ...graph, filter, choices } }))
     } catch (failure) {
-      this.notices.fail(`The Files app did not filter the graph: ${reasonOf(failure)}`, 'Filtering the graph view, calling session.graph_filter_choices')
+      this.notices.fail(`The Files app did not filter the graph: ${reasonOf(failure)}`, 'Filtering the graph view, calling session.graph_filter_choices', { kind: 'graph_view' })
     }
   }
 
@@ -185,7 +185,7 @@ export class FilesGraph {
       this.store.change(({ graph }) => ({ graph: { ...graph, selected } }))
       await this.showNodes(selected)
     } catch (failure) {
-      this.notices.fail(`The Files app did not open the file of ${foldOut.title}: ${reasonOf(failure)}`, 'Go to file on a fold-out, calling session.graph_node_ranges')
+      this.notices.fail(`The Files app did not open the file of ${foldOut.title}: ${reasonOf(failure)}`, 'Go to file on a fold-out, calling session.graph_node_ranges', { kind: 'file_display' })
     }
   }
 
@@ -226,7 +226,7 @@ export class FilesGraph {
       const branch = await this.session.graphBranch(entry.node_id, this.paths, this.nodeFilter)
       if (branch) this.store.change(({ graph }) => ({ graph: { ...graph, branches: { ...graph.branches, [entry.node_id]: branch } } }))
     } catch (failure) {
-      this.notices.fail(`The Files app did not open ${entry.name} in the graph: ${reasonOf(failure)}`, 'Opening a node in the graph view, calling session.graph_branch')
+      this.notices.fail(`The Files app did not open ${entry.name} in the graph: ${reasonOf(failure)}`, 'Opening a node in the graph view, calling session.graph_branch', { kind: 'graph_view' })
     }
   }
 
@@ -244,7 +244,7 @@ export class FilesGraph {
       this.store.change(({ graph }) => ({ graph: { ...graph, selected } }))
       await this.showNodes(selected)
     } catch (failure) {
-      this.notices.fail(`The Files app did not open ${entry.name}: ${reasonOf(failure)}`, 'Selecting a node in the graph view, calling session.graph_node_ranges')
+      this.notices.fail(`The Files app did not open ${entry.name}: ${reasonOf(failure)}`, 'Selecting a node in the graph view, calling session.graph_node_ranges', { kind: 'file_display' })
     }
   }
 

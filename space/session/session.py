@@ -26,8 +26,10 @@ from space.session.practice_session_output import PracticeSessionOutput
 from space.session.practice_outputs import PracticeOutputs
 from space.session.progress_cache import ProgressCache
 from space.session.file_graphs import FileGraphs
+from space.session.format_alignment import SessionAlignmentTools
 from space.session.guidance_selection import GuidanceSelection
 from space.session.guidance_version import GuidanceVersion
+from space.session.file_view_filter import FileViewFilter
 from space.session.session_file import RuleReads, SessionFile
 from space.session.session_explorer import SessionExplorer
 from space.session.session_files import SessionFiles
@@ -112,9 +114,9 @@ class SessionFileTools:
     @mcp
     @agent_tool
     @noSessionLog
-    def file(self, path: str, rules: bool = False, cross_file: bool = False, folds: bool = False) -> SessionFile:
-        """Return path, a file named as read_file names it, as the viewer shows it, refused when the file is not there, such as one deleted or moved since a page listed it, or is longer than the viewer shows: its text and language, the comments on it, and with any of folds, rules or cross_file the folds of its classes, operations, and properties. With folds alone, the folds and no broken rule. With rules, the rules it breaks read on its own, under a second; with cross_file, the rules only the whole working copy finds broken in it, linking files and practices, which takes far longer. Each on its range of lines. All off, browsing never reads a graph."""
-        return SessionFile(self, path, RuleReads(rules, cross_file, folds))
+    def file(self, path: str, rules: bool = False, cross_file: bool = False, folds: bool = False, paths: list[str] | None = None, node_filter: dict | None = None) -> SessionFile:
+        """Return path, a file named as read_file names it, as the viewer shows it, refused when the file is not there, such as one deleted or moved since a page listed it, or is longer than the viewer shows: its text and language, the comments on it, and with any of folds, rules or cross_file the folds of its classes, operations, and properties. With folds alone, the folds and no broken rule. With rules, the rules it breaks read on its own, under a second; with cross_file, the rules only the whole working copy finds broken in it, linking files and practices, which takes far longer. Each on its range of lines. All off, browsing never reads a graph. paths and node_filter are the file view's filters, as graph_trees takes them: the files the page lists for the stages, practices and formats chosen, and the graph view's node filter (practices, types, relationships). They decide which callouts the answer holds, by the graph's own filter: a link into a file of a stage, practice or format turned off is left out, a file no fidelity declares always shows, and what a step invokes or observes is left out while the node filter leaves out that connector or the node type it reaches. Neither sent, the answer holds every callout."""
+        return SessionFile(self, path, RuleReads(rules, cross_file, folds), FileViewFilter(self, paths, node_filter))
 
     @mcp
     @agent_tool
@@ -332,7 +334,7 @@ class SessionDecisionTools:
 @identity("session_file")
 @language_adapter(language="typescript")
 @agent_toolset
-class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionLogTools, SessionDecisionTools):
+class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionAlignmentTools, SessionLogTools, SessionDecisionTools):
     """One named piece of work in a project. Its record, the session.json the board reads, is kept on main in
     ``.sessions/{name}/`` (``record_folder``); everything else it writes goes to its work folder, the same folder in its
     ticket's worktree when it has one (``work_folder``). It holds where it works, the practices it

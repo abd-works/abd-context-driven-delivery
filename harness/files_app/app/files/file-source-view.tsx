@@ -10,12 +10,11 @@ import type { Monaco } from '@monaco-editor/react'
 import { memberLines } from './code-outline'
 import { CommentCardView, CommentComposerView } from './comment-box-view'
 import { placeUnder, useAddCommentAction, useAddToContextAction, useFileMarks, useMarkerPresses } from './editor-comments'
-import type { FileCallouts } from './file-callouts'
 import type { CommentLines, FileCommentsActions } from './file-comments-actions'
 import { selectedMarks } from './file-marks'
 import { keepWrap, storedWrap, type ThemeFailure } from './files-theme'
 import type { FilesFoldKeys } from './files-fold-keys'
-import { expandedLines, isStoryTest, monacoLanguageOf, rulesOf, sourceOf, violationFocusOf } from './source-of-file'
+import { calloutsOf, expandedLines, isStoryTest, monacoLanguageOf, rulesOf, sourceOf, violationFocusOf } from './source-of-file'
 
 // How far down the window the first line asked to show sits once the page scrolls to it: near the top, so it is plain
 // where the page went, with a line or two above it for context.
@@ -54,7 +53,6 @@ function useMembersFolded(editor: SourceEditorInstance | null, text: string, lan
 // step invokes and observes opens on the step's line instead. toggle, for a file with a rendered form, leads its bar.
 export function FileSourceView({
   file,
-  callouts: shown,
   actions,
   onAddToContext,
   openAround = [],
@@ -66,7 +64,6 @@ export function FileSourceView({
   toggle,
 }: {
   file: SessionFileData
-  callouts: FileCallouts
   actions: FileCommentsActions
   onAddToContext: (lines: CommentLines) => void
   openAround?: SourceLines[]
@@ -94,8 +91,9 @@ export function FileSourceView({
     setWrap(!wrap)
   }
   const source = useMemo(() => sourceOf(file, members), [file, members])
-  // The file's callouts the file view's filters show: read again when a practice, a format or a connector changes.
-  const callouts = useMemo(() => shown.shownOf(file), [file, shown, ...shown.filters])
+  // The file's callouts as the session answered them for the file view's filters; the page reads the file again when a
+  // practice, a format or a connector changes.
+  const callouts = useMemo(() => calloutsOf(file), [file])
   // A node selected through a connector shows on the line of its holder that uses it, which its fold-out opens under.
   const expandLines = useMemo(() => expandedLines(callouts, expanded, openAround), [callouts, expanded, openAround])
   const shownAround = useMemo(() => (expandLines.length ? expandLines.map(line => ({ start: line, end: line })) : openAround), [expandLines, openAround])

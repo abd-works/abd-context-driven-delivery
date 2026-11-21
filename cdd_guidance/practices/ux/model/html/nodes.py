@@ -239,8 +239,9 @@ class HtmlUxMap(JsonUxMap):
         hidden = " hidden" if index else ""
         regions = "".join(self._region_html(region) for region in screen.regions)
         stories_attr = ""
-        if screen.story_keys:
-            joined = _text(", ".join(screen.story_keys))
+        stories = [link.key for link in screen.story_links]
+        if stories:
+            joined = _text(", ".join(stories))
             stories_attr = f' data-for-story="{joined}"'
         layout_attr = f' data-layout="{_text(screen.layout)}"' if screen.layout else ""
         return (
@@ -249,7 +250,7 @@ class HtmlUxMap(JsonUxMap):
             f"<h2>{_text(screen.name)}</h2>"
             f'<p class="layout">{_text(screen.layout) or "-"}</p>'
             f'<div class="regions">{regions}</div>'
-            f'<p class="screen-stories">Stories: {_text(" . ".join(screen.story_keys)) or "-"}</p>'
+            f'<p class="screen-stories">Stories: {_text(" . ".join(stories)) or "-"}</p>'
             f"</article>"
         )
 
