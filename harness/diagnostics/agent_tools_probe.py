@@ -93,7 +93,7 @@ class AgentToolsProbe:
         server = self.host.checkout_server
         refs = set(self.toolset_refs)
         served = {name: tool for name, tool in (*server.tools.items(), *server.prompts.items())}
-        return sorted(name for name, tool in served.items() if name in installed and tool.registration_name in refs)
+        return sorted(name for name, tool in served.items() if name in installed and str(tool.toolset.reference) in refs)
 
     def run(self) -> str:
         """Ping, invoke, and heavy invoke, each phase written to diagnostics.json; the reply holds each phase's colour."""

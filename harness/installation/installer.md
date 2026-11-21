@@ -7,7 +7,7 @@ Install annotated toolsets into the IDE path — skills, commands, rules, MCP, a
 Use slash **`/install`** (command — not a skill, not MCP). Deployed **commands** and **skills**:
 
 - ``@agent_instructions`` with ``@mcp``: short docstring in the slash/skill file; MCP invoke tail (full instructions stay on the MCP prompt).
-- ``@agent_tool`` **without** ``@mcp``: Shell invoke tail — ``scripts/{deploy_name}.py`` when present, else ``python -c`` via ``AgentToolSet.instantiate`` (e.g. ``/install`` → ``scripts/install.py``).
+- ``@agent_tool`` **without** ``@mcp``: Shell invoke tail — ``scripts/{deploy_name}.py`` when present, else ``python -c`` via ``ToolsetReference.parsed(...).made()`` (e.g. ``/install`` → ``scripts/install.py``).
 - ``@agent_tool`` **with** ``@mcp``: MCP invoke tail on the same skill/command file (no Shell tail).
 
 Every full install also re-deploys the Installer toolset last so the slash commands stay current.
@@ -18,7 +18,7 @@ Every chat in every project talks to **one cdd server**, installed once under `~
 
 When install runs **inside** the cdd server itself, the installer skips standing up a second MCP host and starting the server, so it does not reload every toolset during an unrelated tool request.
 
-**After install finishes, read the diagnostic report back to the user.** `install` always runs `diagnose_after_install` (install-channel counts and runtime status only) and appends to `{install_path}/diagnostics.json` (for this repo, `.cursor/diagnostics.json`). It does not run guidance instruction or action probes — use `/guidance-diagnostics` for those. The CLI only prints reports that start with `!` (red); green and yellow stay in the log. Open the latest `installs[]` entry: give the overall `color`, paste the full `diagnose_install` `report` (channel deltas, any new/deleted items, **cdd server**, **hooks registered (events)**, **hook handlers (operations)**), and call out red or yellow. If you ran install in the shell, read that file or run `Installer(...).diagnose_install()` against the same install path — do not leave the user without the summary.
+**After install finishes, read the diagnostic report back to the user.** Every install run (*InstallRun*) ends by diagnosing what it deployed (install-channel counts and each registered channel's status only) and appends that diagnosis to `{install_path}/diagnostics.json` (for this repo, `.cursor/diagnostics.json`). It does not run guidance instruction or action probes — use `/guidance-diagnostics` for those. The CLI only prints reports that start with `!` (red); green and yellow stay in the log. Open the latest `installs[]` entry: give the overall `color`, paste the full `diagnose_install` `report` (channel deltas, any new/deleted items, **cdd server**, **hooks registered (events)**, **hook handlers (operations)**), and call out red or yellow. If you ran install in the shell, read that file or run `Installer(...).diagnose_install()` against the same install path — do not leave the user without the summary.
 
 ### When install fails
 
@@ -42,7 +42,7 @@ Remove files written by the previous install for this IDE path. Slash **`/clean`
 
 Compare this install with the last entry in `diagnostics.json` on the install path. Report green, yellow, or red, each channel as previous -> current (delta), every new or deleted item, whether the cdd server is running, and which hook events and handler operations are registered on the install path.
 
-`diagnose_after_install` is the last install step. It runs `diagnose_install` and appends one install section to `diagnostics.json`.
+Diagnosing is the last step of every install run: the run's *InstallDiagnosis*, what it deployed against the last install, is appended as one install section to `diagnostics.json` (`InstallDiagnostics.record`), and a red one is printed. `diagnose_install` reports the same diagnosis again.
 
 - Green: surface change is at most 10%.
 - Yellow: surface change is at most 50%.

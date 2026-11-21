@@ -110,7 +110,7 @@ clean-engineering-model (Skill)
                  -> load_document content paths
                  -> each
                       -> listed
-                           -> AgentToolSet.instantiate
+                           -> ToolsetReference.parsed(entry).made(**context)
                                 -> CleanEngineering fidelity="model"
                       -> each Guidance, handed over as the fidelity the action works at on it
                            -> FidelityGuidance.render_files format="drawio" paths

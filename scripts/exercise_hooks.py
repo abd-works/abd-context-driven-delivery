@@ -119,14 +119,14 @@ class HookExercise:
 
     def _practices(self) -> list[PracticeGuidance]:
         """Every installed practice with fidelities, found the way the installer finds toolsets."""
-        from harness.agent_tools.agent_tools import AgentToolSet
+        from harness.agent_tools.agent_tools import ToolsetReference
         from harness.guidance.guidance import PracticeGuidance
         from harness.installation.repository_toolsets import RepositoryToolsets
 
         practice_classes = [
             toolset for toolset in RepositoryToolsets(self.repo).classes() if issubclass(toolset, PracticeGuidance)
         ]
-        practices = [AgentToolSet.instantiate(toolset) for toolset in practice_classes]
+        practices = [ToolsetReference.of(toolset).made() for toolset in practice_classes]
         return [practice for practice in practices if practice.fidelities.entries]
 
     def _exercise_practice(self, practice: PracticeGuidance) -> list[CheckReport]:

@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Callable
 
-from harness.agent_tools.agent_tools import InstallDestination
+from harness.agent_tools.agent_tools import ToolsetReference
 from harness.annotations.annotation import Annotation, Destination
 from harness.installation.ide_layout import IdeLayout
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
@@ -50,7 +50,7 @@ class Hook(Destination):
     off, which the destination records on the operation."""
 
     flag = "_hook"
-    channel = InstallDestination.HOOK
+    channel = "hook"
     enlists_member = True
     EVENTS = frozenset(
         {
@@ -132,9 +132,9 @@ class HookHandlersFile(_HooksJsonFile):
         return [dict(item) for item in self._file.read().get("handlers") or [] if isinstance(item, dict)]
 
     @property
-    def refs(self) -> tuple[str, ...]:
-        """Each toolset reference the handlers name, once, in order."""
-        return tuple(dict.fromkeys(str(item["ref"]) for item in self.handlers if item.get("ref")))
+    def refs(self) -> tuple[ToolsetReference, ...]:
+        """Each toolset reference the handlers name, once, in order, parsed from the text the file holds."""
+        return tuple(dict.fromkeys(ToolsetReference.parsed(str(item["ref"])) for item in self.handlers if item.get("ref")))
 
     @property
     def operation_names(self) -> list[str]:
@@ -178,6 +178,6 @@ class InstalledHookHandlers:
         ]
 
     @property
-    def refs(self) -> tuple[str, ...]:
+    def refs(self) -> tuple[ToolsetReference, ...]:
         """Each toolset reference any install's handlers name, once, in order."""
         return tuple(dict.fromkeys(ref for handlers in self.files for ref in handlers.refs))

@@ -18,7 +18,7 @@ from mamba import after, before, context, description, it
 from harness.agent_tools.agent_tools import AgentInstructions
 from space.session.throwaway_project import ThrowawayProject
 from cdd_guidance.actions.sketch.sketch import Sketch
-from harness.agent_tools.agent_tools import AgentToolSet
+from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference
 from harness.agent_tools.tool_call import ToolCall
 from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
@@ -39,13 +39,13 @@ with description("Sketch toolset") as self:
 
     with context("with its tools listed"):
         with it("exposes find_template, save_sketch, list_sketches as tools"):
-            tools = AgentToolSet.instantiate(Sketch).tools
+            tools = ToolsetReference.of(Sketch).made().tools
             expect(tools["find_template"].kind).to(equal("tool"))
             expect(tools["save_sketch"].kind).to(equal("tool"))
             expect(tools["list_sketches"].kind).to(equal("tool"))
 
         with it("exposes sketch as an action with find_template and save_sketch"):
-            sketch = AgentToolSet.instantiate(Sketch).tools["sketch"]
+            sketch = ToolsetReference.of(Sketch).made().tools["sketch"]
             expect(sketch.kind).to(equal("instructions"))
             expect("find_template" in sketch.tools).to(be_true)
             expect("save_sketch" in sketch.tools).to(be_true)
@@ -264,9 +264,7 @@ with description("a sketch action"):
 with description("PracticeGuidance operations for sketch"):
     with it("should not expose sketch on practice Guidance"):
         cls = type(
-            AgentToolSet.instantiate(
-                "cdd_guidance.builders.create_practice_guidance._examples.car_chronicle.car_chronicle:CarChronicle"
-            )
+            ToolsetReference.parsed("cdd_guidance.builders.create_practice_guidance._examples.car_chronicle.car_chronicle:CarChronicle").made()
         )
         practice = cls()
         expect("sketch" in practice.tools).to(equal(False))

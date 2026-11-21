@@ -13,6 +13,7 @@ from pathlib import Path
 from expects import contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
+from harness.agent_tools.agent_tools import ToolsetReference
 from harness.installation.repository_toolsets import RepositoryToolsets
 
 RepositoryToolsets(Path(__file__).resolve().parents[4]).ensure_import_path()
@@ -119,7 +120,7 @@ class StoryMapProject:
         (self.root / ".context").mkdir()
         self.map.write_text(map_text or _laid_out(HAND_WRITTEN_MAP), encoding="utf-8")
         self.server = McpServer(project=self.root)
-        self.server.start(TOOLSETS)
+        self.server.start([ToolsetReference.parsed(text) for text in TOOLSETS])
         # The Story UI works in the session open in the project, as the board's server reaches the cdd server.
         self.call("sessions.switch", name="checkout-flow")
 

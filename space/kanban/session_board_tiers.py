@@ -22,6 +22,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from harness.agent_tools.agent_tools import ToolsetReference
 from harness.installation.data_class import data_of
 from harness.installation.repository_toolsets import RepositoryToolsets
 
@@ -152,7 +153,7 @@ class CddTools:
 
     def __init__(self, project: SessionsProject) -> None:
         self._server = McpServer(project=project.root)
-        self._server.start(TOOLSETS)
+        self._server.start([ToolsetReference.parsed(text) for text in TOOLSETS])
 
     def call(self, tool: str, **arguments: Any) -> Any:
         answered = self._server.invoke(tool, arguments)

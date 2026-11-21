@@ -12,10 +12,10 @@ from dataclasses import dataclass, fields as dataclass_fields, replace
 from pathlib import Path
 from typing import Any, Callable, Protocol
 
-from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination, ToolsetConfiguration, ToolsetReference
+from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, ToolsetReference
 from harness.agent_tools.tool_call import ToolCall
 from harness.annotations.annotation import hosted_only
-from harness.hooks.hooks import HookHandlersFile, Hooks, InstalledHookHandlers, events_served
+from harness.hooks.hooks import Hook, HookHandlersFile, Hooks, InstalledHookHandlers, events_served
 from harness.installation.destination import SkippedTools
 from harness.installation.context_config import ContextConfig
 from harness.installation.repository_toolsets import RepositoryToolsets
@@ -365,43 +365,32 @@ class HookHandler:
 
 class HandlerCatalog:
     """The toolsets whose hook operations may run, and the handlers of each event they serve, made once when the
-    toolsets load. Each toolset is named by its class, its instance, or, as ``hook-handlers.json`` lists it, its
-    ``module:Class`` reference; one that cannot be loaded is kept in ``failures`` and the rest still serve. A toolset
-    whose hooks ``@Hooks(deploy=False)`` keeps out of install is left out here too, so the hooks an install leaves out
-    never run, however the catalog was named."""
+    toolsets load. Each toolset is named by its reference, as ``hook-handlers.json`` lists it, or handed in made, as a
+    spec's fake is; one that cannot be loaded is kept in ``failures`` and the rest still serve. A toolset whose hooks
+    ``@Hooks(deploy=False)`` keeps out of install is left out here too, so the hooks an install leaves out never run,
+    however the catalog was named."""
 
-    def __init__(self, toolsets: list[ToolsetConfiguration], repo_root: Path | None = None) -> None:
+    def __init__(self, toolsets: list[ToolsetReference | AgentToolSet], repo_root: Path | None = None) -> None:
         self.repo_root = repo_root
         self.failures: list[tuple[str, BaseException]] = []
         self.toolsets: list[AgentToolSet] = []
         self._load_items(toolsets)
         self._handlers = self._handlers_by_event()
 
-    def _load_items(self, items: list[ToolsetConfiguration]) -> None:
-        for configured in items:
+    def _load_items(self, items: list[ToolsetReference | AgentToolSet]) -> None:
+        for item in items:
             try:
-                loaded = AgentToolSet.from_items([configured])
+                toolset = item.made()
             except AgentToolSet.LOAD_FAILURES as error:
-                self.failures.append((self.ref_label(configured), error))
+                self.failures.append((str(item), error))
                 continue
-            self.toolsets.extend(
-                instance for instance in loaded if not hosted_only.annotates(instance) and Hooks.from_toolset_class(type(instance)).deploy
-            )
-
-    def ref_label(self, configured: ToolsetConfiguration) -> str:
-        if isinstance(configured, str):
-            return configured
-        if isinstance(configured, dict):
-            return str(configured.get("toolset") or configured)
-        registration = getattr(configured, "registration_name", None)
-        if isinstance(registration, str) and registration:
-            return registration
-        return str(ToolsetReference.of(configured if isinstance(configured, type) else type(configured)))
+            if not hosted_only.annotates(toolset) and Hooks.from_toolset_class(type(toolset)).deploy:
+                self.toolsets.append(toolset)
 
     @property
     def event_names(self) -> list[str]:
         """Every event some loaded hook operation serves, each once."""
-        return list(dict.fromkeys(tool.hook_event for tool in self._hook_tools() if tool.hook_event))
+        return list(dict.fromkeys(Hook.name_given(tool.callable) for tool in self._hook_tools() if Hook.name_given(tool.callable)))
 
     def for_event(self, event_name: str) -> list[HookHandler]:
         """The handlers of the hook operations that serve event_name, one for each operation."""
@@ -410,7 +399,7 @@ class HandlerCatalog:
     def _handlers_by_event(self) -> dict[str, list[HookHandler]]:
         by_event: dict[str, dict[tuple[str, str], HookHandler]] = {}
         for tool in self._hook_tools():
-            for event in events_served(tool.hook_event):
+            for event in events_served(Hook.name_given(tool.callable)):
                 handlers = by_event.setdefault(event, {})
                 key = (type(tool.toolset).__name__, tool.name)
                 if key not in handlers:
@@ -418,7 +407,7 @@ class HandlerCatalog:
         return {event: list(handlers.values()) for event, handlers in by_event.items()}
 
     def _hook_tools(self) -> list[AgentTool]:
-        return [tool for toolset in self.toolsets for tool in toolset.tools_for(InstallDestination.HOOK)]
+        return [tool for toolset in self.toolsets for tool in toolset.tools_published_to(Hook)]
 
 
 
@@ -465,9 +454,9 @@ class HookServer:
         so the registrations those modules make, such as how a call opens its session, hold in the hook process."""
         classes = toolsets.classes()
         installed = InstalledHookHandlers(toolsets.root).refs
-        server = cls(toolsets.root, HandlerCatalog(list(installed) or classes, toolsets.root))
+        server = cls(toolsets.root, HandlerCatalog(list(installed) or [ToolsetReference.of(toolset_class) for toolset_class in classes], toolsets.root))
         for unloadable in toolsets.unloadable:
-            server.skipped.skip(unloadable.reference, unloadable.cause)
+            server.skipped.skip(str(unloadable.reference), unloadable.cause)
         return server
 
     @classmethod

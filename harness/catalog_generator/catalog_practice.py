@@ -8,14 +8,14 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any, ClassVar
 
-from harness.agent_tools.agent_tools import InstallDestination
 from harness.annotations.name import Name
 from harness.catalog_generator.catalog_examples import EXAMPLES_FOLDER, CatalogFidelity
 from harness.catalog_generator.stage_columns import StageColumn
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 from harness.annotations.annotation import noCatalog
-from harness.installation.files import FileChannel, FileInstallation
+from harness.installation.files import Skill, SkillInstallation
+from harness.installation.repository_toolsets import RepositoryToolsets
 from harness.installation.ide_layout import IdeLayout
 from harness.installation.install_target import InstallTarget
 from harness.markdown.format import Format
@@ -39,14 +39,14 @@ class CatalogSkills:
 
     _FOLDERS: ClassVar[dict[tuple[str, str], str]] = {}
 
-    def __init__(self, install: FileInstallation) -> None:
+    def __init__(self, install: SkillInstallation) -> None:
         self._install = install
 
     @classmethod
     def create(cls) -> CatalogSkills:
         """The skill install of the IDE whose skill names the catalog shows as slash commands (Claude's)."""
         layout = IdeLayout(_SLASH_COMMAND_IDE)
-        return cls(FileInstallation(InstallTarget(layout, _REPO_ROOT / layout.folder_name), FileChannel(InstallDestination.SKILL), repo=_REPO_ROOT))
+        return cls(SkillInstallation.into(InstallTarget(layout, _REPO_ROOT / layout.folder_name), RepositoryToolsets(_REPO_ROOT)))
 
     def skill_of(self, guidance: PracticeGuidance | FidelityGuidance) -> str:
         """The skill that runs guidance, a practice or one of its fidelities: the folder the skill install writes its
@@ -55,7 +55,7 @@ class CatalogSkills:
         key = (str(self._install.path), named)
         held = CatalogSkills._FOLDERS.get(key)
         if held is None:
-            tool = next((tool for tool in guidance.tools.values() if tool.install_to_skill), None)
+            tool = next((tool for tool in guidance.tools.values() if tool.is_published_to(Skill)), None)
             held = self._install.relative_path(guidance, tool.deploy_name).parent.name if tool is not None else ""
             CatalogSkills._FOLDERS[key] = held
         return held

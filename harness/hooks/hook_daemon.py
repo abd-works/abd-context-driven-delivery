@@ -273,7 +273,7 @@ class HookDaemon(ServerDaemon):
         found = [*_HOOK_SERVER_FILES, *(handlers.path for handlers in installed.files)]
         for ref in installed.refs:
             try:
-                found.append(ToolsetReference(ref).module_file())
+                found.append(ref.module_file())
             except (ModuleNotFoundError, ValueError):
                 continue
         return found

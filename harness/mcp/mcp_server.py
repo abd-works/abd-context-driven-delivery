@@ -24,13 +24,15 @@ if TYPE_CHECKING:
     from starlette.requests import Request
     from starlette.responses import JSONResponse
 
-from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination, ToolsetConfiguration, ToolsetReference, names_alike
+from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, ToolsetReference, names_alike
 from harness.agent_tools.chat_pointer import ChatPointer
 from harness.process.claude_chat_process import ClaudeChatProcess, is_desktop_spare
 from harness.agent_tools.tool_call import ToolCall, ToolRequest
-from harness.installation.destination import ServerInstallation, SkippedTool, SkippedTools
+from harness.installation.destination import ChannelServer, RegisteredChannel, SkippedTool, SkippedTools, StandUp
 from harness.installation.data_class import SentValue, data_of
 from harness.installation.ide_layout import IdeLayout
+from harness.installation.install_record import InstallRecord
+from harness.installation.install_target import InstallTarget
 from harness.installation.installer import SERVER_CHANNELS
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
 from harness.installation.repository_toolsets import RUNNING_CHECKOUT, RepositoryToolsets
@@ -38,7 +40,7 @@ from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_annotations import LongCall, Mcp  # noqa: F401 - importing the server defines Mcp, the channel install reads
 from harness.mcp.claude_plugins import ClaudePlugins
 from harness.mcp.mcp_address import BUILTIN_LIST_TOOLS, CHAT_HEADER, CHAT_PROCESS_HEADER, LANE_CALL_PATH, MCP_PATH, PING_PATH, PROJECT_HEADER
-from harness.mcp.mcp_daemon import McpDaemon
+from harness.mcp.mcp_daemon import McpDaemon, ServedCheckout
 from harness.mcp.server_lanes import LaneCall, ServerLane, ServerLanes
 from harness.mcp.server_hooks import CddServerHooks
 from harness.mcp.restart_gate import _RestartGate
@@ -131,19 +133,19 @@ class CddEntry:
             return
         manifest = self._server_manifest()
         if self._has_cdd_entry(dest, manifest):
-            self._installation.track_write(dest)
+            self._installation.wrote(dest)
             return
         if self._layout.is_claude_code or self.is_user_level:
             manifest = self._merged_with_other_servers(dest, manifest)
         self._ide_config(dest).write(manifest)
-        self._installation.track_write(dest)
+        self._installation.wrote(dest)
 
     def _write_claude_plugin(self) -> None:
         self._allow_cdd_tools(self._layout.user_settings_folder / "settings.json")
         self.point_chats_at_served_lane()
         self._drop_cdd_entry(self._layout.user_mcp_config, "user's", remove_when_empty=False)
         for written in self._installation.daemon.home.write_claude_plugin(self._claude_plugin_server()):
-            self._installation.track_write(written)
+            self._installation.wrote(written)
 
     def point_chats_at_served_lane(self) -> None:
         """Point the Claude Code chats working in this checkout at the server of the lane it is served on: the dev
@@ -163,7 +165,7 @@ class CddEntry:
         server = {"type": "http", "url": self._installation.served.daemon.url, "headers": {PROJECT_HEADER: str(self._project_root.resolve())}}
         manifest = self._merged_with_other_servers(config_path, {self._layout.mcp_servers_key: {"cdd": server}})
         self._ide_config(config_path).write(manifest)
-        self._installation.track_write(config_path)
+        self._installation.wrote(config_path)
 
     def _allow_cdd_tools(self, settings_path: Path) -> None:
         """Let Claude Code call every ``cdd`` tool without a prompt. The user's settings file
@@ -251,82 +253,94 @@ class CddEntry:
         return path.parent if path.name == self._layout.folder_name else path
 
 
-class McpInstallation(ServerInstallation):
-    """Record ``@mcp`` operations, write each IDE's ``cdd`` entry, and start the one cdd server from ``~/.cdd``. Every
-    install also publishes the hooks that start that server (*CddServerHooks*), and, for Claude Code, the cdd and
-    board plugins."""
+class McpChannelServer(ChannelServer):
+    """The one cdd server as an install handles it: stood up in the install's process over every toolset of the served
+    checkout, to check it loads, then started from ``~/.cdd``, and, for Claude Code, the cdd and board plugins
+    installed, which declare the server to every chat. Inside the cdd server, as an install through MCP runs, it stands
+    up nothing: the server already serves them."""
 
-    channel = "mcp"
+    def __init__(self, served: ServedCheckout, daemon: McpDaemon, claude_plugins: ClaudePlugins, layout: IdeLayout) -> None:
+        self.served = served
+        # The stable lane's server, which every chat's cdd plugin names.
+        self._daemon = daemon
+        self._claude_plugins = claude_plugins
+        self._layout = layout
+
+    @property
+    def runs_this_process(self) -> bool:
+        """True when this process is the cdd server, as it is when an install runs as one of its tool calls."""
+        return self._daemon.this_process.is_this_process()
+
+    def stand_up(self) -> StandUp:
+        if self.runs_this_process:
+            self.stood_up = StandUp([], SkippedTools("MCP", "tools"))
+        else:
+            host = McpHost.from_repo(self.served.checkout)
+            self.stood_up = StandUp(host.diagnose()["tools"], host.checkout_server.skipped)
+        return self.stood_up
+
+    def ensure_running(self) -> list[str]:
+        """Start the one cdd server when none answers, installing ``~/.cdd/`` on first use; an install that finds a
+        server already running leaves it, and the code it serves, alone. For Claude Code also install the cdd plugin
+        and the mods of the code the served lane runs; chats install mods from the stable lane's marketplace, so a dev
+        lane's mods are published there first."""
+        lines = [f"mcp: {self.served.ensure()}"]
+        if self._layout.is_claude_code:
+            lines.append(f"cdd plugin: {self._claude_plugins.install_cdd()}")
+            lines.extend(self.install_mods())
+        return lines
+
+    def install_mods(self) -> list[str]:
+        """Install the board and prompt queue mods of the code the served lane runs, one line for each. Chats install
+        mods from the stable lane's marketplace, so a dev lane's mods are published there first."""
+        if self.served.home.is_dev_lane:
+            self._daemon.home.publish_mods_of(self.served.home)
+        return [f"board: {self._claude_plugins.install_board()}", f"prompt queue: {self._claude_plugins.install_queue()}"]
+
+
+class McpInstallation(RegisteredChannel):
+    """Record ``@mcp`` operations and write each IDE's ``cdd`` entry; its server is the one cdd server
+    (*McpChannelServer*). Every install also publishes the hooks that start that server (*CddServerHooks*)."""
+
+    destination = Mcp
     toolsets = (CddServerHooks,)
 
-    def __init__(self, layout: IdeLayout, path: Path | str, served: ServedCheckout) -> None:
+    def __init__(self, target: InstallTarget, record: InstallRecord, served: ServedCheckout) -> None:
         """served is the checkout the cdd server is installed from and serves, on the lane its folder runs on: the
         stable lane for a main checkout, the dev lane for a ticket's worktree."""
-        super().__init__(layout, path, repo=served.checkout)
+        super().__init__(target, record, RepositoryToolsets(served.checkout))
         self.served = served
         # The stable lane's server is the one every chat's cdd plugin names, so the plugins and the IDE entry follow it.
         self.daemon = ServerLanes.from_serving(served.daemon.home, served.daemon.address).stable.daemon
         self.claude_plugins = ClaudePlugins(self.daemon.home)
+        self.server = McpChannelServer(served, self.daemon, self.claude_plugins, target.layout)
         # The IDE's cdd entry, written once the whole install has been recorded.
         self.cdd_entry = CddEntry(self)
         self.mcp_operations: list[AgentTool] = []
-        self.host: McpHost | None = None
-        self.diagnosis: dict[str, Any] | None = None
 
     @classmethod
-    def create(cls, layout: IdeLayout, path: Path | str, repo: Path | str | None = None) -> McpInstallation:
-        """The cdd server's installation into path, serving repo, else the running checkout, on the lane its folder runs
-        on (*ServerLanes*)."""
-        checkout = Path(repo or RUNNING_CHECKOUT).resolve()
-        return cls(layout, path, ServerLanes().for_project(checkout).served_checkout(checkout))
+    def create(cls, target: InstallTarget, record: InstallRecord, repository: RepositoryToolsets | None = None) -> McpInstallation:
+        """The cdd server's installation into target, serving repository, else the running checkout, on the lane its
+        folder runs on (*ServerLanes*)."""
+        checkout = (repository.root if repository is not None else RUNNING_CHECKOUT).resolve()
+        return cls(target, record, ServerLanes().for_project(checkout).served_checkout(checkout))
 
     def write(self, tool: AgentTool) -> None:
-        """Record the tool; the MCP config and the plugins are written once the whole install has been recorded, in
-        standup, rather than again after every tool."""
-        if tool.install_to_mcp:
+        """Record the tool; the MCP config and the plugins are written once the whole install has been recorded, rather
+        than again after every tool."""
+        if tool.is_published_to(Mcp):
             self.mcp_operations.append(tool)
+
+    def write_once_recorded(self) -> None:
+        """Write the IDE's cdd entry, or for Claude Code the cdd plugin, once."""
+        self.cdd_entry.write()
 
     @property
     def published(self) -> list[str]:
         return sorted(str(tool.mcp_name) for tool in self.mcp_operations)
 
-    def standup(self) -> McpHost | None:
-        """A host over every toolset in this installation's checkout, in this process, to check it stands up; none
-        inside the cdd server, which already serves them. The MCP config and the plugins are written first, once."""
-        self.cdd_entry.write()
-        if self.serves_this_process():
-            return None
-        self.host = McpHost.from_repo(self.served.checkout)
-        return self.host
-
-    def diagnose(self) -> dict[str, Any]:
-        host = self.host if self.host is not None else self.standup()
-        self.diagnosis = host.diagnose() if host is not None else {}
-        return self.diagnosis
-
-    def ensure_running(self) -> dict[str, str]:
-        """Start the one cdd server when none answers, installing ``~/.cdd/`` on first use; an install that finds a
-        server already running leaves it, and the code it serves, alone. For Claude Code also install the cdd and
-        board plugins, which declare the server to every chat."""
-        status = {"mcp": self.served.ensure()}
-        if self.layout.is_claude_code:
-            status["cdd plugin"] = self.claude_plugins.install_cdd()
-            status.update(self.install_mods())
-        return status
-
-    def install_mods(self) -> dict[str, str]:
-        """Install the board and prompt queue mods of the code the served lane runs. Chats install mods from the stable
-        lane's marketplace, so a dev lane's mods are published there first."""
-        if self.served.home.is_dev_lane:
-            self.daemon.home.publish_mods_of(self.served.home)
-        return {"board": self.claude_plugins.install_board(), "prompt queue": self.claude_plugins.install_queue()}
-
     def status(self) -> list[str]:
         return [f"cdd server: {'running' if self.daemon.is_running() else 'not running'}"]
-
-    def serves_this_process(self) -> bool:
-        """True when this process is the cdd server, as it is when an install runs as one of its tool calls."""
-        return self.daemon.this_process.is_this_process()
 
 
 class McpServer:
@@ -345,7 +359,7 @@ class McpServer:
         self._tools: dict[str, AgentTool] = {}
         self._prompts: dict[str, AgentTool] = {}
         self.skipped = SkippedTools("MCP", "tools")
-        self._toolsets: tuple[Any, ...] = ()
+        self._toolsets: tuple[ToolsetReference, ...] = ()
 
     @property
     def tools(self) -> dict[str, AgentTool]:
@@ -376,31 +390,28 @@ class McpServer:
         else:
             self._prompts[name] = tool
 
-    def start(self, toolsets: Iterable[Any]) -> None:
-        """Enroll the ``@mcp`` operations of each toolset and its child toolsets; each is a toolset class, or a
-        ``module:Class`` reference as a process is started with. A toolset whose code or configuration is wrong is
-        skipped and recorded, so the server still serves the rest."""
+    def start(self, toolsets: Iterable[ToolsetReference]) -> None:
+        """Enroll the ``@mcp`` operations of each toolset its reference names, made for this server's project, and of
+        its child toolsets. A toolset whose code or configuration is wrong is skipped and recorded, so the server still
+        serves the rest."""
         self._toolsets = tuple(toolsets)
         self._tools.clear()
         self._prompts.clear()
         self.skipped.clear()
-        for configured in self._toolsets:
-            for toolset in self._loaded(configured):
-                self._enroll_with_children(toolset)
-
-    def _loaded(self, configured: ToolsetConfiguration) -> list[AgentToolSet]:
-        try:
-            return AgentToolSet.from_items([configured])
-        except AgentToolSet.LOAD_FAILURES as error:
-            self.skipped.skip(str(configured), error)
-            return []
+        for reference in self._toolsets:
+            try:
+                toolset = reference.made()
+            except AgentToolSet.LOAD_FAILURES as error:
+                self.skipped.skip(str(reference), error)
+                continue
+            self._enroll_with_children(toolset)
 
     def _enroll_with_children(self, toolset: AgentToolSet) -> None:
         try:
             for each in (toolset, *toolset.child_toolsets()):
                 self._enroll_toolset(each)
         except AgentToolSet.LOAD_FAILURES as error:
-            self.skipped.skip(toolset.registration_name, error)
+            self.skipped.skip(str(toolset.reference), error)
 
     def for_project(self, project: Path) -> McpServer:
         """A server with the same toolsets working on ``project``. Toolsets keep state between calls, so each project
@@ -415,13 +426,8 @@ class McpServer:
         self._forget_checkout_modules()
         fresh = importlib.import_module(__name__)
         server = fresh.McpServer(repo=self.repo, project=self.project)
-        server.start(self._references())
+        server.start([fresh.ToolsetReference.parsed(str(reference)) for reference in self._toolsets])
         return server
-
-    def _references(self) -> list[str]:
-        """Each toolset by its ``module:Class`` reference, the one name that finds its class again once its module is
-        imported anew."""
-        return [item if isinstance(item, str) else str(ToolsetReference.of(item)) for item in self._toolsets]
 
     def _forget_checkout_modules(self) -> None:
         # Every module is judged before any is forgotten: a namespace package reads its folders through its parent.
@@ -445,7 +451,7 @@ class McpServer:
     def _enroll_toolset(self, toolset: AgentToolSet) -> None:
         if not toolset.is_served_on_mcp:
             return
-        for tool in toolset.tools_for(InstallDestination.MCP):
+        for tool in toolset.tools_published_to(Mcp):
             self.enroll(tool)
 
     def _is_legal_name(self, name: str) -> bool:
@@ -1003,9 +1009,9 @@ class McpHost:
         toolsets = RepositoryToolsets(resolved)
         try:
             server = McpServer(repo=resolved, project=resolved)
-            server.start(toolsets.classes())
+            server.start([ToolsetReference.of(toolset_class) for toolset_class in toolsets.classes()])
             for unloadable in toolsets.unloadable:
-                server.skipped.skip(unloadable.reference, unloadable.cause)
+                server.skipped.skip(str(unloadable.reference), unloadable.cause)
             return cls._serving(server)
         except Exception as error:
             raise McpStandupFailed(resolved, error) from error
@@ -1015,7 +1021,7 @@ class McpHost:
         """A host over the toolsets the ``module:Class`` references name, as a process is started with them."""
         server = McpServer(repo=repo, project=project)
         if toolset_refs:
-            server.start(toolset_refs)
+            server.start([ToolsetReference.parsed(text) for text in toolset_refs])
         return cls._serving(server)
 
     @classmethod

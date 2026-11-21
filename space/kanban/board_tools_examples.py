@@ -10,6 +10,7 @@ from typing import TypeVar
 from unittest.mock import PropertyMock, patch
 
 
+from harness.agent_tools.agent_tools import ToolsetReference
 from harness.installation.repository_toolsets import RepositoryToolsets
 
 RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
@@ -121,7 +122,7 @@ class ProjectTools:
         """The MCP server with the board's toolsets enrolled, started the first time a project asks."""
         if cls._started is None:
             cls._started = McpServer()
-            cls._started.start(TOOLSETS)
+            cls._started.start([ToolsetReference.parsed(text) for text in TOOLSETS])
         return cls._started
 
     def __init__(self) -> None:

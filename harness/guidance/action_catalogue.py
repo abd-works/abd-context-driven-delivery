@@ -5,8 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Callable, Iterator, Protocol
 
-from harness.agent_tools.agent_tools import InstallDestination
-from harness.installation.files import Skill  # noqa: F401 - defining Skill registers the skill channel this reads
+from harness.installation.files import Skill
 from harness.annotations.annotation import annotation_kinds
 from harness.annotations.class_folder import class_folder
 from harness.annotations.class_registry import ClassRegistry
@@ -157,7 +156,7 @@ class ActionCatalogue:
                 Action(name, toolset, self)
                 for toolset in self.toolsets
                 for name, member in vars(toolset).items()
-                if annotation_kinds.publishes(InstallDestination.SKILL, member)
+                if Skill.publishes(member)
             )
         return self._actions
 

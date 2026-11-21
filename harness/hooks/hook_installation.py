@@ -1,33 +1,36 @@
 """*HookInstallation*, the hook channel of an install: it writes the IDE's ``hooks.json`` and ``hook-handlers.json``.
-The install neither stands up, starts, nor reports the hook server: the hook command starts the checkout's hook daemon on
-the first event, and replaces one that loaded older hook code. Importing this module registers it with the Installer's
-server channels (``SERVER_CHANNELS``); importing the ``harness.hooks`` package imports it."""
+The channel holds no server: the hook command starts the checkout's hook daemon on the first event, and replaces one
+that loaded older hook code. Importing this module registers it with the Installer's registered channels
+(``SERVER_CHANNELS``); importing the ``harness.hooks`` package imports it."""
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from harness.agent_tools.agent_tools import AgentTool
 from harness.hooks.hook_daemon import HookDaemon
-from harness.hooks.hooks import HookHandlersFile, Hooks, HooksManifest, events_served
-from harness.installation.destination import ServerInstallation
-from harness.installation.ide_layout import IdeLayout
+from harness.hooks.hooks import Hook, HookHandlersFile, Hooks, HooksManifest, events_served
+from harness.installation.destination import RegisteredChannel
 from harness.installation.installer import SERVER_CHANNELS
 from harness.process.process import PythonInterpreter
+
+if TYPE_CHECKING:
+    from harness.installation.install_record import InstallRecord
+    from harness.installation.install_target import InstallTarget
+    from harness.installation.repository_toolsets import RepositoryToolsets
 
 # How long the IDE waits for the hook command before it carries on without the hooks' answer.
 _HOOK_COMMAND_TIMEOUT_SECONDS = 30
 
 
-class HookInstallation(ServerInstallation):
+class HookInstallation(RegisteredChannel):
     """Write the IDE's ``hooks.json``, which runs the hook command for each event a hook operation serves, and
     ``hook-handlers.json``, which lists those operations for the hook server. The hook command starts that server on the
-    first event, so the install leaves it alone. An IDE whose layout runs no hooks gets none."""
+    first event, so the channel holds no server. An IDE whose layout runs no hooks gets none."""
 
-    channel = "hook"
+    destination = Hook
 
-    def __init__(self, layout: IdeLayout, path: Path | str, repo: Path | str | None = None) -> None:
-        super().__init__(layout, path, repo=repo)
+    def __init__(self, target: InstallTarget, record: InstallRecord, repository: RepositoryToolsets | None = None) -> None:
+        super().__init__(target, record, repository)
         # The Python the hook command runs on: the one running this install.
         self.interpreter = PythonInterpreter()
         self.handlers_file = HookHandlersFile(self.path / HookHandlersFile.NAME)
@@ -39,22 +42,11 @@ class HookInstallation(ServerInstallation):
         return f"{self.interpreter.console} -u {HookDaemon.COMMAND_SCRIPT}"
 
     def accepts(self, tool: AgentTool) -> bool:
-        return tool.install_to_hook and self.layout.runs_hooks
+        return super().accepts(tool) and self.layout.runs_hooks
 
     @property
     def published(self) -> list[str]:
         return self.registered_operations
-
-    def standup(self) -> None:
-        """Stand up nothing: the hook command starts the hook server on the first event."""
-
-    def diagnose(self) -> dict[str, Any]:
-        """Nothing to report about a server, since the install stands none up."""
-        return {}
-
-    def ensure_running(self) -> dict[str, str]:
-        """Start nothing: the hook command starts the hook server on the first event."""
-        return {}
 
     def status(self) -> list[str]:
         return [
@@ -73,11 +65,12 @@ class HookInstallation(ServerInstallation):
         return self.handlers_file.operation_names
 
     def write(self, tool: AgentTool) -> None:
-        if not tool.install_to_hook or not tool.hook_event:
+        event = Hook.name_given(tool.callable)
+        if not tool.is_published_to(Hook) or not event:
             return
         if not Hooks.from_toolset_class(type(tool.toolset)).deploy:
             return
-        record = {"event": tool.hook_event, "operation": tool.name, "ref": tool.registration_name}
+        record = {"event": event, "operation": tool.name, "ref": str(tool.toolset.reference)}
         if record in self._handlers:
             return
         self._handlers.append(record)
@@ -88,7 +81,7 @@ class HookInstallation(ServerInstallation):
         if not self._handlers:
             return
         self.handlers_file.write(self._handlers)
-        self.track_write(self.handlers_file.path)
+        self.wrote(self.handlers_file.path)
 
     def write_hooks_manifest(self) -> None:
         """Point each event a handler serves at the hook command, keeping every other hook the file holds. A file that
@@ -99,7 +92,7 @@ class HookInstallation(ServerInstallation):
         self._strip_dispatch_command(hooks)
         self._attach_dispatch_command(hooks)
         self.manifest.write(hooks)
-        self.track_write(self.manifest.path)
+        self.wrote(self.manifest.path)
 
     def _strip_dispatch_command(self, hooks: dict[str, list[dict[str, Any]]]) -> None:
         for event_name in list(hooks):

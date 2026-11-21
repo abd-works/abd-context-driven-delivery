@@ -26,7 +26,7 @@ from cdd_guidance.practices.ddd.ddd import Ddd
 from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 from harness.agent_tools.agent_tools import ToolsetReference
 
-Car = ToolsetReference("cdd_guidance.practices._examples.car.car:Car").toolset_class
+Car = ToolsetReference.parsed("cdd_guidance.practices._examples.car.car:Car").toolset_class
 from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
 from cdd_guidance.practices.stories.stories import Stories
 

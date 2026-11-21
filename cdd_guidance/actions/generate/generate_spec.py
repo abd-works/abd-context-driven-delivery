@@ -17,6 +17,7 @@ from expects import contain, equal, expect
 from mamba import after, before, context, description, it
 
 from cdd_guidance.actions.generate.generate import Generate
+from harness.agent_tools.agent_tools import ToolsetReference
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.agent_tools.tool_call import ToolCall
 from harness.guidance.fixtures.sample_tool.sample_tool_host import (
@@ -206,7 +207,7 @@ with description("a generate action on practice guidance") as self:
         with context("that an agent runs it as an MCP command"):
             with before.each:
                 server = McpServer(project=self.project)
-                server.start(("cdd_guidance.actions.generate.generate:Generate",))
+                server.start((ToolsetReference.parsed("cdd_guidance.actions.generate.generate:Generate"),))
                 self.reply = server.invoke("generate.generate", {"guidance": "stories-story-map"})
 
             with it("should name the session's session.json"):
@@ -228,7 +229,7 @@ with description("a generate action on practice guidance") as self:
                 (self.project / "src").mkdir(exist_ok=True)
                 (other / "session.json").write_text('{"name": "beta", "workpath": "' + (self.project / "src").as_posix() + '"}', encoding="utf-8")
                 server = McpServer(project=self.project)
-                server.start(("cdd_guidance.actions.generate.generate:Generate",))
+                server.start((ToolsetReference.parsed("cdd_guidance.actions.generate.generate:Generate"),))
                 self.reply = server.invoke("generate.generate", {"guidance": "stories-story-map session=.sessions/beta/session.json"})
 
             with it("should describe that session, not the one open"):
@@ -244,7 +245,7 @@ with description("a generate action on practice guidance") as self:
         with context("that the same cdd server has already generated once"):
             with before.each:
                 server = McpServer(project=self.project)
-                server.start(("cdd_guidance.actions.generate.generate:Generate",))
+                server.start((ToolsetReference.parsed("cdd_guidance.actions.generate.generate:Generate"),))
                 server.invoke("generate.generate", {"guidance": "stories-story-map"})
                 server.invoke("generate.generate", {"guidance": "stories-scenarios"})
 

@@ -16,7 +16,7 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
 from expects import contain, equal, expect, match, raise_error
 from mamba import after, before, context, description, it
 
-from harness.agent_tools.agent_tools import AgentToolSet, SubAgentAnnotation
+from harness.agent_tools.agent_tools import ToolsetReference, AgentToolSet, SubAgentAnnotation
 from space.session.session import Session, SessionNotFoundError
 from space.session.sessions import Sessions
 from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
@@ -36,23 +36,23 @@ def _save_current(root: Path, name: str) -> None:
 
 with description("a session's handoff tools"):
     with it("should offer write_handoff as a tool"):
-        tools = AgentToolSet.instantiate(Session).tools
+        tools = ToolsetReference.of(Session).made().tools
         expect(tools["write_handoff"].kind).to(equal("tool"))
 
     with it("should offer handoff_session as instructions"):
-        tools = AgentToolSet.instantiate(Session).tools
+        tools = ToolsetReference.of(Session).made().tools
         expect(tools["handoff_session"].kind).to(equal("instructions"))
 
     with it("should read the handoff format, then call write_handoff, when running the handoff_session instructions"):
-        tools = AgentToolSet.instantiate(Session).tools["handoff_session"].tools
+        tools = ToolsetReference.of(Session).made().tools["handoff_session"].tools
         expect(tools).to(equal(["read_handoff_format", "write_handoff"]))
 
     with it("should run handoff_session on a sub-agent"):
-        tool = AgentToolSet.instantiate(Session).tools["handoff_session"]
+        tool = ToolsetReference.of(Session).made().tools["handoff_session"]
         expect(SubAgentAnnotation.annotates(tool.callable)).to(equal(True))
 
     with it("should tell the sub-agent to commit and push the handoff"):
-        prompt = "\n".join(AgentToolSet.instantiate(Session).tools["handoff_session"].prompt)
+        prompt = "\n".join(ToolsetReference.of(Session).made().tools["handoff_session"].prompt)
         expect(prompt).to(contain("repo.push_commit"))
 
     with context("with the next agent's steps for where the work goes live"):
@@ -148,7 +148,7 @@ with description("a handoff asked for a board ticket's session"):
             folder.mkdir(parents=True)
             (folder / "session.json").write_text(json.dumps({"name": name}), encoding="utf-8")
         _save_current(self.root, "billing-report")
-        self.tool = AgentToolSet.instantiate(Session).tools["write_handoff"]
+        self.tool = ToolsetReference.of(Session).made().tools["write_handoff"]
 
     with after.each:
         OPEN_PROJECTS.close_all()

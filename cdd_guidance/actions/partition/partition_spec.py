@@ -23,7 +23,7 @@ from cdd_guidance.actions.partition.segment import Segment, SegmentCompletenessC
 
 from harness.markdown import Markdown
 from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
-from harness.agent_tools.agent_tools import AgentToolSet
+from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference
 from harness.agent_tools.tool_call import ToolCall
 
 _CAR_CHRONICLE_TOOLSET = (
@@ -66,7 +66,7 @@ with description("a practice guidance beside the partition action"):
         OPEN_PROJECTS.close_all()
 
     with it("should not expose partition on practice Guidance"):
-        cls = type(AgentToolSet.instantiate(_CAR_CHRONICLE_TOOLSET))
+        cls = type(ToolsetReference.parsed(_CAR_CHRONICLE_TOOLSET).made())
         practice = cls()
         expect("partition" in practice.tools).to(equal(False))
 

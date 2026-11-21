@@ -28,7 +28,7 @@ RUNNING_CHECKOUT: Path = Path(__file__).resolve().parents[2]
 class ToolsetUnloadable(Exception):
     """A toolset the repository's source defines whose module cannot be imported, or does not define it."""
 
-    def __init__(self, reference: str, cause: Exception) -> None:
+    def __init__(self, reference: ToolsetReference, cause: Exception) -> None:
         super().__init__(f"{reference}: {type(cause).__name__}: {cause}")
         self.reference = reference
         self.cause = cause
@@ -141,7 +141,7 @@ class RepositoryToolsets:
             # A toolset's module is the repository's own code; any failure importing it is that toolset's failure.
             except Exception as error:  # noqa: BLE001
                 logger.exception("could not load toolset %s", reference)
-                self.unloadable.append(ToolsetUnloadable(str(reference), error))
+                self.unloadable.append(ToolsetUnloadable(reference, error))
         return found
 
     def references(self) -> list[ToolsetReference]:
@@ -179,7 +179,7 @@ class RepositoryToolsets:
         if not module:
             return []
         return [
-            ToolsetReference.in_module(module, node.name)
+            ToolsetReference(module, node.name)
             for node in tree.body
             if isinstance(node, ast.ClassDef)
             and not self._is_hosted_only(node)

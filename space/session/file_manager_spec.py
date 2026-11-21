@@ -13,7 +13,7 @@ if str(_REPO_ROOT) not in sys.path:
 from expects import be, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
-from harness.agent_tools.agent_tools import AgentToolSet
+from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference
 from harness.agent_tools.tool_call import ToolCall
 from space.session import Session, Sessions
 from harness.agent_tools.tool_call import ToolCall
@@ -67,11 +67,11 @@ with description("a session's file manager"):
             expect(FileManager.load(call=ToolCall({}, self.workpath)).workpath).to(equal(self.workpath / "src"))
 
         with it("should list the files of the project its call names"):
-            listing = AgentToolSet.instantiate(FileManager).tools["list"].invoke({}, project=self.other)
+            listing = ToolsetReference.of(FileManager).made().tools["list"].invoke({}, project=self.other)
             expect([entry.name for entry in listing.entries]).to(contain("notes.md"))
 
         with it("should list each project's own files when calls name different projects"):
-            tool = AgentToolSet.instantiate(FileManager).tools["list"]
+            tool = ToolsetReference.of(FileManager).made().tools["list"]
             tool.invoke({}, project=self.other)
             expect([entry.name for entry in tool.invoke({}, project=self.workpath).entries]).to(equal(["order.ts"]))
 

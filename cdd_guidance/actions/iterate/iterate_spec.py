@@ -16,7 +16,7 @@ from mamba import context, description, it
 
 from cdd_guidance.actions.grill_context.grill_context import GrillContext
 from cdd_guidance.actions.iterate.iterate import Iterate
-from harness.agent_tools.agent_tools import AgentToolSet
+from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference
 
 
 with description("Iterate toolset"):
@@ -60,9 +60,7 @@ with description("an iterate action"):
 with description("PracticeGuidance operations for iterate"):
     with it("should not expose iterate on practice Guidance"):
         cls = type(
-            AgentToolSet.instantiate(
-                "cdd_guidance.builders.create_practice_guidance._examples.car_chronicle.car_chronicle:CarChronicle"
-            )
+            ToolsetReference.parsed("cdd_guidance.builders.create_practice_guidance._examples.car_chronicle.car_chronicle:CarChronicle").made()
         )
         practice = cls()
         expect("iterate" in practice.tools).to(equal(False))

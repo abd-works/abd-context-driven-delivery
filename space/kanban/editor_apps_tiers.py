@@ -23,6 +23,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
+from harness.agent_tools.agent_tools import ToolsetReference
 from harness.agent_tools.tool_call import ToolCall
 from harness.diagnostics.app import APPS, App
 from harness.diagnostics.server_health import ServerHealth
@@ -128,7 +129,7 @@ class ServerTier:
     def open(self) -> SimpleNamespace:
         project = Path(tempfile.mkdtemp(prefix="editor-apps-"))
         server = McpServer(project=project)
-        server.start(TOOLSETS)
+        server.start([ToolsetReference.parsed(text) for text in TOOLSETS])
         chat = ChatLaunch()
         report = lambda: _answer(server, "server-health.report")  # noqa: E731
         return SimpleNamespace(

@@ -51,10 +51,10 @@ with description("a Granola toolset"):
 
     with context("that a tool call makes for its project"):
         with it("should write a relative folder's notes into that project, not the server's folder"):
-            from harness.agent_tools.agent_tools import AgentToolSet
+            from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference
 
             with tempfile.TemporaryDirectory() as project:
-                tool = AgentToolSet.instantiate(Granola).tools["write_note_context"]
+                tool = ToolsetReference.of(Granola).made().tools["write_note_context"]
                 arguments = {"folder": "src", "note": {"note_id": "n1", "title": "Pricing", "date": "2026-09-01", "url": "u"}, "content": "c"}
                 written = tool.invoke(arguments, project=project)
                 expect(Path(str(written)).is_relative_to(Path(project).resolve())).to(be_true)

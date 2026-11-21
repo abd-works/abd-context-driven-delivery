@@ -129,21 +129,15 @@ with description("an install told where to go by something that is no IDE or no 
             expect(install._install(_chat_install(None, path=str(_SCRIPT)))).to(equal(install.REFUSED_EXIT))
 
 
-class FakeDeployment:
-    """The installer's deployment, recording how its Installer-only refresh was asked for."""
+class FakeFullInstaller:
+    """An installer that records how its Installer-only refresh was asked for, and has no whole install to run, which
+    would replace the last one."""
 
     def __init__(self) -> None:
         self.self_installs = 0
 
     def install_self(self) -> None:
         self.self_installs += 1
-
-
-class FakeFullInstaller:
-    """An installer that fails the spec if the refresh runs a whole install, which would replace the last one."""
-
-    def __init__(self) -> None:
-        self.deployment = FakeDeployment()
 
 
 def _self_install() -> argparse.Namespace:
@@ -159,4 +153,4 @@ with description("an Installer-only refresh asked of the install script"):
         install._install_toolsets(_self_install(), self.installer, FakeServer())
 
     with it("should refresh the Installer's own commands, leaving the rest of the last install in place"):
-        expect(self.installer.deployment.self_installs).to(equal(1))
+        expect(self.installer.self_installs).to(equal(1))

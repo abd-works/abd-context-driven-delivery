@@ -177,7 +177,7 @@ def _install(args: argparse.Namespace) -> int:
     except (UnknownIde, NotAnInstallFolder) as refusal:
         print(f"not installed: {refusal}", file=sys.stderr)
         return REFUSED_EXIT
-    server = McpInstallation.create(installer.layout, installer.path, repo=_REPO)
+    server = McpInstallation.create(installer.target, installer.record, installer.toolsets)
     # Switching the code the server runs takes seconds; a full install takes a minute, so the switch runs alone.
     if args.pin_runtime or args.update or args.serve_from_checkout:
         return _switch_server_only(args, installer, server)
@@ -203,16 +203,16 @@ def _switch_server_only(args: argparse.Namespace, installer: Installer, server: 
     print(f"cdd server: {_switch_server(args, server)}")
     if installer.layout.is_claude_code:
         server.cdd_entry.point_chats_at_served_lane()
-        for mod, outcome in server.install_mods().items():
-            print(f"{mod}: {outcome}")
-    print(f"language adapters: {len(installer.deployment.write_language_adapters())} written")
+        for line in server.server.install_mods():
+            print(line)
+    print(f"language adapters: {len(installer.write_language_adapters())} written")
     _write_runtime_adapters(installer, server)
     return 0
 
 
 def _install_toolsets(args: argparse.Namespace, installer: Installer, server: McpInstallation) -> None:
     if args.self:
-        installer.deployment.install_self()
+        installer.install_self()
         return
     installer.install(replace=not args.no_replace)
     # A plain install from the main checkout also moves the server onto the commit it just installed.

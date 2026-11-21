@@ -30,6 +30,8 @@ from harness.mcp._examples.illegitimate_name.illegitimate_name import (
     IllegitimateName,
 )
 from harness.installation.ide_layout import IdeLayout
+from harness.installation.repository_toolsets import RepositoryToolsets
+from harness.installation.install_target import InstallTarget
 from space.repo.repo import Commit
 from space.session import Sessions
 from space.work_state import WorkState
@@ -416,7 +418,7 @@ with description("an MCP host") as self:
     with context("that has stood up with a published tool whose MCP name is illegitimate"):
         with before.each:
             self.host = McpHost.from_refs(
-                (IllegitimateName().registration_name,),
+                (str(IllegitimateName().reference),),
                 repo=str(_REPO_ROOT),
                 project=str(_REPO_ROOT),
             )
@@ -555,7 +557,7 @@ with description("an MCP host tool ping") as self:
 
 
 def _user_level_installation(ide: str) -> McpInstallation:
-    installation = McpInstallation.create(IdeLayout(ide), _REPO_ROOT / ".cursor", repo=_REPO_ROOT)
+    installation = McpInstallation.into(InstallTarget(IdeLayout(ide), _REPO_ROOT / ".cursor"), RepositoryToolsets(_REPO_ROOT))
     installation.is_temporary = False
     for tool in SampleMcpOps().tools.values():
         installation.write(tool)
@@ -633,7 +635,7 @@ with description("an MCP install that deploys to the IDE's user-level config") a
         with context("that is installed again from another checkout"):
             with before.each:
                 self.written = self.config.read_text(encoding="utf-8")
-                again = McpInstallation.create(IdeLayout("Claude"), self.root / "other" / ".claude", repo=self.root / "other")
+                again = McpInstallation.into(InstallTarget(IdeLayout("Claude"), self.root / "other" / ".claude"), RepositoryToolsets(self.root / "other"))
                 again.is_temporary = False
                 for tool in SampleMcpOps().tools.values():
                     again.write(tool)
@@ -649,7 +651,7 @@ with description("an MCP install that deploys to the IDE's user-level config") a
                 (self.project / ".git").mkdir(parents=True)
                 (self.project / ".claude").mkdir()
                 self.project_config = self.project / ".mcp.json"
-                self.installation = McpInstallation.create(IdeLayout("Claude"), self.project / ".claude", repo=self.project)
+                self.installation = McpInstallation.into(InstallTarget(IdeLayout("Claude"), self.project / ".claude"), RepositoryToolsets(self.project))
                 self.installation.is_temporary = False
                 for tool in SampleMcpOps().tools.values():
                     self.installation.write(tool)
@@ -675,7 +677,7 @@ with description("an MCP install that deploys to the IDE's user-level config") a
                 (self.project / ".claude").mkdir(parents=True)
                 (self.project / ".git").write_text("gitdir: elsewhere\n", encoding="utf-8")
                 self.project_config = self.project / ".mcp.json"
-                self.installation = McpInstallation.create(IdeLayout("Claude"), self.project / ".claude", repo=self.project)
+                self.installation = McpInstallation.into(InstallTarget(IdeLayout("Claude"), self.project / ".claude"), RepositoryToolsets(self.project))
                 self.installation.is_temporary = False
                 for tool in SampleMcpOps().tools.values():
                     self.installation.write(tool)
@@ -723,7 +725,7 @@ with description("an MCP install that deploys to the IDE's user-level config") a
     with context("into a temp install tree"):
         with before.each:
             self.tree = Path(tempfile.mkdtemp())
-            self.installation = McpInstallation.create(IdeLayout("Cursor"), self.tree, repo=_REPO_ROOT)
+            self.installation = McpInstallation.into(InstallTarget(IdeLayout("Cursor"), self.tree), RepositoryToolsets(_REPO_ROOT))
             for tool in SampleMcpOps().tools.values():
                 self.installation.write(tool)
             self.installation.cdd_entry.write()

@@ -11,6 +11,7 @@ from pathlib import Path
 from expects import equal, expect
 from mamba import after, before, context, description, it
 
+from harness.agent_tools.agent_tools import ToolsetReference
 from harness.installation.repository_toolsets import RepositoryToolsets
 
 RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
@@ -58,7 +59,7 @@ with description("server health") as self:
     with context("called through the MCP server for the project the call names"):
         with before.each:
             self.server = McpServer(project=self.root)
-            self.server.start(("harness.diagnostics.server_health:ServerHealth",))
+            self.server.start((ToolsetReference.parsed("harness.diagnostics.server_health:ServerHealth"),))
 
         with it("should answer the band's call with every part"):
             result = self.server.invoke("server-health.report", {})

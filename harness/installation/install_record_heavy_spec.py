@@ -11,6 +11,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
+from harness.agent_tools.agent_tools import ToolsetReference
 from harness.installation.installer import Installer, ToolsetInstallFailed
 from harness.installation.repository_toolsets import RepositoryToolsets
 
@@ -88,7 +89,7 @@ with description("an install into an IDE folder") as self:
     with context("that stops at a toolset it cannot publish"):
         with before.each:
             try:
-                self.cursor.install([SampleAgenticOps(), "no.such.module:Nope"])
+                self.cursor.install([SampleAgenticOps(), ToolsetReference.parsed("no.such.module:Nope")])
             except ToolsetInstallFailed:
                 pass
 
@@ -103,7 +104,7 @@ with description("an install into an IDE folder") as self:
     with context("that is finished, then refreshed with the Installer's own commands alone"):
         with before.each:
             self.cursor.install([SampleAgenticOps()])
-            Installer.create(ide="Cursor", path=self.project / ".cursor", repo=_REPO_ROOT).deployment.install_self()
+            Installer.create(ide="Cursor", path=self.project / ".cursor", repo=_REPO_ROOT).install_self()
 
         with it("should keep the skills the install wrote"):
             expect(len(_generate_skills(_skills(self.project / ".cursor")))).to(equal(1))

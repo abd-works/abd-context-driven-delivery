@@ -11,21 +11,22 @@ Annotatable: TypeAlias = Callable[..., Any] | type
 
 
 class AnnotationKinds:
-    """Every kind of annotation defined in this process, and the channel each destination publishes to. A kind
-    registers here as its class is defined, so the toolset asks one object which annotations a member carries and
-    where it is published, without importing the publishers that define the kinds."""
+    """Every kind of annotation defined in this process, and the destinations among them: a destination kind is its
+    channel. A kind registers here as its class is defined, so the toolset asks one object which annotations a member
+    carries and where it is published, without importing the publishers that define the kinds."""
 
     def __init__(self) -> None:
         self._kinds: list[AnnotationKind] = []
-        self._channels: dict[str, DestinationKind] = {}
+        self._destinations: list[DestinationKind] = []
 
     def register(self, kind: AnnotationKind) -> None:
-        """Add kind, the first kind with its flag; a destination also becomes the kind of its channel."""
+        """Add kind, the first kind with its flag; a destination with a channel is also one of the destinations, the
+        first kind with its channel."""
         if kind.flag and all(known.flag != kind.flag for known in self._kinds):
             self._kinds.append(kind)
         channel = getattr(kind, "channel", "")
-        if channel:
-            self._channels.setdefault(channel, kind)
+        if channel and all(known.channel != channel for known in self._destinations):
+            self._destinations.append(kind)
 
     @property
     def copied_flags(self) -> tuple[str, ...]:
@@ -48,27 +49,21 @@ class AnnotationKinds:
             for kind in self._kinds
         )
 
-    def of_channel(self, channel: str) -> DestinationKind | None:
-        """The kind of annotation that publishes to channel; none when its publisher was never imported."""
-        return self._channels.get(channel)
+    def destinations_of(self, operation: Annotatable) -> tuple[DestinationKind, ...]:
+        """Every destination install publishes operation to, in the order the destinations were defined. A destination
+        whose publisher this process never imported publishes nothing."""
+        return tuple(kind for kind in self._destinations if kind.publishes(operation))
 
-    def annotated_for(self, channel: str, operation: Annotatable) -> bool:
-        """True when operation carries the annotation of channel, whether or not install publishes it."""
-        kind = self.of_channel(channel)
-        return kind is not None and kind.annotates(operation)
+    def deploy_name_of(self, operation: Annotatable) -> str:
+        """The name a destination's annotation gave operation for the file it installs, such as a command's name; empty
+        when none did. A destination that enlists its member names something else, such as the event a hook runs on."""
+        return next((name for kind in self._destinations if not kind.enlists_member and (name := kind.name_given(operation))), "")
 
-    def publishes(self, channel: str, operation: Annotatable) -> bool:
-        """True when install publishes operation to channel: it carries that channel's annotation, the annotation is
-        turned on, and no omission keeps it out of install."""
-        kind = self.of_channel(channel)
-        if kind is None or not kind.annotates(operation) or kind.disabled_on(operation):
-            return False
-        return not self.withholds_install(operation)
-
-    def name_given_for(self, channel: str, operation: Annotatable) -> str:
-        """The name channel's annotation gave operation, such as a command's name or a hook's event; empty when none."""
-        kind = self.of_channel(channel)
-        return kind.name_annotated_on(operation) if kind is not None else ""
+    @property
+    def answering_calls(self) -> DestinationKind | None:
+        """The destination whose server answers an agent's calls to the members it publishes, as MCP does; none when
+        its publisher was never imported."""
+        return next((kind for kind in self._destinations if kind.answers_calls), None)
 
     @property
     def installing_names(self) -> frozenset[str]:
@@ -79,7 +74,12 @@ class AnnotationKinds:
 
     def enlisting(self, member: Annotatable) -> bool:
         """True when a destination that enlists its members, such as a hook, annotates member."""
-        return any(kind.enlists_member and kind.annotates(member) for kind in self._channels.values())
+        return any(kind.enlists_member and kind.annotates(member) for kind in self._destinations)
+
+    def marking_a_collection(self, member: Annotatable) -> bool:
+        """True when a destination whose member holds a collection of its toolset's tools, as a practice's ``@rules``
+        member does, annotates member."""
+        return any(kind.marks_a_collection and kind.annotates(member) for kind in self._destinations)
 
 
 # An annotation is a class, and a class is defined once per process, so the list of kinds is one per process too.
@@ -239,8 +239,10 @@ noDeploy = NoDeploy
 
 
 class DestinationKind(AnnotationKind):
-    """A kind of annotation that names where a member is published: its channel, the name the annotation gave the
-    member there, and whether the annotation is turned off on it."""
+    """A kind of annotation that names where a member is published, and is that channel: *Skill*, *Command*, *Rules*,
+    *Mcp*, and *Hook*. It answers whether install publishes a member there, the name the annotation gave the member
+    there, and whether the annotation is turned off on it. Its ``channel`` is the channel's name, the key a published
+    list and ``diagnostics.json`` file it under."""
 
     channel: str
 
@@ -248,9 +250,16 @@ class DestinationKind(AnnotationKind):
         """A destination with a channel publishes the member it annotates there."""
         return bool(kind.channel)
 
-    def name_annotated_on(kind, operation: Annotatable) -> str:
-        """The name this destination's annotation gave the operation, such as the event a hook runs on; empty when the
-        operation carries no such annotation."""
+    def publishes(kind, operation: Annotatable) -> bool:
+        """True when install publishes operation here: it carries this annotation, the annotation is turned on, and no
+        omission keeps it out of install."""
+        if not kind.channel or not kind.annotates(operation) or kind.disabled_on(operation):
+            return False
+        return not annotation_kinds.withholds_install(operation)
+
+    def name_given(kind, operation: Annotatable) -> str:
+        """The name this destination's annotation gave the operation, such as a command's name or the event a hook runs
+        on; empty when the operation carries no such annotation."""
         return str(getattr(operation, f"{kind.flag}_name", "") or "")
 
     def companion_flags(kind) -> tuple[str, ...]:
@@ -273,6 +282,11 @@ class Destination(Annotation, metaclass=DestinationKind):
     # True when this annotation alone makes a member a tool of its toolset, as a hook is: the IDE calls the member, so
     # it needs no ``@agent_tool``.
     enlists_member: ClassVar[bool] = False
+    # True when the member this annotation decorates holds a collection of its toolset's tools, as ``@rules`` does.
+    marks_a_collection: ClassVar[bool] = False
+    # True when this destination's server answers an agent's calls to the member, as MCP does, so a skill or command
+    # for the member tells the agent to call the tool, and each call is logged in the caller's session.
+    answers_calls: ClassVar[bool] = False
 
     def annotate(self, target: Annotatable) -> Annotatable:
         super().annotate(target)

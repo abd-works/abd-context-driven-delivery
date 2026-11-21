@@ -15,9 +15,9 @@ from harness.installation.repository_toolsets import RepositoryToolsets
 
 RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 
-from harness.agent_tools.agent_tools import AgentToolSet  # noqa: E402
+from harness.agent_tools.agent_tools import ToolsetReference, AgentToolSet  # noqa: E402
 from harness.catalog_generator.catalog_practice import CatalogSkills  # noqa: E402
-from harness.installation.files import FileChannel, FileInstallation  # noqa: E402
+from harness.installation.files import CommandInstallation  # noqa: E402
 from harness.installation.ide_layout import IdeLayout  # noqa: E402
 from harness.installation.install_target import InstallTarget  # noqa: E402
 from harness.installation.data_class import DataClass  # noqa: E402
@@ -1269,7 +1269,7 @@ with description("the board tools") as self:
         # A person adds an idea from the chat with /backlog, as the + on the board's Backlog column does.
         with it("should install adding a backlog item as the backlog slash command"):
             installed = tempfile.mkdtemp()
-            FileInstallation(InstallTarget(IdeLayout("Claude"), installed), FileChannel("command")).install(AgentToolSet.instantiate(BacklogItem).tools["create"])
+            CommandInstallation.into(InstallTarget(IdeLayout("Claude"), installed)).install(ToolsetReference.of(BacklogItem).made().tools["create"])
             expect([file.name for file in Path(installed).rglob("*.md")]).to(equal(["backlog.md"]))
 
         # An agent that opens a ticket must work in the ticket's own worktree, not in the chat that opened it.

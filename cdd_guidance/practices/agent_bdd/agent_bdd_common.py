@@ -528,10 +528,10 @@ class ToolsetRequest:
 
     def toolset_on(self, project: Path) -> AgentToolSet:
         """The toolset made from this request's context, for the session it names in project."""
-        from harness.agent_tools.agent_tools import AgentToolSet
+        from harness.agent_tools.agent_tools import ToolsetReference
 
         try:
-            return AgentToolSet.instantiate({"toolset": self.toolset, "context": self._context_on(project)})
+            return ToolsetReference.parsed(self.toolset).made(**self._context_on(project))
         except TypeError as exc:
             raise AgentHarnessError(str(exc)) from exc
 

@@ -14,7 +14,7 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
 from expects import contain, equal, expect
 from mamba import before, description, it
 
-from harness.agent_tools.agent_tools import AgentToolSet, SubAgentAnnotation
+from harness.agent_tools.agent_tools import ToolsetReference, AgentToolSet, SubAgentAnnotation
 from space.session.session import Session
 
 
@@ -22,7 +22,7 @@ from space.session.session import Session
 # (S) Person --> Choose Session And Practice Roots
 with description("a session's instructions to set up its roots, which switching to a session with unchecked roots points to"):
     with before.all:
-        self.tool = AgentToolSet.instantiate(Session).tools["set_up_roots"]
+        self.tool = ToolsetReference.of(Session).made().tools["set_up_roots"]
         self.prompt = "\n".join(self.tool.prompt)
 
     with it("should be offered as instructions"):

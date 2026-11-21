@@ -6,7 +6,7 @@ from pathlib import Path
 
 from expects import equal, expect, raise_error
 
-from harness.agent_tools.agent_tools import AgentToolSet
+from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference
 from space.session import Session, Sessions
 from space.session.session import SessionNotFoundError
 from space.session.file_manager import PathOutsideRootsError
@@ -110,7 +110,7 @@ with description("session.write_file") as self:
         self.folder = self.project.root / ".sessions" / "checkout-flow"
         self.folder.mkdir(parents=True)
         (self.folder / "session.json").write_text(json.dumps({"name": "checkout-flow"}), encoding="utf-8")
-        self.tool = AgentToolSet.instantiate(Session).tools["write_file"]
+        self.tool = ToolsetReference.of(Session).made().tools["write_file"]
 
     with after.each:
         OPEN_PROJECTS.close_all()
