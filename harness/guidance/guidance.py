@@ -12,7 +12,6 @@ from harness.annotations.name import Name
 from harness.guidance.action_catalogue import ACTION_CATALOGUE, FidelityActions
 from harness.guidance.declared_outputs import DeclaredOutputs
 from harness.guidance.practice_formats import PracticeFormats, RenderContent, RenderRequest
-from harness.guidance.practice_reading import PracticeReading
 from harness.guidance.rule import Rule, RulesCollection
 from harness.guidance.schema import Schema
 from harness.guidance.stages import STAGES, ApproachStage
@@ -259,9 +258,11 @@ class PracticeGuidance(Guidance):
     formats_type: type[PracticeFormats] = PracticeFormats
     """The kind of formats this practice holds: a practice whose formats read or convert in a way of their own names its
     own kind."""
-    reading_type: type[PracticeReading] = PracticeReading
-    """The kind of reading this practice takes part in the knowledge graph with: a practice that reads files from the
-    working copy, or declares node types the graph treats in a way of their own, names its own kind."""
+    reading_type: type | None = None
+    """The kind of reading this practice takes part in the knowledge graph with (a *PracticeReading* of harness/graph,
+    which sits above this module, so it is not named here): a practice that reads files from the working copy, or
+    declares node types the graph treats in a way of their own, names its own kind; harness/graph sets the default,
+    *PracticeReading*, when it is imported."""
     extends: str = ""
     """The practice whose types this practice's schema builds on with ``is:``, such as a DDD entity that is a Clean
     Engineering class; its types also carry that practice's rules."""
@@ -296,7 +297,6 @@ class PracticeGuidance(Guidance):
         """fidelity left out starts the practice at its ``first_fidelity``; ``None`` starts it at no fidelity."""
         super().__init__(format=format)
         self.formats = self.formats_type(self, dict(self.format_adapters))
-        self.reading = self.reading_type(self)
         self.working_set = self.working_set_type(self)
         self._start_at(self.first_fidelity if fidelity == "" else fidelity)
         self._check_format()
@@ -361,6 +361,14 @@ class PracticeGuidance(Guidance):
         fidelities from the practice's document when nothing has read them yet."""
         current = self._current_fidelity
         return replace(super().markdown_scope, fidelity=current.name if current is not None else None)
+
+    @cached_property
+    def reading(self) -> Any:
+        """How the practice takes part in the knowledge graph, made from its ``reading_type`` the first time the graph
+        or the practice's own code asks, and kept."""
+        if self.reading_type is None:
+            raise TypeError(f"{self.key} has no kind of reading: harness/graph, which gives the default, is not imported")
+        return self.reading_type(self)
 
     @cached_property
     def document(self) -> MarkdownText:

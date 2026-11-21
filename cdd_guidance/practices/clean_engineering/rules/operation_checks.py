@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
 
-from cdd_guidance.practices.clean_engineering.model.class_graph import parameters_of
+from cdd_guidance.practices.clean_engineering.reading.class_graph import parameters_of
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import StatementCount
 from cdd_guidance.practices.clean_engineering.rules.operation_semantics import SEMANTIC_RULES
 from cdd_guidance.practices.clean_engineering.rules.production_code_rule import ProductionCodeRule

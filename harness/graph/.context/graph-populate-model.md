@@ -353,7 +353,7 @@ The text the explorer's source view shows.
 
 ## A practice in the graph (PracticeReading)
 
-What one practice gives the graph is its reading part, a *PracticeReading* (`harness/guidance/practice_reading.py`) the practice holds as `practice.reading`, of the kind its class names (`reading_type`); the base reads nothing and checks the rules in `{package}.rules`, so a practice that only checks rules names no kind of its own. Each practice's kind of reading lives in `{practice}/model/graph_reading.py`.
+What one practice gives the graph is its reading part, a *PracticeReading* (`harness/graph/practice_reading.py`) the practice holds as `practice.reading`, of the kind its class names (`reading_type`); the base reads nothing and checks the rules in `{package}.rules`, so a practice that only checks rules names no kind of its own. Each practice's kind of reading lives in `{practice}/model/graph_reading.py`, or in its own `{practice}/reading/` package for Clean Engineering and DDD, whose class models other practices import.
 
 + held_in(graph, nodes): None
 	// the graph hands the part itself and the practice's PracticeNodes
@@ -364,7 +364,8 @@ What one practice gives the graph is its reading part, a *PracticeReading* (`har
 	// graph_checks with the rules the graph's overlays add
 + package: str
 	// the practice's Python package, from PracticeCatalogue
-+ reads_after: tuple[str, ...]
++ reads_after: tuple[type[PracticeGuidance], ...]
+	// the practices read first, by their classes; the build finds each open one with graph.practices.loaded(kind)
 + node_types: tuple[str, ...]
 	// offered by the explorer before any node of them is read
 + read(): None
@@ -374,7 +375,9 @@ What one practice gives the graph is its reading part, a *PracticeReading* (`har
 + graph_checks: dict[str, PracticeGraphRule]
 	// read once
 + own_graph_checks(): dict[str, PracticeGraphRule]
-	// -> rules_in(f"{package}.rules"): the module's BY_SLUG, else its RULES
+	// -> rules_in(f"{package}.rules")
++ rules_in(module_path: str): dict[str, PracticeGraphRule]
+	// static: the module's BY_SLUG, else its RULES; a pattern's overlay reads its rules modules with it too
 
 `PracticeReading.checks()` is its part of the graph's `checks`, which adds each active overlay's `rules_for(practice)` to the practice's own, then each always-on supplement the practice holds (`practice.supplements`), whatever overlays the session chose (`PatternOverlays.checks_of`). A practice's schema reads the same overlays (`PatternOverlays.overlays_for(practice)`: the applied patterns', then its supplements'), so a supplement's `practices/<practice>/model/rules.yaml` gives its node types the supplement's rules, labelled with its name (`tdd.bdd.Spec.unit-tier-fakes-every-boundary`), and their prose comes from the supplement's sections. The build reads each supplement's overlay after the practices, as it reads each pattern's, so it records its facts on their nodes; `node.rules` keeps those whose `node_types` hold the node's type, its file language's, or the Clean Engineering type a pattern's schema anchors it to.
 
@@ -393,8 +396,8 @@ What one pattern or one practice supplement gives the graph on top of the practi
 + read(graph: Graph): None
 + rules_for(practice: PracticeGuidance): dict[str, PracticeGraphRule]
 	// read once per practice: its own practices/{practice}/rules, then its shared rules/ bound to that practice
-	-> rules_in(f"{package}.practices.{practice.key}.rules")
-	-> rules_in(f"{package}.rules")
+	-> PracticeReading.rules_in(f"{package}.practices.{practice.key}.rules")
+	-> PracticeReading.rules_in(f"{package}.rules")
 	-> SharedPracticeGraphRule.for_practice(practice)
 
 ## PracticeGraphRule
@@ -537,7 +540,7 @@ A pattern's `GraphOverlay` declares `direct_kinds`, the relationship kinds of it
 
 # Clean Engineering
 
-*CleanEngineering*, with its readers in `cdd_guidance/practices/clean_engineering/model/graph_reading.py`. It reads each source file with its language's class model, then the model documents `{folder}/.context/*-model.md` of the folders in scope.
+*CleanEngineering*, with its readers in `cdd_guidance/practices/clean_engineering/reading/graph_reading.py`. It reads each source file with its language's class model, then the model documents `{folder}/.context/*-model.md` of the folders in scope.
 
 ## Nodes
 
@@ -573,7 +576,7 @@ returns      relationship  Operation -> OoadClass its return type names
 
 # DDD
 
-*Ddd*, with its readers in `cdd_guidance/practices/ddd/model/graph_reading.py`. `reads_after = ("clean_engineering",)`: its building blocks are the classes Clean Engineering read, seen through the stereotype their declaration gives them, or, in a folder a bounded context covers or where a class carries a DDD stereotype, the one their name gives them (`TacticalClass.inferred_kind`); a class with neither is not a building block. A building block is a `BuildingBlock` node that holds the class and works out its tactical facts from the class's operations; the class's own facts stay the class's, and the class stays Clean Engineering's node.
+*Ddd*, with its readers in `cdd_guidance/practices/ddd/reading/graph_reading.py`. `reads_after = (CleanEngineering,)`: its building blocks are the classes Clean Engineering read, seen through the stereotype their declaration gives them, or, in a folder a bounded context covers or where a class carries a DDD stereotype, the one their name gives them (`TacticalClass.inferred_kind`); a class with neither is not a building block. A building block is a `BuildingBlock` node that holds the class and works out its tactical facts from the class's operations; the class's own facts stay the class's, and the class stays Clean Engineering's node.
 
 ## Nodes
 

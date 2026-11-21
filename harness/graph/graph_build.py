@@ -458,9 +458,10 @@ class GraphBuild:
         def place(practice: PracticeGuidance) -> None:
             if practice in ordered:
                 return
-            for earlier in practice.reading.reads_after:
-                if earlier in opened:
-                    place(opened[earlier])
+            for earlier_kind in practice.reading.reads_after:
+                earlier = self.graph.practices.loaded(earlier_kind)
+                if earlier is not None:
+                    place(earlier)
             ordered.append(practice)
 
         for practice in list(opened.values()):

@@ -5,7 +5,7 @@ from __future__ import annotations
 from cdd_guidance.practices.clean_engineering.clean_engineering_formats import CleanEngineeringFormats
 from cdd_guidance.practices.clean_engineering.model.drawio.drawio import Drawio
 from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model import DrawIOCleanEngineeringModel
-from cdd_guidance.practices.clean_engineering.model.graph_reading import GraphReading
+from cdd_guidance.practices.clean_engineering.reading.graph_reading import GraphReading
 from cdd_guidance.practices.clean_engineering.model.javascript.javascript_class_model import JavaScriptCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.json.json_class_model import JsonCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.markdown.markdown_class_model import MarkdownCleanEngineeringModel

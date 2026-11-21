@@ -16,16 +16,16 @@ from pathlib import Path
 from harness.agent_tools.progress import report_progress
 from harness.graph.graph import Node
 from harness.guidance.guidance import PracticeGuidance
-from harness.guidance.practice_reading import PracticeReading
+from harness.graph.practice_reading import PracticeReading
 from harness.graph.model_node import schema_sync_paused
 from harness.graph.skipped_folders import skips_folder
 from harness.graph.schema_conformance import EXEMPT_FACT
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, OoadClass
-from cdd_guidance.practices.clean_engineering.model.call_links import CallLinks, ClassesInReach, ClassLinks
-from cdd_guidance.practices.clean_engineering.model.code_read import DESCRIBED_FACT, PRODUCTION_FACT, CodeRead
-from cdd_guidance.practices.clean_engineering.model.compared_facts import ComparedFacts
-from cdd_guidance.practices.clean_engineering.model.card_lines import CardLines
+from cdd_guidance.practices.clean_engineering.reading.call_links import CallLinks, ClassesInReach, ClassLinks
+from cdd_guidance.practices.clean_engineering.reading.code_read import DESCRIBED_FACT, PRODUCTION_FACT, CodeRead
+from cdd_guidance.practices.clean_engineering.reading.compared_facts import ComparedFacts
+from cdd_guidance.practices.clean_engineering.reading.card_lines import CardLines
 from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property

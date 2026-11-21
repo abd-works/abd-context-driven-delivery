@@ -18,7 +18,7 @@ from cdd_guidance.practices.clean_engineering.model.production_code import is_te
 if TYPE_CHECKING:
     from harness.graph.graph import Node
 
-    from cdd_guidance.practices.clean_engineering.model.graph_reading import GraphReading
+    from cdd_guidance.practices.clean_engineering.reading.graph_reading import GraphReading
 
 _IDENTIFIER = re.compile(r"[A-Za-z_]\w*")
 # A constructor handing its base a message: Python's `super().__init__("...")`, a brace language's `super("...")`.

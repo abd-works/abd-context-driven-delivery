@@ -6,17 +6,17 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER
-from cdd_guidance.practices.clean_engineering.model.folder_facts import folders_of, is_under
-from cdd_guidance.practices.clean_engineering.model.imported_classes import ImportedClasses
-from cdd_guidance.practices.clean_engineering.model.operation_counts import operation_count
+from cdd_guidance.practices.clean_engineering.reading.folder_facts import folders_of, is_under
+from cdd_guidance.practices.clean_engineering.reading.imported_classes import ImportedClasses
+from cdd_guidance.practices.clean_engineering.reading.operation_counts import operation_count
 from cdd_guidance.practices.clean_engineering.model.production_code import is_example_code
-from cdd_guidance.practices.clean_engineering.model.public_routes import NAMED, PublicRoutes
+from cdd_guidance.practices.clean_engineering.reading.public_routes import NAMED, PublicRoutes
 from cdd_guidance.practices.clean_engineering.model.script_imports import ClassReference
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node, PracticeNodes
 
-    from cdd_guidance.practices.clean_engineering.model.class_graph import ClassGraph
+    from cdd_guidance.practices.clean_engineering.reading.class_graph import ClassGraph
 
 
 class ModuleExposure:

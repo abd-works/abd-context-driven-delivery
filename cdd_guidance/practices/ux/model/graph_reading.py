@@ -19,7 +19,10 @@ from harness.graph.location import Location
 from harness.graph.model_node import schema_sync_paused
 from harness.graph.schema_conformance import EXEMPT_FACT
 from harness.graph.skipped_folders import skips_folder
-from harness.guidance.practice_reading import PracticeReading
+from harness.graph.practice_reading import PracticeReading
+from cdd_guidance.practices.stories.stories import Stories
+from cdd_guidance.practices.ddd.ddd import Ddd
+from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 
 from cdd_guidance.practices.ux.model.nodes import Interaction, NavComponent, Screen, Transition
 from cdd_guidance.practices.ux.model.story_link import KEY_SEPARATOR, STEP_TYPES, StoryLink, StoryTargets, key_of
@@ -52,7 +55,7 @@ class UxReading(PracticeReading):
     to, adds the map's nodes to its graph, and links each screen and control to the stories, scenarios, and steps it
     serves and each screen to the domain classes its domain terms name. It checks its screen rules on those nodes."""
 
-    reads_after = ("stories", "clean_engineering", "ddd")
+    reads_after = (Stories, CleanEngineering, Ddd)
     node_types = (
         "UxMap",
         "Screen",
@@ -320,8 +323,6 @@ class _DomainTermLinks(_LinksAcrossPractices):
 
     def _domain_practices(self) -> list[PracticeGuidance]:
         """The practices open in the graph whose classes a domain term can name: DDD first, then Clean Engineering."""
-        from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
-        from cdd_guidance.practices.ddd.ddd import Ddd
 
         loaded = (self._graph.practices.loaded(kind) for kind in (Ddd, CleanEngineering))
         return [practice for practice in loaded if practice is not None]
@@ -344,7 +345,6 @@ class _StoryDemoControlLinks(_LinksAcrossPractices):
     def _steps_reading(self, label: str, control: Node) -> list[Node]:
         """The steps whose text is label: those of the stories the control's screen shows, when it shows any that have
         one; else every such step when only one story has it."""
-        from cdd_guidance.practices.stories.stories import Stories
 
         stories = self._graph.practices.loaded(Stories)
         if stories is None:
@@ -366,7 +366,6 @@ class _StoryDemoControlLinks(_LinksAcrossPractices):
         """The property a bound field's path ends on: the Clean Engineering property called by the path's last part on
         the class called by the part before it, as ``book.title`` is ``title`` on ``Book``. A path of one part, or one
         no single property answers, leads to none."""
-        from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 
         clean = self._graph.practices.loaded(CleanEngineering)
         parts = [part for part in path.split(_PATH_SEPARATOR) if part]

@@ -12,7 +12,9 @@ from typing import TYPE_CHECKING
 
 from harness.agent_tools.progress import report_progress
 from harness.graph.skipped_folders import scanned_files
-from harness.guidance.practice_reading import PracticeReading
+from harness.graph.practice_reading import PracticeReading
+from cdd_guidance.practices.ddd.ddd import Ddd
+from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER
 from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel
@@ -62,7 +64,7 @@ class StoriesReading(PracticeReading):
     and says which areas of the map a model is written for (*ModelledAreas*), where alone a Then must observe an
     Example."""
 
-    reads_after = ("clean_engineering", "ddd")
+    reads_after = (CleanEngineering, Ddd)
     source_ordered_types = frozenset({"Background", "Scenario", "Step", "Story"})
     rule_types = {
         "SubEpic": ("Epic", "StoryNode"),
@@ -90,7 +92,6 @@ class StoriesReading(PracticeReading):
     def object_model(self) -> PracticeReading | None:
         """The part of the Clean Engineering practice the graph that holds Stories reads beside it, whose operations its
         steps call and whose classes its examples show; none when the graph reads none."""
-        from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 
         loaded = self.graph.practices.loaded(CleanEngineering) if self.graph is not None else None
         return loaded.reading if loaded is not None else None
@@ -99,7 +100,6 @@ class StoriesReading(PracticeReading):
     def domain_model(self) -> PracticeReading | None:
         """The part of the DDD practice the graph that holds Stories reads beside it, whose aggregates its scenarios
         name; none when the graph reads none."""
-        from cdd_guidance.practices.ddd.ddd import Ddd
 
         loaded = self.graph.practices.loaded(Ddd) if self.graph is not None else None
         return loaded.reading if loaded is not None else None

@@ -11,9 +11,9 @@ if str(_REPO_ROOT) not in sys.path:
 from expects import equal, expect
 from mamba import before, context, description, it
 
-from cdd_guidance.practices.clean_engineering.model.class_graph import ClassGraph
-from cdd_guidance.practices.clean_engineering.model.module_exposure import ModuleExposure
-from cdd_guidance.practices.clean_engineering.model.public_routes import PublicRoutes, RegisteredClasses
+from cdd_guidance.practices.clean_engineering.reading.class_graph import ClassGraph
+from cdd_guidance.practices.clean_engineering.reading.module_exposure import ModuleExposure
+from cdd_guidance.practices.clean_engineering.reading.public_routes import PublicRoutes, RegisteredClasses
 from cdd_guidance.practices.clean_engineering.rules.rule_examples import practice_from_files
 
 _CARD = "# module\n"

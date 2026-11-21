@@ -3,55 +3,15 @@ from __future__ import annotations
 
 import functools
 import importlib
-from collections.abc import Iterable, Mapping
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING
+
+from harness.guidance.guidance import PracticeGuidance
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from harness.guidance.guidance import PracticeGuidance
-
-
-class HoldingGraph(Protocol):
-    """The knowledge graph that holds a practice, as a practice's reading names it: harness/graph's *Graph* answers it.
-    harness/graph sits above this module, so only what every reading asks of the graph is named here, as the action
-    catalogue names the fidelity an action runs on; a practice's own kind of reading imports harness/graph and reaches
-    the rest of the graph there."""
-
-    @property
-    def practices(self) -> Iterable[object]: ...
-
-
-class HeldRuleRun(Protocol):
-    """The run of a practice's graph rules in its graph, as a reading asks it for the rules it checks."""
-
-    @property
-    def checks(self) -> Mapping[str, object]: ...
-
-
-class HeldNodes(Protocol):
-    """The practice's part of the graph that holds it (harness/graph's *PracticeNodes*): its nodes and edges, the node
-    types it offers, and the run of its rules."""
-
-    @property
-    def rule_run(self) -> HeldRuleRun: ...
-
-    def offer_node_types(self, types: Iterable[str]) -> None: ...
-
-
-def rules_in(module_path: str) -> dict[str, Any]:
-    """The graph rules a rules module lists, by slug: its ``BY_SLUG``, else each of its ``RULES``. A module that is not
-    there has none."""
-    try:
-        module = importlib.import_module(module_path)
-    except ModuleNotFoundError as missing:
-        if missing.name and module_path.startswith(missing.name):
-            return {}
-        raise
-    by_slug = getattr(module, "BY_SLUG", None)
-    if isinstance(by_slug, dict):
-        return dict(by_slug)
-    return {rule.slug: rule for rule in getattr(module, "RULES", ()) if getattr(rule, "slug", "")}
+    from harness.graph.graph import Graph, PracticeNodes
+    from harness.graph.practice_rule import PracticeGraphRule
 
 
 class PracticeReading:
@@ -65,9 +25,9 @@ class PracticeReading:
     kind of reading (``read_working_copy``), after the practices it names in ``reads_after``, and links its nodes to
     theirs there."""
 
-    reads_after: tuple[str, ...] = ()
-    """The practices whose nodes this one reads while it reads its own, by key; the graph reads them first, so this one
-    links its nodes to theirs once its own are read."""
+    reads_after: tuple[type[PracticeGuidance], ...] = ()
+    """The practices whose nodes this one reads while it reads its own, by their classes; the graph reads them first, so
+    this one links its nodes to theirs once its own are read."""
 
     node_types: tuple[str, ...] = ()
     """Node types the graph explorer offers for this practice even before any node of them is read."""
@@ -96,10 +56,10 @@ class PracticeReading:
         self.practice = practice
         # The graph that holds the practice (harness/graph's *Graph*) and the practice's part of it (its
         # *PracticeNodes*: its root node, its nodes, and its edges); none until a graph holds the practice.
-        self.graph: HoldingGraph | None = None
-        self.in_graph: HeldNodes | None = None
+        self.graph: Graph | None = None
+        self.in_graph: PracticeNodes | None = None
 
-    def held_in(self, graph: HoldingGraph, nodes: HeldNodes) -> None:
+    def held_in(self, graph: Graph, nodes: PracticeNodes) -> None:
         """Be read in graph, where nodes, the practice's part of it, holds the practice's nodes and edges."""
         self.graph = graph
         self.in_graph = nodes
@@ -127,7 +87,7 @@ class PracticeReading:
         return False
 
     @functools.cached_property
-    def graph_checks(self) -> dict[str, Any]:
+    def graph_checks(self) -> dict[str, PracticeGraphRule]:
         """Every graph rule (a *PracticeGraphRule*) this practice checks, by slug; read once."""
         return self.own_graph_checks()
 
@@ -136,11 +96,31 @@ class PracticeReading:
         """The Python package that holds the practice, such as ``cdd_guidance.practices.stories``."""
         return type(self.practice).__module__.rsplit(".", 1)[0]
 
-    def own_graph_checks(self) -> dict[str, Any]:
+    def own_graph_checks(self) -> dict[str, PracticeGraphRule]:
         """The graph rules the practice's ``rules`` package lists; a practice that checks more overrides this."""
-        return rules_in(f"{self._package}.rules")
+        return self.rules_in(f"{self._package}.rules")
 
-    def checks(self) -> dict[str, Any]:
+    @staticmethod
+    def rules_in(module_path: str) -> dict[str, PracticeGraphRule]:
+        """The graph rules a rules module lists, by slug: its ``BY_SLUG``, else each of its ``RULES``. A module that is
+        not there has none. A pattern's overlay reads its rules modules the same way."""
+        try:
+            module = importlib.import_module(module_path)
+        except ModuleNotFoundError as missing:
+            if missing.name and module_path.startswith(missing.name):
+                return {}
+            raise
+        by_slug = getattr(module, "BY_SLUG", None)
+        if isinstance(by_slug, dict):
+            return dict(by_slug)
+        return {rule.slug: rule for rule in getattr(module, "RULES", ()) if getattr(rule, "slug", "")}
+
+    def checks(self) -> dict[str, PracticeGraphRule]:
         """The graph rules this practice checks, with those the pattern overlays its graph applies add to it, by slug;
         its own alone for a practice no graph holds."""
         return self.in_graph.rule_run.checks if self.in_graph is not None else dict(self.graph_checks)
+
+
+# A practice that names no reading of its own takes part in the graph with this one. harness/guidance sits below this
+# module, so it names no kind of reading; the graph sets the default when it is imported.
+PracticeGuidance.reading_type = PracticeReading

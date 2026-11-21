@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from cdd_guidance.practices.clean_engineering.model.import_cycles import ImportCycles
+from cdd_guidance.practices.clean_engineering.reading.import_cycles import ImportCycles
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node, PracticeNodes

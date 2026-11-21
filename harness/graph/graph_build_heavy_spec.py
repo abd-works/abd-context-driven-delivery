@@ -53,10 +53,10 @@ _LOADED = '{"message": "Loaded the working copies."}'
 _VALIDATED = (
     ("clean_engineering/model/operation.py", "clean_engineering/rules/class_rules.py"),
     ("stories/model/story_model.py", "stories/stories.py"),
-    ("ddd/model/nodes.py", "ddd/model/graph_reading.py"),
+    ("ddd/model/nodes.py", "ddd/reading/graph_reading.py"),
     ("bdd/model/graph_bdd_model_spec.py", "bdd/model/graph_reading.py"),
     ("ux/model/story_link.py", "ux/model/nodes.py"),
-    ("clean_engineering/model/graph_reading.py", "stories/model/graph_reading.py"),
+    ("clean_engineering/reading/graph_reading.py", "stories/model/graph_reading.py"),
 )
 # How many times each validator refreshes its files.
 _ROUNDS = 2

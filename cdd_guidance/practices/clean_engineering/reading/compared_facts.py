@@ -11,21 +11,21 @@ from typing import TYPE_CHECKING
 
 from harness.agent_tools.progress import report_progress
 
-from cdd_guidance.practices.clean_engineering.model.class_facts import (
+from cdd_guidance.practices.clean_engineering.reading.class_facts import (
     BuiltCollaborators,
     DomainExtensions,
     Forwarding,
     ParallelModels,
     ResourceShapes,
 )
-from cdd_guidance.practices.clean_engineering.model.class_graph import ClassGraph
-from cdd_guidance.practices.clean_engineering.model.folder_facts import ImportCycleFacts, SiblingFanOut
-from cdd_guidance.practices.clean_engineering.model.module_exposure import ModuleExposure
-from cdd_guidance.practices.clean_engineering.model.public_routes import PublicRoutes, registered_in_this_process
-from cdd_guidance.practices.clean_engineering.model.operation_facts import BodyCopies, FailureMessages
+from cdd_guidance.practices.clean_engineering.reading.class_graph import ClassGraph
+from cdd_guidance.practices.clean_engineering.reading.folder_facts import ImportCycleFacts, SiblingFanOut
+from cdd_guidance.practices.clean_engineering.reading.module_exposure import ModuleExposure
+from cdd_guidance.practices.clean_engineering.reading.public_routes import PublicRoutes, registered_in_this_process
+from cdd_guidance.practices.clean_engineering.reading.operation_facts import BodyCopies, FailureMessages
 
 if TYPE_CHECKING:
-    from cdd_guidance.practices.clean_engineering.model.graph_reading import GraphReading
+    from cdd_guidance.practices.clean_engineering.reading.graph_reading import GraphReading
 
 
 class ComparedFacts:

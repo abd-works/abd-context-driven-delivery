@@ -57,7 +57,7 @@ The project round 3 of exploratory testing loaded, kept as `cdd_guidance/practic
 | Source | Note |
 |--------|------|
 | `cdd_guidance/practices/clean_engineering/clean_engineering.md` `source-parses` | "A file that does not parse is read into no classes, so every other rule passes it without looking" |
-| `cdd_guidance/practices/clean_engineering/model/code_read.py` `CodeRead._parsed` | "A file that does not parse is kept with the reason, so the source-parses rule reports it" |
+| `cdd_guidance/practices/clean_engineering/reading/code_read.py` `CodeRead._parsed` | "A file that does not parse is kept with the reason, so the source-parses rule reports it" |
 | Defect widget-18 | a file that did not parse in a folder with no module card, and a valid file that started with a byte-order mark, left the graph with no violation |
 
 #### Scenario: Report a file that does not parse in a folder with no module card

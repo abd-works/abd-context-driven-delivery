@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
 
-from cdd_guidance.practices.clean_engineering.model.folder_facts import FOLDER_TYPES
+from cdd_guidance.practices.clean_engineering.reading.folder_facts import FOLDER_TYPES
 from cdd_guidance.practices.clean_engineering.rules.production_code_rule import ProductionCodeRule
 
 if TYPE_CHECKING:

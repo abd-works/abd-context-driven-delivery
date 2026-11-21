@@ -19,14 +19,15 @@ from harness.graph.graph import Node, PracticeNodes
 from harness.graph.saved_graph import NodeIdentity
 from harness.graph.saved_graph import FactValue
 from harness.graph.location import Location
-from harness.guidance.practice_reading import PracticeReading
+from harness.graph.practice_reading import PracticeReading
+from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 from harness.markdown.markdown import MarkdownText
 from harness.graph.model_node import schema_sync_paused
 from harness.graph.skipped_folders import skips_folder
 
-from cdd_guidance.practices.clean_engineering.model.code_read import DESCRIBED_FACT
+from cdd_guidance.practices.clean_engineering.reading.code_read import DESCRIBED_FACT
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
-from cdd_guidance.practices.clean_engineering.model.card_lines import CardLines
+from cdd_guidance.practices.clean_engineering.reading.card_lines import CardLines
 from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownBoundedContextMap
 from cdd_guidance.practices.ddd.model.nodes import TARGET_SEGMENT, Aggregate, AggregateLink, BoundedContext, ContextMapping, DomainEvent, Integration
@@ -161,7 +162,7 @@ class DddReading(PracticeReading):
     code, and the aggregates its domain model documents describe; and it checks its own graph rules with Clean
     Engineering's."""
 
-    reads_after = ("clean_engineering",)
+    reads_after = (CleanEngineering,)
     class_types = (*BUILDING_BLOCK_KINDS, "Aggregate", "DomainEvent")
 
     @property

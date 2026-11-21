@@ -9,7 +9,7 @@ section: body
 
 Story map: [Build Practice Trees From Source](../../../.context/story-map.md#e-build-practice-trees-from-source). Session release-1-2-fixes.
 
-**Evidence mode.** Every scenario here is *Observed*: it holds for DDD's graph reading today (`cdd_guidance/practices/ddd/model/graph_reading.py`) and is run by `cdd_guidance/practices/ddd/model/graph_reading_spec.py`. They were written after round 3 of exploratory testing (defects r3-bolt-01, r3-bolt-02, r3-bolt-05 and the question r3-cog-05) showed that the graph held none of the contexts, integrations and events the bounded-context map and the domain model write, and after the person answered that one class in several practices is several nodes joined by edges.
+**Evidence mode.** Every scenario here is *Observed*: it holds for DDD's graph reading today (`cdd_guidance/practices/ddd/reading/graph_reading.py`) and is run by `cdd_guidance/practices/ddd/reading/graph_reading_spec.py`. They were written after round 3 of exploratory testing (defects r3-bolt-01, r3-bolt-02, r3-bolt-05 and the question r3-cog-05) showed that the graph held none of the contexts, integrations and events the bounded-context map and the domain model write, and after the person answered that one class in several practices is several nodes joined by edges.
 
 The story below is not on the story map yet.
 
@@ -115,7 +115,7 @@ The story below is not on the story map yet.
 
 #### Scenario: Give a bounded context the aggregates its file links
 
-Observed (`cdd_guidance/practices/ddd/model/graph_reading_spec.py`). Written after the person's answer of 2026-11-21: a bounded context's file names each aggregate as a link to its heading in the domain model.
+Observed (`cdd_guidance/practices/ddd/reading/graph_reading_spec.py`). Written after the person's answer of 2026-11-21: a bounded context's file names each aggregate as a link to its heading in the domain model.
 
 *Given* `ordering/.context/bounded-context.md` names, under `Aggregates:`, the link `[Cart](../../.context/domain-model.md#shopping-cart)`
   *And* `.context/domain-model.md` heads the aggregates Shopping Cart and Order under `## Ordering | custom`
@@ -126,7 +126,7 @@ Observed (`cdd_guidance/practices/ddd/model/graph_reading_spec.py`). Written aft
 
 #### Scenario: Give a bounded context an aggregate the domain model heads under another name
 
-Observed (`cdd_guidance/practices/ddd/model/graph_reading_spec.py`).
+Observed (`cdd_guidance/practices/ddd/reading/graph_reading_spec.py`).
 
 *Given* `catalogue/.context/bounded-context.md` names the link `[Book](../../.context/domain-model.md#book)`
   *And* `.context/domain-model.md` heads the aggregate Book under `## Library | custom`
@@ -135,7 +135,7 @@ Observed (`cdd_guidance/practices/ddd/model/graph_reading_spec.py`).
 
 #### Scenario: Read a bounded context that names its aggregates in plain words by name
 
-Observed (`cdd_guidance/practices/ddd/model/graph_reading_spec.py`).
+Observed (`cdd_guidance/practices/ddd/reading/graph_reading_spec.py`).
 
 *Given* `ordering/.context/bounded-context.md` names its aggregates in plain words and writes no link
   *And* `.context/domain-model.md` heads the aggregates Shopping Cart and Order under `## Ordering | custom`

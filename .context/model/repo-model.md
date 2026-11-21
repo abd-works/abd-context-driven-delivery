@@ -1757,7 +1757,7 @@ A practice's part in the knowledge graph: the node types the graph treats as cla
 
 + PracticeReading(practice: PracticeGuidance)
 ------
-+ reads_after: tuple[str, ...]
++ reads_after: tuple[type[PracticeGuidance], ...]
 + node_types: tuple[str, ...]
 + class_types: tuple[str, ...]
 + member_types: tuple[str, ...]
@@ -2344,7 +2344,7 @@ What one pattern gives the graph on top of the practices: the nodes it reads and
 + read(graph: Graph): None
 + practice_file(practice_key: str, name: str): Path
 + rules_for(practice: Any): dict[str, PracticeGraphRule]
----<<finds rules with>>--> rules_in
+---<<finds rules with>>--> PracticeReading
 ---<<loads>>--> PracticeGraphRule
 
 ## PatternOverlays
@@ -5140,7 +5140,7 @@ The Stories practice: story map, scenarios, and acceptance tests.
 How Stories takes part in the graph: it reads the story tests under its root, or the story maps there when there are none, writes the story map onto its graph, and links each step to the Clean Engineering operations it calls; it reads after Clean Engineering.
 
 ------
-+ reads_after: tuple[str, ...]
++ reads_after: tuple[type[PracticeGuidance], ...]
 + root: Path
 + << composition >> story_tree: StoryTree
 + object_model: PracticeReading | None
@@ -5300,7 +5300,7 @@ The DDD practice: bounded context, model, and tactics. Its python and typescript
 DDD's nodes, read after Clean Engineering's classes, and its graph checks with Clean Engineering's.
 
 ------
-+ reads_after: tuple[str, ...]
++ reads_after: tuple[type[PracticeGuidance], ...]
 + class_types: tuple[str, ...]
 + root: Path
 ----
@@ -5381,7 +5381,7 @@ The BDD practice: behavior, realization, and development.
 BDD's describe trees, read after Clean Engineering's code and linked to the Clean Engineering members each observation drives.
 
 ------
-+ reads_after: tuple[str, ...]
++ reads_after: tuple[type[PracticeGuidance], ...]
 + node_types: tuple[str, ...]
 + clean_engineering_reading: PracticeReading | None
 ----

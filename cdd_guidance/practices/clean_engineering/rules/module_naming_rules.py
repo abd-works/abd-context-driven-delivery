@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from cdd_guidance.practices.clean_engineering.model.folder_facts import FOLDER_TYPES
+from cdd_guidance.practices.clean_engineering.reading.folder_facts import FOLDER_TYPES
 from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 from cdd_guidance.practices.clean_engineering.rules.production_code_rule import ProductionCodeRule
 

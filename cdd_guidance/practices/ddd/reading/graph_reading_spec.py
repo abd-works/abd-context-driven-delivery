@@ -179,7 +179,7 @@ with description("DDD's reading of the relationships a domain model's cards decl
 
 # A bookshop of three bounded contexts as its two documents write it, after the templates: the bounded-context map
 # with integrations and events, and the domain model whose roots hold one another by identity.
-_THREE_CONTEXTS = Path(__file__).resolve().parent / "_examples" / "trip" / "three-contexts"
+_THREE_CONTEXTS = Path(__file__).resolve().parents[1] / "model" / "_examples" / "trip" / "three-contexts"
 _BOOKSHOP_DOCUMENTS = {
     ".context/bounded-context-map.md": (_THREE_CONTEXTS / "bounded-context-map.md").read_text(encoding="utf-8"),
     ".context/domain-model.md": (_THREE_CONTEXTS / "domain-model.md").read_text(encoding="utf-8"),

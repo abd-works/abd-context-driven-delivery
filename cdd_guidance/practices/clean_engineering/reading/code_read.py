@@ -20,7 +20,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     UnreadableSource,
 )
 from cdd_guidance.practices.clean_engineering.model.code_class_model import CodeCleanEngineeringModel
-from cdd_guidance.practices.clean_engineering.model.folder_facts import folders_of
+from cdd_guidance.practices.clean_engineering.reading.folder_facts import folders_of
 from cdd_guidance.practices.clean_engineering.model.module_context_files import ModuleContext
 from cdd_guidance.practices.clean_engineering.model.script_imports import ScriptImports, imported_files
 from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
@@ -28,8 +28,8 @@ from cdd_guidance.practices.clean_engineering.model.production_code import is_te
 if TYPE_CHECKING:
     from harness.graph.graph import Node
 
-    from cdd_guidance.practices.clean_engineering.model.call_links import ClassesInReach
-    from cdd_guidance.practices.clean_engineering.model.graph_reading import GraphReading
+    from cdd_guidance.practices.clean_engineering.reading.call_links import ClassesInReach
+    from cdd_guidance.practices.clean_engineering.reading.graph_reading import GraphReading
     from cdd_guidance.practices.clean_engineering.model.operation import Operation
     from cdd_guidance.practices.clean_engineering.model.property import Property
     from cdd_guidance.practices.clean_engineering.model.script_imports import ClassReference

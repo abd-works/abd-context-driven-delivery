@@ -8,7 +8,7 @@ from functools import cached_property
 from typing import TYPE_CHECKING
 
 from harness.graph.schema_conformance import EXEMPT_FACT
-from harness.guidance.practice_reading import PracticeReading
+from harness.graph.practice_reading import PracticeReading
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node

@@ -8,7 +8,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from harness.guidance.practice_reading import PracticeReading
+from harness.graph.practice_reading import PracticeReading
 from harness.markdown.markdown import MarkdownText
 
 if TYPE_CHECKING:

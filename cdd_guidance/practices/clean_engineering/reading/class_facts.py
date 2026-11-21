@@ -8,8 +8,8 @@ import re
 from typing import TYPE_CHECKING, Callable
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import is_interface_name
-from cdd_guidance.practices.clean_engineering.model.class_graph import names_in, parameters_of
-from cdd_guidance.practices.clean_engineering.model.folder_facts import folders_of, is_under, parent_folder, record_fact
+from cdd_guidance.practices.clean_engineering.reading.class_graph import names_in, parameters_of
+from cdd_guidance.practices.clean_engineering.reading.folder_facts import folders_of, is_under, parent_folder, record_fact
 from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
 from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUCTOR_NAMES
 from cdd_guidance.practices.clean_engineering.model.type_refs import split_top_level
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from harness.graph.graph import Node, PracticeNodes
     from harness.graph.saved_graph import FactValue
 
-    from cdd_guidance.practices.clean_engineering.model.class_graph import ClassGraph
+    from cdd_guidance.practices.clean_engineering.reading.class_graph import ClassGraph
 
 # A copy of another class's fields: at least this many shared fields, covering most of the smaller class.
 _MIN_COPIED_FIELDS = 3
