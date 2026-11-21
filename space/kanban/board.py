@@ -28,7 +28,6 @@ if TYPE_CHECKING:
     from space.kanban.backlog_item import BacklogItem
     from space.kanban.ticket import Ticket
     from space.repo.repo import Branch, Repo
-    from space.repo.worktree import Worktree
     from space.session import Session
 
 BACKLOG_COLUMN = "Backlog"
@@ -176,7 +175,7 @@ class Board:
         return self.placement.reads
 
     @property
-    def worktrees(self) -> dict[Branch, Worktree]:
+    def worktrees(self) -> dict[Branch, Repo]:
         """Each branch's worktree, listed once per board read rather than once per ticket: the board is read after every
         call. A project that is no clone has none."""
         return self.reads.worktrees
@@ -526,11 +525,8 @@ class BoardReads:
         return self._board.repo.branches
 
     @cached_property
-    def worktrees(self) -> dict[Branch, Worktree]:
-        repo = self._board.repo
-        if not repo.is_clone:
-            return {}
-        return {tree.branch: tree for tree in repo.worktrees if tree.branch is not None}
+    def worktrees(self) -> dict[Branch, Repo]:
+        return self._board.repo.worktrees.by_branch
 
 
 @identity("name")

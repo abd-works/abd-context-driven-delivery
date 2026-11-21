@@ -8,7 +8,8 @@ import os
 import re
 from pathlib import Path
 
-from harness.process.claude_chat_process import checkout_holding, claude_config_folder, is_desktop_spare
+from harness.git.checkout import Checkout
+from harness.process.claude_chat_process import claude_config_folder, is_desktop_spare
 
 
 # A chat id becomes part of a file pattern, so only the letters, digits, and dashes of an id may reach it.
@@ -118,7 +119,7 @@ class ChatPointer:
         this follows the chat where the folder it started in does not. None when the transcript records no folder that
         is still there."""
         folder = self._latest_recorded_folder()
-        return checkout_holding(folder) if folder is not None else None
+        return Checkout.holding(folder).folder if folder is not None else None
 
     def _latest_recorded_folder(self) -> Path | None:
         if self.transcript is None or not self.transcript.is_file():

@@ -13,7 +13,8 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from space.repo.built_once import BuiltOnce
-from space.repo.git_folder import GitFolder
+from harness.git.git import Git
+from harness.git.git_facts import AskedOfGit, GitFolder
 
 
 def _git(folder: Path, *args: str) -> str:
@@ -101,3 +102,26 @@ with description("a checkout's git folder, read from its files"):
 
         with it("should still name the commit checked out"):
             expect(self.folder.head_commit()).to(equal(_git(self.clone, "rev-parse", "HEAD")))
+
+
+with description("a checkout's git facts, asked of git"):
+    with before.each:
+        self.clone = _CLONE.copy() / "clone"
+        self.read = GitFolder(self.clone)
+        self.asked = AskedOfGit(Git(self.clone))
+
+    with after.each:
+        shutil.rmtree(self.clone.parent, ignore_errors=True)
+
+    with it("should answer each fact as its files answer it"):
+        questions = (
+            lambda facts: facts.head_branch(),
+            lambda facts: facts.is_on_branch(),
+            lambda facts: facts.head_commit(),
+            lambda facts: facts.branch_names(),
+            lambda facts: [facts.has_ref("refs/heads/feature/pets"), facts.has_ref("refs/heads/missing")],
+            lambda facts: [facts.has_remote("origin"), facts.has_remote("upstream")],
+            lambda facts: [(path.resolve(), branch) for path, branch in facts.worktrees()],
+            lambda facts: facts.common_folder().resolve(),
+        )
+        expect([question(self.asked) for question in questions]).to(equal([question(self.read) for question in questions]))

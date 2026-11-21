@@ -101,9 +101,7 @@ class Merges:
     def keep_session_logs_by_union(self) -> None:
         """Tell git, in this repository's own attributes file, which no checkout commits, to merge session logs by
         union: each line either side wrote is kept."""
-        repo = self._repo
-        common = Path(repo.git.run("rev-parse", "--git-common-dir"))
-        attributes = (common if common.is_absolute() else repo.root / common) / "info" / "attributes"
+        attributes = self._repo.checkout.facts.common_folder() / "info" / "attributes"
         written = attributes.read_text(encoding="utf-8") if attributes.is_file() else ""
         missing = [line for line in _UNION_MERGED_LOGS if line not in written.splitlines()]
         if not missing:

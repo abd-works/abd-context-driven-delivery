@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from harness.agent_tools.tool_call import ToolCall
+from harness.git.checkout import Checkout
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_address import BUILTIN_LIST_TOOLS, DEV_LANE_FOLDER, DEV_PORT_AFTER_STABLE, McpAddress
 from harness.mcp.mcp_daemon import McpDaemon, ServedCheckout
@@ -132,7 +133,7 @@ class ServerLanes:
         return cls(CddHome(home.folder.parent), stable_address)
 
     def for_project(self, project: Path) -> ServerLane:
-        if self._is_in_main_checkout(Path(project).resolve()):
+        if Checkout.holding(project).is_main:
             return self.stable
         return self.dev
 
@@ -145,10 +146,3 @@ class ServerLanes:
         if self.for_project(project) is not self.dev or not self.dev.home.is_installed:
             return None
         return self.dev
-
-    def _is_in_main_checkout(self, project: Path) -> bool:
-        for folder in (project, *project.parents):
-            marker = folder / ".git"
-            if marker.exists():
-                return marker.is_dir()
-        return False

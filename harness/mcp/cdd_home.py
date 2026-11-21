@@ -13,6 +13,7 @@ from harness.installation.ide_layout import IdeLayout
 from harness.installation.install_lock import InstallLock
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
 from harness.installation.repository_toolsets import RepositoryToolsets
+from harness.git.checkout import Checkout
 from harness.git.git import Git, RepoConnectError
 from harness.mcp.mcp_address import DEV_LANE_FOLDER
 from harness.process.process import PythonInterpreter
@@ -39,10 +40,6 @@ DRAWIO_VIEWER = Path("tools") / "drawio_viewer" / "drawio_viewer.py"
 BOARD_DRAWIO_VIEWER = Path("drawio-viewer") / "drawio_viewer.py"
 # A commit without the server cannot serve chats, so pinning one would leave every chat without cdd.
 SERVER_MODULE = "harness/mcp/mcp_daemon.py"
-# What a linked worktree's ``.git`` file starts with, before the path of its folder in the main checkout's ``.git``.
-GITDIR_PREFIX = "gitdir:"
-# What git's ``HEAD`` file starts with when a branch is out; a detached checkout holds a bare commit instead.
-BRANCH_REF_PREFIX = "ref: refs/heads/"
 # Claude Code, the IDE whose plugins this home publishes.
 _CLAUDE_CODE = IdeLayout("Claude")
 
@@ -373,20 +370,6 @@ class CddHome:
         self._save_runtime(Path(checkout).resolve(), self.CHECKOUT)
         self.write_mod_plugins()
 
-    def _branch_of(self, checkout: Path) -> str:
-        """The branch the checkout has out; none for a detached checkout or a folder that is not a git checkout. It reads
-        git's ``HEAD`` file rather than running git, because serving a checkout from disk runs on every install."""
-        git_folder = checkout / ".git"
-        if git_folder.is_file():
-            git_folder = checkout / git_folder.read_text(encoding="utf-8").removeprefix(GITDIR_PREFIX).strip()
-        head = git_folder / "HEAD"
-        if not head.is_file():
-            return ""
-        named = head.read_text(encoding="utf-8").strip()
-        if not named.startswith(BRANCH_REF_PREFIX):
-            return ""
-        return named.removeprefix(BRANCH_REF_PREFIX)
-
     def _git(self, checkout: Path, git: Git, *arguments: str) -> str:
         """Run git while pinning checkout; a failure is the pin's failure."""
         try:
@@ -401,7 +384,7 @@ class CddHome:
         runtime = {"source": str(source), "mode": mode, "python": str(self.interpreter.executable), "worktree": str(served_from)}
         if commit:
             runtime["commit"] = commit
-        branch = self._branch_of(served_from)
+        branch = Checkout(served_from).branch
         if branch:
             runtime["branch"] = branch
         self._runtime_file.write(runtime)

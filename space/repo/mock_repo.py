@@ -7,9 +7,11 @@ import shutil
 import threading
 from pathlib import Path
 
+from harness.git.checkout import Checkout
+from harness.git.git_facts import GitFacts
 from space.repo.origin import Merges, Origin
 from space.repo.repo import SERVED_CHECKOUTS, Branch, Publishing, Refs, Repo, WorkingTree
-from space.repo.worktree import Worktree, Worktrees
+from space.repo.worktree import Worktrees
 
 _IGNORED_ALWAYS = (".git",)
 
@@ -196,15 +198,84 @@ class MockGit:
             self.calls.append(("remove_worktree", str(folder)))
 
 
+class MockGitFacts(GitFacts):
+    """The facts git would hold for one checkout of a *MockGit*, answered from memory."""
+
+    def __init__(self, held: MockGit, root: Path) -> None:
+        self._held = held
+        self._root = root
+
+    def head_branch(self) -> str:
+        return self._held.branch_of(self._root)
+
+    def is_on_branch(self) -> bool:
+        return True
+
+    def head_commit(self) -> str:
+        log = self._held.branches.logs.get(self._held.branch_of(self._root), [])
+        return hashlib.sha1(f"{self._root}{len(log)}".encode()).hexdigest()
+
+    def has_ref(self, ref: str) -> bool:
+        if ref.startswith("refs/heads/"):
+            return self._held.branches.has(ref.removeprefix("refs/heads/"))
+        if ref.startswith("refs/remotes/origin/"):
+            return self._held.origin.has(ref.removeprefix("refs/remotes/origin/"))
+        return False
+
+    def branch_names(self) -> list[str]:
+        return sorted(self._held.branches.trees) if self._held.is_clone else []
+
+    def has_remote(self, name: str) -> bool:
+        return name == "origin" and self._held.origin.is_present
+
+    def worktrees(self) -> list[tuple[Path, str]]:
+        return self._held.worktrees()
+
+    def common_folder(self) -> Path:
+        return self._held.root / ".git"
+
+
+class MockCheckout(Checkout):
+    """One checkout of a *MockGit*: a clone once the spec makes it one, the main clone at the *MockGit*'s root, and its
+    facts answered from memory."""
+
+    def __init__(self, folder: Path, held: MockGit) -> None:
+        super().__init__(folder)
+        self._held = held
+        self._facts = MockGitFacts(held, self.folder)
+
+    @property
+    def is_clone(self) -> bool:
+        return self._held.is_clone
+
+    @property
+    def is_main(self) -> bool:
+        return self.folder == self._held.root
+
+    @property
+    def is_linked_worktree(self) -> bool:
+        return not self.is_main
+
+    @property
+    def main_folder(self) -> Path:
+        return self._held.root
+
+    @property
+    def facts(self) -> GitFacts:
+        return self._facts
+
+
 class MockRepo(Repo):
-    """Our Repo for one checkout of a *MockGit*: every question and command answered from memory, none by git."""
+    """Our Repo for one checkout of a *MockGit*: every question and command answered from memory, none by git; what git
+    holds is answered by its *MockCheckout*'s facts."""
 
     def __init__(self, root: Path, held: MockGit) -> None:
         self._held = held
         self.root = Path(root).resolve()
+        self.checkout = MockCheckout(self.root, held)
         self.git = _NoGit()
         self.worktrees = MockWorktrees(self, SERVED_CHECKOUTS)
-        self.refs = MockRefs(self)
+        self.refs = Refs(self)
         self.working_tree = MockWorkingTree(self)
         self.origin = MockOrigin(self)
         self.merges = MockMerges(self)
@@ -218,16 +289,8 @@ class MockRepo(Repo):
         return self._held
 
     @property
-    def default_branch(self) -> str:
-        return self._held.default_branch
-
-    @property
-    def is_clone(self) -> bool:
-        return self._held.is_clone
-
-    @property
-    def is_linked_worktree(self) -> bool:
-        return self.root != self._held.root
+    def default_branch(self) -> Branch:
+        return self.branch_named(self._held.default_branch)
 
     @property
     def main_clone(self) -> Repo:
@@ -237,48 +300,13 @@ class MockRepo(Repo):
         return MockBranch(self, name)
 
     @property
-    def branches(self) -> list[Branch]:
-        return [self.branch_named(name) for name in sorted(self._held.branches.trees)] if self.is_clone else []
-
-    @property
-    def current_branch(self) -> Branch:
-        return self.branch_named(self._held.branch_of(self.root))
-
-    @property
-    def is_on_branch(self) -> bool:
-        return True
-
-    @property
-    def current_commit(self) -> str:
-        log = self._held.branches.logs.get(self._held.branch_of(self.root), [])
-        return hashlib.sha1(f"{self.root}{len(log)}".encode()).hexdigest()
-
-    @property
     def default_start_point(self) -> str:
-        return self.default_branch
-
-    @property
-    def has_origin(self) -> bool:
-        return self._held.origin.is_present
+        return self._held.default_branch
 
     @property
     def head_message(self) -> str:
         log = self._held.branches.logs.get(self._held.branch_of(self.root), [])
         return log[-1] if log else ""
-
-
-class MockRefs(Refs):
-    """Our Refs on a *MockRepo*: a branch's ref is there when the *MockGit* or its origin holds the branch."""
-
-    _repo: MockRepo
-
-    def has(self, ref: str) -> bool:
-        held = self._repo.held
-        if ref.startswith("refs/heads/"):
-            return held.branches.has(ref.removeprefix("refs/heads/"))
-        if ref.startswith("refs/remotes/origin/"):
-            return held.origin.has(ref.removeprefix("refs/remotes/origin/"))
-        return False
 
 
 class MockWorkingTree(WorkingTree):
@@ -387,7 +415,7 @@ class MockBranch(Branch):
 
     @property
     def start_point(self) -> str:
-        return self._repo.default_branch
+        return self._repo.held.default_branch
 
     def changed_files(self) -> list[str]:
         if not self.exists:
@@ -415,20 +443,14 @@ class MockWorktrees(Worktrees):
     def _held(self) -> MockGit:
         return self._repo.held
 
-    def listing(self) -> list[tuple[Path, str]]:
-        return self._held.worktrees()
-
-    def primary_root(self) -> Path:
-        return self._held.root
-
-    def add(self, path: str | Path, branch: Branch) -> Worktree:
+    def add(self, path: str | Path, branch: Branch) -> Repo:
         existing = self.of(branch)
         if existing is not None:
             return existing
         dest = Path(path).resolve()
         self._held.add_worktree(branch.name, dest)
         self._held.calls.append(("add_worktree", branch.name, str(dest)))
-        return self._listed(dest, branch.name)
+        return self.repository_at(dest)
 
-    def remove(self, worktree: Worktree) -> None:
-        self._held.remove_worktree(worktree.path)
+    def remove(self, worktree: Repo) -> None:
+        self._held.remove_worktree(worktree.root)

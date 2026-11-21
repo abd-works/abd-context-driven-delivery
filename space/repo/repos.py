@@ -18,9 +18,8 @@ from harness.installation.files import command
 from harness.installation.json_file import JsonFile
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_annotations import long_call, mcp
-from harness.git.git import Git
 from space.repo.new_repository import DEFAULT_BRANCH, NewRepository
-from space.repo.repo import Repo
+from space.repo.repo import SERVED_CHECKOUTS, Repo
 
 # The checkout serving these tools: its install script installs CDD.
 _CDD_CHECKOUT = Path(__file__).resolve().parents[2]
@@ -116,39 +115,39 @@ class CddConfig:
 class SiblingRepo:
     """One repository in the repos folder: a folder whose ``.git`` is a folder of its own, never a linked worktree's."""
 
-    def __init__(self, folder: Path) -> None:
-        self.folder = folder
+    def __init__(self, repo: Repo) -> None:
+        self.repo = repo
 
     @property
     @data_field
     def name(self) -> str:
-        return self.folder.name
+        return self.repo.root.name
 
     @property
     @data_field
     def path(self) -> str:
-        return str(self.folder)
+        return str(self.repo.root)
 
     @property
     @data_field
     def branch(self) -> str:
-        return Git(self.folder).run("branch", "--show-current") if Git(self.folder).succeeds("rev-parse", "--git-dir") else ""
+        return self.repo.checkout.branch
 
     @property
     @data_field
     def is_published(self) -> bool:
-        return Git(self.folder).succeeds("remote", "get-url", "origin")
+        return self.repo.has_origin
 
     @property
     @data_field
     def has_cdd(self) -> bool:
         """Whether CDD is installed in its .claude."""
-        return (self.folder / ".claude" / "commands").is_dir()
+        return (self.repo.root / ".claude" / "commands").is_dir()
 
     @property
     def is_repository(self) -> bool:
         """Whether its folder is a repository of its own: its ``.git`` is a folder, not a linked worktree's file."""
-        return (self.folder / ".git").is_dir()
+        return self.repo.checkout.folder == self.repo.root and self.repo.is_main_clone
 
 
 @agent_toolset
@@ -199,7 +198,8 @@ class Repos:
         if not folder.is_dir():
             return []
         children = sorted((child for child in folder.iterdir() if child.is_dir()), key=lambda child: child.name.lower())
-        return [repo for repo in map(SiblingRepo, children) if repo.is_repository]
+        siblings = (SiblingRepo(SERVED_CHECKOUTS.at(child.resolve())) for child in children)
+        return [sibling for sibling in siblings if sibling.is_repository]
 
     @long_call
     @mcp
@@ -217,8 +217,10 @@ class Repos:
         repository's main session. Ask the person for visibility before publishing, offering private as the default."""
         cleaned = self._checked_name(name, visibility)
         root = (Path(folder).expanduser().resolve() if folder else self.folder) / cleaned
-        new = NewRepository(root)
-        steps = [new.create(), new.ignore_as_cdd_does()]
+        new = NewRepository(SERVED_CHECKOUTS.at(root))
+        steps = [new.create().sentence]
+        ignored = new.ignore_as_cdd_does()
+        steps.append(f"Added {ignored} lines to .gitignore for what CDD writes into a project, and committed them." if ignored else ".gitignore already ignores what CDD writes into a project.")
         steps += [self._publish(root, visibility)] if publish else []
         steps += [self._install_cdd(root)] if install else []
         # A new repository's main session is the session of the branch it is created on.
@@ -241,7 +243,7 @@ class Repos:
             if repo.origin.needs_push():
                 repo.origin.push_upstream()
                 return "Pushed main to its origin."
-            return f"Already published: {Git(root).run('remote', 'get-url', 'origin')}."
+            return f"Already published: {repo.git.run('remote', 'get-url', 'origin')}."
         gh = shutil.which("gh")
         if gh is None:
             raise PublishFailedError("the GitHub CLI (gh) is not installed; install it, or open the repository with publish false")
@@ -252,7 +254,7 @@ class Repos:
         )
         if answer.returncode != 0:
             raise PublishFailedError(f"gh repo create failed: {(answer.stderr or answer.stdout).strip()}")
-        return f"Published as a {visibility} GitHub repository: {Git(root).run('remote', 'get-url', 'origin')}."
+        return f"Published as a {visibility} GitHub repository: {repo.git.run('remote', 'get-url', 'origin')}."
 
     def _install_cdd(self, root: Path) -> str:
         """Install CDD's skills, commands, agents and rules into root/.claude with the serving checkout's install script,

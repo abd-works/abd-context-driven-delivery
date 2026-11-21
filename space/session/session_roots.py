@@ -13,7 +13,7 @@ from space.work_state import SESSIONS_FOLDER
 if TYPE_CHECKING:
     from space.session.sessions import Sessions
 
-# How long one ``git worktree list`` answers where each branch's worktree is before it is read again.
+# How long one listing of the worktrees answers where each branch's worktree is before it is read again.
 _WORKTREE_LISTING_SECONDS = 2.0
 
 
@@ -94,15 +94,10 @@ class SessionRoots:
         read_at, listed = self._worktree_listing
         if read_at and time.monotonic() - read_at < _WORKTREE_LISTING_SECONDS:
             return listed
-        main = self._sessions.repo.main_clone.root
         try:
-            listing = self._sessions.repo.main_clone.worktrees.listing()
+            checkouts = self._sessions.repo.main_clone.worktrees.by_branch
         except (RuntimeError, OSError):  # a folder in no repository has no worktrees
-            listing = []
-        listed = {}
-        for path, branch in listing:
-            folder = path.resolve()
-            if branch and folder != main and folder.is_dir():
-                listed[branch] = folder
+            checkouts = {}
+        listed = {branch.name: checkout.root for branch, checkout in checkouts.items() if not checkout.is_main_clone}
         self._worktree_listing = (time.monotonic(), listed)
         return listed

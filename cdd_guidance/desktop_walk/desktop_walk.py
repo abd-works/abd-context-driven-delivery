@@ -27,6 +27,7 @@ from harness.installation.data_class import data_field
 from harness.installation.files import skill
 from harness.mcp.mcp_annotations import mcp
 from space.repo.new_repository import NewRepository
+from space.repo.repo import SERVED_CHECKOUTS
 
 # What a desktop story test writes under a step: what the agent does on the screen, and what it must see there.
 _DIRECTION = re.compile(r"^\s*[-*]\s+\**(Do|See)\**\s*:\**\s*(.+?)\s*$", re.IGNORECASE)
@@ -184,7 +185,7 @@ class DesktopWalk:
         self.project = Path(project).resolve()
         self._opener = opener
         # The boundary to git: makes a folder a repository on main with a first commit.
-        self._make_repository = make_repository or (lambda folder: NewRepository(folder).create())
+        self._make_repository = make_repository or (lambda folder: NewRepository(SERVED_CHECKOUTS.at(folder.resolve())).create())
         self._test_chats_folder = test_chats_folder or Path(tempfile.gettempdir()) / TEST_CHATS_FOLDER
 
     @classmethod

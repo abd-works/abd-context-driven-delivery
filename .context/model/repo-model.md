@@ -240,6 +240,69 @@ Raised when git cannot be run, or a git command fails, in a clone.
 ------
 ----
 
+## Checkout
+
+One checkout of a repository, known by its top folder: whether it is the main clone or a linked worktree, the branch it has out, and the facts its git holds. The framework (harness/mcp, harness/process, harness/agent_tools) and space/repo's *Repo* each ask one, so git's facts have one reader on both sides of the boundary.
+
++ Checkout(folder: Path | str)
+------
++ folder: Path
++ is_clone: bool
++ is_main: bool
++ is_linked_worktree: bool
++ main_folder: Path
++ branch: str
+	// empty for a checkout on no branch or a folder that is no clone
++ << association >> facts: GitFacts
+	// GitFolder once its .git files can be read; AskedOfGit for refs only git reads; NoGitFacts for a folder that is no clone; chosen again until the files can be read
+----
++ holding(folder: Path | str): Checkout
+	// the nearest folder at or above folder that git marks as a checkout's top, else folder itself
+
+## GitFacts
+
+<< interface >> What a checkout's git holds, each answered as git itself answers it.
+
+------
+----
++ head_branch(): str
++ is_on_branch(): bool
++ head_commit(): str
++ has_ref(ref: str): bool
++ branch_names(): list[str]
++ has_remote(name: str): bool
++ worktrees(): list[tuple[Path, str]]
++ common_folder(): Path
+
+## GitFolder : GitFacts
+
+A checkout's facts read from the files of its .git, so a lookup asked many times in one board read starts no git.
+
++ GitFolder(checkout: Path)
+------
++ checkout: Path
++ is_readable: bool
+----
++ main_checkout(): Path
++ commit_of(ref: str): str
+
+## AskedOfGit : GitFacts
+
+A checkout's facts asked of the git command line, for refs only git reads, such as a reftable.
+
++ AskedOfGit(git: Git)
+------
+----
+---<<runs>>--> Git
+
+## NoGitFacts : GitFacts
+
+The facts of a folder that is no clone: nothing, never asking git, which would fail or find a repository above it.
+
++ NoGitFacts(folder: Path)
+------
+----
+
 # harness/markdown
 
 *Markdown* is the prose a property loads from a folder, file, or section beside its class, located once from the *MarkdownScope* its owner hands over; *MarkdownText* reads a document's headings and sections; *Format* names the channel an artifact is written in. The whole model of this module, internals included, is `harness/markdown/.context/markdown-collection-model.md`; that document is canonical, and this section shows only the classes other modules use.
@@ -2996,7 +3059,7 @@ A *WorkState* is what one chat has open — its branch, its worktree, and its se
 
 ## WorkState
 
-The open branch, worktree, and session of one chat, or of one checkout folder for a call that names no chat. It keeps names only: the repository turns a branch name into its *Branch* and a worktree's folder into its *Worktree*.
+The open branch, worktree, and session of one chat, or of one checkout folder for a call that names no chat. It keeps names only: the repository turns a branch name into its *Branch* and a worktree's folder into its *Repo*.
 
 + WorkState(repo_root: Path | str, chat: str = '', home: Path | str | None = None)
 ------
@@ -3016,72 +3079,67 @@ The open branch, worktree, and session of one chat, or of one checkout folder fo
 
 # space/repo
 
-A *Repo* is the local clone; a *Branch* is a named branch on it, its *Worktrees* are its checkouts, and a *Worktree* is one of them.
+A *Repo* is one checkout of the local clone: the main clone or a linked worktree beside it. A *Branch* is a named branch on it and answers where it is checked out; its *Worktrees* are the repository's checkouts, each a *Repo*.
 
 - **Purpose:** Give every caller one object graph for the clone, its branches and worktrees, and its commits, so version control is never reimplemented with raw git output.
-- **Seam (terms):** Repo, ServedCheckouts, Branch, Worktrees, Worktree, Commit, WorktreeNotRemovedError, WorktreeFolderTakenError, MergeRefusedError
+- **Seam (terms):** Repo, ServedCheckouts, Branch, Worktrees, Commit, NewRepository, MadeRepository, WorktreeNotRemovedError, WorktreeFolderTakenError, MergeRefusedError
 - **Dependencies (one-way):** harness/agent_tools, harness/installation, harness/git, harness/hooks, harness/mcp, space/work_state
 
 ## Repo
 
-Local git clone: its branches and its commits. The checkouts beside it are its `worktrees`.
+One checkout of a git repository: its branches and its commits, what its git holds asked of its *Checkout*. The checkouts beside it are its `worktrees`.
 
 + Repo(root: str | Path = '.')
 ------
 + root: Path
-+ default_branch: str
++ << composition >> checkout: Checkout
++ default_branch: Branch
 + << composition >> git: Git
 + << composition >> worktrees: Worktrees
 + << composition >> publishing: Publishing
 + << composition >> refs: Refs
 + << composition >> working_tree: WorkingTree
++ << composition >> origin: Origin
++ << composition >> merges: Merges
 + is_clone: bool
 + is_linked_worktree: bool
++ is_main_clone: bool
 + checkout_folder: Path
 + branches: list[Branch]
+	-> GitFacts.branch_names
 + current_branch: Branch
+	-> GitFacts.head_branch
++ is_on_branch: bool
 + current_commit: str
++ has_origin: bool
 + default_start_point: str
 + << association >> main_clone: Repo
-+ own_work_state: WorkState
-+ work_state: WorkState
-+ open_worktree: Worktree | None
 ----
 + of_project(project: Path): Repo
+	-> Checkout.holding
 	-> ServedCheckouts.at
-+ primary_root(): Path
 + path_from_top(path: Path | str): str
 + branch_named(name: str): Branch
-+ push_upstream(): None
-+ needs_push(): bool
-+ fetch(): None
-+ pull(): None
-+ merge_from(other: Branch, message: str = ''): str
-+ switch_branch(name: str = ''): str
-	-> Branch.switch_to
-+ close_branch(name: str = '', commit_message: str = 'branch: close'): str
-	-> Branch.close
-	-> LatestRelease.keep
-+ switch_worktree(name: str = ''): str
-	-> Branch.move_to_worktree
-+ close_worktree(commit_message: str = 'worktree: close'): str
-	-> Worktree.close
-+ switch_branch_command(): str
-+ close_branch_command(): str
-+ switch_worktree_command(): str
-+ close_worktree_command(): str
++ catch_up_with_origin(fetched: bool = False): None
+	// a checkout that cannot reach origin stays as it is, and the log says why
++ close(commit_message: str): Branch
+	// a linked worktree: its branch saved, its folder removed
+	-> Branch.save
+	-> Worktrees.remove
 + push_commit(message: str, untracked: bool = True, sync_remote: bool = True): Commit
 	-> Publishing.push_commit
++ push_work(): Commit
+	-> Publishing.push_work
++ merge_to_main(): Commit
++ push_to_main(): Commit
++ make_repository(): str
+	-> NewRepository.make_from_folder
 + push(hint: str = ''): str
 ---<<creates>>--> Branch
 ---<<creates>>--> Commit
 ---<<creates>>--> Worktrees
----<<creates>>--> LatestRelease
 ---<<runs>>--> Git
----<<calls succeeds on>>--> Git
 ---<<raises>>--> RepoConnectError
----<<creates>>--> WorkState
----<<reads the answering call from>>--> ToolCall
 ---<<annotated with>>--> AgentToolSetAnnotation
 ---<<annotated with>>--> LanguageAdapter
 ---<<annotated with>>--> ToolSubject
@@ -3097,6 +3155,7 @@ The repository of every checkout this process works in, each made once and held 
 ------
 ----
 + at(root: Path): Repo
++ serve(repo: Repo): Repo
 ---<<creates>>--> Repo
 
 ## Commit
@@ -3113,7 +3172,7 @@ One git commit: its sha, subject, full message, and the trailers the message car
 
 ## Branch
 
-Named branch on a *Repo* — checkout, commit, merge, and close.
+Named branch on a *Repo*: where it is checked out, and checking it out, saving it, merging it, and deleting it.
 
 + Branch(repo: Repo, name: str)
 ------
@@ -3121,61 +3180,79 @@ Named branch on a *Repo* — checkout, commit, merge, and close.
 + name: str
 + exists: bool
 + is_checked_out: bool
+	// any checkout of the repository has it
++ is_checked_out_here: bool
+	// the checkout it was found from has it
 + is_default: bool
-+ << association >> worktree: Worktree | None
++ << association >> checkout: Repo | None
+	-> Worktrees.of
++ << association >> linked_worktree: Repo | None
+	// the checkout that has it when that is a linked worktree, not the main clone
 + start_point: str
 ----
 + changed_files(): list[str]
 	// read through Git.listed, so a file whose name git would quote is listed by the name it has on disk
 + check_out(): Branch
-+ switch_to(): Branch
-+ open_in_worktree(): Worktree
++ open_in_worktree(): Repo
 	-> Worktrees.open
-+ move_to_worktree(): Worktree
-+ save(commit_message: str): None
++ save(commit_message: str, push: bool = True): None
+	// the one "commit everything in the checkout that has it, and push it when origin lacks some of it"
 + land_on_default(): None
++ merge_into_default(): Repo
 + delete(unmerged: bool = False): None
-+ close(commit_message: str = 'branch: close'): None
 ---<<asks whether a ref exists through>>--> Repo
 ---<<finds its checkout through>>--> Worktrees
 
 ## Worktrees
 
-The checkouts of one repository, as `git worktree` lists them: the main clone and each linked worktree, each with the branch checked out there.
+The checkouts of one repository, as `git worktree` lists them: the main clone and each linked worktree, each the *Repo* this process holds for its folder. Which branch each has out is read from the listing, so no git starts for each checkout.
 
-+ Worktrees(repo: Repo)
++ Worktrees(repo: Repo, checkouts: ServedCheckouts)
 ------
++ by_branch: dict[Branch, Repo]
 ----
-+ repository_at(folder: Path): Repo
-+ at(folder: Path | str): Worktree | None
-+ of(branch: Branch): Worktree | None
-+ open(branch: Branch): Worktree
++ repository_at(folder: Path | str): Repo
++ at(folder: Path | str): Repo | None
++ of(branch: Branch): Repo | None
++ open(branch: Branch): Repo
+	-> Repo.catch_up_with_origin
++ primary_root(): Path
+	-> Checkout.main_folder
 + sibling_folder(branch: Branch): Path
-+ add(path: str | Path, branch: Branch): Worktree
++ add(path: str | Path, branch: Branch): Repo
 	// a folder already at path that is not the branch's checkout raises WorktreeFolderTakenError, unless it is the empty folder a removed worktree left
-+ remove(worktree: Worktree): None
++ remove(worktree: Repo): None
 	// stops the checkout's hook daemon first; a folder still there afterwards raises WorktreeNotRemovedError
----<<lists>>--> Worktree
+---<<lists>>--> Repo
+---<<reads the listing through>>--> GitFacts
 ---<<stops>>--> HookDaemon
 ---<<raises>>--> WorktreeNotRemovedError
 ---<<raises>>--> WorktreeFolderTakenError
 
-## Worktree
+## NewRepository
 
-One checkout of the repository, as the *Worktrees* that listed it found it: its folder, its own *Repo*, and the branch checked out there, each made once when it is listed.
+A folder made a git repository of its own on main, its .gitignore given what CDD writes into a project.
 
-+ Worktree(worktrees: Worktrees, path: Path | str, branch_name: str)
++ NewRepository(repo: Repo)
 ------
-+ path: Path
-+ << association >> repository: Repo
-+ << association >> branch: Branch | None
-+ sync_failure: str
++ root: Path
 ----
-+ fetch_pull(): None
-+ close(commit_message: str): Branch
-	-> Branch.save
-	-> Worktrees.remove
----<<calls branch_named on>>--> Repo
++ create(): MadeRepository
++ make_from_folder(): MadeRepository
++ ignore_as_cdd_does(): int
++ write_ignores(): int
+
+## MadeRepository
+
+What making a folder a repository did; the tool that made it words it.
+
+------
++ root: Path
++ was_there: bool
++ branch: str
++ ignored_lines: int
++ sentence: str
+----
 
 ## WorktreeNotRemovedError : RuntimeError
 
@@ -3812,7 +3889,7 @@ Show every work session as a ticket on a kanban: Backlog, Discovery, Specificati
 + unreadable: list[UnreadableSessionFile]
 	// each ticket's session.json the board could not read; such a ticket is on no column until its file is repaired, and the file is never written over
 + project: str
-+ worktrees: dict[Branch, Worktree]
++ worktrees: dict[Branch, Repo]
 + practices: list[PracticeGuidance]
 + << composition >> columns: list[Column]
 + stages: list[Stage]
@@ -4049,11 +4126,11 @@ Where one ticket's work sits in git: its own branch, the worktree that branch is
 	-> Branch.land_on_default
 + leave_branch(leaving: list[str]): None
 	// after the work is saved and merged: deletes the ticket's worktree and its branch, each when leaving names it
-	-> Worktree.close
+	-> Repo.close
 	-> Branch.delete
 + free_worktree(): None
 	// removes the ticket's own worktree, its work committed and pushed first; the branch stays
-	-> Worktree.close
+	-> Repo.close
 + return_to_default_branch(): None
 ---<<writes>>--> LeavingHandoff
 ---<<creates>>--> LeaveChoices

@@ -194,24 +194,24 @@ with description("a Repo's worktrees"):
 
         # (S) Repo --> List Worktree
         with it("should list the main clone with the branch it has checked out"):
-            expect([tree.branch.name for tree in self.repo.worktrees]).to(equal(["main"]))
+            expect([tree.current_branch.name for tree in self.repo.worktrees]).to(equal(["main"]))
 
         # (S) Repo --> Open Worktree
         with it("should add a worktree for a session branch"):
             self.repo.worktrees.add(self.folder, self.repo.branch_named("session/demo"))
-            expect(self.repo.branch_named("session/demo").worktree.path.resolve()).to(equal(self.folder.resolve()))
+            expect(self.repo.branch_named("session/demo").checkout.root).to(equal(self.folder.resolve()))
 
         # (S) Repo --> Reuse Worktree
         with it("should reuse the worktree a branch already has"):
             first = self.repo.worktrees.add(self.folder, self.repo.branch_named("session/demo"))
             second = self.repo.worktrees.add(Path(self.tmp.name) / "wt-demo-2", self.repo.branch_named("session/demo"))
-            expect(second.path.resolve()).to(equal(first.path.resolve()))
+            expect(second.root).to(equal(first.root))
 
         # (S) Repo --> Remove Worktree
         with it("should remove a worktree"):
             added = self.repo.worktrees.add(self.folder, self.repo.branch_named("session/demo"))
             self.repo.worktrees.remove(added)
-            expect(self.repo.branch_named("session/demo").worktree).to(equal(None))
+            expect(self.repo.branch_named("session/demo").checkout).to(equal(None))
 
         # (S) Repo --> Remove Worktree
         with it("should run Windows takeown icacls and Remove-Item as last resort"):

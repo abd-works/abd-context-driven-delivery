@@ -4,9 +4,12 @@ a new repository ``repos.open`` creates, or a plain folder a session already wor
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from harness.git.git import Git
+if TYPE_CHECKING:
+    from space.repo.repo import Repo
 
 DEFAULT_BRANCH = "main"
 _GITIGNORE_HEADER = "# What CDD writes into a project and no repository keeps (written by CDD)"
@@ -46,54 +49,73 @@ class FolderIsAWorktreeError(ValueError):
         self.folder = folder
 
 
-class NewRepository:
-    """The folder at root, made a git repository of its own on main."""
+@dataclass(frozen=True)
+class MadeRepository:
+    """What making a folder a repository did: whether it was a repository already, the branch it is on (empty when on
+    none), and how many lines its .gitignore was given for what CDD writes into a project."""
 
-    def __init__(self, root: Path) -> None:
-        self.root = root
-        self.git = Git(root)
+    root: Path
+    was_there: bool
+    branch: str
+    ignored_lines: int = 0
 
     @property
-    def is_repository(self) -> bool:
-        """Whether root is a repository of its own already: its ``.git`` is a folder git holds a HEAD in."""
-        return (self.root / ".git" / "HEAD").is_file()
+    def sentence(self) -> str:
+        """What was done, as the tool that made it tells the chat."""
+        if not self.was_there:
+            made = f"Created {self.root} on {self.branch} with a first commit."
+        elif self.branch != DEFAULT_BRANCH:
+            made = f"{self.root} is a repository already, on {self.branch or 'no branch'}; the new chat opens it as it is."
+        else:
+            made = f"{self.root} is a repository already, on {DEFAULT_BRANCH}."
+        return f"{made} Its .gitignore ignores what CDD writes into a project ({self.ignored_lines} lines)." if self.ignored_lines else made
 
-    def create(self) -> str:
+
+class NewRepository:
+    """The checkout of repo, a folder made a git repository of its own on main."""
+
+    def __init__(self, repo: Repo) -> None:
+        self.repo = repo
+
+    @property
+    def root(self) -> Path:
+        return self.repo.root
+
+    def create(self) -> MadeRepository:
         """Make root, made first when missing, a repository on main with a README and a first commit of what it holds.
         A repository already there is left as it is; a linked worktree is refused."""
-        if (self.root / ".git").is_file():
+        checkout = self.repo.checkout
+        if checkout.folder == self.root and checkout.is_linked_worktree:
             raise FolderIsAWorktreeError(self.root)
-        if self.is_repository:
-            branch = self.git.run("branch", "--show-current")
-            if branch != DEFAULT_BRANCH:
-                return f"{self.root} is a repository already, on {branch or 'no branch'}; the new chat opens it as it is."
-            return f"{self.root} is a repository already, on {DEFAULT_BRANCH}."
+        if checkout.folder == self.root and checkout.is_clone:
+            return MadeRepository(self.root, was_there=True, branch=checkout.branch)
         self.root.mkdir(parents=True, exist_ok=True)
-        self.git.run("init", "-b", DEFAULT_BRANCH)
+        self.repo.git.run("init", "-b", DEFAULT_BRANCH)
         readme = self.root / "README.md"
         if not readme.exists():
             readme.write_text(f"# {self.root.name}\n", encoding="utf-8")
-        self.git.run("add", "-A")
-        self.git.run("commit", "-m", _FIRST_COMMIT)
-        return f"Created {self.root} on {DEFAULT_BRANCH} with a first commit."
+        self.repo.git.run("add", "-A")
+        self.repo.git.run("commit", "-m", _FIRST_COMMIT)
+        return MadeRepository(self.root, was_there=False, branch=DEFAULT_BRANCH)
 
-    def make_from_folder(self) -> str:
+    def make_from_folder(self) -> MadeRepository:
         """Make the plain folder at root a repository: its .gitignore takes what CDD writes into a project before the
         first commit, so that commit holds the folder's own files and not CDD's install or its sessions' working files."""
-        if (self.root / ".git").is_file() or self.is_repository:
+        checkout = self.repo.checkout
+        if checkout.folder == self.root and checkout.is_clone:
             return self.create()
         added = self.write_ignores()
-        created = self.create()
-        return f"{created} Its .gitignore ignores what CDD writes into a project ({added} lines)." if added else created
+        made = self.create()
+        return MadeRepository(made.root, made.was_there, made.branch, added)
 
-    def ignore_as_cdd_does(self) -> str:
-        """Add to root's .gitignore each pattern for what CDD writes into a project that it lacks, and commit it."""
+    def ignore_as_cdd_does(self) -> int:
+        """Add to root's .gitignore each pattern for what CDD writes into a project that it lacks, and commit it; answer
+        how many lines were added."""
         added = self.write_ignores()
-        if not added:
-            return ".gitignore already ignores what CDD writes into a project."
-        self.git.run("add", "--", ".gitignore")
-        self.git.run("commit", "-m", "Ignore what CDD writes into a project", "--", ".gitignore")
-        return f"Added {added} lines to .gitignore for what CDD writes into a project, and committed them."
+        if added:
+            self.repo.git.run("add", "--", ".gitignore")
+            self.repo.git.run("commit", "-m", "Ignore what CDD writes into a project", "--", ".gitignore")
+        return added
 
     def write_ignores(self) -> int:
         """Write into root's .gitignore each pattern for what CDD writes into a project that it lacks; answer how many
