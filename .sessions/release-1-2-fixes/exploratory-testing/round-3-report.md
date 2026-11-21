@@ -135,6 +135,16 @@ The unit tier, run after each wave, caught three knock-on breaks, each fixed bef
 5. Does a link to a heading that is not there get a callout saying so? It replaces an older scenario that said it carries none (r3-pixel-04).
 6. Do front-end views render between TypeScript and JavaScript (r3-gizmo-05)?
 
+### Second answers from the person, 2026-11-20
+
+- **Callout filtering** is done in Python by the same filter code that narrows the knowledge graph. Every application gets all its business logic from Python, through TypeScript, the cdd server and the Python adapter, with no exception.
+- **1** (does a code render save its files): not answered.
+- **2**: a Then must observe an Example only where a domain model or a class model has been written for that area of the story graph. Where none is written, scenarios may link to terms they come up with, and the graph need not connect them.
+- **3**: Java stays removed, to be made when it is needed. Specs are Python, TypeScript or JavaScript.
+- **4**: a mockup's whiteboard needs only a way to associate screens and widgets with stories, scenarios and steps.
+- **5**: yes. More widely, a failure in display, in a render or generate action, or in the session's roots shows a Fix button that lists the most common causes and sends them to the AI to fix.
+- **6**: yes. And the context viewer gets a Diagnose and align button: it goes through the graph and the selected stages, fidelities and formats, finds the gaps, then brings the formats in step; failures can be fixed. It checks that the graphs of the formats agree and that the callouts match.
+
 ### Tier results on the fixed code (2026-11-20, commit 1194888e0)
 
 - **Unit:** 382 of 382 files, none over the 100 ms budget.
