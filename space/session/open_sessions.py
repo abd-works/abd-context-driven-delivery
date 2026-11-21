@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable, ClassVar
 
 from harness.agent_tools.tool_call import CALLS_BEING_ANSWERED, ToolCall
 from harness.annotations.name import Name
@@ -11,7 +11,6 @@ from space.session.session import MAIN_SESSION_NAME, Session
 from space.session.session_checkout import names_ticket
 from space.session.session_record import SESSION_FILE
 from space.work_state import WorkState
-from tools.prompt_queue.prompt_queue import PromptQueue
 
 if TYPE_CHECKING:
     from space.session.sessions import Sessions
@@ -21,11 +20,6 @@ if TYPE_CHECKING:
 _OUTSIDE_WORKTREE_NOTE = (
     "This chat works in {chat}, but {session}'s worktree is {worktree}. Do this session's work in a chat started there "
     "(start_session with cwd {worktree}), not in this chat.\n\n"
-)
-_HANDOFF_QUEUED_NOTE = (
-    "**Handoff queued.** The {count} steps of {handoff}'s Approach for Next Agent are on this chat's prompt queue, in "
-    "order: work through them first to last, calling prompt-queue.done with each prompt's id as you finish it; "
-    "prompt-queue.show lists them.\n\n"
 )
 _DEFAULT_ROOTS_NOTE = (
     "**Output roots.** These practices write under their default folders, which nobody has checked: {roots}. Before "
@@ -57,6 +51,11 @@ class SessionNameRequiredError(ValueError):
         )
 
 
+# What a module outside the session does when a chat opens a session, such as queueing its latest handoff's steps on
+# that chat's prompt queue: handed the session and the chat's id, it answers what the chat is told, empty for nothing.
+SessionOpenedListener = Callable[[Session, str], str]
+
+
 class OpenSessions:
     """*OpenSessions* are which session each chat has open in one checkout, kept by the cdd server under ``~/.cdd``
     (*WorkState*), never in the checkout: the chat a call comes from keeps its own, and a call naming no chat keeps one
@@ -64,8 +63,20 @@ class OpenSessions:
     that ticket. The open session is read each time it is asked for, so a switch or a close made through another client
     of the same chat is seen at once."""
 
+    # Every listener a module registered (``on_session_opened``), for every checkout's sessions in this process.
+    _opened_listeners: ClassVar[list[SessionOpenedListener]] = []
+
     def __init__(self, sessions: Sessions) -> None:
         self._sessions = sessions
+
+    @classmethod
+    def on_session_opened(cls, listener: SessionOpenedListener) -> None:
+        """Call listener each time a chat switches to a session, and tell the chat what it answers: a module outside
+        the session, such as tools/prompt_queue, registers here when it is imported, so the session imports none."""
+        cls._opened_listeners.append(listener)
+
+    def _told_on_opening(self, session: Session, chat: str) -> str:
+        return "".join(listener(session, chat) for listener in self._opened_listeners)
 
     def state(self, chat: str = "") -> WorkState:
         """What chat keeps open, under ``~/.cdd``: the chat named, else the chat of the call being answered, else this
@@ -134,22 +145,13 @@ class OpenSessions:
         ticket = self._ticket_of_worktree()
         if ticket is not None:
             opened = self.open(ticket, chat)
-            return self._worktree_ticket_note(ticket, name) + self._handoff_queued_note(opened, chat) + self._default_roots_note(opened) + opened.log.instructions()
+            return self._worktree_ticket_note(ticket, name) + self._told_on_opening(opened, chat) + self._default_roots_note(opened) + opened.log.instructions()
         wanted = self._name_to_switch_to(name, chat)
         folder = sessions.folder_of(wanted)
         is_kept = (folder / SESSION_FILE).is_file() or wanted == MAIN_SESSION_NAME
         session = sessions.held.load(folder) if is_kept else sessions.create(wanted, workpath)
         opened = self.open(session, chat)
-        return self._outside_worktree_note(session, call) + self._handoff_queued_note(opened, chat) + self._default_roots_note(opened) + opened.log.instructions()
-
-    def _handoff_queued_note(self, session: Session, chat: str) -> str:
-        """Queue the steps of session's latest handoff on chat's prompt queue, once per handoff, and say so; nothing for
-        a call from no chat, or a session with no handoff."""
-        handoff = session.handoffs.latest
-        if not chat or handoff is None:
-            return ""
-        queued = PromptQueue.of_chat(chat).queue_handoff(handoff)
-        return _HANDOFF_QUEUED_NOTE.format(count=queued, handoff=handoff.name) if queued else ""
+        return self._outside_worktree_note(session, call) + self._told_on_opening(opened, chat) + self._default_roots_note(opened) + opened.log.instructions()
 
     def _default_roots_note(self, session: Session) -> str:
         """What a chat opening session is told about the practices it works on whose roots nobody set, so it points each

@@ -4589,7 +4589,7 @@ The prompts one chat has queued, in the order they will be done, kept in a file 
 + add_interruption(prompt: str, text: str): PromptQueue
 + step_done(prompt: str, step: int): PromptQueue
 + attach(prompt: str, filename: str, media_type: str, data: str): PromptQueue
-+ queue_handoff(handoff: Path): int
++ queue_once(source: str, texts: list[str]): int
 ---<<reads and writes through, holding it for each change>>--> JsonFile
 ---<<raises>>--> ChatIdNotAnId
 ---<<raises>>--> QueueFileUnreadable

@@ -677,7 +677,7 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionAl
     def latest_handoff(self) -> str:
         """The newest handoff file, as a path from the project; empty before one is written."""
         latest = self.handoffs.latest
-        return self.paths.from_project(latest) if latest is not None else ""
+        return self.paths.from_project(latest.path) if latest is not None else ""
 
     @mcp
     @command(name="close-session")

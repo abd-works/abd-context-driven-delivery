@@ -7,7 +7,6 @@ import base64
 import json
 from datetime import datetime, timezone
 import mimetypes
-import re
 import uuid
 from pathlib import Path
 from typing import Literal, NotRequired, TypedDict, get_args
@@ -20,6 +19,8 @@ from harness.chat.chat import CHATS_FOLDER
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
 from harness.mcp.mcp_annotations import mcp
+from space.session.open_sessions import OpenSessions
+from space.session.session import Session
 
 # The file in a chat's own folder that holds its queue.
 QUEUE_FILE = "prompt-queue.json"
@@ -32,11 +33,12 @@ ATTACHMENTS_FOLDER = "attachments"
 ARCHIVE_FOLDER = "queue-archive"
 # What marks a step that came from a message the person sent: a correction or comment filed under the goal it belongs to.
 INTERRUPTION_MARK = "[interruption]"
-# The section of a handoff that holds the numbered steps the next agent takes (space/session/HANDOFF-FORMAT.md).
-_APPROACH_HEADING = re.compile(r"^##\s+Approach for Next Agent\s*$", re.IGNORECASE)
-_NEXT_SECTION = re.compile(r"^##\s")
-# A numbered step: `1. Read this handoff`, `2) Run the unit tier`.
-_NUMBERED_STEP = re.compile(r"^\s*\d+[.)]\s+(.*)$")
+# What a chat that opened a session is told once its latest handoff's next steps are on its queue.
+_HANDOFF_QUEUED_NOTE = (
+    "**Handoff queued.** The {count} steps of {handoff}'s Approach for Next Agent are on this chat's prompt queue, in "
+    "order: work through them first to last, calling prompt-queue.done with each prompt's id as you finish it; "
+    "prompt-queue.show lists them.\n\n"
+)
 
 
 # Where a step stands: not started, the one being worked, or finished.
@@ -300,18 +302,16 @@ class PromptQueue:
             saved = self._saved_attachment(prompt, len(listed) + 1, filename, media_type, data)
             return self._keep([{**item, "attachments": [*listed, str(saved)]} if item["id"] == prompt else item for item in held])
 
-    def queue_handoff(self, handoff: Path) -> int:
-        """Queue the numbered steps of handoff's Approach for Next Agent, in order, one prompt each, so a chat opening a
-        session has its next work lined up; a handoff already queued on this chat queues nothing again. Answers how many
-        steps it queued."""
+    def queue_once(self, source: str, texts: list[str]) -> int:
+        """Queue texts, in order, one prompt each, once for source, such as the steps of a handoff called source: a
+        source already queued on this chat queues nothing again. Answers how many it queued."""
         with self._file.held():
             held = self._file.read()
-            if handoff.name in held.get("handoffs", []):
+            if source in held.get("handoffs", []):
                 return 0
-            steps = handoff_steps(handoff.read_text(encoding="utf-8")) if handoff.is_file() else []
-            queued = [*self.prompts, *self._new_prompts(steps)]
-            self._file.write({**held, "prompts": queued, "handoffs": [*held.get("handoffs", []), handoff.name]})
-            return len(steps)
+            queued = [*self.prompts, *self._new_prompts(texts)]
+            self._file.write({**held, "prompts": queued, "handoffs": [*held.get("handoffs", []), source]})
+            return len([text for text in texts if text.strip()])
 
     def _new_prompts(self, texts: list[str]) -> list[QueuedPrompt]:
         """One prompt, with an id of its own, for each of texts that is more than spaces."""
@@ -371,22 +371,15 @@ class PromptQueue:
         return {**unassigned, "robot": robot} if robot else unassigned
 
 
-def handoff_steps(text: str) -> list[str]:
-    """The numbered steps of a handoff's Approach for Next Agent, each with the lines that continue it; none when it has
-    no such section."""
-    steps: list[str] = []
-    is_inside = False
-    for line in text.splitlines():
-        if _APPROACH_HEADING.match(line):
-            is_inside = True
-            continue
-        if not is_inside:
-            continue
-        if _NEXT_SECTION.match(line):
-            break
-        step = _NUMBERED_STEP.match(line)
-        if step:
-            steps.append(step.group(1).strip())
-        elif steps and line.strip() and line.startswith((" ", "\t")):
-            steps[-1] = f"{steps[-1]} {line.strip()}"
-    return steps
+def _queue_latest_handoff(session: Session, chat: str) -> str:
+    """Queue the next steps of the latest handoff of session, which chat just opened, on chat's prompt queue, once per
+    handoff, and say so; nothing for a call from no chat, or a session with no handoff."""
+    handoff = session.handoffs.latest
+    if not chat or handoff is None:
+        return ""
+    queued = PromptQueue.of_chat(chat).queue_once(handoff.name, handoff.next_steps)
+    return _HANDOFF_QUEUED_NOTE.format(count=queued, handoff=handoff.name) if queued else ""
+
+
+# A chat that opens a session has its latest handoff's next steps lined up on its queue.
+OpenSessions.on_session_opened(_queue_latest_handoff)
