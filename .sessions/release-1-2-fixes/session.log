@@ -1839,3 +1839,7 @@
 2026-11-21T17:30:56Z tool prompt-queue.add 0441e51a-b582-45e7-aefa-d95fcdc406e3 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\0441e51a-b582-45e7-aefa-d95fcdc406e3.jsonl 1-4064
 2026-11-21T17:30:57Z tool prompt-queue.move 0441e51a-b582-45e7-aefa-d95fcdc406e3 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\0441e51a-b582-45e7-aefa-d95fcdc406e3.jsonl 1-4064
 2026-11-21T17:31:22Z tool prompt-queue.set_steps 0441e51a-b582-45e7-aefa-d95fcdc406e3 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\0441e51a-b582-45e7-aefa-d95fcdc406e3.jsonl 1-4085
+2026-11-21T17:31:58Z tool prompt-queue.set_steps 0441e51a-b582-45e7-aefa-d95fcdc406e3 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\0441e51a-b582-45e7-aefa-d95fcdc406e3.jsonl 1-4103
+2026-11-21T17:32:06Z tool prompt-queue.show 0441e51a-b582-45e7-aefa-d95fcdc406e3 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\0441e51a-b582-45e7-aefa-d95fcdc406e3.jsonl 1-4123
+2026-11-21T17:32:29Z tool prompt-queue.show 0441e51a-b582-45e7-aefa-d95fcdc406e3 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\0441e51a-b582-45e7-aefa-d95fcdc406e3.jsonl 1-4124
+2026-11-21T17:32:30Z tool prompt-queue.add_interruption 0441e51a-b582-45e7-aefa-d95fcdc406e3 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\0441e51a-b582-45e7-aefa-d95fcdc406e3.jsonl 1-4125
