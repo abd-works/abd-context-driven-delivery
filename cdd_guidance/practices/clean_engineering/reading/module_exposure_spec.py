@@ -11,7 +11,7 @@ if str(_REPO_ROOT) not in sys.path:
 from expects import equal, expect
 from mamba import before, context, description, it
 
-from cdd_guidance.practices.clean_engineering.reading.class_graph import ClassGraph
+from cdd_guidance.practices.clean_engineering.reading.production_classes import ProductionClasses
 from cdd_guidance.practices.clean_engineering.reading.module_exposure import ModuleExposure
 from cdd_guidance.practices.clean_engineering.reading.public_routes import PublicRoutes, RegisteredClasses
 from cdd_guidance.practices.clean_engineering.rules.rule_examples import practice_from_files
@@ -199,7 +199,7 @@ with description("module exposure"):
             self.fixture = practice_from_files(_module_of("cart", "cart.py", ("Cart", "Line", "Price")))
             reading = self.fixture.practice.reading
             registered = RegisteredClasses({"ACTION_CATALOGUE": [type("Line", (), {"__module__": "cart.cart"})]})
-            ModuleExposure(reading.in_graph, ClassGraph(reading), PublicRoutes(registered)).record()
+            ModuleExposure(reading.in_graph, ProductionClasses(reading), PublicRoutes(registered)).record()
 
         with it("should make it public as registered, with the registry"):
             expect(_public(self.fixture, "cart")).to(equal({"cart/cart.py:Line": {"registered": "ACTION_CATALOGUE"}}))

@@ -14,12 +14,12 @@ from harness.agent_tools.progress import report_progress
 from cdd_guidance.practices.clean_engineering.reading.class_facts import (
     BuiltCollaborators,
     DomainExtensions,
-    Forwarding,
-    ParallelModels,
-    ResourceShapes,
+    CopiedModels,
+    PassThroughClasses,
+    ServicesTakingDataBags,
 )
-from cdd_guidance.practices.clean_engineering.reading.class_graph import ClassGraph
-from cdd_guidance.practices.clean_engineering.reading.folder_facts import ImportCycleFacts, SiblingFanOut
+from cdd_guidance.practices.clean_engineering.reading.production_classes import ProductionClasses
+from cdd_guidance.practices.clean_engineering.reading.folder_facts import FolderImportCycles, SiblingFanOut
 from cdd_guidance.practices.clean_engineering.reading.module_exposure import ModuleExposure
 from cdd_guidance.practices.clean_engineering.reading.public_routes import PublicRoutes, registered_in_this_process
 from cdd_guidance.practices.clean_engineering.reading.operation_facts import BodyCopies, FailureMessages
@@ -38,16 +38,16 @@ class ComparedFacts:
     def record(self) -> None:
         report_progress("clean_engineering · compared facts")
         in_graph = self._reading.in_graph
-        classes = ClassGraph(self._reading)
+        classes = ProductionClasses(self._reading)
         for part in (
-            ImportCycleFacts(in_graph),
+            FolderImportCycles(in_graph),
             SiblingFanOut(in_graph),
             ModuleExposure(in_graph, classes, PublicRoutes(registered_in_this_process())),
-            ResourceShapes(classes),
-            ParallelModels(classes),
-            Forwarding(in_graph, classes),
-            DomainExtensions(in_graph, classes),
-            BuiltCollaborators(in_graph, classes),
+            ServicesTakingDataBags(classes),
+            CopiedModels(classes),
+            PassThroughClasses(in_graph, classes),
+            DomainExtensions(classes),
+            BuiltCollaborators(classes),
             BodyCopies(in_graph),
             FailureMessages(in_graph, classes),
         ):

@@ -16,7 +16,7 @@ from cdd_guidance.practices.source_code import ClassReference
 if TYPE_CHECKING:
     from harness.graph.graph import Node, PracticeNodes
 
-    from cdd_guidance.practices.clean_engineering.reading.class_graph import ClassGraph
+    from cdd_guidance.practices.clean_engineering.reading.production_classes import ProductionClasses
 
 
 class ModuleExposure:
@@ -40,23 +40,23 @@ class ModuleExposure:
     exposes to other modules (``seam_operations``). A constructor counts in the total and the private, never in the
     seam."""
 
-    def __init__(self, in_graph: "PracticeNodes", classes: "ClassGraph", routes: PublicRoutes) -> None:
+    def __init__(self, in_graph: "PracticeNodes", classes: "ProductionClasses", routes: PublicRoutes) -> None:
         self._in_graph = in_graph
         self._classes = classes
         self._routes = routes
 
     def record(self) -> None:
         counted = [
-            node
-            for node in self._classes.classes
-            if not is_example_code(node.source.file) and not (node.name.startswith("_") and not self._classes.has_behavior(node))
+            each.node
+            for each in self._classes
+            if not is_example_code(each.file) and not (each.name.startswith("_") and not each.has_behavior)
         ]
         holders = [
             node
             for node in self._in_graph.nodes("OoadClass")
             if node.name == MODULE_FUNCTION_HOLDER and not is_example_code(node.source.file)
         ]
-        namers = ClassNamers(self._in_graph, self._classes.classes).by_class()
+        namers = ClassNamers(self._in_graph, [each.node for each in self._classes]).by_class()
         for module in self._in_graph.nodes("Module"):
             folder = module.source.file or ""
             inside = [node for node in counted if is_under(node.source.file, folder)]
@@ -83,7 +83,7 @@ class ModuleExposure:
         """The routes by which the class node leaves the module at folder; none for a class that stays inside."""
         if node.name.startswith("_"):
             return {}
-        routes: dict = self._routes.of(node, self._classes.operations(node))
+        routes: dict = self._routes.of(node, self._classes.operations_of(node))
         outside = sorted(namer for namer in namers.get(node.node_id, set()) if not is_under(namer, folder))
         if outside:
             routes = {NAMED: outside, **routes}

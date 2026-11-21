@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from harness.graph.practice_rule import PracticeGraphRule
 from harness.graph.violation import Finding
 
-from cdd_guidance.practices.clean_engineering.reading.class_graph import parameters_of
+from cdd_guidance.practices.clean_engineering.reading.production_classes import parameters_of
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import StatementCount
 from cdd_guidance.practices.clean_engineering.rules.operation_semantics import SEMANTIC_RULES
 from cdd_guidance.practices.clean_engineering.rules.production_code_rule import ProductionCodeRule
@@ -85,7 +85,7 @@ GENERIC_NAMES = {
 class UseExplicitDependencies(ProductionCodeRule):
     """A collaborator a constructor builds that its caller cannot hand it. The parser leaves out what a caller can
     replace or what the class owns: a failure it raises, a parameter's default, a part built from its own state. This
-    rule passes values, failures, and collections (``ClassKinds.is_value``), the peers an Entity composes, and a part
+    rule passes values, failures, and collections (``ProductionClasses.is_value``), the peers an Entity composes, and a part
     the owner builds once and keeps: a class of the program's own that is no outside collaborator. An outside
     collaborator is a class the program does not declare, such as a library's client, or one whose name says it reaches
     outside the object (a repository, service, client, gateway, file, connection, or other process): the caller has to

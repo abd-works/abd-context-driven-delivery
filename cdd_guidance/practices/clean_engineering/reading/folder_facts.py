@@ -46,7 +46,7 @@ def imported_folders(folder: "Node") -> list["Node"]:
     return [edge.child for edge in folder.graph.edges.from_parent("dependsOn", folder)]
 
 
-class ImportCycleFacts:
+class FolderImportCycles:
     """Each folder's imports that close a cycle of folders (``import_cycles``: the folder imported and the cycle's size),
     and its files' imports that close a cycle of the folder's own files (``file_import_cycles``: importer, imported, and
     the cycle's size), each in name order; every folder keeps both, empty when it closes none."""
