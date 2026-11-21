@@ -154,3 +154,24 @@ The unit tier, run after each wave, caught three knock-on breaks, each fixed bef
   - `review-files-in-files-app.story.ui_e2e_spec.py` (pixel-09) and the viewer's line 14 test (pixel-10) failed before this session and still do.
   - `prompt_queue_plugin_e2e_spec.py` fails all 6: it cannot start a headless Claude Code chat on this machine.
 - The whole e2e tier was not run again after the tab fix.
+
+## Third wave: the second answers built (2026-11-20, commit 5c3b22e83)
+
+| Answer | Robot | What is built | What is left |
+|---|---|---|---|
+| Callout filtering in Python | Pixel | `space/session/file_view_filter.py` *FileViewFilter* decides which callouts a file shows with the graph's own `Filter`; the page sends its filters with `session.file` and draws what comes back; the page's `shows` rule is deleted. Seen on a real run and in e2e. | Other rules the file view still decides in TypeScript, found and not moved: which line of a step carries a callout, a callout's title, which fold-outs open, which files open rendered, a second resolving of a link's path, and the file list's `filesShown`, `rootFilesShown`, `listedBy`, `emptyReason`. |
+| A Then observes an Example only where a model is written | Cog | New graph rule `then-observes-an-example`. A story's area is the stories under its sub-epic or epic; a model is written for it when a step or example of the area has an edge to a domain model or class model node. A term link to a missing model raises nothing. | On this repository 643 Thens in modelled areas observe no Example. An example that demonstrates a DDD class is still reported when Clean Engineering is loaded. |
+| Java removed; Python, TypeScript or JavaScript | Cog | Stories' Java story-test format and every Java mention for specs removed. JavaScript offered for BDD in all three fidelities and for Stories scenarios and acceptance tests. | JavaScript story tests read only the story test file: no shared steps, screen specs, template or step library. Clean Engineering still reads Java production code. |
+| Mockup associates screens and controls with stories, scenarios, steps | Gizmo | Controls carry the associations as screens do; the drawing and a new whiteboard show them and read them back; the graph joins them by link target. | The drawing and whiteboard are not formats a person picks at mockup on the board: offering them fails two specs outside UX (drawio outputs must sit in `.context`; the board expects code and canvas for mockup). |
+| Views between TypeScript and JavaScript | Gizmo | Both ways; a view with an enum, namespace or constructor parameter property is refused by name. Compared with the TypeScript compiler on 700 files: 674 matched, 26 refused, none differed. | Not run through the cdd server. |
+| Fix button on failures | Lens | The Files app keeps each failure in a band with Fix; Fix lists the common causes Python holds for that kind (`tools/error_display/failure.py`) and sends the debug-session fix command to the chat that opened the page. | The board's fidelity outputs raise no such failure yet. No live Claude chat took the command; a stand-in chat did. A graph view failure was not made for real. |
+| Diagnose and align | Anvil | `session.diagnose_alignment` and `session.align_formats`, and the button in the Files app. Missing format files, formats whose graph readings differ, callouts that match no edge. Align renders from the format that holds more; formats that each hold something the other lacks wait for the person. | Callout matching is proven only by the real run. The file list does not show newly rendered files until it lists again. A story deleted on purpose from one format is restored from the fuller one. |
+
+Unit tier after the wave: 384 of 386 files, then 386 of 386 after two expectations were brought up to date (the board's tool names gained the two alignment tools; the catalog spec now names the Diagnose utility's own page).
+
+New decisions for the person:
+1. Still open: does a render to Python or TypeScript save its files, or answer content?
+2. Should the mockup's drawing and whiteboard be formats a person picks on the board, saved under the epic's `.context`?
+3. Does Clean Engineering keep reading Java production code?
+4. Are edges between bounded-context files and the domain model expected to carry a link (13 reported on the Bookshop)?
+5. Should JavaScript story tests be brought level with TypeScript (shared steps, screen specs, template, step library)?
