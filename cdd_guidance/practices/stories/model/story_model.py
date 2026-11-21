@@ -1077,11 +1077,11 @@ class Epic(StoryNode):
 
     def _child_band_for_layer(self) -> tuple[str, int, int]:
         """The children this node is counted by and the band they fit (`child-count-fits-layer`). A node holding
-        sub-epics groups 2-6 outcomes; a sub-epic holding only stories holds 2-9, since its sibling sub-epics carry the
+        sub-epics groups 3-9 outcomes; a sub-epic holding only stories holds 2-9, since its sibling sub-epics carry the
         breadth; a top epic holding only stories holds 4-9, since an epic of two or three stories is usually a sub-epic
         of a neighbouring epic."""
         if self.epics:
-            return "children", 2, 6
+            return "children", 3, 9
         if self.is_sub_epic:
             return "stories", 2, 9
         return "stories", 4, 9

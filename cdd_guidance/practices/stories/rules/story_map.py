@@ -32,7 +32,7 @@ class VerbNounFormat(PracticeGraphRule):
 
 
 class ChildCountFitsLayer(PracticeGraphRule):
-    """An epic or sub-epic holds the number of children its layer reads well: 2-6 under a node that holds sub-epics,
+    """An epic or sub-epic holds the number of children its layer reads well: 3-9 under a node that holds sub-epics,
     2-9 stories under a sub-epic, 4-9 stories under a top epic. The node's map facts carry its count and band."""
 
     slug = "child-count-fits-layer"

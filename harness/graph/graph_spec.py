@@ -542,11 +542,11 @@ with description("a graph"):
                 with it("should leave verb-noun format passing on Submit Order"):
                     expect(rule_on(self.submit_order, "verb-noun-format")["status"]).to(equal("passing"))
 
-                with it("should flag the epic holding one sub-epic outside its 2-6 children"):
+                with it("should flag the epic holding one sub-epic outside its 3-9 children"):
                     hit = rule_on(self.onboard, "child-count-fits-layer")
                     expect(hit["status"]).to(equal("violating"))
                     expect(hit["violations"][0]["message"]).to(
-                        equal("epic 'Onboard A Customer': 1 children (target 2-6)")
+                        equal("epic 'Onboard A Customer': 1 children (target 3-9)")
                     )
 
                 with it("should store the epic child-count hit on the line that names the epic"):

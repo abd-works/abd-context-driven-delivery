@@ -26,7 +26,7 @@ section: body
      Shape (`child-count-fits-layer`): repeat the epic block for every epic the sources describe.
      Give an epic sub-epics when its stories fall into separate outcomes, and keep it flat when they
      are one outcome. How many epics there are and how each nests come from the sources, never from
-     this template or an example: a node holding sub-epics groups 2-6, a sub-epic holds 2-9 stories,
+     this template or an example: a node holding sub-epics groups 3-9, a sub-epic holds 2-9 stories,
      and a flat epic holds 4-9.
 
      Headings start at column 0; the # count is the depth (epic #, sub-epic ##, its stories ###,
