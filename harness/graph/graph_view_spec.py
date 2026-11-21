@@ -9,6 +9,7 @@ from harness.installation.data_class import data_of  # noqa: E402
 from mamba import before, context, description, it
 
 from harness.graph.edge import EdgeType
+from harness.graph.violation import Finding
 from harness.graph.graph import Graph, Node, Source
 from harness.graph.saved_graph import NodeIdentity
 from harness.graph.saved_graph import SavedGraph, SavedPractice
@@ -30,7 +31,7 @@ with description("a graph"):
                 NodeIdentity(type="Operation", node_id="clean_engineering:Operation:failure.ts:failure:Account", name="failure"),
                 Source(".", 1, 1)
             )
-            self.failure.rules.record_violation("limit-operation-parameters", "too many")
+            self.failure.rules.entries["limit-operation-parameters"].record(Finding(self.failure, "too many"))
             self.register = Node(
                 self.practice,
                 NodeIdentity(type="Operation", node_id="clean_engineering:Operation:register.ts:register:Account", name="register"),

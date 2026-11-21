@@ -22,8 +22,8 @@ from harness.annotations.name import Name
 from harness.installation.data_class import SourceFile, data_field, identity, language_adapter
 from harness.mcp.mcp_annotations import mcp
 
-from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraph
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, WrittenBlock
+from cdd_guidance.practices.source_code import CallGraph
+from cdd_guidance.practices.source_code import CodeBody, WrittenBlock
 
 from . import name_facts
 from .opened_story_map import OpenedStoryMap, StoryMapEditRefused, UnopenedStoryMap
@@ -1343,7 +1343,7 @@ class StoryModel(StoryNode):
         files = session.session_files.file_manager
         files.read(os.path.relpath(path, files.workpath))
         stories = session.graph.practices.of(cls.practice_class)
-        model = stories.open_file(path, session.repo_path)
+        model = stories.story_files(session.repo_path).opened(path)
         model.opened = OpenedStoryMap(model, path, session)
         return model
 

@@ -6,8 +6,9 @@ import re
 from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
+from harness.graph.violation import Finding
 
-from cdd_guidance.practices.clean_engineering.model.class_graph import parameters_of
+from cdd_guidance.practices.clean_engineering.reading.production_classes import parameters_of
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import StatementCount
 from cdd_guidance.practices.clean_engineering.rules.operation_semantics import SEMANTIC_RULES
 from cdd_guidance.practices.clean_engineering.rules.production_code_rule import ProductionCodeRule
@@ -84,7 +85,7 @@ GENERIC_NAMES = {
 class UseExplicitDependencies(ProductionCodeRule):
     """A collaborator a constructor builds that its caller cannot hand it. The parser leaves out what a caller can
     replace or what the class owns: a failure it raises, a parameter's default, a part built from its own state. This
-    rule passes values, failures, and collections (``ClassKinds.is_value``), the peers an Entity composes, and a part
+    rule passes values, failures, and collections (``ProductionClasses.is_value``), the peers an Entity composes, and a part
     the owner builds once and keeps: a class of the program's own that is no outside collaborator. An outside
     collaborator is a class the program does not declare, such as a library's client, or one whose name says it reaches
     outside the object (a repository, service, client, gateway, file, connection, or other process): the caller has to
@@ -94,9 +95,9 @@ class UseExplicitDependencies(ProductionCodeRule):
     slug = "use-explicit-dependencies"
     node_types = ("OoadClass",)
 
-    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
         built = node.get_fact("constructs_collaborator") or ""
-        return [f"Class '{node.name}' constructs '{built}' inside its constructor."] if built else []
+        return [Finding(node, message) for message in ([f"Class '{node.name}' constructs '{built}' inside its constructor."] if built else [])]
 
 
 class OperationMeasureRule(ProductionCodeRule):
@@ -105,11 +106,11 @@ class OperationMeasureRule(ProductionCodeRule):
 
     node_types = ("Operation", "Property")
 
-    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
         """A field is no operation: one a constructor assigns sits inside the constructor, whose measures are not its."""
         if node.type == "Property" and not node.get_fact("is_property"):
             return []
-        return self.measure(node)
+        return [Finding(node, message) for message in self.measure(node)]
 
     def measure(self, operation: "Node") -> list[str]:
         return []
@@ -171,29 +172,29 @@ class UseExceptionsProperly(ProductionCodeRule):
     slug = "use-exceptions-properly"
     node_types = OperationMeasureRule.node_types
 
-    def check_production(self, operation: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, operation: "Node", context: "RuleCheckContext") -> list[Finding]:
         if not operation.get_fact("has_bare_catch"):
             return []
-        return [f"{operation_label(operation)} catches every exception (a bare except, or except Exception that never re-raises)."]
+        return [Finding(operation, f"{operation_label(operation)} catches every exception (a bare except, or except Exception that never re-raises).")]
 
 
 class NeverSwallowExceptions(ProductionCodeRule):
     slug = "never-swallow-exceptions"
     node_types = OperationMeasureRule.node_types
 
-    def check_production(self, operation: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, operation: "Node", context: "RuleCheckContext") -> list[Finding]:
         if not operation.get_fact("swallows_exceptions"):
             return []
-        return [f"{operation_label(operation)} swallows a caught failure or hands back a fallback in its place."]
+        return [Finding(operation, f"{operation_label(operation)} swallows a caught failure or hands back a fallback in its place.")]
 
 
 class ProvideMeaningfulContext(ProductionCodeRule):
     slug = "provide-meaningful-context"
     node_types = ("Operation",)
 
-    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
         for raw in node.get_fact("unnamed_literal_numbers", []):
-            return [f"Operation '{node.name}' uses the unnamed number {raw}."]
+            return [Finding(node, f"Operation '{node.name}' uses the unnamed number {raw}.")]
         return []
 
 
@@ -204,16 +205,16 @@ class AvoidVagueParameterNames(ProductionCodeRule):
     slug = "avoid-vague-parameter-names"
     node_types = ("Parameter", "Operation")
 
-    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
         if node.type == "Parameter":
             if node.name.lower() in VAGUE_NAMES and not self._named_by_type(node.name, node.get_fact("type_hint", "")):
-                return [f"Parameter '{node.name}' is vague. Use a domain-specific name."]
+                return [Finding(node, f"Parameter '{node.name}' is vague. Use a domain-specific name.")]
             return []
         for parameter in parameters_of(node):
             lowered = parameter.name.lower()
             vague = lowered in VAGUE_NAMES or lowered in _VAGUE_PARAMETER_NAMES
             if vague and not self._named_by_type(parameter.name, parameter.get_fact("type_hint", "")):
-                return [f"Parameter '{parameter.name}' in '{node.name}' is vague."]
+                return [Finding(node, f"Parameter '{parameter.name}' in '{node.name}' is vague.")]
         return []
 
     def _named_by_type(self, name: str, type_hint: str) -> bool:
@@ -234,7 +235,7 @@ class UseIntentionRevealingNames(ProductionCodeRule):
     slug = "use-intention-revealing-names"
     node_types = ("Parameter",)
 
-    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
         if not re.match(r"^[\w$]+$", node.name) or node.name in _CONVENTIONAL_PARAMETER_NAMES:
             return []
         operation = node.get_fact("operation_name", "")
@@ -245,7 +246,7 @@ class UseIntentionRevealingNames(ProductionCodeRule):
         if node.name == "value" and operation == "asyncRoute":
             return []
         if len(node.name) < 3 or node.name.lower() in GENERIC_NAMES:
-            return [f"Parameter '{node.name}' does not reveal intent."]
+            return [Finding(node, f"Parameter '{node.name}' does not reveal intent.")]
         return []
 
     def _setter_parameter(self, node: "Node") -> bool:
@@ -258,7 +259,7 @@ class UseConsistentNaming(ProductionCodeRule):
     slug = "use-consistent-naming"
     node_types = ("OoadClass",)
 
-    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
         snake_names: list[str] = []
         camel_names: list[str] = []
         for shape in node.get_fact("operation_shapes", []):
@@ -273,17 +274,15 @@ class UseConsistentNaming(ProductionCodeRule):
             return []
         minority = camel_names if len(camel_names) <= len(snake_names) else snake_names
         style = "camelCase" if minority is camel_names else "snake_case"
-        return [
-            f"Operation '{minority[0]}' uses {style} while other operations on '{node.name}' "
-            "use the other convention."
-        ]
+        return [Finding(node, f"Operation '{minority[0]}' uses {style} while other operations on '{node.name}' "
+            "use the other convention.")]
 
 
 class PreferInstanceOperations(ProductionCodeRule):
     slug = "prefer-instance-operations"
     node_types = ("Operation",)
 
-    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
         is_static = bool(node.get_fact("is_static"))
         is_classmethod = bool(node.get_fact("is_classmethod"))
         if not is_static and not is_classmethod:
@@ -291,7 +290,7 @@ class PreferInstanceOperations(ProductionCodeRule):
         if self._allows_static_factory_operation(node.name) or self._makes_its_own_class(node) or self._react_static(node):
             return []
         kind = "classmethod" if is_classmethod else "staticmethod"
-        return [f"Operation '{node.name}' is a {kind}; prefer an instance operation."]
+        return [Finding(node, f"Operation '{node.name}' is a {kind}; prefer an instance operation.")]
 
     def _allows_static_factory_operation(self, name: str) -> bool:
         if name in _STATIC_FACTORY_NAMES or name in _STATIC_FACTORY_EXTRA_NAMES:
@@ -325,7 +324,7 @@ class UsePropertyNotAccessor(ProductionCodeRule):
 
     _PREFIXES = ("calculate_", "compute_", "get_")
 
-    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
         if node.get_fact("is_property"):
             return []
         if not any(node.name.startswith(prefix) for prefix in self._PREFIXES):
@@ -333,7 +332,7 @@ class UsePropertyNotAccessor(ProductionCodeRule):
         if parameters_of(node):
             return []
         owner = node.get_fact("owner", "")
-        return [f"Operation '{node.name}' on '{owner}' looks like a getter; use a property."]
+        return [Finding(node, f"Operation '{node.name}' on '{owner}' looks like a getter; use a property.")]
 
 
 class EliminateDuplication(PracticeGraphRule):
@@ -344,15 +343,15 @@ class EliminateDuplication(PracticeGraphRule):
     slug = "eliminate-duplication"
     node_types = ("Operation",)
 
-    def check_practice(self, context: "RuleCheckContext") -> list[tuple[str, str]]:
-        hits: list[tuple[str, str]] = []
+    def check_practice(self, context: "RuleCheckContext") -> list[Finding]:
+        hits: list[Finding] = []
         for operation in context.nodes("Operation"):
             original = operation.get_fact("duplicate_of") or ""
             near = operation.get_fact("near_copy_of") or []
             if original:
-                hits.append((operation.node_id, f"Operation '{operation.name}' duplicates the body of '{original}'."))
+                hits.append(Finding(operation, f"Operation '{operation.name}' duplicates the body of '{original}'."))
             elif near:
-                hits.append((operation.node_id, self._near_copy_message(operation, near)))
+                hits.append(Finding(operation, self._near_copy_message(operation, near)))
         return hits
 
     def _near_copy_message(self, operation: "Node", near: list) -> str:

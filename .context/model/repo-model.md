@@ -1757,7 +1757,7 @@ A practice's part in the knowledge graph: the node types the graph treats as cla
 
 + PracticeReading(practice: PracticeGuidance)
 ------
-+ reads_after: tuple[str, ...]
++ reads_after: tuple[type[PracticeGuidance], ...]
 + node_types: tuple[str, ...]
 + class_types: tuple[str, ...]
 + member_types: tuple[str, ...]
@@ -2344,7 +2344,7 @@ What one pattern gives the graph on top of the practices: the nodes it reads and
 + read(graph: Graph): None
 + practice_file(practice_key: str, name: str): Path
 + rules_for(practice: Any): dict[str, PracticeGraphRule]
----<<finds rules with>>--> rules_in
+---<<finds rules with>>--> PracticeReading
 ---<<loads>>--> PracticeGraphRule
 
 ## PatternOverlays
@@ -2375,8 +2375,8 @@ One graph rule: the node types it checks and what it reports on a node or on the
 + slug: str
 + node_types: tuple[str, ...]
 ----
-+ check(node, context: RuleCheckContext): list[str]
-+ check_practice(context: RuleCheckContext): list[tuple[str, str]]
++ check(node, context: RuleCheckContext): list[Finding]
++ check_practice(context: RuleCheckContext): list[Finding]
 + applies_to(node_type: str): bool
 ---<<checks a node within>>--> RuleCheckContext
 
@@ -5140,7 +5140,7 @@ The Stories practice: story map, scenarios, and acceptance tests.
 How Stories takes part in the graph: it reads the story tests under its root, or the story maps there when there are none, writes the story map onto its graph, and links each step to the Clean Engineering operations it calls; it reads after Clean Engineering.
 
 ------
-+ reads_after: tuple[str, ...]
++ reads_after: tuple[type[PracticeGuidance], ...]
 + root: Path
 + << composition >> story_tree: StoryTree
 + object_model: PracticeReading | None
@@ -5156,17 +5156,37 @@ How Stories takes part in the graph: it reads the story tests under its root, or
 
 ## StoryTree
 
-The story map as the graph holds it: each epic's sub-epics and stories, each story's scenarios, each scenario's steps.
+The story map as the graph holds it (`stories/model/story_tree.py`): each epic's sub-epics and stories, each story's scenarios, each scenario's steps, and the one definition of the step and epic node types (`STEP_TYPES`, `EPIC_TYPES`, `LINKED_TYPES`, `STORY_MAP_TYPES`) and of a node's key (`KEY_SEPARATOR`). UX and the Validate action ask it rather than keeping copies.
 
 + StoryTree(stories: PracticeReading)
 ------
 + stories: PracticeReading
 ----
++ StoryTree.of_graph(graph): StoryTree | None
 + epic_of(node): Node | None
 + sub_epics(epic): list
 + stories_under(epic): list
 + scenarios(story): list
 + steps(scenario): list
++ every_step(): list
++ examples(): list
++ examples_by_file(): dict[str, list]
++ scenario_of(step): Node | None
++ story_of(node): Node | None
++ background_steps(story): list
++ area_of(node): Node
++ step_text(step), step_phase(step), step_body(step): str
++ steps_saying(text): list
++ StoryTree.key_of(node): str
++ nodes_keyed(kind, key): list
++ written_nodes(): WrittenStoryNodes
+	// the nodes by the file each was read from, for a run of links that each name a file and a heading
+
+## WrittenStoryNodes
+
++ WrittenStoryNodes(tree: StoryTree)
+----
++ node_written_at(kind, target, key, written_in): Node | None
 
 ## StoryModel : StoryNode
 
@@ -5300,7 +5320,7 @@ The DDD practice: bounded context, model, and tactics. Its python and typescript
 DDD's nodes, read after Clean Engineering's classes, and its graph checks with Clean Engineering's.
 
 ------
-+ reads_after: tuple[str, ...]
++ reads_after: tuple[type[PracticeGuidance], ...]
 + class_types: tuple[str, ...]
 + root: Path
 ----
@@ -5381,7 +5401,7 @@ The BDD practice: behavior, realization, and development.
 BDD's describe trees, read after Clean Engineering's code and linked to the Clean Engineering members each observation drives.
 
 ------
-+ reads_after: tuple[str, ...]
++ reads_after: tuple[type[PracticeGuidance], ...]
 + node_types: tuple[str, ...]
 + clean_engineering_reading: PracticeReading | None
 ----

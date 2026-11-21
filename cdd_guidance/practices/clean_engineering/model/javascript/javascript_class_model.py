@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import base_type_name_for, example_extension_kind
-from cdd_guidance.practices.clean_engineering.model.code_body import JAVASCRIPT
+from cdd_guidance.practices.source_code import JAVASCRIPT
 from cdd_guidance.practices.clean_engineering.model.code_class_model import (
     BraceCleanEngineeringModel,
     CodeClass,

@@ -5,7 +5,7 @@ from __future__ import annotations
 import posixpath
 from pathlib import Path
 
-from cdd_guidance.practices.clean_engineering.model.code_body import JAVASCRIPT
+from cdd_guidance.practices.source_code import JAVASCRIPT
 from cdd_guidance.practices.stories.model.brace_story import BraceStoryWriting
 from cdd_guidance.practices.stories.model.javascript.nodes import JavaScriptEpic, JavaScriptStory
 from cdd_guidance.practices.stories.model.script_story_model import ScriptStoryModel, script_story_file_suffixes

@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
+from harness.graph.violation import Finding
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
@@ -20,7 +21,7 @@ class NodeRepositoryParsesOnRead(PracticeGraphRule):
     slug = "node-repository-parses-on-read"
     node_types = ("NodeRoot",)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         messages: list[str] = []
         for repository in node.get_fact("node_repositories", []):
             name = repository["name"]
@@ -30,7 +31,7 @@ class NodeRepositoryParsesOnRead(PracticeGraphRule):
             ]
             if not repository["parses_on_read"]:
                 messages.append(f"{name} never runs a Zod `.parse(` on what it reads from its JSON store.")
-        return messages
+        return [Finding(node, message) for message in messages]
 
 
 class PostedBodyParsedInNode(PracticeGraphRule):
@@ -43,19 +44,19 @@ class PostedBodyParsedInNode(PracticeGraphRule):
     slug = "posted-body-parsed-in-node"
     node_types = ("Route", "NodeRoot", "Aggregate")
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         if node.type == "Aggregate":
             return [
-                f"{relative}:{line}: `{code}` in the framework-free core; the node reads the request and hands the core plain values."
+                Finding(node, f"{relative}:{line}: `{code}` in the framework-free core; the node reads the request and hands the core plain values.")
                 for relative, line, code in node.get_fact("core_request_reads", [])
             ]
         if node.type == "NodeRoot":
             return [
-                f"{node.source.file}:{line}: `req.body` is read without a schema; pass it straight into the posted schema's `.parse(`."
+                Finding(node, f"{node.source.file}:{line}: `req.body` is read without a schema; pass it straight into the posted schema's `.parse(`.")
                 for line in node.get_fact("unparsed_body_reads", [])
             ]
         return [
-            f"{node.source.file}:{line}: `{found}` reads the posted body loosely; pass `req` to the node's `fromRequest`, which parses it."
+            Finding(node, f"{node.source.file}:{line}: `{found}` reads the posted body loosely; pass `req` to the node's `fromRequest`, which parses it.")
             for line, found in node.get_fact("loose_body_reads", [])
         ]
 
@@ -66,14 +67,14 @@ class ThrowHttpExceptions(PracticeGraphRule):
     slug = "throw-http-exceptions"
     node_types = ("Route", "NodeRoot")
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        return [
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
+        return [Finding(node, message) for message in [
             f"{node.source.file}:{line}: `{found}` throws an ad hoc value; throw an `HttpException`."
             for line, found in node.get_fact("ad_hoc_throws", [])
         ] + [
             f"{node.source.file}:{line}: `{found}` answers an error by hand; throw an `HttpException` for the error middleware."
             for line, found in node.get_fact("error_replies", [])
-        ]
+        ]]
 
 
 class OneHomeForWebPaths(PracticeGraphRule):
@@ -82,9 +83,9 @@ class OneHomeForWebPaths(PracticeGraphRule):
     slug = "one-home-for-web-paths"
     node_types = ("Aggregate",)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         return [
-            f"{relative}:{line}: web path {path!r} is a literal; import it from the aggregate's `*-paths.ts` module."
+            Finding(node, f"{relative}:{line}: web path {path!r} is a literal; import it from the aggregate's `*-paths.ts` module.")
             for relative, line, path in node.get_fact("web_path_literals", [])
         ]
 
@@ -98,8 +99,8 @@ class ResetEveryRepository(PracticeGraphRule):
     slug = "reset-every-repository"
     node_types = ("Repository", "NodeRoot")
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         return [
-            f"`{instance}` ({class_name}) is never reset by the test setup; add it to the repositories every story resets."
+            Finding(node, f"`{instance}` ({class_name}) is never reset by the test setup; add it to the repositories every story resets.")
             for instance, class_name in node.get_fact("unreset_instances", [])
         ]

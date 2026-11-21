@@ -8,19 +8,23 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
+    from harness.graph.violation import Finding
     from harness.graph.rule_context import RuleCheckContext
     from harness.guidance.guidance import PracticeGuidance
 
 
 class PracticeGraphRule:
+    """The check of one graph rule: the node types it judges, and what it finds on one node (check) or across the whole
+    practice (check_practice), each a *Finding* that names the node it was found on."""
+
     slug = ""
     node_types: tuple[str, ...] = ()
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         return []
 
-    def check_practice(self, context: RuleCheckContext) -> list[tuple[str, str]]:
-        """Optional whole-practice pass. Returns (node_id, message) pairs."""
+    def check_practice(self, context: RuleCheckContext) -> list[Finding]:
+        """Optional whole-practice pass: each finding on the node it names."""
         return []
 
     def applies_to(self, node_type: str) -> bool:

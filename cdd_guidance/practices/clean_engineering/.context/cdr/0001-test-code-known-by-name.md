@@ -1,6 +1,6 @@
 # Test code is known by its name
 
-The Clean Engineering rules judge production code only, so each rule has to know which files are specs or what specs use. `production_code.py` decides that from the file's path alone (`TestFileName`): a test folder (`tests`, `test`, `__tests__`, `test-utils`, `fixtures`, `_examples`), a dotted role in the name (`.spec.`, `.test.`, `.e2e.`, `.feature.`, `.story.`, `.page-driver.`, `.examples.`), or the words of the name (`*_spec`, pytest's `test_*`, Java's `*Test`, and support named `*_test`, `*_fixture`, `*_examples`, `*_tiers`, `spec_helpers`, `spec_support`, `testUtils`). The BDD practice reads its spec files through the same `is_spec_file`.
+The Clean Engineering rules judge production code only, so each rule has to know which files are specs or what specs use. `test_files.py` of `practices/source_code` (once `clean_engineering/model/production_code.py`) decides that from the file's path alone (`TestFileName`): a test folder (`tests`, `test`, `__tests__`, `test-utils`, `fixtures`, `_examples`), a dotted role in the name (`.spec.`, `.test.`, `.e2e.`, `.feature.`, `.story.`, `.page-driver.`, `.examples.`), or the words of the name (`*_spec`, pytest's `test_*`, Java's `*Test`, and support named `*_test`, `*_fixture`, `*_examples`, `*_tiers`, `spec_helpers`, `spec_support`, `testUtils`). The BDD practice reads its spec files through the same `is_spec_file`.
 
 ## Considered options
 

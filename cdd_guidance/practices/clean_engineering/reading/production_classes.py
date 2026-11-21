@@ -1,7 +1,7 @@
 """The classes of Clean Engineering's graph, indexed for the facts that compare a class with the rest of the graph.
 
 A second object model, a service-plus-bag pair, or a pass-through layer looks fine inside the file that holds it; the
-facts that catch them have to see every class at once. ``ClassGraph`` reads the graph once after each read, from the
+facts that catch them have to see every class at once. ``ProductionClasses`` reads the graph once after each read, from the
 nodes' saved facts and the graph's edges, and answers by class name, so each fact compares classes instead of rescanning
 every edge for every class.
 """
@@ -9,16 +9,16 @@ every edge for every class.
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, Iterator
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER
 from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUCTOR_NAMES
-from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
+from cdd_guidance.practices.source_code import is_test_code
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
 
-    from cdd_guidance.practices.clean_engineering.model.graph_reading import GraphReading
+    from cdd_guidance.practices.clean_engineering.reading.graph_reading import GraphReading
 
 _IDENTIFIER = re.compile(r"[A-Za-z_]\w*")
 # A constructor handing its base a message: Python's `super().__init__("...")`, a brace language's `super("...")`.
@@ -69,70 +69,111 @@ _VALUE_BASES = frozenset(
 )
 
 
-class ClassGraph:
-    """Every production class in the practice, its public operations, and the fields it holds."""
+class ProductionClass:
+    """One class of production code as the graph holds it, which answers for itself: the fields it holds, the bases it
+    derives from, its public operations, whether it does any work, whether another class mixes it in, and whether it is
+    a value or a failure. It is a view of its node, read from the facts the node saves and the graph's edges, so a class
+    read back from a saved graph answers what the class it was read from does; the facts a recorder writes go on its
+    node."""
+
+    def __init__(self, node: "Node", classes: "ProductionClasses") -> None:
+        self.node = node
+        self._classes = classes
+
+    @property
+    def name(self) -> str:
+        return self.node.name
+
+    @property
+    def node_id(self) -> str:
+        return self.node.node_id
+
+    @property
+    def fields(self) -> dict[str, str]:
+        """Field name to type hint: declared properties, then the fields its constructor assigns, as the class saves
+        them (``held_fields``)."""
+        return dict(self.node.get_fact("held_fields") or {})
+
+    @property
+    def bases(self) -> list[str]:
+        """The names of the classes it derives from, each by its own name: ``Epic`` for ``pkg.Epic``, ``list`` for
+        ``list[Entry]``."""
+        return [str(base).rsplit(".", 1)[-1].split("[", 1)[0] for base in self.node.get_fact("bases", []) or []]
+
+    @property
+    def operations(self) -> list["Node"]:
+        """The public operations the graph records for this class."""
+        return self._classes.operations_of(self.node)
+
+    @property
+    def operation_count(self) -> int:
+        return len(self.operations)
+
+    @property
+    def has_behavior(self) -> bool:
+        """Any operation beyond construction and property access. The operations' shapes list getters too, which the
+        graph holds as property nodes, so they are read from the class's own fact."""
+        return any(
+            not shape.get("is_property") and shape["name"] not in CONSTRUCTOR_NAMES and not shape["name"].startswith("__")
+            for shape in self.node.get_fact("operation_shapes", []) or []
+        )
+
+    @property
+    def is_mixin(self) -> bool:
+        """A class another class mixes in before the base it derives from, such as a reading mixed into a model."""
+        return self._classes.is_mixed_in(self.name)
+
+    @property
+    def is_value(self) -> bool:
+        return self._classes.is_value(self.name)
+
+    @property
+    def is_failure(self) -> bool:
+        return self._classes.is_failure(self.name)
+
+    @property
+    def file(self) -> str:
+        return self.node.source.file or ""
+
+
+class ProductionClasses:
+    """Every production class in the practice, each a *ProductionClass*, read once after each read; it answers by class
+    name, so each fact compares classes instead of rescanning every edge for every class, and says what kind of class a
+    type name stands for: a value, a failure, or a failure that writes its own message."""
 
     def __init__(self, reading: "GraphReading") -> None:
         in_graph = reading.in_graph
-        self.classes = [node for node in in_graph.nodes("OoadClass") if self.is_production(node)]
         # The index of the classes Clean Engineering read by name, which its type linking asks too.
         self._index = reading.code_index
         self._operations: dict[str, list["Node"]] = {}
         for edge in in_graph.edge_index.of("owns"):
             if edge.child.type == "Operation" and edge.parent.type == "OoadClass":
                 self._operations.setdefault(edge.parent.node_id, []).append(edge.child)
+        self._classes = {node.node_id: ProductionClass(node, self) for node in in_graph.nodes("OoadClass") if _is_production(node)}
         # A class mixed in comes before the base a class derives from: `class Model(Reading, BaseModel)`.
-        self._mixins = {base for node in self.classes for base in self.bases_of(node)[:-1]}
+        self._mixins = {base for each in self for base in each.bases[:-1]}
         self._defining: dict[str, set[str]] = {}
         for node in in_graph.nodes("OoadClass"):
-            for operation in self.operations(node):
+            for operation in self.operations_of(node):
                 self._defining.setdefault(operation.name, set()).add(node.node_id)
-        self.kinds = ClassKinds(self)
 
-    def named(self, type_name: str) -> list["Node"]:
+    def __iter__(self) -> Iterator[ProductionClass]:
+        return iter(self._classes.values())
+
+    def named(self, type_name: str) -> list[ProductionClass]:
         """The production classes the graph holds called type_name."""
-        return [node for node in self._index.classes_named(type_name) if self.is_production(node)]
+        return [self._classes[node.node_id] for node in self._index.classes_named(type_name) if node.node_id in self._classes]
 
-    def is_mixin(self, node: "Node") -> bool:
-        """True for a class another class mixes in before the base it derives from, such as a reading mixed into a model."""
-        return node.name in self._mixins
-
-    def operations(self, node: "Node") -> list["Node"]:
-        """The public operations the graph records for this class."""
-        return self._operations.get(node.node_id, [])
-
-    def classes_defining(self, operation_name: str) -> set[str]:
+    def defining(self, operation_name: str) -> set[str]:
         """Node ids of the classes (module function holders included) that define a public operation of this name."""
         return self._defining.get(operation_name, set())
 
-    def fields(self, node: "Node") -> dict[str, str]:
-        """Field name to type hint: declared properties, then the fields its constructor assigns, as the class saves
-        them (``held_fields``), so a class read back from a saved graph answers what the class it was read from does."""
-        return dict(node.get_fact("held_fields") or {})
+    def operations_of(self, node: "Node") -> list["Node"]:
+        """The public operations the graph records for the class node, production code or not."""
+        return self._operations.get(node.node_id, [])
 
-    def bases_of(self, node: "Node") -> list[str]:
-        """The names of the classes it derives from, each by its own name: ``Epic`` for ``pkg.Epic``, ``list`` for
-        ``list[Entry]``."""
-        return [str(base).rsplit(".", 1)[-1].split("[", 1)[0] for base in node.get_fact("bases", []) or []]
-
-    def has_behavior(self, node: "Node") -> bool:
-        """A class with any operation beyond construction and property access."""
-        return any(
-            not shape.get("is_property") and shape["name"] not in CONSTRUCTOR_NAMES and not shape["name"].startswith("__")
-            for shape in node.get_fact("operation_shapes", []) or []
-        )
-
-    def is_production(self, node: "Node") -> bool:
-        """A class of production code: neither read from a spec or test support, nor the holder of a file's functions."""
-        return node.name != MODULE_FUNCTION_HOLDER and not is_test_code(node.source.file)
-
-
-class ClassKinds:
-    """What kind of class a name stands for in the graph: a value, a failure, or a failure that writes its own
-    message. Each answer walks the bases the graph records, so the kinds are a part the class graph holds."""
-
-    def __init__(self, classes: ClassGraph) -> None:
-        self._classes = classes
+    def is_mixed_in(self, name: str) -> bool:
+        return name in self._mixins
 
     def is_value(self, type_name: str) -> bool:
         """True for a value type: a standard one such as a path, a date, or a number; a failure, named as one or
@@ -151,8 +192,8 @@ class ClassKinds:
         as ``super().__init__(f"paths are required to commit")``."""
         return any(
             _HANDS_MESSAGE.search(operation.get_fact("body_text") or "")
-            for node in self._classes.named(failure)
-            for operation in self._classes.operations(node)
+            for declared in self.named(failure)
+            for operation in declared.operations
             if operation.name in CONSTRUCTOR_NAMES
         )
 
@@ -163,24 +204,26 @@ class ClassKinds:
             return True
         if type_name in seen:
             return False
-        return any(
-            self._derives(base, is_kind, seen | {type_name})
-            for node in self._classes.named(type_name)
-            for base in self._classes.bases_of(node)
-        )
+        return any(self._derives(base, is_kind, seen | {type_name}) for declared in self.named(type_name) for base in declared.bases)
 
     def _is_value_itself(self, type_name: str) -> bool:
         """A standard value, a collection base, a failure, or a class of the graph its stereotype marks as a value."""
         if type_name in _STANDARD_VALUES or type_name in _VALUE_BASES or self._named_failure(type_name):
             return True
-        return any(self._declares_value(node) for node in self._classes.named(type_name))
+        return any(_declares_value(declared.node) for declared in self.named(type_name))
 
     def _named_failure(self, type_name: str) -> bool:
         return type_name.endswith(_FAILURE_SUFFIXES)
 
-    def _declares_value(self, node: "Node") -> bool:
-        stereotypes = {str(item).lower() for item in node.get_fact("stereotypes", []) or []}
-        return "value object" in stereotypes
+
+def _is_production(node: "Node") -> bool:
+    """A class of production code: neither read from a spec or test support, nor the holder of a file's functions."""
+    return node.name != MODULE_FUNCTION_HOLDER and not is_test_code(node.source.file)
+
+
+def _declares_value(node: "Node") -> bool:
+    stereotypes = {str(item).lower() for item in node.get_fact("stereotypes", []) or []}
+    return "value object" in stereotypes
 
 
 def parameters_of(operation: "Node") -> list["Node"]:

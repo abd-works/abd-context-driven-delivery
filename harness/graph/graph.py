@@ -1326,10 +1326,8 @@ class PracticeRuleRun:
         context = RuleCheckContext(practice)
         for index, check in enumerate(checks, start=1):
             report_progress(f"{practice.key} · rule {check.slug} · {index}/{len(checks)}")
-            for node_id, message in check.check_practice(context):
-                node = self._part.graph.node(node_id)
-                if node is not None:
-                    node.rules.record_violation(check.slug, message)
+            for finding in check.check_practice(context):
+                finding.node.rules.record(check, finding)
         self._check_each_node(context)
 
     def renew(self) -> None:
@@ -1361,8 +1359,8 @@ class PracticeRuleRun:
             for rule in node.rules:
                 if not rule.runs or rule.slug in skipped:
                     continue
-                for message in rule.check(context):
-                    rule.record(message)
+                for finding in rule.check(context):
+                    rule.record(finding)
 
     def _inside(self, node: Node, spans: dict[str, list[tuple[int, int]]]) -> bool:
         """Whether node's lines overlap one of the class spans of its file."""

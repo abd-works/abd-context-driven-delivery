@@ -11,7 +11,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 import cdd_guidance.practices  # noqa: F401
-from cdd_guidance.practices.clean_engineering.model.code_body import JAVASCRIPT, PYTHON, TYPESCRIPT, CodeBody
+from cdd_guidance.practices.source_code import JAVASCRIPT, PYTHON, TYPESCRIPT, CodeBody
 from harness.agent_tools.agent_tools import AgentToolSet
 
 _TOOLSET = "cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering"
@@ -218,7 +218,7 @@ with description("a class model rendered to code"):
 
 with description("a body written in one language and kept as comments in another") as self:
     with before.each:
-        from cdd_guidance.practices.clean_engineering.model.code_body import PYTHON, TYPESCRIPT, CodeBody
+        from cdd_guidance.practices.source_code import PYTHON, TYPESCRIPT, CodeBody
 
         self.python = CodeBody("self.items.append(item)\nreturn item", PYTHON)
         self.kept = "\n".join(self.python.lines_in(TYPESCRIPT, "    ", ""))

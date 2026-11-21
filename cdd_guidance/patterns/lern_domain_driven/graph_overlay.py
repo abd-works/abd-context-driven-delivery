@@ -16,7 +16,7 @@ from harness.graph.skipped_folders import scanned_files
 
 from cdd_guidance.patterns.lern_domain_driven.tier_facts import AggregateFolder, TierFile
 from cdd_guidance.practices.bdd.bdd import Bdd
-from cdd_guidance.practices.clean_engineering.model.code_body import CODE_LANGUAGES, TYPESCRIPT
+from cdd_guidance.practices.source_code import CODE_LANGUAGES, TYPESCRIPT
 from cdd_guidance.practices.ddd.ddd import Ddd
 from cdd_guidance.practices.stories.stories import Stories
 

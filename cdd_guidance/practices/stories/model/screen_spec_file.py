@@ -14,8 +14,8 @@ import re
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from cdd_guidance.practices.clean_engineering.model.bracket_structure import BracketStructure
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
+from cdd_guidance.practices.source_code import BracketStructure
+from cdd_guidance.practices.source_code import CodeBody, CodeLanguage
 from cdd_guidance.practices.stories.model.story_model import StepType
 
 if TYPE_CHECKING:

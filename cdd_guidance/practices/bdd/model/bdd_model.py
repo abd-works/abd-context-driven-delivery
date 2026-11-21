@@ -7,10 +7,10 @@ import re
 from harness.graph.model_node import ModelChildren, ModelNode
 from harness.graph.graph import Graph
 
-from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraph, parse_arrow_line
+from cdd_guidance.practices.source_code import CallGraph, parse_arrow_line
 from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation, private_probe_in_text
 from cdd_guidance.practices.bdd.model.spec_source import has_signature_marker, is_developed
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
+from cdd_guidance.practices.source_code import CodeBody
 
 
 class BddModel(ModelNode):

@@ -13,6 +13,8 @@ from harness.annotations.name import Name
 from harness.graph.model_node import ModelChildren
 from harness.graph.graph import Graph, Node
 
+from cdd_guidance.practices.stories.model.story_tree import StoryTree
+
 from .story_link import StoryLink
 from .ux_node import UxNode
 
@@ -128,7 +130,7 @@ class ServesStories(UxNode):
         """Serve the stories, scenarios, and steps other serves: each Stories node other finds on its own graph, else
         the key and the link target other holds for it."""
         for link in other._story_links:
-            resolved = link.resolved_on(other.graph) if other.practice is not None else None
+            resolved = link.resolved_in(StoryTree.of_graph(other.graph)) if other.practice is not None else None
             self._show(link.kind, resolved or link.written)
 
     def _show(self, kind: str, shown: Node | str) -> None:
@@ -153,8 +155,9 @@ class ServesStories(UxNode):
         the node, each holds the node it already held, as a copy keeps the nodes its source found."""
         links = self.links_of(kind)
         if self.practice is not None:
+            story_tree = StoryTree.of_graph(self.graph)
             for link in links:
-                link.resolved_on(self.graph)
+                link.resolved_in(story_tree)
         return links
 
     def links_of(self, kind: str) -> List[StoryLink]:

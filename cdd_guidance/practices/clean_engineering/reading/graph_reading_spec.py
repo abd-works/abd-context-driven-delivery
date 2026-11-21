@@ -5,13 +5,13 @@ from expects import be_true, contain, equal, expect, have_key
 from mamba import before, context, description, it
 
 from cdd_guidance.practices.clean_engineering.model.python.python_class_model import PythonCleanEngineeringModel
-from cdd_guidance.practices.clean_engineering.model.class_graph import ClassGraph
+from cdd_guidance.practices.clean_engineering.reading.production_classes import ProductionClasses
 from cdd_guidance.practices.clean_engineering.rules.rule_examples import practice_from_files
 from cdd_guidance.practices.stories.model.fixtures.round_trip_story_map import round_trip_story_map
 from cdd_guidance.practices.stories.model.whiteboard.nodes import WhiteboardStoryModel
 from cdd_guidance.practices.clean_engineering.model.whiteboard.whiteboard_class_model import WhiteboardCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module
-from cdd_guidance.practices.clean_engineering.model.code_read import DESCRIBED_FACT
+from cdd_guidance.practices.clean_engineering.reading.code_read import DESCRIBED_FACT
 
 _CART = (
     "class Cart:\n"
@@ -242,7 +242,7 @@ with description("Clean Engineering reading code into its graph"):
             expect(self.index.classes_named("Cart")).to(equal([self.cart]))
 
         with it("should be the index the class rules ask"):
-            expect(ClassGraph(self.fixture.practice.reading).named("Till")).to(equal(self.index.classes_named("Till")))
+            expect([each.node for each in ProductionClasses(self.fixture.practice.reading).named("Till")]).to(equal(self.index.classes_named("Till")))
 
     with context("with members that call and read another object's members"):
         with before.all:

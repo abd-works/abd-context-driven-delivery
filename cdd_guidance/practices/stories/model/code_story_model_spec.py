@@ -201,7 +201,7 @@ with description("a code Story Map") as self:
 with description("a story read from a TypeScript story file") as self:
     with before.each:
         from cdd_guidance.practices.stories.model.brace_story_file import BraceStoryFile
-        from cdd_guidance.practices.clean_engineering.model.code_body import TYPESCRIPT
+        from cdd_guidance.practices.source_code import TYPESCRIPT
 
         text = (
             "story('Pay by card', () => {\n"

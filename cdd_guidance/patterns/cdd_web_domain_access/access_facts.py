@@ -6,7 +6,7 @@ import ast
 import re
 from pathlib import Path
 
-from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
+from cdd_guidance.practices.source_code import SourceText
 
 _TOOL_CALL = re.compile(r"\.call(?:<[^>]*>)?\(")
 _ADAPTER_IMPORT = re.compile(r"""from\s+['"]@cdd/""")

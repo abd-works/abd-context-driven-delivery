@@ -222,36 +222,7 @@ model_for(target: Any, model: Any): Any
 
 ## PracticeReading
 
-How one practice takes part in the knowledge graph. Each practice names its kind (`reading_type`): Clean Engineering's
-*GraphReading*, BDD's *BddGraphReading*, DDD's *DddReading*, Stories' *StoriesReading*, UX's *UxReading*.
-
-PracticeReading(practice: PracticeGuidance)
-------
-reads_after: tuple[str, ...]
-node_types: tuple[str, ...]
-class_types: tuple[str, ...]
-member_types: tuple[str, ...]
-class_node_type: str
-source_ordered_types: frozenset[str]
-anchor_types: dict[str, str]
-rule_types: dict[str, tuple[str, ...]]
-graph: HoldingGraph | None
-	// the graph that holds the practice, named by a protocol harness/graph's Graph answers, since the graph sits above guidance
-in_graph: HeldNodes | None
-	// the practice's nodes and edges in the graph that holds it, named by a protocol harness/graph's PracticeNodes answers
-graph_checks: dict[str, PracticeGraphRule]
-	// read once
-_package: str
-----
-held_in(graph: HoldingGraph, nodes: HeldNodes): None
-read(): None
-	// offers its node types, then reads the working copy
-	-> read_working_copy
-read_working_copy(): None
-	// reads its nodes, then links them to the nodes of the practices it reads after
-own_graph_checks(): dict[str, PracticeGraphRule]
-checks(): dict[str, PracticeGraphRule]
-	// with the rules the graph's overlays add
+How one practice takes part in the knowledge graph. It lives in harness/graph (`harness/graph/practice_reading.py`, described in `harness/graph/.context/graph-populate-model.md`), which sits above this module: *PracticeGuidance* names its kind as `reading_type: type | None`, harness/graph sets the default when it is imported, and the practice makes its reading the first time it is asked (`practice.reading`).
 
 ## FidelityGuidance : Guidance
 
@@ -347,9 +318,6 @@ Rule(slug: str, body: str, fidelity: str | None)
 slug: str
 body: str
 fidelity: str | None
-practice: str
-pattern: str
-shared: bool
 ----
 validate(): str
 	// the instructions to check the current context against this rule

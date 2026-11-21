@@ -8,13 +8,10 @@ import hashlib
 import re
 from typing import TYPE_CHECKING, Any
 
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
+from cdd_guidance.practices.source_code import CodeBody, CodeLanguage
 from cdd_guidance.practices.clean_engineering.model.property import Property
-from cdd_guidance.practices.clean_engineering.model.operation_metrics import (
-    MIN_DELEGATION_LINES,
-    CardBullets,
-    SourceText,
-)
+from cdd_guidance.practices.source_code import SourceText
+from cdd_guidance.practices.clean_engineering.model.operation_metrics import MIN_DELEGATION_LINES, CardBullets
 
 if TYPE_CHECKING:
     from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass

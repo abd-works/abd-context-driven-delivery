@@ -13,10 +13,9 @@ from harness.graph.saved_graph import SavedGraph
 from harness.graph.violation import Violation
 
 from cdd_guidance.actions.validate.report_files import ReportFiles
+from cdd_guidance.practices.stories.model.story_tree import STORY_MAP_TYPES
 
 _STORIES = "stories"
-# The story map's own node types; the test files a pattern reads into the practice are scoped by the paths named.
-_STORY_MAP_TYPES = frozenset({"Epic", "SubEpic", "Story", "Scenario", "Step", "Given", "When", "Then", "Example", "Background"})
 
 if TYPE_CHECKING:
     from space.session.session import Session
@@ -114,7 +113,7 @@ class CheckedGraph:
         if not stories or self._checked is None:
             return found
         saved = self._checked.practices.get(_STORIES)
-        outside = saved.outside(stories, _STORY_MAP_TYPES) if saved is not None else set()
+        outside = saved.outside(stories, STORY_MAP_TYPES) if saved is not None else set()
         return [violation for violation in found if violation.node_id not in outside]
 
     @property

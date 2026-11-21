@@ -9,6 +9,7 @@ from harness.installation.data_class import data_of  # noqa: E402
 from mamba import before, context, description, it
 
 from harness.graph.graph import Graph, Node, Source
+from harness.graph.violation import Finding
 from harness.graph.saved_graph import NodeIdentity
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 
@@ -32,10 +33,7 @@ with description("rule categories"):
             self.failure = Node(self.practice, NodeIdentity(type="Operation", node_id="clean_engineering:Operation:failure", name="failure"), Source(".", 1, 2))
             self.register = Node(self.practice, NodeIdentity(type="Operation", node_id="clean_engineering:Operation:register", name="register"), Source(".", 3, 4))
             self.account = Node(self.practice, NodeIdentity(type="OoadClass", node_id="clean_engineering:OoadClass:AccountCredentials", name="AccountCredentials"), Source(".", 1, 8))
-            self.failure.rules.record_violation(
-                "limit-operation-parameters",
-                "Operation 'failure' takes 4 parameters (maximum 3, excluding self).",
-            )
+            self.failure.rules.entries["limit-operation-parameters"].record(Finding(self.failure, "Operation 'failure' takes 4 parameters (maximum 3, excluding self)."))
             root = self.practice.reading.in_graph.root
             root.children = [self.failure, self.register, self.account]
             for node in (self.failure, self.register, self.account):

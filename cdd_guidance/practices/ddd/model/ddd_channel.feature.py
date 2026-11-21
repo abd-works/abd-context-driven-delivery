@@ -12,7 +12,7 @@ from pathlib import Path
 from expects import equal, expect
 from mamba import before, describe, included_context, it, shared_context
 
-from cdd_guidance.practices.clean_engineering.model.property import Property
+from cdd_guidance.practices.clean_engineering.model import Property
 from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownBoundedContextMap
 from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContextMap, DomainEvent
 

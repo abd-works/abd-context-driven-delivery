@@ -39,9 +39,23 @@ class FormatAdapter(Protocol):
         """model written in this format."""
 
 
-# What marks a member kept in a file though its model no longer holds it. Every format that writes a render onto a file
-# already there, and the Render action, write these words and read them back, so a later render leaves the member be.
-NO_LONGER_IN_MODEL = "no longer in the model"
+class KeptMark:
+    """What marks a member kept in a file though its model no longer holds it. Every format that writes a render onto a
+    file already there, and the Render action, write these words and read them back, so a later render leaves the
+    member be: the one definition of the words, of the test that a member is marked already, and of the marking line
+    that names a member and says what to do with it."""
+
+    WORDS = "no longer in the model"
+
+    @staticmethod
+    def marks(lines: Iterable[str] | str) -> bool:
+        """Whether lines, the lines above a member or its text, say it is no longer in the model."""
+        return KeptMark.WORDS in lines if isinstance(lines, str) else any(KeptMark.WORDS in line for line in lines)
+
+    @staticmethod
+    def line_for(member: str, then: str) -> str:
+        """The marking line a reshaper writes above member, saying it is no longer in the model and what to do: then."""
+        return f"---- {KeptMark.WORDS}: {member}. {then} ----"
 
 
 @dataclass(frozen=True)

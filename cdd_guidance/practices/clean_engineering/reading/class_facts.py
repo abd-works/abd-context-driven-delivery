@@ -5,20 +5,18 @@ collaborator it builds that its caller cannot hand it."""
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import is_interface_name
-from cdd_guidance.practices.clean_engineering.model.class_graph import names_in, parameters_of
-from cdd_guidance.practices.clean_engineering.model.folder_facts import folders_of, is_under, parent_folder, record_fact
-from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
+from cdd_guidance.practices.clean_engineering.reading.production_classes import names_in, parameters_of
+from cdd_guidance.practices.clean_engineering.reading.folder_facts import folders_of, is_under, parent_folder, record_fact
 from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUCTOR_NAMES
-from cdd_guidance.practices.clean_engineering.model.type_refs import split_top_level
+from cdd_guidance.practices.source_code import split_top_level
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node, PracticeNodes
-    from harness.graph.saved_graph import FactValue
 
-    from cdd_guidance.practices.clean_engineering.model.class_graph import ClassGraph
+    from cdd_guidance.practices.clean_engineering.reading.production_classes import ProductionClass, ProductionClasses
 
 # A copy of another class's fields: at least this many shared fields, covering most of the smaller class.
 _MIN_COPIED_FIELDS = 3
@@ -35,37 +33,37 @@ _OUTSIDE_COLLABORATOR = re.compile(
 )
 
 
-def record_on_production_classes(in_graph: "PracticeNodes", key: str, fact_of: "Callable[[Node], FactValue]") -> None:
-    """Record key on every class of production code the practice holds, as fact_of answers it for the class."""
-    for node in in_graph.nodes("OoadClass"):
-        if not is_test_code(node.source.file):
-            record_fact(node, key, fact_of(node))
+class ComparedFact:
+    """One fact the build records on each class by comparing it with the other production classes of the graph, after
+    each read; a rule then reads only the fact."""
 
-
-class ResourceShapes:
-    """The data bags each service takes (``data_bags_taken``): a service is a class with behavior and no state, and a data
-    bag a class that holds state and does nothing; the bags are those its operations take as parameters."""
-
-    def __init__(self, classes: "ClassGraph") -> None:
+    def __init__(self, classes: "ProductionClasses") -> None:
         self._classes = classes
 
     def record(self) -> None:
-        classes = self._classes
-        bags = {node.name for node in classes.classes if classes.fields(node) and not classes.has_behavior(node)}
-        for service in classes.classes:
-            record_fact(service, "data_bags_taken", self._bags_taken(service, bags) if self._is_service(service) else [])
+        raise NotImplementedError(f"{type(self).__name__} must record its fact")
 
-    def _is_service(self, node: "Node") -> bool:
+
+class ServicesTakingDataBags(ComparedFact):
+    """The data bags each service takes (``data_bags_taken``): a service is a class with behavior and no state, and a data
+    bag a class that holds state and does nothing; the bags are those its operations take as parameters."""
+
+    def record(self) -> None:
+        bags = {each.name for each in self._classes if each.fields and not each.has_behavior}
+        for service in self._classes:
+            record_fact(service.node, "data_bags_taken", self._bags_taken(service, bags) if self._is_service(service) else [])
+
+    def _is_service(self, each: "ProductionClass") -> bool:
         """A class with behavior and no state. An interface declares what a resource does; it holds no state by design,
         so it is not a service."""
-        return not self._classes.fields(node) and self._classes.has_behavior(node) and not is_interface_name(node.name)
+        return not each.fields and each.has_behavior and not is_interface_name(each.name)
 
-    def _bags_taken(self, service: "Node", bags: set[str]) -> list[str]:
+    def _bags_taken(self, service: "ProductionClass", bags: set[str]) -> list[str]:
         """The data bags the service's operations take as parameters, other than the service itself."""
         return sorted(
             {
                 name
-                for operation in self._classes.operations(service)
+                for operation in service.operations
                 for parameter in parameters_of(operation)
                 for name in names_in(parameter.get_fact("type_hint", "")) & bags
                 if name != service.name
@@ -73,27 +71,27 @@ class ResourceShapes:
         )
 
 
-class ParallelModels:
+class CopiedModels(ComparedFact):
     """Copies of another class's data each class holds: the fields it copies from another class (``copied_fields``: the
     other class's name and the fields), and its name copies of a reference and dicts that hold one value per member,
     keyed by the member's name (``copied_references``: the field, ``name`` or ``member``, and the class it copies)."""
 
-    def __init__(self, classes: "ClassGraph") -> None:
-        self._classes = classes
+    def __init__(self, classes: "ProductionClasses") -> None:
+        super().__init__(classes)
         # A mixin's annotations declare what the class it is mixed into holds, so it holds no model of its own.
-        self._fields = {node.node_id: {} if classes.is_mixin(node) else classes.fields(node) for node in classes.classes}
+        self._fields = {each.node_id: {} if each.is_mixin else each.fields for each in classes}
 
     def record(self) -> None:
         # Two subclasses that each fill the fields of a base they share hold one model, the base's, so a copy is looked
         # for only among the fields a class declares beyond its bases'.
-        declared = {node.node_id: self._beyond_bases(node, self._fields[node.node_id]) for node in self._classes.classes}
+        declared = {each.node_id: self._beyond_bases(each, self._fields[each.node_id]) for each in self._classes}
         holders: dict[str, list["Node"]] = {}
-        for node in self._classes.classes:
-            for field in declared[node.node_id]:
-                holders.setdefault(field, []).append(node)
-        for node in self._classes.classes:
-            record_fact(node, "copied_fields", self._copied_fields(node, holders, declared))
-            record_fact(node, "copied_references", self._copied_references(node))
+        for each in self._classes:
+            for field in declared[each.node_id]:
+                holders.setdefault(field, []).append(each.node)
+        for each in self._classes:
+            record_fact(each.node, "copied_fields", self._copied_fields(each.node, holders, declared))
+            record_fact(each.node, "copied_references", self._copied_references(each))
 
     def _copied_fields(self, node: "Node", holders: dict[str, list["Node"]], fields: dict[str, dict[str, str]]) -> list:
         """The smaller class of each pair is the copy: it is the one holding a subset of the other's fields."""
@@ -117,30 +115,31 @@ class ParallelModels:
         """A subclass repeats its base's fields by design."""
         return other.name in (node.get_fact("bases", []) or []) or node.name in (other.get_fact("bases", []) or [])
 
-    def _beyond_bases(self, node: "Node", fields: dict[str, str]) -> dict[str, str]:
+    def _beyond_bases(self, each: "ProductionClass", fields: dict[str, str]) -> dict[str, str]:
         """The fields it holds that none of the classes it derives from declares, through every base the graph holds."""
         inherited: set[str] = set()
         seen: set[str] = set()
-        pending = self._classes.bases_of(node)
+        pending = each.bases
         while pending:
             base = pending.pop()
             if base in seen:
                 continue
             seen.add(base)
             for declaring in self._classes.named(base):
-                inherited |= set(self._classes.fields(declaring))
-                pending.extend(self._classes.bases_of(declaring))
+                inherited |= set(declaring.fields)
+                pending.extend(declaring.bases)
         return {field: hint for field, hint in fields.items() if field not in inherited}
 
     def _copies(self, shared: set[str], own: set[str], theirs: set[str]) -> bool:
         smaller = min(len(own), len(theirs))
         return len(shared) >= _MIN_COPIED_FIELDS and len(shared) >= _COPIED_SHARE * smaller
 
-    def _copied_references(self, node: "Node") -> list[list[str]]:
+    def _copied_references(self, each: "ProductionClass") -> list[list[str]]:
         """A name copy of a reference, or one value per member keyed by its name. A failure keeps the name of what it
         failed on for its message, so its names are not copies."""
         found: list[list[str]] = []
-        named_copies = not self._classes.kinds.is_failure(node.name)
+        node = each.node
+        named_copies = not each.is_failure
         for field, hint in self._fields[node.node_id].items():
             named = _NAME_COPY.match(field) if named_copies else None
             owner = self._class_named(named.group("owner")) if named else ""
@@ -167,7 +166,7 @@ class ParallelModels:
 
     def _has_name(self, owner: str) -> bool:
         """True when the class is named by a field of its own, such as `name` or `title`, which a copy could repeat."""
-        return any(_NAMING_FIELDS & {field.lstrip("_") for field in self._classes.fields(node)} for node in self._classes.named(owner))
+        return any(_NAMING_FIELDS & {field.lstrip("_") for field in declared.fields} for declared in self._classes.named(owner))
 
     def _holds_value(self, member: str, value_words: list[str]) -> bool:
         """True when the member class holds the value the dict keeps for each one: `fidelity_states` copies a
@@ -175,10 +174,9 @@ class ParallelModels:
         nothing of it."""
         value = "_".join(value_words)
         wanted = {value, value.removesuffix("s"), f"{value}s"}
-        classes = self._classes
         return any(
-            wanted & {field.lstrip("_") for field in classes.fields(node)} or wanted & {operation.name for operation in classes.operations(node)}
-            for node in classes.named(member)
+            wanted & {field.lstrip("_") for field in declared.fields} or wanted & {operation.name for operation in declared.operations}
+            for declared in self._classes.named(member)
         )
 
     def _key_type(self, hint: str) -> str:
@@ -198,34 +196,34 @@ class ParallelModels:
         return [word.lower() for word in spaced.split("_") if word]
 
 
-class Forwarding:
+class PassThroughClasses(ComparedFact):
     """Pass-through layers: the one class each class's public operations all forward to (``forwards_to``), and, on each
     folder whose classes all forward, and all to the classes of one other folder, that folder (``forwards_to_module``,
     empty on every other folder)."""
 
-    def __init__(self, in_graph: "PracticeNodes", classes: "ClassGraph") -> None:
+    def __init__(self, in_graph: "PracticeNodes", classes: "ProductionClasses") -> None:
+        super().__init__(classes)
         self._in_graph = in_graph
-        self._classes = classes
 
     def record(self) -> None:
-        targets = {node.node_id: self._forwarding_target(node) for node in self._classes.classes}
+        targets = {each.node_id: self._forwarding_target(each) for each in self._classes}
         names = {node.node_id: node.name for node in self._in_graph.nodes("OoadClass")}
-        for node in self._classes.classes:
-            target = targets[node.node_id]
-            record_fact(node, "forwards_to", names[target] if target else "")
+        for each in self._classes:
+            target = targets[each.node_id]
+            record_fact(each.node, "forwards_to", names[target] if target else "")
         self._record_folders(targets)
 
-    def _forwarding_target(self, node: "Node") -> str:
+    def _forwarding_target(self, each: "ProductionClass") -> str:
         """The one class every public operation forwards to, or empty when the class does any work of its own."""
-        operations = self._classes.operations(node)
-        if not operations or len(self._classes.fields(node)) > 1:
+        operations = each.operations
+        if not operations or len(each.fields) > 1:
             return ""
         candidates: set[str] | None = None
         for operation in operations:
             callee = self._sole_forward(operation)
             if not callee or (len(operations) == 1 and callee != operation.name):
                 return ""
-            defining = self._classes.classes_defining(callee) - {node.node_id}
+            defining = self._classes.defining(callee) - {each.node_id}
             candidates = defining if candidates is None else candidates & defining
         return sorted(candidates)[0] if candidates and len(candidates) == 1 else ""
 
@@ -247,8 +245,8 @@ class Forwarding:
         """Each module folder whose classes all forward, and all to classes of one other folder."""
         folder_of = {node.node_id: self._folder_id(node) for node in self._in_graph.nodes("OoadClass")}
         members: dict[str, list[str]] = {}
-        for node in self._classes.classes:
-            members.setdefault(folder_of[node.node_id], []).append(node.node_id)
+        for each in self._classes:
+            members.setdefault(folder_of[each.node_id], []).append(each.node_id)
         reached: dict[str, str] = {}
         for folder_id, class_ids in members.items():
             others = {folder_of[targets[class_id]] for class_id in class_ids if targets[class_id]} - {folder_id}
@@ -269,23 +267,20 @@ class Forwarding:
         return next((edge.child.node_id for edge in node.graph.edges.from_parent("belongsTo", node)), "")
 
 
-class DomainExtensions:
+class DomainExtensions(ComparedFact):
     """The domain each class extends from another package (``extends_domain``: the bases it extends, the folder they come
     from, and the bases of its own package it joins them with). A class that joins one of its own package's types with
     the class of another package it is named after extends that other package's domain, so it belongs beside the class
     it extends; in the package that declares that class, or one nested under it, it is where it belongs."""
 
-    def __init__(self, in_graph: "PracticeNodes", classes: "ClassGraph") -> None:
-        self._in_graph = in_graph
-        self._classes = classes
-
     def record(self) -> None:
-        record_on_production_classes(self._in_graph, "extends_domain", self._extension)
+        for each in self._classes:
+            record_fact(each.node, "extends_domain", self._extension(each))
 
-    def _extension(self, node: "Node") -> dict:
-        classes = self._classes
-        own_folder = parent_folder(node.source.file or "")
-        homes = {base: {parent_folder(declared.source.file or "") for declared in classes.named(base)} for base in classes.bases_of(node)}
+    def _extension(self, each: "ProductionClass") -> dict:
+        node = each.node
+        own_folder = parent_folder(each.file)
+        homes = {base: {parent_folder(declared.file) for declared in self._classes.named(base)} for base in each.bases}
         own = [base for base, folders in homes.items() if own_folder in folders]
         extended = self._extended_domain_bases(node.name, homes, own_folder)
         if not own or not extended or self._builds_on(own, homes[extended[0]]):
@@ -296,13 +291,12 @@ class DomainExtensions:
         """True when a base of the class's own package already derives from a class of the package it extends: the
         package is a format built on that one (`DrawIOClass(DiagramClass)`), and the class is where it belongs, since
         moving it would make the base package import its format."""
-        classes = self._classes
         return any(
-            parent_folder(declared.source.file or "") in home
+            parent_folder(declared.file) in home
             for base in own
-            for node in classes.named(base)
-            for parent in classes.bases_of(node)
-            for declared in classes.named(parent)
+            for owned in self._classes.named(base)
+            for parent in owned.bases
+            for declared in self._classes.named(parent)
         )
 
     def _extended_domain_bases(self, name: str, homes: dict[str, set[str]], own_folder: str) -> list[str]:
@@ -315,23 +309,21 @@ class DomainExtensions:
         ]
 
 
-class BuiltCollaborators:
+class BuiltCollaborators(ComparedFact):
     """The first collaborator each class's constructor builds that its caller cannot hand it (``constructs_collaborator``).
-    Left out are values, failures, and collections (``ClassKinds.is_value``), the peers an Entity composes, and a part the
+    Left out are values, failures, and collections (``ProductionClasses.is_value``), the peers an Entity composes, and a part the
     owner builds once and keeps: a class of the program's own that is no outside collaborator. An outside collaborator
     is a class the program does not declare, such as a library's client, or one whose name says it reaches outside the
     object (a repository, service, client, gateway, file, connection, or other process)."""
 
-    def __init__(self, in_graph: "PracticeNodes", classes: "ClassGraph") -> None:
-        self._in_graph = in_graph
-        self._classes = classes
-
     def record(self) -> None:
-        record_on_production_classes(self._in_graph, "constructs_collaborator", self._collaborator)
+        for each in self._classes:
+            record_fact(each.node, "constructs_collaborator", self._collaborator(each))
 
-    def _collaborator(self, node: "Node") -> str:
+    def _collaborator(self, each: "ProductionClass") -> str:
+        node = each.node
         for type_name in node.get_fact("constructs", []):
-            if type_name == node.name or self._classes.kinds.is_value(type_name) or self._owned_part(node, type_name):
+            if type_name == node.name or self._classes.is_value(type_name) or self._owned_part(each, type_name):
                 continue
             # <<Entity>> / <<Aggregate Root>> may compose sibling types from the same file.
             if node.get_fact("composes_peers") and type_name in node.get_fact("peer_names", []):
@@ -339,12 +331,12 @@ class BuiltCollaborators:
             return type_name
         return ""
 
-    def _owned_part(self, owner: "Node", type_name: str) -> bool:
+    def _owned_part(self, owner: "ProductionClass", type_name: str) -> bool:
         """True for a class the program declares, whose name names no outside collaborator, that the constructor builds
         from nothing: `EdgeIndex()`. One built from something outside the object, `Sessions(Path.cwd())`, ties the
         class to that outside thing."""
         if not self._classes.named(type_name) or _OUTSIDE_COLLABORATOR.search(type_name) is not None:
             return False
         built_empty = re.compile(rf"(?<![\w.$]){re.escape(type_name)}\s*\(\s*\)")
-        constructors = [operation for operation in self._classes.operations(owner) if operation.name in CONSTRUCTOR_NAMES]
+        constructors = [operation for operation in owner.operations if operation.name in CONSTRUCTOR_NAMES]
         return any(built_empty.search(operation.get_fact("body_text") or "") for operation in constructors)

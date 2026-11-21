@@ -25,7 +25,7 @@ from cdd_guidance.practices.clean_engineering.model.class_stereotypes import (
     snake_case_decorator,
     stereotype_named,
 )
-from cdd_guidance.practices.clean_engineering.model.code_body import PYTHON, CodeBody
+from cdd_guidance.practices.source_code import PYTHON, CodeBody
 from cdd_guidance.practices.clean_engineering.model.code_class_model import (
     CodeClass,
     CodeCleanEngineeringModel,

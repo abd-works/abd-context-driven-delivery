@@ -7,14 +7,14 @@ import ast
 import textwrap
 from typing import TYPE_CHECKING
 
-from cdd_guidance.practices.clean_engineering.model.folder_facts import record_fact
-from cdd_guidance.practices.clean_engineering.model.near_copies import MIN_LINES, NearCopies
-from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
+from cdd_guidance.practices.clean_engineering.reading.folder_facts import record_fact
+from cdd_guidance.practices.clean_engineering.reading.near_copies import MIN_LINES, NearCopies
+from cdd_guidance.practices.source_code import is_test_code
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node, PracticeNodes
 
-    from cdd_guidance.practices.clean_engineering.model.class_graph import ClassGraph
+    from cdd_guidance.practices.clean_engineering.reading.production_classes import ProductionClasses
 
 # A share is kept as a whole percentage.
 _PERCENT = 100
@@ -78,11 +78,11 @@ class FailureMessages:
     failure the program declares whose constructor hands its base the message carries that context however it is
     raised."""
 
-    def __init__(self, in_graph: "PracticeNodes", classes: "ClassGraph") -> None:
+    def __init__(self, in_graph: "PracticeNodes", classes: "ProductionClasses") -> None:
         self._in_graph = in_graph
         self._classes = classes
 
     def record(self) -> None:
         for operation in self._in_graph.nodes("Operation"):
             exception = operation.get_fact("exception_without_message", "")
-            record_fact(operation, "exception_gives_own_message", bool(exception) and self._classes.kinds.gives_own_message(exception))
+            record_fact(operation, "exception_gives_own_message", bool(exception) and self._classes.gives_own_message(exception))

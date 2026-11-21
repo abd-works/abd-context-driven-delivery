@@ -16,9 +16,9 @@ from mamba import before, context, description, it
 
 from harness.graph.graph import Graph
 
-from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass
-from cdd_guidance.practices.clean_engineering.model.operation import Operation
-from cdd_guidance.practices.clean_engineering.model.property import Property
+from cdd_guidance.practices.clean_engineering.model import OoadClass
+from cdd_guidance.practices.clean_engineering.model import Operation
+from cdd_guidance.practices.clean_engineering.model import Property
 from cdd_guidance.practices.ddd.model.markdown.class_cards import ClassCard
 from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContext, Entity, ValueObject
 from cdd_guidance.practices.ddd.model.stereotypes import TacticalClass

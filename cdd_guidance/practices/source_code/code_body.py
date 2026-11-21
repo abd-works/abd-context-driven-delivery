@@ -6,8 +6,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple, Union
 
-from cdd_guidance.practices.clean_engineering.model.bracket_structure import BracketStructure
-from cdd_guidance.practices.clean_engineering.model.type_refs import split_top_level
+from cdd_guidance.practices.source_code.bracket_structure import BracketStructure, split_top_level
 
 _IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 # An interaction the model writes as a whole call, `CredentialsRepository.create(this)`, up to its closing parenthesis,

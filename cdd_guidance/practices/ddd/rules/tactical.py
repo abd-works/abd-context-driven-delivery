@@ -6,9 +6,10 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUCTOR_NAMES
+from cdd_guidance.practices.clean_engineering.model import CONSTRUCTOR_NAMES
 from cdd_guidance.practices.ddd.model.stereotypes import BUILDING_BLOCK_KINDS
 from harness.graph.practice_rule import PracticeGraphRule
+from harness.graph.violation import Finding
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
@@ -23,29 +24,29 @@ class PrivateMethodNaming(PracticeGraphRule):
     slug = "private-method-naming"
     node_types = BUILDING_BLOCK_KINDS
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         if node.name.startswith("_"):
-            return [f"Domain type name {node.name!r} should not start with '_'."]
-        return [
+            return [Finding(node, f"Domain type name {node.name!r} should not start with '_'.")]
+        return [Finding(node, message) for message in [
             f"Operation '{name}' on '{node.name}' reaches into another object's private API."
             for name in node.get_fact("peer_private_operations", [])
         ] + [
             f"Operation '{name}' on '{node.name}' should be private (prefix with '_')."
             for name in node.get_fact("public_derive_operations", [])
-        ]
+        ]]
 
 
 class FlaccidDataObject(PracticeGraphRule):
     slug = "flaccid-data-object-no-behavior"
     node_types = ("EntityRoot", "Entity")
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         if node.type == "ValueObject" or not node.has_fact("operation_shapes"):
             return []
         public_ops = [name for name in node.get_fact("public_operation_names", []) if name not in CONSTRUCTOR_NAMES]
         props = len(node.get_fact("property_names", [])) or len(context.targets(node, "properties"))
         if props and not public_ops:
-            return [f"{node.type} '{node.name}' has properties but no public operations."]
+            return [Finding(node, f"{node.type} '{node.name}' has properties but no public operations.")]
         return []
 
 
@@ -57,10 +58,10 @@ class EveryClassCarriesDddStereotype(PracticeGraphRule):
     slug = "every-class-carries-ddd-stereotype"
     node_types = ("Aggregate",)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         return [
-            f"Class '{name}' in aggregate '{node.name}' lacks a DDD stereotype "
-            f"(<<Entity>>, <<Repository>>, or code @entity / @repository on the class)."
+            Finding(node, f"Class '{name}' in aggregate '{node.name}' lacks a DDD stereotype "
+            f"(<<Entity>>, <<Repository>>, or code @entity / @repository on the class).")
             for name in node.get_fact("bare_classes", [])
         ]
 
@@ -71,12 +72,12 @@ class DomainConceptsNotTechnicalNames(PracticeGraphRule):
     slug = "domain-concepts-not-technical-names"
     node_types = BUILDING_BLOCK_KINDS + ("Aggregate",)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         """A name whose last word is a technical one (a result, a response) or that names an agent noun (a manager, a
         helper) names the code, not a domain concept."""
         tokens = [token.lower() for token in _CAMEL.findall(node.name or "") if token]
         if tokens and (tokens[-1] in _TECHNICAL_SUFFIXES or any(token in _AGENT_NOUNS for token in tokens)):
-            return [f"Class '{node.name}' uses a technical name instead of a domain concept."]
+            return [Finding(node, f"Class '{node.name}' uses a technical name instead of a domain concept.")]
         return []
 
 
@@ -84,13 +85,11 @@ class ServiceIsHomeless(PracticeGraphRule):
     slug = "service-is-homeless"
     node_types = ("DomainService",)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         if not node.get_fact("named_for_its_kind", False):
             return []
         for name in node.get_fact("delegating_operations", []):
-            return [
-                f"Domain service '{node.name}' only delegates '{name}' to another type; move it onto that aggregate."
-            ]
+            return [Finding(node, f"Domain service '{node.name}' only delegates '{name}' to another type; move it onto that aggregate.")]
         return []
 
 
@@ -98,18 +97,16 @@ class RepositoryIsCollectionLifecycle(PracticeGraphRule):
     slug = "repository-is-collection-lifecycle"
     node_types = ("Repository",)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         if not node.get_fact("named_for_its_kind", False) or not node.has_fact("operation_shapes"):
             return []
         if node.get_fact("lifecycle_operations", []):
             return []
         public = node.get_fact("public_operation_names", [])
         if not public:
-            return [f"Repository '{node.name}' exposes no collection lifecycle operations (add, find, remove, …)."]
+            return [Finding(node, f"Repository '{node.name}' exposes no collection lifecycle operations (add, find, remove, …).")]
         if len(public) == 1 and public[0].lower() in {"persist", "save", "store"}:
-            return [
-                f"Repository '{node.name}' only '{public[0]}'; model find/add/remove for the aggregate collection."
-            ]
+            return [Finding(node, f"Repository '{node.name}' only '{public[0]}'; model find/add/remove for the aggregate collection.")]
         return []
 
 
@@ -117,9 +114,9 @@ class LoadWithIdentityInHand(PracticeGraphRule):
     slug = "load-with-identity-in-hand"
     node_types = ("Repository",)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         return [
-            f"Repository '{node.name}.{name}' must take the identity already in hand."
+            Finding(node, f"Repository '{node.name}.{name}' must take the identity already in hand.")
             for name in node.get_fact("identity_free_loads", [])
         ]
 
@@ -128,14 +125,14 @@ class NoOrphanedObjects(PracticeGraphRule):
     slug = "no-orphaned-objects"
     node_types = ("EntityRoot", "Entity", "ValueObject")
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         """A type is related when another class shares its module, or when it depends on another building block or one
         depends on it, as the classes a domain model's cards compose, aggregate, associate with, or type a member by."""
         if not node.has_fact("peer_names"):
             return []
         if len(node.get_fact("peer_names")) > 1 or self._depends_either_way(node, context):
             return []
-        return [f"Domain type '{node.name}' has no relationship to other concepts in this module."]
+        return [Finding(node, f"Domain type '{node.name}' has no relationship to other concepts in this module.")]
 
     def _depends_either_way(self, node: Node, context: RuleCheckContext) -> bool:
         return any((edge.parent is node) != (edge.child is node) for edge in context.edges("dependsOn"))
@@ -145,9 +142,7 @@ class ScreenInterfaceNotADomainObject(PracticeGraphRule):
     slug = "screen-interface-not-a-domain-object"
     node_types = ("EntityRoot", "Entity", "ValueObject", "DomainService")
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         if not node.has_fact("operation_shapes") or not node.get_fact("drives_a_screen", False):
             return []
-        return [
-            f"'{node.name}' behaves like a UI driver (open/isShowing); put the action on the owning aggregate."
-        ]
+        return [Finding(node, f"'{node.name}' behaves like a UI driver (open/isShowing); put the action on the owning aggregate.")]

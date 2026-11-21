@@ -20,7 +20,7 @@ from harness.design_canvas.look import BACKGROUND, FONTS, LOOK
 from cdd_guidance.practices.ux.model.claude_design.nodes import ClaudeDesignUxMap
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 from harness.annotations.name import Name
-from cdd_guidance.practices.ux.model.story_link import KEY_SEPARATOR, key_of
+from cdd_guidance.practices.stories.model.story_tree import KEY_SEPARATOR, StoryTree
 
 from cdd_guidance.practices.stories.model.diagram_story_model import (
     DiagramEpic,
@@ -326,7 +326,7 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
                 groups[0]["i"] = [f"../{image}"]
         background = scenario in story.backgrounds
         return {"n": "Background" if background else scenario.name, "b": background, "p": prototype, "t": groups,
-                "f": self.sources.get(key_of(scenario), "")}
+                "f": self.sources.get(StoryTree.key_of(scenario), "")}
 
     def _step_groups(self, scenario: "Scenario | Background") -> tuple[List[dict], str]:
         """The scenario's steps, grouped so each group ends on a step a screen shows, with that screen's images; and

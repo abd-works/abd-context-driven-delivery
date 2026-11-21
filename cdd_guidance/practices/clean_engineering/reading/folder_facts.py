@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from cdd_guidance.practices.clean_engineering.model.import_cycles import ImportCycles
+from cdd_guidance.practices.clean_engineering.reading.import_cycles import ImportCycles
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node, PracticeNodes
@@ -46,7 +46,7 @@ def imported_folders(folder: "Node") -> list["Node"]:
     return [edge.child for edge in folder.graph.edges.from_parent("dependsOn", folder)]
 
 
-class ImportCycleFacts:
+class FolderImportCycles:
     """Each folder's imports that close a cycle of folders (``import_cycles``: the folder imported and the cycle's size),
     and its files' imports that close a cycle of the folder's own files (``file_import_cycles``: importer, imported, and
     the cycle's size), each in name order; every folder keeps both, empty when it closes none."""

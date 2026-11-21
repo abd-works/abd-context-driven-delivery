@@ -5,8 +5,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
+from harness.graph.violation import Finding
 
-from cdd_guidance.practices.clean_engineering.model.folder_facts import FOLDER_TYPES
+from cdd_guidance.practices.clean_engineering.reading.folder_facts import FOLDER_TYPES
 from cdd_guidance.practices.clean_engineering.rules.production_code_rule import ProductionCodeRule
 
 if TYPE_CHECKING:
@@ -21,9 +22,9 @@ class HideInnerDetails(ProductionCodeRule):
     slug = "hide-inner-details"
     node_types = ("Operation",)
 
-    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
         if node.get_fact("peer_private_access"):
-            return [f"Operation '{node.name}' reaches into a collaborator's private state."]
+            return [Finding(node, f"Operation '{node.name}' reaches into a collaborator's private state.")]
         return []
 
 
@@ -34,10 +35,10 @@ class ShapeClassesAroundResources(PracticeGraphRule):
     slug = "shape-classes-around-resources"
     node_types = ("OoadClass",)
 
-    def check_practice(self, context: "RuleCheckContext") -> list[tuple[str, str]]:
+    def check_practice(self, context: "RuleCheckContext") -> list[Finding]:
         return [
-            (
-                service.node_id,
+            Finding(
+                service,
                 f"Class '{service.name}' acts on the data bag '{taken[0]}', which holds the state but no "
                 "behavior; put the behavior on the resource that owns the data.",
             )
@@ -55,11 +56,11 @@ class DoNotInventParallelObjectModels(PracticeGraphRule):
     slug = "do-not-invent-parallel-object-models"
     node_types = ("OoadClass",)
 
-    def check_practice(self, context: "RuleCheckContext") -> list[tuple[str, str]]:
-        hits: list[tuple[str, str]] = []
+    def check_practice(self, context: "RuleCheckContext") -> list[Finding]:
+        hits: list[Finding] = []
         for node in context.nodes("OoadClass"):
-            hits.extend((node.node_id, message) for message in self._copied_fields(node))
-            hits.extend((node.node_id, message) for message in self._copied_references(node))
+            hits.extend(Finding(node, message) for message in self._copied_fields(node))
+            hits.extend(Finding(node, message) for message in self._copied_references(node))
         return hits
 
     def _copied_fields(self, node: "Node") -> list[str]:
@@ -86,15 +87,15 @@ class LayerSeparation(PracticeGraphRule):
     slug = "layer-separation"
     node_types = ("OoadClass", "Module", "Package")
 
-    def check_practice(self, context: "RuleCheckContext") -> list[tuple[str, str]]:
+    def check_practice(self, context: "RuleCheckContext") -> list[Finding]:
         classes = [
-            (node.node_id, f"Class '{node.name}' only forwards to '{target}'; merge the layers or give it real behavior.")
+            Finding(node, f"Class '{node.name}' only forwards to '{target}'; merge the layers or give it real behavior.")
             for node in context.nodes("OoadClass")
             for target in [node.get_fact("forwards_to") or ""]
             if target
         ]
         folders = [
-            (folder.node_id, f"Module '{folder.name}' only forwards to '{other}'; collapse the pass-through module.")
+            Finding(folder, f"Module '{folder.name}' only forwards to '{other}'; collapse the pass-through module.")
             for kind in FOLDER_TYPES
             for folder in context.nodes(kind)
             for other in [folder.get_fact("forwards_to_module") or ""]

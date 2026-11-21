@@ -14,7 +14,7 @@ from mamba import before, context, description, it
 from harness.graph.practice_rule import PracticeGraphRule
 from harness.graph.skipped_folders import skips_folder
 
-from cdd_guidance.practices.clean_engineering.model.production_code import is_spec_file, is_test_code
+from cdd_guidance.practices.source_code import is_spec_file, is_test_code
 from cdd_guidance.practices.clean_engineering.rules.production_code_rule import ProductionCodeRule
 from cdd_guidance.practices.clean_engineering.model.typescript.typescript_class_model import (
     TypeScriptCleanEngineeringModel,

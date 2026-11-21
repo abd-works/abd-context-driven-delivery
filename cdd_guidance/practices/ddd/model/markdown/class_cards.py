@@ -8,10 +8,10 @@ from __future__ import annotations
 
 import re
 
-from cdd_guidance.practices.clean_engineering.model.base_class_model import Module, OoadClass
-from cdd_guidance.practices.clean_engineering.model.class_stereotypes import marks_in
-from cdd_guidance.practices.clean_engineering.model.operation import Operation
-from cdd_guidance.practices.clean_engineering.model.property import Property
+from cdd_guidance.practices.clean_engineering.model import Module, OoadClass
+from cdd_guidance.practices.clean_engineering.model import marks_in
+from cdd_guidance.practices.clean_engineering.model import Operation
+from cdd_guidance.practices.clean_engineering.model import Property
 from cdd_guidance.practices.ddd.model.nodes import (
     DomainEvent,
     DomainService,

@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from cdd_guidance.practices.clean_engineering.model.class_graph import parameters_of
+from cdd_guidance.practices.clean_engineering.reading.production_classes import parameters_of
 from cdd_guidance.practices.clean_engineering.rules.operation_checks import (
     OperationMeasureRule,
     operation_label,

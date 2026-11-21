@@ -919,9 +919,9 @@ with description("a story map on a graph") as self:
 
     with it("should record invokes, observes, demonstrates, and retrievedUsing from the schema"):
         from cdd_guidance.practices.bdd.model.nodes import Observation
-        from cdd_guidance.practices.clean_engineering.model.base_class_model import Module, OoadClass
-        from cdd_guidance.practices.clean_engineering.model.operation import Operation
-        from cdd_guidance.practices.clean_engineering.model.property import Property
+        from cdd_guidance.practices.clean_engineering.model import Module, OoadClass
+        from cdd_guidance.practices.clean_engineering.model import Operation
+        from cdd_guidance.practices.clean_engineering.model import Property
         from cdd_guidance.practices.ux.model.nodes import Screen
 
         # The schema reads a node's evidence from the text its source holds; these stand in for the code read.

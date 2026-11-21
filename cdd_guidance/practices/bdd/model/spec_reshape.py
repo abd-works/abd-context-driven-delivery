@@ -19,8 +19,8 @@ from __future__ import annotations
 import ast
 from typing import TYPE_CHECKING, Callable, Iterator
 
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeLanguage
-from harness.guidance.practice_formats import NO_LONGER_IN_MODEL, Reshaped
+from cdd_guidance.practices.source_code import CodeLanguage
+from harness.guidance.practice_formats import KeptMark, Reshaped
 
 if TYPE_CHECKING:
     from cdd_guidance.practices.bdd.model.code_spec_model import DescribeCall, DescribeCalls
@@ -170,8 +170,8 @@ class SpecReshape:
         return ["", *(f"{indent}{line[len(block.indent):]}" if line.strip() else line for line in written)]
 
     def _is_marked(self, file: SpecOutline, block: SpecBlock) -> bool:
-        return any(NO_LONGER_IN_MODEL in line for line in file.lines[block.lead:block.first])
+        return KeptMark.marks(file.lines[block.lead:block.first])
 
     def _marking(self, block: SpecBlock) -> str:
-        said = f"---- {NO_LONGER_IN_MODEL}: {block.name}. Move what it proves into the block that replaced it, then delete it. ----"
+        said = KeptMark.line_for(block.name, "Move what it proves into the block that replaced it, then delete it.")
         return f"{block.indent}{self._language.comment(said)}"

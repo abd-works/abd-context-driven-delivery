@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
 from harness.graph.schema_edges import CHILD_LISTS, SchemaKey
+from harness.graph.violation import Finding
 from harness.guidance.rule import Rule
 
 if TYPE_CHECKING:
@@ -99,7 +100,7 @@ class ConformsToSchema(PracticeGraphRule):
         """Every node type: every type a schema names may require a relationship."""
         return True
 
-    def check_practice(self, context: RuleCheckContext) -> list[tuple[str, str]]:
+    def check_practice(self, context: RuleCheckContext) -> list[Finding]:
         """Each node missing a relationship its schema requires at the practice's current fidelity, with what it lacks."""
         if self._reads_only_named_files(context):
             return []
@@ -107,7 +108,7 @@ class ConformsToSchema(PracticeGraphRule):
         stage = schema.current_stage
         due = [requirement for requirement in schema.requirements if requirement.required_at(stage) and requirement.judged_in(context)]
         found = ((node, requirement.gap_on(node, context)) for requirement in due for node in requirement.owners(context))
-        return [(node.node_id, gap) for node, gap in found if gap]
+        return [Finding(node, gap) for node, gap in found if gap]
 
 
     def _reads_only_named_files(self, context: RuleCheckContext) -> bool:

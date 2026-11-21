@@ -7,12 +7,12 @@ from __future__ import annotations
 
 from cdd_guidance.practices.sketch_document.sketch_outline import SketchOutline
 from harness.guidance.guidance import SketchLens
-from cdd_guidance.practices.ddd.model.markdown.nodes import (
+from cdd_guidance.practices.ddd.model.sketch.sketch_nodes import (
     BUILD_ORDER,
     SKETCH_CONTEXT,
     SKETCH_INDENT,
-    MarkdownAggregate,
-    MarkdownBoundedContext,
+    SketchBoundedContext,
+    SketchedContext,
     fenced,
     sketch_level,
 )
@@ -38,7 +38,7 @@ class SketchDddModel(BoundedContextMap):
 
     lens = _LENS
     """The section of a sketch DDD writes, opened by its `ddd:` or `domain driven design:` heading."""
-    bounded_context_type = MarkdownBoundedContext
+    bounded_context_type = SketchBoundedContext
 
 
     def parse(self, text: str) -> "SketchDddModel":
@@ -58,13 +58,13 @@ class SketchDddModel(BoundedContextMap):
         model = canonical or self
         written = [_SECTION, ""]
         for context in model.contexts:
-            written.extend(context.sketch_lines())
+            written.extend(SketchedContext(context).lines())
         entries = [f"- {event.map_entry()}" for aggregate in model.every_aggregate for event in aggregate.events]
         if entries:
             written.extend([f"{SKETCH_CONTEXT}{_EVENT_MAP}", ""] + fenced(entries))
         return "\n".join(written)
 
-    def open_context(self, stripped: str) -> MarkdownBoundedContext:
+    def open_context(self, stripped: str) -> SketchBoundedContext:
         """The context a `Name | owner` heading opens, added to the map."""
         name, _, owner = stripped.rstrip(":").partition("|")
         context = self.bounded_context_type(name.strip(), len(self.contexts) + 1)
@@ -80,7 +80,7 @@ class _SectionReading:
 
     def __init__(self, sketch: SketchDddModel) -> None:
         self._sketch = sketch
-        self.contexts: list[tuple[MarkdownBoundedContext, list[str]]] = []
+        self.contexts: list[tuple[SketchBoundedContext, list[str]]] = []
         self.events: list[str] = []
         # The lines of the context being read; none while a section is being skipped.
         self._lines: list[str] | None = None

@@ -68,3 +68,10 @@ class BracketStructure:
             return None
         close = self.closing_bracket(open_at)
         return self._text[open_at + 1 : close] if close is not None else None
+
+
+def split_top_level(text: str) -> list[str]:
+    """The comma-separated parts of a parameter list, keeping commas inside brackets or generics; blanks dropped."""
+    starts = [0] + [index + 1 for index in BracketStructure(text).top_level_indexes(",")]
+    ends = [index - 1 for index in starts[1:]] + [len(text)]
+    return [text[start:end].strip() for start, end in zip(starts, ends) if text[start:end].strip()]

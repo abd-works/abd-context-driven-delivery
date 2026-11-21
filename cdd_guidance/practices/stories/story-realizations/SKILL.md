@@ -6,7 +6,7 @@
 - Scenario structure and fidelity: `@practices/stories/stories.md` `#scenarios` — GWT plus **Scenario realizations (default on)** unless the user says **no realizations**.
 - Acceptance tests: `@practices/stories/stories.md` `#acceptance_tests` — implement through the realized call graph.
 - BDD: `@practices/bdd/bdd.md` `#realization` — the same notation on each `it should` of the spec files, in its own `{scope}-bdd-realization.md`. A scenario realization follows the story map's Scenarios; a BDD realization follows the spec files' observations. Keep them in separate files, because a reader has to know which one a graph realizes.
-- Interaction notation: `@practices/clean_engineering/clean_engineering.md` — `write-interactions`; arrows round-trip via `practices/clean_engineering/model/call_graph.py` and the stories/BDD model channels.
+- Interaction notation: `@practices/clean_engineering/clean_engineering.md` — `write-interactions`; arrows round-trip via `practices/source_code/call_graph.py` and the stories/BDD model channels.
 
 ---
 

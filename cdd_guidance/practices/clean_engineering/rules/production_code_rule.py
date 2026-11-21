@@ -8,11 +8,12 @@ from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
 
-from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
+from cdd_guidance.practices.source_code import is_test_code
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
     from harness.graph.rule_context import RuleCheckContext
+    from harness.graph.violation import Finding
 
 
 class ProductionCodeRule(PracticeGraphRule):
@@ -21,10 +22,10 @@ class ProductionCodeRule(PracticeGraphRule):
     judges the whole practice at once reads only the facts the build compared across the graph, which it records on
     production code alone (``model/compared_facts.py``)."""
 
-    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
         if is_test_code(node.source.file):
             return []
         return self.check_production(node, context)
 
-    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
         return []

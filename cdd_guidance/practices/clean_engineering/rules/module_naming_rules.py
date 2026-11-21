@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from harness.graph.violation import Finding
+
 import re
 from typing import TYPE_CHECKING
 
-from cdd_guidance.practices.clean_engineering.model.folder_facts import FOLDER_TYPES
-from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
+from cdd_guidance.practices.clean_engineering.reading.folder_facts import FOLDER_TYPES
+from cdd_guidance.practices.source_code import is_test_code
 from cdd_guidance.practices.clean_engineering.rules.production_code_rule import ProductionCodeRule
 
 if TYPE_CHECKING:
@@ -27,15 +29,15 @@ class DomainNounsOnly(ProductionCodeRule):
     slug = "domain-nouns-only"
     node_types = ("Module",)
 
-    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
         name = (node.name or "").strip()
         if not name:
             return []
         if _VERB_MODULE.search(name.replace(".", "/")):
-            return [f"Module {name!r} reads like an action verb path, not a domain noun."]
+            return [Finding(node, f"Module {name!r} reads like an action verb path, not a domain noun.")]
         leaf = name.split(".")[-1]
         if _BAD_SUFFIX.search(leaf):
-            return [f"Module {name!r} uses technical suffix {leaf!r}; use a domain noun."]
+            return [Finding(node, f"Module {name!r} uses technical suffix {leaf!r}; use a domain noun.")]
         return []
 
 
@@ -46,25 +48,19 @@ class NoModulePerClass(ProductionCodeRule):
     slug = "no-module-per-class"
     node_types = ("Module",)
 
-    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
         if node.get_fact("is_a_in_context"):
-            return [
-                f"Module {node.name!r} module-context uses '*is a type of*'; "
-                "generalisation belongs in model, not modules fidelity."
-            ]
+            return [Finding(node, f"Module {node.name!r} module-context uses '*is a type of*'; "
+                "generalisation belongs in model, not modules fidelity.")]
         if node.get_fact("child_parent_in_context"):
-            return [
-                f"Module {node.name!r} module-context uses 'Child : Parent'; "
-                "use model fidelity for generalisation."
-            ]
+            return [Finding(node, f"Module {node.name!r} module-context uses 'Child : Parent'; "
+                "use model fidelity for generalisation.")]
         if self._holds_modules(node, context):
             return []
         public = self._public_classes_in(node, context)
         if len(public) == 1 and node.get_fact("public_source_files", 0) <= 1 and not self._independent(public[0]):
-            return [
-                f"Module {node.name!r} exposes a single class in one file; "
-                "group cohesive classes or merge into an existing module."
-            ]
+            return [Finding(node, f"Module {node.name!r} exposes a single class in one file; "
+                "group cohesive classes or merge into an existing module.")]
         return []
 
     def _holds_modules(self, folder_node: "Node", context: "RuleCheckContext") -> bool:

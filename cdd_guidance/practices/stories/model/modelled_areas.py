@@ -8,12 +8,11 @@ from functools import cached_property
 from typing import TYPE_CHECKING
 
 from harness.graph.schema_conformance import EXEMPT_FACT
-from harness.guidance.practice_reading import PracticeReading
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
 
-    from cdd_guidance.practices.stories.model.graph_reading import StoryTree
+    from cdd_guidance.practices.stories.model.story_tree import StoryTree
 
 # The relationships the Stories schema requires of an example that lead to a model: what an example is held to only in
 # an area a model is written for.
@@ -35,24 +34,23 @@ class ExampleObservations:
     steps hold no code yet observes the same examples as one that calls them. Each is read from the facts every step
     saves with the graph and from the graph's own edges, so it is the same whichever other practices the graph reads."""
 
-    def __init__(self, stories: PracticeReading, tree: "StoryTree") -> None:
-        self.stories = stories
+    def __init__(self, tree: StoryTree) -> None:
         self.tree = tree
-        self.graph = stories.graph
+        self.graph = tree.stories.graph
 
     @cached_property
     def examples(self) -> list["Node"]:
         """The examples on the Stories graph, read once."""
-        return self.stories.in_graph.nodes("Example")
+        return self.tree.examples()
 
     def link(self) -> None:
-        for step in [step for step in self.tree.all_steps() if step.get_fact("phase")]:
+        for step in [step for step in self.tree.every_step() if self.tree.step_phase(step)]:
             for example in self._observed_by(step):
                 self.graph.edges.relate("observes", step, example)
 
     def _observed_by(self, step: "Node") -> list["Node"]:
         texts = [self.tree.step_body(step)]
-        if step.get_fact("phase") == "then":
+        if self.tree.step_phase(step) == "then":
             texts.extend(self.tree.step_body(given) for given in self._givens_of(step))
         named = [example for example in self.examples if any(self._names(text, example, step) for text in texts)]
         return self._of_story_file(step, named)
@@ -78,19 +76,12 @@ class ExampleObservations:
     def _givens_of(self, step: "Node") -> list["Node"]:
         """The Given steps of the scenario step sits in and of its story's Background, with the steps chained onto
         them."""
-        scenario = self.graph.edges.direct_parent(step)
-        while scenario is not None and scenario.type != "Scenario":
-            scenario = self.graph.edges.direct_parent(scenario)
+        scenario = self.tree.scenario_of(step)
         if scenario is None:
             return []
-        holders = [scenario, *self._backgrounds_of(scenario)]
-        givens = [found for holder in holders for found in self.tree.steps(holder) if found.get_fact("phase") == "given"]
+        holders = [*self.tree.steps(scenario), *self.tree.background_steps(self.tree.story_of(scenario))]
+        givens = [found for found in holders if self.tree.step_phase(found) == "given"]
         return [*givens, *(edge.child for given in givens for edge in self.graph.edges.from_parent("ands", given))]
-
-    def _backgrounds_of(self, scenario: "Node") -> list["Node"]:
-        """The Background of the story scenario sits in; none for a story that writes none."""
-        story = self.graph.edges.direct_parent(scenario)
-        return [] if story is None else [edge.child for edge in self.graph.edges.from_parent("background", story)]
 
 
 class ModelledAreas:
@@ -101,10 +92,10 @@ class ModelledAreas:
     invokes an operation, or an example demonstrates a class. Only there must a Then observe an Example
     (then-observes-an-example) and an example show a class and what retrieves it (the Stories schema)."""
 
-    def __init__(self, stories: PracticeReading, tree: "StoryTree") -> None:
-        self.stories = stories
+    def __init__(self, tree: StoryTree) -> None:
         self.tree = tree
-        self.graph = stories.graph
+        self.stories = tree.stories
+        self.graph = tree.stories.graph
 
     def record(self) -> None:
         """Say on each Then whether a model is written for its area, and on each example outside a modelled area that
@@ -113,7 +104,7 @@ class ModelledAreas:
         for node in self.stories.in_graph.nodes():
             if node.type == "Example":
                 self._record(node, EXEMPT_FACT, [] if self._is_modelled(node) else _EXAMPLE_MODEL_RELATIONSHIPS)
-            elif self.tree.is_step(node) and node.get_fact("phase") == "then":
+            elif self.tree.is_step(node) and self.tree.step_phase(node) == "then":
                 self._record(node, MODEL_WRITTEN_FACT, self._is_modelled(node))
 
     def _record(self, node: "Node", fact: str, held: list[str] | bool) -> None:
@@ -121,7 +112,7 @@ class ModelledAreas:
             node.set_fact(fact, held)
 
     def _is_modelled(self, node: "Node") -> bool:
-        return self._area_of(node) in self._modelled
+        return self.tree.area_of(node) in self._modelled
 
     @cached_property
     def _modelled(self) -> set["Node"]:
@@ -130,14 +121,4 @@ class ModelledAreas:
         if not models:
             return set()
         joined = [edge.parent for edge in self.stories.in_graph.edge_index.of() if edge.child.practice in models]
-        return {self._area_of(node) for node in joined if node.type == "Example" or self.tree.is_step(node)}
-
-    def _area_of(self, node: "Node") -> "Node":
-        """The nearest sub-epic or epic above node; for a node under none, the topmost node above it, its story."""
-        above = node
-        while not self.tree.is_epic(above):
-            parent = self.graph.edges.direct_parent(above)
-            if parent is None:
-                return above
-            above = parent
-        return above
+        return {self.tree.area_of(node) for node in joined if node.type == "Example" or self.tree.is_step(node)}

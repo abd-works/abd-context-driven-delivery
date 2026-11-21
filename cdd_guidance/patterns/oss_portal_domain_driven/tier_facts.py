@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
+from cdd_guidance.practices.source_code import SourceText
 
 # A gateway or service address in browser code: an Apigee base path (`/v1/...`), a Cloud Run URL, or an Apigee host.
 _GATEWAY_ADDRESS = re.compile(r"""(['"`])(?:https?://[^'"`]*)?/v\d+/[^'"`]*\1|\.run\.app\b|\bapigee\b""", re.IGNORECASE)

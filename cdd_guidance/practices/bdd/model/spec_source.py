@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from cdd_guidance.practices.clean_engineering.model.code_body import PYTHON, TYPESCRIPT
+from cdd_guidance.practices.source_code import PYTHON, TYPESCRIPT
 
 # The comment a signature-only test body carries, spelt in each language's own comment.
 SIGNATURE = "BDD: SIGNATURE"

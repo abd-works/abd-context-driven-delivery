@@ -6,7 +6,7 @@ from __future__ import annotations
 import re
 from typing import List
 
-from cdd_guidance.practices.clean_engineering.model.code_body import PYTHON
+from cdd_guidance.practices.source_code import PYTHON
 from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel
 from cdd_guidance.practices.stories.model.python.nodes import PythonEpic, PythonStory
 from cdd_guidance.practices.stories.model.python.shared_story_file import SHARED_SUFFIX, is_shared_story_file

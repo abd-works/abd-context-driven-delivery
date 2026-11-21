@@ -12,7 +12,7 @@ from harness.graph.rule_context import RuleCheckContext
 from harness.graph.rule_fixture import SchemaRuleRun
 
 from cdd_guidance.practices.stories.model.fixtures.bookshop_project import PRACTICES, WHOLE_PROJECT, BookshopProject
-from cdd_guidance.practices.stories.model.graph_reading import StoryTree
+from cdd_guidance.practices.stories.model.story_tree import StoryTree
 from cdd_guidance.practices.stories.rules import BY_SLUG
 
 _PACK_ORDER = "story_tests/fulfil-order/pack-order/pack_order_story.test.py"

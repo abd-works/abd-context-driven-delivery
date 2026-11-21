@@ -44,6 +44,15 @@ class InvariantHolder:
         self.invariants.append(Invariant(cleaned, len(self.invariants) + 1))
         self.description = "\n".join(item.text for item in self.invariants)
 
+    def take_words_from(self, earlier: "InvariantHolder") -> None:
+        """Keep the calls and the `//` lines it has, and take earlier's where it has none, as a render from a drawing
+        that writes neither gives a member back what its document held."""
+        if not self.callees:
+            self.callees = list(earlier.callees)
+        if not self.invariants:
+            self.invariants = [item.clone() for item in earlier.invariants]
+            self.description = earlier.description
+
     def invariant_lines(self) -> List[str]:
         if self.invariants:
             return [item.text for item in self.invariants]

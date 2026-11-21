@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
+from harness.graph.violation import Finding
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
@@ -20,15 +21,15 @@ class VerbNounFormat(PracticeGraphRule):
     slug = "verb-noun-format"
     node_types = ("Epic", "SubEpic", "Story")
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         if not node.has_fact("opening_class"):
             return []
         kind = node.get_fact("opening_class") or ""
         if kind in _VERB_OPENINGS:
             return []
         if kind == _GENERIC_VERB:
-            return [f"{node.type} {node.name!r}: opens with a generic verb; judge from its context whether the action is plain."]
-        return [f"{node.type} {node.name!r}: name should start with a verb (got {kind})."]
+            return [Finding(node, f"{node.type} {node.name!r}: opens with a generic verb; judge from its context whether the action is plain.")]
+        return [Finding(node, f"{node.type} {node.name!r}: name should start with a verb (got {kind}).")]
 
 
 class ChildCountFitsLayer(PracticeGraphRule):
@@ -38,7 +39,7 @@ class ChildCountFitsLayer(PracticeGraphRule):
     slug = "child-count-fits-layer"
     node_types = ("Epic", "SubEpic")
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         severity = node.get_fact("child_band") or ""
         if severity != "error":
             return []
@@ -46,7 +47,7 @@ class ChildCountFitsLayer(PracticeGraphRule):
         label = node.get_fact("child_label") or "children"
         target = node.get_fact("child_target") or "4-9"
         kind = node.type.lower().replace("subepic", "sub-epic")
-        return [f"{kind} {node.name!r}: {count} {label} (target {target})"]
+        return [Finding(node, f"{kind} {node.name!r}: {count} {label} (target {target})")]
 
 
 class StoryScenariosAtMostSeven(PracticeGraphRule):
@@ -56,7 +57,7 @@ class StoryScenariosAtMostSeven(PracticeGraphRule):
     slug = "story-scenarios-at-most-seven"
     node_types = ("Story",)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         count = node.get_fact("scenario_count")
         if count is None and (node.get_fact("child_label") or "") == "scenarios":
             count = node.get_fact("child_count", 0)
@@ -65,7 +66,7 @@ class StoryScenariosAtMostSeven(PracticeGraphRule):
         count = int(count)
         if count <= _MOST_SCENARIOS:
             return []
-        return [f"story {node.name!r}: {count} scenarios — story is huge (target 1-{_MOST_SCENARIOS})"]
+        return [Finding(node, f"story {node.name!r}: {count} scenarios — story is huge (target 1-{_MOST_SCENARIOS})")]
 
 
 class KebabCasePaths(PracticeGraphRule):
@@ -74,23 +75,21 @@ class KebabCasePaths(PracticeGraphRule):
     slug = "kebab-case-paths"
     node_types = ("Story",)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         if not node.get_fact("camel_case_path"):
             return []
         name = node.get_fact("artifact_name") or ""
-        return [f"Story artifact '{name}' should use kebab-case in the file name."]
+        return [Finding(node, f"Story artifact '{name}' should use kebab-case in the file name.")]
 
 
 class StoryNameCapturesSystemMechanic(PracticeGraphRule):
     slug = "story-name-captures-system-mechanic"
     node_types = ("Story",)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         if not node.get_fact("generic_handler"):
             return []
-        return [
-            f"Story {node.name!r} names a generic handler; use the system mechanic (e.g. 'Submit Order')."
-        ]
+        return [Finding(node, f"Story {node.name!r} names a generic handler; use the system mechanic (e.g. 'Submit Order').")]
 
 
 class RightSizeStoryNodes(PracticeGraphRule):
@@ -99,10 +98,10 @@ class RightSizeStoryNodes(PracticeGraphRule):
     slug = "right-size-story-nodes"
     node_types = ("Story",)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         if not node.get_fact("near_duplicate"):
             return []
-        return [f"Story {node.name!r} is too similar to another story on the same map node."]
+        return [Finding(node, f"Story {node.name!r} is too similar to another story on the same map node.")]
 
 
 class BranchOnMechanicalUniqueness(PracticeGraphRule):
@@ -111,12 +110,10 @@ class BranchOnMechanicalUniqueness(PracticeGraphRule):
     slug = "branch-on-mechanical-uniqueness"
     node_types = ("Epic", "SubEpic")
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         verb = node.get_fact("shared_verb") or ""
         if not verb:
             return []
-        return [
-            f"Stories under {node.name!r} share the same verb {verb!r}; split by distinct mechanics or merge."
-        ]
+        return [Finding(node, f"Stories under {node.name!r} share the same verb {verb!r}; split by distinct mechanics or merge.")]
 
 

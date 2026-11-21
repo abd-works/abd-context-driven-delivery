@@ -28,4 +28,4 @@ with description("every story has a screen story"):
     with context("with a story no screen story file describes"):
         with it("should fail it, saying it has no screen story"):
             found = PlaywrightTestsBrowserInteraction().check_practice(_Context([_node("Reassign Ticket Parent", has_screen_story=False)]))
-            expect(found[0][1]).to(contain("has no screen story"))
+            expect(found[0].message).to(contain("has no screen story"))

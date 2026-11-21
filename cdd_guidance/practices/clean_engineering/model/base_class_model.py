@@ -8,14 +8,14 @@ from typing import Iterable, List, Optional
 from harness.graph.model_node import ModelChildren
 from harness.graph.graph import Graph
 
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
+from cdd_guidance.practices.source_code import CodeBody
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
 from cdd_guidance.practices.clean_engineering.model.module_context_files import ModuleContext, PublicSources
 from cdd_guidance.practices.clean_engineering.model.ooad_node import OoadNode
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
-from cdd_guidance.practices.clean_engineering.model.script_imports import ClassReference, ScriptImports
-from cdd_guidance.practices.clean_engineering.model.source_facts import ClassSourceFacts
+from cdd_guidance.practices.source_code import ClassReference, ScriptImports
+from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUCTOR_NAMES, ClassSourceFacts
 from cdd_guidance.practices.clean_engineering.model.type_refs import domain_type_names
 
 
@@ -195,6 +195,21 @@ class OoadClass(OoadNode):
         self.bases = list(source.bases)
         self.collaborators = list(source.collaborators)
         self.dependencies = [item.clone() for item in getattr(source, "dependencies", [])]
+
+    def take_words_from(self, earlier: "OoadClass") -> None:
+        """Keep the intent and the member words it has, and take earlier's where it has none, member by member; a
+        constructor is one member whatever its format calls it."""
+        self.intent = self.intent or earlier.intent
+        for members, earlier_members in ((self.operations, earlier.operations), (self.properties, earlier.properties)):
+            had = {earlier.member_key(member): member for member in earlier_members}
+            for member in members:
+                kept = had.get(self.member_key(member))
+                if kept is not None:
+                    member.take_words_from(kept)
+
+    def member_key(self, member: "Operation | Property") -> str:
+        """The member's name; a constructor is one member whatever its format calls it."""
+        return "constructor" if member.name in {self.name, *CONSTRUCTOR_NAMES} else member.name
 
     def clone(self) -> "OoadClass":
         cloned = type(self)(self.name, self.sequential_order)
@@ -404,6 +419,15 @@ class Module(OoadNode):
         self.dependencies = list(source.dependencies)
         self.preamble = source.preamble
 
+    def take_words_from(self, earlier: "Module") -> None:
+        """Keep the language, constraint, and description it has, and take earlier's where it has none, or where a
+        drawing cut its description short and ended it with three dots."""
+        self.language = self.language or earlier.language
+        self.constraint = self.constraint or earlier.constraint
+        drawn = self.description
+        if drawn.endswith("...") and earlier.description.startswith(drawn[:-3].rstrip()):
+            self.description = earlier.description
+
     def clone(self) -> "Module":
         cloned = type(self)(self.name, self.sequential_order)
         cloned.update_self(self)
@@ -551,6 +575,18 @@ class CleanEngineeringModel(OoadNode):
     def update_self(self, source: "OoadNode") -> None:
         assert isinstance(source, CleanEngineeringModel)
         self.name = source.name
+
+    def take_words_from(self, earlier: "CleanEngineeringModel") -> None:
+        """Give each module and class this model still holds the words earlier held for it, where this model has none:
+        a render from a drawing, which writes no prose, keeps the prose of the document it is written onto."""
+        modules = {module.name: module for module in earlier.modules}
+        for module in self.modules:
+            if module.name in modules:
+                module.take_words_from(modules[module.name])
+        classes = {oclass.name: oclass for oclass in earlier.every_class()}
+        for oclass in self.every_class():
+            if oclass.name in classes:
+                oclass.take_words_from(classes[oclass.name])
 
     def clone(self) -> "CleanEngineeringModel":
         cloned = type(self)(self.name, self.sequential_order)

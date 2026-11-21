@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from harness.graph.violation import Finding
+
 from typing import TYPE_CHECKING
 
 from cdd_guidance.practices.clean_engineering.rules.production_code_rule import ProductionCodeRule
@@ -17,11 +19,9 @@ class NoPrototypeSwapping(ProductionCodeRule):
     slug = "no-prototype-swapping"
     node_types = ("OoadClass",)
 
-    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
         swap = node.get_fact("prototype_swap") or {}
         if not swap:
             return []
-        return [
-            f"{node.name} line {swap['line']} swaps an object's class with `{swap['code']}`; "
-            f"build the right class instead (a factory or an overridable `blank()`)."
-        ]
+        return [Finding(node, f"{node.name} line {swap['line']} swaps an object's class with `{swap['code']}`; "
+            f"build the right class instead (a factory or an overridable `blank()`).")]

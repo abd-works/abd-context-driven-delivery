@@ -14,7 +14,7 @@ from mamba import before, description, it
 
 import cdd_guidance.practices  # noqa: F401  (registers the practices)
 from harness.graph.schema_rules import PracticeSchema
-from harness.guidance.practice_reading import rules_in
+from harness.graph.practice_reading import PracticeReading
 from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 
 
@@ -23,7 +23,7 @@ def _unlisted(practice) -> list[str]:
     the rule on."""
     listed = PracticeSchema(practice).applicable
     package = type(practice).__module__.rsplit(".", 1)[0]
-    own = rules_in(f"{package}.rules")
+    own = PracticeReading.rules_in(f"{package}.rules")
     return sorted(
         f"{practice.key}: {slug} on {node_type}"
         for slug, rule in own.items()
