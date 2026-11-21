@@ -190,3 +190,21 @@ Heavy and e2e on the third wave (commit 5c3b22e83):
 3. Java model classes and Java support are removed everywhere for now, Clean Engineering's reading of Java production code included.
 4. Not understood as asked; explained again in the chat.
 5. JavaScript story tests are brought level with TypeScript. Most tests are on the graph the model creates, written once as shared behaviours and reused for each language.
+
+## Fourth wave: the third answers built (2026-11-21)
+
+| Answer | What is built | What is left |
+|---|---|---|
+| Every render ends in a saved file | A render to Python, TypeScript or JavaScript is saved at the paths the fidelity declares and names its files; none answers code. Stories saves one story test per story, Clean Engineering one file per module, DDD one per aggregate, BDD carries a spec's name across languages (`cart_spec.py`, `cart.spec.ts`). A code file already there that differs is kept whole and named as kept. A document or drawing that is not a fidelity's own file is saved beside itself under its own name. On the Bookshop every practice, fidelity and code language saved or kept. | Each context's `bounded-context.md` is not written when DDD code is rendered. A single code story test rendered to markdown lands in a doubled sub-epic folder. A render of `content` with no `paths`, and a render to a data format such as json, still answer content. A saved graph holding no file of the practice is refused. The Bookshop table was not run again after the last fix. |
+| Diagram is drawio and whiteboard | At UX mockup the drawing and the whiteboard are picked together under the diagram chip and saved under the epic's `.context`. UX ia gained its whiteboard; every fidelity that draws now offers both. | A mockup drawing saved at the old place beside its HTML is not listed until moved or rendered again. |
+| Java removed everywhere | Clean Engineering's Java model, the Java language object, file patterns, parser branches, fixtures, docs and specs are deleted. Languages are Python, TypeScript and JavaScript; DDD and Clean Engineering now offer JavaScript. | The catalog pages were edited by hand, not regenerated. A field declared only by type does not come back from JavaScript in DDD. |
+| JavaScript level with TypeScript, tested through shared behaviours | One model serves both script languages: shared step files, screen specs, examples, step library, template. Two shared sets of examples: each language (Python, TypeScript, JavaScript, markdown) only creates the model, then one common set runs on the model and its graph and on trips between formats. The common set found three defects in every language, fixed. | Python story tests with no story map are not read by a whole-working-copy load. A new story file's example import names the examples folder, not a file. |
+
+Tiers on the final code:
+- **Unit:** 388 of 388 files.
+- **Heavy:** 66 of 68 in the tier run; the two failures (the install health probe red after the render change, and a host spec expecting rendered text) are fixed and pass run alone. The whole heavy tier was not run again.
+- **E2E without agent specs:** 8 of 12 files in the tier run. The board's browser suite run again afterwards: 274 of 275, the one failure pixel-10. `explore-graph-in-files-app.story.ui_e2e_spec.py` failed in the tier run for the second time and again passed its 13 examples alone. pixel-09 and the prompt queue plugin spec fail as before.
+
+Decisions for the person:
+1. Should a bounded context's file link its aggregates to the domain model, so they open in place (13 graph connections on the Bookshop no callout shows)? Recommended: yes.
+2. Code already there that differs from a render is kept whole. Should a render rewrite it where the adapter can keep the bodies?

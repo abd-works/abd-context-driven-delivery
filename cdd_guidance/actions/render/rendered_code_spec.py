@@ -146,6 +146,15 @@ with description("a render to code that is saved") as self:
                 code = RenderedCode(self.root, declared[:1], Format("python"), book, declared)
                 expect(_saved(self.root, code.save({"format": "python", "content": "class Book:\n    pass\n"}))).to(equal(["catalogue/book/book.py"]))
 
+        with context("that is a sketch, whose one section carries a name the sketch does not write"):
+            with it("should name the code for the sketch and save it beside the sketch, as the fidelity declares a module's file"):
+                sketch = self.root / "design" / "cart-sketch.md"
+                sketch.parent.mkdir(parents=True)
+                sketch.write_text("Cart\n  owner\n", encoding="utf-8")
+                code = RenderedCode(self.root, ["{module}/", "{module}/{module}.py"], Format("python"), sketch, ["{module}/{module}.py"], "cart")
+                result = code.save({"format": "python", "content": "# === KnowledgeGraph ===\n\nclass Cart:\n    pass\n"})
+                expect(_saved(self.root, result)).to(equal(["design/cart/cart.py"]))
+
         with context("that no declared path of the fidelity names"):
             with it("should refuse, naming the source"):
                 notes = self.root / "notes.md"

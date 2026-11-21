@@ -91,6 +91,16 @@ class RenderedFile:
         return None if target in sources else cls(target, format, source)
 
     @classmethod
+    def beside_itself(cls, first: Path, source: Format, format: Format) -> RenderedFile:
+        """The file a render of a source no fidelity's file is named for saves: beside the source, under the source's
+        own name in format, without what its own format's files end with, so ``design/cart-sketch.md`` saves
+        ``design/cart.md``; for a folder, in the folder under the folder's name. A render into the format the file is
+        already in names the file itself, which the caller keeps as it is."""
+        if first.is_dir():
+            return cls(first / f"{first.name}{format.extension}", format, source)
+        return cls(first.parent / f"{source.stem_of(first)}{format.extension}", format, source)
+
+    @classmethod
     def from_graph(cls, graph_file: Path, fidelity: FidelityGuidance, format: Format) -> RenderedFile:
         """The file a render of a saved graph into a document saves: the path the fidelity declares for format, its one
         named part, such as the realization's ``{scope}``, named for what the graph was read from. A graph read from

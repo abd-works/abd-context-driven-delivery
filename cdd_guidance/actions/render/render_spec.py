@@ -604,6 +604,45 @@ with description("Render asked for a path, in a session") as self:
             saved = [Path(path).relative_to(self.project.root).as_posix() for path in self.results[0]["paths"]]
             expect(saved).to(equal(["src/ordering/ordering.py"]))
 
+    # The heavy tier, 2026-11-20: the guidance diagnostics probe renders a file of its own, which no fidelity
+    # declares, into the format it is already in, and was refused. A document or a drawing is never refused.
+    with context("that is a markdown file no fidelity declares, rendered to markdown by two fidelities"):
+        with before.each:
+            self.notes = self.project.root / "notes" / "probe.md"
+            self.notes.parent.mkdir()
+            self.notes.write_text(_MARKDOWN_STORY_MAP, encoding="utf-8")
+            self.results = self.action.render(["stories", "clean-engineering-model"], format="markdown", source="markdown", paths=["notes/probe.md"])
+
+        with it("should name the file itself for each, since it is already in that format"):
+            expect([Path(result["path"]) for result in self.results]).to(equal([self.notes, self.notes]))
+
+        with it("should keep the file as it was"):
+            expect(self.notes.read_text(encoding="utf-8")).to(equal(_MARKDOWN_STORY_MAP))
+
+    with context("that is a sketch no fidelity's file is named for, rendered to markdown"):
+        with before.each:
+            (self.project.root / "design").mkdir()
+            (self.project.root / "design" / "cart-sketch.md").write_text("Cart\n  owner\n", encoding="utf-8")
+            self.results = self.action.render("clean-engineering-model", format="markdown", source="sketch", paths=["design/cart-sketch.md"])
+
+        with it("should save the document beside the sketch under the sketch's own name"):
+            expect(Path(self.results[0]["path"]).relative_to(self.project.root).as_posix()).to(equal("design/cart.md"))
+
+        with it("should write the sketch's class into it"):
+            expect((self.project.root / "design" / "cart.md").read_text(encoding="utf-8")).to(contain("Cart"))
+
+    # The heavy tier, 2026-11-20: a sketch of Cart rendered to Python was saved as knowledge_graph/knowledge_graph.py,
+    # after the module name the sketch reader gives a sketch that names none.
+    with context("that is a sketch naming no module, rendered to Python"):
+        with before.each:
+            (self.project.root / "design").mkdir()
+            (self.project.root / "design" / "cart-sketch.md").write_text("Cart\n  owner\n", encoding="utf-8")
+            self.results = self.action.render("clean-engineering-model", format="python", source="sketch", paths=["design/cart-sketch.md"])
+
+        with it("should save the code beside the sketch, as a module named for the sketch"):
+            saved = [Path(path).relative_to(self.project.root).as_posix() for path in self.results[0]["paths"]]
+            expect(saved).to(equal(["design/cart/cart.py"]))
+
     with context("that tells the agent what to do with what it rendered"):
         with it("should not tell the agent to write rendered content itself"):
             expect(Render.place_rendered.__doc__).not_to(contain("write it yourself"))

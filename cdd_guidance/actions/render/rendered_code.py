@@ -1,7 +1,7 @@
 """The files a render to code saves: one for each piece of the rendered code, at the path the fidelity declares for it.
 
 A render to Python, TypeScript or JavaScript ends in saved files, as a render to a drawing or a document does, and its
-result names them; no code is answered for an agent to save. The rendered code comes in one of four shapes, and each
+result names them; no code is answered for an agent to save. The rendered code comes in one of five shapes, and each
 piece of it is placed by the fidelity's declared paths for the format alone:
 
 - **A file for each name** (a path with its text, as a practice whose formats write several files answers): each path
@@ -13,6 +13,10 @@ piece of it is placed by the fidelity's declared paths for the format alone:
 - **One text of one piece from one of the fidelity's own files**: saved as that file in the other format, the named
   parts read off the source's declared path, so ``catalogue/book/book.ts`` is saved as ``catalogue/book/book.py`` and
   ``src/ordering/.context/ordering-model.md`` as ``src/ordering/ordering.py``.
+- **One text of one piece from a source that is not one of the fidelity's files**, such as a sketch: named for the
+  source, not for its banner, which may carry a name the reader gave it because the source names none (a sketch of
+  Cart is read into a module called KnowledgeGraph). It is saved beside the source at the declared path with one named
+  part, so ``design/cart-sketch.md`` against ``{module}/{module}.py`` writes ``design/cart/cart.py``.
 - **One text from one source file no named path places**: saved beside the source under the name the fidelity declares for the format, the
   source's own name read off the path the fidelity declares for the source, so ``CartView.tsx`` against
   ``**/*View.tsx`` is saved as ``CartView.jsx`` for ``**/*View.jsx``, and ``cart_spec.py`` as ``cart.spec.ts``. A
@@ -89,7 +93,7 @@ class RenderedCode:
     """The files one render to code saves under a fidelity's root: where each piece of the rendered code goes by the
     paths the fidelity declares for the format, and the write that keeps a code file already there."""
 
-    def __init__(self, root: Path, declared: list[str], format: Format, source: Path | None = None, source_declared: list[str] | None = None) -> None:
+    def __init__(self, root: Path, declared: list[str], format: Format, source: Path | None = None, source_declared: list[str] | None = None, source_name: str = "") -> None:
         self._root = root
         # The paths the fidelity declares for the format, as it writes them, such as ``{module}/{class}.py``.
         self._declared = list(declared)
@@ -97,6 +101,8 @@ class RenderedCode:
         # The one source file the code was rendered from, and every path the fidelity declares, which name it.
         self._source = source
         self._source_declared = list(source_declared or [])
+        # The source's name without what its format's files end with: ``cart`` for the sketch ``cart-sketch.md``.
+        self._source_name = source_name
 
     def save(self, rendered: dict) -> dict:
         """Write each piece of the rendered code at its declared path and answer the files: ``paths`` the files that
@@ -126,6 +132,9 @@ class RenderedCode:
         counterpart = self._counterpart_of(self._source) if self._source is not None and len(sections) <= 1 else None
         if counterpart is not None:
             return {counterpart: str(content)}
+        named_for_source = self._named_for_source() if len(sections) == 1 else None
+        if named_for_source is not None:
+            return {named_for_source: str(content)}
         if sections:
             return {self._section_file(names): text for names, text in sections}
         return {self._beside_source(): str(content)}
@@ -156,6 +165,19 @@ class RenderedCode:
                 filled = dict(zip(parts, names))
                 return self._root / _NAMED_PART.sub(lambda part: filled[part.group(1)], declared)
         raise RenderHasNoDeclaredPlace(f"the section {banner}", self._format, self._declared, "none of them names a file with a part for each of the section's names")
+
+    def _named_for_source(self) -> Path | None:
+        """The file one piece rendered from one source goes to when the source names it: beside the source, at the
+        first declared path with one named part, filled with the source's own name. None when there is no one source,
+        it has no name of its own, or the format declares no such path."""
+        name = (own_name(self._source, self._source_declared) or self._source_name) if self._source is not None else ""
+        if not name:
+            return None
+        for declared in self._declared:
+            parts = set(_NAMED_PART.findall(declared))
+            if len(parts) == 1 and not declared.endswith("/") and _ONE_NAME not in declared:
+                return self._source.parent / _NAMED_PART.sub(Name(name).snake, declared)
+        return None
 
     def _counterpart_of(self, source: Path) -> Path | None:
         """The file the format declares for the same named parts the source's declared path reads off it, where the

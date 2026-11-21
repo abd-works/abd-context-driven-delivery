@@ -243,13 +243,13 @@ with description("the cdd server") as self:
                 expect(json.loads(_text(result))).to(equal({"n": 3}))
 
         with context("that renders from a file path"):
-            with it("should return the render within 10 seconds"):
+            with it("should save the render within 10 seconds, as a module named for the sketch"):
                 folder = Path(tempfile.mkdtemp(prefix="mcp-render-path-"))
                 sketch = folder / "cart-sketch.md"
                 sketch.write_text("Cart\n  owner\n", encoding="utf-8")
                 arguments = {"guidance": ["clean-engineering-model"], "format": "python", "source": "sketch", "paths": [str(sketch)]}
                 result = self.chat.run(lambda session: session.call_tool("render.render", arguments=arguments), folder, 10)
-                expect(_text(result)).to(contain("Cart"))
+                expect((_text(result).count("cart.py"), (folder / "cart" / "cart.py").read_text(encoding="utf-8").count("class Cart"))).to(equal((1, 1)))
 
     with context("that two chats in different worktrees have connected"):
         with before.each:
