@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Callable
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER
 from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUCTOR_NAMES
-from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
+from cdd_guidance.practices.source_code import is_test_code
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node

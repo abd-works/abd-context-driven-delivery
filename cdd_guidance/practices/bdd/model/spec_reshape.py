@@ -19,7 +19,7 @@ from __future__ import annotations
 import ast
 from typing import TYPE_CHECKING, Callable, Iterator
 
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeLanguage
+from cdd_guidance.practices.source_code import CodeLanguage
 from harness.guidance.practice_formats import NO_LONGER_IN_MODEL, Reshaped
 
 if TYPE_CHECKING:

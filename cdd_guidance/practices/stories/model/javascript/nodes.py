@@ -1,7 +1,7 @@
 """JavaScript nodes: JavaScript, then the script languages, then code, then the story model."""
 from __future__ import annotations
 
-from cdd_guidance.practices.clean_engineering.model.code_body import JAVASCRIPT
+from cdd_guidance.practices.source_code import JAVASCRIPT
 from cdd_guidance.practices.stories.model.brace_story import BraceScenario
 from cdd_guidance.practices.stories.model.code_story_model import CodeEpic
 from cdd_guidance.practices.stories.model.script_story_model import ScriptStory

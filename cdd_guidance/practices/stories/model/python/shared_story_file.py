@@ -19,7 +19,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from cdd_guidance.practices.clean_engineering.model.code_body import PYTHON, CodeBody
+from cdd_guidance.practices.source_code import PYTHON, CodeBody
 from cdd_guidance.practices.stories.model.story_model import Example, ExampleValue, Scenario, StepType, Story
 
 if TYPE_CHECKING:

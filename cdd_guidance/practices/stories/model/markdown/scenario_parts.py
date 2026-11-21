@@ -8,7 +8,7 @@ from typing import Dict, List, Optional
 
 from harness.graph.graph import Source
 
-from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraph
+from cdd_guidance.practices.source_code import CallGraph
 from cdd_guidance.practices.stories.model.markdown.markup import TABLE_LINE, strip_markup
 from cdd_guidance.practices.stories.model.story_model import Background, Scenario, Step, Story
 

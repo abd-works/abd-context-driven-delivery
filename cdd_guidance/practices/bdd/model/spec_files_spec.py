@@ -4,7 +4,7 @@ Engineering's, that both practices ask."""
 from expects import be_false, be_true, expect
 from mamba import context, description, it
 
-from cdd_guidance.practices.clean_engineering.model.production_code import is_spec_file, is_test_code
+from cdd_guidance.practices.source_code import is_spec_file, is_test_code
 
 with description("a file in a working copy BDD reads"):
     with context("that is an end-to-end spec"):

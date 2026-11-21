@@ -16,11 +16,11 @@ from harness.graph.practice_reading import PracticeReading
 from harness.graph.model_node import schema_sync_paused
 
 from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
-from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER
+from cdd_guidance.practices.clean_engineering.model import MODULE_FUNCTION_HOLDER
 from cdd_guidance.practices.clean_engineering.reading.imported_classes import ImportedClasses
-from cdd_guidance.practices.clean_engineering.model.production_code import is_spec_file, is_test_code
-from cdd_guidance.practices.clean_engineering.model.script_imports import ClassReference, ScriptImports
-from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUCTOR_NAMES
+from cdd_guidance.practices.source_code import is_spec_file, is_test_code
+from cdd_guidance.practices.source_code import ClassReference, ScriptImports
+from cdd_guidance.practices.clean_engineering.model import CONSTRUCTOR_NAMES
 
 if TYPE_CHECKING:
     from cdd_guidance.practices.bdd.model.bdd_model import BddModel

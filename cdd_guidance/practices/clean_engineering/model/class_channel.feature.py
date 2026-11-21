@@ -12,7 +12,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from expects import equal, expect
-from cdd_guidance.practices.clean_engineering.model.code_body import TYPESCRIPT
+from cdd_guidance.practices.source_code import TYPESCRIPT
 from cdd_guidance.practices.output_folder import OutputFolder
 from mamba import before, context, describe, included_context, it, shared_context
 

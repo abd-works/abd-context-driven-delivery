@@ -23,11 +23,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
-from cdd_guidance.practices.clean_engineering.model.call_graph import (
-    CallGraph,
-    CallGraphEntry,
-    parse_arrow_line,
-)
+from cdd_guidance.practices.source_code import CallGraph, CallGraphEntry, parse_arrow_line
 
 
 with description("Property"):

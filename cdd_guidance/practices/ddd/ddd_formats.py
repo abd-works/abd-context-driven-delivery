@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from harness.guidance.practice_formats import PracticeFormats
 
-from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel
+from cdd_guidance.practices.clean_engineering.model import CleanEngineeringModel
 from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownBoundedContextMap
 from cdd_guidance.practices.ddd.model.nodes import BoundedContextMap
 

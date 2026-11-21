@@ -10,9 +10,9 @@ from typing import TYPE_CHECKING, Callable
 from cdd_guidance.practices.clean_engineering.model.base_class_model import is_interface_name
 from cdd_guidance.practices.clean_engineering.reading.class_graph import names_in, parameters_of
 from cdd_guidance.practices.clean_engineering.reading.folder_facts import folders_of, is_under, parent_folder, record_fact
-from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
+from cdd_guidance.practices.source_code import is_test_code
 from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUCTOR_NAMES
-from cdd_guidance.practices.clean_engineering.model.type_refs import split_top_level
+from cdd_guidance.practices.source_code import split_top_level
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node, PracticeNodes

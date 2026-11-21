@@ -8,7 +8,7 @@ from functools import cache
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Callable, Iterable
 
-from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
+from cdd_guidance.practices.source_code import is_test_code
 from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import noSessionLog, tool_subject
 from harness.agent_tools.tool_call import ToolCall

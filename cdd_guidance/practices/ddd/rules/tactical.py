@@ -6,7 +6,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUCTOR_NAMES
+from cdd_guidance.practices.clean_engineering.model import CONSTRUCTOR_NAMES
 from cdd_guidance.practices.ddd.model.stereotypes import BUILDING_BLOCK_KINDS
 from harness.graph.practice_rule import PracticeGraphRule
 

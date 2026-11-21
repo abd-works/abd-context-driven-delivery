@@ -29,8 +29,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple, Union
 
 from harness.annotations.name import Name
-from cdd_guidance.practices.clean_engineering.model.bracket_structure import BracketStructure
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage, WrittenBlock
+from cdd_guidance.practices.source_code import BracketStructure
+from cdd_guidance.practices.source_code import CodeBody, CodeLanguage, WrittenBlock
 from cdd_guidance.practices.stories.model.story_model import (
     Background,
     Epic,

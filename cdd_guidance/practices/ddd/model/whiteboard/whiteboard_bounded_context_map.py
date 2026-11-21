@@ -13,8 +13,8 @@ from __future__ import annotations
 
 from harness.whiteboard import Whiteboard
 
-from cdd_guidance.practices.clean_engineering.model.base_class_model import Module
-from cdd_guidance.practices.clean_engineering.model.class_stereotypes import module_path_in
+from cdd_guidance.practices.clean_engineering.model import Module
+from cdd_guidance.practices.clean_engineering.model import module_path_in
 from cdd_guidance.practices.clean_engineering.model.whiteboard.whiteboard_class_model import (
     ClassBoard,
     WhiteboardCleanEngineeringModel,

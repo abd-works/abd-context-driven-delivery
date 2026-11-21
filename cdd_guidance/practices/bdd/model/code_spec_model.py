@@ -7,18 +7,8 @@ import re
 import textwrap
 from typing import Callable, Iterable, List, Optional, Tuple, Union
 
-from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraph
-from cdd_guidance.practices.clean_engineering.model.code_body import (
-    CODE_LANGUAGES,
-    JAVASCRIPT,
-    PYTHON,
-    TYPESCRIPT,
-    BraceCall,
-    CodeBody,
-    CodeLanguage,
-    InsideLines,
-    WrittenBlock,
-)
+from cdd_guidance.practices.source_code import CallGraph
+from cdd_guidance.practices.source_code import CODE_LANGUAGES, JAVASCRIPT, PYTHON, TYPESCRIPT, BraceCall, CodeBody, CodeLanguage, InsideLines, WrittenBlock
 from harness.graph.graph import Graph
 
 from cdd_guidance.practices.bdd.model.spec_reshape import SpecReshape

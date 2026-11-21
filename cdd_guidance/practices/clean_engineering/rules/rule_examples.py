@@ -16,7 +16,7 @@ from harness.graph.location import Location
 
 from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass
-from cdd_guidance.practices.clean_engineering.model.code_body import CODE_LANGUAGES
+from cdd_guidance.practices.source_code import CODE_LANGUAGES
 from cdd_guidance.practices.clean_engineering.rules import BY_SLUG
 
 FIXTURE_FOLDER = "example"

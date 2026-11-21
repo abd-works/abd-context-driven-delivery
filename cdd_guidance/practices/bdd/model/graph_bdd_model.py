@@ -15,9 +15,9 @@ from typing import Iterable, List, Optional
 
 from cdd_guidance.practices.bdd.model.bdd_model import BddModel
 from cdd_guidance.practices.bdd.model.nodes import DescribeBlock
-from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraph
-from cdd_guidance.practices.clean_engineering.model.operation import Operation
-from cdd_guidance.practices.clean_engineering.model.property import Property
+from cdd_guidance.practices.source_code import CallGraph
+from cdd_guidance.practices.clean_engineering.model import Operation
+from cdd_guidance.practices.clean_engineering.model import Property
 from cdd_guidance.practices.clean_engineering.reading.class_graph import parameters_of
 from harness.graph.edge import Edge
 from harness.graph.graph import Graph, Node

@@ -14,7 +14,7 @@ from harness.graph.graph import Graph
 
 from cdd_guidance.practices.bdd.model.bdd_model import BddModel
 from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation
-from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraph
+from cdd_guidance.practices.source_code import CallGraph
 
 
 with description("a bdd spec on a graph"):

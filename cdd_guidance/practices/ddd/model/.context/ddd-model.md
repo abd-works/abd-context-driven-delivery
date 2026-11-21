@@ -75,6 +75,13 @@ bounded_context_map = MarkdownBoundedContextMap().parse(text)
 	// the lines in .context/bounded-context.md, so the graph node spans that file
 + module_path: str
 	// each enclosing context's label, joined by `/`
++ notes: list[str]
+	// why the context exists, as a sketch or a document notes it above its aggregates
++ module_name: str
++ module_notes: list[str]
+	// the Clean Engineering module the context is built as, with its seam and constraint
++ group_notes: dict[str, list[str]]
+	// the notes under each heading that groups aggregates
 ----
 + append_context(context: BoundedContext): None
 + append_aggregate(aggregate: Aggregate): None
@@ -92,6 +99,10 @@ bounded_context_map = MarkdownBoundedContextMap().parse(text)
 	// the entity in this aggregate whose is_root is true
 + integrations: list[Integration]
 	// an arrow that sits on the aggregate
++ group: str | None
+	// the heading a sketch or a document groups the aggregate under
++ consumed_events: list[str]
+	// the events it reacts to, which another aggregate's root emits
 + events: list[DomainEvent]
 	// the domain events the root emits
 + members: list
@@ -330,14 +341,9 @@ The `markdown` format.
 
 ## MarkdownBoundedContext : BoundedContext, MarkdownDomainNode
 
-------
-+ notes: list[str]
-	// why the context exists, as the sketch noted it above its aggregates; written as `> ` lines
-+ module_name: str
-+ module_notes: list[str]
-	// the clean-engineering module the context is built as, with its seam and constraint
-+ group_notes: dict[str, list[str]]
-	// the notes under each heading that groups aggregates
+The context's notes, module, and group notes are *BoundedContext*'s own fields (`notes`, `module_name`,
+`module_notes`, `group_notes`), so every format keeps them; markdown writes the notes as `> ` lines.
+
 ----
 + read_lines(lines: list[str]): None
 	// its own lines: notes, module, group headings, and each aggregate, which reads its own section
@@ -345,9 +351,6 @@ The `markdown` format.
 + lines(): list[str]
 + read_note(line: str, group: str | None): None
 	// to the group it sits under, else the module, else the context
-+ read_sketch_lines(lines: list[str]): None
-	// its lines of a sketch: holders, entities, notes, and each aggregate's fences
-+ sketch_lines(): list[str]
 
 ## MarkdownAggregate : Aggregate, MarkdownDomainNode
 
@@ -356,12 +359,8 @@ The `markdown` format.
 	// the lines under the aggregate's heading; load_root reads the root, its cards, and its arcs from them
 + classes: list[ClassCard]
 	// its building blocks, as the cards of its Module classes
-+ sketch_fences: list[tuple[str, list[str]]]
-	// the entity fences a sketch lists under the aggregate
 + members: list
 	// the member cards, else the root's invariant objects
-+ group: str | None
-	// the sketch heading the aggregate was listed under
 + root_card: ClassCard | None
 + repository: ClassCard | None
 + member_cards: list[ClassCard]
@@ -372,10 +371,8 @@ The `markdown` format.
 - _take_root_card(): None
 	// the <<Aggregate Root>> card's class becomes the root
 + lines(): list[str]
-- _integration_lines(indent: str = ""): list[str]
-	// the aggregate's arcs under `Integrations:` and the root's events under `emits events:`
-+ load_sketch(): None
-+ sketch_lines(): list[str]
++ integration_lines(indent: str = ""): list[str]
+	// the aggregate's arcs under `Integrations:` and the root's events under `emits events:`; a sketch writes them in the root's fence
 + take_class(oclass: OoadClass): None
 	// a class read from a class model, held as the card it is; each dependency of it that keeps an arc is one of this aggregate's integrations
 	-> ClassCard.from_code
@@ -421,8 +418,47 @@ The `sketch` format: the `domain driven design:` section of an integrated sketch
 + parse(text: str): SketchDddModel
 	// where each context starts, the prose it skips, and the event map; each context reads its own lines
 	-> SketchOutline.body_for
-	-> MarkdownBoundedContext.read_sketch_lines
+	-> SketchBoundedContext.read_sketch_lines
 + render(canonical: BoundedContextMap | None = None, previous: str | None = None): str
+	-> SketchedContext.lines
+
+## SketchBoundedContext : MarkdownBoundedContext
+
+A context read from a sketch (`sketch/sketch_nodes.py`); its aggregate_type is *SketchAggregate*.
+
+----
++ read_sketch_lines(lines: list[str]): None
+	// its lines of a sketch: holders, entities, notes, and each aggregate's fences
+	-> SketchAggregate.take_sketch_line
+	-> SketchAggregate.load_sketch
+
+## SketchAggregate : MarkdownAggregate
+
+------
++ sketch_fences: list[tuple[str, list[str]]]
+	// the entity fences a sketch lists under the aggregate
+----
++ take_sketch_line(raw: str): None
++ load_sketch(): None
+	-> ClassCard.from_sketch
+
+## SketchedContext
+
+A context of any format as a sketch writes it: its heading, notes, module, then each aggregate under its holder.
+
++ SketchedContext(context: MarkdownBoundedContext)
+----
++ lines(): list[str]
+	-> SketchedAggregate.lines
+
+## SketchedAggregate
+
++ SketchedAggregate(aggregate: MarkdownAggregate)
+------
++ holder: str | None
+	// its own name when its root card is named apart, else its group
+----
++ lines(): list[str]
 
 ## DrawnBoundedContextMap : BoundedContextMap
 

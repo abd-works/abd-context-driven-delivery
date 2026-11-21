@@ -5,13 +5,14 @@ from __future__ import annotations
 import re
 from typing import List
 
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
+from cdd_guidance.practices.source_code import CodeBody
 from harness.graph.model_node import ModelChildren
 
 from cdd_guidance.practices.clean_engineering.model.ooad_node import OoadNode
 from cdd_guidance.practices.clean_engineering.model.property import InvariantHolder
 from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUCTOR_NAMES, OperationSourceFacts
-from cdd_guidance.practices.clean_engineering.model.type_refs import name_with_type, parse_parameter, split_top_level
+from cdd_guidance.practices.source_code import split_top_level
+from cdd_guidance.practices.clean_engineering.model.type_refs import name_with_type, parse_parameter
 
 # `save(cart: Cart, note: str = ""): Receipt` as a model line writes an operation.
 _SIGNATURE = re.compile(r"^(_?\w+)\s*\((.*)\)\s*(?::\s*(.+))?$")

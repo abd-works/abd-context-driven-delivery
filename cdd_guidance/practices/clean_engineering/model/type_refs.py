@@ -5,7 +5,6 @@ from __future__ import annotations
 import re
 from typing import List
 
-from cdd_guidance.practices.clean_engineering.model.bracket_structure import BracketStructure
 
 
 
@@ -41,13 +40,6 @@ def is_primitive_type(type_name: str) -> bool:
     if type_name.lower().strip() in _PRIMITIVE_TYPE_NAMES:
         return True
     return type_name[0].islower()
-
-
-def split_top_level(text: str) -> List[str]:
-    """The comma-separated parts of a parameter list, keeping commas inside brackets or generics; blanks dropped."""
-    starts = [0] + [index + 1 for index in BracketStructure(text).top_level_indexes(",")]
-    ends = [index - 1 for index in starts[1:]] + [len(text)]
-    return [text[start:end].strip() for start, end in zip(starts, ends) if text[start:end].strip()]
 
 
 def parse_parameter(name_and_type: str) -> tuple[str, str]:

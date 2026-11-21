@@ -1,7 +1,7 @@
 """TypeScript nodes: TypeScript, then the script languages, then code, then the story model."""
 from __future__ import annotations
 
-from cdd_guidance.practices.clean_engineering.model.code_body import TYPESCRIPT
+from cdd_guidance.practices.source_code import TYPESCRIPT
 from cdd_guidance.practices.stories.model.brace_story import BraceScenario
 from cdd_guidance.practices.stories.model.code_story_model import CodeEpic
 from cdd_guidance.practices.stories.model.script_story_model import ScriptStory

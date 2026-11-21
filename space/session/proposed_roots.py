@@ -6,7 +6,7 @@ import re
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Iterable
 
-from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
+from cdd_guidance.practices.source_code import is_test_code
 from harness.guidance.declared_outputs import DeclaredFile
 from harness.markdown.format import Format
 

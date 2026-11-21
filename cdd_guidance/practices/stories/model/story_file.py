@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Tuple
 
 
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeLanguage, InsideLines, WrittenBlock
+from cdd_guidance.practices.source_code import CodeLanguage, InsideLines, WrittenBlock
 from cdd_guidance.practices.stories.model.story_map_files import source_at
 
 

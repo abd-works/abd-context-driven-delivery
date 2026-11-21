@@ -16,11 +16,11 @@ from harness.graph.model_node import ModelChildren, ModelNode
 from harness.graph.graph import Graph
 from harness.markdown.markdown import heading_anchor
 
-from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass
-from cdd_guidance.practices.clean_engineering.model.class_stereotypes import joined_module_path, module_path_in
-from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
-from cdd_guidance.practices.clean_engineering.model.property import Property
-from cdd_guidance.practices.clean_engineering.model.type_refs import pascal_type_names
+from cdd_guidance.practices.clean_engineering.model import CleanEngineeringModel, Module, OoadClass
+from cdd_guidance.practices.clean_engineering.model import joined_module_path, module_path_in
+from cdd_guidance.practices.clean_engineering.model import Relationship
+from cdd_guidance.practices.clean_engineering.model import Property
+from cdd_guidance.practices.clean_engineering.model import pascal_type_names
 from cdd_guidance.practices.ddd.model.stereotypes import TacticalClass
 
 # The `# Title` line of a bounded context's `.context/bounded-context.md`: the context's name.
@@ -216,6 +216,10 @@ class Aggregate(DomainNode, Module):
         super().__init__(name, sequential_order, graph=graph)
         self.root = None
         self.integrations = []
+        # The heading a sketch or a document groups this aggregate under, so every format keeps the grouping.
+        self.group: str | None = None
+        # The events the aggregate reacts to, which another aggregate's root emits.
+        self.consumed_events: list[str] = []
 
     def load_root(self) -> None:
         # The entity records this aggregate and loads its own invariant objects.
@@ -396,6 +400,13 @@ class BoundedContext(DomainNode, Module):
         self.mappings: list[ContextMapping] = []
         # The aggregates the context's own file names as links to their headings in the domain model.
         self.aggregate_links: list[AggregateLink] = []
+        # Why the context exists and what it must not do, as a sketch or a document notes it above its aggregates.
+        self.notes: list[str] = []
+        # The Clean Engineering module the context is built as, with the seam and constraint noted on it.
+        self.module_name = ""
+        self.module_notes: list[str] = []
+        # The notes under each heading that groups aggregates, by that heading.
+        self.group_notes: dict[str, list[str]] = {}
 
     @property
     def label(self) -> str:

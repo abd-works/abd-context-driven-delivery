@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
 
-from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
+from cdd_guidance.practices.source_code import is_test_code
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node

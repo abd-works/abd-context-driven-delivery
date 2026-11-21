@@ -8,8 +8,8 @@ from typing import List, Optional, TypedDict
 from harness.graph.model_node import ModelChildren, ModelNode
 from harness.graph.graph import Graph
 
-from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraph
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, WrittenBlock
+from cdd_guidance.practices.source_code import CallGraph
+from cdd_guidance.practices.source_code import CodeBody, WrittenBlock
 
 
 _EXPECT_PRIVATE = re.compile(r"(?:expect\s*\([^)]*\._\w+|expect\([^)]*\)\.to\([^)]*\._\w+)")

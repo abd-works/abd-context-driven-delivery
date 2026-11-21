@@ -13,7 +13,7 @@ from harness.graph.schema_conformance import EXEMPT_FACT
 from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER
 from cdd_guidance.practices.clean_engineering.reading.code_read import DESCRIBED_FACT
 from cdd_guidance.practices.clean_engineering.reading.folder_facts import folders_of
-from cdd_guidance.practices.clean_engineering.model.script_imports import ClassReference
+from cdd_guidance.practices.source_code import ClassReference
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node

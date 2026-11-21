@@ -15,7 +15,7 @@ import textwrap
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeLanguage, WrittenBlock, WrittenKey
+from cdd_guidance.practices.source_code import CodeLanguage, WrittenBlock, WrittenKey
 from cdd_guidance.practices.stories.model.story_model import Background, Epic, Scenario, Step, Story, StoryType
 
 # The comment that carries a scenario's example rows in a story file, by whether the scenario is an outline.

@@ -467,7 +467,7 @@ The module card, `.context/module-context.md`, of one code folder.
 
 ## ScriptImports
 
-<<Value Object>> The imports of one source file's text (`script_imports.py`).
+<<Value Object>> The imports of one source file's text (`practices/source_code/script_imports.py`).
 
 + ScriptImports(source_text: str)
 ----
@@ -480,7 +480,7 @@ The module card, `.context/module-context.md`, of one code folder.
 
 ## ClassReference
 
-<<Value Object>> A class name a file names and the module it names it from (`script_imports.py`), saved as `[source, name]`.
+<<Value Object>> A class name a file names and the module it names it from (`practices/source_code/script_imports.py`), saved as `[source, name]`.
 
 + source: str
 + name: str
@@ -954,7 +954,7 @@ The `python` format.
 
 ------
 + language: CodeLanguage
-	// PYTHON (the code_body constant)
+	// PYTHON (the source_code constant)
 ----
 + parse(text: str): PythonCleanEngineeringModel
 	// read from the syntax tree; text that does not parse raises UnreadableSource
@@ -986,7 +986,7 @@ The `typescript` format.
 
 ------
 + language: CodeLanguage
-	// TYPESCRIPT (the code_body constant)
+	// TYPESCRIPT (the source_code constant)
 ----
 	// its parts, TypeScriptClass, TypeScriptProperty, TypeScriptOperation, spell TypeScript (the installer's adapter writer calls its method writer *AdapterMethod*, so the name is this model's alone).
 	// The stereotypes are decorators with no arguments: @AggregateRoot()
@@ -997,7 +997,7 @@ The `javascript` format.
 
 ------
 + language: CodeLanguage
-	// JAVASCRIPT (the code_body constant)
+	// JAVASCRIPT (the source_code constant)
 ----
 	// its parts, JavaScriptClass, JavaScriptProperty, JavaScriptOperation, spell JavaScript. An example extension class
 	// becomes a comment pointing at its base type. JavaScript has no interfaces, so an interface is a class that says it
@@ -1009,7 +1009,7 @@ The `java` format.
 
 ------
 + language: CodeLanguage
-	// JAVA (the code_body constant)
+	// JAVA (the source_code constant)
 ----
 	// its parts, JavaClass, JavaProperty, JavaOperation, spell Java
 

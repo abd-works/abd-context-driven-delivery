@@ -9,7 +9,7 @@ from typing import List, Optional
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import is_interface_name
 from cdd_guidance.practices.clean_engineering.model.class_stereotypes import DocComment, pascal_case_decorator
-from cdd_guidance.practices.clean_engineering.model.code_body import TYPESCRIPT
+from cdd_guidance.practices.source_code import TYPESCRIPT
 from cdd_guidance.practices.clean_engineering.model.code_class_model import (
     BraceCleanEngineeringModel,
     CodeClass,

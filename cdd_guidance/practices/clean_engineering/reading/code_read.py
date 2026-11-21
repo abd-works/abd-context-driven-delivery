@@ -22,8 +22,8 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
 from cdd_guidance.practices.clean_engineering.model.code_class_model import CodeCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.reading.folder_facts import folders_of
 from cdd_guidance.practices.clean_engineering.model.module_context_files import ModuleContext
-from cdd_guidance.practices.clean_engineering.model.script_imports import ScriptImports, imported_files
-from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
+from cdd_guidance.practices.source_code import ScriptImports, imported_files
+from cdd_guidance.practices.source_code import is_test_code
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from cdd_guidance.practices.clean_engineering.reading.graph_reading import GraphReading
     from cdd_guidance.practices.clean_engineering.model.operation import Operation
     from cdd_guidance.practices.clean_engineering.model.property import Property
-    from cdd_guidance.practices.clean_engineering.model.script_imports import ClassReference
+    from cdd_guidance.practices.source_code import ClassReference
 
 # The fact a folder's module or package keeps: whether any of its source is production code.
 PRODUCTION_FACT = "holds_production_code"

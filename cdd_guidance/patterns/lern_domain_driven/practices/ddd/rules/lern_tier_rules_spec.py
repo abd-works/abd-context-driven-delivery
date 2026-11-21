@@ -26,7 +26,7 @@ from cdd_guidance.patterns.lern_domain_driven.tier_facts import (
     AggregateFolder,
     TierFile,
 )
-from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
+from cdd_guidance.practices.source_code import SourceText
 from cdd_guidance.practices.clean_engineering.rules.no_prototype_swapping import NoPrototypeSwapping
 from harness.graph.graph import Graph, Node, Source
 from harness.graph.saved_graph import NodeIdentity

@@ -6,7 +6,7 @@ import ast
 import re
 from typing import List, Optional, Sequence, Tuple
 
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage, InsideLines, WrittenBlock
+from cdd_guidance.practices.source_code import CodeBody, CodeLanguage, InsideLines, WrittenBlock
 from cdd_guidance.practices.stories.model.story_file import CodeBlock, StoryFile
 
 _STEP_CALLS = frozenset({"given", "when", "then", "and_", "but_"})

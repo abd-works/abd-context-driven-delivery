@@ -12,9 +12,9 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
 from cdd_guidance.practices.clean_engineering.model.class_stereotypes import ClassHead
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
-from cdd_guidance.practices.clean_engineering.model.bracket_structure import BracketStructure
-from cdd_guidance.practices.clean_engineering.model.type_refs import split_top_level
+from cdd_guidance.practices.source_code import CodeBody, CodeLanguage
+from cdd_guidance.practices.source_code import BracketStructure
+from cdd_guidance.practices.source_code import split_top_level
 
 _CLASS_RE = re.compile(
     r"(?:export\s+)?(?:abstract\s+)?class\s+(\w+)",

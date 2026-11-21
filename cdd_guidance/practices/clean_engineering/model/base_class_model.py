@@ -8,13 +8,13 @@ from typing import Iterable, List, Optional
 from harness.graph.model_node import ModelChildren
 from harness.graph.graph import Graph
 
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
+from cdd_guidance.practices.source_code import CodeBody
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
 from cdd_guidance.practices.clean_engineering.model.module_context_files import ModuleContext, PublicSources
 from cdd_guidance.practices.clean_engineering.model.ooad_node import OoadNode
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
-from cdd_guidance.practices.clean_engineering.model.script_imports import ClassReference, ScriptImports
+from cdd_guidance.practices.source_code import ClassReference, ScriptImports
 from cdd_guidance.practices.clean_engineering.model.source_facts import ClassSourceFacts
 from cdd_guidance.practices.clean_engineering.model.type_refs import domain_type_names
 

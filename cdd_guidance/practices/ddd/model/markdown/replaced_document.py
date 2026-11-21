@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 from cdd_guidance.practices.ddd.model.nodes import BoundedContextMap, Integration
 
 if TYPE_CHECKING:
-    from cdd_guidance.practices.clean_engineering.model.operation import Operation
+    from cdd_guidance.practices.clean_engineering.model import Operation
     from cdd_guidance.practices.ddd.model.markdown.class_cards import ClassCard
     from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownAggregate, MarkdownBoundedContext
 

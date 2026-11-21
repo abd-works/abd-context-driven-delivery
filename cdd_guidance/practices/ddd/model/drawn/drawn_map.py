@@ -9,7 +9,7 @@ each cell as the cell type the format names for it, and each cell reads itself i
 
 from __future__ import annotations
 
-from cdd_guidance.practices.clean_engineering.model.base_class_model import Module
+from cdd_guidance.practices.clean_engineering.model import Module
 from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownBoundedContext, MarkdownIntegration
 from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContext, BoundedContextMap
 

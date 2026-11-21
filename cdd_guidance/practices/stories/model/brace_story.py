@@ -5,7 +5,7 @@ import posixpath
 import re
 from typing import List, Optional
 
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeLanguage
+from cdd_guidance.practices.source_code import CodeLanguage
 from cdd_guidance.practices.stories.model.brace_story_file import BraceStoryFile
 from cdd_guidance.practices.stories.model.code_story_model import CodeScenario, CodeStory, CodeStoryModel, StorySyntax, unescaped
 from cdd_guidance.practices.stories.model.story_model import Background, Story

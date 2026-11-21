@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Iterable, Optional
 
-from cdd_guidance.practices.clean_engineering.model.script_imports import STAR, ClassReference
+from cdd_guidance.practices.source_code import STAR, ClassReference
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node

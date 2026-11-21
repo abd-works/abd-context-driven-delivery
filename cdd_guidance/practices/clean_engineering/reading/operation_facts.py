@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 from cdd_guidance.practices.clean_engineering.reading.folder_facts import record_fact
 from cdd_guidance.practices.clean_engineering.reading.near_copies import MIN_LINES, NearCopies
-from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
+from cdd_guidance.practices.source_code import is_test_code
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node, PracticeNodes

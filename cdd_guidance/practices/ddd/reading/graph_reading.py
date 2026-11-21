@@ -26,9 +26,9 @@ from harness.graph.model_node import schema_sync_paused
 from harness.graph.skipped_folders import skips_folder
 
 from cdd_guidance.practices.clean_engineering.reading.code_read import DESCRIBED_FACT
-from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
+from cdd_guidance.practices.clean_engineering.model import Relationship
 from cdd_guidance.practices.clean_engineering.reading.card_lines import CardLines
-from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
+from cdd_guidance.practices.source_code import is_test_code
 from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownBoundedContextMap
 from cdd_guidance.practices.ddd.model.nodes import TARGET_SEGMENT, Aggregate, AggregateLink, BoundedContext, ContextMapping, DomainEvent, Integration
 from cdd_guidance.practices.ddd.model.stereotypes import BUILDING_BLOCK_KINDS, KIND_OF_STEREOTYPE, TacticalClass, kind_named_by, marks_another_system, root_kept_by
@@ -36,7 +36,7 @@ from cdd_guidance.practices.ddd.model.stereotypes import BUILDING_BLOCK_KINDS, K
 if TYPE_CHECKING:
     from harness.guidance.guidance import PracticeGuidance
 
-    from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass
+    from cdd_guidance.practices.clean_engineering.model import OoadClass
 
 _FOREIGN_KEY = re.compile(r"//\s*foreign\s+(\w+)")
 _DERIVE_PREFIX = re.compile(r"^derive\w*", re.IGNORECASE)

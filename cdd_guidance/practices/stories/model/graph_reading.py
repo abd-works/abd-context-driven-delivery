@@ -16,7 +16,7 @@ from harness.graph.practice_reading import PracticeReading
 from cdd_guidance.practices.ddd.ddd import Ddd
 from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 
-from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER
+from cdd_guidance.practices.clean_engineering.model import MODULE_FUNCTION_HOLDER
 from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel
 from cdd_guidance.practices.stories.model.modelled_areas import ExampleObservations, ModelledAreas
 from cdd_guidance.practices.stories.model.script_story_model import ScriptStoryModel

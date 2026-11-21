@@ -36,7 +36,7 @@ import re
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
-from cdd_guidance.practices.clean_engineering.model.call_graph import parse_arrow_line
+from cdd_guidance.practices.source_code import parse_arrow_line
 from cdd_guidance.practices.clean_engineering.model.class_stereotypes import marks_in, without_marks
 from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
@@ -48,7 +48,7 @@ from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
 from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUCTOR_NAMES
-from cdd_guidance.practices.clean_engineering.model.type_refs import split_top_level
+from cdd_guidance.practices.source_code import split_top_level
 
 if TYPE_CHECKING:
     from harness.graph.graph import Graph

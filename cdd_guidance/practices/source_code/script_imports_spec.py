@@ -3,14 +3,14 @@
 from pathlib import Path
 import sys
 
-_REPO_ROOT = Path(__file__).resolve().parents[4]
+_REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from expects import contain, equal, expect
 from mamba import description, context, it
 
-from cdd_guidance.practices.clean_engineering.model.script_imports import ClassReference, ScriptImports
+from cdd_guidance.practices.source_code.script_imports import ClassReference, ScriptImports
 
 _ROOT = Path("/repo")
 
