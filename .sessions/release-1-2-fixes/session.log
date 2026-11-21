@@ -1920,3 +1920,15 @@
 2026-11-21T18:08:50Z tool prompt-queue.show 0441e51a-b582-45e7-aefa-d95fcdc406e3 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\0441e51a-b582-45e7-aefa-d95fcdc406e3.jsonl 1-5172
 2026-11-21T18:09:27Z tool sketch.sketch
 2026-11-21T18:09:27Z tool sketch.sketch
+2026-11-21T18:11:26Z tool prompt-queue.show 0441e51a-b582-45e7-aefa-d95fcdc406e3 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\0441e51a-b582-45e7-aefa-d95fcdc406e3.jsonl 1-5194
+2026-11-21T18:15:24Z tool prompt-queue.show 0441e51a-b582-45e7-aefa-d95fcdc406e3 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\0441e51a-b582-45e7-aefa-d95fcdc406e3.jsonl 1-5203
+2026-11-21T18:17:14Z tool sample-mcp.generate
+2026-11-21T18:17:50Z tool sample-tool.instructions
+2026-11-21T18:20:01Z tool sample-tool.instructions
+2026-11-21T18:20:28Z tool sample-tool-sketch
+2026-11-21T18:20:32Z tool stories-scenarios
+2026-11-21T18:20:43Z tool generate.generate
+2026-11-21T18:20:43Z generate C:\dev\abd-cdd-release-1-2-fixes no-chat
+2026-11-21T18:24:26Z tool prompt-queue.show 0441e51a-b582-45e7-aefa-d95fcdc406e3 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\0441e51a-b582-45e7-aefa-d95fcdc406e3.jsonl 1-5205
+2026-11-21T18:24:27Z tool prompt-queue.add_interruption 0441e51a-b582-45e7-aefa-d95fcdc406e3 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\0441e51a-b582-45e7-aefa-d95fcdc406e3.jsonl 1-5205
+2026-11-21T18:24:36Z tool prompt-queue.set_steps 0441e51a-b582-45e7-aefa-d95fcdc406e3 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\0441e51a-b582-45e7-aefa-d95fcdc406e3.jsonl 1-5224

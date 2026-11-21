@@ -94,7 +94,6 @@ class StoryNode(ModelNode, ABC):
         "near_duplicate",
         "generic_handler",
         "shared_verb",
-        "one_time_task",
         "artifact_name",
         "camel_case_path",
         "evidence",
@@ -135,7 +134,6 @@ class StoryNode(ModelNode, ABC):
         self.near_duplicate = False
         self.generic_handler = False
         self.shared_verb = ""
-        self.one_time_task = False
         self.artifact_name = ""
         self.camel_case_path = False
 
@@ -146,7 +144,6 @@ class StoryNode(ModelNode, ABC):
         self.generic_handler = name_facts.names_generic_handler(self.name)
         self.near_duplicate = False
         self.shared_verb = ""
-        self.one_time_task = name_facts.names_one_time_task(self.name)
         self._load_child_band(0, "children")
 
     def _load_opening(self) -> None:
@@ -864,7 +861,6 @@ class Scenario(StoryNode):
         self.generic_handler = False
         self.near_duplicate = False
         self.shared_verb = ""
-        self.one_time_task = False
         self.child_count = len(self.steps)
         self.child_label = "steps"
         self.child_band = ""
@@ -1071,7 +1067,6 @@ class Epic(StoryNode):
         self._load_path_case()
         self.generic_handler = False
         self.near_duplicate = False
-        self.one_time_task = False
         self._load_child_band(len(self.epics) + len(self.stories), *self._child_band_for_layer())
         self.shared_verb = self._shared_opening()
 
@@ -1194,7 +1189,6 @@ class Story(StoryNode):
         self._load_opening()
         self._load_path_case()
         self.generic_handler = name_facts.names_generic_handler(self.name)
-        self.one_time_task = name_facts.names_one_time_task(self.name)
         self.shared_verb = ""
         self.scenario_count = len(self.scenarios)
         self.child_count = self.scenario_count

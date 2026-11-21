@@ -31,7 +31,7 @@ Every epic, increment, story, background, scenario, step, and example. It carrie
 	// how this node was written in code: a sub-epic file, a story, a background, or a scenario. None outside code
 + setup: CodeBody
 	// the code inside a story or scenario that is not a background, scenario, or step
-+ opening_token, opening_class, child_count, child_label, child_band, near_duplicate, generic_handler, shared_verb, one_time_task, artifact_name, camel_case_path
++ opening_token, opening_class, child_count, child_label, child_band, near_duplicate, generic_handler, shared_verb, artifact_name, camel_case_path
 	// the facts graph rules read; load_map_facts fills them
 ----
 + load_map_facts(): None

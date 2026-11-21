@@ -61,7 +61,7 @@ story:
     - verb-noun-format
     - story-name-captures-system-mechanic
     - right-size-story-nodes
-    - behaviours-not-one-time-tasks
+    - behaviours-not-build-tasks
     - story-scenarios-at-most-seven
     - kebab-case-paths
     - scenarios-name-a-story-on-the-map

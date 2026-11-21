@@ -504,7 +504,7 @@ with description("a graph"):
                             "verb-noun-format",
                             "story-name-captures-system-mechanic",
                             "right-size-story-nodes",
-                            "behaviours-not-one-time-tasks",
+                            "behaviours-not-build-tasks",
                             "story-scenarios-at-most-seven",
                         }
                         <= set(_rule_names(self.handle_request))

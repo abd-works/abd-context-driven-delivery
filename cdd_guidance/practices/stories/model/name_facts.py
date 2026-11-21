@@ -1,5 +1,5 @@
 """What a story node's name and file say about it, as the story map's rules read them: whether the name opens with a
-verb, a generic handler, an actor, a gerund or a nominalisation, whether it names a one-time task, and whether its file
+verb, a generic handler, an actor, a gerund or a nominalisation, and whether its file
 is named in camel case."""
 
 from __future__ import annotations
@@ -41,10 +41,6 @@ _GERUND = re.compile(r"^[a-z]+ing$")
 _NOMINALISATION = re.compile(r"^[a-z]+(?:tion|sion|ment|ance|ence|ity|ness)$")
 _KEBAB_FILE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*\.(md|ts|tsx|js|jsx)$")
 _CAMEL_FILE = re.compile(r"[A-Z][a-zA-Z0-9]*(?:Story|Test|Spec)")
-# "Once" names a one-time task only where it ends the name ("Rename Columns Once", "Import Tickets Once Only"). Followed
-# by more words it says how often a repeatable behaviour does something ("Once Per Board Build") or means "as soon as"
-# ("Once Its Change Reaches Production").
-_ONE_OFF = re.compile(r"\bonce(\s+only)?\s*$|\b(one[- ]time|initial setup|bootstrap only|migrate legacy)\b", re.IGNORECASE)
 # What a first word is, in the order a word is checked: the first set or pattern that holds it names its class.
 _OPENINGS = (
     ("generic-verb", _GENERIC_VERBS.__contains__),
@@ -84,12 +80,6 @@ def names_generic_handler(name: str) -> bool:
     """A generic verb such as Handle or Process followed by its object: the name hides what happens."""
     words = (name or "").split()
     return len(words) > 1 and words[0].lower() in _GENERIC_VERBS and words[1][:1].isalpha()
-
-
-def names_one_time_task(name: str) -> bool:
-    """The name says the work happens once and is then done, such as an initial setup or a migration. A name that says
-    how often a behaviour does something each time it runs ("Once Per Board Build") does not."""
-    return bool(_ONE_OFF.search(name or ""))
 
 
 def file_name_facts(source: Optional["Source"]) -> tuple[str, bool]:

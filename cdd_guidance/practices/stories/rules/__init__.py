@@ -25,7 +25,6 @@ from cdd_guidance.practices.stories.rules.scenarios import (
     WhenNamesIntentNotInterfaceGesture,
 )
 from cdd_guidance.practices.stories.rules.story_map import (
-    BehavioursNotOneTimeTasks,
     BranchOnMechanicalUniqueness,
     ChildCountFitsLayer,
     KebabCasePaths,
@@ -59,7 +58,6 @@ RULES: tuple = (
     BehavioralAndSystemObservableOutcomes(),
     FlaggedWritesIntendedGwt(),
     BranchOnMechanicalUniqueness(),
-    BehavioursNotOneTimeTasks(),
     GivenNamesComplexStateRootFirst(),
     ScenarioNamesContinuation(),
     ScenariosNameAStoryOnTheMap(),

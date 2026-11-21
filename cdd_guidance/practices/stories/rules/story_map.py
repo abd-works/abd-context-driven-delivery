@@ -122,12 +122,3 @@ class BranchOnMechanicalUniqueness(PracticeGraphRule):
         ]
 
 
-class BehavioursNotOneTimeTasks(PracticeGraphRule):
-    slug = "behaviours-not-one-time-tasks"
-    node_types = ("Story",)
-
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        if not node.get_fact("one_time_task"):
-            return []
-        return [f"Story {node.name!r} reads like a one-time task, not a repeatable behaviour."]
-
