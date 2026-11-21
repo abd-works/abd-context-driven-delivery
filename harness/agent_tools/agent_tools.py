@@ -1088,7 +1088,7 @@ class AgentTool(AgentToolDestination):
         session = self.toolset.session_for(call)
         if session is None:
             return
-        session.log.by(call.request.chat).tool(self.mcp_name, call.named_paths)
+        session.log_tool(call, self.mcp_name)
 
     @property
     def kind(self) -> str:

@@ -885,7 +885,7 @@ class McpHost:
     def _log_failure(self, call: ToolCall, failure: BaseException) -> None:
         session = call.session
         if session is not None:
-            session.log.by(call.request.chat).failure(failure, tool=call.request.tool)
+            session.log_failure(call, failure)
 
     def _content_blocks(self, answer: SentValue) -> list[types.TextContent]:
         types = self._mcp_types()

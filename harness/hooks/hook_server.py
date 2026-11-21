@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, Callable, Protocol
 
 from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination, ToolsetConfiguration, ToolsetReference
-from harness.agent_tools.tool_call import ToolCall
+from harness.agent_tools.tool_call import CallSession, ToolCall
 from harness.annotations.annotation import hosted_only
 from harness.hooks.hooks import HookHandlersFile, Hooks, InstalledHookHandlers, events_served
 from harness.installation.destination import SkippedTools
@@ -123,12 +123,12 @@ class HookPayload(Mapping[str, Any]):
         return self.conversation_id.strip()
 
     @property
-    def session(self) -> Any:
+    def session(self) -> HookSession | None:
         """The session the event works in: the one saved as open in the event's project, else in the checkout that
         received it, main when none is; none when the event names neither or no sessions are registered. It is read
         once for the event, the way a tool call reads its session, so every hook of one event works in the same session,
         and the next event follows a switch or a close made through MCP."""
-        return self.call.session
+        return self.call.session  # type: ignore[return-value] - the registered sessions answer HookSession
 
     # The IDE event and the tools that report a file the agent just edited: Cursor's file-edit event and its edit
     # tools, and Claude Code's edit tools.
@@ -180,6 +180,16 @@ class ChatRuleInjections(Protocol):
     def replay(self, payload: HookPayload, result: HookResult) -> HookResult: ...
 
     def is_rules_dump(self, body: str) -> bool: ...
+
+
+class HookSession(CallSession, Protocol):
+    """The session a hook event works in, as the hook server uses it: the rules it keeps for each of its chats, and the
+    dispatch log each handler's result is written to."""
+
+    chat_injections: ChatRuleInjections
+
+    def log_hook_dispatch(self, text: str) -> None:
+        """Stamp text in the session's hook dispatch log."""
 
 
 @dataclass(frozen=True)
@@ -561,5 +571,5 @@ class HookServer:
         """Append message to the dispatch log of the session payload's event works in."""
         session = payload.session
         if session is not None:
-            session.folder.hook_log("dispatch.debug").stamped(message)
+            session.log_hook_dispatch(message)
 

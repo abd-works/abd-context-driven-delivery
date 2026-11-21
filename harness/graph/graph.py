@@ -1533,7 +1533,7 @@ class Graph:
         """The graph call works on: its session's, which the server holds between calls; this graph for a call that
         works in no session."""
         session = call.session
-        graph = getattr(session, "graph", None) if session is not None else None
+        graph = session.graph if session is not None else None
         return graph if isinstance(graph, Graph) else self
 
     @property

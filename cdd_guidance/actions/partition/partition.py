@@ -6,7 +6,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from harness.guidance_actions import ActionSession, GuidanceArg, GuidanceAction, WorkedGuidance, source_label
+from harness.guidance.worked_session import WorkedSession
+from harness.guidance_actions import GuidanceArg, GuidanceAction, WorkedGuidance, source_label
 from harness.guidance.stages import on_stage
 from cdd_guidance.actions.partition.partition_index import PartitionIndex
 from cdd_guidance.actions.partition.segment import (
@@ -30,13 +31,13 @@ class Partition(GuidanceAction):
     and Context Index's embed indexes the segments it wrote, so they can be searched.
     """
 
-    def __init__(self, session: ActionSession | None = None, call: ToolCall | None = None, context_setup: ContextSetup | None = None) -> None:
+    def __init__(self, session: WorkedSession | None = None, call: ToolCall | None = None, context_setup: ContextSetup | None = None) -> None:
         """A ContextSetup left out is made here; the one held works in this partition's session, and its ContextIndex
         embeds the segments."""
         super().__init__(session, call)
         self._context_setup = context_setup if context_setup is not None else ContextSetup()
 
-    def _made_for(self, session: ActionSession | None, call: ToolCall | None = None) -> Partition:
+    def _made_for(self, session: WorkedSession | None, call: ToolCall | None = None) -> Partition:
         """A partition made for session and call, holding the same ContextSetup, so its embedding provider carries over."""
         return type(self)(session=session, call=call, context_setup=self._context_setup)
 

@@ -8,7 +8,8 @@ from pathlib import Path
 
 from cdd_guidance.actions.generate.generate import Generate
 from cdd_guidance.actions.grill_context.grill_context import GrillContext
-from harness.guidance_actions import ActionSession, GuidanceArg, GuidanceAction, WorkedGuidance
+from harness.guidance.worked_session import WorkedSession
+from harness.guidance_actions import GuidanceArg, GuidanceAction, WorkedGuidance
 from harness.guidance.stages import on_stage
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
 from harness.agent_tools.agent_tools import agent_tool
@@ -22,11 +23,11 @@ _DEFAULT_TEMPLATE = Path(__file__).parent / "templates" / "sketch-template.md"
 class Sketch(GuidanceAction):
     """Sketch a solution interactively before generating the formal artifact."""
 
-    def __init__(self, agent_dir: str = "", session: ActionSession | None = None, call: ToolCall | None = None) -> None:
+    def __init__(self, agent_dir: str = "", session: WorkedSession | None = None, call: ToolCall | None = None) -> None:
         super().__init__(session, call)
         self._agent_dir = agent_dir
 
-    def _made_for(self, session: ActionSession | None, call: ToolCall | None = None) -> Sketch:
+    def _made_for(self, session: WorkedSession | None, call: ToolCall | None = None) -> Sketch:
         """A sketch made for session and call, which finds its template in this sketch's agent_dir."""
         return type(self)(agent_dir=self._agent_dir, session=session, call=call)
 

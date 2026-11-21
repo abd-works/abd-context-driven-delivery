@@ -603,6 +603,18 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionAl
         self.record.update(lambda fields: setattr(fields, "overlays", list(overlays)), f"overlays {', '.join(overlays)}")
         self.practice_outputs.overlay(overlays)
 
+    def log_tool(self, call: ToolCall, tool: str) -> None:
+        """Log that call ran tool, with the paths it named, pointing at the call's chat (*CallSession*)."""
+        self.log.by(call.request.chat).tool(tool, call.named_paths)
+
+    def log_failure(self, call: ToolCall, failure: BaseException) -> None:
+        """Log that call failed with failure, its trace in session.err (*CallSession*)."""
+        self.log.by(call.request.chat).failure(failure, tool=call.request.tool)
+
+    def log_hook_dispatch(self, text: str) -> None:
+        """Stamp text in the hook dispatch log of the session's work folder (*HookSession*)."""
+        self.folder.hook_log("dispatch.debug").stamped(text)
+
     @property
     def answer(self) -> int | None:
         """The answer this session's sessions are giving, which what it reads from its files is held for; none when

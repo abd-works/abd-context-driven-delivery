@@ -1,6 +1,5 @@
 """Harness guidance actions — ``from harness.guidance_actions import GuidanceAction``."""
 from .guidance_actions import (
-    ActionSession,
     ActionWorksInNoSession,
     GuidanceAction,
     GuidanceAgentOperation,
@@ -16,7 +15,6 @@ from .guidance_actions import (
 )
 
 __all__ = [
-    "ActionSession",
     "ActionWorksInNoSession",
     "GuidanceAction",
     "GuidanceAgentOperation",
