@@ -26,7 +26,7 @@ from harness.installation.data_class import data_of
 from harness.guidance_actions import GuidanceAction
 from harness.hooks.hook_server import HookPayload
 from harness.agent_tools.tool_call import SESSION_OPENING, ToolCall, ToolRequest
-from harness.mcp.mcp_server import McpServer
+from harness.mcp.mcp_server import ProjectToolsets
 from harness.whiteboard import BoardLinks
 from space.repo.mock_repo import MockGit
 from tools.prompt_queue.prompt_queue import PromptQueue
@@ -870,13 +870,13 @@ with description("an action"):
             with it("should log generate and validate with practice context"):
                 import os
 
-                from harness.mcp.mcp_server import McpServer
+                from harness.mcp.mcp_server import ProjectToolsets
                 from cdd_guidance.actions.validate.validate import Validate
 
                 (self.repo / ".git").mkdir(exist_ok=True)
                 os.environ["CDD_REPO"] = str(self.repo.resolve())
                 os.environ["CDD_PROJECT"] = str(self.work.resolve())
-                McpServer(repo=self.repo, project=self.work)
+                ProjectToolsets(repo=self.repo, project=self.work)
                 action = GuidanceAction(self.session)
                 action._work_on(["bdd"])
                 action.run(lambda _item: None, action="generate")

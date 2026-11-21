@@ -218,13 +218,13 @@ with description("a cdd server answering a chat's tool calls") as self:
 
     with context("with a tool annotated as a long call"):
         with it("should wait the long call's time for it"):
-            expect(self.host.checkout_server.call_seconds("call-outcomes.reconcile")).to(equal(LONG_CALL_SECONDS))
+            expect(self.host.checkout_toolsets.call_seconds("call-outcomes.reconcile")).to(equal(LONG_CALL_SECONDS))
 
         with it("should wait the usual time for any other tool"):
-            expect(self.host.checkout_server.call_seconds("call-outcomes.balance")).to(equal(CALL_SECONDS))
+            expect(self.host.checkout_toolsets.call_seconds("call-outcomes.balance")).to(equal(CALL_SECONDS))
 
     with context("with a tool list asked for twice"):
         with it("should record nothing as skipped"):
             _list(self.host)
             _list(self.host)
-            expect(self.host.checkout_server.skipped.as_data).to(equal([]))
+            expect(self.host.checkout_toolsets.skipped.as_data).to(equal([]))

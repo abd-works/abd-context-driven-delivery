@@ -66,8 +66,10 @@ describe('cdd connection', () => {
       vi.stubGlobal('fetch', async (_url: string, init: { body: string }) => {
         const { id } = JSON.parse(init.body) as { id: number }
         asks.push(id)
-        const text = asks.length === 1 ? 'session.file is still running after 10 seconds; it was not started again.' : '{"text":"the file"}'
-        return Response.json({ jsonrpc: '2.0', id, result: { content: [{ text }] } })
+        const stillRunning = asks.length === 1
+        const text = stillRunning ? 'session.file is still running after 10 seconds; it was not started again.' : '{"text":"the file"}'
+        const structuredContent = stillRunning ? { still_running: { tool: 'session.file', seconds: 10 } } : undefined
+        return Response.json({ jsonrpc: '2.0', id, result: { content: [{ text }], structuredContent } })
       })
       return asks
     }

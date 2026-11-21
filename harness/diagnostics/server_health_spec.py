@@ -15,7 +15,7 @@ from harness.installation.repository_toolsets import RepositoryToolsets
 
 RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 
-from harness.mcp.mcp_server import McpServer  # noqa: E402
+from harness.mcp.mcp_server import ProjectToolsets  # noqa: E402
 from harness.diagnostics.server_health import ServerHealth  # noqa: E402
 from harness.diagnostics.test_runs import TestCadence, TestRunRecord  # noqa: E402
 
@@ -31,7 +31,7 @@ with description("server health") as self:
 
     with context("called through the MCP server for the project the call names"):
         with before.each:
-            self.server = McpServer(project=self.root)
+            self.server = ProjectToolsets(project=self.root)
             self.server.start((ToolsetReference.parsed("harness.diagnostics.server_health:ServerHealth"),))
 
         with it("should leave the session log alone"):

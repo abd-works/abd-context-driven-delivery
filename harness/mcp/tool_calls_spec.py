@@ -83,6 +83,9 @@ with description("tool calls on worker threads") as self:
         with it("should tell the caller the call is still running"):
             expect(self.first).to(be_a(_StillRunning))
 
+        with it("should say so as data a client reads, naming the tool"):
+            expect(self.first.structured["still_running"]["tool"]).to(equal(self.first.tool))
+
         with it("should tell the caller how to get the result"):
             expect(self.first.message).to(contain("Call validate.validate again with the same arguments"))
 

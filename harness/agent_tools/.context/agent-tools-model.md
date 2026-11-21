@@ -440,6 +440,6 @@ lineno: int
 | Concern | Owner | Reads from this module |
 | ------- | ----- | ---------------------- |
 | Skill, command, and rules markdown | `SkillInstallation`, `CommandInstallation`, `RulesInstallation` (each a `FileInstallation`) | live toolset: `description`, `tools_published_to(destination)`; `AgentTool.is_published_to`, `AgentTool.invoke_line`; `AgentInstructions.expand` |
-| MCP enrollment | `McpInstallation.write` (records each operation), `McpServer` (enrolls it at start) | each member's `mcp_name`, `kind`, `description`, `parameters` |
-| Runtime call | `McpServer` | `AgentTool.invoke(arguments, project=...)`, the project of the runtime the call's project names |
+| MCP enrollment | `McpInstallation.write` (records each operation), `ProjectToolsets` (enrolls it at start) | each member's `mcp_name`, `kind`, `description`, `parameters` |
+| Runtime call | `ProjectToolsets` | `AgentTool.invoke(arguments, project=...)`, the project of the runtime the call's project names |
 | Hooks | `HookInstallation`, `HookDaemon`, `HookServer` | `tools_published_to(Hook)`, `AgentTool.is_published_to(Hook)`, `Hook.name_given(tool.callable)` for the event, `@hosted_only` |

@@ -23,7 +23,7 @@ from cdd_guidance.practices.stories.stories import Stories  # noqa: E402
 from harness.guidance.practice_formats import RenderRequest  # noqa: E402
 from harness.installation.data_class import data_of  # noqa: E402
 from harness.markdown.format import Format  # noqa: E402
-from harness.mcp.mcp_server import McpServer  # noqa: E402
+from harness.mcp.mcp_server import ProjectToolsets  # noqa: E402
 from space.session.throwaway_project import ThrowawayProject  # noqa: E402
 
 TOOLSETS = (
@@ -109,7 +109,7 @@ def _node(path: str) -> str:
 
 class StoryMapProject:
     """A throwaway project holding the checkout-flow session and its story map, whose story map tools run on an
-    McpServer, as the Story UI's server reaches them."""
+    ProjectToolsets, as the Story UI's server reaches them."""
 
     def __init__(self, map_text: str = "") -> None:
         self.root = ThrowawayProject().root
@@ -119,7 +119,7 @@ class StoryMapProject:
         (session / "session.json").write_text(json.dumps({"name": "checkout-flow"}), encoding="utf-8")
         (self.root / ".context").mkdir()
         self.map.write_text(map_text or _laid_out(HAND_WRITTEN_MAP), encoding="utf-8")
-        self.server = McpServer(project=self.root)
+        self.server = ProjectToolsets(project=self.root)
         self.server.start([ToolsetReference.parsed(text) for text in TOOLSETS])
         # The Story UI works in the session open in the project, as the board's server reaches the cdd server.
         self.call("sessions.switch", name="checkout-flow")

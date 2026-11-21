@@ -58,9 +58,9 @@ with story("Install Into The Lane Of The Checkout"):
             self.worktree = seed_ticket_worktree(root, seed_main_checkout(root))
             self.adapters = seed_written_language_adapters(self.worktree)
         with when("the Person pins it, and its lane takes the adapters its install wrote"):
-            # install.py -> McpInstallation.served.home.take_language_adapters(installer adapters, IDE folder)
+            # install.py -> McpInstallation.served.take_language_adapters(installer adapters, IDE folder)
             self.served = self.lanes.for_project(self.worktree).served_checkout(self.worktree)
-            self.served.home.take_language_adapters(self.adapters, IDE_FOLDER)
+            self.served.take_language_adapters(self.adapters, IDE_FOLDER)
         with then("the dev lane's runtime holds them, where the apps it serves import them"):
             copied = self.lanes.dev.home.pinned_checkout / IDE_FOLDER / "language-adapters" / ADAPTER_FILE
             expect(copied.read_text(encoding="utf-8")).to(equal(ADAPTER_TEXT))

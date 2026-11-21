@@ -14,7 +14,7 @@ from mamba import after, before, description, context, it
 
 from harness.agent_tools.agent_tools import ToolsetReference
 from harness.agent_tools.tool_call import ToolCall, ToolRequest
-from harness.mcp.mcp_server import McpServer
+from harness.mcp.mcp_server import ProjectToolsets
 from space.session.session import Session
 from harness.process.capped_log_file import LOG_SIZE_LIMIT_BYTES
 from space.session.session_log import LogTimestamp
@@ -128,7 +128,7 @@ with description("a session loop"):
             self.transcript = self.repo / "chat.jsonl"
             self.transcript.write_text("{}\n", encoding="utf-8")
             chat = {"conversation_id": "chat-m", "transcript_path": str(self.transcript), "transcript_lines": "3"}
-            self.server = McpServer(project=self.repo)
+            self.server = ProjectToolsets(project=self.repo)
             self.server.start((ToolsetReference.of(Session), ToolsetReference.of(Sessions)))
             call = ToolCall.sent({"session": ".sessions/alpha/session.json", **chat}, self.repo, ToolRequest(tool="session.mark_loop"))
             self.number = self.server.answer("session.mark_loop", call)
@@ -186,7 +186,7 @@ with description("a session loop"):
             transcript = repo / "chat.jsonl"
             transcript.write_text("{}\n", encoding="utf-8")
             chat = {"conversation_id": "chat-n", "transcript_path": str(transcript), "transcript_lines": "4"}
-            server = McpServer(project=repo)
+            server = ProjectToolsets(project=repo)
             server.start((ToolsetReference.of(Session), ToolsetReference.of(Sessions)))
             server.answer("session.append_log", ToolCall.sent({"session": ".sessions/alpha/session.json", "note": "fixed", **chat}, repo, ToolRequest(tool="session.append_log")))
             log = (repo / ".sessions" / "alpha" / "session.log").read_text(encoding="utf-8")

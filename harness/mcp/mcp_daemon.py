@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import socket
 import threading
 import time
@@ -112,6 +113,17 @@ class ServedCheckout:
     def _restarted_status(self) -> str:
         """The server's status after it restarts onto the code the home now names."""
         return self.daemon.status(self.daemon.restart())
+
+    def take_language_adapters(self, written: Path, ide_folder: str) -> Path:
+        """Copy the language adapters an install wrote, the folder written, into the pinned runtime under its IDE folder
+        ide_folder, in place of any an earlier pin left. The apps the home's server launches run from the runtime and
+        import the CDD domain through those adapters, which git never copies there. A server started from the runtime
+        keeps its folders open on Windows, so they outlive the removal empty and the copy writes into them. Answers
+        where they went."""
+        target = self._home.pinned_checkout / ide_folder / "language-adapters"
+        shutil.rmtree(target, ignore_errors=True)
+        shutil.copytree(written, target, dirs_exist_ok=True)
+        return target
 
     def keep_pinned_current(self) -> str | None:
         """After a plain install, serve the checkout's current commit when the server is pinned to an older one, so

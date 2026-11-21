@@ -28,7 +28,7 @@ from harness.agent_tools.tool_call import ToolCall
 from harness.diagnostics.app import APPS, App
 from harness.diagnostics.server_health import ServerHealth
 from harness.installation.data_class import data_of
-from harness.mcp.mcp_server import McpServer
+from harness.mcp.mcp_server import ProjectToolsets
 from space.kanban.editor_apps_examples import AppExample, ThrowawayApp, ThrowawayPorts
 from space.kanban.session_board_examples import SessionsProject
 from space.session.sessions import Sessions
@@ -128,7 +128,7 @@ class ServerTier:
 
     def open(self) -> SimpleNamespace:
         project = Path(tempfile.mkdtemp(prefix="editor-apps-"))
-        server = McpServer(project=project)
+        server = ProjectToolsets(project=project)
         server.start([ToolsetReference.parsed(text) for text in TOOLSETS])
         chat = ChatLaunch()
         report = lambda: _answer(server, "server-health.report")  # noqa: E731
@@ -145,7 +145,7 @@ class ServerTier:
         _close(world)
 
 
-def _answer(server: McpServer, tool: str, **arguments: Any) -> Any:
+def _answer(server: ProjectToolsets, tool: str, **arguments: Any) -> Any:
     return json.loads(json.dumps(server.invoke(tool, arguments), default=data_of))
 
 

@@ -77,9 +77,11 @@ def seed_folder_outside_any_checkout(root: Path) -> Path:
     return folder
 
 
-def seed_host(project: Path) -> McpHost:
-    """A cdd server's MCP side serving the ledger toolset, its chats working on project."""
-    return McpHost.from_refs((CALL_OUTCOMES,), repo=str(CHECKOUT_REPO), project=str(project))
+def seed_host(project: Path, lanes: ServerLanes | None = None) -> McpHost:
+    """A cdd server's MCP side serving the ledger toolset, its chats working on project; with lanes, answering as the
+    server running from the stable lane's home."""
+    home = lanes.stable.home if lanes is not None else None
+    return McpHost.from_refs((CALL_OUTCOMES,), repo=str(CHECKOUT_REPO), project=str(project), lanes=lanes, home=home)
 
 
 def seed_feature_host(project: Path) -> McpHost:
@@ -110,6 +112,4 @@ def seed_stable_lane_routing(root: Path, dev_lane: DevLaneInProcess) -> tuple[Se
     """The stable lane's host, answering as the server running from the stable lane's home, with the dev lane reached
     through dev_lane."""
     lanes = ServerLanes(CddHome(root / ".cdd"), McpAddress(STABLE_PORT), dev_lane)
-    stable_host = seed_host(seed_main_checkout(root))
-    stable_host.route_between_lanes(lanes, lanes.stable.home)
-    return lanes, stable_host
+    return lanes, seed_host(seed_main_checkout(root), lanes)

@@ -69,6 +69,12 @@ class _StillRunning:
             "instead of starting another."
         )
 
+    @property
+    def structured(self) -> dict[str, dict[str, object]]:
+        """The same answer as data, beside the message: a client tells a call still running by this field, never by
+        reading the message's words, which an agent reads and which may be reworded."""
+        return {"still_running": {"tool": self.tool, "seconds": self.seconds}}
+
 
 class _RunningCall:
     """One run of a tool on a worker thread, and its outcome once it ends: the value the run returned, or the failure it

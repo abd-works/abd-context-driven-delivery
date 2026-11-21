@@ -90,7 +90,7 @@ class AgentToolsProbe:
     def published(self) -> list[str]:
         """The installed workspace MCP names the host publishes from the probed toolsets."""
         installed = set(self.installer.diagnostics.installed_items("mcp")) - _NEVER_PROBE
-        server = self.host.checkout_server
+        server = self.host.checkout_toolsets
         refs = set(self.toolset_refs)
         served = {name: tool for name, tool in (*server.tools.items(), *server.prompts.items())}
         return sorted(name for name, tool in served.items() if name in installed and str(tool.toolset.reference) in refs)
@@ -150,7 +150,7 @@ class AgentToolsProbe:
     def _skipped_at_start(self) -> list[ProbeOutcome]:
         """A probed toolset, or an installed tool, the host skipped when it started."""
         probed = {*self.toolset_refs, *self.installer.diagnostics.installed_items("mcp")}
-        skipped = self.host.checkout_server.skipped.as_data
+        skipped = self.host.checkout_toolsets.skipped.as_data
         return [ProbeOutcome.from_refusal(item["tool"], f"skipped at start-up: {item['reason']}") for item in skipped if item["tool"] in probed]
 
     def _invoke_one(self, mcp_name: str, arguments: ProbeArguments) -> ProbeOutcome:
@@ -168,7 +168,7 @@ class AgentToolsProbe:
         return self._called_with(mcp_name, OperationArguments(*fixture), "heavy_invoke")
 
     def _invoked_with(self, mcp_name: str, arguments: ProbeArguments, phase: str) -> ProbeOutcome:
-        tool = self.host.checkout_server.enrolled(mcp_name)
+        tool = self.host.checkout_toolsets.enrolled(mcp_name)
         if tool is None:
             return ProbeOutcome.from_refusal(mcp_name, "not enrolled on host")
         return self._called_with(mcp_name, arguments.for_operation(mcp_name, tool.callable), phase)

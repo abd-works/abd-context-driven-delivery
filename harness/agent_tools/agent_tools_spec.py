@@ -33,7 +33,7 @@ from harness.agent_tools.agent_tools import (
 )
 from harness.hooks.hooks import Hook, hook
 from harness.mcp.mcp_annotations import Mcp, mcp
-from harness.mcp.mcp_server import McpServer
+from harness.mcp.mcp_server import ProjectToolsets
 from harness.agent_tools.agent_tools import AgentInstructions, ToolSetCollectionAnnotation
 from harness.agent_tools.recipe import RecipeLineFailed, RecipePlaceholders
 from harness.agent_tools.tool_call import ToolCall
@@ -1576,7 +1576,7 @@ with description("a published tool asked whether a client's spelling names it"):
 
     with context("that a server has enrolled"):
         with before.each:
-            self.server = McpServer(repo=Path(__file__).resolve().parents[2])
+            self.server = ProjectToolsets(repo=Path(__file__).resolve().parents[2])
             self.server.enroll(self.tool)
 
         with it("should be the tool a call spelled with the hyphen as an underscore reaches"):

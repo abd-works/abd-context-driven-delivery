@@ -376,7 +376,7 @@ def _write_runtime_adapters(installer: Installer, server: McpInstallation) -> No
     home = server.served.home
     if home.mode != home.PINNED or not home.is_pinned_to(_REPO):
         return
-    target = home.take_language_adapters(Path(installer.path) / "language-adapters", installer.layout.folder_name)
+    target = server.served.take_language_adapters(Path(installer.path) / "language-adapters", installer.layout.folder_name)
     print(f"runtime language adapters: copied to {target}")
 
 

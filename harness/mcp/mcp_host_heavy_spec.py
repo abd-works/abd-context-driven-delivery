@@ -391,7 +391,7 @@ with description("an MCP host") as self:
             expect(tools).to(equal(["repo.make_repository", "repo.merge_to_main", "repo.push_commit", "repo.push_to_main", "repo.push_work"]))
 
         with it("should resolve Cursor underscore aliases to enrolled names"):
-            expect(self.host.checkout_server.resolve_call_name("repo_push_commit")).to(
+            expect(self.host.checkout_toolsets.resolve_call_name("repo_push_commit")).to(
                 equal("repo.push_commit")
             )
 
@@ -549,7 +549,7 @@ with description("an MCP host tool ping") as self:
         expect(self.host.dispatch("hosting-demo.read_count", {})).to(equal(0))
 
     with it("should leave ping out of the tool schema"):
-        schema = self.host.checkout_server.tools["hosting-demo.increment"].input_schema
+        schema = self.host.checkout_toolsets.tools["hosting-demo.increment"].input_schema
         expect("ping" in schema["properties"]).to(equal(False))
 
     with it("should still run a tool when ping is absent"):

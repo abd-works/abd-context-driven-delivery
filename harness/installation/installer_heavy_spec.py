@@ -15,6 +15,21 @@ from harness.agent_tools.agent_tools import ToolsetReference
 from harness.installation.installer import Installer, ToolsetInstallFailed
 
 
+class _Published:
+    """A plugin the cdd home's marketplace publishes, at the version it publishes it at."""
+
+    def __init__(self, name: str, version: str) -> None:
+        self.name = name
+        self.version = version
+        self.installed_name = f"{name}@cdd-home"
+        self.marketplace = type("Marketplace", (), {"folder": Path("claude-plugins")})()
+
+
+_BOARD = _Published("cdd-board", "0.6.3-abc")
+_CDD = _Published("cdd", "1.0.0-abc")
+_QUEUE = _Published("prompt-queue", "0.1.0-abc")
+
+
 class _ScriptedClaude(ClaudePlugins):
     """The plugin installer with a claude command that records each call and lists what the spec says."""
 
@@ -31,12 +46,8 @@ class _ScriptedClaude(ClaudePlugins):
     def installed(self) -> dict[str, str]:
         return self.plugins_installed
 
-    @property
-    def is_board_watched(self) -> bool:
+    def is_watched(self, plugin: _Published) -> bool:
         return self.board_watched
-
-    def published_version(self, plugin: str) -> str:
-        return {"cdd-board": "0.6.3-abc", "cdd": "1.0.0-abc", "prompt-queue": "0.1.0-abc"}.get(plugin, "")
 
     @property
     def claude_cli(self) -> str | None:
@@ -63,7 +74,7 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
 )
 from harness.hooks.hooks import Hook, hook
 from harness.mcp.cdd_home import CddHome
-from harness.mcp.mcp_server import McpInstallation, McpServer
+from harness.mcp.mcp_server import McpInstallation, ProjectToolsets
 from harness.mcp.mcp_daemon import McpDaemon
 from harness.mcp.spec_support import ThrowawayMachine
 from harness.installation.ide_layout import IdeLayout
@@ -75,9 +86,9 @@ from harness.installation.installer import SERVER_CHANNELS, InstallChannels, Ins
 
 
 
-def _server_publishing(installation: McpInstallation) -> McpServer:
+def _server_publishing(installation: McpInstallation) -> ProjectToolsets:
     """A server publishing the operations an install recorded, as the cdd server publishes them."""
-    server = McpServer()
+    server = ProjectToolsets()
     for tool in installation.mcp_operations:
         server.enroll(tool)
     return server
@@ -1412,7 +1423,7 @@ with description("toolsets installed for Claude Code") as self:
         # A board mod installed from a checkout's own marketplace runs that branch's code, not the server's.
         with it("should remove the board mod installed from a checkout's own marketplace"):
             self.plugins.plugins_installed = {"cdd-board@abd-works": "0.6.3"}
-            self.plugins.install_board()
+            self.plugins.install(_BOARD)
             expect(self.plugins.calls[:2]).to(equal([
                 ("plugin", "uninstall", "cdd-board@abd-works", "--scope", "user"),
                 ("plugin", "marketplace", "remove", "abd-works"),
@@ -1422,7 +1433,7 @@ with description("toolsets installed for Claude Code") as self:
         with context("with the board mod the cdd home publishes already installed"):
             with before.each:
                 self.plugins.plugins_installed = {"cdd-board@cdd-home": "0.6.3-abc"}
-                self.answer = self.plugins.install_board()
+                self.answer = str(self.plugins.install(_BOARD))
 
             with it("should say it is installed"):
                 expect(self.answer).to(equal("installed"))
@@ -1434,7 +1445,7 @@ with description("toolsets installed for Claude Code") as self:
         with context("with the board folder watched by Claude Code"):
             with before.each:
                 self.plugins.board_watched = True
-                self.answer = self.plugins.install_board()
+                self.answer = str(self.plugins.install(_BOARD))
 
             with it("should say it is watched"):
                 expect(self.answer).to(equal("watched"))
@@ -1445,40 +1456,40 @@ with description("toolsets installed for Claude Code") as self:
         with context("with an older board mod installed"):
             with it("should update it"):
                 self.plugins.plugins_installed = {"cdd-board@cdd-home": "0.6.3-old"}
-                self.plugins.install_board()
+                self.plugins.install(_BOARD)
                 expect(("plugin", "update", "cdd-board@cdd-home", "--scope", "user") in self.plugins.calls).to(equal(True))
 
             # Adding a marketplace Claude Code already has reads nothing new, so the update would find the old board.
             with it("should read the cdd home's marketplace again before it updates"):
                 self.plugins.plugins_installed = {"cdd-board@cdd-home": "0.6.3-old"}
-                self.plugins.install_board()
+                self.plugins.install(_BOARD)
                 refresh = self.plugins.calls.index(("plugin", "marketplace", "update", "cdd-home"))
                 expect(refresh).to(be_below(self.plugins.calls.index(("plugin", "update", "cdd-board@cdd-home", "--scope", "user"))))
 
         with it("should install the board mod the cdd home publishes, at user scope"):
-            expect(self.plugins.install_board()).to(equal("installed"))
+            expect(str(self.plugins.install(_BOARD))).to(equal("installed"))
             expect(("plugin", "install", "cdd-board@cdd-home", "--scope", "user") in self.plugins.calls).to(equal(True))
 
         with it("should say the plugin is missing when the list does not show it"):
             self.plugins.listed = ""
-            expect(self.plugins.install_board()).to(equal("missing"))
+            expect(str(self.plugins.install(_BOARD))).to(equal("missing"))
 
         with it("should say the plugin is missing when there is no claude command"):
             self.plugins.cli = None
-            expect(self.plugins.install_board()).to(equal("missing"))
+            expect(str(self.plugins.install(_BOARD))).to(equal("missing"))
 
     with context("installing the prompt queue plugin"):
         with before.each:
             self.plugins = _ScriptedClaude(listed="prompt-queue@cdd-home")
 
         with it("should install the prompt queue mod the cdd home publishes, at user scope"):
-            expect(self.plugins.install_queue()).to(equal("installed"))
+            expect(str(self.plugins.install(_QUEUE))).to(equal("installed"))
             expect(("plugin", "install", "prompt-queue@cdd-home", "--scope", "user") in self.plugins.calls).to(equal(True))
 
         with context("with the prompt queue mod the cdd home publishes already installed"):
             with it("should run no claude command"):
                 self.plugins.plugins_installed = {"prompt-queue@cdd-home": "0.1.0-abc"}
-                self.plugins.install_queue()
+                self.plugins.install(_QUEUE)
                 expect(self.plugins.calls).to(equal([]))
 
     with context("installing the cdd plugin"):
@@ -1488,7 +1499,7 @@ with description("toolsets installed for Claude Code") as self:
         with context("that is already installed at the published version"):
             with before.each:
                 self.plugins.plugins_installed = {"cdd@cdd-home": "1.0.0-abc"}
-                self.answer = self.plugins.install_cdd()
+                self.answer = str(self.plugins.install(_CDD))
 
             with it("should say it is installed"):
                 expect(self.answer).to(equal("installed"))
@@ -1498,14 +1509,14 @@ with description("toolsets installed for Claude Code") as self:
 
         with context("that is not installed"):
             with it("should install it at user scope"):
-                self.plugins.install_cdd()
+                self.plugins.install(_CDD)
                 expect(("plugin", "install", "cdd@cdd-home", "--scope", "user") in self.plugins.calls).to(equal(True))
 
         # Claude Code keeps the copy it installed for a version, so a changed server entry reaches chats only as an update.
         with context("that is installed at an older version"):
             with it("should update it at user scope"):
                 self.plugins.plugins_installed = {"cdd@cdd-home": "1.0.0"}
-                self.plugins.install_cdd()
+                self.plugins.install(_CDD)
                 expect(("plugin", "update", "cdd@cdd-home", "--scope", "user") in self.plugins.calls).to(equal(True))
 
     with context("finding Claude Code in the desktop app"):

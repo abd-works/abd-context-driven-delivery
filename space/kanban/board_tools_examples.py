@@ -1,4 +1,4 @@
-"""The board's tools as specs call them: a project with a sessions folder whose board tools run on a McpServer,
+"""The board's tools as specs call them: a project with a sessions folder whose board tools run on a ProjectToolsets,
 and the examples the board tools specs share."""
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ from space.kanban.session_board_examples import saved_graph, saved_practice  # n
 from space.kanban.story_test import progress_in  # noqa: E402
 from harness.agent_tools.tool_call import ToolCall, ToolRequest  # noqa: E402
 from harness.diagnostics.app import AppServer  # noqa: E402
-from harness.mcp.mcp_server import McpServer  # noqa: E402
+from harness.mcp.mcp_server import ProjectToolsets  # noqa: E402
 from space.session.throwaway_project import ThrowawayProject
 
 T = TypeVar("T")
@@ -115,13 +115,13 @@ class ProjectTools:
     enrolled once for every project a spec makes, as the cdd server enrols them once for its checkout: each call names
     its project, as a chat's request does, so no project's board is read for another's."""
 
-    _started: McpServer | None = None
+    _started: ProjectToolsets | None = None
 
     @classmethod
-    def started_server(cls) -> McpServer:
+    def started_server(cls) -> ProjectToolsets:
         """The MCP server with the board's toolsets enrolled, started the first time a project asks."""
         if cls._started is None:
-            cls._started = McpServer()
+            cls._started = ProjectToolsets()
             cls._started.start([ToolsetReference.parsed(text) for text in TOOLSETS])
         return cls._started
 
