@@ -571,7 +571,7 @@ with description("a ticket") as self:
         # (S) Chat bar --> status line, Open App From Health Panel: the status line names the folder the chat's session
         # works in, and the Graph app opens on it.
         with it("should give its session's path as its repository's whole folder while its session works in the whole repository"):
-            expect(data_of(self.ticket)["session_path"]).to(equal(str(Path(self.ticket.session.repo_path).resolve())))
+            expect(data_of(self.ticket)["session_path"]).to(equal(str(Path(self.ticket.session.checkout.root).resolve())))
 
         # (S) Chat bar, Board App --> Open Ticket Chat: the Claude app opens a new chat from the link, and the person sends it.
         with it("should offer no link to a new chat while it has no worktree"):
@@ -700,7 +700,8 @@ with description("a ticket") as self:
                 expect((self.ticket.column.name, self.ticket.is_done)).to(equal(("Discovery", True)))
 
             with it("should keep its done mark in its session.json"):
-                expect((self.ticket.session.record.fields["stage"], self.ticket.session.record.fields["stage_mark"])).to(equal(("Discovery", "done")))
+                kept = self.ticket.session.record.extra("ticket")
+                expect((kept.get("stage"), kept.get("stage_mark"))).to(equal(("Discovery", "done")))
 
             with it("should have no next"):
                 expect(self.ticket.next_fidelity).to(be_none)

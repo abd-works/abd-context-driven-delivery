@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from space.session.file_graphs import FileGraphs
     from space.session.practice_outputs import PracticeOutputs
     from space.session.session_file import SessionFile
+    from space.session.session_checkout import SessionCheckout
     from space.session.session_paths import SessionPaths
 
 
@@ -31,7 +32,7 @@ class SessionExplorer:
 
     paths: SessionPaths
     graph: Graph
-    repo_path: Path
+    checkout: SessionCheckout
     work_root: Path
     practice_outputs: PracticeOutputs
     file_graphs: FileGraphs
@@ -47,7 +48,7 @@ class SessionExplorer:
         if not listed or not self.practice_outputs.working:
             return []
         graph = self.graph
-        graph.load_files(str(self.repo_path.resolve()), self.practice_outputs.working, listed, graph.overlays, call)
+        graph.load_files(str(self.checkout.root.resolve()), self.practice_outputs.working, listed, graph.overlays, call)
         self.file_graphs.listed([self.paths.path_named(path) for path in listed])
         return graph.explorer.explorer_trees(self._narrowed_to(listed, node_filter))
 

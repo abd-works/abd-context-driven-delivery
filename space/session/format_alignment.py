@@ -360,7 +360,7 @@ class _FidelityAlignment:
 
     def _documents(self) -> list[dict[str, Path]]:
         """Each document of the fidelity as the file every compared format writes it to, by format: the files the
-        fidelity declares beside one another (``DeclaredOutputs.saved_beside``), found from each file that is there."""
+        fidelity declares beside one another (``WrittenFiles.saved_beside``), found from each file that is there."""
         formats = self._compared_formats
         if len(formats) < 2:
             return []
@@ -380,7 +380,7 @@ class _FidelityAlignment:
         none."""
         declared = self._fidelity.declared
         named = declared.file_name_beside(file.as_posix(), format)
-        return declared.saved_beside(file, format) or (file.parent / named if named else None)
+        return self._output.written.saved_beside(file, format) or (file.parent / named if named else None)
 
     def _document_gaps(self, files: dict[str, Path]) -> list[AlignmentGap]:
         there = {name: file for name, file in files.items() if file.is_file()}

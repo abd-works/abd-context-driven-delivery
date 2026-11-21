@@ -44,7 +44,7 @@ with description("the scenarios files of one sub-epic, in a project whose story 
         (self.folder / "add_book_to_cart_story.test.md").write_text(_SCENARIOS, encoding="utf-8")
         # A render reads its paths from the project of the session the practice works in.
         stories = Stories(fidelity="scenarios")
-        stories.work_in(Session(Sessions(self.project)).practice("stories"))
+        stories.work_in(Sessions(self.project).named("main").practice("stories"))
         self.fidelity = stories.fidelities.current
 
     with context("that are rendered to Python by their folder"):
@@ -72,7 +72,7 @@ with description("the scenarios files of one sub-epic, in a project whose story 
 def _fidelity_in(project: Path, name: str):
     """The Stories fidelity called name, working in a session of project, which a render reads its paths from."""
     stories = Stories(fidelity=name)
-    stories.work_in(Session(Sessions(project)).practice("stories"))
+    stories.work_in(Sessions(project).named("main").practice("stories"))
     return stories.fidelities.current
 
 

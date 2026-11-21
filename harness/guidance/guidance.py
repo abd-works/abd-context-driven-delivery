@@ -15,7 +15,7 @@ from harness.guidance.practice_formats import PracticeFormats, RenderContent, Re
 from harness.guidance.rule import Rule, RulesCollection
 from harness.guidance.schema import Schema
 from harness.guidance.stages import STAGES, ApproachStage
-from harness.guidance.worked_session import FidelityOutput, NamedPaths, PracticeOutput, WorkedSession
+from harness.guidance.worked_session import NO_SESSION_OUTPUT, FidelityOutput, NamedPaths, PracticeOutput, WorkedSession
 from harness.guidance.working_set import COMPANION_PRACTICE, WorkingSet
 from harness.agent_tools.agent_tools import (
     collect,
@@ -542,7 +542,7 @@ class PracticeGuidance(Guidance):
 @identity("slug")
 @agent_toolset
 class FidelityGuidance(Guidance):
-    session_output: FidelityOutput | None = None
+    session_output: FidelityOutput = NO_SESSION_OUTPUT
     """What this fidelity has in the session its practice works in (a FidelitySessionOutput): where it writes each
     format, the files it declares there, and its reports folder; none until a session works on its practice."""
     judged_on: str = "artifacts"
@@ -631,7 +631,7 @@ class FidelityGuidance(Guidance):
     def outputs(self, value: dict[str, str | list[str]]) -> None:
         """Write each format to the file, pattern, or folder value names; the files it declares are made again from
         them (``declared``)."""
-        self.declared = DeclaredOutputs(self, value or {})
+        self.declared = DeclaredOutputs(value or {})
 
     def work_in(self, session_output: FidelityOutput) -> None:
         """Work in a session through session_output, the FidelitySessionOutput holding what this fidelity has there."""
@@ -670,7 +670,7 @@ class FidelityGuidance(Guidance):
         """The format this fidelity works in: the one it was last given while that is still chosen in the session its
         practice works in, else the first format chosen there, else the one it was given or its default. A format it
         does not write, such as one an action names for a practice of its own, is worked in for as long as it is held."""
-        chosen = self.session_output.chosen_formats if self.session_output is not None else []
+        chosen = self.session_output.chosen_formats
         if not chosen or not self._offers(self._format) or (self._is_format_given and self._format in chosen):
             return self._format
         return Format(chosen[0])
@@ -681,7 +681,7 @@ class FidelityGuidance(Guidance):
         action on it works in it without being told."""
         self._format = Format(value)
         self._is_format_given = bool(self._format)
-        if self._format and self.session_output is not None and self._offers(self._format):
+        if self._format and self._offers(self._format):
             self.session_output.choose_format(self._format, True)
 
     def _offers(self, format: str) -> bool:

@@ -61,7 +61,7 @@ with description("a validation report"):
             ]
 
         with it("should link each finding to its file by absolute path and line"):
-            session = Session(Sessions(self.root))
+            session = Sessions(self.root).named("main")
             session.workpath = self.root
             session.work_folder = self.session_dir
             report_md = ValidationReport([], _CheckedGraph(session, self.violations)).for_judge()
@@ -75,7 +75,7 @@ with description("a validation report"):
             expect(report_md).not_to(contain("file://"))
 
         with it("should say how many accepted violations it leaves out and the file that keeps them"):
-            session = Session(Sessions(self.root))
+            session = Sessions(self.root).named("main")
             session.workpath = self.root
             session.work_folder = self.session_dir
             report_md = ValidationReport([], _CheckedGraph(session, [], self.violations)).for_saving()

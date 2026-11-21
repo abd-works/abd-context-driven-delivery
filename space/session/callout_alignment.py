@@ -99,11 +99,11 @@ class CalloutAlignment:
         file named from the project."""
         session = self._session
         graph = session.graph
-        graph.load_files(str(session.repo_path.resolve()), session.practice_outputs.working, self._files, graph.overlays, self._call)
+        graph.load_files(str(session.checkout.root.resolve()), session.practice_outputs.working, self._files, graph.overlays, self._call)
         practices = list(SavedGraph.from_graph(graph).practices.values())
         nodes: dict[str, PlacedNode] = {}
         for practice in practices:
-            root = Path(practice.source_root) if practice.source_root else session.repo_path
+            root = Path(practice.source_root) if practice.source_root else session.checkout.root
             nodes.update({node.node_id: PlacedNode(node, session.paths.from_project(root / node.file)) for node in practice.nodes if node.file})
         for placed in nodes.values():
             self._nodes_in.setdefault(placed.file, []).append(placed)

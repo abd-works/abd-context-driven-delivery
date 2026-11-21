@@ -61,7 +61,7 @@ class SessionFiles:
         which a ticket's session keeps in the main checkout's ``.sessions`` outside its worktree, and its work folder;
         held, and a new one when those change."""
         repo_root = self._session.repo.root
-        roots = (repo_root, Path(self._session.repo_path), *self.file_manager.roots, *self._own_folders)
+        roots = (repo_root, Path(self._session.checkout.root), *self.file_manager.roots, *self._own_folders)
         if self._project_files is None or self._project_files.roots != tuple(Path(root).resolve() for root in roots):
             self._project_files = FileManager(repo_root, roots)
         return self._project_files
@@ -130,7 +130,7 @@ class SessionFiles:
         something is there; refused otherwise."""
         path = self._session.paths.path_named(named)
         if not path.exists():
-            raise NamedPathNotFoundError(str(named), self._session.repo_path)
+            raise NamedPathNotFoundError(str(named), self._session.checkout.root)
         return path
 
     def from_root(self, named: str | Path) -> str:
@@ -139,7 +139,7 @@ class SessionFiles:
         fidelity writes to; a path outside every root is refused, since the graph would read nothing for it."""
         path = self.existing(named)
         if not self.in_root(path):
-            raise NamedPathNotFoundError(str(named), self._session.repo_path, self._session.work_root)
+            raise NamedPathNotFoundError(str(named), self._session.checkout.root, self._session.work_root)
         return Path(os.path.relpath(path, self._session.work_root)).as_posix()
 
     def in_root(self, path: Path) -> bool:

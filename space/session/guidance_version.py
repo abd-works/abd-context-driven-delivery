@@ -8,7 +8,7 @@ from contextlib import contextmanager
 from typing import TYPE_CHECKING, Iterator
 
 from harness.guidance.stages import STAGES
-from space.session.guidance_selection import GUIDANCE_FIELD, GuidanceSelection
+from space.session.guidance_selection import GuidanceSelection
 
 if TYPE_CHECKING:
     from space.session.session import Session
@@ -35,14 +35,10 @@ class GuidanceVersion:
         """Raise the version, so every page waiting on it hears the change; nothing while an update is batched."""
         if self._is_batched:
             return
-        self.save(version=self._on_disk() + 1)
+        version = self._on_disk() + 1
+        self._session.record.update(lambda fields: setattr(fields.guidance, "version", version), f"guidance version {version}")
         with _GUIDANCE_CHANGED:
             _GUIDANCE_CHANGED.notify_all()
-
-    def save(self, **values: object) -> None:
-        """Merge values into the selection session.json keeps, such as the stages selected."""
-        record = self._session.record
-        record.save_fields(**{GUIDANCE_FIELD: {**dict(record.fields.get(GUIDANCE_FIELD, {})), **values}})
 
     @contextmanager
     def batch(self) -> Iterator[None]:
@@ -61,7 +57,8 @@ class GuidanceVersion:
             if practices is not None:
                 self._select_practices(practices)
             if stages is not None:
-                self.save(stages=[stage for stage in STAGES.names if stage in stages])
+                chosen = [stage for stage in STAGES.names if stage in stages]
+                self._session.record.update(lambda fields: setattr(fields.guidance, "stages", chosen), f"stages {', '.join(chosen)}")
             if formats is not None:
                 self._select_format_groups(formats)
 
@@ -89,4 +86,4 @@ class GuidanceVersion:
 
     def _on_disk(self) -> int:
         """The version as session.json holds it now, read past this answer's reads: another call raises it."""
-        return int(dict(self._session.record.fields_on_disk.get(GUIDANCE_FIELD, {})).get("version", 0))
+        return self._session.record.fields_on_disk.guidance.version

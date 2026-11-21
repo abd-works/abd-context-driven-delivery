@@ -230,7 +230,7 @@ with description("a practice"):
                 from space.session import Session, Sessions
 
                 self.tool = Stories(fidelity="story_map", format="python")
-                self.tool.work_in(Session(Sessions(self.root)).practice("stories"))
+                self.tool.work_in(Sessions(self.root).named("main").practice("stories"))
                 self.result = self.tool.render("markdown", self.tool)
 
             with it("should instantiate the object model from that code"):

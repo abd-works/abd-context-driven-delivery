@@ -107,7 +107,7 @@ class _StoryMapFolder:
         self.session = Path(self.action.session.work_folder)
         if declared:
             outputs = {"markdown": [str(self.folder / self._MAP)], "drawio": [str(self.folder / "board/.context/story-map.drawio")]}
-            self.action.session.practice("stories").guidance.fidelities.entries["story_map"].declared.output_paths = lambda: outputs
+            self.action.session.practice("stories").guidance.fidelities.entries["story_map"].session_output.written.output_paths = lambda: outputs
 
     def validate(self, guidance: str = "stories-story-map", paths: list[str] | None = None) -> str:
         return self.action.validate(guidance=[guidance], paths=paths or [self._MAP])

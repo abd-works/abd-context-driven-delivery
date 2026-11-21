@@ -57,23 +57,23 @@ with description("a worktree opened for a branch") as self:
                 self.opened = Repo(self.clone).branch_named("feature/a").open_in_worktree()
 
             with it("should check the branch out"):
-                expect(_git(self.opened.path, "branch", "--show-current")).to(equal("feature/a"))
+                expect(_git(self.opened.root, "branch", "--show-current")).to(equal("feature/a"))
 
             with it("should still open the worktree folder"):
-                expect(self.opened.path.is_dir()).to(be_true)
+                expect(self.opened.root.is_dir()).to(be_true)
 
     with context("whose folder holds files past Windows' 260-character path limit"):
         with before.each:
             self.opened = Repo(self.clone).branch_named("feature/a").open_in_worktree()
             self.worktrees = Repo(self.clone).worktrees
-            deep = self.opened.path.resolve().joinpath(".retired", *("fixture-folder-" * 4 for _ in range(5)))
+            deep = self.opened.root.resolve().joinpath(".retired", *("fixture-folder-" * 4 for _ in range(5)))
             long_deep = f"\\\\?\\{deep}" if os.name == "nt" else str(deep)
             os.makedirs(long_deep, exist_ok=True)
             Path(long_deep, "fixture.md").write_text("retired", encoding="utf-8")
 
         with it("should remove the folder"):
             self.worktrees.remove(self.opened)
-            expect(self.opened.path.exists()).to(be_false)
+            expect(self.opened.root.exists()).to(be_false)
 
     # Only Windows refuses to delete a folder a running program works in.
     if os.name == "nt":
@@ -81,15 +81,15 @@ with description("a worktree opened for a branch") as self:
             with before.each:
                 self.repo = Repo(self.clone)
                 self.opened = self.repo.branch_named("feature/a").open_in_worktree()
-                (self.opened.path / "src").mkdir()
-                self.holder = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"], cwd=self.opened.path / "src")
+                (self.opened.root / "src").mkdir()
+                self.holder = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"], cwd=self.opened.root / "src")
 
             with after.each:
                 self.holder.kill()
                 self.holder.wait()
 
             with it("should refuse to call it removed, naming the folder left behind"):
-                expect(lambda: self.repo.worktrees.remove(self.opened)).to(raise_error(WorktreeNotRemovedError, contain(self.opened.path.name)))
+                expect(lambda: self.repo.worktrees.remove(self.opened)).to(raise_error(WorktreeNotRemovedError, contain(self.opened.root.name)))
 
             with context("that has ended since its removal was refused"):
                 with before.each:
@@ -99,31 +99,31 @@ with description("a worktree opened for a branch") as self:
                     self.again = self.repo.branch_named("feature/a").open_in_worktree()
 
                 with it("should open the branch again in a worktree"):
-                    expect(_git(self.again.path, "branch", "--show-current")).to(equal("feature/a"))
+                    expect(_git(self.again.root, "branch", "--show-current")).to(equal("feature/a"))
 
     with context("whose folder was deleted outside CDD"):
         with before.each:
             self.repo = Repo(self.clone)
             self.opened = self.repo.branch_named("feature/a").open_in_worktree()
-            shutil.rmtree(self.opened.path)
+            shutil.rmtree(self.opened.root)
 
         with it("should no longer be the branch's worktree"):
-            expect(self.repo.branch_named("feature/a").worktree).to(be_none)
+            expect(self.repo.branch_named("feature/a").checkout).to(be_none)
 
         with it("should be made again when the branch is opened"):
             again = self.repo.branch_named("feature/a").open_in_worktree()
-            expect(_git(again.path, "branch", "--show-current")).to(equal("feature/a"))
+            expect(_git(again.root, "branch", "--show-current")).to(equal("feature/a"))
 
     with context("whose branch was deleted outside CDD, its folder left on no branch"):
         with before.each:
             self.repo = Repo(self.clone)
             self.opened = self.repo.branch_named("feature/a").open_in_worktree()
-            _git(self.opened.path, "checkout", "-q", "--detach")
+            _git(self.opened.root, "checkout", "-q", "--detach")
             _git(self.clone, "branch", "-q", "-D", "feature/a")
 
         with it("should refuse to open the branch onto that folder, naming the branch and the folder"):
             opening = lambda: self.repo.branch_named("feature/a").open_in_worktree()
-            expect(opening).to(raise_error(WorktreeFolderTakenError, contain("feature/a", self.opened.path.name)))
+            expect(opening).to(raise_error(WorktreeFolderTakenError, contain("feature/a", self.opened.root.name)))
 
     with context("with a folder that is no checkout where the branch's worktree goes"):
         with before.each:
@@ -147,10 +147,10 @@ with description("a worktree opened for a branch") as self:
             self.weekly = self.repo.branch_named("customer-order-history-export-weekly").open_in_worktree()
 
         with it("should open in a folder of its own"):
-            expect(self.weekly.path).not_to(equal(self.monthly.path))
+            expect(self.weekly.root).not_to(equal(self.monthly.root))
 
         with it("should have its own branch checked out there"):
-            expect(_git(self.weekly.path, "branch", "--show-current")).to(equal("customer-order-history-export-weekly"))
+            expect(_git(self.weekly.root, "branch", "--show-current")).to(equal("customer-order-history-export-weekly"))
 
     with context("that two callers open for one branch at the same moment"):
         with before.each:
@@ -159,7 +159,7 @@ with description("a worktree opened for a branch") as self:
 
             def open_it() -> None:
                 try:
-                    self.outcomes.append(self.repo.branch_named("feature/a").open_in_worktree().path)
+                    self.outcomes.append(self.repo.branch_named("feature/a").open_in_worktree().root)
                 except Exception as failure:  # noqa: BLE001 - the example shows whatever either caller was answered
                     self.outcomes.append(failure)
 
@@ -170,7 +170,7 @@ with description("a worktree opened for a branch") as self:
                 caller.join()
 
         with it("should answer every caller the one worktree"):
-            expect(self.outcomes).to(equal([self.repo.branch_named("feature/a").worktree.path] * 3))
+            expect(self.outcomes).to(equal([self.repo.branch_named("feature/a").checkout.root] * 3))
 
 
 with description("a branch on a clone") as self:
@@ -218,21 +218,20 @@ with description("a Repo and its checkouts") as self:
     with context("with a branch opened in a linked worktree"):
         with before.each:
             self.opened = self.repo.branch_named("feature/a").open_in_worktree()
-            self.tree = self.opened.path
+            self.tree = self.opened.root
             self.linked = Repo(self.tree)
 
         with it("should list the worktree where git has it"):
-            expect(self.repo.worktrees.at(self.tree).path).to(equal(self.tree.resolve()))
+            expect(self.repo.worktrees.at(self.tree).root).to(equal(self.tree.resolve()))
 
         with it("should answer the worktree's branch from its own checkout"):
-            expect(self.repo.worktrees.at(self.tree).branch.repo.root).to(equal(self.tree.resolve()))
+            expect(self.repo.worktrees.at(self.tree).current_branch.repo.root).to(equal(self.tree.resolve()))
 
         with it("should find the main clone from the linked worktree"):
             expect(self.linked.main_clone.root).to(equal(self.clone.resolve()))
 
-        with it("should list the main clone with the repository that lists it"):
-            listed = self.repo.worktrees.at(self.clone)
-            expect(listed.repository).to(be(self.repo))
+        with it("should list the main clone as the repository that lists it"):
+            expect(self.repo.worktrees.at(self.clone)).to(be(self.repo))
 
         with it("should remove the worktree through the checkouts that listed it"):
             self.repo.worktrees.at(self.tree).close("close the worktree")

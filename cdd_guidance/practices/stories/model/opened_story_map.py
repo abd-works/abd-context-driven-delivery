@@ -62,7 +62,7 @@ class OpenedStoryMap:
 
     def _lists(self, fidelity: FidelityGuidance) -> bool:
         """Whether the session lists the file among the fidelity's files, which are paths from the project."""
-        return any(Path(entry.path).as_posix() == Path(self.file).as_posix() for entries in fidelity.declared.files().values() for entry in entries)
+        return any(Path(entry.path).as_posix() == Path(self.file).as_posix() for entries in fidelity.session_output.written.files().values() for entry in entries)
 
     @property
     def own_format(self) -> Format:
@@ -115,7 +115,7 @@ class OpenedStoryMap:
     @functools.cached_property
     def _acceptance_tests(self) -> dict[str, list[str]]:
         """The session's story tests with the stories each holds, read once for the map."""
-        return self._stories.story_tests(self._session.repo_path)
+        return self._stories.story_tests(self._session.checkout.root)
 
     def _write(self, format: Format, path: Path) -> Path:
         path.write_text(self._rendered(format, path), encoding="utf-8")

@@ -9,21 +9,8 @@ from expects import contain, expect, equal, raise_error
 
 from harness.chat.chat import CHATS_FOLDER
 from harness.installation.json_file import JsonFile, JsonFileBusy
-from tools.prompt_queue.prompt_queue import ChatIdNotAnId, PromptNotQueued, PromptQueue, QueueFileUnreadable, StepStateUnknown, handoff_steps
+from tools.prompt_queue.prompt_queue import ChatIdNotAnId, PromptNotQueued, PromptQueue, QueueFileUnreadable, StepStateUnknown
 
-HANDOFF = """# Handoff
-
-## Approach for Next Agent
-
-1. Read this handoff
-2) Run the unit tier
-   in the background
-3. Fix what it finds
-
-## Outstanding
-
-1. Not a step
-"""
 
 
 with describe(PromptQueue):
@@ -119,9 +106,8 @@ with describe(PromptQueue):
         expect(lambda: self.queue.add_interruption("gone", "cut the text")).to(raise_error(PromptNotQueued))
 
     with it("queues a handoff's steps once, however often the chat switches to its session"):
-        handoff = self.folder / "handoff-1.md"
-        handoff.write_text(HANDOFF, encoding="utf-8")
-        expect([self.queue.queue_handoff(handoff), self.queue.queue_handoff(handoff)]).to(equal([3, 0]))
+        steps = ["Read this handoff", "Run the unit tier", "Fix what it finds"]
+        expect([self.queue.queue_once("handoff-1.md", steps), self.queue.queue_once("handoff-1.md", steps)]).to(equal([3, 0]))
 
     with it("keeps a card's text when it is edited to only spaces"):
         self.queue.edit(self.queue.prompts[1]["id"], "   ")
@@ -260,8 +246,3 @@ with describe(PromptQueue):
             except ChatIdNotAnId:
                 pass
             expect((self.folder / "escape-chat").exists()).to(equal(False))
-
-
-with describe(handoff_steps):
-    with it("reads the numbered steps of Approach for Next Agent, each with the lines that continue it"):
-        expect(handoff_steps(HANDOFF)).to(equal(["Read this handoff", "Run the unit tier in the background", "Fix what it finds"]))

@@ -22,8 +22,8 @@ from space.session.answer_reads import ServedAnswers
 from space.session.open_sessions import OpenSessions
 from space.session.session import MAIN_SESSION_NAME, Session, SessionNotFoundError
 from space.session.session_folder import COMPLETE_FOLDER
-from space.session.session_record import SESSION_FILE
-from space.session.session_roots import SessionRoots
+from space.session.session_record import SESSION_FILE, SessionFields
+from space.session.checkout_worktrees import CheckoutWorktrees
 from space.work_state import SESSIONS_FOLDER
 
 BACKLOG_FOLDER = "_backlog"
@@ -91,8 +91,8 @@ class Sessions:
         # The checkout holding the project, made once: every session this loads works in it.
         self.repo = Repo.of_project(project)
         self.root = self.repo.root
-        # Where each session works, derived from one ``git worktree list`` read again after a moment.
-        self.roots = SessionRoots(self)
+        # The worktrees and branches each session's checkout is found among, listed once and read again after a moment.
+        self.worktrees = CheckoutWorktrees(self)
         # Which folders in ``.sessions`` hold a session, and the one Session held for each.
         self.listing = SessionListing(self)
         self.held = HeldSessions(self)
@@ -170,14 +170,19 @@ class Sessions:
     def named(self, name: str) -> Session | None:
         """The session called name: the main session, or a work session, open before closed; none when there is none.
         Only that session's folder is read, so a tool that names one session does not load every other."""
+        found = self.folder_named(name)
+        return self.held.load(found) if found is not None else None
+
+    def folder_named(self, name: str) -> Path | None:
+        """The record folder of the session called name: main's, or a work session's, open before closed; none when
+        there is none."""
         if name == MAIN_SESSION_NAME:
-            return self.held.load(self.folder_of(name))
+            return self.folder_of(name)
         if not self.listing.is_work_session(name):
             return None
         open_folder = self.folder / name
         candidates = (open_folder, self.closed_folder / name) if self.listing.is_open(open_folder) else (self.closed_folder / name,)
-        found = next((folder for folder in candidates if folder.is_dir()), None)
-        return self.held.load(found) if found is not None else None
+        return next((folder for folder in candidates if folder.is_dir()), None)
 
     def with_file(self, session_file: str) -> Session:
         """The session whose session.json is session_file, a path from this checkout's top or an absolute one, read
@@ -210,9 +215,14 @@ class Sessions:
         session = self.held.at(self.folder / Name(name).title_slug)
         chosen = Path(workpath).resolve() if workpath is not None else None
         kept = self.repo.path_from_top(chosen) if chosen is not None and chosen != self.root else ""
-        fields = (("name", session.name), ("title", title), ("scope", scope), ("parent", parent), ("workpath", kept))
-        session.record.save_fields(**{key: value for key, value in fields if value})
-        self.held.placed(session)
+        given = {key: value for key, value in (("name", session.name), ("title", title), ("scope", scope), ("parent", parent), ("workpath", kept)) if value}
+
+        def made(fields: SessionFields) -> None:
+            for key, value in given.items():
+                setattr(fields, key, value)
+
+        session.record.update(made, ", ".join(f"{key} {value}" for key, value in given.items()))
+        session.placed()
         session.log.seed_first_loop()
         return session
 
@@ -292,20 +302,8 @@ class HeldSessions:
 
     def load(self, folder: Path) -> Session:
         """The session whose record folder is folder, read without opening it: the one object these sessions hold for
-        that folder, placed where its roots derive now, so a worktree opened or a workpath chosen since is seen."""
-        return self.placed(self.at(Path(folder)))
-
-    def placed(self, session: Session) -> Session:
-        """session working where its roots derive now: in its checkout, at its root, and writing its work in its work
-        folder, its worktree's when it has one. The work folder is set before the root, so a graph made again for a new
-        root is kept in the new work folder."""
-        roots = self._sessions.roots
-        session.repo_path = roots.checkout_of(session)
-        session.work_folder = roots.work_folder_of(session)
-        workpath = roots.root_of(session)
-        if session.workpath is None or session.work_root != workpath:
-            session.workpath = workpath
-        return session
+        that folder, placed where it works now, so a worktree opened or a workpath chosen since is seen."""
+        return self.at(Path(folder)).placed()
 
     def at(self, folder: Path) -> Session:
         """The one Session held for the record folder folder, made the first time it is asked for, its work kept beside
@@ -314,10 +312,7 @@ class HeldSessions:
         with self._held_lock:
             held = self._held.get(key)
             if held is None:
-                held = self._held[key] = Session(self._sessions)
-                held.record_folder = folder
-                held.work_folder = folder
-                held.name = folder.name
+                held = self._held[key] = Session(self._sessions, folder)
             return held
 
     def moved(self, session: Session, moved_from: Path) -> None:

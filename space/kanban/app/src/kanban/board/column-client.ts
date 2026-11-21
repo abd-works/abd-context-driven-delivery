@@ -97,8 +97,10 @@ export class ColumnClient {
     return [...this.inProgress, ...this.done, ...this.tickets]
   }
 
+  // A stage's count is the one its limit is compared with, which the board answers; the other columns count what they show.
   get count(): number {
-    return this.isBacklog ? this.items.length : this.everyTicket.filter(ticket => !ticket.isMain).length
+    if (this.isBacklog) return this.items.length
+    return this.isStage ? (this.column as StageData).ticket_count ?? 0 : this.tickets.length
   }
 
   // A stage's column holds every field of its stage, so its tools act on the stage the column shows.

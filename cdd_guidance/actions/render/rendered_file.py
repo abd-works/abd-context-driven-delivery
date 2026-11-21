@@ -12,6 +12,7 @@ from cdd_guidance.actions.render.rendered_code import RenderHasNoDeclaredPlace, 
 from harness.annotations.name import Name
 from harness.graph.saved_graph import SavedGraph
 from harness.guidance.declared_outputs import DeclaredOutputs
+from harness.guidance.worked_session import WrittenOutput
 from harness.markdown.format import Format
 from harness.whiteboard import BoardLinks, Whiteboard
 
@@ -63,10 +64,10 @@ class RenderedFile:
         return "" if self._source.name == _SKETCH and self.format.group != "diagram" else self._before
 
     @classmethod
-    def from_sources(cls, sources: list[Path], source: Format, format: Format, declared: DeclaredOutputs | None) -> RenderedFile | None:
+    def from_sources(cls, sources: list[Path], source: Format, format: Format, declared: DeclaredOutputs | None, written: WrittenOutput | None = None) -> RenderedFile | None:
         """The file a render of sources, written in source, into format saves. For a first source that is one of the
         fidelity's own files, in a session, it is the file the fidelity declares in format for it, where the fidelity
-        declares it (``DeclaredOutputs.saved_beside``): one drawing of every module is saved in the root's ``.context``,
+        declares it (``WrittenOutput.saved_beside``, what the fidelity has written in the session): one drawing of every module is saved in the root's ``.context``,
         not in the first module's folder. Otherwise it is beside the first source: under the name the fidelity writes
         format to for one of its own files, a sketch, or a folder; else under the first source's own name in format, so
         a render of another file never writes over the fidelity's file. None
@@ -84,7 +85,7 @@ class RenderedFile:
         own_name = f"{source.stem_of(first)}{format.extension}" if first.is_file() and (not source or source.is_offered) else ""
         # A file that is neither one the fidelity declares nor a sketch belongs to no file of the fidelity.
         belongs = declared is not None and (first.is_dir() or source.name == _SKETCH or declared.includes(first.as_posix()))
-        placed = declared.saved_beside(first, format.name) if belongs and first.is_file() else None
+        placed = written.saved_beside(first, format.name) if written is not None and belongs and first.is_file() else None
         name = (declared.file_name_beside(first.as_posix(), format.name) if belongs else "") or own_name
         if placed is None and not name:
             return None
@@ -112,7 +113,7 @@ class RenderedFile:
         outputs = {label: [names] if isinstance(names, str) else list(names) for label, names in fidelity.declared.outputs.items()}
         declared = [path for path in outputs.get(format.name, []) if len(set(_NAMED_PART.findall(path))) == 1]
         piece = f"a document from the saved graph {graph_file.name}"
-        if not declared or fidelity.session_output is None:
+        if not declared or not fidelity.session_output.roots:
             raise RenderHasNoDeclaredPlace(piece, format, outputs.get(format.name, []), "none of them names one file with one named part, in a session")
         scope = cls._scope_of(graph_file, fidelity, [path for paths in outputs.values() for path in paths])
         if not scope:

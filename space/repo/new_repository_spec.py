@@ -12,12 +12,13 @@ from expects import contain, equal, expect
 from mamba import after, before, context, description, it
 
 from space.repo.new_repository import CDD_WRITTEN_PATTERNS, NewRepository
+from space.repo.repo import Repo
 
 
 with description("a plain folder a session works in") as self:
     with before.each:
         self.folder = Path(tempfile.mkdtemp(prefix="cdd-plain-"))
-        self.new = NewRepository(self.folder)
+        self.new = NewRepository(Repo(self.folder))
 
     with after.each:
         shutil.rmtree(self.folder, ignore_errors=True)

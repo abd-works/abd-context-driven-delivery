@@ -17,6 +17,7 @@ from expects import contain, equal, expect, match, raise_error
 from mamba import after, before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentToolSet, SubAgentAnnotation
+from space.session.handoffs import Handoffs
 from space.session.session import Session, SessionNotFoundError
 from space.session.sessions import Sessions
 from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
@@ -180,3 +181,30 @@ with description("a handoff asked for a board ticket's session"):
     with context("through its MCP tool"):
         with it("should take the session as the tool's first argument"):
             expect(list(self.tool.input_schema["properties"])[0]).to(equal("session"))
+
+
+# Seed: a handoff whose Approach for Next Agent lists three steps, one continued on a second line, before another section
+# whose numbered lines are no steps.
+_HANDOFF = """# Handoff
+
+## Approach for Next Agent
+
+1. Read this handoff
+2) Run the unit tier
+   in the background
+3. Fix what it finds
+
+## Outstanding
+
+1. Not a step
+"""
+
+
+with description("a handoff a session wrote") as self:
+    with before.each:
+        self.folder = Path(tempfile.mkdtemp(prefix="cdd-handoff-"))
+        (self.folder / "handoff-20261121T000000.md").write_text(_HANDOFF, encoding="utf-8")
+        self.handoff = Handoffs(self.folder).latest
+
+    with it("should read the numbered steps of its Approach for Next Agent, each with the lines that continue it"):
+        expect(self.handoff.next_steps).to(equal(["Read this handoff", "Run the unit tier in the background", "Fix what it finds"]))

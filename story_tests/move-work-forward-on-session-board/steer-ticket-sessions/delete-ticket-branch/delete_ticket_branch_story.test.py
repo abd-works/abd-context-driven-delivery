@@ -30,7 +30,7 @@ with story("Delete Ticket Branch"):
             pass
         with when("the Person closes checkout-flow, deleting its branch"):
             # Person -> Ticket.close(leaving=['delete_branch'])
-            # TicketCheckout -> Worktree.close(), Branch.delete(unmerged=True)
+            # TicketCheckout -> Repo.close(), Branch.delete(unmerged=True)
             pass
         with then("the worktree folder is gone"):
             pass

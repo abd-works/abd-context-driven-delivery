@@ -27,9 +27,8 @@ _CLASS_MODEL = {
 
 
 def _declared(outputs: dict) -> DeclaredOutputs:
-    """The declared outputs of a fidelity whose practice works in no session: every example asks only what the
-    outputs themselves say."""
-    return DeclaredOutputs(None, outputs)
+    """The declared outputs of a fidelity: every example asks only what the outputs themselves say."""
+    return DeclaredOutputs(outputs)
 
 
 with description("the file a fidelity declares for a render of one of its files") as self:

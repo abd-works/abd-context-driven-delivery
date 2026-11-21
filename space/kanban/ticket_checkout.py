@@ -3,7 +3,6 @@ can do with them."""
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -11,13 +10,11 @@ from harness.chat.chat import Chat
 from harness.installation.data_class import data_field
 from space.kanban.leaving_handoff import LeavingHandoff
 from space.repo.latest_release import LatestRelease
-from space.repo.repo import Branch
-
+from space.repo.repo import Branch, Repo
 from space.repo.worktree import WorktreeFolderTakenError
 
 if TYPE_CHECKING:
     from space.kanban.ticket import Ticket
-    from space.repo.worktree import Worktree
 
 LEAVE_COMMIT = "commit"
 LEAVE_PUSH = "push"
@@ -27,18 +24,6 @@ LEAVE_DELETE_WORKTREE = "delete_worktree"
 LEAVE_HANDOFF = "handoff"
 # What leaving does to the branch itself, beyond saving the work on it.
 LEAVE_BRANCH_STEPS = {LEAVE_MERGE, LEAVE_DELETE_BRANCH, LEAVE_DELETE_WORKTREE}
-# The session.json field that keeps the chat a person assigned to a ticket.
-ASSIGNED_CHAT = "chat"
-
-
-def own_worktree_of(branch: Branch) -> Worktree | None:
-    """The linked worktree beside the main clone that has branch checked out; none while the main clone itself has it,
-    since git lists the main clone among its worktrees too. Asked from inside that worktree, the branch is checked out
-    there, and the worktree is still its own."""
-    worktree = branch.worktree
-    if worktree is None or worktree.path == branch.repo.main_clone.root:
-        return None
-    return worktree
 
 
 class TicketCheckout:
@@ -46,57 +31,35 @@ class TicketCheckout:
     the chat working there. It answers what opening and leaving the ticket can do now and does it, so a dialog offers
     only what will be done. Made once per ticket, holding the ticket's *Branch*.
 
-    The ticket's session records its branch and worktree, which are read first. A record git no longer agrees with,
-    or none, is found again from git and recorded: the branch named as the ticket, else the one branch whose name holds
-    the ticket's name as a whole word, as the Claude desktop app names one (``claude/chat-ui-defects-cef4bc``). With
-    several such branches none is chosen, and they are named instead."""
+    Its branch, the worktree that branch is open in, and the chat a person assigned to it are its session's checkout's
+    (*SessionCheckout*), which reads and records them; with several branches that could each be the ticket's none is
+    chosen, and opening names them instead."""
 
     def __init__(self, ticket: Ticket) -> None:
         self._ticket = ticket
         self._repo = ticket.board.repo
-        # The ticket's own branch, whether or not the repository has it yet; a Branch reads its state from git each time.
-        self.branch: Branch = self._found_branch()
 
     @property
-    def _recorded(self) -> dict:
-        return self._ticket.session.record.fields
-
-    def _found_branch(self) -> Branch:
-        """The recorded branch while the repository has it, else the ticket's branch found in git and recorded."""
-        existing = {branch.name for branch in self._ticket.board.branches}
-        recorded = self._recorded.get("branch", "")
-        if recorded and recorded in existing:
-            return self._repo.branch_named(recorded)
-        named = self._repo.branch_named(self._ticket.name)
-        if named.name in existing:
-            return named
-        candidates = self.candidate_branches
-        return candidates[0] if len(candidates) == 1 else named
-
-    @property
-    def candidate_branches(self) -> list[Branch]:
-        """The branches whose name holds the ticket's name as a whole word, such as claude/chat-ui-defects-cef4bc. A
-        branch named as another ticket is that ticket's own, so performance never claims repo-performance."""
-        word = re.compile(rf"(^|[/_-]){re.escape(self._ticket.name)}($|[/_-])")
-        board = self._ticket.board
-        return [branch for branch in board.branches if branch.name not in board.ticket_names and word.search(branch.name)]
+    def branch(self) -> Branch:
+        """The ticket's own branch, whether or not the repository has it yet, as its session's checkout finds it."""
+        return self._ticket.session.checkout.branch
 
     @property
     def work_branch(self) -> Branch:
         """The branch the ticket's work is on: its own branch while it is checked out, in the repository or in its own
         worktree, else the default branch while the repository has it checked out, as for a session with no branch of
         its own. Any other branch checked out is not the ticket's, so its own branch comes back not checked out."""
-        if self.branch.is_checked_out or self.branch.worktree is not None:
+        if self.branch.is_checked_out:
             return self.branch
-        default = self._repo.branch_named(self._repo.default_branch)
-        return default if default.is_checked_out else self.branch
+        default = self._repo.default_branch
+        return default if default.is_checked_out_here else self.branch
 
     @property
     def worktree(self) -> str:
         """The folder of the ticket's own worktree, where its chat works, as git lists it; empty while it has none. It
         is read from git each time and never written to the session, so switching never changes a tracked file."""
         found = self._ticket.board.worktrees.get(self.branch)
-        return str(found.path) if found else ""
+        return str(found.root) if found else ""
 
     @property
     def chat(self) -> Chat | None:
@@ -105,21 +68,11 @@ class TicketCheckout:
         opens for it, else the one working in its worktree or a folder inside it. None while no such chat is connected,
         and the board offers to open one."""
         chats = self._ticket.board.chats
-        assigned = self.assigned_chat
+        assigned = self._ticket.session.checkout.assigned_chat
         if assigned:
             return next((chat for chat in chats if chat.id == assigned), None)
         named = self._ticket.board.reads.chat_named(self._ticket.name)
         return named or self._chat_in_worktree(chats)
-
-    @property
-    def assigned_chat(self) -> str:
-        """The id of the chat a person assigned to the ticket; empty while none is."""
-        return str(self._ticket.session.record.fields.get(ASSIGNED_CHAT, "") or "")
-
-    def assign_chat(self, chat: str) -> None:
-        """Make chat, a chat's id, the ticket's chat from now on; an empty chat gives it back to the chat named after
-        it. The record is committed on main and pushed."""
-        self._ticket.session.record.save_fields(**{ASSIGNED_CHAT: chat})
 
     def _chat_in_worktree(self, chats: list[Chat]) -> Chat | None:
         worktree = self.worktree
@@ -130,20 +83,14 @@ class TicketCheckout:
     @property
     def close_choices(self) -> LeaveChoices:
         """What closing the ticket can do with its work now."""
-        return LeaveChoices(self._checked_out_work_branch, self._own_branch)
+        work = self.work_branch
+        return LeaveChoices(work if work.checkout is not None else None, self._own_branch)
 
     @property
     def _own_branch(self) -> Branch | None:
         """The ticket's own branch while git has it, checked out or not, and it is not the default branch: leaving can
         merge and delete it. None otherwise."""
         return self.branch if self.branch.exists and not self.branch.is_default else None
-
-    @property
-    def _checked_out_work_branch(self) -> Branch | None:
-        """The branch the ticket's work is on while a checkout has it, the repository or its own worktree, which leaving
-        acts on; none otherwise."""
-        branch = self.work_branch
-        return branch if branch.is_checked_out or branch.worktree is not None else None
 
     def open(self) -> None:
         """Open the ticket in its own worktree, where its chat works: the worktree it has, else a new one on its own
@@ -158,7 +105,7 @@ class TicketCheckout:
             board.sessions.saves.now(f"sessions: save before opening {self._ticket.name}")
             self._open_worktree()
             board.placement.reread()
-        self._ticket.session.record.save_fields(branch=self.branch.name, worktree=self.worktree)
+        self._ticket.session.checkout.record_opened()
         board.sessions.saves.now(f"sessions: open {self._ticket.name}")
 
     def _open_worktree(self) -> None:
@@ -168,7 +115,7 @@ class TicketCheckout:
             raise TicketWorktreeBlockedError(self._ticket.name, taken.folder) from taken
 
     def _refuse_unclear_branch(self) -> None:
-        candidates = [] if self.branch.exists else self.candidate_branches
+        candidates = [] if self.branch.exists else self._ticket.session.checkout.candidate_branches
         if len(candidates) > 1:
             raise TicketBranchUnclearError(self._ticket.name, [branch.name for branch in candidates])
 
@@ -197,9 +144,8 @@ class TicketCheckout:
         worktree is gone."""
         if not set(leaving) & {LEAVE_COMMIT, LEAVE_PUSH, *LEAVE_BRANCH_STEPS}:
             return
-        branch = self._checked_out_work_branch
-        if branch is not None:
-            self._commit_and_push(branch, leaving)
+        if {LEAVE_COMMIT, LEAVE_PUSH} & set(leaving):
+            self.work_branch.save(self._leave_message, push=LEAVE_PUSH in leaving)
         own = self._own_branch
         if own is None:
             return
@@ -224,28 +170,19 @@ class TicketCheckout:
         if own is not None:
             self._delete_worktree(own, [LEAVE_DELETE_WORKTREE])
 
-    def _commit_and_push(self, branch: Branch, leaving: list[str]) -> None:
-        # Checked out in the repository itself, else in the ticket's own worktree.
-        checkout = branch.checkout
-        if LEAVE_COMMIT in leaving or LEAVE_PUSH in leaving:
-            checkout.working_tree.commit_all(self._leave_message)
-        if LEAVE_PUSH in leaving:
-            checkout.origin.push_upstream()
-
-    def _worktree_to_delete(self, branch: Branch, leaving: list[str]) -> Worktree | None:
+    def _worktree_to_delete(self, branch: Branch, leaving: list[str]) -> Repo | None:
         """The branch's own worktree when leaving names delete_worktree or delete_branch: git deletes no branch a
         worktree has checked out, so deleting the branch takes its worktree with it. A merge needs neither, since the
         default branch's checkout merges it."""
         if not {LEAVE_DELETE_WORKTREE, LEAVE_DELETE_BRANCH} & set(leaving):
             return None
-        return own_worktree_of(branch)
+        return branch.linked_worktree
 
     def _save_worktree_to_delete(self, branch: Branch, leaving: list[str]) -> None:
         """Commit and push the work in a worktree leaving is about to delete, whether or not leaving names a commit, so
         the merge that follows carries all of it."""
-        worktree = self._worktree_to_delete(branch, leaving)
-        if worktree is not None and worktree.branch is not None:
-            worktree.branch.save(self._leave_message)
+        if self._worktree_to_delete(branch, leaving) is not None:
+            branch.save(self._leave_message)
 
     def _delete_worktree(self, branch: Branch, leaving: list[str]) -> None:
         """Remove the branch's own worktree folder, its work committed and pushed there, when leaving names it."""
@@ -253,14 +190,7 @@ class TicketCheckout:
         if worktree is None:
             return
         worktree.close(self._leave_message)
-        self._work_from_main_clone()
         self._ticket.board.placement.reread()
-
-    def _work_from_main_clone(self) -> None:
-        """The ticket may have been read from the worktree just deleted, where git can no longer run, so its branch is
-        read from the main clone from now on."""
-        self._repo = self._repo.main_clone
-        self.branch = self._repo.branch_named(self.branch.name)
 
     def _delete_branch(self, leaving: list[str]) -> None:
         """Delete the ticket's own branch, here and on origin, when leaving names delete_branch; unmerged unless leaving
@@ -269,20 +199,20 @@ class TicketCheckout:
             return
         branch = self.branch
         # git deletes no branch the checkout is on, so the checkout goes back to the default branch first.
-        if branch.is_checked_out and not self._repo.is_linked_worktree:
-            self._repo.branch_named(self._repo.default_branch).check_out()
+        if branch.is_checked_out_here and not self._repo.is_linked_worktree:
+            self._repo.default_branch.check_out()
         branch.delete(unmerged=LEAVE_MERGE not in leaving)
 
     def return_to_default_branch(self) -> None:
         """Closing a ticket opens main, the default branch in the repository's own folder, so the closed ticket's own
         branch leaves the repository's checkout. Work left uncommitted goes with the checkout, as git carries it."""
-        if not self.branch.is_checked_out or self.branch.is_default:
+        if not self.branch.is_checked_out_here or self.branch.is_default:
             return
         # A linked worktree cannot check out the default branch while the main checkout has it; the chat goes back to
         # the main checkout instead, so the worktree keeps its branch.
         if self._repo.is_linked_worktree:
             return
-        self._repo.branch_named(self._repo.default_branch).check_out()
+        self._repo.default_branch.check_out()
 
 
 
@@ -340,7 +270,7 @@ class LeaveChoices:
     def _branch_steps(self) -> list[str]:
         if self._own_branch is None:
             return []
-        worktree = [LEAVE_DELETE_WORKTREE] if own_worktree_of(self._own_branch) is not None else []
+        worktree = [LEAVE_DELETE_WORKTREE] if self._own_branch.linked_worktree is not None else []
         return [LEAVE_MERGE, LEAVE_DELETE_BRANCH, *worktree]
 
     @property

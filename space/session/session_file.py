@@ -253,7 +253,7 @@ class SessionFile:
         self._reads_graph = reads.reads_graph
         self._text = session.session_files.read(path)
         if not self._text.exists:
-            raise NamedPathNotFoundError(path, session.repo_path)
+            raise NamedPathNotFoundError(path, session.checkout.root)
         lines = self._text.text.count("\n") + 1
         if lines > VIEWER_SHOWS_LINES:
             raise FileTooLongToShowError(self._text.path, lines)

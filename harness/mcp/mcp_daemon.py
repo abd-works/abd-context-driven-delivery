@@ -9,6 +9,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+from harness.git.checkout import Checkout
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_address import McpAddress
 from harness.process.capped_log_file import CappedLogFile
@@ -184,7 +185,7 @@ class ServedCheckout:
         every chat runs the code just installed. Left alone: a server serving a checkout on disk, an install run from
         a linked worktree (its commit is not what every chat should run), and an install run inside the server itself.
         Returns the server's status when it was restarted, else None."""
-        if self.daemon.this_process.is_this_process() or (self.checkout / ".git").is_file():
+        if self.daemon.this_process.is_this_process() or Checkout(self.checkout).is_linked_worktree:
             return None
         if self._home.is_installed and self._home.mode != self._home.PINNED:
             return None

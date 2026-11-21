@@ -37,7 +37,7 @@ with description("the folder a branch's worktree gets") as self:
             expect(self.worktrees.sibling_folder(self.repo.branch_named(WEEKLY)).name).to(equal("clone-customer-order-history-e-2"))
 
         with it("should stay the same folder for the branch that has it"):
-            expect(self.worktrees.sibling_folder(self.repo.branch_named(MONTHLY))).to(equal(self.monthly.path))
+            expect(self.worktrees.sibling_folder(self.repo.branch_named(MONTHLY))).to(equal(self.monthly.root))
 
         with context("and a third such branch open in the numbered folder"):
             with before.each:
@@ -49,7 +49,7 @@ with description("the folder a branch's worktree gets") as self:
     with context("with a worktree whose folder was deleted outside CDD"):
         with before.each:
             self.opened = self.repo.branch_named(MONTHLY).open_in_worktree()
-            shutil.rmtree(self.opened.path)
+            shutil.rmtree(self.opened.root)
 
         with it("should no longer be the branch's worktree"):
-            expect(self.repo.branch_named(MONTHLY).worktree).to(be_none)
+            expect(self.repo.branch_named(MONTHLY).checkout).to(be_none)

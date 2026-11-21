@@ -349,10 +349,10 @@ class SessionsProject(ThrowawayProject):
     def seed_session(self, seed: SessionSeed) -> Path:
         folder = self.sessions / seed.folder / seed.name
         folder.mkdir(parents=True, exist_ok=True)
-        # A chosen workpath counts only when its folder is there (SessionRoots.root_of), so the seed makes it.
+        # A chosen workpath counts only when its folder is there (Session.placed), so the seed makes it.
         workpath = self.root / seed.workpath
         workpath.mkdir(parents=True, exist_ok=True)
-        fields = {"name": seed.name, "title": seed.title, "scope": "feature", "workpath": str(workpath), "repo_path": str(self.root), **seed.fields}
+        fields = {"name": seed.name, "title": seed.title, "scope": "feature", "workpath": str(workpath), **seed.fields}
         (folder / "session.json").write_text(json.dumps(fields), encoding="utf-8")
         (folder / "session.log").write_text("".join(f"{line}\n" for line in seed.log), encoding="utf-8")
         return folder

@@ -76,7 +76,7 @@ with description("the session a tool call opens"):
             (self.first / "docs").mkdir()
 
         with it("should be the session of the checkout holding that folder"):
-            expect(ToolCall({}, self.first / "docs").session.repo_path).to(equal(self.first))
+            expect(ToolCall({}, self.first / "docs").session.checkout.root).to(equal(self.first))
 
     with context("that a call names a folder in a linked worktree of a project"):
         with before.each:
@@ -91,4 +91,4 @@ with description("the session a tool call opens"):
             shutil.rmtree(self.worktree.parent, ignore_errors=True)
 
         with it("should be the session of the worktree holding that folder"):
-            expect(ToolCall({}, self.worktree / "docs").session.repo_path).to(equal(self.worktree))
+            expect(ToolCall({}, self.worktree / "docs").session.checkout.root).to(equal(self.worktree))

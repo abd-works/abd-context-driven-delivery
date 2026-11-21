@@ -1,16 +1,12 @@
-"""The files a fidelity declares in its outputs, and where they are in the session its practice works in."""
+"""The files a fidelity declares in its outputs: the patterns alone, and what can be answered from them. Where they are
+in a session, and which are there, the session's own output answers (space/session's *WrittenFiles*)."""
 from __future__ import annotations
 
 import functools
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from harness.markdown.format import Format
-
-if TYPE_CHECKING:
-    from harness.guidance.guidance import FidelityGuidance
-    from harness.guidance.worked_session import SessionFile
 
 
 _DECLARED_PART = re.compile(r"(\{[^{}/]+\}/?|\*\*/|\*)")
@@ -97,28 +93,32 @@ class DeclaredFile:
 
 class DeclaredOutputs:
     """The files one fidelity declares, made from its ``outputs`` (each format it writes, with its file, pattern, or
-    folder) and made again when they change: whether a path is one of them, and, in the session the fidelity's practice
-    works in, where they are and which of them exist. The fidelity holds it (``fidelity.declared``); the session output
-    asks it which found files the fidelity declares."""
+    folder) and made again when they change: declarations only, so whether a path is one of them, and the name a render
+    of one of them gets, are answered from the patterns alone. The fidelity holds it (``fidelity.declared``); the
+    session's output asks it which found files the fidelity declares and where they go in the session."""
 
-    def __init__(self, fidelity: FidelityGuidance, outputs: dict[str, str | list[str]]) -> None:
-        self._fidelity = fidelity
+    def __init__(self, outputs: dict[str, str | list[str]]) -> None:
         self.outputs = dict(outputs)
+
+    def paths_in(self, format: str) -> list[str]:
+        """The paths the fidelity declares in format, a declaration of one path or of several read the same way."""
+        names = self.outputs.get(format, [])
+        return [names] if isinstance(names, str) else list(names)
+
+    def declared_files(self, format: str) -> list[DeclaredFile]:
+        """The files the fidelity declares in format; a declared folder names no file."""
+        return self._files.get(format, [])
 
     @functools.cached_property
     def _files(self) -> dict[str, list[DeclaredFile]]:
         """The files each format of its outputs declares, by format."""
-        return {
-            label: [DeclaredFile(name) for name in ([names] if isinstance(names, str) else names) if name and not name.endswith("/")]
-            for label, names in self.outputs.items()
-        }
+        return {label: [DeclaredFile(name) for name in self.paths_in(label) if name and not name.endswith("/")] for label in self.outputs}
 
     def code_folders(self) -> list[str]:
         """The code formats the fidelity writes as a folder for each module, such as Clean Engineering's ``{module}/``:
         each code format one of whose declared paths is a folder. A file it declares in that folder beside it, such as
         ``{module}/{module}.py``, says where a render writes."""
-        declared = ((label, [names] if isinstance(names, str) else names) for label, names in self.outputs.items())
-        return [label for label, names in declared if Format(label).is_code and any(name.endswith("/") for name in names)]
+        return [label for label in self.outputs if Format(label).is_code and any(name.endswith("/") for name in self.paths_in(label))]
 
     def includes(self, path: str, format: str = "") -> bool:
         """Whether path, written from the project's root or absolute, is a file one of the outputs names, in format when
@@ -148,18 +148,6 @@ class DeclaredOutputs:
         path = self._path_beside(source, format)
         return f"{holding[0][1].start_of(source)}{path}" if holding and path else ""
 
-    def saved_beside(self, source: Path, format: str) -> Path | None:
-        """Where a render of the file at source into format is saved in the session the fidelity's practice works in:
-        the file ``file_beside`` places, under the root of the fidelity that holds source. None when its practice works
-        in no session, source is under none of its roots, or no file is placed for it."""
-        session_output = self._fidelity.session_output if self._fidelity is not None else None
-        resolved = source.resolve()
-        for root in (root.resolve() for root in (session_output.roots if session_output is not None else [])):
-            if root in resolved.parents:
-                placed = self.file_beside(resolved.relative_to(root).as_posix(), format)
-                return root / placed if placed else None
-        return None
-
     def _holding(self, source: str) -> list[tuple[str, DeclaredFile]]:
         """The declared files source is one of, each with the output that declares it."""
         return [(label, declared) for label, files in self._files.items() for declared in files if declared.pattern.search(source)]
@@ -179,35 +167,3 @@ class DeclaredOutputs:
             candidates += self._files.get(format, [])
         named = (declared.named_with(parts) for declared in candidates)
         return next((path for path in named if path), "")
-
-    def output_paths(self) -> dict[str, list[str]]:
-        """Where the fidelity writes each format in the session its practice works in: its declared paths under the
-        practice's root there. None when its practice works in no session."""
-        session_output = self._fidelity.session_output
-        return session_output.written.output_paths() if session_output is not None else {}
-
-    def files(self) -> dict[str, list[SessionFile]]:
-        """The files the fidelity declares, by format, in the session its practice works in, each with its path from the
-        project and whether it exists; none when its practice works in no session."""
-        session_output = self._fidelity.session_output
-        return session_output.written.files() if session_output is not None else {}
-
-    def has_output(self) -> bool:
-        """Whether a file the fidelity declares is already in the session its practice works in, such as one a person
-        wrote; false when its practice works in no session."""
-        session_output = self._fidelity.session_output
-        return session_output is not None and session_output.written.has_output()
-
-    def files_to_review(self) -> dict[str, list[SessionFile]]:
-        """The files a person reviews for the fidelity, by format: its own, or those of the fidelities of its practice it
-        reviews files of, in the order it names them, each file once."""
-        practice = self._fidelity.practice_guidance
-        if not self._fidelity.reviews_files_of or practice is None:
-            return self.files()
-        reviewed: dict[str, list[SessionFile]] = {}
-        for name in self._fidelity.reviews_files_of:
-            fidelity = practice.fidelities.entries.get(name)
-            for label, entries in (fidelity.declared.files() if fidelity is not None else {}).items():
-                known = {entry.path for entry in reviewed.get(label, [])}
-                reviewed.setdefault(label, []).extend(entry for entry in entries if entry.path not in known)
-        return reviewed

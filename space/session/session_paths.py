@@ -65,7 +65,7 @@ class SessionPaths:
         """named as a path in this session's project, the way its agent writes one: from the project's root, or
         absolute."""
         path = Path(named)
-        return path.resolve() if path.is_absolute() else (self._session.repo_path / path).resolve()
+        return path.resolve() if path.is_absolute() else (self._session.checkout.root / path).resolve()
 
     def document_named(self, content: str = "", paths: list[str] | str | None = None) -> str:
         """The document a call names: content, or the files at paths, read from this session's project."""
@@ -81,5 +81,5 @@ class SessionPaths:
     def in_project(self, paths: list[str]) -> list[str]:
         """paths, named from the project, as the graph view's graph names its files, which it reads from the project's
         top; any outside the project left out."""
-        project = self._session.repo_path.resolve()
+        project = self._session.checkout.root.resolve()
         return [found.relative_to(project).as_posix() for found in map(self.path_named, paths) if found.is_relative_to(project)]

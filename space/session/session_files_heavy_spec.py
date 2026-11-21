@@ -69,7 +69,7 @@ with description("SessionFiles") as self:
             (self.main / QUOTED_BY_GIT).write_text("uni = 1" + chr(10), encoding="utf-8")
             _git(self.main, "add", "-A")
             _git(self.main, "commit", "-m", "a file git quotes")
-            self.listed = Session(Sessions(self.main)).session_files.under_root()
+            self.listed = Sessions(self.main).named("main").session_files.under_root()
 
         with it("should list that file among the files under the session's root"):
             expect([entry.path for entry in self.listed]).to(contain(QUOTED_BY_GIT))

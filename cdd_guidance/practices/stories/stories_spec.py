@@ -194,7 +194,7 @@ with description("Stories"):
                 story_map.parent.mkdir(parents=True)
                 story_map.write_text("# (E) Move Work On Board\n\n## (E) Display Board\n\n### (S) Person --> Open Board\n", encoding="utf-8")
                 stories = Stories(fidelity="scenarios")
-                stories.work_in(Session(Sessions(self.root)).practice("stories"))
+                stories.work_in(Sessions(self.root).named("main").practice("stories"))
                 self.model = stories.formats.read("tests", RenderRequest(Format("markdown"), source=Format("python")))
 
             with after.all:
@@ -356,7 +356,7 @@ with description("Stories"):
             from space.session import Session, Sessions
 
             self.stories = Stories(fidelity="scenarios")
-            self.stories.work_in(Session(Sessions(self.tempdir.name)).practice("stories"))
+            self.stories.work_in(Sessions(self.tempdir.name).named("main").practice("stories"))
             self.result = self.stories.render(
                 format="typescript",
                 content=_SAMPLE_MARKDOWN,

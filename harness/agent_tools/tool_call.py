@@ -22,18 +22,30 @@ CHAT_FOLDER_ARGUMENT = "chat_folder"
 _NO_CHAT = "unknown"
 
 
+class CallSession(Protocol):
+    """The session a call works in, as agent_tools and mcp use it: they log each tool a call ran in it, and each
+    failure. space/session's *Session* answers it; each framework module that reads more of a session declares what it
+    reads in a protocol of its own that extends this one (*HookSession*, *WorkedSession*)."""
+
+    def log_tool(self, call: ToolCall, tool: str) -> None:
+        """Log that call ran tool, with the paths it named, as a line pointing at the call's chat."""
+
+    def log_failure(self, call: ToolCall, failure: BaseException) -> None:
+        """Log that call failed with failure, its trace kept beside the session's log."""
+
+
 class SessionOpener(Protocol):
     """How a call finds the sessions it works in. The framework keeps no sessions of its own: the module that does
     registers its opener with ``SESSION_OPENING.open_with`` when it is imported, so the framework never imports it."""
 
-    def saved_in(self, project: Path) -> Any:
+    def saved_in(self, project: Path) -> CallSession | None:
         """The session saved as open in project's checkout, read for one caller that serves no call, such as a hook
         event or a diagnostics probe."""
 
-    def open_in(self, call: ToolCall) -> Any:
+    def open_in(self, call: ToolCall) -> CallSession | None:
         """The session saved as open in the call's project."""
 
-    def named_in(self, session_file: str, call: ToolCall) -> Any:
+    def named_in(self, session_file: str, call: ToolCall) -> CallSession | None:
         """The session whose session.json is session_file, a path from the call's project or an absolute one."""
 
 
@@ -116,18 +128,18 @@ class SessionOpening:
         """Have every call find its sessions through opener."""
         self._opener = opener
 
-    def saved_in(self, project: Path | str) -> Any:
+    def saved_in(self, project: Path | str) -> CallSession | None:
         """The session saved as open in the ``.sessions/session.json`` of the checkout holding project, main when none
         is, for work on a project that serves no call, such as the agent BDD harness or a diagnostics probe; none when
         no sessions are registered. It is read again on each ask, so a switch or a close made through MCP is seen at
         once."""
         return self._opener.saved_in(Path(project).resolve()) if self._opener is not None else None
 
-    def open_in(self, call: ToolCall) -> Any:
+    def open_in(self, call: ToolCall) -> CallSession | None:
         """The session saved as open in the call's project; none when no sessions are registered."""
         return self._opener.open_in(call) if self._opener is not None else None
 
-    def named_in(self, session_file: str, call: ToolCall) -> Any:
+    def named_in(self, session_file: str, call: ToolCall) -> CallSession | None:
         """The session whose session.json is session_file, for call."""
         if self._opener is None:
             raise SessionsNotLoaded(session_file)
@@ -154,7 +166,7 @@ class ToolCall:
         self.arguments = dict(arguments or {})
         self.project = Path(project).resolve() if project is not None else None
         self.request = request
-        self._session: Any = None
+        self._session: CallSession | None = None
 
     @classmethod
     def sent(cls, arguments: dict[str, Any] | None, project: Path | str | None, request: ToolRequest = ToolRequest()) -> ToolCall:
@@ -188,7 +200,7 @@ class ToolCall:
         return list(dict.fromkeys(str(value).strip() for value in values if isinstance(value, str) and value.strip()))
 
     @property
-    def session(self) -> Any:
+    def session(self) -> CallSession | None:
         """The session saved as open in the ``.sessions/session.json`` of the checkout holding the project, main when
         none is, read once for this call; none when the call names no project or no sessions are registered. Every call
         in a session works on the one object its sessions hold for it; the lines a call logs point at this call's
@@ -199,7 +211,7 @@ class ToolCall:
             self._session = SESSION_OPENING.open_in(self)
         return self._session
 
-    def session_named(self, session_file: str) -> Any:
+    def session_named(self, session_file: str) -> CallSession | None:
         """The session whose session.json is session_file, a path from the project or an absolute one, for this call.
         A board command names its ticket's session this way, because it runs in whichever chat it is sent to."""
         return SESSION_OPENING.named_in(session_file, self)

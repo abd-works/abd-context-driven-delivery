@@ -8,7 +8,7 @@ import json
 import re
 from pathlib import Path
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Mapping, NotRequired, Protocol, Sequence, TypedDict
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Mapping, NotRequired, Sequence, TypedDict
 
 from harness.agent_tools import AgentOperation, AgentToolSet, agent_instructions, agent_toolset, tools
 from harness.agent_tools.agent_tools import InstallDestination, ToolsetReference
@@ -17,6 +17,7 @@ from harness.guidance.action_catalogue import ACTION_CATALOGUE, Action
 from harness.guidance.documents import document_in
 from harness.guidance.guidance import FidelityGuidance, Guidance, PracticeGuidance
 from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE, PracticeSet
+from harness.guidance.worked_session import WorkedSession
 from harness.hooks.hook_server import rules_toast
 from harness.hooks.hooks import Toast, hook
 
@@ -44,35 +45,6 @@ ListedGuidance = Guidance | AgentToolSet
 WorkedGuidance = ListedGuidance | str
 
 
-class _SessionRecord(Protocol):
-    """A session's record, the session.json it keeps, as an action reads it."""
-
-    fields: Mapping[str, Any]
-
-
-class ActionSession(Protocol):
-    """The session an action works in, as space/session's *Session* answers it: the framework never imports its class,
-    so this names what an action asks of it."""
-
-    name: str
-    practices: Mapping[str, Any]
-    overlays: Sequence[str]
-    stories: Sequence[str]
-    record: _SessionRecord
-    log: Any
-    graph: Any
-    work_root: Path
-    repo_path: Path
-    paths: Any
-    session_files: Any
-    record_folder: Path | None
-    session_file: Path
-
-    def choose_overlays(self, overlays: list[str]) -> None: ...
-
-    def practice(self, key: str) -> Any: ...
-
-    def path_named(self, path: Path) -> Path: ...
 GUIDANCE_PARAMETER = (
     "guidance: the slugs you type, such as stories, clean-engineering-model, or bdd-behavior. "
     "A list runs this action once per slug. A module:Class ref is that slug after lookup. "
@@ -351,7 +323,7 @@ class WorkList:
     fidelity of the same practice changes nothing this one reads. A list made inside another action's (``outer``) asks
     that list for the practices it works with and the fidelity it works at on a practice it names no fidelity of."""
 
-    def __init__(self, session: ActionSession | None, outer: WorkList | None = None) -> None:
+    def __init__(self, session: WorkedSession | None, outer: WorkList | None = None) -> None:
         self._session = session
         self._outer = outer
         # The guidance argument taken, so naming the same argument again keeps what it built.
@@ -660,12 +632,12 @@ class SessionBrief:
             "## Session",
             "",
             f"Session {session.name}, kept in {session.session_file.resolve().as_posix()}.",
-            f"Name paths from the project's root, {session.repo_path.as_posix()}, or absolute.",
+            f"Name paths from the project's root, {session.checkout.root.as_posix()}, or absolute.",
             f"The session's root is {session.work_root.as_posix()}.",
             *(["", "Where each listed practice writes:", *writes] if writes else []),
             "",
             "```json",
-            json.dumps(session.record.fields, indent=2),
+            json.dumps(session.record.fields.as_dict(), indent=2),
             "```",
         ])
 
@@ -698,7 +670,7 @@ class GuidanceAction:
     """Whether the action hands the agent its listed Guidance's rules after it returns; an action that only records
     what exists, such as Document, sets it false."""
 
-    def __init__(self, session: ActionSession | None = None, call: ToolCall | None = None) -> None:
+    def __init__(self, session: WorkedSession | None = None, call: ToolCall | None = None) -> None:
         super().__init__()
         self._session = session
         # The call this action was made for: every line it logs points at its chat, and it says where a graph build the
@@ -724,21 +696,21 @@ class GuidanceAction:
             action.work.take(command)
         return action
 
-    def _made_for(self, session: ActionSession | None, call: ToolCall | None = None) -> GuidanceAction:
+    def _made_for(self, session: WorkedSession | None, call: ToolCall | None = None) -> GuidanceAction:
         """An action of this kind, set up as this one is, made for session and call."""
         return type(self)(session=session, call=call)
 
-    def session_for(self, call: ToolCall) -> ActionSession | None:
+    def session_for(self, call: ToolCall) -> WorkedSession | None:
         """The session this action logs call in: the one it was made for."""
         return self._session
 
     @property
-    def works_in(self) -> ActionSession | None:
+    def works_in(self) -> WorkedSession | None:
         """The session this action was made for; none for an action made for no session."""
         return self._session
 
     @property
-    def session(self) -> ActionSession:
+    def session(self) -> WorkedSession:
         """The session this action works in."""
         if self._session is None:
             raise ActionWorksInNoSession(type(self).__name__)

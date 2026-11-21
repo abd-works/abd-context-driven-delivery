@@ -14,6 +14,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from harness.git.checkout import Checkout
+
 # The name Claude Code's own executable runs under, without its extension.
 CLAUDE_EXECUTABLE = "claude"
 # How far up the process tree the connect script looks for the Claude Code process it was started by: Claude Code may
@@ -49,12 +51,6 @@ def is_desktop_spare(folder: Path) -> bool:
     spares = (claude_config_folder() / "spares").resolve()
     resolved = folder.resolve()
     return resolved == spares or spares in resolved.parents
-
-
-def checkout_holding(folder: Path) -> Path:
-    """The checkout holding folder, the folder a chat works in: the folder itself when no checkout holds it."""
-    resolved = folder.resolve()
-    return next((above for above in (resolved, *resolved.parents) if (above / ".git").exists()), resolved)
 
 
 class ClaudeChatProcess:
@@ -108,7 +104,7 @@ class ClaudeChatProcess:
         folder = Path(recorded) if recorded else None
         if folder is None or not folder.is_dir() or is_desktop_spare(folder):
             return None
-        return checkout_holding(folder)
+        return Checkout.holding(folder).folder
 
     @property
     def session_id(self) -> str:

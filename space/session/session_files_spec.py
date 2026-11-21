@@ -22,7 +22,7 @@ EXAMPLES_TEXT = "LISTED = []" + chr(10)
 
 def _working_in(project: Path, root: Path) -> Session:
     """A session of project that works in root, a folder of the project."""
-    session = Session(Sessions(project))
+    session = Sessions(project).named("main")
     session.workpath = root
     return session
 
@@ -93,8 +93,9 @@ with description("SessionFiles") as self:
             (self.worktree / "board").mkdir()
             (self.worktree / "space").mkdir()
             (self.worktree / "space" / "examples.py").write_text(EXAMPLES_TEXT, encoding="utf-8")
-            session = _working_in(self.project, self.worktree / "board")
-            session.repo_path = self.worktree
+            session = Sessions(self.project).create("board-ticket")
+            session.record.update(lambda fields: setattr(fields, "worktree", str(self.worktree)), "worktree")
+            session.placed().workpath = self.worktree / "board"
             self.files = session.session_files
 
         with after.each:
