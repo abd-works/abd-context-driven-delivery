@@ -208,3 +208,9 @@ Tiers on the final code:
 Decisions for the person:
 1. Should a bounded context's file link its aggregates to the domain model, so they open in place (13 graph connections on the Bookshop no callout shows)? Recommended: yes.
 2. Code already there that differs from a render is kept whole. Should a render rewrite it where the adapter can keep the bodies?
+
+### Fourth answers from the person, 2026-11-21
+
+1. Yes: a bounded context's file links its aggregates to the domain model, so they open in place.
+2. A render brings an existing file to the new shape and preserves whatever exists only in that file: code, comments, anything the other format does not hold. Example: an operation is added to a class in the markdown model or the diagram and the class is rendered again; the class's existing code goes back into it and the new operation is empty. A render never removes what is already there. The one exception is a class or operation that was refactored away, and even then its code is re-allocated afterwards. So an AI pass follows the render, migrating the inner details of the code formats so nothing is lost.
+3. The person began a third point ("that would be wrong") and the message ended there; asked again in the chat.
