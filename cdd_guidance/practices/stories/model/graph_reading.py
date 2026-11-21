@@ -17,7 +17,6 @@ from cdd_guidance.practices.ddd.ddd import Ddd
 from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 
 from cdd_guidance.practices.clean_engineering.model import MODULE_FUNCTION_HOLDER
-from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel
 from cdd_guidance.practices.stories.model.modelled_areas import ExampleObservations, ModelledAreas
 from cdd_guidance.practices.stories.model.script_story_model import ScriptStoryModel
 from cdd_guidance.practices.stories.model.story_recording import StorySource, imported_files
@@ -123,12 +122,11 @@ class StoriesReading(PracticeReading):
         or a story test in a code format the practice reads."""
         if is_story_map_file(path) or path.name.endswith((*STORY_FILE_SUFFIXES, DESKTOP_STORY_FILE_SUFFIX)):
             return True
-        return any(reader.is_story_file(path.as_posix()) for reader in self._code_readers)
+        return any(reader.is_story_file(path.as_posix()) for reader in self._story_files().code_readers)
 
-    @property
-    def _code_readers(self) -> list[CodeStoryModel]:
-        """The code formats the practice reads story tests in."""
-        return [reader for reader in (self.practice.formats.adapter(name) for name in self.practice.formats) if isinstance(reader, CodeStoryModel)]
+    def _story_files(self, on_file=None):
+        """The story maps and story tests under the practice's root, each node naming its file from the root."""
+        return self.practice.story_files(self.root, on_file)
 
     def read_working_copy(self) -> None:
         """Read the story tests, or the story maps when there are none, write the story map onto its graph, and link
@@ -182,18 +180,13 @@ class StoriesReading(PracticeReading):
         practice reads: its story tests, its shared stories, and its screen specs, by the files each format names its
         story files; with edited files, only those among them. A story's first story file in code replaces the
         scenarios the map's markdown gave it, and each later one adds its own, as a read of named files gives them."""
-        readers = self._code_readers
-        suffixes = {Path(suffix).suffix for reader in readers for suffix in reader.story_file_suffixes}
+        story_files = self._story_files()
+        suffixes = {Path(suffix).suffix for reader in story_files.code_readers for suffix in reader.story_file_suffixes}
         edited = self.graph.scope.edited_files
-        project = Path(self.graph.scope.folder) if self.graph.scope.folder is not None else self.root
-        for path in self._scanned(suffixes):
-            reader = next((reader for reader in readers if reader.is_story_file(path.as_posix())), None)
-            if reader is None or (edited is not None and path not in edited):
-                continue
-            text = path.read_text(encoding="utf-8")
-            file = os.path.relpath(path, self.root).replace("\\", "/")
-            model.sources.take(self.practice.story_test_sources(StorySource(file, text), self.root))
-            model.test_scenarios.take(reader.stories_of(text, file, project)[0], file)
+        # The folder the graph reads, which a story file's code imports resolve from; its files are named from the root.
+        code_project = Path(self.graph.scope.folder) if self.graph.scope.folder is not None else self.root
+        paths = [path for path in self._scanned(suffixes) if edited is None or path in edited]
+        story_files.take_code_scenarios(model, paths, code_project)
 
     def _story_tests(self) -> "StoryModel":
         """The story map the story tests under the tests folder are themselves, where no story map file names their
@@ -213,7 +206,7 @@ class StoriesReading(PracticeReading):
     @property
     def _script_readers(self) -> list[ScriptStoryModel]:
         """The script languages the practice reads story tests in, in the order it lists its formats."""
-        return [reader for reader in self._code_readers if isinstance(reader, ScriptStoryModel)]
+        return [reader for reader in self._story_files().code_readers if isinstance(reader, ScriptStoryModel)]
 
     def _script_texts(self, reader: ScriptStoryModel) -> dict[str, str]:
         """The text of each file of reader's language the story tests are read from, by its path from the root."""
@@ -229,9 +222,8 @@ class StoriesReading(PracticeReading):
         """The story maps under the practice's root; with edited files, only the story maps among them."""
         on_file = lambda detail: report_progress(f"stories · markdown · {detail}")  # noqa: E731
         edited = self.graph.scope.edited_files
-        if edited is None:
-            return self.practice.read_folder(self.root, on_file=on_file)
-        return self.practice.read_files(edited, self.root, on_file=on_file)
+        story_files = self._story_files(on_file)
+        return story_files.story_map_in(self.root) if edited is None else story_files.story_map_of(edited)
 
     def _scanned(self, suffixes: set[str]) -> list[Path]:
         """The files with suffixes in the folders the practice's story files sit in: its root and, for a root that is a

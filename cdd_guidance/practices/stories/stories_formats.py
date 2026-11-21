@@ -96,7 +96,7 @@ class StoriesFormats(PracticeFormats):
         project = self._project_of(named)
         entries = [project / entry for entry in named]
         files = [path for entry in entries for path in (sorted(entry.rglob("*")) if entry.is_dir() else [entry]) if path.is_file()]
-        return SpecifiedStories(files, project).kept_in(self._practice.read_files(files, project))
+        return SpecifiedStories(files, project).kept_in(self._practice.story_files(project).story_map_of(files))
 
     def render(self, request: RenderRequest) -> dict:
         """What request renders to; a thin slice read for a drawing is drawn as its increments' lanes, and story

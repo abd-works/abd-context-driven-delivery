@@ -225,7 +225,7 @@ def _expected_typescript() -> dict:
 
 def load_source(name: str) -> StoryModel:
     if name == "markdown":
-        return Stories().read_folder(EXPECTED)
+        return Stories().story_files(EXPECTED).story_map_in(EXPECTED)
     if name == "drawio":
         return DrawIOStoryModel().parse((EXPECTED / "story-map.drawio").read_text(encoding="utf-8"))
     return TypeScriptStoryModel().load(_expected_typescript())

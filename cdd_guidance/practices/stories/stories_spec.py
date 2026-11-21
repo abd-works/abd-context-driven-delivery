@@ -59,7 +59,7 @@ with description("Stories"):
             story_map.epics.append(Epic("Move Work On Board", 1))
             board = self.root / "story-map.whiteboard"
             board.write_text(WhiteboardStoryModel().render(story_map), encoding="utf-8")
-            self.opened = Stories().open_file(board, self.root)
+            self.opened = Stories().story_files(self.root).opened(board)
 
         with after.each:
             import shutil
@@ -104,7 +104,7 @@ with description("Stories"):
                 story_test = self.root / self.filled
                 story_test.parent.mkdir(parents=True)
                 story_test.write_text('with story("Open Board"):\n    with scenario("Open it"):\n        with given("a board"):\n            pass\n', encoding="utf-8")
-                self.model = Stories().read_files([story_test], self.root)
+                self.model = Stories().story_files(self.root).story_map_of([story_test])
 
             with after.each:
                 import shutil
@@ -130,7 +130,7 @@ with description("Stories"):
                 story_test = self.root / "move-work-on-board" / "display-board" / "open-board" / "open_board_story.test.py"
                 story_test.parent.mkdir(parents=True)
                 story_test.write_text('with story("Open Board"):\n    with scenario("Open it"):\n        with given("a board"):\n            pass\n', encoding="utf-8")
-                self.model = Stories().read_files([story_test], self.root)
+                self.model = Stories().story_files(self.root).story_map_of([story_test])
 
             with after.each:
                 import shutil
@@ -164,7 +164,7 @@ with description("Stories"):
                 flat_test = self.root / "story_tests" / "fulfil-order" / "pack-order" / "pack_order_story.test.py"
                 flat_test.parent.mkdir(parents=True)
                 flat_test.write_text('with story("Pack Order"):\n    with scenario("Pack it"):\n        with given("an order"):\n            pass\n', encoding="utf-8")
-                self.model = Stories().read_files([story_test, flat_test], self.root)
+                self.model = Stories().story_files(self.root).story_map_of([story_test, flat_test])
 
             with after.each:
                 import shutil
