@@ -37,7 +37,7 @@ from harness.installation.repository_toolsets import RUNNING_CHECKOUT, Repositor
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_annotations import LongCall, Mcp  # noqa: F401 - importing the server defines Mcp, the channel install reads
 from harness.mcp.claude_plugins import ClaudePlugins
-from harness.mcp.mcp_address import BUILTIN_LIST_TOOLS, CHAT_HEADER, McpAddress, CHAT_PROCESS_HEADER, LANE_CALL_PATH, MCP_PATH, PING_PATH, PROJECT_HEADER
+from harness.mcp.mcp_address import BUILTIN_LIST_TOOLS, CHAT_HEADER, CHAT_PROCESS_HEADER, LANE_CALL_PATH, MCP_PATH, PING_PATH, PROJECT_HEADER
 from harness.mcp.mcp_daemon import McpDaemon
 from harness.mcp.server_lanes import LaneCall, ServerLane, ServerLanes
 from harness.mcp.server_hooks import CddServerHooks
@@ -880,7 +880,7 @@ class McpHost:
     def _ping_tool(self, tool: str) -> dict[str, str]:
         if self._checkout_server.enrolled(tool) is None:
             raise ToolNotEnrolled(tool)
-        return {"ping": "pong", "tool": tool}
+        return {"ping": PONG, "tool": tool}
 
     def _log_failure(self, call: ToolCall, failure: BaseException) -> None:
         session = call.session
@@ -935,7 +935,7 @@ class McpHost:
 
         if request.headers.get("origin"):
             return JSONResponse({"failure": {"kind": "LaneCallRefused", "message": "a browser page may not hand over tool calls"}}, status_code=403)
-        lane_call = LaneCall.from_data(await request.json())
+        lane_call = LaneCall.from_sent(await request.json())
         return JSONResponse(await self._lane_reply(self._call_from_lane(lane_call)))
 
     def _call_from_lane(self, lane_call: LaneCall) -> ToolCall:
@@ -982,8 +982,8 @@ class McpHost:
         """Whether the dev lane's server answers beside this stable one; a dev lane's own server never asks."""
         if self._home.is_dev_lane:
             return True
-        dev = self._home.dev_lane
-        return dev.is_installed and McpDaemon(dev, McpAddress.of_home(dev.folder)).is_running()
+        dev = self._lanes.dev
+        return dev.home.is_installed and dev.daemon.is_running()
 
     def diagnose(self) -> dict[str, Any]:
         """What this host publishes: the ping's answer, every tool name, and what start-up skipped."""

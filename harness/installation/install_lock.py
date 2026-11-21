@@ -8,6 +8,8 @@ import time
 from pathlib import Path
 from typing import Iterator
 
+from harness.installation.json_file import _takes_operating_system_lock
+
 # How long an install waits for another one in the same folder, which takes about a minute in full, and how often it
 # looks again.
 WAIT_SECONDS = 180.0
@@ -103,29 +105,13 @@ class InstallLock:
         """Open the lock file and ask the operating system for its lock; on getting it, name this process in the file."""
         self.folder.mkdir(parents=True, exist_ok=True)
         handle = os.open(str(self._path), os.O_CREAT | os.O_RDWR)
-        if not self._locked(handle):
+        if not _takes_operating_system_lock(handle, _LOCKED_BYTE):
             os.close(handle)
             return False
         os.ftruncate(handle, 0)
         os.lseek(handle, 0, os.SEEK_SET)
         os.write(handle, str(os.getpid()).encode("ascii"))
         self._handle = handle
-        return True
-
-    def _locked(self, handle: int) -> bool:
-        """Whether the operating system gave this process the file's lock; it refuses at once while another holds it."""
-        try:
-            if sys.platform == "win32":
-                import msvcrt
-
-                os.lseek(handle, _LOCKED_BYTE, os.SEEK_SET)
-                msvcrt.locking(handle, msvcrt.LK_NBLCK, 1)
-            else:
-                import fcntl
-
-                fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except OSError:
-            return False
         return True
 
     def _holder(self) -> int:

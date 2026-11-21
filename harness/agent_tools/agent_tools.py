@@ -20,8 +20,6 @@ from harness.markdown.markdown import Markdown, MarkdownCollection, operation_pr
 from harness.annotations.annotation import Annotatable, Annotation, NamesAnnotation, annotation_kinds
 from harness.agent_tools.recipe import ExpansionMode, ExpansionResult, RecipeExpansion, RecipePlaceholders, RecipeSource, RecipeTarget
 
-ContextDocument = dict[str, Any]
-ArgumentDocument = dict[str, Any]
 # A child a toolset collection holds by name, such as a fidelity, a rule, or a child toolset. A collection reads its
 # entries only through their attributes, so an entry may be an object of any class.
 type CollectionEntry = object

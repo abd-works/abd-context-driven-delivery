@@ -13,6 +13,8 @@ from harness.agent_tools.agent_tools import ToolsetReference
 from harness.annotations.annotation import annotation_kinds, hosted_only
 from harness.annotations.name import Name
 
+# The decorator that makes a class a toolset whatever its members are annotated with.
+_TOOLSET_DECORATOR = "agent_toolset"
 # The last name of every decorator a source file could carry, ``@mcp`` and ``@Hook("...")`` alike.
 _DECORATOR_NAME = re.compile(r"@\s*(?:\w+\s*\.\s*)*(\w+)")
 
@@ -188,7 +190,7 @@ class RepositoryToolsets:
         """Whether text names a decorator that can make a class installable. Most source files name none, and reading
         their text this way is far quicker than parsing it; a file that does name one is parsed to find its classes."""
         installing = annotation_kinds.installing_names
-        return any(name == "agent_toolset" or Name(name).snake in installing for name in set(_DECORATOR_NAME.findall(text)))
+        return any(name == _TOOLSET_DECORATOR or Name(name).snake in installing for name in set(_DECORATOR_NAME.findall(text)))
 
     def _collected_files(self) -> Iterable[Path]:
         skip = {name.lower() for name in self._SKIP_DIRS}
@@ -225,7 +227,7 @@ class RepositoryToolsets:
         return any(Name(self._annotation_id(dec) or "").snake == hosted_only.written_as() for dec in class_def.decorator_list)
 
     def _class_is_installable(self, class_def: ast.ClassDef) -> bool:
-        if any(self._annotation_id(dec) == "agent_toolset" for dec in class_def.decorator_list):
+        if any(self._annotation_id(dec) == _TOOLSET_DECORATOR for dec in class_def.decorator_list):
             return True
         # A decorator is matched by its snake-case name, so a kind's class name (``Mcp``) and its alias (``mcp``) both count.
         installing = annotation_kinds.installing_names

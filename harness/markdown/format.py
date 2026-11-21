@@ -98,19 +98,19 @@ class Format(str):
         return self.FILE_ORDER.index(self.group) if self.group in self.FILE_ORDER else len(self.FILE_ORDER)
 
     @property
-    def is_templated(self) -> bool:
+    def _is_templated(self) -> bool:
         """Whether this format keeps its templates in its own folder with its own extension."""
         return self.name in self.TEMPLATED
 
     @property
     def template_folder(self) -> str:
         """The folder under `templates/` that holds this format's templates; empty for a format that has none."""
-        return self.short if self.is_templated else ""
+        return self.short if self._is_templated else ""
 
     @property
     def template_extension(self) -> str:
         """The extension this format's templates end with; empty for a format whose template is found by name."""
-        return self.extension if self.is_templated else ""
+        return self.extension if self._is_templated else ""
 
     def names(self, file: Path) -> bool:
         """Whether the file's name carries the ending this format's files carry: ``orders-sketch.md`` is named as a

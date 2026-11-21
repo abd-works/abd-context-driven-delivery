@@ -4,6 +4,7 @@ The checkout's hook daemon (``hook_daemon.py``) keeps one *HookServer* loaded be
 the IDE's hook command receives."""
 from __future__ import annotations
 
+import functools
 import json
 import logging
 from collections.abc import Iterator, Mapping
@@ -104,15 +105,12 @@ class HookPayload(Mapping[str, Any]):
         folder = str(self._fields.get("cwd") or "").strip()
         return Path(folder) if folder else None
 
-    @property
+    @functools.cached_property
     def call(self) -> ToolCall:
         """The tool call this event reports: the tool's input, in the project the event happened in, else in the
         checkout that received it, made once, so every handler of the event reads the same call and the session it
         opens."""
-        made = self.__dict__.get("_call")
-        if made is None:
-            made = self.__dict__["_call"] = ToolCall(self.tool_input, self.project or self._checkout)
-        return made
+        return ToolCall(self.tool_input, self.project or self._checkout)
 
     @property
     def chat_id(self) -> str:
@@ -372,10 +370,10 @@ class HandlerCatalog:
     whose hooks ``@Hooks(deploy=False)`` keeps out of install is left out here too, so the hooks an install leaves out
     never run, however the catalog was named."""
 
-    def __init__(self, toolsets: list[Any], repo_root: Path | None = None) -> None:
+    def __init__(self, toolsets: list[ToolsetConfiguration], repo_root: Path | None = None) -> None:
         self.repo_root = repo_root
         self.failures: list[tuple[str, BaseException]] = []
-        self.toolsets: list[Any] = []
+        self.toolsets: list[AgentToolSet] = []
         self._load_items(toolsets)
         self._handlers = self._handlers_by_event()
 

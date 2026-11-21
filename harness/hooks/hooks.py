@@ -3,7 +3,7 @@ command for each event, and ``hook-handlers.json``, which lists the operations t
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
 from harness.agent_tools.agent_tools import InstallDestination
 from harness.annotations.annotation import Annotation, Destination

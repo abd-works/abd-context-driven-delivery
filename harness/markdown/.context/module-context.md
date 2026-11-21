@@ -5,7 +5,7 @@
 *Format* is the channel an artifact is written in (`markdown`, `python`, `drawio`, ...), with its short name and file extension, so every reader of a format, an extension, or a template folder means the same thing.
 
 - **Purpose:** Let a class keep its words in markdown beside it, read them back typed, and convert them to HTML.
-- **Seam (terms):** Markdown, MarkdownScope, MarkdownCollection, MarkdownText, MarkdownFile, FrontMatter, FlatSettings, HTML, Format, `operation_property`; the annotations `@markdown` and `@markdown_collection`
+- **Seam (terms):** Markdown, MarkdownScope, MarkdownCollection, MarkdownText, MarkdownTypeUnresolved, HTML, `SOURCE_STAMPS`, and the annotations `@markdown` and `@markdown_collection`, all imported from the package; Format from `format.py`, FrontMatter and FlatSettings from `front_matter.py`, and `operation_property` from `markdown.py`, each imported from its file
 - **Dependencies (one-way):** harness/annotations (*Name*, and the annotations on a property, which are kept when `@markdown` wraps it). A property whose type reads itself from markdown with the object it belongs to, such as a practice's *RulesCollection*, is built through that type's `from_markdown(text, parent=...)`, so this module names no type above it. harness/agent_tools, harness/installation, and harness/guidance depend on it.
 
 ## Constraint

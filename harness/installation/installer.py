@@ -80,7 +80,7 @@ class InstallChannels:
         for installation in (*self.servers, self.language_adapters, *self._files.values(), self.standing_rules):
             installation.track_writes_with(installer.record.track)
         # The toolsets the server channels publish into every install, such as the hooks that start the cdd server.
-        self.toolsets: list[Any] = [AgentToolSet.instantiate(toolset) for server in self.servers for toolset in server.toolsets]
+        self.toolsets: list[AgentToolSet] = [AgentToolSet.instantiate(toolset) for server in self.servers for toolset in server.toolsets]
 
     def of(self, kind: type[_Server]) -> _Server:
         """The run's installation of kind, such as its *McpInstallation*."""
@@ -367,9 +367,9 @@ class Installer:
         *UnknownIde*, and a path that is empty or a file with *NotAnInstallFolder*."""
         root = Path(repo).resolve()
         last_install = LastInstall(_LAST_INSTALL)
-        last = last_install.saved if ide is None and path is None else {}
-        layout = IdeLayout(ide or last.get("ide") or IdeLayout.DEFAULT_IDE)
-        target = InstallTarget(layout, path) if path is not None else InstallTarget.from_last_install(layout, last.get("path"), root)
+        last_ide, last_folder = (last_install.ide, last_install.folder) if ide is None and path is None else (None, None)
+        layout = IdeLayout(ide or last_ide or IdeLayout.DEFAULT_IDE)
+        target = InstallTarget(layout, path) if path is not None else InstallTarget.from_last_install(layout, last_folder, root)
         return cls(target, RepositoryToolsets(root), last_install)
 
     @classmethod
@@ -413,9 +413,9 @@ class Installer:
     @agent_tool
     def install(
         self,
-        toolsets: Iterable[Any] | None = None,
+        toolsets: Iterable[ToolsetConfiguration] | None = None,
         replace: bool = True,
-    ) -> Any:
+    ) -> InstallChannels:
         """Install CDD into ``.cursor`` (or ``.claude`` with ``--ide Claude``) — skills, commands, rules, MCP, and hooks. ``replace`` wipes the previous install first.
 
         Installer-only refresh (``/install`` and ``/clean`` without walking the catalog): ``python scripts/install.py --self`` from this repo — not MCP.
@@ -467,4 +467,4 @@ class Installer:
         return str(self._diagnose_install_section).strip()
 
 
-__all__ = ["Installer"]
+__all__ = ["Deployment", "InstallChannels", "Installer", "SERVER_CHANNELS", "ServersNotRegistered", "ToolsetInstallFailed"]

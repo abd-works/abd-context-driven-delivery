@@ -151,26 +151,32 @@ class ServedCheckout:
     def ensure(self) -> str:
         """Install ``~/.cdd/`` from the checkout on first use and start the server when none answers. A server already
         running is left, with the code it serves, alone."""
-        self._home.install(self.checkout, CONNECT_SCRIPT)
+        self._installed_home()
         return self.daemon.status(self.daemon.ensure())
 
     def pin(self) -> str:
         """Serve the checkout's current commit from ``~/.cdd/runtime``, restarting the server onto it."""
-        self._home.install(self.checkout, CONNECT_SCRIPT)
-        self._home.pin(self.checkout)
-        return self.daemon.status(self.daemon.restart())
+        self._installed_home().pin(self.checkout)
+        return self._restarted_status()
 
     def update(self) -> str:
         """Serve the checkout's current code the way the server already serves it, pinned or as it is on disk,
         restarting the server onto it."""
-        self._home.install(self.checkout, CONNECT_SCRIPT)
-        self._home.serve_current(self.checkout)
-        return self.daemon.status(self.daemon.restart())
+        self._installed_home().serve_current(self.checkout)
+        return self._restarted_status()
 
     def serve_on_disk(self) -> str:
         """Serve the checkout as it is on disk, for working on CDD itself, restarting the server onto it."""
+        self._installed_home().serve_from(self.checkout)
+        return self._restarted_status()
+
+    def _installed_home(self) -> CddHome:
+        """The home, once ``~/.cdd/`` is installed from the checkout, which every way of serving it starts with."""
         self._home.install(self.checkout, CONNECT_SCRIPT)
-        self._home.serve_from(self.checkout)
+        return self._home
+
+    def _restarted_status(self) -> str:
+        """The server's status after it restarts onto the code the home now names."""
         return self.daemon.status(self.daemon.restart())
 
     def keep_pinned_current(self) -> str | None:

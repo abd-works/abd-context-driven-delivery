@@ -19,6 +19,25 @@ _HOLD_RETRY_SECONDS = 0.01
 _LOCK_SUFFIX = ".lock"
 
 
+def _takes_operating_system_lock(handle: int, locked_byte: int = 0) -> bool:
+    """Whether the operating system gave this process the lock on the open file handle names, which closing the file
+    gives back; it refuses at once while another process holds it. Windows locks one byte of the file, the one at
+    locked_byte, so a file whose start is still read by a waiting process locks a byte past what it holds."""
+    try:
+        if os.name == "nt":
+            import msvcrt
+
+            os.lseek(handle, locked_byte, os.SEEK_SET)
+            msvcrt.locking(handle, msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        return False
+    return True
+
+
 class JsonFileUnreadable(ValueError):
     """A JSON file holds something other than a JSON object. Nothing is written over it, so what it holds stays for a
     person to repair. An owner whose file says more about what to do raises its own kind of this error."""
@@ -101,26 +120,10 @@ class JsonFile:
         """Take the operating system's lock on lock_file, which closing the file gives back, trying again while another
         holder has it."""
         deadline = time.monotonic() + _HOLD_SECONDS
-        while not self._is_taken(lock_file):
+        while not _takes_operating_system_lock(lock_file.fileno()):
             if time.monotonic() >= deadline:
                 raise JsonFileBusy(self.path, _HOLD_SECONDS)
             time.sleep(_HOLD_RETRY_SECONDS)
-
-    def _is_taken(self, lock_file: IO[bytes]) -> bool:
-        """Whether this try took the lock; false while another holder has it."""
-        lock_file.seek(0)
-        try:
-            if os.name == "nt":
-                import msvcrt
-
-                msvcrt.locking(lock_file.fileno(), msvcrt.LK_NBLCK, 1)
-            else:
-                import fcntl
-
-                fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except OSError:
-            return False
-        return True
 
     def _text(self) -> str:
         """The file's text, without the byte-order mark an editor may have saved at its start. Windows refuses a read

@@ -139,6 +139,16 @@ class LastInstall:
         """The ``ide`` and ``path`` of the last install; empty before the first."""
         return self._file.read()
 
+    @property
+    def ide(self) -> str | None:
+        """The IDE of the last install; none before the first."""
+        return self.saved.get("ide")
+
+    @property
+    def folder(self) -> str | None:
+        """The folder the last install wrote into, as it was saved; none before the first."""
+        return self.saved.get("path")
+
     def remember(self, target: InstallTarget) -> None:
         """Keep target as the folder last installed into, unless it is a temporary one."""
         if not target.is_temporary:

@@ -49,7 +49,7 @@ Class annotation. Turns off, or keeps out of the install, every hook on that too
 + deploy: bool
 	// false keeps the toolset's hooks out of hook-handlers.json
 ----
-+ annotate(toolset): toolset
++ annotate(toolset_class: type): type
 	// keeps itself on the class as `_hooks`; read through Hooks.from_toolset_class(type(toolset)).disabled and .deploy
 	// write `@Hooks(disabled=True)` above `@agent_toolset` so the annotation stays on the registered type
 
@@ -57,7 +57,7 @@ Class annotation. Turns off, or keeps out of the install, every hook on that too
 
 Install-time writer for hook artifacts. Same walk as markdown and MCP; only the leaf writes differ.
 
-+ HookInstallation(layout: IdeLayout, path: Path, *, python: str | None = None, repo: Path | None = None)
++ HookInstallation(layout: IdeLayout, path: Path | str, repo: Path | str | None = None)
 ------
 + interpreter: PythonInterpreter
 + handlers_file: HookHandlersFile
@@ -93,11 +93,11 @@ Install-time writer for hook artifacts. Same walk as markdown and MCP; only the 
 
 + HooksManifest(path: Path)
 ------
-+ hooks: dict[str, list[dict]]
++ hooks: dict[str, list[dict[str, Any]]]
 	// a file that is not a JSON object raises HooksFileUnreadable; an install never writes over it
 + registered_events: list[str]
 ----
-+ write(hooks: dict): None
++ write(hooks: dict[str, list[dict[str, Any]]]): None
 
 ## HookHandlersFile                                               <!-- Md -->
 
@@ -156,8 +156,10 @@ The stdin JSON for one firing. Handlers read it through the named properties; it
 
 Fields the IDE reads back from the hook process.
 
-+ HookResult(permission: str = "allow", continue_flag: bool | None = None, user_message, agent_message, followup_message, additional_context, toast)
++ HookResult(permission: str = "allow", continue_flag: bool | None = None, messages: HookMessages = HookMessages())
 ------
++ messages: HookMessages
+	// the five texts below, as one value
 + permission: str
 	// deny wins when any handler returns deny
 + continue_flag: bool | None
@@ -180,6 +182,21 @@ Fields the IDE reads back from the hook process.
 	// deny and continue false win; user_message, agent_message, and toast join with newlines
 + as_dict(): dict
 	// the fields the IDE reads; the toast is left out
+
+## HookMessages                                                   <!-- Md -->
+
+What a hook says back, each part none when it says nothing there. A *HookResult* is made from one.
+
++ HookMessages(user_message: str | None = None, agent_message: str | None = None, followup_message: str | None = None, additional_context: str | None = None, toast: str | None = None)
+------
++ user_message: str | None
++ agent_message: str | None
++ followup_message: str | None
++ additional_context: str | None
++ toast: str | None
+----
++ from_handler(raw: Mapping[str, Any]): HookMessages
+	// each message a handler's answer names, read as text; an empty one is none
 
 ## HookHandler                                                    <!-- Md -->
 
@@ -207,9 +224,8 @@ One annotated operation that may run for an event.
 
 The toolsets whose hooks the server runs.
 
-+ HandlerCatalog(toolsets: list | None = None, repo_root: Path | None = None, handlers: Path | None = None)
++ HandlerCatalog(toolsets: list[ToolsetConfiguration], repo_root: Path | None = None)
 	// the toolsets named; a toolset whose @Hooks(deploy=False) keeps it out of install is left out
-	-> HookHandlersFile.refs
 ------
 + << composition >> toolsets: list[AgentToolSet]
 	// skips toolsets whose class is annotated @hosted_only
@@ -218,7 +234,7 @@ The toolsets whose hooks the server runs.
 	// a reference that does not load (bad reference, missing module or class, not a toolset, constructor mismatch)
 + event_names: list[str]
 ----
-+ ref_label(item): str
++ ref_label(configured: ToolsetConfiguration): str
 + for_event(event_name: str): list[HookHandler]
 	// tools_for(InstallDestination.HOOK) serving the event: events_served(hook_event), so a postToolUse hook also serves afterFileEdit
 
@@ -295,9 +311,9 @@ The hook daemon of one checkout: it listens on the one port the checkout's daemo
 + is_running(): bool
 + ensure(): HookDaemonAddress
 	// replace a daemon on older code, then the live one, or start one (one hook command at a time) and wait for it
-	-> replace_stale
+	-> _replace_stale
 	-> spawn
-+ replace_stale(): None
+- _replace_stale(): None
 	-> RunningProcess.stop
 + stop(): None
 	// stop the daemon answering on the port as this checkout's, or as one of the older layout; remove both address files
@@ -318,19 +334,33 @@ The hook daemon of one checkout: it listens on the one port the checkout's daemo
 
 Where a running hook daemon answers, and who it is. The address file holds these fields, and a ping answers them.
 
-+ HookDaemonAddress(host: str, port: int, pid: int | None = None, stamp: str = "", repo: str = "")
++ HookDaemonAddress(host: str, port: int, identity: HookDaemonIdentity = HookDaemonIdentity())
 ------
 + host: str
 + port: int
 + pid: int | None
 + stamp: str
 + repo: str
+	// pid, stamp, and repo are the identity's
++ process: RunningProcess
 ----
 + answers(): bool
 + reported(): HookDaemonAddress | None
 	// the address as the daemon answering here reports it; a daemon of the older layout reports no pid, stamp, or repo
 + serves(repo: Path): bool
 + handle_stdin(raw: bytes): dict
+
+## HookDaemonIdentity                                             <!-- Md -->
+
+Who a running hook daemon is. A daemon started by the older layout says none of these.
+
++ HookDaemonIdentity(pid: int | None = None, stamp: str = "", repo: str = "")
+------
++ pid: int | None
++ stamp: str
+	// the stamp of the hook code the daemon loaded
++ repo: str
+	// its checkout
 
 ## HookDaemonAddressFile                                          <!-- Md -->
 

@@ -267,3 +267,22 @@ with description("a heading a link names by its anchor"):
         with it("should be found by the anchor made from the words the heading shows"):
             linked = MarkdownText("# Story Map\n\n### (S) Person --> [Delete Ticket](../story_tests/remove_tickets_story.test.md)\n\nThe Person removes a ticket.\n")
             expect(linked.anchored_lines("s-person----delete-ticket")).to(equal((3, 5)))
+
+
+with description("a parsed document shared between readers"):
+    with before.each:
+        self.document = MarkdownText(
+            "# Practice\n\n## Fidelities\n\n### story_map\n\nScope the solution.\n\n### scenarios\n\nDefine the behavior.\n"
+        )
+
+    with context("that one reader has asked for a fidelity's block"):
+        with before.each:
+            self.kept_before = set(vars(self.document))
+            self.document.headings()
+            self.block = self.document.fidelity_block("scenarios")
+
+        with it("should answer that block"):
+            expect(self.block).to(equal("Define the behavior."))
+
+        with it("should keep nothing of that reader's question, so a second reader's answer is its own"):
+            expect(set(vars(self.document))).to(equal(self.kept_before))

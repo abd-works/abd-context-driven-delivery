@@ -40,8 +40,9 @@ class LaneCall:
         return cls(call.request.tool, dict(call.arguments), str(call.project or ""), call.chat_id)
 
     @classmethod
-    def from_data(cls, data: dict[str, Any]) -> LaneCall:
-        return cls(str(data.get("tool") or ""), dict(data.get("arguments") or {}), str(data.get("project") or ""), str(data.get("chat") or ""))
+    def from_sent(cls, sent: dict[str, Any]) -> LaneCall:
+        """The call another lane sent as JSON, the ``as_data`` of the call it was handed."""
+        return cls(str(sent.get("tool") or ""), dict(sent.get("arguments") or {}), str(sent.get("project") or ""), str(sent.get("chat") or ""))
 
     @property
     def as_data(self) -> dict[str, Any]:

@@ -51,6 +51,12 @@ def is_desktop_spare(folder: Path) -> bool:
     return resolved == spares or spares in resolved.parents
 
 
+def checkout_holding(folder: Path) -> Path:
+    """The checkout holding folder, the folder a chat works in: the folder itself when no checkout holds it."""
+    resolved = folder.resolve()
+    return next((above for above in (resolved, *resolved.parents) if (above / ".git").exists()), resolved)
+
+
 class ClaudeChatProcess:
     """A running Claude Code chat process, known by its process id."""
 
@@ -92,8 +98,7 @@ class ClaudeChatProcess:
     @property
     def session_file(self) -> Path:
         """The file Claude Code keeps for this process while it runs."""
-        config = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude")
-        return config / "sessions" / f"{self.pid}.json"
+        return claude_config_folder() / "sessions" / f"{self.pid}.json"
 
     @property
     def working_folder(self) -> Path | None:
@@ -103,8 +108,7 @@ class ClaudeChatProcess:
         folder = Path(recorded) if recorded else None
         if folder is None or not folder.is_dir() or is_desktop_spare(folder):
             return None
-        resolved = folder.resolve()
-        return next((above for above in (resolved, *resolved.parents) if (above / ".git").exists()), resolved)
+        return checkout_holding(folder)
 
     @property
     def session_id(self) -> str:

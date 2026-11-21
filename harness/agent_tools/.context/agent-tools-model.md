@@ -393,7 +393,7 @@ attach(instance: Any, name: str | None = None): None
 
 `@collect` on a collection property: the same-named property gathered across the collection's children, joined as text or wrapped in the return type.
 
-Collect(fn: Callable): property
+Collect(operation: Callable): property
 ------
 ----
 of(collection: Any, name: str, return_type: Any): Any

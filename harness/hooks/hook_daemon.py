@@ -349,14 +349,14 @@ class HookDaemon:
 
     def ensure(self) -> HookDaemonAddress:
         """The address of this checkout's daemon, replacing one on older code and starting one when none answers."""
-        self.replace_stale()
+        self._replace_stale()
         address = self.live_address()
         if address is not None:
             return address
         self._start_once()
         return self._wait_until_live(time.time() + _READY_WAIT_SECONDS)
 
-    def replace_stale(self) -> None:
+    def _replace_stale(self) -> None:
         """Stop a daemon that loaded older hook code. A Cursor reload does not restart it."""
         published = self.address_file.read()
         if published is None or published.stamp == self.source_stamp:

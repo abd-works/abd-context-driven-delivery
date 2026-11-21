@@ -43,7 +43,7 @@ attach(instance: Any, name: str | None = None) -> None
 markdown_collection(fn | label: str | None) -> property
 	# a module function, holding the label in the property it makes; no stand-in collection
 	# getter -> Markdown.held_by(owner, label)
-	# getter -> Markdown.read_into(return_type, MarkdownCollection.from_section)
+	# getter -> Markdown.read_for(operation, MarkdownCollection, MarkdownCollection.from_section)
 	# getter -> result.attach(owner, name)
 	# never Markdown.coerce
 
