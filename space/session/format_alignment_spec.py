@@ -63,8 +63,8 @@ with description("a gap between a session's formats") as self:
         with it("should be closed by a render when its format is a drawing"):
             expect(AlignmentGap(MISSING_FILE, "stories-story-map", DRAWING, "", "drawio", STORY_MAP).is_alignable).to(be_true)
 
-        with it("should not be closed by a render when its format is code, which a render does not save"):
-            expect(AlignmentGap(MISSING_FILE, "stories-acceptance-tests", "story_tests", "", "python", STORY_MAP).is_alignable).to(be_false)
+        with it("should be closed by a render when its format is code, which a render saves at the declared paths"):
+            expect(AlignmentGap(MISSING_FILE, "ddd-model", "{bounded_context}/{aggregate}/{aggregate}.py", "", "python", ".context/domain-model.md").is_alignable).to(be_true)
 
         with context("that is left to a person because another format of its document conflicts"):
             with it("should name no file to align from"):

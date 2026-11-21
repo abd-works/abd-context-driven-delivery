@@ -62,14 +62,20 @@ def example_source_file(story_test: str, imported_modules: dict[str, str], name:
         return story_test
     suffix = PurePosixPath(story_test).suffix
     if not module.startswith("."):
-        return module + suffix
+        return _module_file(module, suffix)
     parts: list[str] = list(PurePosixPath(story_test).parent.parts)
     for part in PurePosixPath(module).parts:
         if part == "..":
             parts = parts[:-1]
         elif part != ".":
             parts.append(part)
-    return "/".join(parts) + suffix
+    return _module_file("/".join(parts), suffix)
+
+
+def _module_file(module: str, suffix: str) -> str:
+    """The file a module's path names: the path with suffix, unless the import already writes it, as a JavaScript
+    module's import does (``./order.examples.js``)."""
+    return module if module.endswith(suffix) else module + suffix
 
 
 def imported_files(file: str, imported_modules: dict[str, str]) -> list[str]:
@@ -79,7 +85,7 @@ def imported_files(file: str, imported_modules: dict[str, str]) -> list[str]:
     relative = {example_source_file(file, imported_modules, name) for name, module in imported_modules.items() if module.startswith(".")}
     suffix = PurePosixPath(file).suffix
     rooted = {
-        (folder / f"{module}{suffix}").as_posix().removeprefix("./")
+        (folder / _module_file(module, suffix)).as_posix().removeprefix("./")
         for module in set(imported_modules.values()) if not module.startswith(".")
         for folder in PurePosixPath(file).parents
     }

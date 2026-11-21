@@ -17,7 +17,7 @@ class OperationCount(NamedTuple):
     """<<Value Object>> A class's operations: every one it declares, its getters, setters, and constructor included,
     and those its visibility makes public. A constructor builds the object; it is counted but never public. In Python
     an operation is public when its name does not start with ``_``, so a dunder such as ``__init__`` is not; in a
-    language with a visibility keyword, such as TypeScript, JavaScript, or Java, when it is not marked ``private`` and
+    language with a visibility keyword, such as TypeScript or JavaScript, when it is not marked ``private`` and
     its name does not start with ``#``."""
 
     total: int

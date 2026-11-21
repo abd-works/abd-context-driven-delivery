@@ -216,8 +216,16 @@ outputs:
     - "story_tests/{epic}/examples/{concept}.examples.ts"
     - "story_tests/**/story-test.ts"
   javascript:
+    - "story_tests/{epic}/{sub-epic}/{sub_epic_slug}.story.shared.js"
+    - "story_tests/{epic}/{sub-epic}/{sub_epic_slug}.story.domain.spec.js"
+    - "story_tests/{epic}/{sub-epic}/{sub_epic_slug}.story.server.spec.js"
     - "story_tests/{epic}/{sub-epic}/{story}/{story_snake}_story.test.js"
+    - "story_tests/{epic}/{sub-epic}/{sub_epic_slug}.story.ui.spec.js"
+    - "story_tests/{epic}/{epic_slug}.story.shared.js"
+    - "story_tests/{epic}/{epic_slug}.story.domain.spec.js"
+    - "story_tests/{epic}/{epic_slug}.story.server.spec.js"
     - "story_tests/{epic}/{story}/{story_snake}_story.test.js"
+    - "story_tests/{epic}/{epic_slug}.story.ui.spec.js"
     - "story_tests/{epic}/examples/{concept}.examples.js"
     - "story_tests/**/story-test.js"
 ```

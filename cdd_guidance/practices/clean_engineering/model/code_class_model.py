@@ -167,7 +167,7 @@ class CodeClass(OoadClass):
         return extended, [base for base in bases if base != extended]
 
     def _class_modifiers(self, implemented: List[str]) -> str:
-        """The words before `class`, such as Java's `public`."""
+        """The words before `class`, such as TypeScript's `abstract`."""
         return ""
 
     def closing(self, has_members: bool) -> List[str]:
@@ -199,7 +199,7 @@ class CodeModule(Module):
 
 
 class CodeCleanEngineeringModel(CleanEngineeringModel):
-    """A class model written as code. Python, TypeScript, JavaScript, and Java parts spell their own lines."""
+    """A class model written as code. Python, TypeScript, and JavaScript parts spell their own lines."""
 
     language: CodeLanguage
     module_type: type = CodeModule
@@ -375,5 +375,5 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
 
 
 class BraceCleanEngineeringModel(CFamilyParse, CodeCleanEngineeringModel):
-    """A class model written in a brace language: TypeScript, JavaScript, or Java. Each reads its own text through
+    """A class model written in a brace language: TypeScript or JavaScript. Each reads its own text through
     the brace-language reading it shares."""

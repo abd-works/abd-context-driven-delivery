@@ -1,16 +1,17 @@
-"""BDD spec - TypeScript runnable-story Story Map."""
+"""What TypeScript story tests alone do: how a story file imports the step library, and how its outcomes chain.
+
+What every language's story tests do is in `code_story_behaviours_spec.py` and `story_test_behaviours_spec.py`."""
 
 import sys
 from pathlib import Path
 
-from expects import be_true, contain, equal, expect, have_len, raise_error
+from expects import be_true, contain, equal, expect, have_len
 from mamba import before, context, description, it
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModelError
 from cdd_guidance.practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
 from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryType, Epic
 from cdd_guidance.practices.stories.model.story_model import StepType, Scenario, Step
@@ -51,28 +52,8 @@ with description("a TypeScript runnable-story Story Map") as self:
             self.tree = self.ts.render(_story_map_with_stories())
             self.leaf_paths = sorted(path for path in self.tree if self.ts.is_story_file(path))
 
-        with it("should emit one `{sub_epic_snake}_story.test.ts` in the parent epic folder"):
-            for path in self.leaf_paths:
-                expect(path.endswith("_story.test.ts")).to(be_true)
-                expect("/epic-1/epic_1_" in path).to(be_true)
-                expect("/redeem-a-voucher/" in path).to(equal(False))
-
         with it("should not emit givens.ts — Given steps stay in story tests"):
             expect(any(p.endswith("/givens.ts") for p in self.tree)).to(equal(False))
-
-        with it("should contain story() call directly"):
-            for path in self.leaf_paths:
-                expect(self.tree[path]).to(contain("story('Redeem a voucher', () => {"))
-
-        with it("should write no examples file, whose data no story names"):
-            expect(any("/examples/" in p for p in self.tree)).to(equal(False))
-
-        with it("should include story-test shared helper"):
-            expect("tests/story-test.ts" in self.tree).to(be_true)
-
-        with it("should default output under tests/"):
-            expect(self.ts.tests_root).to(equal("tests"))
-            expect(any(p.startswith("tests/") for p in self.tree)).to(be_true)
 
         with it("should import story-test from the workspace deploy root"):
             leaf = next(p for p in self.leaf_paths)
@@ -84,18 +65,6 @@ with description("a TypeScript runnable-story Story Map") as self:
             self.ts = TypeScriptStoryModel(tests_root=self.custom_root)
             self.tree = self.ts.render(_story_map_with_stories())
 
-        with it("should place story-test at the stories workspace root"):
-            expect("stories/story-test.ts" in self.tree).to(be_true)
-
-        with it("should emit story files under the custom root"):
-            expect(
-                any(
-                    p.startswith(f"{self.custom_root}/")
-                    and p.endswith("_story.test.ts")
-                    for p in self.tree
-                )
-            ).to(be_true)
-
         with it("should import story-test from the stories workspace root"):
             leaf = next(p for p in self.tree if p.endswith("_story.test.ts"))
             expect(self.tree[leaf]).to(contain('from "stories/story-test"'))
@@ -105,24 +74,9 @@ with description("a TypeScript runnable-story Story Map") as self:
             self.ts = TypeScriptStoryModel(tests_root="tests", story_test_folder="test-utils/story-test")
             self.tree = self.ts.render(_story_map_with_stories())
 
-        with it("should place story-test in the step library folder"):
-            expect("test-utils/story-test/story-test.ts" in self.tree).to(be_true)
-            expect("tests/story-test.ts" in self.tree).to(equal(False))
-
-        with it("should keep story files under the tests root"):
-            leaf = next(p for p in self.tree if p.endswith("_story.test.ts"))
-            expect(leaf.startswith("tests/")).to(be_true)
-
         with it("should import story-test from the step library folder"):
             leaf = next(p for p in self.tree if p.endswith("_story.test.ts"))
             expect(self.tree[leaf]).to(contain('from "test-utils/story-test/story-test"'))
-
-        with it("should still skip story-test when parsing the tree back"):
-            parsed = TypeScriptStoryModel("tests").parse(self.tree)
-            expect(parsed.epics[0].epics[0].stories[0].name).to(equal("Redeem a voucher"))
-            expect(
-                sorted(path for path in self.tree if TypeScriptStoryModel("tests").is_story_file(path))
-            ).not_to(contain("test-utils/story-test/story-test.ts"))
 
     with context("a scenario with two Then outcomes"):
         with it("should chain the second outcome with .and()"):
@@ -140,19 +94,6 @@ with description("a TypeScript runnable-story Story Map") as self:
             src = TypeScriptStoryModel().writing.story_text(TypeScriptStory(story))
             expect(".and(" in src).to(be_true)
             expect(src.count("then(")).to(equal(1))
-
-    with context("round-trip"):
-        with before.each:
-            self.parsed = self.ts.parse(self.ts.render(_story_map_with_stories()))
-
-        with it("should preserve story and scenario"):
-            story = self.parsed.epics[0].epics[0].stories[0]
-            expect(story.name).to(equal("Redeem a voucher"))
-            expect(story.scenarios).to(have_len(1))
-
-    with context("invalid parse input"):
-        with it("should reject"):
-            expect(lambda: self.ts.parse("not a tree")).to(raise_error(CodeStoryModelError))
 
     with context("a story file that sits directly in its epic folder"):
         with before.each:

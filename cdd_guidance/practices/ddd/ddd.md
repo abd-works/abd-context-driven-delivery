@@ -307,7 +307,7 @@ Rough building-block index for a **partition** pass or first cut — under each 
 
 ```yaml
 alwaysApply: false
-globs: "**/*.py,**/*.ts,**/*.tsx,**/*.js,**/*.java,**/*-sketch.md"
+globs: "**/*.py,**/*.ts,**/*.tsx,**/*.js,**/*-sketch.md"
 ```
 
 Whenever you add factories, specifications, domain services, or domain events; persist, publish, or test repositories, events, or factories; or change production code they support. Follow these rules.

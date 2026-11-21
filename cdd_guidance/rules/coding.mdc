@@ -1,7 +1,7 @@
 ---
 description: "Coding rules for refactors and public seams in this repository"
 alwaysApply: true
-globs: "**/*.py,**/*.ts,**/*.tsx,**/*.js,**/*.java"
+globs: "**/*.py,**/*.ts,**/*.tsx,**/*.js"
 ---
 
 # Coding rules

@@ -26,11 +26,17 @@ MODEL_WRITTEN_FACT = "model_written"
 then-observes-an-example reads: only there must the Then observe an Example."""
 
 
+# Where a name written in code breaks into words: at an underscore, and before a capital that follows a small letter.
+_WORD_BREAK = re.compile(r"_+|(?<=[a-z0-9])(?=[A-Z])")
+
+
 class ExampleObservations:
     """The ``observes`` edges of the Stories practice: a step observes the examples its own text and body name, and a
     Then also those the Givens of its scenario and of its story's Background name, the state whose outcome it
-    observes. Each is read from the facts every step saves with the graph and from the graph's own edges, so it is
-    the same whichever other practices the graph reads."""
+    observes. An example is named by its name as written, and, by an example of the step's own story file, in the
+    plain words a step is written in (``paid order`` for ``paid_order`` or ``paidOrder``), so a story test whose
+    steps hold no code yet observes the same examples as one that calls them. Each is read from the facts every step
+    saves with the graph and from the graph's own edges, so it is the same whichever other practices the graph reads."""
 
     def __init__(self, stories: PracticeReading, tree: "StoryTree") -> None:
         self.stories = stories
@@ -51,8 +57,18 @@ class ExampleObservations:
         texts = [self._step_body(step)]
         if step.get_fact("phase") == "then":
             texts.extend(self._step_body(given) for given in self._givens_of(step))
-        named = [example for example in self.examples if any(re.search(rf"\b{re.escape(example.name)}\b", text) for text in texts)]
+        named = [example for example in self.examples if any(self._names(text, example, step) for text in texts)]
         return self._of_story_file(step, named)
+
+    def _names(self, text: str, example: "Node", step: "Node") -> bool:
+        """Whether text names example: by its name as written, or, for an example of step's own story file, by its
+        name in plain words, in any case."""
+        if re.search(rf"\b{re.escape(example.name)}\b", text):
+            return True
+        if example.source.file != step.source.file:
+            return False
+        words = _WORD_BREAK.sub(" ", example.name)
+        return words != example.name and re.search(rf"\b{re.escape(words)}\b", text, re.IGNORECASE) is not None
 
     def _of_story_file(self, step: "Node", examples: list["Node"]) -> list["Node"]:
         """examples, keeping of those that share a name only the one recorded for step's own story file: each story file

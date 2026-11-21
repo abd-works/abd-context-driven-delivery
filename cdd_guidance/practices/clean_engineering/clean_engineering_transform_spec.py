@@ -66,12 +66,6 @@ class Cart {
 }
 """
 
-_SAMPLE_JAVA = """\
-class Cart {
-    public Order placeOrder() {}
-}
-"""
-
 _SAMPLE_JSON = """\
 {
   "name": "model",
@@ -180,32 +174,6 @@ with description("OoadAnalysis transform tool"):
             self.CleanEngineering = _load_clean_engineering(fidelity="modules", format="markdown")
             self.result = _invoke_transform(
                 self.CleanEngineering, "typescript", "markdown", _SAMPLE_TYPESCRIPT
-            )
-
-        with it("should preserve the class name Cart in the output"):
-            expect(self.result["content"]).to(contain("Cart"))
-
-        with it("should include format in the result"):
-            expect(self.result["format"]).to(equal("markdown"))
-
-    with context("transform from markdown to java"):
-        with before.each:
-            self.CleanEngineering = _load_clean_engineering(fidelity="modules", format="markdown")
-            self.result = _invoke_transform(
-                self.CleanEngineering, "markdown", "java", _SAMPLE_MARKDOWN
-            )
-
-        with it("should preserve the class name Cart in the output"):
-            expect(self.result["content"]).to(contain("Cart"))
-
-        with it("should include format in the result"):
-            expect(self.result["format"]).to(equal("java"))
-
-    with context("transform from java to markdown"):
-        with before.each:
-            self.CleanEngineering = _load_clean_engineering(fidelity="modules", format="markdown")
-            self.result = _invoke_transform(
-                self.CleanEngineering, "java", "markdown", _SAMPLE_JAVA
             )
 
         with it("should preserve the class name Cart in the output"):

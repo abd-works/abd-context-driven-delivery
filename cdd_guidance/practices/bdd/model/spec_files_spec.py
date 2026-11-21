@@ -22,10 +22,6 @@ with description("a file in a working copy BDD reads"):
         with it("should be test code"):
             expect(is_test_code("app/test-utils/board-page-support.ts")).to(be_true)
 
-    with context("that is a Java test"):
-        with it("should be a spec file"):
-            expect(is_spec_file("src/test/java/shop/CartTest.java")).to(be_true)
-
     with context("that is a fixtures module"):
         with it("should be no spec file"):
             expect(is_spec_file("shop/fixtures.py")).to(be_false)

@@ -1,4 +1,5 @@
-"""ScreenSpecFile. A TypeScript screen spec (``*.story.ui.spec.ts``) read as the code of its stories' scenarios.
+"""ScreenSpecFile. A screen spec in TypeScript or JavaScript (``*.story.ui.spec.ts``, ``*.story.ui.spec.js``) read as
+the code of its stories' scenarios.
 
 A screen spec does what a person does on a page: each ``test.describe('Story', ...)`` is one story, and each
 ``test('Scenario', async ({ page }) => { ... })`` inside it one of its scenarios, written as code with no step words. Its
@@ -14,13 +15,14 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from cdd_guidance.practices.clean_engineering.model.bracket_structure import BracketStructure
-from cdd_guidance.practices.clean_engineering.model.code_body import TYPESCRIPT, CodeBody
+from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
 from cdd_guidance.practices.stories.model.story_model import StepType
 
 if TYPE_CHECKING:
     from cdd_guidance.practices.stories.model.story_model import Scenario, Story
 
-SCREEN_SPEC_SUFFIX = ".story.ui.spec.ts"
+# How a screen spec's name ends before its language's extension.
+SCREEN_SPEC_STEM = ".story.ui.spec"
 # The call and its callback up to the `{` opening the callback's body: `test('Name', async ({ page }) => {`.
 _DESCRIBE = re.compile(r"\btest\.describe\(\s*(['\"`])(?P<name>.+?)\1\s*,.*?=>\s*\{", re.S)
 _TEST = re.compile(r"\btest\(\s*(['\"`])(?P<name>.+?)\1\s*,.*?=>\s*\{", re.S)
@@ -38,10 +40,11 @@ class StepLines:
 
 
 class ScreenSpecFile:
-    """One screen spec's text, parsed once."""
+    """One screen spec's text, parsed once, and the language its steps' code is written in."""
 
-    def __init__(self, text: str) -> None:
+    def __init__(self, text: str, language: CodeLanguage) -> None:
         self.text = text
+        self.language = language
         self._brackets = BracketStructure(text)
 
     def stories(self, story_type: type) -> list:
@@ -59,7 +62,7 @@ class ScreenSpecFile:
         for order, step in enumerate(self._steps_in(body), start=1):
             made = scenario.step_type(step.lines[0].strip(), step.phase, order)
             made.keyword = _KEYWORDS[step.phase]
-            made.body = CodeBody("\n".join(step.lines), TYPESCRIPT)
+            made.body = CodeBody("\n".join(step.lines), self.language)
             scenario.steps.append(made)
         return scenario
 

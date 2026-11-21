@@ -180,7 +180,7 @@ class Stories(PracticeGuidance):
     def _take_story_test(self, merged: StoryModel, test: StorySource, project: Path) -> None:
         """The story test's scenarios onto merged's Story of the same name, each step with the code the story test
         gives it, as a story test read with no map has it; and the story test's text and its examples modules'."""
-        merged.sources.take(self._story_test_sources(test, project))
+        merged.sources.take(self.story_test_sources(test, project))
         reader = self._story_test_reader(project / test.file)
         merged.test_scenarios.take(reader.stories_of(test.text, test.file, project)[0], test.file)
 
@@ -268,7 +268,7 @@ class Stories(PracticeGuidance):
         relative = named.group(1).split("#", 1)[0]
         return next((path for path in (test.parent / relative, project / relative) if path.is_file()), None)
 
-    def _story_test_sources(self, test: StorySource, project: Path) -> StorySources:
+    def story_test_sources(self, test: StorySource, project: Path) -> StorySources:
         """The story test, and each examples module it imports that is there under project, which an example's facts
         read its exported names from."""
         sources = StorySources()

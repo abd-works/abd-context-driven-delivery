@@ -459,21 +459,27 @@ The `python` format: Mamba story tests. Nodes: PythonEpic, PythonStory, PythonSc
 
 The model TypeScript and JavaScript share; they write with a *BraceStoryWriting*. Nodes: BraceStory, BraceScenario. Its blocks are found by *BraceStoryFile*.
 
-## TypeScriptStoryModel : BraceStoryModel
+## ScriptStoryModel : BraceStoryModel
 
-The `typescript` format. Nodes: TypeScriptEpic, TypeScriptStory, TypeScriptScenario.
+The story tree of a script language, TypeScript or JavaScript, which hold the same story files: a story test (`_story.test`), a shared story file (`.story.shared`), a screen spec (`.story.ui.spec`, read by *ScreenSpecFile* as one story for each `test.describe`), and the step library every story file imports. Nodes: ScriptStory. A language names its extension, its code language, its step library seed, and how a story file imports the step library.
 
 ------
 + story_test_folder: str
 	// the step library folder: the stories workspace root, else the deploy root, unless named
 + story_test_import_path: str
-	// property: the import every story file uses for story-test
+	// property: the step library as a path from the workspace root, without its extension
 + story_test_file_path: str
-	// property: where the shared story-test.ts seed is written
+	// property: where the step library a new tree is seeded with is written
++ seed_file: Path
+	// the step library a new tree in this language is seeded with
 
-## JavaScriptStoryModel : BraceStoryModel
+## TypeScriptStoryModel : ScriptStoryModel
 
-The `javascript` format. Nodes: JavaScriptEpic, JavaScriptStory, JavaScriptScenario.
+The `typescript` format. Nodes: TypeScriptEpic, TypeScriptStory, TypeScriptScenario. A story file imports the step library by its path from the workspace root.
+
+## JavaScriptStoryModel : ScriptStoryModel
+
+The `javascript` format. Nodes: JavaScriptEpic, JavaScriptStory, JavaScriptScenario. A story file imports the step library by the path from its own folder, with the file's extension.
 
 ## CodeStory : Story, CodeStoryNode
 

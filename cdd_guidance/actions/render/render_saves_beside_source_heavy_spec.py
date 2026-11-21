@@ -44,6 +44,34 @@ _BOOKSHOP_STORY_MAP = """\
 
 ### (S) Customer --> Place Order
 """
+_DOMAIN_MODEL = """# Domain Model — Bookshop
+
+---
+
+## Ordering | custom
+
+### Cart
+
+A cart holds one line per book.
+
+#### Cart <<Aggregate Root>> <<Entity>>
+
+------
++ cartId: CartId
+----
++ total(): Money
+
+### Order
+
+An order is a cart a customer submitted.
+
+#### Order <<Aggregate Root>> <<Entity>>
+
+------
++ orderId: OrderId
+----
++ submit(): void
+"""
 _THIN_SLICE = """# Thin Slice
 
 ## Increments
@@ -124,6 +152,20 @@ with description("Render saving what it makes beside its source, called through 
 
         with it("should answer the chat with the saved file rather than the drawing"):
             expect((self.failed, "story-map.drawio" in self.answer, "mxGraphModel" in self.answer)).to(equal((False, True, False)))
+
+    # Exploratory testing, r3-bolt-06: a domain model rendered to Python came back as one text and nothing was saved.
+    # The person's answer (2026-11-20): every render ends in a saved file.
+    with context("a domain model rendered to Python"):
+        with before.each:
+            (self.folder / "domain-model.md").write_text(_DOMAIN_MODEL, encoding="utf-8")
+            self.failed, self.answer = asyncio.run(_render(self.server, self.project.root, "python", ".context/domain-model.md", None, "ddd-model"))
+
+        with it("should save a file for each aggregate where the fidelity declares it"):
+            saved = sorted(path.relative_to(self.project.root).as_posix() for path in self.project.root.glob("ordering/*/*.py"))
+            expect(saved).to(equal(["ordering/cart/cart.py", "ordering/order/order.py"]))
+
+        with it("should answer the chat with the saved files rather than the code"):
+            expect((self.failed, "cart.py" in self.answer, "class Cart" in self.answer)).to(equal((False, True, False)))
 
     with context("a story map whose drawing a person moved a card on"):
         with before.each:

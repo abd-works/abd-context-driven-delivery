@@ -11,7 +11,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 import cdd_guidance.practices  # noqa: F401
-from cdd_guidance.practices.clean_engineering.model.code_body import JAVA, JAVASCRIPT, PYTHON, TYPESCRIPT, CodeBody
+from cdd_guidance.practices.clean_engineering.model.code_body import JAVASCRIPT, PYTHON, TYPESCRIPT, CodeBody
 from harness.agent_tools.agent_tools import AgentToolSet
 
 _TOOLSET = "cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering"
@@ -92,7 +92,7 @@ def _bodies(language: str, text: str) -> dict:
     }
 
 
-_LANGUAGES = {"python": PYTHON, "typescript": TYPESCRIPT, "javascript": JAVASCRIPT, "java": JAVA}
+_LANGUAGES = {"python": PYTHON, "typescript": TYPESCRIPT, "javascript": JAVASCRIPT}
 
 with description("an operation body"):
     with context("that was read from python"):
@@ -129,7 +129,7 @@ with description("an operation body"):
 
     with context("that is empty"):
         with it("should write only the line that marks it still to write"):
-            expect(CodeBody("", None).lines_in(JAVA, "    ", "// BDD: SIGNATURE")).to(
+            expect(CodeBody("", None).lines_in(TYPESCRIPT, "    ", "// BDD: SIGNATURE")).to(
                 equal(["    // BDD: SIGNATURE"])
             )
 
@@ -191,9 +191,9 @@ with description("a class model rendered to code"):
             with it("should read back the same bodies"):
                 expect(_bodies("typescript", self.rendered)).to(equal(_bodies("typescript", _CART_TYPESCRIPT)))
 
-        with context("that is rendered to java"):
+        with context("that is rendered to javascript"):
             with it("should carry each typescript body as a commented note inside its method"):
-                expect(_render("java", _CART_TYPESCRIPT, "typescript")).to(contain(f"        // {_TYPESCRIPT_TOTAL}"))
+                expect(_render("javascript", _CART_TYPESCRIPT, "typescript")).to(contain(f"    // {_TYPESCRIPT_TOTAL}"))
 
     with context("that was read from markdown"):
         with context("that is rendered to python with the previous python file"):

@@ -113,6 +113,8 @@ _MOCKUP_BOARD = json.dumps({
     },
 }, indent=1)
 _BOARD_FILE = "bookshop/browse-books.whiteboard"
+# The same board as the mockup fidelity saves it, in the epic's .context, its links still written from the epic's folder.
+_SAVED_BOARD_FILE = "bookshop/.context/browse-books.whiteboard"
 
 _BOOK_CODE = "class Book:\n    @property\n    def title(self) -> str:\n        return self._title\n"
 
@@ -127,6 +129,7 @@ _FILES = {
     "bookshop/.context/story-map.drawio": _STORY_MAP_DRAWING,
     "bookshop/package.json": '{"name": "bookshop"}\n',
     _BOARD_FILE: _MOCKUP_BOARD,
+    _SAVED_BOARD_FILE: _MOCKUP_BOARD,
 }
 _MAP_FILE = "bookshop/ux-map.json"
 
@@ -171,7 +174,7 @@ with description("a UX map read into the graph") as self:
 
         with it("should hold a map for each file a UX map is written in"):
             expect(sorted(node.source.file for node in self.shop.ux.nodes("UxMap"))).to(equal([
-                "bookshop/.context/information-architecture.drawio", "bookshop/.context/ux-context.md", _BOARD_FILE, _MAP_FILE,
+                _SAVED_BOARD_FILE, "bookshop/.context/information-architecture.drawio", "bookshop/.context/ux-context.md", _BOARD_FILE, _MAP_FILE,
             ]))
 
         with it("should hold the screen, region and control a mockup's board draws"):
@@ -263,7 +266,7 @@ with description("a UX map read into the graph") as self:
 
         with it("should join each scenario to the controls and screens it is shown on"):
             scenario = next(node for node in self.shop.graph.practice("stories").reading.in_graph.nodes("Scenario") if node.name == "List every book")
-            expect(sorted(self.shop.linked("shownOn", scenario))).to(equal([("Control", "Open book"), ("Control", "Search"), ("Screen", "Book Details")]))
+            expect(sorted(self.shop.linked("shownOn", scenario))).to(equal([("Control", "Open book"), ("Control", "Search"), ("Control", "Search"), ("Screen", "Book Details")]))
 
         with it("should join a screen to the story a link written from the project's folder names"):
             expect(self.shop.linked("shows", self.shop.node("Screen", "Book Details"))).to(equal([("Story", "Browse Book List")]))
@@ -273,6 +276,9 @@ with description("a UX map read into the graph") as self:
 
         with it("should join a control drawn on a mockup's board to the scenario it serves"):
             expect(self.shop.linked("showsScenarios", self.shop.node("Control", "Search", _BOARD_FILE))).to(equal([("Scenario", "List every book")]))
+
+        with it("should follow a link in a board saved in the epic's .context from the epic's folder, where the mockup it was drawn from wrote it"):
+            expect(self.shop.linked("showsScenarios", self.shop.node("Control", "Search", _SAVED_BOARD_FILE))).to(equal([("Scenario", "List every book")]))
 
         with it("should join a screen to the domain class each of its domain terms names"):
             expect([name for _kind, name in self.shop.linked("domainTerms", self.shop.node("Screen", "Book List"))]).to(equal(["Book"]))

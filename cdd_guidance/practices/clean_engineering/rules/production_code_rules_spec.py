@@ -117,7 +117,6 @@ _TEST_FILES = (
     "orders/rule_fixture.py",
     "app/test-utils/fixture-repo.ts",
     "tools/ide_toast/watch_notice_spec.js",
-    "src/OrderTest.java",
 )
 _PRODUCTION_FILES = (
     "orders/order.py",

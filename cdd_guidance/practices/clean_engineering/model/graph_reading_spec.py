@@ -296,8 +296,6 @@ with description("Clean Engineering reading code into its graph"):
                 {
                     "ts/shape.ts": "export abstract class Shape {\n  abstract area(width: number): number;\n}\n",
                     "ts/drawable.ts": "export interface Drawable {\n  draw(scale: number): void;\n}\n",
-                    "java/Solid.java": "public abstract class Solid {\n  public abstract double volume(double depth);\n}\n",
-                    "java/Printable.java": "public interface Printable {\n  void print(double scale);\n}\n",
                 }
             )
 
@@ -311,13 +309,6 @@ with description("Clean Engineering reading code into its graph"):
         with it("should read no TypeScript interface's method, so none is held to invokes"):
             names = [node.name for node in self.fixture.practice.reading.in_graph.nodes("Operation")]
             expect(names).not_to(contain("draw"))
-
-        with it("should not hold a Java abstract member to invokes"):
-            expect(self._exempt("volume")).to(equal(["invokes"]))
-
-        with it("should read no Java interface's method, so none is held to invokes"):
-            names = [node.name for node in self.fixture.practice.reading.in_graph.nodes("Operation")]
-            expect(names).not_to(contain("print"))
 
     with context("with a spec beside the code"):
         with before.all:

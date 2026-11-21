@@ -32,7 +32,7 @@ with description("a format") as self:
 
     with description("that is a code format"):
         with it("should say it is code"):
-            expect(Format("java").is_code).to(equal(True))
+            expect(Format("javascript").is_code).to(equal(True))
 
         with it("should keep its templates in the folder of its short name"):
             expect(Format("javascript").template_folder).to(equal("js"))

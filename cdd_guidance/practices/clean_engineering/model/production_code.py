@@ -8,9 +8,8 @@ Test code is known by its name, so a file is judged the same way whether a whole
 - a dotted part of the file name that gives the file a test role: `order.spec.ts`, `cart.test.py`, `checkout.e2e.ts`,
   `class_channel.feature.py`, a Stories story test and its shared scenarios (`board.story.shared.py`), a page driver
   (`move_ticket.page-driver.ts`), and a test's examples (`chat-bar.examples.ts`);
-- the words of the name: a spec (`order_spec.py`, `watch_notice_spec.js`, pytest's `test_order.py`, Java's
-  `OrderTest.java`), or what a spec uses: `story_test.py`, `rule_fixture.py`, `fixtures.py`, the named examples and
-  tiers a story test replays (`session_board_examples.py`, `session_board_tiers.py`, `rule_examples.py`), and a spec's
+- the words of the name: a spec (`order_spec.py`, `watch_notice_spec.js`, pytest's `test_order.py`), or what a spec
+  uses: `story_test.py`, `rule_fixture.py`, `fixtures.py`, the named examples and tiers a story test replays (`session_board_examples.py`, `session_board_tiers.py`, `rule_examples.py`), and a spec's
   helpers (`spec_helpers.py`, `spec_support.py`, `testUtils.ts`).
 
 A production module whose name ends in one of those words, such as `catalog_examples.py`, is read as test code; name it
@@ -34,8 +33,6 @@ _HELPER_LAST_WORDS = frozenset({"helper", "helpers", "support", "utils"})
 _EXAMPLE_FOLDERS = frozenset({"examples"})
 # The first word of a test double's name: `mock_repo.py`, `fake_clock.py`.
 _DOUBLE_FIRST_WORDS = frozenset({"mock", "fake"})
-# Java names its tests by a camel-case last word: `OrderTest`, `OrderTests`.
-_JAVA_TEST = re.compile(r"[a-z0-9]Tests?$")
 _WORD = re.compile(r"[A-Z]?[a-z0-9]+|[A-Z]+(?![a-z])")
 
 
@@ -56,14 +53,12 @@ class TestFileName:
     @property
     def is_spec(self) -> bool:
         """A spec or a test: `order.spec.ts`, `cart.test.py`, `checkout.e2e.ts`, `class_channel.feature.py`,
-        `order_spec.py`, pytest's `test_order.py`, or Java's `OrderTest.java`."""
+        `order_spec.py`, or pytest's `test_order.py`."""
         if self.roles & _SPEC_ROLES:
             return True
         if self.words and self.words[-1] in _SPEC_LAST_WORDS:
             return True
-        if self.extension == "py" and self.stem.startswith("test_"):
-            return True
-        return self.extension == "java" and _JAVA_TEST.search(self.stem) is not None
+        return self.extension == "py" and self.stem.startswith("test_")
 
     @property
     def is_test_code(self) -> bool:

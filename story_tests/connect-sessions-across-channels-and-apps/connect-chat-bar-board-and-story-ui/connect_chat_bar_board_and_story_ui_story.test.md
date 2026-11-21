@@ -9,7 +9,7 @@ section: body
 
 ### Domain terms
 
-- ++format++ — what an action writes: diagram (drawio), markdown, or code (python, typescript, javascript, java, html).
+- ++format++ — what an action writes: diagram (drawio), markdown, or code (python, typescript, javascript, html).
 - ++increment++ — a slice of the story map's stories built together.
 - ++backlog ticket++ — a ticket in the board's BACKLOG column, with its own session.
 

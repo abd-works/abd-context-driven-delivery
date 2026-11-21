@@ -17,13 +17,13 @@ The code formats write a story map as runnable story tests and read those tests 
 
 | Language | Story file | Format class |
 | --- | --- | --- |
-| TypeScript | `{sub_epic}_story.test.ts` (also reads `_story.spec.ts`) | *TypeScriptStoryModel* |
-| JavaScript | `{sub_epic}_story.test.js` | *JavaScriptStoryModel* |
+| TypeScript | `{sub_epic}_story.test.ts` (also reads `_story.spec.ts`, `.story.shared.ts` and `.story.ui.spec.ts`) | *TypeScriptStoryModel* |
+| JavaScript | `{sub_epic}_story.test.js` (also reads `_story.spec.js`, `.story.shared.js` and `.story.ui.spec.js`) | *JavaScriptStoryModel* |
 | Python | `{sub_epic}_story.test.py` | *PythonStoryModel* |
 
-Each story file opens with a comment naming its epic and its order on the map, imports `story` and `scenario` from the step library and the example values it uses, then holds one `story(...)` block per story with its backgrounds and `scenario(...)` blocks, each step written as a Given, When, Then, And, or But call with its code inside. Java writes no step library: each story is a doc comment listing its steps, with no code to keep.
+Each story file opens with a comment naming its epic and its order on the map, imports `story` and `scenario` from the step library and the example values it uses, then holds one `story(...)` block per story with its backgrounds and `scenario(...)` blocks, each step written as a Given, When, Then, And, or But call with its code inside.
 
-The step library is written only for a new tree. A tree read from code already has its own, so rendering never replaces it. TypeScript and JavaScript start a new tree's step library from `practices/stories/model/{typescript,javascript}/seeds/story-test.{ts,js}`; Python's comes from `practices/stories/templates/py/story_test.py`.
+The step library is written only for a new tree. A tree read from code already has its own, so rendering never replaces it. TypeScript starts a new tree's step library from `practices/stories/model/typescript/seeds/story-test.ts` and JavaScript from `practices/stories/templates/js/story-test.js`; Python's comes from `practices/stories/templates/py/story_test.py`.
 
 ## Why the code survives
 

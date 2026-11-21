@@ -1,49 +1,37 @@
-"""JavaScriptStoryModel - a story map stored as `*_story.js` files.
-
-Each story file is `story` / `background` / `scenario` / `given` / `when` / `then`.
-"""
+"""JavaScriptStoryModel - runnable `{story_snake}_story.test.js` under epic / sub-epic / story."""
 
 from __future__ import annotations
 
+import posixpath
 from pathlib import Path
-from typing import Dict
 
-from cdd_guidance.practices.clean_engineering.model.code_body import JAVASCRIPT
-from cdd_guidance.practices.stories.model.brace_story import BraceStoryModel, BraceStoryWriting
+from cdd_guidance.practices.clean_engineering.model.code_body import JAVASCRIPT, CodeLanguage
+from cdd_guidance.practices.stories.model.brace_story import BraceStoryWriting
 from cdd_guidance.practices.stories.model.javascript.nodes import JavaScriptEpic, JavaScriptStory
+from cdd_guidance.practices.stories.model.script_story_model import ScriptStoryModel, script_story_file_suffixes
 
 
 class JavaScriptStoryWriting(BraceStoryWriting):
-    """How JavaScript writes stories: a story file imports the story-test helpers from the tests root, relative to
-    its own folder."""
+    """How JavaScript writes stories: a story file imports the story-test helpers by the path from its own folder to
+    the step library (helpers, named from the workspace root), with the file's extension, as a JavaScript module
+    import is written."""
 
     file_name_template = "{snake}_story.test.js"
 
+    def __init__(self, language: CodeLanguage, helpers: str) -> None:
+        super().__init__(language)
+        self.helpers = helpers
+
     def story_test_import(self, parent: str) -> str:
-        relative = "../" * parent.count("/") + "story-test.js"
-        return f'import {{ background, scenario, story }} from "{relative}";'
+        relative = posixpath.relpath(f"{self.helpers}.js", parent or ".")
+        return f'import {{ background, scenario, story }} from "{relative if relative.startswith(".") else "./" + relative}";'
 
 
-class JavaScriptStoryModel(BraceStoryModel):
-    LEAF_EXTENSION = "_story.test.js"
-    story_file_suffixes = (LEAF_EXTENSION,)
+class JavaScriptStoryModel(ScriptStoryModel):
+    LEAF_EXTENSION = ".js"
+    story_file_suffixes = script_story_file_suffixes(LEAF_EXTENSION)
+    seed_file = Path(__file__).resolve().parents[2] / "templates" / "js" / "story-test.js"
     epic_type = JavaScriptEpic
     story_type = JavaScriptStory
     language = JAVASCRIPT
     writing_type = JavaScriptStoryWriting
-
-    def save(self) -> Dict[str, str]:
-        # WHY: a tree read from JavaScript already brings its own story-test helper; only a new tree needs the seed.
-        seed = {} if self.read_from_code else {f"{self.tests_root}/story-test.js": self._story_test_helper()}
-        return self._write_epics(seed)
-
-    def _story_test_helper(self) -> str:
-        """The story-test helper a new JavaScript tree is seeded with: the seed file beside this format, else a
-        minimal one built on node:test."""
-        seed = Path(__file__).resolve().parent / "seeds" / "story-test.js"
-        if seed.exists():
-            return seed.read_text(encoding="utf-8")
-        return (
-            'import { before, describe, it } from "node:test";\n\n'
-            "export function story(name, build) {\n  describe(name, build);\n}\n"
-        )

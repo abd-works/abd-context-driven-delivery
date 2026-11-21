@@ -256,7 +256,7 @@ class LinksAcrossPractices:
 class ServedStoryLinks(LinksAcrossPractices):
     """The edges from UX's screens and controls to the stories, scenarios, and steps each serves, each of which is
     shown on that screen or control. An association written as a link is followed to the file its target names, the
-    path taken from the folder of the UX file it is written in, then from the folders the graph reads, and to the node
+    path taken from the folder of the UX file it is written in (and, for a file in a `.context`, the folder that `.context` belongs to), then from the folders the graph reads, and to the node
     read from the heading the target names; one written as a key alone leads to the node with that key. A graph that
     reads no Stories, or not the file a link names, gets no edge. They are read from the facts every screen and control
     saves with the graph, so a node kept from an earlier read, a plain node in a worker process, links the same way as
@@ -273,7 +273,7 @@ class ServedStoryLinks(LinksAcrossPractices):
                 self._link_served(node)
 
     def _link_served(self, node: Node) -> None:
-        folders = [(self._reading.root / node.source.file).parent] if node.source is not None and node.source.file else []
+        folders = self._folders_written_from(node)
         for kind, edge, fact in _SHOWN:
             for written in node.get_fact(fact) or []:
                 link = StoryLink.from_shown(kind, written)
@@ -281,6 +281,16 @@ class ServedStoryLinks(LinksAcrossPractices):
                 if shown is not None:
                     self._graph.edges.relate(edge, node, shown)
                     self._graph.edges.relate("shownOn", shown, node)
+
+
+    def _folders_written_from(self, node: Node) -> list[Path]:
+        """The folders a link on node may be written from: the folder of node's file, and, for a file in a `.context`,
+        the folder that `.context` belongs to, since a drawing or a board saved there keeps the links of the mockup
+        beside it, which were written from that folder."""
+        if node.source is None or not node.source.file:
+            return []
+        folder = (self._reading.root / node.source.file).parent
+        return [folder, folder.parent] if folder.name == _CONTEXT_FOLDER else [folder]
 
 
 class DomainTermLinks(LinksAcrossPractices):

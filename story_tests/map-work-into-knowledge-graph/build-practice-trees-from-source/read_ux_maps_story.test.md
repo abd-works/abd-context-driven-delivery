@@ -73,9 +73,9 @@ The story below is not on the story map yet.
 
 Observed (`cdd_guidance/practices/ux/model/graph_reading_spec.py`).
 
-*Given* the bookshop project holds four ++UX map file++s
+*Given* the bookshop project holds five ++UX map file++s
 *When* the Knowledge Graph reads the bookshop project for UX
-*Then* the graph holds a UX map for ++bookshop/ux-map.json++, one for ++bookshop/.context/information-architecture.drawio++, one for ++bookshop/.context/ux-context.md++ and one for ++bookshop/browse-books.whiteboard++
+*Then* the graph holds a UX map for ++bookshop/ux-map.json++, one for ++bookshop/.context/information-architecture.drawio++, one for ++bookshop/.context/ux-context.md++, one for ++bookshop/browse-books.whiteboard++ and one for `bookshop/.context/browse-books.whiteboard`
   *And* it holds no UX node for ++bookshop/.context/story-map.drawio++ or ++bookshop/package.json++
 
 #### Scenario: Hold a node for each part of a UX map
@@ -148,6 +148,14 @@ Observed (`graph_reading_spec.py`, the same context).
 *When* the Knowledge Graph reads the bookshop project for UX and Stories
 *Then* the graph holds the screen Book List, the region Books and the control Search for ++bookshop/browse-books.whiteboard++
   *And* Search has a `showsScenarios` edge to the scenario List every book
+
+#### Scenario: Follow a served link in a board saved in the epic's .context
+
+Observed (`graph_reading_spec.py`, the same context).
+
+*Given* `bookshop/.context/browse-books.whiteboard` holds the same board, its ++served link++ still written from the folder `bookshop`, where the mockup it was drawn from sits
+*When* the Knowledge Graph reads the bookshop project for UX and Stories
+*Then* the control Search of that board has a `showsScenarios` edge to the scenario List every book
 
 #### Scenario: Keep what a control serves when the scenarios are not read
 

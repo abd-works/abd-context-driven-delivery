@@ -17,6 +17,7 @@ from harness.guidance.practice_reading import PracticeReading
 from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER
 from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel
 from cdd_guidance.practices.stories.model.modelled_areas import ExampleObservations, ModelledAreas
+from cdd_guidance.practices.stories.model.script_story_model import ScriptStoryModel
 from cdd_guidance.practices.stories.model.story_recording import StorySource, imported_files
 from cdd_guidance.practices.stories.model.term_links import TermLinks
 from cdd_guidance.practices.stories.model.story_map_files import STORY_FILE_SUFFIXES, StoryMapFiles, is_story_map_file
@@ -49,9 +50,10 @@ _EPIC_TYPES = frozenset({"Epic", "SubEpic"})
 
 
 class StoriesReading(PracticeReading):
-    """How Stories takes part in the graph: it reads the story tests under its root, through the TypeScript format
-    Stories holds, or the story maps there when there are none, with edited files only what they touch; writes the
-    story map onto its graph; links each Then to the examples it observes (*ExampleObservations*), each step to the
+    """How Stories takes part in the graph: it reads the story tests under its root, through the TypeScript or
+    JavaScript format Stories holds, or the story maps there when there are none, with edited files only what they
+    touch; writes the story map onto its graph; links each Then to the examples it observes
+    (*ExampleObservations*), each step to the
     Clean Engineering operations it calls and each example to the classes and properties it shows, and each step to
     the DDD class each of its linked domain terms names (*TermLinks*), so it reads after Clean Engineering and DDD;
     and says which areas of the map a model is written for (*ModelledAreas*), where alone a Then must observe an
@@ -191,17 +193,31 @@ class StoriesReading(PracticeReading):
                 continue
             text = path.read_text(encoding="utf-8")
             file = os.path.relpath(path, self.root).replace("\\", "/")
-            model.sources.add(file, text)
+            model.sources.take(self.practice.story_test_sources(StorySource(file, text), self.root))
             model.test_scenarios.take(reader.stories_of(text, file, project)[0], file)
 
     def _story_tests(self) -> "StoryModel":
-        files = self._typescript_texts()
-        report_progress("stories · parse")
-        return self.practice.formats.adapter("typescript").parse(files, on_file=lambda detail: report_progress(f"stories · parse · {detail}"))
+        """The story map the story tests under the tests folder are themselves, where no story map file names their
+        epics: read in the first script language, TypeScript or JavaScript, whose story tests hold an epic. A project
+        writes its story tests in one of them; the map of the first is empty when neither holds one."""
+        read = None
+        for reader in self._script_readers:
+            files = self._script_texts(reader)
+            report_progress("stories · parse")
+            model = reader.parse(files, on_file=lambda detail: report_progress(f"stories · parse · {detail}"))
+            if model.epics:
+                return model
+            read = read or model
+        return read
 
-    def _typescript_texts(self) -> dict[str, str]:
-        """The text of each TypeScript file the story tests are read from, by its path from the root."""
-        sources = self._typescript_files()
+    @property
+    def _script_readers(self) -> list[ScriptStoryModel]:
+        """The script languages the practice reads story tests in, in the order it lists its formats."""
+        return [reader for reader in self._code_readers if isinstance(reader, ScriptStoryModel)]
+
+    def _script_texts(self, reader: ScriptStoryModel) -> dict[str, str]:
+        """The text of each file of reader's language the story tests are read from, by its path from the root."""
+        sources = self._script_files(reader)
         files: dict[str, str] = {}
         for index, path in enumerate(sources, start=1):
             relative = os.path.relpath(path, self.root).replace("\\", "/")
@@ -222,16 +238,16 @@ class StoriesReading(PracticeReading):
         project's .context, the story_tests beside it."""
         return [path for folder in StoryMapFiles(self.root).story_folders() for path in scanned_files(folder, suffixes)]
 
-    def _typescript_files(self) -> list[Path]:
-        """TypeScript under the root; with edited files, each whole story folder that holds one. A story reads its
-        examples and steps from sibling files, so one edited file needs its story's other files."""
+    def _script_files(self, reader: ScriptStoryModel) -> list[Path]:
+        """The files of reader's language under the root; with edited files, each whole story folder that holds one. A
+        story reads its examples and steps from sibling files, so one edited file needs its story's other files."""
+        suffixes = set(reader.language.suffixes)
         edited = self.graph.scope.edited_files
-        if edited is not None and not any(path.suffix.lower() in {".ts", ".tsx"} for path in edited):
+        if edited is not None and not any(path.suffix.lower() in suffixes for path in edited):
             return []
-        found = self._scanned({".ts", ".tsx"})
+        found = self._scanned(suffixes)
         if edited is None:
             return found
-        reader = self.practice.formats.adapter("typescript")
         stories = {path.parent for path in found if reader.is_story_file(path.as_posix())}
         stories = {story for story in stories if any(story == file.parent or story in file.parents for file in edited)}
         return [path for path in found if path in edited or any(story in path.parents for story in stories)]

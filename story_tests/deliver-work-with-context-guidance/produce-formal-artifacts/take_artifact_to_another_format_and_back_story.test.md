@@ -240,6 +240,23 @@ Observed (`cdd_guidance/practices/bdd/bdd_spec.py`, `cdd_guidance/practices/stor
 *Then* the answer names a javascript path beside the typescript one
   *And* no fidelity of BDD or Stories names java
 
+#### Scenario Outline: Keep a story map's stories, scenarios and steps through another format and back
+
+Observed (`cdd_guidance/practices/stories/model/story_test_behaviours_spec.py`). The trip is created from the project written in one format, then checked by the same examples the project itself is checked by.
+
+*Given* the Pack Orders project is written as <format>
+*When* its story files are written as <other format> and written again as <format>
+*Then* the graph read from the files that come back holds the same stories, scenarios and steps
+  *And* each Then still observes the example its Given names in plain words
+
+| format | other format |
+| --- | --- |
+| Python story tests | markdown scenarios |
+| TypeScript story tests | markdown scenarios |
+| TypeScript story tests | JavaScript story tests |
+| JavaScript story tests | markdown scenarios |
+| JavaScript story tests | TypeScript story tests |
+
 #### Scenario: Bring a JavaScript spec back from TypeScript as it was written
 
 Observed (`cdd_guidance/practices/bdd/model/code_spec_render_spec.py`).

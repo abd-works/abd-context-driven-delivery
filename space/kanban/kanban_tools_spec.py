@@ -976,8 +976,11 @@ with description("the board tools") as self:
             with before.each:
                 self.chips = self.project.call("ticket.format_choices", ticket="sign-up", fidelities=["ux-mockup"])
 
-            with it("should offer the design canvas as a chip of its own, after the code"):
-                expect([chip["label"] for chip in self.chips]).to(equal(["code", "canvas"]))
+            with it("should offer the diagram, the code, and the design canvas as a chip of its own after the code"):
+                expect([chip["label"] for chip in self.chips]).to(equal(["diagram", "code", "canvas"]))
+
+            with it("should send the drawing and the whiteboard for the diagram chip"):
+                expect(sorted(next(chip["formats"] for chip in self.chips if chip["label"] == "diagram"))).to(equal(["drawio", "whiteboard"]))
 
             with it("should send the claude_design format for the canvas chip"):
                 expect(next(chip["formats"] for chip in self.chips if chip["label"] == "canvas")).to(equal(["claude_design"]))

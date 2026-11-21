@@ -69,11 +69,14 @@ with description("Ux fidelity and format defaults"):
 
     # A file list and the graph tree show the files a fidelity declares, so a file no fidelity declares is shown nowhere.
     with context("with the files a UX project holds beside its mockup"):
-        with it("should hold the mockup's drawing beside its html as the mockup's file"):
-            expect(Ux().fidelities["mockup"].declared.includes("bookshop/buy-a-book.drawio", "mockup_drawing")).to(equal(True))
+        with it("should hold the mockup's drawing in the epic's .context as the mockup's file"):
+            expect(Ux().fidelities["mockup"].declared.includes("bookshop/.context/buy-a-book.drawio", "drawio")).to(equal(True))
 
-        with it("should hold the mockup's board beside its html as the mockup's file"):
-            expect(Ux().fidelities["mockup"].declared.includes("bookshop/buy-a-book.whiteboard", "mockup_board")).to(equal(True))
+        with it("should hold the mockup's board beside its drawing as the mockup's file"):
+            expect(Ux().fidelities["mockup"].declared.includes("bookshop/.context/buy-a-book.whiteboard", "whiteboard")).to(equal(True))
+
+        with it("should hold the information architecture's board beside its drawing"):
+            expect(Ux().fidelities["ia"].outputs["whiteboard"]).to(equal("{epic}/.context/information-architecture.whiteboard"))
 
         with it("should hold the UX map's ux-map.json in an epic's folder as the information architecture's file"):
             expect(Ux().fidelities["ia"].declared.includes("bookshop/ux-map.json", "json")).to(equal(True))
@@ -81,9 +84,9 @@ with description("Ux fidelity and format defaults"):
         with it("should hold the UX map's ux/ux.json as the information architecture's file"):
             expect(Ux().fidelities["ia"].declared.includes("ux/ux.json", "json")).to(equal(True))
 
-        with it("should offer neither the drawing nor the board as a format a person picks for the mockup: a render draws them"):
+        with it("should offer the drawing and the board as formats a person picks for the mockup"):
             outputs = Ux().fidelities["mockup"].outputs
-            expect(("drawio" in outputs, "whiteboard" in outputs)).to(equal((False, False)))
+            expect(("drawio" in outputs, "whiteboard" in outputs)).to(equal((True, True)))
 
         with it("should hold a view written in TypeScript as the front end code's file"):
             expect(Ux().fidelities["front_end_code"].declared.includes("bookshop/src/CartView.tsx", "typescript")).to(equal(True))

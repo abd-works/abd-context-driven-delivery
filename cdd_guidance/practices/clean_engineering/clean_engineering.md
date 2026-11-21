@@ -312,7 +312,7 @@ Rough source index for a **partition** pass or first cut — under each module, 
 
 ```yaml
 alwaysApply: false
-globs: "**/*.py,**/*.ts,**/*.tsx,**/*.js,**/*.java,**/*-sketch.md"
+globs: "**/*.py,**/*.ts,**/*.tsx,**/*.js,**/*-sketch.md"
 ```
 
 Whenever you create, alter, or delete production behavior — bodies, constructors, call sites — including code supported by a model or module map. Follow these rules.

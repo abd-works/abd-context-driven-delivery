@@ -18,6 +18,7 @@ from expects import contain, end_with, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from cdd_guidance.actions.render.render import Render
+from cdd_guidance.actions.render.rendered_code import RenderHasNoDeclaredPlace
 from cdd_guidance.actions.render.rendered_file import NothingToRender
 from cdd_guidance.actions.render.worker_render import RenderFailed
 from harness.agent_tools.agent_tools import AgentInstructions
@@ -53,6 +54,34 @@ _OTHER_STORY_MAP = """# (E) Manage Customer Returns
 ## (E) Accept Return
 
 ### (S) Customer --> Return Damaged Item
+"""
+_DOMAIN_MODEL = """# Domain Model — Bookshop
+
+---
+
+## Ordering | custom
+
+### Cart
+
+A cart holds one line per book.
+
+#### Cart <<Aggregate Root>> <<Entity>>
+
+------
++ cartId: CartId
+----
++ total(): Money
+
+### Order
+
+An order is a cart a customer submitted.
+
+#### Order <<Aggregate Root>> <<Entity>>
+
+------
++ orderId: OrderId
+----
++ submit(): void
 """
 _WORKER_TRACEBACK = """Traceback (most recent call last):
   File "<frozen runpy>", line 198, in _run_module_as_main
@@ -366,13 +395,13 @@ with description("Render saving what it makes beside its source") as self:
         with it("should leave the sketch as it was"):
             expect(self.sketch.read_text(encoding="utf-8")).to(equal(_STORY_MAP))
 
-    with context("a model rendered to code"):
+    with context("a model rendered to code in no session"):
         with before.each:
             self.sketch = self.folder / "cart-sketch.md"
             self.sketch.write_text("Cart\n  owner\n", encoding="utf-8")
             self.results = Render().render(["clean-engineering-model"], format="python", paths=[str(self.sketch)], source="sketch")
 
-        with it("should answer with the code, for the agent to fold into the module it belongs to"):
+        with it("should answer the code to the Python that called it, since no session says where it is written"):
             expect(str(self.results[0]["content"])).to(contain("Cart"))
 
         with it("should save no file"):
@@ -491,18 +520,47 @@ with description("Render asked for a path, in a session") as self:
         with it("should say where the fidelity declares the file, for the agent to write it there"):
             expect(self.results[0]["declared_at"][0]).to(end_with(".context/{scope}-bdd-realization.md"))
 
-    # Exploratory testing, r3-bolt-06 and r3-sparky-07: a render to code answered its content with no word that
-    # nothing was saved, or where the fidelity writes that code.
+    # Exploratory testing, r3-bolt-06 and r3-sparky-07: a render to code answered its content and saved nothing. The
+    # person's answer (2026-11-20): every render ends in a saved file.
     with context("that is a domain model in markdown, rendered to Python"):
         with before.each:
-            (self.folder / "domain-model.md").write_text(_CLASS_MODEL, encoding="utf-8")
+            (self.folder / "domain-model.md").write_text(_DOMAIN_MODEL, encoding="utf-8")
             self.results = self.action.render("ddd-model", format="python", paths=[".context/domain-model.md"])
+            self.cart = self.project.root / "ordering" / "cart" / "cart.py"
 
-        with it("should answer with the code and save no file"):
-            expect(("content" in self.results[0], "path" in self.results[0])).to(equal((True, False)))
+        with it("should save a file for each aggregate where the fidelity declares it"):
+            saved = sorted(Path(path).relative_to(self.project.root).as_posix() for path in self.results[0]["paths"])
+            expect(saved).to(equal(["ordering/cart/cart.py", "ordering/order/order.py"]))
 
-        with it("should say where the fidelity declares its Python, for the agent to write each aggregate there"):
-            expect(self.results[0]["declared_at"][0]).to(end_with("{bounded_context}/{aggregate}/{aggregate}.py"))
+        with it("should write the aggregate's classes into its file"):
+            expect(self.cart.read_text(encoding="utf-8")).to(contain("class Cart"))
+
+        with it("should answer no code for the agent to save"):
+            expect("content" in self.results[0]).to(equal(False))
+
+        with context("whose code a person then changed, rendered again"):
+            with before.each:
+                self.cart.write_text("class Cart:" + chr(10) + "    def total(self):" + chr(10) + "        return 5" + chr(10), encoding="utf-8")
+                self.results = self.action.render("ddd-model", format="python", paths=[".context/domain-model.md"])
+
+            with it("should keep the file as the person wrote it"):
+                expect(self.cart.read_text(encoding="utf-8")).to(contain("return 5"))
+
+            with it("should name the file as kept"):
+                expect([Path(path).name for path in self.results[0]["kept"]]).to(equal(["cart.py"]))
+
+    with context("that is a class model in markdown, rendered to Python, for which the fidelity declares a folder and no file"):
+        with before.each:
+            (self.project.root / "src" / "ordering" / ".context").mkdir(parents=True)
+            (self.project.root / "src" / "ordering" / ".context" / "ordering-model.md").write_text(_CLASS_MODEL, encoding="utf-8")
+            self.render = lambda: self.action.render("clean-engineering-model", format="python", paths=["src/ordering/.context/ordering-model.md"])
+
+        with it("should refuse, saying the declared paths cannot place the code"):
+            expect(self.render).to(raise_error(RenderHasNoDeclaredPlace, contain("{module}/")))
+
+    with context("that tells the agent what to do with what it rendered"):
+        with it("should not tell the agent to write rendered content itself"):
+            expect(Render.place_rendered.__doc__).not_to(contain("write it yourself"))
 
     # Exploratory testing, r3-sparky-01: the thin slice, a file the story map fidelity declares, was drawn over the story
     # map's drawing.

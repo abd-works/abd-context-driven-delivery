@@ -82,6 +82,32 @@ The session fill-cart works on Stories alone, with markdown, drawio and whiteboa
 *When* the Person aligns the session's formats
 *Then* the alignment answers a failure of kind render_failed for `.context/story-map.whiteboard`, saying that `.context/story-map.md` is empty
 
+#### Scenario: Render a chosen code format that has no file
+
+Answered 2026-11-20, the person: "all renders should result in the final output -> file".
+
+*Given* a session working on DDD alone has markdown and python chosen for its domain model
+*And* `.context/domain-model.md` holds the bounded context Ordering with the aggregates Cart and Order, and no Python file is there
+*When* the Person diagnoses the session's formats
+*Then* the diagnosis reports the Python as a missing file, aligned from `.context/domain-model.md`
+*When* the Person aligns the session's formats
+*Then* the alignment saves `ordering/cart/cart.py` and `ordering/order/order.py`, each holding its aggregate's classes
+*And* the diagnosis afterwards holds no Python gap
+
+#### Scenario: Keep a code file that is already there
+
+*Given* a session whose domain model was rendered to Python, and a person then wrote a body into `ordering/cart/cart.py`
+*When* the domain model is rendered to Python again
+*Then* `ordering/cart/cart.py` is left as the person wrote it and named as kept
+*And* the render answers no code for an agent to save
+
+#### Scenario: Report a drawing that cannot be read
+
+*Given* the session ++fill-cart++ has its story map written in every chosen format
+*And* `.context/story-map.drawio` no longer holds a whole drawing
+*When* the Person diagnoses the session's formats
+*Then* the diagnosis reports `.context/story-map.drawio` as an unreadable format, with no file to align from
+
 #### Scenario: Report a callout that opens nothing
 
 *Given* the session ++fill-cart++ has its story map written in every chosen format
@@ -91,11 +117,11 @@ The session fill-cart works on Stories alone, with markdown, drawio and whiteboa
 
 #### Scenario: Report callouts and edges that do not match
 
-Flagged: proven by a real run on a copy of the round 3 bookshop project (`C:\dev\_et\round3\combined\work`), not yet by an automated test with a fixture of its own.
-
-*Given* a session whose story test `fulfil-order.story.shared.py` holds scenarios of a story on `.context/story-map.md`, with no `# Map:` line and no link from the story
+*Given* the session ++fill-cart++ has a story test `story_tests/fill-cart/review-cart/remove_cart_line_story.test.md` holding a scenario of the story Remove Cart Line, with no `Map:` line and no link from the story
+*And* `.context/story-map.md` links the heading `#cart` of `.context/domain-model.md`, which no practice of the session reads
 *When* the Person diagnoses the session's formats
 *Then* the diagnosis reports the edge from the story to each scenario as an edge no callout shows
+*And* the diagnosis reports the link to `#cart` as a callout no edge matches
 *And* a story test whose `# Map:` line names its story's heading reports no gap, because the edge from the story to its scenarios matches the callout
 
 #### Scenario: Diagnose and align from the Files app

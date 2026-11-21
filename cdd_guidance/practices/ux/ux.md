@@ -17,6 +17,8 @@ sandbox/<epic>/
   <sub-epic>/…_stories.py|.js
   .context/
     information-architecture.drawio        <- ia (drawio-ux CLI: Detailed IA + Site Map)
+    information-architecture.whiteboard    <- ia, the same map as a Claude Whiteboard board
+    <user-goal>.drawio / .whiteboard       <- mockup+ diagram: the screens, controls, and the stories each serves
     ux-sketch.md                           <- scratch sketch
     ux-context.md                          <- optional notes/invariants
 ```
@@ -39,8 +41,8 @@ Before drawing a screen's artboard in the design canvas, drawio regions, or bran
 
 | Fidelity | Default format | Output |
 |---|---|---|
-| **ia** | drawio | Site map + per-screen regions/nav (html optional via transform) |
-| **mockup** | html | Wired greybox; one HTML per concrete user goal; drawio and whiteboard remain peer channels, which show the stories each screen and control serves |
+| **ia** | drawio | Site map + per-screen regions/nav, drawn as a diagram: the draw.io file and the whiteboard beside it (html optional via transform) |
+| **mockup** | html | Wired greybox; one HTML per concrete user goal; the diagram (a draw.io file and a whiteboard in the epic's `.context`, picked together) shows the stories each screen and control serves |
 | **front_end_code** | typescript | Production UI wired to a real backend; a view renders between typescript and javascript |
 
 ## Shared rules
@@ -69,6 +71,7 @@ default_format: drawio
 stage: discovery
 outputs:
   drawio: "{epic}/.context/information-architecture.drawio"
+  whiteboard: "{epic}/.context/information-architecture.whiteboard"
   markdown: "{epic}/.context/ux-context.md"
   json: ["{epic}/ux-map.json", "ux/ux.json"]
 ```
@@ -130,8 +133,8 @@ default_format: html
 stage: specification
 outputs:
   html: "{epic}/{user_goal}.html"
-  mockup_drawing: "{epic}/{user_goal}.drawio"
-  mockup_board: "{epic}/{user_goal}.whiteboard"
+  drawio: "{epic}/.context/{user_goal}.drawio"
+  whiteboard: "{epic}/.context/{user_goal}.whiteboard"
   claude_design: "design-canvas/{version}/project/canvas.json"
 ```
 
@@ -153,7 +156,7 @@ Ask what the person does on this screen to accomplish the outcome, and what they
 - a scenario: `[Add Book To Cart › Add one book](../story_tests/sell-books/fill-cart/fill_cart_story.test.md#scenario-add-one-book)`, its story's name, then ` › `, then its own, linked to the scenario's heading;
 - a step: `[Add Book To Cart › Add one book › the Customer adds 2 copies](../story_tests/sell-books/fill-cart/fill_cart_story.test.md#scenario-add-one-book)`, the same with the step's text last, linked to its scenario's heading, since a step has no heading of its own.
 
-Write the target as any markdown link's: the path from the folder of the file you are writing in, or from the project's root. For story tests written in code, which have no headings, link the file alone (`[Add Book To Cart › Add one book](../story_tests/sell-books/fill-cart/fill_cart_story.test.py)`), and the scenario with that name in that file is the one meant. A name with no link is still read, and is joined to the story, scenario, or step with exactly that key.
+Write the target as any markdown link's: the path from the folder of the file you are writing in, or from the project's root. The drawing and the whiteboard are saved in the epic's `.context` and keep the links as the mockup wrote them, so a link there is also read from the epic's folder. For story tests written in code, which have no headings, link the file alone (`[Add Book To Cart › Add one book](../story_tests/sell-books/fill-cart/fill_cart_story.test.py)`), and the scenario with that name in that file is the one meant. A name with no link is still read, and is joined to the story, scenario, or step with exactly that key.
 
 Every format keeps these links. In the UX map's JSON they are `story_names`, `scenario_names`, and `step_names` on a screen and on a control. On the whiteboard a screen's card and each control's card list them under `Stories:`, `Scenarios:`, and `Steps:`, separated by ` · `; a person can add or change a line on a card and the next read takes it. The drawio drawing lists the same under each screen, one line for the screen and one line for each control (`Add To Cart › Quantity serves steps: …`). The drawing and the whiteboard show screens, regions, controls with their types, transitions, and these links; they hold no state, interaction, or description, which stay in the html and the JSON.
 

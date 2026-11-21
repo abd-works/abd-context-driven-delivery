@@ -14,12 +14,11 @@ for _candidate in _HERE.parents:
         break
 
 from mamba import description, context, it, before
-from expects import equal, have_len, be_true, contain, expect, raise_error
+from expects import equal, contain, expect
 
 from cdd_guidance.practices.stories.model.story_model import Epic, Step, StepType, Story, StoryType
 from cdd_guidance.practices.stories.model.story_model import Scenario
 from cdd_guidance.practices.stories.model.story_model import StoryModel
-from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModelError
 from cdd_guidance.practices.stories.model.python.python_story_model import PythonStoryModel
 
 
@@ -93,12 +92,6 @@ with description("a Python runnable-story Story Map") as self:
             self.leaf_contents = [self.tree[p] for p in self.leaf_paths]
 
         with context("every leaf file"):
-            with it("should be named `<sub_epic_snake>_story.test.py` in the parent epic folder"):
-                for path in self.leaf_paths:
-                    expect(path.endswith("_story.test.py")).to(be_true)
-                    expect("/epic-1/epic_1_" in path).to(be_true)
-                    expect("/book-a-room/" in path).to(equal(False))
-
             with it("should parse as a valid Python module"):
                 for content in self.leaf_contents:
                     ast.parse(content)
@@ -115,27 +108,6 @@ with description("a Python runnable-story Story Map") as self:
             with it("should name the scenario"):
                 for content in self.leaf_contents:
                     expect(content).to(contain('with scenario("a room is available")'))
-
-    with context("that has been rendered and parsed back without edits"):
-        with before.each:
-            self.canonical = _story_map_with_stories()
-            self.parsed = PythonStoryModel().parse(PythonStoryModel().render(self.canonical))
-
-        with it("should preserve Story and Scenario counts under each Epic"):
-            first_sub = self.parsed.epics[0].epics[0]
-            expect(first_sub.stories).to(have_len(1))
-            expect(first_sub.stories[0].scenarios).to(have_len(1))
-
-        with it("should restore the Story name and actor"):
-            story = self.parsed.epics[0].epics[0].stories[0]
-            expect(story.name).to(equal("Book a room"))
-            expect(story.actors).to(equal(["guest"]))
-
-    with context("that is not a valid Python story-spec tree"):
-        with it("should reject parse"):
-            expect(lambda: PythonStoryModel().parse("not a tree")).to(
-                raise_error(CodeStoryModelError)
-            )
 
     with context("that holds a story file whose story keeps code between its scenarios"):
         with before.each:

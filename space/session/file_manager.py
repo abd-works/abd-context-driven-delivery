@@ -302,6 +302,11 @@ class FileManager:
         wildcards = {"**/": "(?:.*/)?", "**": ".*", "*": "[^/]*", "?": "[^/]"}
         return re.compile("".join(wildcards.get(part, re.escape(part)) for part in parts))
 
+    def search_again(self) -> None:
+        """Walk the folders again on the next search: files were just written, such as the ones an alignment rendered,
+        which a walk kept for FILES_KEPT_SECONDS does not hold."""
+        _FILES_UNDER.clear()
+
     def _files_under(self, base: str) -> list[str]:
         """Every file under base that holds someone's work, as a path from base with forward slashes, walked once and kept
         for FILES_KEPT_SECONDS. Installed packages and hidden folders hold no one's work, so the walk skips them."""

@@ -20,7 +20,7 @@ class Format(str):
 
     _SHORT_NAMES = {"markdown": "md", "python": "py", "typescript": "ts", "javascript": "js"}
     _NAMES_BY_SHORT_NAME = {short: name for name, short in _SHORT_NAMES.items()}
-    CODE = frozenset({"python", "typescript", "java", "javascript"})
+    CODE = frozenset({"python", "typescript", "javascript"})
     TEMPLATED = frozenset({"markdown", *CODE})
     # The groups a person picks formats by, in the order an action bar offers them: a diagram (a draw.io file or a
     # Claude Whiteboard board), the markdown, the code,
@@ -28,7 +28,7 @@ class Format(str):
     GROUPS: dict[str, tuple[str, ...]] = {
         "diagram": ("drawio", "whiteboard"),
         "markdown": ("markdown",),
-        "code": ("python", "typescript", "javascript", "java", "html"),
+        "code": ("python", "typescript", "javascript", "html"),
         "canvas": ("claude_design",),
     }
     # The groups a fidelity writes in every format of at once: a diagram is both a draw.io file and a Claude Whiteboard

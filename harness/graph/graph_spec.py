@@ -1454,7 +1454,7 @@ with description("the language of a node's file"):
         self.graph = Graph()
 
     with it("should be the format of the node's practice that reads the file's extension"):
-        expect(_file_language(self.graph, "clean_engineering", "src/Cart.java")).to(equal("java"))
+        expect(_file_language(self.graph, "clean_engineering", "src/Cart.ts")).to(equal("typescript"))
 
     with it("should be the format of another practice that reads it when the node's own practice reads no such file"):
         expect(_file_language(self.graph, "ddd", "src/cart.py")).to(equal("python"))
@@ -1483,3 +1483,31 @@ with description("a graph a validate judges on") as self:
 
             with it("should hold every practice's nodes, the clean engineering model among them"):
                 expect(len(self.graph.practices.held["clean_engineering"].reading.in_graph.nodes())).to(be_above(1))
+
+
+with description("a graph's filter asked whether it lists a file no node stands for") as self:
+    with before.each:
+        self.filter = Graph().explorer.filter
+
+    with context("with no path chosen"):
+        with it("should list no file"):
+            expect(self.filter.lists("story_tests/pay/pay_story.test.md")).to(be(False))
+
+    with context("with a folder and a file chosen"):
+        with before.each:
+            self.filter.paths = ["story_tests/pay/", ".context\domain-model.md"]
+
+        with it("should list a file under the chosen folder"):
+            expect(self.filter.lists("story_tests/pay/pay_story.test.md")).to(be(True))
+
+        with it("should list the chosen file itself, however its slashes are written"):
+            expect(self.filter.lists(".context/domain-model.md")).to(be(True))
+
+        with it("should list the chosen folder itself"):
+            expect(self.filter.lists("story_tests/pay")).to(be(True))
+
+        with it("should not list a file under a folder whose name only starts like the chosen one"):
+            expect(self.filter.lists("story_tests/payments/refund_story.test.md")).to(be(False))
+
+        with it("should not list a file outside the chosen paths"):
+            expect(self.filter.lists("src/order.py")).to(be(False))

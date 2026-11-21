@@ -4,6 +4,7 @@ action; and the same diagnosis as the cdd server answers it for a page. Heavy: e
 graphs, and the last context starts a cdd server of its own from a throwaway ``~/.cdd``. The rules one object decides
 are in format_alignment_spec.py."""
 import re
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -37,6 +38,50 @@ STORY_MAP_TEXT = """\
 
 ### (S) Customer --> Remove Cart Line
 """
+DOMAIN_MODEL = ".context/domain-model.md"
+CART_CODE = "ordering/cart/cart.py"
+ORDER_CODE = "ordering/order/order.py"
+DOMAIN_MODEL_TEXT = """# Domain Model — Bookshop
+
+---
+
+## Ordering | custom
+
+### Cart
+
+A cart holds one line per book.
+
+#### Cart <<Aggregate Root>> <<Entity>>
+
+------
++ cartId: CartId
+----
++ total(): Money
+
+### Order
+
+An order is a cart a customer submitted.
+
+#### Order <<Aggregate Root>> <<Entity>>
+
+------
++ orderId: OrderId
+----
++ submit(): void
+"""
+STORY_TEST = "story_tests/fill-cart/review-cart/remove_cart_line_story.test.md"
+STORY_TEST_TEXT = """## Story: Remove Cart Line
+
+**Story type:** website
+
+### Behaviors
+
+#### Scenario: Remove the only line
+
+*Given* the Customer has a cart with one line
+*When* the Customer removes the line
+*Then* the cart is empty
+"""
 REMOVE_CART_LINE = "### (S) Customer --> Remove Cart Line\n"
 CHANGE_QUANTITY = "### (S) Customer --> Change Cart Line Quantity\n\n"
 # A link from the story map to a heading its target does not hold.
@@ -46,9 +91,9 @@ CARD = r'<UserObject label="{name}".*?</UserObject>'
 
 
 def _project() -> Path:
-    """A project whose story map is written as markdown alone."""
+    """A git project whose story map is written as markdown alone."""
     project = Path(tempfile.mkdtemp(prefix="cdd-format-alignment-"))
-    (project / ".git").mkdir()
+    subprocess.run(["git", "init", "-b", "main"], cwd=project, capture_output=True, text=True, check=True)
     (project / ".context").mkdir()
     (project / STORY_MAP).write_text(STORY_MAP_TEXT, encoding="utf-8")
     return project
@@ -210,6 +255,31 @@ with description("a session's story map with its markdown, drawing and whiteboar
                 failure = next(failure for failure in self.result.failures if failure.file == BOARD)
                 expect(failure.message).to(contain("NothingToRender", "is empty"))
 
+        with context("whose drawing no longer reads as a drawing"):
+            with before.each:
+                self.drawing.write_text("<mxfile><diagram", encoding="utf-8")
+
+            with it("should report the drawing as unreadable, with what the render said"):
+                gaps = [(gap.kind, gap.file, gap.is_alignable) for gap in self.alignment.diagnose().gaps if gap.file == DRAWING]
+                expect(gaps).to(equal([("unreadable_format", DRAWING, False)]))
+
+        with context("whose story has scenarios in a story test nothing links, and whose markdown links a heading of a model no practice reads"):
+            with before.each:
+                self.session.practice("stories").guidance.fidelities.called("scenarios").session_output.choose_format("markdown", True)
+                (self.project / STORY_TEST).parent.mkdir(parents=True)
+                (self.project / STORY_TEST).write_text(STORY_TEST_TEXT, encoding="utf-8")
+                (self.project / ".context" / "domain-model.md").write_text("# Domain Model\n\n## Cart\n\nA cart holds books.\n", encoding="utf-8")
+                (self.project / STORY_MAP).write_text(STORY_MAP_TEXT + "\nThe cart is the [Cart](domain-model.md#cart).\n", encoding="utf-8")
+                self.gaps = self.alignment.diagnose().gaps
+
+            with it("should report the edge from the story to its scenario as one no callout shows"):
+                unshown = [gap.message for gap in self.gaps if gap.kind == "edge_without_callout"]
+                expect(unshown).to(equal([f"{STORY_MAP}: the graph joins Story 'Remove Cart Line' to Scenario 'Remove the only line' in {STORY_TEST} (scenarios), but no callout on either opens the other's file."]))
+
+            with it("should report the link to the model as a callout no edge matches"):
+                unmatched = [(gap.file, "the callout 'Cart' opens .context/domain-model.md" in gap.message) for gap in self.gaps if gap.kind == "callout_without_edge"]
+                expect(unmatched).to(equal([(STORY_MAP, True)]))
+
         with context("whose markdown links a heading its target does not hold"):
             with before.each:
                 (self.project / ".context" / "domain-model.md").write_text("# Domain Model\n", encoding="utf-8")
@@ -218,6 +288,41 @@ with description("a session's story map with its markdown, drawing and whiteboar
             with it("should report the callout that opens nothing"):
                 gaps = [gap for gap in self.alignment.diagnose().gaps if gap.kind == "callout_target_missing"]
                 expect([(gap.file, "has no heading #cart-that-is-not-there" in gap.message) for gap in gaps]).to(equal([(STORY_MAP, True)]))
+
+
+# The person's answer (2026-11-20): every render ends in a saved file, so an alignment renders code formats too.
+with description("a session's domain model with its markdown and Python chosen") as self:
+    with before.each:
+        self.home = ExampleHome()
+        self.project = _project()
+        (self.project / DOMAIN_MODEL).write_text(DOMAIN_MODEL_TEXT, encoding="utf-8")
+        Sessions(self.project).switch("fill-cart", self.project)
+        self.session = Sessions(self.project).current()
+        for practice in self.session.own_practices.values():
+            practice.enable(practice.name == "ddd")
+        self.session.practice("ddd").guidance.fidelities.called("model").session_output.choose_format("python", True)
+        self.alignment = SessionAlignment(self.session)
+
+    with after.each:
+        self.home.close()
+
+    with context("with only the markdown written"):
+        with it("should report the Python as missing, aligned from the markdown"):
+            gaps = [gap for gap in self.alignment.diagnose().gaps if gap.format == "python"]
+            expect([(gap.kind, gap.source, gap.is_alignable) for gap in gaps]).to(equal([("missing_file", DOMAIN_MODEL, True)]))
+
+        with context("that is aligned"):
+            with before.each:
+                self.result = self.alignment.align()
+
+            with it("should save a Python file for each aggregate where the fidelity declares it"):
+                expect([(done.file, done.source) for done in self.result.aligned]).to(equal([(CART_CODE, DOMAIN_MODEL), (ORDER_CODE, DOMAIN_MODEL)]))
+
+            with it("should write the aggregate's class into its file"):
+                expect((self.project / CART_CODE).read_text(encoding="utf-8")).to(contain("class Cart"))
+
+            with it("should leave no Python gap"):
+                expect([gap.message for gap in self.result.diagnosis.gaps if gap.format == "python"]).to(be_empty)
 
 
 with description("a session's formats diagnosed and aligned through the cdd server") as self:

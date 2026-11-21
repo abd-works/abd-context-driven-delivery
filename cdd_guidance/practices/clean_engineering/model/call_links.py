@@ -79,7 +79,7 @@ class ClassesInReach:
 
     def _in_same_package(self, candidates: "list[Node]", file: str) -> "Node | None":
         """The class a file names with no import, when exactly one file of its own folder, in its own language,
-        declares it: Java names a class of its package so, and a Python or script file whose annotation names a class
+        declares it: a Python or script file whose annotation names a class
         it does not import means the one beside it, never a class of that name in another package."""
         beside = [node for node in candidates if self._beside(node.source.file, file)]
         return beside[0] if len(beside) == 1 else None
@@ -194,7 +194,7 @@ class CallLinks:
 
     def _declared_without_body(self, text: str) -> bool:
         """A C-family member with no body: its signature ends in `;` and no brace opens a body (an interface's method,
-        `draw(scale: number): void;`, or `void draw(double scale);`)."""
+        `draw(scale: number): void;`)."""
         code = _CALL_MARKER.sub("", text).strip()
         return bool(code) and "{" not in code and code.endswith(";")
 

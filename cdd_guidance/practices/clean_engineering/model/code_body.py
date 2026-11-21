@@ -369,24 +369,6 @@ JAVASCRIPT = CodeLanguage(
     type_names={},
     suffixes=(".js", ".jsx"),
 )
-JAVA = CodeLanguage(
-    "java",
-    "//",
-    "    ",
-    'throw new UnsupportedOperationException("not implemented");',
-    C_FAMILY_SPELLING,
-    type_names={
-        "str": "String",
-        "int": "int",
-        "float": "double",
-        "bool": "boolean",
-        "None": "void",
-        "list": "List<?>",
-        "dict": "Map<String, Object>",
-        "object": "Object",
-    },
-    suffixes=(".java",),
-)
 
 # Every programming language the code channels read.
-CODE_LANGUAGES = (PYTHON, TYPESCRIPT, JAVASCRIPT, JAVA)
+CODE_LANGUAGES = (PYTHON, TYPESCRIPT, JAVASCRIPT)

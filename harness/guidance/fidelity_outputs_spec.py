@@ -66,16 +66,26 @@ with description("a fidelity's declared outputs") as self:
             ]
             expect(rooted).to(be_empty)
 
-        with it("should keep every markdown and drawio output in a .context folder or a scenario file in story_tests"):
+        with it("should keep every markdown, drawio and whiteboard output in a .context folder or a scenario file in story_tests"):
             outside = [
                 f"{type(practice).__name__}.{name}.{label}"
                 for practice in self.practices
                 for name, fidelity in practice.fidelities.entries.items()
                 for label, paths in fidelity.outputs.items()
                 for path in ([paths] if isinstance(paths, str) else paths)
-                if label in ("markdown", "drawio", "realization") and ".context/" not in path and not path.startswith("story_tests/")
+                if label in ("markdown", "drawio", "whiteboard", "realization") and ".context/" not in path and not path.startswith("story_tests/")
             ]
             expect(outside).to(be_empty)
+
+        # The person, 2026-11-20: "yes diagram is both drawio and whiteboard".
+        with it("should write a whiteboard beside the drawing in every fidelity that writes a drawing, so the diagram chip chooses both"):
+            alone = [
+                f"{type(practice).__name__}.{name}"
+                for practice in self.practices
+                for name, fidelity in practice.fidelities.entries.items()
+                if ("drawio" in fidelity.outputs) != ("whiteboard" in fidelity.outputs)
+            ]
+            expect(alone).to(be_empty)
 
         with it("should give every specification and implementation fidelity a code format"):
             without_code = [
@@ -93,6 +103,10 @@ with description("a fidelity's declared outputs") as self:
 
         with it("should write mockups as html beside the front end's code"):
             expect(self.ux.fidelities["mockup"].outputs["html"]).to(equal("{epic}/{user_goal}.html"))
+
+        with it("should draw the mockup's drawing and its board beside each other in the epic's .context"):
+            outputs = self.ux.fidelities["mockup"].outputs
+            expect((outputs["drawio"], outputs["whiteboard"])).to(equal(("{epic}/.context/{user_goal}.drawio", "{epic}/.context/{user_goal}.whiteboard")))
 
         with it("should also offer the mockup as a Claude Design canvas, each version's canvas.json in its root"):
             expect(self.ux.fidelities["mockup"].outputs["claude_design"]).to(equal("design-canvas/{version}/project/canvas.json"))

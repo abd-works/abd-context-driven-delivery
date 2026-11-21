@@ -122,6 +122,17 @@ Observed (`drawio_ux_map_spec.py`).
 *When* Claude Code renders the drawing to JSON
 *Then* Add To Cart holds Quantity with no type, then the buttons Add to cart and Back to list
 
+#### Scenario: Save a mockup's drawing and its board beside each other in the epic's .context
+
+Observed (`cdd_guidance/practices/ux/ux_render_heavy_spec.py`, through a real cdd server; the declared paths in `ux_spec.py` and `harness/guidance/fidelity_outputs_spec.py`; the diagram chip in `space/kanban/kanban_tools_spec.py`). The person, 2026-11-20: "yes diagram is both drawio and whiteboard".
+
+*Given* ++bookshop/buy-a-book.html++ holds the mockup
+*When* Claude Code renders ++bookshop/buy-a-book.html++ to drawio, then to whiteboard
+*Then* the drawing is saved as `bookshop/.context/buy-a-book.drawio`
+  *And* the ++board++ is saved beside it as `bookshop/.context/buy-a-book.whiteboard`
+  *And* each render answers the saved file, and the whiteboard render answers the writes that put the ++board++ in Claude
+  *And* ++bookshop/buy-a-book.html++ is as it was
+
 #### Scenario: Show on the drawing what each screen and each control serves
 
 Observed (`drawio_ux_map_spec.py`, "a screen of a UX map drawn as draw.io"; drawn through the command line in `drawio_ux_map_heavy_spec.py`). The person decided that the drawing holds no state, interaction or description of a control; those stay in the html and the JSON.

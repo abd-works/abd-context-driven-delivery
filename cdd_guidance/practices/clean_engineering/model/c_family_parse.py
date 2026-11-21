@@ -1,4 +1,4 @@
-"""The brace-language reading the TypeScript, JavaScript, and Java class models share."""
+"""The brace-language reading the TypeScript and JavaScript class models share."""
 from __future__ import annotations
 
 import re
@@ -17,15 +17,15 @@ from cdd_guidance.practices.clean_engineering.model.bracket_structure import Bra
 from cdd_guidance.practices.clean_engineering.model.type_refs import split_top_level
 
 _CLASS_RE = re.compile(
-    r"(?:export\s+)?(?:abstract\s+)?(?:public\s+|private\s+|protected\s+)?class\s+(\w+)",
+    r"(?:export\s+)?(?:abstract\s+)?class\s+(\w+)",
 )
-# A member declared with no body, ending its signature with `;`: an interface's method (`draw(scale: number): void;`,
-# `void draw(double scale);`) or an abstract one (`abstract area(width: number): number;`).
+# A member declared with no body, ending its signature with `;`: an interface's method (`draw(scale: number): void;`)
+# or an abstract one (`abstract area(width: number): number;`).
 # Everything outside the parameter list stays on one line: the class body arrives with its nested bodies blanked to
 # spaces, and a pattern free to cross lines rescans every blank line below each line start, growing with the square of
 # the body.
 _BODILESS_RE = re.compile(
-    r"^[ \t]*(?:(?:public|protected|private|static|abstract|default|readonly)\s+)*(?:[\w<>\[\],.?]+\s+)?(\w+)\s*\(([^)]*)\)[ \t]*(?::[ \t]*([^;{=\n]+?))?[ \t]*;[ \t]*$",
+    r"^[ \t]*(?:(?:public|protected|private|static|abstract|readonly)\s+)*(?:[\w<>\[\],.?]+\s+)?(\w+)\s*\(([^)]*)\)[ \t]*(?::[ \t]*([^;{=\n]+?))?[ \t]*;[ \t]*$",
     re.M,
 )
 _NOT_MEMBERS = frozenset({"if", "for", "while", "switch", "catch", "return", "super", "this"})
@@ -81,7 +81,7 @@ _PRIVATE_RE = re.compile(r"\bprivate\b")
 
 
 class CFamilyParse:
-    """The reading every brace-language class model shares: TypeScript, JavaScript, and Java. The model it is mixed
+    """The reading every brace-language class model shares: TypeScript and JavaScript. The model it is mixed
     into holds the language it reads and fills its own modules, classes, and members from the text."""
 
     language: CodeLanguage
@@ -142,7 +142,7 @@ class CFamilyParse:
 
     def _read_members(self, oclass: OoadClass) -> None:
         """The operations and fields the class body declares, measured once the class holds them."""
-        oclass.operations = self._methods_from_body(oclass.name) + self._bodiless_members()
+        oclass.operations = self._methods_from_body() + self._bodiless_members()
         self._prepend_constructors(oclass)
         oclass.properties = self._fields_from_body()
         self._derive_member_relationships(oclass)
@@ -250,7 +250,7 @@ class CFamilyParse:
                 spans.append((body_start, body_start + len(body)))
         return spans
 
-    def _methods_from_body(self, class_name: str) -> list[Operation]:
+    def _methods_from_body(self) -> list[Operation]:
         operations: list[Operation] = []
         position = 0
         while (match := _METHOD_RE.search(self._class_body, position)) is not None:
@@ -260,7 +260,7 @@ class CFamilyParse:
                 continue
             # Reading on after the body keeps a statement inside it, such as `for (...) {`, from being taken for the next header.
             position = body_start + len(method_body) + 1
-            operations.append(self._method(match, method_body, class_name))
+            operations.append(self._method(match, method_body))
         return operations
 
     def _method_body(self, match: re.Match) -> tuple[str | None, int]:
@@ -272,12 +272,9 @@ class CFamilyParse:
             return None, -1
         return self._brace_body(self._class_body, match.end() - 1)
 
-    def _method(self, match: re.Match, method_body: str, class_name: str) -> Operation:
-        """The method whose header is match, named constructor when it carries its class's name."""
-        name = match.group(1)
-        operation = self._declared_operation(
-            "constructor" if class_name and name == class_name else name, match.group(2) or "", (match.group(3) or "").strip()
-        )
+    def _method(self, match: re.Match, method_body: str) -> Operation:
+        """The method whose header is match."""
+        operation = self._declared_operation(match.group(1), match.group(2) or "", (match.group(3) or "").strip())
         header = match.group(0)
         header_start = match.start() + len(header) - len(header.lstrip())
         operation.line = self._line_at(self._text, self._body_start + header_start)
@@ -363,7 +360,7 @@ class CFamilyParse:
         default_at = BracketStructure(part).top_level_index("=")
         if default_at >= 0:
             part = part[:default_at].strip()
-        part = re.sub(r"^\s*(public|private|protected|final|readonly)\s+", "", part)
+        part = re.sub(r"^\s*(public|private|protected|readonly)\s+", "", part)
         hint_at = BracketStructure(part).top_level_index(":")
         if hint_at >= 0:
             name, type_hint = part[:hint_at].strip().split()[-1], part[hint_at + 1 :].strip()

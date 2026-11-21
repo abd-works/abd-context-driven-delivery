@@ -205,3 +205,37 @@ Observed (`story_tests_on_map_spec.py`). Source: `Graph.load_practice_roots`, "t
 *When* the Knowledge Graph loads the whole working copy of the second bookshop project
 *Then* the graph holds the scenarios a load of the same files holds, those written in code among them
   *And* their steps invoke the operations a load of the same files links them to
+
+#### Scenario Outline: Give the same graph whichever format the story files are written in
+
+Observed (`cdd_guidance/practices/stories/model/story_test_behaviours_spec.py`). The person's rule of 2026-11-20: "create model in whatever language - then common tests". One project, Pack Orders, is written once in each format, and one set of examples asks each graph the same questions.
+
+*Given* the Pack Orders project holds the stories Pack Order and Cancel Order written as <format>
+*When* the Knowledge Graph reads the whole project for Stories and Clean Engineering
+*Then* the sub-epic Pack Orders holds Pack Order and Cancel Order, in the map's order
+  *And* each story holds its scenarios, with their Given, When and Then in order
+  *And* each Then observes the example its Given names
+
+| format |
+| --- |
+| Python story tests |
+| TypeScript story tests |
+| JavaScript story tests |
+| markdown scenarios |
+
+#### Scenario: Read a JavaScript shared story file and screen spec as the TypeScript ones are read
+
+Observed (`story_test_behaviours_spec.py`, `code_story_behaviours_spec.py`). The person's answer of 2026-11-20: JavaScript story tests are level with TypeScript ones. Before, a JavaScript shared story file and screen spec gave the graph no scenario.
+
+*Given* the Pack Orders project holds `pack-orders.story.shared.js` with the scenario Cancel a paid order, and `pack-orders.story.ui.spec.js` with the test Show a packed order
+*When* the Knowledge Graph reads the whole project for Stories and Clean Engineering
+*Then* the story Cancel Order holds the scenario Cancel a paid order, whose When invokes `Order.cancel`
+  *And* the story Pack Order holds the scenario Show a packed order, its seed read as a Given, its actions as a When and its check as a Then
+
+#### Scenario: Read JavaScript story tests as the map where no story map names their epics
+
+Observed (`story_test_behaviours_spec.py`). Before, only TypeScript story tests were read this way.
+
+*Given* the Pack Orders project holds no story map, and its JavaScript story tests sit under its `tests` folder
+*When* the Knowledge Graph reads the whole project for Stories and Clean Engineering
+*Then* the graph holds the stories Pack Order and Cancel Order, under the epics their folders name

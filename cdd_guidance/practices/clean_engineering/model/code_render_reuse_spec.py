@@ -5,7 +5,7 @@ from expects import equal, expect
 from mamba import before, description, it
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass
-from cdd_guidance.practices.clean_engineering.model.java.java_class_model import JavaCleanEngineeringModel
+from cdd_guidance.practices.clean_engineering.model.javascript.javascript_class_model import JavaScriptCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.python.python_class_model import PythonCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.typescript.typescript_class_model import TypeScriptCleanEngineeringModel
 
@@ -32,7 +32,7 @@ def _class_names(channel, text: str) -> list:
 # Seen 2026-11-17: rendering a second model file to Python in a session named its classes after the first file's.
 with description("a code channel that rendered one class model and is given another"):
     with before.each:
-        self.channels = [PythonCleanEngineeringModel(), TypeScriptCleanEngineeringModel(), JavaCleanEngineeringModel()]
+        self.channels = [PythonCleanEngineeringModel(), TypeScriptCleanEngineeringModel(), JavaScriptCleanEngineeringModel()]
         for channel in self.channels:
             channel.render(PROMPT_NOTIFY)
 
