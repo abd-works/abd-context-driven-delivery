@@ -90,7 +90,7 @@ class Merges:
         """Merge ref into the current branch. A merge left half done blocks every later checkout and commit, so a merge
         that fails is aborted, the checkout goes back as it was, and ``MergeRefusedError`` names the two branches."""
         repo = self._repo
-        self.prepare()
+        self.keep_session_logs_by_union()
         with repo.writing_index:
             try:
                 repo.git.run("merge", ref, *(["-m", message] if message else ["--no-edit"]))
@@ -98,7 +98,7 @@ class Merges:
                 repo.git.succeeds("merge", "--abort")
                 raise MergeRefusedError(ref, repo.current_branch.name, str(refused)) from refused
 
-    def prepare(self) -> None:
+    def keep_session_logs_by_union(self) -> None:
         """Tell git, in this repository's own attributes file, which no checkout commits, to merge session logs by
         union: each line either side wrote is kept."""
         repo = self._repo

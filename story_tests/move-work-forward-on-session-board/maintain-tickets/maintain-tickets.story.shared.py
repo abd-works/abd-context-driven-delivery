@@ -136,7 +136,7 @@ def _(s):
 
     @s.when("the Person edits Gift cards' text to Sell gift cards at the till.")
     def _(world):
-        # BoardReads.backlog_item("Gift cards")
+        # BoardReads.backlog_item_called("Gift cards")
         #   <- Gift cards
         # Gift cards.edit_text("Sell gift cards at the till.")
         #   <- Gift cards with the text Sell gift cards at the till.
@@ -218,7 +218,7 @@ def _(s):
 
     @s.when('the Person moves Returns and refunds above Gift cards')
     def _(world):
-        # BoardReads.backlog_item("Returns and refunds")
+        # BoardReads.backlog_item_called("Returns and refunds")
         #   <- Returns and refunds
         # Returns and refunds.move_before(Gift cards)
         #   <- the Backlog with Returns and refunds above Gift cards

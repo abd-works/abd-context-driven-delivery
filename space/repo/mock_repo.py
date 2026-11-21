@@ -154,7 +154,7 @@ class MockGit:
             self.branches.trees[self.default_branch] = {}
             self.branches.logs[self.default_branch] = []
             self.checked_out[self.root] = self.default_branch
-            self.serve(self.root).working_tree.commit([str(self.root)], "Fixture", untracked=True)
+            self.serve(self.root).working_tree.commit_all("Fixture")
 
     def add_worktree(self, branch: str, folder: Path) -> None:
         """branch checked out in a worktree at folder, made with the branch when it is new."""
@@ -374,7 +374,7 @@ class MockMerges(Merges):
             self._repo.held.branches.merge(current, other.name, message)
         return self._repo.current_commit
 
-    def prepare(self) -> None:
+    def keep_session_logs_by_union(self) -> None:
         return None
 
 

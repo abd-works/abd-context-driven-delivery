@@ -2519,8 +2519,8 @@ it should show Validate done for that fidelity
 
 ```
 it should match the practice's class name in the validate line to its folder name
--> FidelityProgress.done_actions
-<- list[str]
+-> FidelityProgress.state
+<- str
 ```
 
 ###### that has been reviewed

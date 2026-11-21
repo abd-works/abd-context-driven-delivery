@@ -166,7 +166,7 @@ with description("a Repo"):
                 self.repo.working_tree.commit([str(self.clone)], "branch line", untracked=True)
                 self.repo.branch_named("main").check_out()
                 log.write_text("start\nnot committed\n", encoding="utf-8")
-                self.repo.branch_named("session/demo").switch_to()
+                self.repo.branch_named("session/demo").check_out()
                 self.switched = log.read_text(encoding="utf-8")
 
             with it("should switch to that branch"):

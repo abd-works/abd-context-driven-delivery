@@ -123,15 +123,6 @@ export class BoardPage {
     return this.chat.fill(`Open a new ticket with ticket.create${session ? ` session=${session}` : ''}, titled: `)
   }
 
-  // The Files app's page: only the file viewer, opened on the files or the session folder its link names, with the board
-  // read again every two seconds so an open file shows what is on disk now.
-  startFiles(): () => void {
-    const search = typeof location === 'undefined' ? '' : location.search
-    void this.links.openFiles(search)
-    void this.links.openSessionFolder(search)
-    return this.reader.startPolling()
-  }
-
   start(): () => void {
     const search = typeof location === 'undefined' ? '' : location.search
     void this.links.openTicket(search)

@@ -382,7 +382,9 @@ class SessionsProject(ThrowawayProject):
         WorkState(self.root).session = seed.name
 
     def seed_wip_limits(self, limits: dict[str, int]) -> None:
-        Board.load(self.root).file.write_text(json.dumps({"wip_limits": limits}), encoding="utf-8")
+        board = Board.load(self.root)
+        for stage, limit in limits.items():
+            board.shared.set_wip_limit(board.stage(stage), limit)
 
     def seed_report(self, seed: SessionSeed, report: ReportSeed) -> Path:
         folder = self.sessions / seed.folder / seed.name / "validation-reports"

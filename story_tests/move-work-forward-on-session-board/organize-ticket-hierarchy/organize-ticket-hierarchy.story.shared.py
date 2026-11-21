@@ -247,7 +247,7 @@ def _(s):
 
     @s.when('the Person starts Gift cards as a child of checkout-flow')
     def _(world):
-        # BoardReads.backlog_item("Gift cards")
+        # BoardReads.backlog_item_called("Gift cards")
         #   <- Gift cards
         # CardPlacement.ticket("checkout-flow")
         #   <- checkout-flow

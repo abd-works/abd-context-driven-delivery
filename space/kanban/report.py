@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from space.session.accepted_violations import AcceptedViolations
 
 
-class ViolationNotInReport(LookupError):
+class ViolationNotInReportError(LookupError):
     """A person accepted, or took back the acceptance of, a violation the fidelity's latest report does not list, such
     as one a newer validate no longer finds. It names the rule and the place asked for, and the report read."""
 
@@ -252,7 +252,7 @@ class ReportFile:
 
     def accept(self, asked: Violation) -> None:
         """Accept the violation this report shows as asked, so no later report, validate, or count names it while it
-        stays the same. *ViolationNotInReport* when the report lists no such violation."""
+        stays the same. *ViolationNotInReportError* when the report lists no such violation."""
         self._accepted_violations.accept(self._listed_as(asked).found)
 
     def reopen(self, asked: Violation) -> None:
@@ -265,7 +265,7 @@ class ReportFile:
         every = [listed for by_rule in (graph_hits, self._judged(self.text)) for violations in by_rule.values() for listed in violations]
         found = next((listed for listed in every if listed.is_shown_as(asked)), None)
         if found is None:
-            raise ViolationNotInReport(asked, self._file)
+            raise ViolationNotInReportError(asked, self._file)
         return found
 
     def _open_and_accepted(self, by_rule: dict[str, list[ListedViolation]]) -> tuple[list[ReportRule], list[ReportRule]]:

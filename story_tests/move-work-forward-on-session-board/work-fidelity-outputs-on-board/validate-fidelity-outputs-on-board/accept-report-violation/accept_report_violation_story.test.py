@@ -26,7 +26,7 @@ with story("Accept Report Violation"):
             # FidelityProgress.report() -> ReportFile.report() -> AcceptedViolations.accepted_among(the report's violations)
             pass
         with and_("the story_map tile marks Validate ✓ with no violations"):
-            # Ticket.load() -> FidelityProgress.from_log() -> FidelityProgress.with_accepted_left_out()
+            # Ticket.load() -> FidelityProgress.from_log() -> FidelityProgress._with_accepted_left_out()
             pass
     with scenario("Leave an accepted violation out of the next validation"):
         # Evidence: observed: validate-fidelity-outputs.story.shared.py (domain tier); checked_graph_spec 'that checks a graph one of whose violations a person accepted'; validation_report_spec 'should say how many accepted violations it leaves out and the file that keeps them'.

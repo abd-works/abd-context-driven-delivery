@@ -57,9 +57,11 @@ ONCE_THERE_IS_OUTPUT = (VALIDATE, RENDER)
 
 
 class MainStaysOpenError(ValueError):
-    """Raised when a tool would close, archive, or shelve main, the default session, which stays on the board."""
+    """Raised when a tool would close, archive, delete, or shelve main, the default session, which stays on the board,
+    or edit its text or tags, which the board keeps for no ticket's work. It names what was asked of main."""
 
     def __init__(self, action: str) -> None:
+        self.action = action
         super().__init__(f"main is the default session and stays open; it cannot {action}")
 
 
@@ -241,7 +243,7 @@ class TicketEnding:
         checkout.write_handoff(leaving)
         # The work is saved and the branch merged while the ticket still has its worktree and its open session, so a
         # merge git refuses leaves both as they were. The branch also merges before the record moves: the session's work
-        # folder it carries lands beside the record in main's .sessions, and the move takes both among the closed
+        # folder on the branch lands beside the record in main's .sessions, and the move takes both among the closed
         # sessions. Moved first, git would find the work folder added inside a folder main renamed, and refuse the merge.
         checkout.save_work(leaving)
         checkout.keep_landing_release(leaving)
@@ -249,7 +251,6 @@ class TicketEnding:
         self.session.close()
         closed = self.board.placement.ticket_of(self.session.folder.move_to_closed())
         checkout.return_to_default_branch()
-        # The ticket's record is kept on main, so its move among the closed sessions is committed and pushed there.
         self.board.sessions.saves.now(f"sessions: close {self.name}")
         return closed
 
@@ -287,16 +288,19 @@ class TicketEnding:
 
 @hosted_only
 class TicketTextTools:
-    """A ticket's published edits to what its session says about its work: its text and its tags, each kept by its session."""
+    """A ticket's published edits to what its session says about its work: its text and its tags, each kept by its session.
+    Main, the default session, is no one piece of work, so it takes neither."""
 
     session: Session
     forget_reads: Callable[[], None]
+    _refuse_main: Callable[[str], None]
 
     @mcp
     @agent_tool
     @noSessionLog
     def edit_text(self, text: str) -> Ticket:
-        """Write text as what ticket's work is about, in the idea file its session folder keeps, <name>.md, under its heading; the file is made when ticket has none. Committed on main and pushed."""
+        """Write text as what ticket's work is about, in the idea file its session folder keeps, <name>.md, under its heading; the file is made when ticket has none. Committed on main and pushed. Main, the default session, is refused."""
+        self._refuse_main("have its text edited")
         self.session.keep_text(text)
         self.forget_reads()
         return self
@@ -305,7 +309,8 @@ class TicketTextTools:
     @agent_tool
     @noSessionLog
     def tag(self, word: str) -> Ticket:
-        """Tag ticket's session with word, kept in its session.json beside its other tags. Committed on main and pushed."""
+        """Tag ticket's session with word, kept in its session.json beside its other tags. Committed on main and pushed. Main, the default session, is refused."""
+        self._refuse_main("be tagged")
         self.session.add_tag(word)
         self.forget_reads()
         return self
@@ -744,8 +749,7 @@ class TicketWork:
     @property
     def progress(self) -> list[FidelityProgress]:
         if self._read is None:
-            entries = self.entries
-            self._read = [FidelityProgress.from_log(required, entries, self._ticket) for required in self._required]
+            self._read = [FidelityProgress.from_log(required, self._ticket) for required in self._required]
         return self._read
 
     @property
@@ -786,7 +790,7 @@ class TicketWork:
         found = next((required for required in self._required if required.fidelity.slug == slug), None)
         if found is None:
             raise FidelityNotFoundError(slug, f"ticket {self._ticket.name!r}")
-        return FidelityProgress.from_log(found, self.entries, self._ticket)
+        return FidelityProgress.from_log(found, self._ticket)
 
     def in_stage(self, stage: Stage) -> StageWork:
         """Its work in stage: the progress of every fidelity stage requires whose practice its session works on."""
@@ -862,7 +866,7 @@ class StageMarks:
 
 
 
-class NoReportToAcceptIn(LookupError):
+class NoReportToAcceptInError(LookupError):
     """A person accepted, or took back the acceptance of, a violation of a fidelity that has no validation report. It
     names the fidelity and the violation asked for."""
 
@@ -904,17 +908,14 @@ class FidelityProgress:
 
     def __init__(self, required: RequiredFidelity, logged: LoggedWork, ticket: Ticket) -> None:
         self._required = required
-        self._fidelity = required.fidelity
-        self._stage = required.stage
         self._logged = logged
-        self._done_actions = logged.done_actions
-        self._has_violations = logged.has_violations
         self._ticket = ticket
 
     @classmethod
-    def from_log(cls, required: RequiredFidelity, entries: list[LogEntry], ticket: Ticket) -> FidelityProgress:
-        """Read the actions done on this fidelity from its session's log entries, finding it by name, never by position;
-        the latest report's judgment can still fail a validate the log shows passing."""
+    def from_log(cls, required: RequiredFidelity, ticket: Ticket) -> FidelityProgress:
+        """Read the actions done on this fidelity from its ticket's session log entries, finding it by name, never by
+        position; the latest report's judgment can still fail a validate the log shows passing."""
+        entries = ticket.work.entries
         naming = [(index, entry.verb) for index, entry in enumerate(entries) if entry.names(required.fidelity)]
         validations = [index for index, verb in naming if verb == VALIDATE]
         latest_validation = validations[-1] if validations else None
@@ -926,8 +927,8 @@ class FidelityProgress:
         done_verbs |= {VALIDATE} if validated else set()
         logged = LoggedWork([action for action in required.stage.steps if action in done_verbs], has_violations, len(naming))
         read = cls(required, logged, ticket)
-        judged = read.with_violations() if read._is_judged_failing else read
-        return judged.with_accepted_left_out()
+        judged = read._with_violations() if read._is_judged_failing else read
+        return judged._with_accepted_left_out()
 
     @classmethod
     @tool_subject
@@ -945,7 +946,7 @@ class FidelityProgress:
     def holds(self, file: Path) -> bool:
         """Whether file is one of this fidelity's in its ticket's session, changed by the session or not; none while its
         practice works in no session."""
-        output = self._fidelity.session_output
+        output = self._required.fidelity.session_output
         return output is not None and output.written.holds(file)
 
     @property
@@ -953,13 +954,13 @@ class FidelityProgress:
     def fidelity(self) -> FidelityGuidance:
         """The fidelity this progress is on, as its ticket's session holds it; sent by its slug, such as
         stories-story-map, because its guidance text is read through its help, never with every ticket."""
-        return self._fidelity
+        return self._required.fidelity
 
     @property
     @data_field(reference=True)
     def stage(self) -> Stage:
         """The stage that requires the fidelity, sent by its name, since the stage sends its tickets."""
-        return self._stage
+        return self._required.stage
 
     @property
     @data_field(reference=True)
@@ -973,27 +974,23 @@ class FidelityProgress:
     def is_enabled(self) -> bool:
         """Whether the ticket's session works on this fidelity's practice, as the fidelity, which works in that session,
         answers it."""
-        return self._fidelity.session_output.is_enabled
+        return self._required.fidelity.session_output.is_enabled
 
     @property
     def _practice(self) -> PracticeGuidance:
-        return self._fidelity.practice_guidance
+        return self._required.fidelity.practice_guidance
 
     @property
-    def done_actions(self) -> list[str]:
-        return list(self._done_actions)
-
-    @property
-    def remaining_actions(self) -> list[str]:
+    def _remaining_actions(self) -> list[str]:
         """Its stage's actions not yet done: a fidelity generated and validated without violations is done."""
-        return [action for action in self._stage.steps if action not in self._done_actions]
+        return [action for action in self._required.stage.steps if action not in self._logged.done_actions]
 
     @property
     @data_field
     def next_action(self) -> str:
         """What Run next does on this fidelity: the first of its stage's actions not done, which is validate again
         while it has violations, or nothing once it is done."""
-        remaining = self.remaining_actions
+        remaining = self._remaining_actions
         return remaining[0] if remaining else ""
 
     @property
@@ -1001,13 +998,13 @@ class FidelityProgress:
     def commands(self) -> dict[str, str]:
         """The command a chat runs for each action its stage offers on this fidelity, such as
         ``/actions-generate ux-mockup session=.sessions/checkout-flow/session.json``."""
-        return {action: self.command(action) for action in self._stage.actions}
+        return {action: self.command(action) for action in self._required.stage.actions}
 
     def command(self, action: str) -> str:
         """The command that runs action on this fidelity in its ticket's session. It names the session, because the
         chat that runs it can have another session open, and no format, so the action works in the format the fidelity
         keeps in that session."""
-        return self._ticket.work.command(action, [self._fidelity])
+        return self._ticket.work.command(action, [self._required.fidelity])
 
     @property
     @data_field
@@ -1015,31 +1012,31 @@ class FidelityProgress:
         """Every action of its stage, in the stage's order; Validate and Render only once there is output to
         check or convert: an action on the fidelity is recorded, or a file it declares is already there, such as one a
         person wrote. A person can check the same output again as often as they like."""
-        has_output = bool(self._done_actions) or self._has_files
-        return [action for action in self._stage.actions if has_output or action not in ONCE_THERE_IS_OUTPUT]
+        has_output = bool(self._logged.done_actions) or self._has_files
+        return [action for action in self._required.stage.actions if has_output or action not in ONCE_THERE_IS_OUTPUT]
 
     @cached_property
     def _has_files(self) -> bool:
         """Read once per reading of the progress, since the board and its stage's work both ask. A file named by its
         whole path, such as one a person wrote, is looked for on every read; a pattern's search walks folders, so it runs
         again only after Generate or Validate logs a line on the fidelity or its session declares other paths for it."""
-        output = self._fidelity.session_output
+        output = self._required.fidelity.session_output
         if output is None:
             return False
         if output.written.has_named_output():
             return True
-        key = json.dumps([self._fidelity.declared.output_paths(), self._logged.lines_logged], sort_keys=True)
-        return self._ticket.session.progress_cache.of(self._fidelity.slug).answer(HAS_OUTPUT, key, output.written.has_found_output)
+        key = json.dumps([self._required.fidelity.declared.output_paths(), self._logged.lines_logged], sort_keys=True)
+        return self._ticket.session.progress_cache.of(self._required.fidelity.slug).answer(HAS_OUTPUT, key, output.written.has_found_output)
 
     @property
     @data_field
     def has_violations(self) -> bool:
         """Whether its latest validate left violations, so it is validated again once they are fixed."""
-        return self._has_violations
+        return self._logged.has_violations
 
     @property
     def is_done(self) -> bool:
-        return not self.remaining_actions
+        return not self._remaining_actions
 
     @property
     @data_field
@@ -1047,16 +1044,16 @@ class FidelityProgress:
         """done, violations, in_progress, or not_started: what the board pane colours."""
         if self.is_done:
             return "done"
-        if self._has_violations:
+        if self._logged.has_violations:
             return "violations"
-        return "in_progress" if self._done_actions else "not_started"
+        return "in_progress" if self._logged.done_actions else "not_started"
 
     @property
     @data_field(key="actions")
     def action_states(self) -> ActionStates:
         """Each action as to_do, in_progress, or done. A validate that left violations is in progress until they are fixed."""
-        states = {action: "done" if action in self._done_actions else "to_do" for action in self._stage.steps}
-        if self._has_violations:
+        states = {action: "done" if action in self._logged.done_actions else "to_do" for action in self._required.stage.steps}
+        if self._logged.has_violations:
             states[VALIDATE] = "in_progress"
         return ActionStates(states)
 
@@ -1071,7 +1068,7 @@ class FidelityProgress:
     def latest_report(self) -> ReportFile | None:
         """Its latest validation report in its ticket's session that has its result, else its latest; none when it has
         none. Found once per reading of the progress."""
-        return ReportFile.from_fidelity(self._fidelity)
+        return ReportFile.from_fidelity(self._required.fidelity)
 
     @property
     @data_field
@@ -1095,9 +1092,9 @@ class FidelityProgress:
         """What count answers about its latest report, kept in its session's progress cache until the report can read
         otherwise; none while it has no violations."""
         latest = self.latest_report
-        if not self._has_violations or latest is None:
+        if not self._logged.has_violations or latest is None:
             return 0
-        return self._ticket.session.progress_cache.of(self._fidelity.slug).answer(question, latest.version, count)
+        return self._ticket.session.progress_cache.of(self._required.fidelity.slug).answer(question, latest.version, count)
 
     @cached_property
     def _latest_read(self) -> Report:
@@ -1109,7 +1106,7 @@ class FidelityProgress:
     @noSessionLog
     def accept_violation(self, rule: str, message: str, location: str, line: int = 0, node_id: str = "") -> Report:
         """Accept one violation of this fidelity's latest validation report as it is, and return the report without it. Name the violation as the report shows it: its rule, message, location, line (0 when it has none), and node_id (empty when it is on no node). It is kept in the project's .context/violations-accepted.json, by its rule, the id of its node, and its message, so no later validate, report, or count names it; a finding on no node is kept by its rule, its file, and the content of its line. It shows again when its message, its node's id, or that content changes. Refused when the report lists no such violation."""
-        self.latest_report_or_refuse(rule, location).accept(self._shown_as(rule, message, Location(location, line or None), node_id))
+        self._latest_report_or_refuse(rule, location).accept(self._shown_as(rule, message, Location(location, line or None), node_id))
         return self._report_read_again()
 
     @mcp
@@ -1117,14 +1114,14 @@ class FidelityProgress:
     @noSessionLog
     def reopen_violation(self, rule: str, message: str, location: str, line: int = 0, node_id: str = "") -> Report:
         """Take back the acceptance of one violation this fidelity's latest validation report lists under accepted, and return the report with it open again. Name the violation as the report shows it: its rule, message, location, line (0 when it has none), and node_id (empty when it is on no node). Refused when the report lists no such violation."""
-        self.latest_report_or_refuse(rule, location).reopen(self._shown_as(rule, message, Location(location, line or None), node_id))
+        self._latest_report_or_refuse(rule, location).reopen(self._shown_as(rule, message, Location(location, line or None), node_id))
         return self._report_read_again()
 
-    def latest_report_or_refuse(self, rule: str, location: str) -> ReportFile:
-        """Its latest report; *NoReportToAcceptIn*, naming the violation asked for, while it has none."""
+    def _latest_report_or_refuse(self, rule: str, location: str) -> ReportFile:
+        """Its latest report; *NoReportToAcceptInError*, naming the violation asked for, while it has none."""
         latest = self.latest_report
         if latest is None:
-            raise NoReportToAcceptIn(self._fidelity.slug, rule, location)
+            raise NoReportToAcceptInError(self._required.fidelity.slug, rule, location)
         return latest
 
     def _shown_as(self, rule: str, message: str, location: Location, node_id: str) -> Violation:
@@ -1156,24 +1153,24 @@ class FidelityProgress:
     @noSessionLog
     def files(self) -> dict[str, list[FileEntry]]:
         """List the files a person reviews for this fidelity by format in its ticket's session, each with its path from the project, whether it exists, and the published link of a design canvas, formats in the order files are shown (``Format.file_order``: markdown, code, diagrams). They are the files it declares, or those of the fidelities its practice document says it reviews files of (UX front-end code: its IA and mockup). A pattern lists the files the ticket worked on, not every match in the repository."""
-        files = self._fidelity.declared.files_to_review()
+        files = self._required.fidelity.declared.files_to_review()
         return dict(sorted(files.items(), key=lambda formats: Format(formats[0]).file_order))
 
-    def with_violations(self) -> FidelityProgress:
+    def _with_violations(self) -> FidelityProgress:
         """This progress with its latest validate failed, so validate is to do again."""
         return FidelityProgress(self._required, self._logged.failed_again(), self._ticket)
 
-    def with_accepted_left_out(self) -> FidelityProgress:
+    def _with_accepted_left_out(self) -> FidelityProgress:
         """This progress with its latest validate passed when a person accepted every violation its latest report
         names, so an accepted violation holds no fidelity back; itself while any is still open."""
-        if not self._has_violations or self._violation_count or not self._accepted_count:
+        if not self._logged.has_violations or self._violation_count or not self._accepted_count:
             return self
-        return FidelityProgress(self._required, self._logged.validated(self._stage.steps), self._ticket)
+        return FidelityProgress(self._required, self._logged.validated(self._required.stage.steps), self._ticket)
 
     @property
     def _is_judged_failing(self) -> bool:
         """A validate the log shows passing still failed when the judgment the validating agent added to its report fails a rule."""
-        if VALIDATE not in self._done_actions:
+        if VALIDATE not in self._logged.done_actions:
             return False
         latest = self.latest_report
         return latest is not None and latest.is_judged_failing

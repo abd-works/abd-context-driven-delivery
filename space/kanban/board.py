@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from datetime import datetime
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -20,9 +19,7 @@ from harness.mcp.mcp_annotations import mcp
 from harness.guidance.stages import STAGES, ApproachStage, StageScope
 from space.kanban.card_name import CardName, TicketNameTakenError
 from space.kanban.unreadable_session_file import UnreadableSessionFile
-from space.repo.repo import Repo
 from space.session.session_record import SESSION_FILE
-from space.session.session_log import LogTimestamp
 from space.session.session_saves import SaveFailure
 from space.session.sessions import BoardPractices, Sessions, SessionsRead
 
@@ -30,7 +27,7 @@ if TYPE_CHECKING:
     from harness.catalog_generator.catalog_practice import CatalogPractice
     from space.kanban.backlog_item import BacklogItem
     from space.kanban.ticket import Ticket
-    from space.repo.repo import Branch
+    from space.repo.repo import Branch, Repo
     from space.repo.worktree import Worktree
     from space.session import Session
 
@@ -54,9 +51,10 @@ class ColumnNotFoundError(LookupError):
 
 class NotAStageError(ValueError):
     """Raised when a caller names a column that is not a stage, such as the Backlog or Complete, where a stage is wanted:
-    a ticket moved into it, or a WIP limit set on it."""
+    a ticket moved into it, or a WIP limit set on it. It names the column."""
 
     def __init__(self, stage: str) -> None:
+        self.stage = stage
         super().__init__(f"{stage!r} is not a stage a ticket can be moved into")
 
 
@@ -71,16 +69,18 @@ class FidelityNotFoundError(LookupError):
 
 
 class TicketNotFoundError(LookupError):
-    """Raised when a tool names a ticket the board does not show."""
+    """Raised when a tool names a ticket the board does not show. It names the ticket."""
 
     def __init__(self, ticket: str) -> None:
+        self.ticket = ticket
         super().__init__(f"no ticket named {ticket!r} on the board")
 
 
 class BacklogItemNotFoundError(LookupError):
-    """Raised when a tool names a backlog item the board does not show."""
+    """Raised when a tool names a backlog item the board does not show. It names the item's title."""
 
     def __init__(self, backlog_item: str) -> None:
+        self.backlog_item = backlog_item
         super().__init__(f"no backlog item titled {backlog_item!r} on the board")
 
 
@@ -95,9 +95,12 @@ class FolderOutsideRepositoryError(ValueError):
 
 
 class CardNotInColumnError(ValueError):
-    """Raised when a card is to be placed before another, and either is not a card of its own in the column."""
+    """Raised when a card is to be placed before or after another, and either is not a card of its own in the column.
+    It names the card and the column."""
 
     def __init__(self, card: str, column: str) -> None:
+        self.card = card
+        self.column = column
         super().__init__(f"{card!r} is not a card of its own in {column}")
 
 
@@ -110,13 +113,14 @@ class Board:
     # Every ticket is in exactly one column; the board stores no ticket state.
 
 
-    def __init__(self, repo: Repo, practices: BoardPractices) -> None:
-        self._repo = repo
+    def __init__(self, sessions: Sessions, practices: BoardPractices | None = None) -> None:
         # The sessions of the board's repository, as this process holds them: each one a ticket, and which is open.
-        self._sessions = Sessions.of_project(repo.root)
+        self._sessions = sessions
+        self._repo = sessions.repo
         # The catalog's view of each practice the board works through, which names its pages and its fidelities' skills,
         # held for the checkout by its sessions, since a board is made for every call. Its stages and tickets ask it.
-        self.catalogued_practices = practices
+        # A board that works through fewer practices than CDD has is handed its own.
+        self.catalogued_practices = practices if practices is not None else sessions.board_practices
         self._stages = [Stage(stage, self) for stage in STAGES]
         self._columns: list[Column] = [Backlog(self), *self._stages, Complete(self)]
         self.shared = BoardFile(self)
@@ -127,8 +131,7 @@ class Board:
     def load(cls, project: Path | str) -> Board:
         """The board of project, with every practice chosen; a tool call is handed the project the call names, the folder
         the calling chat works in. Every checkout's board lists the repository's own ``.sessions``."""
-        sessions = Sessions.of_project(project)
-        return cls(sessions.repo, sessions.board_practices)
+        return cls(Sessions.of_project(project))
 
     @property
     def repo(self) -> Repo:
@@ -137,11 +140,6 @@ class Board:
     @property
     def sessions(self) -> Sessions:
         return self._sessions
-
-    @property
-    def file(self) -> Path:
-        """The file that holds what this repository's sessions share on the board."""
-        return self.sessions.folder / _BOARD_FILE
 
     @property
     @data_field
@@ -282,7 +280,7 @@ class Board:
     @noSessionLog
     def set_sends_fixes_directly(self, sends: bool) -> Board:
         """Set whether a report's Fix sends straight to the ticket's chat as a message, or puts it in the chat's prompt to edit before sending; kept for the repository in the board's file."""
-        self.shared.keep(sends_fixes_directly=sends)
+        self.shared.set_sends_fixes_directly(sends)
         return self
 
     @mcp
@@ -398,13 +396,22 @@ class BoardFile:
     def __init__(self, board: Board) -> None:
         self._board = board
 
+    @property
+    def _file(self) -> Path:
+        """The file that holds what this repository's sessions share on the board."""
+        return self._board.sessions.folder / _BOARD_FILE
+
     @cached_property
     def _held(self) -> dict:
-        return JsonFile(self._board.file).read()
+        return JsonFile(self._file).read()
 
     @property
     def sends_fixes_directly(self) -> bool:
         return bool(self._held.get("sends_fixes_directly", False))
+
+    def set_sends_fixes_directly(self, sends: bool) -> None:
+        """Keep whether a report's Fix sends straight to the ticket's chat, beside whatever else the file holds."""
+        self._keep(sends_fixes_directly=sends)
 
     def wip_limit(self, stage: Stage) -> int:
         """How many tickets stage holds before its count shows as over its limit: the one a person set, else the default."""
@@ -412,7 +419,7 @@ class BoardFile:
 
     def set_wip_limit(self, stage: Stage, limit: int) -> None:
         """Keep stage's limit beside the other stages' limits and whatever else the sessions share there."""
-        self.keep(wip_limits={**self._held.get("wip_limits", {}), stage.name: limit})
+        self._keep(wip_limits={**self._held.get("wip_limits", {}), stage.name: limit})
 
     def order_in(self, column: Column) -> list[str]:
         """The keys of column's cards in the order a person last placed them; none before they have placed any."""
@@ -420,13 +427,13 @@ class BoardFile:
 
     def keep_order(self, column: Column, keys: list[str]) -> None:
         """Keep column's cards in the order keys gives them, beside whatever else the file holds."""
-        self.keep(order={**self._held.get("order", {}), column.name: list(keys)})
+        self._keep(order={**self._held.get("order", {}), column.name: list(keys)})
 
-    def keep(self, **values: object) -> None:
+    def _keep(self, **values: object) -> None:
         """Write values into the file, keeping whatever else it holds."""
         held = self._held
         held.update(values)
-        JsonFile(self._board.file).write(held)
+        JsonFile(self._file).write(held)
 
 
 class BoardReads:
@@ -502,13 +509,10 @@ class BoardReads:
         once for every ticket that looks for its chat."""
         return self._chats_by_name.get(name)
 
-    def backlog_item(self, title: str) -> BacklogItem | None:
-        """The backlog item titled title, of those this read found."""
-        return next((item for item in self.backlog_items if item.title == title), None)
-
     def backlog_item_called(self, title: str) -> BacklogItem:
-        """The backlog item titled title; raises ``BacklogItemNotFoundError`` when the board has none."""
-        found = self.backlog_item(title)
+        """The backlog item titled title, of those this read found; raises ``BacklogItemNotFoundError`` when the board
+        has none."""
+        found = next((item for item in self.backlog_items if item.title == title), None)
         if found is None:
             raise BacklogItemNotFoundError(title)
         return found
@@ -744,8 +748,12 @@ class Card(ABC):
         self._board.sessions.saves.later(f"sessions: move {self.key} before {other.key} in {column.name}")
         return self
 
-    def _timestamp(self, moment: datetime) -> str:
-        return str(LogTimestamp(moment))
+    def move_after(self, other: Card) -> Card:
+        """A person's move of this card just below other in their column: the column keeps that order, committed on
+        main and pushed."""
+        column = self.column.place_after(self, other)
+        self._board.sessions.saves.later(f"sessions: move {self.key} after {other.key} in {column.name}")
+        return self
 
 
 class RequiredFidelity:

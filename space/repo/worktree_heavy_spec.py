@@ -48,13 +48,6 @@ with description("a worktree opened for a branch") as self:
     with after.each:
         shutil.rmtree(self.tmp, ignore_errors=True)
 
-    with context("with origin reachable"):
-        with before.each:
-            self.opened = Repo(self.clone).branch_named("feature/a").open_in_worktree()
-
-        with it("should be up to date with origin"):
-            expect(self.opened.sync_failure).to(equal(""))
-
     with context("with origin no longer reachable"):
         with before.each:
             _git(self.clone, "remote", "set-url", "origin", str(self.tmp / "moved-away.git"))
@@ -65,9 +58,6 @@ with description("a worktree opened for a branch") as self:
 
             with it("should check the branch out"):
                 expect(_git(self.opened.path, "branch", "--show-current")).to(equal("feature/a"))
-
-            with it("should say why it is not up to date with origin"):
-                expect(self.opened.sync_failure).to(contain("fetch"))
 
             with it("should still open the worktree folder"):
                 expect(self.opened.path.is_dir()).to(be_true)

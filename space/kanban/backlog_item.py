@@ -19,6 +19,7 @@ from space.kanban.card_name import BacklogItemTakenError, CardName
 # ticket the call names.
 from space.kanban.ticket import Ticket
 from space.session.idea_file import IdeaFile
+from space.session.session_log import LogTimestamp
 from space.session.session_record import SESSION_FILE
 from harness.mcp.mcp_annotations import mcp
 
@@ -47,10 +48,6 @@ class BacklogOrderTools:
     """A backlog item's published moves within the Backlog's order: just above or just below another item, as dragging it
     there does. The Backlog keeps that order, in .sessions/_board.json."""
 
-    column: Column
-    key: str
-    board: Board
-
     @mcp
     @agent_tool
     @noSessionLog
@@ -64,8 +61,7 @@ class BacklogOrderTools:
     @noSessionLog
     def move_after(self, other: BacklogItem) -> BacklogItem:
         """Move the backlog item just below other in the Backlog, as dragging it onto other's bottom edge does; the Backlog keeps that order, in .sessions/_board.json. Committed on main and pushed."""
-        column = self.column.place_after(self, other)
-        self.board.sessions.saves.later(f"sessions: move {self.key} after {other.key} in {column.name}")
+        super().move_after(other)
         return self
 
 
@@ -177,7 +173,7 @@ class BacklogItem(BacklogOrderTools, Card):
     @property
     def last_activity(self) -> str:
         """When the item's file last changed; a backlog item has no session log to read."""
-        return self._timestamp(datetime.fromtimestamp(self._path.stat().st_mtime).astimezone())
+        return str(LogTimestamp(datetime.fromtimestamp(self._path.stat().st_mtime).astimezone()))
 
     @mcp
     @agent_tool

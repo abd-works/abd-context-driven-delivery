@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from space.session import Session
 
 
-class FormatNotOffered(ValueError):
+class FormatNotOfferedError(ValueError):
     """A chip label the fidelities an action bar acts on do not offer, so there is no chip to turn on or off."""
 
     def __init__(self, label: str, fidelities: list[str], chips: list[FormatChoice]) -> None:
@@ -67,11 +67,11 @@ class TicketChoices:
     @agent_tool
     @noSessionLog
     def choose_formats(self, fidelities: list[str], label: str, is_chosen: bool) -> list[FormatChoice]:
-        """Turn the chip label, such as markdown or diagram, on or off for fidelities, slugs such as stories-story-map, on ticket: each fidelity chooses, or leaves out, the formats it uses from that group in the session, every one of a diagram it writes (its drawio file and its whiteboard board), the same choice the Story UI's toggles make; return the chips again. A label no chip has, such as drawio, which the diagram chip stands for, is refused with FormatNotOffered naming the labels offered."""
+        """Turn the chip label, such as markdown or diagram, on or off for fidelities, slugs such as stories-story-map, on ticket: each fidelity chooses, or leaves out, the formats it uses from that group in the session, every one of a diagram it writes (its drawio file and its whiteboard board), the same choice the Story UI's toggles make; return the chips again. A label no chip has, such as drawio, which the diagram chip stands for, is refused with FormatNotOfferedError naming the labels offered."""
         chips = self.format_choices(fidelities)
         chip = next((chip for chip in chips if chip.label == label), None)
         if chip is None:
-            raise FormatNotOffered(label, fidelities, chips)
+            raise FormatNotOfferedError(label, fidelities, chips)
         chip.choose(is_chosen)
         return self.format_choices(fidelities)
 

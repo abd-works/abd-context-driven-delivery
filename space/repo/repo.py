@@ -111,10 +111,12 @@ class Repo:
         earlier call; every call and every session of that checkout works on the one Repo held for it, which holds the
         one WorkState of its the chat's open state under ``~/.cdd``."""
         folder = Path(project).resolve()
-        return SERVED_CHECKOUTS.at(SERVED_CHECKOUTS.marked_checkout(folder) or folder)
+        marked = GitFolder.from_inside(folder)
+        return SERVED_CHECKOUTS.at(marked.checkout if marked is not None else folder)
 
     def _marked_root(self) -> Path | None:
-        return SERVED_CHECKOUTS.marked_checkout(self.root)
+        marked = GitFolder.from_inside(self.root)
+        return marked.checkout if marked is not None else None
 
     @property
     def is_clone(self) -> bool:
@@ -372,6 +374,10 @@ class WorkingTree:
             self._repo.git.run("commit", "-m", message, *named)
             return self._repo.current_commit
 
+    def commit_all(self, message: str) -> str:
+        """Commit everything in this checkout with message, new files included; the sha of HEAD afterwards."""
+        return self.commit([str(self._repo.root)], message, untracked=True)
+
     def _relative(self, path: str | Path) -> str:
         resolved = Path(path).resolve()
         return (resolved.relative_to(self._repo.root) if resolved.is_relative_to(self._repo.root) else resolved).as_posix()
@@ -399,7 +405,7 @@ class Publishing:
         """Commit the checkout's work on its branch and push the branch, nothing merged."""
         repo = self._repo
         branch = repo.current_branch
-        repo.working_tree.commit([str(repo.root)], f"{branch.name}: work pushed", untracked=True)
+        repo.working_tree.commit_all(f"{branch.name}: work pushed")
         if repo.has_origin:
             repo.origin.push_upstream()
         return Commit(repo.current_commit, repo.head_message)
@@ -409,19 +415,21 @@ class Publishing:
         bring the main clone back to the branch it had."""
         repo = self._repo
         branch = repo.current_branch
-        repo.working_tree.commit([str(repo.root)], f"{branch.name}: work taken to main", untracked=True)
+        repo.working_tree.commit_all(f"{branch.name}: work taken to main")
         if push and not branch.is_default and repo.has_origin:
             repo.origin.push_upstream()
         clone = repo.main_clone
         returning_to = clone.current_branch
         # The clone's own changes are its work too, such as the session's log, which this call has just written there; a
         # merge refuses to run over them.
-        clone.working_tree.commit([str(clone.root)], f"{returning_to.name}: work kept before merging {branch.name}", untracked=True)
+        clone.working_tree.commit_all(f"{returning_to.name}: work kept before merging {branch.name}")
         branch.merge_into_default()
         if push and clone.has_origin:
             clone.origin.push_upstream()
         landed = Commit(clone.current_commit, clone.head_message)
-        returning_to.switch_to()
+        # Nothing is committed on the way back: git refuses the checkout when uncommitted work would be overwritten.
+        if clone.current_branch != returning_to:
+            returning_to.check_out()
         return landed
 
 
@@ -510,19 +518,12 @@ class Branch:
         """Check this branch out in its clone; a branch the clone does not have starts from ``start_point``. Changes
         not committed go along and are merged into the branch checked out, so a session log every tool call appends to
         never stops a switch; its lines merge by union."""
-        self._repo.merges.prepare()
+        self._repo.merges.keep_session_logs_by_union()
         with self._repo.writing_index:
             if self.exists:
                 self._repo.git.run("checkout", "-m", self.name)
             else:
                 self._repo.git.run("checkout", "-m", "-b", self.name, self.start_point)
-        return self
-
-    def switch_to(self) -> Branch:
-        """Check this branch out in its clone. Nothing is committed: a switch moves between branches and leaves the
-        work as it is, and git refuses the checkout when uncommitted work would be overwritten."""
-        if self._repo.current_branch != self:
-            self.check_out()
         return self
 
     def open_in_worktree(self) -> Worktree:
@@ -536,7 +537,7 @@ class Branch:
         """
         repository = self._repo
         if repository.working_tree.is_dirty():
-            repository.working_tree.commit([str(repository.root)], commit_message, untracked=True)
+            repository.working_tree.commit_all(commit_message)
         if not self.is_default and repository.origin.needs_push():
             repository.origin.push_upstream()
 
@@ -574,11 +575,6 @@ class ServedCheckouts:
     def __init__(self) -> None:
         self._at: dict[Path, Repo] = {}
         self._lock = threading.Lock()
-
-    def marked_checkout(self, folder: Path) -> Path | None:
-        """The nearest folder at or above folder that git marks as a checkout's top; none when no folder is marked."""
-        current = folder.parent if folder.is_file() else folder
-        return next((candidate for candidate in (current, *current.parents) if (candidate / ".git").exists()), None)
 
     def at(self, root: Path) -> Repo:
         """The repository checked out at root, made the first time this process works in it."""

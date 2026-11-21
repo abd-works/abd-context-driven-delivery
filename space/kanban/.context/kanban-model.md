@@ -77,15 +77,13 @@ A `@tool_subject` loader or class tool that takes `project` is handed the projec
 
 ## Board
 
-+ Board(repo: Repo, practices: BoardPractices)
++ Board(sessions: Sessions, practices: BoardPractices)
+	// practices is left out by `Board.load`, so the board works through its sessions' `board_practices`; a board that works through fewer practices is handed its own
 ------
 + << association >> repo: Repo
-	// the repository the sessions folder sits in
+	// the repository the sessions folder sits in: its sessions' repository
 + sessions: Sessions
-	// the sessions of its repository: each one a ticket, and which is open
-+ file: Path
-	// `.sessions/_board.json`, what the repository's sessions share on the board, such as each stage's WIP limit; the board is its one reader and writer, and reads it once per board read
-	-> Sessions.folder
+	// the sessions of its repository, handed to it: each one a ticket, and which is open
 + project: str
 	// data field: the repository folder's name
 + sends_fixes_directly: bool
@@ -143,7 +141,7 @@ A `@tool_subject` loader or class tool that takes `project` is handed the projec
 	-> Help.on_practice
 + set_sends_fixes_directly(sends: bool): Board
 	// `board.set_sends_fixes_directly`: keeps sends in `_board.json`, committed on main and pushed
-	-> BoardFile.keep
+	-> BoardFile.set_sends_fixes_directly
 + unsaved: SaveFailure
 	// the latest save of the tickets' records on main that git refused, naming each change not yet saved; none while every save went through
 	-> Sessions.saves
@@ -196,9 +194,8 @@ What one read of a board finds, each read once when first asked for: its tickets
 + backlog_items: list[BacklogItem]
 	-> Sessions.backlog_folder
 ----
-+ backlog_item(title: str): BacklogItem
 + backlog_item_called(title: str): BacklogItem
-	// `backlog_item`, raising `BacklogItemNotFoundError` when the board has none
+	// the backlog item titled title, of those this read found, raising `BacklogItemNotFoundError` when the board has none
 + children_of(ticket: Ticket): list[Ticket]
 	// the tickets whose session names ticket's as its parent, found once per board read
 	-> Session.parent
@@ -212,7 +209,12 @@ What one read of a board finds, each read once when first asked for: its tickets
 + BoardFile(board: Board)
 ------
 + sends_fixes_directly: bool
+- _file: Path
+	// `.sessions/_board.json`, in the folder of the board's sessions
+	-> Sessions.folder
 ----
++ set_sends_fixes_directly(sends: bool)
+	// keeps whether a report's Fix sends straight to the ticket's chat, beside whatever else the file holds
 + wip_limit(stage: Stage): int
 	// the limit saved for stage, else 3
 + set_wip_limit(stage: Stage, limit: int)
@@ -220,7 +222,7 @@ What one read of a board finds, each read once when first asked for: its tickets
 + order_in(column: Column): list[str]
 	// the keys of column's cards in the order a person last placed them
 + keep_order(column: Column, keys: list[str])
-+ keep(values)
+- _keep(values: object)
 	// writes values into the file, keeping whatever else it holds
 
 ## Column
@@ -326,6 +328,9 @@ The base type of Ticket and BacklogItem. It marks `title` and `last_activity` as
 + move_before(other: Card): Card
 	// a person's move of it just above other in their column; committed on main and pushed
 	-> Column.place_before
++ move_after(other: Card): Card
+	// a person's move of it just below other in their column; committed on main and pushed
+	-> Column.place_after
 
 ## Ticket : Card
 
@@ -451,10 +456,10 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	// `ticket.archive`, from *TicketEnding*: its session closes and its folder moves to `_archive/`, off the board; the move is committed on main and pushed
 	-> SessionFolder.move_to_archive
 + edit_text(text: str): Ticket
-	// `ticket.edit_text`: writes text under its idea file's heading, making the file when it has none; committed on main and pushed
+	// `ticket.edit_text`: writes text under its idea file's heading, making the file when it has none; committed on main and pushed; main raises `MainStaysOpenError`
 	-> Session.keep_text
 + tag(word: str): Ticket
-	// `ticket.tag`: adds word to its session's tags; committed on main and pushed
+	// `ticket.tag`: adds word to its session's tags; committed on main and pushed; main raises `MainStaysOpenError`
 	-> Session.add_tag
 + delete()
 	// `ticket.delete`, from *TicketEnding*: its session closes and its folder is removed, that removal committed on main and pushed; main raises `MainStaysOpenError`
@@ -621,7 +626,8 @@ The moves and marks a person made on one ticket's stages, made once with the tic
 
 How far one fidelity has got through its stage's actions on one ticket, read from session log lines. Marked `@identity("ticket", "slug")`: the ticket's name and the fidelity's slug are what its loader takes, so they are sent as strings until a language adapter can send an identity made of references.
 
-+ FidelityProgress(fidelity: FidelityGuidance, stage: Stage, done_actions: list[str], has_violations: bool, ticket: Ticket)
++ FidelityProgress(required: RequiredFidelity, logged: LoggedWork, ticket: Ticket)
+	// required is the fidelity with the stage that requires it; logged is what the ticket's session log says was done on it
 ------
 + ticket: str
 	// data field, part of its identity: the name of the ticket it is on
@@ -652,15 +658,14 @@ How far one fidelity has got through its stage's actions on one ticket, read fro
 	// data field
 + has_violations: bool
 	// data field: its latest validate left violations
-+ done_actions: list[str]
-+ remaining_actions: list[str]
 + is_done: bool
 + << composition >> latest_report: ReportFile
 	// its latest report in its ticket's session that has its result, else its latest; none when it has none; found once per reading of the progress
 	-> ReportFile.from_fidelity
 ----
-+ from_log(fidelity: FidelityGuidance, stage: Stage, entries: list[LogEntry], ticket: Ticket): FidelityProgress
-	// finds the fidelity by name, never by position
++ from_log(required: RequiredFidelity, ticket: Ticket): FidelityProgress
+	// reads its ticket's session log entries and finds the fidelity by name, never by position
+	-> TicketWork.entries
 	-> LogEntry.names
 	-> Stage.steps
 + load(ticket: str, fidelity: str, project: Path): FidelityProgress
@@ -675,8 +680,35 @@ How far one fidelity has got through its stage's actions on one ticket, read fro
 	-> FidelityGuidance.files
 + help(): Help
 	// `fidelity-progress.help`: the help of its fidelity, with its stage, made from what the progress holds
-+ with_violations(): FidelityProgress
+- _with_violations(): FidelityProgress
 	// the same progress with its latest validate failed, for a judgment that fails a rule
+- _with_accepted_left_out(): FidelityProgress
+	// the same progress with its latest validate passed once a person accepted every violation its latest report names
+
+## RequiredFidelity
+
+A fidelity one of the board's stages requires, as a ticket's session holds it, with that stage.
+
++ RequiredFidelity(stage: Stage, fidelity: FidelityGuidance)
+------
++ << association >> stage: Stage
++ << association >> fidelity: FidelityGuidance
+
+## LoggedWork
+
+What a ticket's session log says was done on one fidelity.
+
++ LoggedWork(done_actions: list[str], has_violations: bool, lines_logged: int)
+------
++ done_actions: list[str]
++ has_violations: bool
++ lines_logged: int
+	// how many log lines name the fidelity; a change means its files may have changed since they were last looked for
+----
++ failed_again(): LoggedWork
+	// this work with its latest validate failed
++ validated(steps: list[str]): LoggedWork
+	// this work with its latest validate passed
 
 ## ActionStates
 
@@ -797,13 +829,14 @@ Marked `@identity("title")`. Its two order tools, `move_before` and `move_after`
 	-> Card.move_before
 + move_after(other: BacklogItem): BacklogItem
 	// `backlog-item.move_after`: keeps it just below other in the Backlog, as dropping it on other's bottom edge does
-	-> Column.place_after
+	-> Card.move_after
 
 ## Help
 
 What `board.help` answers for a practice and `fidelity-progress.help` for a fidelity: the guidance objects themselves, with the text help shows.
 
-+ Help(practice: PracticeGuidance, fidelity: FidelityGuidance, stage: Stage, catalogued: CatalogPractice)
++ Help(practice: PracticeGuidance, catalogued: CatalogPractice, required: RequiredFidelity)
+	// required is left out for a practice's help
 ------
 + << association >> catalogued: CatalogPractice
 	// the catalog's view of the practice the board holds (`BoardPractices.of`), which names every page on the forge
@@ -849,7 +882,8 @@ A fidelity as a board tile names it. The page shows its label and its skill's sl
 
 The rules a validation found broken, built from the saved report and the graph saved beside it, which keeps only the graph's violations and the nodes they were found on. It lives in `report.py`.
 
-+ Report(path: str, text: str, rules: list[ReportRule], has_saved_graph: bool)
++ Report(source: ReportSource, rules: list[ReportRule], standing: SavedGraphStanding)
+	// source is where the report was read from, its path and its text; standing says whether its graph is saved beside it and still in a shape the graph reads
 ------
 + path: str
 	// data field
@@ -864,6 +898,24 @@ The rules a validation found broken, built from the saved report and the graph s
 ----
 + from_reports(folder: str, reports: list[Report]): Report
 	// every rule broken in reports, each listed once though two fidelities share it
+
+## ReportSource
+
+Where a report was read from: its path from the project, or the reports folder of several, and its text.
+
++ ReportSource(path: str, text: str)
+------
++ path: str
++ text: str
+
+## SavedGraphStanding
+
+Whether the graph a validation checked is saved beside its report, and whether it was saved in a shape the graph no longer writes; either way the graph's rules are missing from the report.
+
++ SavedGraphStanding(has_saved_graph: bool, is_out_of_date: bool)
+------
++ has_saved_graph: bool
++ is_out_of_date: bool
 
 ## ReportRule
 
@@ -930,6 +982,8 @@ One rule the judgment in a validation report fails, in one judged file. It lives
 
 ## NotAStageError : ValueError
 
+Keeps the column named, as `stage`.
+
 ## PracticeNotFoundError : LookupError
 
 `space/session/sessions.py`, raised by `BoardPractices`.
@@ -938,9 +992,15 @@ One rule the judgment in a validation report fails, in one judged file. It lives
 
 ## TicketNotFoundError : LookupError
 
+Keeps the name asked for, as `ticket`.
+
 ## BacklogItemNotFoundError : LookupError
 
+Keeps the title asked for, as `backlog_item`.
+
 ## CardNotInColumnError : ValueError
+
+Keeps the card's key and the column's name, as `card` and `column`.
 
 ## ParentMovesWithChildrenError : ValueError
 
@@ -952,7 +1012,7 @@ One rule the judgment in a validation report fails, in one judged file. It lives
 
 ## MainStaysOpenError : ValueError
 
-`ticket.py`, raised when a tool would close, archive, shelve, or delete main.
+`ticket.py`, raised when a tool would close, archive, shelve, or delete main, or edit its text or its tags. Keeps what was asked of main, as `action`.
 
 ---
 

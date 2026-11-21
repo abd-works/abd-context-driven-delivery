@@ -226,9 +226,9 @@ class TicketCheckout:
 
     def _commit_and_push(self, branch: Branch, leaving: list[str]) -> None:
         # Checked out in the repository itself, else in the ticket's own worktree.
-        checkout = self._repo if branch.is_checked_out else branch.worktree.repository
+        checkout = branch.checkout
         if LEAVE_COMMIT in leaving or LEAVE_PUSH in leaving:
-            checkout.working_tree.commit([str(checkout.root)], self._leave_message, untracked=True)
+            checkout.working_tree.commit_all(self._leave_message)
         if LEAVE_PUSH in leaving:
             checkout.origin.push_upstream()
 
@@ -269,7 +269,7 @@ class TicketCheckout:
             return
         branch = self.branch
         # git deletes no branch the checkout is on, so the checkout goes back to the default branch first.
-        if branch.is_checked_out and self._repo.root == self._repo.main_clone.root:
+        if branch.is_checked_out and not self._repo.is_linked_worktree:
             self._repo.branch_named(self._repo.default_branch).check_out()
         branch.delete(unmerged=LEAVE_MERGE not in leaving)
 
@@ -280,7 +280,7 @@ class TicketCheckout:
             return
         # A linked worktree cannot check out the default branch while the main checkout has it; the chat goes back to
         # the main checkout instead, so the worktree keeps its branch.
-        if self._repo.root != self._repo.main_clone.root:
+        if self._repo.is_linked_worktree:
             return
         self._repo.branch_named(self._repo.default_branch).check_out()
 

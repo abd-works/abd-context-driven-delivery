@@ -196,7 +196,7 @@ def _(s):
 
     @s.but_("search-orders has no session yet")
     def _(world):
-        world.item = world.board().reads.backlog_item(SEARCH_ORDERS.heading)
+        world.item = world.board().reads.backlog_item_called(SEARCH_ORDERS.heading)
 
     @s.when("the Person looks at search-orders on the board")
     def _(world):

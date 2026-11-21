@@ -26,6 +26,27 @@ class GitFolder:
     def __init__(self, checkout: Path) -> None:
         self._checkout = checkout
 
+    @classmethod
+    def from_inside(cls, folder: Path) -> GitFolder | None:
+        """The git folder of the checkout holding folder: the nearest folder at or above it that git marks as a
+        checkout's top; none when no folder is marked."""
+        current = folder.parent if folder.is_file() else folder
+        top = next((candidate for candidate in (current, *current.parents) if (candidate / ".git").exists()), None)
+        return cls(top) if top is not None else None
+
+    @property
+    def checkout(self) -> Path:
+        """The top folder of the checkout this git folder belongs to."""
+        return self._checkout
+
+    def main_checkout(self) -> Path:
+        """The repository's main checkout. A linked worktree's ``.git`` is a file naming its git folder, whose
+        ``commondir`` leads back to the main checkout's ``.git``; any other checkout is its own main checkout."""
+        own = self._own_folder()
+        if own is None or not self._checkout.joinpath(".git").is_file() or not (own / "commondir").is_file():
+            return self._checkout
+        return self._common_folder().parent
+
     @property
     def is_readable(self) -> bool:
         """Whether the checkout's refs are files this reads: a git folder with a HEAD, refs not kept in a reftable."""

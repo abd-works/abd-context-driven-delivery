@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 
 from harness.hooks.hook_daemon import HookDaemon
 from harness.git.git import RepoConnectError
+from space.repo.git_folder import GitFolder
 
 if TYPE_CHECKING:
     from space.repo.repo import Branch, Repo, ServedCheckouts
@@ -55,7 +56,7 @@ class Worktree:
     branch checked out there, each made once when it is listed. Its repository is the one this process holds for its
     folder; the main clone's is the repository that listed it."""
 
-    __slots__ = ("path", "repository", "branch", "_worktrees", "sync_failure")
+    __slots__ = ("path", "repository", "branch", "_worktrees")
 
     def __init__(self, worktrees: Worktrees, path: Path | str, branch_name: str) -> None:
         self._worktrees = worktrees
@@ -64,8 +65,6 @@ class Worktree:
         name = (branch_name or "").strip()
         # The branch checked out here, acting in this checkout; none for a checkout on no branch.
         self.branch: Branch | None = self.repository.branch_named(name) if name else None
-        # Why the last fetch or pull from origin failed; empty while this checkout is up to date with origin.
-        self.sync_failure = ""
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Worktree):
@@ -78,14 +77,13 @@ class Worktree:
     def __repr__(self) -> str:
         return f"Worktree(path={self.path!r}, branch={self.branch!r})"
 
-    def fetch_pull(self) -> None:
+    def _fetch_pull(self) -> None:
         """Bring this checkout up to date with origin. A checkout that cannot reach origin, or whose branch has moved
-        apart from origin's, still opens as it is; ``sync_failure`` then says why, so the caller can tell the user the
-        work may be behind origin."""
+        apart from origin's, still opens as it is, and the log says why."""
         self._catch_up(self.repository.origin.catch_up)
 
-    def pull_fetched(self) -> None:
-        """Bring this checkout up to date with origin as the repository last fetched it, as ``fetch_pull`` does for a
+    def _pull_fetched(self) -> None:
+        """Bring this checkout up to date with origin as the repository last fetched it, as ``_fetch_pull`` does for a
         checkout opened just after a fetch."""
         self._catch_up(self.repository.origin.merge_copy)
 
@@ -93,10 +91,7 @@ class Worktree:
         try:
             step()
         except RepoConnectError as exc:
-            self.sync_failure = str(exc)
             logger.warning("worktree %s is not up to date with origin: %s", self.path, exc)
-            return
-        self.sync_failure = ""
 
     def close(self, commit_message: str) -> Branch:
         """Commit and push the branch checked out here, then remove this checkout; the branch stays open."""
@@ -150,15 +145,7 @@ class Worktrees:
     def primary_root(self) -> Path:
         """The repository's main checkout. A linked worktree's ``.git`` is a file naming its git folder, whose
         ``commondir`` leads back to the main checkout's ``.git``; any other checkout is its own main checkout."""
-        checkout = self._repo.checkout_folder
-        marker = checkout / ".git"
-        if not marker.is_file():
-            return checkout
-        worktree_git = (checkout / marker.read_text(encoding="utf-8").split("gitdir:", 1)[-1].strip()).resolve()
-        common = worktree_git / "commondir"
-        if not common.is_file():
-            return checkout
-        return (worktree_git / common.read_text(encoding="utf-8").strip()).resolve().parent
+        return GitFolder(self._repo.checkout_folder).main_checkout()
 
     def at(self, folder: Path | str) -> Worktree | None:
         """The checkout git lists at folder; none when git lists none there."""
@@ -176,11 +163,11 @@ class Worktrees:
         with self._opening:
             existing = self.of(branch)
             if existing is not None and existing.path.resolve() != self._repo.root:
-                existing.fetch_pull()
+                existing._fetch_pull()
                 return existing
             if self._repo.current_branch == branch:
                 opened = self._listed(self._repo.root, branch.name)
-                opened.fetch_pull()
+                opened._fetch_pull()
                 return opened
             return self._added_from_origin(branch)
 
@@ -192,11 +179,11 @@ class Worktrees:
         except RepoConnectError as exc:
             logger.warning("opening %s from local refs; fetch from origin failed: %s", branch.name, exc)
             opened = self.add(self.sibling_folder(branch), branch)
-            opened.fetch_pull()
+            opened._fetch_pull()
             return opened
         # The worktree shares the clone's refs, so what was just fetched is what it merges.
         opened = self.add(self.sibling_folder(branch), branch)
-        opened.pull_fetched()
+        opened._pull_fetched()
         return opened
 
     def sibling_folder(self, branch: Branch) -> Path:

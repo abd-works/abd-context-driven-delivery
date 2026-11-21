@@ -31,7 +31,7 @@ from space.kanban.session_board_examples import saved_graph, saved_practice  # n
 from harness.graph.edge import Edge  # noqa: E402
 from harness.graph.saved_graph import SavedGraph, SavedNode  # noqa: E402
 from space.kanban.story_test import progress_in  # noqa: E402
-from space.kanban.ticket import Ticket  # noqa: E402
+from space.kanban.ticket import MainStaysOpenError, Ticket  # noqa: E402
 from space.kanban.board import NotAStageError  # noqa: E402
 from space.session.sessions import PracticeNotFoundError  # noqa: E402
 from space.session import Sessions  # noqa: E402
@@ -411,6 +411,15 @@ with description("the board tools") as self:
             with it("should refuse a change to that ticket, leaving its file as it was"):
                 expect(lambda: self.project.call("ticket.tag", ticket="loyalty-points", word="urgent")).to(raise_error(JsonFileUnreadable))
                 expect(self.cut_off.read_text(encoding="utf-8")).to(equal('{"name": "loyalty-points", "title": "Loyal'))
+
+        # (S) Person --> Edit Ticket Text, Tag Ticket: main is the default session, which the page offers neither for.
+        with context("that edits the text of main, the default session"):
+            with it("should refuse it, naming main"):
+                expect(lambda: self.project.call("ticket.edit_text", ticket="main", text="Everything else.")).to(raise_error(MainStaysOpenError))
+
+        with context("that tags main, the default session"):
+            with it("should refuse it, naming main"):
+                expect(lambda: self.project.call("ticket.tag", ticket="main", word="urgent")).to(raise_error(MainStaysOpenError))
 
         # (S) Person --> Split Ticket Into Child Tickets
         with context("that adds a child whose title makes the name of a ticket already there"):

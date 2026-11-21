@@ -2076,8 +2076,8 @@ a ticket
       -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
       <- Session
     <- Ticket
-    -> FidelityProgress.remaining_actions
-    <- list[str]
+    -> FidelityProgress.next_action
+    <- str
     it should name Generate on story_map as next
     ```
   with its first logged work on a Specification fidelity
@@ -2087,31 +2087,31 @@ a ticket
     ```
   with a fidelity generated
     ```
-    -> FidelityProgress.remaining_actions
-    <- list[str]
+    -> FidelityProgress.next_action
+    <- str
     it should show Generate done and Validate and Review remaining for that fidelity
     ```
     with log lines whose paths hold spaces and commas
       ```
-      -> FidelityProgress.done_actions
-      <- list[str]
+      -> FidelityProgress.action_states
+      <- ActionStates
       it should still find the practice and fidelity by name
       ```
     that has a validate naming graph-rule violations
       ```
-      -> FidelityProgress.remaining_actions
-      <- list[str]
+      -> FidelityProgress.next_action
+      <- str
       it should still need Validate for that fidelity
       ```
     that has a validate with no violations
       ```
-      -> FidelityProgress.done_actions
-      <- list[str]
+      -> FidelityProgress.action_states
+      <- ActionStates
       it should show Validate done for that fidelity
       ```
       ```
-      -> FidelityProgress.done_actions
-      <- list[str]
+      -> FidelityProgress.state
+      <- str
       it should match the practice's class name in the validate line to its folder name
       ```
       that has been reviewed
@@ -2121,8 +2121,8 @@ a ticket
         ```
     that was reviewed before its validate passed
       ```
-      -> FidelityProgress.done_actions
-      <- list[str]
+      -> FidelityProgress.action_states
+      <- ActionStates
       it should not count the review
       ```
   with every required fidelity in its stage done
