@@ -41,7 +41,10 @@ _GERUND = re.compile(r"^[a-z]+ing$")
 _NOMINALISATION = re.compile(r"^[a-z]+(?:tion|sion|ment|ance|ence|ity|ness)$")
 _KEBAB_FILE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*\.(md|ts|tsx|js|jsx)$")
 _CAMEL_FILE = re.compile(r"[A-Z][a-zA-Z0-9]*(?:Story|Test|Spec)")
-_ONE_OFF = re.compile(r"\b(once|one[- ]time|initial setup|bootstrap only|migrate legacy)\b", re.IGNORECASE)
+# "Once" names a one-time task only where it ends the name ("Rename Columns Once", "Import Tickets Once Only"). Followed
+# by more words it says how often a repeatable behaviour does something ("Once Per Board Build") or means "as soon as"
+# ("Once Its Change Reaches Production").
+_ONE_OFF = re.compile(r"\bonce(\s+only)?\s*$|\b(one[- ]time|initial setup|bootstrap only|migrate legacy)\b", re.IGNORECASE)
 # What a first word is, in the order a word is checked: the first set or pattern that holds it names its class.
 _OPENINGS = (
     ("generic-verb", _GENERIC_VERBS.__contains__),
@@ -84,7 +87,8 @@ def names_generic_handler(name: str) -> bool:
 
 
 def names_one_time_task(name: str) -> bool:
-    """The name says the work happens once, such as an initial setup or a migration."""
+    """The name says the work happens once and is then done, such as an initial setup or a migration. A name that says
+    how often a behaviour does something each time it runs ("Once Per Board Build") does not."""
     return bool(_ONE_OFF.search(name or ""))
 
 
