@@ -82,9 +82,13 @@ class SessionRoots:
         listed = self._worktrees_by_branch()
         if name in listed:
             return listed[name]
-        word = re.compile(rf"(^|[/_-]){re.escape(name)}($|[/_-])")
-        matches = [folder for branch, folder in listed.items() if word.search(branch)]
+        matches = [folder for branch, folder in listed.items() if self.is_branch_of(branch, name)]
         return matches[0] if len(matches) == 1 else None
+
+    def is_branch_of(self, branch: str, name: str) -> bool:
+        """Whether branch holds name, a ticket's, as a whole word: the Claude desktop app names a branch around the
+        ticket's name, such as claude/checkout-flow-cef4bc."""
+        return re.search(rf"(^|[/_-]){re.escape(name)}($|[/_-])", branch) is not None
 
     def _worktrees_by_branch(self) -> dict[str, Path]:
         read_at, listed = self._worktree_listing

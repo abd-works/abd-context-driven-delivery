@@ -301,7 +301,7 @@ class GraphReading:
         return GraphDifference(other._nodes - self._nodes, other._edges - self._edges)
 
 
-class ComparisonGraph:
+class _ComparisonGraph:
     """The graph a diagnosis reads each format's document into, apart from the session's knowledge graph: its own
     instance of every practice, made once, and a folder of its own that holds one document at a time. A format the
     graph does not read itself, such as a whiteboard, is first rendered into the fidelity's leading format, so every
@@ -336,11 +336,11 @@ class ComparisonGraph:
         return self._graph, self._folder
 
 
-class FidelityAlignment:
+class _FidelityAlignment:
     """One fidelity's chosen formats in a session, document by document: the file each format is written to, whether it
     is there, and whether the graph reads the same nodes and edges from each."""
 
-    def __init__(self, fidelity: FidelityGuidance, session: Session, comparison: ComparisonGraph) -> None:
+    def __init__(self, fidelity: FidelityGuidance, session: Session, comparison: _ComparisonGraph) -> None:
         self._fidelity = fidelity
         self._session = session
         self._comparison = comparison
@@ -482,9 +482,9 @@ class SessionAlignment:
         # such as one an alignment just rendered.
         self._session.session_files.file_manager.search_again()
         covered = GuidanceSelection(self._session).covered
-        comparison = ComparisonGraph()
+        comparison = _ComparisonGraph()
         try:
-            gaps = [gap for fidelity in covered for gap in FidelityAlignment(fidelity, self._session, comparison).gaps()]
+            gaps = [gap for fidelity in covered for gap in _FidelityAlignment(fidelity, self._session, comparison).gaps()]
         finally:
             comparison.close()
         callouts = CalloutAlignment(self._session, self._files_of(covered), self._call)

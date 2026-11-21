@@ -350,13 +350,27 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionAl
         # The sessions of the checkout that loaded this one, and their repository, which holds this session's ``.sessions``.
         self._sessions = sessions
         self.repo: Repo = sessions.repo
-        self.repo_path: Path = sessions.root
-        # The project's ``.context/config.json``, which names the folder each practice writes in.
-        self.context_config = ContextConfig(self.repo_path)
+        # The checkout this session works in: its sessions' until it is placed, then its ticket's own worktree when
+        # it has one. Its ``.context/config.json``, which names the folder each practice writes in and the formats
+        # each fidelity is chosen in by default, is that checkout's, read again when the session moves to another.
+        self._repo_path: Path = sessions.root
+        self.context_config = ContextConfig(self._repo_path)
         self._workpath: Path | None = None
         self._record_folder: Path | None = None
         self._work_folder: Path | None = None
         self._make_parts()
+
+    @property
+    def repo_path(self) -> Path:
+        """The checkout the session works in: its ticket's own worktree, else the checkout whose sessions hold it."""
+        return self._repo_path
+
+    @repo_path.setter
+    def repo_path(self, checkout: Path) -> None:
+        if checkout == self._repo_path:
+            return
+        self._repo_path = checkout
+        self.context_config = ContextConfig(checkout)
 
     def _make_parts(self) -> None:
         """The parts the session holds, each made once with it: what it reads and writes is theirs to keep."""

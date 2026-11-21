@@ -26,16 +26,22 @@ _INSTRUCTIONS_FILE = Path(__file__).parent / "SESSION-LOG.md"
 # line, so they wait in the session's work folder rather than in either process.
 _INJECTED_RULES_FILE = "injected-rules.txt"
 _TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+# The second, in UTC, that the name of a validation report or a handoff ends with, written so names sort by time:
+# ``clean-engineering-code-20261116T075749.md``.
+REPORT_DATE_FORMAT = "%Y%m%dT%H%M%S"
 # The verb of the line a tool call writes first, naming the tool: every line that call writes follows it.
 _TOOL_VERB = "tool"
 _LOOP_MARKER = re.compile(r"---\s+(\d+)(?:\s|$)")
 
 
 class LoopNotFoundError(LookupError):
-    """A loop was asked for that the session log has not marked, such as loop 4 of a log marked up to 3."""
+    """A loop was asked for that the session log has not marked, such as loop 4 of a log marked up to 3: it carries
+    the loop asked for, none when the latest was asked for, and the highest loop the log has marked."""
 
-    def __init__(self, detail: str) -> None:
+    def __init__(self, detail: str, asked: int | None, highest_marked: int) -> None:
         super().__init__(detail)
+        self.asked = asked
+        self.highest_marked = highest_marked
 
 
 class LogTimestamp:
@@ -328,21 +334,21 @@ class SessionLog:
         """Loop number, the latest with lines when none is named, with each line's chat transcript put under it."""
         loop_number = self.latest_loop_with_entries if number is None else number
         if loop_number < 1:
-            raise LoopNotFoundError("no loops in session.log; run mark-loop first")
+            raise LoopNotFoundError("no loops in session.log; run mark-loop first", number, self.last_loop_number)
         opened = self.loop_at(loop_number)
         if not opened.entries:
-            raise LoopNotFoundError(f"loop {loop_number} not found (missing --- {loop_number} in session.log?)")
+            raise LoopNotFoundError(f"loop {loop_number} not found (missing --- {loop_number} in session.log?)", loop_number, self.last_loop_number)
         return f"# Loop {loop_number} ({self._session.name})\n\n" + opened.expanded_text()
 
     def loop_to_note(self, loop: int | None) -> int:
         """The loop a note goes in: loop, which the log must have marked, else the latest with lines, else the latest."""
         if loop is not None:
             if loop < 1 or self.last_loop_number < loop:
-                raise LoopNotFoundError(f"loop {loop} not found in session.log (no --- {loop} marker)")
+                raise LoopNotFoundError(f"loop {loop} not found in session.log (no --- {loop} marker)", loop, self.last_loop_number)
             return loop
         chosen = self.latest_loop_with_entries or self.last_loop_number
         if chosen < 1:
-            raise LoopNotFoundError("no loop in session.log; run mark-loop first")
+            raise LoopNotFoundError("no loop in session.log; run mark-loop first", loop, self.last_loop_number)
         return chosen
 
     def instructions(self) -> str:
@@ -368,8 +374,6 @@ class ChatLog:
 
     def line(self, line: str) -> None:
         """Append line with this chat's pointer, such as a practice's validate line."""
-        if self._log.path is None:
-            return
         self._log.record(f"{line} {self._chat}")
         self._log.injected_rules.clear()
 
@@ -382,8 +386,6 @@ class ChatLog:
     def action(self, action: str, paths: list[Path], worked: list[FidelitySessionOutput] | None = None) -> None:
         """Log action with the paths it worked on and, for each fidelity it worked at, its practice, its name, and the
         format it worked in."""
-        if self._log.path is None:
-            return
         worked_on = list(worked or [])
         parts = (
             action,
@@ -425,7 +427,7 @@ class ChatLog:
     def note(self, message: str, paths: list[Path] | None = None) -> None:
         """Record a correction or decision in the current loop."""
         text = (message or "").strip()
-        if self._log.path is None or not text:
+        if not text:
             return
         parts = ["note", text]
         if paths:
@@ -444,9 +446,8 @@ class ChatLog:
         return f"appended note to {self._log.path or LOG_FILE} (loop {loop_number})"
 
     def failure(self, failure: BaseException, *, tool: str = "") -> None:
-        """Append the full trace of failure to session.err and a line pointing at it to session.log."""
-        if self._log.path is None:
-            return
+        """Append the full trace of failure to session.err and a line pointing at it to session.log; nothing for a
+        session without a folder, whose log writes nothing."""
         line_number = self._log.append_trace(failure, tool)
         named = [tool.strip()] if tool.strip() else []
         self._log.record(" ".join(["error", *named, str(self._log.error_path), str(line_number), str(self._chat)]))

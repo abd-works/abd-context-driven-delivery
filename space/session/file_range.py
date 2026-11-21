@@ -21,8 +21,7 @@ class Range:
 
     def __init__(self, path: str, span: LineSpan, content: str) -> None:
         self._path = path
-        self._start_line = span.start_line
-        self._end_line = span.end_line
+        self._span = span
         self._content = content
 
     @classmethod
@@ -39,12 +38,12 @@ class Range:
     @property
     @data_field
     def start_line(self) -> int:
-        return self._start_line
+        return self._span.start_line
 
     @property
     @data_field
     def end_line(self) -> int:
-        return self._end_line
+        return self._span.end_line
 
     @property
     @data_field
@@ -55,17 +54,17 @@ class Range:
     @data_field
     def anchor(self) -> str:
         """Where the range is, such as src/checkout/order.py:L12-L14."""
-        return f"{self._path}:L{self._start_line}-L{self._end_line}"
+        return f"{self._path}:L{self.start_line}-L{self.end_line}"
 
     @property
     def quoted(self) -> list[str]:
         """Each line of the range marked > with its number, as a chat reads lines it is shown: `> 12 |     def place`."""
-        return [f"> {self._start_line + offset} | {line}" for offset, line in enumerate(self._content.splitlines())]
+        return [f"> {self.start_line + offset} | {line}" for offset, line in enumerate(self._content.splitlines())]
 
     @property
     def context(self) -> str:
         """The range as a chat's context: the file and its lines, then each line quoted."""
-        return "\n".join([f"{self._path}:{self._start_line}-{self._end_line}", *self.quoted])
+        return "\n".join([f"{self._path}:{self.start_line}-{self.end_line}", *self.quoted])
 
     def contains(self, line: int) -> bool:
-        return self._start_line <= line <= self._end_line
+        return self.start_line <= line <= self.end_line

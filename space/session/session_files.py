@@ -150,9 +150,8 @@ class SessionFiles:
 
 # The folders a root outside a repository never lists files from: version control, dependencies, builds, caches.
 
-# How long the branch's changed files are kept, by checkout and session, before git is asked again.
+# How long a session keeps the files its branch changed before git is asked again.
 CHANGED_KEPT_SECONDS = 3.0
-_CHANGED: dict[tuple[str, str], tuple[float, set[Path]]] = {}
 
 
 # The folders a walk under a root that is not a repository leaves out: tools, caches, and builds hold no one's work.
@@ -165,27 +164,28 @@ class BranchChanges:
 
     def __init__(self, session: Session) -> None:
         self._session = session
+        # When git was last asked, and the files it answered; nothing before the first ask.
+        self._held: tuple[float, set[Path]] | None = None
 
     def files(self) -> set[Path]:
         """The files the session's branch changed since it left the default branch, with its uncommitted changes when
         it is checked out; none for a project that is no clone. The main session works in the repository's own folder,
         on whatever branch that folder has checked out, so its changes are that branch's, as a ticket's are its own
         branch's. Asking git takes a moment, and a page lists many fidelities at once, so the answer is kept for
-        CHANGED_KEPT_SECONDS and shared."""
+        CHANGED_KEPT_SECONDS."""
         repo = self._session.repo
         if not repo.is_clone:
             return set()
-        # A branch checked out in a worktree of its own, such as a ticket's, has its changed files there, not in the
-        # clone the session was reached through.
-        key = (str(repo.root), self._session.name)
-        held = _CHANGED.get(key)
+        held = self._held
         if held is not None and time.monotonic() - held[0] < CHANGED_KEPT_SECONDS:
             return held[1]
         branch = repo.branch_named(self._session.name)
         if branch.is_default:
             branch = repo.current_branch
+        # A branch checked out in a worktree of its own, such as a ticket's, has its changed files there, not in the
+        # clone the session was reached through.
         checkout = branch.checkout if branch.exists else None
         root = checkout.root if checkout is not None else repo.root
         changed = {(root / path).resolve() for path in branch.changed_files()}
-        _CHANGED[key] = (time.monotonic(), changed)
+        self._held = (time.monotonic(), changed)
         return changed

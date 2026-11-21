@@ -147,7 +147,7 @@ class SessionSaves:
         ignore.write_text(f"{written}{lead}{_IGNORED_CACHES}\n", encoding="utf-8")
 
 
-class ServedSaves:
+class _ServedSaves:
     """The saves of every repository this process works in, each made once, by the folder of its main clone: the main
     checkout and its worktrees all save to the one ``.sessions`` there, so they share one queue."""
 
@@ -164,4 +164,4 @@ class ServedSaves:
             return held
 
 
-SERVED_SAVES = ServedSaves()
+SERVED_SAVES = _ServedSaves()

@@ -138,6 +138,11 @@ class Sessions:
         """Where sessions wait before work starts, and where a session moved back is held."""
         return self.folder / BACKLOG_FOLDER
 
+    @property
+    def closed_folder(self) -> Path:
+        """Where closed sessions are kept, each in its own folder under its name."""
+        return self.folder / COMPLETE_FOLDER
+
     def folder_of(self, name: str) -> Path:
         """The folder of the session called name, in the repository's own ``.sessions``."""
         return self.folder / name
@@ -170,7 +175,7 @@ class Sessions:
         if not self.listing.is_work_session(name):
             return None
         open_folder = self.folder / name
-        candidates = (open_folder, self.folder / COMPLETE_FOLDER / name) if self.listing.is_open(open_folder) else (self.folder / COMPLETE_FOLDER / name,)
+        candidates = (open_folder, self.closed_folder / name) if self.listing.is_open(open_folder) else (self.closed_folder / name,)
         found = next((folder for folder in candidates if folder.is_dir()), None)
         return self.held.load(found) if found is not None else None
 
@@ -253,7 +258,7 @@ class SessionListing:
         if not self._sessions.folder.is_dir():
             return []
         open_folders = [folder for folder in sorted(self._sessions.folder.iterdir()) if self.is_open(folder)]
-        closed = self._sessions.folder / COMPLETE_FOLDER
+        closed = self._sessions.closed_folder
         closed_folders = sorted(folder for folder in closed.iterdir() if folder.is_dir()) if closed.is_dir() else []
         return open_folders + closed_folders
 
@@ -267,7 +272,7 @@ class SessionListing:
         """Whether folder, among the open sessions, is only what a closed session of its name left there, such as a
         progress cache written before its move or a folder Windows would not let go of: it holds no session.json, and
         the session is kept among the closed ones. The board would otherwise list that session twice."""
-        return not (folder / SESSION_FILE).is_file() and (self._sessions.folder / COMPLETE_FOLDER / folder.name).is_dir()
+        return not (folder / SESSION_FILE).is_file() and (self._sessions.closed_folder / folder.name).is_dir()
 
     def open_names(self) -> list[str]:
         """The names of the open work sessions in the repository's own .sessions."""

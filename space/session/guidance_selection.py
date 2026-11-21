@@ -205,10 +205,6 @@ class GuidanceSelection:
         return [fidelity for stage in STAGES if stage.name in stages for output in outputs for fidelity in output.guidance.fidelities.entries.values() if fidelity.stage == stage.name]
 
     @property
-    def stages_chosen(self) -> list[str]:
-        return list(self._stages or [])
-
-    @property
     def _outputs(self) -> list[PracticeSessionOutput]:
         return list(self._session.own_practices.values())
 

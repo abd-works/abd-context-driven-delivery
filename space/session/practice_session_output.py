@@ -23,16 +23,15 @@ from harness.markdown.format import Format
 from space.session.answer_reads import HeldForAnswer
 from space.session.file_manager import FileEntry
 from space.session.proposed_roots import ProposedRoots, code_extensions
+from space.session.session_log import REPORT_DATE_FORMAT
 
 if TYPE_CHECKING:
     from harness.guidance.guidance import FidelityGuidance, GuidanceCollection, PracticeGuidance
     from space.session.session import Session
 
 _OUTPUT_PATTERN_MARKS = {"*", "{"}
-# Report and handoff names end with the time they were made, written so names sort by time.
 ChosenOutputs = dict[str, object]
 """What session.json keeps for one practice under `outputs`: the root a person chose, and each fidelity's own choices."""
-REPORT_DATE_FORMAT = "%Y%m%dT%H%M%S"
 
 
 @identity("session_file", "name")
@@ -168,7 +167,7 @@ class PracticeSessionOutput:
         """Every folder this practice's fidelities write their declared outputs in, up to the first part a name or a
         pattern fills in, such as ``story_tests`` for ``story_tests/{epic}/{sub-epic}/...``: a viewer of the session's
         files reads each of them."""
-        paths = (path for fidelity in self.fidelities.entries.values() for paths in self.of_fidelity(fidelity).written.output_paths().values() for path in paths)
+        paths = (path for fidelity in self.fidelities.entries.values() for paths in fidelity.session_output.written.output_paths().values() for path in paths)
         return {self._fixed_folder(path) for path in paths}
 
     @property

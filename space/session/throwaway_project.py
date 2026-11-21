@@ -14,7 +14,7 @@ from pathlib import Path
 from harness.mcp.cdd_home import CDD_HOME_ENV
 
 
-class FolderSweeper:
+class _FolderSweeper:
     """Removes the folders specs are done with on a thread of its own, so an example does not wait while its project is
     deleted: deleting a project's folders took a tenth of a board spec's time. The run waits for every folder to go
     before it ends, so none is left behind."""
@@ -46,10 +46,10 @@ class FolderSweeper:
 
 
 # The one sweeper of a spec run: every project's folders go through it, so the run waits for all of them once.
-FOLDER_SWEEPER = FolderSweeper()
+FOLDER_SWEEPER = _FolderSweeper()
 
 
-class SpecRunHome:
+class _SpecRunHome:
     """The cdd home of one spec run, named by ``CDD_HOME`` from the first spec that needs it until the run ends.
 
     Opening a session records it for its chat in ``open-sessions.json`` under the cdd home. A spec run with no
@@ -72,7 +72,7 @@ class SpecRunHome:
 
 
 # The one cdd home of a spec run, made the first time a spec asks for it.
-SPEC_RUN_HOME = SpecRunHome()
+SPEC_RUN_HOME = _SpecRunHome()
 
 
 class ExampleHome:

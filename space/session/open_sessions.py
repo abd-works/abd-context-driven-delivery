@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from harness.agent_tools.tool_call import CALLS_BEING_ANSWERED, ToolCall
 from harness.annotations.name import Name
 from space.session.session import MAIN_SESSION_NAME, Session
-from space.session.session_folder import COMPLETE_FOLDER
 from space.session.session_record import SESSION_FILE
 from space.work_state import WorkState
 from tools.prompt_queue.prompt_queue import PromptQueue
@@ -79,7 +77,7 @@ class OpenSessions:
     def name_for(self, chat: str = "") -> str:
         """The name of the session chat works on: the ticket of the worktree these sessions serve, whatever any chat
         chose to open; else the session chat has open; main when none is."""
-        ticket = self.ticket_of_worktree()
+        ticket = self._ticket_of_worktree()
         if ticket is not None:
             return ticket.name
         chosen = self.state(chat).session
@@ -92,7 +90,7 @@ class OpenSessions:
     def _is_closed_since(self, name: str) -> bool:
         sessions = self._sessions
         open_folder = sessions.folder_of(name)
-        return (not open_folder.is_dir() or sessions.listing.is_left_behind(open_folder)) and (sessions.folder / COMPLETE_FOLDER / name).is_dir()
+        return (not open_folder.is_dir() or sessions.listing.is_left_behind(open_folder)) and (sessions.closed_folder / name).is_dir()
 
     def open(self, session: Session, chat: str = "") -> Session:
         """Make session the one chat has open. Nothing is written in the checkout: the choice is kept under ``~/.cdd``."""
@@ -111,7 +109,7 @@ class OpenSessions:
             return
         state.session = ""
 
-    def ticket_of_worktree(self) -> Session | None:
+    def _ticket_of_worktree(self) -> Session | None:
         """The ticket whose own worktree these sessions serve: a chat there works on that ticket, whatever any chat
         chose to open. None in the repository's own folder, and in a worktree whose branch names no ticket."""
         sessions = self._sessions
@@ -124,7 +122,7 @@ class OpenSessions:
         if branch in tickets:
             return sessions.named(branch)
         # The Claude desktop app names a branch around the ticket's name, such as claude/checkout-flow-cef4bc.
-        holding = [name for name in tickets if re.search(rf"(^|[/_-]){re.escape(name)}($|[/_-])", branch)]
+        holding = [name for name in tickets if sessions.roots.is_branch_of(branch, name)]
         return sessions.named(holding[0]) if len(holding) == 1 else None
 
     def switch(self, name: str, workpath: Path | None, call: ToolCall | None) -> str:
@@ -132,7 +130,7 @@ class OpenSessions:
         log; a chat in a ticket's own worktree always opens that ticket's session."""
         sessions = self._sessions
         chat = call.chat_id if call is not None else ""
-        ticket = self.ticket_of_worktree()
+        ticket = self._ticket_of_worktree()
         if ticket is not None:
             opened = self.open(ticket, chat)
             return self._worktree_ticket_note(ticket, name) + self._handoff_queued_note(opened, chat) + self._default_roots_note(opened) + opened.log.instructions()

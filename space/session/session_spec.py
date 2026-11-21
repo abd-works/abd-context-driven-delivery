@@ -397,6 +397,19 @@ with description("a session"):
                     with it("should keep working in that folder in the ticket's worktree"):
                         expect(Sessions(self.repo).named("alpha").work_root).to(equal(self.worktree.resolve() / "harness"))
 
+            # The ticket's branch carries its own .context/config.json, which can name other practice folders and
+            # default formats than main's: the ticket reads its own, whichever checkout's sessions read the ticket.
+            with context("that the repository's own sessions read, with a config.json of its own in its worktree"):
+                with before.each:
+                    from harness.installation.context_config import ContextConfig
+
+                    ContextConfig(self.repo).update(practice_folders={"stories": "main-stories"})
+                    ContextConfig(self.worktree).update(practice_folders={"stories": "ticket-stories"})
+                    self.session = Sessions(self.repo).named("alpha")
+
+                with it("should take each practice's folder from its worktree's config.json"):
+                    expect(self.session.context_config.practice_folder("stories")).to(equal("ticket-stories"))
+
             # The worktree holds only its ticket's work, so a chat there always opens the ticket's session.
             with context("that a chat in the ticket's worktree switches naming no session"):
                 with before.each:
@@ -784,6 +797,18 @@ with description("a loop"):
             self.session.log.by(ChatPointer(chat_id, chat, "1")).action("validate", [self.work / "cart.py"])
             body = Sessions(self.called).current().read_loop(self.opened.number)
             expect("loop read" in body and "validate" in body).to(equal(True))
+
+        with context("that is asked for a loop it has not marked"):
+            with before.each:
+                self.asked = self.opened.number + 3
+                try:
+                    self.session.read_loop(self.asked)
+                    self.refusal = None
+                except LoopNotFoundError as refusal:
+                    self.refusal = refusal
+
+            with it("should refuse, naming the loop asked for and the highest loop marked"):
+                expect((self.refusal.asked, self.refusal.highest_marked)).to(equal((self.asked, self.opened.number)))
 
 
 # (E) Open Work Session

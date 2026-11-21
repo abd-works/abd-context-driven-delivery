@@ -61,7 +61,7 @@ class SessionFolder:
 
     def move_to_closed(self) -> Session:
         """Move this session's record folder among the closed sessions, where the board lists closed work."""
-        return self._move_to(self._session.sessions.folder / COMPLETE_FOLDER)
+        return self._move_to(self._session.sessions.closed_folder)
 
     def move_to_archive(self) -> Session:
         return self._move_to(self._session.sessions.folder / ARCHIVE_FOLDER)

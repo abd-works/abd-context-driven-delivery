@@ -69,12 +69,9 @@ class FileComment:
     # A comment's state is read from the chat's message, never kept twice: sent until the chat is done with the message.
 
     def __init__(self, range: Range, text: str, sending: CommentSending | None = None) -> None:
-        sending = sending or CommentSending()
         self._range = range
         self._text = text
-        self._chat = sending.chat
-        self._message = sending.message
-        self._sent_text = sending.sent_text
+        self._sending = sending or CommentSending()
 
     @classmethod
     def from_record(cls, record: CommentRecord) -> FileComment:
@@ -106,9 +103,10 @@ class FileComment:
     def state(self) -> FileCommentState:
         """Not sent until a chat queued it; then sent, until the chat's turn that worked on it ended, or the chat forgot
         it once handled; a message the chat could not show leaves the comment not sent."""
-        if not self._message:
+        sending = self._sending
+        if not sending.message:
             return NOT_SENT
-        sent = Chat.load(self._chat).mailbox.message(self._message)
+        sent = Chat.load(sending.chat).mailbox.message(sending.message)
         if sent is None or sent.state == DONE:
             return PROCESSED
         return NOT_SENT if sent.state in _UNDELIVERED else SENT
@@ -123,7 +121,7 @@ class FileComment:
     def sent_text(self) -> str:
         """The whole file's text as it read when the comment was sent; empty before it is sent. What the chat changed
         is told from it once the comment is processed."""
-        return self._sent_text
+        return self._sending.sent_text
 
     def reworded(self, text: str) -> FileComment:
         """This comment on the same lines, saying text instead, not sent: a chat that had the old words never had these."""
@@ -141,9 +139,9 @@ class FileComment:
             "end_line": self._range.end_line,
             "selected_text": self._range.content,
             "text": self._text,
-            "chat": self._chat,
-            "message": self._message,
-            "sent_text": self._sent_text,
+            "chat": self._sending.chat,
+            "message": self._sending.message,
+            "sent_text": self._sending.sent_text,
         }
 
 
@@ -166,7 +164,7 @@ class FileComments:
     @property
     @data_field
     def session_file(self) -> str:
-        return self._session.paths.from_project(self._session.session_file)
+        return self._session.session_file_from_project
 
     @property
     @data_field

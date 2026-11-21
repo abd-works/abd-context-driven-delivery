@@ -65,10 +65,14 @@ class ProposedRoots:
     def named(self, names: list[str]) -> list[str]:
         """The folders of the pieces this fidelity holds in the project whose own name holds one of names, as text
         with case and separators ignored, so Refund names domain/orders/refund and story_tests/manage-orders/refund-order."""
-        wanted = [squashed for squashed in (_squashed(name) for name in names) if squashed]
+        wanted = [squashed for squashed in (self._squashed(name) for name in names) if squashed]
         if not wanted:
             return []
-        return [folder for folder in self.holding(self._project_files()) if any(name in _squashed(PurePosixPath(folder).name) for name in wanted)]
+        return [folder for folder in self.holding(self._project_files()) if any(name in self._squashed(PurePosixPath(folder).name) for name in wanted)]
+
+    def _squashed(self, text: str) -> str:
+        """text in lower case with everything but letters and digits left out, so names compare across case and separators."""
+        return re.sub(r"[^a-z0-9]", "", text.lower())
 
     def _project_files(self) -> list[Path]:
         """Every file in the project a declared path of this fidelity can name, and its code where it writes a folder
@@ -98,8 +102,8 @@ class ProposedRoots:
         (``story_tests/{epic}/{story}/...``) names ``epic``, and ``{bounded_context}/{aggregate}/...`` names
         ``aggregate``, whose context holds nothing else. Empty when template names no folder."""
         folders = PurePosixPath(template).parts[:-1]
-        head = _fixed_head(template)
-        siblings = [PurePosixPath(other).parts[:-1] for other in self._declared_files() if _fixed_head(other) == head]
+        head = self._fixed_head(template)
+        siblings = [PurePosixPath(other).parts[:-1] for other in self._declared_files() if self._fixed_head(other) == head]
         named = [index for index, part in enumerate(folders) if _NAMED_FOLDER.match(part)]
         while len(named) > 1 and named[-2] == named[-1] - 1 and self._is_part_of_folder_above(folders[: named[-1] + 1], siblings):
             named.pop()
@@ -111,6 +115,11 @@ class ProposedRoots:
         below = [folders for folders in declared if folders[: len(folder)] == folder and folders != folder]
         beside = [folders for folders in declared if folders[: len(folder) - 1] == folder[:-1] and folders[: len(folder)] != folder]
         return not below and bool(beside)
+
+    def _fixed_head(self, template: str) -> tuple[str, ...]:
+        """The folders a declared path names outright before its first named or wildcard part."""
+        parts = PurePosixPath(template).parts[:-1]
+        return tuple(part for part in parts[: next((index for index, part in enumerate(parts) if _FILLED_IN.search(part)), len(parts))])
 
     def _declared_files(self) -> list[str]:
         """The files this fidelity's outputs declare, each once; a folder declared per module names no file."""
@@ -126,17 +135,6 @@ class ProposedRoots:
     def _writes_code(self, path: str) -> bool:
         """Whether path is production code this fidelity writes as a folder per module."""
         return not is_test_code(path) and PurePosixPath(path).suffix in self._code_extensions()
-
-
-def _fixed_head(template: str) -> tuple[str, ...]:
-    """The folders a declared path names outright before its first named or wildcard part."""
-    parts = PurePosixPath(template).parts[:-1]
-    return tuple(part for part in parts[: next((index for index, part in enumerate(parts) if _FILLED_IN.search(part)), len(parts))])
-
-
-def _squashed(text: str) -> str:
-    """text in lower case with everything but letters and digits left out, so names compare across case and separators."""
-    return re.sub(r"[^a-z0-9]", "", text.lower())
 
 
 def code_extensions(label: str) -> tuple[str, ...]:

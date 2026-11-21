@@ -7,12 +7,13 @@ from __future__ import annotations
 import json
 import re
 import threading
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, TypedDict
 
 from harness.graph.location import Location
 from harness.graph.violation import UNKNOWN_LOCATION, FoundBy, FoundOn, Violation
+from space.session.session_log import REPORT_DATE_FORMAT, LogTimestamp
 from space.session.validation_judgment import ReportJudgment
 
 if TYPE_CHECKING:
@@ -21,10 +22,8 @@ if TYPE_CHECKING:
 VIOLATION_HISTORY_FILE = "violation-history.jsonl"
 # How many characters of a commit's sha the history keeps, as ``git log --oneline`` shows it.
 SHORT_SHA = 7
-# A report's name ends with the second its run started, in UTC: ``clean-engineering-code-20261116T075749.md``.
-REPORT_STAMP = "%Y%m%dT%H%M%S"
+# How many characters the second a report's name ends with takes: ``20261116T075749``.
 REPORT_STAMP_LENGTH = 15
-HISTORY_TIME = "%Y-%m-%dT%H:%M:%SZ"
 # What a hit's subject calls its node: ``OoadClass `Graph```, whose name is in backticks.
 NODE_NAME = re.compile(r"`(?P<name>[^`]+)`")
 # A judged finding opens with the node it names, in backticks.
@@ -87,7 +86,7 @@ class ValidationRun:
             rule = heading["rule"] if heading else rule
             hit = HIT_LINE.match(line)
             if hit:
-                hits.append(ListedHit(rule, hit).violation)
+                hits.append(_ListedHit(rule, hit).violation)
         return cls(report, hits, [])
 
     @property
@@ -103,14 +102,14 @@ class ValidationRun:
     def at(self) -> str:
         """When the run started, from the stamp its report's name ends with."""
         stamp = self.report.stem.rsplit("-", 1)[-1][:REPORT_STAMP_LENGTH]
-        return datetime.strptime(stamp, REPORT_STAMP).strftime(HISTORY_TIME)
+        return str(LogTimestamp(datetime.strptime(stamp, REPORT_DATE_FORMAT).replace(tzinfo=timezone.utc)))
 
     def covers(self, hit: Violation) -> bool:
         """Whether the run checked the file hit is in, so a hit it does not find there is fixed."""
         return not self.scope or hit.is_under(self.scope)
 
 
-class ListedHit:
+class _ListedHit:
     """One graph hit as a saved report lists it: ``- [X] **ERROR** **[graph rule]** - [file](target#Lnn): Kind `Name`:
     message``, under the heading of its rule."""
 
@@ -128,7 +127,7 @@ class ListedHit:
         return Violation(FoundBy(self._rule, "", FoundOn("", subject)), message, Location(file, int(line["line"]) if line else None))
 
 
-class HitKey:
+class _HitKey:
     """What tells one hit from another across runs: its rule, its file, and its node's name. Not its line, since an
     edit above a hit moves it without fixing it."""
 
@@ -149,7 +148,7 @@ class HitKey:
         return {"rule": self.rule, "file": self.file, "line": self._hit.line, "node": self.node}
 
 
-class MeasuredRun:
+class _MeasuredRun:
     """A run as the history records it: at the commit it measured, in the session whose history it joins."""
 
     def __init__(self, run: ValidationRun, commit: str, session: str) -> None:
@@ -167,15 +166,15 @@ class MeasuredRun:
     def events(self) -> list[HistoryEvent]:
         """The run itself, with the files it checked and how many hits it found, then each hit it found."""
         run = self.run
-        found = [{"event": FOUND, **self.stamp, **HitKey(hit).fields, "message": hit.message} for hit in run.hits]
+        found = [{"event": FOUND, **self.stamp, **_HitKey(hit).fields, "message": hit.message} for hit in run.hits]
         return [{"event": RUN, **self.stamp, "paths": run.scope, "hits": len(run.hits)}, *found]
 
     def fixed_since(self, previous: str, hits: list[Violation]) -> list[HistoryEvent]:
         """Each of hits, which the previous run found, in a file this run checked and no longer found there, matched by
         rule, file, and node; each once."""
-        now = {HitKey(hit).parts for hit in self.run.hits}
-        gone = {HitKey(hit).parts: hit for hit in hits if self.run.covers(hit) and HitKey(hit).parts not in now}
-        return [{"event": FIXED, **self.stamp, **HitKey(hit).fields, "last_found_in": previous, "fixed_in": self.commit} for hit in gone.values()]
+        now = {_HitKey(hit).parts for hit in self.run.hits}
+        gone = {_HitKey(hit).parts: hit for hit in hits if self.run.covers(hit) and _HitKey(hit).parts not in now}
+        return [{"event": FIXED, **self.stamp, **_HitKey(hit).fields, "last_found_in": previous, "fixed_in": self.commit} for hit in gone.values()]
 
 
 class ViolationHistory:
@@ -207,9 +206,9 @@ class ViolationHistory:
         """Record run as measuring commit: first the judgment of the previous run of its fidelity, which its judge has
         surely appended by now, then the run, each hit it found, and each hit of that previous run it no longer finds."""
         with RECORDING:
-            history = HistoryRuns(self.events)
+            history = _HistoryRuns(self.events)
             previous = history.last_run(run.fidelity)
-            measured = MeasuredRun(run, commit, self._file.parent.name)
+            measured = _MeasuredRun(run, commit, self._file.parent.name)
             fixed = measured.fixed_since(previous["run"], history.hits_of(previous["run"])) if previous is not None else []
             self._append([*self._judged(history, previous, run), *measured.events, *fixed])
 
@@ -221,7 +220,7 @@ class ViolationHistory:
         runs = [ValidationRun.from_report(report) for report in sorted(reports, key=lambda report: report.name)]
         for run in runs:
             self._record_at(run, commits.get(run.name, ""))
-        history = HistoryRuns(self.events)
+        history = _HistoryRuns(self.events)
         last = {run.fidelity: run for run in runs}
         self._append([event for run in last.values() for event in self._judged(history, history.last_run(run.fidelity), run)])
 
@@ -230,7 +229,7 @@ class ViolationHistory:
         checkout = self._checkout
         return checkout.current_commit[:SHORT_SHA] if checkout is not None and checkout.is_clone else ""
 
-    def _judged(self, history: HistoryRuns, previous: HistoryEvent | None, folding: ValidationRun) -> list[HistoryEvent]:
+    def _judged(self, history: _HistoryRuns, previous: HistoryEvent | None, folding: ValidationRun) -> list[HistoryEvent]:
         """The judgment appended to previous's report, read from the folder folding's report is in; none when there is
         no previous run, it is already folded in, or its report is gone."""
         if previous is None or history.is_judged(previous["run"]):
@@ -238,7 +237,7 @@ class ViolationHistory:
         report = folding.report.parent / previous["run"]
         if not report.is_file():
             return []
-        judged = JudgedRun(previous, history.hits_of(previous["run"]), ReportJudgment(report.read_text(encoding="utf-8", errors="replace")))
+        judged = _JudgedRun(previous, history.hits_of(previous["run"]), ReportJudgment(report.read_text(encoding="utf-8", errors="replace")))
         return [{**event, "at": folding.at} for event in judged.events]
 
     def _append(self, events: list[HistoryEvent]) -> None:
@@ -249,7 +248,7 @@ class ViolationHistory:
             history.writelines(json.dumps(event, ensure_ascii=False) + "\n" for event in events)
 
 
-class HistoryRuns:
+class _HistoryRuns:
     """The history as runs: the last run of each fidelity, the hits each run found, and which runs are judged."""
 
     def __init__(self, events: list[HistoryEvent]) -> None:
@@ -271,7 +270,7 @@ class HistoryRuns:
         return any(event.get("event") == JUDGED and event.get("run") == run for event in self._events)
 
 
-class JudgedRun:
+class _JudgedRun:
     """The judgment of one run's report as history lines: each finding of a rule it fails (``stands``) and each graph
     hit it calls noise (``noise``), each saying whether it is one of the hits the run found or the judge's own."""
 
@@ -288,9 +287,8 @@ class JudgedRun:
 
     def _event(self, verdict: str, judged: tuple[str, Violation]) -> HistoryEvent:
         file, finding = judged
-        named = JUDGED_NODE.match(finding.message)
-        matched = self._matching(finding.rule, file, (finding.line, named["name"] if named else ""))
-        node = named["name"] if named else (HitKey(matched).node if matched is not None else "")
+        matched = self._matching(finding, file)
+        node = self._node_named_by(finding) or (_HitKey(matched).node if matched is not None else "")
         run = self._run
         return {
             "event": JUDGED, "run": run["run"], "at": "", "commit": run.get("commit", ""), "session": run.get("session", ""), "fidelity": run.get("fidelity", ""),
@@ -298,12 +296,17 @@ class JudgedRun:
             "verdict": verdict, "reason": finding.message, "matched": matched is not None,
         }
 
-    def _matching(self, rule: str, file: str, place: tuple[int | None, str]) -> Violation | None:
-        """The hit the run found that a judged finding names: of the same rule, in the same file, at its line or on
-        its node; none for a finding of the judge's own."""
-        line, node = place
-        same = [hit for hit in self._hits if hit.rule == rule and HitKey(hit).file == file]
-        return next((hit for hit in same if (line is not None and hit.line == line) or (node and HitKey(hit).node == node)), None)
+    def _matching(self, finding: Violation, file: str) -> Violation | None:
+        """The hit the run found that the judged finding names: of the same rule, in file, at its line or on its node;
+        none for a finding of the judge's own."""
+        line, node = finding.line, self._node_named_by(finding)
+        same = [hit for hit in self._hits if hit.rule == finding.rule and _HitKey(hit).file == file]
+        return next((hit for hit in same if (line is not None and hit.line == line) or (node and _HitKey(hit).node == node)), None)
+
+    def _node_named_by(self, finding: Violation) -> str:
+        """The node a judged finding opens with, in backticks; empty when it names none."""
+        named = JUDGED_NODE.match(finding.message)
+        return named["name"] if named else ""
 
     def _judged_file(self, judged_file: str, finding: Violation) -> str:
         """A finding names the judged file by its name alone, or no file; one that names another file keeps it."""

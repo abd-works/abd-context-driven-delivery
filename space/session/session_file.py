@@ -70,7 +70,7 @@ class Fold:
         return self._name
 
 
-class FileLink:
+class _FileLink:
     """A link a line of a file writes to another file: the line, the link's words, the file it names from the linking
     one, and the anchor of the heading it names there, when it names one."""
 
@@ -90,7 +90,7 @@ class FileCallout:
     term its class in the markdown model. A link to a file or a heading that is not there opens nothing and says what
     is missing."""
 
-    def __init__(self, link: FileLink, section: Range, missing: str = "") -> None:
+    def __init__(self, link: _FileLink, section: Range, missing: str = "") -> None:
         self._line = link.line
         self._title = link.title
         self._link = link.target
@@ -346,10 +346,10 @@ class SessionFile:
 
     def _callouts_on(self, number: int, line: str) -> list[FileCallout]:
         written = [*_FILE_LINK.finditer(line), *_HEADER_LINK.finditer(line)]
-        found = (self._callout(FileLink(number, link)) for link in written)
+        found = (self._callout(_FileLink(number, link)) for link in written)
         return [callout for callout in found if callout is not None]
 
-    def _callout(self, link: FileLink) -> FileCallout | None:
+    def _callout(self, link: _FileLink) -> FileCallout | None:
         """The callout of link, whose file is named from this one; none for a link out of the project, one in code to a
         file not there, or one into a file the file view's filters leave out. A file not there is in no list, so no
         filter hides the callout that says so."""

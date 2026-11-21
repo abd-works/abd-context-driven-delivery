@@ -3,17 +3,16 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import TypedDict
 
 from harness.graph.violation import UNKNOWN_LOCATION, Violation
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
+from space.session.session_log import LogTimestamp
 
 ACCEPTED_VIOLATIONS_FILE = "violations-accepted.json"
 # The one key of the file: the list of acceptances.
 ACCEPTED = "accepted"
-ACCEPTED_TIME = "%Y-%m-%dT%H:%M:%SZ"
 
 
 class AcceptedViolationsUnreadable(JsonFileUnreadable):
@@ -94,7 +93,7 @@ class AcceptedViolations:
         accepted = self._acceptance_of(violation)
         if any(acceptance.covers(accepted) for acceptance in acceptances):
             return
-        stamped = Acceptance({**accepted.kept, "accepted_at": datetime.now(timezone.utc).strftime(ACCEPTED_TIME)})
+        stamped = Acceptance({**accepted.kept, "accepted_at": str(LogTimestamp.now())})
         self._write([*acceptances, stamped])
 
     def reopen(self, violation: Violation) -> None:
