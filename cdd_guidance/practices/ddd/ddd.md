@@ -169,6 +169,7 @@ clean_engineering: model
 outputs:
   python: "{bounded_context}/{aggregate}/{aggregate}.py"
   typescript: "{bounded_context}/{aggregate}/{aggregate}.ts"
+  javascript: "{bounded_context}/{aggregate}/{aggregate}.js"
   markdown: ".context/domain-model.md"
   drawio: ".context/domain-model.drawio"
   whiteboard: ".context/domain-model.whiteboard"
@@ -257,8 +258,9 @@ default_format: python
 stage: implementation
 clean_engineering: code
 outputs:
-  python: "{bounded_context}/{aggregate}/"
-  typescript: "{bounded_context}/{aggregate}/"
+  python: ["{bounded_context}/{aggregate}/", "{bounded_context}/{aggregate}/{aggregate}.py"]
+  typescript: ["{bounded_context}/{aggregate}/", "{bounded_context}/{aggregate}/{aggregate}.ts"]
+  javascript: ["{bounded_context}/{aggregate}/", "{bounded_context}/{aggregate}/{aggregate}.js"]
 ```
 
 #### Overview

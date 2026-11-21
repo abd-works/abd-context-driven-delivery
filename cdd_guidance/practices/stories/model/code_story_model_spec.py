@@ -1,7 +1,7 @@
 """Mamba spec for `a code Story Map`: the folder and file layout every language shares, observed through Python
 story tests. The code inside each file is covered by the TypeScript, Python, and JavaScript specs."""
 
-from expects import be_false, be_true, equal, expect, have_len, raise_error
+from expects import be_true, equal, expect, have_len, raise_error
 from mamba import before, context, description, it
 
 from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModelError
@@ -51,12 +51,12 @@ with description("a code Story Map") as self:
             self.canonical = epics_each_with_a_story(4)
             self.tree = self.code_map.render(self.canonical)
 
-        with it("should write each Epic's stories into a folder named after the Epic"):
+        with it("should write each Epic's story into the story's own folder, in a folder named after the Epic"):
             expect(sorted(self.tree)).to(equal([
-                "tests/epic-1/epic_1_story.test.py",
-                "tests/epic-2/epic_2_story.test.py",
-                "tests/epic-3/epic_3_story.test.py",
-                "tests/epic-4/epic_4_story.test.py",
+                "tests/epic-1/story-of-epic-1/story_of_epic_1_story.test.py",
+                "tests/epic-2/story-of-epic-2/story_of_epic_2_story.test.py",
+                "tests/epic-3/story-of-epic-3/story_of_epic_3_story.test.py",
+                "tests/epic-4/story-of-epic-4/story_of_epic_4_story.test.py",
             ]))
 
         with it("should read back every Epic"):
@@ -105,7 +105,7 @@ with description("a code Story Map") as self:
                 expect(files_under(self.new_tree, "tests/epic-1-renamed")).to(have_len(1))
 
             with it("should keep the Epic's Story in the renamed folder"):
-                content = self.new_tree["tests/epic-1-renamed/epic_1_renamed_story.test.py"]
+                content = self.new_tree["tests/epic-1-renamed/story-of-epic-1/story_of_epic_1_story.test.py"]
                 expect("Story of epic 1" in content).to(be_true)
 
     with context("with the first Epic holding 3 sub-Epics"):
@@ -114,12 +114,12 @@ with description("a code Story Map") as self:
             self.first_epic = self.canonical.epics[0]
             self.tree = self.code_map.render(self.canonical)
 
-        with it("should write one file per sub-Epic inside the first Epic's folder"):
+        with it("should write a folder for each sub-Epic inside the first Epic's folder, holding its story's file"):
             for order in range(1, 4):
-                expect(f"tests/epic-1/epic_1_{order}_story.test.py" in self.tree).to(be_true)
+                expect(f"tests/epic-1/epic-1-{order}/story-{order}/story_{order}_story.test.py" in self.tree).to(be_true)
 
-        with it("should keep the first Epic's own Story in its own file beside them"):
-            expect("tests/epic-1/epic_1_story.test.py" in self.tree).to(be_true)
+        with it("should keep the first Epic's own Story in its own folder beside them"):
+            expect("tests/epic-1/story-of-epic-1/story_of_epic_1_story.test.py" in self.tree).to(be_true)
 
         with it("should read back the sub-Epics under the first Epic"):
             parsed = self.code_map.parse(self.tree)
@@ -132,12 +132,12 @@ with description("a code Story Map") as self:
                 self.first_epic.epics.append(appended)
                 self.new_tree = self.code_map.render(self.canonical)
 
-            with it("should write a new file for the appended sub-Epic"):
-                expect("tests/epic-1/epic_1_4_story.test.py" in self.new_tree).to(be_true)
+            with it("should write a new folder and file for the appended sub-Epic"):
+                expect("tests/epic-1/epic-1-4/story-4/story_4_story.test.py" in self.new_tree).to(be_true)
 
             with it("should leave the files of the first three sub-Epics byte-identical"):
                 for order in range(1, 4):
-                    path = f"tests/epic-1/epic_1_{order}_story.test.py"
+                    path = f"tests/epic-1/epic-1-{order}/story-{order}/story_{order}_story.test.py"
                     expect(self.new_tree[path]).to(equal(self.tree[path]))
 
         with context("with the first sub-Epic renamed"):
@@ -145,14 +145,14 @@ with description("a code Story Map") as self:
                 self.first_epic.epics[0].name = "Epic 1.1 renamed"
                 self.new_tree = self.code_map.render(self.canonical)
 
-            with it("should write the sub-Epic's file under the new name"):
-                expect("tests/epic-1/epic_1_1_renamed_story.test.py" in self.new_tree).to(be_true)
+            with it("should write the sub-Epic's story under the folder of its new name"):
+                expect("tests/epic-1/epic-1-1-renamed/story-1/story_1_story.test.py" in self.new_tree).to(be_true)
 
-            with it("should no longer write the file under the old name"):
-                expect("tests/epic-1/epic_1_1_story.test.py" in self.new_tree).to(be_false)
+            with it("should no longer write under the folder of the old name"):
+                expect(files_under(self.new_tree, "tests/epic-1/epic-1-1")).to(have_len(0))
 
-            with it("should keep the sub-Epic's Story in the renamed file"):
-                expect("Story 1" in self.new_tree["tests/epic-1/epic_1_1_renamed_story.test.py"]).to(be_true)
+            with it("should keep the sub-Epic's Story in the file under the renamed folder"):
+                expect("Story 1" in self.new_tree["tests/epic-1/epic-1-1-renamed/story-1/story_1_story.test.py"]).to(be_true)
 
         with context("with a nested sub-Epic added under the first sub-Epic"):
             with before.each:
@@ -162,11 +162,11 @@ with description("a code Story Map") as self:
                 first_sub_epic.epics.append(nested)
                 self.new_tree = self.code_map.render(self.canonical)
 
-            with it("should make the first sub-Epic a folder holding the nested sub-Epic's file"):
-                expect("tests/epic-1/epic-1-1/nested_story.test.py" in self.new_tree).to(be_true)
+            with it("should write the nested sub-Epic's folder inside the first sub-Epic's, holding its story's file"):
+                expect("tests/epic-1/epic-1-1/nested/nested-story/nested_story_story.test.py" in self.new_tree).to(be_true)
 
-            with it("should keep the first sub-Epic's own Stories in a file inside its folder"):
-                expect("tests/epic-1/epic-1-1/epic_1_1_story.test.py" in self.new_tree).to(be_true)
+            with it("should keep the first sub-Epic's own Story in its own folder inside the sub-Epic's"):
+                expect("tests/epic-1/epic-1-1/story-1/story_1_story.test.py" in self.new_tree).to(be_true)
 
             with it("should read the nested sub-Epic back under the first sub-Epic"):
                 parsed = self.code_map.parse(self.new_tree)
@@ -177,7 +177,7 @@ with description("a code Story Map") as self:
             self.typescript_map = TypeScriptStoryModel("tests")
             self.canonical = first_epic_with_three_sub_epics()
             initial_tree = self.typescript_map.render(self.canonical)
-            self.first_file_path = next(path for path in initial_tree if path.endswith("epic_1_1_story.test.ts"))
+            self.first_file_path = next(path for path in initial_tree if path.endswith("epic-1-1/story-1/story_1_story.test.ts"))
             self.previous_tree = dict(initial_tree)
             self.previous_tree[self.first_file_path] = (
                 initial_tree[self.first_file_path] + "\nconst mySetupVariable = 42;\n"

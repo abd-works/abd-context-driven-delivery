@@ -15,6 +15,11 @@ _REFUSE = "Refuse to pack an unpaid order"
 _CANCEL = "Cancel a paid order"
 _SHOWN = "Show a packed order"
 
+with shared_context("the story files of Pack Orders"):
+    with it("should each sit at a path the scenarios or acceptance tests fidelity declares"):
+        expect(self.project.undeclared_files()).to(equal([]))
+
+
 with shared_context("the story map of Pack Orders"):
     with it("should hold the stories under their sub-epic, in the map's order"):
         expect(self.project.story_names("Pack Orders")).to(equal(["Pack Order", "Cancel Order"]))
@@ -99,6 +104,9 @@ with description("a story map created from story files") as self:
         with before.all:
             self.project = pack_orders_in("python")
 
+        with included_context("the story files of Pack Orders"):
+            pass
+
         with included_context("the story map of Pack Orders"):
             pass
 
@@ -112,6 +120,9 @@ with description("a story map created from story files") as self:
             with before.all:
                 self.project = pack_orders_taken("python", "markdown")
 
+            with included_context("the story files of Pack Orders"):
+                pass
+
             with included_context("the story map of Pack Orders"):
                 pass
 
@@ -121,6 +132,9 @@ with description("a story map created from story files") as self:
     with context("written as TypeScript story tests"):
         with before.all:
             self.project = pack_orders_in("typescript")
+
+        with included_context("the story files of Pack Orders"):
+            pass
 
         with included_context("the story map of Pack Orders"):
             pass
@@ -145,6 +159,9 @@ with description("a story map created from story files") as self:
             with before.all:
                 self.project = pack_orders_taken("typescript", "markdown")
 
+            with included_context("the story files of Pack Orders"):
+                pass
+
             with included_context("the story map of Pack Orders"):
                 pass
 
@@ -155,6 +172,9 @@ with description("a story map created from story files") as self:
             with before.all:
                 self.project = pack_orders_taken("typescript", "javascript")
 
+            with included_context("the story files of Pack Orders"):
+                pass
+
             with included_context("the story map of Pack Orders"):
                 pass
 
@@ -164,6 +184,9 @@ with description("a story map created from story files") as self:
     with context("written as JavaScript story tests"):
         with before.all:
             self.project = pack_orders_in("javascript")
+
+        with included_context("the story files of Pack Orders"):
+            pass
 
         with included_context("the story map of Pack Orders"):
             pass
@@ -188,6 +211,9 @@ with description("a story map created from story files") as self:
             with before.all:
                 self.project = pack_orders_taken("javascript", "markdown")
 
+            with included_context("the story files of Pack Orders"):
+                pass
+
             with included_context("the story map of Pack Orders"):
                 pass
 
@@ -197,6 +223,9 @@ with description("a story map created from story files") as self:
         with context("that is taken to TypeScript and back"):
             with before.all:
                 self.project = pack_orders_taken("javascript", "typescript")
+
+            with included_context("the story files of Pack Orders"):
+                pass
 
             with included_context("the story map of Pack Orders"):
                 pass
@@ -208,6 +237,9 @@ with description("a story map created from story files") as self:
         with before.all:
             self.project = pack_orders_in("markdown")
 
+        with included_context("the story files of Pack Orders"):
+            pass
+
         with included_context("the story map of Pack Orders"):
             pass
 
@@ -217,6 +249,9 @@ with description("a story map created from story files") as self:
         with context("that is taken to Python story tests and back"):
             with before.all:
                 self.project = pack_orders_taken("markdown", "python")
+
+            with included_context("the story files of Pack Orders"):
+                pass
 
             with included_context("the story map of Pack Orders"):
                 pass

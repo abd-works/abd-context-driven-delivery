@@ -12,8 +12,8 @@ from cdd_guidance.practices.stories.model.python.nodes import PythonEpic, Python
 from cdd_guidance.practices.stories.model.python.shared_story_file import SHARED_SUFFIX, is_shared_story_file
 from cdd_guidance.practices.stories.model.python.story_file import PythonStoryFile
 from cdd_guidance.practices.stories.model.story_file import flat_steps
-from cdd_guidance.practices.stories.model.story_model import Background, Epic, Story
-from cdd_guidance.practices.stories.model.story_writing import StepClause, StoryWriting, background_examples_line, example_names_of, story_description
+from cdd_guidance.practices.stories.model.story_model import Background, Story
+from cdd_guidance.practices.stories.model.story_writing import StepClause, StoryFilePlace, StoryWriting, background_examples_line, example_names_of, story_description
 
 
 class PythonStoryWriting(StoryWriting):
@@ -34,10 +34,10 @@ class PythonStoryWriting(StoryWriting):
     verbs = {"Given": "given", "When": "when", "Then": "then", "But": "but_", "And": "and_"}
     default_verb = "then"
 
-    def file_header(self, epic: Epic, parent: str) -> List[str]:
-        names = example_names_of(list(epic.stories))
+    def file_header(self, place: StoryFilePlace) -> List[str]:
+        names = example_names_of(place.stories)
         example_import = [f"from examples import {', '.join(names)}", ""] if names else []
-        heading = [self.language.comment(f"Epic: {epic.name}"), self.language.comment(f"Orders: {epic.order_path()}"), ""]
+        heading = [self.language.comment(f"Epic: {place.epic.name}"), self.language.comment(f"Orders: {place.orders}"), ""]
         return ["from __future__ import annotations", "", "from story_test import and_, background, but_, given, scenario, story, then, when", *example_import, "", *heading]
 
     def story_open(self, story: "Story") -> List[str]:

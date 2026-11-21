@@ -122,6 +122,30 @@ with description("a render to code that is saved") as self:
                 code = RenderedCode(self.root, ["**/*spec.ts"], Format("typescript"), spec, ["**/*_spec.py", "**/*spec.ts"])
                 expect(lambda: code.save({"format": "typescript", "content": "describe()\n"})).to(raise_error(RenderHasNoDeclaredPlace, contain("**/*spec.ts")))
 
+        with context("that is a Python spec, for a fidelity that declares how a TypeScript spec is named"):
+            with it("should carry the spec's own name across: cart_spec.py is saved as cart.spec.ts"):
+                spec = self.root / "cart_spec.py"
+                spec.write_text("pass\n", encoding="utf-8")
+                code = RenderedCode(self.root, ["**/*.spec.ts"], Format("typescript"), spec, ["**/*_spec.py", "**/*.spec.ts"])
+                expect(_saved(self.root, code.save({"format": "typescript", "content": "describe()\n"}))).to(equal(["cart.spec.ts"]))
+
+        with context("that is a document in a .context folder, named for its scope"):
+            with it("should save the code in the folder the .context sits in, named for that scope"):
+                document = self.root / "src" / "ordering" / ".context" / "ordering-bdd-realization.md"
+                document.parent.mkdir(parents=True)
+                document.write_text("# Ordering\n", encoding="utf-8")
+                code = RenderedCode(self.root, ["**/*_spec.py"], Format("python"), document, [".context/{scope}-bdd-realization.md", "**/*_spec.py"])
+                expect(_saved(self.root, code.save({"format": "python", "content": "pass\n"}))).to(equal(["src/ordering/ordering_spec.py"]))
+
+        with context("that is an aggregate's code, for a fidelity that declares a file for each aggregate"):
+            with it("should save the code as the same aggregate's file in the other language"):
+                book = self.root / "catalogue" / "book" / "book.ts"
+                book.parent.mkdir(parents=True)
+                book.write_text("class Book {}\n", encoding="utf-8")
+                declared = ["{bounded_context}/{aggregate}/{aggregate}.py", "{bounded_context}/{aggregate}/{aggregate}.ts"]
+                code = RenderedCode(self.root, declared[:1], Format("python"), book, declared)
+                expect(_saved(self.root, code.save({"format": "python", "content": "class Book:\n    pass\n"}))).to(equal(["catalogue/book/book.py"]))
+
         with context("that no declared path of the fidelity names"):
             with it("should refuse, naming the source"):
                 notes = self.root / "notes.md"

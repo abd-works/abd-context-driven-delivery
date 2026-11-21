@@ -42,14 +42,11 @@
 #
 # ## Example fixtures (`shared-example-fixtures`)
 #
-# Named domain fixtures live under `examples/` at the lowest **shared** folder:
-#   `{epic}/examples/` — seeds shared across the epic
-#   `{epic}/{sub-epic}/examples/` — catalog / givens shared by stories in the sub-epic
-#   `{epic}/{sub-epic}/{story}/examples/` — fixtures unique to this story
-# One file per domain concept (`account-credentials.examples.py`). Import in the story file;
-# never repeat literals across scenarios. Golden layout: `practices/stories/_examples/telco-website/`.
+# Named domain fixtures live beside the code they build, in a package Python can import: a story folder's name
+# holds hyphens, which no Python import can name. One file per domain concept
+# (`{module}/account_credentials_examples.py`). Import in the story file; never repeat literals across scenarios.
 #
-# from .examples.account_credentials_examples import valid_account_credentials
+# from shop.accounts.account_credentials_examples import valid_account_credentials
 #
 # Scenario realizations (default on unless the user says "no realizations"):
 # After GWT is agreed, add a ```realization``` block under each When (see templates/md/scenarios.md).

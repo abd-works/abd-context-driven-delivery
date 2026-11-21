@@ -341,11 +341,11 @@ with description("a session's formats diagnosed and aligned through the cdd serv
 
     with context("with only the markdown written"):
         with it("should answer a page the missing drawing and whiteboard"):
-            diagnosis, _error = self.chat.call("session.diagnose_alignment", session=self.session_file)
+            diagnosis = self.chat.answer("session.diagnose_alignment", session=self.session_file)
             missing = [(gap["kind"], gap["file"]) for gap in diagnosis["gaps"] if gap["fidelity"] == "stories-story-map"]
             expect(missing).to(equal([("missing_file", DRAWING), ("missing_file", BOARD)]))
 
         with context("that a page aligns"):
             with it("should answer the files rendered"):
-                result, _error = self.chat.call("session.align_formats", session=self.session_file)
+                result = self.chat.answer("session.align_formats", session=self.session_file)
                 expect([done["file"] for done in result["aligned"]]).to(equal([DRAWING, BOARD]))

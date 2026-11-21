@@ -12,10 +12,6 @@ from cdd_guidance.practices.ux.model.graph_reading import UxReading
 from cdd_guidance.practices.ux.model.ux_node import UxNode
 
 
-class NoJavascriptPractice(ValueError):
-    """ensure_javascript was asked for JavaScript from a practice that does not write the JavaScript a mockup imports."""
-
-
 class UxOutsideSession(ValueError):
     """ensure_javascript was asked of a Ux that works in no session, so it has no Stories or Clean Engineering of its
     own to render the JavaScript through."""
@@ -104,10 +100,7 @@ class Ux(PracticeGuidance):
         format it works at there."""
         if self.session is None:
             raise UxOutsideSession(f"Ux works in no session, so it holds no {key!r} practice to write JavaScript through.")
-        practice = self.session.practices[key].guidance
-        if "javascript" not in practice.formats:
-            raise NoJavascriptPractice(f"Practice {key!r} writes no JavaScript; Stories and Clean Engineering do.")
-        return practice
+        return self.session.practices[key].guidance
 
 
 UxNode.practice_class = Ux

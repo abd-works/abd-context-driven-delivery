@@ -128,8 +128,8 @@ stage: discovery
 clean_engineering: model
 outputs:
   python: "**/*_spec.py"
-  typescript: "**/*spec.ts"
-  javascript: "**/*spec.js"
+  typescript: "**/*.spec.ts"
+  javascript: "**/*.spec.js"
 ```
 
 #### Overview
@@ -184,8 +184,8 @@ stage: specification
 clean_engineering: model
 outputs:
   python: "**/*_spec.py"
-  typescript: "**/*spec.ts"
-  javascript: "**/*spec.js"
+  typescript: "**/*.spec.ts"
+  javascript: "**/*.spec.js"
   markdown: ".context/{scope}-bdd-realization.md"
 ```
 
@@ -205,7 +205,7 @@ Ask which public operation on the subject under test each observation exercises,
 - **Render it from the graph.** The realization is drawn, not written by hand, so it says exactly what the graph and the model say:
   1. Load the knowledge graph for the spec files, the code they test, and the module's model (`graph.load_files` with `bdd` and `clean_engineering`, files naming the module folder). The load reads each folder's `.context/*-model.md` with the code.
   2. Save it (`graph.save_json`). The save answers with the path of the file it wrote, the session's own `graph.json`.
-  3. Render it: `render` on this guidance with `format=markdown`, `source=graph`, and `paths` naming that path, so the render draws the graph just loaded and not an older one saved elsewhere. Write the result to `.context/{scope}-bdd-realization.md`.
+  3. Render it: `render` on this guidance with `format=markdown`, `source=graph`, and `paths` naming that path, so the render draws the graph just loaded and not an older one saved elsewhere. The render saves it as `.context/{scope}-bdd-realization.md`, its scope named for what the graph was read from: the one spec's own name (`cart` for `cart_spec.py`), else the folder that holds every spec.
   4. Read the result for the gaps below, fix the model or the specs where they are wrong, and render again. Do not edit the rendered file by hand, because the next render replaces it.
 - **The tree comes from the graph.** The graph's `Spec`, `Description`, `Context`, and `Observation` nodes are the behavior tree, in each spec file's order, with every heading and `it should` as the spec writes it; one graph per observation, none added or dropped.
 - **Each observation's entry operations come from its `invokes` edges.** The graph links an observation to the operations and properties it reaches: first what its nearest enclosing setup calls (`before.each`, `beforeEach`, `before`), which is the event the observation follows, then what its own body calls or reads. A tool called by name, `call("ticket.move_next", …)`, is that toolset's operation. Spec files and test helpers are never entries, so the graph already shows the domain call a helper delegates to.
@@ -254,8 +254,8 @@ stage: implementation
 clean_engineering: code
 outputs:
   python: "**/*_spec.py"
-  typescript: "**/*spec.ts"
-  javascript: "**/*spec.js"
+  typescript: "**/*.spec.ts"
+  javascript: "**/*.spec.js"
 ```
 
 #### Overview

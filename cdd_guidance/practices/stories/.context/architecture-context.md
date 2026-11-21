@@ -8,18 +8,22 @@ The code formats write a story map as runnable story tests and read those tests 
 <tests-root>/
   story-test.ts                        <- step library every story file imports (TypeScript; story-test.js for JavaScript)
   <epic-slug>/
-    examples/                          <- example values shared by the stories below
-    <epic>_story.test.ts               <- the epic's own stories, when it has any
-    <sub-epic>_story.test.ts           <- one file per sub-epic that has no sub-epics of its own
-    <sub-epic-slug>/                   <- a sub-epic with sub-epics of its own is a folder
-      <nested-sub-epic>_story.test.ts
+    examples/                          <- example values shared by the stories below (TypeScript and JavaScript)
+    <story-slug>/
+      <story_snake>_story.test.ts      <- a story the epic holds itself: one file, in the story's own folder
+    <sub-epic-slug>/                   <- every sub-epic is a folder
+      <sub_epic_slug>.story.shared.ts  <- shared scenarios the tiers replay, written by hand
+      <story-slug>/
+        <story_snake>_story.test.ts    <- one file for each story, in the story's own folder
 ```
+
+This is the layout the scenarios and acceptance tests fidelities declare under `story_tests`, so a render to code saves each file where its fidelity declares it. A tree written the older way, one file for each sub-epic, is still read, and a story read from a file is written back to that file.
 
 | Language | Story file | Format class |
 | --- | --- | --- |
-| TypeScript | `{sub_epic}_story.test.ts` (also reads `_story.spec.ts`, `.story.shared.ts` and `.story.ui.spec.ts`) | *TypeScriptStoryModel* |
-| JavaScript | `{sub_epic}_story.test.js` (also reads `_story.spec.js`, `.story.shared.js` and `.story.ui.spec.js`) | *JavaScriptStoryModel* |
-| Python | `{sub_epic}_story.test.py` | *PythonStoryModel* |
+| TypeScript | `{story}/{story_snake}_story.test.ts` (also reads `_story.spec.ts`, `.story.shared.ts` and `.story.ui.spec.ts`) | *TypeScriptStoryModel* |
+| JavaScript | `{story}/{story_snake}_story.test.js` (also reads `_story.spec.js`, `.story.shared.js` and `.story.ui.spec.js`) | *JavaScriptStoryModel* |
+| Python | `{story}/{story_snake}_story.test.py` (also reads `.story.shared.py`) | *PythonStoryModel* |
 
 Each story file opens with a comment naming its epic and its order on the map, imports `story` and `scenario` from the step library and the example values it uses, then holds one `story(...)` block per story with its backgrounds and `scenario(...)` blocks, each step written as a Given, When, Then, And, or But call with its code inside.
 

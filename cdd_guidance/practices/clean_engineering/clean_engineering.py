@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from cdd_guidance.practices.clean_engineering.clean_engineering_formats import CleanEngineeringFormats
 from cdd_guidance.practices.clean_engineering.model.drawio.drawio import Drawio
 from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model import DrawIOCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.graph_reading import GraphReading
@@ -25,6 +26,8 @@ class CleanEngineering(PracticeGuidance):
     # In the knowledge graph: Clean Engineering's modules, classes, and members, and its rules. The draw.io layout rules
     # check a rendered diagram through the Draw.io toolset's scan, not the graph.
     reading_type = GraphReading
+    # Its formats name the module a folder's code files form, so a render of them is written to that module's file.
+    formats_type = CleanEngineeringFormats
     SHORT_NAME = "CE"
     COLOUR = "#4FC3F7"
 

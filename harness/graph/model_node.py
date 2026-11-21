@@ -6,6 +6,7 @@ Pass a graph the same way you pass another model.
 
 from __future__ import annotations
 
+import inspect
 from abc import ABCMeta
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Callable, ClassVar, Iterable, Iterator, Optional
@@ -151,6 +152,14 @@ class _SyncedOnceBuilt(ABCMeta):
         model = super().__call__(*args, **kwargs)
         model.finish_building()
         return model
+
+    @property
+    def __signature__(cls) -> inspect.Signature:
+        """The parameters the class's own constructor takes, which a caller that inspects the class reads: making a
+        model goes through this metaclass, whose call takes anything, so without this a caller that hands a model the
+        settings its constructor names, as a practice's formats do, would see none of them."""
+        declared = inspect.signature(cls.__init__)
+        return declared.replace(parameters=list(declared.parameters.values())[1:])
 
 
 class ModelNode(Node, metaclass=_SyncedOnceBuilt):

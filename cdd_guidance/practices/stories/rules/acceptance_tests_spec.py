@@ -44,10 +44,16 @@ with description("an example fixture in an acceptance test"):
         with it("should pass"):
             expect(_hits("tests/onboard/examples/customers_examples.py")).to(equal([]))
 
+    # A Python story test imports its examples from a package Python can import, which a story folder with a hyphen
+    # in its name is not: this repository keeps them beside the code they build (space/kanban/session_board_examples.py).
+    with context("that sits in a Python examples file beside the code it builds, in no examples folder"):
+        with it("should pass"):
+            expect(_hits("src/shop/order_examples.py")).to(equal([]))
+
     with context("that sits in a Python file not named for examples"):
         with it("should be told the Python examples-file ending"):
             expect(_hits("tests/onboard/examples/customers.py")).to(equal(
-                ["Example file 'customers.py' should end with _examples.py under an examples/ folder."]
+                ["Example file 'customers.py' should end with _examples.py."]
             ))
 
     with context("that sits in an examples file outside an examples folder"):

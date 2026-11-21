@@ -44,6 +44,10 @@ _SECTION_TOP = 3
 _SECTION_HEADING = re.compile(r"^(#{3,6}) (.*)$")
 
 
+# How a story's own scenarios file ends, after the story's name in snake case.
+_SCENARIOS_FILE_SUFFIX = "_story.test.md"
+
+
 class MarkdownScenario(Scenario):
     """Scenario leaf node for the Markdown format; a scenarios file is read into these by ScenarioFileReading."""
 
@@ -481,6 +485,20 @@ class MarkdownStoryModel(StoryModel):
 
     def save(self) -> str:
         return self.render(self)
+
+    def scenarios_files(self, folder: str) -> Dict[str, str]:
+        """The scenarios file of each story that has scenarios, by its path under folder, as the scenarios fidelity
+        declares it: named for the story, in the folder of the sub-epic that holds it, or of the epic when the epic
+        holds it itself (``{folder}/{epic}/{sub-epic}/{story_snake}_story.test.md``)."""
+        files: Dict[str, str] = {}
+        pending = [(epic, f"{folder}/{epic.slug}") for epic in self.epics]
+        while pending:
+            epic, epic_folder = pending.pop(0)
+            for story in epic.stories:
+                if story.scenarios:
+                    files[f"{epic_folder}/{story.slug.replace('-', '_')}{_SCENARIOS_FILE_SUFFIX}"] = story.scenarios_text()
+            pending.extend((child, f"{epic_folder}/{child.slug}") for child in epic.epics)
+        return files
 
     def render(
         self,

@@ -582,10 +582,10 @@ A file that is not there is in no list of files, so no filter hides the callout 
 *When* the Person views the shared story test with the node filter narrowed to operations
 *Then* the When's line carries delete, and the Then's line carries nothing
 
-#### Scenario: A step keeps what it reaches in a file no practice declares
+#### Scenario: A step keeps what it reaches in the files listed with it
 
-*Given* the Files app shows checkout-flow's graph of Delete Ticket's Python shared story test, whose Then observes CHECKOUT_TICKET in ticket_story_examples.py, a file no fidelity declares
-*When* the Person views the shared story test with only the story test listed
+*Given* the Files app shows checkout-flow's graph of Delete Ticket's Python shared story test, whose Then observes CHECKOUT_TICKET in ticket_story_examples.py, the examples file Stories declares
+*When* the Person views the shared story test with the story test and its examples file listed
 *Then* the Then's line carries CHECKOUT_TICKET
   *But* the When's line carries nothing, since ticket.py is Clean Engineering's and is not listed
 

@@ -121,8 +121,7 @@ class ProposedRoots:
     def _code_extensions(self) -> list[str]:
         """The extensions of the code this fidelity writes as a folder per module, such as Clean Engineering's
         ``{module}/``."""
-        folders = [label for label, declared in self._output.fidelity.outputs.items() if str(declared).endswith("/") and Format(label).is_code]
-        return [extension for label in folders for extension in code_extensions(label)]
+        return [extension for label in self._output.fidelity.declared.code_folders() for extension in code_extensions(label)]
 
     def _writes_code(self, path: str) -> bool:
         """Whether path is production code this fidelity writes as a folder per module."""

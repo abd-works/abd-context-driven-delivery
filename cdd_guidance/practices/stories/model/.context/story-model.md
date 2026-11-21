@@ -388,7 +388,7 @@ The `miro` format: a canvas-composer SVG, with increments as a thin-slice table.
 
 ## CodeStoryModel : StoryModel
 
-A story map written as test code: one file per sub-epic holding its stories, under epic folders. Nodes: CodeEpic, CodeStory, CodeScenario, CodeIncrement, each also a *CodeStoryNode* (`slug`, `snake`, `pascal`, `camel`). The model keeps the layout of the story files and the code a render adopts; how its language writes a story file is the *StoryWriting* it holds (`writing`), beside the reader of its story files (`story_file`).
+A story map written as test code: a folder for each epic and sub-epic, and one file for each story in a folder of the story's own, as the acceptance tests fidelity declares them; the stories read together from one file go back to it together. Nodes: CodeEpic, CodeStory, CodeScenario, CodeIncrement, each also a *CodeStoryNode* (`slug`, `snake`, `pascal`, `camel`). The model keeps the layout of the story files and the code a render adopts; how its language writes a story file is the *StoryWriting* it holds (`writing`), beside the reader of its story files (`story_file`).
 
 ------
 + language: CodeLanguage | None

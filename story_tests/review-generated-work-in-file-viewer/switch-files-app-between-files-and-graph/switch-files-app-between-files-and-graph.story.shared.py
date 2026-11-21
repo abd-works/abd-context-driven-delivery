@@ -890,15 +890,15 @@ def _(s):
         expect(world.reached).to(equal({STEP_STORY_WHEN_LINE: ["delete"]}))
 
 
-@shared_stories.scenario("Filter Callouts Like The Graph", "A step keeps what it reaches in a file no practice declares")
+@shared_stories.scenario("Filter Callouts Like The Graph", "A step keeps what it reaches in the files listed with it")
 def _(s):
-    @s.given("the Files app shows checkout-flow's graph of Delete Ticket's Python shared story test, whose Then observes CHECKOUT_TICKET in ticket_story_examples.py, a file no fidelity declares")
+    @s.given("the Files app shows checkout-flow's graph of Delete Ticket's Python shared story test, whose Then observes CHECKOUT_TICKET in ticket_story_examples.py, the examples file Stories declares")
     def _(world):
         seed_step_story_graph(world)
 
-    @s.when("the Person views the shared story test with only the story test listed")
+    @s.when("the Person views the shared story test with the story test and its examples file listed")
     def _(world):
-        world.reached = reached_by_steps(world, paths=[STEP_STORY])
+        world.reached = reached_by_steps(world, paths=[STEP_STORY, TICKET_EXAMPLES])
 
     @s.then("the Then's line carries CHECKOUT_TICKET, and the When's line carries nothing, since ticket.py is Clean Engineering's and is not listed")
     def _(world):

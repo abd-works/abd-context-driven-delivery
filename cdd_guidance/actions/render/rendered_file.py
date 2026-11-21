@@ -2,11 +2,23 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+import os
+import re
+from pathlib import Path, PurePosixPath
+from typing import TYPE_CHECKING
+
+from cdd_guidance.actions.render.rendered_code import RenderHasNoDeclaredPlace, own_name
+from harness.annotations.name import Name
+from harness.graph.saved_graph import SavedGraph
 from harness.guidance.declared_outputs import DeclaredOutputs
 from harness.markdown.format import Format
 from harness.whiteboard import BoardLinks, Whiteboard
 
+if TYPE_CHECKING:
+    from harness.guidance.guidance import FidelityGuidance
+
+# The one named part of a declared document path, such as ``{scope}`` in ``.context/{scope}-bdd-realization.md``.
+_NAMED_PART = re.compile(r"\{([^{}/]+)\}")
 # The format a whiteboard file is written in, which goes on its board in Claude once written.
 WHITEBOARD = "whiteboard"
 # The groups of formats a render saves itself: a draw.io file or a whiteboard, and markdown. Code goes into the module it
@@ -77,6 +89,37 @@ class RenderedFile:
             return None
         target = placed or (first if first.is_dir() else first.parent) / name
         return None if target in sources else cls(target, format, source)
+
+    @classmethod
+    def from_graph(cls, graph_file: Path, fidelity: FidelityGuidance, format: Format) -> RenderedFile:
+        """The file a render of a saved graph into a document saves: the path the fidelity declares for format, its one
+        named part, such as the realization's ``{scope}``, named for what the graph was read from. A graph read from
+        one file of the fidelity's practice is named for that file's own name (``cart`` for ``cart_spec.py``); one read
+        from several is named for the folder that holds them all, or, when that is the folder the graph was read
+        from, for that folder. A graph that holds no file of the practice names no scope, and a fidelity that
+        declares no such path names no file: both are refused with *RenderHasNoDeclaredPlace*."""
+        outputs = {label: [names] if isinstance(names, str) else list(names) for label, names in fidelity.declared.outputs.items()}
+        declared = [path for path in outputs.get(format.name, []) if len(set(_NAMED_PART.findall(path))) == 1]
+        piece = f"a document from the saved graph {graph_file.name}"
+        if not declared or fidelity.session_output is None:
+            raise RenderHasNoDeclaredPlace(piece, format, outputs.get(format.name, []), "none of them names one file with one named part, in a session")
+        scope = cls._scope_of(graph_file, fidelity, [path for paths in outputs.values() for path in paths])
+        if not scope:
+            raise RenderHasNoDeclaredPlace(piece, format, declared, f"the graph holds no file of {fidelity.practice_guidance.key}, so nothing names what fills its named part")
+        return cls(fidelity.session_output.root / _NAMED_PART.sub(scope, declared[0]), format, Format("graph"))
+
+    @classmethod
+    def _scope_of(cls, graph_file: Path, fidelity: FidelityGuidance, declared: list[str]) -> str:
+        """What the graph was read from, as a name: the one file's own name, else the folder holding every file."""
+        practice = SavedGraph.from_file(graph_file).practices.get(fidelity.practice_guidance.key)
+        files = sorted({node.file for node in practice.nodes if node.file and PurePosixPath(node.file).suffix}) if practice is not None else []
+        if not files:
+            return ""
+        if len(files) == 1:
+            return Name(own_name(Path(files[0]), declared) or PurePosixPath(files[0]).stem).kebab
+        shared = PurePosixPath(os.path.commonpath([PurePosixPath(file).parent.as_posix() or "." for file in files]))
+        folder = shared.name or Path(practice.source_root or fidelity.session_output.root).name
+        return Name(folder).kebab
 
     def save(self, rendered: dict) -> dict:
         """Write the render into the file, and answer with the file rather than its text, so the agent has nothing to

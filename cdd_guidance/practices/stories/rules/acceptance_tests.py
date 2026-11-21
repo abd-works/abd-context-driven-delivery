@@ -17,17 +17,20 @@ if TYPE_CHECKING:
 
 # How each language Stories writes acceptance tests in names an examples file, lower-cased: TypeScript and JavaScript
 # `account-credentials.examples.ts`, Python `account_credentials_examples.py`.
+_PYTHON_EXAMPLES_ENDING = "_examples.py"
 _EXAMPLES_FILE_ENDINGS = {
     "typescript": ".examples.ts",
     "javascript": ".examples.js",
-    "python": "_examples.py",
+    "python": _PYTHON_EXAMPLES_ENDING,
 }
 
 
 class DomainFixtureExampleFiles(PracticeGraphRule):
-    """An example a story test in code uses sits in an examples file, named as its language names one, under an
-    examples folder. An example read from a markdown scenarios file is a row of a table there, which no examples
-    module holds, so only an example that comes from code is asked."""
+    """An example a story test in code uses sits in an examples file, named as its language names one. A TypeScript
+    or JavaScript one sits under an examples folder of its epic. A Python one sits wherever Python can import it,
+    beside the code it builds (``space/kanban/session_board_examples.py``): a story folder's name holds hyphens, which
+    no Python import can name. An example read from a markdown scenarios file is a row of a table there, which no
+    examples module holds, so only an example that comes from code is asked."""
 
     slug = "domain-fixture-example-files"
     node_types = ("Example",)
@@ -38,8 +41,10 @@ class DomainFixtureExampleFiles(PracticeGraphRule):
         if not Format.from_extension(PurePosixPath(name).suffix).is_code:
             return []
         if not name.endswith(tuple(_EXAMPLES_FILE_ENDINGS.values())):
-            return [f"Example file {name!r} should end with {self._ending_for(name)} under an examples/ folder."]
-        if "examples" not in PurePosixPath(path).parent.parts:
+            ending = self._ending_for(name)
+            where = "" if ending == _PYTHON_EXAMPLES_ENDING else " under an examples/ folder"
+            return [f"Example file {name!r} should end with {ending}{where}."]
+        if not name.endswith(_PYTHON_EXAMPLES_ENDING) and "examples" not in PurePosixPath(path).parent.parts:
             return [f"Example file {name!r} should live under an examples/ folder."]
         return []
 

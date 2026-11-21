@@ -47,6 +47,9 @@ CALLS_REACH_UNREAD = "unread"
 # A story map's epic is recorded as an Epic, or as a SubEpic under another epic; a map built on a graph without being
 # recorded calls every epic an Epic.
 _EPIC_TYPES = frozenset({"Epic", "SubEpic"})
+# Where a project with no story map keeps the story tests that are its map: its `tests` folder. A project with a story
+# map keeps them in `story_tests` beside it, where the map's stories take their scenarios from them.
+_MAP_LESS_TESTS_FOLDER = "tests"
 
 
 class StoriesReading(PracticeReading):
@@ -201,7 +204,8 @@ class StoriesReading(PracticeReading):
         epics: read in the first script language, TypeScript or JavaScript, whose story tests hold an epic. A project
         writes its story tests in one of them; the map of the first is empty when neither holds one."""
         read = None
-        for reader in self._script_readers:
+        for language in self._script_readers:
+            reader = type(language)(tests_root=_MAP_LESS_TESTS_FOLDER)
             files = self._script_texts(reader)
             report_progress("stories · parse")
             model = reader.parse(files, on_file=lambda detail: report_progress(f"stories · parse · {detail}"))

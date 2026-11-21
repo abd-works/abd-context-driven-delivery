@@ -118,6 +118,9 @@ class StoryNode(ModelNode, ABC):
         self.description_text: str = ""
         self.evidence: List[str] = []
         self.written: Optional[WrittenBlock] = None
+        # The story file a story was read with, in code: its path and its own code around its stories, which the
+        # stories read from one file share.
+        self.file_written: Optional[WrittenBlock] = None
         self.setup = CodeBody()
         self._start_map_facts()
 
@@ -163,6 +166,7 @@ class StoryNode(ModelNode, ABC):
     def take_code_from(self, source: "StoryNode") -> None:
         """Keep the code the source was read with, so a copy in another channel can still write it back."""
         self.written = getattr(source, "written", None)
+        self.file_written = getattr(source, "file_written", None)
         self.setup = getattr(source, "setup", CodeBody())
         if hasattr(self, "body"):
             self.body = getattr(source, "body", CodeBody())

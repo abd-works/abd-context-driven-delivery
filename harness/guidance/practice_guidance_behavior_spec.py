@@ -216,7 +216,7 @@ with description("a practice"):
                 self.root = Path(tempfile.mkdtemp(prefix="story-code-"))
                 leaf = (
                     self.root
-                    / "tests"
+                    / "story_tests"
                     / "manage-customer-orders"
                     / "place-new-order"
                     / "browse-product-catalog"
@@ -295,9 +295,11 @@ with description("story scenarios"):
             with context("that have been re-rendered in markdown"):
                 with it("should be markdown of those scenarios"):
                     python_tree = {
-                        "tests/stories/scenarios/browse-product-catalog/browse_product_catalog_story.test.py": (
-                            "Story: Browse Product Catalog\n"
-                            "SCENARIO: Default\n"
+                        "story_tests/stories/scenarios/browse-product-catalog/browse_product_catalog_story.test.py": (
+                            'with story("Browse Product Catalog"):\n'
+                            '    with scenario("Default"):\n'
+                            '        with given("a catalog"):\n'
+                            "            pass\n"
                         )
                     }
                     result = Stories(fidelity="scenarios").render(
@@ -309,9 +311,11 @@ with description("story scenarios"):
     with context("that the scenarios fidelity renders while its practice was made at the story map"):
         with it("should read them in the format the scenarios fidelity works in"):
             python_tree = {
-                "tests/stories/scenarios/browse-product-catalog/browse_product_catalog_story.test.py": (
-                    "Story: Browse Product Catalog\n"
-                    "SCENARIO: Default\n"
+                "story_tests/stories/scenarios/browse-product-catalog/browse_product_catalog_story.test.py": (
+                    'with story("Browse Product Catalog"):\n'
+                    '    with scenario("Default"):\n'
+                    '        with given("a catalog"):\n'
+                    "            pass\n"
                 )
             }
             scenarios = Stories(fidelity="story_map").fidelities["scenarios"]

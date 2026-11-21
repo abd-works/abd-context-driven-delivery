@@ -1354,6 +1354,24 @@ with description("a session whose branch changed code in the folder it works in"
         listed = [entry.path for entries in self.code.declared.files().values() for entry in entries]
         expect(listed).not_to(contain("work/orders/order_spec.py"))
 
+    # The file the fidelity declares in that folder, ``{module}/{module}.py``, is where a render writes a module's
+    # classes: it is listed with the code the branch changed, never searched for across the folder.
+    with context("that holds a module's own file the branch changed and another's it did not"):
+        with before.each:
+            for module in ("orders", "billing"):
+                (self.work / module).mkdir(exist_ok=True)
+                (self.work / module / f"{module}.py").write_text("x" + chr(10), encoding="utf-8")
+            session = Sessions(self.repo).current()
+            session.session_files.branch_changes.files = lambda: {(self.work / "orders" / "orders.py").resolve()}
+            self.code = session.practice("clean_engineering").fidelities["code"]
+
+        with it("should list the changed module file once and leave the unchanged one out"):
+            expect([entry.path for entry in self.code.declared.files()["python"]]).to(equal(["work/orders/orders.py"]))
+
+        with it("should not count the unchanged module file as output the fidelity already has"):
+            (self.work / "orders" / "orders.py").unlink()
+            expect(self.code.declared.has_output()).to(equal(False))
+
 
 # UX's front-end code is reviewed against the screens it was built from: its view code is Clean Engineering's code to
 # review, so the files a person reviews for it are the IA's and the mockup's, the design canvas opening at its link.

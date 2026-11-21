@@ -117,11 +117,12 @@ with description("a Python shared story file"):
             root = Path(folder.name)
             practice = PRACTICE_CATALOGUE.create("stories", fidelity="scenarios")
             paths = [str(root / "shop" / "edit-ticket-text.story.shared.py"), str(root / "story-map.md")]
-            self.markdown = str(practice.fidelities.current.render_files("markdown", paths, "python")["content"])
+            # The render answers a scenarios file for each story; the examples read them one after another.
+            self.markdown = "\n".join(practice.fidelities.current.render_files("markdown", paths, "python")["content"].values())
             folder.cleanup()
 
         with it("should write the scenario's steps"):
             expect(self.markdown).to(contain("*When* the Person opens the board"))
 
         with it("should write the examples its fixtures give under the kind of fixture they are"):
-            expect(self.markdown).to(contain("##### SessionSeed\n\n| example | name | title |\n| --- | --- | --- |\n| CHECKOUT_FLOW | checkout-flow | Checkout flow |"))
+            expect(self.markdown).to(contain("#### SessionSeed\n\n| example | name | title |\n| --- | --- | --- |\n| CHECKOUT_FLOW | checkout-flow | Checkout flow |"))

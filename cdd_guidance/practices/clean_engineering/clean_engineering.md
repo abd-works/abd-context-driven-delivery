@@ -157,8 +157,9 @@ default_format: python
 stage: specification
 judged_on: graph
 outputs:
-  python: "{module}/"
-  typescript: "{module}/"
+  python: ["{module}/", "{module}/{module}.py"]
+  typescript: ["{module}/", "{module}/{module}.ts"]
+  javascript: ["{module}/", "{module}/{module}.js"]
   markdown: "{module}/.context/{module}-model.md"
   drawio: "{module}/.context/{module}-model.drawio"
   whiteboard: "{module}/.context/{module}-model.whiteboard"
@@ -270,8 +271,9 @@ default_format: python
 stage: implementation
 judged_on: graph
 outputs:
-  python: "{module}/"
-  typescript: "{module}/"
+  python: ["{module}/", "{module}/{module}.py"]
+  typescript: ["{module}/", "{module}/{module}.ts"]
+  javascript: ["{module}/", "{module}/{module}.js"]
 ```
 
 #### Overview

@@ -181,3 +181,44 @@ Observed (`cdd_guidance/actions/render/render_spec.py`). Written after explorato
 *When* Claude Code renders `graphs/graph.json` to markdown at ++bdd-realization++ with source graph
 *Then* the answer holds the realization and names `.context/{scope}-bdd-realization.md` as where the fidelity declares it
   *And* no `graph.md` is saved beside `graphs/graph.json`
+
+#### Scenario Outline: Save a story test for each story where the fidelity declares it
+
+Observed (`cdd_guidance/practices/stories/stories_render_saves_heavy_spec.py`, `cdd_guidance/practices/stories/model/code_story_behaviours_spec.py`). Written after exploratory testing round 3 (defect r3-sparky-07): every Stories render to code in a session was refused, because the story formats named their files `tests/{epic}/{sub_epic}_story.test` while the fidelities declare one file for each story under `story_tests`.
+
+*Given* the Pack Orders project holds the stories Pack Order and Cancel Order as markdown scenarios under the sub-epic Pack Orders
+*When* Claude Code renders `story_tests` to <format> at <fidelity>
+*Then* render saves `pack_order_story.test` and `cancel_order_story.test`, each in a folder of the story's own under `story_tests/fulfil-order/pack-orders`
+  *And* a render to TypeScript or JavaScript saves the step library at `story_tests`
+  *And* the result names the saved files and answers no code
+
+| format | fidelity |
+| --- | --- |
+| python | stories-scenarios |
+| typescript | stories-acceptance-tests |
+| javascript | stories-acceptance-tests |
+
+#### Scenario: Import the step library by the path from the folder a JavaScript story test is saved in
+
+Observed (`stories_render_saves_heavy_spec.py`, `cdd_guidance/practices/stories/model/javascript/javascript_story_model_spec.py`).
+
+*Given* the Pack Orders project holds the story Pack Order as markdown scenarios
+*When* Claude Code renders `story_tests` to javascript at ++stories-acceptance-tests++
+*Then* `pack-order/pack_order_story.test.js` imports the step library from `../../../story-test.js`
+
+#### Scenario: Write a story test only for the stories the named file holds
+
+Observed (`stories_render_saves_heavy_spec.py`, `cdd_guidance/practices/stories/scenarios_code_render_spec.py`). Written after defect r3-sparky-07: a render of one shared story file wrote a story test for every story of the map.
+
+*Given* the Pack Orders project holds its story tests in TypeScript, the story Cancel Order in `pack-orders.story.shared.ts`
+*When* Claude Code renders `pack-orders.story.shared.ts` to python at ++stories-acceptance-tests++
+*Then* render saves `cancel-order/cancel_order_story.test.py`
+  *But* no story test for Pack Order, which that file does not hold
+
+#### Scenario: Save a scenarios file for each story of a folder of story tests
+
+Observed (`stories_render_saves_heavy_spec.py`, `scenarios_code_render_spec.py`). Before, a render of a folder of story tests to markdown made one text no declared path could place, and was refused.
+
+*Given* the Pack Orders project holds its story tests in TypeScript
+*When* Claude Code renders `story_tests` to markdown at ++stories-scenarios++
+*Then* render saves `pack_order_story.test.md` and `cancel_order_story.test.md` in `story_tests/fulfil-order/pack-orders`, as the scenarios fidelity declares them

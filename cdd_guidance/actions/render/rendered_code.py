@@ -1,7 +1,7 @@
 """The files a render to code saves: one for each piece of the rendered code, at the path the fidelity declares for it.
 
 A render to Python, TypeScript or JavaScript ends in saved files, as a render to a drawing or a document does, and its
-result names them; no code is answered for an agent to save. The rendered code comes in one of three shapes, and each
+result names them; no code is answered for an agent to save. The rendered code comes in one of four shapes, and each
 piece of it is placed by the fidelity's declared paths for the format alone:
 
 - **A file for each name** (a path with its text, as a practice whose formats write several files answers): each path
@@ -10,9 +10,14 @@ piece of it is placed by the fidelity's declared paths for the format alone:
   banner the code class model writes between modules): the text is cut at the banners, each section keeps the text's
   opening lines, and the names of its banner fill the named parts of the declared path in the order they come, so
   ``{bounded_context}/{aggregate}/{aggregate}.py`` writes ``ordering/cart/cart.py``.
-- **One text from one source file**: saved beside the source under the name the fidelity declares for the format, the
+- **One text of one piece from one of the fidelity's own files**: saved as that file in the other format, the named
+  parts read off the source's declared path, so ``catalogue/book/book.ts`` is saved as ``catalogue/book/book.py`` and
+  ``src/ordering/.context/ordering-model.md`` as ``src/ordering/ordering.py``.
+- **One text from one source file no named path places**: saved beside the source under the name the fidelity declares for the format, the
   source's own name read off the path the fidelity declares for the source, so ``CartView.tsx`` against
-  ``**/*View.tsx`` is saved as ``CartView.jsx`` for ``**/*View.jsx``.
+  ``**/*View.tsx`` is saved as ``CartView.jsx`` for ``**/*View.jsx``, and ``cart_spec.py`` as ``cart.spec.ts``. A
+  source that is a document in a ``.context`` folder, such as ``.context/bookshop-bdd-realization.md``, describes the
+  folder that ``.context`` sits in, so its code is saved there, named for its scope: ``bookshop_spec.py``.
 
 A piece the declared paths cannot place is refused with *RenderHasNoDeclaredPlace*, and nothing is saved: a file
 written under a name nobody declared is read by no practice.
@@ -30,6 +35,7 @@ from pathlib import Path, PurePosixPath
 
 from harness.annotations.name import Name
 from harness.guidance.declared_outputs import DeclaredFile
+from harness.installation.context_config import CONTEXT_FOLDER
 from harness.markdown.format import Format
 
 # A banner comment between the sections of one rendered text: ``# === Ordering | custom · Cart ===`` in Python,
@@ -41,6 +47,30 @@ _NAME_SEPARATOR = " · "
 _NAME_NOTE = " | "
 _NAMED_PART = re.compile(r"\{([^{}/]+)\}")
 _ONE_NAME = "*"
+
+
+def own_name(source: Path, declared: list[str]) -> str | None:
+    """The source's own name, read off the first of the declared paths that names it: ``Cart`` for ``CartView.tsx``
+    against ``**/*View.tsx``, ``cart`` for ``cart_spec.py`` against ``**/*_spec.py``, and ``bookshop`` for
+    ``.context/bookshop-bdd-realization.md`` against ``.context/{scope}-bdd-realization.md``. None when no declared
+    path names it, or the one that does leaves where the name ends unsaid."""
+    for path in declared:
+        before, found, after = PurePosixPath(path).name.partition(_ONE_NAME)
+        if found and _ONE_NAME not in after and _says_where_name_ends(before, after):
+            named = re.fullmatch(re.escape(before) + "(.+)" + re.escape(after), source.name)
+            if named is not None:
+                return named.group(1)
+        parts = set(DeclaredFile(path).parts_of(source.as_posix()).values()) if _NAMED_PART.search(path) and not path.endswith("/") else set()
+        if len(parts) == 1:
+            return parts.pop()
+    return None
+
+
+def _says_where_name_ends(before: str, after: str) -> bool:
+    """Whether a declared file name says where the name in it ends: what follows the name starts with a mark or a
+    capital, as ``_spec.py``, ``.spec.ts`` and ``View.jsx`` do. ``*spec.ts`` does not: ``cartspec.ts`` and
+    ``cart.spec.ts`` both fit it."""
+    return bool(before) or (bool(after) and not (after[0].islower() or after[0].isdigit()))
 
 
 class RenderHasNoDeclaredPlace(ValueError):
@@ -91,6 +121,11 @@ class RenderedCode:
         if isinstance(content, dict):
             return {self._declared_file(str(path)): str(text) for path, text in content.items()}
         sections = self._sections(str(content))
+        # One text of one piece, rendered from one of the fidelity's own files, is that file in the other format: the
+        # source's own path says which folder it is, which a banner's name alone does not (``src/ordering``).
+        counterpart = self._counterpart_of(self._source) if self._source is not None and len(sections) <= 1 else None
+        if counterpart is not None:
+            return {counterpart: str(content)}
         if sections:
             return {self._section_file(names): text for names, text in sections}
         return {self._beside_source(): str(content)}
@@ -122,33 +157,33 @@ class RenderedCode:
                 return self._root / _NAMED_PART.sub(lambda part: filled[part.group(1)], declared)
         raise RenderHasNoDeclaredPlace(f"the section {banner}", self._format, self._declared, "none of them names a file with a part for each of the section's names")
 
+    def _counterpart_of(self, source: Path) -> Path | None:
+        """The file the format declares for the same named parts the source's declared path reads off it, where the
+        source's declared path starts: ``catalogue/book/book.py`` for ``catalogue/book/book.ts`` against
+        ``{bounded_context}/{aggregate}/{aggregate}.ts``. None when no declared path with named parts names the source,
+        or the format declares none those parts fill."""
+        written = source.as_posix()
+        for named_by in (DeclaredFile(path) for path in self._source_declared if _NAMED_PART.search(path) and not path.endswith("/")):
+            parts = named_by.parts_of(written)
+            placed = (DeclaredFile(path).named_with(parts) for path in self._declared if parts and not path.endswith("/"))
+            found = next((path for path in placed if path), "")
+            if found:
+                start = named_by.start_of(written)
+                return Path(start) / found if start else self._root / found
+        return None
+
     def _beside_source(self) -> Path:
-        """The file one text rendered from one source goes to: beside the source, under the declared path's name with
-        the source's own name in it."""
+        """The file one text rendered from one source goes to: beside the source, or beside the ``.context`` folder a
+        document sits in, under the declared path's name with the source's own name in it."""
         source = self._source
         if source is None:
             raise RenderHasNoDeclaredPlace("one text from no single source file", self._format, self._declared, "nothing names its file")
-        name = self._name_of(source)
+        name = own_name(source, self._source_declared)
         if name is None:
             raise RenderHasNoDeclaredPlace(f"code from {source.name}", self._format, self._declared, f"no path the fidelity declares names {source.name}, so its own name cannot be read")
+        folder = source.parent.parent if source.parent.name == CONTEXT_FOLDER else source.parent
         for declared in self._declared:
             before, found, after = PurePosixPath(declared).name.partition(_ONE_NAME)
-            if found and _ONE_NAME not in after and self._joins(before, after):
-                return source.parent / f"{before}{name}{after}"
+            if found and _ONE_NAME not in after and _says_where_name_ends(before, after):
+                return folder / f"{before}{name}{after}"
         raise RenderHasNoDeclaredPlace(f"code from {source.name}", self._format, self._declared, "none of them says how the source's name joins the file's name, as `*.spec.ts` or `*View.jsx` does")
-
-    def _name_of(self, source: Path) -> str | None:
-        """The source's own name, read off the first declared path with one ``*`` in its file name that names it:
-        ``Cart`` for ``CartView.tsx`` against ``**/*View.tsx``."""
-        for declared in self._source_declared:
-            before, found, after = PurePosixPath(declared).name.partition(_ONE_NAME)
-            named = re.fullmatch(re.escape(before) + "(.+)" + re.escape(after), source.name) if found and _ONE_NAME not in after else None
-            if named is not None and self._joins(before, after):
-                return named.group(1)
-        return None
-
-    def _joins(self, before: str, after: str) -> bool:
-        """Whether a declared file name says where the name ends: what follows it starts with a mark or a capital, as
-        ``_spec.py``, ``.spec.ts`` and ``View.jsx`` do. ``*spec.ts`` does not: ``cartspec.ts`` and ``cart.spec.ts``
-        both fit it."""
-        return bool(before) or (bool(after) and not (after[0].islower() or after[0].isdigit()))

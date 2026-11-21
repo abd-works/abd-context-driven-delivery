@@ -112,6 +112,13 @@ class DeclaredOutputs:
             for label, names in self.outputs.items()
         }
 
+    def code_folders(self) -> list[str]:
+        """The code formats the fidelity writes as a folder for each module, such as Clean Engineering's ``{module}/``:
+        each code format one of whose declared paths is a folder. A file it declares in that folder beside it, such as
+        ``{module}/{module}.py``, says where a render writes."""
+        declared = ((label, [names] if isinstance(names, str) else names) for label, names in self.outputs.items())
+        return [label for label, names in declared if Format(label).is_code and any(name.endswith("/") for name in names)]
+
     def includes(self, path: str, format: str = "") -> bool:
         """Whether path, written from the project's root or absolute, is a file one of the outputs names, in format when
         one is named: a declared file such as ``{bounded_context}/{aggregate}/{aggregate}.ts`` matches the end of a

@@ -463,12 +463,20 @@ class WrittenFiles:
             for label, declared in self._fidelity.outputs.items()
         }
 
+    def _listed_paths(self) -> dict[str, list[str]]:
+        """The declared paths a page lists files by. A code format written as a folder for each module is listed by its
+        folders alone, as the code the session worked on: the file it declares in that folder, such as
+        ``{module}/{module}.py``, says where a render writes and is one of those files once the session changes it, so
+        it is not searched for across every module."""
+        folders = self._fidelity.declared.code_folders()
+        return {label: [path for path in paths if path.endswith("/")] if label in folders else paths for label, paths in self.output_paths().items()}
+
     def files(self) -> dict[str, list[FileEntry]]:
         """The files this fidelity declares in the session, by format, each with its path from the project, whether it
         exists, and whether the session's branch changed it, so a page can show only the changed ones."""
         # Asking git what the branch changed is slow, so it is asked only once a file is there.
         changed = cache(self._session.session_files.branch_changes.files)
-        output_paths = self.output_paths()
+        output_paths = self._listed_paths()
         found = self._found_by_pattern(self._listed(path) for paths in output_paths.values() for path in paths)
         return {
             label: [entry for path in paths for entry in self._declared_files(label, path, changed, found)]
@@ -498,14 +506,13 @@ class WrittenFiles:
         roots = [root.resolve() for root in self._output.roots]
         if not any(root in file.resolve().parents for root in roots) or is_test_code(file.as_posix()):
             return False
-        folders = [label for label, declared in self._fidelity.outputs.items() if str(declared).endswith("/") and Format(label).is_code]
-        return any(file.suffix in code_extensions(label) for label in folders)
+        return any(file.suffix in code_extensions(label) for label in self._fidelity.declared.code_folders())
 
     def every_file(self) -> list[Path]:
         """Every file this fidelity declares that is in the session's checkout, worked on by the session or not: what a
         reader links to, such as each acceptance test of a story."""
         repo = self._session.repo
-        listed = [(label, self._listed(path)) for label, paths in self.output_paths().items() for path in paths]
+        listed = [(label, self._listed(path)) for label, paths in self._listed_paths().items() for path in paths]
         searched = self._found_by_pattern(declared for _label, declared in listed)
         found: list[Path] = []
         for label, declared in listed:
@@ -533,7 +540,7 @@ class WrittenFiles:
         return any(self._found(label, file, searched) for label, file in patterns)
 
     def _declared_outputs(self) -> list[tuple[str, DeclaredFile]]:
-        return [(label, self._declared(path)) for label, paths in self.output_paths().items() for path in paths]
+        return [(label, self._declared(path)) for label, paths in self._listed_paths().items() for path in paths]
 
     def _declared(self, path: str) -> DeclaredFile:
         """A declared path under this fidelity's root, as a path from the project."""

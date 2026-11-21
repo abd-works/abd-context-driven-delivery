@@ -12,6 +12,7 @@ from cdd_guidance.practices.stories.model.fixtures.round_trip_story_map import o
 from cdd_guidance.practices.stories.model.javascript.javascript_story_model import JavaScriptStoryModel
 from cdd_guidance.practices.stories.model.python.python_story_model import PythonStoryModel
 from cdd_guidance.practices.stories.model.story_model import Epic, Scenario, Step, StepType, Story, StoryModel, StoryType
+from cdd_guidance.practices.stories.stories import Stories
 from cdd_guidance.practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
 
 _SCRIPT_TEST = """\
@@ -104,12 +105,43 @@ with shared_context("a story map written as story tests and read back"):
         self.leaf_paths = sorted(path for path in self.tree if model.is_story_file(path))
         self.read_back = model.parse(self.tree)
 
-    with it("should write one story test for each sub-epic, in its parent epic's folder"):
+    with it("should write one story test for each story, in the story's own folder under its sub-epic's"):
         suffix = self.model_type.story_file_suffixes[0]
-        expect([path for path in self.leaf_paths if not path.endswith(suffix) or "/epic-1/epic_1_" not in path]).to(equal([]))
+        expected = [f"tests/epic-1/epic-1-{number}/redeem-a-voucher/redeem_a_voucher{suffix}" for number in (1, 2, 3)]
+        expect(self.leaf_paths).to(equal(expected))
 
-    with it("should write no folder for a story"):
-        expect([path for path in self.leaf_paths if "/redeem-a-voucher/" in path]).to(equal([]))
+    with it("should write a story its epic holds itself in the story's own folder under the epic's"):
+        model = self.model_type()
+        written = [path for path in model.render(_epics_each_with_a_story(2)) if model.is_story_file(path)]
+        suffix = self.model_type.story_file_suffixes[0]
+        expect(sorted(written)).to(equal([f"tests/epic-1/story-1/story_1{suffix}", f"tests/epic-2/story-2/story_2{suffix}"]))
+
+    with it("should read a story its epic holds itself back onto that epic, with no sub-epic between"):
+        model = self.model_type()
+        read = model.parse(model.render(_epics_each_with_a_story(2)))
+        expect([(epic.name, [story.name for story in epic.stories], len(epic.epics)) for epic in read.epics]).to(
+            equal([("Epic 1", ["Story 1"], 0), ("Epic 2", ["Story 2"], 0)])
+        )
+
+    with it("should read an epic's stories back in the map's order, whatever their names"):
+        model = self.model_type()
+        story_map = StoryModel()
+        epic = Epic("Sell Books", 1)
+        epic.stories = [Story(name, order) for order, name in enumerate(("Take Order", "Pack Order", "Bill Order"), start=1)]
+        story_map.epics.append(epic)
+        expect([story.name for story in model.parse(model.render(story_map)).epics[0].stories]).to(equal(["Take Order", "Pack Order", "Bill Order"]))
+
+    with it("should write every file at a path the acceptance tests fidelity declares, when the practice renders"):
+        practice = Stories()
+        declared = practice.fidelities.entries["acceptance_tests"].declared
+        written = practice.formats.adapter(self.format_name).render(_voucher_map())
+        expect([path for path in written if not declared.includes(path, self.format_name)]).to(equal([]))
+
+    with it("should write every file at a path the scenarios fidelity declares, when the practice renders"):
+        practice = Stories()
+        declared = practice.fidelities.entries["scenarios"].declared
+        written = practice.formats.adapter(self.format_name).render(_voucher_map())
+        expect([path for path in written if not declared.includes(path, self.format_name)]).to(equal([]))
 
     with it("should write under the tests folder when no root is named"):
         expect([path for path in self.leaf_paths if not path.startswith("tests/")]).to(equal([]))
@@ -190,6 +222,10 @@ with shared_context("a script story map and its step library"):
     with it("should not take the step library for a story file"):
         expect(self.model_type("tests").is_story_file(f"test-utils/story-test/story-test{self.extension}")).to(be_false)
 
+    with it("should take the step library folder its practice names, when the practice makes it"):
+        practice = Stories(story_test_folder="test-utils/story-test")
+        expect(practice.formats.adapter(self.format_name).story_test_folder).to(equal("test-utils/story-test"))
+
     with it("should take a shared story file and a screen spec for story files"):
         names = [f"tests/checkout/checkout.story.shared{self.extension}", f"tests/checkout/checkout.story.ui.spec{self.extension}"]
         expect([name for name in names if not self.model_type().is_story_file(name)]).to(equal([]))
@@ -210,6 +246,7 @@ with description("a story map created as story tests") as self:
     with context("in Python"):
         with before.all:
             self.model_type = PythonStoryModel
+            self.format_name = "python"
             self.story_file = ("tests/place-orders/check_out_story.test.py", _PYTHON_TEST)
 
         with included_context("a story map written as story tests and read back"):
@@ -228,6 +265,7 @@ with description("a story map created as story tests") as self:
     with context("in TypeScript"):
         with before.all:
             self.model_type = TypeScriptStoryModel
+            self.format_name = "typescript"
             self.story_file = ("tests/place-orders/check_out_story.test.ts", _SCRIPT_TEST)
 
         with included_context("a story map written as story tests and read back"):
@@ -242,6 +280,7 @@ with description("a story map created as story tests") as self:
     with context("in JavaScript"):
         with before.all:
             self.model_type = JavaScriptStoryModel
+            self.format_name = "javascript"
             self.story_file = ("tests/place-orders/check_out_story.test.js", _SCRIPT_TEST)
 
         with included_context("a story map written as story tests and read back"):

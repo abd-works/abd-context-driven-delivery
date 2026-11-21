@@ -264,3 +264,35 @@ Observed (`cdd_guidance/practices/bdd/model/code_spec_render_spec.py`).
 *Given* a finished JavaScript spec of a cart, with its imports, its `beforeEach` and one test body
 *When* Claude Code renders it to typescript and renders that back to javascript
 *Then* the spec comes back as it was written
+
+#### Scenario: Save a class model rendered to code in each module's own file
+
+Observed (`cdd_guidance/practices/clean_engineering/model/class_model_languages_spec.py`, `cdd_guidance/practices/clean_engineering/class_model_render_heavy_spec.py`). Written after the person's answer of 2026-11-20: every render ends in a saved file. The model is created from the module written in one language, then checked by the same examples.
+
+*Given* the Ordering module's class model is written as <source>
+*When* Claude Code renders it to <code format> at the Clean Engineering model fidelity
+*Then* the module's classes are saved in `ordering/ordering` with that format's extension
+  *And* that file is one the fidelity declares for the format, `{module}/{module}` with the extension
+
+| source | code format |
+| --- | --- |
+| a markdown class model | python, typescript, javascript |
+| Python code | python, typescript, javascript |
+| TypeScript code | python, typescript, javascript |
+| JavaScript code | python, typescript, javascript |
+
+#### Scenario: Save a domain model rendered to code in each aggregate's own file
+
+Observed (`cdd_guidance/practices/ddd/model/domain_model_languages_spec.py`, `cdd_guidance/practices/ddd/domain_model_render_heavy_spec.py`). DDD writes JavaScript with the class model TypeScript is written with, its types left out.
+
+*Given* the Ordering bounded context, with its aggregates Cart and Order, is written as <source>
+*When* Claude Code renders it to <code format> at the DDD model fidelity
+*Then* each aggregate's classes are saved in `ordering/cart/cart` and `ordering/order/order` with that format's extension
+  *And* each file is one the fidelity declares for the format
+
+| source | code format |
+| --- | --- |
+| a markdown domain model | python, typescript, javascript |
+| Python code whose classes name their place | python, typescript, javascript |
+| TypeScript code whose classes name their place | python, typescript, javascript |
+| JavaScript code whose classes name their place | python, typescript, javascript |

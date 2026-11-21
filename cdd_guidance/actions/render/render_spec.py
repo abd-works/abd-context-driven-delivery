@@ -21,6 +21,7 @@ from cdd_guidance.actions.render.render import Render
 from cdd_guidance.actions.render.rendered_code import RenderHasNoDeclaredPlace
 from cdd_guidance.actions.render.rendered_file import NothingToRender
 from cdd_guidance.actions.render.worker_render import RenderFailed
+from cdd_guidance.practices.stories.stories import Stories
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.agent_tools.tool_call import ToolCall
 from harness.graph.saved_graph import SavedGraph
@@ -82,6 +83,23 @@ An order is a cart a customer submitted.
 + orderId: OrderId
 ----
 + submit(): void
+"""
+_CART_SPEC = """from mamba import description, it
+
+
+with description("a cart"):
+    with it("should total its lines"):
+        pass
+"""
+_REALIZATION = """# Bookshop BDD realization
+
+## a cart
+
+### it should total its lines
+
+```
+Cart.total()
+```
 """
 _WORKER_TRACEBACK = """Traceback (most recent call last):
   File "<frozen runpy>", line 198, in _run_module_as_main
@@ -172,27 +190,16 @@ with description("Render"):
 
     with it("should read a sketch from a file path and leave the document body off the call"):
         folder = Path(tempfile.mkdtemp(prefix="render-paths-"))
-        sketch = folder / "cart-sketch.md"
-        sketch.write_text("Cart\n  owner\n", encoding="utf-8")
-        results = Render().render(
-            ["clean-engineering-model"],
-            format="python",
-            paths=[str(sketch)],
-            source="sketch",
-        )
-        expect(len(results)).to(equal(1))
-        expect(str(results[0]["content"])).to(contain("Cart"))
+        sketch = folder / "orders-sketch.md"
+        sketch.write_text(_STORY_MAP, encoding="utf-8")
+        results = Render().render(_STORIES, format="markdown", paths=[str(sketch)], source="sketch")
+        expect(Path(results[0]["path"]).read_text(encoding="utf-8")).to(contain("Browse Product Catalog"))
 
     with it("should read the sketches in a folder"):
         folder = Path(tempfile.mkdtemp(prefix="render-folder-"))
-        (folder / "cart-sketch.md").write_text("Cart\n  owner\n", encoding="utf-8")
-        results = Render().render(
-            ["clean-engineering-model"],
-            format="python",
-            paths=str(folder),
-            source="sketch",
-        )
-        expect(str(results[0]["content"])).to(contain("Cart"))
+        (folder / "orders-sketch.md").write_text(_STORY_MAP, encoding="utf-8")
+        results = Render().render(_STORIES, format="markdown", paths=str(folder), source="sketch")
+        expect(Path(results[0]["path"]).read_text(encoding="utf-8")).to(contain("Browse Product Catalog"))
 
     with it("should read the story tests in a folder under their story map"):
         folder = Path(tempfile.mkdtemp(prefix="render-story-tests-"))
@@ -200,13 +207,8 @@ with description("Render"):
         story_test = folder / "manage-customer-orders" / "place-new-order" / "browse-product-catalog"
         story_test.mkdir(parents=True)
         (story_test / "browse_product_catalog_story.test.py").write_text(_STORY_TEST, encoding="utf-8")
-        results = Render().render(
-            ["stories-scenarios"],
-            format="markdown",
-            paths=str(folder),
-            source="python",
-        )
-        expect(str(results[0]["content"])).to(contain("Scenario: Show the products in stock"))
+        rendered = Stories(fidelity="scenarios").fidelities.current.render_files("markdown", str(folder), "python")
+        expect(str(rendered["content"])).to(contain("Scenario: Show the products in stock"))
 
     with it("should link a rendered story map to the story files beside the map it reads"):
         folder = Path(tempfile.mkdtemp(prefix="render-links-"))
@@ -399,12 +401,16 @@ with description("Render saving what it makes beside its source") as self:
         with before.each:
             self.sketch = self.folder / "cart-sketch.md"
             self.sketch.write_text("Cart\n  owner\n", encoding="utf-8")
-            self.results = Render().render(["clean-engineering-model"], format="python", paths=[str(self.sketch)], source="sketch")
+            self.render = lambda: Render().render(["clean-engineering-model"], format="python", paths=[str(self.sketch)], source="sketch")
 
-        with it("should answer the code to the Python that called it, since no session says where it is written"):
-            expect(str(self.results[0]["content"])).to(contain("Cart"))
+        with it("should refuse, since no session says where the code is written"):
+            expect(self.render).to(raise_error(RenderHasNoDeclaredPlace, contain("in a session")))
 
         with it("should save no file"):
+            try:
+                self.render()
+            except RenderHasNoDeclaredPlace:
+                pass
             expect(sorted(path.name for path in self.folder.iterdir())).to(equal(["cart-sketch.md", "story-map.md"]))
 
     with context("a story map rendered to whiteboard"):
@@ -503,22 +509,61 @@ with description("Render asked for a path, in a session") as self:
             expect((self.folder / "story-map.drawio").read_text(encoding="utf-8")).to(contain("Browse Product Catalog"))
 
     # Exploratory testing, r3-rivet-08: a realization rendered from a saved graph was saved as graph.md beside the graph,
-    # a name no fidelity writes, while the fidelity declares .context/{scope}-bdd-realization.md.
-    with context("that is a saved graph, rendered to the markdown realization"):
+    # a name no fidelity writes, while the fidelity declares .context/{scope}-bdd-realization.md. The person's answer
+    # (2026-11-20): every render ends in a saved file, so its scope is named from what the graph was read from.
+    with context("that is a saved graph read from one spec, rendered to the markdown realization"):
+        with before.each:
+            (self.project.root / "src" / "ordering").mkdir(parents=True)
+            (self.project.root / "src" / "ordering" / "cart_spec.py").write_text(_CART_SPEC, encoding="utf-8")
+            graph = self.action.session.graph
+            graph.load_files(str(self.project.root), ["bdd"], ["src/ordering/cart_spec.py"])
+            self.graph_file = Path(graph.save_json().path)
+            self.results = self.action.render("bdd-realization", format="markdown", source="graph", paths=[str(self.graph_file)])
+
+        with it("should save the realization where the fidelity declares it, its scope named for the spec"):
+            expect(Path(self.results[0]["path"]).relative_to(self.project.root).as_posix()).to(equal(".context/cart-bdd-realization.md"))
+
+        with it("should write the spec's subject into it"):
+            expect((self.folder / "cart-bdd-realization.md").read_text(encoding="utf-8")).to(contain("a cart"))
+
+        with it("should answer no content for the agent to save"):
+            expect("content" in self.results[0]).to(equal(False))
+
+    with context("that is a saved graph holding no spec, rendered to the markdown realization"):
         with before.each:
             self.graphs = self.project.root / "graphs"
             self.graphs.mkdir()
             (self.graphs / "graph.json").write_text(SavedGraph.from_violations([]).text, encoding="utf-8")
-            self.results = self.action.render("bdd-realization", format="markdown", source="graph", paths=["graphs/graph.json"])
+            self.render = lambda: self.action.render("bdd-realization", format="markdown", source="graph", paths=["graphs/graph.json"])
+
+        with it("should refuse, since nothing in the graph names the realization's scope"):
+            expect(self.render).to(raise_error(RenderHasNoDeclaredPlace, contain("{scope}")))
 
         with it("should save no file named after the graph"):
+            try:
+                self.render()
+            except RenderHasNoDeclaredPlace:
+                pass
             expect(sorted(path.name for path in self.graphs.iterdir())).to(equal(["graph.json"]))
 
-        with it("should answer with the realization, which only the agent can name for its scope"):
-            expect("content" in self.results[0]).to(equal(True))
+    with context("that is a spec in Python, rendered to TypeScript"):
+        with before.each:
+            (self.project.root / "src" / "ordering").mkdir(parents=True)
+            (self.project.root / "src" / "ordering" / "cart_spec.py").write_text(_CART_SPEC, encoding="utf-8")
+            self.results = self.action.render("bdd-behavior", format="typescript", paths=["src/ordering/cart_spec.py"])
 
-        with it("should say where the fidelity declares the file, for the agent to write it there"):
-            expect(self.results[0]["declared_at"][0]).to(end_with(".context/{scope}-bdd-realization.md"))
+        with it("should save the spec beside it under the name TypeScript specs carry"):
+            saved = [Path(path).relative_to(self.project.root).as_posix() for path in self.results[0]["paths"]]
+            expect(saved).to(equal(["src/ordering/cart.spec.ts"]))
+
+    with context("that is a realization in markdown, rendered to Python"):
+        with before.each:
+            (self.folder / "bookshop-bdd-realization.md").write_text(_REALIZATION, encoding="utf-8")
+            self.results = self.action.render("bdd-realization", format="python", paths=[".context/bookshop-bdd-realization.md"])
+
+        with it("should save one spec named for the realization's scope, in the folder its .context sits in"):
+            saved = [Path(path).relative_to(self.project.root).as_posix() for path in self.results[0]["paths"]]
+            expect(saved).to(equal(["bookshop_spec.py"]))
 
     # Exploratory testing, r3-bolt-06 and r3-sparky-07: a render to code answered its content and saved nothing. The
     # person's answer (2026-11-20): every render ends in a saved file.
@@ -549,14 +594,15 @@ with description("Render asked for a path, in a session") as self:
             with it("should name the file as kept"):
                 expect([Path(path).name for path in self.results[0]["kept"]]).to(equal(["cart.py"]))
 
-    with context("that is a class model in markdown, rendered to Python, for which the fidelity declares a folder and no file"):
+    with context("that is the class model of one module in markdown, rendered to Python"):
         with before.each:
             (self.project.root / "src" / "ordering" / ".context").mkdir(parents=True)
             (self.project.root / "src" / "ordering" / ".context" / "ordering-model.md").write_text(_CLASS_MODEL, encoding="utf-8")
-            self.render = lambda: self.action.render("clean-engineering-model", format="python", paths=["src/ordering/.context/ordering-model.md"])
+            self.results = self.action.render("clean-engineering-model", format="python", paths=["src/ordering/.context/ordering-model.md"])
 
-        with it("should refuse, saying the declared paths cannot place the code"):
-            expect(self.render).to(raise_error(RenderHasNoDeclaredPlace, contain("{module}/")))
+        with it("should save the module's code in the module's own folder, where the model's .context sits"):
+            saved = [Path(path).relative_to(self.project.root).as_posix() for path in self.results[0]["paths"]]
+            expect(saved).to(equal(["src/ordering/ordering.py"]))
 
     with context("that tells the agent what to do with what it rendered"):
         with it("should not tell the agent to write rendered content itself"):

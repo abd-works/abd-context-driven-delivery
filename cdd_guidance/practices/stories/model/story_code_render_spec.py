@@ -16,8 +16,8 @@ import cdd_guidance.practices  # noqa: F401
 from cdd_guidance.practices.stories.stories import Stories
 from harness.markdown.format import Format
 
-_TS_PATH = "tests/onboard-a-customer/create-customer/create_customer.story.shared.ts"
-_PY_PATH = "tests/onboard-a-customer/create-customer/create_customer_story.test.py"
+_TS_PATH = "story_tests/onboard-a-customer/create-customer/create_customer.story.shared.ts"
+_PY_PATH = "story_tests/onboard-a-customer/create-customer/create_customer_story.test.py"
 
 _CUSTOMER_TYPESCRIPT = """\
 /**
@@ -160,7 +160,7 @@ with description("a story tree rendered to code"):
     with context("that was read from a javascript story file"):
         with context("that is rendered back to javascript"):
             with it("should write the file back as it was read"):
-                path = "tests/onboard-a-customer/create-customer/create_customer_story.test.js"
+                path = "story_tests/onboard-a-customer/create-customer/create_customer_story.test.js"
                 javascript = _CUSTOMER_TYPESCRIPT.replace("let credentials: Credentials;", "let credentials;").replace(
                     "    let customerProfile: CustomerProfile;", "    let customerProfile;"
                 ).replace("    let caughtError: unknown;", "    let caughtError;").replace("shareStory", "story")

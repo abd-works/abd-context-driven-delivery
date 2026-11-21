@@ -19,7 +19,7 @@ TESTS_ROOT = "story_tests"
 _STEP_TYPES = ("Given", "When", "Then", "Step")
 _PRACTICES = ("stories", "clean_engineering")
 
-_STORY_MAP = """\
+PACK_ORDERS_STORY_MAP = """\
 # Story Map — Shop
 
 # (E) Fulfil Order
@@ -367,7 +367,7 @@ def _script_files(extension: str, module: str) -> dict[str, str]:
     return {path: text.replace("{module}", module) for path, text in texts.items()}
 
 
-_FILES = {
+PACK_ORDERS_FILES = {
     "python": {
         "src/shop/order.py": _ORDER_PYTHON,
         # A Python story test imports its examples from a package Python can import, beside the code under test.
@@ -397,7 +397,7 @@ class StoryTestProject:
     files sit under, or with none, where the story tests are the map themselves. The folder goes when the project
     does."""
 
-    def __init__(self, format_name: str, files: dict[str, str], story_map: str = _STORY_MAP) -> None:
+    def __init__(self, format_name: str, files: dict[str, str], story_map: str = PACK_ORDERS_STORY_MAP) -> None:
         self.format_name = format_name
         self.files = {**({".context/story-map.md": story_map} if story_map else {}), **files}
         self._folder = tempfile.TemporaryDirectory()
@@ -409,6 +409,16 @@ class StoryTestProject:
         self.graph = Graph()
         self.graph.load_working_copy(str(self.root), {key: str(self.root) for key in _PRACTICES}, force=True)
         self.stories = self.graph.practice("stories").reading.in_graph
+
+    ## where the story files sit
+
+    def undeclared_files(self) -> list[str]:
+        """Each story file of the project, and each examples file, that no path the scenarios or acceptance tests
+        fidelity declares for the project's format matches: a file a render could not save, and no practice reads."""
+        practice = Stories()
+        declared = [practice.fidelities.entries[name].declared for name in ("scenarios", "acceptance_tests")]
+        held = [file for file in self.files if file.startswith(f"{TESTS_ROOT}/") or "examples" in Path(file).name]
+        return sorted(file for file in held if not any(each.includes(file, self.format_name) for each in declared))
 
     ## the story map the graph holds
 
@@ -462,7 +472,7 @@ class StoryTestProject:
         written again in this one's: the story map as its files give it, with no code, since no other format holds it."""
         practice = Stories()
         there = _written(practice, other, _read(practice, self.format_name, self.files))
-        back = _written(practice, self.format_name, _read(practice, other, {".context/story-map.md": _STORY_MAP, **there}))
+        back = _written(practice, self.format_name, _read(practice, other, {".context/story-map.md": PACK_ORDERS_STORY_MAP, **there}))
         return StoryTestProject(self.format_name, back)
 
     def _step(self, scenario: str, step: str):
@@ -493,37 +503,21 @@ def _read(practice: Stories, format_name: str, files: dict[str, str]):
 def _written(practice: Stories, format_name: str, model) -> dict[str, str]:
     """The files the format called format_name writes the story model as, under the project's story tests."""
     if format_name == "markdown":
-        return _markdown_files(MarkdownStoryModel(model))
+        return MarkdownStoryModel(model).scenarios_files(TESTS_ROOT)
     return practice.formats.adapter_class(format_name)(model, tests_root=TESTS_ROOT).save()
-
-
-def _markdown_files(model: MarkdownStoryModel) -> dict[str, str]:
-    """One scenarios file for each story with scenarios, in its sub-epic's folder, as the scenarios fidelity saves."""
-    files: dict[str, str] = {}
-
-    def visit(epic, folder: str) -> None:
-        for story in epic.stories:
-            if story.scenarios:
-                files[f"{folder}/{story.slug.replace('-', '_')}_story.test.md"] = story.scenarios_text()
-        for child in epic.epics:
-            visit(child, f"{folder}/{child.slug}")
-
-    for epic in model.epics:
-        visit(epic, f"{TESTS_ROOT}/{epic.slug}")
-    return files
 
 
 @functools.cache
 def pack_orders_in(format_name: str) -> StoryTestProject:
     """The Pack Orders project written in the format called format_name, read once however many specs ask."""
-    return StoryTestProject(format_name, _FILES[format_name])
+    return StoryTestProject(format_name, PACK_ORDERS_FILES[format_name])
 
 
 @functools.cache
 def pack_orders_without_a_map(format_name: str) -> StoryTestProject:
     """The Pack Orders project written in format_name with no story map, its story tests under the project's tests
     folder: the story tests are the map."""
-    files = {file.replace(f"{TESTS_ROOT}/", "tests/", 1): text for file, text in _FILES[format_name].items()}
+    files = {file.replace(f"{TESTS_ROOT}/", "tests/", 1): text for file, text in PACK_ORDERS_FILES[format_name].items()}
     return StoryTestProject(format_name, files, story_map="")
 
 

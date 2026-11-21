@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import re
 import textwrap
+from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeLanguage, WrittenBlock, WrittenKey
@@ -42,6 +43,30 @@ def example_names_of(stories: List[Story]) -> List[str]:
         for scenario in story.scenarios:
             names.extend(name for name in scenario.examples if name not in names and _IMPORTABLE.fullmatch(name))
     return names
+
+
+@dataclass(frozen=True)
+class StoryFilePlace:
+    """Where the stories of one story file are written: the epic or sub-epic that holds them, the stories, the
+    epic's folder, and the examples folder of the top-level epic above them, each folder named from the workspace
+    root. A story file not read from code holds one story, in a folder of the story's own under its epic's, as the
+    acceptance tests fidelity declares it (``{epic}/{sub-epic}/{story}/{story_snake}_story.test``)."""
+
+    epic: Epic
+    stories: List[Story]
+    epic_folder: str
+    examples_folder: str
+
+    @property
+    def folder(self) -> str:
+        """The folder a new story file is written in: the first story's own, under its epic's."""
+        return f"{self.epic_folder}/{self.stories[0].slug}"
+
+    @property
+    def orders(self) -> str:
+        """Where the file comes among the story files of the map: its epic's order, then its first story's place
+        among the epic's stories, so the files are read back in the map's order whatever their names."""
+        return f"{self.epic.order_path()}.{self.epic.stories.index(self.stories[0]) + 1}"
 
 
 def as_read(written: Optional[WrittenBlock], language: Optional[CodeLanguage], key: WrittenKey) -> Optional[WrittenBlock]:
@@ -99,7 +124,7 @@ class StoryWriting:
     """How one language writes stories: the generic render, and the spelling the language gives as data."""
 
     file_name_template = "{snake}"
-    """A sub-epic's story file name, from the sub-epic's `snake` or `pascal` name."""
+    """A story's file name, from the story's `snake` or `pascal` name."""
     scenario_indent = "  "
     scenario_gap = [""]
     """The blank lines between two generic scenarios; Python writes them back to back."""
@@ -133,23 +158,24 @@ class StoryWriting:
         self.language = language
 
     heading_template: List[str] = []
-    """The lines that open a new story file, from the sub-epic's `name` and its `orders`."""
+    """The lines that open a new story file, from its epic's `name` and the file's `orders`."""
 
-    def file_header(self, epic: Epic, parent: str) -> List[str]:
+    def file_header(self, place: StoryFilePlace) -> List[str]:
         """The lines that open a new story file; a language whose file imports its helpers adds them."""
-        return [self._filled(line, name=epic.name, orders=epic.order_path()) for line in self.heading_template]
+        return [self._filled(line, name=place.epic.name, orders=place.orders) for line in self.heading_template]
 
-    def story_file(self, epic: Epic, parent: str, written: Optional[WrittenBlock]) -> Tuple[str, str]:
-        """The path and text of the story file holding a sub-epic's stories, written under the folder parent: back to
-        the path it was read from with the code above and below its stories as read, else named for the sub-epic and
-        opened with the file header. Each story renders itself."""
+    def story_file(self, place: StoryFilePlace, written: Optional[WrittenBlock]) -> Tuple[str, str]:
+        """The path and text of the story file holding place's stories: back to the path they were read from with the
+        code above and below them as read, else named for its one story, in that story's own folder, and opened with
+        the file header. Each story renders itself."""
         if written is not None:
             path, lines = written.path, list(written.inside)
         else:
-            path = f"{parent}/{self._filled(self.file_name_template, snake=epic.snake(), pascal=epic.pascal())}"
-            lines = self.file_header(epic, parent)
+            story = place.stories[0]
+            path = f"{place.folder}/{self._filled(self.file_name_template, snake=story.snake(), pascal=story.pascal())}"
+            lines = self.file_header(place)
         opened = len(lines)
-        for story in epic.stories:
+        for story in place.stories:
             gap = [] if len(lines) == opened else [""]
             lines = (lines if self._is_as_read(story) else self._spaced(lines, gap)) + self.story_lines(story)
         return path, "\n".join(lines + (written.closing if written is not None else [""]))

@@ -30,7 +30,7 @@ from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple, Union
 
 from harness.annotations.name import Name
 from cdd_guidance.practices.clean_engineering.model.bracket_structure import BracketStructure
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
+from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage, WrittenBlock
 from cdd_guidance.practices.stories.model.story_model import (
     Background,
     Epic,
@@ -45,7 +45,7 @@ from cdd_guidance.practices.stories.model.story_model import (
 from cdd_guidance.practices.stories.model.story_map_files import source_at
 from cdd_guidance.practices.stories.model.story_recording import StorySources
 from cdd_guidance.practices.stories.model.story_file import CodeBlock, flat_steps, read_step_code
-from cdd_guidance.practices.stories.model.story_writing import OUTLINE_EXAMPLES, SCENARIO_EXAMPLES, StoryWriting, as_read
+from cdd_guidance.practices.stories.model.story_writing import OUTLINE_EXAMPLES, SCENARIO_EXAMPLES, StoryFilePlace, StoryWriting, as_read
 
 if TYPE_CHECKING:
     from cdd_guidance.practices.stories.model.story_file import StoryFile
@@ -468,42 +468,47 @@ class CodeStoryModel(StoryModel):
         return self.writing_type(self.language)
 
     def _write_epics(self, files: Dict[str, str]) -> Dict[str, str]:
-        """Every epic's folders and sub-epic files, added to files. A top-level epic is always a folder, so the
-        file holding its own stories sits inside it and reads back onto that epic."""
+        """Every epic's folder and story files, added to files, laid out as the acceptance tests fidelity declares
+        them: an epic and each sub-epic is a folder, and each story a file in a folder of its own under it."""
         for epic in self.epics:
-            if epic.epics:
-                self._write_epic(epic, self.tests_root, files)
-            else:
-                self._write_stories(epic, f"{self.tests_root}/{epic.slug}", files)
+            self._write_epic(epic, self.tests_root, f"{self.tests_root}/{epic.slug}/examples", files)
         return files
 
     @property
     def read_from_code(self) -> bool:
-        """Some sub-epic or story in this tree was read from a file in this language."""
-        nodes = [node for epic in self.descendants.epics() for node in (epic, *epic.stories)]
-        return any(node.written is not None and node.written.language is self.language for node in nodes)
+        """Some story in this tree was read from a file in this language."""
+        stories = [story for epic in self.descendants.epics() for story in epic.stories]
+        read = [written for story in stories for written in (story.written, story.file_written) if written is not None]
+        return any(written.language is self.language for written in read)
 
     def story_file(self, content: str) -> Optional["StoryFile"]:
         """The story file content is, as this language finds its blocks; None for a language that does not read its
         blocks, whose stories are written generically."""
         return None
 
-    def _write_epic(self, epic: Epic, parent: str, files: Dict[str, str]) -> None:
-        """An epic with child epics is a folder its children write into; a sub-epic with stories is one file."""
-        if not epic.epics:
-            self._write_stories(epic, parent, files)
-            return
+    def _write_epic(self, epic: Epic, parent: str, examples_folder: str, files: Dict[str, str]) -> None:
+        """An epic is a folder under parent, which its sub-epics and its own stories write into; examples_folder is
+        the examples folder of the top-level epic above it."""
         folder = f"{parent}/{epic.slug}"
         for child in epic.epics:
-            self._write_epic(child, folder, files)
-        self._write_stories(epic, folder, files)
+            self._write_epic(child, folder, examples_folder, files)
+        for written, stories in self._story_files(epic):
+            path, text = self.writing.story_file(StoryFilePlace(epic, stories, folder, examples_folder), written)
+            files[path] = text
 
-    def _write_stories(self, epic: Epic, parent: str, files: Dict[str, str]) -> None:
-        """One file for a sub-epic's stories: back to the path it was read from, else named for the sub-epic."""
-        if not epic.stories:
-            return
-        path, text = self.writing.story_file(epic, parent, as_read(epic.written, self.language, epic.name))
-        files[path] = text
+    def _story_files(self, epic: Epic) -> List[Tuple[Optional[WrittenBlock], List[Story]]]:
+        """The epic's stories by the story file each is written to. The stories read together from one file of this
+        language go back to it together, while their epic keeps the name it was read with: a shared story file, or
+        a file a person wrote several stories in. Every other story has a file of its own."""
+        files: List[Tuple[Optional[WrittenBlock], List[Story]]] = []
+        for story in epic.stories:
+            written = as_read(story.file_written, self.language, epic.name)
+            together = next((stories for kept, stories in files if kept is not None and kept is written), None)
+            if together is not None:
+                together.append(story)
+            else:
+                files.append((written, [story]))
+        return files
 
     def _adopt_code(self, kept: "CodeStoryModel") -> None:
         """Each epic, story, background, scenario, and step without code in this language takes kept's code
@@ -522,6 +527,8 @@ class CodeStoryModel(StoryModel):
         if kept is None:
             return
         self._take_code(story, kept)
+        if story.file_written is None or story.file_written.language is not self.language:
+            story.file_written = kept.file_written
         self._take_children_code(story.backgrounds, kept.backgrounds)
         self._take_children_code(story.scenarios, kept.scenarios)
         for scenario in story.scenarios:
@@ -594,34 +601,50 @@ class CodeStoryModel(StoryModel):
         return epic
 
     def _read_story_file(self, path: str, content: str) -> None:
-        """One file is one sub-epic. Every story in the file belongs to it; a file outside the tests root, or at its
-        top, holds none.
+        """The stories of one story file go on the epic or sub-epic its folders name; a file outside the tests root,
+        or at its top, holds none.
 
-        A parent folder with the same slug as the file, or as the epic its header names, is that sub-epic, so the
-        file is not a second level. A file in its own top folder is the epic itself, and its stories sit on the epic.
+        A story test that holds one story, in a folder named as the file is, is that story's own file, as the
+        acceptance tests fidelity declares it: the folders above the story's are its epic and sub-epics. Any other
+        file, a shared story file and a screen spec among them, is one sub-epic's: a parent folder with the same slug as the file, or as the epic its header names, is that sub-epic,
+        so the file is not a second level, and a file in its own top folder is the epic itself.
         """
         parts = self._under_tests_root(path.strip("/").replace("\\", "/").split("/"))
         stem_slug = self._stem_slug(parts[-1]) if parts is not None and len(parts) >= 2 else ""
         if not stem_slug:
             return
+        source_file = path.replace("\\", "/")
+        stories, written = self.stories_of(content, source_file, self._project)
         epic_name = self._epic_name_in(content)
-        slugs = self._epic_slugs(parts[:-1], stem_slug, (Name(epic_name).title_slug or "unnamed") if epic_name else stem_slug)
+        folders = parts[:-1]
+        epic_slug = (Name(epic_name).title_slug or "unnamed") if epic_name else ""
+        if parts[-1].endswith(self.story_file_suffixes[0]) and epic_slug != stem_slug and self._is_a_story_s_own(stories, folders, stem_slug):
+            slugs = folders[:-1]
+        else:
+            slugs = self._epic_slugs(folders, stem_slug, epic_slug or stem_slug)
         holder = self._epic_for(slugs[0]) if len(slugs) == 1 else self._sub_epic_for(self._epic_for(slugs[0]), slugs[1:])
         if epic_name:
             holder.name = epic_name
-        self._take_stories(holder, content, path.replace("\\", "/"))
+        self._take_stories(holder, stories, written, content, source_file)
 
-    def _take_stories(self, holder: Epic, content: str, source_file: str) -> None:
-        """The file's stories onto the sub-epic that holds them, each with where it is and the code it was written with."""
-        stories, written = self.stories_of(content, source_file, self._project)
+    def _is_a_story_s_own(self, stories: list, folders: List[str], stem_slug: str) -> bool:
+        """Whether a story test is one story's own: it holds that story alone, named as the file is, in a folder of
+        the same name under at least one epic's folder."""
+        if len(stories) != 1 or len(folders) < 2 or folders[-1] != stem_slug:
+            return False
+        return (Name(stories[0].name).title_slug or "unnamed") == stem_slug
+
+    def _take_stories(self, holder: Epic, stories: list, written: Optional[WrittenBlock], content: str, source_file: str) -> None:
+        """The file's stories onto the epic that holds them, each with where it is, the code it was written with, and
+        the file it was read with."""
+        if written is not None:
+            written.key = holder.name
         for story in stories:
             if source_file and not story.has_source_file:
                 line = self._quoted_name_line(content, story.name)
                 story.source = source_at(source_file, line)
+            story.file_written = written
             holder.stories.append(story)
-        if written is not None:
-            written.key = holder.name
-            holder.written = written
 
     def _quoted_name_line(self, content: str, name: str) -> int:
         """The line that quotes name, counted from 1; the first line when none does."""

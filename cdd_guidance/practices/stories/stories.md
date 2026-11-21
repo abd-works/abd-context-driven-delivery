@@ -103,9 +103,11 @@ outputs:
   typescript:
     - "story_tests/{epic}/{sub-epic}/{story}/{story_snake}_story.test.ts"
     - "story_tests/{epic}/{story}/{story_snake}_story.test.ts"
+    - "story_tests/**/story-test.ts"
   javascript:
     - "story_tests/{epic}/{sub-epic}/{story}/{story_snake}_story.test.js"
     - "story_tests/{epic}/{story}/{story_snake}_story.test.js"
+    - "story_tests/**/story-test.js"
   markdown:
     - "story_tests/{epic}/{sub-epic}/{story_snake}_story.test.md"
     - "story_tests/{epic}/{epic_snake}_story.test.md"
@@ -200,7 +202,7 @@ outputs:
     - "story_tests/{epic}/{epic_slug}.story.domain.spec.py"
     - "story_tests/{epic}/{epic_slug}.story.server.spec.py"
     - "story_tests/{epic}/{story}/{story_snake}_story.test.py"
-    - "story_tests/{epic}/examples/{concept}_examples.py"
+    - "{module}/{concept}_examples.py"
     - "story_tests/**/story_test.py"
   typescript:
     - "story_tests/{epic}/{sub-epic}/{sub_epic_slug}.story.shared.ts"
@@ -239,7 +241,7 @@ Make specifications executable by transforming them into automated tests that va
 
 Ask which concrete case proves the outcome, which system already holds the starting state, and what a person can check when the action finishes. Write the examples from those answers.
 
-**Produce:** a story whose scenarios are written as one runnable file, `{story_snake}_story.test.{lang}` with its steps' bodies filled in, is its own acceptance test. Otherwise, per lowest sub-epic, `{sub_epic_slug}.story.shared.{lang}` registers shared scenarios; `{sub_epic_slug}.story.domain.spec.{lang}` replays them at domain tier (domain is the only tier with one layer in the filename); `{sub_epic_slug}.story.server.spec.{lang}` and other tier specs name the tier explicitly before `spec`. Markdown scenarios stay `{story_snake}_story.test.md`. Shared Given/When/Then helpers stay `story_test.py` / `story-test.ts`.
+**Produce:** a story whose scenarios are written as one runnable file, `{story_snake}_story.test.{lang}` with its steps' bodies filled in, is its own acceptance test. Otherwise, per lowest sub-epic, `{sub_epic_slug}.story.shared.{lang}` registers shared scenarios; `{sub_epic_slug}.story.domain.spec.{lang}` replays them at domain tier (domain is the only tier with one layer in the filename); `{sub_epic_slug}.story.server.spec.{lang}` and other tier specs name the tier explicitly before `spec`. Markdown scenarios stay `{story_snake}_story.test.md`. Shared Given/When/Then helpers stay `story_test.py` / `story-test.ts` / `story-test.js`. Example fixtures in TypeScript and JavaScript sit in the epic's `examples/` folder (`{concept}.examples.ts`); Python ones sit beside the code they build (`{module}/{concept}_examples.py`, as `space/kanban/session_board_examples.py` does), because a story folder's name holds hyphens, which no Python import can name.
 
 #### Guidance
 

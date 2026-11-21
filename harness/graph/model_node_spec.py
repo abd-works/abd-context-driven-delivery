@@ -147,3 +147,10 @@ with description("schema edges paused while models are parsed"):
 
         with it("should resume when the outer pause ends"):
             expect(self.after_outer).to(equal(False))
+
+
+with description("a model class asked which parameters its constructor takes"):
+    with it("should name the parameters its own constructor declares"):
+        import inspect
+
+        expect(list(inspect.signature(Story).parameters)[:2]).to(equal(["name", "sequential_order"]))

@@ -87,3 +87,16 @@ with description("the file a fidelity declares for a render of one of its files"
 
         with it("should place no file for it"):
             expect(self.declared.file_beside(".context/returns.md", "drawio")).to(equal(""))
+
+
+with description("the code formats a fidelity writes as a folder for each module") as self:
+    with context("with a folder declared for one code format, alone and beside the file a render writes"):
+        with before.each:
+            self.declared = _declared({"python": "{module}/", "typescript": ["{module}/", "{module}/{module}.ts"], "markdown": "{module}/.context/{module}-model.md"})
+
+        with it("should name each code format that declares a folder"):
+            expect(self.declared.code_folders()).to(equal(["python", "typescript"]))
+
+    with context("with a file declared for each code format and no folder"):
+        with it("should name none"):
+            expect(_declared({"python": "{bounded_context}/{aggregate}/{aggregate}.py"}).code_folders()).to(equal([]))

@@ -1,13 +1,14 @@
 """Story files in the brace languages: TypeScript and JavaScript read and spell stories the same way."""
 from __future__ import annotations
 
+import posixpath
 import re
 from typing import List, Optional
 
 from cdd_guidance.practices.stories.model.brace_story_file import BraceStoryFile
 from cdd_guidance.practices.stories.model.code_story_model import CodeScenario, CodeStory, CodeStoryModel, StorySyntax, unescaped
-from cdd_guidance.practices.stories.model.story_model import Background, Epic, Story
-from cdd_guidance.practices.stories.model.story_writing import StepClause, StoryWriting, background_examples_line, example_names_of, story_description
+from cdd_guidance.practices.stories.model.story_model import Background, Story
+from cdd_guidance.practices.stories.model.story_writing import StepClause, StoryFilePlace, StoryWriting, background_examples_line, example_names_of, story_description
 
 
 class BraceSyntax(StorySyntax):
@@ -129,13 +130,14 @@ class BraceStoryWriting(StoryWriting):
     and_body_depth = 2
     chains_repeated_phase = True
 
-    def file_header(self, epic: Epic, parent: str) -> List[str]:
-        names = example_names_of(list(epic.stories))
-        example_import = [f"import {{ {', '.join(names)} }} from \"./examples\"{self.statement_end}"] if names else []
-        return ["/**", f" * Epic: {epic.name}", f" * Orders: {epic.order_path()}", " */", "", self.story_test_import(parent), *example_import, ""]
+    def file_header(self, place: StoryFilePlace) -> List[str]:
+        names = example_names_of(place.stories)
+        examples = posixpath.relpath(place.examples_folder, place.folder)
+        example_import = [f"import {{ {', '.join(names)} }} from \"{examples}\"{self.statement_end}"] if names else []
+        return ["/**", f" * Epic: {place.epic.name}", f" * Orders: {place.orders}", " */", "", self.story_test_import(place.folder), *example_import, ""]
 
     def story_test_import(self, parent: str) -> str:
-        """The line that imports the story-test helpers into a story file written under parent."""
+        """The line that imports the story-test helpers into a story file written in the folder parent."""
         raise NotImplementedError(f"{type(self).__name__} must import its story-test helpers")
 
     def story_open(self, story: "Story") -> List[str]:

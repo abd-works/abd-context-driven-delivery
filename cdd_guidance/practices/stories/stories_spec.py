@@ -343,10 +343,10 @@ with description("Stories"):
         with after.each:
             self.tempdir.cleanup()
 
-        with it("should default code output under tests/"):
+        with it("should write code under the project's story_tests, where the fidelity declares it"):
             paths = self.result["content"]
-            expect(any(p.startswith("tests/") for p in paths)).to(be_true)
-            expect("tests/story-test.ts" in paths).to(be_true)
+            expect(all(p.startswith("story_tests/") for p in paths)).to(be_true)
+            expect("story_tests/story-test.ts" in paths).to(be_true)
 
     with context("whose transform tool writes typescript under tests"):
         with before.each:
@@ -357,10 +357,10 @@ with description("Stories"):
                 source="markdown",
             )
 
-        with it("should emit files under tests/"):
+        with it("should emit files under story_tests/"):
             paths = self.result["content"]
-            expect(any(p.startswith("tests/") for p in paths)).to(be_true)
-            expect("tests/story-test.ts" in paths).to(be_true)
+            expect(all(p.startswith("story_tests/") for p in paths)).to(be_true)
+            expect("story_tests/story-test.ts" in paths).to(be_true)
 
     with context("whose contexts section is expanded at story_map"):
         with before.each:
@@ -621,9 +621,17 @@ with description("a file Stories writes under story_tests"):
         with it("should be a file of the acceptance tests fidelity"):
             expect(_declaring("story_tests/story_test.py")).to(equal(["acceptance_tests"]))
 
-    with context("that is the TypeScript step library the story tests import"):
+    with context("that is a Python examples file beside the code it builds, where Python can import it"):
         with it("should be a file of the acceptance tests fidelity"):
-            expect(_declaring("story_tests/story-test.ts")).to(equal(["acceptance_tests"]))
+            expect(_declaring("src/bookshop/order_examples.py")).to(equal(["acceptance_tests"]))
+
+    with context("that is the TypeScript step library the story tests import"):
+        with it("should be a file of the scenarios and the acceptance tests fidelities, which both seed a new tree with it"):
+            expect(_declaring("story_tests/story-test.ts")).to(equal(["scenarios", "acceptance_tests"]))
+
+    with context("that is the JavaScript step library the story tests import"):
+        with it("should be a file of the scenarios and the acceptance tests fidelities"):
+            expect(_declaring("story_tests/story-test.js")).to(equal(["scenarios", "acceptance_tests"]))
 
     with context("that is production code beside the story tests"):
         with it("should be no Stories fidelity's file"):

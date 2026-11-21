@@ -30,6 +30,10 @@ _FORMATS = {
         "cdd_guidance.practices.clean_engineering.model.typescript.typescript_class_model",
         "TypeScriptCleanEngineeringModel",
     ),
+    "javascript": (
+        "cdd_guidance.practices.clean_engineering.model.javascript.javascript_class_model",
+        "JavaScriptCleanEngineeringModel",
+    ),
 }
 
 
