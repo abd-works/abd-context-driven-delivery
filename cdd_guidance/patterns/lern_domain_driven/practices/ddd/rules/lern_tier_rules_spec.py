@@ -142,7 +142,7 @@ with description("the lern_domain_driven pattern rules"):
 
         with it("should flag a web path literal outside the paths module and ignore API paths"):
             facts = {"web_path_literals": AggregateFolder(self.root, self.folder).web_path_literals()}
-            messages = OneHomeForWebPaths().check(tier_node("subscription", "Aggregate", facts, file=self.folder), None)
+            messages = [finding.message for finding in OneHomeForWebPaths().check(tier_node("subscription", "Aggregate", facts, file=self.folder), None)]
             expect(messages).to(have_len(1))
             expect(messages[0]).to(contain("/onboarding/done"))
 
@@ -158,7 +158,7 @@ with description("the lern_domain_driven pattern rules"):
             (self.root / self.folder / "subscription.ts").write_text(
                 "export class Sim { static fromRequest(req) { const body = req.body ?? {}; } }\n", encoding="utf-8")
             facts = {"core_request_reads": AggregateFolder(self.root, self.folder).core_request_reads()}
-            messages = PostedBodyParsedInNode().check(tier_node("subscription", "Aggregate", facts, file=self.folder), None)
+            messages = [finding.message for finding in PostedBodyParsedInNode().check(tier_node("subscription", "Aggregate", facts, file=self.folder), None)]
             expect(messages).to(have_len(1))
             expect(messages[0]).to(contain("framework-free core"))
 

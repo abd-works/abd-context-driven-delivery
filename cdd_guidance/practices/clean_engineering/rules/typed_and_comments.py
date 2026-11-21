@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from harness.graph.violation import Finding
+
 import re
 from typing import TYPE_CHECKING
 
@@ -30,13 +32,13 @@ class UseTypedSignatures(ProductionCodeRule):
     slug = "use-typed-signatures"
     node_types = ("Parameter",)
 
-    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
         operation = str(node.get_fact("operation_name") or "")
         if _FIELD_CHANGE.match(operation) or _PROTOCOL_OPERATION.match(operation) or not node.has_fact("type_hint"):
             return []
         if not node.get_fact("in_typed_language", True):
             return []
-        return self._param_violation(node.name, node.get_fact("type_hint"))
+        return [Finding(node, message) for message in self._param_violation(node.name, node.get_fact("type_hint"))]
 
     def _param_violation(self, name: str, hint: str) -> list[str]:
         if not _INVALID_PARAM_NAME.match(name):
@@ -55,9 +57,9 @@ class LimitComments(ProductionCodeRule):
     slug = "limit-comments"
     node_types = ("Operation", "OoadClass")
 
-    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
         if not node.get_fact("prose_comment"):
             return []
         if node.type == "OoadClass":
-            return [f"Class '{node.name}' has a descriptive comment; use invariants only."]
-        return [f"Operation '{node.name}' has a descriptive comment."]
+            return [Finding(node, f"Class '{node.name}' has a descriptive comment; use invariants only.")]
+        return [Finding(node, f"Operation '{node.name}' has a descriptive comment.")]

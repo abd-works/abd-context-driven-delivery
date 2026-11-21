@@ -6,6 +6,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
+from harness.graph.violation import Finding
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
@@ -19,9 +20,9 @@ class ServiceTierRunsARealDatabase(PracticeGraphRule):
     slug = "service-tier-runs-a-real-database"
     node_types = ("ServiceSpec",)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         return [
-            f"{node.source.file}:{line}: `{found}` stubs the service tier; run it on a throwaway database with the migrations applied."
+            Finding(node, f"{node.source.file}:{line}: `{found}` stubs the service tier; run it on a throwaway database with the migrations applied.")
             for line, found in node.get_fact("stubs", [])
         ]
 
@@ -33,8 +34,8 @@ class JourneyTestPerRelease(PracticeGraphRule):
     slug = "journey-test-per-release"
     node_types = ("JourneySpec",)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         return [
-            f"{node.source.file}:{line}: `{found}` stubs part of the citizen journey; run every layer for real."
+            Finding(node, f"{node.source.file}:{line}: `{found}` stubs part of the citizen journey; run every layer for real.")
             for line, found in [*node.get_fact("stubs", []), *node.get_fact("stubbed_requests", [])]
         ]

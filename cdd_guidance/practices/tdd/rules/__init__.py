@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from cdd_guidance.practices.bdd.bdd import Bdd
 from cdd_guidance.practices.stories.stories import Stories
 from harness.graph.practice_rule import SharedPracticeGraphRule
+from harness.graph.violation import Finding
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
@@ -21,10 +22,10 @@ class UnitTierFakesEveryBoundary(SharedPracticeGraphRule):
     slug = "unit-tier-fakes-every-boundary"
     node_types_by_practice = {Bdd: ("Spec",), Stories: ("Story",)}
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         return [
-            f"{node.source.file}:{line}: a unit test imports {module}; put a fake at that boundary and cover the real "
-            f"one in a heavy test."
+            Finding(node, f"{node.source.file}:{line}: a unit test imports {module}; put a fake at that boundary and cover the real "
+            f"one in a heavy test.")
             for line, module in node.get_fact("real_resources", [])
         ]
 

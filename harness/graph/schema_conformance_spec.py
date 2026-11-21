@@ -54,7 +54,7 @@ def stories_fixture(files: dict[str, str]) -> RuleFixture:
 
 def _gaps(practice) -> list[str]:
     """Each gap the rule finds in practice, as it records them."""
-    return [message for _, message in ConformsToSchema().check_practice(RuleCheckContext(practice))]
+    return [finding.message for finding in ConformsToSchema().check_practice(RuleCheckContext(practice))]
 
 
 with description("conforms to schema"):

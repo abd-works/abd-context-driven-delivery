@@ -5,10 +5,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from harness.guidance.rule import Rule, RulesCollection
 from harness.graph.practice_rule import PracticeGraphRule
 from harness.graph.location import Location
-from harness.graph.violation import NodeViolation, Violation
+from harness.graph.violation import Finding, NodeViolation, Violation
 from harness.installation.data_class import data_field
 
 if TYPE_CHECKING:
@@ -16,14 +15,15 @@ if TYPE_CHECKING:
     from harness.graph.rule_context import RuleCheckContext
 
 
-class GraphRule(Rule):
+class GraphRule:
     """One schema rule on one node: its slug, its prose, the graph check that runs it when one exists, whether that
-    check runs here, and the violations it found there. It is a guidance rule held on a node; the check is a part it
-    holds, not a kind of rule it is."""
+    check runs here, and the violations it found there. The check is a part it holds; a rule an agent judges has none,
+    and keeps only the prose its node's schema gives it."""
 
     def __init__(self, node: Node, slug: str, check: PracticeGraphRule | None = None) -> None:
         """The rule slug on node, with the prose node's schema gives it, run by check when one exists."""
-        super().__init__(slug=slug, body=node.schema.rule_prose.get(slug, ""))
+        self._slug = slug
+        self._body = node.schema.rule_prose.get(slug, "")
         self.node = node
         self._check = check
         self.executable = check is not None
@@ -31,8 +31,8 @@ class GraphRule(Rule):
         """Whether its check runs on this node: the check applies to the node's type, or to the type it is anchored to."""
         self._violations: list[Violation] = []
 
-    def check(self, context: RuleCheckContext) -> list[str]:
-        """The messages its check finds on its node; none when no check runs it."""
+    def check(self, context: RuleCheckContext) -> list[Finding]:
+        """What its check finds on its node; nothing when no check runs it."""
         return self._check.check(self.node, context) if self._check is not None else []
 
     def _applying_types(self) -> set[str]:
@@ -41,6 +41,18 @@ class GraphRule(Rule):
         node = self.node
         anchor = node.schema.anchor_type(node.type)
         return {node.type, anchor} if anchor else {node.type}
+
+    @property
+    @data_field
+    def slug(self) -> str:
+        """The rule's name, such as hide-inner-details."""
+        return self._slug
+
+    @property
+    @data_field
+    def body(self) -> str:
+        """What the rule asks for, as its node's schema gives its prose."""
+        return self._body
 
     @property
     @data_field
@@ -76,9 +88,10 @@ class GraphRule(Rule):
     def violations(self) -> list[Violation]:
         return list(self._violations)
 
-    def record(self, message: str) -> None:
-        """Keep message as a violation of this rule at the node's place in its file; the same message is kept once."""
-        violation = NodeViolation.at_node(self, message)
+    def record(self, finding: Finding) -> None:
+        """Keep finding as a violation of this rule, on the lines it names or at the node's place in its file; the same
+        message is kept once."""
+        violation = NodeViolation.at_node(self, finding)
         if violation.message and all(kept.message != violation.message for kept in self._violations):
             self._violations.append(violation)
 
@@ -93,11 +106,11 @@ class GraphRule(Rule):
         return bool(self._violations)
 
 
-class GraphRulesCollection(RulesCollection):
-    """Schema rules for one node. Violations live on each GraphRule entry."""
+class GraphRulesCollection:
+    """Schema rules for one node, by slug. Violations live on each GraphRule entry."""
 
     def __init__(self, node: Node, entries: dict[str, GraphRule] | None = None, kept: list[GraphRule] | None = None) -> None:
-        super().__init__(entries)
+        self.entries: dict[str, GraphRule] = dict(entries or {})
         self.node = node
         # The rules a node filter kept under the node, when one did; otherwise the graph's own filter decides.
         self._kept = kept
@@ -171,18 +184,24 @@ class GraphRulesCollection(RulesCollection):
         failed = set(self.failed_slugs)
         return [slug for slug in self.slugs if slug not in failed]
 
+    def __iter__(self):
+        return iter(self.entries.values())
+
+    def __getitem__(self, slug: str) -> GraphRule:
+        return self.entries[slug]
+
     @property
     def graph_rules(self) -> list[GraphRule]:
-        return [value for value in self.entries.values() if isinstance(value, GraphRule)]
+        return list(self.entries.values())
 
-    def record_violation(self, slug: str, message: str) -> None:
-        """Keep message as a violation of the rule slug on this node. A slug this node has no rule for records nothing,
+    def record(self, check: PracticeGraphRule, finding: Finding) -> None:
+        """Keep finding as a violation of check's rule on this node. A check this node has no rule for records nothing,
         since the rule does not apply to it."""
-        entry = self.entries.get(slug)
-        if isinstance(entry, GraphRule):
-            entry.record(message)
+        entry = self.entries.get(check.slug)
+        if entry is not None:
+            entry.record(finding)
 
     def restore(self, violation: Violation) -> None:
         entry = self.entries.get(violation.rule)
-        if isinstance(entry, GraphRule):
+        if entry is not None:
             entry.restore(violation)

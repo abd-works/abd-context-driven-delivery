@@ -12,6 +12,7 @@ from harness.graph.location import Location
 from harness.installation.data_class import SourceFile, data_field
 
 if TYPE_CHECKING:
+    from harness.graph.graph import Node
     from harness.graph.graph_rules_collection import GraphRule
 
 # A judgment or scanner that cannot tie its finding to a file names this place.
@@ -208,15 +209,18 @@ class Violation:
         return f"Violation({self.rule!r}, {self.described!r} at {self.location}:{self.line})"
 
 
-class Finding(str):
-    """A rule's message that names the lines it was found on when they are not its node's, such as a module helper only
-    one class uses, which a class rule finds on the class but is on the helper's own lines. A viewer marks those lines."""
+class Finding:
+    """One thing a rule's check found: the node it found it on, what it says, and the lines it is on when they are not
+    the node's own, such as a module helper only one class uses, which a class rule finds on the class but is on the
+    helper's own lines. A viewer marks those lines."""
 
-    def __new__(cls, message: str, line: int, end_line: int | None = None) -> Finding:
-        found = super().__new__(cls, message)
-        found.line = line
-        found.end_line = end_line or line
-        return found
+    def __init__(self, node: Node, message: str, lines: tuple[int, int] | None = None) -> None:
+        self.node = node
+        self.message = message
+        self.lines = lines
+
+    def __repr__(self) -> str:
+        return f"Finding({self.node.name!r}, {self.message!r})"
 
 
 class NodeViolation(Violation):
@@ -229,13 +233,12 @@ class NodeViolation(Violation):
         self.found_by = found_by
 
     @classmethod
-    def at_node(cls, found_by: GraphRule, message: str) -> NodeViolation:
-        """A violation the rule found_by found on its node, at the node's place in its file, or on the lines a Finding
-        names."""
+    def at_node(cls, found_by: GraphRule, finding: Finding) -> NodeViolation:
+        """A violation the rule found_by found on its node, on the lines finding names, else at the node's place in its
+        file."""
         source = found_by.node.source
-        if isinstance(message, Finding):
-            return cls(found_by, message, Location(source.file or "", message.line, message.end_line))
-        return cls(found_by, message, Location(source.file or "", source.start_line, source.end_line))
+        start, end = finding.lines if finding.lines is not None else (source.start_line, source.end_line)
+        return cls(found_by, finding.message, Location(source.file or "", start, end))
 
     @property
     @data_field

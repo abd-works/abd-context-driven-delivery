@@ -318,9 +318,6 @@ Rule(slug: str, body: str, fidelity: str | None)
 slug: str
 body: str
 fidelity: str | None
-practice: str
-pattern: str
-shared: bool
 ----
 validate(): str
 	// the instructions to check the current context against this rule

@@ -2375,8 +2375,8 @@ One graph rule: the node types it checks and what it reports on a node or on the
 + slug: str
 + node_types: tuple[str, ...]
 ----
-+ check(node, context: RuleCheckContext): list[str]
-+ check_practice(context: RuleCheckContext): list[tuple[str, str]]
++ check(node, context: RuleCheckContext): list[Finding]
++ check_practice(context: RuleCheckContext): list[Finding]
 + applies_to(node_type: str): bool
 ---<<checks a node within>>--> RuleCheckContext
 

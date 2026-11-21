@@ -10,6 +10,7 @@ import re
 from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
+from harness.graph.violation import Finding
 
 from cdd_guidance.practices.stories.model.modelled_areas import MODEL_WRITTEN_FACT
 from cdd_guidance.practices.stories.model.story_model import NOT_ON_STORY_MAP
@@ -63,19 +64,17 @@ class AndChaining(StepRule):
     slug = "and-chaining"
     node_types = ("Scenario",)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         """Flag a second When before the previous When has its Then, and a When the scenario never answers."""
         pending_when = False
         for step in context.targets(node, "steps"):
             keyword = self._step_keyword(step)
             if keyword == "when" and pending_when:
-                return [
-                    f"Scenario {node.name!r} starts a new When before the previous interaction has a Then; chain with And."
-                ]
+                return [Finding(node, f"Scenario {node.name!r} starts a new When before the previous interaction has a Then; chain with And.")]
             if keyword in ("when", "then"):
                 pending_when = keyword == "when"
         if pending_when:
-            return [f"Scenario {node.name!r} ends after When without a Then; add Then or chain with And."]
+            return [Finding(node, f"Scenario {node.name!r} ends after When without a Then; add Then or chain with And.")]
         return []
 
     def _step_keyword(self, step: Node) -> str:
@@ -85,19 +84,19 @@ class ButMarksMissingState(StepRule):
     slug = "but-marks-missing-state"
     node_types = ("Step", "Given", "When", "Then")
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         if self.keyword(node) != "but":
             return []
         text = self.text(node).casefold()
         if any(word in text for word in ("not ", "without ", "absent", "missing", "no ")):
             return []
-        return [f"But step should mark missing or absent state, not a consequence: {self.text(node)!r}."]
+        return [Finding(node, f"But step should mark missing or absent state, not a consequence: {self.text(node)!r}.")]
 
 class WhenHoldsTheOperation(StepRule):
     slug = "when-holds-the-operation"
     node_types = ("When", "Step")
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         if not self.is_a(node, "when"):
             if node.type not in {"When"}:
                 return []
@@ -105,21 +104,19 @@ class WhenHoldsTheOperation(StepRule):
         if not text or " and " in text.casefold():
             return []
         if len(text.split()) < 2:
-            return [f"When {text!r} should name the operation under test in plain language."]
+            return [Finding(node, f"When {text!r} should name the operation under test in plain language.")]
         return []
 
 class OutlineRequiresManyPermutations(PracticeGraphRule):
     slug = "outline-requires-many-permutations"
     node_types = ("Scenario",)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         if not self._is_outline(node):
             return []
         examples = len(context.targets(node, "examples"))
         if examples <= _ALTERNATIVES_WITHOUT_AN_OUTLINE:
-            return [
-                f"Scenario outline {node.name!r} needs more than two example rows (found {examples})."
-            ]
+            return [Finding(node, f"Scenario outline {node.name!r} needs more than two example rows (found {examples}).")]
         return []
 
     def _is_outline(self, node: Node) -> bool:
@@ -133,11 +130,11 @@ class ExamplesTraceDomainModel(PracticeGraphRule):
     slug = "examples-trace-domain-model"
     node_types = ("Scenario",)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         concepts = self._named_concepts(node, context)
         if not concepts or len(context.targets(node, "examples")):
             return []
-        return [f"Scenario {node.name!r} names domain concepts {sorted(concepts)} but has no examples table."]
+        return [Finding(node, f"Scenario {node.name!r} names domain concepts {sorted(concepts)} but has no examples table.")]
 
     def _named_concepts(self, scenario: Node, context: RuleCheckContext) -> set[str]:
         """The domain concepts a scenario's steps and their And continuations name."""
@@ -175,7 +172,7 @@ class DomainTermsLinkToModel(StepRule):
     slug = "domain-terms-link-to-model"
     node_types = ("Step", "Given", "When", "Then")
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         classes = self._class_keys(context)
         if not classes:
             return []
@@ -189,9 +186,7 @@ class DomainTermsLinkToModel(StepRule):
         ]
         if not unlinked:
             return []
-        return [
-            f"Step {text!r} names the domain terms {unlinked} without linking them to their headings in the domain model."
-        ]
+        return [Finding(node, f"Step {text!r} names the domain terms {unlinked} without linking them to their headings in the domain model.")]
 
     def _class_keys(self, context: RuleCheckContext) -> set[str]:
         """Each class of the DDD model as the key a term is matched by: its name lower case, with no spaces."""
@@ -211,24 +206,24 @@ class WhenNamesIntentNotInterfaceGesture(StepRule):
     slug = "when-names-intent-not-interface-gesture"
     node_types = ("When", "Step")
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         if not self.is_a(node, "when") and node.type != "When":
             return []
         text = self.text(node)
         if _GESTURE.search(text):
-            return [f"When step {text!r} names a UI gesture; state the domain intent instead."]
+            return [Finding(node, f"When step {text!r} names a UI gesture; state the domain intent instead.")]
         return []
 
 class BehavioralAndSystemObservableOutcomes(StepRule):
     slug = "behavioral-and-system-observable-outcomes"
     node_types = ("Then", "Step")
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         if not self.is_a(node, "then") and node.type != "Then":
             return []
         text = self.text(node)
         if _INLINE_CONDITIONAL.search(text):
-            return [f"Then step {text!r} embeds a conditional guard; assert an observable outcome instead."]
+            return [Finding(node, f"Then step {text!r} embeds a conditional guard; assert an observable outcome instead.")]
         return []
 
 class ThenObservesAnExample(StepRule):
@@ -238,24 +233,22 @@ class ThenObservesAnExample(StepRule):
     slug = "then-observes-an-example"
     node_types = ("Then", "Step")
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         if self.phase(node) != "then" or not node.get_fact(MODEL_WRITTEN_FACT) or context.targets(node, "observes"):
             return []
-        return [
-            f"Then {self.text(node)!r} observes no Example, though a model is written for its area of the story map; "
-            "name an example in it, or in a Given of its scenario or of its story's Background."
-        ]
+        return [Finding(node, f"Then {self.text(node)!r} observes no Example, though a model is written for its area of the story map; "
+            "name an example in it, or in a Given of its scenario or of its story's Background.")]
 
 
 class FlaggedWritesIntendedGwt(PracticeGraphRule):
     slug = "flagged-writes-intended-gwt"
     node_types = ("Scenario",)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         if not any("intended" in item.casefold() for item in self._evidence(node)):
             return []
         if len(context.targets(node, "steps")) == 0:
-            return [f"Scenario {node.name!r} is marked intended but has no GWT steps written."]
+            return [Finding(node, f"Scenario {node.name!r} is marked intended but has no GWT steps written.")]
         return []
 
     def _evidence(self, node: Node) -> list[str]:
@@ -270,7 +263,7 @@ class GivenNamesComplexStateRootFirst(StepRule):
     slug = "given-names-complex-state-root-first"
     node_types = ("Given", "Step")
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         if not self.is_a(node, "given") and node.type != "Given":
             return []
         text = self.text(node)
@@ -281,7 +274,7 @@ class GivenNamesComplexStateRootFirst(StepRule):
                 continue
             root_at = self._first_mention(root, text)
             if root_at is None or root_at > part_at:
-                return [f"Given {text!r} names {part} before its aggregate root {root}; open with {root}, then its owned parts."]
+                return [Finding(node, f"Given {text!r} names {part} before its aggregate root {root}; open with {root}, then its owned parts.")]
         return []
 
     def _earlier_steps(self, step: Node, context: RuleCheckContext) -> list[Node]:
@@ -334,16 +327,14 @@ class ScenarioNamesContinuation(StepRule):
     slug = "scenario-names-continuation"
     node_types = ("Then", "Step")
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         if not self.is_a(node, "then") and node.type != "Then":
             return []
         text = self.text(node)
         if "next story" in text.casefold() or "continues in" in text.casefold():
             return []
         if re.search(r"\bstory\b", text, re.I) and len(text.split()) > _CONTINUING_THEN_WORDS:
-            return [
-                f"Long Then {text!r} should name the next story on the map when continuing a flow."
-            ]
+            return [Finding(node, f"Long Then {text!r} should name the next story on the map when continuing a flow.")]
         return []
 
 class ScenariosNameAStoryOnTheMap(PracticeGraphRule):
@@ -353,24 +344,22 @@ class ScenariosNameAStoryOnTheMap(PracticeGraphRule):
     slug = "scenarios-name-a-story-on-the-map"
     node_types = ("Story",)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         if not node.get_fact(NOT_ON_STORY_MAP):
             return []
         file = node.source.file if node.source is not None else ""
-        return [
-            f"Story {node.name!r} has scenarios in {file} and is not on the story map; add it to the map or name the "
-            "story the scenarios belong to."
-        ]
+        return [Finding(node, f"Story {node.name!r} has scenarios in {file} and is not on the story map; add it to the map or name the "
+            "story the scenarios belong to.")]
 
 
 class ScenariosShape(StepRule):
     slug = "scenarios-shape"
     node_types = ("Scenario",)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         steps = context.targets(node, "steps")
         if not steps:
-            return [f"Scenario {node.name!r} has no steps."]
+            return [Finding(node, f"Scenario {node.name!r} has no steps.")]
         phases = self._scenario_phases(node, context, steps)
         missing = []
         if "when" not in phases:
@@ -378,7 +367,7 @@ class ScenariosShape(StepRule):
         if "then" not in phases:
             missing.append("Then")
         if missing:
-            return [f"Scenario {node.name!r} is missing required phase(s): {', '.join(missing)}."]
+            return [Finding(node, f"Scenario {node.name!r} is missing required phase(s): {', '.join(missing)}.")]
         return []
 
     def _scenario_phases(self, scenario_node: Node, context: RuleCheckContext, steps: list[Node]) -> set[str]:
@@ -399,29 +388,27 @@ class PlainEnglishGwtSteps(StepRule):
     slug = "plain-english-gwt-steps"
     node_types = ("Step", "Given", "When", "Then")
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         text = self.text(node).strip()
         if not text:
             return []
         if " " not in text and _CAMEL_STEP.match(text):
-            return [f"Step {text!r} looks like code; write plain English GWT phrasing."]
+            return [Finding(node, f"Step {text!r} looks like code; write plain English GWT phrasing.")]
         if text.isidentifier() or (text.replace("_", "").isalnum() and " " not in text):
-            return [f"Step {text!r} looks like an identifier; write plain English GWT phrasing."]
+            return [Finding(node, f"Step {text!r} looks like an identifier; write plain English GWT phrasing.")]
         return []
 
 class GwtStepsTraceToDomainOperations(StepRule):
     slug = "gwt-steps-trace-to-domain-operations"
     node_types = ("Step", "Given", "When", "Then")
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         name = self.text(node).strip()
         classes = node.get_fact("domain_class_names", [])
         if name.isidentifier() or (name.replace("_", "").isalnum() and " " not in name):
-            return [f"Step {name!r} does not trace to a domain operation; use the domain type in the step phrase."]
+            return [Finding(node, f"Step {name!r} does not trace to a domain operation; use the domain type in the step phrase.")]
         if not classes:
             return []
         if any(cls.lower() in name.lower() for cls in classes):
             return []
-        return [
-            f"Step {name!r} does not name a domain concept ({', '.join(classes)}); tie GWT to domain operations."
-        ]
+        return [Finding(node, f"Step {name!r} does not name a domain concept ({', '.join(classes)}); tie GWT to domain operations.")]

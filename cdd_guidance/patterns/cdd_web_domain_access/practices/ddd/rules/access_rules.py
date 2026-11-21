@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
+from harness.graph.violation import Finding
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
@@ -17,9 +18,9 @@ class OneClassPerObject(PracticeGraphRule):
     slug = "one-class-per-object"
     node_types = ("AccessRoute", "AccessNode")
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         return [
-            f"{node.source.file}:{line}: `{code}` calls a tool directly; call the {{Object}}Adapter operation for it."
+            Finding(node, f"{node.source.file}:{line}: `{code}` calls a tool directly; call the {{Object}}Adapter operation for it.")
             for line, code in node.get_fact("tool_calls", [])
         ]
 
@@ -30,9 +31,9 @@ class StateLivesBehindTheTool(PracticeGraphRule):
     slug = "state-lives-behind-the-tool"
     node_types = ("AccessNode",)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         return [
-            f"{node.source.file}:{line}: `{code}` keeps a store on an object CDD owns; read it through its tool."
+            Finding(node, f"{node.source.file}:{line}: `{code}` keeps a store on an object CDD owns; read it through its tool.")
             for line, code in node.get_fact("store_imports", [])
         ]
 
@@ -43,11 +44,11 @@ class AdapterIsGenerated(PracticeGraphRule):
     slug = "adapter-is-generated"
     node_types = ("AccessHandWrittenAdapter", "AccessNode")
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         if node.type == "AccessHandWrittenAdapter":
-            return [f"{node.source.file}: is an adapter or connection written by hand; annotate the toolset with @language_adapter and install."]
+            return [Finding(node, f"{node.source.file}: is an adapter or connection written by hand; annotate the toolset with @language_adapter and install.")]
         if node.get_fact("extends_adapter", False):
-            return [f"{node.source.file}: extends a generated adapter; use {{Object}}Adapter and its {{operation}}Requested directly."]
+            return [Finding(node, f"{node.source.file}: extends a generated adapter; use {{Object}}Adapter and its {{operation}}Requested directly.")]
         return []
 
 
@@ -57,8 +58,8 @@ class AnnotateWhatTypeScriptReads(PracticeGraphRule):
     slug = "annotate-what-typescript-reads"
     node_types = ("AccessAnnotatedToolset",)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         return [
-            f"{node.source.file}:{line}: `{operation}` returns dict[str, Any]; return a domain object whose properties are annotated with @data_field."
+            Finding(node, f"{node.source.file}:{line}: `{operation}` returns dict[str, Any]; return a domain object whose properties are annotated with @data_field.")
             for line, operation in node.get_fact("open_results", [])
         ]

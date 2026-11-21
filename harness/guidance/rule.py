@@ -83,9 +83,6 @@ class Rule:
         self._slug = slug
         self._body = body
         self.fidelity = fidelity
-        self.practice = ""
-        self.pattern = ""
-        self.shared = False
 
     @property
     @data_field

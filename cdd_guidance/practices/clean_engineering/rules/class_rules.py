@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from harness.graph.violation import Finding
+
 from typing import TYPE_CHECKING
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER
@@ -18,17 +20,15 @@ class KeepClassesSingleResponsibility(ProductionCodeRule):
     slug = "keep-classes-single-responsibility"
     node_types = ("OoadClass",)
 
-    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
         # A file's module functions are no class, so they share no responsibility to split.
         if node.name == MODULE_FUNCTION_HOLDER or not node.has_fact("operation_shapes"):
             return []
         public_ops = self._public_operations_for_budget(node.get_fact("operation_shapes"))
         if len(public_ops) <= _CLASS_BUDGET:
             return []
-        return [
-            f"Class '{node.name}' exposes {len(public_ops)} public operations "
-            f"(budget ~{_CLASS_BUDGET}). Split responsibilities."
-        ]
+        return [Finding(node, f"Class '{node.name}' exposes {len(public_ops)} public operations "
+            f"(budget ~{_CLASS_BUDGET}). Split responsibilities.")]
 
     def _is_accessor(self, name: str) -> bool:
         """getX / setX / isX — property access, not behavior."""

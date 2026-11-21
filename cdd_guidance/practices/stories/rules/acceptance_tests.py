@@ -6,6 +6,7 @@ from pathlib import PurePosixPath
 from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
+from harness.graph.violation import Finding
 from harness.markdown.format import Format
 
 from cdd_guidance.practices.stories.model.graph_reading import CALLS_REACH_NONE, CALLS_REACH_TEST
@@ -35,7 +36,7 @@ class DomainFixtureExampleFiles(PracticeGraphRule):
     slug = "domain-fixture-example-files"
     node_types = ("Example",)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         path = self._fixture_path(node).lower()
         name = path.rsplit("/", 1)[-1]
         if not Format.from_extension(PurePosixPath(name).suffix).is_code:
@@ -43,9 +44,9 @@ class DomainFixtureExampleFiles(PracticeGraphRule):
         if not name.endswith(tuple(_EXAMPLES_FILE_ENDINGS.values())):
             ending = self._ending_for(name)
             where = "" if ending == _PYTHON_EXAMPLES_ENDING else " under an examples/ folder"
-            return [f"Example file {name!r} should end with {ending}{where}."]
+            return [Finding(node, f"Example file {name!r} should end with {ending}{where}.")]
         if not name.endswith(_PYTHON_EXAMPLES_ENDING) and "examples" not in PurePosixPath(path).parent.parts:
-            return [f"Example file {name!r} should live under an examples/ folder."]
+            return [Finding(node, f"Example file {name!r} should live under an examples/ folder.")]
         return []
 
     def _fixture_path(self, node: Node) -> str:
@@ -62,24 +63,24 @@ class ExampleRoleNames(PracticeGraphRule):
     slug = "example-role-names"
     node_types = ("Example",)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         exports = node.get_fact("export_names", [])
         for export in exports:
             lowered = export.lower()
             if any(role in lowered for role in ("entered", "stored", "expected", "seed", "fixture")):
                 return []
         if exports:
-            return [f"Example exports {node.name!r} without a role name (entered/stored/expected/…)."]
+            return [Finding(node, f"Example exports {node.name!r} without a role name (entered/stored/expected/…).")]
         return []
 
 class ExamplesExportDataNotRepository(PracticeGraphRule):
     slug = "examples-export-data-not-repository"
     node_types = ("Example",)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         relative = node.source.file or ""
         if "repository" in relative.lower() and "examples" in relative.lower():
-            return [f"Example file '{relative}' looks like a repository; export data fixtures instead."]
+            return [Finding(node, f"Example file '{relative}' looks like a repository; export data fixtures instead.")]
         return []
 
 
@@ -92,12 +93,12 @@ class CodeStepsInvokeCode(PracticeGraphRule):
     slug = "code-steps-invoke-code"
     node_types = ("When",)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         if not Format.from_extension(PurePosixPath(node.source.file or "").suffix).is_code:
             return []
         reach = node.get_fact("calls_reach")
         if reach == CALLS_REACH_NONE:
-            return [f"When {node.name!r} calls nothing: call the domain operation it tests in the step."]
+            return [Finding(node, f"When {node.name!r} calls nothing: call the domain operation it tests in the step.")]
         if reach == CALLS_REACH_TEST:
-            return [f"When {node.name!r} calls only the story test's own helpers or seeds: call the domain operation it tests in the step."]
+            return [Finding(node, f"When {node.name!r} calls only the story test's own helpers or seeds: call the domain operation it tests in the step.")]
         return []

@@ -6,6 +6,7 @@ import re
 from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
+from harness.graph.violation import Finding
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
@@ -58,5 +59,5 @@ class SharedDescribeSubject(PracticeGraphRule):
     slug = "shared-describe-subject"
     node_types = ("Spec",)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        return branched_top_level_describes(node.get_fact("top_level_describes", []))[:5]
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
+        return [Finding(node, message) for message in branched_top_level_describes(node.get_fact("top_level_describes", []))[:5]]

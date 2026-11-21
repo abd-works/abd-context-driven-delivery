@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from harness.graph.violation import Finding
+
 from typing import TYPE_CHECKING
 
 from cdd_guidance.practices.clean_engineering.reading.folder_facts import FOLDER_TYPES
@@ -19,13 +21,13 @@ class NamedSeamAndConstraint(ProductionCodeRule):
     slug = "named-seam-and-constraint"
     node_types = ("Module",)
 
-    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
         if not node.get_fact("has_module_context"):
             return []
         missing = [part for part, fact in (("**Seam (terms):**", "names_seam"), ("a Constraint", "names_constraint")) if not node.get_fact(fact)]
         if not missing:
             return []
-        return [f"Module '{node.name}' card does not name {' or '.join(missing)}; say what callers use and what they must not do."]
+        return [Finding(node, f"Module '{node.name}' card does not name {' or '.join(missing)}; say what callers use and what they must not do.")]
 
 
 class PublicSeamOnly(ProductionCodeRule):
@@ -35,12 +37,12 @@ class PublicSeamOnly(ProductionCodeRule):
     slug = "public-seam-only"
     node_types = ("Module",)
 
-    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
         found = node.get_fact("public_source_internal", "")
         if found == "heading":
-            return [f"Module '{node.name}' exposes internal design in a public source file."]
+            return [Finding(node, f"Module '{node.name}' exposes internal design in a public source file.")]
         if found == "mixed":
-            return [f"Module '{node.name}' mixes internal design into the public seam."]
+            return [Finding(node, f"Module '{node.name}' mixes internal design into the public seam.")]
         return []
 
 
@@ -59,16 +61,14 @@ class MissingModuleContext(ProductionCodeRule):
     slug = "missing-module-context"
     node_types = ("OoadClass",)
 
-    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
         folder = _python_class_folder(node, context)
         if folder is None or folder.get_fact("has_module_context", True):
             return []
         if self._enclosing_card(folder, context):
             return []
-        return [
-            f"Module folder '{folder.name}' defines classes but has no .context/module-context.md. "
-            "Add one with at minimum: Purpose, Seam, Dependencies."
-        ]
+        return [Finding(node, f"Module folder '{folder.name}' defines classes but has no .context/module-context.md. "
+            "Add one with at minimum: Purpose, Seam, Dependencies.")]
 
 
     def _enclosing_card(self, folder: "Node", context: "RuleCheckContext") -> bool:
@@ -85,22 +85,20 @@ class LanguageModulesOneSection(ProductionCodeRule):
     slug = "language-modules-one-section"
     node_types = ("OoadClass",)
 
-    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
         folder = _python_class_folder(node, context)
         if folder is None or not folder.get_fact("modules_heading"):
             return []
-        return [
-            f"Module '{folder.name}' module-context has a 'Modules' heading. Language is the opening "
-            "lines of each # path card — drop ## Modules and do not add ## Language."
-        ]
+        return [Finding(node, f"Module '{folder.name}' module-context has a 'Modules' heading. Language is the opening "
+            "lines of each # path card — drop ## Modules and do not add ## Language.")]
 
 
 class ModulesNotModelBlocks(ProductionCodeRule):
     slug = "modules-not-model-blocks"
     node_types = ("OoadClass",)
 
-    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
         folder = _python_class_folder(node, context)
         if folder is None:
             return []
-        return list(folder.get_fact("model_blocks", []))
+        return [Finding(node, message) for message in list(folder.get_fact("model_blocks", []))]

@@ -407,10 +407,10 @@ One rule a practice checks on loaded nodes (`practice_rule.py`). A practice writ
 + slug: str
 + node_types: tuple[str, ...]
 ----
-+ check(node, context: RuleCheckContext): list[str]
-	// one message per violation on node
-+ check_practice(context: RuleCheckContext): list[tuple[str, str]]
-	// (node_id, message) pairs from one pass over the whole practice
++ check(node, context: RuleCheckContext): list[Finding]
+	// one Finding per violation on node
++ check_practice(context: RuleCheckContext): list[Finding]
+	// each Finding names the node it was found on, from one pass over the whole practice
 + applies_to(node_type): bool
 	Invariant: check and check_practice read only node facts (`get_fact`), node identity and source, and the graph's edges, and compare them with the rule's limit; a fact that compares a node with others is recorded by the practice's read, never worked out here (CDR 0004)
 
@@ -432,9 +432,17 @@ One rule an overlay checks on several practices' nodes, such as TDD's `one-outco
 ----
 + node_data(node): dict
 
+## Finding
+
+One thing a check found (`violation.py`): no longer a `str`, so a check that returns a plain string fails as soon as
+it fires.
+
++ Finding(node: Node, message: str, lines: tuple[int, int] | None = None)
+	// lines: the lines it is on when they are not the node's own, such as a module helper only one class uses
+
 ## GraphRulesCollection
 
-Extends `RulesCollection` (harness/guidance). The rules that apply to one node, built by `GraphRulesCollection.from_node` from the slugs the practice's `model/schema.yaml` lists on the node's type (plus each active overlay's `schema.yaml` and `rules.yaml`). In the explorer tree it is the node's `rules` child.
+A plain holder of the node's *GraphRule*s by slug (`entries`). The rules that apply to one node, built by `GraphRulesCollection.from_node` from the slugs the practice's `model/schema.yaml` lists on the node's type (plus each active overlay's `schema.yaml` and `rules.yaml`). In the explorer tree it is the node's `rules` child.
 
 + node: Node
 + slugs: list[str]
@@ -445,14 +453,14 @@ Extends `RulesCollection` (harness/guidance). The rules that apply to one node, 
 + passing_slugs: list[str]
 ----
 + chosen(violations_only, selected): list[GraphRule]
-+ record_violation(slug, message): None
-	// a slug the node has no rule for records nothing
++ record(check: PracticeGraphRule, finding: Finding): None
+	// the rule check's slug names on this node keeps the finding; a check the node has no rule for records nothing
 + restore(violation): None
 
 ## GraphRule
 
-Extends `Rule` (harness/guidance). One schema rule on one node; it holds the graph check that runs it (a
-*PracticeGraphRule*) when one exists, rather than being one.
+One schema rule on one node; it holds the graph check that runs it (a *PracticeGraphRule*) when one exists, rather
+than being one, and is no guidance *Rule*: a rule an agent judges has no check and keeps only the prose.
 
 + node: Node
 + slug: str
@@ -466,8 +474,10 @@ Extends `Rule` (harness/guidance). One schema rule on one node; it holds the gra
 	// violating | passing | prompt (no check runs it)
 + violations: list[Violation]
 ----
-+ check(context): list[str]
++ check(context): list[Finding]
 	// -> its check's check(node, context); none when no check runs it
++ record(finding: Finding): None
+	// a NodeViolation on the lines finding names, else at the node's place
 + record(message): None
 	// -> NodeViolation.at_node; the same message is kept once
 + restore(violation): None
