@@ -100,10 +100,10 @@ The base of an annotation that says where install publishes a member, by its `ch
 
 # harness/process
 
-*BackgroundStart* and *PythonInterpreter* start a server without a console window, *RunningProcess* asks about and ends one by its id, *ExclusivePort* is the one port a server may hold, and *CappedLogFile* keeps a log a server or the session writes under a size, so it cannot fill the disk.
+*BackgroundStart* and *PythonInterpreter* start a server without a console window, *RunningProcess* asks about and ends one by its id, *ExclusivePort* is the one port a server may hold, *CappedLogFile* keeps a log a server or the session writes under a size, so it cannot fill the disk, *LockFile* is a file the operating system locks for one holder at a time, and *ServerDaemon* is the one model of a long-running server that the hook daemon and the cdd server both are.
 
 - **Purpose:** Start, name, and stop the processes the framework keeps, the same way on Windows and elsewhere.
-- **Seam (terms):** BackgroundStart, Wmi, OutsideJobStartFailed, PythonInterpreter, ExclusivePort, RunningProcess, ProcessNotStopped, StarterBoundJob, JobNotMade, CappedLogFile
+- **Seam (terms):** BackgroundStart, Wmi, OutsideJobStartFailed, PythonInterpreter, ExclusivePort, RunningProcess, ProcessNotStopped, StarterBoundJob, JobNotMade, CappedLogFile, LockFile, LockFileHeld, ServerDaemon, RunningServer, ServerDidNotStart
 - **Dependencies (one-way):** *(none)*
 
 ## BackgroundStart
@@ -209,6 +209,80 @@ A log file that, once it reaches its size (4 MB), moves its lines to the previou
 ----
 + roll_when_full(): bool
 	// a log another process holds open cannot be moved on Windows, so it rolls at the next write or start that finds it free
++ last_lines(count: int): str
+
+## LockFile
+
+A file the operating system locks for the one holder that claimed it, naming that holder's process at its start: the install lock of an IDE folder, the lock beside a JSON file several processes change, and the start lock of a server. The operating system gives the lock back when its holder's process ends, however it ends.
+
++ LockFile(path: Path, wait_seconds: float)
+------
++ path: Path
++ wait_seconds: float
++ is_held: bool
++ holder: int
+----
++ held(): Iterator[None]
++ claim(): None
+	// waits while another holder has the file, then refuses; one holder may claim again, and the file is free once its first claim is given back
++ release(): None
+---<<raises>>--> LockFileHeld
+
+## LockFileHeld : TimeoutError
+
+Another holder kept a lock file for longer than a claim waits for it.
+
++ LockFileHeld(path: Path, holder: int, waited_seconds: float)
+------
++ path: Path
++ holder: int
++ waited_seconds: float
+----
++ message(): str
+
+## ServerDaemon
+
+A server that keeps running past the command that started it, on the one port it may hold, with its output in a capped log file: the hook daemon of a checkout and the one cdd server. One start at a time, through a start lock beside the log.
+
++ ServerDaemon(port: ExclusivePort, log: CappedLogFile)          abstract
+------
++ port: int
++ << composition >> log: CappedLogFile
+----
++ running(): RunningServer | None          abstract
++ is_running(): bool
++ ensure(): RunningServer
+	// starts the server when none answers and waits until it answers, else raises ServerDidNotStart with the log's last lines
++ stop(): None
+	// stops the process that answers, else the one holding the port
++ restart(): RunningServer
++ spawn(): RunningProcess
+---<<starts with>>--> BackgroundStart
+---<<one start at a time through>>--> LockFile
+---<<raises>>--> ServerDidNotStart
+
+## RunningServer
+
+A long-running server that answered when asked: its process, the folder it serves code from, the stamp of the code it loaded, and the projects its chats have worked on.
+
++ RunningServer(process: RunningProcess, serves: Path | None = None, code: str = "", projects: tuple[str, ...] = ())
+------
++ << composition >> process: RunningProcess
++ pid: int
++ serves: Path | None
++ code: str
++ projects: tuple[str, ...]
+----
++ is_serving(folder: Path): bool
+
+## ServerDidNotStart : Exception
+
+A server was started but did not answer within its wait.
+
++ ServerDidNotStart(daemon: ServerDaemon, seconds: float, log_tail: str)
+------
++ daemon: ServerDaemon
+----
 
 # harness/git
 
@@ -802,22 +876,17 @@ The IDE and folder a checkout last installed into, kept in one file beside the i
 + hand_over_to(record: InstallRecord): None
 	-> InstallRecord.adopt
 
-## InstallLock
+## InstallLock : LockFile
 
-The file `.install-lock` in a folder installs write into, locked by the operating system for the process that installs into it or cleans it, and naming that process. Of any number of installs that ask at the same moment exactly one gets the folder, and the operating system gives the lock back when its process ends, so a stopped install never leaves a held folder. harness/mcp's *CddHome* holds one on the cdd home while it publishes the mods.
+The *LockFile* `.install-lock` in a folder installs write into, held for the process that installs into it or cleans it. harness/mcp's *CddHome* holds one on the cdd home while it publishes the mods. A second install says what it waits for and how long, waits for the first, then runs; the steps of one install share its lock.
 
 + InstallLock(folder: Path, wait_seconds: float = WAIT_SECONDS)
 ------
 + folder: Path
-+ is_held: bool
 ----
-+ held(): Iterator[None]
-	// a second install says what it waits for and how long, waits for the first, then runs; the steps of one install share its lock
-+ claim(): None
-+ release(): None
 ---<<raises>>--> InstallAlreadyRunning
 
-## InstallAlreadyRunning : RuntimeError
+## InstallAlreadyRunning : LockFileHeld
 
 Another process is still installing into, or cleaning, the same folder after the wait.
 
@@ -1055,7 +1124,7 @@ One file holding a JSON object, read and written whole by its owner. A missing f
 + read(): dict[str, Any]
 + write(data: Mapping[str, Any]): Path
 + held(): Iterator[None]
-	// holds the file for one change, from its read to its write, through the operating system's lock on a lock file beside it, so a change another thread or process makes waits its turn; the lock ends with its holder's process
+	// holds the file for one change, from its read to its write, through a LockFile beside it, one per hold, so a change another thread or process makes waits its turn; the lock ends with its holder's process
 ---<<raises>>--> JsonFileUnreadable
 ---<<raises>>--> JsonFileBusy
 
@@ -1070,14 +1139,13 @@ A JSON file holds something other than a JSON object. Nothing is written over it
 ----
 + message(path: Path, cause: Exception): str
 
-## JsonFileBusy : TimeoutError
+## JsonFileBusy : LockFileHeld
 
 Another holder kept a JSON file for longer than a change waits for it, so the change was not made.
 
-+ JsonFileBusy(path: Path, seconds: float)
++ JsonFileBusy(file: Path, holder: int, waited_seconds: float)
 ------
-+ path: Path
-+ seconds: float
++ file: Path
 ----
 
 ## AppPorts
@@ -1286,35 +1354,30 @@ The hooks of one checkout, loaded once: it runs the enabled handlers for each ev
 ---<<loads the toolsets of>>--> RepositoryToolsets
 ---<<reads which guideline applies from>>--> ContextConfig
 
-## HookDaemon
+## HookDaemon : ServerDaemon
 
-The long-running hook server of one checkout, whichever IDE's hook command reaches it; it keeps its address, log, and start lock in the checkout's `.hook-server/` folder. The start lock is a file of its own, `spawn.lock`, claimed by a class private to the module: one hook command starts the daemon while the others wait for it.
+The long-running hook server of one checkout, whichever IDE's hook command reaches it; it keeps its address, log, and start lock in the checkout's `.hook-server/` folder. It keeps the takeover of its port from a daemon on older code, which the cdd server does not do.
 
 + HookDaemon(repo: Path | str, port: int | None = None)
 ------
 + repo: Path
 + << composition >> toolsets: RepositoryToolsets
++ << composition >> address: HookDaemonAddress
++ << composition >> address_file: HookDaemonAddressFile
 + folder: Path
-+ log_path: Path
-+ port: int
 + source_stamp: str
 ----
-+ live_address(): HookDaemonAddress | None
-+ is_running(): bool
-+ ensure(): HookDaemonAddress
-	// starts the daemon, or replaces one that loaded older hook code, and answers its address
-+ replace_stale(): None
++ running(): RunningServer | None
+	// this checkout's daemon when it answers on its port
++ ensure(): RunningServer
+	// replaces one that loaded older hook code, then starts the daemon when none answers
 + stop(): None
-+ spawn(): None
 + serve(server: HookServer | None = None): None
 + claim_port(): socket.socket | None
----<<creates>>--> BackgroundStart
 ---<<creates>>--> PythonInterpreter
 ---<<loads>>--> HookServer
 ---<<handles stdin>>--> HookServer
----<<claims its port with>>--> ExclusivePort
 ---<<stops older daemons as>>--> RunningProcess
----<<checks the lock holder is alive with>>--> RunningProcess
 ---<<raises>>--> HookPortTaken
 
 ## HookInstallation : ServerInstallation

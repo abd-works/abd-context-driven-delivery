@@ -3,16 +3,15 @@ from __future__ import annotations
 
 import os
 import socket
-import sys
 import threading
 import time
 from pathlib import Path
-from typing import Any
 
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_address import McpAddress
 from harness.process.capped_log_file import CappedLogFile
-from harness.process.process import BackgroundStart, ExclusivePort, RunningProcess
+from harness.process.process import ExclusivePort, RunningProcess
+from harness.process.server_daemon import RunningServer, ServerDaemon
 
 # The process a throwaway server belongs to, such as the spec run that started it on a port of its own. The server ends
 # when that process does, so a run that is killed or hangs leaves no server behind; the person's own server names none.
@@ -20,40 +19,12 @@ SERVER_OWNER_ENV = "CDD_SERVER_OWNER"
 # How often a throwaway server checks that the process it belongs to still runs.
 OWNER_CHECK_SECONDS = 2
 _PING_SECONDS = 2
-_START_SECONDS = 60
-_STOP_SECONDS = 10
-_LOG_LINES_SHOWN = 20
 # The command an IDE runs before it connects; an install copies it into ``~/.cdd``.
 CONNECT_SCRIPT = Path(__file__).resolve().parent / "scripts" / "connect.py"
-# How often a start looks again for the server's answer while it waits for the server to come up.
-_PING_RETRY_SECONDS = 0.25
 
 
-class ServerDidNotStart(Exception):
-    """The cdd server was started but never answered a ping."""
-
-    def __init__(self, url: str, log: str) -> None:
-        super().__init__(f"the cdd server at {url} did not answer within {_START_SECONDS} seconds. Last log lines:\n{log}")
-        self.url = url
-
-
-PingAnswer = dict[str, Any]
-"""What the cdd server's ``/ping`` answers, as JSON: its pid, the checkout it serves, and its chats' projects."""
-
-
-class RunningServer:
-    """The cdd server answering on the port, as its ping describes it: its process, the checkout it serves code from,
-    and the projects its chats have worked on."""
-
-    def __init__(self, answer: PingAnswer) -> None:
-        self.pid = int(answer.get("pid") or 0)
-        self.source = str(answer.get("source") or "")
-        self.projects = [str(project) for project in answer.get("projects") or []]
-        self.process = RunningProcess(self.pid)
-
-
-class McpDaemon:
-    """Start, find, and stop the one cdd server. Every IDE connects to its URL, so no chat starts a copy of its own.
+class McpDaemon(ServerDaemon):
+    """The one cdd server, a *ServerDaemon*. Every IDE connects to its URL, so no chat starts a copy of its own.
 
     Holding the port exclusively is the claim: two servers cannot both hold it, so a second start exits quietly."""
 
@@ -61,76 +32,39 @@ class McpDaemon:
         self.home = home
         self.address = address or McpAddress()
         # The server's port, asked which process holds it when the server there does not answer.
-        self._port = port or ExclusivePort(self.address.HOST, self.address.port)
+        super().__init__(port or ExclusivePort(self.address.HOST, self.address.port), CappedLogFile(home.log_path))
         # This process, when it is the server: the port it claims and the address it publishes.
         self.this_process = ServingProcess(home, self.address)
 
-    @property
-    def port(self) -> int:
-        return self.address.port
+    def __str__(self) -> str:
+        return f"the cdd server at {self.url}"
 
     @property
     def url(self) -> str:
         return self.address.url
 
-    def ping(self) -> RunningServer | None:
-        """Ask the running server about itself over HTTP: the server it describes, or ``None`` when nothing answers on
-        the port."""
+    def running(self) -> RunningServer | None:
+        """Ask the running server about itself over HTTP: its process, the checkout it serves code from, and its chats'
+        projects; none when nothing answers on the port."""
         answer = self.address.ping_answer(_PING_SECONDS)
-        return RunningServer(answer) if answer is not None else None
-
-    def is_running(self) -> bool:
-        return self.ping() is not None
-
-    def ensure(self) -> RunningServer:
-        """The running server, starting it first when none answers."""
-        answer = self.ping()
-        if answer is not None:
-            return answer
-        self.spawn()
-        return self._wait_for_ping()
-
-    def restart(self) -> RunningServer:
-        """Stop the running server and start it again on the code ``~/.cdd/runtime.json`` names now."""
-        self.stop()
-        return self.ensure()
-
-    def stop(self) -> None:
-        """Stop the server on the port. One that holds the port but does not answer, such as a deadlocked one, is found
-        by the port it listens on and stopped too: left running, it would keep every new server from claiming the
-        port."""
-        running = self.ping()
-        process = running.process if running is not None else self._port.holder()
-        if process is not None:
-            process.stop(_STOP_SECONDS)
+        if answer is None:
+            return None
+        source = str(answer.get("source") or "")
+        projects = tuple(str(project) for project in answer.get("projects") or [])
+        return RunningServer(RunningProcess(int(answer.get("pid") or 0)), Path(source) if source else None, projects=projects)
 
     def status(self, running: RunningServer) -> str:
         """How the server runs, as an install reports it: its process, and the code it serves, pinned or on disk."""
-        return f"running (pid {running.pid}, {self.home.mode} {running.source})"
+        return f"running (pid {running.pid}, {self.home.mode} {running.serves or ''})"
 
-    def spawn(self) -> None:
-        """Start the server in the background, past the chat that asked for it, with its output in the home's log; a log
-        that reached its size starts again, its earlier output kept in its previous file."""
-        self.home.folder.mkdir(parents=True, exist_ok=True)
-        CappedLogFile(self.home.log_path).roll_when_full()
-        command = [self.home.interpreter.windowless, "-m", "harness.mcp", "--port", str(self.port)]
-        with open(self.home.log_path, "a", encoding="utf-8") as log:
-            BackgroundStart(log).run(command, self.home.source, {**os.environ, **self.home.server_environment})
+    def _command(self) -> list[str]:
+        return [self.home.interpreter.windowless, "-m", "harness.mcp", "--port", str(self.port)]
 
-    def _wait_for_ping(self) -> RunningServer:
-        deadline = time.time() + _START_SECONDS
-        while time.time() < deadline:
-            answer = self.ping()
-            if answer is not None:
-                return answer
-            time.sleep(_PING_RETRY_SECONDS)
-        raise ServerDidNotStart(self.url, self._log_tail())
+    def _folder(self) -> Path:
+        return self.home.source
 
-    def _log_tail(self) -> str:
-        if not self.home.log_path.is_file():
-            return "(no log)"
-        lines = self.home.log_path.read_text(encoding="utf-8", errors="replace").splitlines()
-        return "\n".join(lines[-_LOG_LINES_SHOWN:])
+    def _environment(self) -> dict[str, str]:
+        return {**os.environ, **self.home.server_environment}
 
 
 class ServedCheckout:

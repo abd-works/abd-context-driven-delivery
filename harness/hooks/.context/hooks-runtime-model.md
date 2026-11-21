@@ -290,13 +290,15 @@ The hooks of one checkout, loaded once in its hook daemon. It runs the enabled h
 
 ## HookDaemon                                                     <!-- Md -->
 
-The hook daemon of one checkout: it listens on the one port the checkout's daemon may hold, publishes its address, and serves every hook command with one loaded HookServer. The hook command (`run_hook_command` in `hook_daemon.py`) runs `HookDaemon(checkout).ensure().handle_stdin(raw)`. A daemon that finds the port held by this checkout's daemon on older code, including one the older layout started (address in `.cursor/hook-server.json`, a ping that names no process or checkout), stops it and takes the port; anything else on the port raises *HookPortTaken*, so a daemon never exits silently. Closing a worktree stops its checkout's daemon (`Worktrees.remove` in space/repo calls `stop`).
+The hook daemon of one checkout, a *ServerDaemon* (harness/process): it listens on the one port the checkout's daemon may hold, publishes its address, and serves every hook command with one loaded HookServer. The hook command (`run_hook_command` in `hook_daemon.py`) runs `daemon.ensure()` and then `daemon.address.handle_stdin(raw)`. A daemon that finds the port held by this checkout's daemon on older code, including one the older layout started (address in `.cursor/hook-server.json`, a ping that names no process or checkout), stops it and takes the port; anything else on the port raises *HookPortTaken*, so a daemon never exits silently. Closing a worktree stops its checkout's daemon (`Worktrees.remove` in space/repo calls `stop`).
 
-+ HookDaemon(repo: Path, port: int | None = None)
++ HookDaemon(repo: Path, port: int | None = None)          : ServerDaemon
 ------
 + HOST: str
 	// "127.0.0.1"
 + repo: Path
++ address: HookDaemonAddress
+	// where this checkout's daemon answers: its host and its one port
 + address_file: HookDaemonAddressFile
 	// .hook-server/address.json in the checkout, the running daemon's address; it belongs to no IDE folder
 - _older_layout_file: HookDaemonAddressFile
@@ -306,19 +308,19 @@ The hook daemon of one checkout: it listens on the one port the checkout's daemo
 + source_stamp: str
 	// identity of the hook code the checkout holds now
 ----
-+ live_address(): HookDaemonAddress | None
-	// the published address when a daemon answers a ping there
++ running(): RunningServer | None
+	// this checkout's daemon when one answers a ping on its port as this checkout's
 + is_running(): bool
-+ ensure(): HookDaemonAddress
-	// replace a daemon on older code, then the live one, or start one (one hook command at a time) and wait for it
++ ensure(): RunningServer
+	// replace a daemon on older code, then the running one, or start one (one hook command at a time, ServerDaemon's start lock) and wait for it
 	-> _replace_stale
-	-> spawn
+	-> ServerDaemon.ensure
 - _replace_stale(): None
 	-> RunningProcess.stop
 + stop(): None
 	// stop the daemon answering on the port as this checkout's, or as one of the older layout; remove both address files
-+ spawn(): None
-	// the daemon imports from the checkout, through RepositoryToolsets.pythonpath and pycache_prefix
++ spawn(): RunningProcess
+	// ServerDaemon's; the daemon imports from the checkout, through RepositoryToolsets.pythonpath and pycache_prefix
 + serve(server: HookServer | None = None): None
 	// answers pings at once with its address; with no server, loads every toolset class the repository defines first
 	-> claim_port
@@ -326,45 +328,26 @@ The hook daemon of one checkout: it listens on the one port the checkout's daemo
 + claim_port(): socket | None
 	// the port, taken over from this checkout's daemon on older code; none when its daemon on this code holds it
 	-> ExclusivePort.claim
-	-> HookDaemonAddress.reported
+	-> HookDaemonAddress.running
 	-> ExclusivePort.holder
 	// raises HookPortTaken for a process that is not this checkout's daemon, or one that will not stop
 
 ## HookDaemonAddress                                              <!-- Md -->
 
-Where a running hook daemon answers, and who it is. The address file holds these fields, and a ping answers them.
+Where a hook daemon answers. The address file holds these fields with who the daemon is, and a ping answers them.
 
-+ HookDaemonAddress(host: str, port: int, identity: HookDaemonIdentity = HookDaemonIdentity())
++ HookDaemonAddress(host: str, port: int)
 ------
 + host: str
 + port: int
-+ pid: int | None
-+ stamp: str
-+ repo: str
-	// pid, stamp, and repo are the identity's
-+ process: RunningProcess
 ----
-+ answers(): bool
-+ reported(): HookDaemonAddress | None
-	// the address as the daemon answering here reports it; a daemon of the older layout reports no pid, stamp, or repo
-+ serves(repo: Path): bool
++ running(): RunningServer | None
+	// the daemon answering here, as it reports itself (its process, checkout, and code stamp); a daemon of the older layout reports none of them
 + handle_stdin(raw: bytes): dict
-
-## HookDaemonIdentity                                             <!-- Md -->
-
-Who a running hook daemon is. A daemon started by the older layout says none of these.
-
-+ HookDaemonIdentity(pid: int | None = None, stamp: str = "", repo: str = "")
-------
-+ pid: int | None
-+ stamp: str
-	// the stamp of the hook code the daemon loaded
-+ repo: str
-	// its checkout
 
 ## HookDaemonAddressFile                                          <!-- Md -->
 
-The file a daemon publishes its address in: `read()`, `write(address)`, `remove()`.
+The file a daemon publishes its address and itself in: `address()`, `server()` (a *RunningServer*), `write(address, server)`, `remove()`.
 ---
 
 ## Installed artifacts                                            <!-- Mu -->
@@ -373,7 +356,7 @@ The file a daemon publishes its address in: `read()`, `write(address)`, `remove(
 {Installer.path}/                 typically .cursor/
   hooks.json                      HooksManifest — event → hook_daemon.py command
   hook-handlers.json              HookHandlersFile
-.hook-server/                    HookDaemon.folder — address.json, server.log, spawn.lock
+.hook-server/                    HookDaemon.folder — address.json, server.log, start.lock
 .sessions/{name}/logs/            dispatch.debug, prompt-log.txt (in the session's work folder)
 .sessions/{name}/chat-injections/ ChatInjections (space/session)
 ```

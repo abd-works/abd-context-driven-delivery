@@ -78,21 +78,25 @@ class HookExercise:
     def _ping(self) -> CheckReport:
         from harness.hooks.hook_daemon import HookDaemon
 
-        address = HookDaemon(self.repo).live_address()
-        if address is None:
+        daemon = HookDaemon(self.repo)
+        running = daemon.running()
+        if running is None:
             return {"ping": "down"}
-        return {"ping": "pong", "host": address.host, "port": address.port, "pid": address.pid}
+        return {"ping": "pong", "host": daemon.address.host, "port": daemon.address.port, "pid": running.pid}
 
     def _live_injects(self) -> CheckReport:
         """Whether the running hook daemon injects a fidelity's rules, with the reason when it could not be asked."""
-        from harness.hooks.hook_daemon import HookDaemon, HookDaemonUnavailable
+        from harness.hooks.hook_daemon import HookDaemon, HookPortTaken
+        from harness.process.server_daemon import ServerDidNotStart
 
         sample = self._example_for("modules", "clean-engineering")
         if sample is None:
             return {"live_injects": False, "live_error": "no clean-engineering modules example found"}
         try:
-            result = HookDaemon(self.repo).ensure().handle_stdin(json.dumps(self._payload(sample)).encode("utf-8"))
-        except (HookDaemonUnavailable, OSError) as error:
+            daemon = HookDaemon(self.repo)
+            daemon.ensure()
+            result = daemon.address.handle_stdin(json.dumps(self._payload(sample)).encode("utf-8"))
+        except (ServerDidNotStart, HookPortTaken, OSError) as error:
             return {"live_injects": False, "live_error": f"{type(error).__name__}: {error}"}
         return {"live_injects": "domain-nouns-only" in (result.get("additional_context") or "")}
 

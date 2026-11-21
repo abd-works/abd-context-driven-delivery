@@ -285,17 +285,17 @@ class HookPing:
 
         found = self._daemons()
         daemon = HookDaemon(self.processes.repo)
-        published = daemon.address_file.read()
-        keeper, stopped = self.processes.collapse(found, published.pid if published is not None else None)
-        address = daemon.live_address()
-        ok = address is not None
+        published = daemon.address_file.server()
+        keeper, stopped = self.processes.collapse(found, published.pid if published is not None and published.pid > 0 else None)
+        running = daemon.running()
+        ok = running is not None
         return PingReport().emit(
             {
                 "ok": ok,
                 "ping": "pong" if ok else "down",
-                "host": address.host if ok else None,
-                "port": address.port if ok else None,
-                "pid": address.pid if ok and address.pid is not None else keeper,
+                "host": daemon.address.host if ok else None,
+                "port": daemon.address.port if ok else None,
+                "pid": running.pid if ok and running.pid > 0 else keeper,
                 "instances": len(found),
                 "stopped": stopped,
             }

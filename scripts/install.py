@@ -357,11 +357,11 @@ def _serve_this_checkout(installer: Installer, server: McpInstallation) -> str:
 
 def _ping_server(server: McpInstallation) -> int:
     _step_started(5)
-    running = server.daemon.ping()
+    running = server.daemon.running()
     if running is None:
         _step_failed(5, f"no answer on {server.daemon.url}; see {server.daemon.home.log_path}")
         return 1
-    _step_done(5, f"answers (pid {running.pid}, serving {running.source})")
+    _step_done(5, f"answers (pid {running.pid}, serving {running.serves})")
     return 0
 
 

@@ -7,35 +7,17 @@ import threading
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import IO, Any, Iterator, Mapping
+from typing import Any, Iterator, Mapping
+
+from harness.process.lock_file import LockFile, LockFileHeld
 
 # How long a swap Windows refuses is tried again, and how long between tries.
 _SWAP_SECONDS = 5.0
 _SWAP_RETRY_SECONDS = 0.05
-# How long a change waits for another holder of the file to let go, and how long between tries.
+# How long a change waits for another holder of the file to let go.
 _HOLD_SECONDS = 30.0
-_HOLD_RETRY_SECONDS = 0.01
 # What follows the file's name in the name of the lock file beside it.
 _LOCK_SUFFIX = ".lock"
-
-
-def _takes_operating_system_lock(handle: int, locked_byte: int = 0) -> bool:
-    """Whether the operating system gave this process the lock on the open file handle names, which closing the file
-    gives back; it refuses at once while another process holds it. Windows locks one byte of the file, the one at
-    locked_byte, so a file whose start is still read by a waiting process locks a byte past what it holds."""
-    try:
-        if os.name == "nt":
-            import msvcrt
-
-            os.lseek(handle, locked_byte, os.SEEK_SET)
-            msvcrt.locking(handle, msvcrt.LK_NBLCK, 1)
-        else:
-            import fcntl
-
-            fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except OSError:
-        return False
-    return True
 
 
 class JsonFileUnreadable(ValueError):
@@ -51,13 +33,26 @@ class JsonFileUnreadable(ValueError):
         return f"{path} is not a readable JSON object ({cause})"
 
 
-class JsonFileBusy(TimeoutError):
+class JsonFileBusy(LockFileHeld):
     """Another holder kept a JSON file for longer than a change waits for it, so the change was not made."""
 
-    def __init__(self, path: Path, seconds: float) -> None:
-        super().__init__(f"{path} is held for a change by another caller, and was not let go in {seconds:g} seconds")
-        self.path = path
-        self.seconds = seconds
+    def __init__(self, file: Path, holder: int, waited_seconds: float) -> None:
+        self.file = file
+        super().__init__(file.with_name(f"{file.name}{_LOCK_SUFFIX}"), holder, waited_seconds)
+
+    def message(self) -> str:
+        return f"{self.file} is held for a change by another caller, and was not let go in {self.waited_seconds:g} seconds"
+
+
+class _ChangeLock(LockFile):
+    """The lock file beside a JSON file, held from one change's read to its write."""
+
+    def __init__(self, file: Path) -> None:
+        super().__init__(file.with_name(f"{file.name}{_LOCK_SUFFIX}"), _HOLD_SECONDS)
+        self.file = file
+
+    def _refused(self) -> Exception:
+        return JsonFileBusy(self.file, self.holder, self.wait_seconds)
 
 
 class JsonFile:
@@ -110,20 +105,10 @@ class JsonFile:
         """Hold the file for one change, from its read to its write, so a change another thread or process makes to the
         same file waits its turn and none is lost. The hold is the operating system's lock on the lock file beside the
         file, which ends when the holder lets go or its process ends, however it ends: a killed holder blocks nobody,
-        and the lock file it leaves holds nothing. A wait longer than _HOLD_SECONDS raises *JsonFileBusy*."""
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        with open(self.path.with_name(f"{self.path.name}{_LOCK_SUFFIX}"), "a+b") as lock_file:
-            self._take(lock_file)
+        and the lock file it leaves holds nothing. Each hold is its own *LockFile*, so two threads exclude each other as
+        two processes do. A wait longer than _HOLD_SECONDS raises *JsonFileBusy*."""
+        with _ChangeLock(self.path).held():
             yield
-
-    def _take(self, lock_file: IO[bytes]) -> None:
-        """Take the operating system's lock on lock_file, which closing the file gives back, trying again while another
-        holder has it."""
-        deadline = time.monotonic() + _HOLD_SECONDS
-        while not _takes_operating_system_lock(lock_file.fileno()):
-            if time.monotonic() >= deadline:
-                raise JsonFileBusy(self.path, _HOLD_SECONDS)
-            time.sleep(_HOLD_RETRY_SECONDS)
 
     def _text(self) -> str:
         """The file's text, without the byte-order mark an editor may have saved at its start. Windows refuses a read

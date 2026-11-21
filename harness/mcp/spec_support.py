@@ -15,7 +15,8 @@ from pathlib import Path
 
 from harness.mcp.cdd_home import CDD_HOME_ENV, CddHome
 from harness.mcp.mcp_address import CHAT_HEADER, CHAT_PROCESS_HEADER, PROJECT_HEADER, SERVER_PORT_ENV, McpAddress
-from harness.mcp.mcp_daemon import CONNECT_SCRIPT, SERVER_OWNER_ENV, McpDaemon, RunningServer
+from harness.mcp.mcp_daemon import CONNECT_SCRIPT, SERVER_OWNER_ENV, McpDaemon
+from harness.process.server_daemon import RunningServer
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _TOOLSET_REFS_ENV = "MCP_TOOLSET_REFS"

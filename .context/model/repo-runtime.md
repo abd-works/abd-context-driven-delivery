@@ -117,22 +117,21 @@ Starting, watching, and stopping other processes. Every class here is a leaf: it
 - `RunningProcess._wait_until_ended`
   - `-> raise ProcessNotStopped` · harness/process/process.py
 - **Used by**
-  - `McpDaemon` `-> RunningProcess(pid).stop(_STOP_SECONDS)` stops the old cdd server before a restart · harness/mcp/mcp_daemon.py
-  - `HookDaemon` `-> RunningProcess(pid).stop(_STOP_SECONDS)` replaces a stale hook server · harness/hooks/hook_daemon.py
+  - `ServerDaemon.stop` `-> RunningProcess.stop(STOP_SECONDS)` stops the cdd server before a restart and a hook daemon whose checkout closes · harness/process/server_daemon.py
+  - `HookDaemon` `-> RunningProcess.stop(STOP_SECONDS)` replaces a stale hook server · harness/hooks/hook_daemon.py
 
 ## PythonInterpreter
 
 - **Used by**
-  - `McpDaemon._start_process` `-> PythonInterpreter(home.python).windowless` the interpreter the cdd server runs under · harness/mcp/mcp_daemon.py:106
-  - `HookDaemon` `-> PythonInterpreter().windowless` the interpreter the hook server runs under · harness/hooks/hook_daemon.py:230
+  - `McpDaemon._command` `-> home.interpreter.windowless` the interpreter the cdd server runs under · harness/mcp/mcp_daemon.py
+  - `HookDaemon._command` `-> PythonInterpreter().windowless` the interpreter the hook server runs under · harness/hooks/hook_daemon.py
   - `Hooks` `-> PythonInterpreter(python).console` the interpreter each installed hook command calls · harness/hooks/hooks.py:206
 
 ## BackgroundStart
 
 - `BackgroundStart.run` `-> RunningProcess` starts a process with no console window that breaks away from the starter's job, or `-> Wmi.create` outside every job where the job refuses breakaway · harness/process/process.py
 - **Used by**
-  - `McpDaemon` `-> BackgroundStart().run` starts the cdd server · harness/mcp/mcp_daemon.py
-  - `HookDaemon` `-> BackgroundStart().run` starts the hook server · harness/hooks/hook_daemon.py:229
+  - `ServerDaemon.spawn` `-> BackgroundStart().run` starts the cdd server and the hook server · harness/process/server_daemon.py
   - `scripts/start.py` `-> BackgroundStart().creationflags / .startupinfo` · scripts/start.py:184
 
 # harness/git
@@ -967,9 +966,9 @@ The one way the code runs git, with a timeout and no stdin.
 - `Installer._ensure_hook_server`
   - `-> HookDaemon()` creates · harness/installer/installer.py:285
   - `-> HookDaemon.ensure` ensures · harness/installer/installer.py:286
-  - `-> HookDaemon.live_address` calls live_address on · harness/installer/installer.py:287
+  - `-> HookDaemon.running` asks who runs · harness/installer/installer.py:287
 - `Installer._runtime_status_report`
-  - `-> HookDaemon().live_address` creates · harness/installer/installer.py:329
+  - `-> HookDaemon().running` creates · harness/installer/installer.py:329
   - `-> HookDaemon()` creates · harness/installer/installer.py:329
   - `-> HookInstallation()` creates · harness/installer/installer.py:331
   - `-> HookInstallation.registered_events` reads registered events of · harness/installer/installer.py:332

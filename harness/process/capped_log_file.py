@@ -40,3 +40,9 @@ class CappedLogFile:
         except PermissionError:
             return False
         return True
+
+    def last_lines(self, count: int) -> str:
+        """The log's last count lines, as a server that did not start reports them; ``(no log)`` when there is none."""
+        if not self.path.is_file():
+            return "(no log)"
+        return "\n".join(self.path.read_text(encoding="utf-8", errors="replace").splitlines()[-count:])
