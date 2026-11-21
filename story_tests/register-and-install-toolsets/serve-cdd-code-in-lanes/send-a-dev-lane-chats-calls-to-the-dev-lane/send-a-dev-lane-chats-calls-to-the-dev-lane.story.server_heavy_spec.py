@@ -48,8 +48,7 @@ with description("Send A Dev-Lane Chat's Calls To The Dev Lane") as self:
         dev_address = _listening_dev_lane(dev_home, self.worktree)
         self.lanes = ServerLanes(CddHome(self.root / ".cdd"), McpAddress(examples.STABLE_PORT), dev_address)
         self.lanes.dev.home.serve_from(self.worktree)
-        self.stable_host = examples.seed_host(examples.seed_main_checkout(self.root))
-        self.stable_host.route_between_lanes(self.lanes, self.lanes.stable.home)
+        self.stable_host = examples.seed_host(examples.seed_main_checkout(self.root), self.lanes)
 
     with after.all:
         shutil.rmtree(self.root, ignore_errors=True)

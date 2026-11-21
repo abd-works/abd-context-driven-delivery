@@ -18,7 +18,7 @@ ENDED_WITHIN_SECONDS = 15
 
 def ended_within(server: SpecServer, seconds: float) -> bool:
     deadline = time.monotonic() + seconds
-    while server.daemon.ping() is not None:
+    while server.daemon.running() is not None:
         if time.monotonic() > deadline:
             return False
         time.sleep(0.25)
@@ -40,7 +40,7 @@ with description("a throwaway cdd server") as self:
     with context("whose owning process still runs"):
         with it("should keep answering"):
             time.sleep(3)
-            expect(self.server.daemon.ping()).not_to(be_none)
+            expect(self.server.daemon.running()).not_to(be_none)
 
     with context("whose owning process has ended"):
         with before.each:

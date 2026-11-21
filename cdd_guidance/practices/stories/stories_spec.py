@@ -313,15 +313,14 @@ with description("Stories"):
         with it("should include the stories schema in the practice skill"):
             import tempfile
 
-            from harness.installation.files import FileChannel, FileInstallation
+            from harness.installation.files import SkillInstallation
+            from harness.installation.repository_toolsets import RepositoryToolsets
             from harness.installation.install_target import InstallTarget
 
             stories = Stories()
             tool = stories.tools["instructions"]
             with tempfile.TemporaryDirectory() as tmp:
-                FileInstallation(
-                    InstallTarget(IdeLayout("Cursor"), tmp), FileChannel("skill", True), repo=_REPO_ROOT
-                ).write(tool)
+                SkillInstallation.into(InstallTarget(IdeLayout("Cursor"), tmp), RepositoryToolsets(_REPO_ROOT)).write(tool)
                 text = next(Path(tmp).rglob("SKILL.md")).read_text(encoding="utf-8")
             expect(text).to(contain("storyNode:"))
             expect(text).to(contain("conforms to this schema"))

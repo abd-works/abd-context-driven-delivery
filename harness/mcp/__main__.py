@@ -13,6 +13,7 @@ def main() -> None:
     from harness.mcp.mcp_address import McpAddress
     from harness.mcp.mcp_daemon import McpDaemon
     from harness.mcp.mcp_server import McpHost
+    from harness.mcp.server_lanes import ServerLanes
 
     source = Path.cwd().resolve()
     # The server imports every toolset of the checkout it runs from by its full name.
@@ -24,7 +25,8 @@ def main() -> None:
         return
     daemon.this_process.end_with_owner()
     refs = tuple(ref.strip() for ref in arguments.toolsets.split(",") if ref.strip())
-    host = McpHost.from_refs(refs, repo=str(source)) if refs else McpHost.from_repo(source)
+    lanes = ServerLanes.from_serving(daemon.home, daemon.address)
+    host = McpHost.from_refs(refs, repo=str(source), lanes=lanes, home=daemon.home) if refs else McpHost.from_repo(source, lanes, daemon.home)
     host.serve(daemon, listener)
 
 

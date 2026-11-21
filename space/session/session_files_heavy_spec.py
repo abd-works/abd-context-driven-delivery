@@ -16,7 +16,7 @@ if str(_REPO_ROOT) not in sys.path:
 from expects import be_false, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
-from harness.agent_tools.agent_tools import AgentToolSet
+from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference
 from space.repo.built_once import BuiltOnce
 from space.session import Session, Sessions
 from space.session.session import SessionNotFoundError
@@ -83,7 +83,7 @@ with description("session.write_file") as self:
         _git(self.top / "main", "worktree", "repair", str(self.top / "worktree"))
         self.main, self.worktree = self.top / "main", self.top / "worktree"
         self.folder = self.main / ".sessions" / TICKET
-        self.tool = AgentToolSet.instantiate(Session).tools["write_file"]
+        self.tool = ToolsetReference.of(Session).made().tools["write_file"]
 
     with after.each:
         self.home.close()

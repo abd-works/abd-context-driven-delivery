@@ -2,46 +2,21 @@
 from __future__ import annotations
 
 import functools
-import hashlib
-import json
 import os
-import shutil
 import sys
 from pathlib import Path
 
-from harness.installation.ide_layout import IdeLayout
-from harness.installation.install_lock import InstallLock
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
 from harness.installation.repository_toolsets import RepositoryToolsets
 from harness.git.checkout import Checkout
 from harness.git.git import Git, RepoConnectError
+from harness.mcp.claude_marketplace import ClaudeMarketplace
 from harness.mcp.mcp_address import DEV_LANE_FOLDER
 from harness.process.process import PythonInterpreter
 
 CDD_HOME_ENV = "CDD_HOME"
-CLAUDE_MARKETPLACE = "cdd-home"
-CLAUDE_PLUGIN = "cdd"
-CLAUDE_PLUGIN_DESCRIPTION = "Connects every Claude Code chat to the one cdd server, starting it when a chat starts"
-# How long the chat-start hook may take to start a server that was not running: a cold start imports every toolset.
-SERVER_START_SECONDS = 90
-# How much of a content hash a plugin version carries: enough that two different contents never share a version.
-VERSION_HASH_CHARS = 12
-# The cdd-board mod is published from the code the server runs, so every chat's mod matches the server it talks to.
-BOARD_PLUGIN = "cdd-board"
-BOARD_MOD_FOLDER = Path("harness") / "chat-ui" / "pane"
-# The prompt queue is a mod beside the chat bar, published the same way, so every chat can queue prompts.
-QUEUE_PLUGIN = "prompt-queue"
-QUEUE_MOD_FOLDER = Path("tools") / "prompt_queue"
-# The parts of a mod Claude Code loads; its tests and the rest of its folder stay in the checkout.
-MOD_PARTS = (".claude-plugin", "hooks", "types")
-# The chat bar opens a diagram in the draw.io viewer, so the viewer is published inside the mod: a chat in any project
-# finds it there, not only one in a CDD checkout. It is copied as a file; the harness does not import it.
-DRAWIO_VIEWER = Path("tools") / "drawio_viewer" / "drawio_viewer.py"
-BOARD_DRAWIO_VIEWER = Path("drawio-viewer") / "drawio_viewer.py"
 # A commit without the server cannot serve chats, so pinning one would leave every chat without cdd.
 SERVER_MODULE = "harness/mcp/mcp_daemon.py"
-# Claude Code, the IDE whose plugins this home publishes.
-_CLAUDE_CODE = IdeLayout("Claude")
 
 
 class RuntimeNotInstalled(Exception):
@@ -76,15 +51,14 @@ class ServerStateUnreadable(JsonFileUnreadable):
 
 
 class CddHome:
-    """The user's cdd folder: which checkout the one server runs, the Python it runs on, and the server's address.
+    """The user's cdd folder: which checkout the one server runs, the Python it runs on, and the server's address and
+    files. The Claude Code marketplace it publishes is its own object (`marketplace`).
 
     The server runs from a pinned copy of a commit, so installing from a worktree never changes the code every chat
     talks to. ``serve_from`` points it at a live checkout instead, for working on CDD itself."""
 
     PINNED = "pinned"
     CHECKOUT = "checkout"
-    # The file in the published board mod naming the command its Run install runs.
-    INSTALL_COMMAND = "install.json"
 
     def __init__(self, folder: Path | str | None = None) -> None:
         named = folder or os.environ.get(CDD_HOME_ENV) or Path.home() / ".cdd"
@@ -94,8 +68,8 @@ class CddHome:
         self._runtime_file = JsonFile(self.folder / "runtime.json", RuntimeRecordUnreadable)
         # Where the running server publishes its address and pid, for tools that look for it without calling it.
         self.state_file = JsonFile(self.folder / "server.json", ServerStateUnreadable)
-        # One install publishes this home's mods at a time; a second waits for it.
-        self._publishing = InstallLock(self.folder)
+        # The Claude Code marketplace this home publishes: the cdd plugin and the mods of the code the server runs.
+        self.marketplace = ClaudeMarketplace(self.folder / "claude-plugins", self)
 
     @property
     def is_dev_lane(self) -> bool:
@@ -117,54 +91,6 @@ class CddHome:
         return self.folder / "connect.py"
 
     @property
-    def _start_command(self) -> str:
-        """What the cdd plugin runs when a chat starts: the connect script, starting the server when none answers. It
-        prints nothing, so it runs without a console window."""
-        return f'"{self.interpreter.windowless}" "{self.connect_script}" --start'
-
-    @property
-    def claude_plugins(self) -> Path:
-        """The local marketplace holding the ``cdd`` plugin, which declares the cdd server for every Claude Code chat."""
-        return self.folder / "claude-plugins"
-
-    def write_claude_plugin(self, server: dict[str, object]) -> list[Path]:
-        """Write the ``cdd`` plugin and its marketplace: the server every chat connects to, and the hook that starts it
-        when a chat starts. Its version gains a hash of both: Claude Code keeps a plugin it has already seen at the same
-        version, so a changed one needs a new one. Returns the files written."""
-        plugin = self.claude_plugins / CLAUDE_PLUGIN
-        declared = {_CLAUDE_CODE.mcp_servers_key: {"cdd": server}}
-        hooks = {"hooks": {"SessionStart": [{"hooks": [{"type": "command", "command": self._start_command, "timeout": SERVER_START_SECONDS}]}]}}
-        version = f"1.0.0-{hashlib.sha256(json.dumps([declared, hooks], sort_keys=True).encode('utf-8')).hexdigest()[:VERSION_HASH_CHARS]}"
-        files = {
-            plugin / ".claude-plugin" / "plugin.json": {"name": CLAUDE_PLUGIN, "version": version, "description": CLAUDE_PLUGIN_DESCRIPTION},
-            plugin / ".mcp.json": declared,
-            plugin / "hooks" / "hooks.json": hooks,
-        }
-        for path, content in files.items():
-            JsonFile(path).write(content)
-        if self.is_installed:
-            self.write_mod_plugins()
-        return [self._write_marketplace(), *files]
-
-    def write_mod_plugins(self) -> None:
-        """Publish the mods from the code the server runs."""
-        self._publish_mods(self.source)
-
-    def publish_mods_of(self, lane: CddHome) -> None:
-        """Publish the mods of the code lane's server runs into this home's marketplace. Every chat installs its mods
-        from the stable lane's home, so a dev lane's install publishes there too, or the person keeps the stable lane's
-        mods while the feature changes them."""
-        self._publish_mods(lane.source)
-
-    def publish_mods_for_chats(self, is_dev_lane_running: bool) -> None:
-        """Publish this lane's mods when its server restarts, then the mods every chat installs, which come from the
-        stable lane's marketplace: a dev lane's own, and, on the stable lane, the dev lane's after its own while the dev
-        lane's server runs, so a restart of either server leaves the feature's mods in the chats."""
-        self.write_mod_plugins()
-        if self.is_dev_lane or is_dev_lane_running:
-            self.stable_lane.publish_mods_of(self.stable_lane.dev_lane)
-
-    @property
     def stable_lane(self) -> CddHome:
         """The stable lane's home: this one, or the one a dev lane's home sits in."""
         return CddHome(self.folder.parent) if self.is_dev_lane else self
@@ -174,79 +100,6 @@ class CddHome:
         """The dev lane's home inside this stable lane's home."""
         return CddHome(self.folder / DEV_LANE_FOLDER)
 
-    def _publish_mods(self, code: Path) -> None:
-        """Publish the mods of code: the cdd-board mod, with the draw.io viewer its chat bar opens diagrams in and the
-        install command it runs, and the prompt queue mod; then list them in the marketplace. One install publishes
-        into the marketplace at a time: installs from the main checkout and a ticket's worktree at the same moment both
-        replace the same mod folders, and one would fail on a file the other had just removed."""
-        with self._publishing.held():
-            board = self._publish_mod(code, BOARD_MOD_FOLDER, BOARD_PLUGIN)
-            if board is not None:
-                self._add_board_extras(code, board)
-            self._publish_mod(code, QUEUE_MOD_FOLDER, QUEUE_PLUGIN)
-            self._write_marketplace()
-
-    def _publish_mod(self, code: Path, folder: Path, name: str) -> Path | None:
-        """Copy the mod in folder of code to the plugin called name; none when the code has no such mod. Its version
-        gains a hash of the mod's files: Claude Code keeps a plugin it has already seen at the same version, so a
-        changed mod needs a new one."""
-        source = code / folder
-        if not (source / ".claude-plugin" / "plugin.json").is_file():
-            return None
-        target = self.claude_plugins / name
-        self._copy_mod(source, target)
-        manifest_file = JsonFile(target / ".claude-plugin" / "plugin.json")
-        manifest = manifest_file.read()
-        # The source is hashed, not the copy: with the board folder watched, Claude Code writes type files into the copy
-        # while it is read, and a file it renames away mid-read failed the install.
-        manifest["version"] = f"{manifest.get('version', '0.0.0')}-{self._content_hash(source)}"
-        manifest_file.write(manifest)
-        return target
-
-    def _add_board_extras(self, code: Path, target: Path) -> None:
-        """The install command the chat bar runs, read from its own folder since it runs while the server is broken, and
-        the draw.io viewer it opens diagrams in."""
-        JsonFile(target / self.INSTALL_COMMAND).write({"command": self.install_command})
-        if self.mode == self.CHECKOUT:
-            JsonFile(self.source / BOARD_MOD_FOLDER / self.INSTALL_COMMAND).write({"command": self.install_command})
-        if (code / DRAWIO_VIEWER).is_file():
-            (target / BOARD_DRAWIO_VIEWER).parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(code / DRAWIO_VIEWER, target / BOARD_DRAWIO_VIEWER)
-
-    def _copy_mod(self, source: Path, target: Path) -> None:
-        """Copy the mod's parts, without their tests."""
-        # A file the running app holds open can survive the delete on Windows, so the copy writes over what is left.
-        shutil.rmtree(target, ignore_errors=True)
-        for part in MOD_PARTS:
-            if (source / part).is_dir():
-                shutil.copytree(source / part, target / part, ignore=shutil.ignore_patterns("*.test.*"), dirs_exist_ok=True)
-
-    def _content_hash(self, folder: Path) -> str:
-        digest = hashlib.sha256()
-        for path in sorted(item for item in folder.rglob("*") if item.is_file()):
-            digest.update(path.relative_to(folder).as_posix().encode("utf-8"))
-            digest.update(path.read_bytes())
-        return digest.hexdigest()[:VERSION_HASH_CHARS]
-
-    def _write_marketplace(self) -> Path:
-        """List every plugin published here; a marketplace naming a missing folder fails to load."""
-        plugins = []
-        for name in (CLAUDE_PLUGIN, BOARD_PLUGIN, QUEUE_PLUGIN):
-            manifest = JsonFile(self.claude_plugins / name / ".claude-plugin" / "plugin.json")
-            if manifest.exists():
-                description = manifest.read().get("description", "")
-                plugins.append({"name": name, "source": f"./{name}", "description": description})
-        marketplace = JsonFile(self.claude_plugins / ".claude-plugin" / "marketplace.json")
-        return marketplace.write({"name": CLAUDE_MARKETPLACE, "owner": {"name": "cdd"}, "plugins": plugins})
-
-    @property
-    def board_folder(self) -> Path:
-        """The folder Claude Code loads the board mod from: a served checkout's own mod folder, so an edit there reloads
-        in every chat with no install, else the copy published here."""
-        if self.mode == self.CHECKOUT:
-            return self.source / BOARD_MOD_FOLDER
-        return self.claude_plugins / BOARD_PLUGIN
-
     @property
     def runtime_record(self) -> Path:
         """Which checkout the server runs, in which mode, on which Python."""
@@ -255,17 +108,6 @@ class CddHome:
     @property
     def pinned_checkout(self) -> Path:
         return self.folder / "runtime"
-
-    def take_language_adapters(self, written: Path, ide_folder: str) -> Path:
-        """Copy the language adapters an install wrote, the folder written, into the pinned runtime under its IDE folder
-        ide_folder, in place of any an earlier pin left. The apps this home's server launches run from the runtime and
-        import the CDD domain through those adapters, which git never copies there. A server started from the runtime
-        keeps its folders open on Windows, so they outlive the removal empty and the copy writes into them. Answers
-        where they went."""
-        target = self.pinned_checkout / ide_folder / "language-adapters"
-        shutil.rmtree(target, ignore_errors=True)
-        shutil.copytree(written, target, dirs_exist_ok=True)
-        return target
 
     @property
     def is_installed(self) -> bool:
@@ -306,12 +148,6 @@ class CddHome:
         return PythonInterpreter(self._runtime().get("python") or sys.executable)
 
     @property
-    def install_command(self) -> list[str]:
-        """What the board mod's Run install runs, with the chat's folder added: the served checkout's install script on
-        the Python the server runs on. The mod runs it itself because the server may be what is broken."""
-        return [str(self.interpreter.executable), str(self.source / "scripts" / "install.py"), "--ide", _CLAUDE_CODE.ide, "--from-chat"]
-
-    @property
     def server_environment(self) -> dict[str, str]:
         """What the server process needs to import the source checkout's packages and keep bytecode out of it: the
         checkout's toolsets say both, as they do for the hook daemon."""
@@ -346,7 +182,7 @@ class CddHome:
             raise PinFailed(source, f"commit {commit[:8]} has no {SERVER_MODULE}; commit the one-server code before pinning")
         self._mirror_origin(source, source_git)
         self._save_runtime(source, self.PINNED, commit=commit)
-        self.write_mod_plugins()
+        self.marketplace.publish_mods(self.source)
         return commit
 
     def _mirror_origin(self, source: Path, source_git: Git) -> None:
@@ -368,7 +204,7 @@ class CddHome:
     def serve_from(self, checkout: Path | str) -> None:
         """Run the server on ``checkout`` as it is on disk, so a ``cdd.restart`` picks up its edits."""
         self._save_runtime(Path(checkout).resolve(), self.CHECKOUT)
-        self.write_mod_plugins()
+        self.marketplace.publish_mods(self.source)
 
     def _git(self, checkout: Path, git: Git, *arguments: str) -> str:
         """Run git while pinning checkout; a failure is the pin's failure."""

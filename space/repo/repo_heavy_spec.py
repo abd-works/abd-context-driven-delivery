@@ -20,7 +20,7 @@ for _cat in ("tools", "cdd_guidance/practices"):
 from expects import be_below, be_false, be_true, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
-from harness.agent_tools.agent_tools import AgentToolSet
+from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference
 from harness.mcp.mcp_server import McpHost
 from harness.git.git import Git, RepoConnectError
 from space.repo.latest_release import LatestRelease
@@ -499,10 +499,10 @@ with description("the repo push toolset"):
             expect(payload["sha"]).to(equal(_git(self.repo_root, "rev-parse", "HEAD")))
 
         with it("should publish push_commit on MCP and keep /push as instructions only"):
-            from harness.agent_tools.agent_tools import InstallDestination
+            from harness.mcp.mcp_annotations import Mcp
 
-            toolset = AgentToolSet.instantiate("space.repo.repo:Repo")
-            mcp_names = [tool.name for tool in toolset.tools_for(InstallDestination.MCP)]
+            toolset = ToolsetReference.parsed("space.repo.repo:Repo").made()
+            mcp_names = [tool.name for tool in toolset.tools_published_to(Mcp)]
             expect("push_commit" in mcp_names).to(equal(True))
             expect("push" in mcp_names).to(equal(False))
             expect("push_commit" in toolset.instructions["push"].description).to(equal(True))

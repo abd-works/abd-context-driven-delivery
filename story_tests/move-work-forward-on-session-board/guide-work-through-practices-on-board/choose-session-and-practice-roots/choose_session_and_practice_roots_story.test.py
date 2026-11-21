@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from expects import contain, equal, expect, raise_error
 
-from harness.agent_tools.agent_tools import AgentToolSet
+from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference
 from space.session.practice_session_output import OutputRootRefused
 from space.session.session import Session
 from space.session.session_roots_examples import (
@@ -77,7 +77,7 @@ with story("Choose Session And Practice Roots"):
         with when("the agent asks each fidelity for the roots it proposes"):
             # Agent -> FidelitySessionOutput.propose_roots(['Refund'])
             self.proposed = {(practice, fidelity): self.refund.output(practice, fidelity).propose_roots(self.names) for practice, fidelity in ROOTED_FIDELITIES}
-            self.instructions = "\n".join(AgentToolSet.instantiate(Session).tools["set_up_roots"].prompt)
+            self.instructions = "\n".join(ToolsetReference.of(Session).made().tools["set_up_roots"].prompt)
         with then("DDD's tactics propose domain/orders/refund and Stories' acceptance tests propose story_tests/manage-orders/refund-order"):
             expect((self.proposed[("ddd", "tactics")], self.proposed[("stories", "acceptance_tests")])).to(equal(([REFUND_DOMAIN], [REFUND_STORIES])))
         with and_("the agent shows the proposed roots for each practice and fidelity to the person"):

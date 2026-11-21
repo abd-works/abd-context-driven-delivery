@@ -2,52 +2,61 @@
 
 What each class of the repository model does to another class when the code runs, traced from the code: the operation that acts, then each `-> Other.operation` it calls, creates (`Other()`), reads, or raises, with the interaction in words and the line that does it, and `<- Type` where what comes back matters. A dashed labelled arrow in `.context/repo-model.drawio` stands for each class pair here. Only classes in `.context/repo-model.md` appear as targets; calls into a class outside the model are left out. The judgement of each relationship (right as a dependency, or the code has the wrong shape) is in `.context/repo-model-disconnected.md`.
 
-Read `annotation_kinds` as the one private registry of annotation kinds in harness/annotations; `_InstallChannels` as the Installer's private holder of its run's installations.
+Read `annotation_kinds` as the one registry of annotation kinds in harness/annotations; *InstallChannels* as the installations of one *InstallRun*.
 
 # Traced chains
 
 ## Install: the Installer walks the toolsets, reads each member's destination annotations, and hands the member to the installation of each channel
 
-- `Installer.install` `-> Installer._install_run` calls · harness/installer/installer.py:132
-- `Installer._install_run` `-> RepositoryToolsets.collect` reads the toolset references from the source · harness/installer/installer.py:145
--   `<- list[str]` toolset references `module:Class` · harness/installer/installer.py:145
-- `Installer._install_run` `-> _InstallChannels(installer)` creates McpInstallation, HookInstallation, LanguageAdapterInstallation once per run · harness/installer/installer.py:144
-- `Installer._install_all` `-> AgentToolSet.instantiate` loads each toolset · harness/installer/installer.py:168
-- `Installer._install_toolset` `-> AgentToolSet.tools` reads every published member · harness/installer/installer.py:180
--   `<- dict[str, AgentTool]` · harness/installer/installer.py:180
-- `Installer.installations_for` `-> AgentTool.destinations` reads the channels the member is annotated for · harness/installer/installer.py:100
-- `AgentTool.destinations` `-> AgentTool.install_to(channel)` asks once per listed channel · harness/agent_tools/agent_tools.py:744
-- `AgentTool.install_to` `-> annotation_kinds.publishes(channel, callable)` reads the Destination annotation of that channel (Skill, Command, Rules, Mcp, Hook) and NoDeploy · harness/agent_tools/agent_tools.py:740
--   `<- list[str]` the channels it publishes to · harness/agent_tools/agent_tools.py:744
-- `Installer.installations_for` `-> FileInstallation(ide, path, destination)` creates one per skill, command, or rules channel · harness/installer/installer.py:105
-- `Installer.installations_for` `-> _InstallChannels.mcp` uses the run's McpInstallation for the MCP channel · harness/installer/installer.py:102
-- `Installer.installations_for` `-> _InstallChannels.hook` uses the run's HookInstallation for the hook channel · harness/installer/installer.py:109
--   `<- list[Installation]` · harness/installer/installer.py:98
-- `Installer._install_toolset` `-> Installation.install(tool)` hands the member to each installation · harness/installer/installer.py:182
-- `Installation.install` `-> FileInstallation.write | McpInstallation.write | HookInstallation.write` writes the member's channel · harness/installation/destination.py:274
-- `Installer._install_toolset` `-> LanguageAdapterInstallation.record(toolset)` records a toolset annotated @language_adapter · harness/installer/installer.py:183
-- `LanguageAdapterInstallation.record` `-> DataClass.languages` reads the LanguageAdapter annotation · harness/installation/language_adapter.py:825
-- `Installer._install_run` `-> LanguageAdapterInstallation.write_all` writes `{ide}/language-adapters/typescript/` · harness/installer/installer.py:147
-- `Installer._install_run` `-> Installer._install_agents` copies `cdd_guidance/agents/*.md` to `{ide}/agents/` without reading any annotation · harness/installer/installer.py:148
-- `Installer._install_run` `-> Installer._install_standing_rules -> FileInstallation.write_standing_rule` writes each `cdd_guidance/rules` file · harness/installer/installer.py:149
+- `Installer.install` `-> InstallRun(installer, toolsets, replace)` creates the run and keeps it as `last_run` · harness/installation/installer.py:376
+- `InstallRun` `-> InstallChannels(installer, SERVER_CHANNELS.kinds)` creates the run's installations once · harness/installation/installer.py:136
+- `InstallChannels` `-> RegisteredChannel.create(target, record, repository)` creates McpInstallation and HookInstallation, each registered channel · harness/installation/installer.py:68
+- `InstallChannels` `-> LanguageAdapters(target, record, repository)` creates the language adapters · harness/installation/installer.py:69
+- `InstallChannels` `-> SkillInstallation, CommandInstallation, RulesInstallation` creates one installation of each file channel · harness/installation/installer.py:71
+- `InstallRun.publish` `-> Installer.repository_toolsets` reads every toolset the repository defines · harness/installation/installer.py:161
+-   `<- list[ToolsetReference]` · harness/installation/installer.py:405
+- `InstallRun._install_all` `-> ToolsetReference.made` makes each toolset · harness/installation/installer.py:208
+- `InstallRun._install_toolset` `-> AgentToolSet.tools` reads every published member · harness/installation/installer.py:222
+-   `<- dict[str, AgentTool]` · harness/installation/installer.py:222
+- `InstallRun._install_toolset` `-> InstallChannels.for_tool(tool)` finds every installation the member is written through · harness/installation/installer.py:223
+- `InstallChannels.for_tool` `-> RegisteredChannel.accepts(tool)` asks each registered channel · harness/installation/installer.py:86
+- `InstallChannels.for_tool` `-> AgentTool.is_published_to(installation.destination)` asks each file channel's destination kind · harness/installation/installer.py:87
+- `AgentTool.is_published_to` `-> DestinationKind.publishes(callable)` reads that destination's annotation (Skill, Command, Rules, Mcp, Hook) and NoDeploy · harness/agent_tools/agent_tools.py:916
+-   `<- list[Installation]` · harness/installation/installer.py:85
+- `InstallRun._install_toolset` `-> Installation.install(tool)` hands the member to each installation · harness/installation/installer.py:224
+- `Installation.install` `-> FileInstallation.write | McpInstallation.write | HookInstallation.write` writes the member's channel · harness/installation/destination.py:108
+- `InstallRun._install_toolset` `-> LanguageAdapters.record(toolset)` records a toolset annotated @language_adapter · harness/installation/installer.py:225
+- `LanguageAdapters.record` `-> DataClass.languages` reads the LanguageAdapter annotation · harness/installation/language_adapter.py:862
+- `InstallRun.publish` `-> LanguageAdapters.write_all` writes `{ide}/language-adapters/typescript/` · harness/installation/installer.py:165
+- `InstallRun.publish` `-> InstallRun._install_agents` copies `cdd_guidance/agents/*.md` to `{ide}/agents/` without reading any annotation · harness/installation/installer.py:166
+- `InstallRun.publish` `-> InstallRun._install_standing_rules -> RulesInstallation.write_standing_rule` writes each `cdd_guidance/rules` file · harness/installation/installer.py:250
+- `InstallRun.publish` `-> RegisteredChannel.write_once_recorded` writes what a channel writes once every tool is recorded, such as the IDE's `cdd` entry · harness/installation/installer.py:169
+- `InstallRun.stand_up` `-> ChannelServer.stand_up` stands each channel's server up over what was installed · harness/installation/installer.py:176
+-   `<- StandUp` the tools it serves and the tools it skipped · harness/installation/installer.py:176
+- `InstallRun.ensure_running` `-> ChannelServer.ensure_running` starts each server · harness/installation/installer.py:184
+- `InstallRun._diagnose` `-> Installer.diagnosis_of` diagnoses what the run deployed against the last install · harness/installation/installer.py:189
+- `Installer.diagnosis_of` `-> Deployed.of_folder` reads what the folder holds on each channel · harness/installation/installer.py:410
+- `Installer.diagnosis_of` `-> RegisteredChannel.status` reads each registered channel's status · harness/installation/installer.py:411
+-   `<- InstallDiagnosis` · harness/installation/installer.py:412
+- `InstallRun._diagnose` `-> InstallDiagnostics.record` appends the diagnosis to `diagnostics.json` · harness/installation/installer.py:190
 
-## Destination and the installation that writes it, matched by the destination's channel
+## Destination and the installation that writes it, matched by the installation's destination kind
 
-- `FileInstallation.write` `-> Skill (channel SKILL)` writes `{ide}/skills/{toolset}-{operation}/SKILL.md` · harness/installation/files.py:93
-- `FileInstallation.write` `-> Command (channel COMMAND)` writes `{ide}/commands/{toolset}/{name}.md` · harness/installation/files.py:96
-- `FileInstallation.write` `-> Rules (channel RULE)` writes `{ide}/rules/{practice}/{fidelity}.mdc` (`.md` for Claude Code) · harness/installation/files.py:99
-- `McpInstallation.write` `-> Mcp (channel MCP)` records the operation, then writes the IDE's `cdd` MCP entry · harness/mcp/mcp_server.py:154
-- `HookInstallation.write` `-> Hook (channel HOOK)` adds the event to `hooks.json` and the operation to `hook-handlers.json` · harness/hooks/hooks.py:227
-- `LanguageAdapterInstallation.record` `-> LanguageAdapter (class annotation, no channel)` generates TypeScript for the toolset · harness/installation/language_adapter.py:825
+- `SkillInstallation.write` `-> Skill (destination)` writes `{ide}/skills/{toolset}-{operation}/SKILL.md` · harness/installation/files.py:269
+- `CommandInstallation.write` `-> Command (destination)` writes `{ide}/commands/{toolset}/{name}.md` · harness/installation/files.py:327
+- `RulesInstallation.write` `-> Rules (destination)` writes `{ide}/rules/{practice}/{fidelity}.mdc` (`.md` for Claude Code) · harness/installation/files.py:339
+- `McpInstallation.write` `-> Mcp (destination)` records the operation; `write_once_recorded` writes the IDE's `cdd` MCP entry · harness/mcp/mcp_server.py:327
+- `HookInstallation.write` `-> Hook (destination)` adds the event (`Hook.name_given`) to `hooks.json` and the operation to `hook-handlers.json` · harness/hooks/hook_installation.py:67
+- `LanguageAdapters.record` `-> LanguageAdapter (class annotation, no channel)` generates TypeScript for the toolset · harness/installation/language_adapter.py:860
 - `PromptNotify._has_toast` `-> Toast (no channel)` nothing is installed; the notifier toasts the call · tools/prompt_notify/prompt_notify.py:264
 
 ## A chat's tool call: McpHost to ToolCall to the toolset's operation
 
-- `McpHost.dispatch` `-> McpServer.resolve_call_name` maps the chat's tool id to `toolset.operation` · harness/mcp/mcp_server.py:694
-- `McpHost.dispatch` `-> ToolCall.sent(arguments, project, tool, mcp_host)` creates the call · harness/mcp/mcp_server.py:757
+- `McpHost.dispatch` `-> ProjectToolsets.resolve_call_name` maps the chat's tool id to `toolset.operation` · harness/mcp/mcp_server.py:694
+- `McpHost.dispatch` `-> ToolCall.sent(arguments, project, request)` creates the call; a chat's call takes its project and *ToolRequest* from its *ChatRequest* (`project_for`, `tool_request`) · harness/mcp/mcp_server.py:782, :856
 - `McpHost.answer` `-> McpHost._answer_between_restarts` · harness/mcp/mcp_server.py:767
-- `McpHost._answer_between_restarts` `-> McpHost.server_for(call.project)` finds the project's McpServer · harness/mcp/mcp_server.py:776
-- `McpServer.answer_tool` `-> AgentTool.answer(call)` · harness/mcp/mcp_server.py:533
+- `McpHost._answer_between_restarts` `-> McpHost._server_for(call.project)` finds the project's ProjectToolsets · harness/mcp/mcp_server.py:885
+- `ProjectToolsets.answer` `-> AgentTool.answer(call)` · harness/mcp/mcp_server.py:497
 - `AgentTool.answer` `-> AgentToolSet.for_call(call)` the toolset as the call works on it · harness/agent_tools/agent_tools.py:801
 - `AgentTool.answer` `-> AgentTool.log_session_invocation(call) -> ToolCall.session` logs the call in the session open in its project · harness/agent_tools/agent_tools.py:802
 - `ToolCall.session` `-> SESSION_OPENING.open_in(call)` the opener space/session registered (`SESSION_OPENING.open_with`) · harness/agent_tools/tool_call.py:89
@@ -83,7 +92,7 @@ Read `annotation_kinds` as the one private registry of annotation kinds in harne
 
 - `GuidanceAction.for_call` `-> ToolCall.session_named` makes the action for the session the call works in · harness/guidance_actions/guidance_actions.py:166
 - `Validate.validate` `-> GuidanceAction._work_on(guidance) -> GuidanceArgument(guidance)` takes the guidance the call names · harness/guidance_actions/guidance_actions.py:216
-- `GuidanceAction.listed` `-> AgentToolSet.instantiate_all(items)` builds each PracticeGuidance, then has the session's practice adopt it · harness/guidance_actions/guidance_actions.py:244
+- `GuidanceAction.listed` `-> ToolsetReference.parsed(entry).made(**context)` builds each PracticeGuidance a call names by its reference, then has the session's practice adopt it · harness/guidance_actions/guidance_actions.py:496
 -   `<- list[PracticeGuidance]` · harness/guidance_actions/guidance_actions.py:248
 - `Validate._fidelities` `-> PracticeGuidance.fidelities.current` the FidelityGuidance each guidance is at · cdd_guidance/actions/validate/validate.py:100
 - `Validate.validate` `-> CheckedGraph(session, fidelities, NamedToCheck(paths, graph, call))` builds the graph from the checked files · cdd_guidance/actions/validate/validate.py:55
@@ -117,22 +126,21 @@ Starting, watching, and stopping other processes. Every class here is a leaf: it
 - `RunningProcess._wait_until_ended`
   - `-> raise ProcessNotStopped` · harness/process/process.py
 - **Used by**
-  - `McpDaemon` `-> RunningProcess(pid).stop(_STOP_SECONDS)` stops the old cdd server before a restart · harness/mcp/mcp_daemon.py
-  - `HookDaemon` `-> RunningProcess(pid).stop(_STOP_SECONDS)` replaces a stale hook server · harness/hooks/hook_daemon.py
+  - `ServerDaemon.stop` `-> RunningProcess.stop(STOP_SECONDS)` stops the cdd server before a restart and a hook daemon whose checkout closes · harness/process/server_daemon.py
+  - `HookDaemon` `-> RunningProcess.stop(STOP_SECONDS)` replaces a stale hook server · harness/hooks/hook_daemon.py
 
 ## PythonInterpreter
 
 - **Used by**
-  - `McpDaemon._start_process` `-> PythonInterpreter(home.python).windowless` the interpreter the cdd server runs under · harness/mcp/mcp_daemon.py:106
-  - `HookDaemon` `-> PythonInterpreter().windowless` the interpreter the hook server runs under · harness/hooks/hook_daemon.py:230
+  - `McpDaemon._command` `-> home.interpreter.windowless` the interpreter the cdd server runs under · harness/mcp/mcp_daemon.py
+  - `HookDaemon._command` `-> PythonInterpreter().windowless` the interpreter the hook server runs under · harness/hooks/hook_daemon.py
   - `Hooks` `-> PythonInterpreter(python).console` the interpreter each installed hook command calls · harness/hooks/hooks.py:206
 
 ## BackgroundStart
 
 - `BackgroundStart.run` `-> RunningProcess` starts a process with no console window that breaks away from the starter's job, or `-> Wmi.create` outside every job where the job refuses breakaway · harness/process/process.py
 - **Used by**
-  - `McpDaemon` `-> BackgroundStart().run` starts the cdd server · harness/mcp/mcp_daemon.py
-  - `HookDaemon` `-> BackgroundStart().run` starts the hook server · harness/hooks/hook_daemon.py:229
+  - `ServerDaemon.spawn` `-> BackgroundStart().run` starts the cdd server and the hook server · harness/process/server_daemon.py
   - `scripts/start.py` `-> BackgroundStart().creationflags / .startupinfo` · scripts/start.py:184
 
 # harness/git
@@ -149,7 +157,7 @@ The one way the code runs git, with a timeout and no stdin.
   - `-> raise RepoConnectError` when git is not installed · harness/git/git.py:65
 - **Used by**
   - `Repo.git` `-> Git(root)` every branch, commit and worktree operation of a repository · space/repo/repo.py:122
-  - `CddHome` `-> Git(folder).run / .succeeds` checks the remote and copies the pinned runtime · harness/mcp/cdd_home.py:213, :216, :227
+  - `CddHome` `-> Git(folder).run / .succeeds` checks the remote and copies the pinned runtime · harness/mcp/cdd_home.py:69, :146, :177
   - `Catalog` `-> Git(repo_root)` reads the commit its source links cite · harness/catalog_generator/catalog_generator.py:419
   - `ProjectApproach` `-> RepoConnectError` reports a project with no reachable git · harness/catalog_generator/project_approach.py:23
 
@@ -228,11 +236,12 @@ The one way the code runs git, with a timeout and no stdin.
 
 - `AgentTool.slug`
   - `-> AgentToolSet.slug` reads slug of · harness/agent_tools/agent_tools.py:756
-- `AgentTool.registration_name`
-  - `-> AgentToolSet.registration_name` reads registration name of · harness/agent_tools/agent_tools.py:760
+- `AgentTool.destinations`
+  - `-> annotation_kinds.destinations_of` reads every destination kind that publishes the callable · harness/agent_tools/agent_tools.py:912
+- `AgentTool.is_published_to`
+  - `-> DestinationKind.publishes` asks the destination whether it publishes the callable · harness/agent_tools/agent_tools.py:916
 - `AgentTool.deploy_name`
-  - `-> InstallDestination.COMMAND` reads constants of · harness/agent_tools/agent_tools.py:765
-  - `-> InstallDestination.SKILL` reads constants of · harness/agent_tools/agent_tools.py:766
+  - `-> annotation_kinds.deploy_name_of` reads the name a destination's annotation gave the callable · harness/agent_tools/agent_tools.py:965
 - `AgentTool.invoke`
   - `-> ToolCall()` creates · harness/agent_tools/agent_tools.py:796
 - `AgentTool.answer`
@@ -313,80 +322,59 @@ The one way the code runs git, with a timeout and no stdin.
 
 ## FileInstallation
 
-- `FileInstallation.__init__`
-  - `-> IdeLayout()` creates · harness/installation/files.py:87
-- `FileInstallation.relative_path`
-  - `-> Name()` creates · harness/installation/files.py:92
-  - `-> InstallDestination.SKILL` reads constants of · harness/installation/files.py:93
-  - `-> IdeLayout.nests_skills` reads nests skills of · harness/installation/files.py:95
-  - `-> InstallDestination.COMMAND` reads constants of · harness/installation/files.py:96
-  - `-> IdeLayout.commands_folder` reads commands folder of · harness/installation/files.py:98
-  - `-> InstallDestination.RULE` reads constants of · harness/installation/files.py:99
 - `FileInstallation.write`
-  - `-> AgentTool.kind` reads kind of · harness/installation/files.py:104
-  - `-> AgentTool.toolset` reads toolset of · harness/installation/files.py:107
-  - `-> AgentTool.deploy_name` reads deploy name of · harness/installation/files.py:107
-  - `-> InstallDestination.RULE` reads constants of · harness/installation/files.py:110
-  - `-> MarkdownText()` creates · harness/installation/files.py:111
-  - `-> InstallDestination.SKILL` reads constants of · harness/installation/files.py:113
-- `FileInstallation.write_standing_rule`
-  - `-> IdeLayout.scopes_rules_by_paths` reads scopes rules by paths of · harness/installation/files.py:121
-  - `-> FrontMatter()` creates · harness/installation/files.py:122
-  - `-> FrontMatter.fields` reads fields of · harness/installation/files.py:123
-  - `-> FrontMatter.content` reads content of · harness/installation/files.py:123
-  - `-> IdeLayout.rule_suffix` reads rule suffix of · harness/installation/files.py:126
+  - `-> FileInstallation.relative_path` asks the channel where the file goes · harness/installation/files.py:129
+  - `-> FileInstallation.front_matter` asks the channel what opens the file · harness/installation/files.py:132
+  - `-> AgentTool.toolset` reads toolset of · harness/installation/files.py:129
+  - `-> AgentTool.deploy_name` reads deploy name of · harness/installation/files.py:129
+- `FileInstallation.body`
+  - `-> AgentTool.kind` reads kind of · harness/installation/files.py:123
+  - `-> AgentTool.docstring` reads docstring of · harness/installation/files.py:125
+- `FileInstallation._served`
+  - `-> AgentTool.is_published_to(annotation_kinds.answering_calls)` asks whether a server answers the agent's calls to it · harness/installation/files.py:136
 - `FileInstallation._parts`
-  - `-> AgentTool.name` reads name of · harness/installation/files.py:135
-  - `-> AgentTool.toolset` reads toolset of · harness/installation/files.py:135
-  - `-> AgentTool.invoke_line` calls invoke_line on · harness/installation/files.py:136
-- `FileInstallation._guidance_slug`
-  - `-> Name()` creates · harness/installation/files.py:152
-- `FileInstallation._rule_path`
-  - `-> IdeLayout.rule_suffix` reads rule suffix of · harness/installation/files.py:155
-- `FileInstallation._kebab_folder`
-  - `-> Name()` creates · harness/installation/files.py:168
-- `FileInstallation._skill_operations`
-  - `-> Name()` creates · harness/installation/files.py:182
-- `FileInstallation._schema_guide`
-  - `-> AgentTool.name` reads name of · harness/installation/files.py:197
-  - `-> AgentTool.toolset` reads toolset of · harness/installation/files.py:199
-- `FileInstallation._instructions_at_install`
-  - `-> AgentTool.toolset` reads toolset of · harness/installation/files.py:209
-  - `-> AgentTool.name` reads name of · harness/installation/files.py:209
-  - `-> AgentTool.docstring` reads docstring of · harness/installation/files.py:214
-- `FileInstallation._body_for`
-  - `-> AgentTool.docstring` reads docstring of · harness/installation/files.py:219
-  - `-> AgentTool.kind` reads kind of · harness/installation/files.py:220
-  - `-> InstallDestination.RULE` reads constants of · harness/installation/files.py:222
-  - `-> AgentTool.toolset` reads toolset of · harness/installation/files.py:223
-  - `-> AgentTool.name` reads name of · harness/installation/files.py:223
+  - `-> AgentTool.invoke_line` calls invoke_line on · harness/installation/files.py:138
 - `FileInstallation._shell_command`
-  - `-> AgentTool.deploy_name` reads deploy name of · harness/installation/files.py:244
-  - `-> AgentTool.toolset` reads toolset of · harness/installation/files.py:247
-  - `-> AgentTool.name` reads name of · harness/installation/files.py:248
+  - `-> AgentTool.deploy_name` reads deploy name of · harness/installation/files.py:210
+  - `-> AgentToolSet.reference` reads the toolset's reference for `ToolsetReference.parsed(...).made()` · harness/installation/files.py:213
 - `FileInstallation._needs_shell_invoke`
-  - `-> AgentTool.kind` reads kind of · harness/installation/files.py:255
-  - `-> AgentTool.install_to_mcp` reads install to mcp of · harness/installation/files.py:255
-  - `-> InstallDestination.SKILL` reads constants of · harness/installation/files.py:255
-  - `-> InstallDestination.COMMAND` reads constants of · harness/installation/files.py:255
+  - `-> AgentTool.kind` reads kind of · harness/installation/files.py:220
 - `FileInstallation._fidelity_invoke_parts`
-  - `-> InstallDestination.MCP` reads constants of · harness/installation/files.py:268
-- `FileInstallation._with_installed_references`
-  - `-> IdeLayout.rule_suffix` reads rule suffix of · harness/installation/files.py:278
-- `FileInstallation._rules_front_matter`
-  - `-> IdeLayout.scopes_rules_by_paths` reads scopes rules by paths of · harness/installation/files.py:333
-- `FileInstallation` `-> Skill` writes the SKILL.md for · harness/installation/files.py:93
-- `FileInstallation` `-> Command` writes the slash command for · harness/installation/files.py:96
-- `FileInstallation` `-> Rules` writes the rules file for · harness/installation/files.py:99
+  - `-> AgentTool.invoke_line` calls invoke_line on · harness/installation/files.py:231
 
-## LanguageAdapterInstallation
+## SkillInstallation : FileInstallation
 
-- `LanguageAdapterInstallation.record`
-  - `-> DataClass()` creates · harness/installation/language_adapter.py:825
-- `LanguageAdapterInstallation._typescript_toolsets`
-  - `-> InstallDestination.MCP` reads constants of · harness/installation/language_adapter.py:860
-- `LanguageAdapterInstallation` `-> LanguageAdapter` generates TypeScript for · harness/installation/language_adapter.py:825
-- `LanguageAdapterInstallation` `-> SourceFile` draws a file link for fields annotated · harness/installation/language_adapter.py:196
+- `SkillInstallation.relative_path`
+  - `-> Name()` creates · harness/installation/files.py:272
+  - `-> IdeLayout.nests_skills` reads nests skills of · harness/installation/files.py:273
+- `SkillInstallation._skill_operations`
+  - `-> AgentTool.is_published_to(Skill)` reads the skill annotation · harness/installation/files.py:286
+- `SkillInstallation._skill_folder`
+  - `-> InstallPlace.folder_for` reads the folder the toolset's guidance is installed under · harness/installation/files.py:289
+- `SkillInstallation` `-> Skill` writes the SKILL.md for · harness/installation/files.py:269
+
+## CommandInstallation : FileInstallation
+
+- `CommandInstallation.relative_path`
+  - `-> IdeLayout.commands_folder` reads commands folder of · harness/installation/files.py:332
+- `CommandInstallation` `-> Command` writes the slash command for · harness/installation/files.py:327
+
+## RulesInstallation : FileInstallation
+
+- `RulesInstallation.relative_path`
+  - `-> IdeLayout.rule_suffix` reads rule suffix of · harness/installation/files.py:344
+- `RulesInstallation.write_standing_rule`
+  - `-> FrontMatter.of_file` reads the rule's front matter · harness/installation/files.py:360
+  - `-> IdeLayout.scopes_rules_by_paths` reads scopes rules by paths of · harness/installation/files.py:362
+  - `-> IdeLayout.rule_suffix` reads rule suffix of · harness/installation/files.py:366
+- `RulesInstallation` `-> Rules` writes the rules file for · harness/installation/files.py:339
+
+## LanguageAdapters : InstallPlace
+
+- `LanguageAdapters.record`
+  - `-> DataClass.languages` reads the LanguageAdapter annotation · harness/installation/language_adapter.py:862
+- `LanguageAdapters` `-> LanguageAdapter` generates TypeScript for · harness/installation/language_adapter.py:860
+- `LanguageAdapters` `-> SourceFile` draws a file link for fields annotated · harness/installation/language_adapter.py:196
 
 ## RepositoryToolsets
 
@@ -451,46 +439,54 @@ The one way the code runs git, with a timeout and no stdin.
   - `-> HookServer.handle_stdin` handles stdin · harness/hooks/hook_daemon.py:339
 - `HookDaemon` `-> RunningProcess` checks the lock holder is alive with · harness/hooks/hook_daemon.py:130
 
-## HookInstallation
+## HookInstallation : RegisteredChannel
 
 - `HookInstallation.dispatch_command`
-  - `-> PythonInterpreter()` creates · harness/hooks/hooks.py:206
+  - `-> PythonInterpreter()` creates · harness/hooks/hook_installation.py:36
+- `HookInstallation.accepts`
+  - `-> RegisteredChannel.accepts` asks whether the tool is published to Hook · harness/hooks/hook_installation.py:45
+  - `-> IdeLayout.runs_hooks` reads runs hooks of · harness/hooks/hook_installation.py:45
 - `HookInstallation.write`
-  - `-> AgentTool.install_to_hook` reads install to hook of · harness/hooks/hooks.py:227
-  - `-> AgentTool.hook_event` reads hook event of · harness/hooks/hooks.py:227
-  - `-> AgentTool.toolset` reads toolset of · harness/hooks/hooks.py:229
-  - `-> AgentTool.name` reads name of · harness/hooks/hooks.py:231
-  - `-> AgentTool.registration_name` reads registration name of · harness/hooks/hooks.py:231
-- `HookInstallation` `-> Hook` enrolls in hooks.json · harness/hooks/hooks.py:227
+  - `-> Hook.name_given` reads the event the operation runs on · harness/hooks/hook_installation.py:68
+  - `-> AgentTool.is_published_to(Hook)` reads the hook annotation · harness/hooks/hook_installation.py:69
+  - `-> AgentTool.toolset` reads toolset of · harness/hooks/hook_installation.py:71
+  - `-> AgentTool.name` reads name of · harness/hooks/hook_installation.py:73
+  - `-> AgentToolSet.reference` reads the toolset's reference, written as its text · harness/hooks/hook_installation.py:73
+- `HookInstallation` `-> Hook` enrolls in hooks.json · harness/hooks/hook_installation.py:68
 
 # harness/mcp
 
 ## McpHost
 
 - `McpHost.__init__`
-  - `-> McpServer.project` reads project of · harness/mcp/mcp_server.py:607
-- `McpHost.server_for`
-  - `-> McpServer.get` keeps · harness/mcp/mcp_server.py:622
-  - `-> McpServer.for_project` loads · harness/mcp/mcp_server.py:624
-  - `<- McpServer`
+  - `-> ProjectToolsets.project` reads project of · harness/mcp/mcp_server.py:607
+- `McpHost._server_for`
+  - `-> ProjectToolsets.for_project` loads · harness/mcp/mcp_server.py:652
+  - `<- ProjectToolsets`
 - `McpHost._register_handlers`
-  - `-> McpServer.prompts` reads prompts of · harness/mcp/mcp_server.py:653
+  - `-> ProjectToolsets.prompts` reads prompts of · harness/mcp/mcp_server.py:653
 - `McpHost.handle_get_prompt`
-  - `-> McpServer.prompts` reads prompts of · harness/mcp/mcp_server.py:653
+  - `-> ProjectToolsets.prompts` reads prompts of · harness/mcp/mcp_server.py:653
 - `McpHost._tool_list`
-  - `-> McpServer.tools` reads tools of · harness/mcp/mcp_server.py:673
-  - `-> McpServer.prompts` reads prompts of · harness/mcp/mcp_server.py:673
+  - `-> ProjectToolsets.tools` reads tools of · harness/mcp/mcp_server.py:673
+  - `-> ProjectToolsets.prompts` reads prompts of · harness/mcp/mcp_server.py:673
 - `McpHost._call_from_chat`
-  - `-> McpServer.resolve_call_name` resolves call name · harness/mcp/mcp_server.py:694
-  - `-> ToolCall.sent` loads · harness/mcp/mcp_server.py:695
+  - `-> ProjectToolsets.resolve_call_name` resolves call name · harness/mcp/mcp_server.py:780
+  - `-> McpHost._chat_request` the request being answered · harness/mcp/mcp_server.py:781
+  - `-> ChatRequest.project_for` the project the call works on · harness/mcp/mcp_server.py:782
+  - `-> ChatRequest.tool_request` the request the call answers · harness/mcp/mcp_server.py:782
+  - `-> McpHost._call_sent` creates the call · harness/mcp/mcp_server.py:782
+- `McpHost._call_sent`
+  - `-> ToolCall.sent` loads, from `tool_call` as it is now · harness/mcp/mcp_server.py:788
+- `McpHost._chat_request`
+  - `-> ChatRequest()` creates, from this module as it is now · harness/mcp/mcp_server.py:802
+  - `<- ChatRequest`
 - `McpHost._answer_off_loop`
-  - `-> McpServer.call_seconds` calls seconds · harness/mcp/mcp_server.py:700
+  - `-> ProjectToolsets.call_seconds` calls seconds · harness/mcp/mcp_server.py:700
   - `-> ToolCall.tool` reads tool of · harness/mcp/mcp_server.py:700
-- `McpHost._requested_project`
-  - `-> UserMcpConfig()` creates · harness/mcp/mcp_server.py:740
 - `McpHost.dispatch`
-  - `-> McpServer.resolve_call_name` resolves call name · harness/mcp/mcp_server.py:756
-  - `-> ToolCall.sent` loads · harness/mcp/mcp_server.py:757
+  - `-> ProjectToolsets.resolve_call_name` resolves call name · harness/mcp/mcp_server.py:855
+  - `-> McpHost._call_sent` creates the call · harness/mcp/mcp_server.py:856
 - `McpHost.answer`
   - `-> ToolCall.tool` reads tool of · harness/mcp/mcp_server.py:762
 - `McpHost._answer_between_restarts`
@@ -498,81 +494,88 @@ The one way the code runs git, with a timeout and no stdin.
   - `-> ToolCall.arguments` reads arguments of · harness/mcp/mcp_server.py:778
   - `-> ToolCall.tool` reads tool of · harness/mcp/mcp_server.py:779
 - `McpHost._ping_tool`
-  - `-> McpServer.enrolled` calls enrolled on · harness/mcp/mcp_server.py:788
+  - `-> ProjectToolsets.enrolled` calls enrolled on · harness/mcp/mcp_server.py:788
 - `McpHost._log_failure`
   - `-> ToolCall.session` reads session of · harness/mcp/mcp_server.py:793
   - `-> ToolCall.tool` reads tool of · harness/mcp/mcp_server.py:795
 - `McpHost.serve`
-  - `-> McpServer.repo` reads repo of · harness/mcp/mcp_server.py:807
+  - `-> ProjectToolsets.repo` reads repo of · harness/mcp/mcp_server.py:807
 - `McpHost.http_app`
-  - `-> McpServer.repo` reads repo of · harness/mcp/mcp_server.py:830
+  - `-> ProjectToolsets.repo` reads repo of · harness/mcp/mcp_server.py:830
 - `McpHost.ping`
-  - `-> McpServer.repo` reads repo of · harness/mcp/mcp_server.py:830
+  - `-> ProjectToolsets.repo` reads repo of · harness/mcp/mcp_server.py:830
 - `McpHost.restart`
-  - `-> McpServer.restarted` calls restarted on · harness/mcp/mcp_server.py:846
-  - `-> McpServer.project` reads project of · harness/mcp/mcp_server.py:848
-  - `-> McpServer.tools` reads tools of · harness/mcp/mcp_server.py:849
-  - `-> McpServer.skipped` reads skipped of · harness/mcp/mcp_server.py:850
-  - `-> McpServer.prompts` reads prompts of · harness/mcp/mcp_server.py:850
+  - `-> ProjectToolsets.restarted` calls restarted on · harness/mcp/mcp_server.py:846
+  - `-> ProjectToolsets.project` reads project of · harness/mcp/mcp_server.py:848
+  - `-> ProjectToolsets.tools` reads tools of · harness/mcp/mcp_server.py:849
+  - `-> ProjectToolsets.skipped` reads skipped of · harness/mcp/mcp_server.py:850
+  - `-> ProjectToolsets.prompts` reads prompts of · harness/mcp/mcp_server.py:850
 - `McpHost.notice`
-  - `-> McpServer.skipped` reads skipped of · harness/mcp/mcp_server.py:864
+  - `-> ProjectToolsets.skipped` reads skipped of · harness/mcp/mcp_server.py:864
+- `McpHost._publish_mods`
+  - `-> ClaudeMarketplace.publish_mods_for_chats` publishes the mods of the code the server now runs · harness/mcp/mcp_server.py:992
 - `McpHost.from_repo`
-  - `-> RepositoryToolsets().collect` creates · harness/mcp/mcp_server.py:880
-  - `-> RepositoryToolsets()` creates · harness/mcp/mcp_server.py:880
-  - `<- McpHost`
+  - `-> RepositoryToolsets()` creates · harness/mcp/mcp_server.py:1017
+  - `-> ProjectToolsets()` creates · harness/mcp/mcp_server.py:1019
+  - `<- McpHost` made with its lanes and cdd home
 - `McpHost.from_refs`
-  - `-> McpServer()` creates · harness/mcp/mcp_server.py:895
-  - `-> McpServer.start` starts · harness/mcp/mcp_server.py:897
-  - `<- McpHost`
+  - `-> ProjectToolsets()` creates · harness/mcp/mcp_server.py:1039
+  - `-> ProjectToolsets.start` starts · harness/mcp/mcp_server.py:1041
+  - `<- McpHost` made with its lanes and cdd home
 
-## McpServer
+## ChatRequest
 
-- `McpServer.enroll`
+- `ChatRequest.process`
+  - `-> ClaudeChatProcess.from_header` the process `X-CDD-Chat-Process` names · harness/mcp/mcp_server.py:546
+  - `-> ClaudeChatProcess.from_connection` the process holding the request's connection · harness/mcp/mcp_server.py:549
+- `ChatRequest.chat`
+  - `-> ChatPointer.from_request` · harness/mcp/mcp_server.py:557
+- `ChatRequest.project_for`
+  - `-> raise ProjectNotNamed` when no folder is found · harness/mcp/mcp_server.py:572
+  - `-> raise ProjectIsClaudeSettings` when the folder is Claude Code's settings folder · harness/mcp/mcp_server.py:574
+- `ChatRequest.tool_request`
+  - `-> ToolRequest()` creates, answered for this chat · harness/mcp/mcp_server.py:579
+- `ChatRequest._folder_of_chat`
+  - `-> ChatPointer.from_claude_session` · harness/mcp/mcp_server.py:601
+
+## ProjectToolsets
+
+- `ProjectToolsets.enroll`
   - `-> AgentTool.mcp_name` reads mcp name of · harness/mcp/mcp_server.py:411
   - `-> AgentTool.input_schema` reads input schema of · harness/mcp/mcp_server.py:419
   - `-> AgentTool.kind` reads kind of · harness/mcp/mcp_server.py:423
-- `McpServer.start`
-  - `-> AgentTool.clear` keeps · harness/mcp/mcp_server.py:433
-- `McpServer._loaded`
-  - `-> AgentToolSet.from_items` loads · harness/mcp/mcp_server.py:443
-- `McpServer._enroll_toolset`
-  - `-> InstallDestination.MCP` reads constants of · harness/mcp/mcp_server.py:486
-- `McpServer.enrolled`
+- `ProjectToolsets.start`
+  - `-> ToolsetReference.made` makes each toolset its reference names · harness/mcp/mcp_server.py:399
+- `ProjectToolsets._enroll_toolset`
+  - `-> AgentToolSet.tools_published_to(Mcp)` reads the operations annotated @mcp · harness/mcp/mcp_server.py:450
+- `ProjectToolsets.enrolled`
   - `-> AgentTool.get` keeps · harness/mcp/mcp_server.py:510
   - `<- AgentTool | None`
-- `McpServer.call_seconds`
+- `ProjectToolsets.call_seconds`
   - `-> LongCall.annotates` reads the annotation · harness/mcp/mcp_server.py:518
-- `McpServer.invoke_tool`
-  - `-> ToolCall()` creates · harness/mcp/mcp_server.py:522
-- `McpServer.invoke_prompt`
-  - `-> ToolCall()` creates · harness/mcp/mcp_server.py:526
-- `McpServer` `-> Mcp` serves the operations annotated · harness/mcp/mcp_server.py:486
+- `ProjectToolsets.invoke`
+  - `-> ToolCall()` creates · harness/mcp/mcp_server.py:489
+- `ProjectToolsets` `-> Mcp` serves the operations annotated · harness/mcp/mcp_server.py:450
 
-## McpInstallation
+## McpInstallation : RegisteredChannel
 
 - `McpInstallation.__init__`
-  - `-> CddHome()` creates · harness/mcp/mcp_server.py:147
-  - `-> IdeLayout()` creates · harness/mcp/mcp_server.py:148
+  - `-> McpChannelServer()` creates its server · harness/mcp/mcp_server.py:312
 - `McpInstallation.write`
-  - `-> AgentTool.install_to_mcp` reads install to mcp of · harness/mcp/mcp_server.py:154
-- `McpInstallation.record_operation`
-  - `-> AgentTool.install_to_mcp` reads install to mcp of · harness/mcp/mcp_server.py:160
-  - `-> AgentTool.append` keeps · harness/mcp/mcp_server.py:162
-- `McpInstallation.user_config`
-  - `-> UserMcpConfig()` creates · harness/mcp/mcp_server.py:167
-  - `-> UserMcpConfig.path` reads path of · harness/mcp/mcp_server.py:168
-  - `<- UserMcpConfig | None`
-- `McpInstallation.manifest_path`
-  - `-> IdeLayout.is_claude_code` reads is claude code of · harness/mcp/mcp_server.py:187
-- `McpInstallation.write_mcp_manifest`
-  - `-> IdeLayout.is_claude_code` reads is claude code of · harness/mcp/mcp_server.py:196
-  - `-> UserMcpConfig.folder` reads folder of · harness/mcp/mcp_server.py:197
-- `McpInstallation._server_manifest`
-  - `-> IdeLayout.names_mcp_transport` reads names mcp transport of · harness/mcp/mcp_server.py:274
-- `McpInstallation.standup`
-  - `-> McpHost.from_repo` loads · harness/mcp/mcp_server.py:316
-  - `<- McpHost`
-- `McpInstallation` `-> Mcp` publishes as a cdd MCP tool · harness/mcp/mcp_server.py:154
+  - `-> AgentTool.is_published_to(Mcp)` reads the MCP annotation · harness/mcp/mcp_server.py:327
+- `McpInstallation` `-> Mcp` publishes as a cdd MCP tool · harness/mcp/mcp_server.py:327
+
+## McpChannelServer : ChannelServer
+
+- `McpChannelServer.stand_up`
+  - `-> McpHost.from_repo` loads every toolset of the served checkout · harness/mcp/mcp_server.py:278
+  - `-> StandUp()` creates what the server serves and skipped · harness/mcp/mcp_server.py:280
+- `McpChannelServer.ensure_running`
+  - `-> ClaudePlugins.install(marketplace.cdd_plugin)` installs the cdd plugin · harness/mcp/mcp_server.py:290
+  - `-> McpChannelServer.install_mods` · harness/mcp/mcp_server.py:291
+- `McpChannelServer.install_mods`
+  - `-> ClaudeMarketplace.publish_mods` publishes a dev lane's mods into the stable lane's marketplace · harness/mcp/mcp_server.py:299
+  - `-> ClaudePlugins.install` installs each of `marketplace.mods` · harness/mcp/mcp_server.py:300
 
 ## UserMcpConfig
 
@@ -587,12 +590,40 @@ The one way the code runs git, with a timeout and no stdin.
 
 ## CddHome
 
+- `CddHome.__init__`
+  - `-> ClaudeMarketplace()` creates the marketplace it publishes · harness/mcp/cdd_home.py:75
+- `CddHome.pin`
+  - `-> ClaudeMarketplace.publish_mods` publishes the mods of the code just pinned · harness/mcp/cdd_home.py:188
+- `CddHome.serve_from`
+  - `-> ClaudeMarketplace.publish_mods` publishes the mods of the checkout served from disk · harness/mcp/cdd_home.py:210
 - `CddHome._mirror_origin`
-  - `-> Git().succeeds` creates · harness/mcp/cdd_home.py:213
-  - `-> Git()` creates · harness/mcp/cdd_home.py:213
+  - `-> Git.succeeds` · harness/mcp/cdd_home.py:193
 - `CddHome._git`
-  - `-> Git().run` creates · harness/mcp/cdd_home.py:227
-  - `-> Git()` creates · harness/mcp/cdd_home.py:227
+  - `-> Git.run` · harness/mcp/cdd_home.py:229
+
+## ClaudeMarketplace
+
+- `ClaudeMarketplace.__init__`
+  - `-> InstallLock()` creates, held while one install publishes the mods · harness/mcp/claude_marketplace.py:157
+- `ClaudeMarketplace.plugin`
+  - `-> PublishedPlugin()` creates · harness/mcp/claude_marketplace.py:160
+- `ClaudeMarketplace.mods`
+  - `-> PublishedMods.every` the mods the served code declares · harness/mcp/claude_marketplace.py:170
+- `ClaudeMarketplace.publish_mods`
+  - `-> InstallLock.held` · harness/mcp/claude_marketplace.py:211
+  - `-> PublishedMods.every` · harness/mcp/claude_marketplace.py:212
+  - `-> PublishedPlugin.publish_from` · harness/mcp/claude_marketplace.py:214
+- `PublishedMods.every`
+  - `-> PublishedMod()` creates, one for each `cdd-mod.json` · harness/mcp/claude_marketplace.py:72
+
+## ClaudePlugins
+
+- `ClaudePlugins.install`
+  - `-> ClaudePlugins.is_watched` · harness/mcp/claude_plugins.py:60
+  - `-> PublishedPlugin.version` compares with the installed version · harness/mcp/claude_plugins.py:64
+  - `-> PluginInstall()` creates · harness/mcp/claude_plugins.py:61, :65, :73
+- `ClaudePlugins.is_watched`
+  - `-> ClaudeMarketplace.mod_folder` the folder Claude Code loads the plugin from · harness/mcp/claude_plugins.py:97
 
 ## SpecServer
 
@@ -715,7 +746,7 @@ The one way the code runs git, with a timeout and no stdin.
 
 - `ActionCatalogue.actions`
   - `-> Action()` creates · harness/guidance/action_catalogue.py:76
-  - `-> InstallDestination.SKILL` reads constants of · harness/guidance/action_catalogue.py:79
+  - `-> Skill.publishes` reads the skill annotation of each member · harness/guidance/action_catalogue.py:159
   - `<- tuple[Action, ...]`
 - `ActionCatalogue._toolset_in`
   - `-> Name()` creates · harness/guidance/action_catalogue.py:105
@@ -734,8 +765,9 @@ The one way the code runs git, with a timeout and no stdin.
 - `GuidanceAction._discover_operations`
   - `-> GuidanceAgentOperation()` creates · harness/guidance_actions/guidance_actions.py:207
   - `-> AgentToolAnnotation.annotates` reads the annotation · harness/guidance_actions/guidance_actions.py:208
-- `GuidanceAction.listed`
-  - `-> AgentToolSet.instantiate_all` instantiates every action with · harness/guidance_actions/guidance_actions.py:244
+- `GuidanceAction._made`
+  - `-> ToolsetReference.parsed` reads the reference a call sends · harness/guidance_actions/guidance_actions.py:498
+  - `-> ToolsetReference.made` makes the guidance it names, with its context · harness/guidance_actions/guidance_actions.py:501
 - `GuidanceAction._session_practice`
   - `-> PracticeCatalogue.has` checks a practice name with · harness/guidance_actions/guidance_actions.py:263
 - `GuidanceAction.inject_rules`
@@ -743,9 +775,9 @@ The one way the code runs git, with a timeout and no stdin.
   - `-> HookPayload.tool_input` reads tool input of · harness/guidance_actions/guidance_actions.py:374
   - `-> HookPayload.project` reads project of · harness/guidance_actions/guidance_actions.py:374
   - `-> Name()` creates · harness/guidance_actions/guidance_actions.py:378
-- `GuidanceAction._payload_is_this_action`
-  - `-> HookPayload.tool_name` reads tool name of · harness/guidance_actions/guidance_actions.py:395
-  - `-> InstallDestination.MCP` reads constants of · harness/guidance_actions/guidance_actions.py:398
+- `GuidanceAction._is_this_action`
+  - `-> HookPayload.tool_name` reads tool name of · harness/guidance_actions/guidance_actions.py:905
+  - `-> AgentToolSet.tools_published_to(annotation_kinds.answering_calls)` reads the tools published where a server answers calls · harness/guidance_actions/guidance_actions.py:905
 - Annotations it carries: `Toast` · harness/guidance_actions/guidance_actions.py:321
 
 # harness/graph
@@ -932,50 +964,78 @@ The one way the code runs git, with a timeout and no stdin.
   - `-> Graph.practice` calls practice on · harness/graph/saved_graph.py:232
   - `<- Graph`
 
-# harness/installer
+# harness/installation: the Installer and its run
 
 ## Installer
 
+- `Installer.create`
+  - `-> LastInstall()` creates · harness/installation/installer.py:315
+  - `-> IdeLayout()` creates · harness/installation/installer.py:317
+  - `-> InstallTarget()` creates · harness/installation/installer.py:318
+  - `-> RepositoryToolsets()` creates · harness/installation/installer.py:319
+  - `<- Installer`
 - `Installer.__init__`
-  - `-> IdeLayout.DEFAULT_IDE` reads constants of · harness/installer/installer.py:77
-  - `-> IdeLayout()` creates · harness/installer/installer.py:78
-  - `-> RepositoryToolsets()` creates · harness/installer/installer.py:83
-- `Installer.track`
-  - `-> Installation.track_writes_with` tracks writes with · harness/installer/installer.py:96
-- `Installer.installations_for`
-  - `-> AgentTool.destinations` reads destinations of · harness/installer/installer.py:100
-  - `-> InstallDestination.MCP` reads constants of · harness/installer/installer.py:101
-  - `-> InstallDestination.SKILL` reads constants of · harness/installer/installer.py:103
-  - `-> InstallDestination.COMMAND` reads constants of · harness/installer/installer.py:103
-  - `-> InstallDestination.RULE` reads constants of · harness/installer/installer.py:103
-  - `-> FileInstallation()` creates · harness/installer/installer.py:105
-  - `-> Installation.append` keeps · harness/installer/installer.py:107
-  - `-> IdeLayout.runs_hooks` reads runs hooks of · harness/installer/installer.py:108
-  - `-> InstallDestination.HOOK` reads constants of · harness/installer/installer.py:108
-  - `<- list[Installation]`
-- `Installer._install_run`
-  - `-> RepositoryToolsets.ensure_import_path` ensures import path · harness/installer/installer.py:143
-  - `-> RepositoryToolsets.collect` collects · harness/installer/installer.py:145
-- `Installer._install_all`
-  - `-> AgentToolSet.instantiate` loads · harness/installer/installer.py:168
-  - `-> AgentToolSet.child_toolsets` calls child_toolsets on · harness/installer/installer.py:170
-- `Installer._install_standing_rules`
-  - `-> FileInstallation()` creates · harness/installer/installer.py:222
-  - `-> FileInstallation.write_standing_rule` writes standing rule · harness/installer/installer.py:225
-- `Installer.ensure_runtimes`
-  - `-> IdeLayout.runs_hooks` reads runs hooks of · harness/installer/installer.py:266
-- `Installer._ensure_hook_server`
-  - `-> HookDaemon()` creates · harness/installer/installer.py:285
-  - `-> HookDaemon.ensure` ensures · harness/installer/installer.py:286
-  - `-> HookDaemon.live_address` calls live_address on · harness/installer/installer.py:287
-- `Installer._runtime_status_report`
-  - `-> HookDaemon().live_address` creates · harness/installer/installer.py:329
-  - `-> HookDaemon()` creates · harness/installer/installer.py:329
-  - `-> HookInstallation()` creates · harness/installer/installer.py:331
-  - `-> HookInstallation.registered_events` reads registered events of · harness/installer/installer.py:332
-  - `-> HookInstallation.registered_operations` reads registered operations of · harness/installer/installer.py:332
-- `Installer._last_or_default_folder`
-  - `-> IdeLayout.folder_name` reads folder name of · harness/installer/installer.py:345
+  - `-> InstallRecord()` creates · harness/installation/installer.py:295
+  - `-> InstallLock()` creates · harness/installation/installer.py:300
+- `Installer.install`
+  - `-> InstallRun()` creates the run, kept as `last_run` · harness/installation/installer.py:376
+  - `-> InstallRun.run` runs it · harness/installation/installer.py:377
+- `Installer.repository_toolsets`
+  - `-> RepositoryToolsets.classes` imports every toolset class · harness/installation/installer.py:402
+  - `-> ToolsetReference.of` names each · harness/installation/installer.py:405
+  - `<- list[ToolsetReference]`
+- `Installer.write_language_adapters`
+  - `-> LanguageAdapters()` creates · harness/installation/installer.py:391
+  - `-> LanguageAdapters.write_all` writes · harness/installation/installer.py:397
+- `Installer.diagnosis_of`
+  - `-> Deployed.of_folder` reads what the folder holds · harness/installation/installer.py:410
+  - `-> RegisteredChannel.status` reads each registered channel's status · harness/installation/installer.py:411
+  - `-> InstallDiagnostics.last_deployed` reads what the last install deployed · harness/installation/installer.py:412
+  - `<- InstallDiagnosis`
+
+## InstallRun
+
+- `InstallRun.__init__`
+  - `-> InstallChannels()` creates the run's installations · harness/installation/installer.py:136
+- `InstallRun.run`
+  - `-> InstallLock.held` holds the folder · harness/installation/installer.py:142
+  - `-> RepositoryToolsets.ensure_import_path` ensures import path · harness/installation/installer.py:148
+- `InstallRun.publish`
+  - `-> Installer.repository_toolsets` reads the toolsets · harness/installation/installer.py:161
+  - `-> LanguageAdapters.write_all` writes · harness/installation/installer.py:165
+  - `-> RegisteredChannel.write_once_recorded` writes · harness/installation/installer.py:169
+- `InstallRun._install_all`
+  - `-> ToolsetReference.made` makes each toolset · harness/installation/installer.py:208
+  - `-> AgentToolSet.child_toolsets` calls child_toolsets on · harness/installation/installer.py:210
+- `InstallRun._install_toolset`
+  - `-> InstallChannels.for_tool` finds each installation · harness/installation/installer.py:223
+  - `-> Installation.install` hands the member over · harness/installation/installer.py:224
+- `InstallRun._install_standing_rules`
+  - `-> RulesInstallation.write_standing_rule` writes standing rule · harness/installation/installer.py:250
+- `InstallRun.stand_up`
+  - `-> ChannelServer.stand_up` stands each server up · harness/installation/installer.py:176
+  - `-> ChannelServer.runs_this_process` asks whether the install runs inside one · harness/installation/installer.py:179
+- `InstallRun.ensure_running`
+  - `-> ChannelServer.ensure_running` starts each server · harness/installation/installer.py:184
+- `InstallRun._diagnose`
+  - `-> Installer.diagnosis_of` diagnoses the run · harness/installation/installer.py:189
+  - `-> InstallDiagnostics.record` records it · harness/installation/installer.py:190
+
+## InstallChannels
+
+- `InstallChannels.__init__`
+  - `-> RegisteredChannel.create` creates each registered channel · harness/installation/installer.py:68
+  - `-> LanguageAdapters()` creates · harness/installation/installer.py:69
+  - `-> RulesInstallation()` creates · harness/installation/installer.py:70
+  - `-> SkillInstallation()`, `CommandInstallation()` creates · harness/installation/installer.py:71
+  - `-> ToolsetReference.made` makes the toolsets each registered channel publishes into every install · harness/installation/installer.py:73
+- `InstallChannels.for_tool`
+  - `-> RegisteredChannel.accepts` asks each registered channel · harness/installation/installer.py:86
+  - `-> AgentTool.is_published_to` asks each file channel's destination · harness/installation/installer.py:87
+- `InstallChannels.servers`
+  - `-> RegisteredChannel.server` reads each channel's server · harness/installation/installer.py:93
+- `InstallChannels.published`
+  - `-> RegisteredChannel.published` reads what each channel published, by its channel · harness/installation/installer.py:99
 
 # harness/diagnostics
 
@@ -1010,10 +1070,9 @@ The one way the code runs git, with a timeout and no stdin.
   - `-> PracticeCatalogue.slug` reads slug of · harness/diagnostics/guidance_probe.py:41
 - `GuidanceProbe._instructions_of`
   - `-> PracticeCatalogue.toolset_ref` finds a toolset reference in · harness/diagnostics/guidance_probe.py:82
-  - `-> AgentToolSet.instantiate` loads · harness/diagnostics/guidance_probe.py:86
 - `GuidanceProbe._action_toolset`
-  - `-> AgentToolSet.instantiate` loads · harness/diagnostics/guidance_probe.py:96
-  - `-> AgentToolSet.tools` reads tools of · harness/diagnostics/guidance_probe.py:99
+  - `-> AgentToolSet.tools` reads tools of · harness/diagnostics/guidance_probe.py:107
+  - `-> AgentTool.is_published_to(Mcp)` reads the MCP annotation · harness/diagnostics/guidance_probe.py:107
 
 # harness/health
 
@@ -1569,8 +1628,8 @@ No class of this module acts on another class of the model at run time.
 - `PromptNotify._begin_toast`
   - `-> Name()` creates · tools/prompt_notify/prompt_notify.py:202
 - `PromptNotify._load_echo_toolsets`
-  - `-> AgentToolSet.from_items` loads · tools/prompt_notify/prompt_notify.py:208
-  - `-> Installer()` creates · tools/prompt_notify/prompt_notify.py:208
+  - `-> RepositoryToolsets.references` reads the running checkout's toolset references · tools/prompt_notify/prompt_notify.py:124
+  - `-> ToolsetReference.made` makes each toolset · tools/prompt_notify/prompt_notify.py:125
 - `PromptNotify._compact`
   - `-> Name()` creates · tools/prompt_notify/prompt_notify.py:223
 - `PromptNotify._mcp_tool_name`

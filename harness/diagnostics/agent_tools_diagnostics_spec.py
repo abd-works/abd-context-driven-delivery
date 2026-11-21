@@ -83,7 +83,7 @@ with description("mcp tools diagnostics"):
             repo=str(_REPO_ROOT),
             project=str(_REPO_ROOT),
         )
-        expect(host.checkout_server.tools).to(have_key("agent-tools-diagnostics.agent_tools_diagnostics"))
+        expect(host.checkout_toolsets.tools).to(have_key("agent-tools-diagnostics.agent_tools_diagnostics"))
 
     with it("should treat agent_tools_diagnostics as kind tool for MCP enrollment"):
         tool = AgentToolsDiagnostics().tools["agent_tools_diagnostics"]

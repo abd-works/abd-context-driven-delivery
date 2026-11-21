@@ -104,13 +104,13 @@ ce:
 clean-engineering-model (Skill)
   // agent already has the python model artifact; conversion starts here
   -> render (Skill)
-       -> McpServer.invoke render.render
+       -> ProjectToolsets.invoke render.render
             -> Render.render guidance format paths
                  -> _work_on guidance
                  -> load_document content paths
                  -> each
                       -> listed
-                           -> AgentToolSet.instantiate
+                           -> ToolsetReference.parsed(entry).made(**context)
                                 -> CleanEngineering fidelity="model"
                       -> each Guidance, handed over as the fidelity the action works at on it
                            -> FidelityGuidance.render_files format="drawio" paths

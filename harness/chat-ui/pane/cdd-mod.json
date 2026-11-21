@@ -1,0 +1,5 @@
+{
+  "plugin": "cdd-board",
+  "extras": {"drawio-viewer/drawio_viewer.py": "tools/drawio_viewer/drawio_viewer.py"},
+  "install_command": "install.json"
+}

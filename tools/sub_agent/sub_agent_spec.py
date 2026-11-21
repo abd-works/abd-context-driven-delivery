@@ -8,7 +8,7 @@ if str(_REPO_ROOT) not in sys.path:
 
 from expects import contain, equal, expect
 from tools.sub_agent.fixtures.annotated_examples import AnnotatedActionExample, AnnotatedToolExample
-from harness.agent_tools.agent_tools import AgentToolSet
+from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference
 from harness.agent_tools.agent_tools import SUB_AGENT_CALLER_PREAMBLE, SubAgentAnnotation
 from tools.sub_agent.sub_agent import SubAgent
 from mamba import context, description, it
@@ -17,17 +17,17 @@ from mamba import context, description, it
 with description("SubAgent toolset"):
     with context("with its tools listed"):
         with it("exposes sub_agent as instructions"):
-            tool = AgentToolSet.instantiate(SubAgent).tools["sub_agent"]
+            tool = ToolsetReference.of(SubAgent).made().tools["sub_agent"]
             expect(tool.kind).to(equal("instructions"))
 
     with context("sub_agent instructions"):
         with it("tells the caller to launch a non-blocking sub-agent"):
-            instructions = "\n".join(AgentToolSet.instantiate(SubAgent).tools["sub_agent"].prompt)
+            instructions = "\n".join(ToolsetReference.of(SubAgent).made().tools["sub_agent"].prompt)
             expect(instructions).to(contain("run_in_background"))
             expect(instructions).to(contain("generalPurpose"))
 
         with it("includes the delegated instructions placeholder"):
-            instructions = "\n".join(AgentToolSet.instantiate(SubAgent).tools["sub_agent"].prompt)
+            instructions = "\n".join(ToolsetReference.of(SubAgent).made().tools["sub_agent"].prompt)
             expect(instructions).to(contain("{{instructions}}"))
 
 

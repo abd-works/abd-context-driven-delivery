@@ -17,7 +17,7 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from harness.agent_tools.agent_tools import AgentToolSet
+from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference
 from harness.agent_tools.tool_call import ToolCall
 import cdd_guidance.practices  # noqa: F401 - generator package on path
 from harness.markdown import Markdown
@@ -45,7 +45,7 @@ class CleanEngineeringKit:
         self.kit_dir = _GENERATE_DIR
 
     def load(self) -> AgentToolSet:
-        toolset_cls = type(AgentToolSet.instantiate(_CLEAN_ENGINEERING_TOOLSET))
+        toolset_cls = type(ToolsetReference.parsed(_CLEAN_ENGINEERING_TOOLSET).made())
         return toolset_cls(fidelity=self.fidelity, format=self.format_name)
 
     def expand(self, instance: AgentToolSet) -> Any:

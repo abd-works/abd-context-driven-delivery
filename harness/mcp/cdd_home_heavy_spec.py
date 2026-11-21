@@ -14,14 +14,14 @@ if str(_REPO_ROOT) not in sys.path:
 from expects import equal, expect
 from mamba import after, before, context, description, it
 
-from harness.mcp.cdd_home import BOARD_PLUGIN, CddHome
+from harness.mcp.cdd_home import CddHome
 
 # One install's publishing in a process of its own, repeated so the processes overlap however they start.
 _PUBLISH_IN_ITS_OWN_PROCESS = (
     "import sys; sys.path.insert(0, sys.argv[1]); "
     "from harness.mcp.cdd_home import CddHome; "
     "home = CddHome(sys.argv[2]); "
-    "[home.write_mod_plugins() for _ in range(4)]"
+    "[home.marketplace.publish_mods(home.source) for _ in range(4)]"
 )
 _PUBLISHERS = 4
 _PUBLISH_SECONDS = 120
@@ -54,5 +54,5 @@ with description("a cdd home's Claude Code plugins") as self:
             expect(failed).to(equal([]))
 
         with it("should leave the board mod whole in the marketplace"):
-            manifest = self.home.claude_plugins / BOARD_PLUGIN / ".claude-plugin" / "plugin.json"
-            expect(json.loads(manifest.read_text(encoding="utf-8"))["name"]).to(equal(BOARD_PLUGIN))
+            manifest = self.home.marketplace.folder / "cdd-board" / ".claude-plugin" / "plugin.json"
+            expect(json.loads(manifest.read_text(encoding="utf-8"))["name"]).to(equal("cdd-board"))

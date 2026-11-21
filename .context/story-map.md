@@ -62,7 +62,7 @@ Observed (2026-11-19, `scripts/install.py` `_install_from_latest`, `_match_relea
 
 ### (S:system) Installer --> [Publish Mods For Every Chat](../story_tests/register-and-install-toolsets/install-markdown-files/install_markdown_files_story.test.md#story-publish-mods-for-every-chat)
 
-Observed (2026-11-19, `harness/mcp/cdd_home.py` `CddHome._publish_mods`): one install at a time publishes the mods into the cdd home's `claude-plugins` folder, holding an `InstallLock`, so an install from the main checkout and one from a ticket's worktree at the same moment both finish.
+Observed (2026-11-19, `harness/mcp/claude_marketplace.py` `ClaudeMarketplace.publish_mods`): one install at a time publishes the mods into the cdd home's marketplace, its `claude-plugins` folder, holding an `InstallLock`, so an install from the main checkout and one from a ticket's worktree at the same moment both finish.
 
 ## (E) Install MCP And Hook Manifests
 

@@ -8,6 +8,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
+from harness.installation.install_diagnostics import Deployed, InstallDiagnosis
 from harness.installation.installer import Installer
 from harness.installation.repository_toolsets import RepositoryToolsets
 
@@ -40,7 +41,8 @@ with description("guidance diagnostics"):
             "guidance",
             {"filter": ["stories"], "instructions": {"color": "green", "items": []}},
         )
-        installer.diagnostics.record_install({}, "green", "green")
+        deployed = Deployed({})
+        installer.diagnostics.record(InstallDiagnosis(deployed, deployed.changes_since(None), []))
         data = json.loads((tree / "diagnostics.json").read_text(encoding="utf-8"))
         expect(data).to(have_key("installs"))
         expect(data).to(have_key("guidance"))

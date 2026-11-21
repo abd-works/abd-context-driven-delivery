@@ -22,6 +22,8 @@ from harness.guidance.fixtures.split_tool.split_tool import SplitPracticeGuidanc
 from harness.guidance.guidance import PracticeGuidance
 from harness.markdown import HTML, Markdown
 from harness.hooks.hook_server import HookPayload
+from harness.hooks.hooks import Hook
+from harness.mcp.mcp_annotations import Mcp
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 
@@ -99,12 +101,12 @@ with description("context guidance"):
 
             expect(Hook.annotates(inject)).to(equal(True))
             expect(Hook.disabled_on(inject)).to(equal(True))
-            expect(Hook.name_annotated_on(inject)).to(equal("postToolUse"))
+            expect(Hook.name_given(inject)).to(equal("postToolUse"))
 
         with it("should list inject_rules on tools but not enroll a disabled hook"):
             guidance = SampleGuidance(format="markdown")
             expect("inject_rules" in guidance.tools).to(equal(True))
-            expect(guidance.tools["inject_rules"].install_to_hook).to(equal(False))
+            expect(guidance.tools["inject_rules"].is_published_to(Hook)).to(equal(False))
             expect("inject_rules" in guidance.rules.tools).to(equal(True))
 
         with it("should rehost inject_rules on the practice so install enrolls CleanEngineering"):
@@ -312,7 +314,7 @@ with description("a guidance collection of context guidance children") as self:
     with context("with the instructions property read on the collection"):
         with it("should list instructions on the collection tools"):
             expect("instructions" in self.collection.tools).to(equal(True))
-            expect(self.collection.tools["instructions"].install_to_mcp).to(equal(True))
+            expect(self.collection.tools["instructions"].is_published_to(Mcp)).to(equal(True))
 
         with it("should join each child instructions string"):
             text = self.collection.instructions

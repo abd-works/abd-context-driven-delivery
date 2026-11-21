@@ -1,6 +1,6 @@
 # Hooks — object model (model fidelity)
 
-Markdown channel for **`harness/hooks`**. The module's purpose, seam, and dependencies are in [module-context.md](module-context.md); this document holds only its classes. *AgentToolSet*, *AgentTool*, *ToolCall*, and *InstallDestination* belong to `harness/agent_tools`, *Destination* to `harness/annotations`, *Installation*, *RepositoryToolsets*, and *ContextConfig* to `harness/installation`, *RunningProcess* and *ProcessNotStopped* to `harness/process`, and *Session* and its *ChatInjections* to `space/session`; they appear here only as names this module uses. *PromptLog* (`tools/prompt_log`) is one toolset whose members are hooks; it keeps its own model.
+Markdown channel for **`harness/hooks`**. The module's purpose, seam, and dependencies are in [module-context.md](module-context.md); this document holds only its classes. *AgentToolSet*, *AgentTool*, *ToolCall*, and *ToolsetReference* belong to `harness/agent_tools`, *Destination* and *DestinationKind* to `harness/annotations`, *RegisteredChannel*, *InstallTarget*, *InstallRecord*, *RepositoryToolsets*, and *ContextConfig* to `harness/installation`, *RunningProcess* and *ProcessNotStopped* to `harness/process`, and *Session* and its *ChatInjections* to `space/session`; they appear here only as names this module uses. *PromptLog* (`tools/prompt_log`) is one toolset whose members are hooks; it keeps its own model.
 
 **Install** writes files. **Runtime** is the IDE running `hook_daemon.py` (the hook command) with the event's JSON on stdin; that script finds or starts one long-running *HookServer* per repository through *HookDaemon* and passes the event to it. `@Hook` and `@mcp` on the same operation remain two independent installs.
 
@@ -20,13 +20,17 @@ The `@Hook` decorator on an operation. Event is required and must be an IDE even
 
 + Hook(event: str, disabled: bool = false)
 	// event is one of Hook.EVENTS; unknown names are rejected at decoration
-	// channel is InstallDestination.HOOK
+	// the Hook kind is the hook channel; its channel string is "hook"
 ------
 + name: str
 	// identity the IDE sends as hook_event_name
 + disabled: bool
 + EVENTS: frozenset[str]
 ----
++ Hook.publishes(operation): bool
+	// install publishes operation as a hook: it carries @Hook, turned on, and no omission keeps it out
++ Hook.name_given(operation): str
+	// the event the operation runs on; empty when it carries no @Hook
 	// Destination records the hook on the operation, and disabled as _hook_disabled, which DestinationKind's
 	// disabled_on reads (harness/annotations); Hook adds no kind of its own
 	// sessionStart → session_start
@@ -53,12 +57,14 @@ Class annotation. Turns off, or keeps out of the install, every hook on that too
 	// keeps itself on the class as `_hooks`; read through Hooks.from_toolset_class(type(toolset)).disabled and .deploy
 	// write `@Hooks(disabled=True)` above `@agent_toolset` so the annotation stays on the registered type
 
-## HookInstallation : ServerInstallation                                <!-- Md -->
+## HookInstallation : RegisteredChannel                                <!-- Md -->
 
-Install-time writer for hook artifacts. Same walk as markdown and MCP; only the leaf writes differ.
+Install-time writer for hook artifacts. Same walk as markdown and MCP; only the leaf writes differ. It holds no server: the hook command starts the hook daemon on the first event.
 
-+ HookInstallation(layout: IdeLayout, path: Path | str, repo: Path | str | None = None)
++ HookInstallation(target: InstallTarget, record: InstallRecord, repository: RepositoryToolsets | None = None)
 ------
++ destination = Hook
++ server: None
 + interpreter: PythonInterpreter
 + handlers_file: HookHandlersFile
 + manifest: HooksManifest
@@ -70,10 +76,14 @@ Install-time writer for hook artifacts. Same walk as markdown and MCP; only the 
 	-> HooksManifest.registered_events
 + registered_operations: list[str]
 	-> HookHandlersFile.operation_names
++ published: list[str]
+	-> registered_operations
 ----
++ accepts(tool: AgentTool): bool
+	// tool.is_published_to(Hook), and the layout runs hooks
 + write(tool: AgentTool): None
-	// skip unless tool.install_to_hook, the toolset class is not @Hooks(deploy=False), and tool.hook_event is set
-	// enroll each (event, operation, ref) once
+	// skip unless tool.is_published_to(Hook), the toolset class is not @Hooks(deploy=False), and Hook.name_given(tool.callable) is set
+	// enroll each (event, operation, ref) once; ref is str(tool.toolset.reference)
 	-> write_hooks_manifest()
 	-> write_handlers()
 + write_handlers(): None
@@ -85,7 +95,7 @@ Install-time writer for hook artifacts. Same walk as markdown and MCP; only the 
 	-> HooksManifest.hooks
 	-> HooksManifest.write
 + status(): list[str]
-	// the events and operations the install registered; the install stands up, starts, and reports no hook server
+	// the events and operations the install registered; the install stands up and starts no hook server
 
 ## HooksManifest                                                  <!-- Md -->
 
@@ -107,7 +117,8 @@ Install-time writer for hook artifacts. Same walk as markdown and MCP; only the 
 ------
 + handlers: list[dict]
 	// { event, operation, ref } each; a malformed file raises HooksFileUnreadable
-+ refs: tuple[str, ...]
++ refs: tuple[ToolsetReference, ...]
+	// each ref parsed back from its "{module}:{Class}" text
 + operation_names: list[str]
 ----
 + write(handlers: list[dict]): None
@@ -205,7 +216,7 @@ One annotated operation that may run for an event.
 + HookHandler(tool: AgentTool, repo_root: Path)
 ------
 + << association >> tool: AgentTool
-	// name, toolset, callable, hook_event, and docstring are read from the tool, never copied
+	// name, toolset, callable, and docstring are read from the tool, and the event from Hook.name_given(tool.callable), never copied
 + repo_root: Path
 + label: str
 	// {toolset class}.{tool.name}, for the dispatch log and skipped handlers
@@ -224,8 +235,9 @@ One annotated operation that may run for an event.
 
 The toolsets whose hooks the server runs.
 
-+ HandlerCatalog(toolsets: list[ToolsetConfiguration], repo_root: Path | None = None)
-	// the toolsets named; a toolset whose @Hooks(deploy=False) keeps it out of install is left out
++ HandlerCatalog(toolsets: list[ToolsetReference | AgentToolSet], repo_root: Path | None = None)
+	// the toolsets named by their reference, or handed in made, as a spec's fake is; each is made with item.made()
+	// a toolset whose @Hooks(deploy=False) keeps it out of install is left out
 ------
 + << composition >> toolsets: list[AgentToolSet]
 	// skips toolsets whose class is annotated @hosted_only
@@ -234,9 +246,8 @@ The toolsets whose hooks the server runs.
 	// a reference that does not load (bad reference, missing module or class, not a toolset, constructor mismatch)
 + event_names: list[str]
 ----
-+ ref_label(configured: ToolsetConfiguration): str
 + for_event(event_name: str): list[HookHandler]
-	// tools_for(InstallDestination.HOOK) serving the event: events_served(hook_event), so a postToolUse hook also serves afterFileEdit
+	// tools_published_to(Hook) serving the event: events_served(Hook.name_given(tool.callable)), so a postToolUse hook also serves afterFileEdit
 
 ## HookToasts                                                     <!-- Md -->
 
@@ -290,13 +301,15 @@ The hooks of one checkout, loaded once in its hook daemon. It runs the enabled h
 
 ## HookDaemon                                                     <!-- Md -->
 
-The hook daemon of one checkout: it listens on the one port the checkout's daemon may hold, publishes its address, and serves every hook command with one loaded HookServer. The hook command (`run_hook_command` in `hook_daemon.py`) runs `HookDaemon(checkout).ensure().handle_stdin(raw)`. A daemon that finds the port held by this checkout's daemon on older code, including one the older layout started (address in `.cursor/hook-server.json`, a ping that names no process or checkout), stops it and takes the port; anything else on the port raises *HookPortTaken*, so a daemon never exits silently. Closing a worktree stops its checkout's daemon (`Worktrees.remove` in space/repo calls `stop`).
+The hook daemon of one checkout, a *ServerDaemon* (harness/process): it listens on the one port the checkout's daemon may hold, publishes its address, and serves every hook command with one loaded HookServer. The hook command (`run_hook_command` in `hook_daemon.py`) runs `daemon.ensure()` and then `daemon.address.handle_stdin(raw)`. A daemon that finds the port held by this checkout's daemon on older code, including one the older layout started (address in `.cursor/hook-server.json`, a ping that names no process or checkout), stops it and takes the port; anything else on the port raises *HookPortTaken*, so a daemon never exits silently. Closing a worktree stops its checkout's daemon (`Worktrees.remove` in space/repo calls `stop`).
 
-+ HookDaemon(repo: Path, port: int | None = None)
++ HookDaemon(repo: Path, port: int | None = None)          : ServerDaemon
 ------
 + HOST: str
 	// "127.0.0.1"
 + repo: Path
++ address: HookDaemonAddress
+	// where this checkout's daemon answers: its host and its one port
 + address_file: HookDaemonAddressFile
 	// .hook-server/address.json in the checkout, the running daemon's address; it belongs to no IDE folder
 - _older_layout_file: HookDaemonAddressFile
@@ -306,19 +319,19 @@ The hook daemon of one checkout: it listens on the one port the checkout's daemo
 + source_stamp: str
 	// identity of the hook code the checkout holds now
 ----
-+ live_address(): HookDaemonAddress | None
-	// the published address when a daemon answers a ping there
++ running(): RunningServer | None
+	// this checkout's daemon when one answers a ping on its port as this checkout's
 + is_running(): bool
-+ ensure(): HookDaemonAddress
-	// replace a daemon on older code, then the live one, or start one (one hook command at a time) and wait for it
++ ensure(): RunningServer
+	// replace a daemon on older code, then the running one, or start one (one hook command at a time, ServerDaemon's start lock) and wait for it
 	-> _replace_stale
-	-> spawn
+	-> ServerDaemon.ensure
 - _replace_stale(): None
 	-> RunningProcess.stop
 + stop(): None
 	// stop the daemon answering on the port as this checkout's, or as one of the older layout; remove both address files
-+ spawn(): None
-	// the daemon imports from the checkout, through RepositoryToolsets.pythonpath and pycache_prefix
++ spawn(): RunningProcess
+	// ServerDaemon's; the daemon imports from the checkout, through RepositoryToolsets.pythonpath and pycache_prefix
 + serve(server: HookServer | None = None): None
 	// answers pings at once with its address; with no server, loads every toolset class the repository defines first
 	-> claim_port
@@ -326,45 +339,26 @@ The hook daemon of one checkout: it listens on the one port the checkout's daemo
 + claim_port(): socket | None
 	// the port, taken over from this checkout's daemon on older code; none when its daemon on this code holds it
 	-> ExclusivePort.claim
-	-> HookDaemonAddress.reported
+	-> HookDaemonAddress.running
 	-> ExclusivePort.holder
 	// raises HookPortTaken for a process that is not this checkout's daemon, or one that will not stop
 
 ## HookDaemonAddress                                              <!-- Md -->
 
-Where a running hook daemon answers, and who it is. The address file holds these fields, and a ping answers them.
+Where a hook daemon answers. The address file holds these fields with who the daemon is, and a ping answers them.
 
-+ HookDaemonAddress(host: str, port: int, identity: HookDaemonIdentity = HookDaemonIdentity())
++ HookDaemonAddress(host: str, port: int)
 ------
 + host: str
 + port: int
-+ pid: int | None
-+ stamp: str
-+ repo: str
-	// pid, stamp, and repo are the identity's
-+ process: RunningProcess
 ----
-+ answers(): bool
-+ reported(): HookDaemonAddress | None
-	// the address as the daemon answering here reports it; a daemon of the older layout reports no pid, stamp, or repo
-+ serves(repo: Path): bool
++ running(): RunningServer | None
+	// the daemon answering here, as it reports itself (its process, checkout, and code stamp); a daemon of the older layout reports none of them
 + handle_stdin(raw: bytes): dict
-
-## HookDaemonIdentity                                             <!-- Md -->
-
-Who a running hook daemon is. A daemon started by the older layout says none of these.
-
-+ HookDaemonIdentity(pid: int | None = None, stamp: str = "", repo: str = "")
-------
-+ pid: int | None
-+ stamp: str
-	// the stamp of the hook code the daemon loaded
-+ repo: str
-	// its checkout
 
 ## HookDaemonAddressFile                                          <!-- Md -->
 
-The file a daemon publishes its address in: `read()`, `write(address)`, `remove()`.
+The file a daemon publishes its address and itself in: `address()`, `server()` (a *RunningServer*), `write(address, server)`, `remove()`.
 ---
 
 ## Installed artifacts                                            <!-- Mu -->
@@ -373,7 +367,7 @@ The file a daemon publishes its address in: `read()`, `write(address)`, `remove(
 {Installer.path}/                 typically .cursor/
   hooks.json                      HooksManifest — event → hook_daemon.py command
   hook-handlers.json              HookHandlersFile
-.hook-server/                    HookDaemon.folder — address.json, server.log, spawn.lock
+.hook-server/                    HookDaemon.folder — address.json, server.log, start.lock
 .sessions/{name}/logs/            dispatch.debug, prompt-log.txt (in the session's work folder)
 .sessions/{name}/chat-injections/ ChatInjections (space/session)
 ```

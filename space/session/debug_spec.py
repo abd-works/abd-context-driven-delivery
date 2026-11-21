@@ -14,7 +14,7 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
 from expects import contain, equal, expect
 from mamba import before, context, description, it
 
-from harness.agent_tools.agent_tools import AgentToolSet, SubAgentAnnotation
+from harness.agent_tools.agent_tools import ToolsetReference, AgentToolSet, SubAgentAnnotation
 from space.session.session import Session
 
 
@@ -22,7 +22,7 @@ from space.session.session import Session
 # (S) Person --> Debug A Failure From Chat Bar
 with description("a session's debug instructions, which the chat bar's debug button and Fix start"):
     with before.all:
-        self.tool = AgentToolSet.instantiate(Session).tools["debug_session"]
+        self.tool = ToolsetReference.of(Session).made().tools["debug_session"]
         self.prompt = "\n".join(self.tool.prompt)
 
     with it("should be offered as instructions"):

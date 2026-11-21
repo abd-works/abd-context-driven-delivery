@@ -48,4 +48,4 @@ class InstallTarget:
     @functools.cached_property
     def diagnostics(self) -> InstallDiagnostics:
         """The install's ``diagnostics.json`` in this folder, made once."""
-        return InstallDiagnostics(self.path, self.layout)
+        return InstallDiagnostics(self.path)

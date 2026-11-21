@@ -17,7 +17,7 @@ from mamba import after, before, context, description, it
 
 from harness.markdown import Markdown
 from cdd_guidance.actions.improvement.improvement import Improvement
-from harness.agent_tools.agent_tools import AgentToolSet
+from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference
 from harness.agent_tools.tool_call import ToolCall
 from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 
@@ -39,7 +39,7 @@ with description("Improvement repair recipe"):
 
     with context("that is expanded for repair"):
         with before.all:
-            cls = type(AgentToolSet.instantiate(_IMPROVEMENT))
+            cls = type(ToolsetReference.parsed(_IMPROVEMENT).made())
             self.action = cls()
             self.response = self.action.instructions["repair"].expand(
                 {

@@ -16,7 +16,7 @@ for _cat in ("tools", "cdd_guidance/practices"):
 from expects import be_a, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
-from harness.agent_tools.agent_tools import AgentInstructions, AgentToolSet
+from harness.agent_tools.agent_tools import ToolsetReference, AgentInstructions, AgentToolSet
 from space.session.session import Session, SessionNotFoundError
 from space.session.sessions import Sessions
 
@@ -32,7 +32,7 @@ def _open_session(root: Path) -> Path:
 
 def _expanded(action_name: str) -> str:
     """Expand the instructions' body and return all prose joined."""
-    session = AgentToolSet.instantiate(Session)
+    session = ToolsetReference.of(Session).made()
     body = AgentInstructions.for_callable(getattr(Session, action_name), session)
     return "\n".join(body.prompt)
 
@@ -142,7 +142,7 @@ with description("decision records asked for a board ticket's session"):
             json.dumps({"name": "checkout-flow", "workpath": str(self.ticket_work)}), encoding="utf-8"
         )
         self.open_work = _open_session(self.root)
-        self.tool = AgentToolSet.instantiate(Session).tools["write_cdr"]
+        self.tool = ToolsetReference.of(Session).made().tools["write_cdr"]
 
     with after.each:
         OPEN_PROJECTS.close_all()

@@ -16,13 +16,13 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
         sys.path.insert(0, _p)
 
 import cdd_guidance.practices  # noqa: F401
-from harness.agent_tools.agent_tools import AgentToolSet
+from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference
 
 _OOAD_TOOLSET = "cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering"
 
 
 def _load_clean_engineering(*, fidelity: str = "modules", format: str = "markdown"):
-    toolset_cls = type(AgentToolSet.instantiate(_OOAD_TOOLSET))
+    toolset_cls = type(ToolsetReference.parsed(_OOAD_TOOLSET).made())
     return toolset_cls(fidelity=fidelity, format=format)
 
 

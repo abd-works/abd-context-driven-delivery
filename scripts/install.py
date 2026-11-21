@@ -177,7 +177,7 @@ def _install(args: argparse.Namespace) -> int:
     except (UnknownIde, NotAnInstallFolder) as refusal:
         print(f"not installed: {refusal}", file=sys.stderr)
         return REFUSED_EXIT
-    server = McpInstallation.create(installer.layout, installer.path, repo=_REPO)
+    server = McpInstallation.create(installer.target, installer.record, installer.toolsets)
     # Switching the code the server runs takes seconds; a full install takes a minute, so the switch runs alone.
     if args.pin_runtime or args.update or args.serve_from_checkout:
         return _switch_server_only(args, installer, server)
@@ -203,16 +203,16 @@ def _switch_server_only(args: argparse.Namespace, installer: Installer, server: 
     print(f"cdd server: {_switch_server(args, server)}")
     if installer.layout.is_claude_code:
         server.cdd_entry.point_chats_at_served_lane()
-        for mod, outcome in server.install_mods().items():
-            print(f"{mod}: {outcome}")
-    print(f"language adapters: {len(installer.deployment.write_language_adapters())} written")
+        for line in server.server.install_mods():
+            print(line)
+    print(f"language adapters: {len(installer.write_language_adapters())} written")
     _write_runtime_adapters(installer, server)
     return 0
 
 
 def _install_toolsets(args: argparse.Namespace, installer: Installer, server: McpInstallation) -> None:
     if args.self:
-        installer.deployment.install_self()
+        installer.install_self()
         return
     installer.install(replace=not args.no_replace)
     # A plain install from the main checkout also moves the server onto the commit it just installed.
@@ -357,11 +357,11 @@ def _serve_this_checkout(installer: Installer, server: McpInstallation) -> str:
 
 def _ping_server(server: McpInstallation) -> int:
     _step_started(5)
-    running = server.daemon.ping()
+    running = server.daemon.running()
     if running is None:
         _step_failed(5, f"no answer on {server.daemon.url}; see {server.daemon.home.log_path}")
         return 1
-    _step_done(5, f"answers (pid {running.pid}, serving {running.source})")
+    _step_done(5, f"answers (pid {running.pid}, serving {running.serves})")
     return 0
 
 
@@ -376,7 +376,7 @@ def _write_runtime_adapters(installer: Installer, server: McpInstallation) -> No
     home = server.served.home
     if home.mode != home.PINNED or not home.is_pinned_to(_REPO):
         return
-    target = home.take_language_adapters(Path(installer.path) / "language-adapters", installer.layout.folder_name)
+    target = server.served.take_language_adapters(Path(installer.path) / "language-adapters", installer.layout.folder_name)
     print(f"runtime language adapters: copied to {target}")
 
 

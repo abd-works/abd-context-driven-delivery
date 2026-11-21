@@ -90,10 +90,9 @@ class EventStream {
 
 type Session = { url: string; headers: Record<string, string> }
 type Message = { id?: number; method?: string; params?: { progressToken?: number; message?: string }; result?: unknown; error?: { message?: string } }
-type ToolResult = { content?: { text?: string }[]; isError?: boolean }
-// What the cdd server answers for a call still running at its time limit (harness/mcp/tool_calls.py), after the tool's
-// name; and how often a connection asks again, each ask waiting up to the server's own limit, before it gives up.
-const STILL_RUNNING = 'is still running after'
+type ToolResult = { content?: { text?: string }[]; isError?: boolean; structuredContent?: { still_running?: { tool: string; seconds: number } } }
+// How often a connection asks again for a call the cdd server answers is still running at its time limit
+// (harness/mcp/tool_calls.py), each ask waiting up to the server's own limit, before it gives up.
 const STILL_RUNNING_ASKS = 60
 
 const cddHome = (): string => process.env.CDD_HOME ?? join(homedir(), '.cdd')
@@ -112,8 +111,9 @@ export class CddConnection {
   // is sent once more on a new session rather than failing the page that made it.
   async call<Result>(tool: string, args: Record<string, unknown>): Promise<Result> {
     for (let asked = 1; ; asked += 1) {
-      const text = await this.answerText(tool, args)
-      if (!text.startsWith(`${tool} ${STILL_RUNNING}`)) return this.parsed<Result>(text)
+      const result = await this.answered(tool, args)
+      const text = result.content?.[0]?.text ?? ''
+      if (!result.structuredContent?.still_running) return this.parsed<Result>(text)
       if (asked >= STILL_RUNNING_ASKS) throw new CddToolError(tool, text)
     }
   }
@@ -123,14 +123,14 @@ export class CddConnection {
   // connection's session (restarted), or that did not answer at all (restarting), ran nothing, so the call is sent once
   // more on a new session, whose connect script starts the server when none answers. A call cut off while it was
   // answered may already have run, so it is never sent again.
-  private async answerText(tool: string, args: Record<string, unknown>): Promise<string> {
+  private async answered(tool: string, args: Record<string, unknown>): Promise<ToolResult> {
     const result = (await this.calledOnce(tool, args).catch(failure => {
       if (failure instanceof SessionGoneError || failure instanceof ServerNotAnsweringError) return this.calledOnce(tool, args)
       throw failure
     })) as ToolResult
     const text = result.content?.[0]?.text
     if (result.isError || text === undefined) throw new CddToolError(tool, text ?? 'no result')
-    return text
+    return result
   }
 
   private async calledOnce(tool: string, args: Record<string, unknown>): Promise<unknown> {

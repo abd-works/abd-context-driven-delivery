@@ -19,16 +19,25 @@ from harness.mcp.mcp_address import PROJECT_HEADER, McpAddress
 from harness.mcp.mcp_server import McpConfigUnreadable, McpInstallation
 from harness.mcp.server_lanes import ServerLanes
 from harness.installation.ide_layout import IdeLayout
+from harness.installation.install_record import InstallRecord
+from harness.installation.install_target import InstallTarget
 
 UNREADABLE = '{"mcpServers": {"notes": {"command": "notes-server"},'
+
+
+def _placed(folder: Path) -> tuple[InstallTarget, InstallRecord]:
+    """A Claude Code install folder, with the record of what an installation wrote there."""
+    target = InstallTarget(IdeLayout("Claude"), folder)
+    return target, InstallRecord(target)
+
 
 
 with description("an MCP config that cdd writes its entry into") as self:
     with before.each:
         self.project = Path(tempfile.mkdtemp(prefix="cdd-mcp-config-"))
         self.config = self.project / ".mcp.json"
-        self.installation = McpInstallation.create(IdeLayout("Claude"), self.project / ".claude")
-        self.installation.write(SimpleNamespace(install_to_mcp=True))
+        self.installation = McpInstallation.into(InstallTarget(IdeLayout("Claude"), self.project / ".claude"))
+        self.installation.write(SimpleNamespace(is_published_to=lambda destination: True))
 
     with after.each:
         shutil.rmtree(self.project, ignore_errors=True)
@@ -63,8 +72,8 @@ with description("an MCP config that cdd writes its entry into") as self:
 with description("a VS Code install tree's MCP config") as self:
     with before.each:
         self.tree = Path(tempfile.mkdtemp(prefix="cdd-vscode-tree-")) / ".vscode"
-        self.installation = McpInstallation.create(IdeLayout("VS Code"), self.tree)
-        self.installation.write(SimpleNamespace(install_to_mcp=True))
+        self.installation = McpInstallation.into(InstallTarget(IdeLayout("VS Code"), self.tree))
+        self.installation.write(SimpleNamespace(is_published_to=lambda destination: True))
         self.installation.cdd_entry.write()
         self.config = json.loads(self.installation.cdd_entry.path.read_text(encoding="utf-8"))
 
@@ -89,7 +98,7 @@ with description("the cdd entry a checkout's chats reach its lane's server throu
     with context("of a ticket's worktree, served on the dev lane"):
         with before.each:
             self.config.write_text(json.dumps({"mcpServers": {"notes": {"command": "notes-server"}}}), encoding="utf-8")
-            installation = McpInstallation(IdeLayout("Claude"), self.project / ".claude", self.lanes.dev.served_checkout(self.project))
+            installation = McpInstallation(*_placed(self.project / ".claude"), self.lanes.dev.served_checkout(self.project))
             installation.cdd_entry.point_chats_at_served_lane()
             self.servers = json.loads(self.config.read_text(encoding="utf-8"))["mcpServers"]
 
@@ -106,7 +115,7 @@ with description("the cdd entry a checkout's chats reach its lane's server throu
         with before.each:
             servers = {"cdd": {"type": "http", "url": self.lanes.dev.daemon.url}, "notes": {"command": "notes-server"}}
             self.config.write_text(json.dumps({"mcpServers": servers}), encoding="utf-8")
-            installation = McpInstallation(IdeLayout("Claude"), self.project / ".claude", self.lanes.stable.served_checkout(self.project))
+            installation = McpInstallation(*_placed(self.project / ".claude"), self.lanes.stable.served_checkout(self.project))
             installation.cdd_entry.point_chats_at_served_lane()
             self.servers = json.loads(self.config.read_text(encoding="utf-8"))["mcpServers"]
 

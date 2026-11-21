@@ -11,7 +11,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Mapping, NotRequired, Sequence, TypedDict
 
 from harness.agent_tools import AgentOperation, AgentToolSet, agent_instructions, agent_toolset, tools
-from harness.agent_tools.agent_tools import InstallDestination, ToolsetReference
+from harness.agent_tools.agent_tools import ToolsetReference
+from harness.annotations.annotation import annotation_kinds
 from harness.agent_tools.tool_call import ToolCall
 from harness.guidance.action_catalogue import ACTION_CATALOGUE, Action
 from harness.guidance.documents import document_in
@@ -283,7 +284,7 @@ class GuidanceArgument:
         return named
 
     def _practice_of_class(self, reference: str) -> PracticeGuidance | None:
-        toolset_class = ToolsetReference(reference).toolset_class
+        toolset_class = ToolsetReference.parsed(reference).toolset_class
         return next((practice for practice in self._practices() if type(practice) is toolset_class), None)
 
     def _named(self, slug: str) -> PracticeGuidance | FidelityGuidance | None:
@@ -464,13 +465,23 @@ class WorkList:
             self._worked_at[practice] = sent
         return practice
 
+    def _made(self, entry: GuidanceEntry | ListedGuidance) -> ListedGuidance:
+        """The toolset entry names, made: a ``module:Class`` reference or a ``{toolset, …}`` mapping, as a call sends
+        it, is parsed and made with its context; Guidance already made is itself."""
+        if isinstance(entry, str):
+            return ToolsetReference.parsed(entry).made()
+        if isinstance(entry, dict):
+            context = {**{key: value for key, value in entry.items() if key not in ("toolset", "context")}, **dict(entry.get("context") or {})}
+            return ToolsetReference.parsed(entry["toolset"]).made(**context)
+        return entry
+
     def _worked_on(self, named_entry: ArgumentEntry) -> ListedGuidance:
         """What named_entry names: a practice of the set, worked at the fidelity and in the format it names; or guidance
         made from it when it names none of them."""
         named = named_entry if isinstance(named_entry, NamedGuidance) else self._own_counterpart(named_entry)
         if named is None:
             self._formats.append((None, ""))
-            return AgentToolSet.instantiate(self._held(named_entry))
+            return self._made(self._held(named_entry))
         practice = named.practice
         fidelity = named.guidance if named.guidance is not practice else practice.fidelities.current
         writer = fidelity if fidelity is not None else practice
@@ -863,7 +874,7 @@ class GuidanceAction:
         """True when the hook is about one of the MCP tools this action publishes, however the IDE spells its name:
         ``generate.generate``, or ``mcp__cdd__generate_generate`` in Claude Code. Each tool says whether a spelling names
         it, by the rule the server resolves calls with."""
-        return any(tool.is_called(tool_use.tool_name) for tool in self.tools_for(InstallDestination.MCP))
+        return any(tool.is_called(tool_use.tool_name) for tool in self.tools_published_to(annotation_kinds.answering_calls))
 
 
 class FidelityActionRunner:

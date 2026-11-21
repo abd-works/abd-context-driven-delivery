@@ -18,12 +18,15 @@ from enum import Enum
 from pathlib import Path, PurePosixPath
 from typing import Annotated, Any, Literal, NotRequired, Union, get_args, get_origin, get_type_hints
 
-from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, ClassMember, InstallDestination, OnSubject, ToolsetMembers
+from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, ClassMember, OnSubject, ToolsetMembers
 from harness.agent_tools.parameter_schema import TypeHint
+from harness.annotations.annotation import annotation_kinds
 from harness.annotations.name import Name
-from harness.installation.destination import Installation
+from harness.installation.destination import InstallPlace
 from harness.installation.data_class import DataClass, SourceFile
-from harness.installation.ide_layout import IdeLayout
+from harness.installation.install_record import InstallRecord
+from harness.installation.install_target import InstallTarget
+from harness.installation.repository_toolsets import RepositoryToolsets
 
 _FOLDER = "language-adapters"
 _TYPESCRIPT = "typescript"
@@ -334,7 +337,7 @@ class TypeScriptToolset:
 
     def __init__(self, toolset: AgentToolSet, folder: Path, peers: dict[str, TypeScriptToolset]) -> None:
         self.toolset = toolset
-        self._tools = sorted(toolset.tools_for(InstallDestination.MCP), key=lambda tool: tool.mcp_name)
+        self._tools = sorted(toolset.tools_published_to(annotation_kinds.answering_calls), key=lambda tool: tool.mcp_name)
         self._folder = PurePosixPath(folder.as_posix())
         self._peers = peers
         self._shapes: dict[str, type] = {}
@@ -846,13 +849,12 @@ class TypeScriptViews:
         return _HINT_INPUTS.get(hint, "json")
 
 
-class LanguageAdapterInstallation(Installation):
-    """Records annotated toolsets during the install walk, then writes them together, because their files import each other."""
+class LanguageAdapters(InstallPlace):
+    """The language adapters an install writes: it records annotated toolsets during the install walk, then writes them
+    together, because their files import each other. It writes no channel of a tool, so it is not an *Installation*."""
 
-    channel = "language-adapter"
-
-    def __init__(self, layout: IdeLayout, path: Path | str, repo: Path | str | None = None) -> None:
-        super().__init__(layout, path, repo)
+    def __init__(self, target: InstallTarget, record: InstallRecord, repository: RepositoryToolsets | None = None) -> None:
+        super().__init__(target, record, repository)
         self._recorded: list[AgentToolSet] = []
 
     def record(self, toolset: AgentToolSet) -> None:
@@ -918,5 +920,5 @@ class LanguageAdapterInstallation(Installation):
     def _written(self, path: Path, text: str) -> Path:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text, encoding="utf-8")
-        self.track_write(path)
+        self.wrote(path)
         return path

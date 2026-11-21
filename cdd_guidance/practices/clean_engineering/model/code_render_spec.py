@@ -12,7 +12,7 @@ if str(_REPO_ROOT) not in sys.path:
 
 import cdd_guidance.practices  # noqa: F401
 from cdd_guidance.practices.source_code import JAVASCRIPT, PYTHON, TYPESCRIPT, CodeBody
-from harness.agent_tools.agent_tools import AgentToolSet
+from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference
 
 _TOOLSET = "cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering"
 
@@ -76,7 +76,7 @@ _TYPESCRIPT_TOTAL = "return this.items.reduce((sum, item) => sum + item.price, 0
 
 
 def _render(target: str, content: str, source: str, previous: str = "") -> str:
-    toolset = type(AgentToolSet.instantiate(_TOOLSET))(fidelity="model")
+    toolset = type(ToolsetReference.parsed(_TOOLSET).made())(fidelity="model")
     return toolset.render(format=target, content=content, source=source, previous=previous)["content"]
 
 

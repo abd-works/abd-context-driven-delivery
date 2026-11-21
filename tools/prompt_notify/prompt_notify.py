@@ -122,7 +122,7 @@ class PromptNotify:
         if self._given_echo_toolsets is not None:
             return self._given_echo_toolsets
         references = RepositoryToolsets(RUNNING_CHECKOUT).references()
-        return AgentToolSet.from_items([reference.toolset_class for reference in references])
+        return [reference.made() for reference in references]
 
     def show_toast(self, toast: str, workspace_roots: list[Path | str]) -> list[Path]:
         """Show toast in every workspace folder of the chat it is for, joined with a toast written there in the same

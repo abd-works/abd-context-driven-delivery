@@ -1,5 +1,6 @@
 """Hook process helpers that race threads on purpose. Heavy: four hook commands arrive together on threads, and the
 first one's daemon takes the start-up poll to answer."""
+import os
 import sys
 import tempfile
 import threading
@@ -17,14 +18,16 @@ from mamba import description, it
 with description("hook process helpers"):
 
     with it("should start a single daemon when several hook commands arrive together"):
-        from harness.hooks.hook_daemon import HookDaemon, HookDaemonAddress
+        from harness.hooks.hook_daemon import HookDaemon
+        from harness.process.process import RunningProcess
+        from harness.process.server_daemon import RunningServer
 
         calls: list[float] = []
 
         class _CountingDaemon(HookDaemon):
-            def live_address(self):
+            def running(self):
                 if calls and time.time() >= calls[0] + 0.4:
-                    return HookDaemonAddress(self.HOST, self.port)
+                    return RunningServer(RunningProcess(os.getpid()), self.repo, self.source_stamp)
                 return None
 
             def spawn(self):
@@ -36,7 +39,7 @@ with description("hook process helpers"):
 
             def arrive():
                 try:
-                    _CountingDaemon(repo)._start_once()
+                    _CountingDaemon(repo).ensure()
                 except BaseException as exc:
                     errors.append(exc)
 

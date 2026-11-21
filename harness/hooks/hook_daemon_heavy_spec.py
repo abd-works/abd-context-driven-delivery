@@ -125,17 +125,17 @@ with description("a checkout whose hook port the daemon of the older layout hold
         os.environ["PYTHONPATH"] = self.pythonpath
 
     with it("should answer the next hook command from a daemon on the current code"):
-        address = self.daemon.ensure()
-        expect(address.stamp).to(equal(self.daemon.source_stamp))
+        running = self.daemon.ensure()
+        expect(running.code).to(equal(self.daemon.source_stamp))
 
     with it("should stop the older daemon"):
         self.daemon.ensure()
         expect(self.older.ended()).to(equal(True))
 
     with it("should stop the daemon when the checkout closes"):
-        address = self.daemon.ensure()
+        self.daemon.ensure()
         self.daemon.stop()
-        expect(address.answers()).to(equal(False))
+        expect(self.daemon.address.running()).to(be_none)
 
 
 def _free_port() -> int:
@@ -204,4 +204,4 @@ with description("a checkout's hook daemon") as self:
         with it("should leave the port free"):
             self.daemon.stop()
             self.older.ended()
-            expect(HookDaemon(self.repo, port=self.port).live_address()).to(be_none)
+            expect(HookDaemon(self.repo, port=self.port).running()).to(be_none)

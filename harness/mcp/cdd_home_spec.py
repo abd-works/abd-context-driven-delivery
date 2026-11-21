@@ -16,15 +16,16 @@ from mamba import after, before, context, description, it
 
 from harness.installation.repository_toolsets import RepositoryToolsets
 from harness.mcp.cdd_home import CddHome, RuntimeRecordUnreadable
+from harness.mcp.claude_marketplace import ClaudeMarketplace
 from harness.mcp.cdd_home_checkout_examples import BOARD_MOD, QUEUE_MOD, checkout_with_board_mod
 
 def _plugin_names(home: CddHome) -> list[str]:
-    marketplace = json.loads((home.claude_plugins / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
+    marketplace = json.loads((home.marketplace.folder / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
     return [plugin["name"] for plugin in marketplace["plugins"]]
 
 
 def _board_version(home: CddHome) -> str:
-    return json.loads((home.claude_plugins / "cdd-board" / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))["version"]
+    return json.loads((home.marketplace.folder / "cdd-board" / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))["version"]
 
 
 with description("a cdd home's Claude Code plugins") as self:
@@ -37,7 +38,7 @@ with description("a cdd home's Claude Code plugins") as self:
 
     with context("that serves no code yet"):
         with before.each:
-            self.home.write_claude_plugin({"type": "http"})
+            self.home.marketplace.publish_cdd_plugin({"type": "http"})
 
         with it("should list only the cdd plugin"):
             expect(_plugin_names(self.home)).to(equal(["cdd"]))
@@ -45,7 +46,7 @@ with description("a cdd home's Claude Code plugins") as self:
         # The server names a Claude Code chat from its connection, so the plugin runs nothing before a chat connects;
         # the hook only starts a server that is not running.
         with it("should start the server when a chat starts"):
-            hooks = json.loads((self.home.claude_plugins / "cdd" / "hooks" / "hooks.json").read_text(encoding="utf-8"))
+            hooks = json.loads((self.home.marketplace.folder / "cdd" / "hooks" / "hooks.json").read_text(encoding="utf-8"))
             command = hooks["hooks"]["SessionStart"][0]["hooks"][0]["command"]
             expect(command).to(end_with(f'"{self.home.connect_script}" --start'))
 
@@ -53,20 +54,20 @@ with description("a cdd home's Claude Code plugins") as self:
     with context("that serves a checkout"):
         with before.each:
             self.checkout = checkout_with_board_mod(self.root)
-            self.home.write_claude_plugin({"type": "http"})
+            self.home.marketplace.publish_cdd_plugin({"type": "http"})
             self.home.serve_from(self.checkout)
-            self.board = self.home.claude_plugins / "cdd-board"
+            self.board = self.home.marketplace.folder / "cdd-board"
 
         with it("should list the board and prompt queue mods beside the cdd plugin"):
             expect(_plugin_names(self.home)).to(equal(["cdd", "cdd-board", "prompt-queue"]))
 
         # The prompt queue is a mod beside the chat bar, so every chat gets it from the code the server runs.
         with it("should publish that checkout's prompt queue mod"):
-            queue = self.home.claude_plugins / "prompt-queue"
+            queue = self.home.marketplace.folder / "prompt-queue"
             expect((queue / "hooks" / "register.tsx").read_text(encoding="utf-8")).to(equal("export default { queue: true }\n"))
 
         with it("should keep the prompt queue's own version as the start of the published one"):
-            manifest = json.loads((self.home.claude_plugins / "prompt-queue" / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+            manifest = json.loads((self.home.marketplace.folder / "prompt-queue" / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
             expect(manifest["version"].startswith("0.1.0-")).to(equal(True))
 
         with it("should publish that checkout's board mod"):
@@ -85,7 +86,7 @@ with description("a cdd home's Claude Code plugins") as self:
         # Run install works when the server is what is broken, so the mod reads the command from its own folder.
         with context("whose mod runs an install for a chat"):
             with before.each:
-                self.command = json.loads((self.board / CddHome.INSTALL_COMMAND).read_text(encoding="utf-8"))["command"]
+                self.command = json.loads((self.board / ClaudeMarketplace.INSTALL_COMMAND).read_text(encoding="utf-8"))["command"]
 
             with it("should run it on the Python the server runs on"):
                 expect(self.command[0]).to(equal(str(self.home.interpreter.executable)))

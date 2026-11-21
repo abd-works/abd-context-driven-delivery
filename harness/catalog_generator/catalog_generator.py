@@ -73,7 +73,7 @@ class Utility:
         utility that cannot be imported raises rather than leaving a silent gap."""
         toolsets = RepositoryToolsets(_REPO_ROOT)
         classes = toolsets.classes()
-        unloadable = [failure for failure in toolsets.unloadable if failure.reference.startswith(_UTILITY_PACKAGES)]
+        unloadable = [failure for failure in toolsets.unloadable if failure.reference.module_name.startswith(_UTILITY_PACKAGES)]
         if unloadable:
             raise unloadable[0]
         utilities = [toolset_class for toolset_class in classes if toolset_class.__module__.startswith(_UTILITY_PACKAGES)]

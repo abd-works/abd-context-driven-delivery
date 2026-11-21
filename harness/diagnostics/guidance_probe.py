@@ -9,6 +9,7 @@ from harness.agent_tools.agent_tools import ToolsetReference
 from harness.diagnostics.probe_arguments import ProbeArguments
 from harness.guidance.action_catalogue import ACTION_CATALOGUE
 from harness.diagnostics.probe_outcome import ProbeOutcome, ProbeSection, raised_by_a_bug
+from harness.mcp.mcp_annotations import Mcp
 
 if TYPE_CHECKING:
     from harness.agent_tools.agent_tools import AgentTool, AgentToolSet
@@ -103,7 +104,7 @@ class GuidanceProbe:
             if raised_by_a_bug(failure):
                 raise
             return [ProbeOutcome.from_failure(str(ToolsetReference.of(toolset_class)), failure)]
-        return [self._action(toolset, tool) for tool in toolset.tools.values() if tool.install_to_mcp and tool.mcp_name in published]
+        return [self._action(toolset, tool) for tool in toolset.tools.values() if tool.is_published_to(Mcp) and tool.mcp_name in published]
 
     def _action(self, toolset: AgentToolSet, tool: AgentTool) -> ProbeOutcome:
         if tool.mcp_name in _LEFT_ALONE:

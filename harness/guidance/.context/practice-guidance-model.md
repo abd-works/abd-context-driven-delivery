@@ -26,7 +26,7 @@ session: Session | None
 	// the session work_in gives a practice; none until a session works on it
 name: str | None
 slug: str
-registration_name: str
+reference: ToolsetReference
 install_folder: Path
 module_dir: Path
 overview: str

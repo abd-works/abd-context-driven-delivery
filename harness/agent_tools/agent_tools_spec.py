@@ -26,15 +26,14 @@ from harness.agent_tools.agent_tools import (
     AgentToolValidationError,
     CallNamesNoProject,
     AgentToolSet,
-    InstallDestination,
     ToolSetCollection,
     agent_instructions,
     agent_toolset,
     toolset_collection,
 )
-from harness.hooks.hooks import hook
-from harness.mcp.mcp_annotations import mcp
-from harness.mcp.mcp_server import McpServer
+from harness.hooks.hooks import Hook, hook
+from harness.mcp.mcp_annotations import Mcp, mcp
+from harness.mcp.mcp_server import ProjectToolsets
 from harness.agent_tools.agent_tools import AgentInstructions, ToolSetCollectionAnnotation
 from harness.agent_tools.recipe import RecipeLineFailed, RecipePlaceholders
 from harness.agent_tools.tool_call import ToolCall
@@ -47,7 +46,7 @@ from harness.agent_tools._examples.super_delegation.super_delegation_demo import
 )
 from harness.agent_tools.agent_tools import AgentToolSet, ToolsetMembers, ToolsetReference, agent_tool as _tool, tool_subject, tools, instructions
 
-Car = ToolsetReference("cdd_guidance.practices._examples.car.car:Car").toolset_class
+Car = ToolsetReference.parsed("cdd_guidance.practices._examples.car.car:Car").toolset_class
 
 
 class CarInstance:
@@ -1163,23 +1162,28 @@ with description("AgentToolSet destination catalog"):
         OPEN_PROJECTS.close_all()
 
 
-    with context("tools_for a destination"):
+    with context("tools published to a destination"):
 
         with it("should return only members annotated for that destination"):
             toolset = _DestinationFixture()
-            expect([tool.name for tool in toolset.tools_for(InstallDestination.MCP)]).to(
+            expect([tool.name for tool in toolset.tools_published_to(Mcp)]).to(
                 equal(["ping"])
             )
-            expect([tool.name for tool in toolset.tools_for(InstallDestination.HOOK)]).to(
+            expect([tool.name for tool in toolset.tools_published_to(Hook)]).to(
                 equal(["on_stop"])
             )
 
-    with context("from_items"):
+    with context("named by its reference"):
 
-        with it("should instantiate a class once per type"):
-            loaded = AgentToolSet.from_items([_DestinationFixture, _DestinationFixture()])
-            expect(len(loaded)).to(equal(1))
-            expect(type(loaded[0])).to(equal(_DestinationFixture))
+        with it("should be made from the reference parsed from its text"):
+            expect(type(ToolsetReference.parsed("cdd_guidance.practices._examples.car.car:Car").made())).to(equal(Car))
+
+        with it("should be the toolset itself when it is already made"):
+            toolset = _DestinationFixture()
+            expect(toolset.made()).to(be(toolset))
+
+        with it("should refuse text that names no class"):
+            expect(lambda: ToolsetReference.parsed("no.class.here")).to(raise_error(ValueError))
 
 
 @agent_toolset
@@ -1428,18 +1432,18 @@ with description("a domain class whose constructor takes collaborators"):
 
     with context("that annotates a @tool_subject loader"):
         with it("should build as a toolset with no arguments"):
-            expect(AgentToolSet.instantiate(Parcel).tools).to(have_key("forward"))
+            expect(ToolsetReference.of(Parcel).made().tools).to(have_key("forward"))
 
         with it("should take the loader's argument before the operation's own"):
-            forward = AgentToolSet.instantiate(Parcel).tools["forward"]
+            forward = ToolsetReference.of(Parcel).made().tools["forward"]
             expect(list(forward.parameter_schema.names)).to(equal(["parcel", "destination"]))
 
         with it("should run the operation on the object the call names"):
-            forward = AgentToolSet.instantiate(Parcel).tools["forward"]
+            forward = ToolsetReference.of(Parcel).made().tools["forward"]
             expect(forward.callable(parcel="box-1", destination="west")).to(equal("box-1 from north to west"))
 
         with it("should leave a classmethod tool to take only its own arguments"):
-            receive = AgentToolSet.instantiate(Parcel).tools["receive"]
+            receive = ToolsetReference.of(Parcel).made().tools["receive"]
             expect(list(receive.parameter_schema.names)).to(equal(["label"]))
 
     with context("whose loader takes the project the call works on"):
@@ -1447,40 +1451,40 @@ with description("a domain class whose constructor takes collaborators"):
             self.project = ThrowawayProject().root
 
         with it("should leave the project out of the tool's arguments, since no caller passes it"):
-            ship = AgentToolSet.instantiate(Crate).tools["ship"]
+            ship = ToolsetReference.of(Crate).made().tools["ship"]
             expect(list(ship.parameter_schema.names)).to(equal(["crate"]))
 
         with it("should load the object from the project the call works on"):
-            ship = AgentToolSet.instantiate(Crate).tools["ship"]
+            ship = ToolsetReference.of(Crate).made().tools["ship"]
             expect(ship.invoke({"crate": "crate-1"}, project=self.project)).to(equal(f"crate-1 shipped from {self.project.name}"))
 
         with context("with a call that names no project"):
             with it("should refuse to load the object"):
-                ship = AgentToolSet.instantiate(Crate).tools["ship"]
+                ship = ToolsetReference.of(Crate).made().tools["ship"]
                 expect(lambda: ship.invoke({"crate": "crate-1"})).to(raise_error(CallNamesNoProject))
 
         with context("with a classmethod tool that takes the project too"):
             with it("should leave the project out of its arguments"):
-                pack = AgentToolSet.instantiate(Crate).tools["pack"]
+                pack = ToolsetReference.of(Crate).made().tools["pack"]
                 expect(list(pack.parameter_schema.names)).to(equal(["label"]))
 
             with it("should hand it the project the call works on"):
-                pack = AgentToolSet.instantiate(Crate).tools["pack"]
+                pack = ToolsetReference.of(Crate).made().tools["pack"]
                 expect(pack.invoke({"label": "crate-2"}, project=self.project)).to(equal(f"crate-2 packed in {self.project.name}"))
 
         with context("with a tool that takes another crate"):
             with it("should take the other crate by name"):
-                stack_on = AgentToolSet.instantiate(Crate).tools["stack_on"]
+                stack_on = ToolsetReference.of(Crate).made().tools["stack_on"]
                 expect(list(stack_on.parameter_schema.names)).to(equal(["crate", "other"]))
 
             with it("should hand the operation the crate that name loads, from the same project"):
-                stack_on = AgentToolSet.instantiate(Crate).tools["stack_on"]
+                stack_on = ToolsetReference.of(Crate).made().tools["stack_on"]
                 expect(stack_on.invoke({"crate": "crate-1", "other": "crate-2"}, project=self.project)).to(
                     equal(f"crate-1 on crate-2 in {self.project.name}")
                 )
 
             with it("should hand it no crate when the name is left out"):
-                stack_on = AgentToolSet.instantiate(Crate).tools["stack_on"]
+                stack_on = ToolsetReference.of(Crate).made().tools["stack_on"]
                 expect(stack_on.invoke({"crate": "crate-1"}, project=self.project)).to(
                     equal(f"crate-1 on the floor of {self.project.name}")
                 )
@@ -1488,7 +1492,7 @@ with description("a domain class whose constructor takes collaborators"):
     with context("whose loader takes the call it serves"):
         with before.each:
             self.call = ToolCall.sent({"pallet": "pallet-1", "conversation_id": "chat-7"}, ThrowawayProject().root)
-            self.lift = AgentToolSet.instantiate(Pallet).tools["lift"]
+            self.lift = ToolsetReference.of(Pallet).made().tools["lift"]
 
         with it("should leave the call out of the tool's arguments, since no caller passes it"):
             expect(list(self.lift.parameter_schema.names)).to(equal(["pallet"]))
@@ -1519,7 +1523,7 @@ with description("a toolset reference"):
         with it("should load the toolset class its underscored module name names"):
             from harness.agent_tools.agent_tools import ToolsetReference
 
-            expect(ToolsetReference("hyphen_tools.found_tool:FoundTool").toolset_class.__name__).to(equal("FoundTool"))
+            expect(ToolsetReference.parsed("hyphen_tools.found_tool:FoundTool").toolset_class.__name__).to(equal("FoundTool"))
 
     with context("made from a toolset class"):
         with it("should name the class by its module and its own name"):
@@ -1530,7 +1534,7 @@ with description("a toolset reference"):
 
 with description("a tool's MCP invoke line"):
     with it("should name the tool the installer reads back from it"):
-        tool = next(iter(AgentToolSet.instantiate(CarStory).tools.values()))
+        tool = next(iter(ToolsetReference.of(CarStory).made().tools.values()))
         expect(tool.invoke_line.names).to(equal([tool.mcp_name]))
 
 
@@ -1547,7 +1551,7 @@ class FidelityProgress:
 
 with description("a published tool asked whether a client's spelling names it"):
     with before.each:
-        self.tool = AgentToolSet.instantiate(FidelityProgress).tools["files"]
+        self.tool = ToolsetReference.of(FidelityProgress).made().tools["files"]
 
     with it("should be published under its toolset's slug and its own name"):
         expect(self.tool.mcp_name).to(equal("fidelity-progress.files"))
@@ -1572,7 +1576,7 @@ with description("a published tool asked whether a client's spelling names it"):
 
     with context("that a server has enrolled"):
         with before.each:
-            self.server = McpServer(repo=Path(__file__).resolve().parents[2])
+            self.server = ProjectToolsets(repo=Path(__file__).resolve().parents[2])
             self.server.enroll(self.tool)
 
         with it("should be the tool a call spelled with the hyphen as an underscore reaches"):

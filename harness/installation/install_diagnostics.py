@@ -1,14 +1,14 @@
-"""InstallDiagnostics - ``diagnostics.json`` in an IDE folder: what each install deployed, and the probes' sections."""
+"""InstallDiagnostics - ``diagnostics.json`` in an IDE folder: what each install deployed, and the probes' sections;
+Deployed, what a folder holds on each channel; and InstallDiagnosis, what one install deployed against the last."""
 from __future__ import annotations
 
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from harness.installation.ide_layout import IdeLayout
 from harness.installation.json_file import JsonFile
 
 if TYPE_CHECKING:
-    from harness.installation.installer import InstallChannels
+    from harness.installation.install_target import InstallTarget
 
 _COLORS = ("green", "yellow", "red")
 # How much of the deployed set may change between two installs before the change reads as a warning, then a failure.
@@ -16,83 +16,151 @@ _GREEN_SURFACE_CHANGE = 0.10
 _YELLOW_SURFACE_CHANGE = 0.50
 
 
-class InstallDiagnostics:
-    """``diagnostics.json`` in one IDE folder. Each install appends what it deployed on every channel, coloured by how
-    much changed since the last install; the diagnostics probes write their own sections beside that history."""
+class Deployed:
+    """What an IDE folder holds on each channel an install reports: the toolsets it deployed, its skills, commands,
+    rules, agents, and language adapters, and what each registered channel published, such as the MCP operations and
+    the hook operations."""
 
-    NAME = "diagnostics.json"
     CHANNELS = ("toolset", "skill", "command", "rules", "mcp", "hook", "agent", "language-adapter")
 
-    def __init__(self, folder: Path, layout: IdeLayout) -> None:
+    def __init__(self, items: dict[str, list[str]]) -> None:
+        self._items = {name: list(items.get(name, [])) for name in self.CHANNELS}
+
+    @classmethod
+    def of_folder(cls, target: InstallTarget, toolsets: list[str], published: dict[str, list[str]]) -> Deployed:
+        """What target's folder holds, with the toolsets an install deployed there and what each registered channel
+        published."""
+        folder, layout = target.path, target.layout
+
+        def files(folder_name: str, pattern: str) -> list[Path]:
+            found = folder / folder_name
+            return list(found.rglob(pattern)) if found.is_dir() else []
+
+        return cls(
+            {
+                "toolset": list(toolsets),
+                "skill": sorted({path.parent.name for path in files("skills", "SKILL.md")}),
+                "command": sorted({path.stem for path in [*files("commands", "*.md"), *files("prompts", "*.md")]}),
+                "rules": sorted(path.stem for path in files("rules", f"*{layout.rule_suffix}")),
+                "mcp": sorted(published.get("mcp", [])),
+                "hook": sorted(published.get("hook", [])),
+                "agent": sorted({path.stem for path in files("agents", "*.md")}),
+                "language-adapter": sorted(
+                    path.relative_to(folder / "language-adapters").as_posix() for path in files("language-adapters", "*.ts")
+                ),
+            }
+        )
+
+    def items(self, channel: str) -> list[str]:
+        """What the folder holds on channel."""
+        return list(self._items[channel])
+
+    def changes_since(self, last: Deployed | None) -> DeployedChanges:
+        """What changed on each channel since last, the deployment of the last install; everything is new before the
+        first."""
+        return DeployedChanges(self, last)
+
+
+class DeployedChanges:
+    """What changed on each channel between the last install's deployment and this one's: the items added and removed,
+    each channel's count before and after, and the colour of how much changed. The first install is green."""
+
+    def __init__(self, current: Deployed, last: Deployed | None) -> None:
+        self._current = current
+        self._last = last
+        self._baseline = last if last is not None else Deployed({})
+
+    def added(self, channel: str) -> list[str]:
+        return sorted(set(self._current.items(channel)) - set(self._baseline.items(channel)))
+
+    def removed(self, channel: str) -> list[str]:
+        return sorted(set(self._baseline.items(channel)) - set(self._current.items(channel)))
+
+    @property
+    def colour(self) -> str:
+        """Green, yellow, or red by the share of the compared items, this install's and the last's, that changed."""
+        if self._last is None:
+            return "green"
+        channels = Deployed.CHANNELS
+        changed = sum(len(self.added(name)) + len(self.removed(name)) for name in channels)
+        compared = sum(len(self._current.items(name)) + len(self._baseline.items(name)) for name in channels)
+        ratio = changed / compared if compared else 0.0
+        if ratio <= _GREEN_SURFACE_CHANGE:
+            return "green"
+        return "yellow" if ratio <= _YELLOW_SURFACE_CHANGE else "red"
+
+    @property
+    def report(self) -> str:
+        """Each channel's count before and after, then every new and deleted item."""
+        lines = ["installed"]
+        for name in Deployed.CHANNELS:
+            previous, current = len(self._baseline.items(name)), len(self._current.items(name))
+            lines.append(f"{name} {previous} -> {current} (delta {current - previous})")
+        for name in Deployed.CHANNELS:
+            lines.extend(f"new {name}: {item}" for item in self.added(name))
+            lines.extend(f"deleted {name}: {item}" for item in self.removed(name))
+        return "\n".join(lines)
+
+
+class InstallDiagnosis:
+    """One install's diagnosis: what it deployed, what changed since the last install, and the status each registered
+    channel reports, such as whether the cdd server runs. Its colour is a field, and its report is written from the
+    fields, never read back."""
+
+    def __init__(self, deployed: Deployed, changes: DeployedChanges, server_status: list[str]) -> None:
+        self.deployed = deployed
+        self.changes = changes
+        self.server_status = server_status
+
+    @property
+    def colour(self) -> str:
+        return self.changes.colour
+
+    @property
+    def is_red(self) -> bool:
+        return self.colour == "red"
+
+    @property
+    def report(self) -> str:
+        """The colour, what changed on each channel, and each registered channel's status."""
+        return "\n".join([self.colour, self.changes.report, *self.server_status])
+
+
+class InstallDiagnostics:
+    """``diagnostics.json`` in one IDE folder. Each install appends its diagnosis: what it deployed on every channel,
+    coloured by how much changed since the last install; the diagnostics probes write their own sections beside that
+    history."""
+
+    NAME = "diagnostics.json"
+
+    def __init__(self, folder: Path) -> None:
         self.folder = folder
         self.path = folder / self.NAME
         self._file = JsonFile(self.path)
-        self._layout = layout
 
-    def channels_in_folder(self, toolsets: list[str], published: dict[str, list[str]]) -> dict[str, list[str]]:
-        """What the folder holds on each channel, with the toolsets the install deployed and what each server channel
-        published, such as the MCP operations and the hook operations."""
-        return {
-            "toolset": list(toolsets),
-            "skill": sorted({path.parent.name for path in self._files("skills", "SKILL.md")}),
-            "command": sorted({path.stem for path in [*self._files("commands", "*.md"), *self._files("prompts", "*.md")]}),
-            "rules": sorted(path.stem for path in self._files("rules", f"*{self._layout.rule_suffix}")),
-            "mcp": sorted(published.get("mcp", [])),
-            "hook": sorted(published.get("hook", [])),
-            "agent": sorted({path.stem for path in self._files("agents", "*.md")}),
-            "language-adapter": sorted(
-                path.relative_to(self.folder / "language-adapters").as_posix() for path in self._files("language-adapters", "*.ts")
-            ),
-        }
-
-    def deployed(self, channels: InstallChannels) -> dict[str, list[str]]:
-        """What the folder holds on each channel after the install channels belong to: the toolsets it deployed and
-        what each server channel published. Read outside an install, a channel whose names live outside the folder,
-        such as MCP, names what the last install recorded."""
-        published = channels.published
-        if not channels.installing:
-            published = {channel: names or self.installed_items(channel) for channel, names in published.items()}
-        return self.channels_in_folder(channels.deployed, published)
-
-    def diagnosed(self, channels: InstallChannels) -> tuple[str, str]:
-        """The colour of what the install channels belong to deployed, against the last install, and the report of what
-        changed on each channel, with the status of each server the install points at."""
-        color, compared = self.compared(self.deployed(channels))
-        status = "\n".join(line for server in channels.servers for line in server.status())
-        return color, f"{compared}\n{status}"
-
-    def record_run(self, channels: InstallChannels, report: str) -> None:
-        """Append the install channels belong to, with its report and the colour the report names, to the history."""
-        color = next((line for line in report.splitlines() if line in _COLORS), "green")
-        self.record_install(self.deployed(channels), report, color)
-
-    def compared(self, actual: dict[str, list[str]]) -> tuple[str, str]:
-        """The colour of actual against the last install, and the report of what changed on each channel."""
-        last = self._latest_install_channels()
-        baseline = last if last is not None else {name: [] for name in self.CHANNELS}
-        added = {name: sorted(set(actual.get(name, [])) - set(baseline.get(name, []))) for name in self.CHANNELS}
-        removed = {name: sorted(set(baseline.get(name, [])) - set(actual.get(name, []))) for name in self.CHANNELS}
-        changed = sum(len(added[name]) + len(removed[name]) for name in self.CHANNELS)
-        compared_items = sum(len(actual.get(name, [])) + len(baseline.get(name, [])) for name in self.CHANNELS)
-        color = "green" if last is None else self._surface_color(changed, compared_items)
-        lines = ["installed"]
-        for name in self.CHANNELS:
-            previous, current = len(baseline.get(name, [])), len(actual.get(name, []))
-            lines.append(f"{name} {previous} -> {current} (delta {current - previous})")
-        for name in self.CHANNELS:
-            lines.extend(f"new {name}: {item}" for item in added[name])
-            lines.extend(f"deleted {name}: {item}" for item in removed[name])
-        return color, "\n".join(lines)
-
-    def record_install(self, actual: dict[str, list[str]], report: str, color: str) -> None:
-        """Append this install, with what it deployed on each channel and its report, to the history."""
-        entry: dict[str, Any] = {"color": color, "diagnostics": [{"name": "diagnose_install", "report": report, "color": color}]}
-        for name in self.CHANNELS:
-            items = actual.get(name, [])
+    def record(self, diagnosis: InstallDiagnosis) -> None:
+        """Append diagnosis, with what its install deployed on each channel and its report, to the history."""
+        colour = diagnosis.colour
+        entry: dict[str, Any] = {"color": colour, "diagnostics": [{"name": "diagnose_install", "report": diagnosis.report, "color": colour}]}
+        for name in Deployed.CHANNELS:
+            items = diagnosis.deployed.items(name)
             entry[name] = {"count": len(items), "items": items}
         data = self._file.read()
         data["installs"] = [*(data.get("installs") or []), entry]
         self._file.write(data)
+
+    def last_deployed(self) -> Deployed | None:
+        """What the latest install recorded it deployed; none before the first install."""
+        installs = self._file.read().get("installs") or []
+        if not installs:
+            return None
+        latest = installs[-1]
+        items: dict[str, list[str]] = {}
+        for name in Deployed.CHANNELS:
+            field = latest.get(name) or {}
+            listed = field.get("items") if isinstance(field, dict) else field
+            items[name] = [str(item) for item in listed or []]
+        return Deployed(items)
 
     def write_section(self, section: str, results: dict[str, Any]) -> None:
         """Add or replace results in one top-level section, coloured by its worst result. The install history stays."""
@@ -108,30 +176,5 @@ class InstallDiagnostics:
     def installed_items(self, channel: str) -> list[str]:
         """What the latest install deployed on one channel, such as ``mcp`` operation names or ``toolset``
         references; none before the first install."""
-        installs = self._file.read().get("installs") or []
-        if not installs:
-            return []
-        return [str(item) for item in (installs[-1].get(channel) or {}).get("items") or []]
-
-    def _latest_install_channels(self) -> dict[str, list[str]] | None:
-        installs = self._file.read().get("installs") or []
-        if not installs:
-            return None
-        latest = installs[-1]
-        channels: dict[str, list[str]] = {}
-        for name in self.CHANNELS:
-            field = latest.get(name) or {}
-            items = field.get("items") if isinstance(field, dict) else field
-            channels[name] = [str(item) for item in items or []]
-        return channels
-
-    def _surface_color(self, changed: int, compared_items: int) -> str:
-        """Green, yellow, or red by the share of the compared items, this install's and the last's, that changed."""
-        ratio = changed / compared_items if compared_items else 0.0
-        if ratio <= _GREEN_SURFACE_CHANGE:
-            return "green"
-        return "yellow" if ratio <= _YELLOW_SURFACE_CHANGE else "red"
-
-    def _files(self, folder_name: str, pattern: str) -> list[Path]:
-        folder = self.folder / folder_name
-        return list(folder.rglob(pattern)) if folder.is_dir() else []
+        last = self.last_deployed()
+        return last.items(channel) if last is not None else []

@@ -9,7 +9,7 @@ Dependencies list the modules a module's production code imports today. One runs
 An *Annotation* is what an author types on a class or operation to say how CDD treats it; a *Destination* is an annotation that says where a member is published, and an *OmissionAnnotation* leaves a member out. Each publisher defines its own destinations (harness/installation, harness/mcp, harness/hooks), and every kind joins one registry, `annotation_kinds`, as it is defined. *Name* is one name written in every case CDD needs: `StoryMap`, `story_map`, and `story-map` are the same *Name*. `class_folder(cls)` is the folder a class is defined in.
 
 - **Purpose:** Hold the annotations an author types, the one place a member's destinations are read, and the one way a name is written in each case, below every publisher, so publishers depend on toolsets and never the other way round.
-- **Seam (terms):** Annotation, NamesAnnotation, Destination, ClassRegistry, Name, `annotation_kinds`, `class_folder`, and the annotations an author types `@hosted_only`, `@noCatalog`, `@noDeploy` (their classes, *OmissionAnnotation*, and the kinds of kind stay behind them)
+- **Seam (terms):** Annotation, NamesAnnotation, Destination, DestinationKind, ClassRegistry, Name, `annotation_kinds` (*AnnotationKinds*), `class_folder`, and the annotations an author types `@hosted_only`, `@noCatalog`, `@noDeploy` (their classes, *OmissionAnnotation*, and the other kinds of kind stay behind them)
 - **Dependencies (one-way):** *(none)*
 
 ## Annotation
@@ -70,15 +70,37 @@ The base of an annotation that leaves what it annotates out of something: the ca
 
 ## Destination : Annotation
 
-The base of an annotation that says where install publishes a member, by its `channel`: a skill, a command, a rules file, an MCP tool, or a hook.
+The base of an annotation that says where install publishes a member: a skill, a command, a rules file, an MCP tool, or a hook. Each destination kind (*Skill*, *Command*, *Rules*, *Mcp*, *Hook*, a *DestinationKind*) is that channel, and is asked as one: `Mcp.publishes(operation)`, `Hook.name_given(operation)`. Its `channel` is only the channel's name, the key a published list and `diagnostics.json` file it under.
 
 ------
 + channel: str
 + enlists_member: bool
++ marks_a_collection: bool
+	// true for Rules: the member it decorates holds a collection of its toolset's tools
++ answers_calls: bool
+	// true for Mcp: its server answers an agent's calls to the member, so a skill or command tells the agent to call the tool
 ----
-+ name_annotated_on(operation: Any): str
++ publishes(operation: Any): bool
+	// it carries this annotation, turned on, and no omission keeps it out of install
++ name_given(operation: Any): str
+	// the name the annotation gave the operation, such as a command's name or the event a hook runs on
 + disabled_on(operation: Any): bool
 	// reads `{flag}_disabled`, which a destination that holds `disabled` sets, as `@Hook(..., disabled=True)` does
+
+## AnnotationKinds
+
+Every kind of annotation defined in the process, and the destinations among them, in the order they were defined; the process keeps one, `annotation_kinds`. A toolset asks it where a member is published without importing a publisher.
+
+------
++ answering_calls: DestinationKind | None
+	// the destination whose server answers an agent's calls, MCP; none when its publisher was never imported
+----
++ destinations_of(operation: Any): tuple[DestinationKind, ...]
++ deploy_name_of(operation: Any): str
+	// the name a destination's annotation gave operation for the file it installs, such as a command's name; empty when none did
++ marking_a_collection(member: Any): bool
++ enlisting(member: Any): bool
++ withholds_install(operation: Any): bool
 
 ## Name
 
@@ -100,10 +122,10 @@ The base of an annotation that says where install publishes a member, by its `ch
 
 # harness/process
 
-*BackgroundStart* and *PythonInterpreter* start a server without a console window, *RunningProcess* asks about and ends one by its id, *ExclusivePort* is the one port a server may hold, and *CappedLogFile* keeps a log a server or the session writes under a size, so it cannot fill the disk.
+*BackgroundStart* and *PythonInterpreter* start a server without a console window, *RunningProcess* asks about and ends one by its id, *ExclusivePort* is the one port a server may hold, *CappedLogFile* keeps a log a server or the session writes under a size, so it cannot fill the disk, *LockFile* is a file the operating system locks for one holder at a time, and *ServerDaemon* is the one model of a long-running server that the hook daemon and the cdd server both are.
 
 - **Purpose:** Start, name, and stop the processes the framework keeps, the same way on Windows and elsewhere.
-- **Seam (terms):** BackgroundStart, Wmi, OutsideJobStartFailed, PythonInterpreter, ExclusivePort, RunningProcess, ProcessNotStopped, StarterBoundJob, JobNotMade, CappedLogFile
+- **Seam (terms):** BackgroundStart, Wmi, OutsideJobStartFailed, PythonInterpreter, ExclusivePort, RunningProcess, ProcessNotStopped, StarterBoundJob, JobNotMade, CappedLogFile, LockFile, LockFileHeld, ServerDaemon, RunningServer, ServerDidNotStart
 - **Dependencies (one-way):** *(none)*
 
 ## BackgroundStart
@@ -209,6 +231,80 @@ A log file that, once it reaches its size (4 MB), moves its lines to the previou
 ----
 + roll_when_full(): bool
 	// a log another process holds open cannot be moved on Windows, so it rolls at the next write or start that finds it free
++ last_lines(count: int): str
+
+## LockFile
+
+A file the operating system locks for the one holder that claimed it, naming that holder's process at its start: the install lock of an IDE folder, the lock beside a JSON file several processes change, and the start lock of a server. The operating system gives the lock back when its holder's process ends, however it ends.
+
++ LockFile(path: Path, wait_seconds: float)
+------
++ path: Path
++ wait_seconds: float
++ is_held: bool
++ holder: int
+----
++ held(): Iterator[None]
++ claim(): None
+	// waits while another holder has the file, then refuses; one holder may claim again, and the file is free once its first claim is given back
++ release(): None
+---<<raises>>--> LockFileHeld
+
+## LockFileHeld : TimeoutError
+
+Another holder kept a lock file for longer than a claim waits for it.
+
++ LockFileHeld(path: Path, holder: int, waited_seconds: float)
+------
++ path: Path
++ holder: int
++ waited_seconds: float
+----
++ message(): str
+
+## ServerDaemon
+
+A server that keeps running past the command that started it, on the one port it may hold, with its output in a capped log file: the hook daemon of a checkout and the one cdd server. One start at a time, through a start lock beside the log.
+
++ ServerDaemon(port: ExclusivePort, log: CappedLogFile)          abstract
+------
++ port: int
++ << composition >> log: CappedLogFile
+----
++ running(): RunningServer | None          abstract
++ is_running(): bool
++ ensure(): RunningServer
+	// starts the server when none answers and waits until it answers, else raises ServerDidNotStart with the log's last lines
++ stop(): None
+	// stops the process that answers, else the one holding the port
++ restart(): RunningServer
++ spawn(): RunningProcess
+---<<starts with>>--> BackgroundStart
+---<<one start at a time through>>--> LockFile
+---<<raises>>--> ServerDidNotStart
+
+## RunningServer
+
+A long-running server that answered when asked: its process, the folder it serves code from, the stamp of the code it loaded, and the projects its chats have worked on.
+
++ RunningServer(process: RunningProcess, serves: Path | None = None, code: str = "", projects: tuple[str, ...] = ())
+------
++ << composition >> process: RunningProcess
++ pid: int
++ serves: Path | None
++ code: str
++ projects: tuple[str, ...]
+----
++ is_serving(folder: Path): bool
+
+## ServerDidNotStart : Exception
+
+A server was started but did not answer within its wait.
+
++ ServerDidNotStart(daemon: ServerDaemon, seconds: float, log_tail: str)
+------
++ daemon: ServerDaemon
+----
 
 # harness/git
 
@@ -424,7 +520,7 @@ The settings at the top of a file: a YAML block between `---` lines, or, in a co
 An *AgentToolSet* is an ordinary class an agent can list and run: each `@agent_tool` member is an *AgentOperation* and each `@agent_instructions` member is *AgentInstructions*. A *ToolCall* is one call as a chat made it, with its project and chat. The whole model of this module, internals included, is `harness/agent_tools/.context/agent-tools-model.md`; that document is canonical, and this section shows only the classes other modules use.
 
 - **Purpose:** Let an author publish an ordinary class as operations and instructions an agent can list and use, and let every publisher read those members from one place.
-- **Seam (terms):** AgentToolSet, ToolSetCollection, ToolsetMembers, ToolsetReference, AgentTool, InvokeLine, ToolRequest, CallsBeingAnswered (`CALLS_BEING_ANSWERED`), `names_alike`, `is_built_in`, AgentOperation, AgentInstructions, InstallDestination, AgentToolAnnotation, AgentInstructionsAnnotation, AgentToolSetAnnotation, ToolSetCollectionAnnotation, Collect, ToolSubject, OnSubject, TakesFromCall, NoSessionLog, PublishedWhereHeld, SubAgentAnnotation, ToolSubjectLoader, RecipePlaceholders, ToolCall, SessionOpening (`SESSION_OPENING`), ChatPointer; `tools(...)`, `instructions(...)`, `report_progress`, `reporting_to`, `NO_CHAT`, `SUB_AGENT_CALLER_PREAMBLE`
+- **Seam (terms):** AgentToolSet, ToolSetCollection, ToolsetMembers, ToolsetReference, AgentTool, InvokeLine, ToolRequest, CallsBeingAnswered (`CALLS_BEING_ANSWERED`), `names_alike`, `is_built_in`, AgentOperation, AgentInstructions, AgentToolAnnotation, AgentInstructionsAnnotation, AgentToolSetAnnotation, ToolSetCollectionAnnotation, Collect, ToolSubject, OnSubject, TakesFromCall, NoSessionLog, PublishedWhereHeld, SubAgentAnnotation, ToolSubjectLoader, RecipePlaceholders, ToolCall, SessionOpening (`SESSION_OPENING`), ChatPointer; `tools(...)`, `instructions(...)`, `report_progress`, `reporting_to`, `NO_CHAT`, `SUB_AGENT_CALLER_PREAMBLE`
 - **Dependencies (one-way):** harness/annotations, harness/markdown
 
 ## AgentToolSet : AgentToolSetOrigin
@@ -434,7 +530,7 @@ Injected by @agent_toolset — the operations, instructions, and nested collecti
 ------
 + name: str
 + slug: str
-+ registration_name: str
++ reference: ToolsetReference
 + install_folder: Path
 + description: str
 + parameter_notes: dict[str, str]
@@ -447,17 +543,18 @@ Injected by @agent_toolset — the operations, instructions, and nested collecti
 + is_served_on_mcp: bool
 + operation_type: type[AgentOperation]
 ----
-+ instantiate(toolset: Any = None): Any
-+ from_items(items: list[Any], context: dict[str, object] | None = None): list[Any]
++ made(**context: object): AgentToolSet
+	// itself: a toolset already made is taken where a reference would be made
 + child_toolsets(): None
 + instruction(name: str): AgentInstructions
-+ tools_for(destination: str): list[AgentTool]
++ tools_published_to(destination: DestinationKind | None): list[AgentTool]
 + for_call(call: ToolCall): Any
 + session_for(call: ToolCall): Any
 ---<<creates>>--> AgentInstructions
 ---<<creates>>--> AgentOperation
 ---<<keeps>>--> AgentTool
 ---<<reads its members through>>--> ToolsetMembers
+---<<is named by>>--> ToolsetReference
 ---<<reads session of>>--> ToolCall
 ---<<loads the prose it needs through>>--> Markdown
 ---<<creates>>--> Name
@@ -500,16 +597,19 @@ The members of one toolset class and which of them its annotations make tools, h
 
 ## ToolsetReference
 
-A toolset named `module:Class`, the one way such a reference is written and read back; a module in a hyphenated folder is found under the folders on the import path.
+The one name of a toolset: its class, by its module and its own name. It is text, `module:Class`, only where it crosses a process (configuration, a `hook-handlers.json`, a skill's shell command), and is parsed back there; a module in a hyphenated folder is found under the folders on the import path.
 
-+ ToolsetReference(reference: str)
++ ToolsetReference(module_name: str, class_name: str, toolset_class: type | None = None)
 ------
 + module_name: str
 + toolset_class: type
 ----
 + of(toolset_class: type): ToolsetReference
-+ in_module(module: str, class_name: str): ToolsetReference
++ parsed(text: str): ToolsetReference
++ made(**context: object): AgentToolSet
 + module_file(): Path
+---<<makes>>--> AgentToolSet
+---<<makes the toolset through>>--> ToolsetMembers
 
 ## AgentTool : AgentToolDestination
 
@@ -520,20 +620,18 @@ One published member of a toolset: its name in every channel, its input schema, 
 + callable: Callable[..., Any]
 + toolset: AgentToolSet
 + slug: str
-+ registration_name: str
 + deploy_name: str
 + mcp_name: str
 + parameter_schema: ParameterSchema
 + input_schema: dict[str, Any]
-+ destinations: list[str]
-+ hook_event: str
++ destinations: tuple[DestinationKind, ...]
 + kind: str
 + docstring: str
 + description: str
 + << composition >> invoke_line: InvokeLine
 ----
 + is_called(called: str): bool
-+ install_to(destination: str): bool
++ is_published_to(destination: DestinationKind | None): bool
 + invoke(arguments: dict[str, Any] | None = None, project: Path | str | None = None): Any
 + answer(call: ToolCall): Any
 + on(toolset: Any): AgentTool
@@ -541,8 +639,8 @@ One published member of a toolset: its name in every channel, its input schema, 
 + log_session_invocation(call: ToolCall): None
 ---<<loads>>--> AgentToolSet
 ---<<calls session_for on>>--> AgentToolSet
----<<reads constants of>>--> InstallDestination
 ---<<asks whether its channel publishes it>>--> Destination
+---<<reads its destinations from>>--> AnnotationKinds
 ---<<loads the prose it needs through>>--> Markdown
 ---<<creates>>--> ToolCall
 ---<<keeps out of the session log the calls annotated>>--> NoSessionLog
@@ -630,19 +728,6 @@ An `@agent_instructions` operation: its recipe body, expanded for a call, is the
 ----
 + of(collection: Any): Any
 	// builds its property with operation_property (harness/markdown)
-
-## InstallDestination
-
-The channels a member is published to, in the order a tool lists them.
-
-------
-+ MCP: str
-+ HOOK: str
-+ SKILL: str
-+ COMMAND: str
-+ RULE: str
-+ LISTED: tuple[str, ...]
-----
 
 ## ToolSubject : Annotation
 
@@ -789,15 +874,15 @@ Which chat a tool call, and the session.log line it writes, came from, so `read_
 
 # harness/installation
 
-The *Installer* publishes every annotated member of a repository's toolsets into one IDE folder, through an *Installation* for each channel laid out by its *IdeLayout*, then starts the servers its *ServerInstallation* channels point at; *RepositoryToolsets* finds every toolset a repository defines. The module also reads and writes a project's CDD configuration files (*ContextConfig*, *JsonFile*, *AppPorts*) and holds the annotations that say what an object's data is.
+The *Installer* publishes every annotated member of a repository's toolsets into one IDE folder, one *InstallRun* at a time, through an *Installation* for each channel, each writing through the install's *InstallPlace*; then it starts the servers its *RegisteredChannel*s point at (*ChannelServer*) and diagnoses what it deployed (*InstallDiagnosis*); *RepositoryToolsets* finds every toolset a repository defines. The module also reads and writes a project's CDD configuration files (*ContextConfig*, *JsonFile*, *AppPorts*) and holds the annotations that say what an object's data is.
 
 - **Purpose:** Install one repository into one IDE folder through every channel, from one walk of the repository, and start the servers that install points at; give every channel the annotations, the data, and the writer it publishes a member with.
-- **Seam (terms):** Installer, InstallRecord, LastInstall, InstallLock, InstallAlreadyRunning, UnknownIde, NotAnInstallFolder, JsonFileBusy, InstallDiagnostics, Installation, ServerInstallation, FileInstallation, SkippedTool, SkippedTools, IdeLayout, RepositoryToolsets, ContextConfig, JsonFile, JsonFileUnreadable, AppPorts, SourceFile, DataClass, NamedDestination, Skill, Command, Rules, DataField, Identity, LanguageAdapter; `data_of`, `CONTEXT_FOLDER`, `is_temporary`
+- **Seam (terms):** Installer, InstallRun, InstallChannels, ServerChannels (`SERVER_CHANNELS`), InstallRecord, LastInstall, InstallLock, InstallAlreadyRunning, UnknownIde, NotAnInstallFolder, JsonFileBusy, InstallDiagnostics, Deployed, DeployedChanges, InstallDiagnosis, InstallPlace, Installation, RegisteredChannel, ChannelServer, StandUp, FileInstallation, SkillInstallation, CommandInstallation, RulesInstallation, LanguageAdapters, SkippedTool, SkippedTools, IdeLayout, RepositoryToolsets, ContextConfig, JsonFile, JsonFileUnreadable, AppPorts, SourceFile, DataClass, NamedDestination, Skill, Command, Rules, DataField, Identity, LanguageAdapter; `data_of`, `CONTEXT_FOLDER`, `is_temporary`
 - **Dependencies (one-way):** harness/annotations, harness/agent_tools, harness/markdown
 
 ## Installer
 
-Publish every annotated member of the toolsets a repository defines into one IDE folder, through the installation of each channel its annotations name, then start the servers the installed files point at. harness/mcp and harness/hooks register their server installations with `SERVER_CHANNELS` when they are imported, so this module imports neither.
+Publish every annotated member of the toolsets a repository defines into one IDE folder, through the installation of each channel its annotations name, then start the servers the installed files point at. Each install is one *InstallRun*, kept as `last_run`. harness/mcp and harness/hooks register their channels with `SERVER_CHANNELS` when they are imported, so this module imports neither.
 
 + Installer(target: InstallTarget, toolsets: RepositoryToolsets, last_install: LastInstall)
 ------
@@ -812,17 +897,27 @@ Publish every annotated member of the toolsets a repository defines into one IDE
 	// one install or clean runs in the folder at a time
 + << association >> diagnostics: InstallDiagnostics
 + << association >> toolsets: RepositoryToolsets
-+ << composition >> deployment: Deployment
++ << composition >> last_run: InstallRun | None
+	// the install this installer ran last; none before its first
 ----
 + create(ide: str | None = None, path: str | Path | None = None, repo: str | Path): Installer
 	// an IDE name is matched whatever its case; a name that is no IDE raises UnknownIde, and a path that is empty or a file raises NotAnInstallFolder, before anything is written
 + load(project: Path | str): Installer
 + clean(): list[str]
-+ install(toolsets: Iterable[Any] | None = None, replace: bool = True): Any
++ install(toolsets: Iterable[ToolsetReference | AgentToolSet] | None = None, replace: bool = True): InstallChannels
++ install_self(): InstallChannels
+	// the Installer's own commands and the toolsets the registered channels publish, added to the last install
++ write_language_adapters(): list[Path]
++ repository_toolsets(): list[ToolsetReference]
++ diagnosis_of(channels: InstallChannels, published: dict[str, list[str]]): InstallDiagnosis
++ red_report(diagnosis: InstallDiagnosis): str
 + install_latest(): int
 + diagnose_install(): str
 + diagnose_instructions(): str
+---<<runs each install as>>--> InstallRun
 ---<<reads toolsets with>>--> RepositoryToolsets
+---<<names each toolset with>>--> ToolsetReference
+---<<diagnoses an install as>>--> InstallDiagnosis
 ---<<writes sections with>>--> InstallDiagnostics
 ---<<holds the folder with>>--> InstallLock
 ---<<hands the last install's files to its record through>>--> LastInstall
@@ -865,22 +960,17 @@ The IDE and folder a checkout last installed into, kept in one file beside the i
 + hand_over_to(record: InstallRecord): None
 	-> InstallRecord.adopt
 
-## InstallLock
+## InstallLock : LockFile
 
-The file `.install-lock` in a folder installs write into, locked by the operating system for the process that installs into it or cleans it, and naming that process. Of any number of installs that ask at the same moment exactly one gets the folder, and the operating system gives the lock back when its process ends, so a stopped install never leaves a held folder. harness/mcp's *CddHome* holds one on the cdd home while it publishes the mods.
+The *LockFile* `.install-lock` in a folder installs write into, held for the process that installs into it or cleans it. harness/mcp's *ClaudeMarketplace* holds one on the cdd home while it publishes the mods. A second install says what it waits for and how long, waits for the first, then runs; the steps of one install share its lock.
 
 + InstallLock(folder: Path, wait_seconds: float = WAIT_SECONDS)
 ------
 + folder: Path
-+ is_held: bool
 ----
-+ held(): Iterator[None]
-	// a second install says what it waits for and how long, waits for the first, then runs; the steps of one install share its lock
-+ claim(): None
-+ release(): None
 ---<<raises>>--> InstallAlreadyRunning
 
-## InstallAlreadyRunning : RuntimeError
+## InstallAlreadyRunning : LockFileHeld
 
 Another process is still installing into, or cleaning, the same folder after the wait.
 
@@ -910,109 +1000,243 @@ An install was told to write into something that cannot be an IDE folder: an emp
 + path: Path | str
 ----
 
-## Deployment
+## InstallRun
 
-One installer's publishing of the repository's toolsets into its IDE folder: a run writes every channel's files, saves the install record, stands each server up and diagnoses what it wrote.
+One install of toolsets into an installer's IDE folder, every toolset the repository defines when none are named: it writes every channel's files, tidies the folder and saves the install record, stands each channel's server up and starts it, then diagnoses what it deployed and records the diagnosis. replace wipes the previous install first.
 
-+ Deployment(installer: Installer)
++ InstallRun(installer: Installer, toolsets: Iterable[ToolsetReference | AgentToolSet] | None, replace: bool)
 ------
 + << composition >> channels: InstallChannels
-+ diagnosis: list[str]
++ diagnosis: InstallDiagnosis | None
 ----
-+ run(toolsets: Iterable[ToolsetConfiguration] | None, replace: bool): InstallChannels
-+ install_self(replace: bool = False): InstallChannels
-+ write_language_adapters(): list[Path]
-+ ensure_runtimes(): dict[str, str]
-+ diagnose_after_install(): list[str]
----<<loads>>--> AgentToolSet
----<<reads destinations of>>--> AgentTool
----<<creates one of each registered>>--> ServerInstallation
++ run(): InstallChannels
+	// holds the folder's lock, so a second install into the folder waits for it
++ publish(): None
++ stand_up(): None
+	// a run inside one of the servers, as an install through MCP runs inside the cdd server, starts none
++ ensure_running(): list[str]
+---<<makes each toolset with>>--> ToolsetReference
+---<<hands each member to>>--> Installation
+---<<stands up and starts>>--> ChannelServer
+---<<records its diagnosis in>>--> InstallDiagnostics
 ---<<reads the names of>>--> InvokeLine
 ---<<raises>>--> ToolsetInstallFailed
 
+## InstallChannels
+
+The installations of one install, made once and used for every member of every toolset: one of each file channel, one of each registered channel, and the language adapters.
+
++ InstallChannels(installer: Installer, registered: Iterable[type[RegisteredChannel]])
+------
++ << composition >> registered: list[RegisteredChannel]
++ << composition >> files: list[FileInstallation]
+	// a SkillInstallation, a CommandInstallation, and rules
++ << composition >> rules: RulesInstallation
++ << composition >> language_adapters: LanguageAdapters
++ toolsets: list[AgentToolSet]
+	// the toolsets the registered channels publish into every install, such as the hooks that start the cdd server
++ deployed: list[str]
+	// the toolsets the install deployed, by their references
++ servers: list[ChannelServer]
++ published: dict[str, list[str]]
+	// what each registered channel published, by its channel
+----
++ of(kind: type[RegisteredChannel]): RegisteredChannel
++ for_tool(tool: AgentTool): list[Installation]
+	// each registered channel that accepts tool, then each file channel install publishes it to
+---<<asks whether its destination publishes>>--> AgentTool
+---<<creates each registered>>--> RegisteredChannel
+
 ## ServerChannels
 
-The kinds of server installation every install publishes through; the process keeps one, `SERVER_CHANNELS`.
+The kinds of registered channel every install publishes through, beside its file channels; the process keeps one, `SERVER_CHANNELS`.
 
 + ServerChannels()
 ------
-+ kinds: list[type[ServerInstallation]]
++ kinds: list[type[RegisteredChannel]]
 ----
-+ register(kind: type[ServerInstallation]): None
++ register(kind: type[RegisteredChannel]): None
 ---<<raises>>--> ServersNotRegistered
 
 ## InstallDiagnostics
 
-`diagnostics.json` in one IDE folder: each install appends what it deployed on every channel, coloured by how much changed since the last install, and the diagnostics probes write their own sections beside that history.
+`diagnostics.json` in one IDE folder: each install appends its diagnosis, what it deployed on every channel coloured by how much changed since the last install, and the diagnostics probes write their own sections beside that history.
 
-+ InstallDiagnostics(folder: Path, layout: IdeLayout)
++ InstallDiagnostics(folder: Path)
 ------
 + folder: Path
 + path: Path
 ----
-+ channels_in_folder(toolsets: list[str], published: dict[str, list[str]]): dict[str, list[str]]
-+ deployed(channels: InstallChannels): dict[str, list[str]]
-+ diagnosed(channels: InstallChannels): tuple[str, str]
-+ record_run(channels: InstallChannels, report: str): None
-+ compared(actual: dict[str, list[str]]): tuple[str, str]
-+ record_install(actual: dict[str, list[str]], report: str, color: str): None
++ record(diagnosis: InstallDiagnosis): None
++ last_deployed(): Deployed | None
+	// what the latest install recorded it deployed; none before the first install
 + write_section(section: str, results: dict[str, Any]): None
 + installed_items(channel: str): list[str]
 ---<<reads and writes through>>--> JsonFile
+---<<reads back>>--> Deployed
 
-## Installation
+## Deployed
 
-Write one channel for one IDE, made with the install's *IdeLayout*; each channel overrides `write`.
+What an IDE folder holds on each channel an install reports: the toolsets it deployed, its skills, commands, rules, agents, and language adapters, and what each registered channel published.
 
-+ Installation(layout: IdeLayout, path: Path | str, repo: Path | str | None = None)
++ Deployed(items: dict[str, list[str]])
 ------
-+ channel: str
-+ << association >> layout: IdeLayout
++ CHANNELS: tuple[str, ...]
+----
++ of_folder(target: InstallTarget, toolsets: list[str], published: dict[str, list[str]]): Deployed
++ items(channel: str): list[str]
++ changes_since(last: Deployed | None): DeployedChanges
+---<<creates>>--> DeployedChanges
+
+## DeployedChanges
+
+What changed on each channel between the last install's deployment and this one's, and the colour of how much changed; the first install is green.
+
++ DeployedChanges(current: Deployed, last: Deployed | None)
+------
++ colour: str
+	// green when at most 10% of the compared items changed, yellow at most 50%, else red
++ report: str
+----
++ added(channel: str): list[str]
++ removed(channel: str): list[str]
+
+## InstallDiagnosis
+
+One install's diagnosis: what it deployed, what changed since the last install, and the status each registered channel reports. Its report is written from its fields, never read back.
+
++ InstallDiagnosis(deployed: Deployed, changes: DeployedChanges, server_status: list[str])
+------
++ << composition >> deployed: Deployed
++ << composition >> changes: DeployedChanges
++ server_status: list[str]
++ colour: str
++ is_red: bool
++ report: str
+----
+
+## InstallPlace
+
+Where one install writes: the IDE folder with its layout, the record of every file the install wrote there, and the repository being installed. Every channel of one install writes through one place.
+
++ InstallPlace(target: InstallTarget, record: InstallRecord, repository: RepositoryToolsets | None = None)
+------
++ << association >> target: InstallTarget
++ << association >> install_record: InstallRecord
++ << association >> repository: RepositoryToolsets | None
++ layout: IdeLayout
 + path: Path
 + repo: Path | None
-+ << composition >> repository: RepositoryToolsets
 + is_temporary: bool
 ----
-+ track_writes_with(tracker: InstallTracker): None
-+ track_write(dest: Path): None
-+ folder_for(toolset: Any): Path
-+ install(tool: Any): None
-+ write(tool: Any): None
++ into(target: InstallTarget, repository: RepositoryToolsets | None = None): InstallPlace
+	// a place that keeps its own record, for a writer outside an install run
++ wrote(written: Path): None
+	-> InstallRecord.track
++ folder_for(toolset: AgentToolSetOrigin): Path
 
-## ServerInstallation : Installation
+## Installation : InstallPlace
 
-An installation whose files point the IDE at a server process: the MCP entry at the cdd server, the hook entries at the hook server. Beside writing its files it stands that server up to check it loads, starts it, and reports it.
+Writes one channel's files into one IDE folder; a subclass names its `destination`, the *DestinationKind* that is its channel, and defines `write`.
+
+------
++ destination: DestinationKind | None
+----
++ install(tool: AgentTool): None
++ write(tool: AgentTool): None
+
+## RegisteredChannel : Installation
+
+A channel a module registers with the Installer beside the file channels: the MCP channel and the hook channel. A channel whose files point the IDE at a server holds it; the hook channel holds none.
 
 ------
 + toolsets: tuple[type, ...]
+	// toolset classes every install publishes through this channel, such as the hooks that start the cdd server
++ << composition >> server: ChannelServer | None
 + published: list[str]
 ----
-+ create(layout: IdeLayout, path: Path | str, repo: Path | str | None = None): ServerInstallation
-+ accepts(tool: Any): bool
-+ standup(): Any
-+ diagnose(): dict[str, Any]
-+ ensure_running(): dict[str, str]
++ create(target: InstallTarget, record: InstallRecord, repository: RepositoryToolsets | None = None): RegisteredChannel
++ into(target: InstallTarget, repository: RepositoryToolsets | None = None): RegisteredChannel
++ accepts(tool: AgentTool): bool
+	-> AgentTool.is_published_to(destination)
++ write_once_recorded(): None
 + status(): list[str]
-+ serves_this_process(): bool
+
+## ChannelServer
+
+The server a channel's installed files point the IDE at, as an install handles it: stood up in the install's process over what was installed, to check it loads, then started.
+
+------
++ stood_up: StandUp | None
++ runs_this_process: bool
+----
++ stand_up(): StandUp
++ ensure_running(): list[str]
+---<<creates>>--> StandUp
+
+## StandUp
+
+What a channel's server answered when an install stood it up: the tools it serves, and the tools it skipped so it could serve the rest.
+
++ StandUp(tools: list[str], skipped: SkippedTools)
+------
++ tools: list[str]
++ << association >> skipped: SkippedTools
++ notice: str
+----
 
 ## FileInstallation : Installation
 
-Write the markdown files of one channel — skills, slash commands, or rules — where the IDE reads them.
+Write the markdown files of one file channel where the IDE reads them; each subclass says where a tool's file goes, the front matter that opens it, and its body. A tool also published where a server answers an agent's calls gets a file that tells the agent to call that tool.
 
-+ FileInstallation(layout: IdeLayout, path: Path | str, channel: FileChannel = FileChannel(), repo: Path | str | None = None)
 ------
-+ channel: FileChannel
 ----
-+ relative_path(toolset: Any, name: str): Path
++ relative_path(toolset: AgentToolSet, name: str): Path
++ front_matter(tool: AgentTool, relative: Path, parts: list[str], text: str): str
++ body(tool: AgentTool): str
 + write(tool: AgentTool): None
-+ write_standing_rule(source: Path): None
 ---<<calls invoke_line on>>--> AgentTool
----<<creates>>--> FrontMatter
----<<reads constants of>>--> InstallDestination
+---<<asks which destination answers calls>>--> AnnotationKinds
 ---<<creates>>--> Name
+
+## SkillInstallation : FileInstallation
+
+Write each `@skill` operation as `skills/<name>/SKILL.md`, opened by its name and the first paragraph of its toolset's overview.
+
+------
++ destination: Skill
+----
 ---<<writes the SKILL.md for>>--> Skill
+
+## CommandInstallation : FileInstallation
+
+Write each `@command` operation as a slash command in the IDE's commands folder.
+
+------
++ destination: Command
+----
 ---<<writes the slash command for>>--> Command
+
+## RulesInstallation : FileInstallation
+
+Write what each `@rules` member answers as a rules file, and the always-on rules of `cdd_guidance/rules`, each opened by front matter that says which files it applies to.
+
+------
++ destination: Rules
+----
++ write_standing_rule(source: Path): None
+---<<creates>>--> FrontMatter
 ---<<writes the rules file for>>--> Rules
+
+## LanguageAdapters : InstallPlace
+
+The TypeScript language adapters of one install: a place, not a channel, since they are written from whole toolsets annotated `@language_adapter` rather than from a member's destination.
+
+------
+----
++ record(toolset: AgentToolSet): None
++ write_all(whole: bool = False): list[Path]
+---<<reads the annotation>>--> LanguageAdapter
 
 ## SkippedTool : Exception
 
@@ -1118,7 +1342,7 @@ One file holding a JSON object, read and written whole by its owner. A missing f
 + read(): dict[str, Any]
 + write(data: Mapping[str, Any]): Path
 + held(): Iterator[None]
-	// holds the file for one change, from its read to its write, through the operating system's lock on a lock file beside it, so a change another thread or process makes waits its turn; the lock ends with its holder's process
+	// holds the file for one change, from its read to its write, through a LockFile beside it, one per hold, so a change another thread or process makes waits its turn; the lock ends with its holder's process
 ---<<raises>>--> JsonFileUnreadable
 ---<<raises>>--> JsonFileBusy
 
@@ -1133,14 +1357,13 @@ A JSON file holds something other than a JSON object. Nothing is written over it
 ----
 + message(path: Path, cause: Exception): str
 
-## JsonFileBusy : TimeoutError
+## JsonFileBusy : LockFileHeld
 
 Another holder kept a JSON file for longer than a change waits for it, so the change was not made.
 
-+ JsonFileBusy(path: Path, seconds: float)
++ JsonFileBusy(file: Path, holder: int, waited_seconds: float)
 ------
-+ path: Path
-+ seconds: float
++ file: Path
 ----
 
 ## AppPorts
@@ -1239,7 +1462,7 @@ A file destination whose annotation may name what it installs: `@skill("name")`,
 
 # harness/hooks
 
-A *Hook* annotation makes a member answer an IDE event; the *HookServer* of a checkout runs every enabled hook for a *HookPayload* and merges their *HookResult*, and the *HookDaemon* keeps that server running. *HookInstallation* is the hook channel's server installation, registered with the Installer when the package is imported. The whole model of this module, internals included, is `harness/hooks/.context/hooks-runtime-model.md`; that document is canonical, and this section shows only the classes other modules use.
+A *Hook* annotation makes a member answer an IDE event; the *HookServer* of a checkout runs every enabled hook for a *HookPayload* and merges their *HookResult*, and the *HookDaemon* keeps that server running. *HookInstallation* is the hook channel's *RegisteredChannel*, registered with the Installer when the package is imported; it holds no server. The whole model of this module, internals included, is `harness/hooks/.context/hooks-runtime-model.md`; that document is canonical, and this section shows only the classes other modules use.
 
 - **Purpose:** Let a toolset member answer IDE events, through one hook server per checkout that runs every hooked member and merges their answers.
 - **Seam (terms):** Hook, Toast, Hooks, HookPayload, HookResult, HookServer, HookDaemon, HookInstallation; `rules_toast`, `TOAST_ARROW`
@@ -1349,43 +1572,40 @@ The hooks of one checkout, loaded once: it runs the enabled handlers for each ev
 ---<<loads the toolsets of>>--> RepositoryToolsets
 ---<<reads which guideline applies from>>--> ContextConfig
 
-## HookDaemon
+## HookDaemon : ServerDaemon
 
-The long-running hook server of one checkout, whichever IDE's hook command reaches it; it keeps its address, log, and start lock in the checkout's `.hook-server/` folder. The start lock is a file of its own, `spawn.lock`, claimed by a class private to the module: one hook command starts the daemon while the others wait for it.
+The long-running hook server of one checkout, whichever IDE's hook command reaches it; it keeps its address, log, and start lock in the checkout's `.hook-server/` folder. It keeps the takeover of its port from a daemon on older code, which the cdd server does not do.
 
 + HookDaemon(repo: Path | str, port: int | None = None)
 ------
 + repo: Path
 + << composition >> toolsets: RepositoryToolsets
++ << composition >> address: HookDaemonAddress
++ << composition >> address_file: HookDaemonAddressFile
 + folder: Path
-+ log_path: Path
-+ port: int
 + source_stamp: str
 ----
-+ live_address(): HookDaemonAddress | None
-+ is_running(): bool
-+ ensure(): HookDaemonAddress
-	// starts the daemon, or replaces one that loaded older hook code, and answers its address
-+ replace_stale(): None
++ running(): RunningServer | None
+	// this checkout's daemon when it answers on its port
++ ensure(): RunningServer
+	// replaces one that loaded older hook code, then starts the daemon when none answers
 + stop(): None
-+ spawn(): None
 + serve(server: HookServer | None = None): None
 + claim_port(): socket.socket | None
----<<creates>>--> BackgroundStart
 ---<<creates>>--> PythonInterpreter
 ---<<loads>>--> HookServer
 ---<<handles stdin>>--> HookServer
----<<claims its port with>>--> ExclusivePort
 ---<<stops older daemons as>>--> RunningProcess
----<<checks the lock holder is alive with>>--> RunningProcess
 ---<<raises>>--> HookPortTaken
 
-## HookInstallation : ServerInstallation
+## HookInstallation : RegisteredChannel
 
-Write the IDE's `hooks.json`, which runs the hook command for each event a hook operation serves, and `hook-handlers.json`, which lists those operations for the hook server. The install stands up, starts, and reports no hook server: the hook command starts it on the first event.
+Write the IDE's `hooks.json`, which runs the hook command for each event a hook operation serves, and `hook-handlers.json`, which lists those operations for the hook server. The channel holds no server: the hook command starts it on the first event.
 
-+ HookInstallation(layout: IdeLayout, path: Path | str, python: str | None = None, repo: Path | str | None = None)
++ HookInstallation(target: InstallTarget, record: InstallRecord, repository: RepositoryToolsets | None = None)
 ------
++ destination: Hook
++ server: None
 + interpreter: PythonInterpreter
 + dispatch_command: str
 + handlers_file: HookHandlersFile
@@ -1396,53 +1616,72 @@ Write the IDE's `hooks.json`, which runs the hook command for each event a hook 
 ----
 + accepts(tool: AgentTool): bool
 + write(tool: AgentTool): None
+	// the event is Hook.name_given(tool.callable); the handler names its toolset by its ToolsetReference, as text
 + write_handlers(): None
 + write_hooks_manifest(): None
 + status(): list[str]
----<<reads hook event of>>--> AgentTool
+---<<asks whether Hook publishes>>--> AgentTool
+---<<names the toolset with>>--> ToolsetReference
 ---<<enrolls in hooks.json>>--> Hook
 ---<<registers with>>--> Installer
 
 # harness/mcp
 
-The *McpHost* is the one cdd server every chat talks to; it keeps one *McpServer* per project, and *McpInstallation* writes each IDE's `cdd` entry and starts the server from *CddHome*.
+The *McpHost* is the one cdd server every chat talks to; it keeps one *ProjectToolsets* per project and makes one *ChatRequest* for each request a chat sends. *McpInstallation* is the MCP channel's *RegisteredChannel*: it writes each IDE's `cdd` entry, and its *McpChannelServer* stands the server up, starts it from *CddHome*, and installs the plugins of the home's *ClaudeMarketplace* through *ClaudePlugins*.
 
 - **Purpose:** Let any chat, in any project, call the operations authors annotate `@mcp`, through one long-running server that keeps each project's toolsets apart.
-- **Seam (terms):** Mcp, LongCall, McpHost, McpServer, McpInstallation, CddHome, ThrottledReporter
+- **Seam (terms):** Mcp, LongCall, McpHost, ProjectToolsets, ChatRequest, McpInstallation, McpChannelServer, CddHome, ClaudeMarketplace, PublishedPlugin, PublishedMods, ClaudePlugins, PluginInstall, ThrottledReporter
 - **Dependencies (one-way):** harness/annotations, harness/agent_tools, harness/installation, harness/hooks, harness/process, harness/git
 
 ## McpHost
 
-The cdd server's MCP side: one *McpServer* for each project a chat works on, answering every chat.
+The cdd server's MCP side: one *ProjectToolsets* for each project a chat works on, answering every chat. A host serving chats is made with the two lanes and its cdd home, so it hands a call whose project runs on the other lane to that lane; one made in process for a probe or a spec has neither.
 
-+ McpHost(checkout_server: McpServer)
++ McpHost(checkout_toolsets: ProjectToolsets, lanes: ServerLanes | None = None, home: CddHome | None = None)
 ------
-+ << composition >> checkout_server: McpServer
++ << composition >> checkout_toolsets: ProjectToolsets
 + projects: list[Path]
 ----
-+ server_for(project: Path): McpServer
-	// one McpServer per project, so one project's toolsets never answer another project's call
 + dispatch(name: str, arguments: dict[str, object] | None = None, project: Path | None = None): object
 + answer(call: ToolCall): object
++ tools_listed_for(project: Path | None): list[dict[str, Any]]
 + serve(daemon: McpDaemon, listener: socket.socket): None
-+ http_app(port: int): Any
-+ ping(): str
 + restart(): dict[str, Any]
+	// publishes the mods of the code it now runs, so a chat watching them reloads with the restart
 + diagnose(): dict[str, Any]
-+ from_repo(repo: Path | str): McpHost
-+ from_refs(toolset_refs: tuple[str, ...], repo: str | None = None, project: str | None = None): McpHost
----<<loads>>--> McpServer
----<<resolves call name>>--> McpServer
++ from_repo(repo: Path | str, lanes: ServerLanes | None = None, home: CddHome | None = None): McpHost
++ from_refs(toolset_refs: tuple[str, ...], repo: str | None = None, project: str | None = None, lanes: ServerLanes | None = None, home: CddHome | None = None): McpHost
+---<<keeps one per project>>--> ProjectToolsets
+---<<resolves call name>>--> ProjectToolsets
+---<<makes one for each request from the module as it is now>>--> ChatRequest
 ---<<creates>>--> RepositoryToolsets
 ---<<creates>>--> ToolCall
 ---<<reports progress through>>--> ThrottledReporter
 ---<<answers with the data of>>--> DataClass
+---<<publishes the mods on restart through>>--> ClaudeMarketplace
 
-## McpServer
+## ChatRequest
+
+One request a chat sent the cdd server, from its headers and the port the caller's end of its connection uses. The host makes it from its module as it is now, so a restarted server names chats and calls with the classes its re-imported tools know.
+
++ ChatRequest(headers: Mapping[str, str], client_port: int | None, claude_settings: Path)
+------
++ << association >> process: ClaudeChatProcess | None
+	// the process X-CDD-Chat-Process names, else the one holding the request's connection
++ << association >> chat: ChatPointer | None
+----
++ project_for(tool: str): Path | None
+	// the folder the chat works in now, read on every call; cdd.ping and cdd.restart need none
+	// raises ProjectNotNamed when no folder is found, ProjectIsClaudeSettings when it is Claude Code's settings folder
++ tool_request(tool: str, host: McpHost): ToolRequest
+---<<names the chat with>>--> ChatPointer
+---<<creates>>--> ToolRequest
+
+## ProjectToolsets
 
 The toolsets one project's calls are answered by: every `@mcp` operation of the toolsets it was started with, published under its MCP name, made for that project.
 
-+ McpServer(repo: str | Path | None = None, project: str | Path | None = None)
++ ProjectToolsets(repo: str | Path | None = None, project: str | Path | None = None)
 ------
 + repo: Path | None
 + project: Path | None
@@ -1452,65 +1691,73 @@ The toolsets one project's calls are answered by: every `@mcp` operation of the 
 + << composition >> skipped: SkippedTools
 ----
 + enroll(tool: AgentTool): None
-+ start(toolsets: Iterable[Any]): None
-+ for_project(project: Path): McpServer
-+ restarted(): McpServer
++ start(toolsets: Iterable[ToolsetReference]): None
++ for_project(project: Path): ProjectToolsets
++ restarted(): ProjectToolsets
 + resolve_call_name(name: str): str
 + enrolled(name: str): AgentTool | None
 + call_seconds(name: str): float
-+ invoke_tool(mcp_name: str, arguments: dict[str, object] | None = None): object
-+ invoke_prompt(mcp_name: str, arguments: dict[str, object] | None = None): object
-+ answer_tool(mcp_name: str, call: ToolCall): object
++ invoke(mcp_name: str, arguments: dict[str, object] | None = None): object
++ answer(mcp_name: str, call: ToolCall): object
 	-> AgentTool.answer
-+ answer_prompt(mcp_name: str, call: ToolCall): object
 ---<<keeps>>--> AgentTool
----<<loads>>--> AgentToolSet
----<<reads constants of>>--> InstallDestination
+---<<makes each toolset with>>--> ToolsetReference
+---<<reads the tools published to Mcp of>>--> AgentToolSet
 ---<<reads arguments of>>--> ToolCall
 ---<<waits longer for operations annotated>>--> LongCall
 ---<<serves the operations annotated>>--> Mcp
 
-## McpInstallation : ServerInstallation
+## McpInstallation : RegisteredChannel
 
-Record `@mcp` operations, write each IDE's `cdd` entry, and start the one cdd server from `~/.cdd`; it names *CddServerHooks*, the hooks that start the server when a chat starts, as a toolset every install publishes.
+Record `@mcp` operations and write each IDE's `cdd` entry once every tool is recorded; its server is the one cdd server (*McpChannelServer*). It names *CddServerHooks*, the hooks that start the server when a chat starts, as a toolset every install publishes.
 
-+ McpInstallation(layout: IdeLayout, path: Path | str, served: ServedCheckout)
++ McpInstallation(target: InstallTarget, record: InstallRecord, served: ServedCheckout)
 ------
++ destination: Mcp
 + << association >> served: ServedCheckout
 + daemon: McpDaemon
+	// the stable lane's server, which every chat's cdd plugin names
 + << composition >> claude_plugins: ClaudePlugins
-+ << association >> host: McpHost | None
++ << composition >> server: McpChannelServer
++ << composition >> cdd_entry: CddEntry
 + mcp_operations: list[AgentTool]
 + toolsets: tuple[type, ...]
 + published: list[str]
-+ manifest_path: Path
 ----
++ create(target: InstallTarget, record: InstallRecord, repository: RepositoryToolsets | None = None): McpInstallation
+	// serving repository, else the running checkout, on the lane its folder runs on
 + write(tool: AgentTool): None
-+ record_operation(tool: AgentTool): None
-+ write_mcp_manifest(): None
-+ allow_cdd_tools(settings: Path): None
-+ drop_project_cdd_server(): None
-+ drop_user_cdd_server(): None
-+ standup(): McpHost | None
-+ diagnose(): dict[str, Any]
-+ ensure_running(): dict[str, str]
++ write_once_recorded(): None
+	// writes the IDE's cdd entry, or for Claude Code the cdd plugin, once
 + status(): list[str]
-+ create(layout: IdeLayout, path: Path | str, repo: Path | str | None = None): McpInstallation
-+ ensure_server(): str
-+ pin_server(): str
-+ keep_pinned_current(): str | None
-+ serve_from_checkout(): str
-+ serves_this_process(): bool
 ---<<keeps>>--> AgentTool
 ---<<is handed>>--> ServedCheckout
----<<loads>>--> McpHost
+---<<stands up and starts the server through>>--> McpChannelServer
 ---<<publishes as a cdd MCP tool>>--> Mcp
 ---<<publishes the server-starting hooks with>>--> Hook
 ---<<registers with>>--> Installer
 
+## McpChannelServer : ChannelServer
+
+The one cdd server as an install handles it: stood up in the install's process over every toolset of the served checkout, to check it loads, then started from `~/.cdd`, and, for Claude Code, the `cdd` plugin and every mod the served code declares installed. Inside the cdd server, as an install through MCP runs, it stands up nothing.
+
++ McpChannelServer(served: ServedCheckout, daemon: McpDaemon, claude_plugins: ClaudePlugins, layout: IdeLayout)
+------
++ << association >> served: ServedCheckout
++ runs_this_process: bool
+----
++ stand_up(): StandUp
++ ensure_running(): list[str]
++ install_mods(): list[str]
+	// one line for each mod, `{plugin name}: {state}`; a dev lane's mods are published into the stable lane's marketplace first, since chats install from it
+---<<loads>>--> McpHost
+---<<creates>>--> StandUp
+---<<installs the plugins of>>--> ClaudeMarketplace
+---<<installs each plugin through>>--> ClaudePlugins
+
 ## CddHome
 
-The user's cdd folder: which checkout the one server runs, the pinned copy of it, the Python it runs on, and the server's address.
+The user's cdd folder: which checkout the one server runs, the pinned copy of it, the Python it runs on, and the server's own files. The Claude Code marketplace it publishes is its own object.
 
 + CddHome(folder: Path | str | None = None)
 ------
@@ -1518,27 +1765,113 @@ The user's cdd folder: which checkout the one server runs, the pinned copy of it
 + state_path: Path
 + log_path: Path
 + connect_script: Path
-+ claude_plugins: Path
 + runtime_record: Path
 + pinned_checkout: Path
 + is_installed: bool
++ is_dev_lane: bool
++ stable_lane: CddHome
++ dev_lane: CddHome
 + source: Path
 + mode: str
++ served_branch: str
++ served_worktree: Path | None
 + interpreter: PythonInterpreter
-+ install_command: list[str]
 + server_environment: dict[str, str]
++ << composition >> marketplace: ClaudeMarketplace
 ----
-+ write_claude_plugin(server: dict[str, object]): list[Path]
-+ write_mod_plugins(): None
 + is_pinned_to(checkout: Path | str): bool
 + install(checkout: Path | str, connect_script: Path | str): None
 + pin(checkout: Path | str): str
++ serve_current(checkout: Path | str): None
 + serve_from(checkout: Path | str): None
 ---<<creates>>--> Git
 ---<<creates>>--> PythonInterpreter
 ---<<takes the import path from>>--> RepositoryToolsets
 ---<<reads and writes through>>--> JsonFile
+---<<publishes the mods of the code it serves through>>--> ClaudeMarketplace
+
+## ClaudeMarketplace
+
+The local Claude Code marketplace a cdd home publishes, its `claude-plugins` folder: the `cdd` plugin, which declares the cdd server for every chat, and the mods of the code the server runs. One install publishes into it at a time, so installs from the main checkout and a ticket's worktree at the same moment both finish.
+
++ ClaudeMarketplace(folder: Path, home: CddHome)
+------
++ folder: Path
++ INSTALL_COMMAND: str
+	// install.json, the file in a published mod naming the command its Run install runs
++ cdd_plugin: PublishedPlugin
++ mods: list[PublishedPlugin]
++ install_command: list[str]
+----
++ plugin(name: str): PublishedPlugin
++ mod_folder(plugin: PublishedPlugin): Path
+	// a served checkout's own mod folder, so an edit there reloads in every chat, else the published copy
++ publish_cdd_plugin(server: dict[str, object]): list[Path]
++ publish_mods(code: Path): None
++ publish_mods_for_chats(is_dev_lane_running: bool): None
+	// this lane's mods, then the dev lane's into the stable lane's marketplace, which chats install from
+---<<creates>>--> PublishedPlugin
+---<<finds the mods to publish through>>--> PublishedMods
 ---<<publishes the mods one install at a time, holding>>--> InstallLock
+---<<reads and writes through>>--> JsonFile
+
+## PublishedPlugin
+
+One plugin of the marketplace by its name, and the one owner of its `{name}/.claude-plugin/plugin.json`. A mod is published from its folder in the code the server runs, versioned by a hash of its files, because Claude Code keeps a plugin it has already seen at the same version.
+
++ PublishedPlugin(marketplace: ClaudeMarketplace, name: str)
+------
++ << association >> marketplace: ClaudeMarketplace
++ name: str
++ folder: Path
++ is_published: bool
++ manifest: dict[str, Any]
++ version: str
++ description: str
++ installed_name: str
+	// {name}@cdd-home
+----
++ write_manifest(manifest: dict[str, Any]): Path
++ publish_from(mod: PublishedMod): None
+---<<reads and writes its manifest through>>--> JsonFile
+
+## PublishedMods
+
+The mods a checkout's code declares, each a *PublishedMod*: a folder holding `.claude-plugin/plugin.json` and a `cdd-mod.json` beside it, which names the plugin, the files of the checkout it carries besides its own, and the file its Run install command is written to. A mod declares itself in its own folder, so harness/mcp names no folder of a module built on it, and a pinned server publishes the mods its own code declares.
+
++ PublishedMods(code: Path)
+------
++ code: Path
++ every: list[PublishedMod]
+----
+
+## ClaudePlugins
+
+The plugins a cdd home's marketplace publishes, installed into Claude Code at user level with its own `claude` command. Each command takes seconds, so one runs only for a plugin that is missing, old, or installed from a checkout's own marketplace (`abd-works`), which is replaced. A plugin is a convenience on top of the install, so a miss is printed, never raised.
+
++ ClaudePlugins(home: CddHome | None = None)
+------
++ installed: dict[str, str]
++ claude_cli: str | None
+----
++ install(plugin: PublishedPlugin): PluginInstall
++ is_watched(plugin: PublishedPlugin): bool
+	// Claude Code's settings name the plugin's folder in CLAUDE_CODE_PLUGIN_DIRS, so it reloads as the folder changes and needs no install
+---<<installs>>--> PublishedPlugin
+---<<creates>>--> PluginInstall
+---<<reads Claude Code's settings through>>--> IdeLayout
+
+## PluginInstall
+
+What installing one plugin came to, printed as its state: installed (it is at the published version), watched (Claude Code loads its folder, so it needs no install), or missing (no claude command, or the install did not take).
+
++ PluginInstall(state: str)
+------
++ state: str
++ INSTALLED: str
++ WATCHED: str
++ MISSING: str
+----
 
 ## ThrottledReporter
 
@@ -1941,7 +2274,6 @@ Every action CDD ships: `cdd_guidance/actions` registers each action folder's to
 + action(name: str): Action | None
 ---<<creates>>--> Action
 ---<<counts as actions the operations annotated>>--> Skill
----<<reads constants of>>--> InstallDestination
 ---<<raises>>--> ActionsNotRegistered
 
 ## Action
@@ -2025,7 +2357,7 @@ An action, such as generate, on the guidance a call names, such as stories-story
 + inject_rules(payload: HookPayload): dict[str, Any]
 ---<<raises>>--> ActionWorksInNoSession
 ---<<raises>>--> UnknownGuidance
----<<instantiates every action with>>--> AgentToolSet
+---<<makes the guidance a call names by its reference with>>--> ToolsetReference
 ---<<publishes its operations as>>--> GuidanceAgentOperation
 ---<<calls session_named on>>--> ToolCall
 ---<<reads the listed practices and fidelities of>>--> PracticeGuidance
@@ -2993,13 +3325,14 @@ One practice as the catalog shows it: the live `PracticeGuidance`, the catalog c
 
 The skill install whose folder names are the slash commands the catalog shows, made once for the practices of one catalog.
 
-+ CatalogSkills()
++ CatalogSkills(install: SkillInstallation)
 ------
 ----
++ create(): CatalogSkills
 + skill_of(guidance: PracticeGuidance | FidelityGuidance): str
----<<creates>>--> FileInstallation
+---<<creates, with its own record>>--> SkillInstallation
 ---<<creates>>--> IdeLayout
----<<reads constants of>>--> InstallDestination
+---<<asks whether Skill publishes>>--> AgentTool
 
 ## CatalogFidelity
 

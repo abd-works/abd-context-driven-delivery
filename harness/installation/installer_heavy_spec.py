@@ -11,7 +11,23 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from harness.mcp.claude_plugins import ClaudePlugins
+from harness.agent_tools.agent_tools import ToolsetReference
 from harness.installation.installer import Installer, ToolsetInstallFailed
+
+
+class _Published:
+    """A plugin the cdd home's marketplace publishes, at the version it publishes it at."""
+
+    def __init__(self, name: str, version: str) -> None:
+        self.name = name
+        self.version = version
+        self.installed_name = f"{name}@cdd-home"
+        self.marketplace = type("Marketplace", (), {"folder": Path("claude-plugins")})()
+
+
+_BOARD = _Published("cdd-board", "0.6.3-abc")
+_CDD = _Published("cdd", "1.0.0-abc")
+_QUEUE = _Published("prompt-queue", "0.1.0-abc")
 
 
 class _ScriptedClaude(ClaudePlugins):
@@ -30,12 +46,8 @@ class _ScriptedClaude(ClaudePlugins):
     def installed(self) -> dict[str, str]:
         return self.plugins_installed
 
-    @property
-    def is_board_watched(self) -> bool:
+    def is_watched(self, plugin: _Published) -> bool:
         return self.board_watched
-
-    def published_version(self, plugin: str) -> str:
-        return {"cdd-board": "0.6.3-abc", "cdd": "1.0.0-abc", "prompt-queue": "0.1.0-abc"}.get(plugin, "")
 
     @property
     def claude_cli(self) -> str | None:
@@ -62,18 +74,21 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
 )
 from harness.hooks.hooks import Hook, hook
 from harness.mcp.cdd_home import CddHome
-from harness.mcp.mcp_server import McpInstallation, McpServer
+from harness.mcp.mcp_server import McpInstallation, ProjectToolsets
 from harness.mcp.mcp_daemon import McpDaemon
 from harness.mcp.spec_support import ThrowawayMachine
 from harness.installation.ide_layout import IdeLayout
 from harness.installation.install_target import InstallTarget
+from harness.installation.files import Skill
+from harness.installation.install_diagnostics import InstallDiagnosis
+from harness.installation.installer import SERVER_CHANNELS, InstallChannels, InstallRun
 
 
 
 
-def _server_publishing(installation: McpInstallation) -> McpServer:
+def _server_publishing(installation: McpInstallation) -> ProjectToolsets:
     """A server publishing the operations an install recorded, as the cdd server publishes them."""
-    server = McpServer()
+    server = ProjectToolsets()
     for tool in installation.mcp_operations:
         server.enroll(tool)
     return server
@@ -165,6 +180,19 @@ def _write_install_log(path: Path, skills: list[str]) -> None:
     )
 
 
+def _recorded_diagnosis(installer: Installer) -> InstallDiagnosis:
+    """The diagnosis of the folder installer installs into, recorded in its diagnostics as an install records it."""
+    diagnosis = installer.diagnosis_of(*_folder_channels(installer))
+    installer.diagnostics.record(diagnosis)
+    return diagnosis
+
+
+def _folder_channels(installer: Installer) -> tuple:
+    """The channels of an install not run, reading the folder as an earlier install left it."""
+    channels = InstallChannels(installer, SERVER_CHANNELS.kinds)
+    return channels, channels.published
+
+
 def _last_logged_install(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))["installs"][-1]
 
@@ -174,7 +202,7 @@ def _skill_tool(name: str):
         return None
 
     _fn._skill = True
-    return type("Tool", (), {"name": name, "deploy_name": name, "install_to_skill": True, "callable": _fn})()
+    return type("Tool", (), {"name": name, "deploy_name": name, "is_published_to": lambda self, destination: destination is Skill, "callable": _fn})()
 
 
 # (E) Install CDD Tools
@@ -273,11 +301,8 @@ with description("an agent toolset") as self:
 
                 # (S) Installer --> Configure and Start MCP Host Session
                 with context("with the MCP host stood up"):
-                    with it("should diagnose that the MCP host answers ping"):
-                        expect(self.mcp.diagnosis["ping"]).to(equal("pong"))
-
                     with it("should list the built-in health-check tool"):
-                        expect(self.mcp.diagnosis["tools"]).to(contain("cdd.ping"))
+                        expect(self.mcp.server.stood_up.tools).to(contain("cdd.ping"))
 
                 with it("should return that operation's instructions when the installed tool is invoked"):
                     server = _server_publishing(self.mcp)
@@ -585,7 +610,7 @@ with description("an agent toolset") as self:
                 with it("should install only itself via install_self"):
                     tree = Path(tempfile.mkdtemp())
                     try:
-                        Installer.create(ide="Cursor", path=tree, repo=_REPO_ROOT).deployment.install_self()
+                        Installer.create(ide="Cursor", path=tree, repo=_REPO_ROOT).install_self()
                         path = InstalledTree(tree).command_path("install")
                         expect(path is not None).to(equal(True))
                         expect(path.read_text(encoding="utf-8")).to(contain("scripts/install.py"))
@@ -606,7 +631,7 @@ with description("an agent toolset") as self:
 
                         def run():
                             Installer.create(ide="Cursor", path=tree, repo=_REPO_ROOT).install(
-                                ["no.such.module:Nope"]
+                                [ToolsetReference.parsed("no.such.module:Nope")]
                             )
 
                         expect(run).to(raise_error(ToolsetInstallFailed))
@@ -642,20 +667,17 @@ with description("an agent toolset") as self:
                     with it("should mark the install green"):
                         expect(self.installer.diagnose_install()).to(contain("green"))
 
-                    with it("should record install channels via diagnose_after_install"):
-                        reports = self.installer.deployment.diagnose_after_install()
-                        expect(any("skill 1 -> 1 (delta 0)" in report for report in reports)).to(
-                            equal(True)
-                        )
+                    with it("should record install channels in the diagnosis"):
+                        expect(_recorded_diagnosis(self.installer).report).to(contain("skill 1 -> 1 (delta 0)"))
 
                     with it("should append this install to the diagnostics log"):
-                        self.installer.deployment.diagnose_after_install()
+                        _recorded_diagnosis(self.installer)
                         expect(len(json.loads(self.log.read_text(encoding="utf-8"))["installs"])).to(
                             equal(2)
                         )
 
                     with it("should record the latest skill count on that install"):
-                        self.installer.deployment.diagnose_after_install()
+                        _recorded_diagnosis(self.installer)
                         expect(_last_logged_install(self.log)["skill"]["count"]).to(equal(1))
 
                 with context("that has a yellow surface change"):
@@ -694,7 +716,7 @@ with description("an agent toolset") as self:
                         expect(self.installer.diagnose_install()).to(contain("red"))
 
                     with it("should log diagnose_install on the install"):
-                        self.installer.deployment.diagnose_after_install()
+                        _recorded_diagnosis(self.installer)
                         names = [item["name"] for item in _last_logged_install(self.log)["diagnostics"]]
                         expect(names).to(contain("diagnose_install"))
 
@@ -708,11 +730,11 @@ with description("an agent toolset") as self:
 
                 with it("should leave the cdd server answering"):
                     installer = Installer.create(ide="Cursor", path=_REPO_ROOT / ".cursor", repo=_REPO_ROOT)
-                    expect(installer.deployment.ensure_runtimes()["mcp"]).to(start_with("running"))
+                    expect(InstallRun(installer, [], replace=False).ensure_running()[0]).to(start_with("mcp: running"))
 
                 with it("should start no hook server, which the hook command starts on the first event"):
                     installer = Installer.create(ide="Cursor", path=_REPO_ROOT / ".cursor", repo=_REPO_ROOT)
-                    expect(installer.deployment.ensure_runtimes()).not_to(have_key("hook"))
+                    expect([line for line in InstallRun(installer, [], replace=False).ensure_running() if line.startswith("hook")]).to(equal([]))
 
             with context("that resolves deploy imports and toolsets from the repo catalog"):
                 with before.each:
@@ -796,26 +818,23 @@ with description("a practice guidance class") as self:
             expect(front).to(contain("sample preamble"))
 
         with it("should keep the MCP invoke tail out of the skill description"):
-            from harness.installation.files import FileChannel, FileInstallation
+            from harness.installation.files import SkillInstallation
 
             overview = "sample preamble"
-            writer = FileInstallation(InstallTarget(IdeLayout("Cursor"), self.tree), FileChannel("skill"))
-            text = writer._skill_front_matter(
-                "sample-tool",
-                writer._skill_overview(
-                    type("Host", (), {"overview": overview})(),
-                    [overview, "Use MCP tool: `sample-tool.instructions()`"],
-                ),
+            writer = SkillInstallation.into(InstallTarget(IdeLayout("Cursor"), self.tree))
+            tool = type("Tool", (), {"toolset": type("Host", (), {"overview": overview})()})()
+            text = writer.front_matter(
+                tool, Path("skills") / "sample-tool" / "SKILL.md", [overview, "Use MCP tool: `sample-tool.instructions()`"], ""
             )
             expect(text).to(contain("sample preamble"))
             expect(text).not_to(contain("Use MCP tool:"))
 
         with context("with an overview that opens with its heading and closes with a rule"):
             with before.each:
-                from harness.installation.files import FileChannel, FileInstallation
+                from harness.installation.files import CommandInstallation, RulesInstallation, SkillInstallation
 
                 overview = "## Overview\n\nsample preamble\n\nsecond paragraph\n\n---"
-                writer = FileInstallation(InstallTarget(IdeLayout("Cursor"), self.tree), FileChannel("skill"))
+                writer = SkillInstallation.into(InstallTarget(IdeLayout("Cursor"), self.tree))
                 self.description = writer._skill_overview(type("Host", (), {"overview": overview})(), [overview])
 
             with it("should describe the skill with the opening paragraph alone"):
@@ -823,11 +842,11 @@ with description("a practice guidance class") as self:
 
         with context("with guidance that links a shared reference file and names a rule file"):
             with before.each:
-                from harness.installation.files import FileChannel, FileInstallation
+                from harness.installation.files import RulesInstallation
 
                 self.text = "See [tools](../../references/language-tools.md); follow `practices/ddd/ddd-model.mdc`."
                 self.dest = self.tree / "rules" / "practices" / "ddd" / "ddd-model.md"
-                self.writer = FileInstallation(InstallTarget(IdeLayout("Claude"), self.tree), FileChannel("rules"), repo=_REPO_ROOT)
+                self.writer = RulesInstallation.into(InstallTarget(IdeLayout("Claude"), self.tree), RepositoryToolsets(_REPO_ROOT))
 
             with it("should copy the shared file into the IDE references folder"):
                 self.writer._with_installed_references(self.text, self.dest)
@@ -852,9 +871,9 @@ with description("a practice guidance class") as self:
 
             with context("installed for Claude Code"):
                 with before.each:
-                    from harness.installation.files import FileChannel, FileInstallation
+                    from harness.installation.files import RulesInstallation
 
-                    FileInstallation(InstallTarget(IdeLayout("Claude"), self.tree), FileChannel("rules"), repo=_REPO_ROOT).write_standing_rule(self.source)
+                    RulesInstallation.into(InstallTarget(IdeLayout("Claude"), self.tree), RepositoryToolsets(_REPO_ROOT)).write_standing_rule(self.source)
                     self.text = (self.tree / "rules" / "coding.md").read_text(encoding="utf-8")
 
                 with it("should load in every session, with no paths"):
@@ -865,18 +884,18 @@ with description("a practice guidance class") as self:
 
             with context("installed for Cursor"):
                 with it("should keep the source front matter as an .mdc rule"):
-                    from harness.installation.files import FileChannel, FileInstallation
+                    from harness.installation.files import CommandInstallation, RulesInstallation, SkillInstallation
 
-                    FileInstallation(InstallTarget(IdeLayout("Cursor"), self.tree), FileChannel("rules"), repo=_REPO_ROOT).write_standing_rule(self.source)
+                    RulesInstallation.into(InstallTarget(IdeLayout("Cursor"), self.tree), RepositoryToolsets(_REPO_ROOT)).write_standing_rule(self.source)
                     text = (self.tree / "rules" / "coding.mdc").read_text(encoding="utf-8")
                     expect(text).to(equal(self.source.read_text(encoding="utf-8")))
 
         with context("with an MCP tool whose docstring only names the overview section"):
             with it("should leave that section name out of the skill body"):
-                from harness.installation.files import FileChannel, FileInstallation
+                from harness.installation.files import SkillInstallation
 
-                writer = FileInstallation(InstallTarget(IdeLayout("Cursor"), self.tree), FileChannel("skill", True))
-                tool = type("Tool", (), {"docstring": "overview"})()
+                writer = SkillInstallation.into(InstallTarget(IdeLayout("Cursor"), self.tree))
+                tool = type("Tool", (), {"docstring": "overview", "is_published_to": lambda self, destination: True})()
                 expect(writer._body_for(tool)).to(equal(""))
 
         with it("should not append a YAML CLI invoke fence to the skill body"):
@@ -891,9 +910,9 @@ with description("a practice guidance class") as self:
 
         with context("with an underscored practice module path"):
             with it("should kebab-case the practice folder to match fidelity skill names"):
-                from harness.installation.files import FileChannel, FileInstallation
+                from harness.installation.files import SkillInstallation
 
-                writer = FileInstallation(InstallTarget(IdeLayout("Cursor"), Path(".")), FileChannel("skill"))
+                writer = SkillInstallation.into(InstallTarget(IdeLayout("Cursor"), Path(".")))
                 tools = {"instructions": _skill_tool("instructions")}
                 toolset = type(
                     "Practice",
@@ -976,7 +995,7 @@ with description("a practice guidance class") as self:
             with before.each:
                 from harness.agent_tools.agent_tools import ToolsetReference
 
-                Car = ToolsetReference("cdd_guidance.practices._examples.car.car:Car").toolset_class
+                Car = ToolsetReference.parsed("cdd_guidance.practices._examples.car.car:Car").toolset_class
                 from cdd_guidance.actions._examples.car_story.car_story import CarStory
 
                 self._branch_tmp = tempfile.mkdtemp()
@@ -1030,9 +1049,9 @@ with description("a practice guidance class") as self:
 
         with context("with an underscored module path and fidelity folders under it"):
             with it("should keep the practice folder and name the leaf practice-fidelity"):
-                from harness.installation.files import FileChannel, FileInstallation
+                from harness.installation.files import SkillInstallation
 
-                writer = FileInstallation(InstallTarget(IdeLayout("Cursor"), Path(".")), FileChannel("skill"))
+                writer = SkillInstallation.into(InstallTarget(IdeLayout("Cursor"), Path(".")))
                 tools = {"instructions": _skill_tool("instructions")}
                 practice = type("Practice", (), {"slug": "sample-tool"})()
                 toolset = type(
@@ -1051,9 +1070,9 @@ with description("a practice guidance class") as self:
                 ).to(equal("skills/practices/sample-tool/sample-tool-sketch/SKILL.md"))
 
             with it("should kebab-case the practice parent so it matches the fidelity leaf"):
-                from harness.installation.files import FileChannel, FileInstallation
+                from harness.installation.files import SkillInstallation
 
-                writer = FileInstallation(InstallTarget(IdeLayout("Cursor"), Path(".")), FileChannel("skill"))
+                writer = SkillInstallation.into(InstallTarget(IdeLayout("Cursor"), Path(".")))
                 tools = {"instructions": _skill_tool("instructions")}
                 practice = type("Practice", (), {"slug": "sample-tool"})()
                 toolset = type(
@@ -1308,7 +1327,7 @@ with description("guidance agents"):
     with it("should install the agents from cdd_guidance/agents"):
         tree = Path(tempfile.mkdtemp())
         try:
-            Installer.create(ide="Cursor", path=tree, repo=_REPO_ROOT).deployment._install_agents()
+            InstallRun(Installer.create(ide="Cursor", path=tree, repo=_REPO_ROOT), [], replace=False)._install_agents()
             installed = sorted(path.name for path in (tree / "agents").glob("*.md"))
             expect(installed).to(equal([
                 "context.md", "discoverer.md", "exploratory-testing-supervisor.md", "exploratory-testing-tester.md",
@@ -1401,7 +1420,7 @@ with description("toolsets installed for Claude Code") as self:
         # A board mod installed from a checkout's own marketplace runs that branch's code, not the server's.
         with it("should remove the board mod installed from a checkout's own marketplace"):
             self.plugins.plugins_installed = {"cdd-board@abd-works": "0.6.3"}
-            self.plugins.install_board()
+            self.plugins.install(_BOARD)
             expect(self.plugins.calls[:2]).to(equal([
                 ("plugin", "uninstall", "cdd-board@abd-works", "--scope", "user"),
                 ("plugin", "marketplace", "remove", "abd-works"),
@@ -1411,7 +1430,7 @@ with description("toolsets installed for Claude Code") as self:
         with context("with the board mod the cdd home publishes already installed"):
             with before.each:
                 self.plugins.plugins_installed = {"cdd-board@cdd-home": "0.6.3-abc"}
-                self.answer = self.plugins.install_board()
+                self.answer = str(self.plugins.install(_BOARD))
 
             with it("should say it is installed"):
                 expect(self.answer).to(equal("installed"))
@@ -1423,7 +1442,7 @@ with description("toolsets installed for Claude Code") as self:
         with context("with the board folder watched by Claude Code"):
             with before.each:
                 self.plugins.board_watched = True
-                self.answer = self.plugins.install_board()
+                self.answer = str(self.plugins.install(_BOARD))
 
             with it("should say it is watched"):
                 expect(self.answer).to(equal("watched"))
@@ -1434,40 +1453,40 @@ with description("toolsets installed for Claude Code") as self:
         with context("with an older board mod installed"):
             with it("should update it"):
                 self.plugins.plugins_installed = {"cdd-board@cdd-home": "0.6.3-old"}
-                self.plugins.install_board()
+                self.plugins.install(_BOARD)
                 expect(("plugin", "update", "cdd-board@cdd-home", "--scope", "user") in self.plugins.calls).to(equal(True))
 
             # Adding a marketplace Claude Code already has reads nothing new, so the update would find the old board.
             with it("should read the cdd home's marketplace again before it updates"):
                 self.plugins.plugins_installed = {"cdd-board@cdd-home": "0.6.3-old"}
-                self.plugins.install_board()
+                self.plugins.install(_BOARD)
                 refresh = self.plugins.calls.index(("plugin", "marketplace", "update", "cdd-home"))
                 expect(refresh).to(be_below(self.plugins.calls.index(("plugin", "update", "cdd-board@cdd-home", "--scope", "user"))))
 
         with it("should install the board mod the cdd home publishes, at user scope"):
-            expect(self.plugins.install_board()).to(equal("installed"))
+            expect(str(self.plugins.install(_BOARD))).to(equal("installed"))
             expect(("plugin", "install", "cdd-board@cdd-home", "--scope", "user") in self.plugins.calls).to(equal(True))
 
         with it("should say the plugin is missing when the list does not show it"):
             self.plugins.listed = ""
-            expect(self.plugins.install_board()).to(equal("missing"))
+            expect(str(self.plugins.install(_BOARD))).to(equal("missing"))
 
         with it("should say the plugin is missing when there is no claude command"):
             self.plugins.cli = None
-            expect(self.plugins.install_board()).to(equal("missing"))
+            expect(str(self.plugins.install(_BOARD))).to(equal("missing"))
 
     with context("installing the prompt queue plugin"):
         with before.each:
             self.plugins = _ScriptedClaude(listed="prompt-queue@cdd-home")
 
         with it("should install the prompt queue mod the cdd home publishes, at user scope"):
-            expect(self.plugins.install_queue()).to(equal("installed"))
+            expect(str(self.plugins.install(_QUEUE))).to(equal("installed"))
             expect(("plugin", "install", "prompt-queue@cdd-home", "--scope", "user") in self.plugins.calls).to(equal(True))
 
         with context("with the prompt queue mod the cdd home publishes already installed"):
             with it("should run no claude command"):
                 self.plugins.plugins_installed = {"prompt-queue@cdd-home": "0.1.0-abc"}
-                self.plugins.install_queue()
+                self.plugins.install(_QUEUE)
                 expect(self.plugins.calls).to(equal([]))
 
     with context("installing the cdd plugin"):
@@ -1477,7 +1496,7 @@ with description("toolsets installed for Claude Code") as self:
         with context("that is already installed at the published version"):
             with before.each:
                 self.plugins.plugins_installed = {"cdd@cdd-home": "1.0.0-abc"}
-                self.answer = self.plugins.install_cdd()
+                self.answer = str(self.plugins.install(_CDD))
 
             with it("should say it is installed"):
                 expect(self.answer).to(equal("installed"))
@@ -1487,14 +1506,14 @@ with description("toolsets installed for Claude Code") as self:
 
         with context("that is not installed"):
             with it("should install it at user scope"):
-                self.plugins.install_cdd()
+                self.plugins.install(_CDD)
                 expect(("plugin", "install", "cdd@cdd-home", "--scope", "user") in self.plugins.calls).to(equal(True))
 
         # Claude Code keeps the copy it installed for a version, so a changed server entry reaches chats only as an update.
         with context("that is installed at an older version"):
             with it("should update it at user scope"):
                 self.plugins.plugins_installed = {"cdd@cdd-home": "1.0.0"}
-                self.plugins.install_cdd()
+                self.plugins.install(_CDD)
                 expect(("plugin", "update", "cdd@cdd-home", "--scope", "user") in self.plugins.calls).to(equal(True))
 
     with context("finding Claude Code in the desktop app"):
@@ -1528,9 +1547,9 @@ with description("toolsets installed for Claude Code") as self:
 
     with context("with rules scoped by globs"):
         with it("should list each glob under paths"):
-            from harness.installation.files import FileChannel, FileInstallation
+            from harness.installation.files import RulesInstallation
 
-            text = FileInstallation(InstallTarget(IdeLayout("Claude"), Path(".")), FileChannel("rules"))._claude_rules_front_matter(
+            text = RulesInstallation.into(InstallTarget(IdeLayout("Claude"), Path(".")))._claude_rules_front_matter(
                 "d", "**/*.py, **/*.ts"
             )
             expect(text).to(equal('---\ndescription: "d"\npaths:\n  - "**/*.py"\n  - "**/*.ts"\n---\n\n'))
@@ -1548,7 +1567,7 @@ with description("Repo branch commands installed into Cursor") as self:
         self._tmp = tempfile.mkdtemp()
         self.tree = Path(self._tmp)
         self.mcp = Installer.create(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
-            ["space.repo.repo:Repo"]
+            [ToolsetReference.parsed("space.repo.repo:Repo")]
         ).of(McpInstallation)
 
     with after.each:
