@@ -1,7 +1,7 @@
 import type { EngineInterface, Register } from 'claude-code'
 
 import { keepInTouch } from './chat-bar/check-in-client'
-import { isCheckInDue, turnCompleted, turnStarted } from './board-chat/chat-turns'
+import { chatStarted, isCheckInDue, turnCompleted, turnStarted } from './board-chat/chat-turns'
 import { readName } from './board-chat/chat-name'
 import { openedBoard } from './board-chat/board-server'
 import { currentChatBar, readChatBarUntilAnswered, refreshChatBar } from './chat-bar/chat-bar-client'
@@ -95,10 +95,11 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({ name: 'board', description: 'Open the CDD session board, starting it when it is not running' })
     await clearBusy($)
+    await chatStarted($)
     const chat = await $.session.id()
     // The cdd server can still be connecting at session start, or restarting for a repin; a check-in that keeps failing
     // shows on the bar.
-    $.clock.every(CHECK_IN_MILLISECONDS, () => void keepInTouch($, chat, isCheckInDue()))
+    $.clock.every(CHECK_IN_MILLISECONDS, () => void isCheckInDue($).then(isDue => keepInTouch($, chat, isDue)))
     // The stages, practices and formats selected: the session's guidance selection, followed with one waiting read.
     void followGuidance($, async () => (await currentChatBar($)).sessionFile)
     // The chat opens first and the bar fills in after it, so a slow or still-connecting cdd server never holds the chat up.
@@ -110,7 +111,7 @@ export const register: Register = on => {
   on('command.run', { command: 'board' }, async $ => ({ text: await openedBoard($) }))
 
   on('turn.start', async ($, e, next) => {
-    if (!e.agentId) turnStarted()
+    if (!e.agentId) await turnStarted($)
     return next(e)
   })
 

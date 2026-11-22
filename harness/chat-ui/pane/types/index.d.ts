@@ -95,6 +95,11 @@ export type FidelityHelpJson = { fidelity: string; markdown: string } | null
 // What the chat bar is doing while a ticket opens or closes, which the band shows with a turning wheel; empty when idle.
 export type BusyJson = { doing: string; frame: number }
 
+// The chat's own turns, which tell the board when a message it sent is done: whether a turn runs, how many have
+// started, the check-in clock's ticks since the chat last worked, and each message still worked on with the turns
+// started before it arrived.
+export type ChatTurnsJson = { isBusy: boolean; turnsStarted: number; idleCheckIns: number; unfinished: Record<string, number> }
+
 declare module 'claude-code' {
   interface PluginState {
     'cdd-board': {
@@ -115,6 +120,11 @@ declare module 'claude-code' {
       guidance: object | null
       overlayChoices: OverlayChoicesJson
       busy: BusyJson
+      chatTurns: ChatTurnsJson
+      // The name a person reads for this chat in the board's chat picker.
+      chatName: string
+      // The check-ins with cdd failed in a row, which the bar shows once they reach ten.
+      failedCheckIns: number
     }
     'prompt-queue': {
       failure: QueueFailureJson
