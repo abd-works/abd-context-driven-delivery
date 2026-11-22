@@ -11,6 +11,7 @@ from expects import equal, expect
 from mamba import before, context, description, it
 
 from harness.agent_tools.parameter_schema import ParameterSchema
+from harness.mcp._examples.parameter_types.parameter_types import ParameterTypes
 
 
 class _Wanted(TypedDict, total=False):
@@ -48,3 +49,8 @@ with description("the schema of a tool's parameters") as self:
     with context("with a request that requires a key"):
         with it("should require that key"):
             expect(ParameterSchema(_named).json_schema["properties"]["named"]["required"]).to(equal(["name"]))
+
+    with context("with a record declared under postponed annotations that marks a key not required"):
+        with it("should require only the keys it does not mark"):
+            record = ParameterSchema(ParameterTypes().echo_record).json_schema["properties"]["record"]
+            expect(record["required"]).to(equal(["toolset"]))

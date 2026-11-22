@@ -153,14 +153,25 @@ class ParameterSchema:
         return annotation
 
     def _typed_dict_schema(self, annotation: TypeHint) -> dict[str, Any]:
-        """A TypedDict as an object of its keys; a key it requires, by ``total`` or ``Required``, is required."""
-        hints = get_type_hints(annotation)
-        properties = {name: self._annotation_schema(hint) for name, hint in hints.items()}
-        required = [name for name in hints if name in annotation.__required_keys__]
+        """A TypedDict as an object of its keys; a key it requires, by ``total`` or ``Required``, is required, and a key
+        marked ``NotRequired`` is not. The marks are read from the hints as well as from ``__required_keys__``, because a
+        TypedDict declared under ``from __future__ import annotations`` keeps every key in ``__required_keys__``."""
+        hints = get_type_hints(annotation, include_extras=True)
+        properties = {name: self._annotation_schema(self._unwrap_required(hint)) for name, hint in hints.items()}
+        required = [name for name, hint in hints.items() if self._is_required_key(annotation, name, hint)]
         schema: dict[str, Any] = {"type": "object", "properties": properties, "additionalProperties": False}
         if required:
             schema["required"] = required
         return schema
+
+    def _is_required_key(self, annotation: TypeHint, name: str, hint: TypeHint) -> bool:
+        """Whether the TypedDict requires the key: marked ``Required``, or not marked ``NotRequired`` and kept by
+        ``total``."""
+        if get_origin(hint) is Required:
+            return True
+        if get_origin(hint) is NotRequired:
+            return False
+        return name in annotation.__required_keys__
 
     def _union_schema(self, annotation: TypeHint) -> dict[str, Any]:
         variants = [self._annotation_schema(arg) for arg in get_args(annotation)]
