@@ -46,9 +46,11 @@ if (-not (Test-Path $venv)) {
     if ($commonGit) { $venv = Join-Path (Split-Path -Parent $commonGit) ".venv" }
 }
 $venvPython = Join-Path $venv "Scripts\python.exe"
-$venvMamba = Join-Path $venv "Scripts\mamba.exe"
 $python = if (Test-Path $venvPython) { $venvPython } else { "python" }
-$mamba = if (Test-Path $venvMamba) { $venvMamba } else { "mamba" }
+# Mamba runs as a module of the venv's Python, not through its mamba.exe launcher: a launcher in a venv is a fresh,
+# unsigned executable, which an application control policy may block while it still lets Python itself run.
+$mamba = $python
+$mambaModule = @("-m", "mamba.cli")
 
 $excludedDirs = [System.Collections.Generic.HashSet[string]]::new(
     [string[]]@(
@@ -376,7 +378,7 @@ try {
         $env:PYTHONPATH = "$storyModule$([IO.Path]::PathSeparator)$savedPath"
         $storyFailures = Invoke-Reported "Python story tests" $stories $python @("-m", "story_test", "--format", "budget_formatter.BudgetDocumentation")
         $env:PYTHONPATH = $savedPath
-        $specFailures = Invoke-Reported "Mamba specs" $specs $mamba @("--format", "budget_formatter.BudgetDocumentation")
+        $specFailures = Invoke-Reported "Mamba specs" $specs $mamba ($mambaModule + @("--format", "budget_formatter.BudgetDocumentation"))
         foreach ($relative in @($storyFailures) + @($specFailures)) {
             if ($relative) { $failures.Add($relative) | Out-Null }
         }
@@ -391,7 +393,7 @@ try {
             $env:PYTHONPATH = "$storyModule$([IO.Path]::PathSeparator)$savedPath"
             Invoke-Reported "Over the budget in parallel, run again alone" $flaggedStories $python @("-m", "story_test", "--format", "budget_formatter.BudgetProgress") -Parallel 1 | Out-Null
             $env:PYTHONPATH = $savedPath
-            Invoke-Reported "Over the budget in parallel, run again alone" $flaggedSpecs $mamba @("--format", "budget_formatter.BudgetProgress") -Parallel 1 | Out-Null
+            Invoke-Reported "Over the budget in parallel, run again alone" $flaggedSpecs $mamba ($mambaModule + @("--format", "budget_formatter.BudgetProgress")) -Parallel 1 | Out-Null
             $slow = @(Read-SlowExamples $guardLog)
             if ($slow.Count -gt 0) {
                 Write-Host ""
@@ -414,7 +416,7 @@ try {
         # Heavy specs start servers and browsers, so each runs in its own process, one at a time.
         $heavyFailures = @()
         foreach ($heavy in $heavySpecs) {
-            $heavyFailures += Invoke-Reported "Heavy spec" @($heavy) $mamba @("--format", "documentation") -Parallel 1
+            $heavyFailures += Invoke-Reported "Heavy spec" @($heavy) $mamba ($mambaModule + @("--format", "documentation")) -Parallel 1
         }
         foreach ($relative in @($heavyFailures)) {
             if ($relative) { $failures.Add($relative) | Out-Null }
@@ -428,7 +430,7 @@ try {
         })
         $agentFailures = @()
         foreach ($spec in $endToEndSpecs) {
-            $agentFailures += Invoke-Reported "End-to-end spec" @($spec) $mamba @("--format", "documentation") -Parallel 1
+            $agentFailures += Invoke-Reported "End-to-end spec" @($spec) $mamba ($mambaModule + @("--format", "documentation")) -Parallel 1
         }
         foreach ($relative in @($agentFailures)) {
             if ($relative) { $failures.Add($relative) | Out-Null }
