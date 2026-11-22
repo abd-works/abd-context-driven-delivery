@@ -305,6 +305,22 @@ describe("an epic's description on the page", () => {
   })
 })
 
+// A story's name is a field edited in place, so double-clicking its card puts the caret in that name with all of it
+// selected, as double-clicking an epic's or an increment's name does.
+describe('a story card double-clicked on the page', () => {
+  it("should select the whole of the story's name, ready to be typed over", async () => {
+    await openedPage({}, CHAT)
+    const failures: unknown[] = []
+    const recordFailure = (failure: ErrorEvent) => { failures.push(failure.error); failure.preventDefault() }
+    window.addEventListener('error', recordFailure)
+    const header = screen.getAllByText('STORY')[0]!.closest('.story-card-header')!
+    fireEvent.doubleClick(header)
+    window.removeEventListener('error', recordFailure)
+    const name = header.querySelector('.story-name-input')!
+    expect([failures, document.activeElement === name, window.getSelection()?.toString()]).toEqual([[], true, 'Open Story UI Side Panel From Chat Bar'])
+  })
+})
+
 describe('with the cdd server not answering', () => {
   it('should say the cdd server is not answering and how to start it', async () => {
     const failures: string[] = []

@@ -336,10 +336,23 @@ function dragStartedOnInteractiveControl(target: EventTarget | null): boolean {
  *  .increment-name-input in workspace.css); this hands the pointer back on double-click
  *  so the whole card stays a drag source while the name is still editable in place. */
 function focusNameFieldOnDoubleClick(doubleClick: React.MouseEvent<Element>) {
-  const field = doubleClick.currentTarget.querySelector<HTMLInputElement>('.node-label, .story-name-input, .increment-name-input');
+  const field = doubleClick.currentTarget.querySelector<HTMLElement>('.node-label, .story-name-input, .increment-name-input');
   if (!field) return;
   field.focus();
-  field.select();
+  selectWholeName(field);
+}
+
+/** An epic's and an increment's name is an input, which selects its own text; a story's name is a content-editable
+ *  div, which has no select(), so its text is selected through the document's selection. */
+function selectWholeName(field: HTMLElement) {
+  if (field instanceof HTMLInputElement) {
+    field.select();
+    return;
+  }
+  const whole = document.createRange();
+  whole.selectNodeContents(field);
+  window.getSelection()?.removeAllRanges();
+  window.getSelection()?.addRange(whole);
 }
 
 /** Drag handlers for one Story card. `getTargetIds` returns the current Story ids of
@@ -1236,7 +1249,7 @@ function StoryNameEditor({ story, edit }: Pick<StoryCardProps, 'story' | 'edit'>
       contentEditable={true}
       suppressContentEditableWarning={true}
       onInput={(e) => setEditName(e.currentTarget.textContent || '')}
-      onDoubleClick={(e) => { e.stopPropagation(); e.currentTarget.focus(); document.execCommand('selectAll', false, undefined); }}
+      onDoubleClick={(e) => { e.stopPropagation(); e.currentTarget.focus(); selectWholeName(e.currentTarget); }}
       onKeyDown={(e) => {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.stopPropagation(); saveName(); }
         if (e.key === 'Escape') { setEditName(story.name); e.currentTarget.blur(); }
