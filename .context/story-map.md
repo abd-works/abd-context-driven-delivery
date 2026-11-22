@@ -1630,7 +1630,7 @@ Observed: `DesignCanvas.add_page` lists each page in `canvas.json` in the order 
 
 ### (S) Design Canvas --> Place Artboards On Their Pages
 
-Observed: `DesignCanvas.add_board` puts each artboard on its page and keeps the order they were added in `canvas.json` (`design_canvas_spec.py`).
+Observed: `DesignCanvas.add` and `place` put each artboard on its page and keeps the order they were added in `canvas.json` (`design_canvas_spec.py`).
 
 ### (S) Design Canvas --> Write The Canvas Into A Project Folder
 
@@ -1651,31 +1651,31 @@ Observed: `_context_panel` in `nodes.py` draws a Stories board to the right of a
 ## (E) Load Scenario Fixtures With The Fixture Bar
 ### (S) Person --> Load A Scenario Into A Standalone Screen
 
-Inferred: opened on its own, a screen's fixture bar starts on *Load a scenario…* and loads nothing until the person picks a scenario, which loads its fixture and types the values it enters (`fixture_bar.py` `loadFromFixture`).
+Inferred: opened on its own, a screen's fixture bar starts on *Load a scenario…* and loads nothing until the person picks a scenario, which loads its fixture and types the values it enters (`fixture_screen.py` `loadFromFixture`).
 
 ### (S) Design Canvas --> Load The Explorer's Scenario Into The Screen
 
-Inferred: inside the explorer the screen loads the explorer's scenario as soon as the fixtures bundle is there, and again whenever the explorer moves (`fixture_bar.py` `followExplorer`).
+Inferred: inside the explorer the screen loads the explorer's scenario as soon as the fixtures bundle is there, and again whenever the explorer moves (`fixture_screen.py` `followExplorer`).
 
 ### (S) Person --> Pick Another Scenario From Inside The Explorer
 
-Inferred: picking a scenario on the bar inside the explorer loads it and moves the explorer's tree to it (`fixture_bar.py` `pickScenario`).
+Inferred: picking a scenario on the bar inside the explorer loads it and moves the explorer's tree to it (`fixture_screen.py` `pickScenario`).
 
 ### (S) Person --> Paste Dev Seed Data Into A Screen
 
-Inferred: the bar lists dev mode's seed paste for the screen's path, and picking it types each pasted field into the screen (`fixture_bar.py` `pasteSeedData`).
+Inferred: the bar lists dev mode's seed paste for the screen's path, and picking it types each pasted field into the screen (`fixture_screen.py` `pasteSeedData`).
 
 ### (S) Person --> Follow A Screen Link To The Next Story
 
-Inferred: a link to the next screen moves the explorer to that story, or opens the next screen when the screen stands alone (`fixture_bar.py` `follow`).
+Inferred: a link to the next screen moves the explorer to that story, or opens the next screen when the screen stands alone (`fixture_screen.py` `follow`).
 
 ### (S) Person --> Edit A Screen On Its Own Artboard
 
-Inferred: inside the explorer the bar ends with **Edit**, a link to the screen's own artboard, because an edit inside the explorer would change the explorer (`fixture_bar.py` `bar`).
+Inferred: inside the explorer the bar ends with **Edit**, a link to the screen's own artboard, because an edit inside the explorer would change the explorer (`fixture_screen.py` `bar`).
 
 ### (S) Design Canvas --> Report Where The Screen's Data Came From
 
-Inferred: the bar's values carry the loaded story and scenario, the pasted seed, or the loading problem (`fixture_bar.py` `barVals`).
+Inferred: the bar's values carry the loaded story and scenario, the pasted seed, or the loading problem (`fixture_screen.py` `barVals`).
 
 ## (E) Browse The Story Map Artboard
 

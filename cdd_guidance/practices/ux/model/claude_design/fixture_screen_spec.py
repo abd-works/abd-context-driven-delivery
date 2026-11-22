@@ -1,12 +1,12 @@
 """Mamba spec for a fixture-driven screen artboard and the fixture bar it shows. Its script parsed by Node is in
-fixture_bar_heavy_spec.py."""
+fixture_screen_heavy_spec.py."""
 
 import re
 
 from expects import contain, equal, expect
 from mamba import before, context, description, it
 
-from harness.design_canvas.fixture_bar import FIXTURE_TRIES, FIXTURE_WAIT_MILLISECONDS, FixtureScreen, ScenarioSource
+from cdd_guidance.practices.ux.model.claude_design.fixture_screen import FIXTURE_TRIES, FIXTURE_WAIT_MILLISECONDS, FixtureScreen, ScenarioSource
 
 
 with description("a fixture-driven screen") as self:

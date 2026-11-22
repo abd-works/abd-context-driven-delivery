@@ -15,8 +15,8 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 from urllib.parse import quote, urlencode
 
-from harness.design_canvas.canvas import Artboard, DesignCanvas, Place, stem
-from harness.design_canvas.look import BACKGROUND, FONTS, LOOK
+from harness.design_canvas.canvas import Artboard, DesignCanvas, Place
+from cdd_guidance.practices.ux.model.claude_design.look import BACKGROUND, FONTS, LOOK
 from cdd_guidance.practices.ux.model.claude_design.nodes import ClaudeDesignUxMap
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 from harness.annotations.name import Name
@@ -176,13 +176,13 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
         canvas.add_page(self.screens_page, "Story explorer")
         for page in self.screen_map.pages(self._screen_files()):
             canvas.add_page(page["id"], page["name"])
-        width, height, text = self._story_map()
-        canvas.add_board("Main.dc.html", {"x": 0, "y": 0, "w": width, "h": height, "page": self.story_map_page,
-                                          "title": "Story map", "is_interactive": True, "expand": "fill"}, text)
-        canvas.add_board(f"{self.screens_folder}/explorer.dc.html", {"x": 0, "y": 0, "w": self.explorer_width, "h": self.explorer_height, "page": self.screens_page,
-                                                                     "title": "Story explorer", "is_interactive": True, "expand": "fill"}, self._explorer())
+        story_map = self._story_map()
+        canvas.add(story_map, {"x": 0, "y": 0, "w": story_map.width, "h": story_map.height, "page": self.story_map_page,
+                               "title": "Story map", "is_interactive": True, "expand": "fill"})
+        canvas.place(f"{self.screens_folder}/explorer.dc.html", {"x": 0, "y": 0, "w": self.explorer_width, "h": self.explorer_height, "page": self.screens_page,
+                                                                 "title": "Story explorer", "is_interactive": True, "expand": "fill"}, self._explorer())
         for name, board in self.screen_map.boards(self._screen_files()).items():
-            canvas.add_board(name, board)
+            canvas.place(name, board)
             self._add_context_panel(name)
         return canvas
 
@@ -197,9 +197,8 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
         if not focus:
             return
         board = self.canvas.placed(name)
-        self.canvas.add_board(f"{self.context_folder}/{stem(name)}.dc.html",
-                              {"x": board["w"] + self.context_gap, "y": 0, "w": self.context_width, "h": board["h"],
-                               "page": board["page"], "title": "Stories"}, self._context_panel(focus, board["h"]))
+        self.canvas.add(self._context_panel(focus, board["h"], f"{self.context_folder}/{Artboard.stem_of(name)}.dc.html"),
+                        {"x": board["w"] + self.context_gap, "y": 0, "w": self.context_width, "h": board["h"], "page": board["page"], "title": "Stories"})
 
     def _stories_shown_on(self, name: str) -> List[str]:
         """The stories whose screen is this artboard: the story-level edges of the screens that prototype it."""
@@ -209,7 +208,7 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
                 found += [link.key for link in screen.story_links if link.key not in found]
         return found
 
-    def _context_panel(self, focus: List[str], height: int) -> str:
+    def _context_panel(self, focus: List[str], height: int, name: str) -> Artboard:
         """A read-only story panel for a screen's page: the whole hierarchy greyed and collapsed, except the stories
         the screen serves, opened to their scenarios and steps. Nothing in it navigates or edits."""
         lines: List[str] = []
@@ -221,7 +220,7 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
         style = _CONTEXT_PANEL_STYLE
         body = ('<div style="position: absolute; inset: 0; overflow: auto; box-sizing: border-box; padding: 20px 20px 40px; '
                 'background: #111113; border-left: 1px solid #2A2A2A">\n' + "\n".join(lines) + "\n</div>")
-        return Artboard("Stories", self.context_width, height, body, style=style, root_style=f"background: {BACKGROUND}", head=FONTS).text
+        return Artboard("Stories", self.context_width, height, body, style=style, root_style=f"background: {BACKGROUND}", head=FONTS, name=name)
 
     def _context_story_lines(self, story: ClaudeDesignStory, focus: List[str]) -> List[str]:
         """A story in the context panel: greyed and collapsed, or, when the screen serves it (in focus), opened to its
@@ -235,8 +234,8 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
             lines.append(f'<div class="cx-steps">{html.escape(steps)}</div>')
         return lines
 
-    def _story_map(self) -> tuple:
-        """The story map artboard: its width, height, and file text."""
+    def _story_map(self) -> Artboard:
+        """The story map artboard, ``Main.dc.html``."""
         parts: List[str] = []
         x = 0
         bottom = ClaudeDesignEpic.header_height
@@ -252,8 +251,8 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
         width = max(x - self.sub_epic_gap, self.min_map_width) + 2 * self.margin
         height = bottom + 2 * self.margin
         body = f'<div style="position: absolute; left: {self.margin}px; top: {self.margin}px">' + "\n".join(parts) + "</div>"
-        return width, height, Artboard("Story map", width, height, body, style=f"body{{margin:0;background:{BACKGROUND}}}",
-                                       root_style=f"background: {BACKGROUND}", head=FONTS, zoomable=True).text
+        return Artboard("Story map", width, height, body, style=f"body{{margin:0;background:{BACKGROUND}}}",
+                        root_style=f"background: {BACKGROUND}", head=FONTS, zoomable=True, name="Main.dc.html")
 
     min_map_width = 40
     """The narrowest story map, drawn when it holds no epic."""
@@ -340,7 +339,7 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
             indent = "    " if step.keyword in ("And", "But") else ""
             waiting.append(f"{indent}{step.keyword} {step.text}")
             shown = [screen for screen in shown_on(step, self.screen_map.screens) if not self._blank(screen)]
-            prototype = prototype or next((stem(s.prototype) for s in shown if s.prototype), "")
+            prototype = prototype or next((Artboard.stem_of(s.prototype) for s in shown if s.prototype), "")
             if shown:
                 groups.append({"x": "\n".join(waiting), "i": [f"../{s.image}" for s in shown if s.image]})
                 waiting = []
@@ -354,14 +353,14 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
         """A scenario whose steps show no screen shows its own ``shownOn`` screen, else its story's:
         that screen's prototype, else its screenshot."""
         own = shown_on(scenario, self.screen_map.screens) or shown_on(story, self.screen_map.screens)
-        prototype = next((stem(screen.prototype) for screen in own if screen.prototype), "")
+        prototype = next((Artboard.stem_of(screen.prototype) for screen in own if screen.prototype), "")
         image = next((screen.image for screen in own if screen.image and not self._blank(screen)), "")
         return prototype, image
 
     def _imports(self) -> List[str]:
         lines = []
         for prototype in self._prototypes():
-            name = stem(prototype)
+            name = Artboard.stem_of(prototype)
             lines.append(f'<sc-if value="{{{{live.{Name(name).camel}}}}}" hint-placeholder-val="{{{{ false }}}}">'
                          f'<dc-import name="{name}" story="{{{{storyName}}}}" scenario="{{{{scenarioName}}}}" go="{{{{goToStory}}}}" step="{{{{stepText}}}}" hint-size="1280px,900px" style="display: block; width: 100%; min-height: 100%"></dc-import></sc-if>')
         return lines
@@ -369,20 +368,20 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
     def _screen_files(self) -> List[str]:
         """Screen artboards already in the canvas's screens folder: each needs a place on the Screens page."""
         explorer = f"{self.screens_folder}/explorer.dc.html"
-        return [name for name in self.canvas.artboards_in(self.screens_folder) if name != explorer]
+        return [name for name in self.canvas.project.artboards_in(self.screens_folder) if name != explorer]
 
     fixture_scripts = ("fixtures/canvas-fixtures.js",)
 
     def _fixture_scripts(self) -> List[str]:
         """A pattern's fixtures bundle, when the canvas has one: a screen inside the explorer loads its fixtures from it."""
-        return [script for script in self.fixture_scripts if self.canvas.holds(script)]
+        return [script for script in self.fixture_scripts if self.canvas.project.holds(script)]
 
     def _stylesheets(self) -> List[str]:
         """The stylesheets the prototype screens link, so a screen drawn inside the explorer keeps its own look."""
-        return self.canvas.stylesheets_linked_by([*self._prototypes(), *self._screen_files()])
+        return self.canvas.project.stylesheets_linked_by([*self._prototypes(), *self._screen_files()])
 
     def _blank(self, screen: Screen) -> bool:
-        size = self.canvas.size_of(screen.image) if screen.image else None
+        size = self.canvas.project.size_of(screen.image) if screen.image else None
         return size is not None and size < self.blank_image_bytes
 
     def _screen_map(self, ux_map: Optional[UxMap]) -> ClaudeDesignUxMap:

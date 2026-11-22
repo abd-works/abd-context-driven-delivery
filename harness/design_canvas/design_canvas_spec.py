@@ -7,7 +7,7 @@ from pathlib import Path
 from mamba import description, context, it, before
 from expects import equal, expect, have_keys
 
-from harness.design_canvas.canvas import DesignCanvas, stem
+from harness.design_canvas.canvas import Artboard, DesignCanvas
 from harness.annotations.name import Name
 
 
@@ -16,8 +16,8 @@ with description("Design canvas") as self:
         self.canvas = DesignCanvas("Story Map")
         self.canvas.add_page("story-map", "Story map")
         self.canvas.add_page("screens", "Screens")
-        self.canvas.add_board("Main.dc.html", {"x": 0, "y": 0, "page": "story-map"}, "<map>")
-        self.canvas.add_board("screens/pick-number.dc.html", {"x": 0, "y": 1100, "page": "screens"})
+        self.canvas.add(Artboard("Story map", 100, 100, "<map>", "", "", name="Main.dc.html"), {"x": 0, "y": 0, "page": "story-map"})
+        self.canvas.place("screens/pick-number.dc.html", {"x": 0, "y": 1100, "page": "screens"})
 
     with context("its files"):
         with it("writes the artboards it was given text for, and canvas.json"):
@@ -32,7 +32,7 @@ with description("Design canvas") as self:
 
     with context("artboard names"):
         with it("names a dc-import by the file's stem, and its live flag in camel case"):
-            expect(stem("screens/verify-ported-number.dc.html")).to(equal("verify-ported-number"))
+            expect(Artboard.stem_of("screens/verify-ported-number.dc.html")).to(equal("verify-ported-number"))
             expect(Name("verify-ported-number").camel).to(equal("verifyPortedNumber"))
 
 
@@ -44,19 +44,17 @@ with description("a design canvas made with its project folder"):
         self.canvas = DesignCanvas("Story Map", self.project)
 
     with it("should list the artboards already in a folder of the project"):
-        expect(self.canvas.artboards_in("screens")).to(equal(["screens/plan.dc.html"]))
+        expect(self.canvas.project.artboards_in("screens")).to(equal(["screens/plan.dc.html"]))
 
     with it("should name the stylesheets those artboards link"):
-        expect(self.canvas.stylesheets_linked_by(["screens/plan.dc.html"])).to(equal(["../styles/app.css"]))
+        expect(self.canvas.project.stylesheets_linked_by(["screens/plan.dc.html"])).to(equal(["../styles/app.css"]))
 
     with it("should hold no file the project does not have"):
-        expect(self.canvas.size_of("shots/missing.png")).to(equal(None))
+        expect(self.canvas.project.size_of("shots/missing.png")).to(equal(None))
 
 
 with description("a zoomable artboard"):
     with before.each:
-        from harness.design_canvas.canvas import Artboard
-
         self.text = Artboard("Story map", 2400, 1200, "<map>", "", "", zoomable=True).text
 
     with it("should fit the whole artboard into its frame when its middle zoom button is pressed"):
