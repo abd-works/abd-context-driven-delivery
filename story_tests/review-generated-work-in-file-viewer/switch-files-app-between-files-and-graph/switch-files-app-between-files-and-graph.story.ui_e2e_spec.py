@@ -13,7 +13,7 @@ from expects import equal, expect
 from mamba import after, before, context, description, it
 
 from files_app_browser import GRAPH_READ_MILLISECONDS, SHOWN_MILLISECONDS, TICKET_CODE, FilesStack, all_session_files, graph_view, line, lines_in_order, mark_on, open_branches, select, settled, shown_lines
-from space.session.graph_view_examples import BOARD_CODE, CHECKOUT_FLOW, EXAMPLES_SCENARIOS, EXAMPLES_SCENARIOS_TEXT, SCENARIOS, SCENARIOS_TEXT, STEP_STORY, STORY_MAP, STORY_MAP_WITH_REOPEN_TEXT
+from space.kanban.graph_view_examples import BOARD_CODE, CHECKOUT_FLOW, EXAMPLES_SCENARIOS, EXAMPLES_SCENARIOS_TEXT, SCENARIOS, SCENARIOS_TEXT, STEP_STORY, STORY_MAP, STORY_MAP_WITH_REOPEN_TEXT
 
 FIDELITIES = "stories-acceptance-tests,clean-engineering-code"
 GIVEN_STEP_LINES = ['    @s.given("a ticket on the board")', "    def _(world):", "        world.ticket = ticket_on_board(world)"]

@@ -1,6 +1,6 @@
 """Diagnose And Align Session Formats in a real browser, on the Files app served for real (files_app_browser.FilesStack):
-Diagnose asks the real cdd server for the session's gaps (session.diagnose_alignment) and Align has it render the
-missing formats (session.align_formats), which writes the drawing and the whiteboard into the project.
+Diagnose asks the real cdd server for the session's gaps (format-alignment.diagnose_alignment) and Align has it render the
+missing formats (format-alignment.align_formats), which writes the drawing and the whiteboard into the project.
 
 Scenarios: align_formats_in_files_app_story.test.md. With ``FILES_E2E_SHOTS`` naming a folder, each step's screen is
 saved there."""

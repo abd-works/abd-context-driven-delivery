@@ -1,6 +1,6 @@
 import { useState, type CSSProperties, type KeyboardEvent } from 'react'
 
-import type { FileCommentData } from '@cdd/space/session/file-comments'
+import type { FileCommentData } from '@cdd/space/session/files/file-comments'
 
 import type { CommentLines, FileCommentsActions } from './file-comments-actions'
 import { STATE_WORDS } from './file-marks'

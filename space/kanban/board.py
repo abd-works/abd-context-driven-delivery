@@ -23,7 +23,8 @@ from space.kanban.backlog_folder import BacklogFolder
 from space.kanban.card_name import CardName, TicketNameTakenError
 from space.kanban.unreadable_session_file import UnreadableSessionFile
 from space.session.session_saves import SaveFailure
-from space.session.sessions import BoardPractices, Sessions, SessionsRead
+from space.kanban.board_practices import BOARD_PRACTICES, BoardPractices
+from space.session.sessions import Sessions, SessionsRead
 
 if TYPE_CHECKING:
     from harness.catalog_generator.catalog_practice import CatalogPractice
@@ -124,7 +125,7 @@ class Board:
         # The catalog's view of each practice the board works through, which names its pages and its fidelities' skills,
         # held for the checkout by its sessions, since a board is made for every call. Its stages and tickets ask it.
         # A board that works through fewer practices than CDD has is handed its own.
-        self.catalogued_practices = practices if practices is not None else sessions.board_practices
+        self.catalogued_practices = practices if practices is not None else BOARD_PRACTICES.of(sessions)
         self._stages = [Stage(stage, self) for stage in STAGES]
         self._columns: list[Column] = [Backlog(self), *self._stages, Complete(self)]
         self.shared = BoardFile(self)

@@ -78,7 +78,7 @@ A `@tool_subject` loader or class tool that takes `project` is handed the projec
 ## Board
 
 + Board(sessions: Sessions, practices: BoardPractices, call: ToolCall | None)
-	// practices is left out by `Board.load(project, call)`, so the board works through its sessions' `board_practices`; a board that works through fewer practices is handed its own. call is the call the board is read for, handed to `Board.load` and to the loaders of `Ticket`, `Stage`, and `BacklogItem` from the call they serve
+	// practices is left out by `Board.load(project, call)`, so the board works through its sessions' held `BoardPractices` (`BOARD_PRACTICES.of(sessions)`); a board that works through fewer practices is handed its own. call is the call the board is read for, handed to `Board.load` and to the loaders of `Ticket`, `Stage`, and `BacklogItem` from the call they serve
 ------
 + call: ToolCall | None
 	// the call the board is read for; `chat` is its chat's id, empty for a call that names none: `active` and a ticket's `is_active` name the session that chat has open, a ticket's `close`, `archive`, `delete`, and move to the Backlog close its session for that chat, and `new_chat_link` opens the new chat beside it
@@ -93,7 +93,7 @@ A `@tool_subject` loader or class tool that takes `project` is handed the projec
 + << aggregation >> practices: list[PracticeGuidance]
 	// data field: the practices every ticket works through, each with its key, slug, short name, and colour: the practice each held catalog view is of
 + << aggregation >> catalogued_practices: BoardPractices
-	// the catalog's view of each practice, held for the checkout by `Sessions.board_practices` (`space/session/sessions.py`), so the process makes it and its one skill install once however many boards the calls make; it answers a practice by its class (`of`, `works_through`), which the board's own instance and a ticket's session's share, or by the key a tool names (`keyed`), and every `Help` is handed the one it answers; raises `PracticeNotFoundError` for a practice the board does not have
+	// the catalog's view of each practice, held for the checkout by `BOARD_PRACTICES.of(sessions)` (`space/kanban/board_practices.py`), so the process makes it and its one skill install once however many boards the calls make; it answers a practice by its class (`of`, `works_through`), which the board's own instance and a ticket's session's share, or by the key a tool names (`keyed`), and every `Help` is handed the one it answers; raises `PracticeNotFoundError` for a practice the board does not have
 + << composition >> stages: list[Stage]
 	// its columns from Discovery to Implementation, made once with the board; `stage(name)` answers one and refuses any other column with `NotAStageError`, for `stage.*` tools and `ticket.move_to`
 + << composition >> fidelities: list[BoardFidelity]
@@ -129,7 +129,7 @@ A `@tool_subject` loader or class tool that takes `project` is handed the projec
 	// the `@tool_subject` of the `board.*` tools, handed the call's project: the board of that project's main checkout with every practice chosen, so a chat in a ticket's worktree reads the same board
 	-> Repo.of_project
 	-> Repo.main_clone
-	-> Sessions.board_practices
+	-> BOARD_PRACTICES.of(sessions)
 + show(): Board
 	// `board.show`
 + folders(path: str): list[str]
@@ -1047,7 +1047,7 @@ A validation report of one fidelity as the board reads it: the rules it finds br
 
 ## Judgment
 
-One rule the judgment in a validation report fails, in one judged file. It lives in `space/session/validation_judgment.py`, beside *ReportJudgment*, so the session's violation history reads the judgment the same way the board does.
+One rule the judgment in a validation report fails, in one judged file. It lives in `space/session/validation/validation_judgment.py`, beside *ReportJudgment*, so the session's violation history reads the judgment the same way the board does.
 
 ------
 + file: str
@@ -1125,7 +1125,7 @@ The classes below belong to other modules and are modelled in those modules' own
 
 ## PracticeGuidance
 
-`harness/guidance/guidance.py`, the board's own set, which the checkout's `Sessions` makes once with `PRACTICE_CATALOGUE.create_all()` and holds as the catalog shows them (`board_practices`, `CatalogPractice.of_practices`). `key`, `slug`, `short_name`, and `colour` are data fields; the board reads `fidelities`, `rules`, `overview`, and `guidance`.
+`harness/guidance/guidance.py`, the board's own set, which the board makes once for each checkout with `PRACTICE_CATALOGUE.create_all()` and holds as the catalog shows them (`BOARD_PRACTICES.of(sessions)`, `CatalogPractice.of_practices`). `key`, `slug`, `short_name`, and `colour` are data fields; the board reads `fidelities`, `rules`, `overview`, and `guidance`.
 
 ## FidelityGuidance
 
@@ -1139,4 +1139,4 @@ The classes below belong to other modules and are modelled in those modules' own
 
 `harness/graph/violation.py`: one place a rule is broken, the one shape for graph hits and judged findings. `rule`, `practice`, `location`, `line`, `message`, and `source` (the numbered `SourceLine`s around the line, once `in_file(location, file)` has read them) are data fields. A judged finding is `Violation(FoundBy(rule), message, Location(file, line))`. A report reads the graph saved beside it through `SavedGraph.from_file` (`harness/graph/saved_graph.py`), the one reader of a saved graph document and of the node list `graph.return_nodes` answers with, groups its hits with `Violation.by_rule`, and reads the rules a scanner checks now from its session's graph, `graph.applied_patterns.checks_of(practice, saved.overlays)` (`harness/graph/pattern_overlays.py`), which asks the report's own practice with the overlays the graph was saved with, through the patterns the session's graph already holds.
 
-`FileManager` and `FileEntry` (`space/session/file_manager.py`) list folders for `board.folders`, through the board's `Sessions.file_manager`, and are the entries `fidelity-progress.files` sends.
+`FileManager` and `FileEntry` (`space/session/files/file_manager.py`) list folders for `board.folders`, through the board's `Sessions.file_manager`, and are the entries `fidelity-progress.files` sends.

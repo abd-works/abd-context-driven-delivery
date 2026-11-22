@@ -16,7 +16,7 @@ from expects import be_true, contain, equal, expect
 from mamba import after, before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentInstructions
-from space.session.throwaway_project import ThrowawayProject
+from space.session.spec_support.throwaway_project import ThrowawayProject
 from cdd_guidance.actions.sketch.sketch import Sketch
 from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference
 from harness.agent_tools.tool_call import ToolCall

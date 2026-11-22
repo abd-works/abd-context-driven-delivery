@@ -40,7 +40,7 @@ _KANBAN = (
     "space.kanban.ticket:Ticket",
     "space.kanban.ticket:FidelityProgress",
     "space.kanban.backlog_item:BacklogItem",
-    "space.session.practice_session_output:PracticeSessionOutput",
+    "space.session.practices.practice_session_output:PracticeSessionOutput",
 )
 _ADAPTERS = "language-adapters/typescript"
 _IDENTITY_FLAG = Identity.flag
@@ -209,7 +209,7 @@ with description("a language adapter"):
             self.board = (self.root / "space/kanban/board.ts").read_text(encoding="utf-8")
             self.backlog_item = (self.root / "space/kanban/backlog-item.ts").read_text(encoding="utf-8")
             self.progress = (self.root / "space/kanban/fidelity-progress.ts").read_text(encoding="utf-8")
-            self.practice = (self.root / "space/session/practice-session-output.ts").read_text(encoding="utf-8")
+            self.practice = (self.root / "space/session/practices/practice-session-output.ts").read_text(encoding="utf-8")
 
         with it("should mirror the folders the toolset's source sits in, with every generated class of an object in one file"):
             written = sorted(path.relative_to(self.root).as_posix() for path in self.root.rglob("*.ts*"))
@@ -225,8 +225,8 @@ with description("a language adapter"):
                 "space/kanban/fidelity-progress.ts",
                 "space/kanban/ticket-views.tsx",
                 "space/kanban/ticket.ts",
-                "space/session/practice-session-output-views.tsx",
-                "space/session/practice-session-output.ts",
+                "space/session/practices/practice-session-output-views.tsx",
+                "space/session/practices/practice-session-output.ts",
             ]))
 
         with it("should declare ES modules, so Node loads the files wherever the install sits"):
@@ -503,7 +503,7 @@ with description("a language adapter"):
     with description("the generated views of an annotated toolset"):
         with before.all:
             install_path = Path(tempfile.mkdtemp(prefix="language-adapter-views-"))
-            _install(install_path, ("harness.installation._examples.note:Note", "space.session.file_manager:FileManager"))
+            _install(install_path, ("harness.installation._examples.note:Note", "space.session.files.file_manager:FileManager"))
             root = install_path / _ADAPTERS
             self.note = (root / "harness/installation/_examples/note.ts").read_text(encoding="utf-8")
             self.views = (root / "harness/installation/_examples/note-views.tsx").read_text(encoding="utf-8")
@@ -564,7 +564,7 @@ with description("a language adapter"):
 
         with description("the shared file views"):
             with it("should read files through the file manager's generated client"):
-                expect(self.file_views).to(contain("from './space/session/file-manager'"))
+                expect(self.file_views).to(contain("from './space/session/files/file-manager'"))
 
             with it("should take Monaco from the application"):
                 expect(self.file_views).to(contain("from '@monaco-editor/react'"))

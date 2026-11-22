@@ -35,12 +35,12 @@ from mamba import after, before, context, description, it
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 from harness.guidance_actions import GuidanceAction  # noqa: F401 - loaded with the module, not by its first example
-from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject  # noqa: F401 - likewise
+from space.session.spec_support.throwaway_project import OPEN_PROJECTS, ThrowawayProject  # noqa: F401 - likewise
 
 
 def _project() -> Path:
     """A project of its own for an example, so what its actions log never lands in the session being worked on here."""
-    from space.session.throwaway_project import ThrowawayProject
+    from space.session.spec_support.throwaway_project import ThrowawayProject
 
     folder = ThrowawayProject().root
     (folder / ".git").mkdir()

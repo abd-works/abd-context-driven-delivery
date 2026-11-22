@@ -27,7 +27,7 @@ TOOLSETS = (
     "space.kanban.ticket:FidelityProgress",
     "space.session.session:Session",
     "space.session.sessions:Sessions",
-    "space.session.practice_session_output:PracticeSessionOutput",
+    "space.session.practices.practice_session_output:PracticeSessionOutput",
     "space.repo.repo:Repo",
     # The board lists every practice's fidelities; importing one practice registers them all.
     "cdd_guidance.practices.stories.stories:Stories",

@@ -11,8 +11,8 @@ from harness.graph.pattern_overlays import PatternOverlays
 from harness.mcp.mcp_annotations import long_call, mcp
 from space.kanban.format_choice import FormatChoice
 from space.kanban.overlay_choice import OverlayChoice
-from space.session.file_manager import FileEntry
-from space.session.practice_session_output import publication_of
+from space.session.files.file_manager import FileEntry
+from space.session.practices.practice_session_output import publication_of
 
 if TYPE_CHECKING:
     from space.kanban.ticket import TicketWork

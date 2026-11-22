@@ -10,7 +10,7 @@ export const fixtureRoot = process.env.BOARD_FIXTURE_ROOT ?? join(tmpdir(), 'cdd
 // The server can still be reading a file when a spec resets, and Windows will not remove one that is open.
 const REMOVE_RETRIES = 20
 const REMOVE_RETRY_MILLISECONDS = 100
-// Where the project keeps the violations a person accepted (space/session/accepted_violations.py).
+// Where the project keeps the violations a person accepted (space/session/validation/accepted_violations.py).
 const ACCEPTED_VIOLATIONS_FILE = 'violations-accepted.json'
 export const STAMP = '2026-11-01T10:00:00Z'
 const STORY_MAP_FILE = '.context/story-map.md'

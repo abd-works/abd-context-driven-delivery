@@ -24,7 +24,7 @@ from harness.guidance.practice_formats import RenderRequest  # noqa: E402
 from harness.installation.data_class import data_of  # noqa: E402
 from harness.markdown.format import Format  # noqa: E402
 from harness.mcp.mcp_server import ProjectToolsets  # noqa: E402
-from space.session.throwaway_project import ThrowawayProject  # noqa: E402
+from space.session.spec_support.throwaway_project import ThrowawayProject  # noqa: E402
 
 TOOLSETS = (
     "cdd_guidance.practices.stories.model.story_model:StoryModel",
@@ -34,7 +34,7 @@ TOOLSETS = (
     "cdd_guidance.practices.stories.model.story_model:Step",
     "cdd_guidance.practices.stories.model.story_model:Example",
     "cdd_guidance.practices.stories.model.story_model:Increment",
-    "space.session.practice_session_output:FidelitySessionOutput",
+    "space.session.practices.practice_session_output:FidelitySessionOutput",
     "space.session.sessions:Sessions",
 )
 # A snapshot of this repository's story map, its thin slice, and the chat bar's scenario file, taken before its stories

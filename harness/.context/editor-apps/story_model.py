@@ -10,7 +10,7 @@ from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import tool_subject
 from harness.agent_tools.tool_call import ToolCall
 from harness.graph.graph import Graph
-from space.session.practice_session_output import FidelitySessionOutput
+from space.session.practices.practice_session_output import FidelitySessionOutput
 from harness.installation.data_class import SourceFile, data_field, language_adapter
 from harness.mcp.mcp_server import mcp
 

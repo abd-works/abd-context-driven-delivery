@@ -6,7 +6,7 @@ import re
 from datetime import datetime, timezone
 from pathlib import Path
 
-from space.session.session_log import REPORT_DATE_FORMAT
+from harness.process.log_timestamp import REPORT_DATE_FORMAT
 
 HANDOFF_FORMAT_FILE = Path(__file__).parent / "HANDOFF-FORMAT.md"
 _HANDOFF_FILES = "handoff-*.md"

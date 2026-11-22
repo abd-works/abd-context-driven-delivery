@@ -11,13 +11,13 @@ from harness.graph.violation import UNKNOWN_LOCATION, Violation
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.guidance.rule import Rule
 from harness.installation.data_class import data_field
-from space.session.validation_judgment import Judgment
-from space.session.validation_report import ValidationReport
+from space.session.validation.validation_judgment import Judgment
+from space.session.validation.validation_report import ValidationReport
 
 if TYPE_CHECKING:
     from space.repo.repo import Repo
     from space.session import Session
-    from space.session.accepted_violations import AcceptedViolations
+    from space.session.validation.accepted_violations import AcceptedViolations
 
 
 class ViolationNotInReportError(LookupError):

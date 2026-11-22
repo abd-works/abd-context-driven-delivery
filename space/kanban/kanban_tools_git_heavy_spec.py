@@ -21,10 +21,10 @@ from harness.chat.chat import Chat  # noqa: E402
 from harness.installation.data_class import DataClass  # noqa: E402
 from space.repo.repo import Branch, Repo  # noqa: E402
 from space.session import Sessions  # noqa: E402
-from space.session.progress_cache import PROGRESS_CACHE_FILE  # noqa: E402
+from space.kanban.progress_cache import PROGRESS_CACHE_FILE  # noqa: E402
 
 from space.kanban.board_tools_examples import ProjectTools  # noqa: E402
-from space.session.throwaway_project import OPEN_PROJECTS
+from space.session.spec_support.throwaway_project import OPEN_PROJECTS
 
 # The session records with nothing left off origin's main: none uncommitted, none unpushed.
 SAVED = {"uncommitted": "", "unpushed": ""}

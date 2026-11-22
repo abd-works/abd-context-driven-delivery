@@ -22,7 +22,8 @@ from cdd_guidance.practices.stories.stories import Stories  # noqa: E402
 from cdd_guidance.practices.ux.ux import Ux  # noqa: E402
 from harness.catalog_generator.catalog_practice import CatalogPractice  # noqa: E402
 from space.work_state import WorkState
-from space.session.sessions import BoardPractices, Sessions  # noqa: E402
+from space.kanban.board_practices import BoardPractices  # noqa: E402
+from space.session.sessions import Sessions  # noqa: E402
 from harness.guidance.guidance import FidelityGuidance  # noqa: E402
 from harness.installation.data_class import data_of  # noqa: E402
 import space.kanban.backlog_item as backlog_item_module  # noqa: E402
@@ -30,7 +31,7 @@ from space.kanban.backlog_item import BacklogNestingError  # noqa: E402
 from space.kanban.board import Board, Card, ColumnNotFoundError, Help, RequiredFidelity  # noqa: E402
 from space.kanban.ticket import Ticket  # noqa: E402
 from space.kanban.ticket_checkout import TicketCheckout, UnknownLeavingStepError  # noqa: E402
-from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject  # noqa: E402
+from space.session.spec_support.throwaway_project import OPEN_PROJECTS, ThrowawayProject  # noqa: E402
 
 
 class SessionsFolder:

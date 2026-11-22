@@ -23,14 +23,14 @@ from mamba import after, before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.agent_tools.tool_call import ToolCall
-from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
+from space.session.spec_support.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeGuidance,
 )
-import space.session.validation_report as validation_report_module
+import space.session.validation.validation_report as validation_report_module
 from harness.graph.saved_graph import SavedGraph
 from cdd_guidance.actions.validate.report_files import ReportFiles
-from space.session.session_files import NamedPathNotFoundError
+from space.session.files.session_files import NamedPathNotFoundError
 from cdd_guidance.actions.validate.validate import UnknownRule, Validate
 from cdd_guidance.actions.validate.validate_examples import ENTITY_ROOT_FILE, SPEC_FILE, STORY_FILE, SampleWorkingCopy, working_in
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue

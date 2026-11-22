@@ -30,7 +30,8 @@ from cdd_guidance.practices.stories.stories import Stories
 from cdd_guidance.practices.ux.ux import Ux
 from harness.catalog_generator.catalog_practice import CatalogPractice
 from harness.installation.json_file import JsonFileUnreadable
-from space.session.sessions import BoardPractices, Sessions
+from space.kanban.board_practices import BoardPractices
+from space.session.sessions import Sessions
 from space.kanban.session_board_examples import (
     BACK_TO_BACKLOG,
     BILLING_REPORT,

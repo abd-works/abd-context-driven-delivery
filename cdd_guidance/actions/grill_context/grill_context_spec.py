@@ -20,7 +20,7 @@ from harness.agent_tools.agent_tools import AgentInstructions
 from cdd_guidance.actions.grill_context.grill_context import GrillContext
 from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference
 from space.session import Session, Sessions
-from space.session.session_files import NamedPathNotFoundError
+from space.session.files.session_files import NamedPathNotFoundError
 from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 

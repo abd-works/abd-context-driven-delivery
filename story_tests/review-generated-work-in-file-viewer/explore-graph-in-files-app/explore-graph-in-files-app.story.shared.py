@@ -16,8 +16,8 @@ from __future__ import annotations
 from expects import equal, expect
 
 from space.kanban.story_test import SharedStories
-from space.session.graph_view_examples import BOARD_CODE, LISTED, STORY_MAP, TICKET_CODE, node_id_of, seed_checkout_flow_with_graph_files, session_of
-from space.session.graph_view_rule_examples import (
+from space.kanban.graph_view_examples import BOARD_CODE, LISTED, STORY_MAP, TICKET_CODE, node_id_of, seed_checkout_flow_with_graph_files, session_of
+from space.kanban.graph_view_rule_examples import (
     CHECKOUT_FLOW_WITH_DDD,
     LERN,
     LERN_DOMAIN_TIER_RULES,

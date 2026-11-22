@@ -18,7 +18,7 @@ Consolidated on 2026-11-14 from the board's Review Files In Viewer scenarios (th
 - [chat](../../../space/kanban/.context/kanban-model.md#chat): a Claude Code chat whose cdd-board mod checks in. Its queue holds the messages sent to it. A message is done once the chat's turn that worked on it has ended.
 - [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets): the file viewer as an app of its own, on its own server and port, opened beside the chat by a link that names the files to show and the chat that opened it (`harness/files_app/files_app.py`). It never reads the board.
 - [practice](../../../harness/files_app/.context/files-app-model.md#session-practicesessionoutput-python-spacesession): a lens the session works through (Stories, DDD, UX, Clean Engineering, BDD), on or off for the session, with its own colour (`practice_session_output.py`).
-- file manager: the session's reader and writer of the files under its roots (`space/session/file_manager.py`).
+- file manager: the session's reader and writer of the files under its roots (`space/session/files/file_manager.py`).
 - [file comment](../../../harness/files_app/.context/files-app-model.md#filecommentsactions-filesfile-comments-actionsts): a comment a person writes on lines of a file, kept in the session's folder. It is not sent, then sent, then processed.
 
 ### Evidence
@@ -105,7 +105,7 @@ A chat working in a repository other than the CDD checkout opens the Files app o
 
 #### Scenario: List a file whose name holds letters outside ASCII
 
-Found on 2026-11-19 (exploratory testing, pixel-02): git writes such a name in quotes with octal escapes unless asked for NUL-ended entries, so the file was dropped from the list and from the branch's changed files, with no word that a file was left out. Acceptance tests: `harness/git/git_spec.py` for the reading of git's listing; `space/session/session_files_heavy_spec.py` and `space/repo/repo_heavy_spec.py` on a real git repository.
+Found on 2026-11-19 (exploratory testing, pixel-02): git writes such a name in quotes with octal escapes unless asked for NUL-ended entries, so the file was dropped from the list and from the branch's changed files, with no word that a file was left out. Acceptance tests: `harness/git/git_spec.py` for the reading of git's listing; `space/session/files/session_files_heavy_spec.py` and `space/repo/repo_heavy_spec.py` on a real git repository.
 
 *Given* checkout-flow's branch committed *src/ünïcödé_日本.py* in a git project
 *When* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) lists every file under the session's root
@@ -540,7 +540,7 @@ Found on 2026-11-16 (debug report `debug-20261116T225500.md`): a page reaching a
 
 #### Scenario: Say so when a listed file is gone
 
-Found on 2026-11-19 (exploratory testing, pixel-01): a file deleted or moved on disk after the page listed it opened as one empty line in a live editor, exactly as an empty file opens, so the next save would bring it back empty. Acceptance tests: `space/session/session_graph_spec.py` and `space/session/file_manager_spec.py` for what the session answers; `open-files-in-files-app.story.ui_e2e_spec.py` for the page.
+Found on 2026-11-19 (exploratory testing, pixel-01): a file deleted or moved on disk after the page listed it opened as one empty line in a live editor, exactly as an empty file opens, so the next save would bring it back empty. Acceptance tests: `space/session/session_graph_spec.py` and `space/session/files/file_manager_spec.py` for what the session answers; `open-files-in-files-app.story.ui_e2e_spec.py` for the page.
 
 *Given* the file bar lists *src/order.py*, and *order.py* was deleted on disk since the page listed it
 *When* the Person views *order.py*
@@ -549,7 +549,7 @@ Found on 2026-11-19 (exploratory testing, pixel-01): a file deleted or moved on 
 
 #### Scenario: Refuse a file longer than the viewer shows
 
-Found on 2026-11-19 (exploratory testing, pixel-03): the source view is as tall as its file and draws every line, so a file of 90,000 lines left the page answering after twelve seconds and one of 360,000 crashed its tab, with every open file and comment not yet sent. The viewer shows at most 30,000 lines (`VIEWER_SHOWS_LINES` in `space/session/session_file.py`). Acceptance tests: `space/session/session_graph_spec.py`; `open-files-in-files-app.story.ui_e2e_spec.py` for the page.
+Found on 2026-11-19 (exploratory testing, pixel-03): the source view is as tall as its file and draws every line, so a file of 90,000 lines left the page answering after twelve seconds and one of 360,000 crashed its tab, with every open file and comment not yet sent. The viewer shows at most 30,000 lines (`VIEWER_SHOWS_LINES` in `space/session/files/session_file.py`). Acceptance tests: `space/session/session_graph_spec.py`; `open-files-in-files-app.story.ui_e2e_spec.py` for the page.
 
 *Given* the file bar lists *src/big.py*, which has 90,000 lines
 *When* the Person views *big.py*
@@ -683,7 +683,7 @@ Intended in the Files app: the board's files panel did it until 2026-11-21, when
 
 #### Scenario: Save a file into the session's own folder, naming the session by its name
 
-Requested 2026-11-16: a chat in checkout-flow's worktree ran the debug skill, which writes its report as *debug/debug-{time}.md* in the session's folder with session.write_file. The tool refused the session's name, which sessions.switch had opened it by, and then refused the session's folder, which sits in the main checkout's *.sessions*, outside the worktree and its practices' folders. Only the session's own folder is added: a path outside it and outside the session's roots is still refused. Realized by `space/session/session_files_spec.py`.
+Requested 2026-11-16: a chat in checkout-flow's worktree ran the debug skill, which writes its report as *debug/debug-{time}.md* in the session's folder with session.write_file. The tool refused the session's name, which sessions.switch had opened it by, and then refused the session's folder, which sits in the main checkout's *.sessions*, outside the worktree and its practices' folders. Only the session's own folder is added: a path outside it and outside the session's roots is still refused. Realized by `space/session/files/session_files_spec.py`.
 
 *Given* checkout-flow works in its ticket's worktree, its session folder *.sessions/checkout-flow* in the main checkout
 *When* an agent saves *debug/debug-20261116T225500.md* in checkout-flow's folder with session.write_file, naming the session *checkout-flow*
@@ -811,7 +811,7 @@ session=.sessions/checkout-flow/session.json
 
 ## Story: Show AI Changes As Diff
 
-Intended in the Files app (`.sessions/_backlog/review-work-in-board-files.md`, "change viewer from ai change like vscode / cursor"); the session answers the changes (`SessionFile.changes`, `space/session/session_file.py`) and the board's files panel drew them until it was removed on 2026-11-21 (design proposal 24). What counts as the chat's change is the difference between the file as it read when the comment was sent and the file once the comment is processed.
+Intended in the Files app (`.sessions/_backlog/review-work-in-board-files.md`, "change viewer from ai change like vscode / cursor"); the session answers the changes (`SessionFile.changes`, `space/session/files/session_file.py`) and the board's files panel drew them until it was removed on 2026-11-21 (design proposal 24). What counts as the chat's change is the difference between the file as it read when the comment was sent and the file once the comment is processed.
 
 #### Scenario: Mark the line the chat changed, with the line it replaced
 

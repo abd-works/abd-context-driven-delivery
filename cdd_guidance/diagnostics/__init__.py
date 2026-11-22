@@ -1,0 +1,1 @@
+"""Diagnostics that run the guidance actions: the session probe, which runs Generate and Validate in a throwaway project. Import its classes from their modules, such as cdd_guidance.diagnostics.session_diagnostics."""

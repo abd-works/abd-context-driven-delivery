@@ -1,4 +1,4 @@
-import { FileCommentsClientGenerated, type FileCommentData } from '@cdd/space/session/file-comments'
+import { FileCommentsClientGenerated, type FileCommentData } from '@cdd/space/session/files/file-comments'
 import { buildViolationCorrectComment, NOT_SENT, SENT_TO_CHAT, type CorrectViolation } from '@source-view/violation-prompt'
 
 import type { FilesPage } from './files-page'

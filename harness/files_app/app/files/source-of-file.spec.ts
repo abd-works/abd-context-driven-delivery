@@ -32,7 +32,7 @@ describe('Story Test Callouts', () => {
 })
 
 // The same story test with its text: its When on line 13 calls delete on line 15, its Then on line 17 observes the example
-// CHECKOUT_TICKET on line 19 (space/session/graph_view_examples.py, STEP_STORY_TEXT).
+// CHECKOUT_TICKET on line 19 (space/kanban/graph_view_examples.py, STEP_STORY_TEXT).
 const STEP_STORY_TEXT = [
   '"""Delete Ticket: a Ticket leaves the board."""',
   'from space.kanban.story_test import SharedStories',

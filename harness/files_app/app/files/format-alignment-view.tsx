@@ -1,6 +1,6 @@
 import { useMemo, useSyncExternalStore } from 'react'
 
-import type { AlignedFileData, AlignmentFailureData, AlignmentGapData } from '@cdd/space/session/session'
+import { FormatAlignmentClientGenerated, type AlignedFileData, type AlignmentFailureData, type AlignmentGapData } from '@cdd/align/format-alignment'
 
 import type { FilesPage } from './files-page'
 import { FormatAlignment } from './format-alignment'
@@ -13,7 +13,7 @@ const STEP_LABELS = { idle: 'Diagnose', diagnosing: 'Diagnosing…', diagnosed: 
 // A gap a render does not close, and each failure an alignment met, carries Fix, which puts it on the band of failures
 // above, whose own Fix sends it to the chat.
 export function FormatAlignmentView({ page }: { page: FilesPage }) {
-  const formats = useMemo(() => new FormatAlignment(page.session, page.notices.fixes), [page])
+  const formats = useMemo(() => new FormatAlignment(FormatAlignmentClientGenerated.named(page.api, page.link.sessionFile), page.notices.fixes), [page])
   const state = useSyncExternalStore(formats.subscribe, () => formats.state)
   const isShown = state.step !== 'idle' && state.step !== 'diagnosing'
   return (

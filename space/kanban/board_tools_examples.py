@@ -21,7 +21,7 @@ from space.kanban.story_test import progress_in  # noqa: E402
 from harness.agent_tools.tool_call import ToolCall, ToolRequest  # noqa: E402
 from harness.apps.app import AppServer  # noqa: E402
 from harness.mcp.mcp_server import ProjectToolsets  # noqa: E402
-from space.session.throwaway_project import ThrowawayProject
+from space.session.spec_support.throwaway_project import ThrowawayProject
 
 T = TypeVar("T")
 
@@ -33,8 +33,8 @@ TOOLSETS = (
     "space.kanban.backlog_item:BacklogItem",
     "space.session.session:Session",
     "space.session.sessions:Sessions",
-    "space.session.practice_session_output:PracticeSessionOutput",
-    "space.session.practice_session_output:FidelitySessionOutput",
+    "space.session.practices.practice_session_output:PracticeSessionOutput",
+    "space.session.practices.practice_session_output:FidelitySessionOutput",
 )
 
 

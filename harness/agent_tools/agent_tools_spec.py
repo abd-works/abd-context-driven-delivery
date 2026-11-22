@@ -16,7 +16,7 @@ import yaml
 from dataclasses import replace
 from expects import be, be_true, contain, equal, expect, have_key, raise_error
 from mamba import after, before, context, description, it
-from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
+from space.session.spec_support.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 
 from harness.agent_tools.agent_tools import (
     AgentInstructions,

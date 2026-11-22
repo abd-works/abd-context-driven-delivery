@@ -12,7 +12,7 @@ from harness.guidance.guidance import FidelityGuidance
 
 if TYPE_CHECKING:
     from space.session.session import Session
-    from space.session.validation_report import ValidationReport
+    from space.session.validation.validation_report import ValidationReport
 
 
 class CheckedFidelity:

@@ -29,7 +29,7 @@ from harness.hooks.hook_server import HOOK_TOASTS, TOAST_ARROW, HookPayload, rul
 from harness.hooks.hooks import Toast, hook
 from harness.installation.ide_layout import installed_guidance_kind
 from harness.installation.repository_toolsets import RUNNING_CHECKOUT, RepositoryToolsets
-from space.session.session_log import LogTimestamp
+from harness.process.log_timestamp import LogTimestamp
 
 TOAST_NOTICE = ".cursor/prompt-notify-toast.json"
 IDE_TOAST_EXTENSION = "cdd.prompt-notify-0.0.1"

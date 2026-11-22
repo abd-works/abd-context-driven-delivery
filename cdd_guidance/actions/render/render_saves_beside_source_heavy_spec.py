@@ -18,7 +18,7 @@ from mamba import after, before, context, description, it
 
 from harness.mcp.spec_support import SpecServer
 from harness.whiteboard import Whiteboard
-from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
+from space.session.spec_support.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 
 _RENDER = "cdd_guidance.actions.render.render:Render"
 _SESSIONS = "space.session.sessions:Sessions"

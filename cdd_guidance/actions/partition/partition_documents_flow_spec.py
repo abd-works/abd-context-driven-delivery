@@ -24,7 +24,7 @@ from cdd_guidance.actions.partition.partition import Partition
 from cdd_guidance.context_setup.context_index import ContextIndex
 from cdd_guidance.context_setup.context_setup import ContextSetup
 from harness.agent_tools.tool_call import ToolCall
-from space.session.throwaway_project import ThrowawayProject
+from space.session.spec_support.throwaway_project import ThrowawayProject
 
 
 class FakeEmbeddingProvider:

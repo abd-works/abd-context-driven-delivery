@@ -29,7 +29,7 @@ const CLEAN_GRAPH = {
   practices: { stories: { source_root: '', root_facts: {}, nodes: [{ node_id: 'node-1', name: '', type: 'Story', practice: 'stories', file: '.context/story-map.md', line: 6, end_line: 6, stage: '', facts: {} }], edges: [], violations: [] } },
 }
 
-// What the project keeps of the violations a person accepted (space/session/accepted_violations.py).
+// What the project keeps of the violations a person accepted (space/session/validation/accepted_violations.py).
 const ACCEPTED_FILE = join(fixtureRoot, '.context', 'violations-accepted.json')
 const acceptedInProject = (): { rule: string; node_id: string; message: string }[] => JSON.parse(readFileSync(ACCEPTED_FILE, 'utf8')).accepted
 // A later validate of the story map that finds the same rule on the same node, saying something else.

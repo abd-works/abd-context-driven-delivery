@@ -16,7 +16,7 @@ RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 from space.repo.built_once import BuiltOnce  # noqa: E402
 from space.repo.repo import Repo  # noqa: E402
 from space.repo.worktree import WorktreeFolderTakenError, WorktreeNotRemovedError  # noqa: E402
-from space.session.throwaway_project import SPEC_RUN_HOME
+from space.session.spec_support.throwaway_project import SPEC_RUN_HOME
 
 
 def _git(root: Path, *args: str) -> str:

@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Generic, TypeVar
 
 from harness.installation.json_file import HeldJsonFile, JsonFile
-from space.session.answer_reads import ANSWER_READS, HeldForAnswer
+from harness.process.answer_reads import ANSWER_READS, HeldForAnswer
 
 if TYPE_CHECKING:
     from space.session.session import Session

@@ -1,9 +1,9 @@
 // Diagnose And Align Session Formats, as the page shows it: what the session answers for a diagnosis and an alignment
-// is proved by space/session/format_alignment_heavy_spec.py; here, what the Diagnose and Align buttons ask of it, what
+// is proved by cdd_guidance/align/format_alignment_heavy_spec.py; here, what the Diagnose and Align buttons ask of it, what
 // the page shows while it waits, and what Fix hands the band of failures.
 import { describe, expect, it } from 'vitest'
 
-import type { AlignmentDiagnosisData, AlignmentGapData, AlignmentResultData } from '@cdd/space/session/session'
+import type { AlignmentDiagnosisData, AlignmentGapData, AlignmentResultData } from '@cdd/align/format-alignment'
 
 import { FormatAlignment, type AlignmentSession, type FailureBand } from './format-alignment'
 
@@ -127,7 +127,7 @@ describe('the formats of a session in the Files app', () => {
         await formats.diagnose()
         await formats.align()
         formats.fixFailure(formats.state.failures[0])
-        expect(band.shown).toEqual([{ failure: RENDER_FAILED, context: 'Aligning the formats of the session, writing .context/story-map.whiteboard, calling session.align_formats', kind: 'render' }])
+        expect(band.shown).toEqual([{ failure: RENDER_FAILED, context: 'Aligning the formats of the session, writing .context/story-map.whiteboard, calling format-alignment.align_formats', kind: 'render' }])
       })
     })
   })
@@ -137,7 +137,7 @@ describe('the formats of a session in the Files app', () => {
       const { band, formats } = alignment(new FakeSession(diagnosis(gap('formats_conflict', CONFLICT, false))))
       await formats.diagnose()
       formats.fixGap(formats.state.gaps[0])
-      expect(band.shown).toEqual([{ failure: CONFLICT, context: `Diagnosing the formats of the session, in ${DRAWING}, calling session.diagnose_alignment`, kind: '' }])
+      expect(band.shown).toEqual([{ failure: CONFLICT, context: `Diagnosing the formats of the session, in ${DRAWING}, calling format-alignment.diagnose_alignment`, kind: '' }])
     })
   })
 

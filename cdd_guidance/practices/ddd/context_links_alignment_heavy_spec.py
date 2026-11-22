@@ -17,8 +17,8 @@ import cdd_guidance.actions  # noqa: E402, F401 - registers the actions with the
 import cdd_guidance.practices  # noqa: E402, F401 - registers the practices with the practice catalogue
 from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownBoundedContextMap  # noqa: E402
 from space.session import Sessions  # noqa: E402
-from space.session.format_alignment import SessionAlignment  # noqa: E402
-from space.session.throwaway_project import ExampleHome  # noqa: E402
+from cdd_guidance.align.format_alignment import SessionAlignment  # noqa: E402
+from space.session.spec_support.throwaway_project import ExampleHome  # noqa: E402
 
 _MODEL = ".context/domain-model.md"
 _MODEL_LINKED = "../../.context/domain-model.md"

@@ -15,7 +15,7 @@ from cdd_guidance.actions.document.document import Document
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.agent_tools.tool_call import ToolCall
 from harness.agent_tools.recipe import RecipeLineFailed
-from space.session.throwaway_project import ThrowawayProject
+from space.session.spec_support.throwaway_project import ThrowawayProject
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 
 _STORY_MAP = """# (E) Manage Customer Orders

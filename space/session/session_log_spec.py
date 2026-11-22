@@ -18,9 +18,10 @@ from harness.mcp.mcp_server import ProjectToolsets
 from space.session.session import Session
 from harness.process.capped_log_file import LOG_SIZE_LIMIT_BYTES
 from harness.agent_tools.chat_pointer import ChatPointer
-from space.session.session_log import LogLine, LogTimestamp
+from harness.process.log_timestamp import LogTimestamp
+from space.session.session_log import LogLine
 from space.session.sessions import Sessions
-from space.session.throwaway_project import ExampleHome
+from space.session.spec_support.throwaway_project import ExampleHome
 from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 

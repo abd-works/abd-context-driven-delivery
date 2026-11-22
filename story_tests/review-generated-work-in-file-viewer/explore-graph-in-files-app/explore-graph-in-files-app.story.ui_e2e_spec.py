@@ -30,7 +30,7 @@ from files_app_browser import (
     select,
     settled,
 )
-from space.session.graph_view_examples import BOARD_CODE, CHECKOUT_FLOW
+from space.kanban.graph_view_examples import BOARD_CODE, CHECKOUT_FLOW
 
 # Interaction: the lines of Board.reread, from board.py, as they open in place under the call that names them.
 REREAD_LINES = "    def reread(self) -> None:"

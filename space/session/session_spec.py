@@ -32,14 +32,14 @@ from space.repo.mock_repo import MockGit
 from tools.prompt_queue.prompt_queue import PromptQueue
 from space.repo.repo import Repo
 from space.session import Session, Sessions
-from space.session.guidance_selection import UnknownSelectionPart
+from space.session.practices.guidance_selection import UnknownSelectionPart
 from harness.agent_tools.chat_pointer import ChatPointer
 from space.session.session_log import LogLine, LoopNotFoundError
 from space.session.open_sessions import SessionNameRequiredError
 from space.work_state import WorkState
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
-from space.session.throwaway_project import ExampleHome, SPEC_RUN_HOME
+from space.session.spec_support.throwaway_project import ExampleHome, SPEC_RUN_HOME
 from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 
 # The first practices a process makes read and parse their guidance for every later one; made once here, before any

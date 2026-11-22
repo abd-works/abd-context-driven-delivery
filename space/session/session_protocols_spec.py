@@ -8,7 +8,7 @@ from harness.agent_tools.tool_call import CallSession
 from harness.guidance.worked_session import WorkedSession
 from harness.hooks.hook_server import HookSession
 from space.session import Sessions
-from space.session.throwaway_project import ThrowawayProject
+from space.session.spec_support.throwaway_project import ThrowawayProject
 
 
 with description("a session, as the framework describes it") as self:

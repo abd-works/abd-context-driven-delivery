@@ -588,7 +588,7 @@ Inbound uses from the top-level Stories files (judged by that part; listed here 
 | 61 | GraphBddModel → PracticeGraph "bdd", "clean_engineering" | `graph.practice(name)`, `.nodes`, `root_node.get_fact("model_members")` | bdd/model/graph_bdd_model.py:33-34, :104, :109 | W | new | finds practices by name and reads the Clean Engineering model's members out of a fact dictionary |
 | 62 | BDD rules → GraphPractice | `SPEC_RULES` in `RULES`/`BY_SLUG`, read by `rules_in`; each rule reads `node.get_fact` | bdd/rules/__init__.py:5-6; bdd/rules/spec_rules.py:45 | R | new | registry of rules; each checks the node it is handed |
 | 63 | AgentBdd → Bdd | `Bdd(format=self.format)` inside `generate_output` | agent_bdd/agent_bdd.py:22 | W | - | a new Bdd per call, without the session's fidelity |
-| 64 | AgentBdd → Generate | `Generate(self.session).generate(...)` | agent_bdd/agent_bdd.py:22 | R | W | an action is made with the session it acts on, as every other caller does (space/session/session_probe.py:57); nothing holds action objects |
+| 64 | AgentBdd → Generate | `Generate(self.session).generate(...)` | agent_bdd/agent_bdd.py:22 | R | W | an action is made with the session it acts on, as every other caller does (cdd_guidance/diagnostics/session_probe.py:57); nothing holds action objects |
 | 65 | `agent()` → AgentBddConf | `AgentBddConf().configure()` | agent_bdd/agent_block.py:197 | R | new | process setup when a spec opens an agent |
 | 66 | `agent()` → ChatAgentBlock, CliAgentBlock | chooses the class, `opened(...)` | agent_bdd/agent_block.py:199-203 | R | new | factory for the block the spec uses |
 | 67 | AgentBlock → YamlFence, HarnessLog | made in `__init__` and kept | agent_bdd/agent_block.py:45-46 | R | new | composition 1 each |

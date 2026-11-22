@@ -39,11 +39,11 @@ from space.kanban.ticket_tree import NotAChildError, ParentLoopError, TicketTree
 from space.repo.repo import Branch
 from space.session import Session
 from space.session.session import MAIN_SESSION_NAME
-from space.session.progress_cache import ACCEPTED_COUNT, HAS_OUTPUT, VIOLATION_COUNT
+from space.kanban.progress_cache import ACCEPTED_COUNT, HAS_OUTPUT, PROGRESS_CACHES, VIOLATION_COUNT
 from space.session.session_log import LogLine
-from space.session.guidance_selection import GuidanceSelection
+from space.session.practices.guidance_selection import GuidanceSelection
 from space.session.session_record import OwnedFields
-from space.session.file_manager import FileEntry
+from space.session.files.file_manager import FileEntry
 
 if TYPE_CHECKING:
     from space.kanban.backlog_item import BacklogItem
@@ -1141,7 +1141,7 @@ class FidelityProgress(Work):
         if output.written.has_named_output():
             return True
         key = json.dumps([self._required.fidelity.session_output.written.output_paths(), self._logged.lines_logged], sort_keys=True)
-        return self._ticket.session.progress_cache.of(self._required.fidelity.slug).answer(HAS_OUTPUT, key, output.written.has_found_output)
+        return PROGRESS_CACHES.of(self._ticket.session).of(self._required.fidelity.slug).answer(HAS_OUTPUT, key, output.written.has_found_output)
 
     @property
     @data_field
@@ -1209,7 +1209,7 @@ class FidelityProgress(Work):
         latest = self.latest_report
         if not self._logged.has_violations or latest is None:
             return 0
-        return self._ticket.session.progress_cache.of(self._required.fidelity.slug).answer(question, latest.version, count)
+        return PROGRESS_CACHES.of(self._ticket.session).of(self._required.fidelity.slug).answer(question, latest.version, count)
 
     @cached_property
     def _latest_read(self) -> Report:

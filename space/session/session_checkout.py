@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from space.repo.repo import Branch, Repo
-from space.session.answer_reads import HeldForAnswer
+from harness.process.answer_reads import HeldForAnswer
 
 if TYPE_CHECKING:
     from space.session.session import Session

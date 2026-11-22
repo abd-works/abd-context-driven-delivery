@@ -6,7 +6,7 @@ import { ScenarioClientGenerated } from '@cdd/practices/stories/model/scenario'
 import { StepClientGenerated } from '@cdd/practices/stories/model/step'
 import { StoryClientGenerated } from '@cdd/practices/stories/model/story'
 import { StoryModelClientGenerated, type StoryModelData } from '@cdd/practices/stories/model/story-model'
-import { FidelitySessionOutputClientGenerated } from '@cdd/space/session/fidelity-session-output'
+import { FidelitySessionOutputClientGenerated } from '@cdd/space/session/practices/fidelity-session-output'
 
 import type { SemanticType, StepKeyword } from './story-map-view-models'
 

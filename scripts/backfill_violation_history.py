@@ -19,8 +19,8 @@ if str(_REPO) not in sys.path:
 
 from space.repo.repo import Repo  # noqa: E402
 from space.session.sessions import Sessions  # noqa: E402
-from space.session.validation_report import ValidationReport  # noqa: E402
-from space.session.violation_history import SHORT_SHA, FoundLine, JudgedLine  # noqa: E402
+from space.session.validation.validation_report import ValidationReport  # noqa: E402
+from space.session.validation.violation_history import SHORT_SHA, FoundLine, JudgedLine  # noqa: E402
 
 
 def main() -> int:

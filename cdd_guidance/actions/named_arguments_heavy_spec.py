@@ -15,7 +15,7 @@ from expects import contain, equal, expect
 from mamba import after, before, context, description, it
 
 from harness.mcp.spec_support import SpecServer
-from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
+from space.session.spec_support.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 
 _TOOLSETS = (
     "cdd_guidance.actions.generate.generate:Generate",

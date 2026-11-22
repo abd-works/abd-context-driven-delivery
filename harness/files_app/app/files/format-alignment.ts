@@ -1,7 +1,7 @@
-import type { AlignedFileData, AlignmentDiagnosisData, AlignmentFailureData, AlignmentGapData, AlignmentResultData } from '@cdd/space/session/session'
+import type { AlignedFileData, AlignmentDiagnosisData, AlignmentFailureData, AlignmentGapData, AlignmentResultData } from '@cdd/align/format-alignment'
 import { reasonOf } from './reason'
 
-// What the page asks of the session: its diagnosis and its alignment (session.diagnose_alignment, session.align_formats).
+// What the page asks of the session: its diagnosis and its alignment (format-alignment.diagnose_alignment, format-alignment.align_formats).
 export type AlignmentSession = {
   diagnoseAlignment(): Promise<AlignmentDiagnosisData | null>
   alignFormats(): Promise<AlignmentResultData | null>
@@ -78,11 +78,11 @@ export class FormatAlignment {
   }
 
   fixGap(gap: AlignmentGapData): void {
-    this.band.show(gap.message, `Diagnosing the formats of the session, in ${gap.file}, calling session.diagnose_alignment`, '')
+    this.band.show(gap.message, `Diagnosing the formats of the session, in ${gap.file}, calling format-alignment.diagnose_alignment`, '')
   }
 
   fixFailure(failure: AlignmentFailureData): void {
-    this.band.show(failure.message, `Aligning the formats of the session, writing ${failure.file}, calling session.align_formats`, 'render')
+    this.band.show(failure.message, `Aligning the formats of the session, writing ${failure.file}, calling format-alignment.align_formats`, 'render')
   }
 
   close(): void {

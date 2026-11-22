@@ -30,7 +30,7 @@ from files_app_browser import (
     drawio_editor,
     lines_in_order,
 )
-from space.session.graph_view_examples import CHECKOUT_FLOW
+from space.kanban.graph_view_examples import CHECKOUT_FLOW
 
 STORY_MAP_FIDELITIES = "stories-story-map"
 CODE_FIDELITIES = "stories-acceptance-tests,clean-engineering-code"

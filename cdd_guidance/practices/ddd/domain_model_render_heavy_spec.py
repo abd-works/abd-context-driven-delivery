@@ -14,7 +14,7 @@ from expects import contain, equal, expect  # noqa: E402
 from mamba import after, before, context, description, it  # noqa: E402
 
 from harness.mcp.spec_support import SpecServer  # noqa: E402
-from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject  # noqa: E402
+from space.session.spec_support.throwaway_project import OPEN_PROJECTS, ThrowawayProject  # noqa: E402
 
 import cdd_guidance.practices  # noqa: E402, F401
 

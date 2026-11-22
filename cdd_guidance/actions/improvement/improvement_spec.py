@@ -19,7 +19,7 @@ from harness.markdown import Markdown
 from cdd_guidance.actions.improvement.improvement import Improvement
 from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference
 from harness.agent_tools.tool_call import ToolCall
-from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
+from space.session.spec_support.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 
 _IMPROVEMENT = "cdd_guidance.actions.improvement.improvement:Improvement"
 

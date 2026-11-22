@@ -26,8 +26,8 @@ from harness.agent_tools.agent_tools import AgentInstructions
 from harness.agent_tools.tool_call import ToolCall
 from harness.graph.saved_graph import SavedGraph
 from harness.installation.data_class import data_of
-from space.session.session_files import NamedPathNotFoundError
-from space.session.throwaway_project import ThrowawayProject
+from space.session.files.session_files import NamedPathNotFoundError
+from space.session.spec_support.throwaway_project import ThrowawayProject
 from harness.whiteboard import Whiteboard
 
 _REF = "cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering"

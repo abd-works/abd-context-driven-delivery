@@ -16,7 +16,7 @@ import cdd_guidance.practices  # noqa: F401 - registers the practices with the p
 from harness.agent_tools.tool_call import ToolCall, ToolRequest
 from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 from space.session import Sessions
-from space.session.throwaway_project import ExampleHome
+from space.session.spec_support.throwaway_project import ExampleHome
 
 PRACTICE_CATALOGUE.create_all()
 

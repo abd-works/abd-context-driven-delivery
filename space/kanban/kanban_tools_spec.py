@@ -33,12 +33,12 @@ from harness.graph.saved_graph import SavedGraph, SavedNode  # noqa: E402
 from space.kanban.story_test import progress_in  # noqa: E402
 from space.kanban.ticket import MainStaysOpenError, Ticket  # noqa: E402
 from space.kanban.board import NotAStageError  # noqa: E402
-from space.session.sessions import PracticeNotFoundError  # noqa: E402
+from space.kanban.board_practices import PracticeNotFoundError  # noqa: E402
 from space.session import Sessions  # noqa: E402
 from space.session.session import UnknownPracticeError  # noqa: E402
 
 from space.kanban.board_tools_examples import CHECKED_GRAPH, DISCOVERY_DONE, JUDGED_REPORT, ProjectTools, STORY_MAP_GRAPH, WHOLE_STORIES_GRAPH, column_of, next_action_of, reports_of, session_file_of, ticket_names_in, ticket_of, violation_counts_of  # noqa: E402
-from space.session.throwaway_project import OPEN_PROJECTS
+from space.session.spec_support.throwaway_project import OPEN_PROJECTS
 
 
 # A context whose examples only look at what its tools answered reads them once, in a ``before.all``, on a project of
@@ -1277,7 +1277,7 @@ with description("the board tools") as self:
                 "ticket.edit_text", "ticket.tag", "ticket.delete", "ticket.add_child", "ticket.pull_out", "ticket.reassign_parent", "ticket.move_before",
                 "fidelity-progress.report", "fidelity-progress.accept_violation", "fidelity-progress.reopen_violation", "fidelity-progress.files", "fidelity-progress.help",
                 "sessions.current", "sessions.switch", "session.close", "session.append_log", "session.mark_loop", "session.read_loop",
-                "session.choose_workpath", "session.folder_files", "session.workpath_files", "session.read_file", "session.write_file", "session.file", "session.graph_trees", "session.graph_branch", "session.graph_filter_choices", "session.graph_node_ranges", "session.graph_members", "session.diagnose_alignment", "session.align_formats", "session.add_to_chat_context", "session.show",
+                "session.choose_workpath", "session.folder_files", "session.workpath_files", "session.read_file", "session.write_file", "session.file", "session.graph_trees", "session.graph_branch", "session.graph_filter_choices", "session.graph_node_ranges", "session.graph_members", "session.add_to_chat_context", "session.show",
                 "session.guidance_selection", "session.toggle_guidance", "session.guidance_selection_after",
                 "session.write_handoff", "session.read_handoff_format", "session.read_cdr_format", "session.list_cdrs", "session.write_cdr",
                 "practice-session-output.enable", "practice-session-output.choose_root", "practice-session-output.use_default_root", "fidelity-session-output.choose_root", "fidelity-session-output.add_root", "fidelity-session-output.propose_roots", "fidelity-session-output.choose_format",

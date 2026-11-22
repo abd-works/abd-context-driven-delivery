@@ -30,7 +30,7 @@ from harness.graph.location import Location
 from harness.graph.violation import FoundBy, FoundOn, Violation
 from space.kanban.board import Board
 from space.repo.mock_repo import MockGit
-from space.session.throwaway_project import ThrowawayProject
+from space.session.spec_support.throwaway_project import ThrowawayProject
 from space.work_state import WorkState
 
 STAMP = "2026-11-01T10:00:00Z"

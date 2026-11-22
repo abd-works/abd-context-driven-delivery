@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING
 
 from harness.guidance.guidance import FidelityGuidance
 from harness.installation.data_class import data_field
-from space.session.guidance_selection import FormatGroup
+from space.session.practices.guidance_selection import FormatGroup
 
 if TYPE_CHECKING:
-    from space.session.file_manager import FileEntry
+    from space.session.files.file_manager import FileEntry
 
 
 class FormatChoice:

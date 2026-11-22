@@ -1,0 +1,154 @@
+"""What a board read costs most to work out for one session, kept in its work folder between reads: the board is its
+only reader, so it is the board's."""
+from __future__ import annotations
+
+import logging
+import threading
+from pathlib import Path
+from typing import TYPE_CHECKING, Callable, TypeVar
+
+from harness.installation.json_file import JsonFile, JsonFileUnreadable
+from space.session.session_saves import SessionSaves
+
+if TYPE_CHECKING:
+    from space.session.session import Session
+
+logger = logging.getLogger(__name__)
+
+PROGRESS_CACHE_FILE = "progress-cache.json"
+# The questions it keeps answers to for each fidelity.
+HAS_OUTPUT = "has_output"
+VIOLATION_COUNT = "violation_count"
+ACCEPTED_COUNT = "accepted_count"
+# How long after its first new answer the file is written: one board read works out many answers, and they go into one
+# write rather than one each, which Windows refuses when it comes too fast.
+SAVE_SECONDS = 1.0
+
+Kept = TypeVar("Kept", bool, int)
+KeptAnswers = dict[str, dict[str, dict[str, object]]]
+"""The answers kept, by fidelity, then by question: each the key it was worked out under and its value."""
+
+
+class ProgressCache:
+    """*ProgressCache* holds, for each fidelity a session works on, the answers that make reading the board slow:
+    whether a file the fidelity declares is already there, which walks the session's folders, and how many violations
+    its latest report names and how many it leaves out as accepted, which opens the graph saved beside the report. The board reads every session every two
+    seconds, so working these out on each read made the board take over ten seconds to show a move.
+
+    Each answer is kept with the key it was worked out from, and worked out again only when its key changes. The keys
+    are what Generate and Validate change: the log lines naming the fidelity, the paths the session declares for it,
+    and the latest report with its saved graph and the project's accepted violations. A move changes none of them, so moving a ticket never works them out
+    again.
+
+    The board holds one for each session's work folder (*HeldProgressCaches*), as ``progress-cache.json`` there, so a
+    closed session takes it along; it lasts as long as the cdd server, so its answers are held between reads and the
+    file serves the next server. It is a
+    cache: a missing or unreadable file, or one another reader holds open while it is written, only means the answers
+    are worked out again."""
+
+    def __init__(self, folder: Path | None, save_seconds: float = SAVE_SECONDS) -> None:
+        # A session with no folder yet, such as a project's main before anything is saved in it, keeps its answers only
+        # while it is held.
+        self._file = JsonFile(folder / PROGRESS_CACHE_FILE) if folder is not None else None
+        self._held: dict | None = None
+        # Board reads run on several threads at once, and each can work out an answer for the same session.
+        self._lock = threading.Lock()
+        # The write of the new answers, waiting for the read that works them out to finish; none while all are saved.
+        self._saving: threading.Timer | None = None
+        # How long the write waits for the read that works the answers out; a spec that reads once waits less.
+        self._save_seconds = save_seconds
+
+    def of(self, fidelity: str) -> FidelityAnswers:
+        """The answers kept about fidelity, by its slug, such as stories-story-map."""
+        return FidelityAnswers(self, fidelity)
+
+    def kept(self, fidelity: str) -> dict[str, dict[str, object]]:
+        """Each answer kept about fidelity, by question, with the key it was worked out under."""
+        with self._lock:
+            return dict(self._read().get(fidelity, {}))
+
+    def keep(self, fidelity: str, question: str, answer: dict[str, object]) -> None:
+        """Keep answer, its key and value, to question on fidelity, written to the file soon after."""
+        with self._lock:
+            self._read().setdefault(fidelity, {})[question] = answer
+            self._save_soon()
+
+    def _save_soon(self) -> None:
+        if self._file is None or self._saving is not None:
+            return
+        self._saving = threading.Timer(self._save_seconds, self._save)
+        self._saving.daemon = True
+        self._saving.start()
+
+    def _save(self) -> None:
+        with self._lock:
+            self._saving = None
+            self._write(dict(self._read()))
+
+    def _read(self) -> KeptAnswers:
+        if self._held is None:
+            self._held = self._from_file()
+        return self._held
+
+    def _from_file(self) -> KeptAnswers:
+        if self._file is None:
+            return {}
+        try:
+            return self._file.read()
+        except JsonFileUnreadable as unreadable:
+            logger.warning("%s; its answers are worked out again", unreadable)
+            return {}
+
+    def _write(self, held: KeptAnswers) -> None:
+        if self._file is None or not self._file.path.parent.is_dir():
+            return
+        try:
+            self._file.write(held)
+        except PermissionError as held_open:
+            # Windows refuses to replace a file another process, such as a virus scanner, still has open.
+            logger.warning("%s was not saved (%s); it is saved after the next answer worked out", self._file.path, held_open)
+
+
+class FidelityAnswers:
+    """The answers a session's progress cache keeps about one fidelity, each worked out again only under a new key."""
+
+    def __init__(self, cache: ProgressCache, fidelity: str) -> None:
+        self._cache = cache
+        self._fidelity = fidelity
+
+    def answer(self, question: str, key: str, work_out: Callable[[], Kept]) -> Kept:
+        """The answer to question, worked out with work_out only when it was last kept under another key, and then kept
+        under key for the next read."""
+        kept = self._cache.kept(self._fidelity).get(question)
+        if kept is not None and kept.get("key") == key:
+            return kept["value"]
+        value = work_out()
+        self._cache.keep(self._fidelity, question, {"key": key, "value": value})
+        return value
+
+
+class HeldProgressCaches:
+    """The progress cache of each session's work folder, made the first time the board reads that session and held
+    for as long as the process runs, so the answers worked out in one board read serve the next. A session that moves
+    its work to another folder, such as a ticket activated in its own worktree, reads the cache kept in that folder."""
+
+    def __init__(self) -> None:
+        self._held: dict[Path, ProgressCache] = {}
+        self._lock = threading.Lock()
+
+    def of(self, session: Session) -> ProgressCache:
+        """The progress cache of session's work folder; one for this read alone while the session has no folder yet."""
+        folder = session.work_folder
+        if folder is None:
+            return ProgressCache(None)
+        with self._lock:
+            held = self._held.get(folder)
+            if held is None:
+                held = self._held[folder] = ProgressCache(folder)
+            return held
+
+
+# The board's progress caches in this process, one for each session work folder.
+PROGRESS_CACHES = HeldProgressCaches()
+# No save of the session folders commits a progress cache: it is worked out again wherever it is missing.
+SessionSaves.leave_out(f"**/{PROGRESS_CACHE_FILE}")
