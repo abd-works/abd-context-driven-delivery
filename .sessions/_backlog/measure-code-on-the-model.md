@@ -35,6 +35,26 @@ Validate at Clean Engineering's modules, model and code fidelities checks what o
 - The measures the removed gate used: paths through a function (cyclomatic complexity), readability score (cognitive complexity), lines, parameters; a class's total complexity, method count and the classes it depends on; a group of methods sharing no data with the rest of their class (cohesion).
 - Measured with what `.context/repo-review/metrics_gate.py` and `code-metrics-trend.md` already use: radon, lizard, complexipy, cohesion and grimp. They need a metrics venv and Node tools, which the practice would have to install or check for.
 
+#### Story: Record Module Measures As Node Facts
+
+Requested on 2026-11-22: the item names functions, classes and modules, and listed no measure for a module. The exploratory testing of release 1.2 found that defects gather by module (see [code-metrics.md](../release-1-2-fixes/exploratory-testing/analysis/code-metrics.md)), so a module carries its own measures.
+
+- Each module node in the knowledge graph carries its measures as facts, beside the facts of its classes and functions.
+- Measures the older script `.context/model/repo-review/measure_revision.py` already took, which were not carried into this item:
+  - the modules that import this one, and the modules it imports (grimp for Python, dependency-cruiser for TypeScript; the graph already holds the import edges, so the two counts can be read from it)
+  - import loops, where modules import each other in a circle (networkx, from the import data)
+  - a maintainability score for each file (radon)
+  - copied code, as blocks repeated across files (jscpd) and as function bodies of the same shape under different names (the script's own count; an operation already keeps a fingerprint of its body)
+  - abstractness and instability, the share of abstract classes against the share of outgoing imports: reported for information only, because this framework extends through annotations and registration and the measure misreads it
+- Measures from the defect analysis of release 1.2:
+  - lines of production code, the only size or complexity measure that moved with the defect count across modules, and only loosely (rank correlation 0.56 over 17 modules)
+  - defects found for each thousand lines of production code, counted from the defect reports of a testing session
+  - stories of the module with no failure scenario (121 of 197 stories at release, counted from words in scenario titles)
+  - operations published as tools that have no test of a refused argument, the gap behind the defects where a name or path was taken as given
+  - formats a fidelity declares that no test renders there and back, counted on the fidelity and summed on the module of its practice (17 of 31 at release, 4 of 42 after the fixes)
+  - production changes committed with no test in the same commit (26% at release; on its own it showed no relation to the defect count)
+- Open questions: which of these fail validate past a limit and which are only reported? Where do the defect count and the commit count come from, since neither is in the code the graph reads?
+
 #### Story: Check Code Metrics Against Clean Engineering Limits
 
 - Clean Engineering's code fidelity (`cdd_guidance/practices/clean_engineering/clean_engineering.md`) states its size and complexity limits as named rules, and Validate checks them at the model and code fidelities.

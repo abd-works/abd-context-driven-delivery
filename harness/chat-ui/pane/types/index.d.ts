@@ -22,10 +22,6 @@ export type ToastedRunsJson = { runIds: string[]; missedSteps?: string[] }
 // The latest scheduled e2e run's screen review, as server-health.report gives it under e2e_review.
 export type E2eReviewJson = { run: string; sub_epics: number; steps: number; changed_steps: string[]; unjudged_steps: string[]; missed_steps: string[]; report: string; review_id: string }
 
-// The question a timed e2e run asks before its desktop walk, as server-health.report gives it under
-// desktop_walk_question while it waits for an answer: what the dialog says, and the command a yes runs in this chat.
-export type DesktopWalkQuestionJson = { run_id: string; message: string; command: string }
-
 export type InstallJson = { state: 'idle' | 'running' | 'installed' | 'failed'; error: string | null }
 
 // The CDD version badge. data is cdd-version.check's answer, read as the chat opens; isAsking while the update dialog

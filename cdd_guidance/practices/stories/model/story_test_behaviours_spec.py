@@ -1,9 +1,5 @@
 """One story map, created from story files in each format, then one common set of examples on the graph it gives.
 
-A desktop story test, which holds a story's scenarios again with what an agent does and sees in the desktop app under
-each step, is one more writing of the same stories: beside a story's scenarios file it adds no scenario, and in its
-place it gives the story the same ones.
-
 Each format's part is only the setup that creates the project from that format's files (Python, TypeScript,
 JavaScript, and markdown scenarios, which hold the same stories). Every example after that is shared: it asks the
 graph for stories, scenarios, steps, examples and the code they are joined to, and names no format. The trip to
@@ -12,13 +8,7 @@ another format and back is created the same way, then checked by the same exampl
 from expects import contain, equal, expect
 from mamba import before, context, description, included_context, it, shared_context
 
-from cdd_guidance.practices.stories.model.fixtures.pack_orders_project import (
-    PACK_ORDER_DESKTOP_FILE,
-    pack_orders_in,
-    pack_orders_taken,
-    pack_orders_with_a_desktop_story_test,
-    pack_orders_without_a_map,
-)
+from cdd_guidance.practices.stories.model.fixtures.pack_orders_project import pack_orders_in, pack_orders_taken, pack_orders_without_a_map
 
 _PACK = "Pack a paid order"
 _REFUSE = "Refuse to pack an unpaid order"
@@ -265,32 +255,3 @@ with description("a story map created from story files") as self:
 
             with included_context("the story map of Pack Orders"):
                 pass
-
-        with context("with a desktop story test beside a story's scenarios file"):
-            with before.all:
-                self.project = pack_orders_with_a_desktop_story_test()
-
-            with included_context("the story files of Pack Orders"):
-                pass
-
-            with included_context("the story map of Pack Orders"):
-                pass
-
-            with included_context("the examples of Pack Orders"):
-                pass
-
-            with it("should read a scenario both files hold from the story's scenarios file"):
-                expect(self.project.scenario_file(_PACK)).to(equal("story_tests/fulfil-order/pack-orders/pack_order_story.test.md"))
-
-        with context("with a desktop story test in place of a story's scenarios file"):
-            with before.all:
-                self.project = pack_orders_with_a_desktop_story_test(beside_its_scenarios=False)
-
-            with included_context("the story files of Pack Orders"):
-                pass
-
-            with included_context("the story map of Pack Orders"):
-                pass
-
-            with it("should read the story's scenarios from its desktop story test"):
-                expect(self.project.scenario_file(_PACK)).to(equal(PACK_ORDER_DESKTOP_FILE))

@@ -10,7 +10,6 @@ from harness.annotations.name import Name
 from harness.guidance.guidance import PracticeGuidance
 from harness.installation.context_config import CONTEXT_FOLDER
 
-from cdd_guidance.practices.stories.model.desktop_story_test import DesktopStoryTest
 from cdd_guidance.practices.stories.model.graph_reading import StoriesReading
 from cdd_guidance.practices.stories.model.project_story_files import OnFile, ProjectStoryFiles
 from cdd_guidance.practices.stories.model.sketch.sketch_story_map import SketchStoryMap
@@ -125,11 +124,5 @@ class Stories(PracticeGuidance):
         of the stories it holds: the acceptance tests a story map links each story to."""
         outputs = [fidelity.session_output for fidelity in self.fidelities if fidelity.session_output is not None]
         return self.story_files(project).story_tests([file for output in outputs for file in output.written.every_file()])
-
-    @staticmethod
-    def desktop_story_tests(project: Path) -> list[DesktopStoryTest]:
-        """Each story of every desktop story test under project's story_tests folder: its file, its scenarios, and
-        each step with the lines the file holds below it, which a walk in the Claude desktop app follows."""
-        return DesktopStoryTest.every_one_in(Path(project))
 
 StoryNode.practice_class = Stories

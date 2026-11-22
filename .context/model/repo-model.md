@@ -3019,7 +3019,7 @@ The npm package an app installs from, which installs itself: its folder, `packag
 The CDD version and its release, never on red, and the slow test tiers run on a cadence whose results a release reads.
 
 - **Purpose:** Say which CDD version a chat runs, set and release the next one, and keep the heavy and e2e tiers running on main so a release knows they passed.
-- **Seam (terms):** CddVersion, Version, VersionStanding, VersionNotValid, ProjectVersion, CddRelease, ReleaseNotes, ReleaseOnRed, ReleaseAlreadyTagged, GitHubCli, TestCadence, TestTier, TestRun, TestRunRecord, TestRunRecordUnreadable, TestRunner, RunWorktree, DesktopWalkQuestion; the MCP operations `cdd-version.check`, `cdd-version.read`, `cdd-version.set_next` (`/version`), `cdd-version.release` (`/release`)
+- **Seam (terms):** CddVersion, Version, VersionStanding, VersionNotValid, ProjectVersion, CddRelease, ReleaseNotes, ReleaseOnRed, ReleaseAlreadyTagged, GitHubCli, TestCadence, TestTier, TestRun, TestRunRecord, TestRunRecordUnreadable, TestRunner, RunWorktree; the MCP operations `cdd-version.check`, `cdd-version.read`, `cdd-version.set_next` (`/version`), `cdd-version.release` (`/release`)
 - **Dependencies (one-way):** harness/agent_tools, harness/installation, harness/mcp, harness/process, harness/git, harness/e2e_review
 
 ## ProjectVersion

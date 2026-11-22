@@ -36,9 +36,6 @@ STORY_TESTS_FOLDER = "story_tests"
 _MARKDOWN = ".md"
 # A story's own markdown file: `submit_order_story.test.md`, `submit_order_story.spec.md`.
 STORY_FILE_SUFFIXES = ("_story.test.md", "_story.spec.md")
-# A story's desktop story test, `submit_order_story.desktop.md`: its scenarios again, each step with what an agent does
-# and must see in the real desktop app, walked by computer control and run by no test tier.
-DESKTOP_STORY_FILE_SUFFIX = "_story.desktop.md"
 # The markdown a map's increments are written in, in the order a folder is searched for them.
 THIN_SLICING_FILES = ("thin-slicing.md", "thin-slice.md", "thin-slices.md", "increments.md")
 # The name a map's first thin slice is written under, in a folder that holds none yet.
@@ -110,10 +107,6 @@ class StoryMapFiles:
         """Each story's own markdown file in this folder and the folders below it."""
         return sorted(path for path in self._markdown_below() if path.name.endswith(STORY_FILE_SUFFIXES))
 
-    def desktop_story_tests_below(self) -> List[Path]:
-        """Each desktop story test in this folder and the folders below it, in path order."""
-        return sorted(path for path in self._markdown_below() if path.name.endswith(DESKTOP_STORY_FILE_SUFFIX))
-
     def thin_slicing(self) -> Optional[Path]:
         """The markdown that slices the map into increments: `thin-slicing.md` (or `thin-slice.md`, `thin-slices.md`,
         `increments.md`, in that order), in this folder, else the first in the folders below it; none when there is
@@ -130,9 +123,8 @@ class StoryMapFiles:
 
     def scenario_files_below(self) -> List[Path]:
         """Each markdown file scenarios are written in, in this folder and the folders below it: in a `scenarios`, `md`
-        or `stories` folder, a `scenarios.md` or `story-scenarios.md`, a story's own file, or its desktop story test.
-        Grouped by the kind of file in that order, then by path, so a folder's scenarios read in the same order every
-        time, and a scenario its desktop story test repeats word for word is read from the story's own file."""
+        or `stories` folder, a `scenarios.md` or `story-scenarios.md`, or a story's own file. Grouped by the kind of
+        file in that order, then by path, so a folder's scenarios read in the same order every time."""
         found = [(kind, path) for walked in self.story_folders() for path in self._markdown_in(walked) for kind in [self._scenario_file_kind(PurePosixPath(path.relative_to(walked).as_posix()))] if kind is not None]
         return [path for _kind, path in sorted(found)]
 
@@ -183,6 +175,4 @@ class StoryMapFiles:
             relative.name in _STORY_SCENARIO_FILES,
             _STORIES_FOLDER in folders,
         )
-        if relative.name.endswith(DESKTOP_STORY_FILE_SUFFIX):
-            return len(kinds)
         return next((index for index, matches in enumerate(kinds) if matches), None)

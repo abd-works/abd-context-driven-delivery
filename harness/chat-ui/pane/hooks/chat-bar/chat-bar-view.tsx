@@ -36,8 +36,7 @@ export type ChatBarDraw = {
   formats: FormatChips
   overlays: OverlayChips
   busy: { doing: string; wheel: string }
-  // walkQuestion is the dialog a timed e2e run's desktop walk question shows, null when none is open.
-  health: { band: unknown; panel: unknown; icons: HealthIcons; walkQuestion: unknown }
+  health: { band: unknown; panel: unknown; icons: HealthIcons }
   version: { label: string; badge: unknown; dialog: unknown }
   push: { buttons: unknown; dialog: unknown }
   width: number
@@ -356,7 +355,6 @@ export function ChatBarView($: EngineInterface, elements: ElementTable, draw: Ch
       {draw.busy.doing ? <Text key="busy" color={BRAND.accent}>{`${draw.busy.wheel} ${draw.busy.doing}…`}</Text> : null}
       {draw.version.dialog}
       {draw.push.dialog}
-      {draw.health.walkQuestion}
       {CloseView($, elements, draw)}
       {chatBar.isPlainFolder ? null : SessionCardView($, elements, draw)}
       {chatBar.isPlainFolder ? null : ListRoomView(elements, draw)}

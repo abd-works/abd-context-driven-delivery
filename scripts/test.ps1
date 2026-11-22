@@ -10,11 +10,8 @@
 #   e2e   (alias agent) - *_e2e_spec.py (a real browser through Playwright), agentic BDD
 #           (*_agent_spec.py, which drive a real agent), and the kanban app's Playwright suite: the board's layout and
 #           every *.story.ui.spec.ts under story_tests. Only this tier may start an agent.
-# The desktop story tests (*_story.desktop.md) are no tier this script runs: an agent in a chat walks them in the real
-# Claude desktop app by computer control, which takes the person's screen and keyboard, so they run only when a person
-# asks. -Suite desktop lists them and prints how to start the walk.
 param(
-    [ValidateSet("unit", "vanilla", "heavy", "e2e", "agent", "desktop")]
+    [ValidateSet("unit", "vanilla", "heavy", "e2e", "agent")]
     [string]$Suite = "unit",
     # The unit tier's budget for one example, before.each and after.each included. Over it, the example's file fails.
     [int]$ExampleBudgetMs = 100,
@@ -27,18 +24,6 @@ if ($Suite -eq "agent") { $Suite = "e2e" }
 
 $ErrorActionPreference = "Continue"
 $repo = Split-Path -Parent $PSScriptRoot
-if ($Suite -eq "desktop") {
-    $desktopTests = @(Get-ChildItem -Path (Join-Path $repo "story_tests") -Recurse -Filter "*_story.desktop.md" -ErrorAction SilentlyContinue)
-    Write-Host "$($desktopTests.Count) desktop story test(s) under story_tests:"
-    foreach ($desktopTest in $desktopTests) { Write-Host "  $($desktopTest.FullName.Substring($repo.Length + 1))" }
-    Write-Host ""
-    Write-Host "This script does not run them: a walk drives the real Claude desktop app by computer control and takes"
-    Write-Host "your screen and keyboard. To walk them, type this in a chat of the Claude desktop app opened on this checkout:"
-    Write-Host "  /desktop-walk                                    every desktop story test"
-    Write-Host "  /desktop-walk target=<epic>/<sub-epic>           one sub-epic's, by its folder under story_tests"
-    Write-Host "  /desktop-walk target='<story name>'              one story's"
-    exit 0
-}
 # A ticket's worktree has no venv of its own: use the main checkout's, never whatever python is first on the PATH.
 $venv = Join-Path $repo ".venv"
 if (-not (Test-Path $venv)) {

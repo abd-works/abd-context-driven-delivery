@@ -699,10 +699,6 @@ Observed: pressing the Kanban app or the Graph app on the server health panel op
 
 Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "restart buttons not on panel"): the restart controls sit on the chat bar itself, not only inside the server health panel.
 
-### (S) Person --> Answer Desktop Walk Question From Chat Bar
-
-Built (2026-11-21), never drawn or tested: the chat bar shows the question with Not now and Run the walk; yes runs `/desktop-walk` in that chat (`server-health.answer_desktop_walk`).
-
 ## (E) See Work In Chat Bar
 
 ### (S) Person --> Open Board From Chat
@@ -2430,18 +2426,6 @@ Intended (ticket, "Walk report"): `report.ts` reduced to one run writes one self
 
 Intended (ticket, Flow A step 2, `person-accepts-the-baseline`): the person reviews the walk report, and accepting it makes the walk the reference the sub-epic's e2e tests are compared with. A walk with a step that misses its intent is not accepted.
 
-### (S) Agent --> Walk Desktop Story Tests By Computer Control
-
-Requested (2026-11-21, "can we also use computer control to test the chat ui panel"; "e2e tests matching our acceptance tests and story map, run only when asked for"). Built (2026-11-21), not walked: `/desktop-walk` (`cdd_guidance/desktop_walk`) hands the agent each step's Do and See lines; the agent drives a separate test chat in the Claude desktop app by computer control and records each step's screenshot and verdict through the e2e review's walk. No test tier runs it.
-
-### (S) Author --> Write Desktop Story Test
-
-Built (2026-11-21): a story's scenarios repeated word for word in `{story_snake}_story.desktop.md` beside its scenarios, with a Do line and a See line under each step; Stories reads it as the same scenarios, so a scenario worded differently shows as a second one.
-
-### (S) Agent --> Open Test Chat For A Walk
-
-Built (2026-11-21), not walked: a walk opens a throwaway git repository and a new chat found by its mark, and never types in the chat that runs the walk (`desktop-walk.open_test_chat`).
-
 ## (E) Capture End-To-End Steps
 
 Intended (ticket, Flow A step 3 and "Compare reports"): the e2e test that captures a walked path records the same steps, and is compared with the accepted walk.
@@ -2489,14 +2473,6 @@ Intended (ticket, step 5 of the review): once every changed pair is intended, th
 ### (S:system) CDD Server --> Review The Daily E2E Run
 
 Intended (ticket, "Daily run"): when the daily e2e run ends, the cdd server starts the regression review in a background agent session and raises a toast for each step judged missed by the tests; the fix happens in a ticket.
-
-### (S:system) Test Cadence --> Ask Before Desktop Walk On Timed E2E Run
-
-Requested (2026-11-21, "on a timed e2e run put a dialog out to user before running"). Built (2026-11-21), not seen on a real timed run: when the cadence starts an e2e run in a checkout that holds desktop story tests, the health report carries a question; the first answer from any chat wins, within ten minutes (`harness/release/desktop_walk_question.py`).
-
-### (S:system) Test Cadence --> Record Desktop Walk Not Run
-
-Built (2026-11-21): on no, or no answer, the e2e run's summary says the desktop walk was not run and why.
 
 ## (E) Read E2E Reports
 

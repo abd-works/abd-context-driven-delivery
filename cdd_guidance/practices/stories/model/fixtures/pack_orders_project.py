@@ -16,8 +16,6 @@ from cdd_guidance.practices.stories.stories import Stories
 from harness.graph.graph import Graph
 
 TESTS_ROOT = "story_tests"
-# The output the acceptance tests fidelity declares desktop story tests under, named for what it holds.
-DESKTOP_OUTPUT = "desktop"
 _STEP_TYPES = ("Given", "When", "Then", "Step")
 _PRACTICES = ("stories", "clean_engineering")
 
@@ -353,52 +351,7 @@ format: md
 *Then* the Order paid order has status cancelled
 """
 
-# Pack Order's desktop story test: its scenarios word for word, each step with what an agent does and must see in the
-# real desktop app.
-_PACK_ORDER_DESKTOP = """---
-fidelity: [acceptance_tests]
-artifact: [desktop-story-test]
-format: md
----
-
-## Story: Pack Order
-
-#### Scenario: Pack a paid order
-
-*Given* the Shop keeps Order paid order
-
-- Do: open the Shop app's order list.
-- See: order 1001 is listed as paid.
-
-*When* the Shop Clerk packs the Order
-
-- Do: press Pack order on order 1001.
-
-*Then* the Order paid order has status packed
-
-- See: order 1001 reads Status packed.
-
-#### Scenario: Refuse to pack an unpaid order
-
-*Given* the Shop keeps Order unpaid order
-
-- See: order 1002 is listed as not paid.
-
-*When* the Shop Clerk packs the Order
-
-- Do: press Pack order on order 1002.
-
-*Then* the Shop refuses with "order 1002 is not paid"
-
-- See: a notice reads order 1002 is not paid.
-
-  *And* the Order unpaid order keeps status submitted
-
-- See: order 1002 reads Status submitted.
-"""
-
 _SUB_EPIC = f"{TESTS_ROOT}/fulfil-order/pack-orders"
-PACK_ORDER_DESKTOP_FILE = f"{_SUB_EPIC}/pack_order_story.desktop.md"
 
 
 def _script_files(extension: str, module: str) -> dict[str, str]:
@@ -461,13 +414,11 @@ class StoryTestProject:
 
     def undeclared_files(self) -> list[str]:
         """Each story file of the project, and each examples file, that no path the scenarios or acceptance tests
-        fidelity declares for the project's format, or for a desktop story test, matches: a file a render could not
-        save, and no practice reads."""
+        fidelity declares for the project's format matches: a file a render could not save, and no practice reads."""
         practice = Stories()
         declared = [practice.fidelities.entries[name].declared for name in ("scenarios", "acceptance_tests")]
         held = [file for file in self.files if file.startswith(f"{TESTS_ROOT}/") or "examples" in Path(file).name]
-        formats = (self.format_name, DESKTOP_OUTPUT)
-        return sorted(file for file in held if not any(each.includes(file, name) for each in declared for name in formats))
+        return sorted(file for file in held if not any(each.includes(file, self.format_name) for each in declared))
 
     ## the story map the graph holds
 
@@ -481,10 +432,6 @@ class StoryTestProject:
 
     def scenario_names(self, story: str) -> list[str]:
         return [edge.child.name for edge in self._edges("scenarios", self._one(("Story",), story))]
-
-    def scenario_file(self, scenario: str) -> str:
-        """The file the scenario was read from, as a path from the project."""
-        return self._one(("Scenario",), scenario).source.file
 
     def steps(self, scenario: str) -> list[tuple]:
         """The scenario's steps in order, each as its kind, its words, and the words of the steps chained onto it."""
@@ -564,16 +511,6 @@ def _written(practice: Stories, format_name: str, model) -> dict[str, str]:
 def pack_orders_in(format_name: str) -> StoryTestProject:
     """The Pack Orders project written in the format called format_name, read once however many specs ask."""
     return StoryTestProject(format_name, PACK_ORDERS_FILES[format_name])
-
-
-@functools.cache
-def pack_orders_with_a_desktop_story_test(beside_its_scenarios: bool = True) -> StoryTestProject:
-    """The Pack Orders project written as markdown scenarios, with Pack Order's desktop story test beside its scenarios
-    file, or in its place."""
-    files = dict(PACK_ORDERS_FILES["markdown"])
-    if not beside_its_scenarios:
-        del files[f"{_SUB_EPIC}/pack_order_story.test.md"]
-    return StoryTestProject("markdown", {**files, PACK_ORDER_DESKTOP_FILE: _PACK_ORDER_DESKTOP})
 
 
 @functools.cache

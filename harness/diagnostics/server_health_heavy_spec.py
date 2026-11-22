@@ -64,4 +64,4 @@ with description("server health") as self:
         with it("should answer the band's call with every part"):
             result = self.server.invoke("server-health.report", {})
             answer = json.loads(json.dumps(result, default=data_of))
-            expect(sorted(answer)).to(equal(["apps", "desktop_walk_question", "e2e_review", "test_runs"]))
+            expect(sorted(answer)).to(equal(["apps", "e2e_review", "test_runs"]))
