@@ -3761,16 +3761,30 @@ Which session each chat has open in one checkout, kept by the cdd server under `
 + OpenSessions(sessions: Sessions)
 ------
 ----
-+ state(chat: str = ''): WorkState
-+ name_for(chat: str = ''): str
-+ open(session: Session, chat: str = ''): Session
-+ current(chat: str = ''): Session
-+ close(session: Session): None
++ state(chat: str): WorkState
++ name_for(chat: str): str
++ open(session: Session, chat: str): Session
++ current(chat: str): Session
++ close(session: Session, chat: str): None
 + ticket_of_worktree(): Session | None
-+ switch(name: str, workpath: Path | None, call: ToolCall | None): str
-	-> SessionLog.instructions
++ switch(name: str, workpath: Path | None, call: ToolCall | None): SwitchedSession
 ---<<creates>>--> WorkState
+---<<creates>>--> SwitchedSession
 ---<<raises>>--> SessionNameRequiredError
+
+## SwitchedSession
+
+One switch of a chat to a session: the session opened, what the modules listening for an opening told the chat, and the notes the chat must read first, worded in `space/session/SESSION-SWITCH.md`.
+
++ SwitchedSession(session: Session, told_on_opening: str, asked_in_ticket_worktree: str | None = None, chat_works_in: Path | None = None)
+------
++ session: Session
++ told_on_opening: str
++ opened_in_worktree_of: str
++ outside_worktree: Path | None
++ default_roots: list[str]
++ instructions: str
+	-> SessionLog.instructions
 
 ## ServedAnswers
 
@@ -3873,7 +3887,8 @@ One named piece of work in a project, its record (session.json, idea file) kept 
 + reopen(): Session
 	-> Sessions.moved
 + practice(name: str): PracticeSessionOutput
-+ close(): None
++ close(call: ToolCall): None
+	// closes the session for the calling chat
 	-> OpenSessions.close
 + choose_workpath(path: str = ''): Session
 + show(): Session
