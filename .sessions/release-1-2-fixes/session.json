@@ -9,7 +9,7 @@
       "specification",
       "implementation"
     ],
-    "version": 34
+    "version": 35
   },
   "practices": {
     "bdd": {
@@ -23,30 +23,38 @@
     },
     "clean_engineering": {
       "enabled": true,
-      "formats": {
-        "model": [
-          "python"
-        ],
-        "modules": [
-          "markdown",
-          "drawio",
-          "whiteboard"
-        ]
+      "fidelities": {
+        "model": {
+          "formats": [
+            "python"
+          ]
+        },
+        "modules": {
+          "formats": [
+            "markdown",
+            "drawio",
+            "whiteboard"
+          ]
+        }
       }
     },
     "stories": {
-      "formats": {
-        "story_map": [
-          "markdown",
-          "drawio",
-          "whiteboard"
-        ],
-        "scenarios": [
-          "python",
-          "markdown"
-        ]
-      },
-      "enabled": false
+      "enabled": true,
+      "fidelities": {
+        "story_map": {
+          "formats": [
+            "markdown",
+            "drawio",
+            "whiteboard"
+          ]
+        },
+        "scenarios": {
+          "formats": [
+            "python",
+            "markdown"
+          ]
+        }
+      }
     }
   }
 }
