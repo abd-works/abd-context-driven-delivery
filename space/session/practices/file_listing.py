@@ -45,11 +45,10 @@ class FileListing:
         return entry.listed_as(listed, self._is_work(entry, is_declared=True))
 
     def of_root(self, entry: FileEntry) -> FileEntry:
-        """entry, a file under the session's root: listed while it is in a format selected and belongs to a fidelity
-        listed. A file no fidelity declares, such as a practice's example, belongs to no practice, so it is listed only
-        while no practice is selected, which filters no practice."""
-        formats = self.formats
-        in_format = not formats or entry.format in formats
+        """entry, a file under the session's root: listed while it is in a format selected, or is published to a link,
+        such as a design canvas, and belongs to a fidelity listed. A file no fidelity declares, such as a practice's
+        example, belongs to no practice, so it is listed only while no practice is selected, which filters no practice."""
+        in_format = self._in_formats(entry.format, entry)
         belongs = any(slug in self.listed for slug in entry.fidelities) if entry.fidelities else self._is_no_practice_selected
         return entry.listed_as(in_format and belongs, self._is_work(entry, is_declared=bool(entry.fidelities)))
 

@@ -86,6 +86,14 @@ with description("a listing of a session's files") as self:
             with it("should list its files in the formats selected that it offers"):
                 expect(self.listing.of_fidelity(CODE, "python", FileEntry("app/checkout/order.py", True)).is_listed).to(equal(True))
 
+    # A design canvas opens in Claude at its link, so All session files lists it whatever formats are chosen, as the
+    # fidelity's own list does; requested 2026-11-16: a design canvas opens where it is published, wherever it lies.
+    with context("for a design canvas under the root, published to its link, with only code selected"):
+        with it("should list it"):
+            listing = FileListing(selection(["ux-mockup"], [["python"]]), [], is_repository=True)
+            canvas = FileEntry("ux/design-canvas/version-1/project/canvas.json", True).belonging_to(["ux-mockup"]).linked(Publication("https://claude.ai/artifact/canvas", "design canvas"))
+            expect(listing.of_root(canvas).is_listed).to(equal(True))
+
     with context("for a file under the root that no fidelity declares"):
         with it("should leave it out while a practice is selected"):
             expect(FileListing(selection([STORY_MAP]), [], is_repository=True).of_root(FileEntry("notes/plain.txt", True)).is_listed).to(equal(False))
