@@ -514,7 +514,6 @@ class SessionAlignment:
             return [AlignmentFailure(RENDER_FAILED, gap.file, f"Rendering {gap.source} to {gap.format} failed: {type(failure).__name__}: {failure}")]
         saved = [str(path) for result in results for path in result.saved]
         waiting = [(each.file, each.member) for result in results for each in result.migrate]
-
         return [AlignedFile(self._session.paths.from_project(path), gap.format, gap.source, [kept for file, kept in waiting if file == path]) for path in saved]
 
     def _files_of(self, covered: Iterable[FidelityGuidance]) -> list[str]:

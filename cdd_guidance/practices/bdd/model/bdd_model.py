@@ -80,7 +80,6 @@ class BddModel(ModelNode, FormatAdapter):
         return found
 
     def render(self, canonical: "BddModel", written: Written = Written()) -> str:
-
         return "\n\n".join(self._sketch_lines(item) for item in canonical.descriptions)
 
     def _sketch_lines(self, description: Description) -> str:

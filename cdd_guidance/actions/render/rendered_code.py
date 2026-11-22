@@ -43,7 +43,6 @@ from cdd_guidance.actions.render.reshaped_code import Reshape, ReshapedCode
 from harness.guidance.declared_outputs import DeclaredFile
 from cdd_guidance.actions.render.render_result import KeptCodeMember, Migration, SavedCode, SignatureDiffers
 from harness.guidance.practice_formats import Rendered, Reshaped
-
 from harness.installation.context_config import CONTEXT_FOLDER
 from harness.markdown.format import Format
 
@@ -126,7 +125,7 @@ class RenderedCode:
         for file, reshaped in written.items():
             file.parent.mkdir(parents=True, exist_ok=True)
             file.write_text(reshaped.text, encoding="utf-8")
-        migrate: list[Migration] = [self._migration(file, kept, reshaped) for file, reshaped in written.items() for kept in reshaped.kept]
+        migrate: list[Migration] = [self._migration(file, kept, reshaped) for file, reshaped in written.items() for kept in reshaped.left_to_move]
         migrate += [SignatureDiffers(file, member, line) for file, reshaped in written.items() for member, line in reshaped.changed.items()]
         return SavedCode(rendered, list(written), migrate)
 

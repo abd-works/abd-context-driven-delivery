@@ -351,7 +351,6 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
     suffixes = language.suffixes
 
     def parse(self, text: str, file: str = "") -> "PythonCleanEngineeringModel":
-
         """The model the Python text declares. Text that is not valid Python raises UnreadableSource."""
         self._text = text
         try:

@@ -111,7 +111,6 @@ class CodeBddModel(BddModel):
             lines = lines + self._render_block(description, (), first=False)
         if spec_lines is not None:
             return "\n".join(lines + spec_lines.closing)
-
         lines.extend(self.top_level_gap() + self._foreign(canonical.written and canonical.written.closing_body, ""))
         return "\n".join(lines).strip("\n") + "\n"
 

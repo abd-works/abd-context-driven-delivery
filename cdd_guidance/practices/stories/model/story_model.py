@@ -1288,7 +1288,6 @@ class Story(StoryNode):
 @language_adapter(language="typescript")
 @agent_toolset
 class StoryModel(StoryNode, FormatAdapter):
-
     """A story map: its epics, and the increments that deliver its stories. One opened in a session through its tools
     (``load``) holds the file it was read from (an *OpenedStoryMap*) and saves itself there after every edit."""
 
@@ -1346,7 +1345,6 @@ class StoryModel(StoryNode, FormatAdapter):
         """The story map an edit to the file at path writes back, each node naming the file from project: the file
         read by this format."""
         return self.read_file(path, project)
-
     @classmethod
     @tool_subject
     def load(cls, file: str, *, call: ToolCall) -> "StoryModel":

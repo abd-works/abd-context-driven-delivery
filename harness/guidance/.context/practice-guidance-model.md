@@ -254,6 +254,29 @@ render(): Rendered
 
 The content of a render in the format it is written in: format, content; written as those two fields.
 
+## Reshaped (frozen)
+
+text, kept, added, changed, set_apart: int
+----
+left_to_move: list[str]
+	// each member kept, then how many lines were set apart
+
+## ExistingText
+
+ExistingText(text)
+----
+lines_not_in(text: str): list[str]
+	// the lines a text would lose; every reshaper's lost-line check
+set_apart_below(rendered: str, comment: str): Reshaped
+	// the lines only this text holds, as comments under one marking line; carried over unchanged when set apart before
+
+## OutlinedMember
+
+OutlinedMember(name, lead, start, end, indent = '')
+----
+lead_of(lines, start, indent, marks, floor = 0): int
+	// the first comment or decorator line written directly above start
+
 ## PracticeReading
 
 How one practice takes part in the knowledge graph. It lives in harness/graph (`harness/graph/practice_reading.py`, described in `harness/graph/.context/graph-populate-model.md`), which sits above this module: *PracticeGuidance* names its kind as `reading_type: type | None`, harness/graph sets the default when it is imported, and the practice makes its reading the first time it is asked (`practice.reading`).

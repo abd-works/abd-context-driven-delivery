@@ -275,7 +275,6 @@ class WhiteboardUxMap(UxMap):
         """A new map of this format, read from a board's text by where its elements sit."""
         ux_map = type(self).create()
         ux_map._take_board(Whiteboard.from_text(text).holding({"screen"}, "UX screen"))
-
         return ux_map
 
     def _take_board(self, board: Whiteboard) -> None:

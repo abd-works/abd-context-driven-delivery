@@ -90,7 +90,6 @@ class Ux(PracticeGuidance):
 
     @agent_tool
     def ensure_javascript(self, practice: str, source_format: str, content: str) -> Rendered:
-
         """Ensure Stories or Clean Engineering JS exists - transform via that practice if needed.
         practice: 'stories' | 'clean_engineering', the practice's catalogue key: story steps come from Stories, the
         object model from Clean Engineering. content: the practice's text in source_format. Returns {format: javascript, content: ...}."""

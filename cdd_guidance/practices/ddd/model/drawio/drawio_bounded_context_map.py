@@ -53,7 +53,6 @@ class DrawIOBoundedContextMap(DrawnBoundedContextMap, DrawIOCleanEngineeringMode
         return html.unescape(cell.get("value", "")).rstrip().endswith(MODULES_TITLE_ENDING)
 
     def parse(self, text: str, file: str = "") -> "DrawIOBoundedContextMap":
-
         """Read a drawing into this map, and return it."""
         DrawIOCleanEngineeringModel.parse(self, text)
         return self.read_drawing()

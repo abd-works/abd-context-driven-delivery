@@ -160,7 +160,6 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
         return json.dumps(drawn.files(), indent=1, ensure_ascii=False)
 
     def parse(self, text: str, file: str = "") -> "ClaudeDesignStoryModel":
-
         raise NotImplementedError("A Claude Design canvas is rendered from the story map; it is not read back.")
 
     # -- canvas ---------------------------------------------------------------------------

@@ -131,7 +131,6 @@ class WhiteboardStoryModel(DiagramStoryModel):
         return self.board().save()
 
     def parse(self, text: str, file: str = "") -> "WhiteboardStoryModel":
-
         """The format-adapter entry point Stories renders through: the story map a board's text holds."""
         return self.take_board(Whiteboard.from_text(text))
 

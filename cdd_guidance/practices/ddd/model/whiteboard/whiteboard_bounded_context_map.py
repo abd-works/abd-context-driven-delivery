@@ -91,7 +91,6 @@ class WhiteboardBoundedContextMap(DrawnBoundedContextMap, WhiteboardCleanEnginee
         return self
 
     def parse(self, text: str, file: str = "") -> "WhiteboardBoundedContextMap":
-
         """Read a board into this map, and return it."""
         WhiteboardCleanEngineeringModel.parse(self, text)
         return self.read_drawing()

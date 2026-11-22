@@ -123,6 +123,31 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
         # The arrows a class drawing shows from one of its cards with no detail kept on them: the card and the arrow.
         self._drawn_arrows: list[tuple[ClassCard, Relationship]] = []
 
+    def take_words_from(self, earlier: "MarkdownAggregate") -> None:
+        """Keep the words it has and take earlier's where it has none: its sentence, group, and consumed events; what
+        a root listed under it, as the bounded-context map writes it, says it is; and each card's words, card by
+        card."""
+        super().take_words_from(earlier)
+        self._take_root_words_from(earlier)
+        was_named = {card.name: card for card in earlier.classes}
+        for card in self.classes:
+            if card.name in was_named:
+                card.take_words_from(was_named[card.name])
+
+    def _take_root_words_from(self, earlier: "MarkdownAggregate") -> None:
+        """A root listed under this aggregate, as the bounded-context map writes it, takes what earlier says the root
+        is, its operations, the events it emits, and each member's line as earlier writes it."""
+        was_root, root = earlier.root, self.root
+        if was_root is None or root is None or self.classes:
+            return
+        root.intent = root.intent or was_root.intent
+        root.operations = root.operations or list(was_root.operations)
+        if not self.events:
+            root.properties.extend(earlier.events)
+        written = {_drawn_name(member.name): member.name for member in was_root.invariant_objects}
+        for member in root.invariant_objects:
+            member.name = written.get(_drawn_name(member.name), member.name)
+
     def load_root(self) -> None:
         sections, map_lines = self._split_cards()
         self.classes.extend(card for section in sections for card in ClassCard.read(section))
@@ -566,7 +591,6 @@ class MarkdownBoundedContextMap(BoundedContextMap, MarkdownDomainNode):
         hold."""
         source = canonical
         previous = written.previous
-
         from_sketch = bool(previous) and "## domain driven design:" in previous.lower()
         if previous and not from_sketch and not source.holds_document_words:
             ReplacedDocument(MarkdownBoundedContextMap().parse(previous), source).give_its_words()
@@ -636,3 +660,8 @@ class MarkdownBoundedContextMap(BoundedContextMap, MarkdownDomainNode):
             elif in_event_map and line.startswith("- ") and ":" in line:
                 entries.append(line[2:])
         return entries
+
+
+def _drawn_name(line: str) -> str:
+    """A member's name as a drawing lists it: without what its line says after ` - `."""
+    return line.split(" - ", 1)[0].strip().lower()

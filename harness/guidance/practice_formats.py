@@ -143,8 +143,9 @@ class Reshaped:
     """A rendered shape written onto the text a file already holds, as a format's adapter answers it from
     ``reshape(rendered, existing)``: the text to save, which holds every line existing held, the members only the
     existing file holds, kept in the text and marked as no longer in the model (``Cart.empty``), the members only the
-    render holds, added empty (``Cart.add_line``), and the members whose opening line the render writes otherwise. A format with no ``reshape`` leaves the writing to the Render
-    action."""
+    render holds, added empty (``Cart.add_line``), the members whose opening line the render writes otherwise, and how
+    many lines were set apart below the text, where a file whose members a render cannot place keeps what only it held.
+    A format with no ``reshape`` leaves the writing to the Render action."""
 
     text: str
     kept: list[str]
@@ -152,6 +153,64 @@ class Reshaped:
     # Each member both hold whose opening line the render writes otherwise than the file, with the render's line
     # (``Cart.total``: ``def total(self, tax: int) -> int:``); the file's own line stays in the text.
     changed: dict[str, str] = field(default_factory=dict)
+    # The lines kept below the text under one line saying they are no longer in the model.
+    set_apart: int = 0
+
+    @property
+    def left_to_move(self) -> list[str]:
+        """What waits in the text for a person or an agent to move: each member kept, then, when lines were set apart,
+        how many."""
+        return [*self.kept, *([f"{self.set_apart} line(s) set apart"] if self.set_apart else [])]
+
+
+class ExistingText:
+    """The text a file holds before a render is written onto it: the check that the text to save loses none of its
+    lines, written once for every reshaper, and the lines only it holds set apart below a rendered shape that cannot
+    place them."""
+
+    def __init__(self, text: str) -> None:
+        self.text = text
+        self.lines = text.splitlines()
+
+    def lines_not_in(self, text: str) -> list[str]:
+        """Each line this text holds, blank lines aside, that text has nowhere: the lines a render would lose."""
+        held = text.splitlines()
+        return [line for line in self.lines if line.strip() and not any(line.strip() in kept for kept in held)]
+
+    def set_apart_below(self, rendered: str, comment: str) -> Reshaped:
+        """The rendered shape, then the lines only this text holds as comments under one line saying so; lines an
+        earlier render set apart are carried over as they are, so a second render changes nothing."""
+        marked = next((index for index, line in enumerate(self.lines) if KeptMark.marks(line)), len(self.lines))
+        carried = self.lines[marked + 1:]
+        unplaced = ExistingText("\n".join(self.lines[:marked])).lines_not_in(rendered)
+        apart = carried + [f"{comment} {line}" for line in unplaced]
+        if not apart:
+            return Reshaped(rendered, [], [])
+        heading = f"{comment} ---- {KeptMark.WORDS}: the lines below were in this file and the render did not write them. Move each into the member it belongs to, then delete it. ----"
+        return Reshaped("\n".join([*rendered.splitlines(), "", heading, *apart]) + "\n", [], [], set_apart=len(apart))
+
+
+class OutlinedMember:
+    """One member of a file a reshaper outlines, such as a class, an operation, a describe block, or a component's
+    hook: its name, where the comments above it start (``lead``), where its own lines start and end, and its indent.
+    Each reshaper reads its own language into it; the record and the marker are what they share."""
+
+    def __init__(self, name: str, lead: int, start: int, end: int, indent: str = "") -> None:
+        self.name = name
+        self.lead = lead
+        self.start = start
+        self.end = end
+        self.indent = indent
+
+    @staticmethod
+    def lead_of(lines: list[str], start: int, indent: str, marks: tuple[str, ...], floor: int = 0) -> int:
+        """The first of the lines written directly above the line at start, at indent, that open with one of marks,
+        such as a comment or a decorator, going no higher than floor; start when none are."""
+        lead = start
+        while lead > floor and lines[lead - 1].startswith(indent) and lines[lead - 1][len(indent):].startswith(marks):
+            lead -= 1
+        return lead
+
 
 
 # What a render converts: text or data in a source format, an object model, or the practice itself, whose own model is

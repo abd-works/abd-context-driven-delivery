@@ -9,7 +9,6 @@ from cdd_guidance.actions.render.render_result import AnsweredContent, RenderRes
 from harness.guidance_actions import GuidanceArg, GuidanceAction, WorkedGuidance
 from harness.guidance.guidance import FidelityGuidance
 from harness.guidance.practice_formats import Rendered, RenderRequest
-
 from harness.guidance.stages import TAKES_FORMATS, on_stage
 from pathlib import Path
 

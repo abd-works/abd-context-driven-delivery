@@ -39,7 +39,6 @@ class GraphBddModel(BddModel):
     """Reads a saved graph (`SavedGraph.from_graph`, `graph.save_json`) into descriptions whose observations carry their realization."""
 
     def parse(self, text: str, file: str = "") -> "GraphBddModel":
-
         graph = Graph()
         graph.restored_from(SavedGraph.from_text(text))
         self._graph = graph

@@ -229,7 +229,6 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
         kept = type(self)(name="", sequential_order=1)
         if written.previous:
             kept.parse(written.previous)
-
         known_names = [oclass.name for oclass in self.every_class()]
         lines = self.file_header(self._preamble(kept))
         for module in self.modules:

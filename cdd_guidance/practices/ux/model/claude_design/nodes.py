@@ -39,7 +39,6 @@ class ClaudeDesignUxMap(UxMap):
         return json.dumps(self.boards(), indent=1, ensure_ascii=False)
 
     def parse(self, text: str, file: str = "") -> UxMap:
-
         raise ClaudeDesignScreensNotReadable("Claude Design screens are placed from the UX map; they are not read back.")
 
     def prototype_names(self) -> List[str]:

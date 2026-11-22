@@ -31,7 +31,6 @@ class ScreenNotOnMap(KeyError):
 
 
 class UxMap(UxNode, FormatAdapter):
-
     _semantic_type_name = "UxMap"
     graph_facts = ("scope",)
 

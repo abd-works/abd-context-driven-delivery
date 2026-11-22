@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING
 from cdd_guidance.actions.render.kept_document import KeptDocument
 from cdd_guidance.actions.render.render_result import KeptMember, Migration, SavedBoard, SavedFile
 from harness.guidance.practice_formats import Rendered
-
 from cdd_guidance.actions.render.rendered_code import RenderHasNoDeclaredPlace, own_name
 from harness.annotations.name import Name
 from harness.graph.saved_graph import SavedGraph
@@ -144,7 +143,7 @@ class RenderedFile:
         kept = KeptDocument(self.format).onto(self._before, str(rendered.content))
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.write_text(kept.text, encoding="utf-8")
-        migrate: list[Migration] = [KeptMember(self.path, each) for each in kept.kept]
+        migrate: list[Migration] = [KeptMember(self.path, each) for each in kept.left_to_move]
         if self.format.name != WHITEBOARD:
             return SavedFile(rendered, self.path, migrate)
         board = BoardLinks.beside(self.path).of(self.path)

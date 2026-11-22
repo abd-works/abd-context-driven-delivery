@@ -556,7 +556,6 @@ class WhiteboardCleanEngineeringModel(DiagramCleanEngineeringModel):
         return _ModulesBoard(self).draw() if self.is_modules_view else self.class_board_type(self).draw()
 
     def parse(self, text: str, file: str = "") -> "WhiteboardCleanEngineeringModel":
-
         """The modules view or class view a saved board's text holds, read into this model's own modules. Text that is
         not a saved board raises UnreadableSource, as a draw.io diagram that is not XML does; a saved board that draws
         no module and no class, such as a Stories story map, raises UnreadableBoard from ``take_board``."""

@@ -5,7 +5,7 @@ from pathlib import Path
 from expects import be_none, equal, expect, raise_error
 from mamba import before, context, description, it
 
-from harness.guidance.practice_formats import FormatAdapter, Rendered, RenderRequest, Written
+from harness.guidance.practice_formats import ExistingText, FormatAdapter, OutlinedMember, Rendered, RenderRequest, Written
 from harness.installation.data_class import data_of
 from harness.markdown.format import Format
 
@@ -89,3 +89,41 @@ with description("a render request") as self:
     with context("that works at no fidelity"):
         with it("should refuse to render, since no practice's formats are named"):
             expect(lambda: RenderRequest(Format("drawio"), "text").render()).to(raise_error(ValueError))
+
+
+with description("the text a file holds before a render is written onto it") as self:
+    with before.each:
+        self.existing = ExistingText("class Cart:\n    pass\n\nNOTE = 'keep me'\n")
+
+    with it("should name each line a text would lose"):
+        expect(self.existing.lines_not_in("class Cart:\n    pass\n")).to(equal(["NOTE = 'keep me'"]))
+
+    with it("should lose nothing to a text that holds every line"):
+        expect(self.existing.lines_not_in("class Cart:\n    pass\nNOTE = 'keep me'\nmore\n")).to(equal([]))
+
+    with context("whose lines a rendered shape cannot place"):
+        with before.each:
+            self.reshaped = self.existing.set_apart_below("class Basket:\n    pass\n", "#")
+
+        with it("should keep the lines the shape does not hold below it as comments"):
+            expect(self.reshaped.text.splitlines()[-2:]).to(equal(["# class Cart:", "# NOTE = 'keep me'"]))
+
+        with it("should count the lines set apart"):
+            expect(self.reshaped.set_apart).to(equal(2))
+
+        with it("should say how many lines wait to be moved"):
+            expect(self.reshaped.left_to_move).to(equal(["2 line(s) set apart"]))
+
+        with it("should carry them over as they are when rendered again"):
+            again = ExistingText(self.reshaped.text).set_apart_below("class Basket:\n    pass\n", "#")
+            expect(again.text).to(equal(self.reshaped.text))
+
+
+with description("a member a reshaper outlines") as self:
+    with it("should start at the comments and decorators written directly above it, at its indent"):
+        lines = ["class Cart:", "    # adds a book", "    @staticmethod", "    def add():", "        pass"]
+        expect(OutlinedMember.lead_of(lines, 3, "    ", ("#", "@"))).to(equal(1))
+
+    with it("should go no higher than the floor it is given"):
+        lines = ["# about", "# the file", "def add():"]
+        expect(OutlinedMember.lead_of(lines, 2, "", ("#",), floor=1)).to(equal(1))

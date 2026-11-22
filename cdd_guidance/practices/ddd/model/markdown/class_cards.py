@@ -81,6 +81,36 @@ class ClassCard(MarkdownDomainNode):
         card.stereotypes = marks
         return card
 
+    def take_words_from(self, earlier: "ClassCard") -> None:
+        """Keep the invariants, intent, and member words it has, and take earlier's where it has none, as a card read
+        from a drawing takes what the document it is written onto held: where that document writes its repository,
+        each property's note and the relationship a drawing shows no arrow for, and each operation's note and calls."""
+        self.invariants = self.invariants or list(earlier.invariants)
+        self.intent = self.intent or earlier.intent
+        self.drawn_in_root = earlier.drawn_in_root
+        written_properties = {item.name: item for item in earlier.plain_properties}
+        for prop in self.plain_properties:
+            written = written_properties.get(prop.name)
+            if written is not None:
+                prop.description = prop.description or written.description
+                if written.type_hint == prop.type_hint and not prop.stereotype:
+                    prop.stereotype = written.stereotype
+        written_operations = {item.name: item for item in earlier.operations}
+        for operation in self.operations:
+            if operation.name in written_operations:
+                self._take_operation_words(written_operations[operation.name], operation)
+
+    def _take_operation_words(self, earlier: "Operation", operation: "Operation") -> None:
+        """The operation's note, and its calls as the document writes them: every call inside the card's aggregate,
+        which no arrow shows, each call to another aggregate whose arrow is still drawn, then each arrow the document
+        has no call for."""
+        operation.description = operation.description or earlier.description
+        arrows = {_called_class(callee) for callee in operation.callees}
+        local = {card.name for card in self.parent.classes} if self.parent is not None else {self.name}
+        kept = [callee for callee in earlier.callees if _called_class(callee) in local | {""} or _called_class(callee) in arrows]
+        written = {_called_class(callee) for callee in kept}
+        operation.callees = kept + [callee for callee in operation.callees if _called_class(callee) not in written]
+
     @staticmethod
     def from_heading(heading: str) -> "ClassCard":
         """An empty card for `Name <<Stereotype>> …`."""
@@ -428,3 +458,10 @@ _PROPERTY = re.compile(r"^([+-])\s*(?:<<\s*(\w+)\s*>>\s*)?(\w+)\s*(?::\s*(.+))?$
 def ordered_stereotypes(found: list[str]) -> list[str]:
     known = [item for item in _ORDER if any(item.lower() == mark.lower() for mark in found)]
     return known + [item for item in found if item.lower() not in {mark.lower() for mark in known}]
+
+
+def _called_class(callee: str) -> str:
+    """The class a call names before its operation: `BookRepository` of `BookRepository.load(bookId)`; none for a call
+    that names only an operation."""
+    named = callee.strip().partition(".")[0].partition("(")[0].strip()
+    return named if named[:1].isupper() else ""

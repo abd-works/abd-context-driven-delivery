@@ -298,7 +298,6 @@ class MiroStoryModel(DiagramStoryModel):
         return [shape.svg_line() for epic in self.epics for shape in epic.shapes()]
 
     def parse(self, text: str, file: str = "") -> "MiroStoryModel":
-
         """Read a canvas-composer SVG into a Miro story map; the format-adapter entry point Stories renders through."""
         tagged = list(self._cards_in_order(self._svg_root(text)))
         if not tagged:

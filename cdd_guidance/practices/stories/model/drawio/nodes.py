@@ -406,7 +406,6 @@ class DrawIOStoryModel(DiagramStoryModel):
         return page.text()
 
     def parse(self, text: str, file: str = "") -> "DrawIOStoryModel":
-
         """Read the story map by where its cells sit, not their order in the file: draw.io saves cells back to
         front, so bringing a cell forward or sending it back moves it in the file but not on screen."""
         cells = self._placed_cells(text)

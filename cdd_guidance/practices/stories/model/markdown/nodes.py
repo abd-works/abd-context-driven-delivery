@@ -511,7 +511,6 @@ class MarkdownStoryModel(StoryModel):
             return document.text()
         previous = written.previous or None
         links = StoryMapLinks(story_map, str(written.folder)) if written.folder is not None else None
-
         replaced = self._replaced_outline(previous)
         if replaced is not None:
             replaced.lend_to(story_map)

@@ -18,7 +18,6 @@ from typing import TypedDict
 from harness.agent_tools.worker_process import WorkerProcess
 from harness.guidance.guidance import FidelityGuidance
 from harness.guidance.practice_formats import Rendered, RenderRequest
-
 from harness.markdown.format import Format
 
 # The module a worker process runs, which draws one order.

@@ -267,7 +267,6 @@ class JsonUxMap(UxMap):
         return self.find_screen(name) if name else None
 
     def render(self, canonical: UxMap, written: Written = Written()) -> str:
-
         """canonical in this format: copied into a map of this format, which writes itself."""
         return self.copy_of(canonical).save()
 

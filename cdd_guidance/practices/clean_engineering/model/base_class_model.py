@@ -501,7 +501,6 @@ class ModuleSourceFacts:
 
 
 class CleanEngineeringModel(OoadNode, FormatAdapter):
-
     _semantic_type_name = "CleanEngineeringModel"
     # The kind of module this model holds; a format's model names its own.
     module_type: type = Module
@@ -600,7 +599,6 @@ class CleanEngineeringModel(OoadNode, FormatAdapter):
         raise NotImplementedError(f"{type(self).__name__} must implement save")
 
     def parse(self, text: str, file: str = "") -> "CleanEngineeringModel":
-
         raise NotImplementedError(f"{type(self).__name__} must implement parse")
 
     def load_module(self, source: Module) -> Module:

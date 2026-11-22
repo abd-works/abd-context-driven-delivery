@@ -53,7 +53,7 @@ with description("a document rendered onto one that is already there") as self:
             expect(below).to(contain("no longer in the model", f"{NOTE}.", "## Open questions", "- Who owns returns?"))
 
         with it("should name how many lines wait to be placed"):
-            expect(self.kept.kept).to(equal(["3 line(s) set apart"]))
+            expect(self.kept.set_apart).to(equal(3))
 
         with context("rendered a second time"):
             with it("should change nothing"):

@@ -104,7 +104,6 @@ class JsonCleanEngineeringModel(CleanEngineeringModel):
     module_type = JsonModule
 
     def parse(self, text: str, file: str = "") -> "JsonCleanEngineeringModel":
-
         """Read a JSON model document into this model's own modules, and return it."""
         return self.take_record(self._decoded(text))
 
@@ -130,7 +129,6 @@ class JsonCleanEngineeringModel(CleanEngineeringModel):
 
     def render(self, canonical: CleanEngineeringModel, written: Written = Written()) -> str:
         if canonical is not self:
-
             self.translate_from(canonical)
         return json.dumps(self.as_record(), indent=2)
 
