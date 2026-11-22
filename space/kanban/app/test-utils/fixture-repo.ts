@@ -17,11 +17,11 @@ const STORY_MAP_FILE = '.context/story-map.md'
 const SOURCE_FILE = 'app/checkout/order.py'
 const STORY_MAP_TEXT = ['# Check Out Order', '', '## Payment', '', '- Enter Card Details', '- Handle Payment', '- Confirm Order', ''].join('\n')
 
-// The graph validate saved beside the story map's report, in the shape harness/graph/saved_graph.py writes (version 5).
+// The graph validate saved beside the story map's report, in the shape harness/graph/saved_graph.py writes (version 6).
 const STORY_MAP_NODE = { node_id: 'node-1', name: '', type: 'Story', practice: 'stories', file: STORY_MAP_FILE, line: 6, end_line: 6, stage: '', facts: {} }
 const STORY_MAP_HIT = { rule: 'verb-noun-format', message: 'Name the story with a verb', practice: 'stories', node_id: 'node-1', location: STORY_MAP_FILE, line: 6, end_line: 6 }
 const STORY_MAP_GRAPH = {
-  version: 5,
+  version: 6,
   overlays: [],
   practices: { stories: { source_root: '', root_facts: {}, nodes: [STORY_MAP_NODE], edges: [], violations: [STORY_MAP_HIT] } },
 }
