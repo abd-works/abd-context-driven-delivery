@@ -21,8 +21,6 @@ class WebDomainAccessOverlay(GraphOverlay):
         root = Path(graph.folder)
         ddd_nodes = graph.practices.part_of(ddd)
         for file in scanned_files(root):
-            tier = AccessFile.at(file).tier()
-            if tier is None:
-                continue
-            semantic, facts = tier
-            ddd_nodes.add_file(semantic, file.relative_to(root).as_posix(), file.name).set_facts(facts)
+            access = AccessFile.at(root, file)
+            if access.node_type:
+                ddd_nodes.add_file(access.node_type, access.relative, file.name).set_facts(access.facts)

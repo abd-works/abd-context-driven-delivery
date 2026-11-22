@@ -15,7 +15,7 @@ from harness.graph.pattern_overlays import GraphOverlay
 from harness.graph.saved_graph import NodeFacts
 from harness.graph.skipped_folders import scanned_files
 
-from cdd_guidance.patterns.lern_domain_driven.tier_facts import TierFile
+from cdd_guidance.patterns.lern_domain_driven.fact_files import BehaviorFile, StoryTestFile
 from cdd_guidance.patterns.oss_portal_domain_driven.tier_facts import AggregateFolder, MigrationFile, OssFile, ProxyFolder
 
 if TYPE_CHECKING:
@@ -182,9 +182,9 @@ class _OssReading:
             semantic = next((semantic for suffix, semantic in _STORY_TIERS.items() if file.name.endswith(suffix)), None)
             if semantic is None:
                 continue
-            story = TierFile.at(self.root, file)
+            story, behavior = StoryTestFile.at(self.root, file, semantic), BehaviorFile.at(self.root, file, semantic)
             node = self._file_node(self.stories, story.relative, semantic, file.name)
-            self._set_facts(node, {**story.story_facts(), **story.behavior_facts()})
+            self._set_facts(node, {**story.facts, **behavior.facts})
 
     # Nodes -----------------------------------------------------------------------------------------------------------
 

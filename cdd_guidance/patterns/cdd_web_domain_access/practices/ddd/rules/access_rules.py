@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
 from harness.graph.violation import Finding
+from cdd_guidance.patterns.cdd_web_domain_access import fact_names
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
@@ -21,7 +22,7 @@ class OneClassPerObject(PracticeGraphRule):
     def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         return [
             Finding(node, f"{node.source.file}:{line}: `{code}` calls a tool directly; call the {{Object}}Adapter operation for it.")
-            for line, code in node.get_fact("tool_calls", [])
+            for line, code in node.get_fact(fact_names.TOOL_CALLS, [])
         ]
 
 
@@ -34,7 +35,7 @@ class StateLivesBehindTheTool(PracticeGraphRule):
     def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         return [
             Finding(node, f"{node.source.file}:{line}: `{code}` keeps a store on an object CDD owns; read it through its tool.")
-            for line, code in node.get_fact("store_imports", [])
+            for line, code in node.get_fact(fact_names.STORE_IMPORTS, [])
         ]
 
 
@@ -47,7 +48,7 @@ class AdapterIsGenerated(PracticeGraphRule):
     def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         if node.type == "AccessHandWrittenAdapter":
             return [Finding(node, f"{node.source.file}: is an adapter or connection written by hand; annotate the toolset with @language_adapter and install.")]
-        if node.get_fact("extends_adapter", False):
+        if node.get_fact(fact_names.EXTENDS_ADAPTER, False):
             return [Finding(node, f"{node.source.file}: extends a generated adapter; use {{Object}}Adapter and its {{operation}}Requested directly.")]
         return []
 
@@ -61,5 +62,5 @@ class AnnotateWhatTypeScriptReads(PracticeGraphRule):
     def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         return [
             Finding(node, f"{node.source.file}:{line}: `{operation}` returns dict[str, Any]; return a domain object whose properties are annotated with @data_field.")
-            for line, operation in node.get_fact("open_results", [])
+            for line, operation in node.get_fact(fact_names.OPEN_RESULTS, [])
         ]

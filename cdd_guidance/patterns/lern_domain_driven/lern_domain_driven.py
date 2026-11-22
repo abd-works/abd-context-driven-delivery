@@ -16,7 +16,6 @@ from cdd_guidance.patterns.lern_domain_driven.graph_overlay import LernOverlay
 class LernDomainDriven(DomainDrivenStack):
     """The LERN stack: lowdb JSON files, Express, React, and Node, in TypeScript, organized by domain module."""
 
-    pattern = "lern_domain_driven"
     # The shared step library (story-test.ts, story-playwright.ts, my-paradise.ts, repositories.ts) sits outside tests/,
     # so tests/ holds only story-map folders.
     story_test_folder = "test-utils/story-test"

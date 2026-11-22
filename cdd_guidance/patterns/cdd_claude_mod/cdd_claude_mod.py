@@ -4,25 +4,13 @@ See space/kanban for the worked example."""
 
 from __future__ import annotations
 
-from functools import cached_property
-
 from harness.agent_tools.agent_tools import agent_toolset
-from harness.graph.pattern_overlays import GraphOverlay
-from harness.guidance.guidance import PracticeGuidance
+
+from cdd_guidance.patterns.pattern import Pattern
 
 
 @agent_toolset
-class CddClaudeMod(PracticeGuidance):
+class CddClaudeMod(Pattern):
     """A Claude Code mod that is a view of the CDD domain: each component runs view, client, MCP tool, domain."""
 
-    pattern = "cdd_claude_mod"
-
     default_workspace_folder = "harness"
-
-    def __init__(self) -> None:
-        super().__init__(format="typescript")
-
-    @cached_property
-    def graph_overlay(self) -> GraphOverlay:
-        """What this pattern gives the knowledge graph on top of the practices: no nodes, only the rules it adds to each practice. Made once and kept."""
-        return GraphOverlay(self)
