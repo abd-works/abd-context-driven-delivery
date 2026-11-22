@@ -90,7 +90,8 @@ WHITEBOARD_TEXT = json.dumps({
 })
 
 # Seed: story-review, a session working in the project's review folder with Stories alone on, whose story map holds two
-# stories that open with a generic verb, which verb-noun-format breaks, beside Delete Ticket, which passes it.
+# stories whose names describe a system mechanic, which story-name-captures-system-mechanic lists as candidates, beside
+# Delete Ticket, which it does not.
 STORY_REVIEW = "story-review"
 REVIEW_MAP = "review/.context/story-map.md"
 
