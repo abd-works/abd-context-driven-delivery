@@ -9,7 +9,7 @@ from harness.guidance.guidance import PracticeGuidance
 
 from cdd_guidance.practices.ddd.ddd_formats import DddFormats
 from cdd_guidance.practices.ddd.reading.graph_reading import DddReading
-from cdd_guidance.practices.ddd.model.nodes import DomainNode
+from cdd_guidance.practices.ddd.model.building_blocks import DomainNode
 from cdd_guidance.practices.ddd.model.sketch.sketch_ddd_model import SketchDddModel
 from cdd_guidance.practices.ddd.reading.graph_reading import BOUNDED_CONTEXT_MARKER, DOMAIN_MODEL_NAMES
 from cdd_guidance.practices.ddd.model.stereotypes import carries_a_stereotype, names_a_building_block

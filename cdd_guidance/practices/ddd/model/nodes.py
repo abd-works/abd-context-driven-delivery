@@ -1,7 +1,8 @@
-"""DDD building blocks — CE subtypes (schema ``is: class|module|property``).
+"""DDD's map — the bounded contexts and aggregates (schema ``is: module``), and the arcs between aggregates.
 
-BoundedContext and Aggregate subclass Module; Entity, ValueObject, Repository, and peers
-subclass OoadClass; DomainEvent subclasses Property. Graph rule slugs inherit from CE via
+BoundedContext and Aggregate subclass Module; the building blocks an aggregate holds are in ``building_blocks``. Every
+format reads into these nodes and writes from them: an aggregate holds its building blocks as the cards they are, and
+answers which is its root and its repository, whichever format it was read from. Graph rule slugs inherit from CE via
 ``harness.graph.schema_rules`` (same ``is:`` mapping as schema.yaml).
 """
 
@@ -12,15 +13,25 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import NamedTuple
 
-from harness.graph.model_node import ModelChildren, ModelNode
+from harness.graph.model_node import ModelChildren
 from harness.graph.graph import Graph
 from harness.markdown.markdown import heading_anchor
 
 from cdd_guidance.practices.clean_engineering.model import CleanEngineeringModel, Module, OoadClass
 from cdd_guidance.practices.clean_engineering.model import joined_module_path, module_path_in
+from cdd_guidance.practices.clean_engineering.model import Operation
 from cdd_guidance.practices.clean_engineering.model import Relationship
 from cdd_guidance.practices.clean_engineering.model import Property
 from cdd_guidance.practices.clean_engineering.model import pascal_type_names
+from cdd_guidance.practices.ddd.model.building_blocks import (
+    DomainClass,
+    DomainEvent,
+    DomainNode,
+    DomainService,
+    Entity,
+    called_class,
+    plain_name,
+)
 from cdd_guidance.practices.ddd.model.stereotypes import TacticalClass
 from harness.guidance.practice_formats import FormatAdapter
 
@@ -40,16 +51,30 @@ TARGET_SEGMENT = re.compile(r"[·•]")
 _PATH = "/"
 # The context classes with no place gather in.
 _DEFAULT_CONTEXT = "Domain"
+# How an arc's target line starts across contexts, and how it names the identity it holds its target by.
+_ARROWS = ("→", "->")
+_HELD_BY = "(by"
+# The words an arc's `key: value` lines use for its fields; `integrate:` is the sketch's word for the integration field.
+_FIELD_NAMES = {"integrate": "integration", "context": "context", "aggregate": "aggregate", "entity": "entity"}
 
 
-class DomainNode(ModelNode):
-    """A node of the DDD model. Most also subclass a Clean Engineering node, and the DDD practice registers itself on
-    this class, so each is a node of the DDD practice's graph."""
+def looks_like_operation(line: str) -> bool:
+    """A single lower-case word under the root names one of its operations; anything else names a member."""
+    if not line or " " in line or line.endswith(":"):
+        return False
+    return line[0].islower()
+
+
+def _drawn_name(line: str) -> str:
+    """A member's name as a drawing lists it: without what its line says after ` - `."""
+    return line.split(" - ", 1)[0].strip().lower()
 
 
 class Integration:
     """An arrow from an aggregate to another class: the context, aggregate, and entity it reaches, the identity it holds
-    that class by, and its fields. A target that names one class names only its entity."""
+    that class by, and its fields. A target that names one class names only its entity. Every text format writes an
+    arc the same way, a `- target` line, then a `key: value` line for each field, so the arc reads and writes those
+    lines itself."""
 
     FIELDS = ("pattern", "direction", "crosses", "integration", "sync")
     """The fields of an arc, in the order its lines write them under its target."""
@@ -75,6 +100,63 @@ class Integration:
         integration.context, integration.aggregate = target.parent.name, target.name
         return integration
 
+    @classmethod
+    def read_arcs(cls, lines: list[str]) -> list["Integration"]:
+        """The arcs the lines write: each `- target` line opens one, and the `key: value` lines under it fill it."""
+        arcs: list[Integration] = []
+        for line in (raw.strip() for raw in lines):
+            if line.startswith("- "):
+                arcs.append(cls.targeting(line[2:]))
+            elif arcs and ":" in line:
+                arcs[-1].read_field(line)
+        return arcs
+
+    @classmethod
+    def targeting(cls, text: str) -> "Integration":
+        """An arc to the target text names: `→ Context · Aggregate · Entity (by Identity)`, or one class alone."""
+        integration = cls()
+        named, _, held_by = text.partition(_HELD_BY)
+        named = plain_name(named)
+        for arrow in _ARROWS:
+            named = named.removeprefix(arrow).strip()
+        parts = [part.strip() for part in TARGET_SEGMENT.split(named) if part.strip()]
+        if len(parts) == 1:
+            parts = ["", "", parts[0]]
+        integration.context, integration.aggregate, integration.entity = (parts + ["", "", ""])[:3]
+        integration.held_by = held_by.rstrip(")").strip()
+        return integration
+
+    @classmethod
+    def kept_by(cls, dependency: Relationship) -> "Integration | None":
+        """The arc a class model's dependency keeps, when its details name a part of the arc's target: its pattern is
+        the label, the rest details."""
+        if not any(dependency.details.get(key) for key in cls.PARTS):
+            return None
+        integration = cls()
+        integration.pattern = dependency.label
+        for key in (*cls.PARTS, *cls.FIELDS[1:]):
+            setattr(integration, key, dependency.details.get(key, ""))
+        return integration
+
+    @property
+    def target(self) -> str:
+        """The target as the arc's line writes it: `→ Context · Aggregate · Entity` across contexts, the class alone
+        when it names one, then the identity it is held by."""
+        named = " · ".join(part for part in (self.context, self.aggregate, self.entity) if part)
+        written = f"{_ARROWS[0]} {named}" if self.context or self.aggregate else named
+        return f"{written} {_HELD_BY} {self.held_by})" if self.held_by else written
+
+    def lines(self) -> list[str]:
+        """The arc as an aggregate writes it under `Integrations:`: `- target`, then each field it has, indented."""
+        return [f"- {self.target}"] + [f"  {key}: {getattr(self, key)}" for key in self.FIELDS if getattr(self, key)]
+
+    def read_field(self, line: str) -> None:
+        """One `key: value` line under the arc's target, for a field the arc has."""
+        key, value = (part.strip() for part in line.split(":", 1))
+        field = _FIELD_NAMES.get(key.lower()) or (key.lower() if key.lower() in self.FIELDS else "")
+        if field:
+            setattr(self, field, value)
+
     @property
     def target_name(self) -> str:
         """The class the arrow points at: the entity when the target names one, else the aggregate."""
@@ -85,117 +167,6 @@ class Integration:
         its pattern, with each part of its target and each of its other fields as a detail."""
         details = {key: getattr(self, key) for key in (*self.PARTS, *self.FIELDS[1:]) if getattr(self, key)}
         return Relationship(target=self.target_name, kind="dependency", label=self.pattern, details=details)
-
-    def keeps_one(self, dependency: Relationship) -> bool:
-        """Whether a class model's dependency keeps an arc: it names a part of the arc's target as a detail."""
-        return any(dependency.details.get(key) for key in self.PARTS)
-
-    def read_dependency(self, dependency: Relationship) -> None:
-        """Take the parts and fields a class model's dependency keeps for this arc: its pattern is the label, the rest
-        details."""
-        self.pattern = dependency.label
-        for key in (*self.PARTS, *self.FIELDS[1:]):
-            setattr(self, key, dependency.details.get(key, ""))
-
-
-class InvariantObject(DomainNode, Property):
-    """A property that changes with its entity. Stereotype is invariant."""
-
-    _semantic_type_name = "InvariantObject"
-
-    def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
-        super().__init__(name, sequential_order, kwargs.get("type_hint", ""))
-        self.description = kwargs.get("description", "")
-        self.stereotype = "invariant"
-
-
-class DomainClass(DomainNode, OoadClass):
-    """A class of the DDD model: a Clean Engineering class that is one of the domain's building blocks, made with its
-    name, its order, and its intent. It holds its *TacticalClass*, the one reading of which building block its
-    stereotypes make it."""
-
-    def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
-        super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
-        self.tactical = TacticalClass(self)
-
-
-class Entity(DomainClass):
-    """Identity that stays the same when its values change."""
-
-    _semantic_type_name = "Entity"
-    _belongs = {("InvariantObject", "Entity")}
-
-    def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
-        super().__init__(name, sequential_order, **kwargs)
-        self.identity = []
-        self.is_root = False
-        self.aggregate = None
-        self.invariant_objects = []
-
-    def load_invariant_objects(self) -> None:
-        """Read the invariant objects the entity's source names: none for an entity read from no lines; each format's
-        entity reads its own."""
-
-
-class ValueObject(DomainClass):
-    """No write operations and no setters: a change makes a new value."""
-
-    _semantic_type_name = "ValueObject"
-
-
-class Repository(DomainClass):
-    """A collection. Operations are any of create, read, update, delete, and search."""
-
-    _semantic_type_name = "Repository"
-
-    def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
-        super().__init__(name, sequential_order, **kwargs)
-        self.accesses = None
-
-
-class DomainService(DomainClass):
-    """No state. An operation here is one no domain object can perform."""
-
-    _semantic_type_name = "DomainService"
-
-
-class DomainEvent(DomainNode, Property):
-    """One producer aggregate, one or many consumers, and a subject property."""
-
-    _semantic_type_name = "DomainEvent"
-
-    def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
-        super().__init__(name, sequential_order, kwargs.get("type_hint", ""))
-        self.description = kwargs.get("description", "")
-        self.producer = None
-        self.consumers = []
-        self.subject = self._blank_subject()
-
-    def _blank_subject(self) -> Property:
-        """The subject property an event starts with: the state of the event, with no fields read yet."""
-        subject = Property("subject", 0)
-        subject.description = "the state of the event"
-        return subject
-
-    def emitted_by(self, producer: "Aggregate") -> None:
-        """Become the event producer emits, starting again from a blank subject."""
-        self.producer = producer
-        self.subject = self._blank_subject()
-
-    def map_entry(self) -> str:
-        """The event as a map's event map lists it: `CartCheckedOut: emitted by ShoppingCart; consumed by Inventory`,
-        which `BoundedContextMap.wire_events` reads back."""
-        producer = self.producer.name if self.producer is not None else ""
-        consumers = ", ".join(item.name for item in self.consumers)
-        return f"{self.name}: emitted by {producer}; consumed by {consumers}"
-
-
-class Specification(DomainClass):
-    _semantic_type_name = "Specification"
-
-
-class Factory(DomainClass):
-    _semantic_type_name = "Factory"
 
 
 class Aggregate(DomainNode, Module):
@@ -221,6 +192,8 @@ class Aggregate(DomainNode, Module):
         self.group: str | None = None
         # The events the aggregate reacts to, which another aggregate's root emits.
         self.consumed_events: list[str] = []
+        # The arrows a class drawing shows from one of its cards with no detail kept on them: the card and the arrow.
+        self._drawn_arrows: list[tuple[DomainClass, Relationship]] = []
 
     def load_root(self) -> None:
         # The entity records this aggregate and loads its own invariant objects.
@@ -235,6 +208,58 @@ class Aggregate(DomainNode, Module):
         entity.is_root = True
         entity.aggregate = self
 
+    def open_root(self, name: str, members: list[str], emitted: list[str]) -> None:
+        """The root a document's or a drawing's lines name: an entity called name, holding the members listed under
+        it, the single lower-case words among them its operations, and emitting the events named."""
+        operations = [member for member in members if looks_like_operation(member)]
+        self.root = Entity(name, 1, member_lines=[member for member in members if member and member not in operations])
+        for operation in operations:
+            self.root.operations.append(Operation(operation, len(self.root.operations) + 1))
+        for event_name in emitted:
+            event = DomainEvent(event_name, len(self.root.properties))
+            event.producer = self
+            self.root.properties.append(event)
+
+    def take_drawn_root(self, members: list[str]) -> None:
+        """The root a map drawing shows: the aggregate's own entity, holding the members listed under it."""
+        self.open_root(self.name, members, [])
+        self.load_root()
+
+    def take_root_card(self) -> None:
+        """At model fidelity the root is the <<Aggregate Root>> card, keeping the events the aggregate's lines named;
+        each repository card collects that root."""
+        root = self.root_card
+        if root is None:
+            return
+        events = self.events
+        self.take_root(root)
+        self.root.properties.extend(event for event in events if event not in self.root.properties)
+        for card in self.classes:
+            if card.is_repository:
+                card.accesses = self.root
+
+    @property
+    def root_card(self) -> DomainClass | None:
+        """The card marked <<Aggregate Root>>, or made the aggregate's root; none at bounded-context fidelity."""
+        return next((card for card in self.classes if card.is_root), None)
+
+    @property
+    def repository(self) -> DomainClass | None:
+        """The card of the repository that keeps the root."""
+        return next((card for card in self.classes if card.is_repository), None)
+
+    @property
+    def member_cards(self) -> list[DomainClass]:
+        """The entities and values the root composes."""
+        return [card for card in self.classes if not card.is_root and not card.is_repository]
+
+    @property
+    def ordered_cards(self) -> list[DomainClass]:
+        """Root, then its repository, then members — the same order in every format."""
+        roots = [card for card in self.classes if card.is_root]
+        repositories = [card for card in self.classes if card.is_repository]
+        return roots + repositories + self.member_cards
+
     @property
     def events(self) -> list[DomainEvent]:
         """The domain events the root emits."""
@@ -244,8 +269,32 @@ class Aggregate(DomainNode, Module):
 
     @property
     def members(self) -> list:
-        """What the root holds: the invariant objects its lines name."""
+        """What the root holds: the member cards at model fidelity, else the invariant objects its lines name."""
+        if self.classes:
+            return self.member_cards
         return list(self.root.invariant_objects) if self.root is not None else []
+
+    @property
+    def drawn_members(self) -> list[str]:
+        """The members the map lists under the aggregate: what the root holds, without the root itself, prose, or
+        operations."""
+        if self.root is None:
+            return []
+        names = [item.name.split("//", 1)[0].split(" - ", 1)[0].strip() for item in self.members]
+        seen = {self.root.name.split(" - ", 1)[0].strip().lower(), self.name.lower()}
+        drawn: list[str] = []
+        for name in names:
+            if name and name.lower() not in seen and not self._looks_like_prose(name) and not looks_like_operation(name):
+                seen.add(name.lower())
+                drawn.append(name)
+        return drawn
+
+    def _looks_like_prose(self, line: str) -> bool:
+        """A note or a sentence, not a member's name."""
+        text = line.strip()
+        if not text or text.lower().startswith("note:"):
+            return True
+        return ". " in text or text.endswith(".") or text[0].islower()
 
     @property
     def place_labels(self) -> list[str]:
@@ -264,31 +313,124 @@ class Aggregate(DomainNode, Module):
 
     def take_words_from(self, earlier: "Aggregate") -> None:
         """Keep the sentence, group, and consumed events it has, and take earlier's where it has none, as an aggregate
-        read from a drawing takes what the document it is written onto held."""
+        read from a drawing takes what the document it is written onto held; what a root listed under it, as the
+        bounded-context map writes it, says it is; and each card's words, card by card."""
         self.description = self.description or earlier.description
         self.group = self.group or earlier.group
         self.consumed_events = self.consumed_events or list(earlier.consumed_events)
+        self._take_root_words_from(earlier)
+        was_named = {card.name: card for card in earlier.classes}
+        for card in self.classes:
+            if card.name in was_named:
+                card.take_words_from(was_named[card.name])
+
+    def _take_root_words_from(self, earlier: "Aggregate") -> None:
+        """A root listed under this aggregate, as the bounded-context map writes it, takes what earlier says the root
+        is, its operations, the events it emits, and each member's line as earlier writes it."""
+        was_root, root = earlier.root, self.root
+        if was_root is None or root is None or self.classes:
+            return
+        root.intent = root.intent or was_root.intent
+        root.operations = root.operations or list(was_root.operations)
+        if not self.events:
+            root.properties.extend(earlier.events)
+        written = {_drawn_name(member.name): member.name for member in was_root.invariant_objects}
+        for member in root.invariant_objects:
+            member.name = written.get(_drawn_name(member.name), member.name)
 
     def take_class(self, oclass: OoadClass) -> None:
-        """Hold a class read from a class model."""
-        self.classes.append(oclass)
+        """Hold a class read from a class model as the card of the building block it is, and the arcs it keeps as
+        dependencies as this aggregate's integrations."""
+        card = DomainClass.from_code(oclass)
+        self.classes.append(card)
+        arcs = (Integration.kept_by(dependency) for dependency in oclass.dependencies)
+        self.integrations.extend(arc for arc in arcs if arc is not None)
+        self._drawn_arrows.extend((card, item) for item in oclass.dependencies if item.label and not item.details)
 
     def read_arrows_across(self, homes: dict[str, "Aggregate"]) -> None:
-        """Once every aggregate holds its classes, read the arrows a class drawing shows from this aggregate's classes
-        to the classes of another, given the aggregate each class is in; each format's aggregate reads its own."""
+        """Once every aggregate holds its classes, read each labelled arrow from one of its cards to a class of another
+        aggregate, given the aggregate each class is in, as what it was drawn from: a call, when an operation of the
+        card names the arrow, made by that operation to the class; otherwise an integration to the class, whose
+        pattern is the arrow's label."""
+        for card, arrow in self._drawn_arrows:
+            target = homes.get(arrow.target)
+            if target is None or target is self:
+                continue
+            caller = next((item for item in card.operations if item.name == arrow.label), None)
+            if caller is None:
+                self._integrate_with(target, arrow)
+            elif arrow.target not in (callee.partition(".")[0].strip() for callee in caller.callees):
+                caller.callees.append(arrow.target)
+
+    def _integrate_with(self, target: "Aggregate", arrow: Relationship) -> None:
+        reaches = (target.parent.name, target.name, arrow.target)
+        if any((item.context, item.aggregate, item.entity) == reaches for item in self.integrations):
+            return
+        integration = Integration.from_aggregate(target)
+        integration.entity, integration.pattern = arrow.target, arrow.label
+        self.integrations.append(integration)
 
     def take_root_from_classes(self) -> None:
-        """Once its classes are read, make the one marked <<Aggregate Root>> its root."""
-        root = next((item for item in self.classes if isinstance(item, Entity) and item.tactical.kind() == "EntityRoot"), None)
-        if root is not None:
-            self.take_root(root)
+        """Once its cards are read from a class model: the relationships their types name, and the root card, else a
+        root named after the aggregate."""
+        self._infer_relationships()
+        self.take_root_card()
+        if self.root is None:
+            self.root = Entity(self.name, 1)
 
     def write_classes_into(self, module: Module) -> None:
-        """Add each of its classes to module, a module of a Clean Engineering format, as that format's own class."""
-        for oclass in self.classes:
-            written = module.load_class(oclass)
-            written.translate_from(oclass)
-            module.classes.append(written)
+        """Write the aggregate into module as code holds it: each card a class kept in the aggregate's place, and the
+        root alone when it has no cards."""
+        written = {id(card): card.write_into(module, self.place_labels) for card in self.ordered_cards}
+        self._fold_into_root(module, written)
+        if not module.classes and self.root is not None:
+            self.root.write_into(module, self.place_labels)
+        self._depend_across(module)
+
+    def _fold_into_root(self, module: Module, written: dict[int, OoadClass]) -> None:
+        """Draw each repository written inside its root's card inside the root's class, in place of a class of its own."""
+        root = self.root_card
+        if root is None:
+            return
+        for card in self.classes:
+            if card.drawn_in_root and id(card) in written:
+                module.classes.remove(written[id(card)])
+                written[id(root)].fold(written[id(card)])
+
+    def _depend_across(self, module: Module) -> None:
+        """Each class depends on the class of another aggregate its operations call, named by the calling operation,
+        and the root on each class an integration reaches, the arc kept whole as that dependency."""
+        local = {card.name for card in self.classes} | {self.name}
+        for oclass in module.classes:
+            for operation in oclass.operations:
+                self._depend_on_callees(oclass, operation, local)
+        if module.classes:
+            module.classes[0].dependencies.extend(item.as_dependency() for item in self.integrations if item.target_name)
+
+    def _depend_on_callees(self, oclass: OoadClass, operation: Operation, local: set[str]) -> None:
+        """oclass depends on the class of another aggregate each of the operation's calls names, by the operation."""
+        for callee in operation.callees:
+            target = called_class(callee)
+            if target and target not in local:
+                oclass.arrows.depend_on(target, operation.name)
+
+    def _infer_relationships(self) -> None:
+        """Code holds `identity: Identity`, not `<< composition >>`: a member the aggregate holds is composed, and a
+        repository's collection of the root is an aggregation."""
+        for card in self.classes:
+            for prop in card.plain_properties:
+                prop.stereotype = prop.stereotype or self._relationship_named_by(card, prop)
+
+    def _relationship_named_by(self, card: DomainClass, prop: Property) -> str:
+        """The relationship a property's type names: an aggregation for a repository's collection of the root, a
+        composition for a member the aggregate holds; none otherwise."""
+        named = pascal_type_names(prop.type_hint or "")
+        roots = {item.name for item in self.classes if item.is_root}
+        if card.is_repository and any(part in roots for part in named) and prop.type_hint.strip() not in roots:
+            return "aggregation"
+        if named and named[0] in {item.name for item in self.member_cards}:
+            return "composition"
+        return prop.stereotype
 
 
 class ContextMapping(DomainNode):
@@ -446,6 +588,15 @@ class BoundedContext(DomainNode, Module):
         self.module_name = self.module_name or earlier.module_name
         self.module_notes = self.module_notes or list(earlier.module_notes)
         self.group_notes = self.group_notes or dict(earlier.group_notes)
+
+    def keep_note(self, text: str, group: str | None) -> None:
+        """A note goes to the group it sits under, else the module, else the context."""
+        if group:
+            self.group_notes.setdefault(group, []).append(text)
+        elif self.module_name:
+            self.module_notes.append(text)
+        else:
+            self.notes.append(text)
 
     def append_context(self, context: "BoundedContext") -> None:
         self.contexts.append(context)

@@ -19,8 +19,8 @@ from harness.graph.graph import Graph
 from cdd_guidance.practices.clean_engineering.model import OoadClass
 from cdd_guidance.practices.clean_engineering.model import Operation
 from cdd_guidance.practices.clean_engineering.model import Property
-from cdd_guidance.practices.ddd.model.markdown.class_cards import MarkdownBuildingBlock
-from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContext, Entity, ValueObject
+from cdd_guidance.practices.ddd.model.building_blocks import DomainClass, Entity, ValueObject
+from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContext
 from cdd_guidance.practices.ddd.model.stereotypes import TacticalClass
 
 
@@ -32,13 +32,13 @@ def _class(name: str, stereotypes: list[str]) -> TacticalClass:
 
 with description("a class as DDD reads it"):
     with it("should name the aggregate root its heading marks"):
-        expect(TacticalClass(MarkdownBuildingBlock.from_heading("**ShoppingCart** <<Aggregate Root>> <<Entity>>")).kind()).to(equal("EntityRoot"))
+        expect(TacticalClass(DomainClass.from_heading("**ShoppingCart** <<Aggregate Root>> <<Entity>>")).kind()).to(equal("EntityRoot"))
 
     with it("should name the value object its heading marks"):
-        expect(TacticalClass(MarkdownBuildingBlock.from_heading("**CartItem** <<Value Object>>")).kind()).to(equal("ValueObject"))
+        expect(TacticalClass(DomainClass.from_heading("**CartItem** <<Value Object>>")).kind()).to(equal("ValueObject"))
 
     with it("should name the repository its heading marks"):
-        expect(TacticalClass(MarkdownBuildingBlock.from_heading("**ShoppingCartRepository** <<Repository>>")).kind()).to(equal("Repository"))
+        expect(TacticalClass(DomainClass.from_heading("**ShoppingCartRepository** <<Repository>>")).kind()).to(equal("Repository"))
 
     with it("should read the repository stereotype the graph reads from a @repository decorator"):
         expect(_class("CartRepository", ["Repository"]).kind()).to(equal("Repository"))
@@ -68,11 +68,11 @@ with description("a DDD class"):
     with it("should read its own stereotypes through that reading"):
         expect(self.entity.tactical.kind()).to(equal("EntityRoot"))
 
-    with it("should make its aggregate's root of itself when its stereotypes mark it the root"):
+    with it("should make its card its aggregate's root when its stereotypes mark it the root"):
         aggregate = Aggregate("cart")
         aggregate.take_class(self.entity)
         aggregate.take_root_from_classes()
-        expect(aggregate.root).to(be(self.entity))
+        expect((aggregate.root.name, aggregate.root is aggregate.root_card, aggregate.root.is_root)).to(equal(("ShoppingCart", True, True)))
 
 
 with description("a bounded context on a graph"):

@@ -10,8 +10,7 @@ each cell as the cell type the format names for it, and each cell reads itself i
 from __future__ import annotations
 
 from cdd_guidance.practices.clean_engineering.model import Module
-from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownBoundedContext, MarkdownIntegration
-from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContext, BoundedContextMap
+from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContext, BoundedContextMap, Integration
 
 # What a drawn map is called on the page it is drawn on.
 _TITLE = "Bounded Context Map"
@@ -72,7 +71,7 @@ class AggregateCell(MapCell):
     def read_integrations_into(self, drawn: BoundedContextMap) -> None:
         source = drawn.aggregate_at(self.name)
         for dependency in self.external_deps():
-            integration = MarkdownIntegration.from_aggregate(drawn.aggregate_at(dependency))
+            integration = Integration.from_aggregate(drawn.aggregate_at(dependency))
             integration.pattern = self.dependency_labels.get(dependency, "")
             source.integrations.append(integration)
 
@@ -81,7 +80,6 @@ class DrawnBoundedContextMap(BoundedContextMap):
     """A map drawn as a Clean Engineering model of some drawn format: its contexts and aggregates are its own modules.
     Each format names its context and aggregate cell types and renders and parses the drawing itself."""
 
-    bounded_context_type = MarkdownBoundedContext
     context_cell_type: type[ContextCell] = ContextCell
     aggregate_cell_type: type[AggregateCell] = AggregateCell
 
