@@ -8,7 +8,6 @@ import re
 from typing import TYPE_CHECKING
 
 from cdd_guidance.practices.clean_engineering.reading.folder_facts import FOLDER_TYPES
-from cdd_guidance.practices.source_code import is_test_code
 from cdd_guidance.practices.clean_engineering.rules.production_code_rule import ProductionCodeRule
 
 if TYPE_CHECKING:
@@ -76,14 +75,15 @@ class NoModulePerClass(ProductionCodeRule):
     def _public_classes_in(self, folder_node: "Node", context: "RuleCheckContext") -> list["Node"]:
         """The classes the folder owns that its production files declare under public names; a spec's classes are not
         its seam."""
+        test_code = context.practice.reading.test_code
         return [
             class_node
             for class_node in context.targets(folder_node, "owns")
-            if class_node.type == "OoadClass" and self._in_public_file(class_node.source.file or "")
+            if class_node.type == "OoadClass" and self._in_public_file(class_node.source.file or "") and not test_code.is_test_code(class_node.source.file)
         ]
 
     def _in_public_file(self, file: str) -> bool:
-        return not file.rsplit("/", 1)[-1].startswith("_") and not is_test_code(file)
+        return not file.rsplit("/", 1)[-1].startswith("_")
 
     def _independent(self, class_node: "Node") -> bool:
         """True for a class its stereotype marks as a subsystem of its own, such as an `@agent_toolset`."""

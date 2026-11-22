@@ -80,12 +80,14 @@
     "publishing_decorators": [
       "mcp",
       "agent_tool",
-      "agent_toolset",
+      "agent_toolset: for_call, session_for, instructions_type, is_served_on_mcp",
       "agent_instructions",
       "skill",
       "command",
       "rules",
-      "hook"
+      "hook",
+      "data_field",
+      "tool_subject"
     ],
     "registries": [
       "PRACTICE_CATALOGUE.register",
@@ -97,12 +99,35 @@
       "PracticeGraphRule",
       "PracticeGuidance",
       "GuidanceAction",
-      "GraphOverlay"
+      "GraphOverlay",
+      "Component: render, componentDidMount, componentDidUpdate, componentWillUnmount, componentDidCatch, getDerivedStateFromError, getDerivedStateFromProps, shouldComponentUpdate, getSnapshotBeforeUpdate",
+      "DocumentationFormatter: example_passed, example_failed, example_pending, example_group_started, example_group_finished, summary",
+      "ProgressFormatter: example_passed, example_failed, example_pending, summary"
     ],
     "entry_points": [
-      "*.py:main"
+      "*.py:main",
+      "*/extension.js:activate",
+      "*/extension.js:deactivate"
     ],
     "naming_conventions": [],
     "generated_adapters": []
+  },
+  "test_code": {
+    "files": [
+      "cdd_guidance/practices/template_checks.py",
+      "cdd_guidance/practices/output_folder.py",
+      "space/repo/built_once.py",
+      "cdd_guidance/practices/agent_bdd/__init__.py",
+      "cdd_guidance/practices/agent_bdd/agent.py",
+      "cdd_guidance/practices/agent_bdd/agent_bdd_common.py",
+      "cdd_guidance/practices/agent_bdd/agent_block.py",
+      "cdd_guidance/practices/agent_bdd/agent_chat_bdd.py",
+      "cdd_guidance/practices/agent_bdd/agent_cli_bdd.py",
+      "cdd_guidance/practices/agent_bdd/conf.py",
+      "cdd_guidance/practices/agent_bdd/conftest.py",
+      "cdd_guidance/practices/agent_bdd/cursor_cli.py",
+      "cdd_guidance/practices/agent_bdd/spec_helpers.py",
+      "cdd_guidance/practices/agent_bdd/yaml_fence.py"
+    ]
   }
 }

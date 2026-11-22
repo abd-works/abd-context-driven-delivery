@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Callable, Iterator
 from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER
 from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUCTOR_NAMES
 from cdd_guidance.practices.clean_engineering.reading.code_read import DESCRIBED_FACT
-from cdd_guidance.practices.source_code import is_test_code
+from cdd_guidance.practices.source_code import ProjectTestCode
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
@@ -151,7 +151,7 @@ class ProductionClasses:
         for edge in in_graph.edge_index.of("owns"):
             if edge.child.type == "Operation" and edge.parent.type == "OoadClass":
                 self._operations.setdefault(edge.parent.node_id, []).append(edge.child)
-        self._classes = {node.node_id: ProductionClass(node, self) for node in in_graph.nodes("OoadClass") if _is_production(node)}
+        self._classes = {node.node_id: ProductionClass(node, self) for node in in_graph.nodes("OoadClass") if _is_production(node, reading.test_code)}
         # A class mixed in comes before the base a class derives from: `class Model(Reading, BaseModel)`.
         self._mixins = {base for each in self for base in each.bases[:-1]}
         self._defining: dict[str, set[str]] = {}
@@ -218,10 +218,10 @@ class ProductionClasses:
         return type_name.endswith(_FAILURE_SUFFIXES)
 
 
-def _is_production(node: "Node") -> bool:
+def _is_production(node: "Node", test_code: "ProjectTestCode") -> bool:
     """A class of production code, read from code: neither one a model document describes, which has no code to
     measure, nor one read from a spec or test support, nor the holder of a file's functions."""
-    return node.name != MODULE_FUNCTION_HOLDER and not is_test_code(node.source.file) and not node.has_fact(DESCRIBED_FACT)
+    return node.name != MODULE_FUNCTION_HOLDER and not test_code.is_test_code(node.source.file) and not node.has_fact(DESCRIBED_FACT)
 
 
 def _declares_value(node: "Node") -> bool:

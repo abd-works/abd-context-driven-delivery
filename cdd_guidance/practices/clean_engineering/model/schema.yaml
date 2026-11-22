@@ -32,6 +32,7 @@ module:
     - use-typed-signatures
     - general-purpose-surface
     - temporal-independence
+    - seam-names-current-code
     - one-way-deps
     - depend-toward-stability
     - extensions-live-with-the-domain
@@ -52,10 +53,12 @@ package:
     - id is the module id, then this package name, joined by dots
     - a package groups classes inside a module
   rules:
+    - do-not-invent-parallel-object-models
     - one-way-deps
     - depend-toward-stability
     - layer-separation
     - source-parses
+    - merge-one-class-packages
 
 class:
   fidelity: model
@@ -82,6 +85,7 @@ class:
     - keep-classes-single-responsibility
     - shape-classes-around-resources
     - put-logic-on-the-owning-resource
+    - hold-state-on-the-object-not-in-parameters
     - hide-inner-details
     - use-explicit-dependencies
     - external-system-interface-is-one-way
@@ -101,6 +105,9 @@ class:
     - limit-class-complexity
     - limit-class-methods
     - keep-class-methods-sharing-data
+    - delete-unused-classes
+    - check-use-the-graph-cannot-see
+    - connect-disconnected-classes
 
 relationship:
   fidelity: model
@@ -155,9 +162,14 @@ operation:
     - put-logic-on-the-owning-resource
     - use-property-not-accessor
     - eliminate-duplication
+    - hold-state-on-the-object-not-in-parameters
+    - use-consistent-naming
     - limit-paths-through-a-function
     - keep-functions-readable
     - limit-function-lines
+    - delete-unused-operations
+    - check-use-the-graph-cannot-see
+    - make-module-only-operations-private
 
 property:
   fidelity: model
@@ -177,6 +189,8 @@ property:
     - use-property-not-accessor
     - hide-inner-details
     - keep-operations-small-focused
+    - delete-unused-operations
+    - check-use-the-graph-cannot-see
     - simplify-control-flow
     - use-exceptions-properly
     - never-swallow-exceptions

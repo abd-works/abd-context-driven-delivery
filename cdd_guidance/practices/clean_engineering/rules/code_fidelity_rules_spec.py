@@ -22,6 +22,8 @@ _CODE_ONLY = (
     "never-swallow-exceptions", "provide-meaningful-context", "prefer-instance-operations",
     "limit-paths-through-a-function", "keep-functions-readable", "limit-function-lines",
     "limit-class-complexity", "limit-class-methods", "keep-class-methods-sharing-data",
+    "delete-unused-classes", "delete-unused-operations", "check-use-the-graph-cannot-see",
+    "make-module-only-operations-private", "connect-disconnected-classes", "merge-one-class-packages",
 )
 _METHODS = "".join(f"    def step_{index}(self) -> None:\n        ...\n\n" for index in range(31))
 # A class of the model fidelity written in Python: 31 operations, a classmethod named current among them, a
@@ -53,9 +55,12 @@ with description("a rule Clean Engineering states only at the code fidelity") as
         expect([BY_SLUG[slug].code_fidelity_only for slug in _CODE_ONLY]).to(equal([True] * len(_CODE_ONLY)))
 
     with context("on a class whose operations have no bodies"):
+        # Each rule's hits run every rule of the practice again, so the code-only rules are run once, before the example.
+        with before.all:
+            self.reported = {slug: self.declared_only.hits(BY_SLUG[slug]) for slug in _CODE_ONLY}
+
         with it("should report nothing, since a class at the model fidelity has no body to judge"):
-            reported = {slug: self.declared_only.hits(BY_SLUG[slug]) for slug in _CODE_ONLY}
-            expect({slug: hits for slug, hits in reported.items() if hits}).to(equal({}))
+            expect({slug: hits for slug, hits in self.reported.items() if hits}).to(equal({}))
 
     with context("on the same class once one operation has a body"):
         with it("should report the class for its 33 methods"):

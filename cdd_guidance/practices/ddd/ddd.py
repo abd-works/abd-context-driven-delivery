@@ -8,7 +8,6 @@ from harness.agent_tools.agent_tools import agent_toolset
 from harness.guidance.guidance import PracticeGuidance
 
 from cdd_guidance.practices.ddd.ddd_formats import DddFormats
-from cdd_guidance.practices.source_code import is_test_code
 from cdd_guidance.practices.ddd.reading.graph_reading import DddReading
 from cdd_guidance.practices.ddd.model.building_blocks import DomainNode
 from cdd_guidance.practices.ddd.model.sketch.sketch_ddd_model import SketchDddModel
@@ -75,8 +74,8 @@ class Ddd(PracticeGuidance):
     claims_some_code = True
 
     def is_production_code(self, file: str) -> bool:
-        """Code its tactics write, not a spec, a test, or test support (``is_test_code``)."""
-        return not is_test_code(file)
+        """Code its tactics write, not a spec, a test, or test support (its reading's ``test_code``, the project's one answer)."""
+        return not self.reading.test_code.is_test_code(file)
 
     def claims(self, file: Path) -> bool:
         """DDD's files are a domain's: a file whose path names a domain model or a bounded context, code declaring a

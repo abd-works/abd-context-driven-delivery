@@ -20,16 +20,15 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     UnreadableSource,
 )
 from cdd_guidance.practices.clean_engineering.model.code_class_model import CodeCleanEngineeringModel
+from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.reading.folder_facts import folders_of
 from cdd_guidance.practices.clean_engineering.model.module_context_files import ModuleContext
 from cdd_guidance.practices.source_code import ScriptImports, imported_files
-from cdd_guidance.practices.source_code import is_test_code
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
 
     from cdd_guidance.practices.clean_engineering.reading.graph_reading import GraphReading
-    from cdd_guidance.practices.clean_engineering.model.operation import Operation
     from cdd_guidance.practices.clean_engineering.model.property import Property
     from cdd_guidance.practices.source_code import ClassReference
 
@@ -158,6 +157,7 @@ class OutsideScope:
     def __init__(self, reading: "GraphReading", parsed: list[Path]) -> None:
         self._graph = reading.graph
         self._in_graph = reading.in_graph
+        self._test_code = reading.test_code
         self._root = Path(reading.in_graph.source_root)
         self._suffixes = reading.practice.formats.suffixes
         self._parsed = set(parsed)
@@ -180,7 +180,7 @@ class OutsideScope:
                 continue
             names.update(_CLASS_NAMES.findall(text))
             relative = file.relative_to(self._root).as_posix()
-            if not is_test_code(relative):
+            if not self._test_code.is_test_code(relative):
                 references = ScriptImports(text).class_references(file, self._root)
                 importers[relative] = {"module": self._module_folder_of(file.parent), "classes": sorted(references)}
         self._in_graph.root.set_fact("imported_classes_outside", importers)
@@ -252,10 +252,13 @@ class ClassNodes:
         self._graph.edges.link("owns", folder, node)
         self._graph.edges.relate("belongsTo", node, folder)
         self._written.extend((node, prop.relationship.kind, prop.relationship.target) for prop in cls.properties if prop.stereotype and prop.relationship)
-        for prop in cls.public_properties:
+        shown = cls.public_properties
+        for prop in shown:
             self._property(relative, node, prop)
+        # A getter its instances do not show, a private one, is read as the operation it is, so what its body calls and
+        # raises is read too.
         for operation in cls.operations:
-            if not operation.is_property:
+            if not operation.is_property or not any(operation is prop for prop in shown):
                 self._operation(relative, node, operation)
 
     def link_types(self) -> None:
@@ -278,9 +281,10 @@ class ClassNodes:
     def _property(self, relative: str, cls: "Node", prop: "Operation | Property") -> None:
         """A field the class declares, or a getter: the operation that reads it, which is the property's node. Its type
         is the field's declared type, or the type the getter returns, which ``link_types`` links once every class is
-        added."""
-        line = prop.line or 1
-        node = self._in_graph.add(prop, f"clean_engineering:Property:{relative}:{prop.name}:{cls.name}", Location(relative, line, line))
+        added. A getter's node spans the getter's whole body, so the calls its body makes and the failures it raises
+        are read as an operation's are; a field's spans its line."""
+        start, end = prop.source_lines if isinstance(prop, Operation) else (prop.line or 1, prop.line or 1)
+        node = self._in_graph.add(prop, f"clean_engineering:Property:{relative}:{prop.name}:{cls.name}", Location(relative, start, end))
         self._graph.edges.group("properties", cls, node)
 
     def _operation(self, relative: str, cls: "Node", operation: "Operation") -> None:
@@ -330,6 +334,7 @@ class CodeFolders:
     def __init__(self, reading: "GraphReading") -> None:
         self._graph = reading.graph
         self._in_graph = reading.in_graph
+        self._test_code = reading.test_code
         self._root = Path(self._in_graph.source_root)
         self._suffixes = reading.practice.formats.suffixes
         self._modules: dict[str, Module] = self._found(self._graph.scope.folders)
@@ -347,7 +352,7 @@ class CodeFolders:
 
     def _is_public_source(self, file_name: str) -> bool:
         """True for a file of a folder other modules may read: production code whose name does not start with `_`."""
-        return not file_name.startswith("_") and not is_test_code(file_name)
+        return not file_name.startswith("_") and not self._test_code.is_test_code(file_name)
 
     def add(self) -> None:
         """Add each folder to the graph as its Module's node."""
@@ -361,7 +366,7 @@ class CodeFolders:
         owner = self._nearest(str(Path(relative).parent).replace("\\", "/"), self._modules)
         if not owner:
             return self._in_graph.root
-        if not is_test_code(relative):
+        if not self._test_code.is_test_code(relative):
             self._imports[owner].extend(module.dependencies)
             self._record_imported_classes(self._nodes[owner], relative, module.imported_classes)
             self._record_sibling_imports(self._nodes[owner], relative, module.dependencies)
@@ -466,7 +471,7 @@ class CodeFolders:
             return None
         module = Module(name=folder.name, sequential_order=1)
         module.source_facts.load_folder(folder)
-        module.set_fact(PRODUCTION_FACT, any(not is_test_code(f"{relative}/{name}".lstrip("/")) for name in sources))
+        module.set_fact(PRODUCTION_FACT, any(not self._test_code.is_test_code(f"{relative}/{name}".lstrip("/")) for name in sources))
         if module.has_module_context:
             module.type = "Module"
             module.set_fact(CARD_FACT, f"{relative}/.context/module-context.md".lstrip("/"))

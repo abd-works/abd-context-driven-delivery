@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING
 from harness.graph.practice_rule import PracticeGraphRule
 
 from cdd_guidance.practices.clean_engineering.reading.code_read import CODE_FIDELITY
-from cdd_guidance.practices.source_code import is_test_code
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
@@ -28,7 +27,8 @@ class ProductionCodeRule(PracticeGraphRule):
     code_fidelity_only = False
 
     def check(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
-        if is_test_code(node.source.file):
+        """Judge node unless it is test code, as the project tells it through the reading of the node's practice."""
+        if node.practice.reading.test_code.is_test_code(node.source.file):
             return []
         if self.code_fidelity_only and not node.is_read_at(CODE_FIDELITY):
             return []

@@ -20,7 +20,7 @@ from cdd_guidance.practices.source_code.code_body import (
 )
 from cdd_guidance.practices.source_code.script_imports import STAR, ClassReference, ScriptImports, imported_files
 from cdd_guidance.practices.source_code.source_text import MeasuredBody, SourceText, SpanCollaborators, SpanFailures
-from cdd_guidance.practices.source_code.test_files import TestFileName, is_example_code, is_spec_file, is_test_code
+from cdd_guidance.practices.source_code.test_files import HoldsProjectTestCode, ProjectTestCode, TestFileName
 
 __all__ = [
     "BraceCall",
@@ -32,10 +32,12 @@ __all__ = [
     "CodeBody",
     "CodeLanguage",
     "CodeSpelling",
+    "HoldsProjectTestCode",
     "InsideLines",
     "JAVASCRIPT",
     "MeasuredBody",
     "PYTHON",
+    "ProjectTestCode",
     "STAR",
     "ScriptImports",
     "SourceText",
@@ -46,9 +48,6 @@ __all__ = [
     "WrittenBlock",
     "WrittenKey",
     "imported_files",
-    "is_example_code",
-    "is_spec_file",
-    "is_test_code",
     "parse_arrow_line",
     "split_top_level",
 ]

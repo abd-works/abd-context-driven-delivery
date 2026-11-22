@@ -3,7 +3,7 @@
 
 - **Purpose:** Hold the test-tier and test-first rules every implementation fidelity follows, once, beside the practices they supplement.
 - **Seam (terms):** Tdd (`records_for(fidelity, files)`), TddOverlay, ModuleTiers, `tier_of`, `recorded_tier_of`, `test_tool_of`, `is_code_file`, `real_resources_in`, `stubs_in`, HeavyExamples, CodeUnderTest
-- **Dependencies (one-way):** `harness/guidance` (*PracticeSupplement*), `harness/graph` (*Graph*, *Node*, *GraphOverlay*), `harness/agent_tools`, the session it works in through `harness/guidance`'s *WorkedSession* (`session.test_tiers`), `cdd_guidance/practices/stories`, `cdd_guidance/practices/bdd` and `cdd_guidance/practices/clean_engineering` (the practices whose nodes it records facts on), `cdd_guidance/practices/source_code` (`is_example_code`)
+- **Dependencies (one-way):** `harness/guidance` (*PracticeSupplement*), `harness/graph` (*Graph*, *Node*, *GraphOverlay*), `harness/agent_tools`, the session it works in through `harness/guidance`'s *WorkedSession* (`session.test_tiers`), `cdd_guidance/practices/stories`, `cdd_guidance/practices/bdd` and `cdd_guidance/practices/clean_engineering` (the practices whose nodes it records facts on), `cdd_guidance/practices/source_code` (*ProjectTestCode*, through Clean Engineering's reading)
 
 ## Constraint
 

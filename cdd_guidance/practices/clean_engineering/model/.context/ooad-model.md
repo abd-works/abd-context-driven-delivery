@@ -472,8 +472,23 @@ The module card, `.context/module-context.md`, of one code folder.
 + writes_child_parent_headings(): bool
 + model_blocks(): list[str]
 	// model-fidelity detail written into the card: a ------ member list, a Sources / context list, a Live instance list
++ bullets(): ModuleMeta
+	// the card's Purpose, Seam, and Dependencies bullets
 + folder_facts(): dict[str, object]
-	// every fact above by the name a Module keeps it under, with whether the folder holds .context/bounded-context.md
+	// every fact above by the name a Module keeps it under, with whether the folder holds .context/bounded-context.md, and the seam terms and dependencies the card names (card_seam_terms, card_dependencies)
+
+## ModuleMeta (module_context_files.py)
+
+<<Value Object>> The Purpose, Seam, and Dependencies bullets of a modules-fidelity block, and the prose left beside them.
+
++ ModuleMeta(text: str)
+------
++ purpose: str
++ seam_terms: list[str]
++ dependencies: list[str]
++ leftover: str
+----
++ terms(raw: str): list[str]
 
 ## PublicSources
 
@@ -705,19 +720,6 @@ A model document of bold class cards under modules and resource groups, each one
 ----
 + read(text: str, headings: list[tuple]): None
 + render(): str
-
-## ModuleMeta
-
-<<Value Object>> The Purpose, Seam, and Dependencies bullets of a modules-fidelity block, and the prose left beside them.
-
-+ ModuleMeta(text: str)
-------
-+ purpose: str
-+ seam_terms: list[str]
-+ dependencies: list[str]
-+ leftover: str
-----
-+ terms(raw: str): list[str]
 
 ## ClassHeading
 

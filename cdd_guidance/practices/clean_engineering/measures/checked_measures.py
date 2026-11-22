@@ -13,7 +13,7 @@ from cdd_guidance.practices.clean_engineering.model import MODULE_FUNCTION_HOLDE
 from cdd_guidance.practices.clean_engineering.measures.measuring_tools import MeasuredNode, MeasuringTool, ToolDoesNotTakeMeasure
 from cdd_guidance.practices.clean_engineering.reading.code_read import DESCRIBED_FACT
 from cdd_guidance.practices.clean_engineering.reading.folder_facts import is_under
-from cdd_guidance.practices.source_code import CODE_LANGUAGES, is_test_code
+from cdd_guidance.practices.source_code import CODE_LANGUAGES
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
@@ -42,7 +42,7 @@ class CheckedCodeMeasures:
         root = Path(reading.in_graph.source_root).resolve()
         named = {self._from_root(file, root): file.resolve() for file in files}
         # Each checked production code file, by its path from the source root.
-        self._files = {relative: file for relative, file in named.items() if relative and file.suffix in _LANGUAGE_OF and not is_test_code(relative)}
+        self._files = {relative: file for relative, file in named.items() if relative and file.suffix in _LANGUAGE_OF and not reading.test_code.is_test_code(relative)}
 
     def take(self) -> None:
         """Keep each measure of each function, class and module read from the checked files on its node."""

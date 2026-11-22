@@ -24,6 +24,12 @@ def record_fact(node: "Node", key: str, fact: "FactValue") -> None:
         node.set_fact(key, fact)
 
 
+def own_fact(node: "Node", key: str) -> "FactValue":
+    """The fact node itself records, or none: what ``record_fact`` left. A node that records no fact of its own would
+    otherwise answer the nearest ancestor's (``Node.get_fact``), so a module would report its parent module's finding."""
+    return node.get_fact(key) if node.has_fact(key) else None
+
+
 def is_under(path: str | None, folder: str | None) -> bool:
     """True for a path at or below folder, both from the source root."""
     if not path or not folder:

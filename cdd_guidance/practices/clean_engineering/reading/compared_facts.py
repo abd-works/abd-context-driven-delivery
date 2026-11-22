@@ -23,6 +23,12 @@ from cdd_guidance.practices.clean_engineering.reading.folder_facts import Folder
 from cdd_guidance.practices.clean_engineering.reading.module_exposure import ModuleExposure
 from cdd_guidance.practices.clean_engineering.reading.public_routes import PublicRoutes, registered_in_this_process
 from cdd_guidance.practices.clean_engineering.reading.operation_facts import BodyCopies, FailureMessages
+from cdd_guidance.practices.clean_engineering.reading.card_drift import CardDrift
+from cdd_guidance.practices.clean_engineering.reading.operation_verbs import VerbsForOneTarget
+from cdd_guidance.practices.clean_engineering.reading.owned_dependencies import DependenciesToOwn
+from cdd_guidance.practices.clean_engineering.reading.passed_state import HandedDownParameters, ParameterEveryOperationTakes
+from cdd_guidance.practices.clean_engineering.reading.same_bodies import SameBodies
+from cdd_guidance.practices.clean_engineering.reading.second_registries import SecondRegistries
 
 if TYPE_CHECKING:
     from cdd_guidance.practices.clean_engineering.reading.graph_reading import GraphReading
@@ -51,5 +57,12 @@ class ComparedFacts:
             BuiltCollaborators(classes),
             BodyCopies(in_graph),
             FailureMessages(in_graph, classes),
+            DependenciesToOwn(in_graph, classes),
+            SameBodies(in_graph),
+            HandedDownParameters(in_graph),
+            ParameterEveryOperationTakes(classes),
+            SecondRegistries(in_graph, classes),
+            VerbsForOneTarget(in_graph),
+            CardDrift(in_graph),
         ):
             part.record()

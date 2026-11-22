@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from cdd_guidance.practices.bdd.bdd import Bdd
 from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 from cdd_guidance.practices.stories.stories import Stories
-from harness.graph.practice_rule import SharedPracticeGraphRule
+from harness.graph.practice_rule import SCOPE_ALL, SharedPracticeGraphRule
 from harness.graph.violation import Finding
 
 if TYPE_CHECKING:
@@ -38,6 +38,7 @@ class OperationHasAProvingTest(SharedPracticeGraphRule):
     such as a test that loads a module by a path, or a call from another language, so each operation it lists is a candidate to read. A graph that read no test records nothing to judge."""
 
     slug = "operation-has-a-proving-test"
+    scope = SCOPE_ALL
     requires_judge = True
     node_types_by_practice = {CleanEngineering: ("Operation",)}
 
@@ -53,6 +54,7 @@ class DeclaredExceptionRaisedByATest(SharedPracticeGraphRule):
     raised. A graph that read no test records nothing to judge."""
 
     slug = "declared-exception-raised-by-a-test"
+    scope = SCOPE_ALL
     node_types_by_practice = {CleanEngineering: ("OoadClass",)}
 
     def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:

@@ -28,7 +28,7 @@ from harness.graph.skipped_folders import skips_folder
 from cdd_guidance.practices.clean_engineering.reading.code_read import CODE_FIDELITY, DESCRIBED_FACT, MODEL_FIDELITY
 from cdd_guidance.practices.clean_engineering.model import Relationship
 from cdd_guidance.practices.clean_engineering.reading.card_lines import CardLines
-from cdd_guidance.practices.source_code import is_test_code
+from cdd_guidance.practices.source_code import HoldsProjectTestCode
 from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownBoundedContextMap
 from cdd_guidance.practices.ddd.model.building_blocks import DomainEvent
 from cdd_guidance.practices.ddd.model.nodes import TARGET_SEGMENT, Aggregate, AggregateLink, BoundedContext, ContextMapping, Integration
@@ -159,7 +159,7 @@ class BuildingBlock(Node):
         return [op for op in self.ooad_class.operations if op.name and not op.name.startswith("_")]
 
 
-class DddReading(PracticeReading):
+class DddReading(HoldsProjectTestCode, PracticeReading):
     """How DDD takes part in the graph: it reads, after the Clean Engineering practice it extends, the bounded contexts
     its folders mark, the aggregates its folders hold, a building block for each class Clean Engineering read from
     code, and the aggregates its domain model documents describe; and it checks its own graph rules with Clean
@@ -220,6 +220,8 @@ class _DomainClasses:
 
     def __init__(self, classes: PracticeNodes | None) -> None:
         self._classes = classes
+        # The project's test code, as Clean Engineering's reading tells it; none without Clean Engineering, and no class.
+        self._test_code = classes.practice.reading.test_code if classes is not None else None
         # Clean Engineering's module or package node of each folder, read once when first asked for.
         self._folder_nodes: dict[Path, Node] | None = None
         every = [cls for cls in classes.nodes("OoadClass") if not cls.has_fact(DESCRIBED_FACT)] if classes is not None else []
@@ -233,7 +235,7 @@ class _DomainClasses:
         if self._classes is None:
             return []
         read_now = self._classes.nodes_read_now("OoadClass")
-        return [cls for cls in read_now if not is_test_code(cls.source.file) and not cls.has_fact(DESCRIBED_FACT)]
+        return [cls for cls in read_now if not self._test_code.is_test_code(cls.source.file) and not cls.has_fact(DESCRIBED_FACT)]
 
     def holds_a_domain(self, folder: str) -> bool:
         return folder in self._stereotyped_folders
@@ -268,7 +270,7 @@ class _DomainClasses:
         named with `_`), not test code, not a React screen module's, and not one marked as another system's."""
         file = cls.source.file
         return not (
-            cls.name.startswith("_") or is_test_code(file) or file.lower().endswith(_SCREEN_MODULE) or marks_another_system(cls.get_fact("stereotypes") or [])
+            cls.name.startswith("_") or self._test_code.is_test_code(file) or file.lower().endswith(_SCREEN_MODULE) or marks_another_system(cls.get_fact("stereotypes") or [])
         )
 
 

@@ -77,3 +77,31 @@ with description("a graph rule's finding on a node"):
 
         with it("should still be found by a filter that asks for the nodes with findings"):
             expect(self.place.failed_rules).to(equal([_SLUG]))
+
+    with context("of a rule a program decides, that lists one finding for a judge"):
+        with before.each:
+            self.place = _operation_ruled_by(_CountedRule())
+            self.rule = self.place.rules[_SLUG]
+            self.rule.record(Finding(self.place, "Operations 'place' and 'put' may do the same work.", candidate=True))
+
+        with it("should keep the finding the program decided an error"):
+            expect(self.rule.violations[0].severity).to(equal("error"))
+
+        with it("should keep the finding it lists for a judge a candidate"):
+            expect(self.rule.violations[1].severity).to(equal("candidate"))
+
+        with it("should keep the candidate a candidate when its node's rule takes it back from a saved graph"):
+            restored = GraphRule(self.place, _SLUG, _CountedRule())
+            restored.restore(Violation.from_data(data_of(self.rule.violations[1])))
+            expect(restored.violations[0].severity).to(equal("candidate"))
+
+        with it("should say the rule is violating while one finding is an error"):
+            expect(self.rule.status).to(equal("violating"))
+
+    with context("of a rule a program decides, that only lists findings for a judge on a node"):
+        with it("should say the rule has a candidate there"):
+            practice = _operation_ruled_by(_CountedRule()).practice
+            checked = Node(practice, NodeIdentity(type="Operation", node_id="clean_engineering:Operation:put", name="put"), Source("order.py", 3, 4))
+            checked.rules.entries[_SLUG] = GraphRule(checked, _SLUG, _CountedRule())
+            checked.rules.entries[_SLUG].record(Finding(checked, "Operations 'put' and 'place' may do the same work.", candidate=True))
+            expect(checked.rules[_SLUG].status).to(equal("candidate"))

@@ -1,7 +1,8 @@
 """A graph rule's scope: a rule of scope ``all`` runs over the graph of the whole working copy, so a validate reports
 what it finds wherever it is, marked when it is outside the paths the validate was given; a rule of the default scope,
-``paths``, reports only what it finds in those paths. A judged rule of scope ``all`` lists its candidates only when the
-validate asks for the judged pass, since reading every candidate in a repository is work a person chooses to start."""
+``paths``, reports only what it finds in those paths. A judged rule of scope ``all`` lists its candidates inside those paths
+on every validate, as a rule of scope ``paths`` does, and over the rest of the working copy only when the validate asks
+for the judged pass, since reading every candidate in a repository is work a person chooses to start."""
 
 from pathlib import Path
 
@@ -83,13 +84,17 @@ with description("a graph rule's scope") as self:
 
     with context("declared all, of a rule that requires a judge"):
         with before.each:
-            self.found = _found("src/orders/order.py", _JudgedWholeRule())
+            self.inside = _found("src/orders/order.py", _JudgedWholeRule())
+            self.outside = _found(_ELSEWHERE, _JudgedWholeRule())
 
-        with it("should not list its candidate when the validate does not ask for the judged pass"):
-            expect(self.found.is_reported_for(_GIVEN, judge_all=False)).to(be_false)
+        with it("should list its candidate inside the paths a validate was given, as every validate does"):
+            expect(self.inside.is_reported_for(_GIVEN, judge_all=False)).to(be_true)
 
-        with it("should list its candidate when the validate asks for the judged pass"):
-            expect(self.found.is_reported_for(_GIVEN, judge_all=True)).to(be_true)
+        with it("should not list its candidate outside those paths when the validate does not ask for the judged pass"):
+            expect(self.outside.is_reported_for(_GIVEN, judge_all=False)).to(be_false)
+
+        with it("should list its candidate outside those paths when the validate asks for the judged pass"):
+            expect(self.outside.is_reported_for(_GIVEN, judge_all=True)).to(be_true)
 
     with context("left as it is, of a rule that requires a judge"):
         with it("should list its candidate inside the paths without the judged pass, as it does today"):

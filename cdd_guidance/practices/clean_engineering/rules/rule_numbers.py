@@ -14,6 +14,17 @@ MOST_SEAM_SHARE = 0.35
 MOST_STATEMENTS = 20
 # simplify-control-flow: the most levels of control flow an operation nests.
 MOST_NESTED_LEVELS = 3
+# eliminate-duplication: the fewest statements of operations whose bodies match once their names are set aside, for
+# them to be listed; shorter bodies, such as getters, read alike without being one behaviour.
+FEWEST_SHARED_STATEMENTS = 4
+# hold-state-on-the-object-not-in-parameters: the fewest other classes a parameter is handed on to unchanged, and the
+# fewest operations of a class that all take one parameter, for either to be listed.
+FEWEST_CLASSES_HANDED_TO = 2
+FEWEST_OPERATIONS_TAKING_ONE_PARAMETER = 3
+# do-not-invent-parallel-object-models: the fewest classes two collections in different files both name, and the share
+# of the smaller collection they make up, for one to be listed as a second registry.
+FEWEST_CLASSES_REGISTERED_TWICE = 3
+LEAST_SHARE_REGISTERED_TWICE = 0.75
 
 
 def markdown_values() -> dict[str, str]:
@@ -23,6 +34,11 @@ def markdown_values() -> dict[str, str]:
         "most.seam_share": f"{round(100 * MOST_SEAM_SHARE)}%",
         "most.statements": str(MOST_STATEMENTS),
         "most.nested_levels": str(MOST_NESTED_LEVELS),
+        "fewest.shared_statements": str(FEWEST_SHARED_STATEMENTS),
+        "fewest.classes_handed_to": str(FEWEST_CLASSES_HANDED_TO),
+        "fewest.operations_taking_one_parameter": str(FEWEST_OPERATIONS_TAKING_ONE_PARAMETER),
+        "fewest.classes_registered_twice": str(FEWEST_CLASSES_REGISTERED_TWICE),
+        "least.share_registered_twice": f"{round(100 * LEAST_SHARE_REGISTERED_TWICE)}%",
     }
     held.update({f"shipped_limit.{measure}": f"{limit:g}" for measure, limit in code_measures.SHIPPED_LIMITS.items()})
     return held

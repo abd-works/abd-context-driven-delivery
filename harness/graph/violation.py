@@ -180,12 +180,14 @@ class Violation:
         return self.scope == SCOPE_ALL
 
     def is_reported_for(self, paths: list[str], judge_all: bool) -> bool:
-        """Whether a validate given paths (none: every place) reports it: one in those paths, as every validate does; one anywhere, of a
-        rule that runs over the whole working copy; but a candidate of such a rule only when the validate asks for the
-        judged pass (judge_all), since reading every candidate in a repository is work a person chooses to start."""
+        """Whether a validate given paths (none: every place) reports it: one in those paths, as every validate does; one
+        anywhere, of a rule that runs over the whole working copy; but a candidate of such a rule outside those paths only
+        when the validate asks for the judged pass (judge_all), since reading every candidate in a repository is work a
+        person chooses to start."""
+        in_paths = not paths or self.is_under(paths)
         if self.runs_over_all:
-            return judge_all or not self.is_candidate
-        return not paths or self.is_under(paths)
+            return in_paths or judge_all or not self.is_candidate
+        return in_paths
 
     @property
     @data_field
@@ -245,12 +247,15 @@ class Violation:
 class Finding:
     """One thing a rule's check found: the node it found it on, what it says, and the lines it is on when they are not
     the node's own, such as a module helper only one class uses, which a class rule finds on the class but is on the
-    helper's own lines. A viewer marks those lines."""
+    helper's own lines. A viewer marks those lines. A checked rule may also list a finding no program can decide, such as
+    two bodies that match once their names are set aside, as a candidate for a judge (candidate); a judged rule's
+    findings are all candidates."""
 
-    def __init__(self, node: Node, message: str, lines: tuple[int, int] | None = None) -> None:
+    def __init__(self, node: Node, message: str, lines: tuple[int, int] | None = None, candidate: bool = False) -> None:
         self.node = node
         self.message = message
         self.lines = lines
+        self.candidate = candidate
 
     def __repr__(self) -> str:
         return f"Finding({self.node.name!r}, {self.message!r})"
@@ -261,9 +266,11 @@ class NodeViolation(Violation):
     node and its practice, so its rule, practice, node, and subject are theirs, not copies. A saved graph keeps it as
     the same data as any violation, which names them by slug, key, and id."""
 
-    def __init__(self, found_by: GraphRule, message: str, location: Location = NOWHERE) -> None:
+    def __init__(self, found_by: GraphRule, message: str, location: Location = NOWHERE, candidate: bool = False) -> None:
         super().__init__(FoundBy(""), message, location)
         self.found_by = found_by
+        # Listed for a judge by a rule a program otherwise decides.
+        self._candidate = candidate
 
     @classmethod
     def at_node(cls, found_by: GraphRule, finding: Finding) -> NodeViolation:
@@ -271,7 +278,7 @@ class NodeViolation(Violation):
         file."""
         source = found_by.node.source
         start, end = finding.lines if finding.lines is not None else (source.start_line, source.end_line)
-        return cls(found_by, finding.message, Location(source.file or "", start, end))
+        return cls(found_by, finding.message, Location(source.file or "", start, end), finding.candidate)
 
     @property
     @data_field
@@ -296,7 +303,7 @@ class NodeViolation(Violation):
 
     @property
     def is_candidate(self) -> bool:
-        return self.found_by.requires_judge
+        return self._candidate or self.found_by.requires_judge
 
     @property
     @data_field

@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from harness.graph.practice_rule import PracticeGraphRule
+from harness.graph.practice_rule import SCOPE_ALL, PracticeGraphRule
 from harness.graph.violation import Finding
 
-from cdd_guidance.practices.clean_engineering.reading.folder_facts import FOLDER_TYPES
+from cdd_guidance.practices.clean_engineering.reading.folder_facts import FOLDER_TYPES, own_fact
+from cdd_guidance.practices.clean_engineering.reading.second_registries import SECOND_REGISTRIES
+from cdd_guidance.practices.clean_engineering.rules import rule_numbers
 from cdd_guidance.practices.clean_engineering.rules.production_code_rule import ProductionCodeRule
 
 if TYPE_CHECKING:
@@ -54,20 +56,35 @@ class ShapeClassesAroundResources(PracticeGraphRule):
 
 class DoNotInventParallelObjectModels(PracticeGraphRule):
     """Copies of another class's data anywhere in the graph: copied fields, name copies of a reference, and dicts that
-    hold one value per member, keyed by the member's name. The build keeps on each class what it copies
-    (``copied_fields``, ``copied_references``)."""
+    hold one value per member, keyed by the member's name; and second registries, a collection in one file naming the
+    classes a collection in another already names. The build keeps on each class what it copies (``copied_fields``,
+    ``copied_references``), and on each folder the collections of its files another file's collection repeats
+    (``second_registries``). A copy looks fine in the file that holds it, so the rule runs over the whole code."""
 
     slug = "do-not-invent-parallel-object-models"
     # Requires a judge: whether a class is a second model of a concept is read from what both classes mean; the check matches their fields.
     requires_judge = True
-    node_types = ("OoadClass",)
+    node_types = ("OoadClass", *FOLDER_TYPES)
+    scope = SCOPE_ALL
 
     def check_practice(self, context: "RuleCheckContext") -> list[Finding]:
         hits: list[Finding] = []
         for node in context.nodes("OoadClass"):
             hits.extend(Finding(node, message) for message in self._copied_fields(node))
             hits.extend(Finding(node, message) for message in self._copied_references(node))
+        for kind in FOLDER_TYPES:
+            for folder in context.nodes(kind):
+                hits.extend(Finding(folder, message) for message in self._second_registries(folder))
         return hits
+
+    def _second_registries(self, folder: "Node") -> list[str]:
+        return [
+            f"'{file}' {name} and '{other_file}' {other_name} hold the same classes: {', '.join(shared)}. "
+            "Read whether one is a second registry; if it is, read the classes from the other."
+            for file, name, count, other_file, other_name, other_count, shared in own_fact(folder, SECOND_REGISTRIES) or []
+            if len(shared) >= rule_numbers.FEWEST_CLASSES_REGISTERED_TWICE
+            and len(shared) >= rule_numbers.LEAST_SHARE_REGISTERED_TWICE * min(count, other_count)
+        ]
 
     def _copied_fields(self, node: "Node") -> list[str]:
         copied = node.get_fact("copied_fields") or []

@@ -5,11 +5,13 @@ from __future__ import annotations
 
 import ast
 import textwrap
+from pathlib import PurePosixPath
 from typing import TYPE_CHECKING
 
+from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER
 from cdd_guidance.practices.clean_engineering.reading.folder_facts import record_fact
 from cdd_guidance.practices.clean_engineering.reading.near_copies import MIN_LINES, NearCopies
-from cdd_guidance.practices.source_code import is_test_code
+from cdd_guidance.practices.source_code import CODE_LANGUAGES
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node, PracticeNodes
@@ -20,6 +22,29 @@ if TYPE_CHECKING:
 _PERCENT = 100
 
 
+def qualified_name(operation: "Node") -> str:
+    """How a fact across files names an operation: `Class.operation`, or the function's name alone for a function a
+    file declares outside any class."""
+    owner = str(operation.get_fact("owner") or "")
+    return operation.name if not owner or owner == MODULE_FUNCTION_HOLDER else f"{owner}.{operation.name}"
+
+
+def code_operations(in_graph: "PracticeNodes") -> list["Node"]:
+    """The operations of the production code the graph read: neither a spec's or test support's, nor one a model
+    document describes, which has no body to compare."""
+    suffixes = {suffix for language in CODE_LANGUAGES for suffix in language.suffixes}
+    return [
+        node for node in in_graph.nodes("Operation")
+        if not in_graph.practice.reading.test_code.is_test_code(node.source.file) and PurePosixPath(node.source.file or "").suffix in suffixes
+    ]
+
+
+def file_qualified_name(operation: "Node") -> str:
+    """How a fact across files names an operation with its file, `shop/cart.py: Cart.total`, so two classes of one name
+    in different files stay apart."""
+    return f"{operation.source.file}: {qualified_name(operation)}"
+
+
 class BodyCopies:
     """Production operations whose bodies are the same as one read before them (``duplicate_of``: that operation's
     name), or nearly the same (``near_copy_of``: its name, its file, and the percentage of their code they share). A copy
@@ -27,7 +52,7 @@ class BodyCopies:
     once: a near copy is looked for only among the operations no exact copy names."""
 
     def __init__(self, in_graph: "PracticeNodes") -> None:
-        self._operations = [node for node in in_graph.nodes("Operation") if not is_test_code(node.source.file)]
+        self._operations = code_operations(in_graph)
 
     def record(self) -> None:
         exact = self._exact_copies()

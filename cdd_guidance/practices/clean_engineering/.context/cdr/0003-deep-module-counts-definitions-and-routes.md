@@ -9,7 +9,7 @@ CDR 0004 of `harness/graph` moved `deep-module`'s counting into facts the build 
 - A class is public when it leaves its module's subtree by a route: `named` (with the folders), `registered` (with the registry: `PRACTICE_CATALOGUE`, `ACTION_CATALOGUE`, `REGISTERED_PATTERNS`, read from the registries this process filled, by the file and name of each registered class), or `published` (an `@agent_toolset` class, or one with a member published as a tool, unless `@hosted_only` or `@noDeploy`). `public_classes` keys each class by `file:Name` and holds its routes.
 - Counts are of definitions: total, public, and private = total − public.
 - Each module also records its operations (`operations_total`, `operations_public`, `operations_private`, `seam_operations`) for reading; the rule judges classes only.
-- Examples (`examples` folders) and test doubles (`mock_*`, `fake_*`) are left out of the counts and do not name a class, like tests and fixtures (`is_example_code`); other rules still judge them.
+- Examples (`examples` folders) and test doubles (`mock_*`, `fake_*`) are left out of the counts and do not name a class, like tests and fixtures (the project's *ProjectTestCode*); other rules still judge them.
 - Saved shape 5.
 
 ## Considered options

@@ -434,8 +434,13 @@ with description("a limit on a code measure") as self:
             expect(fixture.hits(BY_SLUG["limit-paths-through-a-function"])).to(equal([]))
 
     with context("on the measures the practice's own reader takes, with its failing and its repaired example"):
+        # Each pair reads and measures two projects, so they are read once, before the examples, which only check them.
+        with before.all:
+            self.method_count_pair = measured_example_pair("limit-class-methods", _READER_ALONE)
+            self.sharing_data_pair = measured_example_pair("keep-class-methods-sharing-data", _READER_ALONE)
+
         with it("should report a class with more methods than the limit, and pass the repaired one"):
-            measured_example_pair("limit-class-methods", _READER_ALONE).check()
+            self.method_count_pair.check()
 
         with it("should report a class with a group of methods that share no data with the rest, and pass the repaired one"):
-            measured_example_pair("keep-class-methods-sharing-data", _READER_ALONE).check()
+            self.sharing_data_pair.check()

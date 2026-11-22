@@ -95,10 +95,11 @@ class GraphRule:
     @property
     @data_field
     def status(self) -> str:
-        """``violating`` when it found a violation here, ``candidate`` when it requires a judge and listed this node for
-        a reading, ``prompt`` when no check runs it, else ``passing``."""
+        """``violating`` when it found a violation here, ``candidate`` when everything it listed here is for a judge to
+        read, ``prompt`` when no check runs it, else ``passing``."""
         if self._violations:
-            return "candidate" if self._requires_judge else "violating"
+            judged = self._requires_judge or all(violation.is_candidate for violation in self._violations)
+            return "candidate" if judged else "violating"
         return "passing" if self.executable else "prompt"
 
     @property
@@ -115,7 +116,7 @@ class GraphRule:
 
     def restore(self, violation: Violation) -> None:
         """Keep a violation a saved graph recorded, at the place it was saved with, as this rule's own."""
-        restored = NodeViolation(self, violation.message, Location(violation.location, violation.line, violation.end_line))
+        restored = NodeViolation(self, violation.message, Location(violation.location, violation.line, violation.end_line), violation.is_candidate)
         if restored not in self._violations:
             self._violations.append(restored)
 

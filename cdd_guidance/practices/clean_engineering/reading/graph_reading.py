@@ -27,19 +27,20 @@ from cdd_guidance.practices.clean_engineering.measures.checked_measures import C
 from cdd_guidance.practices.clean_engineering.measures.code_measures import MEASURES, NODE_TYPES, SHOWN_WITHOUT_LIMIT, ChosenTools
 from cdd_guidance.practices.clean_engineering.measures.measuring_tools import TOOLS, MeasuringTool
 from cdd_guidance.practices.clean_engineering.reading.call_links import CallLinks, ClassLinks, FieldLinks
+from cdd_guidance.practices.clean_engineering.reading.statement_links import StatementLinks
 from cdd_guidance.practices.clean_engineering.model import CONSTRUCTOR_NAMES
-from cdd_guidance.practices.clean_engineering.reading.code_file import CodeFile, CodeSpan, MemberAnswers
+from cdd_guidance.practices.clean_engineering.reading.code_file import CREATED_IN_THE_CONSTRUCTOR, CREATED_ON_EACH_CALL, CodeFile, CodeSpan, MemberAnswers
 from cdd_guidance.practices.clean_engineering.reading.code_read import DESCRIBED_FACT, PRODUCTION_FACT, CodeRead
 from cdd_guidance.practices.clean_engineering.reading.compared_facts import ComparedFacts
 from cdd_guidance.practices.clean_engineering.reading.folder_facts import folders_of
 from cdd_guidance.practices.clean_engineering.reading.card_lines import CardLines
 from cdd_guidance.practices.clean_engineering.reading.node_evidence import CodeNodeTypes
-from cdd_guidance.practices.source_code import ClassReference, is_test_code
+from cdd_guidance.practices.source_code import ClassReference, HoldsProjectTestCode
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
 
 
-class GraphReading(PracticeReading):
+class GraphReading(HoldsProjectTestCode, PracticeReading):
     """How Clean Engineering takes part in the graph: it reads the model documents, then the code, and holds each class
     a document describes as it holds the code's, each joined to the code class that implements it. Its classes are the classes the source view
     opens and folds, their operations and properties the members it opens a call to, and its checks run on each class
@@ -93,7 +94,7 @@ class GraphReading(PracticeReading):
         shown for information (``SHOWN_WITHOUT_LIMIT``), each with its value and no limit. A project that holds its
         code to no limit has none, and neither does test code, which no production rule judges."""
         chosen = self.chosen_tools
-        if node.type not in self.metric_node_types or not chosen.measures_code or is_test_code(node.source.file):
+        if node.type not in self.metric_node_types or not chosen.measures_code or self.test_code.is_test_code(node.source.file):
             return []
         limited = [(measure, chosen.limit(measure)) for measure in MEASURES if node.type in NODE_TYPES[measure.of]]
         held = [(measure, limit, measure.value_on(node)) for measure, limit in limited if limit is not None or measure in SHOWN_WITHOUT_LIMIT]
@@ -121,6 +122,7 @@ class GraphReading(PracticeReading):
             CodeRead(self).read()
         ClassLinks(self).link()
         CallLinks(self).link()
+        StatementLinks(self).link()
         FieldLinks(self).link()
         ComparedFacts(self).record()
         self.keep_code_measures(list(self.graph.scope.edited_files or []))
@@ -131,7 +133,7 @@ class GraphReading(PracticeReading):
         either: none of its nodes, and no folder holding only them, is held to the relationships its type requires."""
         requirements = self.in_graph.rule_run.schema.requirements
         for node in self.in_graph.nodes():
-            if not is_test_code(node.source.file) and node.get_fact(PRODUCTION_FACT, True):
+            if not self.test_code.is_test_code(node.source.file) and node.get_fact(PRODUCTION_FACT, True):
                 continue
             fields = {requirement.field for requirement in requirements if node.type in requirement.owner.node_types}
             if fields:
@@ -151,6 +153,8 @@ class CodeIndex:
         # The classes each production file imports, by its path, as its folder kept them.
         self._imports: dict[str, list[ClassReference]] | None = None
         self._files: dict[str, CodeFile] = {}
+        # The classes that extend or satisfy each class, by its id, read once the inheritance edges are linked.
+        self._extended_by: dict[int, list[Node]] | None = None
         # What each member answers where the code writes no type hint for it, read once per index.
         self.answers = MemberAnswers(self)
 
@@ -160,6 +164,7 @@ class CodeIndex:
         self._members = None
         self._imports = None
         self._files = {}
+        self._extended_by = None
         self.answers = MemberAnswers(self)
 
     @property
@@ -181,13 +186,18 @@ class CodeIndex:
             if member.type == "Operation" and member.get_fact("owner") == declared.name and member.source.file == declared.source.file
         ]
 
+    def operations_of(self, declared: Node) -> list[Node]:
+        """The operations the class declared owns, in the order the read added them."""
+        return [edge.child for edge in self._reading.graph.edges.from_parent("owns", declared) if edge.child.type == "Operation"]
+
     def span_of(self, member: Node) -> CodeSpan:
-        """The member's own code, the class that declares it, the type hint of each of its parameters, and whether it
-        runs while its object is built: a constructor, or a field, whose initializer does."""
+        """The member's own code, the class that declares it, the type hint of each of its parameters, and how an object
+        it builds is reached: in the constructor for a constructor or a field, whose initializer runs as its object is
+        built, else on each call."""
         text = CodeSpan.code_of(member.source.text) if member.source.file else ""
         typed = {edge.child.name: str(edge.child.get_fact("type_hint") or "") for edge in self._reading.graph.edges.from_parent("hasParameter", member)}
         builds = member.name in CONSTRUCTOR_NAMES or (member.type == "Property" and not member.get_fact("is_property"))
-        return CodeSpan(text, self.class_declaring(member), typed, builds_its_object=builds)
+        return CodeSpan(text, self.class_declaring(member), typed, creates=CREATED_IN_THE_CONSTRUCTOR if builds else CREATED_ON_EACH_CALL)
 
     def file(self, relative: str, imports: list[ClassReference] | None = None) -> CodeFile:
         """The file at relative, from the source root, as its code names things. A production file's imports are those
@@ -211,6 +221,39 @@ class CodeIndex:
                 for file, references in kept.items():
                     self._imports[file] = [ClassReference(*reference) for reference in references]
         return self._imports.get(relative, [])
+
+    def subclasses_of(self, declared: Node) -> list[Node]:
+        """Every class that extends declared, at any depth, or satisfies it when it is a protocol, as the read's
+        inheritance and realization edges (``baseClass``, ``realizes``) say."""
+        if self._extended_by is None:
+            self._extended_by = {}
+            for edge in [*self._reading.in_graph.edge_index.of("baseClass"), *self._reading.in_graph.edge_index.of("realizes")]:
+                self._extended_by.setdefault(id(edge.child), []).append(edge.parent)
+        extended_by = self._extended_by
+        found: list[Node] = []
+        waiting = [declared]
+        while waiting:
+            for sub in extended_by.get(id(waiting.pop()), []):
+                if sub not in found and sub is not declared:
+                    found.append(sub)
+                    waiting.append(sub)
+        return found
+
+    def is_protocol(self, declared: Node) -> bool:
+        """Whether declared is a protocol, a class others satisfy by declaring its members (`class Washer(Protocol)`)."""
+        return any(str(base).split("[")[0].rsplit(".", 1)[-1].strip() == "Protocol" for base in declared.get_fact("bases") or [])
+
+    def common_base(self, classes: list[Node]) -> Node | None:
+        """The nearest class every one of classes is or extends; none when they share none."""
+        lines = [self._lineage(declared) for declared in classes]
+        return next((candidate for candidate in lines[0] if all(candidate in line for line in lines[1:])), None) if lines else None
+
+    def _lineage(self, declared: Node) -> list[Node]:
+        """The class, then each class it extends, nearest first."""
+        line = [declared]
+        for current in line:
+            line.extend(edge.child for edge in self._reading.graph.edges.from_parent("baseClass", current) if edge.child not in line)
+        return line
 
     def classes_named(self, name: str) -> list[Node]:
         """The classes the graph holds called name, in the order of their node ids."""

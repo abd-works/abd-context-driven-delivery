@@ -129,13 +129,18 @@ class UnjoinedCalls:
         """A parameter whose hint names no class of the code, untyped when it has none."""
         self._unknown.setdefault(name, self._causes.of_hint(hint))
 
+    def names_a_local(self, name: str) -> bool:
+        """Whether name is a parameter or a local of the span whose class the read cannot tell."""
+        return name in self._unknown
+
     def keep_local(self, name: str, cause: str) -> None:
         """A local assigned what the read cannot type, for the cause its expression gives."""
         self._unknown.setdefault(name, cause)
 
     def of_head(self, head: str, called: bool) -> str:
         """Why the first name of a chain has no class: what the span knows of it, else an object from outside the code,
-        else, for a function the code declares, what its return type says, else a name the read cannot reach."""
+        else, for a function the code declares, what its return type says, else, for a module variable, what its module
+        assigns it, else a name the read cannot reach."""
         if head in self._unknown:
             return self._unknown[head]
         if self._causes.is_outside(head):
@@ -143,22 +148,30 @@ class UnjoinedCalls:
         if called:
             function = self._file.function_named(head)
             return self._causes.of_hint(function.get_fact("return_type") if function is not None else "")
-        return OTHERWISE
+        return self._file.module_cause(head) or OTHERWISE
 
     def of_member(self, holders: "list[Node]", name: str, member: "Node | None", called: bool) -> str:
         """Why what a member of holders[0] (or a class it extends, holders[1:]) answers has no class: what its return
-        type, its type, or the hint its holder keeps for the field says; a member no class of the code declares is
-        inherited from outside the code when the class extends a class the read does not hold."""
-        if member is not None:
-            hint = member.get_fact("return_type") if called and member.type == "Operation" else member.get_fact("value_type")
-            return self._index.file(member.source.file).receiver_causes.of_hint(hint)
+        type, its type, or the hint its holder keeps for the field says, and for a field with no hint, what its
+        constructor or initializer assigns it; a member no class of the code declares is inherited from outside the code
+        when the class extends a class the read does not hold."""
+        if member is not None and called and member.type == "Operation":
+            return self._index.file(member.source.file).receiver_causes.of_hint(member.get_fact("return_type"))
         for holder in holders:
             fields = holder.get_fact("held_fields") or {}
             if name in fields:
-                return self._index.file(holder.source.file).receiver_causes.of_hint(fields[name])
+                return self._field_cause(holder, name, fields[name])
+        if member is not None:
+            return self._index.file(member.source.file).receiver_causes.of_hint(member.get_fact("value_type"))
         held = {holder.name for holder in holders}
         written = (str(base).split("[")[0].split("<")[0].strip().rsplit(".", 1)[-1] for holder in holders for base in holder.get_fact("bases") or [])
         return ON_OUTSIDE_OBJECTS if any(base not in held for base in written) else OTHERWISE
+
+    def _field_cause(self, holder: "Node", name: str, hint: str) -> str:
+        """Why a field of holder has no class: what its hint says, or, with no hint, what is assigned to it."""
+        if hint:
+            return self._index.file(holder.source.file).receiver_causes.of_hint(hint)
+        return self._index.answers.field_cause(holder, name) or ON_UNTYPED_VALUES
 
     def count(self, unresolved: dict[str, int], name: str, cause: str) -> None:
         """Count a call of name, on a receiver of no class the read can tell, under its cause."""

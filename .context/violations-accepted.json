@@ -1,0 +1,40 @@
+{
+  "accepted": [
+    {
+      "rule": "delete-unused-operations",
+      "file": "harness/e2e_review/report/report.ts",
+      "message": "Operation 'writeHistoryReport': no use \u2014 delete it with its specs. Nothing calls it, on its class or on a class of its family, and none of the `code_reach` ways its `.context/config.json` names reaches it.",
+      "node_id": "clean_engineering:Operation:harness/e2e_review/report/report.ts:writeHistoryReport:_module",
+      "subject": "Operation `writeHistoryReport`",
+      "accepted_at": "2026-11-22T12:25:21Z",
+      "reason": "Kept for the Intended run-history page story."
+    },
+    {
+      "rule": "delete-unused-operations",
+      "file": "harness/installation/installer.py",
+      "message": "Operation 'of': no use \u2014 delete it with its specs. Nothing calls it, on its class or on a class of its family, and none of the `code_reach` ways its `.context/config.json` names reaches it.",
+      "node_id": "clean_engineering:Operation:harness/installation/installer.py:of:InstallChannels",
+      "subject": "Operation `of`",
+      "accepted_at": "2026-11-22T12:25:21Z",
+      "reason": "Test seam the heavy install specs use to reach one installation."
+    },
+    {
+      "rule": "delete-unused-operations",
+      "file": "harness/process/lock_file.py",
+      "message": "Property 'is_held': no use \u2014 delete it with its specs. Nothing calls it, on its class or on a class of its family, and none of the `code_reach` ways its `.context/config.json` names reaches it.",
+      "node_id": "clean_engineering:Property:harness/process/lock_file.py:is_held:LockFile",
+      "subject": "Property `is_held`",
+      "accepted_at": "2026-11-22T12:25:21Z",
+      "reason": "The only way the lock specs observe a held lock."
+    },
+    {
+      "rule": "delete-unused-operations",
+      "file": "harness/mcp/mcp_server.py",
+      "message": "Operation 'invoke': no use \u2014 delete it with its specs. Nothing calls it, on its class or on a class of its family, and none of the `code_reach` ways its `.context/config.json` names reaches it.",
+      "node_id": "clean_engineering:Operation:harness/mcp/mcp_server.py:invoke:ProjectToolsets",
+      "subject": "Operation `invoke`",
+      "accepted_at": "2026-11-22T12:58:52Z",
+      "reason": "The story tiers call tools in process through it; no other seam does that."
+    }
+  ]
+}

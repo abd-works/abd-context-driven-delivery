@@ -5,9 +5,13 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from harness.graph.practice_rule import PracticeGraphRule
+from harness.graph.practice_rule import SCOPE_ALL, PracticeGraphRule
 from harness.graph.violation import Finding
 
+from cdd_guidance.practices.clean_engineering.reading.folder_facts import own_fact
+from cdd_guidance.practices.clean_engineering.reading.operation_facts import file_qualified_name
+from cdd_guidance.practices.clean_engineering.reading.operation_verbs import VERBS_FOR_ONE_TARGET
+from cdd_guidance.practices.clean_engineering.reading.same_bodies import SAME_BODY_ELSEWHERE
 from cdd_guidance.practices.clean_engineering.reading.production_classes import parameters_of
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import StatementCount
 from cdd_guidance.practices.clean_engineering.rules.operation_semantics import SEMANTIC_RULES
@@ -274,28 +278,42 @@ class UseIntentionRevealingNames(ProductionCodeRule):
 
 
 class UseConsistentNaming(ProductionCodeRule):
+    """Lists a class whose operations mix snake_case and camelCase, and, once for each group, operations of different
+    classes that name one target with different answering verbs (``verbs_for_one_target``: `get_order` and
+    `fetch_order`). Two verbs show only across classes, so the rule runs over the whole code."""
+
     slug = "use-consistent-naming"
     # Requires a judge: whether two words name one concept is read from what they mean; the check matches word lists.
     requires_judge = True
-    node_types = ("OoadClass",)
+    node_types = ("OoadClass", "Operation")
+    scope = SCOPE_ALL
 
     def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
-        snake_names: list[str] = []
-        camel_names: list[str] = []
-        for shape in node.get_fact("operation_shapes", []):
-            name = shape["name"]
-            if not name or name in _SKIP_OP_NAMES or _DUNDER.match(name) or name.startswith("_"):
-                continue
-            if _CAMEL_CASE.match(name):
-                camel_names.append(name)
-            elif _SNAKE_CASE.match(name):
-                snake_names.append(name)
+        return self._verbs_for_one_target(node) if node.type == "Operation" else self._mixed_styles(node)
+
+    def _mixed_styles(self, node: "Node") -> list[Finding]:
+        """A class whose operations mix snake_case and camelCase, named by the first of the fewer."""
+        public = [shape["name"] for shape in node.get_fact("operation_shapes", []) if self._compared_name(shape["name"])]
+        camel_names = [name for name in public if _CAMEL_CASE.match(name)]
+        snake_names = [name for name in public if _SNAKE_CASE.match(name)]
         if not snake_names or not camel_names:
             return []
-        minority = camel_names if len(camel_names) <= len(snake_names) else snake_names
-        style = "camelCase" if minority is camel_names else "snake_case"
+        minority, style = (camel_names, "camelCase") if len(camel_names) <= len(snake_names) else (snake_names, "snake_case")
         return [Finding(node, f"Operation '{minority[0]}' uses {style} while other operations on '{node.name}' "
             "use the other convention.")]
+
+    def _compared_name(self, name: str) -> bool:
+        """A public operation's name, which a caller writes; constructors, test hooks and dunders aside."""
+        return bool(name) and name not in _SKIP_OP_NAMES and not _DUNDER.match(name) and not name.startswith("_")
+
+    def _verbs_for_one_target(self, operation: "Node") -> list[Finding]:
+        """The group's candidate, on the operation whose name comes first in it."""
+        target, verbs, labels = own_fact(operation, VERBS_FOR_ONE_TARGET) or ["", [], [""]]
+        if not target or labels[0] != file_qualified_name(operation):
+            return []
+        named = ", ".join(f"'{label}'" for label in labels)
+        return [Finding(operation, f"Operations {named} name one concept, '{target}', with the verbs {', '.join(verbs)}. "
+            "Read whether they do the same kind of work; if they do, use one verb.")]
 
 
 class PreferInstanceOperations(ProductionCodeRule):
@@ -359,21 +377,38 @@ class UsePropertyNotAccessor(ProductionCodeRule):
 class EliminateDuplication(PracticeGraphRule):
     """Production operations whose bodies are the same, or nearly the same: a copy with a renamed variable or one
     changed line is still a second place the same fix has to go. The build keeps on each copy the operation it copies
-    (``duplicate_of``, ``near_copy_of``)."""
+    (``duplicate_of``, ``near_copy_of``), each a violation. It also lists, once for each group and as a candidate for a
+    judge, operations in different files whose bodies match once their own names are set aside (``same_body_elsewhere``),
+    when they hold at least the fewest statements compared: two such bodies can still be two behaviours that will change
+    apart, such as two forms that each check their own fields, so a reading decides. A copy shows only when the files are
+    compared, so the rule runs over the whole code."""
 
     slug = "eliminate-duplication"
     node_types = ("Operation",)
+    scope = SCOPE_ALL
 
     def check_practice(self, context: "RuleCheckContext") -> list[Finding]:
-        hits: list[Finding] = []
-        for operation in context.nodes("Operation"):
-            original = operation.get_fact("duplicate_of") or ""
-            near = operation.get_fact("near_copy_of") or []
-            if original:
-                hits.append(Finding(operation, f"Operation '{operation.name}' duplicates the body of '{original}'."))
-            elif near:
-                hits.append(Finding(operation, self._near_copy_message(operation, near)))
-        return hits
+        operations = context.nodes("Operation")
+        return [finding for operation in operations for finding in self._copies(operation) + self._same_work(operation)]
+
+    def _copies(self, operation: "Node") -> list[Finding]:
+        original = operation.get_fact("duplicate_of") or ""
+        near = operation.get_fact("near_copy_of") or []
+        if original:
+            return [Finding(operation, f"Operation '{operation.name}' duplicates the body of '{original}'.")]
+        return [Finding(operation, self._near_copy_message(operation, near))] if near else []
+
+    def _same_work(self, operation: "Node") -> list[Finding]:
+        """The group's candidate, on the operation whose name comes first in it."""
+        statements, labels = own_fact(operation, SAME_BODY_ELSEWHERE) or [0, [""]]
+        if statements < rule_numbers.FEWEST_SHARED_STATEMENTS or labels[0] != file_qualified_name(operation):
+            return []
+        named = ", ".join(f"'{label}'" for label in labels)
+        said = (
+            f"Operations {named} do the same work: their bodies match once their local names are set aside. Read whether "
+            "they are one behaviour; if they are, give it one home and have the others call it."
+        )
+        return [Finding(operation, said, candidate=True)]
 
     def _near_copy_message(self, operation: "Node", near: list) -> str:
         name, file, percent = near

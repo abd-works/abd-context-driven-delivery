@@ -20,7 +20,7 @@ from harness.graph.model_node import schema_sync_paused
 from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 from cdd_guidance.practices.clean_engineering.reading.node_evidence import NodeEvidence
 from cdd_guidance.practices.clean_engineering.reading.code_file import CodeFile, CodeSpan
-from cdd_guidance.practices.source_code import is_spec_file, is_test_code
+from cdd_guidance.practices.source_code import HoldsProjectTestCode
 from cdd_guidance.practices.source_code import ClassReference, ScriptImports
 
 if TYPE_CHECKING:
@@ -54,7 +54,7 @@ class BddNodeTypes(PracticeNodeTypes):
         return kind == "demonstrates" and evidence.mentions(target.name)
 
 
-class BddGraphReading(PracticeReading):
+class BddGraphReading(HoldsProjectTestCode, PracticeReading):
     """How BDD takes part in the graph: it reads each spec file's describe tree, after Clean Engineering's code, then
     links each observation to the code it drives."""
 
@@ -69,7 +69,7 @@ class BddGraphReading(PracticeReading):
         are added to its graph as they are; then each observation is linked to the operations and properties of the
         code it drives, when the graph reads Clean Engineering too."""
         root = Path(self.in_graph.source_root)
-        specs = [file for file in self.graph.scope.source_files(root, self.practice.formats.suffixes) if is_spec_file(file.name)]
+        specs = [file for file in self.graph.scope.source_files(root, self.practice.formats.suffixes) if self.test_code.is_spec(file)]
         with schema_sync_paused():
             for index, file in enumerate(specs, start=1):
                 relative = file.relative_to(root).as_posix()
@@ -163,6 +163,7 @@ class _SpecLinks:
     def __init__(self, links: ObservationLinks, nodes: list[Node], code_file: CodeFile, is_python: bool) -> None:
         self._graph = links.graph
         self._index = links.clean.code_index
+        self._test_code = links.bdd.test_code
         self._nodes = nodes
         self._file = code_file
         self._is_python = is_python
@@ -194,7 +195,7 @@ class _SpecLinks:
         a tool by its name is transport, not the act, so it is none of them."""
         return [
             member for member in self._file.members_called_in(CodeSpan(code.code, None, {}, before))
-            if member.source.file and not is_test_code(member.source.file) and member.name not in code.transports
+            if member.source.file and not self._test_code.is_test_code(member.source.file) and member.name not in code.transports
         ]
 
     def _tool_operations(self, code: "_SpecCode") -> list[Node]:
@@ -207,7 +208,7 @@ class _SpecLinks:
             if member.type == "Operation"
             and Name(member.get_fact("owner")).kebab == toolset
             and member.source.file
-            and not is_test_code(member.source.file)
+            and not self._test_code.is_test_code(member.source.file)
             and (member.file_language == _PYTHON) == self._is_python
         ]
 
@@ -216,7 +217,7 @@ class _SpecLinks:
         the longest name when several fit, none when no imported class is named."""
         words = described.name.strip().lower()
         words = next((words[len(article):] for article in _ARTICLES if words.startswith(article)), words)
-        imported = [node for node in self._file.imported_classes if not is_test_code(node.source.file)]
+        imported = [node for node in self._file.imported_classes if not self._test_code.is_test_code(node.source.file)]
         named = [node for node in imported if f"{words} ".startswith(f"{Name(node.name).snake.replace('_', ' ')} ")]
         subject = max(named, key=lambda node: len(node.name), default=None)
         if subject is not None:

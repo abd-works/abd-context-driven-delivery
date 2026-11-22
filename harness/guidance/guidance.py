@@ -52,6 +52,7 @@ FIDELITIES_HEADING = "Fidelities"
 OWN_INSTRUCTIONS = "instructions"
 
 if TYPE_CHECKING:
+    from harness.graph.pattern_overlays import GraphOverlay
     from harness.guidance.practice_supplement import PracticeSupplement
     from harness.hooks.hook_server import HookPayload
 
@@ -430,6 +431,13 @@ class PracticeGuidance(Guidance):
         if self.reading_type is None:
             raise TypeError(f"{self.key} has no kind of reading: harness/graph, which gives the default, is not imported")
         return self.reading_type(self)
+
+    @property
+    def graph_overlay(self) -> GraphOverlay | None:
+        """What the practice gives the knowledge graph on top of the practices it works with, as a pattern or a
+        supplement does: the rules it adds to each and the facts it records. None for a practice that gives none, which
+        is every practice but a pattern and a supplement that checks graph rules."""
+        return None
 
     @cached_property
     def document(self) -> MarkdownText:

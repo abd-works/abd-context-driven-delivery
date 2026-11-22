@@ -34,6 +34,12 @@ with description("a rule a practice supplement shares across practices") as self
         with it("should not be bound"):
             expect(SampleOneOutcome().for_practice(self.practices["stories"])).to(be_none)
 
+    # Every practice answers the overlay it gives the graph through its typed base, so the framework asks for it by a
+    # call it can follow rather than by its name.
+    with context("given by a practice that gives the graph no overlay of its own"):
+        with it("should be none"):
+            expect(self.practices["stories"].graph_overlay).to(be_none)
+
     with context("with no overlay chosen"):
         with before.each:
             self.overlays = PatternOverlays()

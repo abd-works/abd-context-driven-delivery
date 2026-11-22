@@ -43,6 +43,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     OoadClass,
 )
 from cdd_guidance.practices.clean_engineering.model.markdown.class_card import ClassCard
+from cdd_guidance.practices.clean_engineering.model.module_context_files import ModuleMeta, listed_terms
 from cdd_guidance.practices.source_code import split_top_level
 from harness.guidance.practice_formats import Written
 
@@ -53,16 +54,6 @@ if TYPE_CHECKING:
 _HEADING = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 _CARD_HEADING = re.compile(r"^(#{2,6})\s+\*\*([^*]+)\*\*(.*?)\s*$")
 _FENCE = re.compile(r"^\s*(```|~~~)")
-
-
-def _listed_terms(raw: str) -> List[str]:
-    """The terms a bullet lists, separated by commas or semicolons, without their backticks and bold; none for
-    `*(none)*`."""
-    text = re.sub(r"^\*\(?none\)?\*$", "", raw.strip(), flags=re.IGNORECASE).strip()
-    if text.lower() in {"*(none)*", "(none)", "none", "-"}:
-        return []
-    found = (re.sub(r"^\*\*?|\*\*?$", "", part.strip().strip("`").strip()).strip() for part in re.split(r"[,;]", text))
-    return [term for term in found if term]
 
 
 @dataclass
@@ -342,7 +333,7 @@ class MarkdownModule(Module):
         """A "**Formal (modules):** a, b" line names them; else the section's first line lists them."""
         formal = re.search(r"\*\*Formal\s*\(modules\):\*\*\s*(.+)", body, re.IGNORECASE)
         first = next((line.strip() for line in body.splitlines() if line.strip()), "")
-        self.dependencies = _listed_terms(formal.group(1) if formal else first)
+        self.dependencies = listed_terms(formal.group(1) if formal else first)
 
     def _take_fidelity_bullets(self, body: str) -> None:
         meta = ModuleMeta(body)
@@ -353,43 +344,6 @@ class MarkdownModule(Module):
             self.seam = self.seam or ", ".join(meta.seam_terms)
         if meta.dependencies:
             self.dependencies = meta.dependencies
-
-
-class ModuleMeta:
-    """<<Value Object>> The Purpose, Seam, and Dependencies bullets of a modules-fidelity block, and the prose left
-    beside them."""
-
-    _PURPOSE = re.compile(r"^-?\s*\*\*Purpose:\*\*\s*(.+)$", re.IGNORECASE)
-    _SEAM = re.compile(r"^-?\s*\*\*Seam(?:\s*\(terms\))?:\*\*\s*(.+)$", re.IGNORECASE)
-    _DEPENDENCIES = re.compile(r"^-?\s*\*\*Dependencies(?:\s*\(one-way\))?:\*\*\s*(.+)$", re.IGNORECASE)
-    # Lines that frame the bullets and say nothing of the module: a build order, a nested module's or the block's heading.
-    _FRAMING = re.compile(r"^-?\s*\*\*Build order:\*\*|^###\s+Module\s+|^##\s+Modules fidelity", re.IGNORECASE)
-
-    def __init__(self, text: str) -> None:
-        self.purpose = ""
-        self.seam_terms: List[str] = []
-        self.dependencies: List[str] = []
-        leftover: List[str] = []
-        for line in text.splitlines():
-            if not self._take_bullet(line.strip()):
-                leftover.append(line)
-        self.leftover = "\n".join(leftover).strip()
-        # The prose beside a Purpose bullet is the card's language; with no bullet the prose is the purpose itself.
-        self.language = self.leftover if self.purpose else ""
-        # A nested "### Module `path`" block often puts its purpose only in its prose.
-        prose = [line.strip() for line in self.leftover.splitlines() if line.strip() and not line.strip().startswith("- **")]
-        self.purpose = self.purpose or (prose[0] if prose else "")
-
-    def _take_bullet(self, stripped: str) -> bool:
-        """Keep the bullet this line is; true when the line is a bullet or framing, false for prose."""
-        purpose, seam, dependencies = (pattern.match(stripped) for pattern in (self._PURPOSE, self._SEAM, self._DEPENDENCIES))
-        if purpose:
-            self.purpose = purpose.group(1).strip()
-        elif seam:
-            self.seam_terms = _listed_terms(seam.group(1))
-        elif dependencies:
-            self.dependencies = _listed_terms(dependencies.group(1))
-        return bool(purpose or seam or dependencies or self._FRAMING.match(stripped))
 
 
 class CardDocument:

@@ -9,6 +9,8 @@ from cdd_guidance.practices.clean_engineering.rules.coupling_rules import (
     ShapeClassesAroundResources,
 )
 from cdd_guidance.practices.clean_engineering.rules.code_measure_limits import MEASURE_LIMIT_RULES
+from cdd_guidance.practices.clean_engineering.rules.code_use_rules import CODE_USE_RULES
+from cdd_guidance.practices.clean_engineering.rules.cross_file_rules import CROSS_FILE_RULES
 from cdd_guidance.practices.clean_engineering.rules.operation_checks import CODE_RULES
 from cdd_guidance.practices.clean_engineering.rules.prefer_class_operations import PreferClassOperations
 from cdd_guidance.practices.clean_engineering.rules.typed_and_comments import LimitComments, UseTypedSignatures
@@ -58,7 +60,7 @@ RULES: tuple = (
     NoPrototypeSwapping(),
     RefuseUnreadableInput(),
     DependTowardStability(),
-) + CODE_RULES + MEASURE_LIMIT_RULES
+) + CODE_RULES + MEASURE_LIMIT_RULES + CODE_USE_RULES + CROSS_FILE_RULES
 
 BY_SLUG = {rule.slug: rule for rule in RULES}
 

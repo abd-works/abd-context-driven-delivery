@@ -55,8 +55,8 @@ class PracticeSupplement(PracticeGuidance):
     session (``always_apply``). Its document keeps the usual Overview and Guidance, then sections headed with the slugs of
     the fidelities they apply to (``## bdd-development``, or ``## stories-acceptance-tests, bdd-development`` for one
     that applies to both), each with its guidance and a ``### Rules`` list. Its Shared rules are the few that apply to
-    all work, such as choosing the flow before writing code; every other rule names the fidelities it is for. A subclass that checks graph rules makes its *GraphOverlay* as ``graph_overlay``, as a pattern
-    does."""
+    all work, such as choosing the flow before writing code; every other rule names the fidelities it is for. A subclass that checks graph rules makes its *GraphOverlay* by overriding ``graph_overlay``, which
+    every practice declares and answers none for, as a pattern does."""
 
     working_set_type = SupplementWorkingSet
 

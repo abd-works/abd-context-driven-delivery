@@ -29,8 +29,8 @@ class AcceptedViolationsUnreadable(JsonFileUnreadable):
 class AcceptanceData(TypedDict, total=False):
     """One acceptance as the file keeps it. ``rule``, ``node_id``, and ``message`` are what a violation on a node is
     matched on; ``rule``, ``file``, and ``content`` (the judged line's text) what a finding that names no node is
-    matched on, by its ``message`` when it names no line either. ``subject`` and ``accepted_at`` are for a person
-    reading the file."""
+    matched on, by its ``message`` when it names no line either. ``subject``, ``accepted_at``, and ``reason`` (why the
+    violation stands, when the person gave one) are for a person reading the file."""
 
     rule: str
     node_id: str
@@ -39,6 +39,7 @@ class AcceptanceData(TypedDict, total=False):
     content: str
     message: str
     accepted_at: str
+    reason: str
 
 
 class Acceptance:
@@ -87,13 +88,14 @@ class AcceptedViolations:
     def holds_any(self) -> bool:
         return bool(self._acceptances())
 
-    def accept(self, violation: Violation) -> None:
-        """Keep violation as accepted, once however often it is accepted."""
+    def accept(self, violation: Violation, reason: str = "") -> None:
+        """Keep violation as accepted, once however often it is accepted, with the reason it stands when one is given."""
         acceptances = self._acceptances()
         accepted = self._acceptance_of(violation)
         if any(acceptance.covers(accepted) for acceptance in acceptances):
             return
-        stamped = Acceptance({**accepted.kept, "accepted_at": str(LogTimestamp.now())})
+        why: AcceptanceData = {"reason": reason} if reason else {}
+        stamped = Acceptance({**accepted.kept, "accepted_at": str(LogTimestamp.now()), **why})
         self._write([*acceptances, stamped])
 
     def reopen(self, violation: Violation) -> None:

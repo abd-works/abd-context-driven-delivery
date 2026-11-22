@@ -5,6 +5,7 @@ name."""
 
 from __future__ import annotations
 
+import keyword
 import re
 from collections import Counter
 from typing import TYPE_CHECKING
@@ -33,6 +34,8 @@ _DOCSTRING = re.compile(r'(?s)\A\s*(?:"""|\'\'\').*?(?:"""|\'\'\')')
 # The marker the source view puts after a line for each call on it, `/* call:show */`, which is no code.
 _CALL_MARKER = re.compile(r"\s*/\* call:[^*]*\*/")
 _NO_BODY = {"", "...", "pass", "raise NotImplementedError", "raise NotImplementedError()"}
+# An attribute a class's body assigns at its top level: `written = _NoWrittenFiles()`, `foam: str = 'thin'`, `foam: str`.
+_CLASS_ATTRIBUTE = re.compile(r"^\s*([A-Za-z_]\w*)\s*(?::[^=\n]*)?(?:=(?!=)|$)")
 # The relationships a class has with the class a field of its holds, each its own kind of edge, as the schema names them.
 _FIELD_RELATIONSHIPS = ("composition", "aggregation", "association")
 
@@ -59,6 +62,28 @@ class ClassLinks:
                 design = self._design_of(node, described)
                 if design is not None:
                     self._graph.edges.relate("implements", node, design)
+        self._realize([node for node in classes if not node.has_fact(DESCRIBED_FACT)])
+
+    def _realize(self, coded: "list[Node]") -> None:
+        """Join each class to each protocol whose members it declares, every one of two or more, which it satisfies
+        without extending it (``realizes``): a call through the protocol reaches the class's operation. A protocol of
+        one member is too common a shape to say which classes mean to satisfy it."""
+        protocols = [node for node in coded if self._index.is_protocol(node)]
+        if not protocols:
+            return
+        # Each class's members and fields, its class attributes among them, by the class.
+        declared: dict[int, set[str]] = {id(node): {*(node.get_fact("held_fields") or {}), *_class_attributes(node)} for node in coded}
+        for member in [*self._in_graph.nodes("Operation"), *self._in_graph.nodes("Property")]:
+            owner = self._index.class_declaring(member)
+            if owner is not None and not member.name.startswith("__"):
+                declared.setdefault(id(owner), set()).add(member.name)
+        for protocol in protocols:
+            wanted = declared.get(id(protocol), set())
+            if len(wanted) < 2:
+                continue
+            for node in coded:
+                if node is not protocol and not self._index.is_protocol(node) and wanted <= declared.get(id(node), set()):
+                    self._graph.edges.relate("realizes", node, protocol)
 
     def _design_of(self, coded: "Node", described: "list[Node]") -> "Node | None":
         """The class a model document describes under coded's name, from the nearest folder at or above coded's file
@@ -75,6 +100,18 @@ class ClassLinks:
         """The folder a model document describes, the one holding its `.context`; empty for the source root."""
         parts = design.source.file.split("/")[:-2]
         return "/".join(parts)
+
+
+def _class_attributes(node: "Node") -> set[str]:
+    """The attributes a Python class's own body assigns, with a hint or without one (`written = _NoWrittenFiles()`):
+    the names its body's top level assigns."""
+    lines = (node.source.text or "").split("\n")[1:]
+    indents = [len(line) - len(line.lstrip()) for line in lines if line.strip()]
+    if not indents:
+        return set()
+    top = min(indents)
+    found = (_CLASS_ATTRIBUTE.match(line) for line in lines if len(line) - len(line.lstrip()) == top)
+    return {match.group(1) for match in found if match is not None and not keyword.iskeyword(match.group(1))}
 
 
 class FieldLinks:

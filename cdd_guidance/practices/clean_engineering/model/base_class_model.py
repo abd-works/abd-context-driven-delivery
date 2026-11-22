@@ -326,6 +326,8 @@ class Module(OoadNode):
     class_type: type = OoadClass
     graph_facts = (
         "has_module_context",
+        "card_seam_terms",
+        "card_dependencies",
         "has_bounded_context",
         "modules_heading",
         "names_seam",

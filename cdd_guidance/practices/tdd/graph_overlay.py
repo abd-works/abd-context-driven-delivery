@@ -10,7 +10,6 @@ from pathlib import Path
 from cdd_guidance.practices.bdd.bdd import Bdd
 from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 from cdd_guidance.practices.source_code.code_reach import CodeReach
-from cdd_guidance.practices.source_code.test_files import is_example_code
 from cdd_guidance.practices.stories.stories import Stories
 from cdd_guidance.practices.tdd.tiers import is_code_file, real_resources_in, stubs_in, tier_of
 from harness.graph.graph import Graph, Node
@@ -117,6 +116,7 @@ class CodeUnderTest:
     def __init__(self, graph: Graph, clean: CleanEngineering, texts: dict[str, str]) -> None:
         self._graph = graph
         self._clean = clean.reading.in_graph
+        self._test_code = clean.reading.test_code
         self._texts = texts
 
     def record(self) -> None:
@@ -135,7 +135,7 @@ class CodeUnderTest:
         ways reach, then every member one of them invokes, followed through Clean Engineering's own invokes links."""
         edges = self._clean.edge_index
         reached = {id(edge.parent): edge.parent for edge in edges.of("invokedBy")}
-        reached.update((id(operation), operation) for operation in operations if is_example_code(operation.source.file))
+        reached.update((id(operation), operation) for operation in operations if self._test_code.is_example_code(operation.source.file))
         reached.update((id(operation), operation) for operation in CodeReach.from_graph(self._graph).operations(operations))
         waiting = list(reached.values())
         while waiting:
@@ -158,13 +158,13 @@ class CodeUnderTest:
 
     def _is_production_code(self, node: Node) -> bool:
         file = node.source.file or ""
-        return is_code_file(file) and not is_example_code(file)
+        return is_code_file(file) and not self._test_code.is_example_code(file)
 
     def _names_in_tests(self, operations: list[Node]) -> set[str]:
         """Each capitalised word a test file or an operation of test code writes: the class names tests can name."""
         words = {word for text in self._texts.values() for word in _CAPITALISED_WORD.findall(text)}
         for operation in operations:
-            if is_example_code(operation.source.file):
+            if self._test_code.is_example_code(operation.source.file):
                 words.update(_CAPITALISED_WORD.findall(str(operation.get_fact("body_text") or "")))
         return words
 

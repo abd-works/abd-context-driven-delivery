@@ -65,6 +65,3 @@ class Range:
     def context(self) -> str:
         """The range as a chat's context: the file and its lines, then each line quoted."""
         return "\n".join([f"{self._path}:{self.start_line}-{self.end_line}", *self.quoted])
-
-    def contains(self, line: int) -> bool:
-        return self.start_line <= line <= self.end_line

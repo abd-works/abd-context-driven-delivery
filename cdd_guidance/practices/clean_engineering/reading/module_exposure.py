@@ -9,7 +9,6 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import MODU
 from cdd_guidance.practices.clean_engineering.reading.folder_facts import folders_of, is_under
 from cdd_guidance.practices.clean_engineering.reading.imported_classes import ImportedClasses
 from cdd_guidance.practices.clean_engineering.reading.operation_counts import operation_count
-from cdd_guidance.practices.source_code import is_example_code
 from cdd_guidance.practices.clean_engineering.reading.public_routes import NAMED, PublicRoutes
 from cdd_guidance.practices.source_code import ClassReference
 
@@ -31,7 +30,7 @@ class ModuleExposure:
     subtree (``subtree_class_count``), the public ones, each as ``file:Name`` with the routes that reach it
     (``public_classes``), and how many are public and private (``public_class_count``, ``private_class_count``). A
     private record, such as a parser's ``_Section``, is neither seam nor hidden design, so it is not counted; a name
-    starting with ``_`` is never public; tests, test support, examples, and test doubles (``is_example_code``) neither
+    starting with ``_`` is never public; tests, test support, examples, and test doubles (the reading's ``test_code``) neither
     count nor name a class.
 
     Beside the classes it keeps their operations (*OperationCount*), the module functions of its production files
@@ -44,17 +43,18 @@ class ModuleExposure:
         self._in_graph = in_graph
         self._classes = classes
         self._routes = routes
+        self._test_code = in_graph.practice.reading.test_code
 
     def record(self) -> None:
         counted = [
             each.node
             for each in self._classes
-            if not is_example_code(each.file) and not (each.name.startswith("_") and not each.has_behavior)
+            if not self._test_code.is_example_code(each.file) and not (each.name.startswith("_") and not each.has_behavior)
         ]
         holders = [
             node
             for node in self._in_graph.nodes("OoadClass")
-            if node.name == MODULE_FUNCTION_HOLDER and not is_example_code(node.source.file)
+            if node.name == MODULE_FUNCTION_HOLDER and not self._test_code.is_example_code(node.source.file)
         ]
         namers = ClassNamers(self._in_graph, [each.node for each in self._classes]).by_class()
         for module in self._in_graph.nodes("Module"):
@@ -99,6 +99,7 @@ class ClassNamers:
     def __init__(self, in_graph: "PracticeNodes", classes: list["Node"]) -> None:
         self._in_graph = in_graph
         self._classes = classes
+        self._test_code = in_graph.practice.reading.test_code
 
     def by_class(self) -> dict[str, set[str]]:
         """The folders that name each class definition, by its node id."""
@@ -119,13 +120,13 @@ class ClassNamers:
         for folder in folders_of(self._in_graph):
             by_file = folder.get_fact("imported_classes_by_file") if folder.has_fact("imported_classes_by_file") else {}
             for file, made in by_file.items():
-                if not is_example_code(file):
+                if not self._test_code.is_example_code(file):
                     references[file] = [ClassReference(*item) for item in made]
                     namer_of[file] = folder.source.file or ""
         root = self._in_graph.root
         outside = root.get_fact("imported_classes_outside") if root.has_fact("imported_classes_outside") else {}
         for file, kept in outside.items():
-            if is_example_code(file):
+            if self._test_code.is_example_code(file):
                 continue
             references[file] = [ClassReference(*item) for item in kept["classes"]]
             namer_of[file] = kept["module"]

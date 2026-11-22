@@ -169,8 +169,13 @@ def violations_in(graph: Graph, practice: str, scope: list[str]) -> set[tuple[st
 # because links across practices cannot be judged on part of it, and a class copying another's fields is found only
 # when the file holding the other class is read too, such as the sample's CustomerException beside
 # AccountCredentialsException. TDD's coverage rules ask whether a test reaches an operation or names an exception, which
-# only a load that reads the tests beside the code can answer.
-_JUDGED_ON_THE_WHOLE = frozenset({"conforms-to-schema", "do-not-invent-parallel-object-models", "operation-has-a-proving-test", "declared-exception-raised-by-a-test"})
+# only a load that reads the tests beside the code can answer, and the rules about unused and disconnected code ask what
+# the other files use, which a load of named files alone has not read.
+_JUDGED_ON_THE_WHOLE = frozenset({
+    "conforms-to-schema", "do-not-invent-parallel-object-models", "operation-has-a-proving-test", "declared-exception-raised-by-a-test",
+    "delete-unused-classes", "delete-unused-operations", "check-use-the-graph-cannot-see", "make-module-only-operations-private",
+    "connect-disconnected-classes", "merge-one-class-packages",
+})
 
 
 def judged_alone(hits: set[tuple[str, str]]) -> set[tuple[str, str]]:

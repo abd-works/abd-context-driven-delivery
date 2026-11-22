@@ -174,7 +174,7 @@ class PatternOverlays:
         found: list[GraphOverlay] = []
         for practice in practices:
             for supplement in practice.working_set.supplements:
-                overlay = getattr(supplement, "graph_overlay", None)
+                overlay = supplement.graph_overlay
                 if overlay is not None and overlay not in found:
                     found.append(overlay)
         return found

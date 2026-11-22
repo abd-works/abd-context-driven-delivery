@@ -69,6 +69,9 @@ with description("a project's accepted violations"):
         with it("should leave it out of the open violations"):
             expect(self.accepted.open_among([on_node(), judged()])).to(equal([judged()]))
 
+        with it("should keep no reason when the person gave none"):
+            expect("reason" in self.kept[0]).to(be_false)
+
         with it("should name it among the accepted ones"):
             expect(self.accepted.accepted_among([on_node(), judged()])).to(equal([on_node()]))
 
@@ -100,6 +103,13 @@ with description("a project's accepted violations"):
 
             with it("should keep no acceptance of it in the file"):
                 expect(json.loads(self.file.read_text(encoding="utf-8"))["accepted"]).to(equal([]))
+
+    # A person says why a violation stands, so the next reader of the file knows why it is not fixed.
+    with context("with a violation on a node accepted for a reason"):
+        with it("should keep the reason beside it, for a person reading the file"):
+            self.accepted.accept(on_node(), reason="kept for the payment history story")
+            kept = json.loads(self.file.read_text(encoding="utf-8"))["accepted"]
+            expect([entry["reason"] for entry in kept]).to(equal(["kept for the payment history story"]))
 
     with context("with a judged finding on a line of a file accepted"):
         with before.each:

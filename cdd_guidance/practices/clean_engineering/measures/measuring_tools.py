@@ -31,7 +31,6 @@ from cdd_guidance.practices.clean_engineering.measures.code_measures import (
     CodeMeasure,
 )
 from cdd_guidance.practices.clean_engineering.reading.folder_facts import ModuleImports, is_under
-from cdd_guidance.practices.source_code import is_test_code
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
@@ -198,7 +197,7 @@ class ReaderTool(MeasuringTool):
         nested = [module.source.file for module in measured.reading.in_graph.nodes("Module") if module is not measured.node and is_under(module.source.file, folder)]
         classes = [
             node for node in measured.reading.in_graph.nodes("OoadClass")
-            if is_under(node.source.file, folder) and not any(is_under(node.source.file, inner) for inner in nested) and not is_test_code(node.source.file)
+            if is_under(node.source.file, folder) and not any(is_under(node.source.file, inner) for inner in nested) and not measured.reading.test_code.is_test_code(node.source.file)
         ]
         abstract = [node for node in classes if _ABSTRACT.search(node.source.text or "")]
         return round(len(abstract) / len(classes), _DECIMALS) if classes else None

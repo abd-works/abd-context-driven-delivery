@@ -42,8 +42,8 @@ class PracticeGraphRule:
     scope = SCOPE_PATHS
     """Where a validate given paths reports what the rule finds. ``paths``: only in those paths. ``all``: anywhere in
     the whole working copy, for a rule about how files use one another, such as whether anything uses a class, which
-    the paths alone cannot answer. A judged rule of scope ``all`` lists its candidates only when the validate asks for
-    the judged pass."""
+    the paths alone cannot answer. A judged rule of scope ``all`` lists its candidates in those paths on every validate,
+    and over the rest of the working copy only when the validate asks for the judged pass."""
 
     @property
     def how_decided(self) -> str:

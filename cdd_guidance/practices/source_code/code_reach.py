@@ -23,23 +23,34 @@ _CODE_SUFFIXES = {".py", ".ts", ".tsx", ".js", ".jsx", ".mjs"}
 _ENTRY_POINT_SEPARATOR = ":"
 
 
+def _base_and_members(entry: str) -> tuple[str, frozenset[str]]:
+    """A scanned base as the config writes it, ``Base`` or ``Base: member, member``, as the base and its members."""
+    base, _, members = entry.partition(":")
+    return base.strip(), frozenset(member.strip() for member in members.split(",") if member.strip())
+
+
 class WaysCodeIsReached:
     """The ways one project reaches code besides calls and imports, as its config names them:
     - publishing_decorators: a decorator or annotation that publishes the operation or class it marks for a framework
-      to call by name, such as a tool, a command, or a route;
+      to call by name, such as a tool, a command, or a route. One that joins the class it marks with a framework base
+      at run time names after a colon the members the framework calls on that class (``agent_toolset: for_call``),
+      which the class or a base of it may declare;
     - registries: a call that registers the classes it lists with a registry or plugin list, such as
       ``CATALOGUE.register``; the framework calls each override such a class makes of its bases;
-    - scanned_bases: a base class a framework finds its subclasses by, scanning folders or by reflection; it calls each
-      override a subclass makes of it;
+    - scanned_bases: a base class a framework finds its subclasses by, scanning folders or by reflection, or calls them
+      through; it calls each override a subclass makes of it. A base from outside the code read, such as a library's,
+      names after a colon the members the framework calls on it (``Component: render, componentDidCatch``), since
+      the read holds no members of its own for it;
     - entry_points: an operation the project's configuration or runtime starts, as ``file:operation``;
     - naming_conventions: a pattern of names a framework finds operations and classes by;
     - generated_adapters: the files whose public classes and operations generated code calls, as patterns."""
 
     def __init__(self, section: dict[str, Any] | None = None) -> None:
         section = section or {}
-        self.publishing_decorators = frozenset(section.get("publishing_decorators") or [])
+        self.decorator_members: dict[str, frozenset[str]] = dict(_base_and_members(str(entry)) for entry in section.get("publishing_decorators") or [])
+        self.publishing_decorators = frozenset(self.decorator_members)
         self.registries = list(section.get("registries") or [])
-        self.scanned_bases = frozenset(section.get("scanned_bases") or [])
+        self.scanned_bases: dict[str, frozenset[str]] = dict(_base_and_members(str(entry)) for entry in section.get("scanned_bases") or [])
         self.entry_points = [str(entry).rsplit(_ENTRY_POINT_SEPARATOR, 1) for entry in section.get("entry_points") or [] if _ENTRY_POINT_SEPARATOR in str(entry)]
         self.naming_conventions = [re.compile(pattern) for pattern in section.get("naming_conventions") or []]
         self.generated_adapters = list(section.get("generated_adapters") or [])
@@ -70,17 +81,26 @@ class CodeReach:
         self._root = Path(graph.folder or ".")
         self._texts: dict[str, list[str]] = {}
         self._registered: set[str] | None = None
+        # The class of each property, by property, for each practice whose properties are asked about.
+        self._property_owners: dict[int, dict[int, Node]] = {}
+        # The classes that extend each class, by the class, for each practice whose classes are asked about.
+        self._subclasses: dict[int, dict[int, list[Node]]] = {}
 
     @classmethod
     def from_graph(cls, graph: Graph) -> CodeReach:
-        """The ways the project whose folder graph read names in its config, as they reach that graph."""
-        return cls(graph, WaysCodeIsReached.from_project(graph.folder or "."))
+        """The ways the project whose folder graph read names in its config, as they reach that graph; none for a graph
+        that read no folder, which belongs to no project, whatever folder the process runs in."""
+        return cls(graph, WaysCodeIsReached.from_project(graph.folder) if graph.folder else WaysCodeIsReached())
+
+    @property
+    def ways(self) -> WaysCodeIsReached:
+        return self._ways
 
     def operations(self, operations: list[Node]) -> list[Node]:
-        """The operations among operations that one of the project's ways reaches."""
+        """The operations and properties among operations that one of the project's ways reaches."""
         names_by_class: dict[int, set[str]] = {}
         for operation in operations:
-            owner = self._graph.edges.direct_parent(operation)
+            owner = self._owner(operation)
             if owner is not None:
                 names_by_class.setdefault(id(owner), set()).add(operation.name)
         return [operation for operation in operations if self._reaches_operation(operation, names_by_class)]
@@ -96,7 +116,33 @@ class CodeReach:
             return True
         if ways.is_generated_adapter(file) and not operation.name.startswith("_"):
             return True
-        return self._is_published(operation) or self._overrides_for_a_framework(operation, names_by_class)
+        if self._is_published(operation) or self._overrides_for_a_framework(operation, names_by_class):
+            return True
+        return operation.name in self._members_decorators_call_on(self._owner(operation))
+
+    def _members_decorators_call_on(self, declared: Node | None) -> set[str]:
+        """The members the frameworks of the decorators on the class, or on a class that extends it, call on it."""
+        if declared is None:
+            return set()
+        marked = [declared, *self._extending(declared)]
+        names = {name for each in marked for name in self._decorators_of(each)}
+        return {member for name in names for member in self._ways.decorator_members.get(name, frozenset())}
+
+    def _extending(self, declared: Node) -> list[Node]:
+        """Every class the graph holds that extends declared, directly or through others."""
+        subclasses = self._subclasses.get(id(declared.practice))
+        if subclasses is None:
+            subclasses = self._subclasses.setdefault(id(declared.practice), {})
+            for edge in declared.practice.reading.in_graph.edge_index.of("baseClass"):
+                subclasses.setdefault(id(edge.child), []).append(edge.parent)
+        found: list[Node] = []
+        waiting = [declared]
+        while waiting:
+            for child in subclasses.get(id(waiting.pop()), []):
+                if all(child is not known for known in found):
+                    found.append(child)
+                    waiting.append(child)
+        return found
 
     def _reaches_class(self, declared: Node) -> bool:
         ways = self._ways
@@ -108,15 +154,39 @@ class CodeReach:
         return bool(self._ways.publishing_decorators & self._decorators_of(node))
 
     def _is_registered(self, declared: Node) -> bool:
-        """Whether a registry lists the class, or a framework finds it by a base it reaches."""
-        return declared.name in self._registered_names() or any(base.name in self._ways.scanned_bases for base in self._base_chain(declared))
+        """Whether a registry lists the class, or a framework finds it by a base it reaches, read or outside the code."""
+        if declared.name in self._registered_names() or any(base.name in self._ways.scanned_bases for base in self._base_chain(declared)):
+            return True
+        return bool(self._outside_bases_named(declared))
 
     def _overrides_for_a_framework(self, operation: Node, names_by_class: dict[int, set[str]]) -> bool:
-        """Whether operation overrides an operation of a base, on a class a framework calls through that base."""
-        owner = self._graph.edges.direct_parent(operation)
-        if owner is None or not self._is_registered(owner):
+        """Whether operation overrides an operation of a base, on a class a framework calls through that base: one the
+        base declares in the code read, or one the config names for a base from outside it."""
+        owner = self._owner(operation)
+        if owner is None:
+            return False
+        # A mixin's member is called through each class that mixes it in with a framework's base outside the code read.
+        if any(operation.name in members for each in [owner, *self._extending(owner)] for members in self._outside_bases_named(each)):
+            return True
+        if not self._is_registered(owner):
             return False
         return any(operation.name in names_by_class.get(id(base), set()) for base in self._base_chain(owner))
+
+    def _outside_bases_named(self, declared: Node) -> list[frozenset[str]]:
+        """The members the config names for each base from outside the code read that the class or a base of it
+        extends, by the base's name as the code writes it or its last part (``React.Component``, ``Component``)."""
+        written = [str(base) for each in [declared, *self._base_chain(declared)] for base in each.get_fact("bases") or []]
+        names = {name for base in written for name in (base, base.rsplit(".", 1)[-1])}
+        return [members for base, members in self._ways.scanned_bases.items() if base in names and members]
+
+    def _owner(self, member: Node) -> Node | None:
+        """The class that declares member: an operation hangs under its class, and a property is grouped under it."""
+        if member.type != "Property":
+            return self._graph.edges.direct_parent(member)
+        owners = self._property_owners.setdefault(id(member.practice), {
+            id(edge.child): edge.parent for edge in member.practice.reading.in_graph.edge_index.of("properties")
+        })
+        return owners.get(id(member))
 
     def _decorators_of(self, node: Node) -> set[str]:
         """The names of the decorators written just above the node's opening line, and on and after it when the reading

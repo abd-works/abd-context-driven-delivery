@@ -123,8 +123,8 @@ class CheckedGraph:
 
     def found(self) -> list[Violation]:
         """The listed practices' violations in the graph this call checks, accepted or not: those in the files it was
-        built from, and, of a rule that runs over the whole working copy, those anywhere, its candidates only when the
-        call asks for the judged pass."""
+        built from, and, of a rule that runs over the whole working copy, those anywhere, its candidates outside those
+        files only when the call asks for the judged pass."""
         keys = [checked.fidelity.practice_guidance.key for checked in self._checked_fidelities]
         found = self._checked.violations(keys) if self._checked is not None else []
         found = [violation for violation in found if violation.is_reported_for(self._built_from, self._judge_all)]
