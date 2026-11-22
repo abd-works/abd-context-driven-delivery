@@ -23,7 +23,8 @@ from harness.graph.schema_conformance import EXEMPT_FACT
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER, CleanEngineeringModel, OoadClass
 from cdd_guidance.practices.clean_engineering.reading.call_links import CallLinks, ClassLinks
-from cdd_guidance.practices.clean_engineering.reading.code_file import CodeFile
+from cdd_guidance.practices.clean_engineering.model import CONSTRUCTOR_NAMES
+from cdd_guidance.practices.clean_engineering.reading.code_file import CodeFile, CodeSpan, MemberAnswers
 from cdd_guidance.practices.clean_engineering.reading.code_read import DESCRIBED_FACT, PRODUCTION_FACT, CodeRead
 from cdd_guidance.practices.clean_engineering.reading.compared_facts import ComparedFacts
 from cdd_guidance.practices.clean_engineering.reading.folder_facts import folders_of
@@ -102,6 +103,8 @@ class CodeIndex:
         # The classes each production file imports, by its path, as its folder kept them.
         self._imports: dict[str, list[ClassReference]] | None = None
         self._files: dict[str, CodeFile] = {}
+        # What each member answers where the code writes no type hint for it, read once per index.
+        self.answers = MemberAnswers(self)
 
     def forget(self) -> None:
         """Drop the index, so the next question after a read indexes what the read added."""
@@ -109,6 +112,32 @@ class CodeIndex:
         self._members = None
         self._imports = None
         self._files = {}
+        self.answers = MemberAnswers(self)
+
+    @property
+    def source_root(self) -> str:
+        """The folder the code read is read from, which each node's file is named from."""
+        return str(self._reading.in_graph.source_root)
+
+    def class_declaring(self, member: Node) -> Node | None:
+        """The class that declares member; none for a module's function."""
+        owner = member.get_fact("owner")
+        if not owner or owner == MODULE_FUNCTION_HOLDER:
+            return None
+        return next((node for node in self.classes_named(owner) if node.source.file == member.source.file), None)
+
+    def constructors_of(self, declared: Node) -> list[Node]:
+        """The constructor the class declared writes; none when it writes none."""
+        return [
+            member for constructor in sorted(CONSTRUCTOR_NAMES) for member in self.members_named(constructor)
+            if member.type == "Operation" and member.get_fact("owner") == declared.name and member.source.file == declared.source.file
+        ]
+
+    def span_of(self, member: Node) -> CodeSpan:
+        """The member's own code, the class that declares it, and the type hint of each of its parameters."""
+        text = CodeSpan.code_of(member.source.text) if member.source.file else ""
+        typed = {edge.child.name: str(edge.child.get_fact("type_hint") or "") for edge in self._reading.graph.edges.from_parent("hasParameter", member)}
+        return CodeSpan(text, self.class_declaring(member), typed)
 
     def file(self, relative: str, imports: list[ClassReference] | None = None) -> CodeFile:
         """The file at relative, from the source root, as its code names things. A production file's imports are those
@@ -118,6 +147,11 @@ class CodeIndex:
         if relative not in self._files:
             self._files[relative] = CodeFile(self, relative, self._imports_of(relative), self._reading.graph.scope.over_whole)
         return self._files[relative]
+
+    def has_imports(self, relative: str) -> bool:
+        """Whether the read keeps the imports of the file at relative, as it does for each production file it read."""
+        self._imports_of(relative)
+        return relative in (self._imports or {})
 
     def _imports_of(self, relative: str) -> list[ClassReference]:
         if self._imports is None:
