@@ -8,7 +8,6 @@ Two views:
 from __future__ import annotations
 
 import re
-import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -23,7 +22,9 @@ from cdd_guidance.practices.stories.model.diagram_story_model import (
 )
 from cdd_guidance.practices.stories.model.markdown.links import StoryMapLinks
 from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryModel, StoryType
+from harness.drawio import DrawioCell, DrawioFile, DrawioPage, UnreadableDrawio
 from harness.guidance.practice_formats import Written
+from harness.whiteboard import Box
 
 # A sub-epic's estimate is never drawn narrower than this, however little room its bar leaves.
 _ESTIMATE_MIN_WIDTH = 80
@@ -191,26 +192,20 @@ class DrawIOEpic(LaidOutEpic):
 
 # -- Root node + I/O -----------------------------------------------------------
 
-class DrawIOParseError(Exception):
-    """Raised when a document is not a valid Draw.io story map."""
-
-
 class _PlacedCell(DiagramStoryCell):
     """One vertex of a story map diagram as it sits on screen: its role from the style, its bar depth, and its box."""
 
-    def __init__(self, element: ET.Element) -> None:
+    def __init__(self, cell: DrawioCell) -> None:
         super().__init__()
-        self.style = element.attrib.get("style", "")
-        self.text = element.attrib.get("value", "")
-        self.cell_id = element.attrib.get("id", "")
-        head = self.style.split(";", 1)[0]
-        self.role = head.split(":", 1)[0]
-        self.depth = int(head.split(":", 1)[1]) if self.role == "subepic" and ":" in head else -1
-        self.kind = head.split(":", 1)[1] if self.role == "story" and ":" in head else ""
-        geometry = element.find("mxGeometry")
-        box = geometry.attrib if geometry is not None else {}
-        self.x, self.y = float(box.get("x", 0)), float(box.get("y", 0))
-        self.width, self.height = float(box.get("width", 0)), float(box.get("height", 0))
+        style = cell.style
+        self.style = style.text
+        self.text = cell.label
+        self.cell_id = cell.id
+        self.role = style.role
+        self.depth = int(style.role_detail) if self.role == "subepic" and style.role_detail else -1
+        self.kind = style.role_detail if self.role == "story" else ""
+        box = cell.box or Box(0, 0, 0, 0)
+        self.x, self.y, self.width, self.height = box.x, box.y, box.w, box.h
 
     @property
     def is_epic_estimate(self) -> bool:
@@ -237,37 +232,6 @@ class _PlacedCell(DiagramStoryCell):
         return None
 
 
-class _DrawIOPage:
-    """One page of a draw.io file being written: its root, which each vertex is added under."""
-
-    def __init__(self, name: str, page_id: str) -> None:
-        self.mxfile = ET.Element("mxfile", attrib={"host": "app.diagrams.net"})
-        diagram = ET.SubElement(self.mxfile, "diagram", attrib={"name": name, "id": page_id})
-        self.root = ET.SubElement(ET.SubElement(diagram, "mxGraphModel"), "root")
-        ET.SubElement(self.root, "mxCell", attrib={"id": "0"})
-        ET.SubElement(self.root, "mxCell", attrib={"id": "1", "parent": "0"})
-
-    def add(self, vertex: "DrawIOStoryModel.Vertex") -> None:
-        """The vertex as a cell of this page; a linked one inside the ``UserObject`` that carries its links."""
-        attributes = {"id": str(vertex.cell_id), "value": vertex.label, "style": vertex.style, "vertex": "1", "parent": "1"}
-        holder = self.root
-        if vertex.link:
-            user = {"label": attributes.pop("value"), "link": vertex.link, "id": attributes.pop("id")}
-            if vertex.entry and vertex.entry != vertex.link:
-                user["entry"] = vertex.entry
-            user.update(vertex.code_link)
-            holder = ET.SubElement(self.root, "UserObject", attrib=user)
-        cell = ET.SubElement(holder, "mxCell", attrib=attributes)
-        ET.SubElement(cell, "mxGeometry", attrib={
-            "x": str(vertex.x), "y": str(vertex.y),
-            "width": str(vertex.width), "height": str(vertex.height),
-            "as": "geometry",
-        })
-
-    def text(self) -> str:
-        return "<?xml version='1.0' encoding='utf-8'?>\n" + ET.tostring(self.mxfile, encoding="unicode")
-
-
 class _KeptPlaces:
     """Where each cell of a story map drawn before stands, by its cell id: the drawing a person may have moved cards on,
     which the next render keeps them where they put them."""
@@ -282,19 +246,11 @@ class _KeptPlaces:
         if not drawio:
             return kept
         try:
-            root = ET.fromstring(drawio)
-        except ET.ParseError:
+            drawn = DrawioFile.from_text(drawio).whole
+        except UnreadableDrawio:
             return kept
-        kept._take_drawn_geometries(root)
+        kept._places = {cell.id: cell.geometry for cell in drawn.cells if cell.id and cell.geometry}
         return kept
-
-    def _take_drawn_geometries(self, root: ET.Element) -> None:
-        """Keep each drawn cell's geometry by its id; a linked cell's id is on the ``UserObject`` round it."""
-        for holder in root.iter():
-            cell = holder.find("mxCell") if holder.tag == "UserObject" else holder if holder.tag == "mxCell" else None
-            geometry = cell.find("mxGeometry") if cell is not None else None
-            if geometry is not None and holder.get("id"):
-                self._places[holder.get("id")] = geometry.attrib
 
     def place(self, vertex: "DrawIOStoryModel.Vertex") -> None:
         """Put vertex where its cell stood before, at the size it had; a cell new to the map stays where it was laid out.
@@ -364,6 +320,13 @@ class DrawIOStoryModel(DiagramStoryModel):
             self.link = story_file or self.entry
             self.code_link = links.code_link(self.link)
 
+        def draw_on(self, page: DrawioPage) -> None:
+            """This vertex as a cell of page; a linked one inside the UserObject that carries its links."""
+            link = None
+            if self.link:
+                link = {"link": self.link, **({"entry": self.entry} if self.entry and self.entry != self.link else {}), **self.code_link}
+            page.add(str(self.cell_id), self.label, self.style, Box(self.x, self.y, self.width, self.height), link)
+
     # -- Uniform Callable Surface ----------------------------------------------
 
     @property
@@ -396,14 +359,15 @@ class DrawIOStoryModel(DiagramStoryModel):
         """Draw this story map; each cell links where the links of the folder it was placed in say, and stands where
         the drawing it replaces had it."""
         vertices = [vertex for epic in self.epics for vertex in epic.cells()]
-        page = _DrawIOPage("Story Map", "story-map")
+        drawing = DrawioFile()
+        page = drawing.add_page("Story Map", "story-map")
         for vertex in vertices:
             if self.links is not None:
                 vertex.take_links(self.links)
             if self.kept_places is not None:
                 self.kept_places.place(vertex)
-            page.add(vertex)
-        return page.text()
+            vertex.draw_on(page)
+        return drawing.save()
 
     def parse(self, text: str, file: str = "") -> "DrawIOStoryModel":
         """Read the story map by where its cells sit, not their order in the file: draw.io saves cells back to
@@ -418,41 +382,9 @@ class DrawIOStoryModel(DiagramStoryModel):
         return story_map
 
     def _placed_cells(self, text: str) -> List[_PlacedCell]:
-        """Each vertex a draw.io story map draws, as it sits on screen."""
-        return [_PlacedCell(element) for element in self._vertices(self._graph_model(text))]
-
-    def _graph_model(self, text: str) -> ET.Element:
-        try:
-            root_el = ET.fromstring(text)
-        except ET.ParseError as err:
-            raise DrawIOParseError(f"Not valid Draw.io XML: {err}") from err
-        if root_el.tag == "mxGraphModel":
-            return root_el
-        if root_el.tag != "mxfile":
-            raise DrawIOParseError("Root element must be <mxGraphModel>")
-        tree = root_el.find(".//mxGraphModel")
-        if tree is None:
-            raise DrawIOParseError("mxfile has no mxGraphModel child")
-        return tree
-
-    def _vertices(self, tree: ET.Element) -> List[ET.Element]:
-        """Vertex cells in document order. A linked cell sits in a ``UserObject`` that holds
-        its ``label`` and ``id``; it is read as if they were on the cell, with the cell's geometry."""
-        vertices: List[ET.Element] = []
-        wrapped: set = set()
-        for element in tree.iter():
-            if element.tag == "UserObject":
-                cell = element.find("mxCell")
-                if cell is not None and cell.attrib.get("vertex") == "1":
-                    wrapped.add(id(cell))
-                    merged = ET.Element("mxCell", attrib=dict(
-                        cell.attrib, id=element.attrib.get("id", ""), value=element.attrib.get("label", ""),
-                    ))
-                    merged.extend(cell.findall("mxGeometry"))
-                    vertices.append(merged)
-            elif element.tag == "mxCell" and element.attrib.get("vertex") == "1" and id(element) not in wrapped:
-                vertices.append(element)
-        return vertices
+        """Each vertex a draw.io story map draws, as it sits on screen; a linked one read with its UserObject's id and
+        words."""
+        return [_PlacedCell(cell) for cell in DrawioFile.from_text(text).whole.cells if cell.is_vertex]
 
     # -- Thin-slice view -------------------------------------------------------
 
@@ -464,32 +396,32 @@ class DrawIOStoryModel(DiagramStoryModel):
         Rows 3+: One horizontal lane per increment; story cells placed in their
                  epic-column position within the lane.
         """
-        return _ThinSliceDrawing(self, _DrawIOPage("Thin Slicing", "thin-slicing")).text()
+        return _ThinSliceDrawing(self, DrawioFile()).text()
 
     def load_thin_slice(self, text: str) -> "DrawIOStoryModel":
         """Read a thin-slicing.drawio document into this map's increments, each delivering the map's own stories
         that its lane names, and return this map."""
-        names, lanes = self._lanes_in(self._graph_model(text))
+        names, lanes = self._lanes_in(DrawioFile.from_text(text).whole)
         self.increments.refill([
             DrawIOIncrement(names[slug], order, lanes[slug]) for order, slug in enumerate((slug for slug in lanes if slug in names), start=1)
         ])
         return self
 
-    def _lanes_in(self, tree: ET.Element) -> Tuple[Dict[str, str], Dict[str, List[Story]]]:
+    def _lanes_in(self, page: DrawioPage) -> Tuple[Dict[str, str], Dict[str, List[Story]]]:
         """Each lane's name and the map's stories it holds, by the increment slug its cells are named with. Cells are
         read in document order, so a lane's stories may come before its label."""
         lanes: Dict[str, List[Story]] = {}
         names: Dict[str, str] = {}
-        for cell in tree.findall(".//mxCell[@vertex='1']"):
-            style = cell.attrib.get("style", "")
-            parts = cell.attrib.get("id", "").split("/", 2)
+        for cell in (cell for cell in page.cells if cell.is_vertex and not cell.link):
+            style = cell.style.text
+            parts = cell.id.split("/", 2)
             if len(parts) < 2:
                 continue
             if style.startswith("inc-lane-label;"):
-                names[parts[1]] = cell.attrib.get("value", "").strip()
+                names[parts[1]] = cell.label.strip()
                 lanes.setdefault(parts[1], [])
             elif style.startswith("increment-story;") and len(parts) >= 3:
-                lanes.setdefault(parts[1], []).extend(self.descendants.stories_named([cell.attrib.get("value", "").strip()]))
+                lanes.setdefault(parts[1], []).extend(self.descendants.stories_named([cell.label.strip()]))
         return names, lanes
 
 
@@ -497,19 +429,23 @@ class _ThinSliceDrawing:
     """A story map's increments drawn as a swim-lane grid on one draw.io page: its epics and sub-epics as column
     headers, and one lane per increment holding its stories under their sub-epics' columns."""
 
-    def __init__(self, story_map: DrawIOStoryModel, page: _DrawIOPage) -> None:
-        self.page = page
+    def __init__(self, story_map: DrawIOStoryModel, drawing: DrawioFile) -> None:
+        self.drawing = drawing
+        self.page = drawing.add_page("Thin Slicing", "thin-slicing")
         self.columns = story_map.thin_slice_columns()
         self.lanes = story_map.thin_slice_lanes(self.columns)
         self.widths = story_map.thin_slice_widths(self.lanes, DiagramStory.size + DrawIOIncrement.card_gap, DrawIOIncrement.card_gap)
         self.width = DrawIOIncrement.label_width + sum(self.widths)
+
+    def _draw(self, vertex: "DrawIOStoryModel.Vertex") -> None:
+        vertex.draw_on(self.page)
 
     def text(self) -> str:
         lane_y = self._headers() + DrawIOIncrement.header_gap
         for increment, held in self.lanes:
             self._lane(increment, held, lane_y)
             lane_y += DrawIOIncrement.lane_height + DrawIOIncrement.lane_gap
-        return self.page.text()
+        return self.drawing.save()
 
     def _headers(self) -> int:
         """Each epic over the columns it spans, and each column's sub-epic under it; answers the headers' bottom."""
@@ -517,9 +453,9 @@ class _ThinSliceDrawing:
         for index, (epic, sub) in enumerate(self.columns):
             if index == 0 or self.columns[index - 1][0] is not epic:
                 span = sum(width for (top, _), width in zip(self.columns, self.widths) if top is epic)
-                self.page.add(DrawIOStoryModel.Vertex.make(epic.slug, epic.name, x, DiagramEpic.row_y, span - _HEADER_INSET, DiagramEpic.bar_height, epic.style))
+                self._draw(DrawIOStoryModel.Vertex.make(epic.slug, epic.name, x, DiagramEpic.row_y, span - _HEADER_INSET, DiagramEpic.bar_height, epic.style))
             if sub is not epic:
-                self.page.add(DrawIOStoryModel.Vertex.make(sub.cell_id, sub.name, x, DiagramEpic.nested_row_y, self.widths[index] - _HEADER_INSET, DiagramEpic.bar_height, sub.style))
+                self._draw(DrawIOStoryModel.Vertex.make(sub.cell_id, sub.name, x, DiagramEpic.nested_row_y, self.widths[index] - _HEADER_INSET, DiagramEpic.bar_height, sub.style))
             x += self.widths[index]
         return DiagramEpic.nested_row_y + DiagramEpic.bar_height
 
@@ -527,8 +463,8 @@ class _ThinSliceDrawing:
         """One increment's lane: its label at the left and its stories in one row under their sub-epics."""
         left = DiagramEpic.left_margin - DrawIOIncrement.label_width
         height = DrawIOIncrement.lane_height
-        self.page.add(DrawIOStoryModel.Vertex.make(f"inc-lane/{increment.slug}/bg", "", left, lane_y, self.width, height, DrawIOIncrement.lane_style))
-        self.page.add(DrawIOStoryModel.Vertex.make(f"inc-lane/{increment.slug}", increment.name, left, lane_y, DrawIOIncrement.label_width - _HEADER_INSET, height, DrawIOIncrement.label_style))
+        self._draw(DrawIOStoryModel.Vertex.make(f"inc-lane/{increment.slug}/bg", "", left, lane_y, self.width, height, DrawIOIncrement.lane_style))
+        self._draw(DrawIOStoryModel.Vertex.make(f"inc-lane/{increment.slug}", increment.name, left, lane_y, DrawIOIncrement.label_width - _HEADER_INSET, height, DrawIOIncrement.label_style))
         story_y = lane_y + (DrawIOIncrement.lane_height - DiagramStory.size) // 2
         pitch = DiagramStory.size + DrawIOIncrement.card_gap
         seen: Dict[str, int] = {}
@@ -538,4 +474,4 @@ class _ThinSliceDrawing:
                 count = seen[story.slug] = seen.get(story.slug, 0) + 1
                 cell_id = f"inc-lane/{increment.slug}/{story.slug}" + (f"-{count}" if count > 1 else "")
                 story_x = column_x + DrawIOIncrement.card_gap + place * pitch
-                self.page.add(DrawIOStoryModel.Vertex.make(cell_id, story.name, story_x, story_y, DiagramStory.size, DiagramStory.size, DrawIOIncrement.story_style))
+                self._draw(DrawIOStoryModel.Vertex.make(cell_id, story.name, story_x, story_y, DiagramStory.size, DiagramStory.size, DrawIOIncrement.story_style))

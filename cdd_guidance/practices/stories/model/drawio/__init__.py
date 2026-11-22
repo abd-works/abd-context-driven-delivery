@@ -1,1 +1,1 @@
-from .nodes import DrawIOStoryModel, DrawIOParseError
+from .nodes import DrawIOStoryModel

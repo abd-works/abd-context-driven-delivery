@@ -152,9 +152,9 @@ Layout audit for an existing mxfile. It reads cells; it does not render them. Ea
 + scan_file(root: Path, file_path: Path): list[Violation]
 	// each diagram page of the file
 	-> scan_page
-+ scan_page(page: DrawioPage): list[Violation]
++ scan_page(page: ClassDiagramPage): list[Violation]
 	// each subclass checks its one rule here
-+ violation(page: DrawioPage, message: str): Violation
++ violation(page: ClassDiagramPage, message: str): Violation
 + every(): dict[str, type[DrawioScanner]]
 	// class operation
 	// every *_scanner.py beside this file, by its RULE
@@ -164,24 +164,19 @@ Layout audit for an existing mxfile. It reads cells; it does not render them. Ea
 + collect_drawio_files(root: Path): list[Path]
 + is_skipped_path(path: Path): bool
 
-## DrawioPage
+## ClassDiagramPage
 
-One page of a draw.io file (`drawio/page/drawio_page.py`, a package the class model and the scanners both read, so the scanners depend on it one way): its cells, the class boxes on it, and the edges between them. It is the one reader of draw.io cells: *DrawIOCleanEngineeringModel* parses a diagram and keeps the positions and routes of the one it replaces through it, and every scanner checks one.
+One page of a class diagram (`drawio/page/drawio_page.py`, a package the class model and the scanners both read, so the scanners depend on it one way), over the framework's draw.io page (*DrawioPage*, harness/drawio, which reads every practice's drawings): the class boxes on it, and the edges between them with their kinds, anchors, and routes, which are the class diagram's own. *DrawIOCleanEngineeringModel* parses a diagram and keeps the positions (`page.positions()`) and routes of the one it replaces through it, and every scanner checks one.
 
-+ DrawioPage(file_path: Path | None, name: str, root: Element)
++ ClassDiagramPage(page: DrawioPage, file_path: Path | None = None)
 ------
++ page: DrawioPage
 + cells: list[Element]
 + vertices: list[Element]
 + edges: list[Element]
-+ boxes: dict[str, tuple]
++ boxes: dict[str, Box]
 + class_names: dict[str, str]
 ----
-+ pages_in(mxfile: Element, file_path: Path | None = None): list[DrawioPage]
-	// class operation: each diagram page that holds a graph model
-+ whole(text: str): DrawioPage | None
-	// class operation: every cell of a document as one page
-+ cell(cell_id: str): Element | None
-+ positions(): dict[str, tuple[float, float]]
 + edges_by_ends(): dict[tuple[str, str], Element]
 + kind_of(edge: Element): str
 	// inheritance, composition, aggregation, dependency, or association

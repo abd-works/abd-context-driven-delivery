@@ -6,7 +6,7 @@ import re
 from harness.graph.violation import Violation
 
 from cdd_guidance.practices.clean_engineering.model.drawio.page.drawio_page import (
-    DrawioPage,
+    ClassDiagramPage,
     class_title_in,
     quoted_title,
 )
@@ -18,7 +18,7 @@ _STEREOTYPE = re.compile(r"<<[^>]+>>|«[^»]+»")
 class StereotypeAboveClassNameScanner(DrawioScanner):
     RULE = "stereotype-above-class-name"
 
-    def scan_page(self, page: DrawioPage) -> list[Violation]:
+    def scan_page(self, page: ClassDiagramPage) -> list[Violation]:
         violations = []
         for cell in page.vertices:
             title = class_title_in(cell.get("value") or "")

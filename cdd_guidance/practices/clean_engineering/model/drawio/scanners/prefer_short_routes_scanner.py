@@ -3,12 +3,12 @@ from __future__ import annotations
 
 from xml.etree import ElementTree as ET
 
+from harness.drawio import DrawioCell
 from harness.graph.violation import Violation
 
 from harness.whiteboard import Box
 from cdd_guidance.practices.clean_engineering.model.drawio.page.drawio_page import (
-    DrawioPage,
-    cell_box,
+    ClassDiagramPage,
 )
 from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import DrawioScanner
 
@@ -19,7 +19,7 @@ SHORT_ROUTE_MAX_BOX_GAP = 320
 class PreferShortRoutesScanner(DrawioScanner):
     RULE = "prefer-short-routes"
 
-    def scan_page(self, page: DrawioPage) -> list[Violation]:
+    def scan_page(self, page: ClassDiagramPage) -> list[Violation]:
         """Edges that dog-leg across a short gap, and related boxes placed too far apart."""
         boxes = self._vertex_boxes(page)
         violations = []
@@ -42,11 +42,11 @@ class PreferShortRoutesScanner(DrawioScanner):
             messages.append(f"endpoint gap {gap:.0f}px (max {SHORT_ROUTE_MAX_BOX_GAP}) — place related classes closer")
         return messages
 
-    def _vertex_boxes(self, page: DrawioPage) -> dict[str, Box]:
+    def _vertex_boxes(self, page: ClassDiagramPage) -> dict[str, Box]:
         """Every vertex with a geometry, class or not, since an edge may end on any of them."""
         boxes: dict[str, Box] = {}
         for cell in page.cells:
-            box = cell_box(cell) if cell.get("vertex") == "1" else None
+            box = DrawioCell(cell).box if cell.get("vertex") == "1" else None
             if box and cell.get("id"):
                 boxes[cell.get("id")] = box
         return boxes

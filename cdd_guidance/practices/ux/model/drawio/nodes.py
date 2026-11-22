@@ -27,6 +27,7 @@ from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen, Serve
 from cdd_guidance.practices.stories.model.story_tree import KEY_SEPARATOR
 from cdd_guidance.practices.ux.model.story_link import StoryLink
 from cdd_guidance.practices.ux.model.ux_map import UxMap
+from harness.drawio import CellStyle, DrawioCell, DrawioFile, UnreadableDrawio
 from harness.guidance.practice_formats import Written
 
 _CLI = Path(__file__).with_name("drawio_ux.mjs")
@@ -70,10 +71,6 @@ class DrawioCliTimedOut(DrawioCliFailed):
     """The drawio-ux command line ran past its timeout and was stopped."""
 
 
-class UnreadableDrawio(ValueError):
-    """The draw.io content is not XML, so it holds no screens to read."""
-
-
 # Layouts the CLI templates understand (alias -> CLI id).
 _CLI_LAYOUTS = {
     "stack": "stack",
@@ -89,43 +86,34 @@ _CLI_LAYOUTS = {
 }
 
 
-class CellStyle:
-    """One cell's draw.io style, read as its keys: ``strokeColor=none;uxArea=panel;`` holds ``strokeColor`` and
-    ``uxArea``."""
+class UxCellStyle(CellStyle):
+    """One cell's draw.io style as the UX map reads it: what a cell of a mockup draws, from the keys its style holds,
+    such as ``strokeColor=none;uxArea=panel;``, and where the cell is drawn."""
 
     def __init__(self, cell: ET.Element) -> None:
-        self._cell = cell
-        pairs = (part.partition("=") for part in cell.get("style", "").split(";") if part)
-        self._keys = {key: held for key, _equals, held in pairs}
-
-    def __contains__(self, key: str) -> bool:
-        return key in self._keys
-
-    def get(self, key: str) -> str:
-        return self._keys.get(key, "")
+        super().__init__(cell.get("style", ""))
+        self._cell = DrawioCell(cell)
 
     @property
     def is_action_strip(self) -> bool:
-        return self.get("fillColor") == _ACTION_STRIP_FILL
+        return self.value("fillColor") == _ACTION_STRIP_FILL
 
     @property
     def draws_controls(self) -> bool:
         """Whether the cell shows a region's controls, not a region: it names their types, it is an unframed row, or
         it is the grey action strip."""
-        return _CONTROLS_KEY in self or self.get("strokeColor") == "none" or self.is_action_strip
+        return _CONTROLS_KEY in self or self.value("strokeColor") == "none" or self.is_action_strip
 
     @property
     def control_types(self) -> list[str]:
         """The type of each control the cell shows, in the order it shows them; none for a cell that keeps none."""
-        return self.get(_CONTROLS_KEY).split(",") if _CONTROLS_KEY in self else []
+        return self.value(_CONTROLS_KEY).split(",") if _CONTROLS_KEY in self else []
 
     @property
     def corner(self) -> tuple[float, float]:
         """Where the cell's top left corner is drawn; the page's own corner for a cell with no geometry."""
-        geometry = self._cell.find("mxGeometry")
-        if geometry is None:
-            return (0.0, 0.0)
-        return (float(geometry.get("x", 0) or 0), float(geometry.get("y", 0) or 0))
+        box = self._cell.box
+        return (box.x, box.y) if box is not None else (0.0, 0.0)
 
 
 class DrawnServed(ServesStories):
@@ -155,7 +143,7 @@ class DrawioControl(Control, DrawnServed):
     def from_cell(cls, cell: ET.Element) -> list["DrawioControl"]:
         """The controls one cell shows, each with the type the cell keeps for it. Where the cell keeps none, a control
         on an action strip, or one a form shows in brackets as ``[Pay]``, is a button."""
-        style = CellStyle(cell)
+        style = UxCellStyle(cell)
         labels = [label.strip() for label in _plain_text(cell.get("value", "")).split(_BESIDE) if label.strip()]
         kinds = style.control_types
         controls = []
@@ -182,11 +170,11 @@ class DrawioRegion(Region):
         """The region a cell inside a screen's box draws; none for a cell that draws no region (a cell that shows
         controls, an annotation, or one with no text)."""
         name = _plain_text(cell.get("value", ""))
-        style = CellStyle(cell)
+        style = UxCellStyle(cell)
         if cell.get("vertex") != "1" or style.draws_controls or not name or _is_annotation(name):
             return None
         region = cls(name, index)
-        region.area = style.get(_AREA_KEY)
+        region.area = style.value(_AREA_KEY)
         return region
 
     def read_controls(self, cell: ET.Element, control_type: type[DrawioControl]) -> None:
@@ -238,7 +226,7 @@ class DrawioScreen(Screen, DrawnServed):
         ]
         if not boxes:
             return
-        self.layout = CellStyle(boxes[0]).get(_LAYOUT_KEY)
+        self.layout = UxCellStyle(boxes[0]).value(_LAYOUT_KEY)
         self._read_regions(detailed, {box.get("id", "") for box in boxes}, ux_map)
         callout = Callout.under(boxes[0], detailed)
         if callout is not None:
@@ -251,7 +239,7 @@ class DrawioScreen(Screen, DrawnServed):
         for cell in detailed.iter("mxCell"):
             if cell.get("parent", "") not in boxes:
                 continue
-            if CellStyle(cell).draws_controls:
+            if UxCellStyle(cell).draws_controls:
                 if region is not None:
                     region.read_controls(cell, ux_map.control_type)
                 continue
@@ -310,12 +298,12 @@ class Callout:
     def under(cls, box: ET.Element, detailed: ET.Element) -> Optional["Callout"]:
         """The callout drawn under box: the annotation whose left edge is the box's, nearest below the box's top; none
         when the page draws none there."""
-        left, top = CellStyle(box).corner
+        left, top = UxCellStyle(box).corner
         below = [
-            (CellStyle(cell).corner[1], order, cell)
+            (UxCellStyle(cell).corner[1], order, cell)
             for order, cell in enumerate(detailed.iter("mxCell"))
             if cell.get("vertex") == "1" and cell.get("parent") == "1" and _is_annotation(_plain_text(cell.get("value", "")))
-            and CellStyle(cell).corner[0] == left and CellStyle(cell).corner[1] >= top
+            and UxCellStyle(cell).corner[0] == left and UxCellStyle(cell).corner[1] >= top
         ]
         return cls(min(below, key=lambda found: found[:2])[2]) if below else None
 
@@ -354,32 +342,22 @@ class DrawioUxMap(UxMap):
     def parse(self, text: str, file: str = "") -> UxMap:
         """A new map of this format, read from a draw.io file."""
         ux_map = type(self).create()
-        ux_map._read_pages(self._diagram_of(text))
+        ux_map._read_pages(DrawioFile.from_text(text))
         return ux_map
 
-    def _diagram_of(self, content: str) -> ET.Element:
-        """The draw.io file's XML; content that is not XML is refused."""
-        try:
-            return ET.fromstring(content.strip())
-        except ET.ParseError as error:
-            raise UnreadableDrawio(f"draw.io content is not valid XML: {error}") from error
-
-    def _read_pages(self, root_element: ET.Element) -> None:
+    def _read_pages(self, drawing: DrawioFile) -> None:
         """Read the diagram's pages into this map: its screens from the Site Map page, what the Detailed IA page draws
         of each screen (its layout, regions, controls, stories, and domain terms), then the transitions drawn between
         screens."""
-        site_map = self._page_named(root_element, "Site Map")
-        detailed = self._page_named(root_element, "Detailed IA")
-        source = site_map if site_map is not None else root_element
+        site_map = drawing.page("Site Map")
+        detailed = drawing.page("Detailed IA")
+        source = (site_map or drawing.whole).element
         with self.batch_schema_sync():
             screens = self._read_screens(source)
             if detailed is not None:
                 for screen in self.screens:
-                    screen.read_detail(detailed, self)
+                    screen.read_detail(detailed.element, self)
             self._read_transitions(source, screens)
-
-    def _page_named(self, root_element: ET.Element, name: str) -> Optional[ET.Element]:
-        return next((diagram for diagram in root_element.findall("diagram") if diagram.get("name") == name), None)
 
     def _read_screens(self, source: ET.Element) -> dict[str, Screen]:
         """Each screen the page draws, by the id of the cell that draws it."""
@@ -409,8 +387,8 @@ class DrawioUxMap(UxMap):
     def _nav_type_of(self, edge: ET.Element) -> str:
         """The kind of navigation an edge draws: the one it keeps, else a tab for a dashed line, else an action, the
         kind a transition is made with."""
-        style = CellStyle(edge)
-        return style.get(_NAV_KEY) or ("tab" if style.get("dashed") == "1" else _ACTION)
+        style = UxCellStyle(edge)
+        return style.value(_NAV_KEY) or ("tab" if style.value("dashed") == "1" else _ACTION)
 
     def _append_transition(self, trigger: str, origin: Screen, target: Screen) -> Transition:
         transition = self.transition_type(trigger, len(self.transitions)).joining(origin, target)

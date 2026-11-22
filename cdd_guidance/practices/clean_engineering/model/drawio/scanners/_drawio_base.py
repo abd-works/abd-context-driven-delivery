@@ -13,7 +13,8 @@ from harness.graph.location import Location
 from harness.graph.violation import FoundBy, Violation
 from harness.installation.data_class import data_of
 
-from cdd_guidance.practices.clean_engineering.model.drawio.page.drawio_page import DrawioPage
+from harness.drawio import DrawioFile
+from cdd_guidance.practices.clean_engineering.model.drawio.page.drawio_page import ClassDiagramPage
 
 DRAWIO_EXTENSIONS = frozenset({'.drawio', '.xml'})
 SKIP_DIR_NAMES = frozenset({'node_modules', '.git', 'dist', 'build', 'coverage', '__pycache__', '.venv', 'venv', 'examples'})
@@ -65,14 +66,14 @@ class DrawioScanner:
         except (OSError, ET.ParseError) as exc:
             return [Violation(FoundBy(self.rule, 'clean_engineering'), f'Could not load drawio file: {exc}', Location(str(file_path)))]
         violations = []
-        for page in DrawioPage.pages_in(mxfile, file_path):
+        for page in (ClassDiagramPage(page, file_path) for page in DrawioFile(mxfile).pages):
             violations.extend(self.scan_page(page))
         return violations
 
-    def scan_page(self, page: DrawioPage) -> list[Violation]:
+    def scan_page(self, page: ClassDiagramPage) -> list[Violation]:
         return []
 
-    def violation(self, page: DrawioPage, message: str) -> Violation:
+    def violation(self, page: ClassDiagramPage, message: str) -> Violation:
         """A violation on this page, prefixed with the page name and located at the scanned file."""
         return Violation(FoundBy(self.rule, 'clean_engineering'), f'[{page.name or "(unnamed)"}] {message}', Location(str(page.file_path)))
 

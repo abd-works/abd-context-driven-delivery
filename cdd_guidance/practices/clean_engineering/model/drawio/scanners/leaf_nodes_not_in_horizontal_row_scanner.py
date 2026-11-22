@@ -7,7 +7,7 @@ from harness.graph.violation import Violation
 
 from harness.whiteboard import Box
 from cdd_guidance.practices.clean_engineering.model.drawio.page.drawio_page import (
-    DrawioPage,
+    ClassDiagramPage,
 )
 from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import DrawioScanner
 
@@ -20,7 +20,7 @@ WIDE_ROW_SPAN = 600
 class LeafNodesNotInHorizontalRowScanner(DrawioScanner):
     RULE = "leaf-nodes-not-in-horizontal-row"
 
-    def scan_page(self, page: DrawioPage) -> list[Violation]:
+    def scan_page(self, page: ClassDiagramPage) -> list[Violation]:
         boxes = self._sized_vertex_boxes(page)
         neighbours: dict[str, set[str]] = {}
         for edge in page.edges:
@@ -37,7 +37,7 @@ class LeafNodesNotInHorizontalRowScanner(DrawioScanner):
                     violations.append(self.violation(page, message))
         return violations
 
-    def _sized_vertex_boxes(self, page: DrawioPage) -> dict[str, Box]:
+    def _sized_vertex_boxes(self, page: ClassDiagramPage) -> dict[str, Box]:
         boxes: dict[str, Box] = {}
         for cell in page.cells:
             geometry = cell.find("mxGeometry")
@@ -69,11 +69,11 @@ class LeafNodesNotInHorizontalRowScanner(DrawioScanner):
             f"(y~{int(sum(y_values) / len(y_values))}, x-span={int(x_spread)}px)"
         )
 
-    def _hub_name(self, page: DrawioPage, hub_id: str) -> str:
-        hub_cell = page.cell(hub_id)
+    def _hub_name(self, page: ClassDiagramPage, hub_id: str) -> str:
+        hub_cell = page.page.cell(hub_id)
         if hub_cell is None:
             return hub_id
-        text = re.sub("<[^>]+>", "", hub_cell.get("value") or hub_id)
+        text = re.sub("<[^>]+>", "", hub_cell.label or hub_id)
         text = re.sub("&[a-z]+;", " ", text)
         return re.split(r"[\s+]", text.strip())[0] or hub_id
 

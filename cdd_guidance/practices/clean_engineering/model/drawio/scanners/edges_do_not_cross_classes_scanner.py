@@ -4,7 +4,7 @@ from __future__ import annotations
 from harness.graph.violation import Violation
 
 from cdd_guidance.practices.clean_engineering.model.drawio.page.drawio_page import (
-    DrawioPage,
+    ClassDiagramPage,
     segment_hits_box,
 )
 from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import DrawioScanner
@@ -16,7 +16,7 @@ BOX_MARGIN = 3
 class EdgesDoNotCrossClassesScanner(DrawioScanner):
     RULE = "edges-do-not-cross-classes"
 
-    def scan_page(self, page: DrawioPage) -> list[Violation]:
+    def scan_page(self, page: ClassDiagramPage) -> list[Violation]:
         """Only routes the file states exactly; Draw.io's router may find a better way for an edge with no waypoints."""
         violations = []
         for edge in page.edges:

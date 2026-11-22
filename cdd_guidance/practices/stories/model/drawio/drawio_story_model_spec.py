@@ -20,11 +20,11 @@ from cdd_guidance.practices.stories.model.story_model import Scenario
 from cdd_guidance.practices.stories.model.diagram_story_model import DiagramEpic, DiagramEpic
 from cdd_guidance.practices.stories.model.drawio.nodes import (
     DrawIOEpic,
-    DrawIOParseError,
     DrawIOStory,
     DrawIOStoryModel,
     DrawIOEpic,
 )
+from harness.drawio import UnreadableDrawio
 from harness.guidance.practice_formats import Written
 LEFT_MARGIN_X = DiagramEpic.left_margin
 SUBEPIC_DEPTH_GAP = DiagramEpic.depth_gap
@@ -222,7 +222,7 @@ with description("a DrawIO Story Map") as self:
         with context("the parse"):
             with it("should be rejected"):
                 expect(lambda: self.drawio.parse("<not-drawio/>")).to(
-                    raise_error(DrawIOParseError)
+                    raise_error(UnreadableDrawio)
                 )
 
     with context("rendering the thin-slice view for a StoryModel with 2 increments"):

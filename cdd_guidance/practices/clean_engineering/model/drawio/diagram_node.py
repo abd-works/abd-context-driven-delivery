@@ -7,8 +7,8 @@ import re
 import xml.etree.ElementTree as ET
 from typing import List, Optional, Tuple
 
+from harness.drawio import CellStyle
 from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass
-from cdd_guidance.practices.clean_engineering.model.drawio.page.drawio_page import style_value
 from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import (
     DiagramClass,
     DiagramModule,
@@ -183,7 +183,7 @@ class DrawIOModule(DiagramModule, DrawioVertex):
         """The module a modules-view cell shows, read from the cell's HTML label; None when the cell's style names
         another kind than this type's, or the label names no module. A plain module reads a cell of any kind, so a
         reader that knows no kind of its own reads every cell as a plain module."""
-        if cls.KIND and style_value(cell.get('style', ''), 'kind') != cls.KIND:
+        if cls.KIND and CellStyle(cell.get('style', '')).value('kind') != cls.KIND:
             return None
         label_html = html.unescape(cell.get('value', ''))
         bold = re.search('<b[^>]*>([^<]+)</b>', label_html, re.IGNORECASE)
