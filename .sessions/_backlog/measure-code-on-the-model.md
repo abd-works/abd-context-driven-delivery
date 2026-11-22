@@ -46,14 +46,11 @@ Requested on 2026-11-22: the item names functions, classes and modules, and list
   - a maintainability score for each file (radon)
   - copied code, as blocks repeated across files (jscpd) and as function bodies of the same shape under different names (the script's own count; an operation already keeps a fingerprint of its body)
   - abstractness and instability, the share of abstract classes against the share of outgoing imports: reported for information only, because this framework extends through annotations and registration and the measure misreads it
-- Measures from the defect analysis of release 1.2:
-  - lines of production code, the only size or complexity measure that moved with the defect count across modules, and only loosely (rank correlation 0.56 over 17 modules)
-  - defects found for each thousand lines of production code, counted from the defect reports of a testing session
-  - stories of the module with no failure scenario (121 of 197 stories at release, counted from words in scenario titles)
-  - operations published as tools that have no test of a refused argument, the gap behind the defects where a name or path was taken as given
-  - formats a fidelity declares that no test renders there and back, counted on the fidelity and summed on the module of its practice (17 of 31 at release, 4 of 42 after the fixes)
-  - production changes committed with no test in the same commit (26% at release; on its own it showed no relation to the defect count)
-- Open questions: which of these fail validate past a limit and which are only reported? Where do the defect count and the commit count come from, since neither is in the code the graph reads?
+- One measure from the defect analysis of release 1.2: defects found for each thousand lines of the module's production code.
+  - It is measured for a branch at the time its defects are captured, such as an exploratory testing session on that branch, from that session's defect reports and the branch's code as it stands then.
+  - It belongs to that branch only: the next merge to main wipes it, so main never carries a defect rate measured on code that has since been fixed.
+- Decided on 2026-11-22: the other measures the defect analysis proposed for a module are left out (lines of production code as a measure of its own, stories with no failure scenario, published operations with no test of a refused argument, formats with no there-and-back test, production changes with no test in the same commit).
+- Open question: which of the older script's measures fail validate past a limit, and which are only reported?
 
 #### Story: Check Code Metrics Against Clean Engineering Limits
 
