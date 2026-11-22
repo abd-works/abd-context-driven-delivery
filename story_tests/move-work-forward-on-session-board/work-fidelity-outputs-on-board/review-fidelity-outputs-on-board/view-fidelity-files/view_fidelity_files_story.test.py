@@ -30,8 +30,7 @@ with story("View Fidelity Files"):
         with given("the tabs .context/story-map.md and .context/story-map.drawio are open"):
             pass
         with when("the Person closes both tabs"):
-            # Person -> FilesPanelClient.closeTab('.context/story-map.md')
-            # Person -> FilesPanelClient.closeTab('.context/story-map.drawio')
+            # Person -> the Files app's tabs (harness/files_app), which the board opens with EditorAppClient.openFilesOn
             pass
         with then("the Files app shows the list"):
             pass
