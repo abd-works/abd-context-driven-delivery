@@ -52,7 +52,7 @@ def _read_back(graph: Graph):
     """A graph opened from the saved text of graph, as a session opens its saved graph."""
     restored = Graph()
     restored.practices.of(CleanEngineering)
-    restored.restored_from(SavedGraph.from_text(SavedGraph.from_graph(graph).text))
+    restored.practices.restore(SavedGraph.from_text(SavedGraph.from_graph(graph).text))
     return restored.practices.of(CleanEngineering).reading.in_graph
 
 

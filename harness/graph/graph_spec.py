@@ -13,6 +13,7 @@ from mamba import after, before, context, description, it
 
 from harness.graph.edge import EdgeType
 from harness.graph.graph import Graph, Node, Source
+from harness.graph.node_filter import Filter
 from harness.graph.saved_graph import NodeIdentity
 from harness.graph.location import Location
 from harness.guidance.guidance import PracticeGuidance
@@ -61,11 +62,12 @@ def owned_types(node: dict, practice: str) -> set[str]:
     }
 
 
-def opened_tree(graph: Graph, entry: dict) -> dict:
-    """The entry with every branch below it opened through explorer_branch, as a person opening each one sees it."""
+def opened_tree(graph: Graph, entry: dict, request: dict | None = None) -> dict:
+    """The entry with every branch below it opened through explorer_branch with the filter the tree was read with, as a
+    person opening each one sees it."""
     if entry.get("children_left_out"):
-        entry = data_of(graph.explorer_branch(entry["node_id"]))
-    children = [child if child.get("type") in _RULE_TYPES else opened_tree(graph, child) for child in entry.get("children") or []]
+        entry = data_of(graph.explorer_branch(entry["node_id"], request))
+    children = [child if child.get("type") in _RULE_TYPES else opened_tree(graph, child, request) for child in entry.get("children") or []]
     return {**entry, "children": children}
 
 
@@ -328,44 +330,46 @@ with description("a graph"):
 
             with context("with the practice selected"):
                 with before.all:
-                    self.graph.explorer.filter.select_practices(["clean_engineering"])
+                    self.choices = self.graph.filter_choices(["clean_engineering"], [])
+                    self.request = {"practices": ["clean_engineering"]}
 
                 with it("should offer the class type named by the class query"):
-                    expect(self.graph.explorer.filter.node_types).to(contain("OoadClass"))
+                    expect(self.choices.offered_node_types).to(contain("OoadClass"))
 
                 with it("should offer the module type named by the module query"):
-                    expect(self.graph.explorer.filter.node_types).to(contain("Module"))
+                    expect(self.choices.offered_node_types).to(contain("Module"))
 
                 with it("should offer the package type named by the package query"):
-                    expect(self.graph.explorer.filter.node_types).to(contain("Package"))
+                    expect(self.choices.offered_node_types).to(contain("Package"))
 
                 with it("should return AccountCredentials"):
-                    returned = [node["name"] for node in data_of(self.graph.return_nodes())]
+                    returned = [node["name"] for node in data_of(self.graph.return_nodes(self.request))]
                     expect(returned).to(contain("AccountCredentials"))
 
                 with it("should return the account-credentials module"):
-                    returned = [node["name"] for node in data_of(self.graph.return_nodes())]
+                    returned = [node["name"] for node in data_of(self.graph.return_nodes(self.request))]
                     expect(returned).to(contain("account-credentials"))
 
                 with context("with operations selected"):
                     with before.all:
-                        self.graph.explorer.filter.select_node_types(["Operation"])
+                        self.choices = self.graph.filter_choices(["clean_engineering"], ["Operation"])
+                        self.request = {"practices": ["clean_engineering"], "types": ["Operation"]}
 
                     with it("should offer invokedBy for operations"):
-                        expect(self.graph.explorer.filter.relationships).to(contain("invokedBy"))
+                        expect(self.choices.relationships).to(contain("invokedBy"))
 
                     with it("should offer the operation parameter rule"):
-                        expect(self.graph.explorer.filter.rules).to(contain("clean_engineering.Operation.limit-operation-parameters"))
+                        expect(self.choices.rules).to(contain("clean_engineering.Operation.limit-operation-parameters"))
 
                     with it("should leave the class dependency rule out of the rule filter"):
-                        expect("use-explicit-dependencies" in self.graph.explorer.filter.rules).to(equal(False))
+                        expect("use-explicit-dependencies" in self.choices.rules).to(equal(False))
 
                     with it("should return the failure operation"):
-                        returned = [node["name"] for node in data_of(self.graph.return_nodes())]
+                        returned = [node["name"] for node in data_of(self.graph.return_nodes(self.request))]
                         expect(returned).to(contain("failure"))
 
                     with it("should leave classes out of the operation results"):
-                        returned = {node["type"] for node in data_of(self.graph.return_nodes())}
+                        returned = {node["type"] for node in data_of(self.graph.return_nodes(self.request))}
                         expect("OoadClass" in returned).to(equal(False))
 
                     with it("should attach the parameter rule to the operation that fails it"):
@@ -385,19 +389,20 @@ with description("a graph"):
 
                 with context("with violations of the parameter rule"):
                     with before.all:
-                        self.graph.explorer.filter.select_violations(["limit-operation-parameters"])
-                        self.violation_tree = data_of(self.graph.practices.named("clean_engineering").reading.in_graph.root.tree.serialize())
+                        self.request = {"practices": ["clean_engineering"], "violations": True, "rules": ["limit-operation-parameters"]}
+                        root = self.graph.practices.named("clean_engineering").reading.in_graph.root
+                        self.violation_tree = data_of(root.tree.serialize().kept_by(Filter(self.graph, self.request)))
 
                     with it("should return the operation that fails the rule"):
-                        returned = [node["name"] for node in data_of(self.graph.return_nodes())]
+                        returned = [node["name"] for node in data_of(self.graph.return_nodes(self.request))]
                         expect(returned).to(contain(_OVER_LIMIT))
 
                     with it("should leave the operation that passes the rule out"):
-                        returned = [node["name"] for node in data_of(self.graph.return_nodes())]
+                        returned = [node["name"] for node in data_of(self.graph.return_nodes(self.request))]
                         expect("register" in returned).to(equal(False))
 
                     with it("should attach the violation on the returned operation"):
-                        returned = data_of(self.graph.return_nodes())
+                        returned = data_of(self.graph.return_nodes(self.request))
                         failure = next(node for node in returned if node["name"] == _OVER_LIMIT)
                         attached = [rule for rule in failure["rules"] if rule["name"] == "limit-operation-parameters"]
                         expect(len(attached)).to(equal(1))
@@ -411,21 +416,17 @@ with description("a graph"):
                         expect(len(rule["violations"])).to(be_above(0))
 
                     with it("should leave the passing rule off the serialized graph"):
-                        register = tree_named(self.violation_tree, "register", "Operation")
-                        attached = [
-                            rule["name"]
-                            for child in register.get("children") or []
-                            if child.get("name") == "rules"
-                            for rule in child.get("children") or []
-                        ]
+                        kept = [item for item in walk_tree(self.violation_tree) if item.get("name") == "register" and item.get("type") == "Operation"]
+                        attached = [rule["name"] for register in kept for child in register.get("children") or [] if child.get("name") == "rules" for rule in child.get("children") or []]
                         expect("limit-operation-parameters" in attached).to(equal(False))
 
                 with context("with classes selected"):
                     with before.all:
-                        self.graph.explorer.filter.select_node_types(["OoadClass"])
+                        self.choices = self.graph.filter_choices(["clean_engineering"], ["OoadClass"])
+                        self.request = {"practices": ["clean_engineering"], "types": ["OoadClass"]}
 
                     with it("should offer the class dependency rule"):
-                        expect(self.graph.explorer.filter.rules).to(contain("clean_engineering.OoadClass.use-explicit-dependencies"))
+                        expect(self.choices.rules).to(contain("clean_engineering.OoadClass.use-explicit-dependencies"))
 
                     with it("should attach the class dependency rule to the class"):
                         rule = rule_on(self.account, "use-explicit-dependencies")
@@ -437,13 +438,13 @@ with description("a graph"):
                         expect("limit-operation-parameters" in attached).to(equal(False))
 
                     with it("should leave the operation parameter rule out of the rule filter"):
-                        expect("limit-operation-parameters" in self.graph.explorer.filter.rules).to(equal(False))
+                        expect("limit-operation-parameters" in self.choices.rules).to(equal(False))
 
                     with it("should leave invokes out of the class relationships"):
-                        expect("invokes" in self.graph.explorer.filter.relationships).to(equal(False))
+                        expect("invokes" in self.choices.relationships).to(equal(False))
 
                     with it("should leave modules out of the class results"):
-                        returned = {node["type"] for node in data_of(self.graph.return_nodes())}
+                        returned = {node["type"] for node in data_of(self.graph.return_nodes(self.request))}
                         expect("Module" in returned).to(equal(False))
 
         with context("with stories"):
@@ -592,8 +593,7 @@ with description("a graph"):
 
                 with context("with the story type selected"):
                     with before.all:
-                        self.graph.explorer.filter.select_practices(["stories"])
-                        self.graph.explorer.filter.select_node_types(["Story"])
+                        self.choices = self.graph.filter_choices(["stories"], ["Story"])
 
                     with it("should offer the story-node rules"):
                         expect(
@@ -602,7 +602,7 @@ with description("a graph"):
                                 "stories.Story.read-all-source-context-in-full",
                                 "stories.Story.do-not-invent-requirements",
                             }
-                            <= set(self.graph.explorer.filter.rules)
+                            <= set(self.choices.rules)
                         ).to(equal(True))
 
             with context("with an epic, a sub-epic, a story, a scenario, a step, and an example"):
@@ -689,22 +689,23 @@ with description("a graph"):
 
             with context("with the practice selected"):
                 with before.all:
-                    self.graph.explorer.filter.select_practices(["stories"])
+                    self.choices = self.graph.filter_choices(["stories"], [])
+                    self.request = {"practices": ["stories"]}
 
                 with it("should offer the story type named by the story query"):
-                    expect(self.graph.explorer.filter.node_types).to(contain("Story"))
+                    expect(self.choices.offered_node_types).to(contain("Story"))
 
                 with it("should offer the epic type named by the epic query"):
-                    expect(self.graph.explorer.filter.node_types).to(contain("Epic"))
+                    expect(self.choices.offered_node_types).to(contain("Epic"))
 
                 with it("should leave class node types out of the node filter"):
-                    expect("OoadClass" in self.graph.explorer.filter.node_types).to(equal(False))
+                    expect("OoadClass" in self.choices.offered_node_types).to(equal(False))
 
                 with it("should return the epic"):
-                    expect([node["name"] for node in data_of(self.graph.return_nodes())]).to(contain("Onboard A Customer"))
+                    expect([node["name"] for node in data_of(self.graph.return_nodes(self.request))]).to(contain("Onboard A Customer"))
 
                 with it("should leave classes out of the results"):
-                    expect("OoadClass" in {node["type"] for node in data_of(self.graph.return_nodes())}).to(equal(False))
+                    expect("OoadClass" in {node["type"] for node in data_of(self.graph.return_nodes(self.request))}).to(equal(False))
 
         with context("with domain-driven design"):
             with before.all:
@@ -802,84 +803,87 @@ with description("a graph"):
 
             with context("with the practice selected"):
                 with before.all:
-                    self.graph.explorer.filter.select_practices(["ddd"])
+                    self.choices = self.graph.filter_choices(["ddd"], [])
+                    self.request = {"practices": ["ddd"]}
 
                 with it("should offer the aggregate type named by the aggregate query"):
-                    expect(self.graph.explorer.filter.node_types).to(contain("Aggregate"))
+                    expect(self.choices.offered_node_types).to(contain("Aggregate"))
 
                 with it("should offer the entity root type named by the entity root query"):
-                    expect(self.graph.explorer.filter.node_types).to(contain("EntityRoot"))
+                    expect(self.choices.offered_node_types).to(contain("EntityRoot"))
 
                 with it("should leave story node types out of the node filter"):
-                    expect("Story" in self.graph.explorer.filter.node_types).to(equal(False))
+                    expect("Story" in self.choices.offered_node_types).to(equal(False))
 
                 with it("should return the bounded context"):
-                    expect([node["name"] for node in data_of(self.graph.return_nodes())]).to(contain("bounded context"))
+                    expect([node["name"] for node in data_of(self.graph.return_nodes(self.request))]).to(contain("bounded context"))
 
                 with it("should leave stories out of the results"):
-                    expect("Story" in {node["type"] for node in data_of(self.graph.return_nodes())}).to(equal(False))
+                    expect("Story" in {node["type"] for node in data_of(self.graph.return_nodes(self.request))}).to(equal(False))
 
                 with context("with entity roots selected"):
                     with before.all:
-                        self.graph.explorer.filter.select_node_types(["EntityRoot"])
+                        self.choices = self.graph.filter_choices(["ddd"], ["EntityRoot"])
+                        self.request = {"practices": ["ddd"], "types": ["EntityRoot"]}
 
                     with it("should offer accesses for entity roots"):
-                        expect(self.graph.explorer.filter.relationships).to(contain("accesses"))
+                        expect(self.choices.relationships).to(contain("accesses"))
 
                     with it("should leave owns out of the entity root relationships"):
-                        expect("owns" in self.graph.explorer.filter.relationships).to(equal(False))
+                        expect("owns" in self.choices.relationships).to(equal(False))
 
                     with it("should return AccountCredentials"):
-                        expect([node["name"] for node in data_of(self.graph.return_nodes())]).to(contain("AccountCredentials"))
+                        expect([node["name"] for node in data_of(self.graph.return_nodes(self.request))]).to(contain("AccountCredentials"))
 
                     with it("should leave aggregates out of the entity root results"):
-                        expect("Aggregate" in {node["type"] for node in data_of(self.graph.return_nodes())}).to(equal(False))
+                        expect("Aggregate" in {node["type"] for node in data_of(self.graph.return_nodes(self.request))}).to(equal(False))
 
                 with context("with aggregates selected"):
                     with before.all:
-                        self.graph.explorer.filter.select_node_types(["Aggregate"])
+                        self.choices = self.graph.filter_choices(["ddd"], ["Aggregate"])
+                        self.request = {"practices": ["ddd"], "types": ["Aggregate"]}
 
                     with it("should offer owns for aggregates"):
-                        expect(self.graph.explorer.filter.relationships).to(contain("owns"))
+                        expect(self.choices.relationships).to(contain("owns"))
 
                     with it("should leave accesses out of the aggregate relationships"):
-                        expect("accesses" in self.graph.explorer.filter.relationships).to(equal(False))
+                        expect("accesses" in self.choices.relationships).to(equal(False))
 
                     with it("should return the account-credentials aggregate"):
-                        expect([node["name"] for node in data_of(self.graph.return_nodes())]).to(contain("account-credentials"))
+                        expect([node["name"] for node in data_of(self.graph.return_nodes(self.request))]).to(contain("account-credentials"))
 
                     with it("should leave entity roots out of the aggregate results"):
-                        expect("EntityRoot" in {node["type"] for node in data_of(self.graph.return_nodes())}).to(equal(False))
+                        expect("EntityRoot" in {node["type"] for node in data_of(self.graph.return_nodes(self.request))}).to(equal(False))
 
                     with it("should keep the practice's root as the explorer tree"):
-                        expect([tree["type"] for tree in data_of(self.graph.explorer_trees())]).to(equal(["Practice"]))
+                        expect([tree["type"] for tree in data_of(self.graph.explorer_trees(self.request))]).to(equal(["Practice"]))
 
                     with it("should send the explorer tree with the entries below its first level left out"):
-                        tree = data_of(self.graph.explorer_trees())[0]
+                        tree = data_of(self.graph.explorer_trees(self.request))[0]
                         below = [entry for child in tree["children"] for entry in child.get("children") or [] if entry["type"] not in _RULE_TYPES]
                         expect(below).to(equal([]))
 
                     with it("should say how many entries each first-level entry left out"):
-                        tree = data_of(self.graph.explorer_trees())[0]
+                        tree = data_of(self.graph.explorer_trees(self.request))[0]
                         expect(sum(child.get("children_left_out", 0) for child in tree["children"])).to(be_above(0))
 
                     with context("that has a branch opened"):
                         with it("should answer the entries the branch left out"):
-                            closed = next(child for child in data_of(self.graph.explorer_trees())[0]["children"] if child.get("children_left_out"))
-                            opened = data_of(self.graph.explorer_branch(closed["node_id"]))
+                            closed = next(child for child in data_of(self.graph.explorer_trees(self.request))[0]["children"] if child.get("children_left_out"))
+                            opened = data_of(self.graph.explorer_branch(closed["node_id"], self.request))
                             expect(len([child for child in opened["children"] if child["type"] not in _RULE_TYPES])).to(equal(closed["children_left_out"]))
 
                     with it("should keep the account-credentials aggregate in the explorer tree"):
-                        tree = opened_tree(self.graph, data_of(self.graph.explorer_trees())[0])
+                        tree = opened_tree(self.graph, data_of(self.graph.explorer_trees(self.request))[0], self.request)
                         expect([item["name"] for item in walk_tree(tree)]).to(contain("account-credentials"))
 
                     with it("should keep an entity root in the explorer tree only as the way to an aggregate, without its rules"):
-                        tree = opened_tree(self.graph, data_of(self.graph.explorer_trees())[0])
+                        tree = opened_tree(self.graph, data_of(self.graph.explorer_trees(self.request))[0], self.request)
                         roots = [item for item in walk_tree(tree) if item["type"] == "EntityRoot"]
                         expect([child["type"] for root in roots for child in root["children"] if child["type"] in _RULE_TYPES]).to(equal([]))
 
                     with it("should keep the aggregates' rules in the explorer tree"):
-                        aggregate = tree_named(opened_tree(self.graph, data_of(self.graph.explorer_trees())[0]), "account-credentials", "Aggregate")
+                        aggregate = tree_named(opened_tree(self.graph, data_of(self.graph.explorer_trees(self.request))[0], self.request), "account-credentials", "Aggregate")
                         expect([child["type"] for child in aggregate["children"]]).to(contain("rules"))
 
         with context("with behavior-driven development that has one story spec without describes"):
@@ -900,32 +904,34 @@ with description("a graph"):
 
             with context("with the practice selected"):
                 with before.all:
-                    self.graph.explorer.filter.select_practices(["bdd"])
+                    self.choices = self.graph.filter_choices(["bdd"], [])
+                    self.request = {"practices": ["bdd"]}
 
                 with it("should offer the spec type named by the spec query"):
-                    expect(self.graph.explorer.filter.node_types).to(contain("Spec"))
+                    expect(self.choices.offered_node_types).to(contain("Spec"))
 
                 with it("should offer the description type named by the description query"):
-                    expect(self.graph.explorer.filter.node_types).to(contain("Description"))
+                    expect(self.choices.offered_node_types).to(contain("Description"))
 
                 with it("should leave class node types out of the node filter"):
-                    expect("OoadClass" in self.graph.explorer.filter.node_types).to(equal(False))
+                    expect("OoadClass" in self.choices.offered_node_types).to(equal(False))
 
                 with it("should leave classes out of the results"):
-                    expect("OoadClass" in {node["type"] for node in data_of(self.graph.return_nodes())}).to(equal(False))
+                    expect("OoadClass" in {node["type"] for node in data_of(self.graph.return_nodes(self.request))}).to(equal(False))
 
                 with context("with specs selected"):
                     with before.all:
-                        self.graph.explorer.filter.select_node_types(["Spec"])
+                        self.choices = self.graph.filter_choices(["bdd"], ["Spec"])
+                        self.request = {"practices": ["bdd"], "types": ["Spec"]}
 
                     with it("should leave descriptions out of the node filter"):
-                        expect("Description" in self.graph.explorer.filter.node_types).to(equal(False))
+                        expect("Description" in self.choices.node_types).to(equal(False))
 
                     with it("should offer only owns"):
-                        expect(self.graph.explorer.filter.relationships).to(equal(["owns"]))
+                        expect(self.choices.relationships).to(equal(["owns"]))
 
                     with it("should leave descriptions out of the results"):
-                        expect("Description" in {node["type"] for node in data_of(self.graph.return_nodes())}).to(equal(False))
+                        expect("Description" in {node["type"] for node in data_of(self.graph.return_nodes(self.request))}).to(equal(False))
 
         with context("with experience design that has no map"):
             with before.all:
@@ -1485,17 +1491,14 @@ with description("a graph a validate judges on") as self:
                 expect(len(self.graph.practices.held["clean_engineering"].reading.in_graph.nodes())).to(be_above(1))
 
 
-with description("a graph's filter asked whether it lists a file no node stands for") as self:
-    with before.each:
-        self.filter = Graph().explorer.filter
-
+with description("a filter asked whether it lists a file no node stands for") as self:
     with context("with no path chosen"):
         with it("should list no file"):
-            expect(self.filter.lists("story_tests/pay/pay_story.test.md")).to(be(False))
+            expect(Filter(Graph()).lists("story_tests/pay/pay_story.test.md")).to(be(False))
 
     with context("with a folder and a file chosen"):
         with before.each:
-            self.filter.paths = ["story_tests/pay/", ".context\domain-model.md"]
+            self.filter = Filter(Graph(), {"paths": ["story_tests/pay/", ".context\\domain-model.md"]})
 
         with it("should list a file under the chosen folder"):
             expect(self.filter.lists("story_tests/pay/pay_story.test.md")).to(be(True))
@@ -1511,3 +1514,15 @@ with description("a graph's filter asked whether it lists a file no node stands 
 
         with it("should not list a file outside the chosen paths"):
             expect(self.filter.lists("src/order.py")).to(be(False))
+
+
+with description("the graph's toolset") as self:
+    with it("should publish its own loads and the explorer's queries under the one toolset name graph"):
+        expect(sorted(Graph().tools)).to(equal(sorted([
+            "load_working_copy", "load_practice_roots", "load_files", "refresh", "save_json", "set_overlays",
+            "overlay_of", "practice_names", "inventory", "filter_choices", "source", "return_nodes", "explorer_trees", "explorer_branch",
+        ])))
+
+    with it("should publish a filter as an object whose keys a caller may leave out"):
+        request = Graph().tools["return_nodes"].input_schema["properties"]["filter"]["anyOf"][0]
+        expect("required" in request).to(equal(False))

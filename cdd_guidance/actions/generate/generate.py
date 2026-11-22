@@ -7,6 +7,7 @@ from pathlib import Path
 
 from harness.guidance.guidance import FidelityGuidance, Guidance, PracticeGuidance
 from harness.guidance_actions import GuidanceArg, GuidanceAction
+from harness.guidance_actions.generated_patterns import GeneratedPatterns
 from harness.guidance.stages import STEP, TAKES_FORMATS, on_stage
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
 from harness.installation.files import skill
@@ -46,7 +47,7 @@ class Generate(GuidanceAction):
         if self._writes_whiteboard():
             tools(self._render().publish_board)
             tools(self._render().record_board)
-        patterns = self.graph.applied_patterns.record_content(self._output_folders()) if self._session is not None else ""
+        patterns = GeneratedPatterns(self.graph.applied_patterns).record_content(self._output_folders()) if self._session is not None else ""
         instructions(patterns)
         "After the artifact is written, call validate with this same guidance and paths set to the files you wrote: validate refreshes the session's graph with exactly those files, so the graph rules run on them as they are now."
         tools(self._validate().validate)

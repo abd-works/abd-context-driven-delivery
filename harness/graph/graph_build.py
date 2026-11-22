@@ -23,14 +23,12 @@ from typing import IO, TYPE_CHECKING, TypedDict
 
 from harness.agent_tools.progress import report_progress
 from harness.agent_tools.worker_process import WorkerProcess
-from harness.graph.explorer import GraphLoaded
 from harness.graph.file_lines import BuildReads
 from harness.graph.load_scope import LoadScope
 from harness.graph.saved_graph import GraphChanges, GraphDocument, SavedGraph
 from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 
 if TYPE_CHECKING:
-    from harness.agent_tools.tool_call import ToolCall
     from harness.graph.graph import Graph
     from harness.guidance.guidance import PracticeGuidance
 
@@ -103,13 +101,16 @@ class BuildTaskDocument(TypedDict):
 
 
 class BuildTask:
-    """What one build does: its step, then whether it saves the graph it built in its folder's ``graph.json`` (saves)
-    and the files a validate checks, whose nodes it writes for it (checked)."""
+    """What one build does: its step, then whether it saves the graph it built in its folder's ``graph.json`` (saves),
+    the files a validate checks, whose nodes it writes for it (checked), and whether a worker process carries it out
+    apart from the process that asks (apart), as for a call the cdd server answers for a chat. A worker carries out its
+    order itself, so its order never says apart."""
 
-    def __init__(self, step: BuildStep, saves: bool = False, checked: CheckedFiles | None = None) -> None:
+    def __init__(self, step: BuildStep, saves: bool = False, checked: CheckedFiles | None = None, apart: bool = False) -> None:
         self.step = BuildStep(step)
         self.saves = saves
         self.checked = checked
+        self.apart = apart
 
     @classmethod
     def from_document(cls, document: BuildTaskDocument) -> BuildTask:
@@ -311,7 +312,7 @@ class WorkerBuild:
         for practice, record in changed.items():
             practice.reading.in_graph.restore.links(record)
         for practice in changed:
-            practice.reading.in_graph.loading.put_in_source_order()
+            practice.reading.in_graph.put_in_source_order()
             practice.reading.in_graph.root.tree.rebuild()
 
     def _run(self, arguments: list[str], errors: IO[str]) -> int:
@@ -319,14 +320,14 @@ class WorkerBuild:
 
 
 class GraphBuild:
-    """The build of one graph, which the graph makes once and keeps (``graph.build``): a load of a working copy, or of
-    the saved graph that holds it, a load of the files being edited, a refresh of the files an action wrote, or a run of
-    the rules on what the graph holds. For a call the cdd server answers for a chat (``call.request.answers_a_chat``) a worker
-    process carries the build out, and the graph then holds what the worker built: a build is minutes of CPU-bound
+    """The build of one graph, which the graph makes once and keeps (``graph.build``): a read of the working copy or of
+    the files being edited, a refresh of the files an action wrote, or a run of the rules on what the graph holds, each
+    a *BuildTask* its reads hand it. A task that runs apart, as one for a call the cdd server answers for a chat, is
+    carried out by a worker process, and the graph then holds what the worker built: a build is minutes of CPU-bound
     Python, and in the server's interpreter it would keep the server from answering every other chat. The graph changes
-    only once the worker answers, so a build that fails leaves it holding what it held. Any other call, or none, builds
-    in its own process. The build keeps the file of the worker's last answer and counts every change to what the graph
-    holds, so the next order names that file while the graph has not changed since."""
+    only once the worker answers, so a build that fails leaves it holding what it held. Any other task builds in its own
+    process. The build keeps the file of the worker's last answer and counts every change to what the graph holds, so
+    the next order names that file while the graph has not changed since."""
 
     def __init__(self, graph: Graph) -> None:
         self.graph = graph
@@ -336,48 +337,10 @@ class GraphBuild:
         """Count a change to what the graph holds, so the file of a worker's answer stops standing for it."""
         self._answer.changed()
 
-    def load(self, force: bool, call: ToolCall | None) -> GraphLoaded:
-        """Read each chosen practice from its root, with the graph's overlays: from the saved graph when it holds every
-        one of them on the same root with the same overlays and the load is not forced, else from the working copy,
-        which is then saved."""
-        graph = self.graph
-        report_progress("Checking the saved graph")
-        saved = None if force else graph.saved_file.holding(graph.practices.roots_by_key, graph.overlays)
-        if saved is not None:
-            report_progress("Loading the saved graph")
-            self.run(BuildTask(BuildStep.CHECK), call, state=saved.of_practices(list(graph.practices.roots_by_key)))
-            return GraphLoaded("Loaded the saved graph.")
-        report_progress("Scanning the folder")
-        graph.practices.open_chosen()
-        self.run(BuildTask(BuildStep.READ, saves=True), call)
-        return GraphLoaded("Loaded the working copies.")
-
-    def refresh(self, paths: list[str], call: ToolCall | None, checked: CheckedFiles | None = None) -> GraphLoaded:
-        """Read again the files at paths in the graph's folder, and the files a practice reads together with them; with
-        checked, write the nodes read from the files it names, whether or not anything was refreshed."""
-        graph = self.graph
-        scope = graph.scope.refreshing(paths)
-        if scope.named and graph.practices.chosen:
-            report_progress(f"Refreshing {len(scope.named)} files")
-            graph.scope = scope.also_naming(self._read_with(scope.named))
-            self.run(BuildTask(BuildStep.REFRESH, checked=checked), call)
-            return GraphLoaded(f"Refreshed {len(scope.named)} files.")
-        if checked is not None:
-            checked.write(graph)
-        if scope.folder is None or not graph.practices.chosen:
-            return GraphLoaded("No graph is open, so nothing was refreshed.")
-        return GraphLoaded("None of those files is in the graph's folder, so nothing was refreshed.")
-
-    def _read_with(self, files: list[Path]) -> list[Path]:
-        """The files each chosen practice reads together with files, which a refresh of files then reads again too: a
-        practice that builds one tree from several files, read from only some of them, would leave a different graph
-        than the load that read them all."""
-        return [path for practice in self.graph.practices.chosen for path in practice.reading.read_with(files)]
-
-    def run(self, task: BuildTask, call: ToolCall | None, state: SavedGraph | None = None) -> None:
-        """Carry task out on the graph's scope, from state when one is given, else from what the graph holds now. A call
-        that answers a chat has a worker process carry it out."""
-        if call is not None and call.request.answers_a_chat:
+    def run(self, task: BuildTask, state: SavedGraph | None = None) -> None:
+        """Carry task out on the graph's scope, from state when one is given, else from what the graph holds now; a
+        worker process carries out a task that runs apart."""
+        if task.apart:
             answer = self._answer.next_file()
             WorkerBuild(self.graph).carry_out(lambda: self._order(task, state), answer)
             self._answer.keep(answer)
@@ -473,7 +436,7 @@ class GraphBuild:
         that reports the first of two nodes then reports the same node whichever build read them."""
         opened = self.graph.practices.opened.values()
         for practice in opened:
-            practice.reading.in_graph.loading.put_in_source_order()
+            practice.reading.in_graph.put_in_source_order()
         for practice in opened:
             practice.reading.in_graph.rule_run.check()
 

@@ -85,6 +85,12 @@ class GraphPractices:
         self.choose({self.held[key]: record.root_in(folder) for key, record in kept.practices.items()})
         self.hold(kept)
 
+    def restore(self, saved: SavedGraph) -> None:
+        """Hold every practice saved keeps, with the overlays it was saved with: each practice's nodes first, then the
+        edges between them, which may cross practices, and the violations on them."""
+        self._graph.overlays = list(saved.overlays)
+        self.hold(saved)
+
     def hold(self, saved: SavedGraph) -> None:
         """Hold exactly the practices saved keeps, of those the graph holds, each on the source root it was saved with,
         under the folder of the graph's scope: their nodes, then the edges between them, which may cross practices, and

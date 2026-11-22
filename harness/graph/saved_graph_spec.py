@@ -45,7 +45,7 @@ with description("a saved graph"):
         self.graph.load_files(str(self.root), ["clean_engineering"], ["src"])
         self.text = SavedGraph.from_graph(self.graph).text
         self.restored = Graph()
-        self.restored.restored_from(SavedGraph.from_text(self.text))
+        self.restored.practices.restore(SavedGraph.from_text(self.text))
 
     with after.all:
         shutil.rmtree(self.root, ignore_errors=True)

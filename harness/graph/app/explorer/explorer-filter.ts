@@ -1,6 +1,6 @@
 import { useRef, useState, type MutableRefObject } from 'react';
 import type { Held } from './held';
-import type { ExplorerEntryData, FilterData } from '@cdd/harness/graph/graph';
+import type { ExplorerEntryData, FilterChoicesData } from '@cdd/harness/graph/graph';
 import { NO_CHOICES, NO_FILTER, chosen, nodeFilter, type FilterSelection } from '../filter/filter-selection';
 import { reasonOf } from '@cdd/cdd-page-failures';
 import { failures, graphs } from '../graph/graph-page';
@@ -12,7 +12,7 @@ import type { PageFolder } from './page-folder';
 interface ExplorerFilterState {
   selection: Held<FilterSelection>;
   trees: Held<ExplorerEntryData[]>;
-  choices: Held<FilterData>;
+  choices: Held<FilterChoicesData>;
   // The filter the trees on the page were read with, which a branch opened later is read with too.
   shown: MutableRefObject<FilterSelection>;
   folder: PageFolder;
@@ -38,7 +38,7 @@ export class ExplorerFilter {
   }
 
   // The node types, relationships, and rules the filter offers for the selection.
-  get offered(): FilterData {
+  get offered(): FilterChoicesData {
     return this.state.choices[0];
   }
 
@@ -48,7 +48,7 @@ export class ExplorerFilter {
 
   // The node types the practices hold, and the relationships and rules of the node types chosen. practicesBefore names
   // the practices chosen before a change of practice.
-  async offerChoices(next: FilterSelection, practicesBefore?: string[]): Promise<FilterData> {
+  async offerChoices(next: FilterSelection, practicesBefore?: string[]): Promise<FilterChoicesData> {
     const choices = (await graphs.filterChoices(next.practices, next.node_types, practicesBefore)) ?? NO_CHOICES;
     this.state.choices[1](choices);
     return choices;
@@ -97,7 +97,7 @@ export function useExplorerFilter(folder: PageFolder, status: LoadStatus): Explo
   return new ExplorerFilter({
     selection: useState<FilterSelection>(NO_FILTER),
     trees: useState<ExplorerEntryData[]>([]),
-    choices: useState<FilterData>(NO_CHOICES),
+    choices: useState<FilterChoicesData>(NO_CHOICES),
     shown: useRef<FilterSelection>(NO_FILTER),
     folder,
     status,

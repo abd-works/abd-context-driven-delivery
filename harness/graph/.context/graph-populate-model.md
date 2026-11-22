@@ -12,7 +12,7 @@ A node's id is `{practice}:{type}:{file or folder}:{name}`, with the owning clas
 
 ## Graph
 
-The toolset the graph tools run on. A session holds one (`Session.graph`), with the session's practices in it; each project's cdd runtime also holds one for calls that work in no session. Annotated `@language_adapter(language="typescript")`, so the explorer app calls the same operations through the generated `GraphClientGenerated`. Each of its jobs is a part it makes once and keeps; its MCP operations are the one entry and hand each job to its part.
+The toolset the graph tools run on. A session holds one (`Session.graph`), with the session's practices in it; each project's cdd runtime also holds one for calls that work in no session. Annotated `@language_adapter(language="typescript")`, so the explorer app calls the same operations through the generated `GraphClientGenerated`. Each of its jobs is a part it makes once and keeps; its MCP operations are the one entry and hand each job to its part. It extends *GraphExplorer*, the `@hosted_only` class whose queries are published under the toolset name `graph` too. The call a tool answers stops here: a tool says whether its build runs apart, in a worker process (`call.request.answers_a_chat`), and hands its reads that word.
 
 + practices: GraphPractices
 	// the practices it holds, those a load reads, and those open now
@@ -21,8 +21,6 @@ The toolset the graph tools run on. A session holds one (`Session.graph`), with 
 + build: GraphBuild
 	// loads, refreshes, and rule runs, here or in a worker for a chat's call
 + schema_edges: SchemaEdges
-+ explorer: GraphExplorer
-	// the explorer's queries, with the graph's own Filter (explorer.filter)
 + applied_patterns: PatternOverlays
 + overlays: list[str]
 	// pattern overlay roots, each a folder holding practices/; setting them holds the pattern each one is and asks it for its GraphOverlay
@@ -42,60 +40,63 @@ The toolset the graph tools run on. A session holds one (`Session.graph`), with 
 	// on practices.part_of(parent.practice)
 + edges_from(kind, parent): list[Edge]
 + direct_parent(child): Node | None
-+ restored_from(saved: SavedGraph): None
-	// the saved overlays, then practices.hold(saved)
 + load_working_copy(folder, practices, database=None, overlays=None, force=False, call=None): GraphLoaded
-	// @mcp. -> reads.working_copy(WorkingCopyRead(...), call)
+	// @mcp. holding reads.changing, chooses the scope, the practices' roots, and the overlays, then -> reads.load(force, apart)
 + load_practice_roots(call=None): GraphLoaded
-	// @mcp. -> reads.practice_roots(call)
+	// @mcp. -> reads.practice_roots(apart)
 + load_files(folder, practices, files, overlays=None, call=None): GraphLoaded
-	// @mcp, /load-files. -> reads.files(FilesRead(...), call); never touches the saved graph
+	// @mcp, /load-files. holding reads.changing, scope = LoadScope.of_paths(folder, files), then -> reads.edited_files(apart); never touches the saved graph
 + refresh(paths, call=None): GraphLoaded
-	// @mcp. -> reads.refresh(paths, call)
+	// @mcp. -> reads.refresh(paths, apart)
 + save_json(): GraphSaved
 	// @mcp. -> saved_file.save(SavedGraph.from_graph(self)); practices already saved and not loaded now stay
 + saved_file: SavedGraphFile
 + set_overlays(overlays, call=None): AppliedOverlays
-	// @mcp. -> AppliedOverlays(reads.apply_overlays(overlays, call)), which names the overlays now applied
+	// @mcp. -> AppliedOverlays(reads.apply_overlays(overlays, apart)), which names the overlays now applied
+
+## GraphExplorer
+
+`@hosted_only`, extended by *Graph*: the explorer's queries, published as the graph's own tools under the toolset name
+`graph`. Each query makes a *Filter* for the *FilterRequest* its call sends, so no filter stays chosen on the server.
+
 + overlay_of(folder): Overlay
-	// @mcp. -> explorer.overlay_of(folder), which raises GraphFailure when the folder and its parents hold no practices/
+	// @mcp. raises GraphFailure when the folder and its parents hold no practices/
 + practice_names(): list[str]
 	// @mcp. the key of every practice the graph holds
-+ inventory(), filter_choices(...), source(node_id), return_nodes(filter=None), explorer_trees(filter=None),
-  explorer_branch(node_id, filter=None)
-	// @mcp. -> explorer. explorer_trees sends each root with the entries below it closed; explorer_branch sends one
++ inventory(): Inventory
++ filter_choices(practices, node_types, practices_before=None): FilterChoices
++ source(node_id): NodeSource | None
++ source_members(): list[NodeSource]
++ return_nodes(filter: FilterRequest | None = None), explorer_trees(filter=None), explorer_branch(node_id, filter=None)
+	// @mcp. explorer_trees sends each root with the entries below it closed; explorer_branch sends one
 	// entry's next level, so the page reads only the levels a person opens
-+ report_progress(message): None
-	// -> harness.agent_tools.progress.report_progress
 
 ## GraphReads (graph_reads.py)
 
 What a graph reads, and when: the graph makes it once and keeps it (`graph.reads`). It holds the lock that runs a load,
-a refresh, and a write alone, since calls in one session can arrive at once.
+a refresh, and a write alone (`changing`), since calls in one session can arrive at once. `apart` says a build runs in a
+worker process; the graph's tools work it out from the call they answer.
 
 + GraphReads(graph)
++ changing: RLock
 ----
 + open(folder): None
 	// every practice rooted on folder, holding its root node alone
 + open_saved(folder): None
 	// open, then hold the saved graph's practices on their saved roots
-+ working_copy(read: WorkingCopyRead, call): GraphLoaded
-	// chooses the practices' roots and the overlays read names, then -> build.load(read.force, call)
-+ practice_roots(call): GraphLoaded
-	// each practice on its session root that is there to read, then -> build.load(False, call)
-+ files(read: FilesRead, call): GraphLoaded
-	// scope = LoadScope.of_paths(read.folder, read.files); build from only the edited files
-+ refresh(paths, call): GraphLoaded
-	// -> build.refresh(paths, call)
-+ hold_whole(call=None): None
++ load(force, apart): GraphLoaded
+	// the chosen practices from the saved graph when it holds them, else read and saved
++ edited_files(apart): GraphLoaded
+	// build from only the edited files the scope names
++ practice_roots(apart): GraphLoaded
+	// each practice on its session root that is there to read, then -> load(False, apart)
++ refresh(paths, apart): GraphLoaded
++ hold_whole(apart=False): None
 	// load the whole working copy when the graph holds only some files
-+ refreshed(paths, checked, call=None): None
-	// refresh, and write the nodes read from paths at checked, as one change; the worker writes them for a chat's call
-+ apply_overlays(overlays, call): Graph
++ refreshed(paths, checked, apart=False): None
+	// refresh, and write the nodes read from paths at checked, as one change; the worker writes them when apart
++ apply_overlays(overlays, apart): Graph
 	// apply the overlays and load the open folder again with them; answers the graph
-
-*WorkingCopyRead* (`folder`, `practices`, `database`, `overlays`, `force`) and *FilesRead* (`folder`, `practices`,
-`files`, `overlays`) are the reads a call asks for, as values.
 
 ## GraphPractices (graph_practices.py)
 
@@ -108,7 +109,8 @@ a refresh, and a write alone, since calls in one session can arrive at once.
 ----
 + named(key), of(kind), loaded(kind), part_of(practice)
 	// of opens the practice of that class; loaded answers it only when open; part_of refuses a practice another graph holds
-+ choose(roots), roots_by_key, open_chosen(), reopen(saved), hold(saved), take(changes)
++ choose(roots), roots_by_key, open_chosen(), reopen(saved), restore(saved), hold(saved)
+	// restore: the saved overlays, then hold(saved)
 + rebuild_trees()
 
 ## LoadScope (load_scope.py)
@@ -127,20 +129,20 @@ a refresh, and a write alone, since calls in one session can arrive at once.
 
 ## GraphBuild (graph_build.py)
 
-+ load(force, call), refresh(paths, call, checked=None), run(step, call, state=None, saves=False, checked=None), carry_out(order), changed()
-	// a chat's call builds in a worker (WorkerBuild); the worker's answer is taken whole (practices.hold) or as changes (WorkerBuild, each practice's restore). HeldAnswer counts each change, so an order names the last answer while the graph still holds it
++ run(task: BuildTask, state=None), carry_out(order), changed()
+	// a task that runs apart (BuildTask(step, saves, checked, apart)) builds in a worker (WorkerBuild); the worker's answer is taken whole (practices.hold) or as changes (WorkerBuild, each practice's restore). HeldAnswer counts each change, so an order names the last answer while the graph still holds it
 
 ## PracticeNodes
 
-+ root, source_root, nodes(type=None), node(node_id), holds(node_id), node_types, offer_node_types(types), add(...), add_file(type, relative, name=""), hold(node), unused_node_id(type, name)
++ root, source_root, nodes(type=None), nodes_read_now(type=None), node(node_id), holds(node_id), node_types, offer_node_types(types), add(...), add_file(type, relative, name=""), hold(node), release(node), drop(dropped), put_in_source_order(), unused_node_id(type, name)
 	// add_file: the practice's node for a whole file or folder (a pattern's tier file, an aggregate's folder), the one held or a new one; one place for every pattern overlay
-	// the nodes themselves are kept by id and by type in a store it shares with its loading (_HeldNodes)
+	// it holds its nodes itself, by id, by type, and the relationship groups its tree puts edges under
 + edge_index: EdgeIndex
 	// the edges by kind (edge_index.of(kind)), with the kinds' EdgeTypes and the indexes by pair, by parent, and by direct child
 + rule_run: PracticeRuleRun
 	// schema, schema_with(overlays), checks, rule_labels, rule_labels_for(types), check(), renew()
 + loading: PracticeLoading
-	// open(root), close(), release(node), nodes_read_now(type=None), forget_files(files), forget(dropped), put_in_source_order(): what a load, a refresh, or a restore does to the nodes the practice holds
+	// open(root), close(), forget_files(files): what a load, a refresh, or a restore does to the nodes the practice holds
 + restore: PracticeRestore
 	// nodes(saved), changes(changes), links(saved): one way to take saved state, for a restore and a worker's changes
 
@@ -332,24 +334,24 @@ The text the explorer's source view shows.
 + order: int
 + operation: str
 
-## Filter
+## FilterRequest, FilterChoices, Filter (node_filter.py)
 
-+ practices: list[str]
-+ node_types: list[str]
-+ relationships: list[str]
-+ rules: list[str]
-+ violations: bool
-+ name: str
-+ paths: list[str]
+*FilterRequest* is the TypedDict a call sends: practice(s), type(s), name, rules, relationships, violations, path(s).
+
+*FilterChoices* (`graph.filter_choices`) answers what the explorer's filter offers, made for one question and kept by no one.
+
++ FilterChoices(graph, practices, node_types, practices_before=None)
++ node_types, offered_node_types, relationships, rules: list[str]
+	// after a change of practice, the chosen node types the new practices still hold stay chosen, with every type of each practice added
+
+*Filter* is made for one request; no filter stays chosen on the graph between calls.
+
++ Filter(graph, request: FilterRequest | None)
++ practices, node_types, relationships, rules, paths: list[str]; violations: bool; name: str
 ----
-+ select_practices(practices): None
-	// offers the node types, relationships, and rules those practices hold
-+ select_node_types(node_types): None
-+ select_relationships(relationships): None
-+ select_violations(): None
-+ clear(): None
-+ narrowed_by(request): Filter
 + matches(node): bool
++ lists(file): bool
++ collect(roots): list[FilteredNode]
 
 ## A practice in the graph (PracticeReading)
 

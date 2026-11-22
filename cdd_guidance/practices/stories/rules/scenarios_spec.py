@@ -81,7 +81,7 @@ def _read_back(context: RuleCheckContext) -> RuleCheckContext:
     """The same graph as graph.json gives it back: each node a plain node holding the facts the object it was read
     from saved."""
     restored = Graph()
-    restored.restored_from(SavedGraph.from_graph(context.graph))
+    restored.practices.restore(SavedGraph.from_graph(context.graph))
     return RuleCheckContext(restored.practices.named(context.practice.key))
 
 

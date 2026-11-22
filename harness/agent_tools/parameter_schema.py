@@ -153,15 +153,10 @@ class ParameterSchema:
         return annotation
 
     def _typed_dict_schema(self, annotation: TypeHint) -> dict[str, Any]:
-        hints = get_type_hints(annotation, include_extras=True)
-        properties: dict[str, Any] = {}
-        required: list[str] = []
-        for name, hint in hints.items():
-            if get_origin(hint) is NotRequired:
-                hint = get_args(hint)[0]
-            else:
-                required.append(name)
-            properties[name] = self._annotation_schema(hint)
+        """A TypedDict as an object of its keys; a key it requires, by ``total`` or ``Required``, is required."""
+        hints = get_type_hints(annotation)
+        properties = {name: self._annotation_schema(hint) for name, hint in hints.items()}
+        required = [name for name in hints if name in annotation.__required_keys__]
         schema: dict[str, Any] = {"type": "object", "properties": properties, "additionalProperties": False}
         if required:
             schema["required"] = required

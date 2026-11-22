@@ -229,7 +229,7 @@ class _DomainClasses:
         support is never a domain building block, whatever its name."""
         if self._classes is None:
             return []
-        read_now = self._classes.loading.nodes_read_now("OoadClass")
+        read_now = self._classes.nodes_read_now("OoadClass")
         return [cls for cls in read_now if not is_test_code(cls.source.file) and not cls.has_fact(DESCRIBED_FACT)]
 
     def holds_a_domain(self, folder: str) -> bool:

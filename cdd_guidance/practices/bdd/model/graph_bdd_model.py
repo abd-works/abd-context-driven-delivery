@@ -40,7 +40,7 @@ class GraphBddModel(BddModel):
 
     def parse(self, text: str) -> "GraphBddModel":
         graph = Graph()
-        graph.restored_from(SavedGraph.from_text(text))
+        graph.practices.restore(SavedGraph.from_text(text))
         self._graph = graph
         bdd = graph.practices.of(self.practice_kind)
         self._clean = bdd.reading.clean_engineering_reading

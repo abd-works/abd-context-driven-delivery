@@ -39,7 +39,6 @@ with description("a graph"):
             )
             root = self.practice.reading.in_graph.root
             root.children.extend([self.failure, self.register])
-            self.graph.explorer.filter.select_violations(["limit-operation-parameters"])
 
         with it("should list the failed rule on the failing operation"):
             expect(self.failure.failed_rules).to(equal(["limit-operation-parameters"]))
@@ -52,7 +51,7 @@ with description("a graph"):
 
         with it("should return the operation that fails"):
             import json
-            returned = [node["name"] for node in data_of(self.graph.return_nodes())]
+            returned = [node["name"] for node in data_of(self.graph.return_nodes({"violations": True, "rules": ["limit-operation-parameters"]}))]
             expect(returned).to(equal(["failure"]))
 
     with context("with a relationship selected"):
@@ -68,7 +67,6 @@ with description("a graph"):
             root = self.practice.reading.in_graph.root
             root.children.extend([self.module, self.class_node, self.other])
             self.graph.edges.record(EdgeType("owns", 2, "direct"), self.module, self.class_node)
-            self.graph.explorer.filter.select_relationships(["owns"])
 
         with it("should keep the stage from the query on the node"):
             expect(self.class_node.stage).to(equal("implementation"))
@@ -79,14 +77,14 @@ with description("a graph"):
 
         with it("should return the nodes on the selected edge"):
             import json
-            returned = {node["name"] for node in data_of(self.graph.return_nodes())}
+            returned = {node["name"] for node in data_of(self.graph.return_nodes({"relationships": ["owns"]}))}
             expect(returned).to(equal({"account-credentials", "AccountCredentials"}))
 
     with context("with a saved node that carries a stage"):
         with before.all:
             graph = Graph()
             saved = {"nodes": [_saved_node("id", "AccountCredentials", "OoadClass", "account.ts", 4, "implementation")]}
-            graph.restored_from(SavedGraph([], {"clean_engineering": SavedPractice.from_record("clean_engineering", saved)}))
+            graph.practices.restore(SavedGraph([], {"clean_engineering": SavedPractice.from_record("clean_engineering", saved)}))
             self.node = graph.node("id")
 
         with it("should store the stage on the node"):
@@ -110,7 +108,7 @@ with description("a graph"):
                     {"parent": package, "child": customer, "kind": "owns", "order": 2, "display": "direct"},
                 ],
             })
-            graph.restored_from(SavedGraph([], {"clean_engineering": saved}))
+            graph.practices.restore(SavedGraph([], {"clean_engineering": saved}))
             self.tree = data_of(graph.practices.named("clean_engineering").reading.in_graph.root.tree.serialize())
 
         with it("should parent the package on the module"):

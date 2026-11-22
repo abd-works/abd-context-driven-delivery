@@ -1,5 +1,5 @@
 import type { CddApi, CddProgress } from '@cdd/cdd-shared'
-import type { FilterData, GraphRuleData, GraphRulesCollectionData, NodeSourceData } from '@cdd/harness/graph/graph'
+import type { FilterChoicesData, GraphRuleData, GraphRulesCollectionData, NodeSourceData } from '@cdd/harness/graph/graph'
 import type { ExplorerEntryData, RangeData, SessionClientGenerated } from '@cdd/space/session/session'
 import { NO_CHOICES, chosen, nodeFilter, type FilterSelection } from '@graph-app/filter/filter-selection'
 
@@ -26,10 +26,10 @@ export function listAnswered<Item>(tool: string, answer: unknown): Item[] {
 
 // The choices graph_filter_choices answered: none offers nothing, and anything without its lists of node types, those
 // offered, connectors and rules is that tool's failure, so the node filter never draws a list it was not given.
-export function choicesAnswered(answer: unknown): FilterData {
+export function choicesAnswered(answer: unknown): FilterChoicesData {
   if (answer === null || answer === undefined) return NO_CHOICES
   const lists = ['node_types', 'offered_node_types', 'relationships', 'rules'] as const
-  if (typeof answer === 'object' && lists.every(list => Array.isArray((answer as Record<string, unknown>)[list]))) return answer as FilterData
+  if (typeof answer === 'object' && lists.every(list => Array.isArray((answer as Record<string, unknown>)[list]))) return answer as FilterChoicesData
   throw new Error(`session.graph_filter_choices answered no choices: ${saidBy(answer)}`)
 }
 

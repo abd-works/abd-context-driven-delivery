@@ -11,7 +11,8 @@ from harness.graph.graph_rules_collection import GraphRule, GraphRulesCollection
 from harness.installation.data_class import SourceFile, data_field
 
 if TYPE_CHECKING:
-    from harness.graph.graph import Filter, Graph, Node
+    from harness.graph.graph import Graph, Node
+    from harness.graph.node_filter import Filter
     from harness.guidance.guidance import PracticeGuidance
 
 

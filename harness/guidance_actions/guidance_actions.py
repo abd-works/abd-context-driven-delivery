@@ -19,6 +19,7 @@ from harness.guidance.documents import document_in
 from harness.guidance.guidance import FidelityGuidance, Guidance, PracticeGuidance
 from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE, PracticeSet
 from harness.guidance.worked_session import WorkedSession
+from harness.guidance_actions.generated_patterns import GeneratedPatterns
 from harness.hooks.hook_server import rules_toast
 from harness.hooks.hooks import Toast, hook
 
@@ -599,7 +600,7 @@ class SessionBrief:
             return ""
         patterns = self._action.graph.applied_patterns
         root = session.work_root
-        recorded = patterns.recorded_for([root / path for path in paths or []], root)
+        recorded = GeneratedPatterns(patterns).recorded_for([root / path for path in paths or []], root)
         names = recorded or list(session.overlays)
         source = _RECORDED_IN_PATTERNS_FILE if recorded else _OVERLAID_BY_SESSION
         rules = [self._overlay_rules_of(patterns.pattern_named(name), name, source) for name in names if name in patterns.names]
