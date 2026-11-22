@@ -2440,29 +2440,19 @@ One graph. Builders fill nodes, edges, and rules; the explorer reads the tree. E
 + << composition >> applied_patterns: PatternOverlays
 + << composition >> schema_edges: SchemaEdges
 + << composition >> edges: GraphEdges
-+ << composition >> explorer: GraphExplorer
 + << composition >> reads: GraphReads
 + folder: str
 + overlays: list[str]
 + saved_file: SavedGraphFile
 ----
 + for_call(call: ToolCall): Graph
-+ practice(key: str): PracticeGuidance
 + node(node_id: str): Node | None
-+ restored_from(saved: SavedGraph): None
 + load_working_copy(folder: str, practices: dict[str, str], database: str | None = None, overlays: list[str] | None = None, force: bool = False, call: ToolCall | None = None): GraphLoaded
 + load_files(folder: str, practices: list[str], files: list[str], overlays: list[str] | None = None, call: ToolCall | None = None): GraphLoaded
 + refresh(paths: list[str], call: ToolCall | None = None): GraphLoaded
 + save_json(): GraphSaved
 + set_overlays(overlays: list[str], call: ToolCall | None = None): AppliedOverlays
-+ overlay_of(folder: str): Overlay
-+ practice_names(): list[str]
-+ inventory(): Inventory
-+ filter_choices(practices: list[str], node_types: list[str], practices_before: list[str] | None = None): Filter
-+ source(node_id: str): NodeSource | None
-+ return_nodes(filter: dict | None = None): list[FilteredNode]
-+ explorer_trees(filter: dict | None = None): list[ExplorerEntry]
-+ explorer_branch(node_id: str, filter: dict | None = None): ExplorerEntry | None
+---<<extends>>--> GraphExplorer
 ---<<makes its practices with>>--> PracticeCatalogue
 ---<<gives each practice its part through>>--> PracticeReading
 ---<<creates>>--> PracticeNodes
@@ -2470,10 +2460,26 @@ One graph. Builders fill nodes, edges, and rules; the explorer reads the tree. E
 ---<<creates>>--> LoadScope
 ---<<creates>>--> PatternOverlays
 ---<<creates>>--> GraphBuild
----<<creates>>--> GraphExplorer
 ---<<keeps>>--> PracticeGuidance
 ---<<restores from>>--> SavedGraph
 ---<<reads the call's session from>>--> ToolCall
+
+## GraphExplorer
+
+`@hosted_only`, extended by *Graph*: the explorer's queries, published as the graph's own tools under the toolset name `graph`. Each query makes a *Filter* for the *FilterRequest* its call sends, so no filter stays chosen on the server between calls.
+
+----
++ overlay_of(folder: str): Overlay
++ practice_names(): list[str]
++ inventory(): Inventory
++ filter_choices(practices: list[str], node_types: list[str], practices_before: list[str] | None = None): FilterChoices
++ source(node_id: str): NodeSource | None
++ source_members(): list[NodeSource]
++ return_nodes(filter: FilterRequest | None = None): list[FilteredNode]
++ explorer_trees(filter: FilterRequest | None = None): list[ExplorerEntry]
++ explorer_branch(node_id: str, filter: FilterRequest | None = None): ExplorerEntry | None
+---<<creates>>--> Filter
+---<<creates>>--> FilterChoices
 
 ## GraphPractices
 
@@ -2502,27 +2508,29 @@ The practices one graph holds, which the graph makes once and keeps (`graph.prac
 
 ## GraphReads
 
-What a graph reads, and when (`graph.reads`): open it on a folder, with or without its saved graph; load a working copy, its practices' session roots, or some files; refresh the files an action wrote; make sure it holds the whole working copy; apply pattern overlays. Each read runs alone. The graph's load tools hand each call to it in one line, with *WorkingCopyRead* or *FilesRead* naming what the call asked to read.
+What a graph reads, and when (`graph.reads`): open it on a folder, with or without its saved graph; load a working copy, its practices' session roots, or some files; refresh the files an action wrote; make sure it holds the whole working copy; apply pattern overlays. Each read runs alone. The graph's load tools choose what to read while they hold its lock (`changing`) and say whether the build runs apart, in a worker process, so no read takes the call.
 
 + GraphReads(graph: Graph)
 ------
 + << association >> graph: Graph
 ----
++ changing: RLock
+----
 + open(folder: Path): None
 + open_saved(folder: Path): None
-+ working_copy(read: WorkingCopyRead, call: ToolCall | None): GraphLoaded
-+ practice_roots(call: ToolCall | None): GraphLoaded
-+ files(read: FilesRead, call: ToolCall | None): GraphLoaded
-+ refresh(paths: list[str], call: ToolCall | None): GraphLoaded
-+ hold_whole(call: ToolCall | None = None): None
-+ refreshed(paths: list[str], checked: Path, call: ToolCall | None = None): None
-+ apply_overlays(overlays: list[str], call: ToolCall | None): Graph
----<<calls load, refresh, and run on>>--> GraphBuild
++ load(force: bool, apart: bool): GraphLoaded
++ edited_files(apart: bool): GraphLoaded
++ practice_roots(apart: bool): GraphLoaded
++ refresh(paths: list[str], apart: bool): GraphLoaded
++ hold_whole(apart: bool = False): None
++ refreshed(paths: list[str], checked: Path, apart: bool = False): None
++ apply_overlays(overlays: list[str], apart: bool): Graph
+---<<runs each BuildTask on>>--> GraphBuild
 ---<<creates>>--> LoadScope
 
 ## PracticeNodes
 
-One practice's part of the graph that holds it: the root node its explorer tree starts from, the folder its source is read from, and its nodes by type and by id. The graph makes one for each practice it holds and gives it to the practice, which reads it as `practice.reading.in_graph`.
+One practice's part of the graph that holds it: the root node its explorer tree starts from, the folder its source is read from, and its nodes, which it holds itself by type and by id. The graph makes one for each practice it holds and gives it to the practice, which reads it as `practice.reading.in_graph`.
 
 + PracticeNodes(graph: Graph, practice: PracticeGuidance)
 ------
@@ -2538,12 +2546,16 @@ One practice's part of the graph that holds it: the root node its explorer tree 
 + node_types: list[str]
 ----
 + nodes(type: str | None = None): list[Node]
++ nodes_read_now(type: str | None = None): list[Node]
 + node(node_id: str): Node | None
 + holds(node_id: str): bool
 + offer_node_types(types: Iterable[str]): None
 + add(node: Node, node_id: str, location: Location): Node
 + add_file(type: str, relative: str, name: str): Node
 + hold(node: Node): None
++ release(node: Node): None
++ drop(dropped: set[int]): set[int]
++ put_in_source_order(): None
 + unused_node_id(type: str, name: str): str
 ---<<keeps>>--> Node
 ---<<creates>>--> Source
@@ -2554,19 +2566,16 @@ One practice's part of the graph that holds it: the root node its explorer tree 
 
 ## PracticeLoading
 
-What a load, a refresh, or a restore does to the nodes one practice holds (`practice.reading.in_graph.loading`): open the practice on a root with its root node alone, close it, let a node go to another practice, name the nodes the load in progress read, drop the nodes read from files read again, and hold the rest in source order. It shares its part's store of nodes by id and by type.
+What a load, a refresh, or a restore does to the nodes one practice holds (`practice.reading.in_graph.loading`): open the practice on a root with its root node alone, close it, and drop the nodes read from files read again.
 
-+ PracticeLoading(part: PracticeNodes, held: _HeldNodes)
++ PracticeLoading(part: PracticeNodes)
 ------
 + << association >> part: PracticeNodes
 ----
 + open(root: Path | None): None
 + close(): None
-+ release(node: Node): None
-+ nodes_read_now(type: str | None = None): list[Node]
 + forget_files(files: Iterable[Path]): set[int]
-+ forget(dropped: set[int]): set[int]
-+ put_in_source_order(): None
++ from_root(files: Iterable[Path]): set[str]
 
 ## LoadScope
 
@@ -2932,26 +2941,78 @@ Spec support: one rule's findings over one practice's nodes, as the graph's own 
 + node_hits(node): list[str]
 ---<<reads nodes through>>--> RuleCheckContext
 
-# harness/diagnostics
+# harness/apps
 
-This module reports whether CDD is running and answering: *ServerHealth* says which of its long-running parts are up right now, and the diagnostics toolsets, each a *CallDiagnostics* made for one call, probe what an install published through the MCP host answering that call and write a report section.
+The CDD web apps a person opens beside the chat: each module that owns an app makes it once and registers it with *App*, the one registry, and `app.open` installs and readies it.
 
-- **Purpose:** Show whether CDD is running: which of its servers and apps are up, for the chat's server health band, and whether what an install published answers through the live MCP host, so a broken publication shows up in a report rather than in a failing chat.
-- **Seam (terms):** ServerHealth, TestCadence, TestTier, TestRun, TestRunRecord, TestRunRecordUnreadable, TestRunner, RunWorktree, CallDiagnostics, DiagnosticsNeedACall, AgentToolsDiagnostics, GuidanceDiagnostics, AgentToolsProbe, GuidanceProbe; the MCP operations `server-health.report`, `agent-tools-diagnostics.agent_tools_diagnostics`, `guidance-diagnostics.guidance_diagnostics`
-- **Dependencies (one-way):** harness/agent_tools, harness/installation, harness/process, harness/git, harness/hooks, harness/mcp, harness/guidance, harness/graph
+- **Purpose:** Give every module that owns a web app one way to register it, install it, and say where it answers, apart from the module that diagnoses installs.
+- **Seam (terms):** App, Apps (`APPS`), AppPackage, AppPage, AppServer, NodeScript, Npm, AppSources, PortProbe, AppStatus, AppNotStarted, AppNotRegistered, PackageNotInstalled; the MCP operations `app.open` and `app.install`
+- **Dependencies (one-way):** harness/agent_tools, harness/installation, harness/mcp, harness/process
 
-## ServerHealth
+## App
 
-Report the parts of CDD that run outside this MCP host, so a person can see what is up without opening a terminal: every registered *App*, each read as it is now, and the latest heavy and e2e test runs.
+One CDD web app a person opens beside the chat (Kanban, Graph, Story UI), and the one registry of them. The module that owns each app makes it once and registers it: the Graph app in harness/graph, from `GRAPH_APP_PORTS`; the CDD Kanban and the Story UI editor in space/kanban; the Files app in harness/files_app.
 
-+ ServerHealth(repo_root: Path | str, cadence: TestCadence | None = None, e2e_review: E2eReview | None = None)
++ App(label: str, package: AppPackage, page: AppPage)
 ------
-+ apps: list[App]
++ label: str
++ package: AppPackage
++ status: AppStatus
++ port: int | None
++ url: str
++ server: AppServer
 ----
-+ load(project: Path | str): ServerHealth
-+ report(): ServerHealth
----<<aggregation>>--> App
++ register(): App
++ registered(): list[App]
++ load(app: str, project: Path | str): App
++ open(): App
++ install(): App
+---<<raises>>--> AppNotRegistered
+---<<raises>>--> AppNotStarted
+---<<aggregation>>--> AppServer
 ---<<annotated with>>--> LanguageAdapter
+
+## AppServer
+
+The server an app answers from, which the chat that opens the app starts and its end stops: the folder it runs in, the command that starts it (node on its script, through tsx for TypeScript), and the ports it tries in turn.
+
++ AppServer(folder: Path, script: str, ports: tuple[int, ...])
+------
++ folder: str
++ command: list[str]
++ port: int | None
+
+## AppPackage
+
+The npm package an app installs from, which installs itself: its folder, `package.json`, the sources its install reads, and npm. It keeps the fingerprint of what each install read beside what that install wrote, so an install with nothing changed takes no npm.
+
++ AppPackage(folder: Path, imports: tuple[Path, ...] = (), npm: Npm | None = None)
+------
++ is_installed: bool
++ is_current: bool
+----
++ install(label: str): None
+---<<raises>>--> PackageNotInstalled
+
+# harness/release
+
+The CDD version and its release, never on red, and the slow test tiers run on a cadence whose results a release reads.
+
+- **Purpose:** Say which CDD version a chat runs, set and release the next one, and keep the heavy and e2e tiers running on main so a release knows they passed.
+- **Seam (terms):** CddVersion, Version, VersionStanding, VersionNotValid, ProjectVersion, CddRelease, ReleaseNotes, ReleaseOnRed, ReleaseAlreadyTagged, GitHubCli, TestCadence, TestTier, TestRun, TestRunRecord, TestRunRecordUnreadable, TestRunner, RunWorktree, DesktopWalkQuestion; the MCP operations `cdd-version.check`, `cdd-version.read`, `cdd-version.set_next` (`/version`), `cdd-version.release` (`/release`)
+- **Dependencies (one-way):** harness/agent_tools, harness/installation, harness/mcp, harness/process, harness/git, harness/e2e_review
+
+## ProjectVersion
+
+The version of a project, the one reader and writer of the `version` line of its `pyproject.toml`.
+
++ ProjectVersion(pyproject: Path)
+------
++ version: Version
+----
++ of(project: Path): ProjectVersion
++ read(): str
++ write(version: str): None
 
 ## TestRun
 
@@ -3058,38 +3119,26 @@ Runs heavy every hour and e2e every day on the main checkout its record is of. N
 	-> TestRunner.run
 	-> TestRunRecord.save
 
-## App
+# harness/diagnostics
 
-One CDD web app a person opens beside the chat (Kanban, Graph, Story UI), and the one registry of them. The module that owns each app makes it once and registers it: the Graph app here, from `GRAPH_APP_PORTS`; the CDD Kanban and the Story UI editor in space/kanban.
+This module reports whether CDD is running and answering: *ServerHealth* says which of its long-running parts are up right now, and the diagnostics toolsets, each a *CallDiagnostics* made for one call, probe what an install published through the MCP host answering that call and write a report section.
 
-+ App(label: str, folder: Path, server: AppServer, page: str = "/")
+- **Purpose:** Show whether CDD is running: which of its servers and apps are up, for the chat's server health band, and whether what an install published answers through the live MCP host, so a broken publication shows up in a report rather than in a failing chat.
+- **Seam (terms):** ServerHealth, CallDiagnostics, DiagnosticsNeedACall, AgentToolsDiagnostics, GuidanceDiagnostics, AgentToolsProbe, GuidanceProbe; the MCP operations `server-health.report`, `agent-tools-diagnostics.agent_tools_diagnostics`, `guidance-diagnostics.guidance_diagnostics`
+- **Dependencies (one-way):** harness/agent_tools, harness/installation, harness/hooks, harness/mcp, harness/guidance, harness/apps (*App*, the apps the report lists), harness/release (*TestCadence*, the test runs it starts and lists), harness/e2e_review
+
+## ServerHealth
+
+Report the parts of CDD that run outside this MCP host, so a person can see what is up without opening a terminal: every registered *App*, each read as it is now, and the latest heavy and e2e test runs.
+
++ ServerHealth(repo_root: Path | str, cadence: TestCadence | None = None, e2e_review: E2eReview | None = None)
 ------
-+ label: str
-+ status: AppStatus
-+ port: int | None
-+ url: str
-+ server: AppServer
-+ is_installed: bool
++ apps: list[App]
 ----
-+ register(): App
-+ registered(): list[App]
-+ load(app: str, project: Path | str): App
-+ open(): App
-+ install(): App
----<<raises>>--> AppNotRegistered
----<<raises>>--> AppNotStarted
----<<aggregation>>--> AppServer
++ load(project: Path | str): ServerHealth
++ report(): ServerHealth
+---<<aggregation>>--> App
 ---<<annotated with>>--> LanguageAdapter
-
-## AppServer
-
-The server an app answers from, which the chat that opens the app starts and its end stops: the folder it runs in, the command that starts it (node on its script, through tsx for TypeScript), and the ports it tries in turn.
-
-+ AppServer(folder: Path, script: str, ports: tuple[int, ...])
-------
-+ folder: str
-+ command: list[str]
-+ port: int | None
 
 ## CallDiagnostics
 
@@ -3881,13 +3930,13 @@ Mixed into *Session*: the published graph tools a page browsing the session's fi
 + graph_trees(paths: list[str], call: ToolCall | None = None): list[ExplorerEntry]
 	-> SessionPaths.in_project
 	-> Graph.load_files
-	-> GraphExplorer.explorer_trees
+	-> Graph.explorer_trees
 + graph_branch(node_id: str, paths: list[str]): ExplorerEntry | None
-	-> GraphExplorer.explorer_branch
+	-> Graph.explorer_branch
 + graph_node_ranges(node_id: str, paths: list[str]): list[Range]
 	-> NodeSpans.collect
 + graph_members(): list[NodeSource]
-	-> GraphExplorer.source_members
+	-> Graph.source_members
 
 ## SessionGuidanceTools
 
@@ -4219,7 +4268,7 @@ The *Board* shows every session as a *Ticket* in a *Column*: Backlog, a *Stage*,
 
 - **Purpose:** See every session's progress through the delivery stages, and move sessions through them, from an agent's tools or from the CDD Kanban app.
 - **Seam (terms):** Board, Column, Stage, Card, Ticket, TicketWork, TicketCheckout, StageMarks, FidelityProgress, StageWork, LeaveChoices, BacklogItem, Report, ReportFile, Help, BoardOverview, FormatChoice, UnreadableSessionFile, CardName, TitleNamesNothingError, TitleTooLongError, TicketNameTakenError, BacklogItemTakenError, TicketWorktreeBlockedError
-- **Dependencies (one-way):** harness/annotations, harness/agent_tools, harness/installation, harness/mcp, harness/markdown, harness/guidance, harness/graph, harness/diagnostics, harness/chat, harness/catalog_generator, space/repo, space/session
+- **Dependencies (one-way):** harness/annotations, harness/agent_tools, harness/installation, harness/mcp, harness/markdown, harness/guidance, harness/graph, harness/apps, harness/diagnostics, harness/chat, harness/catalog_generator, space/repo, space/session
 
 ## Board
 
@@ -5705,9 +5754,8 @@ An epic; a nested epic is an epic whose parent is an epic.
 + depth: int
 + << composition >> descendants: Descendants
 	// every epic and story under it, and place_in(file)
-+ << composition >> columns: EpicColumns
-	// leaf_epics(), estimate_label(), has_estimate(), span(), diagram_span(), tree_depth(): how a drawn map lays it out
 ----
++ leaf_epics(): list[Epic]
 + record(recording: StoryRecording, parent): None
 + clone(): Epic
 + load_map_facts(): None

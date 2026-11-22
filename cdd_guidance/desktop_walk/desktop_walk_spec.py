@@ -164,4 +164,4 @@ with description("a desktop walk of a project") as self:
             expect(self.prompt).to(contain("never type in the chat that runs the walk"))
 
         with it("should record each step through the end-to-end review's walk"):
-            expect(self.prompt).to(contain("record_verdict"))
+            expect(self.prompt).to(contain("record_walked_step"))

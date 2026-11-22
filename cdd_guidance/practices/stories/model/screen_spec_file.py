@@ -12,10 +12,12 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from functools import cached_property
 from typing import TYPE_CHECKING
 
 from cdd_guidance.practices.source_code import BracketStructure
-from cdd_guidance.practices.source_code import CodeBody, CodeLanguage
+from cdd_guidance.practices.source_code import CodeBody
+from cdd_guidance.practices.stories.model.story_file import StoryFile
 from cdd_guidance.practices.stories.model.story_model import StepType
 
 if TYPE_CHECKING:
@@ -39,16 +41,21 @@ class StepLines:
     lines: list[str] = field(default_factory=list)
 
 
-class ScreenSpecFile:
-    """One screen spec's text, parsed once, and the language its steps' code is written in."""
+class ScreenSpecFile(StoryFile):
+    """One screen spec, read once: a story for each ``test.describe``, with a scenario for each of its tests, whose steps'
+    code is written in its model's language. Its own code is not kept."""
 
-    def __init__(self, text: str, language: CodeLanguage) -> None:
-        self.text = text
-        self.language = language
-        self._brackets = BracketStructure(text)
+    @cached_property
+    def _read(self) -> tuple[list, None]:
+        return self._stories(), None
 
-    def stories(self, story_type: type) -> list:
+    @cached_property
+    def _brackets(self) -> BracketStructure:
+        return BracketStructure(self.text)
+
+    def _stories(self) -> list:
         """The stories the file describes, each with a scenario for each of its tests."""
+        story_type = self.model.story_type
         stories: dict[str, object] = {}
         for describe in _DESCRIBE.finditer(self.text):
             story = stories.setdefault(describe.group("name"), story_type(describe.group("name"), len(stories) + 1))
@@ -62,7 +69,7 @@ class ScreenSpecFile:
         for order, step in enumerate(self._steps_in(body), start=1):
             made = scenario.step_type(step.lines[0].strip(), step.phase, order)
             made.keyword = _KEYWORDS[step.phase]
-            made.body = CodeBody("\n".join(step.lines), self.language)
+            made.body = CodeBody("\n".join(step.lines), self.model.language)
             scenario.steps.append(made)
         return scenario
 

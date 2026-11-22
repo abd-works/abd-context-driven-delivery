@@ -34,19 +34,15 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING, List, Optional
 
-from cdd_guidance.practices.source_code import parse_arrow_line
 from cdd_guidance.practices.clean_engineering.model.class_stereotypes import marks_in, without_marks
 from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
     Module,
     OoadClass,
-    is_interface_name,
 )
-from cdd_guidance.practices.clean_engineering.model.operation import Operation
-from cdd_guidance.practices.clean_engineering.model.property import Property
-from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
+from cdd_guidance.practices.clean_engineering.model.markdown.class_card import ClassCard
 from cdd_guidance.practices.source_code import split_top_level
 
 if TYPE_CHECKING:
@@ -126,46 +122,13 @@ class MarkdownOoadClass(OoadClass):
         if self.intent:
             lines.extend([self.intent, ""])
         if self.properties or self.operations or self.dependencies:
-            lines.extend(self._member_lines())
+            lines.extend(ClassCard([]).lines_of(self))
         lines.append("")
         return "\n".join(lines)
 
     def heading(self, known_names: List[str]) -> ClassHeading:
         """The class's heading: its stereotypes, then the bases its declaration names."""
         return ClassHeading(self.name, list(self.stereotypes), self.declared_bases(known_names), self._card_note)
-
-    def _member_lines(self) -> List[str]:
-        constructors = [operation for operation in self.operations if self._builds_it(operation)]
-        methods = [operation for operation in self.operations if not self._builds_it(operation)]
-        lines = [self._public_line(self._constructor_line(constructors))]
-        for operation in constructors:
-            lines.extend(self._notes_under(operation.callees, operation.invariant_lines()))
-        lines.append("------")
-        for prop in self.properties:
-            lines.append(self._property_line(prop))
-            lines.extend(self._notes_under(prop.callees, prop.notes()))
-        lines.append("----")
-        for operation in methods:
-            if is_interface_name(self.name) and operation.name.startswith("_"):
-                continue
-            lines.append(self._public_line(operation.save()))
-            lines.extend(self._notes_under(operation.callees, operation.invariant_lines()))
-        lines.extend(line for item in self.dependencies for line in item.lines())
-        return lines
-
-    def _builds_it(self, operation: Operation) -> bool:
-        """Whether operation is the class's constructor, named after the class or as a code language names one."""
-        return operation.name == self.name or operation.is_constructor
-
-    def _constructor_line(self, constructors: List[Operation]) -> str:
-        if constructors:
-            return self._constructor_signature(constructors[0])
-        params = ", ".join(f"{prop.name}: {prop.type_hint}" if prop.type_hint else prop.name for prop in self.properties)
-        return f"{self.name}({params})"
-
-    def _notes_under(self, callees: List[str], notes: List[str]) -> List[str]:
-        """The call-graph arrows and invariant notes written under a member, indented."""
-        return [f"\t-> {callee}" for callee in callees] + [f"\t// {note}" for note in notes]
 
     def keep_card(self, card: str, heading: ClassHeading) -> None:
         """Remember the card this class was read from, so an unchanged class writes it back as is."""
@@ -180,26 +143,6 @@ class MarkdownOoadClass(OoadClass):
         body = self.render().split("\n", 1)[1]
         return f"{'#' * level} {self.heading([]).card_text()}\n{body}\n"
 
-    def _constructor_signature(self, operation: Operation) -> str:
-        """Markdown names the constructor after the class, with its parameters and no return type. A code language
-        keeps its own word for it, `constructor` or `__init__`."""
-        if not operation.is_constructor:
-            return operation.save()
-        return f"{self.name}({', '.join(parameter.save() for parameter in operation.parameters)})"
-
-    def _public_line(self, body: str) -> str:
-        """Public members lead with +. A leading - is already the private mark."""
-        if body.startswith("+") or body.startswith("-"):
-            return body
-        return f"+ {body}"
-
-    def _property_line(self, prop: Property) -> str:
-        """Public field, with the << composition|aggregation|association >> written or drawn on it; a field nobody
-        marked is written plain."""
-        kind = (prop.stereotype or "").lower()
-        stereo = f"<< {kind} >> " if kind in {"composition", "aggregation", "association"} else ""
-        return self._public_line(f"{stereo}{prop.save()}")
-
     @classmethod
     def read_card(cls, heading: ClassHeading, body: str, sequential_order: int) -> "MarkdownOoadClass":
         """The class a card shows: named and marked by its heading, filled from its body."""
@@ -210,148 +153,9 @@ class MarkdownOoadClass(OoadClass):
         return loaded
 
     def read_body(self, body: str) -> None:
-        """Read this class's card body: its intent, its constructor, its properties and operations, and the
-        dependencies it names."""
-        text_lines, dependencies = Relationship.split_off(body.splitlines())
-        head, members = self._split_once(r"(?m)^-{6}\s*$", "\n".join(text_lines))
-        props_text, ops_text = self._split_once(r"(?m)^-{4}\s*$", members)
-        intent, constructor_line, constructor_notes = self._read_head(head)
-        self.intent = intent
-        self.properties = self._read_properties(props_text)
-        for prop in self.properties:
-            prop.arrow.derive()
-        self.operations = self._constructors(constructor_line, constructor_notes) + self._read_operations(ops_text)
-        for relationship in dependencies:
-            self.arrows.place(relationship)
-
-    def _split_once(self, separator: str, text: str) -> Tuple[str, str]:
-        """The text before the first separator line and the text after it; all of it before when there is none."""
-        parts = re.split(separator, text, maxsplit=1)
-        return parts[0], parts[1] if len(parts) > 1 else ""
-
-    def _read_head(self, head: str) -> Tuple[str, str, List[str]]:
-        """The card's intent, its constructor line, and the notes under the constructor, from the part above the
-        constructor / properties rule."""
-        intent_lines: List[str] = []
-        notes: List[str] = []
-        constructor_line = ""
-        seen_signature = False
-        for line in head.splitlines():
-            stripped = line.strip()
-            if stripped.startswith("//") and seen_signature:
-                notes.append(stripped[2:].strip())
-            if not stripped or stripped.startswith("//"):
-                continue
-            signature = self._constructor_line_in(stripped)
-            if signature is not None:
-                seen_signature = True
-                constructor_line = signature
-            elif not seen_signature:
-                intent_lines.append(stripped)
-        return "\n".join(intent_lines), constructor_line, notes
-
-    def _constructor_line_in(self, stripped: str) -> Optional[str]:
-        """The constructor signature a head line writes (a `+`, `-`, or `->` line, or `Name(`); none for intent."""
-        if stripped.startswith(("+", "-")) or re.match(r"^\w[\w\s]*\(", stripped):
-            return stripped
-        return None
-
-    def _constructors(self, constructor_line: str, notes: List[str]) -> List[Operation]:
-        constructors = self._read_operations(constructor_line) if constructor_line else []
-        for constructor in constructors:
-            for note in notes:
-                constructor.add_invariant(note)
-        return constructors
-
-    _CE_STEREOTYPE_KINDS = {
-        "composition": "composition",
-        "aggregation": "aggregation",
-        "association": "association",
-    }
-
-    def _strip_ce_prefix(self, line: str) -> tuple[str, str | None]:
-        """A member line without its leading `+` and its `<< composition >>` stereotype, and the relationship kind that
-        stereotype names: composition, aggregation, association, or none."""
-        if line.startswith("+"):
-            line = line[1:].strip()
-        marked = re.match(r"^<<\s*(\w+)\s*>>\s*", line)
-        if marked is None:
-            return line, None
-        return line[marked.end():].strip(), self._CE_STEREOTYPE_KINDS.get(marked.group(1).lower())
-
-    def _read_properties(self, text: str) -> List[Property]:
-        """The properties a card lists. ``+ << composition >> identity: Identity`` is a property whose stereotype
-        names the relationship it stands for."""
-        props: List[Property] = []
-        for line in text.splitlines():
-            stripped = line.strip()
-            if not stripped or stripped.startswith("#"):
-                continue
-            if stripped.startswith(("//", "->")):
-                self._note_on_property(props[-1] if props else None, stripped)
-                continue
-            prop = self._property_in(stripped)
-            if prop is not None:
-                props.append(prop)
-        return props
-
-    def _note_on_property(self, prop: Optional[Property], stripped: str) -> None:
-        """A `//` note or `->` call written under the property above it."""
-        if prop is None:
-            return
-        if stripped.startswith("//"):
-            prop.take_note(stripped[2:])
-        else:
-            prop.callees.append(stripped[2:].strip())
-
-    def _property_in(self, stripped: str) -> Optional[Property]:
-        """The property a member line writes; none for an operation, or for a stereotype that names no relationship.
-        An optional property may be written `name?: Type` or `name: Type | null`."""
-        bare, kind = self._strip_ce_prefix(stripped)
-        if ("<<" in stripped and kind is None) or not bare or re.match(r"^_?\w+\s*\(", bare):
-            return None
-        prop = Property.from_signature(bare)
-        if prop is None:
-            return Property(name=bare) if re.match(r"^\w+$", bare) else None
-        if kind:
-            prop.stereotype = kind
-        return prop
-
-    def _read_operations(self, text: str) -> List[Operation]:
-        """The operations a card lists, with the call-graph arrows and invariant notes written under each."""
-        ops: List[Operation] = []
-        for line in text.splitlines():
-            stripped = line.strip()
-            if not stripped or stripped.startswith("#"):
-                continue
-            if stripped.startswith(("//", "->", "→")):
-                self._note_on_operation(ops[-1] if ops else None, stripped)
-                continue
-            operation = self._operation_in(stripped)
-            if operation is not None:
-                ops.append(operation)
-        return ops
-
-    def _note_on_operation(self, operation: Optional[Operation], stripped: str) -> None:
-        """A `//` invariant or `->` call written under the operation above it."""
-        if operation is None:
-            return
-        if stripped.startswith("//"):
-            operation.add_invariant(stripped[2:])
-            return
-        arrow = parse_arrow_line(stripped)
-        callee = arrow[1] if arrow else stripped[2:].strip()
-        if callee and callee not in operation.callees:
-            operation.callees.append(callee)
-
-    def _operation_in(self, stripped: str) -> Optional[Operation]:
-        """The operation a member line writes; a `- ` line is private, so its name gets a leading underscore."""
-        private = stripped.startswith("- ")
-        body, _kind = self._strip_ce_prefix(stripped[2:].strip() if private else stripped)
-        operation = Operation.from_signature(body)
-        if operation is not None and private and not operation.name.startswith("_"):
-            operation.name = f"_{operation.name}"
-        return operation
+        """Read this class's card body in the class-card notation: its intent, its constructor, its properties and
+        operations, and the dependencies it names."""
+        ClassCard(body.splitlines()).read_into(self)
 
 
 class MarkdownModule(Module):

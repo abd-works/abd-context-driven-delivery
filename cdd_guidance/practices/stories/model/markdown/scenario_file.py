@@ -17,9 +17,8 @@ from typing import Callable, Dict, List, Optional
 
 from cdd_guidance.practices.stories.model.markdown.links import unlink
 from cdd_guidance.practices.stories.model.markdown.markup import ExampleRowLine, MarkdownExample, MarkdownStep, strip_markup
+from cdd_guidance.practices.stories.model.markdown.read_lines import ExampleLine, HeadingLine, HeldLines, KeptLine, ReadLine, StepLines
 from cdd_guidance.practices.stories.model.markdown.scenario_parts import (
-    HEADING_LINE,
-    STEP_LINE,
     BackgroundReading,
     ExamplesTable,
     RealizationFence,
@@ -112,12 +111,13 @@ class ScenarioFileReading:
         self.scenario_type = scenario_type
         self.lines = text.splitlines()
         self.kept_lines = text.splitlines(keepends=True)
-        self.document_parts: list = []
+        self.document_lines: List[ReadLine] = []
         self.sections: List[StorySection] = []
-        self.tree_heading: Optional[tuple] = None
+        # The heading that names the epic or sub-epic the document's stories are on, said as (level, name).
+        self.tree_heading: Optional[HeadingLine] = None
         self.tree_heading_line = 0
         self.document_examples = None
-        self.container = self.document_parts
+        self.container: List[ReadLine] = self.document_lines
         self.section: Optional[StorySection] = None
         self.scenario = None
         self.scenario_level = 0
@@ -139,9 +139,9 @@ class ScenarioFileReading:
     def _read_line(self) -> None:
         if not self.raw.strip():
             self.backgrounds.blank_line()
-            self.container.append(self.kept)
+            self.container.append(KeptLine(self.kept))
         elif self.fence.accept(self.raw):
-            self.container.append(self.kept)
+            self.container.append(KeptLine(self.kept))
         else:
             kind, match = _heading_of(self.raw)
             self._read_heading(kind, match) if kind else self._read_text()
@@ -153,9 +153,9 @@ class ScenarioFileReading:
         elif kind == "scenario":
             self._scenario_heading(match)
         elif kind == "tree" and self.tree_heading is None and not self.sections:
-            self.tree_heading = (match.group(1), strip_markup(match.group(2)), self.kept)
+            self.tree_heading = HeadingLine(None, (match.group(1), strip_markup(match.group(2))), self.kept)
             self.tree_heading_line = self.number
-            self.document_parts.append(HEADING_LINE)
+            self.document_lines.append(self.tree_heading)
         else:
             self._section_heading("heading" if kind == "tree" else kind, match)
 
@@ -170,15 +170,14 @@ class ScenarioFileReading:
         scenario = self.scenario_type(strip_markup(match.group(1)))
         scenario.is_outline = "outline" in self.raw.lower()
         scenario.source = source_at(self.rel, self.number)
-        scenario.markdown_heading = (scenario.name, scenario.is_outline, self.kept)
-        scenario.markdown_parts = [HEADING_LINE]
+        scenario.read_lines = [HeadingLine(scenario, (scenario.name, scenario.is_outline), self.kept)]
         self.scenario = scenario
         self.scenario_level = self._level()[0]
         if self.section is None:
             self._open_section(self.story_name, None)
-        self.section.parts.append(scenario)
+        self.section.lines.append(HeldLines(scenario))
         self.section.scenarios.append(scenario)
-        self.container = scenario.markdown_parts
+        self.container = scenario.read_lines
         self.backgrounds.heading("scenario", "", True, source_at(self.rel, self.number))
         self.examples.heading("scenario", 0, "")
 
@@ -187,9 +186,9 @@ class ScenarioFileReading:
             self.document_examples = self.backgrounds.shared.examples
         section = StorySection(name, heading, self.number, self.rel)
         self.sections.append(section)
-        self.document_parts.append(section)
+        self.document_lines.append(HeldLines(section))
         self.section = section
-        self.container = section.parts
+        self.container = section.lines
         return section
 
     def _section_heading(self, kind: str, match: re.Match) -> None:
@@ -199,11 +198,11 @@ class ScenarioFileReading:
         level, title = self._level()
         if self.scenario is not None and kind != "background" and 0 < level < self.scenario_level:
             self._close_scenario()
-            self.container = self.section.parts if self.section is not None else self.document_parts
+            self.container = self.section.lines if self.section is not None else self.document_lines
         if not self.examples.heading(kind, level, title):
             named = (match.group(1) or "background").strip() if kind == "story-background" else ""
             self.backgrounds.heading(kind, named, self.scenario is not None, source_at(self.rel, self.number))
-        self.container.append(self.kept)
+        self.container.append(KeptLine(self.kept))
 
     def _level(self) -> tuple:
         """The line's heading level and its text, as a heading of one to six marks gives them; (0, "") otherwise."""
@@ -218,16 +217,16 @@ class ScenarioFileReading:
             self._step_line(match.group(1), unlink(match.group(2)).strip())
             return
         fields = self.examples.row(self.raw)
-        self.container.append(self.kept if fields is None else self._record_example(fields))
+        self.container.append(KeptLine(self.kept) if fields is None else ExampleLine(self._record_example(fields)))
 
     def _step_line(self, keyword: str, text: str) -> None:
         background = self.backgrounds.owner_of(keyword)
         owner = background if background is not None else self.scenario
         if owner is None:
-            self.container.append(self.kept)
+            self.container.append(KeptLine(self.kept))
             return
         self._take_step(owner, keyword, text)
-        self.container.append((STEP_LINE, owner))
+        self.container.append(StepLines(owner))
         if owner is self.scenario and keyword.lower() in ("when", "then") and owner.steps:
             self.fence.target = owner.steps[-1]
 

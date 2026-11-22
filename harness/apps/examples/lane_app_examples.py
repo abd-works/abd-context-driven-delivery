@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from harness.diagnostics.app import AppServer, NodeScript, PortProbe
+from harness.apps.app import AppServer, NodeScript, PortProbe
 from harness.mcp.server_lanes import ServerLane
 
 # Seed: the Files app's folder and script, and the port its ports file gives it, as harness/files_app/app holds them.

@@ -213,7 +213,7 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
         lines: List[str] = []
         for epic in self.epics:
             lines.append(f'<div class="cx-epic">{html.escape(epic.name)}</div>')
-            for sub in epic.columns.leaf_epics():
+            for sub in epic.leaf_epics():
                 lines.append(f'<div class="cx-sub">{html.escape(sub.name)}</div>')
                 lines.extend(line for story in sub.stories for line in self._context_story_lines(story, focus))
         style = _CONTEXT_PANEL_STYLE
@@ -239,7 +239,7 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
         x = 0
         bottom = ClaudeDesignEpic.header_height
         spans: Dict[int, list] = {}
-        for epic in (leaf for top_epic in self.epics for leaf in top_epic.columns.leaf_epics()):
+        for epic in (leaf for top_epic in self.epics for leaf in top_epic.leaf_epics()):
             top = epic.top_epic
             span = spans.setdefault(id(top), [top.name, x, x])
             span[2] = x + epic.column_width()
@@ -302,7 +302,7 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
     def _explorer(self) -> str:
         tree = []
         for epic in self.epics:
-            subs = epic.columns.leaf_epics()
+            subs = epic.leaf_epics()
             tree.append({"n": epic.name, "u": [{"n": sub.name, "s": [self._story_entry(story) for story in sub.stories]}
                                                for sub in subs]})
         template = _EXPLORER_TEMPLATE.read_text(encoding="utf-8")

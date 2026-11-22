@@ -1,4 +1,4 @@
-import type { FilterData, NodeSourceData } from '@cdd/harness/graph/graph'
+import type { FilterChoicesData, NodeSourceData } from '@cdd/harness/graph/graph'
 import { NO_CHOICES, NO_FILTER, type FilterSelection } from '@graph-app/filter/filter-selection'
 import type { ExplorerEntryData, FileEntryData, GuidanceSelectionData, RangeData, SessionFileData } from '@cdd/space/session/session'
 
@@ -21,7 +21,7 @@ export type FilesGraphState = {
   trees: ExplorerEntryData[] | null
   readFor: string
   filter: FilterSelection
-  choices: FilterData
+  choices: FilterChoicesData
   branches: Record<string, ExplorerEntryData>
   openNodes: string[]
   selected: SelectedNode[]

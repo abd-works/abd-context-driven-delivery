@@ -2,7 +2,7 @@
 
 The *Files app* shows a session's files beside the chat and takes a person's comments on them back to that chat: the file viewer as an app of its own, on its own server and port (`app/ports.json`, 8783), which reads only the files its link names and never the board. It is the one place a session's files are viewed; the chat bar's files button, its session name, and an `open_file` another page sends a chat all open it. Stories and scenarios: the main map's (E) Review Generated Work In File Viewer (`.context/story-map.md`, `story_tests/review-generated-work-in-file-viewer/`); acceptance tests: `space/session/review-files-in-files-app.story.*.py`, `app/files/*.spec.ts`. Model: `.context/files-app-model.md`.
 
-**Opening it.** Python registers it once as an *App* (`files_app.py`, `FILES_APP`, harness/diagnostics); a chat readies it with `app.open('Files')` and starts its server while it is not running. A link names what to show and who opened it:
+**Opening it.** Python registers it once as an *App* (`files_app.py`, `FILES_APP`, harness/apps); a chat readies it with `app.open('Files')` and starts its server while it is not running. A link names what to show and who opened it:
 
 | Query | Means |
 |---|---|
@@ -28,7 +28,7 @@ The *Files app* shows a session's files beside the chat and takes a person's com
 
 **Seam (terms):** the page's link and its query (`files`, `fidelity`, `session-folder`, `file`, `chat`, `project`); the server's routes under its API root (the generated `session.*`, `file-comments.*`, `fidelity-progress.*`, `practice-session-output.*`, `failure.describe` and `chat.send` routes, the draw.io page, and `/reveal`); the *App* `FILES_APP` that `app.open('Files')` readies.
 
-**Depends on:** the generated TypeScript adapters (`.claude/language-adapters/typescript`), the graph explorer's source view (`harness/graph/app/source`), harness/diagnostics (*App*, *AppPackage*, *AppPage*, *AppServer*), and the cdd server. Nothing imports it.
+**Depends on:** the generated TypeScript adapters (`.claude/language-adapters/typescript`), the graph explorer's source view (`harness/graph/app/source`), harness/apps (*App*, *AppPackage*, *AppPage*, *AppServer*), and the cdd server. Nothing imports it.
 
 ## Constraint
 

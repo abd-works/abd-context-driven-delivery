@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, ClassVar
 
-from harness.diagnostics.app import App
+from harness.apps.app import App
 from harness.markdown.format import Format
 
 

@@ -3,21 +3,19 @@ whose notes are the commits and the stories completed since the release before. 
 packages it, so a release changes no file."""
 from __future__ import annotations
 
-import re
 import tempfile
 from pathlib import Path
 
-from harness.diagnostics.test_runs import RunOutcome, TestRunRecord, TestTier
+from harness.release.test_runs import RunOutcome, TestRunRecord, TestTier
 from harness.installation.data_class import data_field
 from harness.git.git import Git, RepoConnectError
-from harness.diagnostics.github_cli import GitHubCli
+from harness.release.github_cli import GitHubCli
+from harness.release.project_version import PYPROJECT, ProjectVersion
 
-PYPROJECT = "pyproject.toml"
 TAG_PATTERN = "v*"
 # Where a ticket's session folder moves when its ticket is complete: each folder added there is a completed story.
 COMPLETE_SESSIONS = ".sessions/_complete"
 # The version line of pyproject.toml's [project] table: the one line /version rewrites and /release reads.
-VERSION_LINE = re.compile(r'^version\s*=\s*"([^"]*)"', re.MULTILINE)
 # The release tiers, in the order /release runs them.
 RELEASE_TIERS = (TestTier.E2E, TestTier.HEAVY)
 # How much of a commit hash release notes show: enough to find the commit, short enough to read.
@@ -29,7 +27,7 @@ class ReleaseOnRed(RuntimeError):
 
     def __init__(self, problems: list[str]) -> None:
         super().__init__("Not released, the tests are not green on this commit: " + "; ".join(problems)
-                         + ". Run each tier with python -m harness.diagnostics.test_runs <tier> . and fix what fails until both pass.")
+                         + ". Run each tier with python -m harness.release.test_runs <tier> . and fix what fails until both pass.")
         self.problems = problems
 
 
@@ -138,7 +136,7 @@ class CddRelease:
     @data_field
     def version(self) -> str:
         """The version this releases, as /version set it in pyproject.toml, such as 1.5.0."""
-        return VERSION_LINE.search((self._project / PYPROJECT).read_text(encoding="utf-8")).group(1)
+        return ProjectVersion.of(self._project).read()
 
     @property
     @data_field

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { CddApi } from '@cdd/cdd-shared'
-import type { AppData } from '@cdd/harness/diagnostics/app'
+import type { AppData } from '@cdd/harness/apps/app'
 
 import { BoardStore } from '../shared/board-store'
 import { EditorAppClient } from './editor-app-client'

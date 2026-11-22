@@ -3,7 +3,7 @@ from expects import contain, equal, expect
 
 from mamba import description, it
 
-from harness.diagnostics.app import APPS
+from harness.apps.app import APPS
 from space.kanban.board_app import APP_FOLDER, BOARD_APP_PORTS, BOARD_SERVER, KANBAN_APP, STORY_UI_APP, STORY_UI_FOLDER
 
 

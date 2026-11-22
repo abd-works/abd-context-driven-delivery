@@ -1024,7 +1024,7 @@ with description("an epic tree") as self:
         expect(self.pay.top_epic).to(be(self.shop))
 
     with it("should give an epic with sub-epics its innermost sub-epics as its leaf epics"):
-        expect(self.shop.columns.leaf_epics()).to(equal([self.pay]))
+        expect(self.shop.leaf_epics()).to(equal([self.pay]))
 
     with it("should give a story under no epic no top epic"):
         expect(Story("Loose").top_epic).to(be(None))

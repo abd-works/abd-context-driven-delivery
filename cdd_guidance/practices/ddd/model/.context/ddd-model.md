@@ -278,7 +278,7 @@ its order, and its intent.
 
 ## Factory : DomainClass
 
-`ClassCard._named(name, stereotypes)` makes the card a class with those stereotypes is read into: specification, value object, repository, domain service (or service), factory, entity, or aggregate root (an entity); a card with none is a plain class card.
+`MarkdownBuildingBlock._named(name, stereotypes)` makes the card a class with those stereotypes is read into: specification, value object, repository, domain service (or service), factory, entity, or aggregate root (an entity); a card with none is a plain class card.
 
 ## MarkdownDomainNode
 
@@ -287,17 +287,22 @@ its order, and its intent.
 + owner_from(heading: str): str
 	// the text after | on a context heading
 
-## ClassCard : MarkdownDomainNode
+## MarkdownBuildingBlock : MarkdownDomainNode
 
 The `####` card a building block reads and writes itself in markdown, and in a sketch's fence. Each markdown building
 block is one: *MarkdownEntity*, *MarkdownValueObject*, *MarkdownRepository*, *MarkdownDomainService*,
 *MarkdownSpecification*, *MarkdownFactory*, and *MarkdownClass* for a card whose stereotypes name no building block. Its
-stereotypes are the class's `stereotypes`.
+stereotypes are the class's `stereotypes`. Its members are read and written in Clean Engineering's one class-card
+notation (*ClassCard* and *SketchFence*, `clean_engineering/model/markdown/class_card.py`), with DDD's own options: no
+constructor line, the stereotypes in their order, a repository drawn inside its root's card, and the **Invariants** it
+lists. Where the two notations disagreed, the Clean Engineering form is read and written: a card always writes its
+`----` operations rule, a private operation is `- name()` read as `_name`, and a `//` note under an operation is an
+invariant of it.
 
-+ ClassCard.from_heading(heading: str): ClassCard
-+ ClassCard.read(section: list[str]): ClassCard[]
-+ ClassCard.from_sketch(heading: str, lines: list[str]): list[ClassCard]
-	// the card, then the repository its fence's `repo:` names; a *_SketchFence* reads the fence onto the card
++ MarkdownBuildingBlock.from_heading(heading: str): MarkdownBuildingBlock
++ MarkdownBuildingBlock.read(section: list[str]): MarkdownBuildingBlock[]
++ MarkdownBuildingBlock.from_sketch(heading: str, lines: list[str]): list[MarkdownBuildingBlock]
+	// the card, then the repository its fence's `repo:` names; a *SketchFence* reads the fence onto the card
 ------
 + invariants: list[str]
 + is_root: bool
@@ -307,15 +312,13 @@ stereotypes are the class's `stereotypes`.
 + plain_properties: list[Property]
 	// what the class holds, not its events or invariant objects
 ----
-+ add_member(line: str, as_operation: bool): Property | Operation | None
-	// one `+ name: Type` or `+ name(parameters): Type` line
-+ add_sketch_member(line: str, calls: list[str]): None
-	// one sketch line naming a member: an owned member, an operation, or a property
++ read_body(body: list[str]): None
+	// its members in the class-card notation, then the invariants its **Invariants** lists
 + lines(): list[str]
 + sketch_lines(): list[str]
 + write_into(module: Module, place: list[str]): OoadClass
 	// adds the card to module as that format's own class: its stereotypes, its intent, its members, and place as its module_path
-+ ClassCard.from_code(oclass: OoadClass): ClassCard
++ MarkdownBuildingBlock.from_code(oclass: OoadClass): MarkdownBuildingBlock
 	// the card a class read from code or a class drawing is, holding the class's own members and intent, without its constructor
 
 ## MarkdownBoundedContextMap : BoundedContextMap, MarkdownDomainNode
@@ -357,14 +360,14 @@ The context's notes, module, and group notes are *BoundedContext*'s own fields (
 ------
 + source_lines: list[str]
 	// the lines under the aggregate's heading; load_root reads the root, its cards, and its arcs from them
-+ classes: list[ClassCard]
++ classes: list[MarkdownBuildingBlock]
 	// its building blocks, as the cards of its Module classes
 + members: list
 	// the member cards, else the root's invariant objects
-+ root_card: ClassCard | None
-+ repository: ClassCard | None
-+ member_cards: list[ClassCard]
-+ ordered_cards: list[ClassCard]
++ root_card: MarkdownBuildingBlock | None
++ repository: MarkdownBuildingBlock | None
++ member_cards: list[MarkdownBuildingBlock]
++ ordered_cards: list[MarkdownBuildingBlock]
 	// root, then its repository, then members — the one card order every format uses
 ----
 + load_root(): None
@@ -375,17 +378,17 @@ The context's notes, module, and group notes are *BoundedContext*'s own fields (
 	// the aggregate's arcs under `Integrations:` and the root's events under `emits events:`; a sketch writes them in the root's fence
 + take_class(oclass: OoadClass): None
 	// a class read from a class model, held as the card it is; each dependency of it that keeps an arc is one of this aggregate's integrations
-	-> ClassCard.from_code
+	-> MarkdownBuildingBlock.from_code
 	-> MarkdownIntegration.kept_by
 + take_root_from_classes(): None
 	// once its cards are read: relationships, and the root card
 + write_classes_into(module: Module): None
 	// each card as module's own class, kept in the aggregate's place; the root depends on each class an integration reaches, the arc whole as that dependency
-	-> ClassCard.write_into
+	-> MarkdownBuildingBlock.write_into
 	-> Integration.as_dependency
 - _infer_relationships(): None
 
-## MarkdownEntity : ClassCard, Entity
+## MarkdownEntity : MarkdownBuildingBlock, Entity
 
 + MarkdownEntity(name: str, sequential_order: int, member_lines: list[str] | None = None)
 ----
@@ -440,7 +443,7 @@ A context read from a sketch (`sketch/sketch_nodes.py`); its aggregate_type is *
 ----
 + take_sketch_line(raw: str): None
 + load_sketch(): None
-	-> ClassCard.from_sketch
+	-> MarkdownBuildingBlock.from_sketch
 
 ## SketchedContext
 

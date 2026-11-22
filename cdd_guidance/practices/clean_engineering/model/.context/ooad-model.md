@@ -623,13 +623,35 @@ The `markdown` format: a `#` heading per module and a `##` card per class, or a 
 	// class operation: the class a card shows, named and marked by its heading
 	-> read_body
 + read_body(body: str): None
-	// the class reads its own card body: intent, constructor, properties, operations, and the dependencies it names
+	// -> ClassCard(body).read_into(self): intent, constructor, properties, operations, and the dependencies it names
 + render(known_names: list[str] | None = None): str
+	// its members written by ClassCard.lines_of
 + heading(known_names: list[str]): ClassHeading
 	-> OoadClass.declared_bases
 + render_card(level: int): str
 + keep_card(card: str, heading: ClassHeading): None
 	// remembers the card this class was read from
+
+## ClassCard (markdown/class_card.py)
+
+The one class-card notation Clean Engineering and DDD both read and write: the intent and constructor above `------`, the properties between `------` and `----`, the operations below, each with the `->` calls and `//` notes under it, a private operation `- name()` read as `_name`, and the dependencies a card names. A card that writes no constructor line, as DDD's building blocks, starts at `------`.
+
++ ClassCard(body_lines: list[str], writes_constructor: bool = True)
+----
++ read_into(oclass: OoadClass): None
++ lines_of(oclass: OoadClass, properties: list[Property] | None = None): list[str]
++ property_lines(properties): list[str]
++ operation_lines(oclass): list[str]
++ property_in(line): Property | None
++ operation_in(line): Operation | None
+
+## SketchFence (markdown/class_card.py)
+
+A sketch's fence under a class heading, read onto the class: member lines in the class-card notation, `-> call` lines, owned members, sketch operations and properties, and `refs:` entries; it answers a *FenceRead* of the `invariant:` lines and the `repo:` repositories, which DDD's building blocks take.
+
++ SketchFence(lines: list[str])
+----
++ read_into(oclass: OoadClass): FenceRead
 
 ## CardDocument
 

@@ -1,6 +1,7 @@
 /**
- * Walk report: one self-contained `report.html` per run folder, built from the run's `results.json` and screenshots.
- * Each step shows its Given/When/Then text, its one screenshot, and the agent's verdict with its reason.
+ * Walk report: one self-contained `report.html` per run folder, built from the run (*Run*, `run.ts`) and its
+ * screenshots. Each step shows its Given/When/Then text, its one screenshot, and the agent's verdict with its reason.
+ * This file only renders; what a run holds and how it compares with another is *Run*'s.
  *
  * Copied from pml-web's `test-utils/legacy-compare/report.ts` and reduced to one run: no second system, no check kinds.
  * `npx tsx harness/e2e_review/report/report.ts .sessions/<release>/e2e-test-results/<epic>/<sub-epic>/<run>` rebuilds it.
@@ -12,42 +13,9 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { PNG } from 'pngjs';
 
-export const RESULTS_FILE = 'results.json';
+import { type Area, type Change, RESULTS_FILE, Run, type StepPair, type StepRow } from './run';
+
 export const REPORT_FILE = 'report.html';
-
-export type Verdict = 'meets the intent' | 'misses the intent';
-export type StepResult = 'pass' | 'fail';
-
-/** One step of a run, as the walk recorder or the step capture hook writes it. */
-export type StepRow = {
-  /** `Story › Scenario › <number> <step text>` */
-  key: string;
-  /** The step's Given, When or Then text. */
-  step: string;
-  /** The screenshot, relative to the run folder. */
-  screenshot: string;
-  by: 'walked by hand' | 'run by a test';
-  /** A test's result; a walk by hand has none. */
-  result?: StepResult;
-  verdict?: Verdict;
-  reason?: string;
-  /** Shown, never stored: the earlier run whose judge pass this step's verdict is carried from, its screen unchanged. */
-  judgedIn?: string;
-  /** Shown, never stored: how the step's screen stands against the same step of the previous run. */
-  change?: Change;
-  /** Shown, never stored: the previous run it is compared with. */
-  previous?: string;
-  /** Shown, never stored: the same step's screenshot in the previous run, relative to that run's folder. */
-  previousShot?: string;
-  /** Shown, never stored: how much of the screen changed since the previous run, in percent, and where. */
-  changedPercent?: number;
-  changedArea?: Area;
-  /** Shown, never stored: the regression review's verdict and reason on the change, when it has one. */
-  changeReview?: string;
-};
-
-/** Where a screen changed: the box round its changed blocks, each edge a share of the screen from 0 to 1. */
-export type Area = { left: number; top: number; width: number; height: number };
 
 type Step = StepRow & { title: string; number: number };
 type Scenario = { story: string; scenario: string; steps: Step[] };
@@ -55,10 +23,10 @@ type Tally = { meets: number; misses: number; unjudged: number; failed: number; 
 
 const ASSETS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'assets');
 
-/** Write `<runDir>/report.html` and return its path. */
-export function writeWalkReport(runDir: string): string {
-  const file = path.join(runDir, REPORT_FILE);
-  writeFileSync(file, renderPage(runDir, groupScenarios(checkedRows(runDir))));
+/** Write the run's `report.html` and return its path. */
+export function writeWalkReport(run: Run): string {
+  const file = path.join(run.dir, REPORT_FILE);
+  writeFileSync(file, renderPage(run.dir, groupScenarios(run.checkedSteps)));
   return file;
 }
 
@@ -66,12 +34,12 @@ export function writeWalkReport(runDir: string): string {
  * Write the run's no-image report into the run history, `<historyDir>/<run>.html` (`<run>` is `<epic>/<sub-epic>`), and
  * add the run's counts and missed steps to `<historyDir>/summary.md`. Return the page's path. The history is never cleared.
  */
-export function writeHistoryReport(runDir: string, historyDir: string, run: string): string {
-  const scenarios = groupScenarios(checkedRows(runDir));
-  const file = path.join(historyDir, `${run}.html`);
+export function writeHistoryReport(run: Run, historyDir: string, named: string): string {
+  const scenarios = groupScenarios(run.checkedSteps);
+  const file = path.join(historyDir, `${named}.html`);
   mkdirSync(path.dirname(file), { recursive: true });
-  writeFileSync(file, renderPage(runDir, scenarios, false));
-  appendFileSync(path.join(historyDir, 'summary.md'), renderSummaryMarkdown(run, scenarios));
+  writeFileSync(file, renderPage(run.dir, scenarios, false));
+  appendFileSync(path.join(historyDir, 'summary.md'), renderSummaryMarkdown(named, scenarios));
   return file;
 }
 
@@ -85,7 +53,7 @@ export function writeStoryMapReport(root: string): string {
   const groups = new Map<string, Scenario[]>();
   const reportOf = new Map<string, string>();
   for (const [subEpic, run] of [...newest.entries()].sort(([a], [b]) => a.localeCompare(b))) {
-    groups.set(subEpic, groupScenarios(checkedRows(path.join(root, run))));
+    groups.set(subEpic, groupScenarios(new Run(path.join(root, run)).checkedSteps));
     reportOf.set(subEpic, `${run}/${REPORT_FILE}`);
   }
   const file = path.join(root, 'story-map.html');
@@ -95,85 +63,19 @@ export function writeStoryMapReport(root: string): string {
 
 export const COMPARE_FILE = 'compare.html';
 
-/** How a step's screen stands against the same step of the run it is compared with. */
-export type Change = 'same' | 'changed' | 'new' | 'gone';
-
-/** One step of this run beside the same step of the run it is compared with. */
-export type StepPair = { key: string; change: Change; changedPercent: number; changedArea?: Area; ours?: StepRow; theirs?: StepRow };
-
-/**
- * A pair changed when at least this many of its 8px blocks moved. pml-web gates on 1% of the page, tuned for two
- * different systems; two runs of the same system match block for block (Maintain Tickets: 58 of 61 pairs moved no
- * block), and a red failure toast on a 1600×1600 page is only 0.93% of it, so a share of the page hides small changes.
- */
-const LOOK_GATE_BLOCKS = 4;
-const LOOK_BLOCK_PX = 8;
-const LOOK_BLOCK_LIMIT = 6;
-
-/**
- * Pair each step of `runDir` with the same step of `againstDir` (an accepted walk, or the last accepted run) and say
- * whether its screen changed, by pixels: the share of 8px blocks whose average grey moved by more than 6 levels.
- */
-export function stepPairs(runDir: string, againstDir: string): StepPair[] {
-  const ours = new Map(readRows(runDir).map(row => [row.key, row]));
-  const theirs = new Map(readRows(againstDir).map(row => [row.key, row]));
-  const keys = [...new Set([...ours.keys(), ...theirs.keys()])];
-  return keys.map(key => {
-    const mine = ours.get(key);
-    const other = theirs.get(key);
-    if (!other) return { key, change: 'new', changedPercent: 100, ours: mine };
-    if (!mine) return { key, change: 'gone', changedPercent: 100, theirs: other };
-    const look = lookDifference(path.join(againstDir, other.screenshot), path.join(runDir, mine.screenshot));
-    return { key, change: look.changedBlocks >= LOOK_GATE_BLOCKS ? 'changed' : 'same', changedPercent: look.changedPercent, changedArea: look.area, ours: mine, theirs: other };
-  });
-}
-
-/** Write `<runDir>/compare.html`: each step's screen in `againstDir` and in `runDir` side by side, and return its path. */
-export function writeCompareReport(runDir: string, againstDir: string): string {
-  const file = path.join(runDir, COMPARE_FILE);
-  writeFileSync(file, renderComparePage(runDir, againstDir, stepPairs(runDir, againstDir)));
+/** Write the run's `compare.html`: each step's screen in `against` and in the run side by side, and return its path. */
+export function writeCompareReport(run: Run, against: Run): string {
+  const file = path.join(run.dir, COMPARE_FILE);
+  writeFileSync(file, renderComparePage(run, against));
   return file;
 }
 
-/** How many 8px blocks' average grey moved, and their share in percent; screens of different sizes count as all changed. */
-function lookDifference(theirFile: string, ourFile: string): { changedBlocks: number; changedPercent: number; area?: Area } {
-  const everything = { changedBlocks: Number.POSITIVE_INFINITY, changedPercent: 100, area: { left: 0, top: 0, width: 1, height: 1 } };
-  if (!existsSync(theirFile) || !existsSync(ourFile)) return everything;
-  const one = PNG.sync.read(readFileSync(theirFile));
-  const two = PNG.sync.read(readFileSync(ourFile));
-  if (one.width !== two.width || one.height !== two.height) return everything;
-  let changed = 0;
-  let blocks = 0;
-  const box = { left: Number.POSITIVE_INFINITY, top: Number.POSITIVE_INFINITY, right: 0, bottom: 0 };
-  for (let by = 0; by + LOOK_BLOCK_PX <= one.height; by += LOOK_BLOCK_PX) {
-    for (let bx = 0; bx + LOOK_BLOCK_PX <= one.width; bx += LOOK_BLOCK_PX) {
-      blocks++;
-      if (Math.abs(blockGrey(one, bx, by) - blockGrey(two, bx, by)) <= LOOK_BLOCK_LIMIT) continue;
-      changed++;
-      box.left = Math.min(box.left, bx);
-      box.top = Math.min(box.top, by);
-      box.right = Math.max(box.right, bx + LOOK_BLOCK_PX);
-      box.bottom = Math.max(box.bottom, by + LOOK_BLOCK_PX);
-    }
-  }
-  const area = changed ? { left: box.left / one.width, top: box.top / one.height, width: (box.right - box.left) / one.width, height: (box.bottom - box.top) / one.height } : undefined;
-  return { changedBlocks: changed, changedPercent: blocks ? (100 * changed) / blocks : 0, area };
-}
-
-function blockGrey(image: PNG, left: number, top: number): number {
-  let sum = 0;
-  for (let y = top; y < top + LOOK_BLOCK_PX; y++) {
-    for (let x = left; x < left + LOOK_BLOCK_PX; x++) {
-      const at = (y * image.width + x) * 4;
-      sum += 0.299 * image.data[at] + 0.587 * image.data[at + 1] + 0.114 * image.data[at + 2];
-    }
-  }
-  return sum / (LOOK_BLOCK_PX * LOOK_BLOCK_PX);
-}
-
-function renderComparePage(runDir: string, againstDir: string, pairs: StepPair[]): string {
-  const run = path.basename(runDir);
-  const against = path.basename(againstDir);
+function renderComparePage(ours: Run, theirs: Run): string {
+  const runDir = ours.dir;
+  const againstDir = theirs.dir;
+  const pairs = ours.pairsAgainst(theirs);
+  const run = ours.name;
+  const against = theirs.name;
   const subEpic = subEpicOf([path.basename(path.dirname(path.dirname(runDir))), path.basename(path.dirname(runDir)), run].join('/'));
   const shots = new EmbeddedShots(runDir);
   const scenarios = new Map<string, StepPair[]>();
@@ -182,8 +84,7 @@ function renderComparePage(runDir: string, againstDir: string, pairs: StepPair[]
     const id = `${story} › ${scenario}`;
     scenarios.set(id, [...(scenarios.get(id) ?? []), pair]);
   }
-  const reviewFile = path.join(runDir, 'review.json');
-  const review = existsSync(reviewFile) ? (JSON.parse(readFileSync(reviewFile, 'utf8')) as { against: string; pairs: Record<string, { verdict: string; reason: string; cites?: string }> }) : undefined;
+  const review = ours.review;
   const judged = review?.against === against ? review.pairs : {};
   const counts = (list: StepPair[]) => (['same', 'changed', 'new', 'gone'] as Change[]).map(change => `${list.filter(pair => pair.change === change).length} ${change}`).join(' · ');
   const cards = [...scenarios.entries()].map(([id, list]) => {
@@ -243,58 +144,6 @@ function runFolders(root: string, under = ''): string[] {
 function subEpicOf(run: string): string {
   const parts = run.split('/').slice(0, -1);
   return parts.length ? parts.map(titleCase).join(' › ') : 'Other stories';
-}
-
-/**
- * The run its own report compares a run's screens with: its sub-epic's accepted run (`baseline.json`) when that is
- * another run, else the run before it by name, else none.
- */
-export function previousRunOf(runDir: string): string | undefined {
-  const subEpicDir = path.dirname(runDir);
-  const run = path.basename(runDir);
-  const baselineFile = path.join(subEpicDir, 'baseline.json');
-  if (existsSync(baselineFile)) {
-    const accepted = (JSON.parse(readFileSync(baselineFile, 'utf8')) as { run: string }).run;
-    if (accepted !== run && existsSync(path.join(subEpicDir, accepted, RESULTS_FILE))) return path.join(subEpicDir, accepted);
-  }
-  const runs = existsSync(subEpicDir) ? readdirSync(subEpicDir).filter(entry => existsSync(path.join(subEpicDir, entry, RESULTS_FILE))).sort() : [];
-  const at = runs.indexOf(run);
-  return at > 0 ? path.join(subEpicDir, runs[at - 1]) : undefined;
-}
-
-/**
- * The run's rows with their three checks: the test's result, the judge's verdict (does the screen show what the step
- * says), and whether the screen is the same as the previous run's. A step the judge has not seen whose screen is the
- * same as the previous run's takes that run's verdict: a judge pass is needed only for new or changed screens, or when
- * the person asks for one.
- */
-export function checkedRows(runDir: string): StepRow[] {
-  const rows = readRows(runDir);
-  const previousDir = previousRunOf(runDir);
-  if (!previousDir) return rows;
-  const previous = path.basename(previousDir);
-  const earlierRows = new Map(checkedRows(previousDir).map(row => [row.key, row]));
-  const pairs = new Map(stepPairs(runDir, previousDir).map(pair => [pair.key, pair]));
-  const reviewFile = path.join(runDir, 'review.json');
-  const review = existsSync(reviewFile) ? (JSON.parse(readFileSync(reviewFile, 'utf8')) as { against: string; pairs: Record<string, { verdict: string; reason: string }> }) : undefined;
-  const reviewed = review?.against === previous ? review.pairs : {};
-  return rows.map(row => {
-    const pair = pairs.get(row.key);
-    const checked: StepRow = { ...row, change: pair?.change ?? 'new', previous };
-    if (pair?.change === 'changed') {
-      const judged = reviewed[row.key];
-      Object.assign(checked, { previousShot: pair.theirs?.screenshot, changedPercent: pair.changedPercent, changedArea: pair.changedArea, changeReview: judged ? `${judged.verdict}: ${judged.reason}` : undefined });
-    }
-    const earlier = earlierRows.get(row.key);
-    if (!row.verdict && pair?.change === 'same' && earlier?.verdict) return { ...checked, verdict: earlier.verdict, reason: earlier.reason, judgedIn: earlier.judgedIn ?? previous };
-    return checked;
-  });
-}
-
-function readRows(runDir: string): StepRow[] {
-  const file = path.join(runDir, RESULTS_FILE);
-  if (!existsSync(file)) return [];
-  return JSON.parse(readFileSync(file, 'utf8')) as StepRow[];
 }
 
 function keyParts(key: string): { story: string; scenario: string; step: string } {
@@ -794,9 +643,11 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
     process.exit(1);
   }
   for (const runDir of runDirs) {
-    if (against) console.log(`Compare report: ${writeCompareReport(path.resolve(runDir), path.resolve(against))}`);
-    const resolved = path.resolve(runDir);
-    console.log(`Walk report: ${writeWalkReport(resolved)}`);
-    console.log(`Story map: ${writeStoryMapReport(path.resolve(resolved, '..', '..', '..'))}`);
+    const run = new Run(path.resolve(runDir));
+    const compared = against ? new Run(path.resolve(against)) : undefined;
+    if (compared) console.log(`Compare report: ${writeCompareReport(run, compared)}`);
+    console.log(`Walk report: ${writeWalkReport(run)}`);
+    console.log(`Story map: ${writeStoryMapReport(path.resolve(run.dir, '..', '..', '..'))}`);
+    run.keepSummary(compared);
   }
 }

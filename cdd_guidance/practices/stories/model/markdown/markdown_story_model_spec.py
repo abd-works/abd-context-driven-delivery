@@ -584,7 +584,7 @@ with description("a markdown scenarios file read from a file, whose backgrounds 
         with before.each:
             reading = ScenarioFileReading(_STORY_BACKGROUND_SCENARIOS, "story_tests/add_book_to_cart_story.test.md", MarkdownScenario)
             reading.read()
-            self.section = next(part for part in reading.document_parts if getattr(part, "story_backgrounds", None))
+            self.section = next(section for section in reading.sections if section.story_backgrounds)
 
         with it("should read the story's own background on its heading's line"):
             expect(self.section.story_backgrounds[0].source.start_line).to(equal(3))

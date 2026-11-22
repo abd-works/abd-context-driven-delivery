@@ -10,9 +10,9 @@ from pathlib import Path
 from expects import be_true, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
-from harness.diagnostics.cdd_version import CddVersion
-from harness.diagnostics.release import CddRelease, ReleaseAlreadyTagged, ReleaseOnRed
-from harness.diagnostics.test_runs import RunOutcome, TestRun, TestRunRecord, TestTier
+from harness.release.cdd_version import CddVersion
+from harness.release.release import CddRelease, ReleaseAlreadyTagged, ReleaseOnRed
+from harness.release.test_runs import RunOutcome, TestRun, TestRunRecord, TestTier
 from harness.git.git import RepoConnectError
 
 HEAD = "f00dfeed1234"

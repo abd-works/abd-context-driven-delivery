@@ -245,7 +245,7 @@ class MiroStoryModel(DiagramStoryModel):
         one per sub-epic, or per innermost sub-epic of a sub-epic that has its own."""
         columns = [(epic.name, list(epic.stories))] if epic.stories else []
         for sub_epic in epic.epics:
-            leaves = sub_epic.columns.leaf_epics()
+            leaves = sub_epic.leaf_epics()
             names = [f"{epic.name} / {sub_epic.name}"] if not sub_epic.epics else [f"{epic.name} / … / {leaf.name}" for leaf in leaves]
             columns.extend((name, list(leaf.stories)) for name, leaf in zip(names, leaves))
         return columns

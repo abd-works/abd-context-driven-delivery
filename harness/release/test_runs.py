@@ -20,7 +20,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Callable, Iterator
 
-from harness.diagnostics.desktop_walk_question import DesktopWalkQuestion
+from harness.release.desktop_walk_question import DesktopWalkQuestion
 from harness.e2e_review.e2e_review import RUN_STAMP_FORMAT, ScheduledReview
 from harness.installation.data_class import data_field
 from harness.mcp.cdd_home import CddHome
@@ -443,7 +443,7 @@ class TestRunner:
         answer that process."""
         record, checkout = self._record, self._record.checkout
         record.folder.mkdir(parents=True, exist_ok=True)
-        command = [PythonInterpreter().windowless, "-m", "harness.diagnostics.test_runs", run.tier.value, str(checkout), str(record.folder),
+        command = [PythonInterpreter().windowless, "-m", "harness.release.test_runs", run.tier.value, str(checkout), str(record.folder),
                    "--started", run.started]
         with record.log_path(run.tier).open("w", encoding="utf-8") as log:
             env = {**os.environ, "PYTHONPATH": str(Path(__file__).resolve().parents[2]), "PYTHONIOENCODING": "utf-8"}
@@ -630,7 +630,7 @@ class TestCadence:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """python -m harness.diagnostics.test_runs <tier> <checkout> <record folder>: run a tier and record its result. The
+    """python -m harness.release.test_runs <tier> <checkout> <record folder>: run a tier and record its result. The
     cadence starts it this way in the background, with --started naming the run it recorded; the /release command runs
     it the same way."""
     parser = argparse.ArgumentParser(description=main.__doc__)

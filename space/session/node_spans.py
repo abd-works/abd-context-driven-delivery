@@ -133,7 +133,7 @@ class NodeSpans:
     def _below(self, node: Node, below_lines: bool) -> list[tuple[str, bool]]:
         """The nodes the request keeps at their home below node, still to take. A node shown under node only as a
         relationship adds its own lines here, but nothing below it; an example node uses adds none."""
-        branch = self._graph.explorer.explorer_branch(node.node_id, self._request)
+        branch = self._graph.explorer_branch(node.node_id, self._request)
         entries = [child for child in (branch.children if branch is not None else []) if isinstance(child, ExplorerEntry)]
         children = [child for entry in entries if (child := self._graph.node(entry.node_id)) is not None]
         for related in (child for child in children if not self._at_home_under(child, node) and not self._used_from_elsewhere(child)):

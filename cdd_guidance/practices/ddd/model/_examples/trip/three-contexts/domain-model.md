@@ -198,6 +198,7 @@ A shipment is dispatched once, for one paid order.
 ------
 + weight: Weight
 + trackingCode: TrackingCode
+----
 
 Integrations:
   - → Ordering · Order · Order (by OrderId)

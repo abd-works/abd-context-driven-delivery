@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
-import type { AppData, AppServerData } from '@cdd/harness/diagnostics/app'
+import type { AppData, AppServerData } from '@cdd/harness/apps/app'
 
 import type { AppOpeningJson } from '../../types'
 import { after } from '../shared/clock'

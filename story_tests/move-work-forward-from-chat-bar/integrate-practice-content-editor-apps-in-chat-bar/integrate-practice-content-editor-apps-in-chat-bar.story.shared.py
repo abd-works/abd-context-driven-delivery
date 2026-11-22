@@ -26,7 +26,7 @@ from expects import be_a, be_none, contain, equal, expect
 
 from cdd_guidance.practices.stories.model.story_model import StoryModel
 from harness.design_canvas.versions import CanvasVersions
-from harness.diagnostics.app import AppNotStarted, AppStatus
+from harness.apps.app import AppNotStarted, AppStatus
 from space.kanban.board import BoardPractice
 from space.kanban.board_app import STORY_UI_APP
 from space.kanban.ticket import FidelityProgress

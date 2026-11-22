@@ -5,7 +5,7 @@ from pathlib import Path
 
 from expects import equal, expect
 
-from harness.diagnostics.examples.lane_app_examples import seed_files_server
+from harness.apps.examples.lane_app_examples import seed_files_server
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.examples.server_lanes_examples import seed_lanes
 from harness.mcp.server_lanes import ServerLane, ServerLanes

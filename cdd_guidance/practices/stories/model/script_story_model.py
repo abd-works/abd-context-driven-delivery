@@ -14,8 +14,8 @@ from pathlib import Path
 from typing import Dict, Optional
 
 from cdd_guidance.practices.stories.model.brace_story import BraceStory, BraceStoryModel, BraceStoryWriting
-from cdd_guidance.practices.stories.model.brace_story_file import BraceStoryFile
 from cdd_guidance.practices.stories.model.screen_spec_file import SCREEN_SPEC_STEM, ScreenSpecFile, is_screen_spec
+from cdd_guidance.practices.stories.model.story_file import StoryFile
 from cdd_guidance.practices.stories.model.story_model import StoryModel
 
 # How a story file's name ends before its language's extension; the first is the one a language writes.
@@ -30,13 +30,7 @@ def script_story_file_suffixes(extension: str) -> tuple[str, ...]:
 class ScriptStory(BraceStory):
     """A story read from a script-language story file; a screen spec gives one for each ``test.describe``."""
 
-    @classmethod
-    def load_all(cls, content: str) -> list:
-        """Every story in one story file: a screen spec's, one for each `test.describe`; any other's, from its `story`
-        blocks."""
-        if is_screen_spec(content):
-            return ScreenSpecFile(content, cls.language).stories(cls)
-        return super().load_all(content)
+    """A story read from a script-language story file; a screen spec gives one for each ``test.describe``."""
 
 
 class ScriptStoryModel(BraceStoryModel):
@@ -82,10 +76,12 @@ class ScriptStoryModel(BraceStoryModel):
         """Where the step library a new tree is seeded with is written."""
         return f"{self.story_test_import_path}{self.LEAF_EXTENSION}"
 
-    def story_file(self, content: str) -> BraceStoryFile | None:
-        """The story file content is, read block by block; none for a screen spec, whose stories its story type reads
-        from its describes and tests."""
-        return None if is_screen_spec(content) else super().story_file(content)
+    def story_file(self, path: str, content: str, project: Optional[Path] = None) -> StoryFile:
+        """The story file at path: a screen spec, read from its describes and tests, or any other, read block by
+        block."""
+        if is_screen_spec(content):
+            return ScreenSpecFile(self, path, content, project if project is not None else self.project)
+        return super().story_file(path, content, project)
 
     def save(self) -> Dict[str, str]:
         # WHY: a tree read from code already brings its own step library; only a new tree needs the seed.

@@ -5,9 +5,9 @@ from pathlib import Path
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
-from harness.diagnostics.app import APPS, App
-from harness.diagnostics.desktop_walk_question import DesktopWalkQuestion
-from harness.diagnostics.test_runs import TestCadence, TestRun, TestRunRecord, default_record_folder, main_checkout
+from harness.apps.app import APPS, App
+from harness.release.desktop_walk_question import DesktopWalkQuestion
+from harness.release.test_runs import TestCadence, TestRun, TestRunRecord, default_record_folder, main_checkout
 from harness.e2e_review.e2e_review import E2eReview, E2eRunReview, ScheduledReview
 from harness.installation.data_class import data_field, language_adapter
 from harness.mcp.mcp_annotations import mcp

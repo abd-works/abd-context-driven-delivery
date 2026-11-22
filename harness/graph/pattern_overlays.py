@@ -15,7 +15,6 @@ from typing import TYPE_CHECKING
 
 from harness.annotations.class_folder import class_folder
 from harness.annotations.class_registry import ClassRegistry
-from harness.graph.patterns_file import PatternsFile
 from harness.graph.practice_rule import PracticeGraphRule, SharedPracticeGraphRule
 from harness.graph.schema_conformance import FRAMEWORK_RULES
 from harness.graph.practice_reading import PracticeReading
@@ -79,11 +78,6 @@ class GraphOverlay:
                 break
             roles.append(row.strip().strip("|").split("|")[0].strip())
         return roles
-
-    def record_in(self, patterns_file: PatternsFile) -> None:
-        """Record in patterns_file that its folder's content is generated with this pattern, keeping the patterns and
-        roles it names already."""
-        patterns_file.record([self.name])
 
     def rules_for(self, practice: PracticeGuidance) -> GraphChecks:
         """The graph rules this pattern adds to practice, by slug, read once from the pattern's own folder: its package
@@ -184,46 +178,6 @@ class PatternOverlays:
                 if overlay is not None and overlay not in found:
                     found.append(overlay)
         return found
-
-    def record_content(self, folders: list[Path]) -> str:
-        """Record each applied pattern in the patterns file of each folder content is generated in, and say how to
-        record them for any other folder and how to name the roles a folder holds; none when none is applied."""
-        if not self.patterns:
-            return ""
-        return self._recording_instructions(self._recorded_in(folders))
-
-    def _recorded_in(self, folders: list[Path]) -> list[PatternsFile]:
-        """The patterns file of each folder content is generated in, once each, with each applied pattern recorded."""
-        files = list({file.folder: file for file in map(PatternsFile.for_content, folders)}.values())
-        for file in files:
-            for overlay in self.graph_overlays:
-                overlay.record_in(file)
-        return files
-
-    def _recording_instructions(self, files: list[PatternsFile]) -> str:
-        """How the agent records the applied patterns in any other folder it writes content in, naming the files they
-        are recorded in already and the roles each pattern has."""
-        overlays = self.graph_overlays
-        names = ", ".join(overlay.name for overlay in overlays)
-        written = ", ".join(file.path.as_posix() for file in files) or "none yet"
-        return "\n".join([
-            "## Patterns this content is generated with",
-            "",
-            f"This content is generated with {names}, recorded in `.context/patterns.md` at the root of each folder it is "
-            f"written in ({written}). Record the same patterns at the root of any other folder you write content in. When "
-            "a pattern's layers sit in several folders, name after the pattern the roles this folder holds "
-            "(`- cdd_web_domain_access: Domain, Tool, Contract`); a folder that holds the whole pattern names none. Keep "
-            "the patterns and roles already there. The roles each pattern has:",
-            "",
-            *(f"- {overlay.name}: {', '.join(overlay.roles)}" for overlay in overlays if overlay.roles),
-        ])
-
-    def recorded_for(self, paths: list[Path], root: Path) -> list[str]:
-        """The registered patterns the content at paths was generated with, from the patterns file nearest each path
-        up to root, once each; none when no folder records any."""
-        found = [PatternsFile.nearest(path, root) for path in paths]
-        recorded = [name for patterns in found if patterns is not None for name in patterns.patterns]
-        return [name for name in dict.fromkeys(recorded) if self._registered.has(name)]
 
     @property
     def names(self) -> list[str]:

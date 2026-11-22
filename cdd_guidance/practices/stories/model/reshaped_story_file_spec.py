@@ -89,12 +89,12 @@ class StoryTestOnDisk:
 
     def steps_read_from(self, text: str, scenario: str) -> list[str]:
         """The words of each step the format reads back from text for the scenario, chained steps included."""
-        story = self.adapter.stories_of(text, f"{TESTS_ROOT}/fulfil-order/pack-orders/pack-order/pack_order_story.test")[0][0]
+        story = self.adapter.story_file(f"{TESTS_ROOT}/fulfil-order/pack-orders/pack-order/pack_order_story.test", text).stories[0]
         found = next(each for each in story.scenarios if each.name == scenario)
         return [each.text for step in found.steps for each in (step, *step.ands)]
 
     def scenarios_read_from(self, text: str) -> list[str]:
-        story = self.adapter.stories_of(text, f"{TESTS_ROOT}/fulfil-order/pack-orders/pack-order/pack_order_story.test")[0][0]
+        story = self.adapter.story_file(f"{TESTS_ROOT}/fulfil-order/pack-orders/pack-order/pack_order_story.test", text).stories[0]
         return [scenario.name for scenario in story.scenarios]
 
     def _rendered(self, scenarios: StoryModel) -> str:

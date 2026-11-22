@@ -10,7 +10,7 @@ from pathlib import Path
 from expects import be_true, equal, expect
 from mamba import after, before, description, it
 
-from harness.diagnostics.app import App, AppPackage, AppPage, AppServer, AppStatus, NodeScript, Npm
+from harness.apps.app import App, AppPackage, AppPage, AppServer, AppStatus, NodeScript, Npm
 from space.kanban.board_app import APP_FOLDER
 from space.kanban.editor_apps_examples import free_port
 
@@ -47,4 +47,4 @@ with description("the CDD Kanban installed with real npm") as self:
         expect((self.folder / "dist" / "index.html").is_file()).to(be_true)
 
     with it("should read as installed"):
-        expect(self.app.is_installed).to(be_true)
+        expect(self.app.package.is_installed).to(be_true)

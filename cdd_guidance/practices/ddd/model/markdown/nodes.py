@@ -12,7 +12,7 @@ from cdd_guidance.practices.clean_engineering.model import Property
 from cdd_guidance.practices.clean_engineering.model import pascal_type_names
 from cdd_guidance.practices.ddd.model.markdown.class_cards import (
     CARD,
-    ClassCard,
+    MarkdownBuildingBlock,
     MarkdownDomainNode,
     MarkdownEntity,
 )
@@ -120,30 +120,30 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
         # The lines under the aggregate's heading; `load_root` reads the root, its cards, and its arcs from them.
         self.source_lines: list[str] = []
         # The arrows a class drawing shows from one of its cards with no detail kept on them: the card and the arrow.
-        self._drawn_arrows: list[tuple[ClassCard, Relationship]] = []
+        self._drawn_arrows: list[tuple[MarkdownBuildingBlock, Relationship]] = []
 
     def load_root(self) -> None:
         sections, map_lines = self._split_cards()
-        self.classes.extend(card for section in sections for card in ClassCard.read(section))
+        self.classes.extend(card for section in sections for card in MarkdownBuildingBlock.read(section))
         self._read_map_lines(map_lines)
         self._take_root_card()
         super().load_root()
 
     @property
-    def root_card(self) -> ClassCard | None:
+    def root_card(self) -> MarkdownBuildingBlock | None:
         return next((card for card in self.classes if card.is_root), None)
 
     @property
-    def repository(self) -> ClassCard | None:
+    def repository(self) -> MarkdownBuildingBlock | None:
         return next((card for card in self.classes if card.is_repository), None)
 
     @property
-    def member_cards(self) -> list[ClassCard]:
+    def member_cards(self) -> list[MarkdownBuildingBlock]:
         """The entities and values the root composes."""
         return [card for card in self.classes if not card.is_root and not card.is_repository]
 
     @property
-    def ordered_cards(self) -> list[ClassCard]:
+    def ordered_cards(self) -> list[MarkdownBuildingBlock]:
         """Root, then its repository, then members — the same order in every aggregate."""
         roots = [card for card in self.classes if card.is_root]
         repositories = [card for card in self.classes if card.is_repository]
@@ -196,7 +196,7 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
     def take_class(self, oclass: OoadClass) -> None:
         """Hold a class read from a class model as the card of the building block it is, and the arcs it keeps as
         dependencies as this aggregate's integrations."""
-        card = ClassCard.from_code(oclass)
+        card = MarkdownBuildingBlock.from_code(oclass)
         self.classes.append(card)
         arcs = (MarkdownIntegration.kept_by(dependency) for dependency in oclass.dependencies)
         self.integrations.extend(arc for arc in arcs if arc is not None)
@@ -275,7 +275,7 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
             for prop in card.plain_properties:
                 prop.stereotype = prop.stereotype or self._relationship_named_by(card, prop)
 
-    def _relationship_named_by(self, card: ClassCard, prop: Property) -> str:
+    def _relationship_named_by(self, card: MarkdownBuildingBlock, prop: Property) -> str:
         """The relationship a property's type names: an aggregation for a repository's collection of the root, a
         composition for a member the aggregate holds; none otherwise."""
         named = pascal_type_names(prop.type_hint or "")

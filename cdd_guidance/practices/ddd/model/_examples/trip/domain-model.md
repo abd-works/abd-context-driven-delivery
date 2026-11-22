@@ -46,6 +46,7 @@ An order keeps its lines and its total in step.
 ------
 + title: Title
 + price: Money
+----
 
 ## Catalog | custom
 

@@ -16,7 +16,7 @@ from cdd_guidance.practices.ddd.model.nodes import BoundedContextMap, Integratio
 
 if TYPE_CHECKING:
     from cdd_guidance.practices.clean_engineering.model import Operation
-    from cdd_guidance.practices.ddd.model.markdown.class_cards import ClassCard
+    from cdd_guidance.practices.ddd.model.markdown.class_cards import MarkdownBuildingBlock
     from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownAggregate, MarkdownBoundedContext
 
 
@@ -116,7 +116,7 @@ class _ReplacedCard:
     """One class card of the replaced file and the card of the same name read from the drawing, in an aggregate whose
     classes are local."""
 
-    def __init__(self, was: ClassCard, card: ClassCard, local: set[str]) -> None:
+    def __init__(self, was: MarkdownBuildingBlock, card: MarkdownBuildingBlock, local: set[str]) -> None:
         self._was = was
         self._card = card
         self._local = local

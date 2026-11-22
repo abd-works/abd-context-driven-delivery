@@ -11,7 +11,8 @@ from harness.graph.violation import Finding, NodeViolation, Violation
 from harness.installation.data_class import data_field
 
 if TYPE_CHECKING:
-    from harness.graph.graph import Filter, Node
+    from harness.graph.graph import Node
+    from harness.graph.node_filter import Filter
     from harness.graph.rule_context import RuleCheckContext
 
 
@@ -141,19 +142,16 @@ class GraphRulesCollection:
     @property
     @data_field
     def children(self) -> list[GraphRule]:
-        """The rules the graph's filter shows under the node."""
+        """The rules shown under the node."""
         return self.shown
 
     @property
     def shown(self) -> list[GraphRule]:
-        """Every rule, or only the violating ones of the chosen rules when the graph's filter, or the node filter that
-        kept these rules, asks for violations."""
+        """Every rule, or only the violating ones of the chosen rules when the filter that kept these rules asks for
+        violations."""
         if self._kept is not None:
             return list(self._kept)
-        graph = self.node.graph
-        if graph is None:
-            return self.chosen(False, [])
-        return self.chosen(graph.explorer.filter.violations, list(graph.explorer.filter.rules))
+        return self.chosen(False, [])
 
     def kept_by(self, wanted: Filter) -> GraphRulesCollection:
         """These rules as the node filter wanted shows them under a node it keeps: only the broken ones of its chosen

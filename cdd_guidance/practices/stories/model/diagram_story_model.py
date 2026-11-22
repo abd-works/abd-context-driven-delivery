@@ -2,9 +2,19 @@
 
 from __future__ import annotations
 
+from functools import cached_property
 from typing import List, Optional
 
 from cdd_guidance.practices.stories.model.story_model import Epic, Increment, Story, StoryModel, StoryType
+
+# A leaf epic with an estimate widens by a column for about this many characters of the estimate: wider for an epic
+# that has stories beside it, as its estimate shares their columns.
+_ESTIMATE_CHARACTERS_PER_COLUMN = 18
+_ESTIMATE_CHARACTERS_PER_EXTRA_COLUMN = 22
+_ESTIMATE_LEAD_CHARACTERS = 12
+_ESTIMATE_EXTRA_LEAD_CHARACTERS = 15
+_EMPTY_EPIC_COLUMNS = (2, 8)
+_EXTRA_EPIC_COLUMNS = (1, 5)
 
 
 class DiagramStoryNode:
@@ -157,6 +167,11 @@ class DiagramEpic(Epic, DiagramStoryNode):
     nested_fill = "#d5e8d4"
     stroke = "#9673a6"
     nested_stroke = "#82b366"
+
+    @cached_property
+    def columns(self) -> EpicColumns:
+        """How many story columns the epic spans on the drawn map, and how deep its sub-epics nest."""
+        return EpicColumns(self)
 
 
 class DiagramStory(Story, DiagramStoryNode):
@@ -319,3 +334,54 @@ class DiagramStoryModel(StoryModel):
         story = self.story_type
         deepest_bottom = self.sub_epic_y(self.max_sub_epic_depth) + DiagramEpic.bar_height
         return max(self.story_floor, deepest_bottom + story.actor_height + story.actor_gap + story.pad_below_sub_epic)
+
+
+class EpicColumns:
+    """How many story columns an epic spans on a drawn map, and how deep its sub-epics nest: what a diagram format
+    lays its bars out by."""
+
+    def __init__(self, epic: DiagramEpic) -> None:
+        self._epic = epic
+
+    def estimate_label(self) -> str:
+        """The epic's estimate as a bar writes it, `* {estimate}`; empty for an epic with none."""
+        estimate = (self._epic.estimate or "").strip()
+        if not estimate:
+            return ""
+        if estimate.startswith("*"):
+            return estimate
+        return f"* {estimate}"
+
+    def has_estimate(self) -> bool:
+        """The epic or a sub-epic under it gives an estimate."""
+        if (self._epic.estimate or "").strip():
+            return True
+        return any(child.columns.has_estimate() for child in self._epic.epics)
+
+    def span(self) -> int:
+        """Story-grid columns a top-level epic occupies: its own stories, then each nested epic. An empty epic is one
+        column."""
+        nested = sum(max(child.columns.diagram_span(), 1) for child in self._epic.epics)
+        return max(len(self._epic.stories) + nested, 1)
+
+    def diagram_span(self) -> int:
+        """Bar width in story-pitch columns. Stories and nested epics both take columns; an estimate widens a leaf
+        epic."""
+        nested = sum(child.columns.diagram_span() for child in self._epic.epics)
+        story_columns = len(self._epic.stories)
+        if self._epic.epics:
+            return max(nested + story_columns, 1)
+        estimate = self._epic.estimate.strip()
+        if not estimate:
+            return max(story_columns, 1)
+        if story_columns == 0:
+            fewest, most = _EMPTY_EPIC_COLUMNS
+            return max(fewest, min(most, (len(estimate) + _ESTIMATE_LEAD_CHARACTERS) // _ESTIMATE_CHARACTERS_PER_COLUMN))
+        fewest, most = _EXTRA_EPIC_COLUMNS
+        return story_columns + max(fewest, min(most, (len(estimate) + _ESTIMATE_EXTRA_LEAD_CHARACTERS) // _ESTIMATE_CHARACTERS_PER_EXTRA_COLUMN))
+
+    def tree_depth(self) -> int:
+        """The depth of the deepest sub-epic under the epic; its own depth when it has none."""
+        if not self._epic.epics:
+            return self._epic.depth
+        return max(child.columns.tree_depth() for child in self._epic.epics)

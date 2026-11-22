@@ -12,7 +12,7 @@ import { practiceSessionOutputRoutes } from '@cdd/space/session/practice-session
 import { sessionRoutes } from '@cdd/space/session/session'
 import { chatRoutes } from '@cdd/harness/chat/chat'
 import { chatsRoutes } from '@cdd/harness/chat/chats'
-import { appRoutes } from '@cdd/harness/diagnostics/app'
+import { appRoutes } from '@cdd/harness/apps/app'
 import { cddRoutes } from '@src/session-board/cdd-routes'
 import { API_ROOT } from '@src/session-board/board-server-paths'
 import { answerFailure, HttpException } from '@src/session-board/http-exception'

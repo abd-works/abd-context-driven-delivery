@@ -16,7 +16,7 @@ from harness.installation.repository_toolsets import RepositoryToolsets
 
 RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 
-from harness.diagnostics.app import APPS, App, AppPackage, AppPage, AppServer, NodeScript  # noqa: E402
+from harness.apps.app import APPS, App, AppPackage, AppPage, AppServer, NodeScript  # noqa: E402
 from harness.diagnostics.server_health import ServerHealth  # noqa: E402
 from harness.installation.data_class import data_of  # noqa: E402
 from harness.mcp.mcp_server import ProjectToolsets  # noqa: E402

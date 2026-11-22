@@ -6,8 +6,10 @@ from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from harness.graph.node_filter import Filter, FilterRequest
+
 if TYPE_CHECKING:
-    from harness.graph.graph import Filter, FilterRequest, Node
+    from harness.graph.graph import Node
     from space.session.session import Session
 
 # What a node filter chooses that narrows a file's callouts: the practices, the node types and the connectors. Its
@@ -18,8 +20,8 @@ _CONNECTOR_CHOICES = ("relationships",)
 
 class FileViewFilter:
     """The filters of a file view, as its page sends them with the read of a file: the files its stages, practices and
-    formats list, and the graph view's node filter. They decide which callouts of the file show, by the graph's own
-    *Filter* narrowed by both, as the session's graph trees are (``session.graph_trees``): a callout into a file of a
+    formats list, and the graph view's node filter. They decide which callouts of the file show, by a
+    *Filter* made for both, as the session's graph trees are (``session.graph_trees``): a callout into a file of a
     stage, practice or format turned off is left out, and so is what a step invokes or observes while the node filter
     leaves out that connector or the node type of what it reaches. A file no fidelity declares, such as a note, belongs
     to no practice, so no practice turned off hides a callout into it. A read that sends no list of files and no node
@@ -54,15 +56,15 @@ class FileViewFilter:
 
     @cached_property
     def _by_files(self) -> Filter:
-        """The graph's filter narrowed to the files listed and the connectors chosen."""
+        """The filter of the files listed and the connectors chosen."""
         chosen = {choice: self._node_filter[choice] for choice in _CONNECTOR_CHOICES if choice in self._node_filter}
-        return self._session.graph.explorer.filter.narrowed_by({**chosen, "paths": self._session.paths.in_project(self._listed or [])})
+        return Filter(self._session.graph, {**chosen, "paths": self._session.paths.in_project(self._listed or [])})
 
     @cached_property
     def _by_nodes(self) -> Filter:
-        """The graph's filter narrowed to the practices and node types chosen. A node is matched apart from the files
+        """The filter of the practices and node types chosen. A node is matched apart from the files
         listed, which shows_file answers, since a node in a file of no practice is in no list and still shows."""
-        return self._session.graph.explorer.filter.narrowed_by({choice: self._node_filter[choice] for choice in _NODE_CHOICES if choice in self._node_filter})
+        return Filter(self._session.graph, {choice: self._node_filter[choice] for choice in _NODE_CHOICES if choice in self._node_filter})
 
     def _file_of(self, node: Node) -> str:
         """The file node was read from, named from the project."""

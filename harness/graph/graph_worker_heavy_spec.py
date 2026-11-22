@@ -323,7 +323,7 @@ with description("a graph built for a chat's call"):
                 apart.reads.open_saved(self.every)
                 apart.refresh([_READ_BY_EACH_PRACTICE[1]], _FROM_A_CHAT)
                 with _SerialisedHere() as self.serialised:
-                    apart.reads.refreshed([file], checked / "apart.json", _FROM_A_CHAT)
+                    apart.reads.refreshed([file], checked / "apart.json", apart=True)
                 self.checked_here = SavedGraph.from_file(checked / "here.json").document
                 self.checked_apart = SavedGraph.from_file(checked / "apart.json").document
 

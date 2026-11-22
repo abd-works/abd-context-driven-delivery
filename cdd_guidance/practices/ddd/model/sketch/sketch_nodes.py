@@ -6,7 +6,7 @@ read from a sketch writes as markdown too; a map of any format is written as a s
 from __future__ import annotations
 
 from cdd_guidance.practices.clean_engineering.model import marks_in, without_marks
-from cdd_guidance.practices.ddd.model.markdown.class_cards import ClassCard
+from cdd_guidance.practices.ddd.model.markdown.class_cards import MarkdownBuildingBlock
 from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownAggregate, MarkdownBoundedContext
 from cdd_guidance.practices.ddd.model.stereotypes import kind_named_by, plain_class_name
 
@@ -48,7 +48,7 @@ class SketchAggregate(MarkdownAggregate):
 
     def load_sketch(self) -> None:
         """Read the sketch's fences into cards, then the root from this aggregate's lines and its root card."""
-        self.classes = [card for heading, lines in self.sketch_fences for card in ClassCard.from_sketch(heading, lines)]
+        self.classes = [card for heading, lines in self.sketch_fences for card in MarkdownBuildingBlock.from_sketch(heading, lines)]
         self.load_root()
 
 
