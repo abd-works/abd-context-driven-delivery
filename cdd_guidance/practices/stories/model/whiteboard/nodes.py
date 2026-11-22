@@ -26,6 +26,7 @@ from cdd_guidance.practices.stories.model.diagram_story_model import (
     LaidOutStory,
 )
 from cdd_guidance.practices.stories.model.story_model import Epic, Increment, Story, StoryModel
+from harness.guidance.practice_formats import Written
 
 KEY_LENGTH = 10
 """Hex digits of a node's path hash in its element id: enough that two nodes of one map never share one."""
@@ -113,11 +114,11 @@ class WhiteboardStoryModel(DiagramStoryModel):
     story_type = WhiteboardStory
     increment_type = DiagramIncrement
 
-    def render(self, canonical: StoryModel | None = None, previous: str | None = None) -> str:
-        """Draw canonical, or this map, as a board; the elements a previous board held stay where people put them."""
-        board = self.copy_of(canonical if canonical is not None else self).board()
-        if previous:
-            board.keep_places(Whiteboard.from_text(previous))
+    def render(self, canonical: StoryModel, written: Written = Written()) -> str:
+        """Draw canonical as a board; the elements a previous board held stay where people put them."""
+        board = self.copy_of(canonical).board()
+        if written.previous:
+            board.keep_places(Whiteboard.from_text(written.previous))
         return board.save()
 
     def board(self) -> Whiteboard:
@@ -129,7 +130,8 @@ class WhiteboardStoryModel(DiagramStoryModel):
     def save(self) -> str:
         return self.board().save()
 
-    def parse(self, text: str) -> "WhiteboardStoryModel":
+    def parse(self, text: str, file: str = "") -> "WhiteboardStoryModel":
+
         """The format-adapter entry point Stories renders through: the story map a board's text holds."""
         return self.take_board(Whiteboard.from_text(text))
 

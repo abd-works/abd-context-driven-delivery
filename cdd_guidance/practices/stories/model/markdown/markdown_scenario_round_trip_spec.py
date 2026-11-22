@@ -114,7 +114,7 @@ with description("a scenarios Markdown document") as self:
     with context("rendered through the stories render tool"):
         with it("should write the document it was given"):
             result = Stories(fidelity="scenarios").render("markdown", self.text, source="markdown")
-            expect(result["content"]).to(equal(self.text))
+            expect(result.content).to(equal(self.text))
 
 
 def _unread_story():

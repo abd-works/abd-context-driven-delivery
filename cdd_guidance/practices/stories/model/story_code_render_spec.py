@@ -112,7 +112,7 @@ _REGISTER = "await credentials.register();"
 
 
 def _render(target: str, content, source: str, previous=None) -> dict:
-    return Stories(fidelity="acceptance_tests").render(target, content, source=source, previous=previous)["content"]
+    return Stories(fidelity="acceptance_tests").render(target, content, source=source, previous=previous).content
 
 
 with description("a story tree rendered to code"):
@@ -133,7 +133,7 @@ with description("a story tree rendered to code"):
                 model = stories.formats.parse(Format("typescript"), {_TS_PATH: _CUSTOMER_TYPESCRIPT})
                 story = model.epics[0].epics[0].stories[0]
                 story.scenarios[1].name = "CustomerProfile exists already"
-                self.rendered = stories.render("typescript", model)["content"][_TS_PATH]
+                self.rendered = stories.render("typescript", model).content[_TS_PATH]
 
             with it("should write the other scenario as it was read"):
                 expect(self.rendered).to(contain("    }).and('a CustomerProfile already exists for that email', () => {") | contain(

@@ -30,6 +30,7 @@ from cdd_guidance.practices.stories.model.markdown.scenario_file import SCENARIO
 from cdd_guidance.practices.stories.model.markdown.scenario_parts import HEADING_LINE, STEP_LINE, DocumentPart, StorySection
 from cdd_guidance.practices.stories.model.story_model import StoryModel
 from cdd_guidance.practices.stories.model.markdown.thin_slice import MarkdownIncrement, ThinSlice
+from harness.guidance.practice_formats import OnFile, Written
 
 if TYPE_CHECKING:
     from cdd_guidance.practices.stories.model.story_model import Examples, Step, StoryNode
@@ -412,21 +413,22 @@ class MarkdownStoryModel(StoryModel):
         return story_map
 
 
-    @classmethod
-    def from_workspace(cls, root: "Path", *, on_file: Optional[Callable[[str], None]] = None, project: Optional["Path"] = None) -> Optional["MarkdownStoryModel"]:
-        """The story map in the file *root*, or the markdown story maps *root* holds (``StoryMapFiles.markdown_below``),
-        merged; None if absent.
+    def read_file(self, path: "Path", project: "Path", on_file: OnFile = None) -> "MarkdownStoryModel":
+        """The story map in the markdown file at path, with the scenarios files and the thin slice beside it, each node
+        naming its file as a path from project, so a rule hit points at the file a reader opens; empty when the file
+        holds no epic."""
+        return self._read_at(Path(path), project, on_file)
 
-        Each node names its file as a path from *project*, so a rule hit points at the file a reader opens;
-        without *project* the path is from *root*, or from the folder holding *root* when it is a file.
-        """
-        root = Path(root).resolve()
-        merged = cls()
-        base = Path(project).resolve() if project is not None else (root.parent if root.is_file() else root)
+    def read_folder(self, folder: "Path", project: "Path", on_file: OnFile = None) -> Optional["MarkdownStoryModel"]:
+        """The markdown story maps folder holds (``StoryMapFiles.markdown_below``), merged, with the scenarios files
+        and the thin slice beside them, each node naming its file as a path from project; none when it holds none."""
+        merged = self._read_at(Path(folder), project, on_file)
+        return merged if merged.epics else None
+
+    def _read_at(self, root: "Path", project: "Path", on_file: OnFile) -> "MarkdownStoryModel":
+        merged = type(self)()
         with merged.batch_schema_sync():
-            merged._read_workspace(root, base, on_file)
-        if not merged.epics:
-            return None
+            merged._read_workspace(Path(root).resolve(), Path(project).resolve(), on_file)
         return merged
 
     def _read_workspace(self, root: Path, base: Path, on_file: Optional[Callable[[str], None]]) -> None:
@@ -500,19 +502,16 @@ class MarkdownStoryModel(StoryModel):
             pending.extend((child, f"{epic_folder}/{child.slug}") for child in epic.epics)
         return files
 
-    def render(
-        self,
-        canonical: StoryModel,
-        previous: Optional[str] = None,
-        workspace: Optional[str] = None,
-    ) -> str:
-        """Write canonical, copied into a markdown map when it is in another format. In a *workspace* folder, each
-        story that has its own markdown file there links to it; a story with no file stays plain text."""
+    def render(self, canonical: StoryModel, written: Written = Written()) -> str:
+        """Write canonical, copied into a markdown map when it is in another format. Written in a folder, each story
+        that has its own markdown file there links to it; a story with no file stays plain text."""
         story_map = canonical if isinstance(canonical, MarkdownStoryModel) else self.copy_of(canonical)
         document = story_map.scenario_document
         if document is not None:
             return document.text()
-        links = StoryMapLinks(story_map, workspace) if workspace else None
+        previous = written.previous or None
+        links = StoryMapLinks(story_map, str(written.folder)) if written.folder is not None else None
+
         replaced = self._replaced_outline(previous)
         if replaced is not None:
             replaced.lend_to(story_map)

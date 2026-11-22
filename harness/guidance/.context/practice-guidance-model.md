@@ -109,7 +109,7 @@ work_in(session_output: PracticeSessionOutput): None
 	// the practice works in that output's session; each fidelity is given its FidelitySessionOutput through FidelityGuidance.work_in
 generate_output(): str
 	// instruction-only by default; a practice that owns generation overrides it
-render(format: str, content: RenderContent, source: str | None, previous: str): dict
+render(format: str, content: RenderContent, source: str | None, previous: str): Rendered
 	// at the fidelity the practice was made at, which renders it; a practice with no fidelity renders through its formats
 	-> fidelities.current.render
 	-> formats.render
@@ -199,26 +199,60 @@ adapter_settings: dict[str, Any]
 ----
 check(): None
 	// ValueError for a format the practice works in but does not write
-adapter_class(format: str): Any
+adapter_class(format: str): type[FormatAdapter]
 	// imported once
-adapter(format: str): Any
+adapter(format: str): FormatAdapter
 	// made once and kept
 reading(file: Path): Format | None
 reading_with(file: Path, others: Iterable[PracticeGuidance]): Format | None
-for_file(file: Path): Any
+for_file(file: Path): FormatAdapter
 	// a new model of the format that reads the file
 read(paths, request: RenderRequest): Any
 	// what a render converts from files: their text, read through the session's project
-render(request: RenderRequest): dict
+render(request: RenderRequest): Rendered
 	Interaction:
 		# no adapters: hand the request to the companion's practice
 		-> request.companion.practice_guidance.formats.render
 		# otherwise: read content into the object model, then render the target format
 		-> parse
 		-> model_for
-		-> adapter(request.format).render
-parse(format: Format, content: Any): Any
-model_for(target: Any, model: Any): Any
+		-> adapter(request.format).render(model, request.written)
+parse(format: Format, content: Any): ObjectModel
+model_for(target: FormatAdapter, model: ObjectModel): ObjectModel
+
+## FormatAdapter
+
+The one contract every format of every practice meets; each practice's domain root extends it (*StoryModel*,
+*CleanEngineeringModel*, *BoundedContextMap*, *BddModel*, *UxMap*, UX's *ViewFormat*).
+
+----
+parse(text: TextOrData, file: str = ''): Self
+render(model: ObjectModel, written: Written = Written()): str | dict[str, str]
+read_file(path: Path, project: Path, on_file: OnFile = None): Self
+	// by default: the file's text parsed, then placed_in(file, text)
+placed_in(file: str, text: str): Self
+	// by default: itself; a story map keeps the text as a source and names the file on every node
+reshape(rendered: str, existing: str): Reshaped | None
+	// by default: none, which leaves the writing to the Render action
+
+## Written (frozen)
+
+What an adapter is handed of the file a render writes: previous (its text now, or each file's text by path for a
+format written as several files) and folder (where the files it links to are), or None.
+
+## RenderRequest (frozen)
+
+format, content, source, previous, folder, fidelity
+----
+written: Written
+from_files(fidelity, format, paths, source, previous): RenderRequest
+	// what it converts read from the files at paths, in the folder the first one is or sits in
+render(): Rendered
+	-> fidelity.practice_guidance.formats.render(self)
+
+## Rendered
+
+The content of a render in the format it is written in: format, content; written as those two fields.
 
 ## PracticeReading
 
@@ -281,13 +315,12 @@ declared: DeclaredOutputs
 ----
 generate_output(): str
 	// the practice's generate_output recipe, expanded
-render(format: str, content: RenderContent, source: str | None): dict
+render(format: str, content: RenderContent, source: str | None): Rendered
 	// at this fidelity: content is in source, else in this fidelity's format
-	-> practice_guidance.formats.render RenderRequest(fidelity=self)
-render_files(format: str, paths: list[str] | str, source: str | None): dict
+	-> RenderRequest(fidelity=self).render
+render_files(format: str, paths: list[str] | str, source: str | None, previous: str): Rendered
 	// a renderer that links to other files finds them in the folder of the first path
-	-> practice_guidance.formats.read
-	-> practice_guidance.formats.render RenderRequest(fidelity=self)
+	-> RenderRequest.from_files(self, ...).render
 work_in(session_output: FidelitySessionOutput): None
 	// its reports and where a new one goes are its session output's: session_output.validation_reports.listed(), validation_reports.new_path()
 

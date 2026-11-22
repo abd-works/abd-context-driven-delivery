@@ -38,7 +38,11 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from cdd_guidance.practices.stories.model.story_map_files import STORY_GRAPH_FILE, StoryMapFiles, source_at
+from harness.guidance.practice_formats import OnFile, Written, named_from
+
+from cdd_guidance.practices.stories.model.story_map_files import source_at
+
+
 from cdd_guidance.practices.stories.model.story_model import (
     Background,
     Epic,
@@ -275,7 +279,7 @@ class JsonStoryModel(StoryModel):
     story_type = JsonStory
     increment_type = JsonIncrement
 
-    def render(self, canonical: StoryModel, previous: Optional[str] = None) -> str:
+    def render(self, canonical: StoryModel, written: Written = Written()) -> str:
         """canonical as story-graph.json text: copied into a JSON map, which writes itself."""
         return (canonical if isinstance(canonical, JsonStoryModel) else self.copy_of(canonical)).save()
 
@@ -288,7 +292,7 @@ class JsonStoryModel(StoryModel):
             payload["increments"] = [increment.as_record() for increment in self.increments]
         return json.dumps(payload, indent=2)
 
-    def parse(self, text: str) -> "JsonStoryModel":
+    def parse(self, text: str, file: str = "") -> "JsonStoryModel":
         """Read story-graph.json text into this map, and return it."""
         try:
             payload = json.loads(text)
@@ -300,26 +304,21 @@ class JsonStoryModel(StoryModel):
         self.increments.refill([JsonIncrement.from_record(record, self) for record in payload.get("increments", [])])
         return self
 
-    @classmethod
-    def from_workspace(cls, root: Path) -> Optional["JsonStoryModel"]:
-        """Find story-graph.json in *root* and parse it; None when the folder has none. A file that is there but does
-        not read is a JsonParseError naming the file, not a missing story map."""
-        text = StoryMapFiles(root).story_graph_text()
-        if text is None:
-            return None
-        return cls().parse_file(STORY_GRAPH_FILE, text)
-
-    def parse_file(self, file: str, text: str) -> "JsonStoryModel":
-        """Read the text of the story-graph.json called file into this map, every epic and story naming that file, and
-        return it; text that does not read is a JsonParseError naming the file."""
+    def read_file(self, path: Path, project: Path, on_file: OnFile = None) -> "JsonStoryModel":
+        """The story map the story-graph.json at path holds, read into this map, every epic and story naming the file
+        as a path from project; text that does not read is a JsonParseError naming the file, not a missing story
+        map."""
         try:
-            self.parse(text)
+            return super().read_file(path, project, on_file)
         except JsonParseError as err:
-            raise JsonParseError(f"{file}: {err}") from err
-        self.sources.add(file, text)
-        self.descendants.place_in(file)
+            raise JsonParseError(f"{named_from(project, path)}: {err}") from err
+
+    def placed_in(self, file: str, text: str) -> "JsonStoryModel":
+        """This map, read from the story-graph.json called file, naming that file as its own too."""
+        super().placed_in(file, text)
         self.source = source_at(file, 1)
         return self
+
 
     def _guard_schema(self, document: JsonDocument) -> None:
         if not isinstance(document, dict):

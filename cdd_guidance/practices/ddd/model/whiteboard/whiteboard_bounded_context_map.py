@@ -22,6 +22,7 @@ from cdd_guidance.practices.clean_engineering.model.whiteboard.whiteboard_class_
 )
 from cdd_guidance.practices.ddd.model.drawn.drawn_map import MODULES_TITLE_ENDING, AggregateCell, ContextCell, DrawnBoundedContextMap
 from cdd_guidance.practices.ddd.model.nodes import BoundedContextMap
+from harness.guidance.practice_formats import Written
 
 
 class WhiteboardContextCell(ContextCell, WhiteboardModule):
@@ -75,10 +76,10 @@ class WhiteboardBoundedContextMap(DrawnBoundedContextMap, WhiteboardCleanEnginee
     module_cell_types = (WhiteboardContextCell, WhiteboardAggregateCell, WhiteboardModule)
     class_board_type = AggregateViewBoard
 
-    def render(self, canonical: BoundedContextMap | None = None, previous: str | None = None) -> str:
+    def render(self, canonical: BoundedContextMap, written: Written = Written()) -> str:
         """The aggregate view when the map's aggregates hold class cards (model fidelity); otherwise the map."""
-        self.draw(canonical if canonical is not None else self)
-        return WhiteboardCleanEngineeringModel.render(self, self, previous)
+        self.draw(canonical)
+        return WhiteboardCleanEngineeringModel.render(self, self, written)
 
     def take_board(self, board: Whiteboard) -> "WhiteboardBoundedContextMap":
         """Read the board's modules or classes, and the map's own name from the title it was drawn under; a modules
@@ -89,7 +90,8 @@ class WhiteboardBoundedContextMap(DrawnBoundedContextMap, WhiteboardCleanEnginee
             self.title = board.title.strip()
         return self
 
-    def parse(self, text: str) -> "WhiteboardBoundedContextMap":
+    def parse(self, text: str, file: str = "") -> "WhiteboardBoundedContextMap":
+
         """Read a board into this map, and return it."""
         WhiteboardCleanEngineeringModel.parse(self, text)
         return self.read_drawing()

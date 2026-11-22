@@ -12,7 +12,7 @@ from cdd_guidance.practices.source_code import CODE_LANGUAGES, JAVASCRIPT, PYTHO
 from harness.graph.graph import Graph
 
 from cdd_guidance.practices.bdd.model.spec_reshape import SpecReshape
-from harness.guidance.practice_formats import Reshaped
+from harness.guidance.practice_formats import Reshaped, Written
 from cdd_guidance.practices.bdd.model.bdd_model import BddModel
 from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation
 from cdd_guidance.practices.bdd.model.spec_source import SIGNATURE
@@ -89,28 +89,29 @@ class CodeBddModel(BddModel):
         self._kept_lines = KeptLines(self.language, (self.marker_line(), self.language.comment(SIGNATURE)))
         self._kept_preamble = KeptLines(self.language, self.default_imports())
 
-    def parse(self, text: str) -> "CodeBddModel":
+    def parse(self, text: str, file: str = "") -> "CodeBddModel":
         self.check_readable(text)
         return self.parse_code(text)
 
     def check_readable(self, text: str) -> None:
         """Raise UnreadableSpec when text is not valid code in this language. A language with no syntax check accepts any text."""
 
-    def render(self, canonical: BddModel, previous: Optional[str] = None) -> str:
+    def render(self, canonical: BddModel, written: Written = Written()) -> str:
         # The previous file is read once per render and consulted for any block the canonical spec
         # did not read in this language.
-        self._kept = type(self)().parse(previous) if previous else type(self)()
-        written = self._written(canonical, ())
+        self._kept = type(self)().parse(written.previous) if written.previous else type(self)()
+        spec_lines = self._written(canonical, ())
         preamble = canonical.preamble.in_language_of(self._kept.preamble, self.language)
         # WHY: imports from another language name nothing this file can load, so only this language's are kept.
         own = preamble.lines_in(self.language, "", "") if preamble.language is self.language else []
-        as_read = written.inside_for(preamble) if written is not None and own else None
+        as_read = spec_lines.inside_for(preamble) if spec_lines is not None and own else None
         # Another language's imports stay as a note under this language's, so the trip back finds them.
         lines = as_read if as_read is not None else (own or self.default_imports() + preamble.lines_in(self.language, "", ""))
         for description in canonical.descriptions:
             lines = lines + self._render_block(description, (), first=False)
-        if written is not None:
-            return "\n".join(lines + written.closing)
+        if spec_lines is not None:
+            return "\n".join(lines + spec_lines.closing)
+
         lines.extend(self.top_level_gap() + self._foreign(canonical.written and canonical.written.closing_body, ""))
         return "\n".join(lines).strip("\n") + "\n"
 

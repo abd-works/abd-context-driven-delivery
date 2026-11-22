@@ -7,6 +7,7 @@ from typing import Iterable, List, Optional
 
 from harness.graph.model_node import ModelChildren
 from harness.graph.graph import Graph
+from harness.guidance.practice_formats import FormatAdapter
 
 from cdd_guidance.practices.source_code import CodeBody
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
@@ -499,7 +500,8 @@ class ModuleSourceFacts:
         self._module.public_source_internal = public.internal_notes()
 
 
-class CleanEngineeringModel(OoadNode):
+class CleanEngineeringModel(OoadNode, FormatAdapter):
+
     _semantic_type_name = "CleanEngineeringModel"
     # The kind of module this model holds; a format's model names its own.
     module_type: type = Module
@@ -597,7 +599,8 @@ class CleanEngineeringModel(OoadNode):
     def save(self) -> str:
         raise NotImplementedError(f"{type(self).__name__} must implement save")
 
-    def parse(self, text: str) -> "CleanEngineeringModel":
+    def parse(self, text: str, file: str = "") -> "CleanEngineeringModel":
+
         raise NotImplementedError(f"{type(self).__name__} must implement parse")
 
     def load_module(self, source: Module) -> Module:

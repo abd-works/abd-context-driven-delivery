@@ -519,13 +519,12 @@ class PracticeGuidance(Guidance):
         """Examples folder content — not part of instructions."""
 
     @agent_tool
-    def render(self, format: str, content: RenderContent = "", source: str | None = None, previous: str = "") -> dict:
+    def render(self, format: str, content: RenderContent = "", source: str | None = None, previous: str = "") -> Rendered:
         """Turn content into the practice object model, then render the target format. Content is in source, the
         format this practice works in when none is named; with no content, the practice renders its own model.
         previous is the target file as it is now. It renders through its formats at the fidelity the practice was made
         at, whose Clean Engineering companion writes its code; a practice with no fidelity renders at none."""
-        request = RenderRequest(Format(format), content, Format(source), previous, fidelity=self.fidelities.current)
-        return self.formats.render(request)
+        return self.formats.render(RenderRequest(Format(format), content, Format(source), previous, fidelity=self.fidelities.current))
 
     @property
     def scoped_markdown(self) -> str:
@@ -833,40 +832,15 @@ class FidelityGuidance(Guidance):
         practice = self.practice_guidance
         return practice.instruction("generate_output").expand({}).instructions if practice is not None else ""
 
-    def render(self, format: str, content: RenderContent = "", source: str | None = None) -> dict:
+    def render(self, format: str, content: RenderContent = "", source: str | None = None) -> Rendered:
         """Render content into format at this fidelity, through its practice's formats: content is in source, else in
         the format this fidelity works in; with no content, its practice renders its own model. The practice is shared
         by every call in a session, so a call working at this fidelity asks this fidelity, never the practice."""
-        return self.practice_guidance.formats.render(RenderRequest(Format(format), content, Format(source), fidelity=self))
+        return RenderRequest(Format(format), content, Format(source), fidelity=self).render()
 
-    def render_files(self, format: str, paths: NamedPaths, source: str | None = None, previous: str = "") -> dict:
-        """Render the files at paths into format at this fidelity, read from the project of the session its practice
-        works in, in source, else in the format this fidelity works in. previous is the target file as it is now, whose
-        layout a diagram keeps. A renderer that links to other files, such as a story map linking to each story's file,
-        finds them in the folder the first path is, or sits in."""
-        return self.render_request(self.files_to_render(format, paths, source, previous))
-
-    def files_to_render(self, format: str, paths: NamedPaths, source: str | None = None, previous: str = "") -> RenderRequest:
-        """The render of the files at paths into format at this fidelity (``render_files``), with what it converts
-        read from them, before anything is rendered."""
-        formats = self.practice_guidance.formats
-        request = RenderRequest(Format(format), source=Format(source), previous=previous, folder=self._folder_holding(paths), fidelity=self)
-        return replace(request, content=formats.read(paths, request))
-
-    def render_request(self, request: RenderRequest) -> dict:
-        """What request renders to through its practice's formats, at this fidelity."""
-        return self.practice_guidance.formats.render(replace(request, fidelity=self))
-
-    def _folder_holding(self, paths: NamedPaths) -> str:
-        """The folder the files at paths sit in, where a renderer finds the files they link to: the first path when it
-        is a folder, else its parent."""
-        first = paths[0] if isinstance(paths, (list, tuple)) and paths else paths
-        if not first or not isinstance(first, str):
-            return ""
-        path = Path(first)
-        if path.is_dir():
-            return str(path)
-        return str(path.parent) if path.parent.is_dir() else ""
+    def render_files(self, format: str, paths: NamedPaths, source: str | None = None, previous: str = "") -> Rendered:
+        """Render the files at paths into format at this fidelity (``RenderRequest.from_files``)."""
+        return RenderRequest.from_files(self, format, paths, source, previous).render()
 
     def _guidance_parts(self) -> list[str]:
         """Its own guidance, then its Clean Engineering companion's instructions: what a practice working at this

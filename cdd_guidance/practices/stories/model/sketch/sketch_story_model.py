@@ -24,6 +24,7 @@ from cdd_guidance.practices.stories.model.story_model import (
     StoryModel,
     StoryType,
 )
+from harness.guidance.practice_formats import Written
 
 _NESTING_INDENT = 4
 # The headings that open the stories section of a sketch; the Stories practice declares them from here.
@@ -246,7 +247,7 @@ class SketchStoryModel(StoryModel):
     lens = _LENS
     """The section of a sketch Stories writes, opened by its `stories:` heading."""
 
-    def parse(self, text: str) -> "SketchStoryModel":
+    def parse(self, text: str, file: str = "") -> "SketchStoryModel":
         """Read the sketch's stories section into this map, and return it."""
         self.epics.refill([])
         self.increments.refill([])
@@ -287,11 +288,11 @@ class SketchStoryModel(StoryModel):
                 lines.append(raw)
         return SketchLines.from_raw(lines)
 
-    def render(self, canonical: StoryModel | None = None, previous: str | None = None) -> str:
-        """Write canonical (this map when none is given) as a sketch: copied into a sketch map, which writes itself.
-        A sketch keeps no previous text."""
-        source = canonical or self
-        return (source if isinstance(source, SketchStoryModel) else self.copy_of(source)).save()
+    def render(self, canonical: StoryModel, written: Written = Written()) -> str:
+        """Write canonical as a sketch: copied into a sketch map, which writes itself. A sketch keeps no previous
+        text."""
+        return (canonical if isinstance(canonical, SketchStoryModel) else self.copy_of(canonical)).save()
+
 
     def save(self) -> str:
         lines = [line for epic in self.epics for line in epic.sketch_lines(0)]

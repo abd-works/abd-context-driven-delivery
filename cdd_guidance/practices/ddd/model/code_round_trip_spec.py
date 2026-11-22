@@ -13,8 +13,8 @@ _MODEL = (Path(__file__).resolve().parent / "_examples" / "expected" / "domain-m
 
 
 def _round_trip(code_format):
-    code = Ddd(fidelity="model").render(code_format, _MODEL, source="markdown")["content"]
-    back = Ddd(fidelity="model").render("markdown", code, source=code_format)["content"]
+    code = Ddd(fidelity="model").render(code_format, _MODEL, source="markdown").content
+    back = Ddd(fidelity="model").render("markdown", code, source=code_format).content
     return code, MarkdownBoundedContextMap().parse(back)
 
 
@@ -153,7 +153,7 @@ with description("Ddd.render at model fidelity"):
     with context("from code whose classes carry decorators that are not DDD's"):
         with it("should keep only the DDD stereotypes on each card"):
             code = "@dataclass\n@value_object\nclass Money:\n    amount: int\n\n@entity\nclass Wallet:\n    money: Money\n"
-            back = Ddd(fidelity="model").render("markdown", code, source="python")["content"]
+            back = Ddd(fidelity="model").render("markdown", code, source="python").content
             cards = MarkdownBoundedContextMap().parse(back).contexts[0].aggregates[0].classes
             expect(sorted((card.name, card.stereotypes) for card in cards)).to(
                 equal([("Money", ["Value Object"]), ("Wallet", ["Entity"])])
@@ -170,7 +170,7 @@ with description("Ddd.render at model fidelity"):
                 "class CartRepository:\n"
                 "    def load(self, cart_id: str) -> Cart: ...\n"
             )
-            back = Ddd(fidelity="model").render("markdown", code, source="python")["content"]
+            back = Ddd(fidelity="model").render("markdown", code, source="python").content
             model = MarkdownBoundedContextMap().parse(back)
             aggregate = model.contexts[0].aggregates[0]
             expect([card.name for card in aggregate.classes]).to(equal(["Cart", "CartRepository", "CartLine"]))

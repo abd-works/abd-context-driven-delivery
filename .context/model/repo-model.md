@@ -2034,8 +2034,8 @@ One fidelity of a practice, such as the story map: its stage, its outputs, its r
 + schema_guide(): str
 + rules(): RulesCollection
 + generate_output(): str
-+ render(format: str, content: Any = '', source: str | None = None): dict
-+ render_files(format: str, paths: list[str] | str, source: str | None = None, previous: str = ''): dict
++ render(format: str, content: Any = '', source: str | None = None): Rendered
++ render_files(format: str, paths: list[str] | str, source: str | None = None, previous: str = ''): Rendered
 	// previous is the target file as it is now, whose layout a diagram keeps
 + guidance_parts(): list[str]
 ---<<reads its stage from>>--> ApproachStage

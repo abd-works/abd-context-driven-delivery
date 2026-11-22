@@ -152,7 +152,7 @@ _UNFINISHED_PYTHON = _CART_PYTHON.replace(_PYTHON_ASSERT, "expect(self.cart.item
 
 
 def _render(target: str, content: str, source: str, previous: str = "") -> str:
-    return Bdd().render(target, content, source=source, previous=previous)["content"]
+    return Bdd().render(target, content, source=source, previous=previous).content
 
 
 with description("a spec rendered to code"):

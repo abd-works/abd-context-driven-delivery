@@ -92,7 +92,7 @@ def _laid_out(text: str) -> str:
     """text as the markdown format writes a story map, so saving it changes nothing but an edit."""
     stories = Stories()
     model = stories.formats.parse(Format("markdown"), text)
-    return stories.formats.render(RenderRequest(Format("markdown"), model))["content"]
+    return stories.formats.render(RenderRequest(Format("markdown"), model)).content
 
 
 def _changed(before: str, after: str) -> tuple[list[str], list[str]]:

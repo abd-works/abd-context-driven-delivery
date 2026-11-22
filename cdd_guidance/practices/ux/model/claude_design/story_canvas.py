@@ -30,6 +30,7 @@ from cdd_guidance.practices.stories.model.diagram_story_model import (
 from cdd_guidance.practices.stories.model.story_model import Background, Scenario, Step, StoryModel, StoryNode
 from harness.graph.graph import Graph
 from cdd_guidance.practices.ux.model.nodes import Screen
+from harness.guidance.practice_formats import Written
 
 _EXPLORER_TEMPLATE = Path(__file__).with_name("explorer.dc.html")
 _SHOWN_ON = "shownOn"
@@ -146,18 +147,20 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
         Design map, which places the screens."""
         super().__init__(source, graph)
         setup = setup or StoryCanvasSetup()
+        # What every canvas this one renders is drawn with: the same UX map, sources, and project.
+        self._setup = setup
         self.screen_map = self._screen_map(setup.ux_map)
         self.sources = dict(setup.sources)
         self.canvas = DesignCanvas(self.name if self.name and self.name != "StoryModel" else "Story Map", setup.project)
 
-    def render(self, canonical: Optional[StoryModel] = None, setup: Optional["StoryCanvasSetup"] = None) -> str:
-        """The canvas files as JSON, drawn on a new canvas of canonical (else of this map) made with setup, so this
-        canvas keeps its own."""
-        source = canonical if canonical is not None else self
-        drawn = type(self)(source, setup=setup)
+    def render(self, canonical: StoryModel, written: Written = Written()) -> str:
+        """The canvas files as JSON, drawn on a new canvas of canonical made with this canvas's setup, so canonical
+        keeps its own."""
+        drawn = type(self)(canonical, setup=self._setup)
         return json.dumps(drawn.files(), indent=1, ensure_ascii=False)
 
-    def parse(self, text: str) -> "ClaudeDesignStoryModel":
+    def parse(self, text: str, file: str = "") -> "ClaudeDesignStoryModel":
+
         raise NotImplementedError("A Claude Design canvas is rendered from the story map; it is not read back.")
 
     # -- canvas ---------------------------------------------------------------------------

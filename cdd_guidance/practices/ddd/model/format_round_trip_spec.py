@@ -9,6 +9,7 @@ from cdd_guidance.practices.ddd.model.drawio.drawio_bounded_context_map import D
 from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownBoundedContextMap
 from cdd_guidance.practices.ddd.model.sketch.sketch_ddd_model import SketchDddModel
 from cdd_guidance.practices.ddd.model.whiteboard.whiteboard_bounded_context_map import WhiteboardBoundedContextMap
+from harness.guidance.practice_formats import Written
 
 _EXAMPLES = Path(__file__).resolve().parent / "_examples" / "expected"
 _BOUNDED_CONTEXT_MAP = (_EXAMPLES / "bounded-context-map.md").read_text(encoding="utf-8")
@@ -257,7 +258,7 @@ def _written_lines(markdown: str) -> list:
 def _written_over(adapter, markdown: str) -> str:
     """markdown drawn in the adapter's format, then the drawing written as markdown over the file it was drawn from."""
     drawn = type(adapter)().parse(adapter.render(MarkdownBoundedContextMap().parse(markdown)))
-    return MarkdownBoundedContextMap().render(drawn, markdown)
+    return MarkdownBoundedContextMap().render(drawn, Written(markdown))
 
 
 def _arcs(model) -> list:
@@ -314,7 +315,7 @@ with description("a bounded context map of three contexts a person wrote after t
         with it("should leave out the integration whose arrow is gone and keep the others whole"):
             drawn = DrawIOBoundedContextMap().parse(DrawIOBoundedContextMap().render(MarkdownBoundedContextMap().parse(_SHOP_MAP)))
             next(item for item in drawn.every_aggregate if item.name == "Cart").integrations.clear()
-            back = MarkdownBoundedContextMap().parse(MarkdownBoundedContextMap().render(drawn, _SHOP_MAP))
+            back = MarkdownBoundedContextMap().parse(MarkdownBoundedContextMap().render(drawn, Written(_SHOP_MAP)))
             kept = [(aggregate.name, [(arc.pattern, arc.crosses) for arc in aggregate.integrations]) for aggregate in back.every_aggregate]
             expect(kept).to(equal([
                 ("Cart", []),

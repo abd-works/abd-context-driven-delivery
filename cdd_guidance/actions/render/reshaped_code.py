@@ -45,8 +45,10 @@ _STATEMENTS = frozenset({"if", "for", "while", "switch", "catch", "return", "sup
 # The members a model does not name: a constructor, and a helper whose name starts with an underscore or a hash.
 _CONSTRUCTORS = frozenset({"__init__", "constructor"})
 
-Reshape = Callable[[str, str], Reshaped]
-"""A format's own way to write a rendered shape onto existing text: ``reshape(rendered, existing)``."""
+Reshape = Callable[[str, str], Reshaped | None]
+"""A format's own way to write a rendered shape onto existing text: ``reshape(rendered, existing)``, which answers
+none for a format that leaves the writing to the Render action."""
+
 
 
 class RenderWouldLoseContent(ValueError):
@@ -216,7 +218,7 @@ class ReshapedCode:
     def onto(self, existing: str, rendered: str) -> Reshaped:
         """The text of existing in the shape rendered has, with the members kept and added; raises
         *RenderWouldLoseContent* when a line existing holds is in it nowhere."""
-        reshaped = self._reshape(rendered, existing) if self._reshape is not None else self._edited(existing, rendered)
+        reshaped = (self._reshape(rendered, existing) if self._reshape is not None else None) or self._edited(existing, rendered)
         held = reshaped.text.splitlines()
         missing = [line for line in existing.splitlines() if line.strip() and not any(line.strip() in kept for kept in held)]
         if missing:

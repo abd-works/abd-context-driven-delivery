@@ -34,6 +34,7 @@ from cdd_guidance.practices.clean_engineering.model.diagram.geometry import MODU
 from cdd_guidance.practices.clean_engineering.model.diagram.module_layout import ModuleLayout
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
+from harness.guidance.practice_formats import Written
 
 RULE = "---"
 LINE_ROOM = 21
@@ -540,21 +541,22 @@ class WhiteboardCleanEngineeringModel(DiagramCleanEngineeringModel):
         loaded.translate_from(source)
         return loaded
 
-    def render(self, canonical: CleanEngineeringModel, previous: Optional[str] = None) -> str:
+    def render(self, canonical: CleanEngineeringModel, written: Written = Written()) -> str:
         """Become the canonical model once, as whiteboard modules and classes, then draw it; the elements a previous
         board held stay where people put them."""
         if canonical is not self:
             self.translate_from(canonical)
         board = self.board()
-        if previous:
-            board.keep_places(Whiteboard.from_text(previous))
+        if written.previous:
+            board.keep_places(Whiteboard.from_text(written.previous))
         return board.save()
 
     def board(self) -> Whiteboard:
         """The model drawn: its modules view, or its class view."""
         return _ModulesBoard(self).draw() if self.is_modules_view else self.class_board_type(self).draw()
 
-    def parse(self, text: str) -> "WhiteboardCleanEngineeringModel":
+    def parse(self, text: str, file: str = "") -> "WhiteboardCleanEngineeringModel":
+
         """The modules view or class view a saved board's text holds, read into this model's own modules. Text that is
         not a saved board raises UnreadableSource, as a draw.io diagram that is not XML does; a saved board that draws
         no module and no class, such as a Stories story map, raises UnreadableBoard from ``take_board``."""

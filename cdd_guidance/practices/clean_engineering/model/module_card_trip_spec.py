@@ -46,8 +46,8 @@ with description("module cards rendered to markdown") as self:
 
     with context("from their drawing, with no markdown to write over"):
         with before.each:
-            drawn = self.practice.render("drawio", CARDS, source="markdown")["content"]
-            self.back = self.practice.render("markdown", drawn, source="drawio")["content"]
+            drawn = self.practice.render("drawio", CARDS, source="markdown").content
+            self.back = self.practice.render("markdown", drawn, source="drawio").content
 
         with it("should hold the three modules the cards name, and no module that only groups them"):
             expect(list(_dependencies(self.back))).to(equal(["src/catalogue", "src/ordering", "src/fulfilment"]))
@@ -64,8 +64,8 @@ with description("module cards rendered to markdown") as self:
 
     with context("from their drawing, over the markdown it was made from"):
         with before.each:
-            drawn = self.practice.render("drawio", CARDS, source="markdown")["content"]
-            self.back = self.practice.render("markdown", drawn, source="drawio", previous=CARDS)["content"]
+            drawn = self.practice.render("drawio", CARDS, source="markdown").content
+            self.back = self.practice.render("markdown", drawn, source="drawio", previous=CARDS).content
 
         with it("should write each card as the person wrote it: its language, its bullets and its constraint"):
             for module in MODULES:
@@ -75,8 +75,8 @@ with description("module cards rendered to markdown") as self:
         with before.each:
             model = MarkdownCleanEngineeringModel().parse(CARDS)
             model.modules[0].dependencies = ["src/fulfilment"]
-            drawn = CleanEngineering(fidelity="modules").render("drawio", model)["content"]
-            self.back = self.practice.render("markdown", drawn, source="drawio", previous=CARDS)["content"]
+            drawn = CleanEngineering(fidelity="modules").render("drawio", model).content
+            self.back = self.practice.render("markdown", drawn, source="drawio", previous=CARDS).content
 
         with it("should write the new dependency on its card"):
             expect(_dependencies(self.back)["src/catalogue"]).to(equal(["src/fulfilment"]))
@@ -90,8 +90,8 @@ with description("module cards rendered to markdown") as self:
 
     with context("from their whiteboard, with no markdown to write over"):
         with before.each:
-            drawn = self.practice.render("whiteboard", CARDS, source="markdown")["content"]
-            self.back = self.practice.render("markdown", drawn, source="whiteboard")["content"]
+            drawn = self.practice.render("whiteboard", CARDS, source="markdown").content
+            self.back = self.practice.render("markdown", drawn, source="whiteboard").content
 
         with it("should hold the three modules the cards name, and no module that only groups them"):
             expect(list(_dependencies(self.back))).to(equal(["src/catalogue", "src/ordering", "src/fulfilment"]))
@@ -108,8 +108,8 @@ with description("module cards rendered to markdown") as self:
 
     with context("from their whiteboard, over the markdown it was made from"):
         with before.each:
-            drawn = self.practice.render("whiteboard", CARDS, source="markdown")["content"]
-            self.back = self.practice.render("markdown", drawn, source="whiteboard", previous=CARDS)["content"]
+            drawn = self.practice.render("whiteboard", CARDS, source="markdown").content
+            self.back = self.practice.render("markdown", drawn, source="whiteboard", previous=CARDS).content
 
         with it("should write each card as the person wrote it: its language, its bullets and its constraint"):
             for module in MODULES:
@@ -119,8 +119,8 @@ with description("module cards rendered to markdown") as self:
         with before.each:
             model = MarkdownCleanEngineeringModel().parse(CARDS)
             model.modules[0].dependencies = ["src/fulfilment"]
-            drawn = CleanEngineering(fidelity="modules").render("whiteboard", model)["content"]
-            self.back = self.practice.render("markdown", drawn, source="whiteboard", previous=CARDS)["content"]
+            drawn = CleanEngineering(fidelity="modules").render("whiteboard", model).content
+            self.back = self.practice.render("markdown", drawn, source="whiteboard", previous=CARDS).content
 
         with it("should write the new dependency on its card"):
             expect(_dependencies(self.back)["src/catalogue"]).to(equal(["src/fulfilment"]))

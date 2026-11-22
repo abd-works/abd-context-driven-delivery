@@ -8,6 +8,7 @@ from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel
 from cdd_guidance.practices.stories.model.python.python_story_model import PythonStoryModel
 from cdd_guidance.practices.stories.model.story_model import Epic, Scenario, Story, StoryModel, StoryType
 from cdd_guidance.practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
+from harness.guidance.practice_formats import Written
 
 
 def story_named(name: str) -> Story:
@@ -185,7 +186,7 @@ with description("a code Story Map") as self:
 
         with context("with the story file written again from the canonical Story Map and the previous tree"):
             with before.each:
-                self.new_tree = self.typescript_map.render(self.canonical, previous=self.previous_tree)
+                self.new_tree = self.typescript_map.render(self.canonical, Written(self.previous_tree))
 
             with it("should keep the hand-written code byte-for-byte"):
                 expect("const mySetupVariable = 42;" in self.new_tree[self.first_file_path]).to(be_true)

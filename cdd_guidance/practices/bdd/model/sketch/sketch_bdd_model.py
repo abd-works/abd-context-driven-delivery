@@ -8,6 +8,7 @@ from cdd_guidance.practices.sketch_document.sketch_outline import SketchOutline
 from cdd_guidance.practices.bdd.model.bdd_model import BddModel
 from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation
 from harness.guidance.guidance import SketchLens
+from harness.guidance.practice_formats import Written
 
 _FENCE = "```"
 _FENCE_LINE = re.compile(r"^([ \t]*)```.*$", re.MULTILINE)
@@ -25,13 +26,14 @@ class SketchBddModel(BddModel):
     # The BDD section of a sketch, opened by either of its headings; the practice holds this lens.
     lens = SketchLens(("bdd:", "behavior driven development:"))
 
-    def parse(self, text: str) -> BddModel:
+    def parse(self, text: str, file: str = "") -> BddModel:
         outline = SketchOutline(_FENCE_LINE.sub(rf"\1{_KEPT_FENCE}", text))
         if outline.holds(self.lens):
             text = outline.body_for(self.lens).replace(_KEPT_FENCE, _FENCE)
         return super().parse(text)
 
-    def render(self, canonical: BddModel, previous: str | None = None) -> str:
+    def render(self, canonical: BddModel, written: Written = Written()) -> str:
+
         """The spec as the BDD section of a sketch: the fidelity it holds, the section's heading, then each subject."""
         realized = any(self._is_realized(node) for node in canonical.behavior_nodes() if isinstance(node, Observation))
         blocks = [f"Fidelity: {'realization' if realized else 'behavior'}", f"## {self.lens.titles[-1]}"]

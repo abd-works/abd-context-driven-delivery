@@ -17,7 +17,8 @@ from typing import TypedDict
 
 from harness.agent_tools.worker_process import WorkerProcess
 from harness.guidance.guidance import FidelityGuidance
-from harness.guidance.practice_formats import RenderRequest
+from harness.guidance.practice_formats import Rendered, RenderRequest
+
 from harness.markdown.format import Format
 
 # The module a worker process runs, which draws one order.
@@ -54,8 +55,10 @@ class RenderOrder:
         self._document = document
 
     @classmethod
-    def from_request(cls, fidelity: FidelityGuidance, request: RenderRequest) -> RenderOrder:
-        """request, whose content is the text read from its files, as a worker draws it at fidelity."""
+    def from_request(cls, request: RenderRequest) -> RenderOrder:
+        """request, whose content is the text read from its files, as a worker draws it at the fidelity request works
+        at."""
+        fidelity = request.fidelity
         return cls({
             "fidelity": fidelity.slug,
             "module": type(fidelity.practice_guidance).__module__,
@@ -80,12 +83,11 @@ class RenderOrder:
         """The module whose import registers the fidelity's practice with the practice catalogue."""
         return self._document["module"]
 
-    @property
-    def request(self) -> RenderRequest:
-        """The render the order asks for, at no fidelity yet: the fidelity the worker makes renders it."""
+    def request_at(self, fidelity: FidelityGuidance) -> RenderRequest:
+        """The render the order asks for, at fidelity, the fidelity the worker made from the order's slug."""
         document = self._document
         return RenderRequest(
-            Format(document["format"]), document["content"], Format(document["source"]), document["previous"], document["folder"],
+            Format(document["format"]), document["content"], Format(document["source"]), document["previous"], document["folder"], fidelity,
         )
 
     @property
@@ -97,22 +99,24 @@ class WorkerRender:
     """One render drawn by a worker process: the server writes the order, the worker draws it at the same fidelity and
     writes what it drew to an answer file, and the server reads that back as the render's result."""
 
-    def __init__(self, fidelity: FidelityGuidance) -> None:
-        self._fidelity = fidelity
+    def __init__(self, request: RenderRequest) -> None:
+        self._request = request
 
-    def takes(self, request: RenderRequest) -> bool:
-        """Whether a worker draws request: a diagram, whose class layout can take minutes, converted from text the
+    @property
+    def takes_it(self) -> bool:
+        """Whether a worker draws the request: a diagram, whose class layout can take minutes, converted from text the
         server read. Content read some other way, such as Stories' story tests merged onto their maps, stays in the
         server."""
-        return request.format.group == "diagram" and isinstance(request.content, str)
+        return self._request.format.group == "diagram" and isinstance(self._request.content, str)
 
-    def render(self, request: RenderRequest) -> dict:
-        """What request renders to, drawn by a worker process; ``RenderFailed`` when the worker exits with an error."""
+    def render(self) -> Rendered:
+        """What the request renders to, drawn by a worker process; ``RenderFailed`` when the worker exits with an
+        error."""
         with tempfile.TemporaryDirectory(prefix="cdd-render-") as folder:
             order_file, answer_file, errors_file = (Path(folder) / name for name in ("order.json", "answer.json", "errors.txt"))
-            order_file.write_text(RenderOrder.from_request(self._fidelity, request).text, encoding="utf-8")
+            order_file.write_text(RenderOrder.from_request(self._request).text, encoding="utf-8")
             with open(errors_file, "w", encoding="utf-8") as errors:
                 exit_code = WorkerProcess(WORKER_MODULE).run([str(order_file), str(answer_file)], errors)
             if exit_code != 0:
                 raise RenderFailed(exit_code, errors_file.read_text(encoding="utf-8", errors="replace"))
-            return json.loads(answer_file.read_text(encoding="utf-8"))
+            return Rendered.from_data(json.loads(answer_file.read_text(encoding="utf-8")))

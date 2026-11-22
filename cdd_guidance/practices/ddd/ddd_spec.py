@@ -20,6 +20,7 @@ from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngi
 from cdd_guidance.practices.ddd.ddd import Ddd
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
+from harness.guidance.practice_formats import Rendered
 
 
 class _DddSpecSupport:
@@ -147,14 +148,14 @@ with description("a Ddd toolset"):
     with context("whose transform tool is called"):
         with it("should delegate to CleanEngineering and return a dict"):
             result = Ddd().render("markdown", "class Foo:\n    pass\n", source="python")
-            expect(result).to(be_a(dict))
-            expect(result["format"]).to(equal("markdown"))
+            expect(result).to(be_a(Rendered))
+            expect(result.format).to(equal("markdown"))
 
         with context("with a domain model read from python and rendered to typescript"):
             with it("should carry each python body commented out inside its method"):
                 python = "class Cart:\n    def add(self, item: object) -> None:\n        self.items.append(item)\n"
                 result = Ddd(fidelity="model").render("typescript", python, source="python")
-                expect("    // self.items.append(item)" in result["content"]).to(be_true)
+                expect("    // self.items.append(item)" in result.content).to(be_true)
 
 
 with description("a Ddd practice made in a set with the Clean Engineering practice it extends"):

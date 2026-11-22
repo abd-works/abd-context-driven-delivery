@@ -90,7 +90,7 @@ with description("a domain model Markdown document") as self:
             added = MarkdownModule("Billing", 3)
             added.description = "Charges the plans."
             self.parsed.modules.append(added)
-            self.rendered = self.parsed.render()
+            self.rendered = self.parsed.render(self.parsed)
 
         with it("should write the renamed module's heading in its own place"):
             expect(self.rendered).to(contain("## Customers\n"))
@@ -101,4 +101,4 @@ with description("a domain model Markdown document") as self:
     with context("rendered through the clean engineering render tool"):
         with it("should write the document it was given"):
             result = CleanEngineering(fidelity="model").render("markdown", self.text, source="markdown")
-            expect(result["content"]).to(equal(self.text))
+            expect(result.content).to(equal(self.text))

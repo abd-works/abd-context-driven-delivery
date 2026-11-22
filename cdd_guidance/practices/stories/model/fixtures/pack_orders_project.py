@@ -548,7 +548,7 @@ def _read(practice: Stories, format_name: str, files: dict[str, str]):
             path = Path(folder.name) / file
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(text, encoding="utf-8")
-        return MarkdownStoryModel.from_workspace(Path(folder.name))
+        return MarkdownStoryModel().read_folder(Path(folder.name), Path(folder.name))
     adapter = practice.formats.adapter_class(format_name)(TESTS_ROOT)
     return adapter.load({file: text for file, text in files.items() if file.startswith(TESTS_ROOT)})
 

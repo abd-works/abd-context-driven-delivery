@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from cdd_guidance.practices.stories.model.diagram_story_model import (
     DiagramStoryCell,
@@ -22,8 +22,8 @@ from cdd_guidance.practices.stories.model.diagram_story_model import (
     DiagramStoryModel,
 )
 from cdd_guidance.practices.stories.model.markdown.links import StoryMapLinks
-from cdd_guidance.practices.stories.model.story_map_files import path_from
 from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryModel, StoryType
+from harness.guidance.practice_formats import Written
 
 # A sub-epic's estimate is never drawn narrower than this, however little room its bar leaves.
 _ESTIMATE_MIN_WIDTH = 80
@@ -379,20 +379,14 @@ class DrawIOStoryModel(DiagramStoryModel):
     def story_floor(self) -> int:
         return DrawIOStory.shaping_row_y if self.has_outline_estimates else DrawIOStory.row_y
 
-    def render(
-        self,
-        canonical: StoryModel | None = None,
-        previous: str | None = None,
-        workspace: str | None = None,
-    ) -> str:
-        """Draw the story map. In a *workspace* folder, each epic, sub-epic, and story cell links to its
-        ``story-map.md`` entry there, and a story to its own file when one exists. With no target file,
-        the cell has no link. Each cell a *previous* drawing held stays where it stood there, so the cards a person
-        moved stay put."""
-        drawn = self.copy_of(canonical if canonical is not None else self)
-        if workspace:
-            drawn.links = StoryMapLinks(drawn, workspace)
-        drawn.kept_places = _KeptPlaces.from_text(previous)
+    def render(self, canonical: StoryModel, written: Written = Written()) -> str:
+        """Draw the story map. Written in a folder, each epic, sub-epic, and story cell links to its ``story-map.md``
+        entry there, and a story to its own file when one exists. With no target file, the cell has no link. Each cell
+        the previous drawing held stays where it stood there, so the cards a person moved stay put."""
+        drawn = self.copy_of(canonical)
+        if written.folder is not None:
+            drawn.links = StoryMapLinks(drawn, str(written.folder))
+        drawn.kept_places = _KeptPlaces.from_text(written.previous or None)
         return drawn.save()
 
     # Where the cells of the drawing this one replaces stood; none while the map is drawn afresh.
@@ -411,21 +405,8 @@ class DrawIOStoryModel(DiagramStoryModel):
             page.add(vertex)
         return page.text()
 
-    @classmethod
-    def from_workspace(cls, path: Path, *, on_file: Optional[Callable[[str], None]] = None, project: Optional[Path] = None) -> "DrawIOStoryModel":
-        """The story map drawn in the .drawio file at path, each epic and everything under it naming that file as a
-        path from project (from the file's own folder without one)."""
-        path = Path(path).resolve()
-        file = path_from(Path(project).resolve() if project is not None else path.parent, path)
-        if on_file is not None:
-            on_file(file)
-        text = path.read_text(encoding="utf-8")
-        loaded = cls().parse(text)
-        loaded.sources.add(file, text)
-        loaded.descendants.place_in(file)
-        return loaded
+    def parse(self, text: str, file: str = "") -> "DrawIOStoryModel":
 
-    def parse(self, text: str) -> "DrawIOStoryModel":
         """Read the story map by where its cells sit, not their order in the file: draw.io saves cells back to
         front, so bringing a cell forward or sending it back moves it in the file but not on screen."""
         cells = self._placed_cells(text)

@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Iterable
 
 from harness.graph.model_node import ModelChildren
 from harness.graph.graph import Graph
+from harness.guidance.practice_formats import FormatAdapter
 
 from .collections import ContentTypes, NavComponents, Transitions
 from .nodes import ContentType, Control, Interaction, NavComponent, Region, Screen, StoryDemoControl, Transition, UxContext
@@ -29,7 +30,8 @@ class ScreenNotOnMap(KeyError):
         self.name = name
 
 
-class UxMap(UxNode):
+class UxMap(UxNode, FormatAdapter):
+
     _semantic_type_name = "UxMap"
     graph_facts = ("scope",)
 

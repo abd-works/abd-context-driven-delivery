@@ -350,7 +350,8 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
     module_type = PythonModule
     suffixes = language.suffixes
 
-    def parse(self, text: str) -> "PythonCleanEngineeringModel":
+    def parse(self, text: str, file: str = "") -> "PythonCleanEngineeringModel":
+
         """The model the Python text declares. Text that is not valid Python raises UnreadableSource."""
         self._text = text
         try:

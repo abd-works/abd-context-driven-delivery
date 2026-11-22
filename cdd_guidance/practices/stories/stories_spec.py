@@ -15,7 +15,7 @@ from expects import be, be_true, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from cdd_guidance.practices.stories.stories import Stories
-from harness.guidance.practice_formats import RenderRequest
+from harness.guidance.practice_formats import RenderRequest, Rendered
 from harness.markdown.format import Format
 from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 from harness.agent_tools.agent_tools import AgentInstructions
@@ -335,15 +335,15 @@ with description("Stories"):
             )
 
         with it("should return a dict"):
-            expect(isinstance(self.result, dict)).to(be_true)
+            expect(isinstance(self.result, Rendered)).to(be_true)
 
         with it("should set format to python"):
-            expect(self.result["format"]).to(equal("python"))
+            expect(self.result.format).to(equal("python"))
 
         with it("should set content to a dict of path->file text"):
-            expect(isinstance(self.result["content"], dict)).to(be_true)
-            expect(len(self.result["content"]) > 0).to(be_true)
-            for path, text in self.result["content"].items():
+            expect(isinstance(self.result.content, dict)).to(be_true)
+            expect(len(self.result.content) > 0).to(be_true)
+            for path, text in self.result.content.items():
                 expect(isinstance(path, str)).to(be_true)
                 expect(isinstance(text, str)).to(be_true)
 
@@ -366,7 +366,7 @@ with description("Stories"):
             self.tempdir.cleanup()
 
         with it("should write code under the project's story_tests, where the fidelity declares it"):
-            paths = self.result["content"]
+            paths = self.result.content
             expect(all(p.startswith("story_tests/") for p in paths)).to(be_true)
             expect("story_tests/story-test.ts" in paths).to(be_true)
 
@@ -380,7 +380,7 @@ with description("Stories"):
             )
 
         with it("should emit files under story_tests/"):
-            paths = self.result["content"]
+            paths = self.result.content
             expect(all(p.startswith("story_tests/") for p in paths)).to(be_true)
             expect("story_tests/story-test.ts" in paths).to(be_true)
 

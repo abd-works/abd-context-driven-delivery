@@ -27,6 +27,7 @@ from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen, Serve
 from cdd_guidance.practices.stories.model.story_tree import KEY_SEPARATOR
 from cdd_guidance.practices.ux.model.story_link import StoryLink
 from cdd_guidance.practices.ux.model.ux_map import UxMap
+from harness.guidance.practice_formats import Written
 
 _CLI = Path(__file__).with_name("drawio_ux.mjs")
 # Writing a two-page diagram takes well under a second; a write still running after this has hung.
@@ -350,10 +351,10 @@ class DrawioUxMap(UxMap):
         drawing is another practice's, such as a story map."""
         return any(mark in text for mark in _UX_DRAWING_MARKS)
 
-    def parse(self, content: str) -> UxMap:
+    def parse(self, text: str, file: str = "") -> UxMap:
         """A new map of this format, read from a draw.io file."""
         ux_map = type(self).create()
-        ux_map._read_pages(self._diagram_of(content))
+        ux_map._read_pages(self._diagram_of(text))
         return ux_map
 
     def _diagram_of(self, content: str) -> ET.Element:
@@ -416,15 +417,17 @@ class DrawioUxMap(UxMap):
         self.transitions.append(transition)
         return transition
 
-    def render(self, canonical: UxMap, previous: Optional[str] = None) -> str:
+    def render(self, canonical: UxMap, written: Written = Written()) -> str:
         """canonical as Detailed IA + Site Map: copied into a draw.io map with this map's timeout, which draws itself.
         previous is the drawing as it is now: a source that holds no screen, such as the UX context file, has nothing
         to draw, so a drawing that holds screens stays as it is rather than being written over with an empty one. A
         drawing that holds what canonical does not (a screen, a region, a control, a transition, a story or a domain
         term a person drew) keeps it: the drawing is laid out again, and nothing it showed is left out."""
+        previous = written.previous
         held = self.parse(previous) if previous else None
         if held is not None and not canonical.screens and held.screens:
             return previous
+
         drawn = self.copy_of(canonical)
         if held is not None:
             drawn.keep_what_only(held)

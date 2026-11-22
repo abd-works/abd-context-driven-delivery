@@ -200,7 +200,7 @@ it should hold no lines
 
 
 def _render(target: str, content: str, source: str, fidelity: str = "behavior") -> str:
-    return Bdd(fidelity=fidelity).render(target, content, source=source)["content"]
+    return Bdd(fidelity=fidelity).render(target, content, source=source).content
 
 
 def _observation(content: str, source: str, path: tuple):

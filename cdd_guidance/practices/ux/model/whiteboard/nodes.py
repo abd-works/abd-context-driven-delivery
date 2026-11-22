@@ -26,6 +26,7 @@ from harness.whiteboard import BoardElement, Box, Whiteboard, WhiteboardNode
 from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen, ServesStories, StoryDemoControl, Transition
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 from cdd_guidance.practices.ux.model.ux_node import UxNode
+from harness.guidance.practice_formats import Written
 
 KEY_LENGTH = 10
 """Hex digits of a node's path hash in its element id: enough that two nodes of one map never share one."""
@@ -238,17 +239,17 @@ class WhiteboardUxMap(UxMap):
         """A board that draws a UX screen; any other board is another practice's, such as a story map."""
         return '"screen.' in text
 
-    def render(self, canonical: UxMap, previous: Optional[str] = None) -> str:
+    def render(self, canonical: UxMap, written: Written = Written()) -> str:
         """canonical drawn as a board. Drawn over a previous board, it loses nothing that board holds: each element
         stays where people put it, a card keeps the stories, scenarios, and steps a person wrote on it beside what
         canonical's control serves, and every element canonical does not draw (a card or a screen a person added or
         canonical has since lost, a note stuck on the board) stays as it was."""
         drawn = self.copy_of(canonical)
-        if not previous:
+        if not written.previous:
             return drawn.board().save()
-        before = Whiteboard.from_text(previous)
+        before = Whiteboard.from_text(written.previous)
         if any(element.role == "screen" for element in before.sections):
-            drawn.keep_served_by(self.parse(previous))
+            drawn.keep_served_by(self.parse(written.previous))
         board = drawn.board().keep_places(before)
         for element in before.elements:
             if board.element(element.id) is None:
@@ -270,10 +271,11 @@ class WhiteboardUxMap(UxMap):
             board.draw(transition)
         return board
 
-    def parse(self, content: str) -> UxMap:
+    def parse(self, text: str, file: str = "") -> UxMap:
         """A new map of this format, read from a board's text by where its elements sit."""
         ux_map = type(self).create()
-        ux_map._take_board(Whiteboard.from_text(content).holding({"screen"}, "UX screen"))
+        ux_map._take_board(Whiteboard.from_text(text).holding({"screen"}, "UX screen"))
+
         return ux_map
 
     def _take_board(self, board: Whiteboard) -> None:

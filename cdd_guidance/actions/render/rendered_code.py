@@ -41,7 +41,9 @@ from pathlib import Path, PurePosixPath
 from harness.annotations.name import Name
 from cdd_guidance.actions.render.reshaped_code import Reshape, ReshapedCode
 from harness.guidance.declared_outputs import DeclaredFile
-from harness.guidance.practice_formats import Reshaped
+from cdd_guidance.actions.render.render_result import KeptCodeMember, Migration, SavedCode, SignatureDiffers
+from harness.guidance.practice_formats import Rendered, Reshaped
+
 from harness.installation.context_config import CONTEXT_FOLDER
 from harness.markdown.format import Format
 
@@ -112,7 +114,7 @@ class RenderedCode:
         # The format's own way to write a rendered shape onto a file already there, when its adapter has one.
         self._reshape = reshape
 
-    def save(self, rendered: dict) -> dict:
+    def save(self, rendered: Rendered) -> SavedCode:
         """Write each piece of the rendered code at its declared path and answer the files: ``paths`` the files that
         now hold the render, and ``migrate`` what waits for a person or an agent in a file already there: each
         member it keeps though its model no longer holds it (``kept``, with ``may_have_replaced_it``, the members added
@@ -120,16 +122,13 @@ class RenderedCode:
         ``model_has``, the model's line; the file's own line stays). A piece whose file is already there is written onto it,
         losing nothing. Every piece is placed, and every file's new text made, before any is written, so a render that
         cannot be placed whole, or that would lose a line a file holds, saves nothing."""
-        written = {file: self._written_onto(file, text) for file, text in self._placed(rendered["content"]).items()}
+        written = {file: self._written_onto(file, text) for file, text in self._placed(rendered.content).items()}
         for file, reshaped in written.items():
             file.parent.mkdir(parents=True, exist_ok=True)
             file.write_text(reshaped.text, encoding="utf-8")
-        migrate = [self._migration(file, kept, reshaped) for file, reshaped in written.items() for kept in reshaped.kept]
-        migrate += [
-            {"file": str(file), "signature_differs": member, "model_has": line}
-            for file, reshaped in written.items() for member, line in reshaped.changed.items()
-        ]
-        return {"format": rendered["format"], "paths": [str(file) for file in written], "migrate": migrate}
+        migrate: list[Migration] = [self._migration(file, kept, reshaped) for file, reshaped in written.items() for kept in reshaped.kept]
+        migrate += [SignatureDiffers(file, member, line) for file, reshaped in written.items() for member, line in reshaped.changed.items()]
+        return SavedCode(rendered, list(written), migrate)
 
     def _written_onto(self, file: Path, text: str) -> Reshaped:
         """What file holds once text is rendered to it: text itself for a file not there yet, else the file in text's
@@ -138,11 +137,11 @@ class RenderedCode:
             return Reshaped(text, [], [])
         return ReshapedCode(self._format, self._reshape).onto(file.read_text(encoding="utf-8"), text)
 
-    def _migration(self, file: Path, kept: str, reshaped: Reshaped) -> dict:
+    def _migration(self, file: Path, kept: str, reshaped: Reshaped) -> KeptCodeMember:
         """One member to migrate: the file, the member kept, and the members added to the same class, else to the file."""
         owner = kept.rpartition(".")[0]
         beside = [added for added in reshaped.added if owner and added.rpartition(".")[0] == owner]
-        return {"file": str(file), "kept": kept, "may_have_replaced_it": beside or ([] if owner else list(reshaped.added))}
+        return KeptCodeMember(file, kept, beside or ([] if owner else list(reshaped.added)))
 
     def _placed(self, content: object) -> dict[Path, str]:
         """Each piece of content with the file it goes to."""

@@ -25,6 +25,7 @@ from cdd_guidance.practices.ddd.model.nodes import (
     TARGET_SEGMENT,
 )
 from cdd_guidance.practices.ddd.model.markdown.replaced_document import ReplacedDocument
+from harness.guidance.practice_formats import Written
 
 _EVENT_MAP = "event map"
 # The `##` sections a map holds that are no context: the event map, and the template's explanation of the map's format.
@@ -529,7 +530,7 @@ class MarkdownBoundedContextMap(BoundedContextMap, MarkdownDomainNode):
         self._index = end
         return context
 
-    def parse(self, text: str) -> "MarkdownBoundedContextMap":
+    def parse(self, text: str, file: str = "") -> "MarkdownBoundedContextMap":
         """Read the text's contexts into this map, and return it."""
         self.contexts = []
         self._lines = text.splitlines()
@@ -559,11 +560,13 @@ class MarkdownBoundedContextMap(BoundedContextMap, MarkdownDomainNode):
         """A markdown text that names no aggregate is a plain class model, which Clean Engineering's markdown reads."""
         return not self.every_aggregate
 
-    def render(self, canonical: BoundedContextMap | None = None, previous: str | None = None) -> str:
-        """canonical (this map when none is given) as markdown; under the header of the sketch it came from when the
-        previous text is a sketch. A map read from a drawing first takes, from the markdown file it is written over,
-        the words a drawing does not hold."""
-        source = canonical or self
+    def render(self, canonical: BoundedContextMap, written: Written = Written()) -> str:
+        """canonical as markdown; under the header of the sketch it came from when the previous text is a sketch. A map
+        read from a drawing first takes, from the markdown file it is written over, the words a drawing does not
+        hold."""
+        source = canonical
+        previous = written.previous
+
         from_sketch = bool(previous) and "## domain driven design:" in previous.lower()
         if previous and not from_sketch and not source.holds_document_words:
             ReplacedDocument(MarkdownBoundedContextMap().parse(previous), source).give_its_words()

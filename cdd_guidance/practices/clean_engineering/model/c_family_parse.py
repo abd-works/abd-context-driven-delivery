@@ -91,7 +91,8 @@ class CFamilyParse:
     operation_type: type
     property_type: type
 
-    def parse(self, text: str) -> "CFamilyParse":
+    def parse(self, text: str, file: str = "") -> "CFamilyParse":
+
         """Read the text's classes and top-level functions into this model's one module, and return the model. The
         module keeps the text, and each class and operation the lines it spans."""
         self._text = text

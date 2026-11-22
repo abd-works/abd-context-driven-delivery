@@ -54,6 +54,7 @@ from cdd_guidance.practices.clean_engineering.model.drawio.diagram_node import (
 )
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
+from harness.guidance.practice_formats import Written
 
 _EDGE_BASE_STYLE = 'edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;'
 EDGE_STYLES = {'inheritance': f'{_EDGE_BASE_STYLE}endArrow=block;endSize=16;endFill=0;', 'composition': f'{_EDGE_BASE_STYLE}startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;', 'aggregation': f'{_EDGE_BASE_STYLE}startArrow=diamondThin;startFill=0;startSize=14;endArrow=open;endSize=12;', 'association': f'{_EDGE_BASE_STYLE}endArrow=open;endSize=12;', 'dependency': f'{_EDGE_BASE_STYLE}dashed=1;endArrow=open;endSize=12;'}
@@ -105,7 +106,7 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
         loaded.translate_from(source)
         return loaded
 
-    def parse(self, text: str) -> 'DrawIOCleanEngineeringModel':
+    def parse(self, text: str, file: str = "") -> 'DrawIOCleanEngineeringModel':
         """Read a modules-view or class-view diagram into this model's own modules, and return it."""
         root_el = self._diagram_xml(text)
         self.modules = []
@@ -129,15 +130,16 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
         else:
             _ClassDiagramReader(self).read_single_page(document)
 
-    def render(self, canonical: CleanEngineeringModel, previous: Optional[str] = None) -> str:
+    def render(self, canonical: CleanEngineeringModel, written: Written = Written()) -> str:
         """Become the canonical model once, as Draw.io modules and classes, then write this model's own diagram. With
         previous, the drawing this one replaces, the cards and arrows a person placed there stay where they are; without
         it, the diagram this model keeps positions from, when it keeps them."""
         if canonical is not self:
             self.translate_from(canonical)
         if self.is_modules_view:
-            return _ModulesDiagramWriter(self, previous or self.previous).write()
-        return _ClassDiagramWriter(self, previous or self.kept_previous()).write()
+            return _ModulesDiagramWriter(self, written.previous or self.previous).write()
+        return _ClassDiagramWriter(self, written.previous or self.kept_previous()).write()
+
 
     def kept_previous(self) -> Optional[str]:
         """The previous diagram when this render keeps its positions, else None."""

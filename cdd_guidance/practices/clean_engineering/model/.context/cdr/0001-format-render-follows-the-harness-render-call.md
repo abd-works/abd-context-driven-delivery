@@ -21,3 +21,7 @@ Clean Engineering and BDD keep their formats' `render` as the harness's render c
 
 - M17 leaves the Clean Engineering and BDD count; its work is step 1, owned by harness core, and steps 2 and 3 follow in the same change.
 - Until then a format that names `previous` keeps the bodies or text the target file already has, and one that does not writes from the canonical model alone.
+
+## Closed
+
+The render call has one shape now. Every format's adapter extends harness/guidance's *FormatAdapter* and renders with `render(canonical, written)`, where *Written* holds the target file as it is now (`previous`) and the folder its links point into (`folder`); `_call_render` and its inspection of the signature are gone, and no format defaults `canonical` to itself, so a model writes itself back with `model.render(model)`.

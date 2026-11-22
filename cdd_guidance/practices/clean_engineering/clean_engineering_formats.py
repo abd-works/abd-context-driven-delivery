@@ -5,7 +5,8 @@ from __future__ import annotations
 from dataclasses import replace
 from pathlib import Path
 
-from harness.guidance.practice_formats import PracticeFormats, RenderRequest
+from harness.guidance.practice_formats import PracticeFormats, Rendered, RenderRequest
+
 
 
 class CleanEngineeringFormats(PracticeFormats):
@@ -14,7 +15,7 @@ class CleanEngineeringFormats(PracticeFormats):
     written under that module's banner, which names the file the fidelity declares for the module
     (``{module}/{module}.py``). Code rendered from text names no folder and stays one text."""
 
-    def render(self, request: RenderRequest) -> dict:
+    def render(self, request: RenderRequest) -> Rendered:
         return super().render(self._naming_the_folders_module(request))
 
     def _naming_the_folders_module(self, request: RenderRequest) -> RenderRequest:

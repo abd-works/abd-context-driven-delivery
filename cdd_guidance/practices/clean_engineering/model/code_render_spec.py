@@ -77,7 +77,7 @@ _TYPESCRIPT_TOTAL = "return this.items.reduce((sum, item) => sum + item.price, 0
 
 def _render(target: str, content: str, source: str, previous: str = "") -> str:
     toolset = type(ToolsetReference.parsed(_TOOLSET).made())(fidelity="model")
-    return toolset.render(format=target, content=content, source=source, previous=previous)["content"]
+    return toolset.render(format=target, content=content, source=source, previous=previous).content
 
 
 def _bodies(language: str, text: str) -> dict:

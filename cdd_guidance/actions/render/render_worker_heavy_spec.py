@@ -95,7 +95,7 @@ with description("a class diagram rendered for a chat's call"):
         expect(self.drawing.read_text(encoding="utf-8")).to(equal(self.drawn_here))
 
     with it("should answer with the file it saved"):
-        expect(self.results[0]["path"]).to(equal(str(self.drawing)))
+        expect(self.results[0].path).to(equal(str(self.drawing)))
 
     with context("by a worker that fails"):
         with before.all:

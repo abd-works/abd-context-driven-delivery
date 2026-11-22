@@ -25,6 +25,7 @@ from cdd_guidance.practices.stories.model.drawio.nodes import (
     DrawIOStoryModel,
     DrawIOEpic,
 )
+from harness.guidance.practice_formats import Written
 LEFT_MARGIN_X = DiagramEpic.left_margin
 SUBEPIC_DEPTH_GAP = DiagramEpic.depth_gap
 SUBEPIC_HEIGHT = DiagramEpic.bar_height
@@ -499,7 +500,7 @@ with description("a DrawIO Story Map rendered in a workspace") as self:
                 "onboard/get-sim/select_sim_story.test.md": "## Story: Select Sim\n",
             })
             self.source = MarkdownStoryModel().parse(_LINKED_MAP)
-            self.text = DrawIOStoryModel().render(self.source, workspace=str(self.root))
+            self.text = DrawIOStoryModel().render(self.source, Written(folder=Path(self.root)))
             self.links = _links_by_label(self.text)
 
         with it("should link an epic cell to its story-map.md entry"):
@@ -537,7 +538,7 @@ with description("a DrawIO Story Map rendered in a workspace") as self:
             from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
 
             root = _workspace({".context/sims-story-map.md": _LINKED_MAP})
-            text = DrawIOStoryModel().render(MarkdownStoryModel().parse(_LINKED_MAP), workspace=str(root))
+            text = DrawIOStoryModel().render(MarkdownStoryModel().parse(_LINKED_MAP), Written(folder=Path(root)))
             expect(_links_by_label(text)["Onboard A Customer"][0]).to(equal("sims-story-map.md#e-onboard-a-customer"))
 
     with context("with no story-map.md and no story files"):
@@ -545,7 +546,7 @@ with description("a DrawIO Story Map rendered in a workspace") as self:
             from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
 
             source = MarkdownStoryModel().parse(_LINKED_MAP)
-            text = DrawIOStoryModel().render(source, workspace=str(_workspace({"notes.md": "x\n"})))
+            text = DrawIOStoryModel().render(source, Written(folder=Path(_workspace({"notes.md": "x\n"}))))
             expect(_links_by_label(text)).to(equal({}))
             expect("link=" in text).to(be_false)
             expect("hedietLinkedDataV1" in text).to(be_false)

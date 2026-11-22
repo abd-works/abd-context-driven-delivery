@@ -8,10 +8,8 @@ import re
 from pathlib import Path
 from typing import Callable, Optional
 
-from harness.guidance.practice_formats import FormatAdapter
 
 from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel
-from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
 from cdd_guidance.practices.stories.model.story_map_files import (
     STORY_FILE_SUFFIXES,
     STORY_TESTS_FOLDER,
@@ -78,11 +76,10 @@ class ProjectStoryFiles:
         if nearest is not None:
             inside = Path(root).resolve() in nearest.resolve().parents
             return self._story_map_file(nearest, Path(root) if inside else nearest.parent)
-        return (
-            self._formats.adapter_class("json").from_workspace(files.folder)
-            or self._formats.adapter_class("markdown").from_workspace(files.folder, on_file=self._on_file)
-            or StoryModel()
-        )
+        saved = files.story_graph()
+        if saved is not None:
+            return self._formats.adapter("json").read_file(saved, files.folder, self._on_file)
+        return self._formats.adapter("markdown").read_folder(files.folder, files.folder, self._on_file) or StoryModel()
 
     def story_map_of(self, files: list[Path]) -> StoryModel:
         """The story maps and story tests among files, merged into one story map whose nodes name their files as paths
@@ -174,10 +171,7 @@ class ProjectStoryFiles:
         onto its story map (``read_files``)."""
         if self.reader_of(Path(path)) is not None:
             return self.story_map_of([path])
-        adapter = self._formats.for_file(Path(path))
-        if isinstance(adapter, MarkdownStoryModel):
-            return adapter.opened_from(Path(path), self.project)
-        return self._read_by(adapter, Path(path), self.project) or adapter
+        return self._formats.for_file(Path(path)).opened_from(Path(path), self.project)
 
     def _story_map_of_code(self, tests: list[Path]) -> StoryModel:
         """The story map the story tests in code among tests hold under the project's story_tests, each language read
@@ -193,7 +187,7 @@ class ProjectStoryFiles:
     def _code_map(self, tests: list[Path], on_file: OnFile) -> StoryModel:
         merged = StoryModel()
         for reader, texts in self._texts_by_reader(tests).items():
-            read = type(reader)(tests_root=STORY_TESTS_FOLDER).parse(texts, on_file=on_file, project=self.project)
+            read = type(reader)(tests_root=STORY_TESTS_FOLDER).load(texts, on_file=on_file, project=self.project)
             merged.sources.take(read.sources)
             self._merge_epics(merged, read.epics)
         return merged
@@ -222,16 +216,10 @@ class ProjectStoryFiles:
         return next((reader for reader in self.code_readers if reader.is_story_file(path)), None)
 
     def _story_map_file(self, path: Path, project: Path) -> StoryModel:
-        """The story map in the file at path, read by the format that reads its extension."""
-        return self._read_by(self._formats.for_file(path), path, project) or StoryModel()
+        """The story map in the file at path, read by the format that reads its extension, each node naming its file
+        as a path from project."""
+        return self._formats.for_file(path).read_file(path, project, self._on_file)
 
-    def _read_by(self, adapter: FormatAdapter, path: Path, project: Path) -> StoryModel | None:
-        """The story map in the file at path as adapter, the format that reads its extension, reads it: by the
-        format's own read of a file, which names each node's file as a path from project; a format with none, such
-        as a whiteboard, reads the file's text."""
-        if hasattr(adapter, "from_workspace"):
-            return adapter.from_workspace(path, on_file=self._on_file, project=project)
-        return adapter.parse(path.read_text(encoding="utf-8"))
 
     def _maps_beside(self, tests: list[Path]) -> list[Path]:
         """The story map each story test belongs to: in its own folder, or the nearest folder above it inside project,

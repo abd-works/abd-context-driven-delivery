@@ -5,6 +5,7 @@ from expects import expect, equal, contain
 
 from cdd_guidance.practices.ddd.model.sketch.sketch_ddd_model import SketchDddModel
 from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownBoundedContextMap
+from harness.guidance.practice_formats import Written
 
 _SKETCH = """\
 # Example sketch
@@ -52,7 +53,7 @@ with description("SketchDddModel"):
 
         with it("should render markdown bounded-context map from sketch"):
             model = SketchDddModel().parse(_SKETCH)
-            body = MarkdownBoundedContextMap().render(model, _SKETCH)
+            body = MarkdownBoundedContextMap().render(model, Written(_SKETCH))
             expect(body).to(contain("## Sales | custom"))
             expect(body).to(contain("### Cart"))
             expect(body).to(contain("## event map"))
