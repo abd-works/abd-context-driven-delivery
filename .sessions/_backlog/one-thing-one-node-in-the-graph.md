@@ -16,6 +16,9 @@ What it costs: a class's facts are split between two nodes, counts are doubled, 
 4. **Facts with several formats selected.** The one node carries the facts of each selected format, each fact from the format that supplies it: the code's measures and the model document's description sit together on the one class.
 5. **"Model" means the model fidelity, not the markdown format.** A model is written at the model fidelity in code, in markdown or as a diagram. The rule that the code must not break the model's shape is a rule between two fidelities, model and code, whatever format each is written in. It is kept by the order of work, not by a comparison across formats: render the code from the markdown or the diagram, which gives it the model's shape, then generate the implementation into that shape. No graph rule compares a markdown node with a code node of the same class.
 
+6. **Which fidelity is right when two disagree.** In general the fidelity with the most detail is the source of truth: code over a model, a model over a module description. People still often edit a fidelity with less detail first, such as a module description or a story's scenarios in drawio or markdown, and then write the tests and the code to match. So neither direction of change is wrong, and a difference between two fidelities is something to report, not something a load refuses.
+7. **Differences are reported by the repository's e2e test, not by a load.** As part of the e2e test of a repository, compare the graph across its fidelities and report where they disagree: an operation the code has that the model lacks, a scenario the story test lacks, a module the code has that the module description lacks. That keeps a load simple, in one format with no crossing, and still tells the team when a lower fidelity has fallen behind the code or the code has not yet caught up with an edited model.
+
 ## What the fix removes
 
 - the second node for a thing written in two formats
