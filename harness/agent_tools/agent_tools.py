@@ -30,8 +30,6 @@ type ClassMember = Callable[..., Any]
 # What a class annotation such as ``@toolset_collection`` decorates: a class it joins with its framework base, or a
 # property it marks.
 type JoinedTarget = Annotatable | property
-LISTED_INSTRUCTIONS_NOTE = "Call this tool for the full instructions."
-
 SUB_AGENT_CALLER_PREAMBLE = """Hand work to a background sub-agent and continue without waiting.
 
 Do not perform the delegated work in this conversation. Do not wait for the
@@ -69,6 +67,18 @@ class AgentToolValidationError(Exception):
         where = f"{self.class_name}.{self.action_name}" if self.class_name else self.action_name
         detail = f"{where}: {message}"
         super().__init__(f"{detail} (line {lineno})" if lineno is not None else detail)
+
+
+@dataclass(frozen=True)
+class InstalledName:
+    """Where install puts the files of one tool of a toolset, and what it names them. ``folder`` is the folder the
+    toolset's files go in, as the toolset knows it; ``stem`` is the name the toolset's files are named by within it,
+    none for a toolset whose files are named by its own folder; and ``is_own`` says the tool is the toolset's own, such
+    as a guidance's whole instructions, named after the toolset alone rather than after the tool."""
+
+    folder: Path
+    stem: str | None = None
+    is_own: bool = False
 
 
 class AgentToolSetOrigin:
@@ -129,11 +139,6 @@ class AgentToolSetOrigin:
     parameter_notes: ClassVar[dict[str, str]] = {}
     """What an agent reads about a parameter, by its name, after the description of every tool on this toolset that
     takes it; a guidance action explains its ``guidance`` parameter this way."""
-
-    def schema_guide(self) -> str:
-        """The schema this toolset's instructions tell an agent to conform its output to, which an installed skill of
-        its instructions carries; none unless the toolset has one, as a practice does."""
-        return ""
 
     @functools.cached_property
     def class_markdown(self) -> Markdown:
@@ -658,12 +663,25 @@ class AgentToolSet(AgentToolSetOrigin):
         """Every tool install publishes to destination; none when destination's publisher was never imported."""
         return [tool for tool in self.tools.values() if tool.is_published_to(destination)]
 
-    @property
-    def is_part_of_practice(self) -> bool:
-        """Whether this toolset is one part of a practice, such as one of its fidelities: its files and commands sit in
-        its practice's folder, named after its own slug, and its own instructions are published under that slug. A
-        toolset is a whole of its own unless it says otherwise."""
-        return False
+    def published_name(self, tool: AgentTool) -> str:
+        """The name MCP publishes tool, one of this toolset's, under and the session log records it by:
+        ``{slug}.{name}``, unless the toolset names its tools otherwise."""
+        return f"{self.slug}.{tool.name}"
+
+    def installed_as(self, tool: AgentTool) -> InstalledName:
+        """Where install puts tool's files and what it names them: in this toolset's install folder, named by the
+        tool, unless the toolset names its files otherwise."""
+        return InstalledName(self.install_folder)
+
+    def listed_parts(self) -> list[AgentToolSet]:
+        """The parts the file of this toolset's own tool lists, each with the call to its own tool; none unless the
+        toolset says."""
+        return []
+
+    def instructions_type(self, name: str) -> type[AgentInstructions]:
+        """The kind of tool the ``@agent_instructions`` member called name is published as: an *AgentInstructions*,
+        unless the toolset publishes one of its own members as another kind."""
+        return AgentInstructions
 
     @property
     def is_served_on_mcp(self) -> bool:
@@ -708,16 +726,16 @@ class AgentToolSet(AgentToolSetOrigin):
         return subject_loader.on_subject(member)
 
     def _discover_instruction_members(self) -> dict[str, AgentInstructions]:
-        return self._members_as(AgentInstructions, AgentInstructionsAnnotation.annotates)
+        return self._members_as(self.instructions_type, AgentInstructionsAnnotation.annotates)
 
     def _discover_enlisted_members(self) -> dict[str, AgentTool]:
-        return self._members_as(AgentTool, annotation_kinds.enlisting)
+        return self._members_as(lambda _name: AgentTool, annotation_kinds.enlisting)
 
-    def _members_as[T: AgentTool](self, kind: type[T], is_one: Callable[[ClassMember], bool]) -> dict[str, T]:
-        """Each annotated member that is_one accepts, as a tool of kind on this toolset, by its name."""
+    def _members_as[T: AgentTool](self, kind_of: Callable[[str], type[T]], is_one: Callable[[ClassMember], bool]) -> dict[str, T]:
+        """Each annotated member that is_one accepts, as a tool of the kind kind_of names for it, by its name."""
         members = self._members
         return {
-            name: kind(name=name, callable=members.declared.callable_on(self, name, member), toolset=self)
+            name: kind_of(name)(name=name, callable=members.declared.callable_on(self, name, member), toolset=self)
             for name, member in members.annotated if is_one(member)
         }
 
@@ -966,11 +984,9 @@ class AgentTool(AgentToolDestination):
 
     @property
     def mcp_name(self) -> str:
-        """The name MCP publishes this tool under and the session log records it by: ``{toolset slug}.{name}``. A
-        practice's own instructions are published under the practice's slug alone."""
-        if self.toolset.is_part_of_practice and self.name == "instructions":
-            return self.slug
-        return f"{self.slug}.{self.name}"
+        """The name MCP publishes this tool under and the session log records it by, as its toolset names it
+        (``AgentToolSet.published_name``)."""
+        return self.toolset.published_name(self)
 
     def is_called(self, called: str) -> bool:
         """Whether called, the name a client sent, names this tool: its MCP name as published (``generate.generate``),
@@ -1083,27 +1099,24 @@ class AgentTool(AgentToolDestination):
         body = (text or "").strip()
         return f"{preamble}\n\n{body}" if body else preamble
 
-    @functools.cached_property
+    @property
     def listed_description(self) -> str:
-        """What the MCP tool list says of this tool, which every chat carries each turn the tool is loaded. An
-        instructions tool returns its whole guidance when called, so the list gives only its opening paragraph."""
-        if self.name != "instructions":
-            return self.description
-        paragraphs = [part.strip() for part in self.description.split("\n\n") if part.strip()]
-        prose = [part for part in paragraphs if not part.startswith("#")]
-        if len(prose) <= 1:
-            return "\n\n".join(prose) or self.description
-        return f"{prose[0]}\n\n{LISTED_INSTRUCTIONS_NOTE}"
+        """What the MCP tool list says of this tool, which every chat carries each turn the tool is loaded: its
+        description."""
+        return self.description
 
     @functools.cached_property
     def description(self) -> str:
         """What the tool does, expanded from its docstring once: the skill and the MCP prompt carry it whole."""
         expanded = self.toolset.class_markdown.expand_docstring(self.docstring)
-        if expanded:
-            return expanded
-        if self.name == "instructions" and (self.toolset.overview or "").strip():
-            return self.toolset.overview.strip()
-        return self.docstring or self.callable.__name__
+        return expanded or self.docstring or self.callable.__name__
+
+    @property
+    def served_body(self) -> str:
+        """What the file installed for this tool says above the call to it, when a server answers that call: its
+        docstring, unless an ``\"\"\"overview\"\"\"`` docstring names the section the server returns, which is no
+        body text."""
+        return "" if self.docstring.strip() == "overview" else self.docstring
 
 
 @dataclass
@@ -1148,8 +1161,6 @@ class AgentInstructions(AgentTool):
         """The instructions an agent follows for call, expanded with its arguments by the toolset made for it."""
         tool = self._on(self.toolset.for_call(call))
         tool.log_session_invocation(call)
-        if tool.name == "instructions":
-            return tool.toolset.instructions
         return tool._expanded_reply(call.arguments)
 
     def _expanded_reply(self, arguments: dict[str, Any]) -> str:

@@ -11,7 +11,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from harness.mcp.claude_plugins import ClaudePlugins
-from harness.agent_tools.agent_tools import ToolsetReference
+from harness.agent_tools.agent_tools import InstalledName, ToolsetReference
 from harness.installation.installer import Installer, ToolsetInstallFailed
 
 
@@ -203,6 +203,13 @@ def _skill_tool(name: str):
 
     _fn._skill = True
     return type("Tool", (), {"name": name, "deploy_name": name, "is_published_to": lambda self, destination: destination is Skill, "callable": _fn})()
+
+
+def _own_skill_tool(installed: InstalledName):
+    """A toolset's own instructions skill, on a toolset that installs it as installed says."""
+    tool = _skill_tool("instructions")
+    tool.toolset = type("Toolset", (), {"tools": {"instructions": tool}, "installed_as": lambda self, _tool: installed})()
+    return tool
 
 
 # (E) Install CDD Tools
@@ -913,15 +920,8 @@ with description("a practice guidance class") as self:
                 from harness.installation.files import SkillInstallation
 
                 writer = SkillInstallation.into(InstallTarget(IdeLayout("Cursor"), Path(".")))
-                tools = {"instructions": _skill_tool("instructions")}
-                toolset = type(
-                    "Practice",
-                    (),
-                    {"install_folder": Path("cdd_guidance/practices/sample_tool"), "tools": tools, "is_part_of_practice": False},
-                )()
-                expect(
-                    writer.relative_path(toolset, "instructions").as_posix()
-                ).to(equal("skills/practices/sample-tool/SKILL.md"))
+                tool = _own_skill_tool(InstalledName(Path("cdd_guidance/practices/sample_tool"), is_own=True))
+                expect(writer.relative_path(tool).as_posix()).to(equal("skills/practices/sample-tool/SKILL.md"))
 
     # (S) Installer --> Deploy Practice guidance rules
     with context("with rules"):
@@ -1052,42 +1052,18 @@ with description("a practice guidance class") as self:
                 from harness.installation.files import SkillInstallation
 
                 writer = SkillInstallation.into(InstallTarget(IdeLayout("Cursor"), Path(".")))
-                tools = {"instructions": _skill_tool("instructions")}
-                practice = type("Practice", (), {"slug": "sample-tool"})()
-                toolset = type(
-                    "Fidelity",
-                    (),
-                    {
-                        "install_folder": Path("cdd_guidance/practices/sample_tool/sketch"),
-                        "tools": tools,
-                        "practice_guidance": practice,
-                        "is_part_of_practice": True,
-                        "slug": "sample-tool-sketch",
-                    },
-                )()
+                installed = InstalledName(Path("cdd_guidance/practices/sample_tool"), "sample-tool-sketch", is_own=True)
                 expect(
-                    writer.relative_path(toolset, "instructions").as_posix()
+                    writer.relative_path(_own_skill_tool(installed)).as_posix()
                 ).to(equal("skills/practices/sample-tool/sample-tool-sketch/SKILL.md"))
 
             with it("should kebab-case the practice parent so it matches the fidelity leaf"):
                 from harness.installation.files import SkillInstallation
 
                 writer = SkillInstallation.into(InstallTarget(IdeLayout("Cursor"), Path(".")))
-                tools = {"instructions": _skill_tool("instructions")}
-                practice = type("Practice", (), {"slug": "sample-tool"})()
-                toolset = type(
-                    "Fidelity",
-                    (),
-                    {
-                        "install_folder": Path("cdd_guidance/practices/sample_tool/spec"),
-                        "tools": tools,
-                        "practice_guidance": practice,
-                        "is_part_of_practice": True,
-                        "slug": "sample-tool-spec",
-                    },
-                )()
+                installed = InstalledName(Path("cdd_guidance/practices/sample_tool"), "sample-tool-spec", is_own=True)
                 expect(
-                    writer.relative_path(toolset, "instructions").as_posix()
+                    writer.relative_path(_own_skill_tool(installed)).as_posix()
                 ).to(equal("skills/practices/sample-tool/sample-tool-spec/SKILL.md"))
 
         # (S) Installer --> Deploy Practice guidance fidelity instructions

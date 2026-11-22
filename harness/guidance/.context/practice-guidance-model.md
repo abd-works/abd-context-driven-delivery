@@ -37,7 +37,28 @@ sketch_template: str
 rules: RulesCollection
 	// the "shared rules" section
 instructions: str
-	// overview, guidance, rules, and templates joined; published as a skill and an MCP prompt
+	// overview, guidance, rules, and templates joined; published as a skill and an MCP prompt, as a GuidanceInstructions
+markdown_scope: MarkdownScope
+	// the folder beside its class, its slug, and its format
+----
+instructions_type(name: str): type[AgentInstructions]
+	// GuidanceInstructions for its own instructions member
+installed_as(tool: AgentTool): InstalledName
+	// its install folder; its own instructions named after it alone
+listed_parts(): list[AgentToolSet]
+	// its child toolsets, such as a practice's fidelities
+
+## GuidanceInstructions : AgentInstructions
+
+A guidance's own instructions tool: a call answers the guidance's whole instructions, described by its overview when its docstring says nothing; the MCP tool list gives its opening paragraph and a note that a call returns the rest; the file installed for it carries the guidance's schema guide.
+
+------
+listed_description: str
+description: str
+served_body: str
+----
+answer(call: ToolCall): str
+	-> toolset.for_call(call).instructions
 
 ## GuidanceCollection : MarkdownCollection, Guidance
 
@@ -113,6 +134,10 @@ render(format: str, content: RenderContent, source: str | None, previous: str): 
 	// at the fidelity the practice was made at, which renders it; a practice with no fidelity renders through its formats
 	-> fidelities.current.render
 	-> formats.render
+scope_at(fidelity: FidelityGuidance | None): MarkdownScope
+	// its markdown read at fidelity: templates named for that fidelity first, and the files reads_file_at gives
+reads_file_at(fidelity: str | None): FileFilter | None
+	// which files of its folders it reads at fidelity; every file, and Stories' story map examples alone at the story map
 
 ## WorkingSet
 
@@ -328,6 +353,14 @@ templates: str
 	// its template in the format it works in, else its default format
 examples: str
 	// its practice's examples at this fidelity and format
+	-> practice_guidance.scope_at(self)
+markdown_scope: MarkdownScope
+	// its practice's scope at this fidelity, read within ("Fidelities", name)
+----
+published_name(tool: AgentTool): str
+	// its own instructions under its slug alone when a practice holds it
+installed_as(tool: AgentTool): InstalledName
+	// its practice's install folder, named after its kebab slug
 checked_rule_collections: list[RulesCollection]
 	// the practice's shared rules, then its own, then each supplement's rules for this fidelity
 	-> PracticeSupplement.rules_for

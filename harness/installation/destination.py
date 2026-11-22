@@ -11,7 +11,7 @@ import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
-from harness.agent_tools.agent_tools import AgentTool, AgentToolSetOrigin
+from harness.agent_tools.agent_tools import AgentTool
 from harness.annotations.annotation import DestinationKind
 from harness.installation.ide_layout import IdeLayout
 from harness.installation.repository_toolsets import RepositoryToolsets
@@ -78,9 +78,9 @@ class InstallPlace:
         """Keep written, a file the install wrote, in the install record."""
         self.install_record.track(written)
 
-    def folder_for(self, toolset: AgentToolSetOrigin) -> Path:
-        """Repo-relative package folder the toolset already knows (practice dir, fidelity leaf)."""
-        folder = self._guidance_source_folder(Path(toolset.install_folder))
+    def relative_folder(self, install_folder: Path) -> Path:
+        """The folder a toolset installs from, such as its practice's folder, from the repository it is in."""
+        folder = self._guidance_source_folder(Path(install_folder))
         repo = self.repo
         if repo is None:
             return folder

@@ -19,7 +19,6 @@ from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 
 from harness.agent_tools.agent_tools import (
     AgentInstructions,
-    LISTED_INSTRUCTIONS_NOTE,
     collect,
     tools,
     instructions,
@@ -1066,47 +1065,8 @@ with description("AgentToolValidationError"):
             expect(err.lineno).to(equal(10))
 
 
-
-@agent_toolset
-class _LongGuidance:
-    """Toolset whose instructions tool is described by an overview of several paragraphs."""
-
-    @property
-    def overview(self) -> str:
-        return "## Overview\n\nWhat this guidance is for.\n\nEvery rule the guidance holds."
-
-    @property
-    @mcp
-    @agent_instructions
-    def instructions(self) -> str:
-        return self.overview
-
-
-@agent_toolset
-class _ShortGuidance(_LongGuidance):
-    """Toolset whose instructions tool is described by an overview of one paragraph."""
-
-    @property
-    def overview(self) -> str:
-        return "## Overview\n\nWhat this guidance is for."
-
-
 with description("a tool as the MCP tool list describes it"):
-    with context("that is an instructions tool"):
-        with it("should keep its whole overview as its description"):
-            tool = _LongGuidance().tools["instructions"]
-            expect(tool.description).to(contain("Every rule the guidance holds."))
-
-        with it("should list its overview's opening paragraph and say a call returns the rest"):
-            tool = _LongGuidance().tools["instructions"]
-            expect(tool.listed_description).to(equal(f"What this guidance is for.\n\n{LISTED_INSTRUCTIONS_NOTE}"))
-
-        with context("with an overview of one paragraph"):
-            with it("should list that paragraph alone"):
-                tool = _ShortGuidance().tools["instructions"]
-                expect(tool.listed_description).to(equal("What this guidance is for."))
-
-    with context("that is any other tool"):
+    with context("of any toolset"):
         with it("should list its whole description"):
             tool = _SelfCallAgent().tools["polish"]
             expect(tool.listed_description).to(equal(tool.description))

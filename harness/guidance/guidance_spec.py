@@ -472,7 +472,7 @@ with description("a fidelity read from its practice's document"):
             expect(self.stories.document is self.stories.document).to(equal(True))
 
         with it("should give the fidelity its block from that document"):
-            expect(self.story_map.section).to(equal(self.stories.document.fidelity_block("story_map")))
+            expect(self.story_map.section).to(equal(self.stories.document.block_under("Fidelities", "story_map")))
 
 
 with description("the guidance classes whose tools run only through what holds them"):

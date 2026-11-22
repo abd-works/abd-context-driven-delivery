@@ -11,6 +11,7 @@ from harness.annotations.class_folder import class_folder
 from harness.annotations.name import Name
 from harness.guidance.action_catalogue import ACTION_CATALOGUE, FidelityActions
 from harness.guidance.declared_outputs import DeclaredOutputs
+from harness.guidance.guidance_instructions import GuidanceInstructions
 from harness.guidance.practice_formats import PracticeFormats, RenderContent, RenderRequest
 from harness.guidance.rule import Rule, RulesCollection
 from harness.guidance.schema import Schema
@@ -18,6 +19,10 @@ from harness.guidance.stages import STAGES, ApproachStage
 from harness.guidance.worked_session import NO_SESSION_OUTPUT, FidelityOutput, NamedPaths, PracticeOutput, WorkedSession
 from harness.guidance.working_set import COMPANION_PRACTICE, WorkingSet
 from harness.agent_tools.agent_tools import (
+    AgentInstructions,
+    AgentTool,
+    AgentToolSet,
+    InstalledName,
     collect,
     agent_instructions,
     agent_tool,
@@ -30,6 +35,7 @@ from harness.installation.data_class import data_field, identity
 from harness.hooks.hooks import Hook
 from harness.mcp.mcp_annotations import mcp
 from harness.markdown import (
+    FileFilter,
     Markdown,
     MarkdownCollection,
     MarkdownScope,
@@ -38,6 +44,11 @@ from harness.markdown import (
     markdown_collection,
 )
 from harness.markdown.format import Format
+
+# The heading of a practice document under which each fidelity has a block of its own, ``### {fidelity}``.
+FIDELITIES_HEADING = "Fidelities"
+# The member of every guidance that answers its whole guidance, published as its own tool.
+OWN_INSTRUCTIONS = "instructions"
 
 if TYPE_CHECKING:
     from harness.guidance.practice_supplement import PracticeSupplement
@@ -79,6 +90,22 @@ class Guidance:
         """The prose of one of its own labelled sections, such as its Overview, from the Markdown it keeps for that
         section, so a second read answers from the text the first read found."""
         return Markdown.held_by(self, label).extract()
+
+    # -- how its tools are published and installed ----------------------------------------------------------------
+
+    def instructions_type(self, name: str) -> type[AgentInstructions]:
+        """Its own ``instructions`` member is published as its whole guidance (*GuidanceInstructions*); every other
+        ``@agent_instructions`` member as any toolset's."""
+        return GuidanceInstructions if name == OWN_INSTRUCTIONS else super().instructions_type(name)
+
+    def installed_as(self, tool: AgentTool) -> InstalledName:
+        """Its files go in its install folder; its own instructions are named after the guidance alone."""
+        return InstalledName(self.install_folder, is_own=isinstance(tool, GuidanceInstructions))
+
+    def listed_parts(self) -> list[AgentToolSet]:
+        """The parts the file of its own instructions lists, each with the call to its instructions: the toolsets it
+        holds in its collections, such as each fidelity of a practice."""
+        return list(self.child_toolsets())
 
     @markdown_collection("shared rules")
     @rules
@@ -359,8 +386,18 @@ class PracticeGuidance(Guidance):
     def markdown_scope(self) -> MarkdownScope:
         """Where this practice's markdown lives, at its current fidelity and format, read without reading the
         fidelities from the practice's document when nothing has read them yet."""
-        current = self._current_fidelity
-        return replace(super().markdown_scope, fidelity=current.name if current is not None else None)
+        return self.scope_at(self._current_fidelity)
+
+    def scope_at(self, fidelity: FidelityGuidance | None) -> MarkdownScope:
+        """Where this practice's markdown lives when read at fidelity: its templates are looked for by that fidelity's
+        name first, and the files of its folders are those the practice reads at that fidelity (``reads_file_at``)."""
+        name = fidelity.name if fidelity is not None else None
+        return replace(super().markdown_scope, template_name=name or None, reads_file=self.reads_file_at(name))
+
+    def reads_file_at(self, fidelity: str | None) -> FileFilter | None:
+        """Which files of its folders, such as its examples, the practice reads at fidelity, given the label read and
+        the file; every file unless a practice says otherwise."""
+        return None
 
     @cached_property
     def reading(self) -> Any:
@@ -641,10 +678,20 @@ class FidelityGuidance(Guidance):
         practice = self.practice_guidance
         return practice.schema_guide() if practice is not None else ""
 
-    @property
-    def is_part_of_practice(self) -> bool:
-        """A fidelity is a part of the practice that holds it; one made apart from any practice is not."""
-        return self.practice_guidance is not None
+    def published_name(self, tool: AgentTool) -> str:
+        """Its own instructions are published under its slug alone, ``stories-story-map``, when a practice holds it;
+        its other tools as any guidance's."""
+        if self.practice_guidance is not None and isinstance(tool, GuidanceInstructions):
+            return self.slug
+        return super().published_name(tool)
+
+    def installed_as(self, tool: AgentTool) -> InstalledName:
+        """A fidelity a practice holds is one part of it: its files sit in its practice's install folder, named after
+        its own slug, ``stories-story-map``. One made apart from any practice is installed as any guidance."""
+        practice = self.practice_guidance
+        if practice is None:
+            return super().installed_as(tool)
+        return InstalledName(practice.install_folder, Name(self.slug).kebab, is_own=isinstance(tool, GuidanceInstructions))
 
     @property
     def is_served_on_mcp(self) -> bool:
@@ -752,8 +799,9 @@ class FidelityGuidance(Guidance):
         """Where this fidelity's markdown lives: its own ``### {name}`` block of its practice's document, with the
         practice's templates and examples at this fidelity and the format it works in."""
         practice = self.practice_guidance
-        base = practice.markdown_scope if practice is not None else super().markdown_scope
-        return replace(base, fidelity=self.name or None, format=self.format or None, in_fidelity_block=True)
+        base = practice.scope_at(self) if practice is not None else super().markdown_scope
+        within = (FIDELITIES_HEADING, self.name) if self.name else ()
+        return replace(base, template_name=self.name or None, format=self.format or None, within=within)
 
     @property
     def module_dir(self) -> Path:
@@ -780,7 +828,7 @@ class FidelityGuidance(Guidance):
         """This fidelity's whole ``### {name}`` block in its practice's document: overview, sketch, guidance, and
         rules."""
         practice = self.practice_guidance
-        return practice.document.fidelity_block(self.name) if practice is not None else ""
+        return practice.document.block_under(FIDELITIES_HEADING, self.name) if practice is not None else ""
 
     @property
     def _titled_section(self) -> str:
@@ -824,7 +872,7 @@ class FidelityGuidance(Guidance):
         practice = self.practice_guidance
         if practice is None:
             return ""
-        return str(Markdown.from_label(practice, "examples", MarkdownScope.of(practice).at(self.name, self.format)).extract() or "").strip()
+        return str(Markdown.from_label(practice, "examples", practice.scope_at(self).at(self.format)).extract() or "").strip()
 
     def generate_output(self) -> str:
         """What its practice tells the agent about writing this fidelity's artifact: the practice's generate_output

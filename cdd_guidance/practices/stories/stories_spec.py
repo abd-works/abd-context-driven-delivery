@@ -669,3 +669,27 @@ with description("the Stories schema"):
 
     with it("should give a step the classes its linked domain terms name, which a step with no link lacks"):
         expect(self.step).to(contain("  names?: [class]"))
+
+
+with description("the files of its folders Stories reads"):
+    with context("at the story map"):
+        with before.each:
+            self.reads = Stories().reads_file_at("story_map")
+
+        with it("should read a story map example"):
+            expect(self.reads("examples", Path("manage-customer-orders/md/story-map.md"))).to(be_true)
+
+        with it("should leave out a scenario example, which is a later fidelity's"):
+            expect(self.reads("examples", Path("manage-customer-orders/md/scenario-inline.md"))).to(equal(False))
+
+        with it("should leave out another markdown file"):
+            expect(self.reads("examples", Path("manage-customer-orders/md/notes.md"))).to(equal(False))
+
+    with context("at no fidelity"):
+        with it("should leave out a whole-map example"):
+            expect(Stories().reads_file_at(None)("examples", Path("telco-website/examples.md"))).to(equal(False))
+
+    with context("at the scenarios"):
+        with it("should read a scenario example"):
+            reads = Stories().reads_file_at("scenarios")
+            expect(reads("examples", Path("manage-customer-orders/md/scenario-inline.md"))).to(be_true)

@@ -433,19 +433,22 @@ The prose one property loads: the folder or file named after the property, or th
 
 ## MarkdownScope
 
-Where an owner keeps its markdown and which part of it the owner reads: the folder beside its class, the slug its `{slug}.md` is named by, and the fidelity and format whose templates and examples it reads. An owner that knows these hands them over as its `markdown_scope` property.
+Where an owner keeps its markdown and which part of it the owner reads: the folder beside its class, the slug its `{slug}.md` is named by, the format whose templates it reads, the name its own template is looked for by first, the headings its own sections are read under, and the owner's own filter of the files of a folder it reads. An owner that knows these hands them over as its `markdown_scope` property; the scope names no practice or fidelity.
 
-+ MarkdownScope(folder: Path, slug: str, fidelity: str | None = None, format: str | None = None, in_fidelity_block: bool = False)
++ MarkdownScope(folder: Path, slug: str, format: str | None = None, template_name: str | None = None, within: tuple[str, ...] = (), reads_file: FileFilter | None = None)
 ------
 + folder: Path
 + slug: str
-+ fidelity: str | None
 + format: str | None
-+ in_fidelity_block: bool
++ template_name: str | None
++ within: tuple[str, ...]
+	// the headings a section is read under, e.g. ("Fidelities", "story_map")
++ reads_file: FileFilter | None
+	// the owner's filter of a folder's files, given the label read and the file
 ----
 + beside(owner_class: type): MarkdownScope
 + of(owner: Any): MarkdownScope
-+ at(fidelity: str | None = None, format: str | None = None): MarkdownScope
++ at(format: str | None): MarkdownScope
 
 ## MarkdownCollection
 
@@ -479,8 +482,7 @@ A markdown document: headings, slices, and child sections.
 + slice_heading(heading: str): str
 + child_blocks(parent_heading: str): list[tuple[str, str]]
 + section_child_blocks(): list[tuple[str, str]]
-+ fidelity_blocks(): list[tuple[str, str]]
-+ fidelity_block(fidelity_name: str): str
++ block_under(*headings: str): str
 + named_subsection(heading: str): str
 
 ## FrontMatter
@@ -539,7 +541,6 @@ Injected by @agent_toolset — the operations, instructions, and nested collecti
 + << composition >> operations: dict[str, AgentOperation]
 + << composition >> instructions: Mapping[str, AgentInstructions]
 + << composition >> tools: dict[str, AgentTool]
-+ is_part_of_practice: bool
 + is_served_on_mcp: bool
 + operation_type: type[AgentOperation]
 ----
@@ -1133,7 +1134,7 @@ Where one install writes: the IDE folder with its layout, the record of every fi
 	// a place that keeps its own record, for a writer outside an install run
 + wrote(written: Path): None
 	-> InstallRecord.track
-+ folder_for(toolset: AgentToolSetOrigin): Path
++ relative_folder(install_folder: Path): Path
 
 ## Installation : InstallPlace
 
@@ -5656,6 +5657,8 @@ The Stories practice: story map, scenarios, and acceptance tests.
 + read_folder(root: Path, on_file = None): StoryModel
 + read_files(files: list[Path], project: Path, on_file = None): StoryModel
 	// a story test's scenarios go on the map's Story of the same name; a test with no map listed reads the map in its own folder or the nearest one above it
++ reads_file_at(fidelity: str | None): StoryExampleFiles
+	// the story map examples alone at the story map; no whole-map example at the story map or at no fidelity
 ---<<creates>>--> StoryModel
 ---<<reads the graph with>>--> StoriesReading
 ---<<registers with>>--> StoryNode
