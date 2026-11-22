@@ -1526,3 +1526,11 @@ with description("the graph's toolset") as self:
     with it("should publish a filter as an object whose keys a caller may leave out"):
         request = Graph().tools["return_nodes"].input_schema["properties"]["filter"]["anyOf"][0]
         expect("required" in request).to(equal(False))
+
+
+with description("the Graph app") as self:
+    with it("should be registered with App by harness/graph, from its own ports file"):
+        from harness.apps.app import APPS
+        from harness.graph.graph_app import GRAPH_APP
+
+        expect(GRAPH_APP in APPS.registered).to(equal(True))

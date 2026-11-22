@@ -1,5 +1,5 @@
 """Module: harness/diagnostics. Model (clean-engineering-model, python): *App*, its status and its failures.
-Implemented: harness/diagnostics/app.py.
+Implemented: harness/apps/app.py.
 Canonical: harness/.context/editor-apps/.context/editor-apps-model.md#app"""
 from __future__ import annotations
 

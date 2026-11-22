@@ -2941,26 +2941,78 @@ Spec support: one rule's findings over one practice's nodes, as the graph's own 
 + node_hits(node): list[str]
 ---<<reads nodes through>>--> RuleCheckContext
 
-# harness/diagnostics
+# harness/apps
 
-This module reports whether CDD is running and answering: *ServerHealth* says which of its long-running parts are up right now, and the diagnostics toolsets, each a *CallDiagnostics* made for one call, probe what an install published through the MCP host answering that call and write a report section.
+The CDD web apps a person opens beside the chat: each module that owns an app makes it once and registers it with *App*, the one registry, and `app.open` installs and readies it.
 
-- **Purpose:** Show whether CDD is running: which of its servers and apps are up, for the chat's server health band, and whether what an install published answers through the live MCP host, so a broken publication shows up in a report rather than in a failing chat.
-- **Seam (terms):** ServerHealth, TestCadence, TestTier, TestRun, TestRunRecord, TestRunRecordUnreadable, TestRunner, RunWorktree, CallDiagnostics, DiagnosticsNeedACall, AgentToolsDiagnostics, GuidanceDiagnostics, AgentToolsProbe, GuidanceProbe; the MCP operations `server-health.report`, `agent-tools-diagnostics.agent_tools_diagnostics`, `guidance-diagnostics.guidance_diagnostics`
-- **Dependencies (one-way):** harness/agent_tools, harness/installation, harness/process, harness/git, harness/hooks, harness/mcp, harness/guidance, harness/graph
+- **Purpose:** Give every module that owns a web app one way to register it, install it, and say where it answers, apart from the module that diagnoses installs.
+- **Seam (terms):** App, Apps (`APPS`), AppPackage, AppPage, AppServer, NodeScript, Npm, AppSources, PortProbe, AppStatus, AppNotStarted, AppNotRegistered, PackageNotInstalled; the MCP operations `app.open` and `app.install`
+- **Dependencies (one-way):** harness/agent_tools, harness/installation, harness/mcp, harness/process
 
-## ServerHealth
+## App
 
-Report the parts of CDD that run outside this MCP host, so a person can see what is up without opening a terminal: every registered *App*, each read as it is now, and the latest heavy and e2e test runs.
+One CDD web app a person opens beside the chat (Kanban, Graph, Story UI), and the one registry of them. The module that owns each app makes it once and registers it: the Graph app in harness/graph, from `GRAPH_APP_PORTS`; the CDD Kanban and the Story UI editor in space/kanban; the Files app in harness/files_app.
 
-+ ServerHealth(repo_root: Path | str, cadence: TestCadence | None = None, e2e_review: E2eReview | None = None)
++ App(label: str, package: AppPackage, page: AppPage)
 ------
-+ apps: list[App]
++ label: str
++ package: AppPackage
++ status: AppStatus
++ port: int | None
++ url: str
++ server: AppServer
 ----
-+ load(project: Path | str): ServerHealth
-+ report(): ServerHealth
----<<aggregation>>--> App
++ register(): App
++ registered(): list[App]
++ load(app: str, project: Path | str): App
++ open(): App
++ install(): App
+---<<raises>>--> AppNotRegistered
+---<<raises>>--> AppNotStarted
+---<<aggregation>>--> AppServer
 ---<<annotated with>>--> LanguageAdapter
+
+## AppServer
+
+The server an app answers from, which the chat that opens the app starts and its end stops: the folder it runs in, the command that starts it (node on its script, through tsx for TypeScript), and the ports it tries in turn.
+
++ AppServer(folder: Path, script: str, ports: tuple[int, ...])
+------
++ folder: str
++ command: list[str]
++ port: int | None
+
+## AppPackage
+
+The npm package an app installs from, which installs itself: its folder, `package.json`, the sources its install reads, and npm. It keeps the fingerprint of what each install read beside what that install wrote, so an install with nothing changed takes no npm.
+
++ AppPackage(folder: Path, imports: tuple[Path, ...] = (), npm: Npm | None = None)
+------
++ is_installed: bool
++ is_current: bool
+----
++ install(label: str): None
+---<<raises>>--> PackageNotInstalled
+
+# harness/release
+
+The CDD version and its release, never on red, and the slow test tiers run on a cadence whose results a release reads.
+
+- **Purpose:** Say which CDD version a chat runs, set and release the next one, and keep the heavy and e2e tiers running on main so a release knows they passed.
+- **Seam (terms):** CddVersion, Version, VersionStanding, VersionNotValid, ProjectVersion, CddRelease, ReleaseNotes, ReleaseOnRed, ReleaseAlreadyTagged, GitHubCli, TestCadence, TestTier, TestRun, TestRunRecord, TestRunRecordUnreadable, TestRunner, RunWorktree, DesktopWalkQuestion; the MCP operations `cdd-version.check`, `cdd-version.read`, `cdd-version.set_next` (`/version`), `cdd-version.release` (`/release`)
+- **Dependencies (one-way):** harness/agent_tools, harness/installation, harness/mcp, harness/process, harness/git, harness/e2e_review
+
+## ProjectVersion
+
+The version of a project, the one reader and writer of the `version` line of its `pyproject.toml`.
+
++ ProjectVersion(pyproject: Path)
+------
++ version: Version
+----
++ of(project: Path): ProjectVersion
++ read(): str
++ write(version: str): None
 
 ## TestRun
 
@@ -3067,38 +3119,26 @@ Runs heavy every hour and e2e every day on the main checkout its record is of. N
 	-> TestRunner.run
 	-> TestRunRecord.save
 
-## App
+# harness/diagnostics
 
-One CDD web app a person opens beside the chat (Kanban, Graph, Story UI), and the one registry of them. The module that owns each app makes it once and registers it: the Graph app here, from `GRAPH_APP_PORTS`; the CDD Kanban and the Story UI editor in space/kanban.
+This module reports whether CDD is running and answering: *ServerHealth* says which of its long-running parts are up right now, and the diagnostics toolsets, each a *CallDiagnostics* made for one call, probe what an install published through the MCP host answering that call and write a report section.
 
-+ App(label: str, folder: Path, server: AppServer, page: str = "/")
+- **Purpose:** Show whether CDD is running: which of its servers and apps are up, for the chat's server health band, and whether what an install published answers through the live MCP host, so a broken publication shows up in a report rather than in a failing chat.
+- **Seam (terms):** ServerHealth, CallDiagnostics, DiagnosticsNeedACall, AgentToolsDiagnostics, GuidanceDiagnostics, AgentToolsProbe, GuidanceProbe; the MCP operations `server-health.report`, `agent-tools-diagnostics.agent_tools_diagnostics`, `guidance-diagnostics.guidance_diagnostics`
+- **Dependencies (one-way):** harness/agent_tools, harness/installation, harness/hooks, harness/mcp, harness/guidance, harness/apps (*App*, the apps the report lists), harness/release (*TestCadence*, the test runs it starts and lists), harness/e2e_review
+
+## ServerHealth
+
+Report the parts of CDD that run outside this MCP host, so a person can see what is up without opening a terminal: every registered *App*, each read as it is now, and the latest heavy and e2e test runs.
+
++ ServerHealth(repo_root: Path | str, cadence: TestCadence | None = None, e2e_review: E2eReview | None = None)
 ------
-+ label: str
-+ status: AppStatus
-+ port: int | None
-+ url: str
-+ server: AppServer
-+ is_installed: bool
++ apps: list[App]
 ----
-+ register(): App
-+ registered(): list[App]
-+ load(app: str, project: Path | str): App
-+ open(): App
-+ install(): App
----<<raises>>--> AppNotRegistered
----<<raises>>--> AppNotStarted
----<<aggregation>>--> AppServer
++ load(project: Path | str): ServerHealth
++ report(): ServerHealth
+---<<aggregation>>--> App
 ---<<annotated with>>--> LanguageAdapter
-
-## AppServer
-
-The server an app answers from, which the chat that opens the app starts and its end stops: the folder it runs in, the command that starts it (node on its script, through tsx for TypeScript), and the ports it tries in turn.
-
-+ AppServer(folder: Path, script: str, ports: tuple[int, ...])
-------
-+ folder: str
-+ command: list[str]
-+ port: int | None
 
 ## CallDiagnostics
 
@@ -4228,7 +4268,7 @@ The *Board* shows every session as a *Ticket* in a *Column*: Backlog, a *Stage*,
 
 - **Purpose:** See every session's progress through the delivery stages, and move sessions through them, from an agent's tools or from the CDD Kanban app.
 - **Seam (terms):** Board, Column, Stage, Card, Ticket, TicketWork, TicketCheckout, StageMarks, FidelityProgress, StageWork, LeaveChoices, BacklogItem, Report, ReportFile, Help, BoardOverview, FormatChoice, UnreadableSessionFile, CardName, TitleNamesNothingError, TitleTooLongError, TicketNameTakenError, BacklogItemTakenError, TicketWorktreeBlockedError
-- **Dependencies (one-way):** harness/annotations, harness/agent_tools, harness/installation, harness/mcp, harness/markdown, harness/guidance, harness/graph, harness/diagnostics, harness/chat, harness/catalog_generator, space/repo, space/session
+- **Dependencies (one-way):** harness/annotations, harness/agent_tools, harness/installation, harness/mcp, harness/markdown, harness/guidance, harness/graph, harness/apps, harness/diagnostics, harness/chat, harness/catalog_generator, space/repo, space/session
 
 ## Board
 

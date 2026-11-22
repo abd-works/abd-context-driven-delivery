@@ -2,9 +2,11 @@
 screen changed against the accepted run, record a verdict on each, and accept a reviewed run as the next baseline.
 
 A run folder is `<project>/.sessions/<release>/e2e-test-results/<epic>/<sub-epic>/<run>/`: its `results.json` holds one
-row per step (written by the step capture hook, or by `record_verdict` on a walk), `screens/` its screenshots, and
-`review.json` its verdicts. The pixel check, the verdict rules and the reports are `harness/e2e_review/report/`, run
-through Node; this toolset is the seam an agent and the cdd server call."""
+row per step (written by the step capture hook, or by `record_walked_step` on a walk), `screens/` its screenshots,
+`review.json` its verdicts, and `changed.json` its summary. The one model of a run, its pixel check, its verdict rules,
+and the reports are `harness/e2e_review/report/`, run through Node, which keeps each run's summary beside it after every
+command; Python reads only that summary, so the health report never starts Node. This toolset is the seam an agent and
+the cdd server call."""
 from __future__ import annotations
 
 import json
@@ -23,10 +25,9 @@ from harness.process.process import BackgroundStart
 
 RESULTS_FOLDER = "e2e-test-results"
 RESULTS_FILE = "results.json"
-REVIEW_FILE = "review.json"
 BASELINE_FILE = "baseline.json"
-# The keys of a run's changed steps, kept when the review lists them, so reading the health report never runs Node.
-CHANGED_FILE = "changed.json"
+# A run's summary, which the review's every command keeps beside the run, so reading the health report never runs Node.
+SUMMARY_FILE = "changed.json"
 STORY_TESTS = "story_tests"
 # The board's Playwright config runs every browser story test under story_tests/ as its story-ui project.
 PLAYWRIGHT_APP = Path("space") / "kanban" / "app"
@@ -62,10 +63,12 @@ class ReportTool:
 
 
 class E2eRun:
-    """One run of a sub-epic: walked by hand or run by its browser story tests, with each step's row and verdicts."""
+    """One run of a sub-epic, walked by hand or run by its browser story tests, as its summary says it stands: the
+    review's commands keep the summary beside the run, and this reads it once."""
 
     def __init__(self, folder: Path) -> None:
         self.folder = folder
+        self._summary: dict | None = None
 
     @property
     @data_field
@@ -85,21 +88,19 @@ class E2eRun:
     @property
     @data_field
     def steps(self) -> int:
-        return len(self.rows)
+        return int(self.summary.get("steps", 0))
 
     @property
     @data_field
     def changed_steps(self) -> list[str]:
         """The steps whose screen changed against the accepted run, as the review last listed them."""
-        file = self.folder / CHANGED_FILE
-        return json.loads(file.read_text(encoding="utf-8")) if file.exists() else []
+        return list(self.summary.get("changed_steps", []))
 
     @property
     @data_field
     def unjudged_steps(self) -> list[str]:
         """The changed steps with no verdict yet."""
-        verdicts = self.verdicts
-        return [key for key in self.changed_steps if key not in verdicts]
+        return list(self.summary.get("unjudged_steps", []))
 
     @property
     @data_field
@@ -110,9 +111,8 @@ class E2eRun:
     @property
     @data_field
     def missed_steps(self) -> list[str]:
-        """The steps judged missed by the tests, and the walked steps that miss the intent."""
-        missed = [key for key, review in self.verdicts.items() if review.get("verdict") == "missed by the tests"]
-        return missed + [row["key"] for row in self.rows if row.get("verdict") == "misses the intent"]
+        """The steps judged missed by the tests, and the walked or judged steps that miss the intent."""
+        return list(self.summary.get("missed_steps", []))
 
     @property
     @data_field
@@ -121,25 +121,14 @@ class E2eRun:
         return compare if compare.exists() else self.folder / "report.html"
 
     @property
-    def rows(self) -> list[dict]:
-        file = self.folder / RESULTS_FILE
-        return json.loads(file.read_text(encoding="utf-8")) if file.exists() else []
-
-    @property
-    def verdicts(self) -> dict[str, dict]:
-        file = self.folder / REVIEW_FILE
-        return json.loads(file.read_text(encoding="utf-8")).get("pairs", {}) if file.exists() else {}
-
-    def was_run_by_a_test(self, key: str) -> bool:
-        return any(row["key"] == key and row.get("by") == "run by a test" for row in self.rows)
-
-    def add_walked_step(self, key: str, step: str, screenshot: str, verdict: str, reason: str) -> None:
-        """A step of a walk by hand: its screenshot, saved in the run folder, and its verdict. Walking it again replaces it."""
-        if not (self.folder / screenshot).is_file():
-            raise E2eReviewRefused(f"save the step's screenshot at {self.folder / screenshot} first")
-        row = {"key": key, "step": step, "screenshot": screenshot, "by": "walked by hand", "verdict": verdict, "reason": reason}
-        rows = [earlier for earlier in self.rows if earlier["key"] != key] + [row]
-        (self.folder / RESULTS_FILE).write_text(json.dumps(rows, indent=2) + "\n", encoding="utf-8")
+    def summary(self) -> dict:
+        """The summary the review last kept beside the run, read once; empty before any command kept one."""
+        if self._summary is None:
+            file = self.folder / SUMMARY_FILE
+            read = json.loads(file.read_text(encoding="utf-8")) if file.exists() else {}
+            # A run reviewed before the summary was kept there holds only the keys of its changed steps.
+            self._summary = read if isinstance(read, dict) else {"changed_steps": list(read)}
+        return self._summary
 
 
 class E2eRunReview:
@@ -235,7 +224,7 @@ class E2eReview:
     def walk(self, target: str) -> E2eRun:
         """Open a walk by hand of target, `<epic>/<sub-epic>`: a new run folder whose steps the agent records. Walk each
         scenario of the sub-epic's story markdown in the running app; after each Given, When and Then save the page's
-        screenshot under the run folder's screens/ and call record_verdict with the step's key (`Story › Scenario ›
+        screenshot under the run folder's screens/ and call record_walked_step with the step's key (`Story › Scenario ›
         <number> <step text>`), its text, the screenshot, and meets the intent or misses the intent with the reason."""
         folder = self.sub_epic_folder(target) / f"walk-{self._stamp()}"
         (folder / "screens").mkdir(parents=True, exist_ok=True)
@@ -268,7 +257,6 @@ class E2eReview:
         found = self.run_of(run)
         args = ["pairs", str(found.folder)] + (["--against", str(self.run_of(against).folder)] if against else [])
         pairs = json.loads(self._tool.run("review.ts", *args))
-        (found.folder / CHANGED_FILE).write_text(json.dumps([pair["key"] for pair in pairs], indent=2) + "\n", encoding="utf-8")
         base = self.run_of(against).folder if against else self.baseline_of(found.folder.parent)
         for pair in pairs:
             pair["ours"] = str(found.folder / pair["ours"]) if pair.get("ours") else ""
@@ -277,23 +265,38 @@ class E2eReview:
 
     @mcp
     @agent_tool
-    def record_verdict(self, run: str, step: str, verdict: str, reason: str, cites: str = "", step_text: str = "",
-                       screenshot: str = "", against: str = "") -> E2eRun:
-        """Record one step's verdict with its reason. On a walk: meets the intent or misses the intent, with step_text and
-        screenshot (relative to the run folder). On a step a test ran, the same two are the judge's verdict: does its
-        screen show what the step says. On a compared run: intended (cites the story or code change), regression caught
-        (cites the failing test), missed by the tests, or noise."""
+    def record_verdict(self, run: str, step: str, verdict: str, reason: str, cites: str = "", against: str = "") -> E2eRun:
+        """Record the verdict on one step of run whose screen changed against the accepted run (or against, another run
+        folder), with its reason: intended (cites the story or code change), regression caught (cites the failing
+        test), missed by the tests, or noise."""
+        if verdict not in REVIEW_VERDICTS:
+            raise E2eReviewRefused(f"no review verdict {verdict!r}: give one of {', '.join(REVIEW_VERDICTS)}")
         found = self.run_of(run)
-        if verdict in WALK_VERDICTS and found.was_run_by_a_test(step):
-            self._tool.run("review.ts", "judge", str(found.folder), step, verdict, reason)
-        elif verdict in WALK_VERDICTS:
-            found.add_walked_step(step, step_text or step.split(" › ")[-1], screenshot, verdict, reason)
-        elif verdict in REVIEW_VERDICTS:
-            args = ["verdict", str(found.folder), step, verdict, reason] + (["--cites", cites] if cites else [])
-            args += ["--against", str(self.run_of(against).folder)] if against else []
-            self._tool.run("review.ts", *args)
-        else:
-            raise E2eReviewRefused(f"no verdict {verdict!r}: give one of {', '.join(WALK_VERDICTS + REVIEW_VERDICTS)}")
+        args = ["verdict", str(found.folder), step, verdict, reason] + (["--cites", cites] if cites else [])
+        args += ["--against", str(self.run_of(against).folder)] if against else []
+        self._tool.run("review.ts", *args)
+        return found
+
+    @mcp
+    @agent_tool
+    def judge_step(self, run: str, step: str, verdict: str, reason: str) -> E2eRun:
+        """The judge's verdict on one step a test ran, with its reason: meets the intent or misses the intent, as its
+        screen shows what the step says or not. Judging it again replaces it."""
+        if verdict not in WALK_VERDICTS:
+            raise E2eReviewRefused(f"no judge verdict {verdict!r}: give one of {', '.join(WALK_VERDICTS)}")
+        found = self.run_of(run)
+        self._tool.run("review.ts", "judge", str(found.folder), step, verdict, reason)
+        return found
+
+    @mcp
+    @agent_tool
+    def record_walked_step(self, run: str, step: str, step_text: str, screenshot: str, verdict: str, reason: str) -> E2eRun:
+        """Record one step of a walk by hand: its key, its Given, When or Then text, its screenshot (saved first, relative
+        to the run folder), and meets the intent or misses the intent with the reason. Walking it again replaces it."""
+        if verdict not in WALK_VERDICTS:
+            raise E2eReviewRefused(f"no walk verdict {verdict!r}: give one of {', '.join(WALK_VERDICTS)}")
+        found = self.run_of(run)
+        self._tool.run("review.ts", "walk-step", str(found.folder), step, step_text, screenshot, verdict, reason)
         return found
 
     @mcp

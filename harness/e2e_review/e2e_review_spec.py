@@ -73,24 +73,36 @@ with description("the end-to-end screen review of a project") as self:
         with context("with a step walked and judged"):
             with before.each:
                 self.walk = self.review.walk(TARGET)
-                (self.walk.folder / "screens" / "1.png").write_bytes(b"png")
 
-            with it("should keep the step's row with its verdict and reason"):
-                self.review.record_verdict(str(self.walk.folder), GIVEN, "misses the intent", "The board is empty.", screenshot="screens/1.png")
-                expect(self.walk.rows[0]["verdict"]).to(equal("misses the intent"))
+            with it("should pass the step, its text, its screenshot, and its verdict to the review"):
+                self.review.record_walked_step(str(self.walk.folder), GIVEN, "Given the ticket pet-visits has no tags", "screens/1.png", "misses the intent", "The board is empty.")
+                expect(self.tool.calls[-1]).to(equal(["review.ts", "walk-step", str(self.walk.folder), GIVEN, "Given the ticket pet-visits has no tags", "screens/1.png", "misses the intent", "The board is empty."]))
 
-            with it("should count the step as missed"):
-                self.review.record_verdict(str(self.walk.folder), GIVEN, "misses the intent", "The board is empty.", screenshot="screens/1.png")
-                expect(self.walk.missed_steps).to(equal([GIVEN]))
-
-            with it("should replace the step when it is walked again"):
-                self.review.record_verdict(str(self.walk.folder), GIVEN, "misses the intent", "Empty.", screenshot="screens/1.png")
-                self.review.record_verdict(str(self.walk.folder), GIVEN, "meets the intent", "Shows pet-visits.", screenshot="screens/1.png")
-                expect(self.walk.rows).to(have_len(1))
-
-            with it("should refuse a step whose screenshot was not saved"):
-                record = lambda: self.review.record_verdict(str(self.walk.folder), GIVEN, "meets the intent", "Fine.", screenshot="screens/9.png")  # noqa: E731
+            with it("should refuse a verdict a walk does not give"):
+                record = lambda: self.review.record_walked_step(str(self.walk.folder), GIVEN, "Given", "screens/1.png", "intended", "Fine.")  # noqa: E731
                 expect(record).to(raise_error(E2eReviewRefused))
+
+    with context("with a run whose summary the review kept beside it"):
+        with before.each:
+            folder = self.run_folder("run-1")
+            summary = {"steps": 2, "changed_steps": [THEN], "unjudged_steps": [THEN], "missed_steps": [GIVEN]}
+            (folder / "changed.json").write_text(json.dumps(summary), encoding="utf-8")
+            self.run = self.review.run_of(f"{TARGET}/run-1")
+
+        with it("should count its steps"):
+            expect(self.run.steps).to(equal(2))
+
+        with it("should name its changed steps not judged yet"):
+            expect(self.run.unjudged_steps).to(equal([THEN]))
+
+        with it("should name its missed steps"):
+            expect(self.run.missed_steps).to(equal([GIVEN]))
+
+    with context("with a run reviewed before its summary was kept"):
+        with it("should read the changed steps its file names"):
+            folder = self.run_folder("run-1")
+            (folder / "changed.json").write_text(json.dumps([THEN]), encoding="utf-8")
+            expect(self.review.run_of(f"{TARGET}/run-1").changed_steps).to(equal([THEN]))
 
     with context("that runs a sub-epic's browser story tests"):
         with it("should start Playwright's story-ui project on the sub-epic's folder"):
@@ -115,21 +127,20 @@ with description("the end-to-end screen review of a project") as self:
             pair = self.review.changed_pairs(f"{TARGET}/run-2")[0]
             expect((pair["theirs"], pair["ours"])).to(equal((str(self.sub_epic / "run-1" / "screens/2.png"), str(self.run2 / "screens/2.png"))))
 
-        with it("should keep the changed steps beside the run"):
-            self.review.changed_pairs(f"{TARGET}/run-2")
-            expect(self.review.run_of(f"{TARGET}/run-2").changed_steps).to(equal([THEN]))
-
         with it("should pass a judge verdict on a step a test ran to the review"):
             self.run_folder("run-3", [{"key": THEN, "step": "Then", "screenshot": "screens/2.png", "by": "run by a test", "result": "pass"}])
-            self.review.record_verdict(f"{TARGET}/run-3", THEN, "misses the intent", "No tag shows.")
+            self.review.judge_step(f"{TARGET}/run-3", THEN, "misses the intent", "No tag shows.")
             expect(self.tool.calls[-1]).to(equal(["review.ts", "judge", str(self.sub_epic / "run-3"), THEN, "misses the intent", "No tag shows."]))
 
         with it("should pass a review verdict, with what it cites, to the review"):
             self.review.record_verdict(f"{TARGET}/run-2", THEN, "intended", "Tags are dark now.", cites="commit abc123")
             expect(self.tool.calls[-1]).to(equal(["review.ts", "verdict", str(self.run2), THEN, "intended", "Tags are dark now.", "--cites", "commit abc123"]))
 
-        with it("should refuse a verdict that is none of the six"):
-            expect(lambda: self.review.record_verdict(f"{TARGET}/run-2", THEN, "fine", "ok")).to(raise_error(E2eReviewRefused))
+        with it("should refuse a review verdict that is none of the four"):
+            expect(lambda: self.review.record_verdict(f"{TARGET}/run-2", THEN, "meets the intent", "ok")).to(raise_error(E2eReviewRefused))
+
+        with it("should refuse a judge verdict that is none of the two"):
+            expect(lambda: self.review.judge_step(f"{TARGET}/run-2", THEN, "intended", "ok")).to(raise_error(E2eReviewRefused))
 
         with it("should accept the run as named by the person, and rewrite its report"):
             self.review.accept(f"{TARGET}/run-2", "Jeff")
@@ -201,7 +212,9 @@ with description("the scheduled e2e run's screen review") as self:
         with context("and judged by the agent"):
             with before.each:
                 self.scheduled.start()
-                (self.run2 / "review.json").write_text(json.dumps({"against": "run-1", "pairs": {THEN: {"verdict": "missed by the tests", "reason": "Red on red."}}}), encoding="utf-8")
+                # The summary the review keeps once the agent records missed by the tests on the changed step.
+                summary = {"steps": 1, "changed_steps": [THEN], "unjudged_steps": [], "missed_steps": [THEN]}
+                (self.run2 / "changed.json").write_text(json.dumps(summary), encoding="utf-8")
 
             with it("should name the latest run's missed step with its sub-epic"):
                 expect(self.review.latest().missed_steps).to(equal([f"{TARGET}: {THEN}"]))

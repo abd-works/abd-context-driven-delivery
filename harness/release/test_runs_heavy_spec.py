@@ -2,7 +2,7 @@
 stand-in scripts/test.ps1 the repository commits, real processes started and killed, and two processes on one
 test-runs.json. test_runs_spec.py holds the stubbed twins.
 
-Each run is started as a person or the cadence starts it, `python -m harness.diagnostics.test_runs <tier> <checkout>
+Each run is started as a person or the cadence starts it, `python -m harness.release.test_runs <tier> <checkout>
 <record folder>`, and the record is read as the file holds it."""
 import json
 import os
@@ -17,7 +17,7 @@ from pathlib import Path
 from expects import be_false, be_true, contain, equal, expect
 from mamba import after, before, context, description, it
 
-from harness.diagnostics.test_runs import RunOutcome, TestCadence, TestRun, TestRunRecord, TestTier
+from harness.release.test_runs import RunOutcome, TestCadence, TestRun, TestRunRecord, TestTier
 from harness.git.git import Git
 from harness.process.process import RunningProcess
 
@@ -103,7 +103,7 @@ with description("a tier run") as self:
         self.pid_file = self.root / f"tier-{len(self.started)}.pid"
         env = {**os.environ, "PYTHONPATH": str(REPOSITORY), "PYTHONIOENCODING": "utf-8", "RUN_SECONDS": str(seconds),
                "RUN_EXIT": str(exit_code), "RUN_PID_FILE": str(self.pid_file), "RUN_CAPTURES": str(int(captures))}
-        process = subprocess.Popen([sys.executable, "-m", "harness.diagnostics.test_runs", "heavy", str(checkout or self.checkout), str(self.home)],
+        process = subprocess.Popen([sys.executable, "-m", "harness.release.test_runs", "heavy", str(checkout or self.checkout), str(self.home)],
                                    cwd=self.root, env=env, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                    text=True, encoding="utf-8", errors="replace")
         self.started.append(process)
@@ -261,14 +261,14 @@ with description("the record of test runs") as self:
 
     def run_by_hand(self) -> subprocess.CompletedProcess:
         env = {**os.environ, "PYTHONPATH": str(REPOSITORY), "PYTHONIOENCODING": "utf-8"}
-        return subprocess.run([sys.executable, "-m", "harness.diagnostics.test_runs", "heavy", str(self.root), str(self.home)], cwd=self.root,
+        return subprocess.run([sys.executable, "-m", "harness.release.test_runs", "heavy", str(self.root), str(self.home)], cwd=self.root,
                               env=env, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=SOON_SECONDS, check=False)
 
     with context("that another process writes again and again"):
         with before.each:
             self.record.save(TestRun(TestTier.HEAVY, "abc123", datetime.now(timezone.utc)))
             writes = ("import sys, time\nfrom datetime import datetime, timezone\n"
-                      "from harness.diagnostics.test_runs import TestRun, TestRunRecord, TestTier\n"
+                      "from harness.release.test_runs import TestRun, TestRunRecord, TestTier\n"
                       "record = TestRunRecord(sys.argv[1])\nrun = record.latest(TestTier.HEAVY)\nend = time.monotonic() + 3\n"
                       "print('writing', flush=True)\n"
                       "while time.monotonic() < end:\n    record.save(run)\n")

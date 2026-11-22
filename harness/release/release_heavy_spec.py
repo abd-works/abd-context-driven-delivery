@@ -14,10 +14,10 @@ from pathlib import Path
 from expects import be_none, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
-from harness.diagnostics.release import CddRelease, ReleaseAlreadyTagged
-from harness.diagnostics.test_runs import RunOutcome, TestCadence, TestRun, TestRunRecord, TestRunner, TestTier, main_checkout
+from harness.release.release import CddRelease, ReleaseAlreadyTagged
+from harness.release.test_runs import RunOutcome, TestCadence, TestRun, TestRunRecord, TestRunner, TestTier, main_checkout
 from harness.git.git import Git
-from harness.diagnostics.github_cli import GitHubCli, GitHubCliError
+from harness.release.github_cli import GitHubCli, GitHubCliError
 
 # How long the background run of a stand-in test.ps1 has to record its result.
 RECORDED_SECONDS = 60

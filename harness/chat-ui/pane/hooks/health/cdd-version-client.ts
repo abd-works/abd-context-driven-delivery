@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
-import type { CddVersionData } from '@cdd/harness/diagnostics/cdd-version'
+import type { CddVersionData } from '@cdd/harness/release/cdd-version'
 
 import type { CddVersionJson } from '../../types'
 import { BRAND } from '../shared/brand'

@@ -25,7 +25,7 @@ from typing import Any
 
 from harness.agent_tools.agent_tools import ToolsetReference
 from harness.agent_tools.tool_call import ToolCall
-from harness.diagnostics.app import APPS, App
+from harness.apps.app import APPS, App
 from harness.diagnostics.server_health import ServerHealth
 from harness.installation.data_class import data_of
 from harness.mcp.mcp_server import ProjectToolsets
@@ -33,7 +33,7 @@ from space.kanban.editor_apps_examples import AppExample, ThrowawayApp, Throwawa
 from space.kanban.session_board_examples import SessionsProject
 from space.session.sessions import Sessions
 
-TOOLSETS = ("harness.diagnostics.app:App", "harness.diagnostics.server_health:ServerHealth")
+TOOLSETS = ("harness.apps.app:App", "harness.diagnostics.server_health:ServerHealth")
 # As long as the chat bar waits for a server it started to answer, and how often it looks.
 LAUNCH_SECONDS = 20
 LAUNCH_CHECK_SECONDS = 0.5

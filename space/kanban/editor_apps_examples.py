@@ -17,7 +17,7 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from harness.diagnostics.app import App, AppPackage, AppPage, AppServer, AppStatus, NodeScript, Npm, NpmRun, PortProbe
+from harness.apps.app import App, AppPackage, AppPage, AppServer, AppStatus, NodeScript, Npm, NpmRun, PortProbe
 import space.kanban  # noqa: F401 - registers the Kanban and Story UI apps, as the cdd server does when it loads every toolset
 from space.kanban.session_board_examples import BacklogFileSeed
 

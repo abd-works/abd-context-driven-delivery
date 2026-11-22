@@ -371,8 +371,8 @@ with description("a language adapter"):
             with context("with a field that holds a member of an enumeration"):
                 with it("should allow only the enumeration's values"):
                     install_path = Path(tempfile.mkdtemp(prefix="language-adapter-"))
-                    _install(install_path, ("harness.diagnostics.app:App",))
-                    app = (install_path / _ADAPTERS / "harness/diagnostics/app.ts").read_text(encoding="utf-8")
+                    _install(install_path, ("harness.apps.app:App",))
+                    app = (install_path / _ADAPTERS / "harness/apps/app.ts").read_text(encoding="utf-8")
                     expect(app).to(contain("  status: 'not installed' | 'not running' | 'running'\n"))
 
             with context("of a toolset with no data of its own, whose operation answers an object that has data"):

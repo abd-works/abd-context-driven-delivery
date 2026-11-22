@@ -19,6 +19,7 @@ from harness.graph.explorer import ExplorerEntry, FilteredNode, GraphLoaded, Gra
 from harness.graph.file_lines import FileLines, PathKind
 from harness.markdown.markdown import MarkdownText
 from harness.graph.graph_build import GraphBuild
+import harness.graph.graph_app  # noqa: F401 - registers the Graph app with App, so the server health report lists it
 from harness.graph.graph_practices import GraphPractices
 from harness.graph.graph_reads import GraphReads
 from harness.graph.node_filter import Filter, FilterChoices, FilterRequest

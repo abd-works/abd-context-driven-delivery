@@ -3,36 +3,25 @@ say when to update."""
 from __future__ import annotations
 
 import re
-import tomllib
-from enum import Enum
 from pathlib import Path
 
 from harness.agent_tools import agent_toolset
-from harness.diagnostics.release import PYPROJECT, VERSION_LINE, CddRelease
-from harness.diagnostics.test_runs import TestRunRecord, default_record_folder
+from harness.release.project_version import PYPROJECT, ProjectVersion, Version, VersionStanding
+from harness.release.release import CddRelease
+from harness.release.test_runs import TestRunRecord, default_record_folder
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.installation.data_class import data_field, language_adapter
 from harness.installation.files import command
 from harness.mcp.mcp_annotations import long_call, mcp
 from harness.git.git import Git, RepoConnectError
-from harness.diagnostics.github_cli import GitHubCli
+from harness.release.github_cli import GitHubCli
 
 # The checkout the cdd server runs its code from: the one whose version every chat it answers runs.
 SERVED_CHECKOUT = Path(__file__).resolve().parents[2]
 # A release is a tag such as v2.0.0 that /release pushes; commits on main after it are not released.
-RELEASE_TAG = re.compile(r'^v(\d+)\.(\d+)(\.\d+)?$')
 _VERSION_TEXT = re.compile(r'^\d+\.\d+(\.\d+)?$')
 # Short enough that the fetch ends inside the cdd tool's own time limit, so a slow network reads the last fetch instead.
 FETCH_SECONDS = 8
-
-
-class VersionStanding(str, Enum):
-    """How the version a chat runs stands against the latest release on origin."""
-
-    CURRENT = "current"
-    BEHIND_MINOR = "behind minor"
-    BEHIND_MAJOR = "behind major"
-    UNKNOWN = "unknown"
 
 
 class VersionNotValid(ValueError):
@@ -41,37 +30,6 @@ class VersionNotValid(ValueError):
     def __init__(self, text: str) -> None:
         super().__init__(f"{text!r} is not a version: give major and minor, such as 0.2, or major, minor and patch, such as 0.2.1")
         self.text = text
-
-
-class Release:
-    """A CDD version by its major and minor numbers, read from the ``version`` in ``pyproject.toml``; the patch number is
-    left out, since a release moves the minor version."""
-
-    def __init__(self, major: int, minor: int) -> None:
-        self.major = major
-        self.minor = minor
-
-    @classmethod
-    def from_pyproject(cls, text: str) -> Release:
-        numbers = [int(part) for part in tomllib.loads(text)["project"]["version"].split(".")[:2]]
-        return cls(*numbers, *([0] * (2 - len(numbers))))
-
-    @classmethod
-    def from_tag(cls, tag: str) -> Release | None:
-        """The release a tag such as v2.0.0 names, or None when the tag is not a release."""
-        numbers = RELEASE_TAG.match(tag.strip())
-        return cls(int(numbers.group(1)), int(numbers.group(2))) if numbers else None
-
-    @property
-    def label(self) -> str:
-        return f"v{self.major}.{self.minor}"
-
-    def standing_against(self, latest: Release) -> VersionStanding:
-        if latest.major > self.major:
-            return VersionStanding.BEHIND_MAJOR
-        if latest.major == self.major and latest.minor > self.minor:
-            return VersionStanding.BEHIND_MINOR
-        return VersionStanding.CURRENT
 
 
 @language_adapter(language="typescript")
@@ -130,11 +88,9 @@ class CddVersion:
         to origin, so the version is the latest there at once: the version given, such as 0.2 or 1.0.1, or with none
         given the next minor version. Nothing raises the version by itself; run this when a change is a release. Then
         tell the person the version it wrote and pushed."""
-        file = self._project / PYPROJECT
-        text = file.read_text(encoding="utf-8")
-        next_version = self._next_version_from(version, Release.from_pyproject(text))
-        file.write_text(VERSION_LINE.sub(f'version = "{next_version}"', text, count=1), encoding="utf-8")
-        self._project_git.run("commit", "-m", f"Version {Release.from_pyproject(file.read_text(encoding='utf-8')).label}", "--", PYPROJECT)
+        project = ProjectVersion.of(self._project)
+        project.write(self._next_version_from(version, project.version))
+        self._project_git.run("commit", "-m", f"Version {project.version.label}", "--", PYPROJECT)
         self._project_git.run("push", "origin", "HEAD")
         return self
 
@@ -147,7 +103,7 @@ class CddVersion:
         """Release the CDD version in pyproject.toml, never on red. /version sets the number; this tags and publishes
         it, changing no file. A version already released is refused: run /version first.
         1. Run the e2e tier, then the heavy tier, each to its end in the background from the repository's folder with
-           the main checkout's Python: `.venv/Scripts/python -m harness.diagnostics.test_runs e2e .`, then the same
+           the main checkout's Python: `.venv/Scripts/python -m harness.release.test_runs e2e .`, then the same
            with heavy. Each records its result in the cdd home. When a tier fails, find the cause, fix it, commit, and
            run that tier again, then the other, until both pass on the same commit.
         2. Call this with publish false. It refuses with ReleaseOnRed unless the latest e2e and heavy runs passed on
@@ -162,7 +118,7 @@ class CddVersion:
         release = self._release or CddRelease(self._project_git, GitHubCli(self._project), TestRunRecord(default_record_folder(), self._project))
         return release.publish() if publish else release.check_green()
 
-    def _next_version_from(self, version: str, current: Release) -> str:
+    def _next_version_from(self, version: str, current: Version) -> str:
         if not version.strip():
             return f"{current.major}.{current.minor + 1}.0"
         given = version.strip().removeprefix("v")
@@ -202,14 +158,14 @@ class CddVersion:
         return f"CDD {running} is behind the {latest} release, a {size} update. Press to update and reinstall."
 
     @property
-    def _running(self) -> Release:
-        return Release.from_pyproject((self._checkout / PYPROJECT).read_text(encoding="utf-8"))
+    def _running(self) -> Version:
+        return ProjectVersion.of(self._checkout).version
 
     @property
-    def _latest(self) -> Release | None:
+    def _latest(self) -> Version | None:
         """The newest release tag fetched, by version, not by date; None when there is none."""
         try:
             tags = self._git.run("tag", "--list", "v*", "--sort=-v:refname")
         except RepoConnectError:
             return None
-        return next((release for release in map(Release.from_tag, tags.splitlines()) if release is not None), None)
+        return next((release for release in map(Version.from_tag, tags.splitlines()) if release is not None), None)

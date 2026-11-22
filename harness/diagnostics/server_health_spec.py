@@ -17,7 +17,7 @@ RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 
 from harness.mcp.mcp_server import ProjectToolsets  # noqa: E402
 from harness.diagnostics.server_health import ServerHealth  # noqa: E402
-from harness.diagnostics.test_runs import TestCadence, TestRunRecord  # noqa: E402
+from harness.release.test_runs import TestCadence, TestRunRecord  # noqa: E402
 
 STEP = "Delete Ticket › Refuse to delete a ticket the board does not have › 3 Then the board says no ticket named 'no-such-ticket' on the board"
 
@@ -48,8 +48,8 @@ with description("server health") as self:
             run = self.root / ".sessions" / "scheduled" / "e2e-test-results" / "move-work-forward-on-session-board" / "maintain-tickets" / "run-2"
             run.mkdir(parents=True)
             (run / "results.json").write_text(json.dumps([{"key": STEP}]), encoding="utf-8")
-            (run / "changed.json").write_text(json.dumps([STEP]), encoding="utf-8")
-            (run / "review.json").write_text(json.dumps({"against": "run-1", "pairs": {STEP: {"verdict": "missed by the tests", "reason": "Red on red."}}}), encoding="utf-8")
+            summary = {"steps": 1, "changed_steps": [STEP], "unjudged_steps": [], "missed_steps": [STEP]}
+            (run / "changed.json").write_text(json.dumps(summary), encoding="utf-8")
             self.health = ServerHealth(self.root, cadence=TestCadence(TestRunRecord(self.root / "home")))
 
         with it("should report the run's name"):

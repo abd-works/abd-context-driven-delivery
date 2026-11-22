@@ -11,7 +11,7 @@ from pathlib import Path
 from expects import be_false, be_true, equal, expect
 from mamba import after, before, context, description, it
 
-from harness.diagnostics.app import AppServer, NodeScript
+from harness.apps.app import AppServer, NodeScript
 from harness.process.process import ExclusivePort
 
 STARTED_WITHIN_SECONDS = 15

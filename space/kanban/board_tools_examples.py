@@ -19,7 +19,7 @@ from harness.installation.data_class import data_of  # noqa: E402
 from space.kanban.session_board_examples import saved_graph, saved_practice  # noqa: E402
 from space.kanban.story_test import progress_in  # noqa: E402
 from harness.agent_tools.tool_call import ToolCall, ToolRequest  # noqa: E402
-from harness.diagnostics.app import AppServer  # noqa: E402
+from harness.apps.app import AppServer  # noqa: E402
 from harness.mcp.mcp_server import ProjectToolsets  # noqa: E402
 from space.session.throwaway_project import ThrowawayProject
 

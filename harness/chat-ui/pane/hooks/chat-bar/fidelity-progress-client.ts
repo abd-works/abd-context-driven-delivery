@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
-import type { AppData } from '@cdd/harness/diagnostics/app'
+import type { AppData } from '@cdd/harness/apps/app'
 import type { BoardPracticeData } from '@cdd/space/kanban/board'
 import type { FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
 import type { TicketData } from '@cdd/space/kanban/ticket'

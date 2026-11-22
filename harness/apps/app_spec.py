@@ -12,7 +12,7 @@ from pathlib import Path
 from expects import be_a, be_none, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
-from harness.diagnostics.app import APPS, App, AppNotRegistered, AppNotStarted, AppPackage, AppPage, AppServer, AppStatus, NodeScript, Npm, NpmRun, PortProbe
+from harness.apps.app import APPS, App, AppNotRegistered, AppNotStarted, AppPackage, AppPage, AppServer, AppStatus, NodeScript, Npm, NpmRun, PortProbe
 from harness.installation.data_class import data_of
 
 
@@ -132,7 +132,7 @@ with description("an app installed again") as self:
 
     with context("with nothing changed since"):
         with it("should read current"):
-            expect(self.app.is_current).to(equal(True))
+            expect(self.app.package.is_current).to(equal(True))
 
         with it("should run no npm"):
             self.app.install()
@@ -147,7 +147,7 @@ with description("an app installed again") as self:
             package_in(self.folder, {"build": "vite build", "start": "node serve.js"})
 
         with it("should not read current"):
-            expect(self.app.is_current).to(equal(False))
+            expect(self.app.package.is_current).to(equal(False))
 
         with it("should install its packages and build its page again"):
             self.app.install()
@@ -204,9 +204,6 @@ with description("the registry of apps") as self:
         for app in self.held:
             app.register()
         shutil.rmtree(self.folder, ignore_errors=True)
-
-    with it("should hold the Graph app, which harness registers from its own ports file"):
-        expect([app.label for app in APPS.registered]).to(contain("Graph"))
 
     # Each spec registers its app under the Graph app's label, so putting the apps held before back leaves none behind.
     with it("should load a registered app by its label"):

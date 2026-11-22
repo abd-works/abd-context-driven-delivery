@@ -247,7 +247,7 @@ def _step_failed(number: int, error: str) -> None:
     print(f"✗ {number}/{len(INSTALL_LATEST_STEPS)} {INSTALL_LATEST_STEPS[number]}: {error}", file=sys.stderr, flush=True)
 
 
-# A release is a tag such as v2.0.0 that /release pushes (harness/diagnostics/release.py).
+# A release is a tag such as v2.0.0 that /release pushes (harness/release/release.py).
 _RELEASE_TAG = re.compile(r"^v\d+\.\d+(\.\d+)?$")
 
 
@@ -335,7 +335,8 @@ def _restart_everything(installer: Installer, server: McpInstallation) -> None:
     next hook command replaces a hook daemon that loaded older hook code."""
     import space.kanban  # noqa: F401  registers the Kanban and Story UI apps
     import space.session  # noqa: F401  registers the Files app
-    from harness.diagnostics.app import APPS
+    import harness.graph.graph_app  # noqa: F401  registers the Graph app
+    from harness.apps.app import APPS
 
     _step_started(2)
     # Two apps can share one server, as the Kanban and the Story UI do; the second finds it already stopped.

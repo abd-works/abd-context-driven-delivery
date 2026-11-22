@@ -9,7 +9,8 @@ from expects import be_true, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.mcp.mcp_annotations import LongCall
-from harness.diagnostics.cdd_version import CddVersion, VersionNotValid, VersionStanding
+from harness.release.cdd_version import CddVersion, VersionNotValid
+from harness.release.project_version import VersionStanding
 from harness.git.git import RepoConnectError
 
 

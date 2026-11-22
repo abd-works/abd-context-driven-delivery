@@ -249,7 +249,7 @@ Requested 2026-11-16 by the person: "I can't find a single instance of code fold
 
 #### Scenario: A call inside a folded method opens in place once the method is unfolded
 
-Requested 2026-11-16 by the person: "I can't find a single instance of code folding where it's supposed to happen". In harness/diagnostics/app.py, opened from the graph, AppServer.restart's line `if not self.stop():` opened AppServer.stop 0 px tall: opening the file folds every block, the `if` block's own body stayed folded once restart was unfolded, and Monaco gives no height to a view zone whose next line a fold hides. The page and Monaco's view zones: `harness/graph/app/app.test.tsx`; the real editor is checked by hand in the Files app.
+Requested 2026-11-16 by the person: "I can't find a single instance of code folding where it's supposed to happen". In harness/apps/app.py, opened from the graph, AppServer.restart's line `if not self.stop():` opened AppServer.stop 0 px tall: opening the file folds every block, the `if` block's own body stayed folded once restart was unfolded, and Monaco gives no height to a view zone whose next line a fold hides. The page and Monaco's view zones: `harness/graph/app/app.test.tsx`; the real editor is checked by hand in the Files app.
 
 *Given* the Files app shows ticket.py from the graph with Ticket.delete folded, and the graph is read  
 *When* the Person unfolds Ticket.delete and opens the call `self.close()`, whose `if` block is still folded  

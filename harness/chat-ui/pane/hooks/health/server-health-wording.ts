@@ -1,4 +1,4 @@
-import type { AppData } from '@cdd/harness/diagnostics/app'
+import type { AppData } from '@cdd/harness/apps/app'
 import type { ServerHealthData } from '@cdd/harness/diagnostics/server-health'
 
 import type { AppOpeningJson, E2eReviewJson, InstallJson, ServerHealthJson, TestRunJson } from '../../types'

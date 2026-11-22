@@ -3,7 +3,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { PNG } from 'pngjs';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { placeOf, RESULTS_FILE, type StepRow, stepPairs, writeCompareReport, writeHistoryReport, writeStoryMapReport, writeWalkReport } from './report';
+import { placeOf, writeCompareReport, writeHistoryReport, writeStoryMapReport, writeWalkReport } from './report';
+import { RESULTS_FILE, Run, type StepRow } from './run';
 
 const STORY = 'Maintain Tickets';
 const SCENARIO = 'Rename a ticket';
@@ -48,7 +49,7 @@ describe('a walk report', () => {
   describe('that has been written for a walk with a step that meets the intent and one that misses it', () => {
     let page: string;
     beforeEach(() => {
-      page = readFileSync(writeWalkReport(runFolder([MISSES, MEETS]).runDir), 'utf8');
+      page = readFileSync(writeWalkReport(new Run(runFolder([MISSES, MEETS]).runDir)), 'utf8');
     });
 
     it('should name the sub-epic from the run folder', () => {
@@ -94,28 +95,28 @@ describe('a walk report', () => {
 
   describe('that has been written for a walk whose every step meets the intent', () => {
     it('should leave the scenario closed', () => {
-      const page = readFileSync(writeWalkReport(runFolder([MEETS]).runDir), 'utf8');
+      const page = readFileSync(writeWalkReport(new Run(runFolder([MEETS]).runDir)), 'utf8');
       expect(page).not.toMatch(/<details class="scenario failing"/);
     });
   });
 
   describe('that has been written for a step not judged yet', () => {
     it('should mark the step not judged', () => {
-      const page = readFileSync(writeWalkReport(runFolder([{ ...MEETS, verdict: undefined, reason: undefined }]).runDir), 'utf8');
+      const page = readFileSync(writeWalkReport(new Run(runFolder([{ ...MEETS, verdict: undefined, reason: undefined }]).runDir)), 'utf8');
       expect(page).toContain('<span class="check-name">Judge</span><span class="check-value">not judged</span>');
     });
   });
 
   describe('that has been written for a step run by a test that failed', () => {
     it("should show the test's failure among its checks", () => {
-      const page = readFileSync(writeWalkReport(runFolder([{ ...MEETS, by: 'run by a test', result: 'fail' }]).runDir), 'utf8');
+      const page = readFileSync(writeWalkReport(new Run(runFolder([{ ...MEETS, by: 'run by a test', result: 'fail' }]).runDir)), 'utf8');
       expect(page).toContain('<div class="check fail"><span class="check-name">Test</span><span class="check-value">failed</span></div>');
     });
   });
 
   describe('that has been written for the first run of its sub-epic', () => {
     it('should say there is no previous run to compare with', () => {
-      const page = readFileSync(writeWalkReport(runFolder([MEETS]).runDir), 'utf8');
+      const page = readFileSync(writeWalkReport(new Run(runFolder([MEETS]).runDir)), 'utf8');
       expect(page).toContain('<span class="check-name">Previous</span><span class="check-value">no previous run</span>');
     });
   });
@@ -126,7 +127,7 @@ describe('a walk report', () => {
       const { root } = runFolder([MEETS, MISSES], 'run-1');
       const { runDir } = runFolder([{ ...MEETS, verdict: undefined, reason: undefined }, { ...MISSES, verdict: undefined, reason: undefined }], 'run-2', root);
       writeFileSync(path.join(runDir, THEN_SHOT), screenshot(128));
-      page = readFileSync(writeWalkReport(runDir), 'utf8');
+      page = readFileSync(writeWalkReport(new Run(runDir)), 'utf8');
     });
 
     it("should mark a step whose screen is the previous run's as the same", () => {
@@ -164,7 +165,7 @@ describe('a walk report', () => {
 
   describe('that has been written for a step whose screenshot is missing', () => {
     it('should say the step has no screenshot', () => {
-      const page = readFileSync(writeWalkReport(runFolder([{ ...MEETS, screenshot: 'screens/gone.png' }]).runDir), 'utf8');
+      const page = readFileSync(writeWalkReport(new Run(runFolder([{ ...MEETS, screenshot: 'screens/gone.png' }]).runDir)), 'utf8');
       expect(page).toContain('no screenshot');
     });
   });
@@ -175,7 +176,7 @@ describe('a walk report', () => {
     beforeEach(() => {
       const { root, runDir } = runFolder([MEETS, MISSES]);
       historyDir = path.join(root, 'history', '2026-11-17');
-      page = readFileSync(writeHistoryReport(runDir, historyDir, 'move-work-forward-on-session-board/maintain-tickets'), 'utf8');
+      page = readFileSync(writeHistoryReport(new Run(runDir), historyDir, 'move-work-forward-on-session-board/maintain-tickets'), 'utf8');
     });
 
     it('should keep the page without its screenshots', () => {
@@ -200,14 +201,14 @@ describe('an end-to-end run compared with an accepted walk', () => {
 
   describe('with a step whose screen is the same in both', () => {
     it('should mark the pair same', () => {
-      expect(stepPairs(runDir, walkDir).find(pair => pair.key === MEETS.key)?.change).toBe('same');
+      expect(new Run(runDir).pairsAgainst(new Run(walkDir)).find(pair => pair.key === MEETS.key)?.change).toBe('same');
     });
   });
 
   describe('with a step whose screen differs', () => {
     it('should mark the pair changed', () => {
       writeFileSync(path.join(runDir, THEN_SHOT), screenshot(255));
-      expect(stepPairs(runDir, walkDir).find(pair => pair.key === MISSES.key)?.change).toBe('changed');
+      expect(new Run(runDir).pairsAgainst(new Run(walkDir)).find(pair => pair.key === MISSES.key)?.change).toBe('changed');
     });
   });
 
@@ -215,7 +216,7 @@ describe('an end-to-end run compared with an accepted walk', () => {
     it('should mark the pair new', () => {
       const extra: StepRow = { ...MEETS, key: `${STORY} › ${SCENARIO} › 3 And the card is still open`, step: 'And the card is still open' };
       writeFileSync(path.join(runDir, RESULTS_FILE), JSON.stringify([MEETS, MISSES, extra]));
-      expect(stepPairs(runDir, walkDir).find(pair => pair.key === extra.key)?.change).toBe('new');
+      expect(new Run(runDir).pairsAgainst(new Run(walkDir)).find(pair => pair.key === extra.key)?.change).toBe('new');
     });
   });
 
@@ -223,7 +224,7 @@ describe('an end-to-end run compared with an accepted walk', () => {
     let page: string;
     beforeEach(() => {
       writeFileSync(path.join(runDir, THEN_SHOT), screenshot(255));
-      page = readFileSync(writeCompareReport(runDir, walkDir), 'utf8');
+      page = readFileSync(writeCompareReport(new Run(runDir), new Run(walkDir)), 'utf8');
     });
 
     it("should show each step's two screens side by side, captioned with their runs", () => {

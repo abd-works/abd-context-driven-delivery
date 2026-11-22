@@ -1,5 +1,5 @@
 import { CHAT_QUERY, PROJECT_QUERY, type CddApi } from '@cdd/cdd-shared'
-import { AppClientGenerated, type AppData } from '@cdd/harness/diagnostics/app'
+import { AppClientGenerated, type AppData } from '@cdd/harness/apps/app'
 
 import type { Failures } from './board-api'
 

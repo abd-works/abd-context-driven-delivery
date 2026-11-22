@@ -16,7 +16,6 @@ from typing import Callable
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, tool_subject
 from harness.agent_tools.progress import report_progress
-from harness.graph.graph_app import GRAPH_APP_PORTS
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.json_file import JsonFile
 from harness.mcp.mcp_annotations import long_call, mcp
@@ -276,16 +275,114 @@ class Npm:
         os.kill(process, signal.SIGTERM)
 
 
+class PackageNotInstalled(Exception):
+    """An app's package could not be installed, and the output that says why."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
 class AppPackage:
     """The npm package an app installs from: its folder, its ``package.json``, what its install reads (*AppSources*:
     its own folder and the folders outside it its build imports, such as the language adapters), and npm, which
-    installs it and builds its page."""
+    installs it and builds its page. It installs itself, and keeps the fingerprint of what each install read beside what
+    that install wrote, so an install with nothing changed takes no npm."""
+
+    # The fingerprints the last install kept, each beside what it describes, so removing either folder forgets it.
+    PACKAGES_STAMP = Path("node_modules") / ".cdd-packages"
+    BUILD_STAMP = Path("dist") / ".cdd-build"
+    # A package that builds no page, such as the Graph's, which its server serves through vite, keeps its sources'
+    # fingerprint beside its packages, so a change to its server's code still counts as a change.
+    SOURCES_STAMP = Path("node_modules") / ".cdd-sources"
 
     def __init__(self, folder: Path, imports: tuple[Path, ...] = (), npm: Npm | None = None) -> None:
         self.folder = Path(folder)
         self.file = JsonFile(self.folder / "package.json")
         self.sources = AppSources(self.folder, imports)
         self.npm = npm or Npm()
+
+    @property
+    def is_installed(self) -> bool:
+        """Its packages are in its folder, and so is its built page when it builds one."""
+        if not self.file.exists() or not (self.folder / "node_modules").is_dir():
+            return False
+        return not self._builds_a_page or (self.folder / "dist").is_dir()
+
+    @property
+    def is_current(self) -> bool:
+        """Installed, and nothing its install reads has changed since: its packages match the package files, and its
+        built page, when it builds one, matches its sources."""
+        if not self.is_installed or not self._is_stamped(self.PACKAGES_STAMP, self.sources.packages):
+            return False
+        return self._is_stamped(self._sources_stamp, self.sources.build)
+
+    def install(self, label: str) -> None:
+        """Install the packages, then build the page when the package builds one, each only when what it reads changed
+        since the last install; label names the app in the progress it reports. Raises *PackageNotInstalled* with the
+        reason when npm fails or leaves it not installed."""
+        if not self.file.exists():
+            raise PackageNotInstalled(f"{self.folder} holds no package.json, so the {label} app is not there yet")
+        self._install_packages(label)
+        if self._builds_a_page:
+            self._build_page(label)
+        else:
+            self._stamp(self.SOURCES_STAMP, self.sources.build)
+        # a chat starts only an installed app, so an install that leaves it not installed is a failed one.
+        if not self.is_installed:
+            raise PackageNotInstalled(f"npm left {self.folder} without its packages or its built page")
+
+    def _install_packages(self, label: str) -> None:
+        if self._is_stamped(self.PACKAGES_STAMP, self.sources.packages):
+            report_progress(f"{label}: packages unchanged in {self.folder}")
+            return
+        report_progress(f"{label}: npm install in {self.folder}")
+        self._npm("install")
+        # npm install may rewrite the lock file, so the fingerprint is taken after it.
+        self._stamp(self.PACKAGES_STAMP, self.sources.packages)
+
+    def _build_page(self, label: str) -> None:
+        sources = self.sources.build
+        if self._is_stamped(self.BUILD_STAMP, sources):
+            report_progress(f"{label}: page unchanged in {self.folder}")
+            return
+        report_progress(f"{label}: npm run build in {self.folder}")
+        self._npm("run", "build")
+        self._stamp(self.BUILD_STAMP, sources)
+
+    def _is_stamped(self, stamp: Path, fingerprint: str) -> bool:
+        kept = self.folder / stamp
+        return kept.is_file() and kept.read_text(encoding="utf-8") == fingerprint
+
+    def _stamp(self, stamp: Path, fingerprint: str) -> None:
+        kept = self.folder / stamp
+        if kept.parent.is_dir():
+            kept.write_text(fingerprint, encoding="utf-8")
+
+    @property
+    def _sources_stamp(self) -> Path:
+        return self.BUILD_STAMP if self._builds_a_page else self.SOURCES_STAMP
+
+    @property
+    def _builds_a_page(self) -> bool:
+        return "build" in self.file.read().get("scripts", {})
+
+    def _npm(self, *arguments: str) -> None:
+        try:
+            ran = self.npm.run(self.folder, *arguments)
+        except NpmNotFound as missing:
+            raise PackageNotInstalled("npm is not on the PATH: install Node.js") from missing
+        except NpmTooSlow as slow:
+            raise PackageNotInstalled(f"npm {' '.join(arguments)} {slow}") from slow
+        if ran.code != 0:
+            raise PackageNotInstalled(self._reason_of(ran.stderr or ran.stdout) or f"npm {' '.join(arguments)} exited with {ran.code}")
+
+    def _reason_of(self, output: str) -> str:
+        """The lines of a failed step's output that say why: the first error lines npm and node print, such as
+        ``npm error code ENOENT``, else its last lines."""
+        lines = output.strip().splitlines()
+        errors = [line for line in lines if "err" in line.lower()]
+        return "\n".join(errors[:REASON_LINES] if errors else lines[-REASON_LINES:])
 
 
 class AppPage:
@@ -336,21 +433,12 @@ class App:
     # open answers an app installed, or refuses; the chat that opens it starts its server for as long as it lasts.
     # status is read from the folder and the ports each time it is asked; the app keeps no copy of it.
 
-    # The fingerprints the last install kept, each beside what it describes, so removing either folder forgets it.
-    PACKAGES_STAMP = Path("node_modules") / ".cdd-packages"
-    BUILD_STAMP = Path("dist") / ".cdd-build"
-    # An app that builds no page, such as the Graph, which its server serves through vite, keeps its sources' fingerprint
-    # beside its packages, so a change to its server's code still counts as a change.
-    SOURCES_STAMP = Path("node_modules") / ".cdd-sources"
-
     def __init__(self, label: str, package: AppPackage, page: AppPage) -> None:
         self._label = label
+        self.package = package
         self.folder = package.folder
         self._server = page.server
         self.page = page.path
-        self._npm_system = package.npm
-        self._package = package.file
-        self._sources = package.sources
 
     def register(self) -> App:
         """Register this app in the one registry of apps; registering a label again replaces the earlier app."""
@@ -371,7 +459,7 @@ class App:
     @property
     @data_field
     def status(self) -> AppStatus:
-        if not self.is_installed:
+        if not self.package.is_installed:
             return AppStatus.NOT_INSTALLED
         return AppStatus.DOWN if self.port is None else AppStatus.RUNNING
 
@@ -392,31 +480,16 @@ class App:
     def server(self) -> AppServer:
         return self._server
 
-    @property
-    def is_installed(self) -> bool:
-        """Its packages are in its folder, and so is its built page when its package builds one."""
-        if not self._package.exists() or not (self.folder / "node_modules").is_dir():
-            return False
-        return not self._builds_a_page or (self.folder / "dist").is_dir()
-
     @mcp
     @agent_tool
     def open(self) -> App:
         """Ready the app to open beside the chat: install it again when anything its install reads has changed, and
         restart its server when one runs, so it serves the new code; then answer it with its url and its server, which
         the chat starts while it is not running and stops when the chat ends. An unchanged app opens with no npm."""
-        if not self.is_current:
+        if not self.package.is_current:
             self.install()
             self._server.restart()
         return self
-
-    @property
-    def is_current(self) -> bool:
-        """Installed, and nothing its install reads has changed since: its packages match the package files, and its
-        built page, when it builds one, matches its sources."""
-        if not self.is_installed or not self._is_stamped(self.PACKAGES_STAMP, self._sources.packages):
-            return False
-        return self._is_stamped(self._sources_stamp, self._sources.build)
 
     @long_call
     @mcp
@@ -424,72 +497,8 @@ class App:
     def install(self) -> App:
         """Install the app's packages, then build its page when its package builds one; a page open on it loads the new
         build. Each step runs only when what it reads changed since the last install, so an unchanged app takes no npm."""
-        if not self._package.exists():
-            raise AppNotStarted(self, f"{self.folder} holds no package.json, so the {self.label} app is not there yet")
-        self._install_packages()
-        if self._builds_a_page:
-            self._build_page()
-        else:
-            self._stamp(self.SOURCES_STAMP, self._sources.build)
-        # a chat starts only an installed app, so an install that leaves it not installed is a failed one.
-        if not self.is_installed:
-            raise AppNotStarted(self, f"npm left {self.folder} without its packages or its built page")
-        return self
-
-    def _install_packages(self) -> None:
-        if self._is_stamped(self.PACKAGES_STAMP, self._sources.packages):
-            report_progress(f"{self.label}: packages unchanged in {self.folder}")
-            return
-        report_progress(f"{self.label}: npm install in {self.folder}")
-        self._npm("install")
-        # npm install may rewrite the lock file, so the fingerprint is taken after it.
-        self._stamp(self.PACKAGES_STAMP, self._sources.packages)
-
-    def _build_page(self) -> None:
-        sources = self._sources.build
-        if self._is_stamped(self.BUILD_STAMP, sources):
-            report_progress(f"{self.label}: page unchanged in {self.folder}")
-            return
-        report_progress(f"{self.label}: npm run build in {self.folder}")
-        self._npm("run", "build")
-        self._stamp(self.BUILD_STAMP, sources)
-
-    def _is_stamped(self, stamp: Path, fingerprint: str) -> bool:
-        kept = self.folder / stamp
-        return kept.is_file() and kept.read_text(encoding="utf-8") == fingerprint
-
-    def _stamp(self, stamp: Path, fingerprint: str) -> None:
-        kept = self.folder / stamp
-        if kept.parent.is_dir():
-            kept.write_text(fingerprint, encoding="utf-8")
-
-    @property
-    def _sources_stamp(self) -> Path:
-        return self.BUILD_STAMP if self._builds_a_page else self.SOURCES_STAMP
-
-    @property
-    def _builds_a_page(self) -> bool:
-        return "build" in self._package.read().get("scripts", {})
-
-    def _npm(self, *arguments: str) -> None:
         try:
-            ran = self._npm_system.run(self.folder, *arguments)
-        except NpmNotFound as missing:
-            raise AppNotStarted(self, "npm is not on the PATH: install Node.js") from missing
-        except NpmTooSlow as slow:
-            raise AppNotStarted(self, f"npm {' '.join(arguments)} {slow}") from slow
-        if ran.code != 0:
-            raise AppNotStarted(self, self._reason_of(ran.stderr or ran.stdout) or f"npm {' '.join(arguments)} exited with {ran.code}")
-
-    def _reason_of(self, output: str) -> str:
-        """The lines of a failed step's output that say why: the first error lines npm and node print, such as
-        ``npm error code ENOENT``, else its last lines."""
-        lines = output.strip().splitlines()
-        errors = [line for line in lines if "err" in line.lower()]
-        return "\n".join(errors[:REASON_LINES] if errors else lines[-REASON_LINES:])
-
-
-# harness/graph sits below this module and imports nothing of it, so the Graph app is made and registered here, from
-# the ports file its servers read; space/kanban registers the CDD Kanban and the Story UI editor the same way.
-_GRAPH_FOLDER = GRAPH_APP_PORTS.file.path.parent
-GRAPH_APP = App("Graph", AppPackage(_GRAPH_FOLDER), AppPage(AppServer(NodeScript(_GRAPH_FOLDER, "start.ts"), GRAPH_APP_PORTS.of("app")))).register()
+            self.package.install(self.label)
+        except PackageNotInstalled as failed:
+            raise AppNotStarted(self, failed.reason) from failed
+        return self
