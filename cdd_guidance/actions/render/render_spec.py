@@ -492,6 +492,14 @@ with description("A render whose worker process failed"):
 
 
 with description("Render asked for a path, in a session") as self:
+    # The first story map a process renders to a drawing imports the drawing's format adapter and every practice's
+    # graph reading, which each later render uses as it is; rendered once here, so no example pays for that first import.
+    with before.all:
+        warmed = ThrowawayProject()
+        (warmed.root / "story-map.md").write_text(_MARKDOWN_STORY_MAP, encoding="utf-8")
+        Render().for_call(ToolCall({}, warmed.root)).render("stories-story-map", format="drawio", paths=["story-map.md"], source="markdown")
+        warmed.close()
+
     with before.each:
         self.project = ThrowawayProject()
         self.folder = self.project.root / ".context"
@@ -746,18 +754,27 @@ with description("Render asked for a path, in a session") as self:
 
     # Exploratory testing, r3-sparky-01: the thin slice, a file the story map fidelity declares, was drawn over the story
     # map's drawing.
+    # The two renders happen once, in a project of the context's own, and every example reads what they left.
     with context("that is the story map's thin slice, beside the story map's drawing"):
-        with before.each:
-            self.action.render("stories-story-map", format="drawio", paths=[".context/story-map.md"], source="markdown")
-            self.drawn = (self.folder / "story-map.drawio").read_text(encoding="utf-8")
-            (self.folder / "thin-slice.md").write_text(_THIN_SLICE, encoding="utf-8")
-            self.results = self.action.render("stories-story-map", format="drawio", paths=[".context/thin-slice.md"], source="markdown")
+        with before.all:
+            self.sliced = ThrowawayProject()
+            self.sliced_folder = self.sliced.root / ".context"
+            self.sliced_folder.mkdir()
+            (self.sliced_folder / "story-map.md").write_text(_MARKDOWN_STORY_MAP, encoding="utf-8")
+            rendering = Render().for_call(ToolCall({}, self.sliced.root))
+            rendering.render("stories-story-map", format="drawio", paths=[".context/story-map.md"], source="markdown")
+            self.drawn = (self.sliced_folder / "story-map.drawio").read_text(encoding="utf-8")
+            (self.sliced_folder / "thin-slice.md").write_text(_THIN_SLICE, encoding="utf-8")
+            self.sliced_results = rendering.render("stories-story-map", format="drawio", paths=[".context/thin-slice.md"], source="markdown")
+
+        with after.all:
+            self.sliced.close()
 
         with it("should save the thin slice's drawing under the name the fidelity declares for it"):
-            expect(Path(self.results[0].path).name).to(equal("thin-slice.drawio"))
+            expect(Path(self.sliced_results[0].path).name).to(equal("thin-slice.drawio"))
 
         with it("should leave the story map's drawing as it was"):
-            expect((self.folder / "story-map.drawio").read_text(encoding="utf-8")).to(equal(self.drawn))
+            expect((self.sliced_folder / "story-map.drawio").read_text(encoding="utf-8")).to(equal(self.drawn))
 
     # Exploratory testing, r3-widget-01: one drawing of every module was saved in the first module's own folder.
     with context("that is the module card of each of two modules, rendered to one drawing"):

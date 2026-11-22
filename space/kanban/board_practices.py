@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import threading
-from pathlib import Path
+import weakref
 from typing import TYPE_CHECKING
 
 from harness.catalog_generator.catalog_practice import CatalogPractice
@@ -63,18 +63,19 @@ class HeldBoardPractices:
     their slash commands are named by: what the board shows of a practice, its name, colour, fidelities, pages, and
     skills, is the same for every session, so no single session's instances stand for it, and no other reader changes
     these. The board is made again for every call, so they are held here, for each checkout's sessions, for as long as
-    the process runs."""
+    those sessions are held."""
 
     def __init__(self) -> None:
-        self._held: dict[Path, BoardPractices] = {}
+        self._held: weakref.WeakKeyDictionary[Sessions, BoardPractices] = weakref.WeakKeyDictionary()
         self._lock = threading.Lock()
 
     def of(self, sessions: Sessions) -> BoardPractices:
-        """The practices the board of sessions' checkout works through, made the first time a board there asks."""
+        """The practices the board of sessions' checkout works through, made the first time a board there asks and held
+        for as long as those sessions are."""
         with self._lock:
-            held = self._held.get(sessions.root)
+            held = self._held.get(sessions)
             if held is None:
-                held = self._held[sessions.root] = BoardPractices(CatalogPractice.of_practices(PRACTICE_CATALOGUE.create_all()))
+                held = self._held[sessions] = BoardPractices(CatalogPractice.of_practices(PRACTICE_CATALOGUE.create_all()))
             return held
 
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import threading
+import weakref
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, TypeVar
 
@@ -49,6 +50,7 @@ class ProgressCache:
     def __init__(self, folder: Path | None, save_seconds: float = SAVE_SECONDS) -> None:
         # A session with no folder yet, such as a project's main before anything is saved in it, keeps its answers only
         # while it is held.
+        self.folder = folder
         self._file = JsonFile(folder / PROGRESS_CACHE_FILE) if folder is not None else None
         self._held: dict | None = None
         # Board reads run on several threads at once, and each can work out an answer for the same session.
@@ -128,12 +130,12 @@ class FidelityAnswers:
 
 
 class HeldProgressCaches:
-    """The progress cache of each session's work folder, made the first time the board reads that session and held
-    for as long as the process runs, so the answers worked out in one board read serve the next. A session that moves
-    its work to another folder, such as a ticket activated in its own worktree, reads the cache kept in that folder."""
+    """The progress cache of each session the board reads, made the first time the board reads it in its work folder,
+    and held for as long as the session is, so the answers worked out in one board read serve the next. A session that
+    moves its work to another folder, such as a ticket activated in its own worktree, reads the cache kept there."""
 
     def __init__(self) -> None:
-        self._held: dict[Path, ProgressCache] = {}
+        self._held: weakref.WeakKeyDictionary[Session, ProgressCache] = weakref.WeakKeyDictionary()
         self._lock = threading.Lock()
 
     def of(self, session: Session) -> ProgressCache:
@@ -142,13 +144,13 @@ class HeldProgressCaches:
         if folder is None:
             return ProgressCache(None)
         with self._lock:
-            held = self._held.get(folder)
-            if held is None:
-                held = self._held[folder] = ProgressCache(folder)
+            held = self._held.get(session)
+            if held is None or held.folder != folder:
+                held = self._held[session] = ProgressCache(folder)
             return held
 
 
-# The board's progress caches in this process, one for each session work folder.
+# The board's progress caches in this process, one for each session it reads.
 PROGRESS_CACHES = HeldProgressCaches()
 # No save of the session folders commits a progress cache: it is worked out again wherever it is missing.
 SessionSaves.leave_out(f"**/{PROGRESS_CACHE_FILE}")

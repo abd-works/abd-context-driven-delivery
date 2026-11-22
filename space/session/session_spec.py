@@ -36,6 +36,7 @@ from space.session.practices.guidance_selection import UnknownSelectionPart
 from harness.agent_tools.chat_pointer import ChatPointer
 from space.session.session_log import LogLine, LoopNotFoundError
 from space.session.open_sessions import SessionNameRequiredError
+from space.session.sessions import SERVED_SESSIONS
 from space.work_state import WorkState
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
@@ -937,9 +938,15 @@ with description("a practice"):
             self.called = self.repo
             self.work = self.repo / "work"
             self.work.mkdir()
-            Sessions(self.repo).switch("alpha", self.work)
+            Sessions.of_project(self.called).switch("alpha", self.work)
             self.session = Sessions.of_project(self.called).current()
             self.opened = self.session.practice("bdd")
+
+        # The process lets go of the project's sessions, and with them its graph and practices, so a run of many
+        # examples does not keep each one's to its end.
+        with after.each:
+            SERVED_SESSIONS.forget_under(self.repo)
+            shutil.rmtree(self.repo, ignore_errors=True)
 
         with it("should hold that practice's guidance in memory"):
             expect(isinstance(self.opened.guidance, PracticeGuidance)).to(equal(True))
@@ -1865,3 +1872,32 @@ with description("a session whose graph two calls first ask for at once"):
 
     with it("should make the graph once"):
         expect(len(self.made)).to(equal(1))
+
+
+# (S) Process --> Let Go Of A Removed Project's Sessions
+# A process that serves many short-lived projects, such as a spec run's throwaway projects, lets go of each one's
+# sessions once its folder is removed, so their graphs and practices are not kept, and scanned by every collection,
+# for as long as the process runs.
+with description("the sessions this process serves"):
+    with before.each:
+        self.home = ExampleHome()
+        self.folder = Path(tempfile.mkdtemp())
+        self.held = Sessions.of_project(self.folder)
+
+    with after.each:
+        self.home.close()
+        shutil.rmtree(self.folder, ignore_errors=True)
+
+    with context("let go of for the folder holding their project"):
+        with before.each:
+            SERVED_SESSIONS.forget_under(self.folder.parent / self.folder.name)
+
+        with it("should make new sessions the next time a call works in that project"):
+            expect(Sessions.of_project(self.folder)).not_to(be(self.held))
+
+    with context("let go of for another folder"):
+        with before.each:
+            SERVED_SESSIONS.forget_under(Path(tempfile.gettempdir()) / "cdd-no-such-project")
+
+        with it("should keep its sessions"):
+            expect(Sessions.of_project(self.folder)).to(be(self.held))

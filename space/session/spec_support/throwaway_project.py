@@ -12,6 +12,7 @@ import threading
 from pathlib import Path
 
 from harness.mcp.cdd_home import CDD_HOME_ENV
+from space.session.sessions import SERVED_SESSIONS
 
 
 class _FolderSweeper:
@@ -144,8 +145,10 @@ class ThrowawayProject:
         return self._folder
 
     def close(self) -> None:
-        """Name the project that was named before, and remove this one."""
+        """Name the project that was named before, and remove this one, letting go of the sessions this process held
+        for it, so a run of many specs does not keep every project's sessions, graphs, and practices to its end."""
         OPEN_PROJECTS.closed(self)
+        SERVED_SESSIONS.forget_under(self._folder)
         if self._saved is None:
             os.environ.pop("CDD_PROJECT", None)
         else:

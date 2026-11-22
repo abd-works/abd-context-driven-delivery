@@ -297,6 +297,15 @@ class CallSessions:
         held.answers.begin()
         return held
 
+    def forget_under(self, folder: Path) -> None:
+        """Let go of the sessions of every checkout inside folder, such as a spec's throwaway project once it is removed,
+        so their graphs and practices are not kept for as long as the process runs; a later call in a project there
+        makes its sessions again."""
+        top = folder.resolve()
+        with self._lock:
+            for root in [root for root in self._of_project if root.is_relative_to(top)]:
+                del self._of_project[root]
+
     def saved_in(self, project: Path) -> Session:
         return self.of_project(project).current()
 
