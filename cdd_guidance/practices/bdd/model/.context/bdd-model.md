@@ -37,11 +37,10 @@ Every description, context, and observation. It knows its own source lines and t
 	// the first line that asserts on, reads, or calls a private member; empty when there is none
 ----
 	// keep written and setup, so a copy in another format can still write them back
-+ setup_reach: dict
-	// what its lines after its opening line reach, up to its first child: member names, those it only reads, and tools called by name
 + load_span_facts(span: str): None
-	// fills expect_count, has_implementation, private_probe, and setup_reach from this node's own lines; an observation also keeps reach, what its whole span reaches
-	-> reach_of
+	// fills expect_count, has_implementation, and private_probe from this node's own lines. What an observation and
+	// its setups call is read when the graph links them (ObservationLinks), from their lines, by the spec's own file as
+	// Clean Engineering's index knows it (`CodeIndex.file(spec, imports).members_called_in(CodeSpan)`)
 
 ## Description : BehaviorNode
 

@@ -28,7 +28,6 @@ from cdd_guidance.practices.source_code import is_test_code
 if TYPE_CHECKING:
     from harness.graph.graph import Node
 
-    from cdd_guidance.practices.clean_engineering.reading.call_links import ClassesInReach
     from cdd_guidance.practices.clean_engineering.reading.graph_reading import GraphReading
     from cdd_guidance.practices.clean_engineering.model.operation import Operation
     from cdd_guidance.practices.clean_engineering.model.property import Property
@@ -52,9 +51,8 @@ class CodeRead:
     that do not parse, with the reason. Made for each read, so nothing one read finds stays on the practice for the
     next. It holds the folders the read takes and the class nodes it adds."""
 
-    def __init__(self, reading: "GraphReading", reach: "ClassesInReach") -> None:
+    def __init__(self, reading: "GraphReading") -> None:
         self._reading = reading
-        self._reach = reach
         self._root = Path(reading.in_graph.source_root)
         report_progress("clean_engineering · folders")
         self._folders = CodeFolders(reading)
@@ -70,7 +68,7 @@ class CodeRead:
         self._parse()
         self._record_public_sources()
         declared = self._class_names()
-        classes = ClassNodes(self._reading, set(declared), self._reach)
+        classes = ClassNodes(self._reading, set(declared))
         self._folders.add()
         for file, module in self._modules.items():
             relative = file.relative_to(self._root).as_posix()
@@ -228,12 +226,11 @@ class ClassNodes:
     """The classes one read adds to the graph, with their properties, operations, and parameters, and the class names a
     type hint may name, so the read links each member to the classes its type names once every class is added."""
 
-    def __init__(self, reading: "GraphReading", class_names: set[str], reach: "ClassesInReach") -> None:
+    def __init__(self, reading: "GraphReading", class_names: set[str]) -> None:
         self._graph = reading.graph
         self._in_graph = reading.in_graph
         self._index = reading.code_index
         self._class_names = class_names
-        self._reach = reach
         # Each relationship a person wrote on a property, as (the class's node, its kind, the class it names).
         self._written: "list[tuple[Node, str, str]]" = []
 
@@ -266,7 +263,7 @@ class ClassNodes:
             for other in self._classes_named_in(operation.get_fact("return_type"), operation.source.file):
                 self._graph.edges.relate("returns", operation, other)
         for cls, kind, target in self._written:
-            related = self._reach.class_named(target, cls.source.file)
+            related = self._index.file(cls.source.file).class_named(target)
             if related is not None:
                 self._graph.edges.relate(kind, cls, related)
 
@@ -300,7 +297,8 @@ class ClassNodes:
 
     def _classes_named_in(self, hint: str | None, file: str) -> "list[Node]":
         """The class file means by each name the hint names: the one it declares or imports."""
-        return [found for found in (self._reach.class_named(name, file) for name in self._names_in(hint)) if found is not None]
+        code_file = self._index.file(file)
+        return [found for found in (code_file.class_named(name) for name in self._names_in(hint)) if found is not None]
 
     def _names_in(self, hint: str | None) -> list[str]:
         """The class names a type hint names, each as a whole type, not as a prefix of a longer name; a collection's

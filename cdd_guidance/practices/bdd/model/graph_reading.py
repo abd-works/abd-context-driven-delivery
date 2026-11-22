@@ -5,6 +5,7 @@ only through what its own imports name, never through a name alone."""
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -16,20 +17,22 @@ from harness.graph.practice_reading import PracticeReading
 from harness.graph.model_node import schema_sync_paused
 
 from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
-from cdd_guidance.practices.clean_engineering.model import MODULE_FUNCTION_HOLDER
-from cdd_guidance.practices.clean_engineering.reading.imported_classes import ImportedClasses
+from cdd_guidance.practices.clean_engineering.reading.code_file import CodeFile, CodeSpan
 from cdd_guidance.practices.source_code import is_spec_file, is_test_code
 from cdd_guidance.practices.source_code import ClassReference, ScriptImports
-from cdd_guidance.practices.clean_engineering.model import CONSTRUCTOR_NAMES
 
 if TYPE_CHECKING:
     from cdd_guidance.practices.bdd.model.bdd_model import BddModel
-    from cdd_guidance.practices.bdd.model.nodes import Reach
 
 _BEHAVIOR_EDGES = {"Description": "descriptions", "Context": "contexts", "Observation": "observations"}
 # The language a node read from Python names; a script spec drives script code.
 _PYTHON = "python"
 _ARTICLES = ("a ", "an ", "the ")
+# A tool called by its name, `<toolset>.<operation>`: `call("ticket.move_next", ticket="pet-visits")`.
+_TOOL_NAMED = re.compile(r"""\b(\w+)\(\s*["']([a-z][a-z-]*)\.([a-zA-Z_]+)["']""")
+_QUOTED = re.compile(r"""(['"`])(?:\\.|(?!\1).)*\1""")
+# A mamba spec's own state, `self.cart`, which its blocks reach as a local.
+_SPEC_STATE = re.compile(r"\bself\.(\w+)")
 
 
 class BddGraphReading(PracticeReading):
@@ -106,21 +109,16 @@ class BddGraphReading(PracticeReading):
 
 class ObservationLinks:
     """Each observation invokes the operations and properties its realization starts from: what the nearest enclosing
-    setup reaches, the event the observation follows, and what the observation's own body calls or reads. Each describe
-    aligns with the class it describes. Each block recorded what its lines reach when its spec was read, so linking
-    reads no file. A name is looked for only in the code the spec's own imports name."""
+    setup calls, the event the observation follows, and what the observation's own body calls or reads. Each describe
+    aligns with the class it describes. A spec's code is resolved by the spec's own file as Clean Engineering's index
+    knows it, given the classes the spec imports (``CodeFile.members_called_in``), so an observation invokes the member
+    a call in the code it drives would invoke; a spec and the helpers only specs use drive the code under test, so they
+    are never part of it, and a tool called by its name is that toolset's operation."""
 
     def __init__(self, bdd: BddGraphReading, clean: PracticeReading) -> None:
         self.bdd = bdd
         self.clean = clean
         self.graph = bdd.graph
-        code_classes = [node for node in clean.in_graph.nodes("OoadClass") if node.source.file and not is_test_code(node.source.file)]
-        # A spec imports classes of its own language family, Python or script, so each family is resolved apart: a
-        # script's `./order` is `order.ts` though `order.py` lies beside it. No re-export is followed.
-        self._imported_classes = {
-            is_python: ImportedClasses([node for node in code_classes if (node.file_language == _PYTHON) == is_python], {})
-            for is_python in (True, False)
-        }
 
     def link(self) -> None:
         by_file: dict[str, list[Node]] = {}
@@ -131,74 +129,57 @@ class ObservationLinks:
         for file, nodes in by_file.items():
             nodes.sort(key=lambda node: node.source.start_line)
             spec = specs[file]
-            self._link_file(nodes, ImportedCode(self.clean, self._imported_classes[spec.file_language == _PYTHON], spec))
+            imports = [ClassReference(*pair) for pair in spec.get_fact("imported_classes") or []]
+            _SpecLinks(self, nodes, self.clean.code_index.file(file, imports), spec.file_language == _PYTHON).link()
 
-    def _link_file(self, nodes: list[Node], imported: ImportedCode) -> None:
-        for index, node in enumerate(nodes):
+
+class _SpecLinks:
+    """The links of one spec file's blocks, read through the spec's own file."""
+
+    def __init__(self, links: ObservationLinks, nodes: list[Node], code_file: CodeFile, is_python: bool) -> None:
+        self._graph = links.graph
+        self._index = links.clean.code_index
+        self._nodes = nodes
+        self._file = code_file
+        self._is_python = is_python
+
+    def link(self) -> None:
+        for index, node in enumerate(self._nodes):
             if node.type == "Description":
-                self._align(node, imported)
+                self._align(node)
             if node.type != "Observation":
                 continue
-            enclosing = self._enclosing(nodes, index)
-            reaches = [setup.get_fact("setup_reach") or {} for setup in enclosing]
-            own = node.get_fact("reach") or {}
-            builds: dict[str, str] = {}
-            for reach in [*reversed(reaches), own]:
-                builds.update(reach.get("builds", {}))
-            invoked = ReachedMembers(imported, own, builds).invoked
+            enclosing = self._enclosing(index)
+            setups = [self._setup_code(block) for block in enclosing]
+            own = _SpecCode(node.source.text)
+            # The setups run before the observation, outermost first, so each makes the locals the observation uses.
+            before = "\n".join(code.code for code in reversed(setups))
+            invoked = self._tool_operations(own) + self._called_in(own, before)
             # The nearest block that has a setup gives the event; a block with none passes to the one around it.
-            setup = next((reach for reach in reaches if reach.get("names")), None)
-            if setup is not None:
-                found = ReachedMembers(imported, setup, builds).invoked
+            at = next((index for index, code in enumerate(setups) if code.code.strip()), None)
+            if at is not None:
+                setup = setups[at]
+                found = self._tool_operations(setup) + self._called_in(setup, "\n".join(code.code for code in reversed(setups[at + 1:])))
                 invoked = found + [member for member in invoked if member not in found]
-            for member in invoked:
-                self.graph.edges.relate("invokes", node, member)
-                self.graph.edges.relate("invokedBy", member, node)
+            for member in dict.fromkeys(invoked):
+                self._graph.edges.relate("invokes", node, member)
+                self._graph.edges.relate("invokedBy", member, node)
 
-    def _align(self, described: Node, imported: ImportedCode) -> None:
-        subject = imported.class_described_by(described.name)
-        if subject is not None:
-            self.graph.edges.relate("alignsWith", described, subject)
-
-    def _enclosing(self, nodes: list[Node], index: int) -> list[Node]:
-        """Each describe or context around nodes[index], innermost first."""
-        observation = nodes[index]
+    def _called_in(self, code: "_SpecCode", before: str) -> list[Node]:
+        """The members of the code under test the code calls and reads, after the code before it; a call that carries
+        a tool by its name is transport, not the act, so it is none of them."""
         return [
-            parent
-            for parent in reversed(nodes[:index])
-            if parent.type != "Observation" and parent.source.end_line >= observation.source.end_line
+            member for member in self._file.members_called_in(CodeSpan(code.code, None, {}, before))
+            if member.source.file and not is_test_code(member.source.file) and member.name not in code.transports
         ]
 
-
-class ImportedCode:
-    """The code one spec's imports name: the classes it imports, and the operations and properties of the files those
-    imports name, in the spec's own language family, Python or script. A spec and the helpers only specs use drive the
-    code under test, so they are never part of it."""
-
-    def __init__(self, clean: PracticeReading, classes: ImportedClasses, spec: Node) -> None:
-        self._clean = clean
-        self._is_python = spec.file_language == _PYTHON
-        references = [ClassReference(*pair) for pair in spec.get_fact("imported_classes") or []]
-        resolved = [classes.resolve(reference, spec.source.file) for reference in references]
-        self.classes = [node for node in resolved if node is not None]
-        # A module a spec imports a function from holds no class the import names, so its file is taken as written.
-        self._files = {node.source.file for node in self.classes} | {file for reference in references for file in reference.files()}
-
-    def members_named(self, name: str) -> list[Node]:
-        """The operations and properties called name in the files the spec imports from."""
+    def _tool_operations(self, code: "_SpecCode") -> list[Node]:
+        """A tool is named by its toolset and operation, which is its address, so it is found without an import: the
+        operation of the toolset a tool's name gives, in the spec's language family."""
         return [
             member
-            for member in self._clean.code_index.members_named(name)
-            if member.source.file in self._files
-            and not is_test_code(member.source.file)
-            and (member.file_language == _PYTHON) == self._is_python
-        ]
-
-    def tool_operations(self, toolset: str, operation: str) -> list[Node]:
-        """The operation called operation of the toolset a tool's name gives, in the spec's language family."""
-        return [
-            member
-            for member in self._clean.code_index.members_named(operation)
+            for toolset, operation in code.tools
+            for member in self._index.members_named(Name(operation).snake)
             if member.type == "Operation"
             and Name(member.get_fact("owner")).kebab == toolset
             and member.source.file
@@ -206,77 +187,39 @@ class ImportedCode:
             and (member.file_language == _PYTHON) == self._is_python
         ]
 
-    def constructors_of(self, class_name: str) -> list[Node]:
-        """The constructor of the imported class called class_name, when its code writes one."""
-        files = {node.source.file for node in self.classes if node.name == class_name}
+    def _align(self, described: Node) -> None:
+        """A describe aligns with the imported class its subject opens with, `an order` or `a cart line that is new`;
+        the longest name when several fit, none when no imported class is named."""
+        words = described.name.strip().lower()
+        words = next((words[len(article):] for article in _ARTICLES if words.startswith(article)), words)
+        imported = [node for node in self._file.imported_classes if not is_test_code(node.source.file)]
+        named = [node for node in imported if f"{words} ".startswith(f"{Name(node.name).snake.replace('_', ' ')} ")]
+        subject = max(named, key=lambda node: len(node.name), default=None)
+        if subject is not None:
+            self._graph.edges.relate("alignsWith", described, subject)
+
+    def _enclosing(self, index: int) -> list[Node]:
+        """Each describe or context around the node at index, innermost first."""
+        observation = self._nodes[index]
         return [
-            member
-            for constructor in sorted(CONSTRUCTOR_NAMES)
-            for member in self.members_named(constructor)
-            if member.get_fact("owner") == class_name and member.source.file in files
+            parent
+            for parent in reversed(self._nodes[:index])
+            if parent.type != "Observation" and parent.source.end_line >= observation.source.end_line
         ]
 
-    def class_described_by(self, subject: str) -> Node | None:
-        """The imported class a describe's subject opens with, `an order` or `a cart line that is new`; the longest
-        name when several fit, none when no imported class is named."""
-        words = subject.strip().lower()
-        words = next((words[len(article) :] for article in _ARTICLES if words.startswith(article)), words)
-        named = [node for node in self.classes if f"{words} ".startswith(f"{Name(node.name).snake.replace('_', ' ')} ")]
-        return max(named, key=lambda node: len(node.name), default=None)
+    def _setup_code(self, block: Node) -> "_SpecCode":
+        """A describe's or context's own lines, after its opening line and before its first child."""
+        start, end = block.source.start_line, block.source.end_line
+        first_child = min((node.source.start_line for node in self._nodes if start < node.source.start_line <= end), default=end + 1)
+        return _SpecCode("\n".join(block.source.text.splitlines()[1:first_child - start]))
 
 
-class ReachedMembers:
-    """The code members one block's reach names, among the code its spec imports. A call that carries a tool by its
-    name is transport, not the act, so it links to nothing itself."""
+class _SpecCode:
+    """A spec's lines as code: each tool its calls carry by name, the calls that carry them, and the code itself, without
+    its strings, with the spec's own state on `self` read as locals, since a mamba spec keeps its fixtures there."""
 
-    def __init__(self, imported: ImportedCode, reach: Reach, builds: dict[str, str]) -> None:
-        self._imported = imported
-        self._reach = reach
-        # The class each variable in scope was built or declared as, by the block's own lines and the setups around it.
-        self._builds = builds
-        self._reads = set(reach.get("reads", []))
-        self._transports = {transport for transport, _toolset, _operation in reach.get("tools", [])}
-
-    @property
-    def invoked(self) -> list[Node]:
-        """The members the reach names, in the order it names them, one per class and name; a tool it calls by name is
-        that toolset's operation."""
-        found = self._tool_operations() + [
-            member for name in self._reach.get("names", []) for member in self._members_reached(name)
-        ]
-        unique: dict[tuple[str, str, str], Node] = {}
-        for member in found:
-            unique.setdefault((member.source.file, member.get_fact("owner"), member.name), member)
-        return list(unique.values())
-
-    def _tool_operations(self) -> list[Node]:
-        """A tool is named by its toolset and operation, which is its address, so it is found without an import."""
-        return [
-            member
-            for _transport, toolset, operation in self._reach.get("tools", [])
-            for member in self._imported.tool_operations(toolset, Name(operation).snake)
-        ]
-
-    def _members_reached(self, name: str) -> list[Node]:
-        constructors = self._imported.constructors_of(name)
-        if constructors:
-            return constructors
-        members = [
-            member for member in self._imported.members_named(name)
-            # A module function is reached by calling it; a read with its name belongs to some object's field.
-            if not (name in self._reads and member.get_fact("owner") == MODULE_FUNCTION_HOLDER)
-        ]
-        members = self._of_receiver(name, members)
-        owners = {member.get_fact("owner") for member in members}
-        # A name more than two classes share, such as `column`, does not say which one the observation reaches; a read,
-        # which has no call to narrow it, links only when one class owns the name.
-        if name in self._transports or len(owners) > (1 if name in self._reads else 2):
-            return []
-        # A getter is both an operation and a property of one class; the operation is the one that runs.
-        return sorted(members, key=lambda member: member.type != "Operation")
-
-    def _of_receiver(self, name: str, members: list[Node]) -> list[Node]:
-        """The members of the class the name's receiver was built as, when a setup or the block itself built it."""
-        built = {self._builds[receiver] for receiver in self._reach.get("receivers", {}).get(name, []) if receiver in self._builds}
-        of_built = [member for member in members if member.get_fact("owner") in built]
-        return of_built or members
+    def __init__(self, text: str) -> None:
+        named = [(match.group(1), match.group(2), match.group(3)) for match in _TOOL_NAMED.finditer(text)]
+        self.tools = [(toolset, operation) for _transport, toolset, operation in named]
+        self.transports = {transport for transport, _toolset, _operation in named}
+        self.code = _SPEC_STATE.sub(r"\1", _QUOTED.sub('""', CodeSpan.code_of(text)))

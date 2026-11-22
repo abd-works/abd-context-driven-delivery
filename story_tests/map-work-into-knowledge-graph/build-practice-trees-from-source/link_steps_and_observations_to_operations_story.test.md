@@ -13,7 +13,7 @@ Story map: [Build Practice Trees From Source](../../../.context/story-map.md#e-b
 
 ### Domain terms
 
-- ++imported class++ — a class a spec file's own imports name, found in the file the import names (`ImportedCode`).
+- ++imported class++ — a class a spec file's own imports name, found in the file the import names (`CodeFile`, which Clean Engineering's code index answers for the spec file).
 - ++nearest setup++ — the `before.each` or `beforeEach` of the innermost describe or state around an observation that has one.
 
 > In steps: the bookshop's files are the examples below.

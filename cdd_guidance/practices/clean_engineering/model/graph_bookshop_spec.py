@@ -58,10 +58,12 @@ with description("Clean Engineering reading the Bookshop into its graph") as sel
         with before.all:
             self.fixture = practice_from_files(_code())
 
-        with it("should join each call to the one operation its receiver names, by the receiver's type and the file's imports"):
+        with it("should join each call to the one operation its receiver names, by the receiver's type and the file's imports, and each class it builds to its constructor"):
             expect(_calls(self.fixture)).to(equal([
                 "Book.reserve -> Book.is_in_stock",
                 "Cart.add -> Book.is_in_stock",
+                "Cart.add -> CartLine.__init__",
+                "Cart.check_out -> Order.__init__",
                 "Cart.check_out -> Order.place",
                 "Cart.check_out -> Payment.authorise",
                 "Cart.total -> CartLine.subtotal",
