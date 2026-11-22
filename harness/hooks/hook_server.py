@@ -210,22 +210,15 @@ class HookMessages:
 
 
 class HookResult:
-    """Fields Cursor reads back from the hook process, and the toast the person sees beside the chat. The toast is not
-    sent to Cursor: the hook server hands it to the notifier that shows toasts."""
+    """Fields Cursor reads back from the hook process: the permission, whether the agent goes on, and the messages the
+    hooks say back (``messages``), which hold the toast the person sees beside the chat. The toast is not sent to
+    Cursor: the hook server hands it to the notifier that shows toasts."""
 
     def __init__(self, permission: str = "allow", continue_flag: bool | None = None, messages: HookMessages = HookMessages()) -> None:
         self.permission = permission
         self.continue_flag = continue_flag
-        self.user_message = messages.user_message
-        self.agent_message = messages.agent_message
-        self.followup_message = messages.followup_message
-        self.additional_context = messages.additional_context
-        self.toast = messages.toast
+        self.messages = messages
         self.followup_only = False
-
-    @property
-    def messages(self) -> HookMessages:
-        return HookMessages(self.user_message, self.agent_message, self.followup_message, self.additional_context, self.toast)
 
     @classmethod
     def from_handler(cls, raw: Mapping[str, Any] | None) -> HookResult:
@@ -233,15 +226,19 @@ class HookResult:
             return cls()
         continue_flag = False if raw.get("continue") is False else None
         result = cls(str(raw.get("permission") or "allow"), continue_flag, HookMessages.from_handler(raw))
-        if "permission" not in raw and result.followup_message:
+        if "permission" not in raw and result.messages.followup_message:
             result.followup_only = True
         return result
+
+    def keep_context(self, context: str | None) -> None:
+        """Keep context, or none, as the context the result adds to the agent's model, in place of what it held."""
+        self.messages = replace(self.messages, additional_context=context)
 
     def with_description(self, description: str) -> HookResult:
         text = description.strip()
         if not text:
             return self
-        existing = (self.agent_message or "").strip()
+        existing = (self.messages.agent_message or "").strip()
         if existing == text:
             return self
         if existing:
@@ -251,12 +248,13 @@ class HookResult:
     def merge(self, other: HookResult) -> HookResult:
         permission = "deny" if "deny" in (self.permission, other.permission) else "allow"
         continue_flag = False if False in (self.continue_flag, other.continue_flag) else None
+        mine, theirs = self.messages, other.messages
         merged = HookMessages(
-            self._join_lines(self.user_message, other.user_message),
-            self._join_lines(self.agent_message, other.agent_message),
-            other.followup_message or self.followup_message,
+            self._join_lines(mine.user_message, theirs.user_message),
+            self._join_lines(mine.agent_message, theirs.agent_message),
+            theirs.followup_message or mine.followup_message,
             self._join_unique_context(other),
-            self._join_lines(self.toast, other.toast),
+            self._join_lines(mine.toast, theirs.toast),
         )
         return HookResult(permission, continue_flag, merged)
 
@@ -266,27 +264,22 @@ class HookResult:
 
     def _join_unique_context(self, other: HookResult) -> str | None:
         parts: list[str] = []
-        for item in (self.additional_context, other.additional_context):
+        for item in (self.messages.additional_context, other.messages.additional_context):
             if item and item not in parts:
                 parts.append(item)
         return "\n\n".join(parts) or None
 
     def as_dict(self) -> dict[str, Any]:
+        """What Cursor reads back: only the follow-up prompt for a reply that sends one alone, else the permission,
+        whether the agent goes on, and each message the hooks said; never the toast."""
+        messages = self.messages
         if self.followup_only:
-            if self.followup_message:
-                return {"followup_message": self.followup_message}
-            return {}
+            return {"followup_message": messages.followup_message} if messages.followup_message else {}
         payload: dict[str, Any] = {"permission": self.permission}
         if self.continue_flag is False:
             payload["continue"] = False
-        if self.user_message:
-            payload["user_message"] = self.user_message
-        if self.agent_message:
-            payload["agent_message"] = self.agent_message
-        if self.followup_message:
-            payload["followup_message"] = self.followup_message
-        if self.additional_context:
-            payload["additional_context"] = self.additional_context
+        sent = (field.name for field in dataclass_fields(HookMessages) if field.name != "toast")
+        payload.update({name: getattr(messages, name) for name in sent if getattr(messages, name)})
         return payload
 
 
@@ -368,7 +361,7 @@ class HookHandler:
         raw = self.tool.callable(payload)
         fields = raw if isinstance(raw, Mapping) else None
         result = HookResult.from_handler(fields)
-        if result.additional_context or not fields:
+        if result.messages.additional_context or not fields:
             return result
         return result.with_description(self.tool.docstring)
 
@@ -490,13 +483,13 @@ class HookServer:
         if session is not None:
             result = self._with_chat_injections(session.chat_injections, payload, result)
         if payload.hook_event_name in ("stop", "subagentStop"):
-            result.followup_only = result.followup_message is not None
+            result.followup_only = result.messages.followup_message is not None
         return result
 
     def _with_chat_injections(self, injections: ChatRuleInjections, payload: HookPayload, result: HookResult) -> HookResult:
         """result with the rules kept for the event's chat, through the chat injections its session keeps."""
-        if injections.is_rules_dump(result.additional_context or ""):
-            result.additional_context = None
+        if injections.is_rules_dump(result.messages.additional_context or ""):
+            result.keep_context(None)
         injections.keep(result, payload)
         if payload.hook_event_name == "beforeSubmitPrompt":
             return injections.replay(payload, result)
@@ -518,7 +511,7 @@ class HookServer:
         for result in self._invoke_enabled(event, payload):
             merged = merged.merge(result)
         self._append_debug(payload, f"MERGED {json.dumps(merged.as_dict())}")
-        HOOK_TOASTS.show(merged.toast, payload.workspace_roots)
+        HOOK_TOASTS.show(merged.messages.toast, payload.workspace_roots)
         return merged
 
     def diagnose(self) -> dict[str, Any]:

@@ -9,9 +9,6 @@ from harness.graph.graph import MARKDOWN_SUFFIXES, FilterRequest, Graph, Node
 from harness.markdown.markdown import MarkdownText
 from space.session.session_files import NamedPathNotFoundError
 
-# The kind of node a story's example is: a fixture a scenario uses, declared in the story test or in an examples module.
-EXAMPLE_TYPE = "Example"
-
 
 class NodeSpans:
     """The lines a node covers, one span for each file: a node read from lines of a file covers those; a node read from
@@ -83,10 +80,9 @@ class NodeSpans:
         return self._below(node, below_lines=True)
 
     def _used_from_elsewhere(self, node: Node) -> bool:
-        """True for an example, which a scenario uses from where the story declares it, such as the examples module a
-        story test imports its fixtures from or the Examples table of a markdown story: it is no part of the scenario,
-        so the scenario's lines open alone."""
-        return node.type == EXAMPLE_TYPE
+        """True for a node its practice says is used from where something else declares it, such as a story's example:
+        it is no part of the node above it, so that node's lines open alone."""
+        return node.practice is not None and node.practice.reading.is_used_from_elsewhere(node)
 
     def _widen_with(self, node: Node) -> bool:
         """Widen the spans with the lines node was read from; whether it was read from any."""

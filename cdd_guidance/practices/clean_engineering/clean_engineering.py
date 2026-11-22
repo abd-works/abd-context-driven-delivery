@@ -14,6 +14,7 @@ from cdd_guidance.practices.clean_engineering.model.python.python_class_model im
 from cdd_guidance.practices.clean_engineering.model.sketch.sketch_class_model import SketchCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.typescript.typescript_class_model import TypeScriptCleanEngineeringModel
 from harness.agent_tools.agent_tools import agent_instructions, agent_toolset, tools
+from cdd_guidance.practices.source_code import is_test_code
 from harness.guidance.guidance import PracticeGuidance
 
 
@@ -47,6 +48,10 @@ class CleanEngineering(PracticeGuidance):
     model_document_format = MarkdownCleanEngineeringModel
 
     default_workspace_folder = "src"
+
+    def is_production_code(self, file: str) -> bool:
+        """Code its fidelities write, not a spec, a test, or test support (``is_test_code``)."""
+        return not is_test_code(file)
     # The class model each format reads and writes; the whiteboard model is imported only when a whiteboard is drawn.
     format_adapters = {
         "markdown": model_document_format,

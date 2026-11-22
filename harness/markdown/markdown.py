@@ -23,6 +23,7 @@ from harness.markdown.front_matter import FlatSettings
 # The seam other modules import from the package: a class's markdown read typed, the scope an owner hands it, and the
 # annotations that make a property read it. The classes that locate and read one file stay behind *Markdown*.
 __all__ = [
+    "FileFilter",
     "HTML",
     "Markdown",
     "MarkdownCollection",
@@ -91,6 +92,8 @@ class HTML:
 
 
 LocationKind = Literal["file", "folder", "section"]
+# An owner's filter of the files of a folder it reads: given the label read and a file's path, whether it reads the file.
+FileFilter: TypeAlias = Callable[[str, Path], bool]
 
 
 # A markdown link, whose words are all of it a heading shows.
@@ -228,25 +231,28 @@ class MarkdownText:
         parent = next((index for index, item in enumerate(self.headings()) if item[3].casefold() == wanted), None)
         if parent is None:
             return []
-        return self._blocks_under(parent)
+        return [(self.headings()[index][3], self._body_of(index)) for index in self._children_of(parent)]
 
-    def _blocks_under(self, parent_index: int) -> list[tuple[str, str]]:
-        """Each heading one level below the heading at parent_index, with its body. The parent is this question's own:
+    def _children_of(self, parent_index: int) -> list[int]:
+        """The index of each heading one level below the heading at parent_index. The parent is this question's own:
         a parsed document is shared between threads, so nothing of one reader's question is kept on it."""
         headings = self.headings()
         level = headings[parent_index][2]
-        child_level = level + 1
-        blocks: list[tuple[str, str]] = []
+        children: list[int] = []
         for child_index in range(parent_index + 1, len(headings)):
-            _start, heading_end, next_level, name = headings[child_index]
+            next_level = headings[child_index][2]
             if next_level <= level:
                 break
-            if next_level != child_level:
-                continue
-            # The child ends at the next heading as high as it, else at the end of the text.
-            child_end = next((later[0] for later in headings[child_index + 1 :] if later[2] <= child_level), len(self._text))
-            blocks.append((name, self._text[heading_end:child_end].lstrip("\r\n").strip()))
-        return blocks
+            if next_level == level + 1:
+                children.append(child_index)
+        return children
+
+    def _body_of(self, index: int) -> str:
+        """The body under the heading at index: it ends at the next heading as high as it, else at the end of the text."""
+        headings = self.headings()
+        _start, heading_end, level, _name = headings[index]
+        end = next((later[0] for later in headings[index + 1 :] if later[2] <= level), len(self._text))
+        return self._text[heading_end:end].lstrip("\r\n").strip()
 
     def section_child_blocks(self) -> list[tuple[str, str]]:
         headings = self.headings()
@@ -254,16 +260,17 @@ class MarkdownText:
             return []
         return self._child_blocks(headings[0][3])
 
-    def _fidelity_blocks(self) -> list[tuple[str, str]]:
-        """Each ``### fidelity`` block under a practice document's ``## Fidelities``, by name, in document order."""
-        return [(name, body) for name, body in self._child_blocks("Fidelities") if name.casefold() != "fidelities"]
-
-    def fidelity_block(self, fidelity_name: str) -> str:
-        wanted = fidelity_name.casefold()
-        for name, body in self._fidelity_blocks():
-            if name.casefold() == wanted:
-                return body
-        return ""
+    def block_under(self, *headings: str) -> str:
+        """The body under the last of headings, each a heading one level below the one before it, such as
+        ``("Fidelities", "story_map")`` for a ``### story_map`` block under ``## Fidelities``; the first may sit at any
+        level. Headings match in any case. Empty when the document has no such block."""
+        first, *rest = headings
+        found = next((index for index, item in enumerate(self.headings()) if item[3].casefold() == first.casefold()), None)
+        for wanted in rest:
+            if found is None:
+                return ""
+            found = next((index for index in self._children_of(found) if self.headings()[index][3].casefold() == wanted.casefold()), None)
+        return self._body_of(found) if found is not None else ""
 
 
 class SourceStamps:
@@ -363,11 +370,13 @@ class MarkdownFile:
             return document.text
         return document.slice_heading(_section_heading(self._heading))
 
-    def read_fidelity_subsection(self, fidelity_name: str) -> str:
+    def read_within(self, within: tuple[str, ...]) -> str:
+        """Its heading's section inside the block the headings within lead to, such as a fidelity's own Guidance in its
+        ``### {fidelity}`` block; empty when the file has no such block."""
         document = self._load()
         if document is None:
             return ""
-        block = document.fidelity_block(fidelity_name)
+        block = document.block_under(*within)
         if not block:
             return ""
         titled = _section_heading(self._heading) if self._heading else ""
@@ -382,7 +391,8 @@ class AssetLocation:
     section_file: Path | None = None
     section_heading: str | None = None
     label: str | None = None
-    fidelity: str | None = None
+    within: tuple[str, ...] = ()
+    reads_file: FileFilter | None = None
     format: str | None = None
 
     def extract(self) -> str:
@@ -432,7 +442,7 @@ class AssetLocation:
             return True
         if path.is_dir():
             return self._skip_format_dir(name)
-        return self._skip_format_file(path) or self._skip_fidelity_file(path)
+        return self._skip_format_file(path) or not self._read_by_owner(path)
 
     def _skip_format_dir(self, name: str) -> bool:
         wanted = self._format_dir_name()
@@ -449,26 +459,16 @@ class AssetLocation:
             return False
         return path.suffix.lower() != allowed
 
-    def _skip_fidelity_file(self, path: Path) -> bool:
-        stem = Name(path.stem).kebab
-        fidelity = Name(self.fidelity or "").kebab
-        whole_map_example = "thin-slice" in stem or stem.startswith("scenario-") or stem == "examples"
-        if self.label == "examples" and fidelity in {"story-map", ""} and whole_map_example:
-            return True
-        if fidelity != "story-map":
-            return False
-        if "scenario" in stem or stem == "thin-slice":
-            return True
-        if path.suffix.lower() == ".md" and "story-map" not in stem and stem != "examples":
-            return True
-        return False
+    def _read_by_owner(self, path: Path) -> bool:
+        """Whether the owner reads path of the folder for this label: every file, unless the owner filters them."""
+        return self.reads_file is None or self.reads_file(self.label or "", path)
 
     def _extract_section(self) -> str:
         if self.section_file is None:
             return ""
         markdown_file = MarkdownFile(self.section_file, self.section_heading or "")
-        if self.fidelity:
-            return markdown_file.read_fidelity_subsection(self.fidelity)
+        if self.within:
+            return markdown_file.read_within(self.within)
         if self.section_heading and not markdown_file.section_exists():
             return ""
         return markdown_file.read_section()
@@ -477,16 +477,19 @@ class AssetLocation:
 @dataclass(frozen=True)
 class MarkdownScope:
     """Where an owner keeps its markdown and which part of it the owner reads: the folder beside its class, the slug
-    its ``{slug}.md`` is named by, the fidelity and format whose assets (templates, examples) it reads, and whether its
-    own sections are subsections of that fidelity's block in the practice document, as a fidelity's are. An owner that
-    knows these hands them over as its ``markdown_scope`` property, so nothing here asks the owner for its attributes;
-    any other class reads the markdown beside its own file, under the ``domain_slug`` its class declares."""
+    its ``{slug}.md`` is named by, the format whose templates it reads, the name its own template is looked for by
+    before the slug's (``template_name``), the headings its own sections are read under (``within``, such as
+    ``("Fidelities", "story_map")`` for a section of one block of a longer document), and the owner's own filter of the
+    files of a folder it reads (``reads_file``). An owner that knows these hands them over as its ``markdown_scope``
+    property, so nothing here asks the owner for its attributes; any other class reads the markdown beside its own
+    file, under the ``domain_slug`` its class declares."""
 
     folder: Path
     slug: str
-    fidelity: str | None = None
     format: str | None = None
-    in_fidelity_block: bool = False
+    template_name: str | None = None
+    within: tuple[str, ...] = ()
+    reads_file: FileFilter | None = None
 
     @classmethod
     def _beside(cls, owner_class: type) -> MarkdownScope:
@@ -503,14 +506,10 @@ class MarkdownScope:
             return handed.fget(owner)
         return cls._beside(type(owner))
 
-    def at(self, fidelity: str | None = None, format: str | None = None) -> MarkdownScope:
-        """This scope at another fidelity or format when one is named, so a caller reads another fidelity's assets
-        without changing the owner other callers read."""
-        return replace(
-            self,
-            fidelity=fidelity if fidelity is not None else self.fidelity,
-            format=format if format is not None else self.format,
-        )
+    def at(self, format: str | None) -> MarkdownScope:
+        """This scope in another format when one is named, so a caller reads that format's template without changing
+        the format other callers read the owner in."""
+        return replace(self, format=format if format is not None else self.format)
 
 
 class AssetLocator:
@@ -529,21 +528,14 @@ class AssetLocator:
         self._search_root_path = scope.folder
 
     @property
-    def fidelity(self) -> str | None:
-        return self._scope.fidelity or None
-
-    @property
     def format(self) -> str | None:
         return self._scope.format or None
 
     def _stamp(self, location: AssetLocation) -> AssetLocation:
-        fidelity = location.fidelity
-        if location.kind == "folder":
-            fidelity = fidelity or self.fidelity
         return replace(
             location,
             label=self._label,
-            fidelity=fidelity,
+            reads_file=self._scope.reads_file if location.kind == "folder" else None,
             format=location.format or self.format,
         )
 
@@ -580,9 +572,8 @@ class AssetLocator:
         )
 
     def _locate_under(self) -> AssetLocation:
-        fidelity_name = self.fidelity if self._scope.in_fidelity_block else None
-        if fidelity_name:
-            return self._section_of_domain_markdown(fidelity=str(fidelity_name))
+        if self._scope.within:
+            return self._section_of_domain_markdown(within=self._scope.within)
         return self._located_beside() or self._section_of_domain_markdown()
 
     def _located_beside(self) -> AssetLocation | None:
@@ -597,12 +588,12 @@ class AssetLocator:
         first = self._first_extension_match(self._search_root_path)
         return AssetLocation("file", path=first.resolve()) if first else None
 
-    def _section_of_domain_markdown(self, fidelity: str | None = None) -> AssetLocation:
+    def _section_of_domain_markdown(self, within: tuple[str, ...] = ()) -> AssetLocation:
         return AssetLocation(
             "section",
             section_file=self._canonical_domain_md().resolve(),
             section_heading=_section_heading(self._label),
-            fidelity=fidelity,
+            within=within,
         )
 
     def _first_extension_match(self, search_root: Path) -> Path | None:
@@ -626,9 +617,9 @@ class AssetLocator:
         return None
 
     def _locate_templates(self) -> AssetLocation:
-        fidelity = self.fidelity
-        if fidelity:
-            located = self._named_template_file(fidelity, practice=False)
+        named = self._scope.template_name
+        if named:
+            located = self._named_template_file(named, practice=False)
             if located is not None:
                 return located
         located = self._named_template_file(self._domain_slug, practice=True)
@@ -806,15 +797,15 @@ class Markdown(Generic[Owner]):
 
     @classmethod
     def from_label(cls, instance: Owner, label: str, scope: MarkdownScope | None = None) -> Markdown:
-        """Markdown for ``label`` on ``instance``, in scope when given (``MarkdownScope.of(instance).at(fidelity,
-        format)`` reads another fidelity's or format's assets), else in the scope instance reads in now."""
+        """Markdown for ``label`` on ``instance``, in scope when given (``MarkdownScope.of(instance).at(format)`` reads
+        another format's template), else in the scope instance reads in now."""
         return cls(instance, label, scope if scope is not None else MarkdownScope.of(instance))
 
     @classmethod
     def held_by(cls, owner: Owner, label: str) -> Markdown:
         """The Markdown of label on owner at the scope owner reads it in now, made the first time and kept on owner, so
-        a second read answers from the text the first found. A scope owner moves to, such as another fidelity or
-        format, has a Markdown of its own, made when it is first read."""
+        a second read answers from the text the first found. A scope owner moves to, such as another part of its
+        document or another format, has a Markdown of its own, made when it is first read."""
         scope = MarkdownScope.of(owner)
         held: dict[tuple[str, MarkdownScope], Markdown] = vars(owner).setdefault(cls._HELD_AS, {})
         key = (label, scope)

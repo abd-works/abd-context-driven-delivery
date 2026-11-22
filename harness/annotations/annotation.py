@@ -30,10 +30,9 @@ class AnnotationKinds:
 
     @property
     def copied_flags(self) -> tuple[str, ...]:
-        """Every attribute a wrapper copies from the operation it wraps: each copied kind's flag and the attributes that
-        go with it, such as the name a skill annotation gives."""
-        flags = [flag for kind in self._kinds if kind.copied for flag in (kind.flag, *kind.companion_flags())]
-        return tuple(dict.fromkeys(flags))
+        """Every attribute a wrapper copies from the operation it wraps: each copied kind's flag, under which the
+        annotation recorded itself with what it holds, such as the name a skill annotation gives."""
+        return tuple(dict.fromkeys(kind.flag for kind in self._kinds if kind.copied))
 
     def copy_annotations(self, source: Annotatable, target: Annotatable) -> None:
         """Set on target each copied annotation source carries, so a wrapper installs the way the operation it wraps
@@ -104,9 +103,9 @@ class AnnotationKind(type):
         """True when this kind of annotation is on target."""
         return bool(getattr(target, kind.flag, False))
 
-    def recorded_on(kind, target: Annotatable) -> object:
-        """What this kind of annotation recorded on target: the annotation itself for one that records itself, such as
-        ``@on_stage`` with its place among a stage's actions; none when target carries none."""
+    def recorded_on(kind, target: Annotatable) -> Any:
+        """The annotation of this kind on target, which recorded itself there with what it holds, such as the name a
+        ``@skill`` gives or ``@on_stage``'s place among a stage's actions; none when target carries none."""
         return getattr(target, kind.flag, None)
 
     def written_as(kind) -> str:
@@ -118,16 +117,13 @@ class AnnotationKind(type):
         """Whether this kind on a member makes the member installable, so install counts its class as a toolset."""
         return kind.makes_installable
 
-    def companion_flags(kind) -> tuple[str, ...]:
-        """The other attributes this kind of annotation sets beside its flag."""
-        return ()
-
 
 class Annotation(metaclass=AnnotationKind):
     """Install and discovery find what an author annotated: the operations and classes an annotation decorates. An
-    annotation records itself by setting its ``flag`` on what it decorates, and each kind of annotation is a subclass
-    that names its flag; its kind (*AnnotationKind*) reads it back with ``annotates``. Every kind registers in
-    ``annotation_kinds`` as it is defined, which is the one list of annotations."""
+    annotation records itself, with what it holds, under its ``flag`` on what it decorates, and each kind of annotation
+    is a subclass that names its flag; its kind (*AnnotationKind*) reads it back with ``annotates`` and
+    ``recorded_on``. Every kind registers in ``annotation_kinds`` as it is defined, which is the one list of
+    annotations."""
 
     flag = ""
     # A wrapper of an annotated operation, such as a collected or markdown property, copies the annotations whose kinds
@@ -143,7 +139,7 @@ class Annotation(metaclass=AnnotationKind):
         return annotation
 
     def annotate(self, target: Annotatable) -> Annotatable:
-        setattr(target, self.flag, True)
+        setattr(target, self.flag, self)
         return target
 
     def __call__(self, target: Annotatable) -> Annotatable:
@@ -155,7 +151,8 @@ class NamesKind(AnnotationKind):
 
     def names_on(kind, target: Annotatable) -> tuple[str, ...]:
         """The names this kind of annotation recorded on target; none when it carries none."""
-        return tuple(getattr(target, kind.flag, ()) or ())
+        recorded = kind.recorded_on(target)
+        return tuple(recorded.names) if recorded is not None else ()
 
 
 class NamesAnnotation(Annotation, metaclass=NamesKind):
@@ -170,10 +167,6 @@ class NamesAnnotation(Annotation, metaclass=NamesKind):
 
     def __init__(self, *names: str) -> None:
         self.names = names
-
-    def annotate(self, target: Annotatable) -> Annotatable:
-        setattr(target, self.flag, self.names)
-        return target
 
 
 class OmissionKind(AnnotationKind):
@@ -260,14 +253,13 @@ class DestinationKind(AnnotationKind):
     def name_given(kind, operation: Annotatable) -> str:
         """The name this destination's annotation gave the operation, such as a command's name or the event a hook runs
         on; empty when the operation carries no such annotation."""
-        return str(getattr(operation, f"{kind.flag}_name", "") or "")
-
-    def companion_flags(kind) -> tuple[str, ...]:
-        return (f"{kind.flag}_name", f"{kind.flag}_disabled")
+        recorded = kind.recorded_on(operation)
+        return str(recorded.name or "") if recorded is not None else ""
 
     def disabled_on(kind, operation: Annotatable) -> bool:
         """True when the annotation on operation is there but turned off, as ``@Hook(..., disabled=True)`` is."""
-        return bool(getattr(operation, f"{kind.flag}_disabled", False))
+        recorded = kind.recorded_on(operation)
+        return recorded is not None and recorded.disabled
 
 
 class Destination(Annotation, metaclass=DestinationKind):
@@ -287,12 +279,8 @@ class Destination(Annotation, metaclass=DestinationKind):
     # True when this destination's server answers an agent's calls to the member, as MCP does, so a skill or command
     # for the member tells the agent to call the tool, and each call is logged in the caller's session.
     answers_calls: ClassVar[bool] = False
-
-    def annotate(self, target: Annotatable) -> Annotatable:
-        super().annotate(target)
-        name = getattr(self, "name", None)
-        if name is not None:
-            setattr(target, f"{self.flag}_name", name)
-        if getattr(self, "disabled", False):
-            setattr(target, f"{self.flag}_disabled", True)
-        return target
+    # The name the annotation gives the member there, such as a command's name or a hook's event; none for the member's
+    # own name.
+    name: str | None = None
+    # Whether the annotation is turned off on the member, as ``@Hook(..., disabled=True)`` is.
+    disabled: bool = False

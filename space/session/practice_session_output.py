@@ -7,7 +7,6 @@ from functools import cache
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Callable, Iterable
 
-from cdd_guidance.practices.source_code import is_test_code
 from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import noSessionLog, tool_subject
 from harness.agent_tools.tool_call import ToolCall
@@ -16,7 +15,6 @@ from harness.guidance.declared_outputs import DeclaredFile
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.mcp.mcp_annotations import mcp
 from harness.whiteboard import Whiteboard
-from cdd_guidance.practices.stories.model.story_map_files import STORY_TESTS_FOLDER
 from harness.installation.context_config import CONTEXT_FOLDER, DEFAULT_FORMAT
 from harness.markdown.format import Format
 from space.session.answer_reads import HeldForAnswer
@@ -488,7 +486,7 @@ class WrittenFiles:
     def _writes_code_to(self, file: Path) -> bool:
         """Whether file is production code in a format this fidelity writes as a folder per module, under its root."""
         roots = [root.resolve() for root in self._output.roots]
-        if not any(root in file.resolve().parents for root in roots) or is_test_code(file.as_posix()):
+        if not any(root in file.resolve().parents for root in roots) or not self._is_production_code(file.as_posix()):
             return False
         return any(file.suffix in code_extensions(label) for label in self._fidelity.declared.code_folders())
 
@@ -592,7 +590,7 @@ class WrittenFiles:
         roots = [root.resolve() for root in self._output.roots]
         extensions = code_extensions(label)
         worked_on = sorted(
-            file for file in changed() if file.suffix in extensions and any(file == root or root in file.parents for root in roots) and not is_test_code(file.as_posix())
+            file for file in changed() if file.suffix in extensions and any(file == root or root in file.parents for root in roots) and self._is_production_code(file.as_posix())
         )
         return [FileEntry(self._session.repo.path_from_top(file), file.exists(), True) for file in worked_on]
 
@@ -612,36 +610,19 @@ class WrittenFiles:
         is_single_file = len(names) == 1 and not set(names[0]) & _OUTPUT_PATTERN_MARKS
         return [PurePosixPath(names[0]).with_name(chosen_name).as_posix()] if chosen_name and is_single_file else names
 
+    def _is_production_code(self, file: str) -> bool:
+        """Whether file is production code rather than a test of it, as its practice tells them apart."""
+        practice = self._fidelity.practice_guidance
+        return practice is None or practice.is_production_code(file)
+
     def _under_root(self, name: str, root: Path) -> str:
-        """A declared name under root, this fidelity's root. A root inside a ``.context`` folder, such as
-        ``harness/.context/stories``, holds the practice's documents itself, so a declared ``.context/story-map.md``
-        lands in it as ``story-map.md`` rather than in a ``.context`` within the ``.context``; a declared
-        ``story_tests/...`` lands in the ``story_tests`` beside that ``.context``, or, for a root inside ``story_tests``
-        such as one epic's folder, under that root; empty when the root names a folder deeper than the declared path
-        goes."""
+        """A declared name under root, this fidelity's root, where its practice places it (``placed_under``); empty
+        when it lands nowhere under root. A declared folder keeps its closing slash."""
         folder_mark = "/" if name.endswith("/") else ""
+        practice = self._fidelity.practice_guidance
         declared = PurePosixPath(name)
-        if STORY_TESTS_FOLDER in root.parts and declared.parts[:1] == (STORY_TESTS_FOLDER,):
-            below = self._below_named(declared, root)
-            # An epic's own stories' file is not below a sub-epic's folder: the root already names more folders than it does.
-            return f"{(root / below).as_posix()}{folder_mark}" if below.parts else ""
-        if CONTEXT_FOLDER in root.parts and declared.parts[:1] == (STORY_TESTS_FOLDER,):
-            return f"{(self._beside_context(root) / declared).as_posix()}{folder_mark}"
-        if CONTEXT_FOLDER in root.parts and declared.parts[:1] == (CONTEXT_FOLDER,):
-            declared = PurePosixPath(*declared.parts[1:])
-        return f"{(root / declared).as_posix()}{folder_mark}"
-
-    def _below_named(self, declared: PurePosixPath, root: Path) -> PurePosixPath:
-        """The part of a declared ``story_tests/{epic}/{sub-epic}/...`` path below a root inside ``story_tests``, such as
-        a session's epic folder: the folders the root already names, ``story_tests`` and one name per folder below it,
-        are dropped."""
-        named = len(root.parts) - root.parts.index(STORY_TESTS_FOLDER)
-        return PurePosixPath(*declared.parts[named:])
-
-    def _beside_context(self, root: Path) -> Path:
-        """The folder holding the `.context` root sits in, where a project keeps its `story_tests` beside its
-        `.context`."""
-        return Path(*root.parts[: root.parts.index(CONTEXT_FOLDER)])
+        placed = practice.placed_under(declared, root) if practice is not None else root / declared
+        return f"{placed.as_posix()}{folder_mark}" if placed is not None else ""
 
 
 def latest_version(file: Path) -> Path:

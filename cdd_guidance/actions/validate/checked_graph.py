@@ -7,15 +7,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from harness.agent_tools.tool_call import ToolCall
-from harness.guidance.guidance import FidelityGuidance
+from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.graph.saved_graph import SavedGraph
 from harness.graph.violation import Violation
 
 from cdd_guidance.actions.validate.checked_fidelity import CheckedFidelity
 from cdd_guidance.actions.validate.report_files import ReportFiles
-from cdd_guidance.practices.stories.model.story_tree import STORY_MAP_TYPES
 
-_STORIES = "stories"
 
 if TYPE_CHECKING:
     from space.session.session import Session
@@ -141,15 +139,27 @@ class CheckedGraph:
 
     def _on_session_stories(self, found: list[Violation]) -> list[Violation]:
         """The violations inside the work's scope, when the session's ticket names its stories: on those stories and on
-        everything held under them (their scenarios, steps, and examples). A violation on any other epic, story,
-        scenario, step, or example is another increment's work and is left out; files, and every other practice's
-        nodes, are already scoped by the paths the call names."""
+        everything held under them. A violation on a node of a type a checked practice scopes by stories
+        (``PracticeNodeTypes.scope_types``, such as the story map's epics, stories, scenarios, steps, and examples)
+        that lies outside them is another increment's work and is left out; files, and every other node, are already
+        scoped by the paths the call names."""
         stories = getattr(self._session, "stories", None) or []
         if not stories or self._checked is None:
             return found
-        saved = self._checked.practices.get(_STORIES)
-        outside = saved.outside(stories, STORY_MAP_TYPES) if saved is not None else set()
+        outside: set[str] = set()
+        for practice in self._scoped_practices:
+            saved = self._checked.practices.get(practice.key)
+            scope = practice.reading.types.scope_types
+            if saved is not None and scope:
+                outside |= saved.outside(stories, scope)
         return [violation for violation in found if violation.node_id not in outside]
+
+    @property
+    def _scoped_practices(self) -> list[PracticeGuidance]:
+        """The practices whose violations the call reports: those of the fidelities it checks, else every practice of
+        the session, as a call that names only graph files reports every practice's violations."""
+        checked = list({id(practice): practice for practice in (each.fidelity.practice_guidance for each in self._checked_fidelities)}.values())
+        return checked or [output.guidance for output in self._session.practice_outputs.every.values()]
 
     @property
     def unread(self) -> list[str]:

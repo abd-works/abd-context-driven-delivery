@@ -541,6 +541,8 @@ violation: { rule, practice, node_id, subject, location, line, end_line, message
 The graph names no practice, so each practice's `PracticeGuidance` class says what only it knows:
 
 - `class_types`, `member_types` — the classes and their operations and properties a source view can open.
+- `types` — its *PracticeNodeTypes*: `evidence_kinds`, `links(owner, kind, target)`, `scope_types`.
+- `steps()`, `is_used_from_elsewhere(node)`, `owner_of(node)` — a story test's steps, a node used from where something else declares it, and the class a member belongs to, as a file view asks them.
 - `class_node_type` — the type its checks run on as a whole class; another practice's node inside one skips those checks.
 - `source_ordered_types` — the types the explorer lists in file order.
 - `anchor_types` — the `is:` words another practice uses for this practice's types; the practice whose types a schema builds on with `is:` is the practice's `extends`.

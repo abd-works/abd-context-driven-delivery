@@ -53,15 +53,19 @@ mode: ExpansionMode
 	// classes whose tools run only through the practice or toolset that holds them; install and the hook server skip them
 parameter_notes: dict[str, str]
 	// parameter name -> note added after the description of each tool that takes it; every toolset origin has one
-schema_guide(): str
-	// the schema its instructions conform to; empty unless the toolset has one, as a practice does
-is_part_of_practice: bool
-	// false; a fidelity its practice holds says true, so installs and MCP name it after its own slug in its practice's folder
 is_served_on_mcp: bool
 	// true; a fidelity made apart from any practice says false, so the cdd server skips it
 ----
 instruction(name: str): AgentInstructions
 	// the @agent_instructions member called name; a recipe names its members by name in its source
+published_name(tool: AgentTool): str
+	// "{slug}.{name}"; a fidelity its practice holds publishes its own instructions under its slug alone
+installed_as(tool: AgentTool): InstalledName
+	// in its install folder, named by the tool; a guidance names its own instructions after itself, a fidelity after its slug in its practice's folder
+listed_parts(): list[AgentToolSet]
+	// the parts the file of its own tool lists, each with the call to its own tool; none, and a guidance's child toolsets
+instructions_type(name: str): type[AgentInstructions]
+	// AgentInstructions; a guidance publishes its own instructions member as a GuidanceInstructions
 tools_published_to(destination: DestinationKind | None): list[AgentTool]
 	// none when destination's publisher was never imported
 	-> AgentTool.is_published_to
@@ -95,12 +99,16 @@ deploy_name: str
 	// the name a destination's annotation gives for its installed file, such as a @command's name, else name
 	-> annotation_kinds.deploy_name_of(callable)
 mcp_name: str
-	// "{toolset slug}.{name}"; a practice's own instructions publish under the practice slug alone
+	-> toolset.published_name(self)
 kind: str
 	// "tool", "instructions", or "none"
 docstring: str
 description: str
 	// the docstring expanded once through the toolset's class_markdown
+listed_description: str
+	// what the MCP tool list says: its description; a GuidanceInstructions lists its opening paragraph
+served_body: str
+	// what its installed file says above the call to it: its docstring, unless "overview" names the section the server returns
 parameters: dict[str, str]
 response: str | None
 << composition >> parameter_schema: ParameterSchema
@@ -149,13 +157,22 @@ chat: ChatPointer | None
 session: Session | None
 	// the session saved as open in the project's checkout, read once for this call; none when the call names no project or no opener is registered
 	-> SessionOpening.open_in(self)
+reporter: Callable[[str], None] | None
+	// whoever listens to the call's progress, such as the MCP host's notifications; none for a call made in process, which reports nowhere
 ----
+report_progress(message: str): None
+	// tells reporter; nothing when no one listens. The function report_progress(message) reports to CALLS_BEING_ANSWERED.current, and a call
+	// answered inside another that has no reporter of its own reports to the other's
 sent(arguments: dict | None, project: Path | None): ToolCall
 	// the chat named in the arguments is taken out and kept as the call's chat
 	-> ChatPointer.taken_from
 session_named(session_file: str): Session
 	// the session a board command names by its session.json
 	-> SessionOpening.named_in(session_file, self)
+as_sent(): dict
+	// the call as one lane's server hands it to the other's: tool, arguments, project, chat
+from_sent(sent: dict, mcp_host: AnsweringMcpHost): ToolCall
+	// the call another lane handed this one, which mcp_host answers for the chat that sent it
 
 ## SessionOpening                                                <!-- Md -->
 
@@ -236,6 +253,19 @@ provider_of(owner: RecipeTarget, provider_name: str): Any
 parent_recipe(): AgentInstructions | None
 	// the same-named recipe on the nearest class above defining_class, holding the class that defines it, for a recipe
 	// that defers to its parent
+
+## InstalledName                                                  <!-- Md -->
+
+Where install puts the files of one tool of a toolset, and what it names them; the toolset answers it (`installed_as`), so an installation names no practice or fidelity.
+
+InstalledName(folder: Path, stem: str | None = None, is_own: bool = False)
+------
+folder: Path
+	// the folder the toolset's files go in, as the toolset knows it
+stem: str | None
+	// the name its files are named by within folder; none for a toolset named by its own folder
+is_own: bool
+	// the toolset's own tool, named after the toolset alone
 
 ## RecipeExpansion                                                <!-- Md -->
 

@@ -31,8 +31,8 @@ The `@Hook` decorator on an operation. Event is required and must be an IDE even
 	// install publishes operation as a hook: it carries @Hook, turned on, and no omission keeps it out
 + Hook.name_given(operation): str
 	// the event the operation runs on; empty when it carries no @Hook
-	// Destination records the hook on the operation, and disabled as _hook_disabled, which DestinationKind's
-	// disabled_on reads (harness/annotations); Hook adds no kind of its own
+	// the Hook annotation records itself on the operation, holding its event and disabled, which DestinationKind's
+	// name_given and disabled_on read (harness/annotations); Hook adds no kind of its own
 	// sessionStart → session_start
 
 ## Toast : Destination
@@ -170,27 +170,22 @@ Fields the IDE reads back from the hook process.
 + HookResult(permission: str = "allow", continue_flag: bool | None = None, messages: HookMessages = HookMessages())
 ------
 + messages: HookMessages
-	// the five texts below, as one value
+	// what the hooks say back, held as made; the result keeps no copy of its texts
 + permission: str
 	// deny wins when any handler returns deny
 + continue_flag: bool | None
 	// false wins when any handler returns continue false
-+ user_message: str | None
-+ agent_message: str | None
-+ followup_message: str | None
-	// last non-empty followup_message wins
-+ additional_context: str | None
-	// unique parts join with blank lines
-+ toast: str | None
-	// shown beside the chat, never sent to the IDE; toasts join with newlines
 + followup_only: bool
 	// as_dict returns only followup_message
 ----
 + from_handler(raw: dict | None): HookResult
++ keep_context(context: str | None): None
+	// the context it adds to the agent's model, in place of what it held
 + with_description(description: str): HookResult
 	// prepends the tool docstring onto agent_message
 + merge(other: HookResult): HookResult
-	// deny and continue false win; user_message, agent_message, and toast join with newlines
+	// deny and continue false win; the messages' user_message, agent_message, and toast join with newlines, the last
+	// non-empty followup_message wins, and the unique parts of additional_context join with blank lines
 + as_dict(): dict
 	// the fields the IDE reads; the toast is left out
 

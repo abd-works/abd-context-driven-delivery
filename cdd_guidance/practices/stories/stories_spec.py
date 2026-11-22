@@ -1,7 +1,7 @@
 """BDD spec for Stories generator - fidelity defaults, transform, contexts."""
 
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
@@ -669,3 +669,52 @@ with description("the Stories schema"):
 
     with it("should give a step the classes its linked domain terms name, which a step with no link lacks"):
         expect(self.step).to(contain("  names?: [class]"))
+
+
+with description("the files of its folders Stories reads"):
+    with context("at the story map"):
+        with before.each:
+            self.reads = Stories().reads_file_at("story_map")
+
+        with it("should read a story map example"):
+            expect(self.reads("examples", Path("manage-customer-orders/md/story-map.md"))).to(be_true)
+
+        with it("should leave out a scenario example, which is a later fidelity's"):
+            expect(self.reads("examples", Path("manage-customer-orders/md/scenario-inline.md"))).to(equal(False))
+
+        with it("should leave out another markdown file"):
+            expect(self.reads("examples", Path("manage-customer-orders/md/notes.md"))).to(equal(False))
+
+    with context("at no fidelity"):
+        with it("should leave out a whole-map example"):
+            expect(Stories().reads_file_at(None)("examples", Path("telco-website/examples.md"))).to(equal(False))
+
+    with context("at the scenarios"):
+        with it("should read a scenario example"):
+            reads = Stories().reads_file_at("scenarios")
+            expect(reads("examples", Path("manage-customer-orders/md/scenario-inline.md"))).to(be_true)
+
+
+with description("where Stories places a declared path under a fidelity's root"):
+    with before.each:
+        self.stories = Stories()
+
+    with context("that is a story test, under a root inside story_tests"):
+        with it("should land below the folders the root already names"):
+            placed = self.stories.placed_under(PurePosixPath("story_tests/{epic}/{sub-epic}/x.py"), Path("story_tests/billing"))
+            expect(placed).to(equal(Path("story_tests/billing/{sub-epic}/x.py")))
+
+        with context("that names a folder deeper than the path goes"):
+            with it("should land nowhere"):
+                placed = self.stories.placed_under(PurePosixPath("story_tests/{epic}"), Path("story_tests/billing/invoices"))
+                expect(placed).to(equal(None))
+
+    with context("that is a story test, under a root inside .context"):
+        with it("should land in the story_tests beside that .context"):
+            placed = self.stories.placed_under(PurePosixPath("story_tests/{epic}/x.py"), Path("harness/.context/stories"))
+            expect(placed).to(equal(Path("harness/story_tests/{epic}/x.py")))
+
+    with context("that is a .context document, under a root inside .context"):
+        with it("should land in that root itself"):
+            placed = self.stories.placed_under(PurePosixPath(".context/story-map.md"), Path("harness/.context/stories"))
+            expect(placed).to(equal(Path("harness/.context/stories/story-map.md")))

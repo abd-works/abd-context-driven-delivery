@@ -6,7 +6,7 @@ from pathlib import Path
 from expects import equal, expect
 from mamba import before, context, description, it
 
-from harness.agent_tools.progress import reporting_to
+from harness.agent_tools.tool_call import CALLS_BEING_ANSWERED, ToolCall
 from harness.graph.graph import Graph
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 
@@ -20,7 +20,7 @@ with description("a working copy load"):
             self.graph = Graph()
             self.messages = []
             roots = {name: str(_SAMPLE) for name in _PRACTICES}
-            with reporting_to(self.messages.append):
+            with CALLS_BEING_ANSWERED.answering(ToolCall(reporter=self.messages.append)):
                 self.graph.load_working_copy(str(_SAMPLE), roots, database=tempfile.mkdtemp(prefix="cdd-graph-spec-"), force=True)
 
         with it("should name the saved-graph check first"):

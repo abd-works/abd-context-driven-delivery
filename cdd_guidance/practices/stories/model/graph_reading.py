@@ -20,8 +20,9 @@ from cdd_guidance.practices.clean_engineering.model import MODULE_FUNCTION_HOLDE
 from cdd_guidance.practices.stories.model.modelled_areas import ExampleObservations, ModelledAreas
 from cdd_guidance.practices.stories.model.script_story_model import ScriptStoryModel
 from cdd_guidance.practices.stories.model.story_recording import StorySource, imported_files
+from cdd_guidance.practices.stories.model.story_node_types import StoryNodeTypes
 from cdd_guidance.practices.stories.model.term_links import TermLinks
-from cdd_guidance.practices.stories.model.story_tree import StoryTree
+from cdd_guidance.practices.stories.model.story_tree import EXAMPLE_TYPE, STEP_TYPES, StoryTree
 from cdd_guidance.practices.stories.model.story_map_files import DESKTOP_STORY_FILE_SUFFIX, STORY_FILE_SUFFIXES, StoryMapFiles, is_story_map_file
 
 if TYPE_CHECKING:
@@ -64,6 +65,7 @@ class StoriesReading(PracticeReading):
 
     reads_after = (CleanEngineering, Ddd)
     source_ordered_types = frozenset({"Background", "Scenario", "Step", "Story"})
+    types = StoryNodeTypes()
     rule_types = {
         "SubEpic": ("Epic", "StoryNode"),
         "Epic": ("StoryNode",),
@@ -74,6 +76,16 @@ class StoriesReading(PracticeReading):
     }
     """A step is recorded as the Given, When, or Then it is, while the schema keeps every step's rules on Step (its
     given, when, and then types are each a Step), so each carries Step's rules; its check says which kind it judges."""
+
+    def steps(self) -> list[Node]:
+        """Every step its graph holds, a Given, When, or Then, each with the operations it invokes and the examples it
+        observes."""
+        return [node for node in self.in_graph.nodes() if node.type in STEP_TYPES]
+
+    def is_used_from_elsewhere(self, node: Node) -> bool:
+        """An example is: a scenario uses it from where the story declares it, such as the examples module a story test
+        imports its fixtures from or the Examples table of a markdown story."""
+        return node.type == EXAMPLE_TYPE
 
     @cached_property
     def story_tree(self) -> StoryTree:

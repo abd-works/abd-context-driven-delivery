@@ -6,7 +6,6 @@ import re
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Iterable
 
-from cdd_guidance.practices.source_code import is_test_code
 from harness.guidance.declared_outputs import DeclaredFile
 from harness.markdown.format import Format
 
@@ -131,8 +130,11 @@ class ProposedRoots:
         return [extension for label in self._output.fidelity.declared.code_folders() for extension in code_extensions(label)]
 
     def _writes_code(self, path: str) -> bool:
-        """Whether path is production code this fidelity writes as a folder per module."""
-        return not is_test_code(path) and PurePosixPath(path).suffix in self._code_extensions()
+        """Whether path is production code this fidelity writes as a folder per module, as its practice tells
+        production code from tests."""
+        practice = self._output.fidelity.practice_guidance
+        is_production = practice is None or practice.is_production_code(path)
+        return is_production and PurePosixPath(path).suffix in self._code_extensions()
 
 
 def code_extensions(label: str) -> tuple[str, ...]:

@@ -472,3 +472,16 @@ with description("Clean Engineering linking a call on a receiver whose class its
     with context("with a parameter that has no annotation, and two classes of the file's package that declare the operation"):
         with it("should invoke neither"):
             expect(_invoked_by(self.fixture, "move")).to(equal([]))
+
+
+with description("Clean Engineering naming the class a member belongs to"):
+    with before.all:
+        self.fixture = practice_from_files({"shop/cart.py": _CART + "\n\ndef total(lines: list) -> int:\n    return 0\n"})
+        self.reading = self.fixture.practice.reading
+        self.nodes = {node.name: node for node in self.reading.in_graph.nodes() if node.type == "Operation"}
+
+    with it("should name the class an operation belongs to"):
+        expect(self.reading.owner_of(self.nodes["__init__"])).to(equal("Cart"))
+
+    with it("should name none for a module's function"):
+        expect(self.reading.owner_of(self.nodes["total"])).to(equal(""))

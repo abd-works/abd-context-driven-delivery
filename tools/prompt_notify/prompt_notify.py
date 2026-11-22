@@ -22,6 +22,7 @@ from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, agent_tools
 from harness.annotations.name import Name
 from harness.annotations.annotation import noCatalog
 from harness.guidance.action_catalogue import ACTION_CATALOGUE
+from harness.guidance.guidance import FidelityGuidance
 from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
 from harness.hooks.hook_server import HOOK_TOASTS, TOAST_ARROW, HookPayload, rules_toast
@@ -224,7 +225,7 @@ class PromptNotify:
     def _echo_kind_label(self, tool: AgentTool) -> tuple[str, str]:
         toolset = tool.toolset
         if tool.name == "instructions":
-            if toolset.is_part_of_practice:
+            if isinstance(toolset, FidelityGuidance) and toolset.practice_guidance is not None:
                 return "fidelity", tool.slug
             return "practice", getattr(toolset, "slug", tool.name)
         if tool.name == "begin":
@@ -244,9 +245,7 @@ class PromptNotify:
     def _mcp_aliases(self, tool: AgentTool) -> set[str]:
         toolset = tool.toolset
         slug = str(getattr(toolset, "slug", "") or "")
-        names = {f"{slug}.{tool.name}", f"{slug}_{tool.name}", tool.name}
-        if toolset.is_part_of_practice:
-            names.add(tool.slug)
+        names = {f"{slug}.{tool.name}", f"{slug}_{tool.name}", tool.name, tool.mcp_name}
         if tool.name == "instructions" and slug:
             names.add(slug)
             names.add(f"{slug}.instructions")

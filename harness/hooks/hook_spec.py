@@ -26,6 +26,7 @@ from harness.agent_tools.agent_tools import agent_tool
 from harness.hooks.hook_server import (
     HOOK_TOASTS,
     HandlerCatalog,
+    HookMessages,
     HookPayload,
     HookResult,
     HookServer,
@@ -371,7 +372,7 @@ with description("hook dispatch"):
                         }
                     ).encode()
                 )
-                expect(other.additional_context or "").to(equal(""))
+                expect(other.messages.additional_context or "").to(equal(""))
                 same = server.handle_stdin(
                     json.dumps(
                         {
@@ -380,7 +381,7 @@ with description("hook dispatch"):
                         }
                     ).encode()
                 )
-                expect(same.additional_context or "").to(contain("stories scenario rules"))
+                expect(same.messages.additional_context or "").to(contain("stories scenario rules"))
             finally:
                 tmp.cleanup()
 
@@ -403,7 +404,7 @@ with description("hook dispatch"):
                         }
                     ).encode()
                 )
-                expect(replayed.additional_context or "").to(equal(""))
+                expect(replayed.messages.additional_context or "").to(equal(""))
             finally:
                 tmp.cleanup()
 
@@ -428,7 +429,7 @@ with description("hook dispatch"):
                         }
                     ).encode()
                 )
-                expect(replayed.additional_context or "").to(equal(""))
+                expect(replayed.messages.additional_context or "").to(equal(""))
                 expect(saved.is_file()).to(equal(False))
             finally:
                 tmp.cleanup()
@@ -475,7 +476,7 @@ with description("hook dispatch"):
                         }
                     ).encode()
                 )
-                expect(stopped.followup_message).to(equal(None))
+                expect(stopped.messages.followup_message).to(equal(None))
                 replayed = server.handle_stdin(
                     json.dumps(
                         {
@@ -484,7 +485,7 @@ with description("hook dispatch"):
                         }
                     ).encode()
                 )
-                text = replayed.additional_context or ""
+                text = replayed.messages.additional_context or ""
                 expect(text).to(equal("verb-noun-format"))
                 expect(text).not_to(contain("rules injected for"))
             finally:
@@ -501,7 +502,7 @@ with description("hook dispatch"):
                     / "last-chat-injected-rules.md"
                 ).read_text(encoding="utf-8")
                 expect(dumped).to(contain("hide-inner-details"))
-                expect(dumped.strip()).to(equal((result.additional_context or "").strip()))
+                expect(dumped.strip()).to(equal((result.messages.additional_context or "").strip()))
             finally:
                 tmp.cleanup()
 
@@ -845,7 +846,7 @@ with description("a hook that gives a toast"):
 
         with it("should still give the IDE the hook's context"):
             result = HookServer(self.root, HandlerCatalog([ToolsetReference.of(_ToastingInject)], self.root)).dispatch(self.payload)
-            expect(result.additional_context).to(equal("rules for the edit"))
+            expect(result.messages.additional_context).to(equal("rules for the edit"))
 
 
 with description("hook process helpers"):
@@ -901,7 +902,7 @@ with description("a hook server whose project registers no sessions"):
         result = self.server.handle_stdin(
             json.dumps({"hook_event_name": "postToolUse", "conversation_id": "chat-a"}).encode()
         )
-        expect(result.additional_context).to(equal("stories scenario rules"))
+        expect(result.messages.additional_context).to(equal("stories scenario rules"))
 
     with it("should answer a prompt from a chat"):
         result = self.server.handle_stdin(
@@ -1027,3 +1028,23 @@ with description("a hook event that reports a file the agent changed"):
     with context("from a tool that only reads"):
         with it("should report no edit"):
             expect(HookPayload({"hook_event_name": "PostToolUse", "tool_name": "Read"}).is_edit).to(equal(False))
+
+
+with description("a hook result"):
+    with before.each:
+        self.messages = HookMessages(user_message="for the person", toast="Rules injected")
+        self.result = HookResult(messages=self.messages)
+
+    with it("should hold the messages it was made with"):
+        expect(self.result.messages).to(be(self.messages))
+
+    with context("merged with another's"):
+        with it("should join each part of their messages"):
+            other = HookResult(messages=HookMessages(user_message="and again", toast="Hook ran"))
+            merged = self.result.merge(other).messages
+            expect((merged.user_message, merged.toast)).to(equal(("for the person\nand again", "Rules injected\nHook ran")))
+
+    with context("described by its handler"):
+        with it("should put the description before the note it has for the agent"):
+            described = HookResult(messages=HookMessages(agent_message="a note")).with_description("the handler")
+            expect(described.messages.agent_message).to(equal("the handler\na note"))

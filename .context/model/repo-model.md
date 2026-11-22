@@ -14,16 +14,16 @@ An *Annotation* is what an author types on a class or operation to say how CDD t
 
 ## Annotation
 
-The base of every annotation an author types: it sets its `flag` on what it annotates, and `annotates(target)` reads it back. Each kind joins `annotation_kinds` as it is defined.
+The base of every annotation an author types: it records itself, with what it holds, under its `flag` on what it annotates; `annotates(target)` and `recorded_on(target)` read it back, so a destination's `.name` and `.disabled`, a names annotation's `.names`, and a data field's `.key` and `.reference` are read from the annotation, never from attributes beside it. Each kind joins `annotation_kinds` as it is defined.
 
 ------
 + flag: str
 + copied: bool
 ----
 + annotates(target: Any): bool
++ recorded_on(target: Any): Annotation | None
 + written_as(): str
 + installs_member(): bool
-+ companion_flags(): tuple[str, ...]
 + annotate(target: Any): Any
 
 ## NamesAnnotation : Annotation
@@ -32,8 +32,8 @@ An annotation that records a tuple of names on what it annotates and reads them 
 
 + NamesAnnotation(*names: str)
 ------
++ names: tuple[str, ...]
 ----
-+ annotate(target: Any): Any
 + names_on(target: Any): tuple[str, ...]
 
 ## OmissionAnnotation : Annotation
@@ -79,13 +79,17 @@ The base of an annotation that says where install publishes a member: a skill, a
 	// true for Rules: the member it decorates holds a collection of its toolset's tools
 + answers_calls: bool
 	// true for Mcp: its server answers an agent's calls to the member, so a skill or command tells the agent to call the tool
++ name: str | None
+	// the name it gives the member there; none for the member's own name
++ disabled: bool
+	// true when it is turned off on the member, as `@Hook(..., disabled=True)` is
 ----
 + publishes(operation: Any): bool
 	// it carries this annotation, turned on, and no omission keeps it out of install
 + name_given(operation: Any): str
 	// the name the annotation gave the operation, such as a command's name or the event a hook runs on
 + disabled_on(operation: Any): bool
-	// reads `{flag}_disabled`, which a destination that holds `disabled` sets, as `@Hook(..., disabled=True)` does
+	// the recorded annotation's `disabled`, as `@Hook(..., disabled=True)` holds it
 
 ## AnnotationKinds
 
@@ -433,19 +437,22 @@ The prose one property loads: the folder or file named after the property, or th
 
 ## MarkdownScope
 
-Where an owner keeps its markdown and which part of it the owner reads: the folder beside its class, the slug its `{slug}.md` is named by, and the fidelity and format whose templates and examples it reads. An owner that knows these hands them over as its `markdown_scope` property.
+Where an owner keeps its markdown and which part of it the owner reads: the folder beside its class, the slug its `{slug}.md` is named by, the format whose templates it reads, the name its own template is looked for by first, the headings its own sections are read under, and the owner's own filter of the files of a folder it reads. An owner that knows these hands them over as its `markdown_scope` property; the scope names no practice or fidelity.
 
-+ MarkdownScope(folder: Path, slug: str, fidelity: str | None = None, format: str | None = None, in_fidelity_block: bool = False)
++ MarkdownScope(folder: Path, slug: str, format: str | None = None, template_name: str | None = None, within: tuple[str, ...] = (), reads_file: FileFilter | None = None)
 ------
 + folder: Path
 + slug: str
-+ fidelity: str | None
 + format: str | None
-+ in_fidelity_block: bool
++ template_name: str | None
++ within: tuple[str, ...]
+	// the headings a section is read under, e.g. ("Fidelities", "story_map")
++ reads_file: FileFilter | None
+	// the owner's filter of a folder's files, given the label read and the file
 ----
 + beside(owner_class: type): MarkdownScope
 + of(owner: Any): MarkdownScope
-+ at(fidelity: str | None = None, format: str | None = None): MarkdownScope
++ at(format: str | None): MarkdownScope
 
 ## MarkdownCollection
 
@@ -479,8 +486,7 @@ A markdown document: headings, slices, and child sections.
 + slice_heading(heading: str): str
 + child_blocks(parent_heading: str): list[tuple[str, str]]
 + section_child_blocks(): list[tuple[str, str]]
-+ fidelity_blocks(): list[tuple[str, str]]
-+ fidelity_block(fidelity_name: str): str
++ block_under(*headings: str): str
 + named_subsection(heading: str): str
 
 ## FrontMatter
@@ -520,7 +526,7 @@ The settings at the top of a file: a YAML block between `---` lines, or, in a co
 An *AgentToolSet* is an ordinary class an agent can list and run: each `@agent_tool` member is an *AgentOperation* and each `@agent_instructions` member is *AgentInstructions*. A *ToolCall* is one call as a chat made it, with its project and chat. The whole model of this module, internals included, is `harness/agent_tools/.context/agent-tools-model.md`; that document is canonical, and this section shows only the classes other modules use.
 
 - **Purpose:** Let an author publish an ordinary class as operations and instructions an agent can list and use, and let every publisher read those members from one place.
-- **Seam (terms):** AgentToolSet, ToolSetCollection, ToolsetMembers, ToolsetReference, AgentTool, InvokeLine, ToolRequest, CallsBeingAnswered (`CALLS_BEING_ANSWERED`), `names_alike`, `is_built_in`, AgentOperation, AgentInstructions, AgentToolAnnotation, AgentInstructionsAnnotation, AgentToolSetAnnotation, ToolSetCollectionAnnotation, Collect, ToolSubject, OnSubject, TakesFromCall, NoSessionLog, PublishedWhereHeld, SubAgentAnnotation, ToolSubjectLoader, RecipePlaceholders, ToolCall, SessionOpening (`SESSION_OPENING`), ChatPointer; `tools(...)`, `instructions(...)`, `report_progress`, `reporting_to`, `NO_CHAT`, `SUB_AGENT_CALLER_PREAMBLE`
+- **Seam (terms):** AgentToolSet, ToolSetCollection, ToolsetMembers, ToolsetReference, AgentTool, InvokeLine, ToolRequest, CallsBeingAnswered (`CALLS_BEING_ANSWERED`), `names_alike`, `is_built_in`, AgentOperation, AgentInstructions, AgentToolAnnotation, AgentInstructionsAnnotation, AgentToolSetAnnotation, ToolSetCollectionAnnotation, Collect, ToolSubject, OnSubject, TakesFromCall, NoSessionLog, PublishedWhereHeld, SubAgentAnnotation, ToolSubjectLoader, RecipePlaceholders, ToolCall, SessionOpening (`SESSION_OPENING`), ChatPointer; `tools(...)`, `instructions(...)`, `report_progress` (which reports to the call being answered, `ToolCall.report_progress`), `NO_CHAT`, `SUB_AGENT_CALLER_PREAMBLE`
 - **Dependencies (one-way):** harness/annotations, harness/markdown
 
 ## AgentToolSet : AgentToolSetOrigin
@@ -539,7 +545,6 @@ Injected by @agent_toolset — the operations, instructions, and nested collecti
 + << composition >> operations: dict[str, AgentOperation]
 + << composition >> instructions: Mapping[str, AgentInstructions]
 + << composition >> tools: dict[str, AgentTool]
-+ is_part_of_practice: bool
 + is_served_on_mcp: bool
 + operation_type: type[AgentOperation]
 ----
@@ -1133,7 +1138,7 @@ Where one install writes: the IDE folder with its layout, the record of every fi
 	// a place that keeps its own record, for a writer outside an install run
 + wrote(written: Path): None
 	-> InstallRecord.track
-+ folder_for(toolset: AgentToolSetOrigin): Path
++ relative_folder(install_folder: Path): Path
 
 ## Installation : InstallPlace
 
@@ -5656,6 +5661,8 @@ The Stories practice: story map, scenarios, and acceptance tests.
 + read_folder(root: Path, on_file = None): StoryModel
 + read_files(files: list[Path], project: Path, on_file = None): StoryModel
 	// a story test's scenarios go on the map's Story of the same name; a test with no map listed reads the map in its own folder or the nearest one above it
++ reads_file_at(fidelity: str | None): StoryExampleFiles
+	// the story map examples alone at the story map; no whole-map example at the story map or at no fidelity
 ---<<creates>>--> StoryModel
 ---<<reads the graph with>>--> StoriesReading
 ---<<registers with>>--> StoryNode
@@ -5681,7 +5688,7 @@ How Stories takes part in the graph: it reads the story tests under its root, or
 
 ## StoryTree
 
-The story map as the graph holds it (`stories/model/story_tree.py`): each epic's sub-epics and stories, each story's scenarios, each scenario's steps, and the one definition of the step and epic node types (`STEP_TYPES`, `EPIC_TYPES`, `LINKED_TYPES`, `STORY_MAP_TYPES`) and of a node's key (`KEY_SEPARATOR`). UX and the Validate action ask it rather than keeping copies.
+The story map as the graph holds it (`stories/model/story_tree.py`): each epic's sub-epics and stories, each story's scenarios, each scenario's steps, and the one definition of the step and epic node types (`STEP_TYPES`, `EPIC_TYPES`, `LINKED_TYPES`, `STORY_MAP_TYPES`) and of a node's key (`KEY_SEPARATOR`), and the type of a story's example (`EXAMPLE_TYPE`). UX asks it rather than keeping copies; the Validate action asks each checked practice's node types (`PracticeNodeTypes.scope_types`, Stories' *StoryNodeTypes*) which types a session's stories scope.
 
 + StoryTree(stories: PracticeReading)
 ------

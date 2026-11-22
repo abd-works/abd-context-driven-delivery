@@ -23,9 +23,6 @@ from harness.guidance.schema import Schema
 if TYPE_CHECKING:
     from harness.graph.graph import Node
 
-# Fields every schema type may carry that describe the type itself, not a relationship.
-_TYPE_FIELDS = frozenset({"is", "fidelity", "name", "path"})
-
 
 class PracticeSchema:
     """One practice's schema with the applied patterns' schemas on top: which rules each node type carries, which type
@@ -320,9 +317,7 @@ class SchemaOverlays:
     @cached_property
     def relationship_kinds(self) -> frozenset[str]:
         """The relationship fields the patterns' schemas give the practice's types, such as ``route``."""
-        return frozenset(
-            name for schema in self.schemas for kind in schema.types.values() for name, value in kind.fields if value and name not in _TYPE_FIELDS
-        )
+        return frozenset(relationship.name for schema in self.schemas for kind in schema.types.values() for relationship in kind.relationships)
 
     def pattern_adding(self, node_type: str, slug: str, base_types: frozenset[str]) -> str | None:
         """The name of the applied pattern whose schema declares the rule on this type, or declares a type the

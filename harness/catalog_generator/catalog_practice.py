@@ -56,7 +56,7 @@ class CatalogSkills:
         held = CatalogSkills._FOLDERS.get(key)
         if held is None:
             tool = next((tool for tool in guidance.tools.values() if tool.is_published_to(Skill)), None)
-            held = self._install.relative_path(guidance, tool.deploy_name).parent.name if tool is not None else ""
+            held = self._install.relative_path(tool).parent.name if tool is not None else ""
             CatalogSkills._FOLDERS[key] = held
         return held
 

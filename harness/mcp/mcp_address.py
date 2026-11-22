@@ -7,7 +7,9 @@ import http.client
 import json
 import os
 import socket
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any, Protocol
 
 SERVER_PORT_ENV = "CDD_SERVER_PORT"
 DEFAULT_SERVER_PORT = 47800
@@ -37,6 +39,35 @@ class LaneUnreachable(Exception):
     def __init__(self, port: int, detail: str) -> None:
         super().__init__(f"the cdd server on port {port} did not answer a tool call sent from the other lane: {detail}")
         self.port = port
+
+
+class SentCall(Protocol):
+    """A tool call one lane's server can hand the other's: it writes itself as JSON data (``ToolCall.as_sent``)."""
+
+    def as_sent(self) -> dict[str, Any]: ...
+
+
+@dataclass(frozen=True)
+class LaneReply:
+    """What the other lane's server answered a call it was handed: the tool's answer, or the failure that stopped it,
+    named by its kind and message, so the chat sees the failure it would have seen there."""
+
+    answer: Any = None
+    failure: dict[str, str] = field(default_factory=dict)
+
+    @classmethod
+    def failed(cls, failure: BaseException) -> LaneReply:
+        """The reply naming failure by its class and message."""
+        return cls(failure={"kind": type(failure).__name__, "message": str(failure)})
+
+    @classmethod
+    def read(cls, data: dict[str, Any]) -> LaneReply:
+        """The reply the other lane wrote as JSON (``as_data``)."""
+        return cls(data.get("answer"), dict(data.get("failure") or {}))
+
+    @property
+    def as_data(self) -> dict[str, Any]:
+        return {"failure": self.failure} if self.failure else {"answer": self.answer}
 
 
 class McpAddress:
@@ -75,14 +106,14 @@ class McpAddress:
             connection.close()
         return answer if isinstance(answer, dict) and answer.get("ok") else None
 
-    def send_lane_call(self, lane_call: dict, reply_seconds: float) -> dict:
-        """Hand a tool call to the server on this port and wait up to reply_seconds for its reply: ``answer`` holds the
-        tool's answer, or ``failure`` names what failed."""
+    def send_lane_call(self, call: SentCall, reply_seconds: float) -> LaneReply:
+        """Hand call to the server on this port and wait up to reply_seconds for its reply: the tool's answer, or the
+        failure that stopped it."""
         connection = http.client.HTTPConnection(self.HOST, self.port, timeout=reply_seconds)
         try:
-            connection.request("POST", LANE_CALL_PATH, body=json.dumps(lane_call), headers={"Content-Type": "application/json"})
+            connection.request("POST", LANE_CALL_PATH, body=json.dumps(call.as_sent()), headers={"Content-Type": "application/json"})
             reply = connection.getresponse()
-            return json.loads(reply.read().decode("utf-8"))
+            return LaneReply.read(json.loads(reply.read().decode("utf-8")))
         except (OSError, http.client.HTTPException, json.JSONDecodeError) as failure:
             raise LaneUnreachable(self.port, str(failure)) from failure
         finally:

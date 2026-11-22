@@ -8,7 +8,7 @@ Markdown channel for `harness/guidance`. The module's purpose, seam, and depende
 
 ## Language companion
 
-A *PracticeGuidance* reads its *FidelityGuidance* children from the Fidelities section of `{practice}/{practice}.md`; each fidelity's `stage` (held as its *ApproachStage*), `default_format`, `outputs`, `judged_on`, and optional `clean_engineering` companion come from the YAML fields in its block, which the fidelity applies itself when its block makes it (`FidelityGuidance.from_block`). The practice holds its document (`document`, read once), and each fidelity reads its block, its instructions, rules, templates, template file, and declared files from itself, so an action holding a fidelity reads only that fidelity's text whatever fidelity is current. Each guidance hands its *Markdown* a *MarkdownScope*: its folder, slug, fidelity, and format. The practice's current fidelity, `fidelities.current`, is fixed at construction: a session's practices are shared by every call in it, so an action holds the fidelity it works at and never moves the practice's. Each fidelity keeps the format it last used, so the practice's `format` is its current fidelity's. Callers convert artifacts through *Render*, which asks the fidelity the action works at (*FidelityGuidance.render* or *render_files*); that fidelity hands its practice a *RenderRequest* that carries it. A practice that owns an artifact keeps one adapter per format under `{practice}/model/{format}/` and passes them as `formats`; every practice CDD ships passes formats today; a practice with none renders through the Clean Engineering companion of the fidelity the request works at (`RenderRequest.companion`, which is `FidelityGuidance.clean_engineering`).
+A *PracticeGuidance* reads its *FidelityGuidance* children from the Fidelities section of `{practice}/{practice}.md`; each fidelity's `stage` (held as its *ApproachStage*), `default_format`, `outputs`, `judged_on`, and optional `clean_engineering` companion come from the YAML fields in its block, which the fidelity applies itself when its block makes it (`FidelityGuidance.from_block`). The practice holds its document (`document`, read once), and each fidelity reads its block, its instructions, rules, templates, template file, and declared files from itself, so an action holding a fidelity reads only that fidelity's text whatever fidelity is current. Each guidance hands its *Markdown* a *MarkdownScope*: its folder, slug, and format, the name its template is looked for by first, the headings its sections are read under (a fidelity's are `("Fidelities", name)`), and the filter of its folders' files its practice gives at that fidelity (`scope_at`, `reads_file_at`). The practice's current fidelity, `fidelities.current`, is fixed at construction: a session's practices are shared by every call in it, so an action holds the fidelity it works at and never moves the practice's. Each fidelity keeps the format it last used, so the practice's `format` is its current fidelity's. Callers convert artifacts through *Render*, which asks the fidelity the action works at (*FidelityGuidance.render* or *render_files*); that fidelity hands its practice a *RenderRequest* that carries it. A practice that owns an artifact keeps one adapter per format under `{practice}/model/{format}/` and passes them as `formats`; every practice CDD ships passes formats today; a practice with none renders through the Clean Engineering companion of the fidelity the request works at (`RenderRequest.companion`, which is `FidelityGuidance.clean_engineering`).
 
 ---
 
@@ -37,7 +37,28 @@ sketch_template: str
 rules: RulesCollection
 	// the "shared rules" section
 instructions: str
-	// overview, guidance, rules, and templates joined; published as a skill and an MCP prompt
+	// overview, guidance, rules, and templates joined; published as a skill and an MCP prompt, as a GuidanceInstructions
+markdown_scope: MarkdownScope
+	// the folder beside its class, its slug, and its format
+----
+instructions_type(name: str): type[AgentInstructions]
+	// GuidanceInstructions for its own instructions member
+installed_as(tool: AgentTool): InstalledName
+	// its install folder; its own instructions named after it alone
+listed_parts(): list[AgentToolSet]
+	// its child toolsets, such as a practice's fidelities
+
+## GuidanceInstructions : AgentInstructions
+
+A guidance's own instructions tool: a call answers the guidance's whole instructions, described by its overview when its docstring says nothing; the MCP tool list gives its opening paragraph and a note that a call returns the rest; the file installed for it carries the guidance's schema guide.
+
+------
+listed_description: str
+description: str
+served_body: str
+----
+answer(call: ToolCall): str
+	-> toolset.for_call(call).instructions
 
 ## GuidanceCollection : MarkdownCollection, Guidance
 
@@ -113,6 +134,10 @@ render(format: str, content: RenderContent, source: str | None, previous: str): 
 	// at the fidelity the practice was made at, which renders it; a practice with no fidelity renders through its formats
 	-> fidelities.current.render
 	-> formats.render
+scope_at(fidelity: FidelityGuidance | None): MarkdownScope
+	// its markdown read at fidelity: templates named for that fidelity first, and the files reads_file_at gives
+reads_file_at(fidelity: str | None): FileFilter | None
+	// which files of its folders it reads at fidelity; every file, and Stories' story map examples alone at the story map
 
 ## WorkingSet
 
@@ -328,6 +353,14 @@ templates: str
 	// its template in the format it works in, else its default format
 examples: str
 	// its practice's examples at this fidelity and format
+	-> practice_guidance.scope_at(self)
+markdown_scope: MarkdownScope
+	// its practice's scope at this fidelity, read within ("Fidelities", name)
+----
+published_name(tool: AgentTool): str
+	// its own instructions under its slug alone when a practice holds it
+installed_as(tool: AgentTool): InstalledName
+	// its practice's install folder, named after its kebab slug
 checked_rule_collections: list[RulesCollection]
 	// the practice's shared rules, then its own, then each supplement's rules for this fidelity
 	-> PracticeSupplement.rules_for
@@ -615,11 +648,30 @@ SchemaType(key: str)
 ------
 key: str
 fields: list[tuple[str, str]]
+optional: set[str]
+relationships: list[SchemaRelationship]
+	// every field with a value that does not describe the type itself (is, fidelity, path, name), read once
+required_relationships: dict[str, tuple[str, ...]]
+	// derives from relationships: those is_required says
 rules: list[str]
 fidelity: str
 supertype: str
 ----
 field(name: str): str
+add_field(name: str, value: str, optional: bool): None
+
+## SchemaRelationship
+
+One field of a schema type that relates a node of the type to others; the graph's edges, its required relationships, and a pattern's added edge kinds all read a type's fields through these.
+
+SchemaRelationship(name: str, written: str, optional: bool)
+------
+targets: tuple[str, ...]
+	// each word of the value that names a type, value types left out; none for a quoted value
+references: tuple[str, ...]
+	// the schema types the value names, when it names only types
+is_required: bool
+	// not optional, naming only types, and not the belongsTo back-edge
 
 ## load_document
 

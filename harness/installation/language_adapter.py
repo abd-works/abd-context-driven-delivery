@@ -914,7 +914,7 @@ class LanguageAdapters(InstallPlace):
     def _typescript_toolsets(self) -> dict[str, TypeScriptToolset]:
         peers: dict[str, TypeScriptToolset] = {}
         for toolset in self._recorded:
-            peers[type(toolset).__name__] = TypeScriptToolset(toolset, self.folder_for(toolset), peers)
+            peers[type(toolset).__name__] = TypeScriptToolset(toolset, self.relative_folder(toolset.install_folder), peers)
         return peers
 
     def _written(self, path: Path, text: str) -> Path:

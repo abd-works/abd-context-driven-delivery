@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+from dataclasses import dataclass
+from pathlib import Path, PurePosixPath
 
 from harness.agent_tools.agent_tools import agent_toolset
+from harness.annotations.name import Name
 from harness.guidance.guidance import PracticeGuidance
+from harness.installation.context_config import CONTEXT_FOLDER
 
 from cdd_guidance.practices.stories.model.desktop_story_test import DesktopStoryTest
 from cdd_guidance.practices.stories.model.graph_reading import StoriesReading
@@ -27,6 +30,27 @@ _FORMAT_ADAPTERS = {
     "typescript": ("cdd_guidance.practices.stories.model.typescript.typescript_story_model", "TypeScriptStoryModel"),
     "javascript": ("cdd_guidance.practices.stories.model.javascript.javascript_story_model", "JavaScriptStoryModel"),
 }
+
+
+@dataclass(frozen=True)
+class StoryExampleFiles:
+    """Which files of its folders Stories reads at one fidelity (kebab case; empty at none). A story map's examples
+    are its story map files alone: the scenario and thin-slice examples, and every other markdown file, are the later
+    fidelities'. Read at the story map or at no fidelity, the examples leave out the whole-map examples (thin slices,
+    scenario files, and an ``examples`` index), which would show more of a map than a first cut writes."""
+
+    fidelity: str
+
+    def __call__(self, label: str, path: Path) -> bool:
+        stem = Name(path.stem).kebab
+        whole_map_example = "thin-slice" in stem or stem.startswith("scenario-") or stem == "examples"
+        if label == "examples" and self.fidelity in {"story-map", ""} and whole_map_example:
+            return False
+        if self.fidelity != "story-map":
+            return True
+        if "scenario" in stem or stem == "thin-slice":
+            return False
+        return not (path.suffix.lower() == ".md" and "story-map" not in stem and stem != "examples")
 
 
 @agent_toolset
@@ -69,6 +93,25 @@ class Stories(PracticeGuidance):
 
     default_workspace_folder = "tests"
     format_adapters = _FORMAT_ADAPTERS
+
+    def reads_file_at(self, fidelity: str | None) -> StoryExampleFiles:
+        """The files of its folders it reads at fidelity (``StoryExampleFiles``)."""
+        return StoryExampleFiles(Name(fidelity or "").kebab)
+
+    def placed_under(self, declared: PurePosixPath, root: Path) -> Path | None:
+        """A declared ``story_tests/...`` path lands under a root inside ``story_tests``, such as one epic's folder,
+        below the folders that root already names, and nowhere when the root names a folder deeper than the path goes;
+        under a root inside a ``.context`` folder, it lands in the ``story_tests`` beside that ``.context``. Any other
+        path lands as any practice's does."""
+        if declared.parts[:1] != (STORY_TESTS_FOLDER,):
+            return super().placed_under(declared, root)
+        if STORY_TESTS_FOLDER in root.parts:
+            below = PurePosixPath(*declared.parts[len(root.parts) - root.parts.index(STORY_TESTS_FOLDER) :])
+            # An epic's own stories' file is not below a sub-epic's folder: the root already names more folders than it does.
+            return root / below if below.parts else None
+        if CONTEXT_FOLDER in root.parts:
+            return Path(*root.parts[: root.parts.index(CONTEXT_FOLDER)]) / declared
+        return root / declared
 
     ## reading story maps and story tests from files
 

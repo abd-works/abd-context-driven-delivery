@@ -27,10 +27,6 @@ class Hooks(Annotation):
             return annotation.annotate(target)
         return annotation
 
-    def annotate(self, toolset_class: type) -> type:
-        setattr(toolset_class, self.flag, self)
-        return toolset_class
-
     @classmethod
     def from_toolset_class(cls, toolset_class: type) -> Hooks:
         """The ``@Hooks`` annotation on toolset_class or a class it derives from; a class annotated with none has every

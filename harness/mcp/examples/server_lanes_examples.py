@@ -8,7 +8,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from harness.mcp.cdd_home import CddHome
-from harness.mcp.mcp_address import DEV_PORT_AFTER_STABLE, LANE_CALL_PATH, McpAddress
+from harness.mcp.mcp_address import DEV_PORT_AFTER_STABLE, LANE_CALL_PATH, LaneReply, McpAddress, SentCall
 from harness.mcp.mcp_server import McpHost
 from harness.mcp.server_lanes import ServerLanes
 
@@ -98,14 +98,14 @@ class DevLaneInProcess(McpAddress):
         from starlette.testclient import TestClient
 
         self._client = TestClient(dev_host._http_app(DEV_PORT))
-        self.handed_over: list[dict] = []
+        self.handed_over: list[SentCall] = []
 
     def ping_answer(self, reply_seconds: float) -> dict:
         return {"ok": True, "pid": 0, "source": "", "projects": []}
 
-    def send_lane_call(self, lane_call: dict, reply_seconds: float) -> dict:
-        self.handed_over.append(lane_call)
-        return self._client.post(LANE_CALL_PATH, json=lane_call).json()
+    def send_lane_call(self, call: SentCall, reply_seconds: float) -> LaneReply:
+        self.handed_over.append(call)
+        return LaneReply.read(self._client.post(LANE_CALL_PATH, json=call.as_sent()).json())
 
 
 def seed_stable_lane_routing(root: Path, dev_lane: DevLaneInProcess) -> tuple[ServerLanes, McpHost]:
