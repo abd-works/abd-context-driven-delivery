@@ -2270,6 +2270,13 @@ Every action CDD ships: `cdd_guidance/actions` registers each action folder's to
 + toolsets(): tuple[type, ...]
 + actions(): tuple[Action, ...]
 + names(): tuple[str, ...]
++ on_fidelities: tuple[Action, ...]
++ steps: tuple[Action, ...]
++ writing_step: Action
++ checking_step: Action
++ producing: tuple[Action, ...]
++ taking_formats: tuple[Action, ...]
++ needing_output: tuple[Action, ...]
 + has(name: str): bool
 + action(name: str): Action | None
 ---<<creates>>--> Action
@@ -2286,23 +2293,20 @@ One action CDD ships: an operation an action toolset installs as a skill, such a
 + toolset_class: type
 + operation
 + folder: Path
++ place: OnStage | None
 ----
 + run_on(fidelity: WorkedFidelity, **arguments): Any
 	-> ActionRunner.run
 
 ## ApproachStage
 
-One stage of the CDD approach: the name each fidelity's **Stage:** gives it, its title, its scope, and the actions a person runs on a fidelity in it.
+One stage of the CDD approach: the name each fidelity's **Stage:** gives it, its title, and its scope. The actions run on a fidelity are the action catalogue's.
 
 + ApproachStage(name: str, scope: StageScope)
 ------
 + name: str
 + title: str
 + << composition >> scope: StageScope
-+ steps: list[str]
-+ actions: list[str]
-+ producing_actions: list[str]
-+ actions_with_formats: list[str]
 ----
 
 ## StageScope
@@ -4330,7 +4334,7 @@ Show one stage of the board, the tickets at work in it, and how many it takes be
 + set_wip_limit(limit: int): Stage
 	-> BoardFile.set_wip_limit
 ---<<reads title of>>--> ApproachStage
----<<reads steps of>>--> ApproachStage
+---<<reads the actions on a fidelity from>>--> ActionCatalogue
 ---<<annotated with>>--> LanguageAdapter
 ---<<annotated with>>--> AgentToolSetAnnotation
 ---<<annotated with>>--> Mcp

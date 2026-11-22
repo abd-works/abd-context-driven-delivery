@@ -1,4 +1,4 @@
-"""The stages of the CDD approach, each with its scope and the actions a person runs on a fidelity in it."""
+"""The stages of the CDD approach, each with its scope; the actions a person runs on a fidelity are the action catalogue's."""
 import sys
 from pathlib import Path
 
@@ -10,11 +10,9 @@ from expects import be_none, equal, expect
 from mamba import description, it
 
 from harness.guidance.stages import STAGES
-from harness.guidance.action_catalogue import ACTION_CATALOGUE
 from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 from harness.installation.data_class import data_of
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
-import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 
 
 with description("the stages of the approach"):
@@ -42,24 +40,3 @@ with description("the stages of the approach"):
                 "shape": "solution", "name": "Whole solution", "reach": "wide / shallow",
                 "covers": "outcomes · scope · boundaries",
             }))
-
-    with description("a stage's actions"):
-        with it("should take every fidelity through generate, then validate"):
-            expect(STAGES.of("discovery").steps).to(equal(["generate", "validate"]))
-
-        with it("should offer the other actions after the steps"):
-            expect(STAGES.of("discovery").actions).to(
-                equal(["partition", "generate", "validate", "iterate", "sketch", "render", "document"])
-            )
-
-        with it("should name only actions in the action catalogue"):
-            unknown = {action for stage in STAGES for action in stage.actions} - set(ACTION_CATALOGUE.names)
-            expect(unknown).to(equal(set()))
-
-        with it("should name generate and render as the actions that take the formats a person picks"):
-            expect(STAGES.of("specification").actions_with_formats).to(equal(["generate", "render"]))
-
-        with it("should leave validate out of the actions that write a fidelity's files"):
-            expect(STAGES.of("implementation").producing_actions).to(
-                equal(["partition", "generate", "iterate", "sketch", "render", "document"])
-            )

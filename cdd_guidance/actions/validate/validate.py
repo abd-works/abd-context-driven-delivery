@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from harness.guidance.guidance import Guidance
 from harness.guidance_actions import GuidanceArg, GuidanceAction
-from harness.guidance.stages import CHECKS, STEP, on_stage
+from harness.guidance.action_catalogue import CHECKS, STEP, on_stage
 from harness.agent_tools import agent_instructions, agent_toolset
 from harness.agent_tools.tool_call import ToolCall
 from harness.annotations.annotation import noDeploy

@@ -8,7 +8,7 @@ from typing import Any
 
 from harness.guidance.worked_session import WorkedSession
 from harness.guidance_actions import GuidanceArg, GuidanceAction, WorkedGuidance, source_label
-from harness.guidance.stages import on_stage
+from harness.guidance.action_catalogue import on_stage
 from cdd_guidance.actions.partition.partition_index import PartitionIndex
 from cdd_guidance.actions.partition.segment import (
     MIN_ENTRY_BODY_CHARS, SEGMENT_FILE, SEGMENT_FILES, Segment, SegmentCompletenessConfig,

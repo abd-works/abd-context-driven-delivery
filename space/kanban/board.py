@@ -16,6 +16,7 @@ from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.json_file import JsonFile
 from harness.mcp.mcp_annotations import mcp
+from harness.guidance.action_catalogue import ACTION_CATALOGUE
 from harness.guidance.stages import STAGES, ApproachStage, StageScope
 from space.kanban.card_name import CardName, TicketNameTakenError
 from space.kanban.unreadable_session_file import UnreadableSessionFile
@@ -624,7 +625,7 @@ class Stage(Column):
     @property
     def steps(self) -> list[str]:
         """What every fidelity goes through in this stage, in order: generate, then validate."""
-        return self._approach.steps
+        return [action.name for action in ACTION_CATALOGUE.steps]
 
     @property
     @data_field
@@ -636,19 +637,19 @@ class Stage(Column):
     @data_field
     def actions(self) -> list[str]:
         """Every action a person can run on a fidelity in this stage: its steps first, then the others."""
-        return self._approach.actions
+        return [action.name for action in ACTION_CATALOGUE.on_fidelities]
 
     @property
     @data_field
     def producing_actions(self) -> list[str]:
         """The actions that write a fidelity's files, which an action bar offers with formats."""
-        return self._approach.producing_actions
+        return [action.name for action in ACTION_CATALOGUE.producing]
 
     @property
     @data_field
     def actions_with_formats(self) -> list[str]:
         """The actions whose command takes the formats an action bar's chips pick, generate and render."""
-        return self._approach.actions_with_formats
+        return [action.name for action in ACTION_CATALOGUE.taking_formats]
 
     @property
     @data_field(reference=True)

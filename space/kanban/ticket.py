@@ -13,7 +13,7 @@ from harness.annotations.annotation import hosted_only
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.chat.chat import Chat, links_of_run
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
-from harness.guidance.stages import GENERATE, RENDER, VALIDATE
+from harness.guidance.action_catalogue import ACTION_CATALOGUE
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.markdown.format import Format
 from harness.mcp.mcp_annotations import long_call, mcp
@@ -63,8 +63,21 @@ _STAGE_FIELD = "stage"
 Remembered = TypeVar("Remembered")
 _STAGE_MARK_FIELD = "stage_mark"
 _TICKET_FIELDS = "ticket"
-# The actions that check or convert a fidelity's output, so they wait until there is some.
-ONCE_THERE_IS_OUTPUT = (VALIDATE, RENDER)
+
+
+def _generate() -> str:
+    """The step that writes a fidelity's files, as the session log names it: the action catalogue's writing step."""
+    return ACTION_CATALOGUE.writing_step.name
+
+
+def _validate() -> str:
+    """The step that checks a fidelity's files, as the session log names it: the action catalogue's checking step."""
+    return ACTION_CATALOGUE.checking_step.name
+
+
+def _needing_output() -> list[str]:
+    """The actions that check or convert a fidelity's output, so they wait until there is some."""
+    return [action.name for action in ACTION_CATALOGUE.needing_output]
 
 
 class MainStaysOpenError(ValueError):
@@ -781,7 +794,7 @@ class TicketWork:
         moves = [index for index, entry in enumerate(entries) if entry.verb == MOVED_INTO]
         since = entries[moves[-1] + 1:] if moves else entries
         for entry in reversed(since):
-            if entry.verb not in (GENERATE, VALIDATE):
+            if entry.verb not in (_generate(), _validate()):
                 continue
             stage = next((progress.stage for progress in self.enabled if entry.names(progress.fidelity)), None)
             if stage is not None:
@@ -907,11 +920,11 @@ class LoggedWork:
 
     def failed_again(self) -> LoggedWork:
         """This work with its latest validate failed, so validate is to do again."""
-        return LoggedWork([action for action in self.done_actions if action == GENERATE], True, self.lines_logged)
+        return LoggedWork([action for action in self.done_actions if action == _generate()], True, self.lines_logged)
 
     def validated(self, steps: list[str]) -> LoggedWork:
         """This work with its latest validate passed, its done actions in the order of steps, its stage's."""
-        return LoggedWork([action for action in steps if action in (*self.done_actions, VALIDATE)], False, self.lines_logged)
+        return LoggedWork([action for action in steps if action in (*self.done_actions, _validate())], False, self.lines_logged)
 
 
 @identity("ticket", "fidelity")
@@ -935,14 +948,14 @@ class FidelityProgress:
         position; the latest report's judgment can still fail a validate the log shows passing."""
         entries = ticket.work.entries
         naming = [(index, entry.verb) for index, entry in enumerate(entries) if entry.names(required.fidelity)]
-        validations = [index for index, verb in naming if verb == VALIDATE]
+        validations = [index for index, verb in naming if verb == _validate()]
         latest_validation = validations[-1] if validations else None
         has_violations = latest_validation is not None and GRAPH_RULE_VIOLATION in entries[latest_validation].words
         validated = latest_validation is not None and not has_violations
         # Only the generate tool writes a generate line: an action started inside another, such as the generate a
         # Sketch prompt expands, logs nothing (GuidanceAction.log_running), so every generate line counts.
-        done_verbs = {verb for _index, verb in naming if verb == GENERATE}
-        done_verbs |= {VALIDATE} if validated else set()
+        done_verbs = {verb for _index, verb in naming if verb == _generate()}
+        done_verbs |= {_validate()} if validated else set()
         logged = LoggedWork([action for action in required.stage.steps if action in done_verbs], has_violations, len(naming))
         read = cls(required, logged, ticket)
         judged = read._with_violations() if read._is_judged_failing else read
@@ -1031,7 +1044,7 @@ class FidelityProgress:
         check or convert: an action on the fidelity is recorded, or a file it declares is already there, such as one a
         person wrote. A person can check the same output again as often as they like."""
         has_output = bool(self._logged.done_actions) or self._has_files
-        return [action for action in self._required.stage.actions if has_output or action not in ONCE_THERE_IS_OUTPUT]
+        return [action for action in self._required.stage.actions if has_output or action not in _needing_output()]
 
     @cached_property
     def _has_files(self) -> bool:
@@ -1072,7 +1085,7 @@ class FidelityProgress:
         """Each action as to_do, in_progress, or done. A validate that left violations is in progress until they are fixed."""
         states = {action: "done" if action in self._logged.done_actions else "to_do" for action in self._required.stage.steps}
         if self._logged.has_violations:
-            states[VALIDATE] = "in_progress"
+            states[_validate()] = "in_progress"
         return ActionStates(states)
 
     @property
@@ -1188,7 +1201,7 @@ class FidelityProgress:
     @property
     def _is_judged_failing(self) -> bool:
         """A validate the log shows passing still failed when the judgment the validating agent added to its report fails a rule."""
-        if VALIDATE not in self._logged.done_actions:
+        if _validate() not in self._logged.done_actions:
             return False
         latest = self.latest_report
         return latest is not None and latest.is_judged_failing
@@ -1205,7 +1218,7 @@ class ActionStates:
         """Where each action stands across several fidelities: done only once it is done on all of them, in progress
         once it is under way on any, else to do."""
         if not every:
-            return cls({action: "to_do" for action in (GENERATE, VALIDATE)})
+            return cls({action: "to_do" for action in (_generate(), _validate())})
         taken = every[0]
         for states in every[1:]:
             taken = taken._with(states)
@@ -1225,12 +1238,12 @@ class ActionStates:
     @property
     @data_field
     def generate(self) -> str:
-        return self._states[GENERATE]
+        return self._states[_generate()]
 
     @property
     @data_field
     def validate(self) -> str:
-        return self._states[VALIDATE]
+        return self._states[_validate()]
 
 
 class StageWork:
