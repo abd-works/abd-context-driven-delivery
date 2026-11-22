@@ -1,31 +1,37 @@
 // The Story UI editor's views: the story map as epics, sub-epics, stories and scenarios, edited in place. The views
-// draw what the Python story model sends (StoryMapClient over the generated StoryModel client) and hand every edit to
-// that client, which saves it through the node's own tool; nothing here holds a story map of its own.
+// draw the nodes the map makes from what the Python story model sends (StoryMapClient over the generated StoryModel
+// client, story-map-nodes.ts), and each card edits through its own node, which saves it through that node's own tool;
+// nothing here holds a story map of its own.
 
 import React, { Component, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ErrorInfo, type ReactNode } from 'react';
 import { ChatClientGenerated } from '@cdd/harness/chat/chat';
 import { useStoryModel } from '@cdd/practices/stories/model/story-model-views';
 
 import { StoryMapApi } from './story-map-api';
-import { StoryMapClient, type NodeKind } from './story-map-client';
+import { StoryMapClient } from './story-map-client';
 import type { StoryMapFailures } from './story-map-failures';
 import {
-  StoryMapViewModel,
-  type EpicViewModel,
-  type ExampleTable,
-  type IncrementViewModel,
-  type ScenarioViewModel,
-  type SemanticType,
-  type StepRowDto,
-  type StoryViewModel,
-  type SubEpicViewModel,
-} from './story-map-view-models';
+  STEP_KEYWORDS,
+  type Answer,
+  type EpicOnPage,
+  type IncrementOnPage,
+  type ScenarioOnPage,
+  type StepKeyword,
+  type StepOnPage,
+  type StoryOnPage,
+  type StoryNodeOnPage,
+} from './story-map-nodes';
 
 // The page reads its map again this often, so an edit the agent made through the tools shows without a reload, and a
 // page following the open session shows the ticket activated last.
 const READ_EVERY_MILLISECONDS = 2_000;
 
 type EditStatus = 'synced' | 'saving' | 'error';
+
+// An edit a view makes: a call on a node, or on the map, that answers the map as its file now holds it.
+type Change = () => Answer;
+// What a view hands every edit to: the page's edit, which shows it saving and says why one failed.
+type Edit = (change: Change) => void;
 
 // What a page's reads and edits share, made once for its failures: the calls it makes, where their failures go, and
 // whether an edit is under way.
@@ -62,13 +68,13 @@ function useStoryMapReading(file: string | null, calls: StoryMapPageCalls) {
 // An edit answers the map as its file now holds it; one that fails leaves the map as it was and says why.
 function useStoryMapEdit(client: StoryMapClient | null, calls: StoryMapPageCalls) {
   const [status, setStatus] = useState<EditStatus>('synced');
-  const edit = useCallback(async (change: (held: StoryMapClient) => Promise<StoryMapClient | null>) => {
+  const edit = useCallback(async (change: Change) => {
     if (!client) return;
     const { failures, editing } = calls;
     editing.current = true;
     setStatus('saving');
     try {
-      const answered = await change(client);
+      const answered = await change();
       setStatus(answered ? 'synced' : 'error');
     } catch (thrown) {
       setStatus('error');
@@ -531,24 +537,24 @@ class ColumnLayoutBuilder {
   private readonly layout: ColumnLayout = { epicCols: new Map(), subEpicCols: new Map(), storyCol: new Map(), totalCols: 1 };
   private col = 1;
 
-  constructor(private readonly storyMap: StoryMapViewModel, private readonly preview: DragPreview) {}
+  constructor(private readonly epics: EpicOnPage[], private readonly preview: DragPreview) {}
 
   laidOut(): ColumnLayout {
-    const epicIds = computeDisplayIds(this.storyMap.epics.map((e) => e.id), { listKey: EPIC_LIST_KEY, kind: 'epic' }, this.preview);
-    for (const epicId of epicIds) this.layOutEpic(this.storyMap.epics.find((e) => e.id === epicId)!);
+    const epicIds = computeDisplayIds(this.epics.map((e) => e.id), { listKey: EPIC_LIST_KEY, kind: 'epic' }, this.preview);
+    for (const epicId of epicIds) this.layOutEpic(this.epics.find((e) => e.id === epicId)!);
     return { ...this.layout, totalCols: Math.max(1, this.col - 1) };
   }
 
-  private layOutEpic(epic: EpicViewModel): void {
+  private layOutEpic(epic: EpicOnPage): void {
     const epicStart = this.col;
-    const subEpicsById = new Map(this.storyMap.epics.flatMap((e) => e.sub_epics.map((s) => [s.id, s] as const)));
-    const displaySubIds = computeDisplayIds(epic.sub_epics.map((s) => s.id), { listKey: epic.id, kind: 'sub-epic' }, this.preview);
+    const subEpicsById = new Map(this.epics.flatMap((e) => e.subEpics.map((s) => [s.id, s] as const)));
+    const displaySubIds = computeDisplayIds(epic.subEpics.map((s) => s.id), { listKey: epic.id, kind: 'sub-epic' }, this.preview);
     for (const subId of displaySubIds) this.layOutSubEpic(subEpicsById.get(subId)!);
     if (displaySubIds.length === 0) this.col += EMPTY_PARENT_COLUMNS;
     this.layout.epicCols.set(epic.id, { start: epicStart, span: this.col - epicStart });
   }
 
-  private layOutSubEpic(sub: SubEpicViewModel): void {
+  private layOutSubEpic(sub: EpicOnPage): void {
     const subStart = this.col;
     const displayStoryIds = computeDisplayIds(sub.stories.map((s) => s.id), { listKey: sub.id, kind: 'story' }, this.preview);
     if (displayStoryIds.length === 0) this.col += EMPTY_PARENT_COLUMNS;
@@ -557,8 +563,8 @@ class ColumnLayoutBuilder {
   }
 }
 
-function computeColumnLayout(storyMap: StoryMapViewModel, preview: DragPreview): ColumnLayout {
-  return new ColumnLayoutBuilder(storyMap, preview).laidOut();
+function computeColumnLayout(epics: EpicOnPage[], preview: DragPreview): ColumnLayout {
+  return new ColumnLayoutBuilder(epics, preview).laidOut();
 }
 
 function colTemplate(totalCols: number): string {
@@ -571,95 +577,39 @@ function colTemplate(totalCols: number): string {
 // ---------------------------------------------------------------------------
 
 interface StoryHierarchyViewProps {
-  storyMap: StoryMapViewModel;
+  // The map, whose increments the view draws and which adds and reorders epics and increments.
+  map: StoryMapClient;
+  // The epics the view draws: every epic, or the part a ticket's scope covers.
+  epics: EpicOnPage[];
   expandedNodeIds: ReadonlySet<string>;
   showScenarios: boolean;
   /** false = Map View (no increment rows, no assign combobox); true = Increment View */
   showIncrements?: boolean;
-  onNodeClick: (id: string, semantic_type: SemanticType) => void;
-  onExpand: (id: string, semantic_type: SemanticType, descendantIds: string[]) => void;
-  onSaveInline: (nodeId: string, patch: { name?: string }) => void;
-  onReorderEpics?: (epicOrders: string[]) => void;
-  onReorderSubEpics?: (epicId: string, subEpicOrders: string[]) => void;
-  onReorderStories?: (subEpicId: string, storyOrders: string[]) => void;
-  /** Move a Story to a SubEpic — same-parent reorder or across to a different Epic's SubEpic. */
-  onMoveStory?: (storyId: string, targetSubEpicId: string, storyOrders: string[]) => void;
-  /** Move a SubEpic (and its Stories) to an Epic — same-parent reorder or across to a different Epic. */
-  onMoveSubEpic?: (subEpicId: string, targetEpicId: string, subEpicOrders: string[]) => void;
-  onReorderScenarios?: (storyId: string, scenarioOrders: string[]) => void;
-  onReorderSteps?: (storyId: string, scenarioId: string, stepOrders: string[]) => void;
-  onAssignToIncrement?: (storyId: string, incrementId: string) => void;
-  onUnassignFromIncrement?: (storyId: string) => void;
-  onAppendEpic?: (name?: string) => void;
-  onRemoveEpic?: (epicId: string) => void;
-  onAppendSubEpic?: (epicId: string, name?: string) => void;
-  onRemoveSubEpic?: (epicId: string, subEpicId: string) => void;
-  onAppendStory?: (subEpicId: string, name?: string) => void;
-  onRemoveStory?: (subEpicId: string, storyId: string) => void;
-  // Positional insert — leading-+ per group and card-level + buttons
-  onInsertEpicAfter?: (afterEpicId: string, name?: string) => void;
-  onPrependSubEpic?: (epicId: string, name?: string) => void;
-  onInsertSubEpicAfter?: (epicId: string, afterSubEpicId: string, name?: string) => void;
-  onPrependStory?: (subEpicId: string, name?: string) => void;
-  onInsertStoryAfter?: (subEpicId: string, afterStoryId: string, name?: string) => void;
-  onAppendIncrement?: () => void;
-  onRemoveIncrement?: (incrementId: string) => void;
-  onReorderIncrements?: (incrementOrders: string[]) => void;
-  // Scenario / step / example CRUD
-  onAppendScenario?: (storyId: string) => void;
-  onRemoveScenario?: (storyId: string, scenarioId: string) => void;
-  onAddStep?: (storyId: string, scenarioId: string) => void;
-  onUpdateStep?: (storyId: string, scenarioId: string, stepId: string, values: Partial<Pick<StepRowDto, 'text' | 'step_type'>>) => void;
-  onRemoveStep?: (storyId: string, scenarioId: string, stepId: string) => void;
-  onEditExample?: (exampleId: string, field: string, value: string) => void;
-  onRemoveExample?: (exampleId: string) => void;
-  onEditDescription?: (nodeId: string, description: string) => void;
+  onNodeClick: (id: string) => void;
+  onExpand: (id: string, descendantIds: string[]) => void;
+  // Every edit goes here, each a call on the node a card shows.
+  edit: Edit;
   // Opens an acceptance-test file in the chat bar's file viewer; none when no chat opened the page.
   onOpenFile?: (path: string) => void;
 }
 
+// The new name a person typed for a node, else the name a new node of its kind takes.
+const named = (typed: string | undefined, otherwise: string): string => typed?.trim() || otherwise;
+
 export function StoryHierarchyView({
-  storyMap,
+  map,
+  epics,
   expandedNodeIds,
   showScenarios,
   showIncrements = true,
   onNodeClick,
   onExpand,
-  onSaveInline,
-  onReorderEpics = () => {},
-  onReorderSubEpics = () => {},
-  onReorderStories = () => {},
-  onMoveStory = () => {},
-  onMoveSubEpic = () => {},
-  onReorderScenarios = () => {},
-  onReorderSteps = () => {},
-  onAssignToIncrement = () => {},
-  onUnassignFromIncrement = () => {},
-  onAppendEpic = () => {},
-  onRemoveEpic = () => {},
-  onAppendSubEpic = () => {},
-  onRemoveSubEpic = () => {},
-  onAppendStory = () => {},
-  onRemoveStory = () => {},
-  onInsertEpicAfter = () => {},
-  onPrependSubEpic = () => {},
-  onInsertSubEpicAfter = () => {},
-  onPrependStory = () => {},
-  onInsertStoryAfter = () => {},
-  onAppendIncrement = () => {},
-  onRemoveIncrement = () => {},
-  onReorderIncrements = () => {},
-  onAppendScenario = () => {},
-  onRemoveScenario = () => {},
-  onAddStep = () => {},
-  onUpdateStep = () => {},
-  onRemoveStep = () => {},
-  onEditExample = () => {},
-  onRemoveExample = () => {},
-  onEditDescription = () => {},
+  edit,
   onOpenFile,
 }: StoryHierarchyViewProps) {
-  const assignedStoryIds = new Set(storyMap.increments.flatMap((i) => i.stories));
+  const increments = map.incrementsOnPage;
+  // The stories a drop names by id, among those the view draws.
+  const storiesById = new Map(epics.flatMap((epic) => epic.storiesShown).map((story) => [story.id, story]));
   const dragRef = useRef<string | null>(null);
   const dragKindRef = useRef<DragKind | null>(null);
   /** True while the cursor is currently over a VALID drop target for the active drag —
@@ -674,7 +624,7 @@ export function StoryHierarchyView({
 
   const dragVisuals = useDragVisuals();
   const { dragState, dropEdge } = dragVisuals;
-  const { epicCols, subEpicCols, storyCol, totalCols } = computeColumnLayout(storyMap, dragVisuals);
+  const { epicCols, subEpicCols, storyCol, totalCols } = computeColumnLayout(epics, dragVisuals);
   const gridCols = colTemplate(totalCols);
 
   // Grid row constants — keep in sync with test assertions
@@ -688,14 +638,20 @@ export function StoryHierarchyView({
 
   /** Render a StoryCard with all callbacks wired — used in both spine and increment rows.
    *  Pass `isFirst=true` for the first story in a sub-epic group to show the prepend + button. */
-  const getSubEpicStoryIds = (subEpicId: string) => {
-    for (const e of storyMap.epics)
-      for (const s of e.sub_epics)
-        if (s.id === subEpicId) return s.stories.map((st) => st.id);
-    return [];
+  // The rows of every epic, and the epics, by the id a drop's list names them by.
+  const rowsById = new Map(epics.flatMap((e) => e.subEpics.map((s) => [s.id, s] as const)));
+  const epicsById = new Map(epics.map((e) => [e.id, e] as const));
+  const getSubEpicStoryIds = (subEpicId: string) => rowsById.get(subEpicId)?.stories.map((st) => st.id) ?? [];
+  const getEpicIds = () => epics.map((e) => e.id);
+  const getEpicSubEpicIds = (epicId: string) => epicsById.get(epicId)?.subEpics.map((s) => s.id) ?? [];
+  // A node dropped into a list goes before the node that follows it there; dropped last, it stays where it was.
+  const moveInto = (siblings: StoryNodeOnPage[], dragged: StoryNodeOnPage | undefined, order: string[]) => {
+    const next = siblings.find((each) => each.id === order[order.indexOf(dragged?.id ?? '') + 1]);
+    if (dragged && next) edit(() => dragged.moveBefore(next));
   };
-  const getEpicIds = () => storyMap.epics.map((e) => e.id);
-  const getEpicSubEpicIds = (epicId: string) => storyMap.epics.find((e) => e.id === epicId)?.sub_epics.map((s) => s.id) ?? [];
+  const onMoveStory = (storyId: string, rowId: string, order: string[]) => moveInto(rowsById.get(rowId)?.stories ?? [], storiesById.get(storyId), order);
+  const onMoveSubEpic = (subEpicId: string, epicId: string, order: string[]) => moveInto(epicsById.get(epicId)?.subEpics ?? [], rowsById.get(subEpicId), order);
+  const onReorderEpics = (order: string[]) => edit(() => map.reorder(epics, order));
 
   // ── Authoritative container-level drop commit ──────────────────────────────
   // Native HTML5 drag only fires `drop` on an element whose `dragover` called
@@ -755,13 +711,13 @@ export function StoryHierarchyView({
     },
   };
 
-  const renderStoryCard = (story: StoryViewModel, subEpicId: string, isFirst = false) => {
+  const renderStoryCard = (story: StoryOnPage, row: EpicOnPage, isFirst = false) => {
     const baseDrag = makeStoryDragHandlers(
       dragRef,
       dragKindRef,
       story.id,
-      subEpicId,
-      () => getSubEpicStoryIds(subEpicId),
+      row.id,
+      () => getSubEpicStoryIds(row.id),
       onMoveStory,
       dragVisuals,
     );
@@ -783,36 +739,30 @@ export function StoryHierarchyView({
     return (
       <StoryCard
         story={story}
-        increments={storyMap.increments}
+        row={row}
+        isFirst={isFirst}
         isExpanded={expandedNodeIds.has(story.id)}
-        showScenarios={showScenarios}
-        showIncrements={showIncrements}
         onNodeClick={onNodeClick}
         onExpand={onExpand}
-        onSaveInline={onSaveInline}
-        onAssignToIncrement={onAssignToIncrement}
-        onUnassignFromIncrement={onUnassignFromIncrement}
-        onReorderScenarios={onReorderScenarios}
-        onReorderSteps={onReorderSteps}
-        onRemoveStory={(storyId) => onRemoveStory(subEpicId, storyId)}
-        onAppendStory={(name) => onInsertStoryAfter(subEpicId, story.id, name)}
-        onPrepend={isFirst ? (name) => onPrependStory(subEpicId, name) : undefined}
-        onAppendScenario={onAppendScenario}
-        onRemoveScenario={onRemoveScenario}
-        onAddStep={onAddStep}
-        onUpdateStep={onUpdateStep}
-        onRemoveStep={onRemoveStep}
-        onEditExample={onEditExample}
-        onRemoveExample={onRemoveExample}
-        onEditDescription={onEditDescription}
+        edit={edit}
         onOpenFile={onOpenFile}
         dragHandlers={dragHandlers}
         dropIndicatorClass={
-          dropIndicatorClass(dropEdge, subEpicId, story.id) +
+          dropIndicatorClass(dropEdge, row.id, story.id) +
           (isBeingDragged(dragState, 'story', story.id) ? ' being-dragged' : '')
         }
       />
     );
+  };
+
+  // The story a drop onto an increment names: the story dragged, else the one the drop's data names.
+  const droppedStory = (drop: React.DragEvent<Element>): StoryOnPage | undefined => {
+    const sid = storyDragRef.current ?? drop.dataTransfer?.getData('text/plain') ?? null;
+    storyDragRef.current = null;
+    // This is an increment (un)assignment, not a parent move — cancel the
+    // cross-parent drag so the container's dragend fallback doesn't also fire.
+    dragRef.current = null; dragKindRef.current = null; dragVisuals.end();
+    return sid ? storiesById.get(sid) : undefined;
   };
 
   return (
@@ -841,22 +791,22 @@ export function StoryHierarchyView({
       {...containerDragHandlers}
     >
       {/* ── Row 1: Epic lanes ─────────────────────────────────────────── */}
-      {storyMap.epics.length === 0
+      {epics.length === 0
         ? <AddNodePopoverButton
             className="add-root-btn"
             title="Add Epic"
             buttonLabel="+ Epic"
             placeholder="Epic title (optional)"
             style={{ gridRow: ROW_EPICS, gridColumn: 1 }}
-            onAdd={onAppendEpic}
+            onAdd={(name) => edit(() => map.addEpic(named(name, NEW_NAMES.epic)))}
           />
-        : storyMap.epics.map((epic) => {
+        : epics.map((epic, epicIdx) => {
             const at = epicCols.get(epic.id)!;
             const epicDragHandlers = makeEpicDragHandlers(
               dragRef,
               dragKindRef,
               epic.id,
-              () => storyMap.epics.map((e) => e.id),
+              () => epics.map((e) => e.id),
               onReorderEpics,
               dragVisuals,
             );
@@ -865,7 +815,7 @@ export function StoryHierarchyView({
                 key={epic.id}
                 className={`epic-lane${isBeingDragged(dragState, 'epic', epic.id) ? ' being-dragged' : ''}`}
                 style={{ gridRow: ROW_EPICS, gridColumn: `${at.start} / span ${at.span}` }}
-                onClick={() => onNodeClick(epic.id, 'epic')}
+                onClick={() => onNodeClick(epic.id)}
                 onDoubleClick={focusNameFieldOnDoubleClick}
                 {...epicDragHandlers}
               >
@@ -886,21 +836,21 @@ export function StoryHierarchyView({
                   </div>
                   <div className="type-label-right">
                     <span className="node-actions">
-                      <button className="node-btn" title="Expand descendants" onClick={(e) => { e.stopPropagation(); onExpand(epic.id, 'epic', getAllDescendantStoryIds(epic)); }}>↕</button>
+                      <button className="node-btn" title="Expand descendants" onClick={(e) => { e.stopPropagation(); onExpand(epic.id, epic.storiesShown.map((story) => story.id)); }}>↕</button>
                       <AddNodePopoverButton
                         className="node-btn plus-btn"
                         title="Add Epic"
                         buttonLabel="+"
                         placeholder="Epic title (optional)"
-                        onAdd={(name) => onInsertEpicAfter(epic.id, name)}
+                        onAdd={(name) => edit(() => map.addEpic(named(name, NEW_NAMES.epic), epics[epicIdx + 1]))}
                       />
-                      <button className="node-btn minus-btn" title="Delete Epic" onClick={(e) => { e.stopPropagation(); onRemoveEpic(epic.id); }}>−</button>
+                      <button className="node-btn minus-btn" title="Delete Epic" onClick={(e) => { e.stopPropagation(); edit(() => epic.remove()); }}>−</button>
                     </span>
                   </div>
                 </div>
-                <NodeNameInput nodeId={epic.id} name={epic.name} onSaveInline={onSaveInline} className="node-label" />
+                <NodeNameInput node={epic} edit={edit} className="node-label" />
                 {expandedNodeIds.has(epic.id) && (
-                  <DescriptionEditor key={epic.description} node={epic} onSave={(description) => onEditDescription(epic.id, description)} />
+                  <DescriptionEditor key={epic.description} node={epic} edit={edit} />
                 )}
               </div>
             );
@@ -908,9 +858,11 @@ export function StoryHierarchyView({
       }
 
       {/* ── Row 2: SubEpic lanes ──────────────────────────────────────── */}
-      {storyMap.epics.flatMap((epic) => {
+      {epics.flatMap((epic) => {
         const epicAt = epicCols.get(epic.id)!;
-        const displaySubEpicIds = computeDisplayIds(epic.sub_epics.map((s) => s.id), { listKey: epic.id, kind: 'sub-epic' }, dragVisuals);
+        // A sub-epic added first goes before the first epic nested under this one, after the row of its own stories.
+        const firstNested = epic.subEpics.find((sub) => sub.id !== epic.id);
+        const displaySubEpicIds = computeDisplayIds(epic.subEpics.map((s) => s.id), { listKey: epic.id, kind: 'sub-epic' }, dragVisuals);
         if (displaySubEpicIds.length === 0) {
           return [
             // The "+" button stays small/visible, but the drop target spans the whole
@@ -928,12 +880,12 @@ export function StoryHierarchyView({
                 title="Add SubEpic"
                 buttonLabel="+"
                 placeholder="SubEpic title (optional)"
-                onAdd={(name) => onPrependSubEpic(epic.id, name)}
+                onAdd={(name) => edit(() => epic.newSubEpic(named(name, NEW_NAMES.subEpic), firstNested))}
               />
             </div>,
           ];
         }
-        return epic.sub_epics.map((sub, subIdx) => {
+        return epic.subEpics.map((sub, subIdx) => {
           const at = subEpicCols.get(sub.id)!;
           const isFirst = subIdx === 0;
           const subEpicDragHandlers = makeSubEpicDragHandlers(
@@ -941,7 +893,7 @@ export function StoryHierarchyView({
             dragKindRef,
             sub.id,
             epic.id,
-            () => epic.sub_epics.map((s) => s.id),
+            () => epic.subEpics.map((s) => s.id),
             onMoveSubEpic,
             dragVisuals,
           );
@@ -953,7 +905,7 @@ export function StoryHierarchyView({
                 (isBeingDragged(dragState, 'sub-epic', sub.id) ? ' being-dragged' : '')
               }
               style={{ gridRow: ROW_SUB_EPICS, gridColumn: `${at.start} / span ${at.span}` }}
-              onClick={() => onNodeClick(sub.id, 'sub-epic')}
+              onClick={() => onNodeClick(sub.id)}
               onDoubleClick={focusNameFieldOnDoubleClick}
               {...subEpicDragHandlers}
             >
@@ -965,7 +917,7 @@ export function StoryHierarchyView({
                       title="Add SubEpic at beginning"
                       buttonLabel="+"
                       placeholder="SubEpic title (optional)"
-                      onAdd={(name) => onPrependSubEpic(epic.id, name)}
+                      onAdd={(name) => edit(() => epic.newSubEpic(named(name, NEW_NAMES.subEpic), firstNested))}
                     />
                   )}
                   <span
@@ -983,22 +935,22 @@ export function StoryHierarchyView({
                 </div>
                 <div className="type-label-right">
                   <span className="node-actions">
-                    <button className="node-btn" onClick={(e) => { e.stopPropagation(); onExpand(sub.id, 'sub-epic', sub.stories.map((s) => s.id)); }}>↕</button>
+                    <button className="node-btn" onClick={(e) => { e.stopPropagation(); onExpand(sub.id, sub.stories.map((s) => s.id)); }}>↕</button>
                     <AddNodePopoverButton
                       className="node-btn plus-btn"
                       title="Add SubEpic"
                       buttonLabel="+"
                       placeholder="SubEpic title (optional)"
-                      onAdd={(name) => onInsertSubEpicAfter(epic.id, sub.id, name)}
+                      onAdd={(name) => edit(() => epic.newSubEpic(named(name, NEW_NAMES.subEpic), epic.subEpics[subIdx + 1]))}
                     />
-                    <button className="node-btn minus-btn" title="Delete SubEpic" onClick={(e) => { e.stopPropagation(); onRemoveSubEpic(epic.id, sub.id); }}>−</button>
+                    <button className="node-btn minus-btn" title="Delete SubEpic" onClick={(e) => { e.stopPropagation(); edit(() => sub.remove()); }}>−</button>
                   </span>
                 </div>
               </div>
-              <NodeNameInput nodeId={sub.id} name={sub.name} onSaveInline={onSaveInline} className="node-label" />
+              <NodeNameInput node={sub} edit={edit} className="node-label" />
               {/* An epic's own stories show as a row named for the epic, whose description the epic's lane edits. */}
               {sub.id !== epic.id && expandedNodeIds.has(sub.id) && (
-                <DescriptionEditor key={sub.description} node={sub} onSave={(description) => onEditDescription(sub.id, description)} />
+                <DescriptionEditor key={sub.description} node={sub} edit={edit} />
               )}
             </div>
           );
@@ -1006,8 +958,8 @@ export function StoryHierarchyView({
       })}
 
       {/* ── Row 3: Spine (unassigned) story cards ────────────────────── */}
-      {storyMap.epics.flatMap((epic) =>
-        epic.sub_epics.flatMap((sub) => {
+      {epics.flatMap((epic) =>
+        epic.subEpics.flatMap((sub) => {
           const subAt = subEpicCols.get(sub.id)!;
           const displayStoryIds = computeDisplayIds(sub.stories.map((s) => s.id), { listKey: sub.id, kind: 'story' }, dragVisuals);
           if (displayStoryIds.length === 0) {
@@ -1026,7 +978,7 @@ export function StoryHierarchyView({
                   title="Add Story"
                   buttonLabel="+"
                   placeholder="Story title (optional)"
-                  onAdd={(name) => onPrependStory(sub.id, name)}
+                  onAdd={(name) => edit(() => sub.newStory(named(name, NEW_NAMES.story)))}
                 />
               </div>,
             ];
@@ -1035,10 +987,10 @@ export function StoryHierarchyView({
             // Increment-assigned Stories only move down to an Increment row once
             // Increment View is actually rendering one for them — otherwise they'd
             // vanish entirely, leaving a phantom reserved column in this SubEpic.
-            .filter((s) => !showIncrements || !assignedStoryIds.has(s.id))
+            .filter((s) => !showIncrements || !s.increment)
             .map((story, storyIdx) => (
               <div key={story.id} data-row-type="spine" style={{ gridRow: ROW_SPINE, gridColumn: storyCol.get(story.id) }}>
-                {renderStoryCard(story, sub.id, storyIdx === 0)}
+                {renderStoryCard(story, sub, storyIdx === 0)}
               </div>
             ));
         }),
@@ -1055,12 +1007,9 @@ export function StoryHierarchyView({
           onDrop={(e) => {
             e.preventDefault();
             e.currentTarget.classList.remove('drag-over');
-            const sid = storyDragRef.current ?? e.dataTransfer?.getData('text/plain') ?? null;
-            storyDragRef.current = null;
-            // This is an increment (un)assignment, not a parent move — cancel the
-            // cross-parent drag so the container's dragend fallback doesn't also fire.
-            dragRef.current = null; dragKindRef.current = null; dragVisuals.end();
-            if (sid) onUnassignFromIncrement(sid);
+            const story = droppedStory(e);
+            const increment = story?.increment;
+            if (story && increment) edit(() => increment.stopDelivering(story));
           }}
         >
           ↑ Unassigned — drop here to remove from increment
@@ -1068,7 +1017,7 @@ export function StoryHierarchyView({
       )}
 
       {/* ── Rows 5+: Increment rows (label + cards) ──────────────────── */}
-      {showIncrements && storyMap.increments.map((inc, incIdx) => {
+      {showIncrements && increments.map((inc, incIdx) => {
         const labelRow = incLabelRow(incIdx);
         const cardsRow = incCardsRow(incIdx);
         return (
@@ -1084,17 +1033,14 @@ export function StoryHierarchyView({
               onDrop={(e) => {
                 e.preventDefault();
                 setDragOverIncrementId(null);
-                const sid = storyDragRef.current ?? e.dataTransfer?.getData('text/plain') ?? null;
-                storyDragRef.current = null;
-                dragRef.current = null; dragKindRef.current = null; dragVisuals.end();
-                if (sid) onAssignToIncrement(sid, inc.id);
+                const story = droppedStory(e);
+                if (story) edit(() => inc.deliver(story));
               }}
             >
               <IncrementLabel
                 increment={inc}
-                onSaveInline={onSaveInline}
-                onRemoveIncrement={onRemoveIncrement}
-                dragHandlers={makeDragHandlers(incDragRef, inc.id, () => storyMap.increments.map((i) => i.id), onReorderIncrements)}
+                edit={edit}
+                dragHandlers={makeDragHandlers(incDragRef, inc.id, () => increments.map((i) => i.id), (order) => edit(() => map.reorder(increments, order)))}
               />
             </div>
             {/* Full-width drop band behind the cards row — lets a Story be dropped
@@ -1110,19 +1056,17 @@ export function StoryHierarchyView({
               onDrop={(e) => {
                 e.preventDefault();
                 setDragOverIncrementId(null);
-                const sid = storyDragRef.current ?? e.dataTransfer?.getData('text/plain') ?? null;
-                storyDragRef.current = null;
-                dragRef.current = null; dragKindRef.current = null; dragVisuals.end();
-                if (sid) onAssignToIncrement(sid, inc.id);
+                const story = droppedStory(e);
+                if (story) edit(() => inc.deliver(story));
               }}
             />
             {/* Increment story cards — placed at their story column positions */}
-            {storyMap.epics.flatMap((epic) =>
-              epic.sub_epics.flatMap((sub) => {
-                const filtered = sub.stories.filter((s) => inc.stories.includes(s.id));
+            {epics.flatMap((epic) =>
+              epic.subEpics.flatMap((sub) => {
+                const filtered = sub.stories.filter((s) => inc.delivers(s));
                 return filtered.map((story, storyIdx) => (
                   <div key={story.id} data-row-type={`increment-${inc.id}`} style={{ gridRow: cardsRow, gridColumn: storyCol.get(story.id) }}>
-                    {renderStoryCard(story, sub.id, storyIdx === 0)}
+                    {renderStoryCard(story, sub, storyIdx === 0)}
                   </div>
                 ));
               }),
@@ -1136,37 +1080,31 @@ export function StoryHierarchyView({
         <button
           className="add-root-btn"
           title="Add Increment"
-          style={{ gridRow: incAddRow(storyMap.increments.length), gridColumn: 1 }}
-          onClick={onAppendIncrement}
+          style={{ gridRow: incAddRow(increments.length), gridColumn: 1 }}
+          onClick={() => edit(() => map.addIncrement(NEW_NAMES.increment))}
         >+ Increment</button>
       )}
     </div>
   );
 }
 
-function getAllDescendantStoryIds(epic: EpicViewModel): string[] {
-  return epic.sub_epics.flatMap((sub) => sub.stories.map((s) => s.id));
-}
 
 // ---------------------------------------------------------------------------
 // NodeNameInput — shared inline-rename control for Epic/SubEpic lane labels;
-// commits via the same StoryNodeBase.translateFrom PATCH /nodes/:nodeId path
-// Story cards already use (on-double-click-name -> inline rename -> Save Inline).
+// saves through the node's own rename, as a story card's name does.
 // ---------------------------------------------------------------------------
 
 function NodeNameInput({
-  nodeId,
-  name,
-  onSaveInline,
+  node,
+  edit,
   className,
 }: {
-  nodeId: string;
-  name: string;
-  onSaveInline: (nodeId: string, patch: { name?: string }) => void;
+  node: StoryNodeOnPage;
+  edit: Edit;
   className: string;
 }) {
-  const [editName, setEditName] = useState(name);
-  const save = () => { if (editName !== name) onSaveInline(nodeId, { name: editName }); };
+  const [editName, setEditName] = useState(node.name);
+  const save = () => { if (editName && editName !== node.name) edit(() => node.rename(editName)); };
   return (
     <>
       <input
@@ -1178,7 +1116,7 @@ function NodeNameInput({
         onChange={(e) => setEditName(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); e.stopPropagation(); save(); }
-          if (e.key === 'Escape') { e.stopPropagation(); setEditName(name); }
+          if (e.key === 'Escape') { e.stopPropagation(); setEditName(node.name); }
         }}
         onBlur={save}
       />
@@ -1187,23 +1125,21 @@ function NodeNameInput({
 }
 
 // ---------------------------------------------------------------------------
-// IncrementLabel — inline-editable Increment name (rename via the same
-// StoryNodeBase.translateFrom PATCH /nodes/:nodeId path Stories use) + delete
+// IncrementLabel — inline-editable Increment name (rename through the increment's
+// own rename, as Stories' names are) + delete
 // ---------------------------------------------------------------------------
 
 function IncrementLabel({
   increment,
-  onSaveInline,
-  onRemoveIncrement,
+  edit,
   dragHandlers,
 }: {
-  increment: IncrementViewModel;
-  onSaveInline: (nodeId: string, patch: { name?: string }) => void;
-  onRemoveIncrement: (incrementId: string) => void;
+  increment: IncrementOnPage;
+  edit: Edit;
   dragHandlers: ReturnType<typeof makeDragHandlers>;
 }) {
   const [editName, setEditName] = useState(increment.name);
-  const save = () => { if (editName !== increment.name) onSaveInline(increment.id, { name: editName }); };
+  const save = () => { if (editName && editName !== increment.name) edit(() => increment.rename(editName)); };
   return (
     <div className="increment-label" onDoubleClick={focusNameFieldOnDoubleClick} {...dragHandlers}>
       <span className="drag-handle" aria-hidden="true">⠿</span>
@@ -1220,7 +1156,7 @@ function IncrementLabel({
         }}
         onBlur={save}
       />
-      <button className="node-btn minus-btn" title="Delete Increment" onClick={() => onRemoveIncrement(increment.id)}>−</button>
+      <button className="node-btn minus-btn" title="Delete Increment" onClick={() => edit(() => increment.remove())}>−</button>
     </div>
   );
 }
@@ -1230,41 +1166,23 @@ function IncrementLabel({
 // ---------------------------------------------------------------------------
 
 interface StoryCardProps {
-  story: StoryViewModel;
-  increments: IncrementViewModel[];
+  story: StoryOnPage;
+  // The row the card sits in, whose epic adds a story beside it.
+  row: EpicOnPage;
+  // The first card of its row shows the button that adds a story at the row's start.
+  isFirst: boolean;
   isExpanded: boolean;
-  showScenarios: boolean;
-  /** When false (Map View) the increment assign combobox is hidden */
-  showIncrements: boolean;
-  onNodeClick: (id: string, semantic_type: SemanticType) => void;
-  onExpand: (id: string, semantic_type: SemanticType, descendantIds: string[]) => void;
-  onSaveInline: (nodeId: string, patch: { name?: string }) => void;
-  onAssignToIncrement: (storyId: string, incrementId: string) => void;
-  onUnassignFromIncrement: (storyId: string) => void;
-  onReorderScenarios: (storyId: string, scenarioOrders: string[]) => void;
-  onReorderSteps: (storyId: string, scenarioId: string, stepOrders: string[]) => void;
-  onRemoveStory: (storyId: string) => void;
-  onAppendStory: (name?: string) => void;
-  /** When provided, renders a prepend-sibling + button as the very first element
-   * in the card header (only supplied for the first story in each sub-epic group). */
-  onPrepend?: (name?: string) => void;
+  onNodeClick: (id: string) => void;
+  onExpand: (id: string, descendantIds: string[]) => void;
+  edit: Edit;
   dragHandlers: ReturnType<typeof makeStoryDragHandlers>;
   /** Extra className applied to the outer card — shows the "insert before" drop-position indicator. */
   dropIndicatorClass?: string;
-  // Scenario / step / example CRUD
-  onAppendScenario: (storyId: string) => void;
-  onRemoveScenario: (storyId: string, scenarioId: string) => void;
-  onAddStep: (storyId: string, scenarioId: string) => void;
-  onUpdateStep: (storyId: string, scenarioId: string, stepId: string, values: Partial<Pick<StepRowDto, 'text' | 'step_type'>>) => void;
-  onRemoveStep: (storyId: string, scenarioId: string, stepId: string) => void;
-  onEditExample: (exampleId: string, field: string, value: string) => void;
-  onRemoveExample: (exampleId: string) => void;
-  onEditDescription: (nodeId: string, description: string) => void;
   onOpenFile?: (path: string) => void;
 }
 
 function StoryCard(props: StoryCardProps) {
-  const { story, isExpanded, dragHandlers, dropIndicatorClass = '' } = props;
+  const { isExpanded, dragHandlers, dropIndicatorClass = '' } = props;
   return (
     <div className={`story-card${isExpanded ? ' expanded' : ''}${dropIndicatorClass}`} {...dragHandlers}>
       <StoryCardHeader {...props} />
@@ -1275,14 +1193,16 @@ function StoryCard(props: StoryCardProps) {
 }
 
 // The card's header: its drag handle, the buttons that add, expand and remove stories, and its name, edited in place.
-function StoryCardHeader({ story, isExpanded, onNodeClick, onExpand, onSaveInline, onRemoveStory, onAppendStory, onPrepend, dragHandlers }: StoryCardProps) {
+// A story added after this one goes before the story that follows it in its row.
+function StoryCardHeader({ story, row, isFirst, isExpanded, onNodeClick, onExpand, edit, dragHandlers }: StoryCardProps) {
   const { draggable: storyDraggable, onDragStart: storyOnDragStart, onDragEnd: storyOnDragEnd } = dragHandlers;
+  const following = row.stories[row.stories.findIndex((each) => each.id === story.id) + 1];
   return (
-    <div className="story-card-header" onClick={() => onNodeClick(story.id, 'story')} onDoubleClick={focusNameFieldOnDoubleClick}>
+    <div className="story-card-header" onClick={() => onNodeClick(story.id)} onDoubleClick={focusNameFieldOnDoubleClick}>
       <div className="type-label-row">
         <div className="type-label-left">
-          {onPrepend && (
-            <AddNodePopoverButton className="node-btn plus-btn row-lead-plus" title="Add Story at beginning" buttonLabel="+" placeholder="Story title (optional)" onAdd={onPrepend} />
+          {isFirst && (
+            <AddNodePopoverButton className="node-btn plus-btn row-lead-plus" title="Add Story at beginning" buttonLabel="+" placeholder="Story title (optional)" onAdd={(name) => edit(() => row.newStory(named(name, NEW_NAMES.story), row.stories[0]))} />
           )}
           <span className="drag-handle" aria-hidden="true" draggable={storyDraggable} onDragStart={(e) => { e.stopPropagation(); storyOnDragStart(e); }} onDragEnd={() => { storyOnDragEnd(); }}>
             ⠿
@@ -1293,23 +1213,23 @@ function StoryCardHeader({ story, isExpanded, onNodeClick, onExpand, onSaveInlin
         </div>
         <div className="type-label-right">
           <span className="node-actions">
-            <button className="expand-btn" title="Expand story" onClick={(e) => { e.stopPropagation(); onExpand(story.id, 'story', []); }}>
+            <button className="expand-btn" title="Expand story" onClick={(e) => { e.stopPropagation(); onExpand(story.id, []); }}>
               {isExpanded ? '▲' : '▼'}
             </button>
-            <AddNodePopoverButton className="node-btn plus-btn" title="Add Story" buttonLabel="+" placeholder="Story title (optional)" onAdd={onAppendStory} />
-            <button className="node-btn minus-btn" title="Delete Story" onClick={(e) => { e.stopPropagation(); onRemoveStory(story.id); }}>−</button>
+            <AddNodePopoverButton className="node-btn plus-btn" title="Add Story" buttonLabel="+" placeholder="Story title (optional)" onAdd={(name) => edit(() => row.newStory(named(name, NEW_NAMES.story), following))} />
+            <button className="node-btn minus-btn" title="Delete Story" onClick={(e) => { e.stopPropagation(); edit(() => story.remove()); }}>−</button>
           </span>
         </div>
       </div>
-      <StoryNameEditor story={story} onSaveInline={onSaveInline} />
+      <StoryNameEditor story={story} edit={edit} />
     </div>
   );
 }
 
 // A story's name, edited in place and saved on Enter or when the person leaves it.
-function StoryNameEditor({ story, onSaveInline }: Pick<StoryCardProps, 'story' | 'onSaveInline'>) {
+function StoryNameEditor({ story, edit }: Pick<StoryCardProps, 'story' | 'edit'>) {
   const [editName, setEditName] = useState(story.name);
-  const saveName = () => { if (editName !== story.name) onSaveInline(story.id, { name: editName }); };
+  const saveName = () => { if (editName && editName !== story.name) edit(() => story.rename(editName)); };
   return (
     <div
       className="story-name-input"
@@ -1328,31 +1248,19 @@ function StoryNameEditor({ story, onSaveInline }: Pick<StoryCardProps, 'story' |
 }
 
 // An expanded story: its description, its acceptance tests and its scenarios, each scenario dragged to reorder.
-function StoryExpansionPanel(props: StoryCardProps) {
-  const { story, onSaveInline, onReorderScenarios, onReorderSteps, onAppendScenario, onRemoveScenario, onAddStep, onUpdateStep, onRemoveStep, onEditExample, onRemoveExample, onEditDescription, onOpenFile } = props;
+function StoryExpansionPanel({ story, edit, onOpenFile }: StoryCardProps) {
   const scenarioDragRef = useRef<string | null>(null);
   return (
     <div className="story-expansion-panel">
-      <DescriptionEditor key={story.description} node={story} onSave={(description) => onEditDescription(story.id, description)} />
-      <AcceptanceTestsView files={story.acceptance_tests} onOpen={onOpenFile} />
+      <DescriptionEditor key={story.description} node={story} edit={edit} />
+      <AcceptanceTestsView files={story.acceptanceTests} onOpen={onOpenFile} />
       <div className="section-heading">
         <span>Scenarios</span>
-        <button className="node-btn plus-btn" title="Add Scenario" onClick={() => onAppendScenario(story.id)}>+</button>
+        <button className="node-btn plus-btn" title="Add Scenario" onClick={() => edit(() => story.newScenario(NEW_NAMES.scenario))}>+</button>
       </div>
       {story.scenarios.map((sc) => (
-        <div key={sc.id} className="scenario-row-drag" {...makeDragHandlers(scenarioDragRef, sc.id, () => story.scenarios.map((s) => s.id), (ids) => onReorderScenarios(story.id, ids))}>
-          <ScenarioPanel
-            scenario={sc}
-            storyId={story.id}
-            onSaveInline={onSaveInline}
-            onReorderSteps={onReorderSteps}
-            onRemoveScenario={() => onRemoveScenario(story.id, sc.id)}
-            onAddStep={() => onAddStep(story.id, sc.id)}
-            onUpdateStep={(stepId, values) => onUpdateStep(story.id, sc.id, stepId, values)}
-            onRemoveStep={(stepId) => onRemoveStep(story.id, sc.id, stepId)}
-            onEditExample={onEditExample}
-            onRemoveExample={onRemoveExample}
-          />
+        <div key={sc.id} className="scenario-row-drag" {...makeDragHandlers(scenarioDragRef, sc.id, () => story.scenarios.map((s) => s.id), (ids) => edit(() => story.reorderScenarios(ids)))}>
+          <ScenarioPanel scenario={sc} edit={edit} />
         </div>
       ))}
     </div>
@@ -1429,32 +1337,10 @@ function AddNodePopoverButton({
   );
 }
 
-function ScenarioPanel({
-  scenario,
-  storyId,
-  onSaveInline,
-  onReorderSteps,
-  onRemoveScenario,
-  onAddStep,
-  onUpdateStep,
-  onRemoveStep,
-  onEditExample,
-  onRemoveExample,
-}: {
-  scenario: ScenarioViewModel;
-  storyId: string;
-  onSaveInline: (nodeId: string, patch: { name?: string }) => void;
-  onReorderSteps: (storyId: string, scenarioId: string, stepOrders: string[]) => void;
-  onRemoveScenario: () => void;
-  onAddStep: () => void;
-  onUpdateStep: (stepId: string, values: Partial<Pick<StepRowDto, 'text' | 'step_type'>>) => void;
-  onRemoveStep: (stepId: string) => void;
-  onEditExample: (exampleId: string, field: string, value: string) => void;
-  onRemoveExample: (exampleId: string) => void;
-}) {
+function ScenarioPanel({ scenario, edit }: { scenario: ScenarioOnPage; edit: Edit }) {
   const stepDragRef = useRef<string | null>(null);
   const [scenarioName, setScenarioName] = useState(scenario.name);
-  const saveScenarioName = () => { if (scenarioName !== scenario.name) onSaveInline(scenario.id, { name: scenarioName }); };
+  const saveScenarioName = () => { if (scenarioName && scenarioName !== scenario.name) edit(() => scenario.rename(scenarioName)); };
 
   return (
     <div className="scenario-panel">
@@ -1473,69 +1359,56 @@ function ScenarioPanel({
           }}
           onBlur={saveScenarioName}
         />
-        <button className="node-btn minus-btn" title="Delete Scenario" onClick={onRemoveScenario}>−</button>
+        <button className="node-btn minus-btn" title="Delete Scenario" onClick={() => edit(() => scenario.remove())}>−</button>
       </div>
 
       <div className="steps-section">
         <div className="section-heading indent">
           <span>Steps</span>
-          <button className="node-btn plus-btn" title="Add Step" onClick={onAddStep}>+</button>
+          <button className="node-btn plus-btn" title="Add Step" onClick={() => edit(() => scenario.newStep('given', NEW_NAMES.step))}>+</button>
         </div>
         <ol className="step-list">
           {scenario.steps.map((step) => (
             <li
               key={step.id}
               className="step-row"
-              {...makeDragHandlers(stepDragRef, step.id, () => scenario.steps.map((s) => s.id), (ids) => onReorderSteps(storyId, scenario.id, ids))}
+              {...makeDragHandlers(stepDragRef, step.id, () => scenario.steps.map((s) => s.id), (ids) => edit(() => scenario.reorderSteps(ids)))}
             >
               <span className="drag-handle" aria-hidden="true">⠿</span>
-              <StepEditor key={`${step.id}-${step.step_type}-${step.text}`} step={step} onUpdate={(values) => onUpdateStep(step.id, values)} />
-              <button className="node-btn minus-btn" title="Delete Step" onClick={() => onRemoveStep(step.id)}>−</button>
+              <StepEditor key={`${step.id}-${step.keyword}-${step.text}`} step={step} edit={edit} />
+              <button className="node-btn minus-btn" title="Delete Step" onClick={() => edit(() => step.remove())}>−</button>
             </li>
           ))}
         </ol>
       </div>
 
-      <ExampleTableView examples={scenario.examples} onEdit={onEditExample} onRemove={onRemoveExample} />
+      <ExampleTableView scenario={scenario} edit={edit} />
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// StepEditor — inline-editable step (type selector + text)
+// StepEditor — inline-editable step (keyword selector + text); the text is saved through the step's edit_text
 // ---------------------------------------------------------------------------
-const STEP_TYPES: StepRowDto['step_type'][] = ['given', 'when', 'then', 'and', 'but'];
-
-function StepEditor({
-  step,
-  onUpdate,
-}: {
-  step: { step_type: StepRowDto['step_type']; text: string };
-  onUpdate: (values: Partial<Pick<StepRowDto, 'text' | 'step_type'>>) => void;
-}) {
+function StepEditor({ step, edit }: { step: StepOnPage; edit: Edit }) {
   const [text, setText] = useState(step.text);
-  const [type, setType] = useState<StepRowDto['step_type']>(step.step_type);
-  const save = () => {
-    const changed: Partial<Pick<StepRowDto, 'text' | 'step_type'>> = {};
-    if (text !== step.text) changed.text = text;
-    if (type !== step.step_type) changed.step_type = type;
-    if (Object.keys(changed).length > 0) onUpdate(changed);
-  };
+  const [keyword, setKeyword] = useState<StepKeyword>(step.keyword);
+  const save = () => { if (text !== step.text) edit(() => step.editText(text)); };
   return (
     <span className="step-editor">
       <select
         className="step-type-select"
-        value={type}
-        onChange={(e) => { setType(e.target.value as StepRowDto['step_type']); }}
+        value={keyword}
+        onChange={(e) => { setKeyword(e.target.value as StepKeyword); }}
         onBlur={save}
       >
-        {STEP_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+        {STEP_KEYWORDS.map((each) => <option key={each} value={each}>{each}</option>)}
       </select>
       <input
         className="step-text-input"
         value={text}
         onChange={(e) => setText(e.target.value)}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); save(); } if (e.key === 'Escape') { setText(step.text); setType(step.step_type); } }}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); save(); } if (e.key === 'Escape') { setText(step.text); setKeyword(step.keyword); } }}
         onBlur={save}
       />
     </span>
@@ -1544,27 +1417,28 @@ function StepEditor({
 
 // A scenario's examples as the story model holds them: a row per example. Each cell its row has is edited through that
 // example's edit_field when it changes; a column only other rows have stays empty and read only.
-function ExampleTableView({ examples, onEdit, onRemove }: { examples: ExampleTable; onEdit: (exampleId: string, field: string, value: string) => void; onRemove: (exampleId: string) => void }) {
-  if (!examples.rows.length) return null;
+function ExampleTableView({ scenario, edit }: { scenario: ScenarioOnPage; edit: Edit }) {
+  if (!scenario.examples.length) return null;
+  const columns = scenario.exampleColumns;
   return (
     <div className="examples-section">
       <div className="section-heading indent"><span>Examples</span></div>
       <div className="example-block">
       <table>
         <thead>
-          <tr>{examples.columns.map((column) => <th key={column}>{column}</th>)}<th aria-label="Remove" /></tr>
+          <tr>{columns.map((column) => <th key={column}>{column}</th>)}<th aria-label="Remove" /></tr>
         </thead>
         <tbody>
-          {examples.rows.map((row) => (
-            <tr key={row.id}>
-              {examples.columns.map((column) => (
+          {scenario.examples.map((example) => (
+            <tr key={example.id}>
+              {columns.map((column) => (
                 <td key={column}>
-                  {column in row.fields
-                    ? <ExampleCellEditor key={`${row.id}-${row.fields[column]}`} label={`${column} of ${row.fields.example}`} value={row.fields[column]!} onSave={(value) => onEdit(row.id, column, value)} />
+                  {column in example.fields
+                    ? <ExampleCellEditor key={`${example.id}-${example.fields[column]}`} label={`${column} of ${example.fields.example}`} value={example.fields[column]!} onSave={(value) => edit(() => example.editField(column, value))} />
                     : null}
                 </td>
               ))}
-              <td><button className="node-btn minus-btn" title="Delete Example" onClick={() => onRemove(row.id)}>−</button></td>
+              <td><button className="node-btn minus-btn" title="Delete Example" onClick={() => edit(() => example.remove())}>−</button></td>
             </tr>
           ))}
         </tbody>
@@ -1592,9 +1466,9 @@ function ExampleCellEditor({ label, value, onSave }: { label: string; value: str
 }
 
 // What the story map says about a node, under its heading; saved through the node's edit_description when it changes.
-function DescriptionEditor({ node, onSave }: { node: { name: string; description: string }; onSave: (description: string) => void }) {
+function DescriptionEditor({ node, edit }: { node: StoryNodeOnPage; edit: Edit }) {
   const [text, setText] = useState(node.description);
-  const save = () => { if (text.trim() !== node.description) onSave(text); };
+  const save = () => { if (text.trim() !== node.description) edit(() => node.describe(text)); };
   return (
     <div className="description-section">
       <div className="section-heading"><span>Description</span></div>
@@ -1757,109 +1631,13 @@ type StoryMapCanvasProps = Omit<ReturnType<typeof useStoryMapPage>, 'client'> & 
   panning: ReturnType<typeof useCanvasPanning>;
 };
 
-type Change = (held: StoryMapClient) => Promise<StoryMapClient | null>;
-type HierarchyEdits = Partial<Omit<StoryHierarchyViewProps, 'storyMap' | 'expandedNodeIds' | 'showScenarios' | 'showIncrements' | 'onNodeClick' | 'onExpand'>>;
-
-// What every edit the hierarchy hands back needs: the map as drawn, the page's edit, and the kind of node an id names.
-class MapEditing {
-  constructor(
-    readonly storyMap: StoryMapViewModel,
-    readonly edit: (change: Change) => Promise<void>,
-  ) {}
-
-  kindOf(node: string): NodeKind {
-    return (this.storyMap.kinds.get(node) ?? 'epic') as NodeKind;
-  }
-
-  subEpicsOf(epic: string): SubEpicViewModel[] {
-    return this.storyMap.epics.find((each) => each.id === epic)?.sub_epics ?? [];
-  }
-
-  storiesOf(sub: string): StoryViewModel[] {
-    return this.storyMap.epics.flatMap((each) => each.sub_epics).find((each) => each.id === sub)?.stories ?? [];
-  }
-
-  // A node added after another is added last, then moved before the one that followed the other.
-  addThenPlace(add: Change, siblings: (read: StoryMapViewModel) => { id: string }[], after: string | null): Promise<void> {
-    return this.edit(async (held) => {
-      const added = await add(held);
-      if (!added) return null;
-      const placed = siblings(StoryMapViewModel.of(added.toJSON()));
-      const created = placed[placed.length - 1]?.id;
-      const next = after === null ? placed[0]?.id : placed[placed.findIndex((each) => each.id === after) + 1]?.id;
-      return created && next && next !== created ? held.nodeAt(created, this.kindOf(next) === 'story' ? 'story' : 'epic').moveBefore(next) : added;
-    });
-  }
-}
-
-// The edits of epics and sub-epics: adding, placing, moving and removing them.
-function epicEditsOf(editing: MapEditing): HierarchyEdits {
-  const { storyMap, edit } = editing;
-  const subEpicsUnder = (epic: string) => (read: StoryMapViewModel) => read.epics.find((each) => each.id === epic)?.sub_epics ?? [];
-  return {
-    onReorderEpics: (order) => void edit((held) => held.reorder(storyMap.epics.map((each) => each.id), order, 'epic')),
-    onReorderSubEpics: (epic, order) => void edit((held) => held.reorder(editing.subEpicsOf(epic).map((each) => each.id), order, 'sub-epic')),
-    onMoveSubEpic: (sub, _epic, order) => { const next = order[order.indexOf(sub) + 1]; if (next) void edit((held) => held.nodeAt(sub, 'sub-epic').moveBefore(next)); },
-    onAppendEpic: (name) => void edit((held) => held.newEpic(name?.trim() || NEW_NAMES.epic)),
-    onRemoveEpic: (epic) => void edit((held) => held.nodeAt(epic, 'epic').remove()),
-    onAppendSubEpic: (epic, name) => void edit((held) => held.nodeAt(epic, 'epic').newSubEpic(name?.trim() || NEW_NAMES.subEpic)),
-    onRemoveSubEpic: (_epic, sub) => void edit((held) => held.nodeAt(sub, 'sub-epic').remove()),
-    onInsertEpicAfter: (after, name) => void editing.addThenPlace((held) => held.newEpic(name?.trim() || NEW_NAMES.epic), (read) => read.epics, after),
-    onPrependSubEpic: (epic, name) => void editing.addThenPlace((held) => held.nodeAt(epic, 'epic').newSubEpic(name?.trim() || NEW_NAMES.subEpic), subEpicsUnder(epic), null),
-    onInsertSubEpicAfter: (epic, after, name) => void editing.addThenPlace((held) => held.nodeAt(epic, 'epic').newSubEpic(name?.trim() || NEW_NAMES.subEpic), subEpicsUnder(epic), after),
-  };
-}
-
-// The edits of stories: adding, placing, moving and removing them, and what the map says about any node.
-function storyEditsOf(editing: MapEditing): HierarchyEdits {
-  const { edit } = editing;
-  const storiesUnder = (sub: string) => (read: StoryMapViewModel) => read.epics.flatMap((each) => each.sub_epics).find((each) => each.id === sub)?.stories ?? [];
-  return {
-    onReorderStories: (sub, order) => void edit((held) => held.reorder(editing.storiesOf(sub).map((each) => each.id), order, 'story')),
-    onMoveStory: (story, _sub, order) => { const next = order[order.indexOf(story) + 1]; if (next) void edit((held) => held.nodeAt(story, 'story').moveBefore(next)); },
-    onAppendStory: (sub, name) => void edit((held) => held.nodeAt(sub, 'epic').newStory(name?.trim() || NEW_NAMES.story)),
-    onRemoveStory: (_sub, story) => void edit((held) => held.nodeAt(story, 'story').remove()),
-    onPrependStory: (sub, name) => void editing.addThenPlace((held) => held.nodeAt(sub, 'epic').newStory(name?.trim() || NEW_NAMES.story), storiesUnder(sub), null),
-    onInsertStoryAfter: (sub, after, name) => void editing.addThenPlace((held) => held.nodeAt(sub, 'epic').newStory(name?.trim() || NEW_NAMES.story), storiesUnder(sub), after),
-    onEditDescription: (node, description) => void edit((held) => held.nodeAt(node, editing.kindOf(node)).describe(description)),
-  };
-}
-
-// The edits of a story's scenarios, their steps and their examples.
-function scenarioEditsOf(editing: MapEditing): HierarchyEdits {
-  const { storyMap, edit } = editing;
-  const scenariosOf = (story: string) => storyMap.epics.flatMap((each) => each.sub_epics.flatMap((sub) => sub.stories)).find((each) => each.id === story)?.scenarios ?? [];
-  return {
-    onReorderScenarios: (story, order) => void edit((held) => held.reorder(scenariosOf(story).map((each) => each.id), order, 'scenario')),
-    onAppendScenario: (story) => void edit((held) => held.nodeAt(story, 'story').newScenario(NEW_NAMES.scenario)),
-    onRemoveScenario: (_story, scenario) => void edit((held) => held.nodeAt(scenario, 'scenario').remove()),
-    onAddStep: (_story, scenario) => void edit((held) => held.nodeAt(scenario, 'scenario').newStep('given', NEW_NAMES.step)),
-    onUpdateStep: (_story, _scenario, step, values) => { if (values.text !== undefined) void edit((held) => held.nodeAt(step, 'step').editText(values.text!)); },
-    onRemoveStep: (_story, _scenario, step) => void edit((held) => held.nodeAt(step, 'step').remove()),
-    onEditExample: (example, field, cellText) => void edit((held) => held.exampleAt(example).editField(field, cellText)),
-    onRemoveExample: (example) => void edit((held) => held.exampleAt(example).remove()),
-  };
-}
-
-// The edits of increments and the stories each delivers.
-function incrementEditsOf(editing: MapEditing): HierarchyEdits {
-  const { storyMap, edit } = editing;
-  return {
-    onAppendIncrement: () => void edit((held) => held.newIncrement(NEW_NAMES.increment)),
-    onRemoveIncrement: (increment) => void edit((held) => held.nodeAt(increment, 'increment').remove()),
-    onReorderIncrements: (order) => void edit((held) => held.reorder(storyMap.increments.map((each) => each.id), order, 'increment')),
-    onAssignToIncrement: (story, increment) => void edit((held) => held.incrementAt(increment).deliver(story)),
-    onUnassignFromIncrement: (story) => { const increment = storyMap.incrementOf(story); if (increment) void edit((held) => held.incrementAt(increment.id).stopDelivering(story)); },
-  };
-}
-
 type StoryMapToolbarProps = Pick<StoryMapCanvasProps, 'edit' | 'viewMode' | 'toggleViewMode' | 'scoped' | 'toggleScoped' | 'showScenarios' | 'toggleShowScenarios' | 'expandDescendants' | 'collapseAll' | 'theme' | 'setTheme'> & {
   map: StoryMapClient;
-  storyMap: StoryMapViewModel;
+  epics: EpicOnPage[];
 };
 
-function StoryMapToolbar({ map, storyMap, edit, viewMode, toggleViewMode, scoped, toggleScoped, showScenarios, toggleShowScenarios, expandDescendants, collapseAll, theme, setTheme }: StoryMapToolbarProps) {
-  const everyNode = () => storyMap.epics.flatMap((epic) => [epic.id, ...epic.sub_epics.flatMap((sub) => [sub.id, ...sub.stories.map((story) => story.id)])]);
+function StoryMapToolbar({ map, epics, edit, viewMode, toggleViewMode, scoped, toggleScoped, showScenarios, toggleShowScenarios, expandDescendants, collapseAll, theme, setTheme }: StoryMapToolbarProps) {
+  const everyNode = () => epics.flatMap((epic) => [epic.id, ...epic.subEpics.flatMap((sub) => [sub.id, ...sub.stories.map((story) => story.id)])]);
   return (
     <div className="workspace-toolbar">
       <img className="brand-logo" src={`${import.meta.env.BASE_URL}${theme === 'engineering' ? 'logo-wordmark-white.svg' : 'logo-wordmark-black.svg'}`} alt="abd.works" />
@@ -1874,7 +1652,7 @@ function StoryMapToolbar({ map, storyMap, edit, viewMode, toggleViewMode, scoped
       <button className="toolbar-btn" onClick={() => expandDescendants('all-epics', everyNode())}>Expand All</button>
       <button className="toolbar-btn" onClick={collapseAll}>Collapse All</button>
       <span className="toolbar-sep" />
-      <FormatTogglesView map={map} onToggle={(format, isChosen) => void edit((held) => held.chooseFormat(format, isChosen))} />
+      <FormatTogglesView map={map} onToggle={(format, isChosen) => void edit(() => map.chooseFormat(format, isChosen))} />
       <div className="mode-switch" role="group" aria-label="Color mode">
         <button type="button" className={theme === 'executive' ? 'active' : ''} aria-pressed={theme === 'executive'} onClick={() => setTheme('executive')}>Executive</button>
         <button type="button" className={theme === 'engineering' ? 'active' : ''} aria-pressed={theme === 'engineering'} onClick={() => setTheme('engineering')}>Engineering</button>
@@ -1896,14 +1674,13 @@ function SaveStatusView({ status, map }: { status: EditStatus; map: StoryMapClie
 function StoryMapCanvasView(props: StoryMapCanvasProps) {
   const { client, chat, failure, status, edit, showInChat, dismissFailure, viewMode, showScenarios, expandedNodeIds, expandNode, collapseNode, expandDescendants, panning } = props;
   const map = useStoryModel(client);
-  const storyMap = useMemo(() => StoryMapViewModel.of(map.toJSON(), props.scoped), [map, map.toJSON(), props.scoped]);
-  const editing = new MapEditing(storyMap, edit);
-  const handleExpand = (id: string, _type: SemanticType, descendants: string[]) => (expandedNodeIds.has(id) ? collapseNode(id) : expandDescendants(id, descendants));
-  const onSaveInline = (nodeId: string, patch: { name?: string }) => { if (patch.name) void edit((held) => held.nodeAt(nodeId, editing.kindOf(nodeId)).rename(patch.name!)); };
+  // The epics are made once from each answer the map holds; reading them again draws the same nodes.
+  const epics = map.epicsShown(props.scoped);
+  const handleExpand = (id: string, descendants: string[]) => (expandedNodeIds.has(id) ? collapseNode(id) : expandDescendants(id, descendants));
 
   return (
     <main className="story-map-workspace">
-      <StoryMapToolbar {...props} map={map} storyMap={storyMap} />
+      <StoryMapToolbar {...props} map={map} epics={epics} />
       {failure && (
         <div className="edit-failure" role="alert">
           <span className="status-dot error" />{failure}
@@ -1912,7 +1689,7 @@ function StoryMapCanvasView(props: StoryMapCanvasProps) {
       )}
       {map.refusal && <div className="edit-refusal" role="note">Read only: {map.refusal}</div>}
       <div ref={panning.canvasRef} className="story-map-canvas" style={{ cursor: panning.isPanning ? 'grabbing' : 'grab' }} onMouseDown={panning.onMouseDown} onContextMenu={panning.onContextMenu}>
-        <StoryHierarchyView storyMap={storyMap} expandedNodeIds={expandedNodeIds} showScenarios={showScenarios} showIncrements={viewMode === 'increment'} onNodeClick={expandNode} onExpand={handleExpand} onSaveInline={onSaveInline} onOpenFile={chat ? showInChat : undefined} {...epicEditsOf(editing)} {...storyEditsOf(editing)} {...scenarioEditsOf(editing)} {...incrementEditsOf(editing)} />
+        <StoryHierarchyView map={map} epics={epics} expandedNodeIds={expandedNodeIds} showScenarios={showScenarios} showIncrements={viewMode === 'increment'} onNodeClick={expandNode} onExpand={handleExpand} edit={(change) => void edit(change)} onOpenFile={chat ? showInChat : undefined} />
       </div>
       <SaveStatusView status={status} map={map} />
     </main>
