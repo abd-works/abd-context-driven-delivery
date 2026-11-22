@@ -28,7 +28,7 @@ from harness.graph.saved_graph import SavedGraph
 from harness.installation.data_class import data_of
 from space.session.session_files import NamedPathNotFoundError
 from space.session.throwaway_project import ThrowawayProject
-from harness.whiteboard import BoardLinks, Whiteboard
+from harness.whiteboard import Whiteboard
 
 _REF = "cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering"
 _STORIES = "cdd_guidance.practices.stories.stories:Stories"
@@ -255,21 +255,21 @@ with description("Render publishing a whiteboard file to its board in Claude") a
     with context("that the agent created a board for"):
         with it("should keep the board's address beside the file, so the Files app opens the board"):
             Render().record_board(str(self.file), "https://claude.ai/artifact/StoryMapBoard")
-            expect(BoardLinks.beside(self.file).of(self.file)).to(equal("https://claude.ai/artifact/StoryMapBoard"))
+            expect(Whiteboard.links_beside(self.file).of(self.file.name)).to(equal("https://claude.ai/artifact/StoryMapBoard"))
 
     with context("that was published before"):
         with before.each:
             self.other = self.folder / "modules.whiteboard"
-            BoardLinks.beside(self.file).record(self.other, "https://claude.ai/artifact/ModulesBoard")
-            BoardLinks.beside(self.file).record(self.file, "https://claude.ai/artifact/OldBoard")
+            Whiteboard.links_beside(self.file).record(self.other.name, "https://claude.ai/artifact/ModulesBoard")
+            Whiteboard.links_beside(self.file).record(self.file.name, "https://claude.ai/artifact/OldBoard")
 
         with it("should keep only the new address"):
             Render().record_board(str(self.file), "https://claude.ai/artifact/NewBoard")
-            expect(BoardLinks.beside(self.file).of(self.file)).to(equal("https://claude.ai/artifact/NewBoard"))
+            expect(Whiteboard.links_beside(self.file).of(self.file.name)).to(equal("https://claude.ai/artifact/NewBoard"))
 
         with it("should leave the other files' addresses as they were"):
             Render().record_board(str(self.file), "https://claude.ai/artifact/NewBoard")
-            expect(BoardLinks.beside(self.other).of(self.other)).to(equal("https://claude.ai/artifact/ModulesBoard"))
+            expect(Whiteboard.links_beside(self.other).of(self.other.name)).to(equal("https://claude.ai/artifact/ModulesBoard"))
 
     with context("that is not a whiteboard file"):
         with before.each:
@@ -284,7 +284,7 @@ with description("Render publishing a whiteboard file to its board in Claude") a
                 Render().record_board(str(self.drawio), "https://claude.ai/artifact/X")
             except ValueError:
                 pass
-            expect((self.folder / BoardLinks.RECORD).exists()).to(equal(False))
+            expect((self.folder / Whiteboard.LINKS).exists()).to(equal(False))
 
     with context("rendered to the whiteboard format"):
         with it("should tell the agent to publish the board after the conversion returns"):
@@ -452,7 +452,7 @@ with description("Render saving what it makes beside its source") as self:
         with before.each:
             Render().render(_STORIES, format="whiteboard", paths=[str(self.story_map)], source="markdown")
             self.board_file = self.folder / "story-map.whiteboard"
-            BoardLinks.beside(self.board_file).record(self.board_file, "https://claude.ai/artifact/StoryMapBoard")
+            Whiteboard.links_beside(self.board_file).record(self.board_file.name, "https://claude.ai/artifact/StoryMapBoard")
             board = json.loads(self.board_file.read_text(encoding="utf-8"))
             self.card = next(key for key, record in board["elements"].items() if "Browse Product Catalog" in str(record.get("text")))
             board["elements"][self.card]["x"] = 777
@@ -806,7 +806,7 @@ with description("A comment a person left on a board in Claude") as self:
 
     with context("on the board the story map's whiteboard file was published to"):
         with before.each:
-            BoardLinks.beside(self.board_file).record(self.board_file, "https://claude.ai/artifact/StoryMapBoard")
+            Whiteboard.links_beside(self.board_file).record(self.board_file.name, "https://claude.ai/artifact/StoryMapBoard")
             answer = AgentInstructions.for_callable(Render.answer_board_comment, self.action)
             self.text = answer.expand({"board": "https://claude.ai/artifact/StoryMapBoard"}).instructions
 

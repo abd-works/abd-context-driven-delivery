@@ -12,7 +12,7 @@ from harness.mcp.mcp_annotations import long_call, mcp
 from space.kanban.format_choice import FormatChoice
 from space.kanban.overlay_choice import OverlayChoice
 from space.session.file_manager import FileEntry
-from space.session.practice_session_output import published_link
+from space.session.practice_session_output import publication_of
 
 if TYPE_CHECKING:
     from space.kanban.ticket import TicketWork
@@ -53,7 +53,7 @@ class TicketChoices:
         session = self.session
         progress = self.work.progress
         repo = session.repo.root
-        return [entry.belonging_to([each.fidelity.slug for each in progress if each.holds(repo / entry.path)]).linked(published_link(repo / entry.path)) for entry in session.session_files.under_root()]
+        return [entry.belonging_to([each.fidelity.slug for each in progress if each.holds(repo / entry.path)]).linked(publication_of(repo / entry.path)) for entry in session.session_files.under_root()]
 
     @mcp
     @agent_tool

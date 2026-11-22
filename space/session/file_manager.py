@@ -10,7 +10,7 @@ import os
 import time
 import re
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, NamedTuple
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
@@ -97,16 +97,30 @@ class Folder:
         return sorted(entry.path for entry in self.folders)
 
 
+class Publication(NamedTuple):
+    """Where a file is published in Claude, which a page opens instead of the file: the link, and what is published
+    there, a ``whiteboard`` board or a ``design canvas``; no link and no kind for a file not published."""
+
+    link: str = ""
+    kind: str = ""
+
+
+# What a file published in Claude is published as.
+WHITEBOARD_KIND = "whiteboard"
+DESIGN_CANVAS_KIND = "design canvas"
+
+
 class FileEntry:
     """One file something declares, such as a fidelity's output, as a path from the project, whether it is there yet,
     whether the session's branch changed it, the format its extension names, and the fidelities it belongs to, which a
-    page filters on, and the link it is published at, such as a design canvas's, which a page opens instead of the file."""
+    page filters on, and where it is published, such as a design canvas's link and kind, which a page opens instead of
+    the file."""
 
     def __init__(self, path: str, exists: bool, is_changed: bool = False) -> None:
         self._path = path
         self._exists = exists
         self._is_changed = is_changed
-        self._link = ""
+        self._published = Publication()
         self._fidelities: tuple[str, ...] = ()
 
     @property
@@ -127,7 +141,15 @@ class FileEntry:
     @property
     @data_field
     def link(self) -> str:
-        return self._link
+        """The link it is published at in Claude; none while it is not published."""
+        return self._published.link
+
+    @property
+    @data_field
+    def published_kind(self) -> str:
+        """What it is published as in Claude, a ``whiteboard`` or a ``design canvas``, so a page names it so without
+        working it out from the path; none for a file that is not published."""
+        return self._published.kind
 
     @property
     @data_field
@@ -143,15 +165,16 @@ class FileEntry:
 
     def belonging_to(self, fidelities: list[str]) -> FileEntry:
         """This file, saying it is a file of fidelities."""
-        return self._copied(self._link, tuple(fidelities))
+        return self._copied(self._published, tuple(fidelities))
 
-    def linked(self, link: str) -> FileEntry:
-        """This file, published at link, such as a design canvas's, which a page opens instead of the file."""
-        return self._copied(link, self._fidelities)
+    def linked(self, published: Publication) -> FileEntry:
+        """This file, published as published says, such as a design canvas's, which a page opens instead of the
+        file."""
+        return self._copied(published, self._fidelities)
 
-    def _copied(self, link: str, fidelities: tuple[str, ...]) -> FileEntry:
+    def _copied(self, published: Publication, fidelities: tuple[str, ...]) -> FileEntry:
         copy = FileEntry(self._path, self._exists, self._is_changed)
-        copy._link = link
+        copy._published = published
         copy._fidelities = fidelities
         return copy
 

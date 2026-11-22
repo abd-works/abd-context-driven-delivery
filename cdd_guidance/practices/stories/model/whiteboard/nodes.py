@@ -10,11 +10,10 @@ a shared board.
 
 from __future__ import annotations
 
-import hashlib
 import re
 from typing import Dict, List
 
-from harness.whiteboard import BoardElement, Box, Whiteboard, WhiteboardNode
+from harness.whiteboard import BoardElement, Box, ElementId, Section, Shape, Whiteboard, WhiteboardNode
 
 from cdd_guidance.practices.stories.model.diagram_story_model import (
     DiagramEpic,
@@ -28,21 +27,22 @@ from cdd_guidance.practices.stories.model.diagram_story_model import (
 from cdd_guidance.practices.stories.model.story_model import Epic, Increment, Story, StoryModel
 from harness.guidance.practice_formats import Written
 
-KEY_LENGTH = 10
-"""Hex digits of a node's path hash in its element id: enough that two nodes of one map never share one."""
-
-
 class _BoardStoryNode(WhiteboardNode):
     """A story-map node drawn on a board, keyed by its path from the map's root."""
 
     @property
-    def board_key(self) -> str:
+    def path_names(self) -> List[str]:
+        """The node's names from the map's root down to it, each with the kind of node it names."""
         names: List[str] = []
         node = self
         while node is not None and not isinstance(node, StoryModel):
             names.append(f"{'epic' if isinstance(node, Epic) else 'story'}:{node.name}")
             node = node.parent
-        return hashlib.sha1("/".join(reversed(names)).encode("utf-8")).hexdigest()[:KEY_LENGTH]
+        return list(reversed(names))
+
+    def element_id(self, role: str, *parts: str) -> ElementId:
+        """This node's element id as role, then parts, then the key its path hashes to."""
+        return ElementId.of(role, *self.path_names, length=self.KEY_LENGTH, parts=parts)
 
 
 class WhiteboardStory(LaidOutStory, _BoardStoryNode):
@@ -69,13 +69,12 @@ class WhiteboardStory(LaidOutStory, _BoardStoryNode):
         return f"*{actor}*\n{self.name}" if actor else self.name
 
     def board_elements(self) -> List[BoardElement]:
-        return [self.board_shape(f"story.{self.story_type.value}.{self.board_key}", kind="rounded", color="yellow", size="small", text=self.card_text)]
+        return [self.board_shape(self.element_id("story", self.story_type.value), kind="rounded", color="yellow", size="small", text=self.card_text)]
 
-    def lane_card(self, lane_key: str, left: float, top: float) -> BoardElement:
+    def lane_card(self, lane: ElementId, left: float, top: float) -> BoardElement:
         """This story's card in a thin-slice lane: keyed by the lane too, since the board holds the lanes beside the map."""
-        key = hashlib.sha1(f"{lane_key}/{self.board_key}".encode("utf-8")).hexdigest()[:KEY_LENGTH]
-        return BoardElement.shape(f"story.{self.story_type.value}.{key}", Box(left, top, self.card_width, self.size),
-                                  kind="rounded", color="yellow", size="small", text=self.card_text)
+        card = ElementId.of("story", lane.key, self.element_id("story").key, length=self.KEY_LENGTH, parts=(self.story_type.value,))
+        return Shape(card, box=Box(left, top, self.card_width, self.size), kind="rounded", color="yellow", size="small", text=self.card_text)
 
 
 class WhiteboardEpic(LaidOutEpic, _BoardStoryNode):
@@ -102,7 +101,7 @@ class WhiteboardEpic(LaidOutEpic, _BoardStoryNode):
     def bar(self) -> BoardElement:
         """This epic's bar, or a sub-epic's, over the stories it holds."""
         nested = isinstance(self.parent, Epic)
-        element_id = f"subepic.{self.depth}.{self.board_key}" if nested else f"epic.{self.board_key}"
+        element_id = self.element_id("subepic", str(self.depth)) if nested else self.element_id("epic")
         return self.board_shape(element_id, kind="rounded", color="green" if nested else "purple", size="body", text=self.name)
 
 
@@ -116,10 +115,7 @@ class WhiteboardStoryModel(DiagramStoryModel):
 
     def render(self, canonical: StoryModel, written: Written = Written()) -> str:
         """Draw canonical as a board; the elements a previous board held stay where people put them."""
-        board = self.copy_of(canonical).board()
-        if written.previous:
-            board.keep_places(Whiteboard.from_text(written.previous))
-        return board.save()
+        return self.copy_of(canonical).board().drawn_over(str(written.previous))
 
     def board(self) -> Whiteboard:
         board = Whiteboard("Story Map")
@@ -187,11 +183,11 @@ class _ThinSliceBoard:
         for index, (epic, sub) in enumerate(self.columns):
             if index == 0 or self.columns[index - 1][0] is not epic:
                 span = sum(width for (top, _), width in zip(self.columns, self.widths) if top is epic)
-                board.add(BoardElement.shape(f"epic.{epic.board_key}", Box(left, DiagramEpic.row_y, span - WhiteboardEpic.bar_gap, DiagramEpic.bar_height),
-                                             kind="rounded", color="purple", size="body", text=epic.name))
+                board.add(Shape(epic.element_id("epic"), box=Box(left, DiagramEpic.row_y, span - WhiteboardEpic.bar_gap, DiagramEpic.bar_height),
+                                kind="rounded", color="purple", size="body", text=epic.name))
             if sub is not epic:
-                board.add(BoardElement.shape(f"subepic.{sub.depth}.{sub.board_key}", Box(left, DiagramEpic.nested_row_y, self.widths[index] - WhiteboardEpic.bar_gap, DiagramEpic.bar_height),
-                                             kind="rounded", color="green", size="body", text=sub.name))
+                board.add(Shape(sub.element_id("subepic", str(sub.depth)), box=Box(left, DiagramEpic.nested_row_y, self.widths[index] - WhiteboardEpic.bar_gap, DiagramEpic.bar_height),
+                                kind="rounded", color="green", size="body", text=sub.name))
             left += self.widths[index]
         top = DiagramEpic.nested_row_y + DiagramEpic.bar_height + self.LANE_GAP
         for increment, held in self.lanes:
@@ -200,16 +196,16 @@ class _ThinSliceBoard:
 
     def _draw_lane(self, increment: "Increment", held: Dict[int, List[Story]], top: float) -> float:
         board = self.drawing
-        lane_key = hashlib.sha1(f"lane:{increment.name}".encode("utf-8")).hexdigest()[:KEY_LENGTH]
+        lane = ElementId.of("lane", f"lane:{increment.name}", length=WhiteboardNode.KEY_LENGTH)
         height = WhiteboardStory.size + 2 * self.LANE_INSET
-        board.add(BoardElement.section(f"lane.{lane_key}", Box(WhiteboardEpic.first_x, top, self.left - WhiteboardEpic.first_x + sum(self.widths), height), color="white"))
-        board.add(BoardElement.shape(f"increment.{lane_key}", Box(WhiteboardEpic.first_x + self.LANE_INSET, top + self.LANE_INSET, self.LABEL_WIDTH - self.LANE_INSET, WhiteboardStory.size),
-                                     kind="rounded", color="white", size="body", text=increment.name))
+        board.add(Section(lane, box=Box(WhiteboardEpic.first_x, top, self.left - WhiteboardEpic.first_x + sum(self.widths), height), color="white"))
+        board.add(Shape(ElementId("increment", lane.key), box=Box(WhiteboardEpic.first_x + self.LANE_INSET, top + self.LANE_INSET, self.LABEL_WIDTH - self.LANE_INSET, WhiteboardStory.size),
+                        kind="rounded", color="white", size="body", text=increment.name))
         for column, stories in held.items():
             column_left = self.left + sum(self.widths[:column]) + WhiteboardStory.column_pad
             for place, story in enumerate(self._map_story(story) for story in stories):
                 if isinstance(story, WhiteboardStory):
-                    board.add(story.lane_card(lane_key, column_left + place * WhiteboardStory.pitch, top + self.LANE_INSET))
+                    board.add(story.lane_card(lane, column_left + place * WhiteboardStory.pitch, top + self.LANE_INSET))
         return top + height + self.LANE_GAP
 
     def _map_story(self, story: Story) -> Story:
@@ -225,12 +221,11 @@ class _BoardCell(DiagramStoryCell):
 
     def __init__(self, element: BoardElement) -> None:
         super().__init__()
-        parts = element.id.split(".")
         if element.role not in self.ROLES:
             return
         self.role = element.role
-        self.depth = int(parts[1]) if self.role == "subepic" else -1
-        self.kind = parts[1] if self.role == "story" else ""
+        self.depth = int(element.id.parts[0]) if self.role == "subepic" else -1
+        self.kind = element.id.parts[0] if self.role == "story" else ""
         lines = [line.strip() for line in element.text.strip().splitlines() if line.strip()]
         actor = re.match(r"^\*([^*].*)\*$", lines[0]) if self.role == "story" and len(lines) > 1 else None
         self.actor = actor.group(1).strip() if actor else ""

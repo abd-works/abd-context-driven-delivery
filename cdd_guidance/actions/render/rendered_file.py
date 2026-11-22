@@ -13,7 +13,7 @@ from harness.graph.saved_graph import SavedGraph
 from harness.guidance.declared_outputs import RenderPlacement
 from harness.guidance.worked_session import WrittenOutput
 from harness.markdown.format import Format
-from harness.whiteboard import BoardLinks, Whiteboard
+from harness.whiteboard import Whiteboard
 
 if TYPE_CHECKING:
     from harness.guidance.guidance import FidelityGuidance
@@ -109,7 +109,7 @@ class RenderedFile:
         migrate: list[Migration] = [KeptMember(self.path, each) for each in kept.left_to_move]
         if self.format.name != WHITEBOARD:
             return SavedFile(rendered, self.path, migrate)
-        board = BoardLinks.beside(self.path).of(self.path)
+        board = Whiteboard.links_beside(self.path).of(self.path.name) or ""
         return SavedBoard(rendered, self.path, migrate, board, self._board_writes(board, kept.text))
 
     def _board_writes(self, board: str, content: str) -> list:

@@ -17,7 +17,7 @@ from harness.agent_tools.agent_tools import agent_instructions, agent_tool, agen
 from harness.installation.files import skill
 from harness.markdown.format import Format
 from harness.mcp.mcp_annotations import mcp
-from harness.whiteboard import BoardLinks, Whiteboard
+from harness.whiteboard import Whiteboard
 
 
 # The file a saved graph is kept in, which a render reads as data.
@@ -180,10 +180,10 @@ class Render(GuidanceAction):
     def _file_published_to(self, board: str) -> Path:
         """The whiteboard file of the session's project whose board is at board; refused when none was published to it."""
         root = self.session.work_root
-        for record in self.session.session_files.find(f"{root.as_posix()}/**/{BoardLinks.RECORD}"):
-            found = BoardLinks(record.parent).file_published_to(board)
-            if found is not None:
-                return found
+        for record in self.session.session_files.find(f"{root.as_posix()}/**/{Whiteboard.LINKS}"):
+            named = Whiteboard.links_beside(record).named_at(board)
+            if named is not None:
+                return record.parent / named
         raise BoardNotKept(board, root)
 
     def _fidelity_drawing(self, relative: str):
@@ -204,5 +204,5 @@ class Render(GuidanceAction):
         file = self.files.path_named(path)
         if file.suffix != Whiteboard.SUFFIX:
             raise ValueError(f"{path} is not a {Whiteboard.SUFFIX} file: only a {Whiteboard.SUFFIX} file is published to a board.")
-        BoardLinks.beside(file).record(file, url)
+        Whiteboard.links_beside(file).record(file.name, url)
         return url

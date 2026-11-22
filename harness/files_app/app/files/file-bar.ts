@@ -27,12 +27,14 @@ const WHITEBOARD_SUFFIX = '.whiteboard'
 // links kept in `<design-canvas>/versions.json` (harness/design_canvas/versions.py).
 const CANVAS_VERSION = /^(?:(.*)\/)?design-canvas\/([^/]+)\/project\/canvas\.json$/
 
+// The session answers what a file is published as (`published_kind`, space/session's FileEntry); the page names it so and
+// places it in the tree.
 export function publishedOf(entry: FileEntryData): PublishedFile | null {
-  if (entry.path.endsWith(WHITEBOARD_SUFFIX)) return { kind: 'whiteboard', name: nameOf(entry.path).slice(0, -WHITEBOARD_SUFFIX.length), folder: folderOf(entry.path), link: entry.link }
+  if (entry.published_kind === 'whiteboard') return { kind: 'whiteboard', name: nameOf(entry.path).slice(0, -WHITEBOARD_SUFFIX.length), folder: folderOf(entry.path), link: entry.link }
+  if (entry.published_kind !== 'design canvas') return null
   const canvas = CANVAS_VERSION.exec(entry.path)
   if (canvas) return { kind: 'design canvas', name: canvas[2] ?? '', folder: canvas[1] ? `${canvas[1]}/design-canvas` : 'design-canvas', link: entry.link }
-  if (entry.link) return { kind: 'design canvas', name: nameOf(entry.path), folder: folderOf(entry.path), link: entry.link }
-  return null
+  return { kind: 'design canvas', name: nameOf(entry.path), folder: folderOf(entry.path), link: entry.link }
 }
 
 // The folder the tree lists a file in: a design canvas in its design-canvas folder, where its versions' links are kept.

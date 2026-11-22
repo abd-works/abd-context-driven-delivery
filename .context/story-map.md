@@ -1725,7 +1725,7 @@ Observed: `CanvasVersions.title` names the canvas `<name> — version-N` (`versi
 
 ### (S) Agent --> Record Each Version's Published Link
 
-Observed: `record_link` keeps each version's canvas link in `versions.json`, in the order published (`versions_spec.py`).
+Observed: `CanvasVersion.publish_at` keeps each version's canvas link in `versions.json`, in the order published (`versions_spec.py`).
 
 ### (S) Agent --> Keep A Published Version As A Release
 

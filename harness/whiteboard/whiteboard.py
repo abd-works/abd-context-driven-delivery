@@ -7,12 +7,16 @@ file beside its other formats, and an agent sends ``Whiteboard.batches(previous)
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import re
 from pathlib import Path
 from dataclasses import dataclass, field, fields, replace
 from typing import ClassVar, Collection, Dict, Iterable, List, Optional
+
+from harness.installation.json_file import JsonFile
+from harness.installation.published_links import PublishedLinks
 
 ID_PATTERN = re.compile(r"^[A-Za-z0-9_.~:@+-]{1,40}$")
 BATCH_SIZE = 50
@@ -30,6 +34,46 @@ the list of an arrow's heads or bends."""
 
 class UnreadableBoard(ValueError):
     """Text that is not a saved board, so no practice reads a model from it."""
+
+
+class ElementId(str):
+    """An element's id on a board, which is how a board already published in Claude is updated in place: its role, then
+    its parts, joined by dots, such as ``story.user.a1b2c3d4e5`` or ``region.body.9f8e7d6c5b``. A node a practice draws
+    keeps one id from one render to the next because its last part is a key hashed from the node's names
+    (``ElementId.of``), whose length each practice keeps (``WhiteboardNode.KEY_LENGTH``), so no published board is
+    redrawn."""
+
+    SEPARATOR = "."
+
+    def __new__(cls, role: str, *parts: str) -> ElementId:
+        return super().__new__(cls, cls.SEPARATOR.join([role, *parts]))
+
+    @classmethod
+    def of(cls, role: str, *names: str, length: int, parts: tuple[str, ...] = ()) -> ElementId:
+        """The id of the node names name, in order from the map's root, as role, then parts, then the first length hex
+        digits of the hash of those names: the one hash every practice keys its elements with."""
+        return cls(role, *parts, hashlib.sha1("/".join(names).encode("utf-8")).hexdigest()[:length])
+
+    @classmethod
+    def read(cls, written: str) -> ElementId:
+        """The id written as written, such as an element's key in a saved board."""
+        role, *parts = str(written).split(cls.SEPARATOR)
+        return cls(role, *parts)
+
+    @property
+    def role(self) -> str:
+        """What the element draws: ``story`` for ``story.user.a1``."""
+        return self.split(self.SEPARATOR, 1)[0]
+
+    @property
+    def parts(self) -> tuple[str, ...]:
+        """What the id names after its role: ``("user", "a1")`` for ``story.user.a1``."""
+        return tuple(self.split(self.SEPARATOR)[1:])
+
+    @property
+    def key(self) -> str:
+        """The id's last part, the key a drawn node's names hash to; the role for an id of one part."""
+        return self.rsplit(self.SEPARATOR, 1)[-1]
 
 
 @dataclass(frozen=True)
@@ -51,7 +95,7 @@ class Box:
 class BoardElement:
     """One record on a board, under its element id; each kind writes the fields the Whiteboard type reads."""
 
-    id: str
+    id: ElementId
     TYPE: ClassVar[str] = ""
     HOLDS_OTHERS: ClassVar[bool] = False
     """Whether the element is a container drawn round other elements, so it lies behind them."""
@@ -62,6 +106,8 @@ class BoardElement:
     def __post_init__(self) -> None:
         if not ID_PATTERN.match(self.id):
             raise ValueError(f"Element id {self.id!r} is not 1-40 of [A-Za-z0-9_.~:@+-]")
+        if not isinstance(self.id, ElementId):
+            self.id = ElementId.read(self.id)
 
     @property
     def record(self) -> Dict[str, object]:
@@ -73,26 +119,6 @@ class BoardElement:
                 continue
             written[self.STORE_NAMES.get(item.name, item.name)] = value
         return written
-
-    @classmethod
-    def shape(cls, element_id: str, box: Box, **drawn: DrawnField) -> "BoardElement":
-        """A block drawn in box: an epic bar, a story card, a class or module box."""
-        return Shape(element_id, box=box, **drawn)
-
-    @classmethod
-    def section(cls, element_id: str, box: Box, **drawn: DrawnField) -> "BoardElement":
-        """A container drawn in box, titled with its text, that holds the elements drawn inside it."""
-        return Section(element_id, box=box, **drawn)
-
-    @classmethod
-    def words(cls, element_id: str, corner: Box, **drawn: DrawnField) -> "BoardElement":
-        """A label: words with no box, starting at corner's top left; the board sizes it from its text."""
-        return Label(element_id, x=corner.x, y=corner.y, **drawn)
-
-    @classmethod
-    def arrow(cls, element_id: str, **drawn: DrawnField) -> "BoardElement":
-        """A line from the element ``from_id`` names to the one ``to_id`` names."""
-        return Arrow(element_id, **drawn)
 
     @classmethod
     def from_record(cls, element_id: str, record: Dict[str, object]) -> "BoardElement":
@@ -110,8 +136,8 @@ class BoardElement:
 
     @property
     def role(self) -> str:
-        """What the element draws, as the first part of its id names it: ``story`` for ``story.user.a1``."""
-        return self.id.split(".", 1)[0]
+        """What the element draws, as its id names it: ``story`` for ``story.user.a1``."""
+        return self.id.role
 
     @property
     def whole_id(self) -> str:
@@ -282,7 +308,11 @@ class StoreWrite:
 
 class WhiteboardNode:
     """What a practice's diagram node mixes in to be drawn on a board. The node says the box it is drawn in and the
-    elements it draws there; the board places them back to front as the nodes are drawn."""
+    elements it draws there; the board places them back to front as the nodes are drawn. Each practice keeps the length
+    of the key its element ids hash a node's names to (``KEY_LENGTH``): Clean Engineering 12, the others 10, so a
+    board already published keeps its ids."""
+
+    KEY_LENGTH: ClassVar[int] = 10
 
     def board_box(self) -> Box:
         """The box the diagram placed this node in."""
@@ -292,15 +322,24 @@ class WhiteboardNode:
         """The elements this node draws, back to front."""
         raise NotImplementedError
 
-    def board_shape(self, element_id: str, **drawn: DrawnField) -> BoardElement:
+    def board_shape(self, element_id: ElementId, **drawn: DrawnField) -> Shape:
         """A shape with this element id at this node's box."""
-        return BoardElement.shape(element_id, self.board_box(), **drawn)
+        return Shape(element_id, box=self.board_box(), **drawn)
 
 
 class Whiteboard:
     """A board: its title and its elements in back-to-front order."""
 
     SUFFIX = ".whiteboard"
+    # The record beside a folder's whiteboard files of the board in Claude each was published to, by the file's name.
+    LINKS = "whiteboards.json"
+
+    @classmethod
+    def links_beside(cls, file: Path) -> PublishedLinks:
+        """The addresses of the boards in Claude the whiteboard files in file's folder were published to, by each
+        file's name, kept in the folder's ``whiteboards.json``, as a design canvas keeps its versions' links in
+        ``versions.json``: the next render updates the same board, and a page opens the board instead of the file."""
+        return PublishedLinks(JsonFile(file.parent / cls.LINKS))
 
     def __init__(self, title: str = "", elements: Iterable[BoardElement] = ()) -> None:
         self.title = title
@@ -329,25 +368,22 @@ class Whiteboard:
         return list(wholes.values())
 
     @property
-    def sections(self) -> List[BoardElement]:
+    def sections(self) -> List[Section]:
         """The whole containers on the board, back to front."""
-        return self._whole_of(Section)
+        return [element for element in self.whole_elements if isinstance(element, Section)]
 
     @property
-    def shapes(self) -> List[BoardElement]:
+    def shapes(self) -> List[Shape]:
         """The whole blocks on the board that are no container, back to front."""
-        return self._whole_of(Shape)
+        return [element for element in self.whole_elements if isinstance(element, Shape)]
 
     @property
-    def labels(self) -> List[BoardElement]:
-        return self._whole_of(Label)
+    def labels(self) -> List[Label]:
+        return [element for element in self.whole_elements if isinstance(element, Label)]
 
     @property
-    def arrows(self) -> List[BoardElement]:
-        return self._whole_of(Arrow)
-
-    def _whole_of(self, kind: type) -> List[BoardElement]:
-        return [element for element in self.whole_elements if isinstance(element, kind)]
+    def arrows(self) -> List[Arrow]:
+        return [element for element in self.whole_elements if isinstance(element, Arrow)]
 
     def holding(self, roles: Collection[str], missing: str) -> "Whiteboard":
         """This board, when an element on it draws one of roles. A board with none is not the drawing a practice reads,
@@ -420,6 +456,11 @@ class Whiteboard:
                 self._elements[key] = element.placed_at(before.place)
         return self
 
+    def drawn_over(self, previous: str) -> str:
+        """This board saved as a ``.whiteboard`` file, drawn over previous, the file's text before the render: every
+        element previous also held stays where people put it (``keep_places``); with no previous text, as drawn."""
+        return self.keep_places(Whiteboard.from_text(previous) if previous else None).save()
+
     def _writes(self, previous: Optional["Whiteboard"] = None) -> List[StoreWrite]:
         """The store writes that turn previous, the board as it is in Claude, into this board: its meta, then each
         element a practice drew that this board no longer holds deleted, then each new element set and each changed
@@ -454,40 +495,3 @@ class Whiteboard:
             StoreWrite("delete", "elements", element.id, None, before._versions.get(element.id)) for element in before.elements
             if self.element(element.id) is None and not isinstance(element, OtherElement)
         ]
-
-
-class BoardLinks:
-    """The address of the board in Claude each ``.whiteboard`` file in one folder was published to, by the file's name,
-    kept beside the files in the folder's ``whiteboards.json``, as a design canvas keeps its versions' links in
-    ``versions.json``: the next render updates the same board, and a page opens the board instead of the file."""
-
-    RECORD = "whiteboards.json"
-
-    def __init__(self, folder: Path) -> None:
-        self._record = folder / self.RECORD
-
-    @classmethod
-    def beside(cls, file: Path) -> "BoardLinks":
-        """The addresses kept in the folder file is in."""
-        return cls(file.parent)
-
-    def of(self, file: Path) -> str:
-        """The address of the board file was published to; none while it was never published."""
-        return self._all().get(file.name, "")
-
-    def file_published_to(self, url: str) -> Optional[Path]:
-        """The whiteboard file in this folder whose board is at url; none when no file here was published to it."""
-        name = next((name for name, kept in self._all().items() if kept == url), "")
-        return self._record.parent / name if name else None
-
-    def record(self, file: Path, url: str) -> None:
-        """Keep url as the address of the board file was published to."""
-        self._record.write_text(json.dumps({**self._all(), file.name: url}, indent=2), encoding="utf-8")
-
-    def _all(self) -> Dict[str, str]:
-        """Every address kept; none when the folder keeps none, or keeps something that is no record of them."""
-        try:
-            kept = json.loads(self._record.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            return {}
-        return {str(name): str(url) for name, url in kept.items()} if isinstance(kept, dict) else {}
