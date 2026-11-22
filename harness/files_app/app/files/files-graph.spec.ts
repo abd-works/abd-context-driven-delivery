@@ -99,7 +99,7 @@ class FakeFilesServer implements CddApi {
     this.posts.push({ path, body })
     if (path.endsWith('/graph-trees') && this.treesAnswer !== undefined) return this.treesAnswer as Result
     if (path.endsWith('/guidance-selection')) return this.selection() as Result
-    if (path.endsWith('/update-guidance-selection')) return this.update(body) as Result
+    if (path.endsWith('/toggle-guidance')) return this.toggle(String(body.part), String(body.name)) as Result
     if (path.endsWith('/guidance-selection-after')) return (await this.after(Number(body.version))) as Result
     if (path.endsWith('/fidelity-files')) return {} as Result
     if (path.endsWith('/root-files')) return CHECKOUT_FLOW_FILES as Result
@@ -113,6 +113,11 @@ class FakeFilesServer implements CddApi {
     if (path.endsWith('/cdd/progress')) return this.progress.map(message => ({ tool: 'session.graph_trees', message })) as Result
     if (path.endsWith('/file')) return { path: body.path, text: 'line\n'.repeat(700), language: 'python', comments: [], folds: [], violations: body.rules ? [BROKEN_RULE] : [], changes: [] } as Result
     return null
+  }
+
+  // A press on a practice's toggle, as Session.toggle_guidance answers it: the practice taken out of those selected, or put in.
+  toggle(_part: string, name: string): GuidanceSelectionData {
+    return this.update({ practices: this.practices.includes(name) ? this.practices.filter(each => each !== name) : [...this.practices, name] })
   }
 
   // A change made on the chat bar or in the page: the version moves and every waiting read answers.
@@ -137,6 +142,7 @@ class FakeFilesServer implements CddApi {
       practices: PRACTICES.map(practice => ({ ...practice, is_selected: this.practices.includes(practice.key) })),
       formats: [],
       fidelities,
+      commands: {},
     } as GuidanceSelectionData
   }
 
@@ -274,7 +280,7 @@ describe('Filter Graph Like The File List', () => {
   describe('with Stories and Clean Engineering on', () => {
     it('should hold only the Stories tree once the Person turns Clean Engineering off', async () => {
       const { page, stop } = await showingGraph()
-      await page.guidance.togglePractice('clean_engineering')
+      await page.guidance.toggle('practice', 'clean_engineering')
       await settled()
       stop()
       expect(treeNames(page)).toEqual(['Stories'])
@@ -282,7 +288,7 @@ describe('Filter Graph Like The File List', () => {
 
     it('should list only story-map.md when switched back to the files', async () => {
       const { page, stop } = await showingGraph()
-      await page.guidance.togglePractice('clean_engineering')
+      await page.guidance.toggle('practice', 'clean_engineering')
       await settled()
       page.fileBar.show('list')
       stop()

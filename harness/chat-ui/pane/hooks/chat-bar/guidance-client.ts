@@ -8,9 +8,9 @@ import { callTool } from '../shared/cdd-tool'
 import { clearChosenAction } from './action-picker-client'
 
 // The session's guidance selection as the bar last drew it: the stages, practices, and format groups selected, the
-// fidelities they cover, and the version every change raises. The session holds it (Session.guidance_selection); the bar
-// follows it with one waiting read, so a press in the Files app draws here in a fraction of a second, and draws a press
-// of its own at once, ignoring any answer older than the version drawn. Atom guidance, declared in pane/types/index.d.ts.
+// fidelities they cover, the command each action runs on them, and the version every change raises. The session holds it
+// (Session.guidance_selection); the bar follows it with one waiting read, so a press in the Files app draws here in a
+// fraction of a second, and draws the answer to a press of its own, ignoring any answer older than the version drawn. Atom guidance, declared in pane/types/index.d.ts.
 const guidance = atom({ plugin: 'cdd-board', key: 'guidance' } as const, null as object | null)
 
 // How long the bar waits before reading the selection again after a read failed, and how many failed in a row show: a
@@ -23,8 +23,9 @@ export async function currentGuidance($: EngineInterface): Promise<GuidanceSelec
 }
 
 // Follow the session's guidance selection for as long as the chat's mod runs: read it, then wait for each change.
-// sessionFileOf names the session the bar shows, which a chat switching sessions changes.
-export async function followGuidance($: EngineInterface, sessionFileOf: () => Promise<string>, stageOf: () => Promise<string>): Promise<void> {
+// sessionFileOf names the session the bar shows, which a chat switching sessions changes. Before anyone chose stages,
+// the session answers its ticket's stage selected itself.
+export async function followGuidance($: EngineInterface, sessionFileOf: () => Promise<string>): Promise<void> {
   let failed = 0
   for (;;) {
     const session = await sessionFileOf()
@@ -36,7 +37,6 @@ export async function followGuidance($: EngineInterface, sessionFileOf: () => Pr
       const drawn = await currentGuidance($)
       const answer = drawn ? await callTool<GuidanceSelectionData>($, 'session.guidance_selection_after', { session, version: drawn.version }) : await callTool<GuidanceSelectionData>($, 'session.guidance_selection', { session })
       await accept($, answer)
-      if (!answer.is_stage_chosen) await startStage($, session, await stageOf())
       failed = 0
     } catch (failure) {
       failed += 1
@@ -46,50 +46,19 @@ export async function followGuidance($: EngineInterface, sessionFileOf: () => Pr
   }
 }
 
-// Before any stage was selected for the session, the bar selects the stage its ticket is in, so turning every stage
-// off later shows none.
-async function startStage($: EngineInterface, session: string, stage: string): Promise<void> {
-  if (!stage) return
-  await accept($, await callTool<GuidanceSelectionData>($, 'session.update_guidance_selection', { session, stages: [stage.toLowerCase()] }))
-}
+// The part of the selection a press toggles, as Session.toggle_guidance names it.
+export type SelectionPart = 'stage' | 'practice' | 'format'
 
-// A press on a stage button selects the stage beside those selected, or no longer.
-export async function toggleStage($: EngineInterface, session: string, name: string): Promise<void> {
-  await toggle($, session, 'stages', name, selection => selection.stages.map(stage => ({ name: stage.name, isSelected: stage.is_selected })))
-}
-
-// A press on a practice's dot turns the practice on or off for the session: all its fidelities of the stages selected.
-export async function togglePractice($: EngineInterface, session: string, key: string): Promise<void> {
-  await toggle($, session, 'practices', key, selection => selection.practices.map(practice => ({ name: practice.key, isSelected: practice.is_selected })))
-}
-
-// A press on a format chip selects the format group for every selected fidelity offering it, or no longer.
-export async function toggleFormat($: EngineInterface, session: string, label: string): Promise<void> {
-  await toggle($, session, 'formats', label, selection => selection.formats.map(format => ({ name: format.label, isSelected: format.is_selected })))
-}
-
-type Part = 'stages' | 'practices' | 'formats'
-type Named = { name: string; isSelected: boolean }
-
-// The press draws at once, flipped; then one update, whose answer replaces it.
-async function toggle($: EngineInterface, session: string, part: Part, name: string, namedIn: (selection: GuidanceSelectionData) => Named[]): Promise<void> {
-  const selection = await currentGuidance($)
-  if (!selection || !session) return
-  const named = namedIn(selection)
-  const selected = named.filter(each => each.isSelected !== (each.name === name)).map(each => each.name)
-  await update($, guidance, () => flipped(selection, part, name))
+// A press on a stage button, a practice's dot, or a format chip: one toggle, whose answer the bar draws. The session works
+// out the selection the press leaves.
+export async function toggleGuidance($: EngineInterface, session: string, part: SelectionPart, name: string): Promise<void> {
+  if (!session) return
   await clearChosenAction($)
   try {
-    await accept($, await callTool<GuidanceSelectionData>($, 'session.update_guidance_selection', { session, [part]: selected }))
+    await accept($, await callTool<GuidanceSelectionData>($, 'session.toggle_guidance', { session, part, name }))
   } catch (failure) {
-    await shownAsFailure($, `The ${name} ${part.slice(0, -1)} was not ${selected.includes(name) ? 'selected' : 'cleared'}`, `Pressing ${name} on the chat bar, calling session.update_guidance_selection`)(failure)
+    await shownAsFailure($, `The ${name} ${part} was not changed`, `Pressing ${name} on the chat bar, calling session.toggle_guidance`)(failure)
   }
-}
-
-function flipped(selection: GuidanceSelectionData, part: Part, name: string): GuidanceSelectionData {
-  if (part === 'stages') return { ...selection, is_stage_chosen: true, stages: selection.stages.map(stage => (stage.name === name ? { ...stage, is_selected: !stage.is_selected } : stage)) }
-  if (part === 'practices') return { ...selection, practices: selection.practices.map(practice => (practice.key === name ? { ...practice, is_selected: !practice.is_selected } : practice)) }
-  return { ...selection, formats: selection.formats.map(format => (format.label === name ? { ...format, is_selected: !format.is_selected } : format)) }
 }
 
 // An answer older than the version drawn is one a press has already moved past.

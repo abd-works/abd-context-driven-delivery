@@ -6,8 +6,6 @@ import { chooseAction, clearChosenAction, toggleActionPicker } from './action-pi
 import { moveNext, type ChatBarClient } from './chat-bar-client'
 import type { ChatBarDraw } from './chat-bar-view'
 import { promptCommand } from '../error-display/failure-client'
-import { commandOn } from './fidelity-progress-client'
-import { formatArgumentOf } from './format-choices-client'
 import { overlayArgumentOf } from './overlay-choices-client'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
@@ -36,12 +34,12 @@ export function shownActionOf(chatBar: ChatBarClient, chosenAction: string | nul
 // prompt box for the person to send,
 // with the formats its chips have chosen and the session's pattern overlays. A picked action is run once, and the button then
 // shows the next one again.
-async function pressAction($: EngineInterface, { chatBar, formats, overlays }: ChatBarDraw, action: string): Promise<unknown> {
+async function pressAction($: EngineInterface, { chatBar, overlays }: ChatBarDraw, action: string): Promise<unknown> {
   const fidelity = chatBar.actionFidelity
   await clearChosenAction($)
   if (action === 'advance') return moveNext($, chatBar)
   if (!fidelity) return
-  await promptCommand($, commandOn(chatBar.fidelities, action) + formatArgumentOf(chatBar, formats, action) + overlayArgumentOf(overlays))
+  await promptCommand($, chatBar.commandOf(action) + overlayArgumentOf(overlays))
 }
 
 // The orange chip of the canvas, an orange Box holding the next action's icon, then the ▾ that opens

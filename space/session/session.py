@@ -28,8 +28,7 @@ from space.session.practice_outputs import PracticeOutputs
 from space.session.progress_cache import ProgressCache
 from space.session.file_graphs import FileGraphs
 from space.session.format_alignment import SessionAlignmentTools
-from space.session.guidance_selection import GuidanceSelection
-from space.session.guidance_version import GuidanceVersion
+from space.session.guidance_selection import GuidanceSelection, SelectionPart
 from space.session.file_view_filter import FileViewFilter
 from space.session.session_file import RuleReads, SessionFile
 from space.session.session_explorer import SessionExplorer
@@ -133,24 +132,23 @@ class SessionFileTools:
 
 @hosted_only
 class SessionGuidanceTools:
-    """The tools that read and change a session's guidance selection, whose versions its *GuidanceVersion* keeps."""
+    """The tools that read and change a session's guidance selection, which the session holds (*GuidanceSelection*)."""
 
-    guidance_version: GuidanceVersion
+    guidance: GuidanceSelection
 
     @mcp
     @agent_tool
     @noSessionLog
     def guidance_selection(self) -> GuidanceSelection:
         """Return the session's guidance selection: each stage and practice selected or not, the formats the selected stages' fidelities of the selected practices offer, each selected or not, those fidelities by slug, and the version every change raises. The chat bar's stage buttons, practice dots and format chips and the Files app's toggles all show it."""
-        return GuidanceSelection(self)
+        return self.guidance
 
     @mcp
     @agent_tool
     @noSessionLog
-    def update_guidance_selection(self, stages: list[str] | None = None, practices: list[str] | None = None, formats: list[str] | None = None) -> GuidanceSelection:
-        """Select exactly these stages (such as discovery), practices (such as stories), and format groups (such as markdown), each list in place of what was selected, a list left out unchanged; save it in session.json, raise the version once, and return the selection. A practice selected is one the session works on; a format group selected is chosen for every selected fidelity offering it."""
-        self.guidance_version.select(stages, practices, formats)
-        return GuidanceSelection(self)
+    def toggle_guidance(self, part: SelectionPart, name: str) -> GuidanceSelection:
+        """Select the stage (such as discovery), practice (such as stories), or format group (such as markdown) called name beside those selected, or no longer, as a press on the chat bar or the Files app asks; part is stage, practice, or format. Save it in session.json, raise the version once, and return the selection. Before anyone chose stages, a stage toggles beside the one the session's ticket stands in. A practice selected is one the session works on; a format group selected is chosen for every selected fidelity offering it."""
+        return self.guidance.toggle(part, name)
 
     @mcp
     @skill
@@ -173,8 +171,8 @@ class SessionGuidanceTools:
     @noSessionLog
     def guidance_selection_after(self, version: int) -> GuidanceSelection:
         """Return the session's guidance selection once its version is past version: at once when it already is, else as soon as a change raises it, else after GUIDANCE_WAIT_SECONDS with it unchanged. A page holds one such call open, so a selection made anywhere reaches it in a fraction of a second."""
-        self.guidance_version.wait_past(version)
-        return GuidanceSelection(self)
+        self.guidance.wait_past(version)
+        return self.guidance
 
 
 @hosted_only
@@ -372,7 +370,7 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionAl
         self.folder = SessionFolder(self)
         self.hierarchy = SessionHierarchy(self)
         self.file_graphs = FileGraphs(self)
-        self.guidance_version = GuidanceVersion(self)
+        self.guidance = GuidanceSelection(self)
         self.decision_records = DecisionRecords(self.work_root / CONTEXT_FOLDER / _DECISION_RECORDS_FOLDER)
         self.handoffs: Handoffs | None = None
         # What a board read costs most to work out for each of its fidelities, kept in its folder between reads.

@@ -139,7 +139,7 @@ class PracticeSessionOutput:
     def enable(self, is_enabled: bool) -> PracticeSessionOutput:
         """Turn this practice on or off for its session, saved in its session.json; its guidance selection changes."""
         self.change(lambda fields: setattr(fields, "enabled", is_enabled), f"enabled {is_enabled}")
-        self._session.guidance_version.changed()
+        self._session.guidance.changed()
         return self
 
     @property
@@ -373,7 +373,7 @@ class FidelitySessionOutput:
         others = [each for each in self.chosen_formats if each != named]
         chosen = self.chosen_formats if is_chosen and named in self.chosen_formats else others + ([named] if is_chosen else [])
         self._change(lambda fields: setattr(fields, "formats", chosen), f"formats {', '.join(chosen)}")
-        self._session.guidance_version.changed()
+        self._session.guidance.changed()
         return self
 
     @property

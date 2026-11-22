@@ -645,11 +645,6 @@ class Stage(Column):
         """The actions that write a fidelity's files, which an action bar offers with formats."""
         return [action.name for action in ACTION_CATALOGUE.producing]
 
-    @property
-    @data_field
-    def actions_with_formats(self) -> list[str]:
-        """The actions whose command takes the formats an action bar's chips pick, generate and render."""
-        return [action.name for action in ACTION_CATALOGUE.taking_formats]
 
     @property
     @data_field(reference=True)

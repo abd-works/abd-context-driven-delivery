@@ -1433,11 +1433,9 @@ No class of this module acts on another class of the model at run time.
   - `-> ApproachStage.scope` reads scope of · space/kanban/board.py:299
   - `<- StageScope`
 - `Stage.actions`
-  - `-> ApproachStage.actions` reads actions of · space/kanban/board.py:305
+  - `-> ActionCatalogue.on_fidelities` reads the actions run on a fidelity · space/kanban/board.py
 - `Stage.producing_actions`
-  - `-> ApproachStage.producing_actions` reads producing actions of · space/kanban/board.py:311
-- `Stage.actions_with_formats`
-  - `-> ApproachStage.actions_with_formats` reads actions with formats of · space/kanban/board.py:317
+  - `-> ActionCatalogue.producing` reads the actions that write a fidelity's files · space/kanban/board.py
 - `Stage.work_required`
   - `-> ApproachStage.name` reads name of · space/kanban/board.py:323
   - `<- list[FidelityGuidance]`

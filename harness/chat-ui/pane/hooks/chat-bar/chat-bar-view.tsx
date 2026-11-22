@@ -8,7 +8,7 @@ import { TipView } from '../shared/tip-view'
 import { ActionButtonView, pickerRowsOf } from './action-button-view'
 import { formatGlyphOf, REPO_GLYPH, repoWordOf, SESSION_GLYPH, sessionWordOf } from './bar-columns'
 import type { FormatChips } from './format-choices-client'
-import { toggleFormat, togglePractice, toggleStage } from './guidance-client'
+import { toggleGuidance } from './guidance-client'
 import { toggleOverlay, toggleOverlayList, type OverlayChips } from './overlay-choices-client'
 import { askChatToFixBoard, restartServer, runDebug, runHandoff, type ChatBarClient } from './chat-bar-client'
 import type { FailureClient } from '../error-display/failure-client'
@@ -56,7 +56,7 @@ export function PracticeDotView($: EngineInterface, elements: ElementTable, dot:
   const violating = dot.violating
   return (
     <Box key={`practice-${dot.practice}`} flexDirection="row" gap={0} backgroundColor={dot.isOn ? BRAND.selectedTint : undefined}>
-      {GlyphButtonView(elements, `dot-${dot.practice}`, '■', dot.shade, () => togglePractice($, dot.sessionFile, dot.practice), dot.isOn)}
+      {GlyphButtonView(elements, `dot-${dot.practice}`, '■', dot.shade, () => toggleGuidance($, dot.sessionFile, 'practice', dot.practice), dot.isOn)}
       {violating ? GlyphButtonView(elements, `violations-${dot.practice}`, String(dot.violationCount), BRAND.error, () => openReport($, violating)) : null}
       {PracticeTipView($, elements, dot)}
     </Box>
@@ -91,7 +91,7 @@ function StageButtonsView($: EngineInterface, elements: ElementTable, { chatBar 
     <Box key="stage-buttons" flexDirection="row" gap={1} flexShrink={0}>
       {stages.map((stage: StageClient) => (
         <Box key={`stage-${stage.stage}`} width={STAGE_BUTTON_COLUMNS} justifyContent="center" backgroundColor={stage.isShown ? BRAND.accent : undefined}>
-          {GlyphButtonView(elements, `stage-button-${stage.stage}`, stage.icon, stage.isShown ? BRAND.onAccent : stage.ink, () => toggleStage($, chatBar.sessionFile, stage.stage.toLowerCase()))}
+          {GlyphButtonView(elements, `stage-button-${stage.stage}`, stage.icon, stage.isShown ? BRAND.onAccent : stage.ink, () => toggleGuidance($, chatBar.sessionFile, 'stage', stage.stage.toLowerCase()))}
           {TipView(elements, stage.stage, stage.isCurrent ? 'the session is here' : '', BRAND.muted)}
         </Box>
       ))}
@@ -208,7 +208,7 @@ function FormatChipsView($: EngineInterface, elements: ElementTable, { chatBar, 
         const colour = isOn ? BRAND.onAccent : BRAND.muted
         return (
           <Box key={`format-${choice.label}`} paddingX={1} backgroundColor={isOn ? BRAND.accent : undefined}>
-            {GlyphButtonView(elements, `format-chip-${choice.label}`, formatGlyphOf(choice.label), colour, () => toggleFormat($, chatBar.sessionFile, choice.label))}
+            {GlyphButtonView(elements, `format-chip-${choice.label}`, formatGlyphOf(choice.label), colour, () => toggleGuidance($, chatBar.sessionFile, 'format', choice.label))}
             {TipView(elements, choice.label, `offered by ${choice.offered}`, BRAND.muted)}
           </Box>
         )

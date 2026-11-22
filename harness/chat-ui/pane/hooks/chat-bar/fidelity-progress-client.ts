@@ -113,12 +113,6 @@ export class FidelityProgressClient {
     return this.practice?.editor ?? null
   }
 
-  // The command the Python FidelityProgress gives for action on this fidelity. It names the ticket's session, because the
-  // chat that runs it can have another session open, and no format, so the action works in the format the fidelity keeps.
-  commandFor(action: string): string {
-    return this.progress.commands[action] ?? ''
-  }
-
   get #look(): (typeof LOOKS)[string] {
     return LOOKS[this.progress.state] ?? LOOKS.not_started
   }
@@ -164,13 +158,3 @@ export class PracticeDotClient {
 
 // How faint a practice turned off draws its dot.
 const OFF_SHADE = '30'
-
-// One command for several fidelities, as the actions take a list of slugs: the first one's command with every slug.
-// Generate renders the earlier fidelity first itself when that fidelity has no file in the format, so every action is
-// one command; none without a fidelity.
-export function commandOn(fidelities: FidelityProgressClient[], action: string): string {
-  const [first, ...rest] = fidelities
-  if (!first) return ''
-  const command = first.commandFor(action)
-  return rest.length ? command.replace(` ${first.slug} `, ` ${fidelities.map(fidelity => fidelity.slug).join(' ')} `) : command
-}

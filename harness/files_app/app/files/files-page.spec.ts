@@ -36,11 +36,19 @@ class FakeFilesServer implements CddApi {
     this.posts.push({ path, body })
     if (path.endsWith('/guidance-selection')) return this.selection() as Result
     if (path.endsWith('/show')) return { name: 'release-2', repo_name: 'abd-cdd', branch: 'release-2', root: 'C:/dev/abd-cdd-2' } as Result
-    if (path.endsWith('/update-guidance-selection')) return this.update(body) as Result
+    if (path.endsWith('/toggle-guidance')) return this.toggle(String(body.part), String(body.name)) as Result
     if (path.endsWith('/guidance-selection-after')) return (await this.after(Number(body.version))) as Result
     if (path.endsWith('/fidelity-files')) return Object.fromEntries((body.fidelities as string[]).map(slug => [slug, { markdown: [entry(`.context/${slug}.md`)], drawio: [entry(`.context/${slug}.drawio`)] }])) as Result
     if (path.endsWith('/root-files')) return this.rootFiles as Result
     return null
+  }
+
+  // A press, as Session.toggle_guidance answers it: the one named taken out of those selected, or put in.
+  toggle(part: string, name: string): GuidanceSelectionData {
+    const flip = (names: string[]) => (names.includes(name) ? names.filter(each => each !== name) : [...names, name])
+    if (part === 'stage') return this.update({ stages: flip(this.stages ?? []) })
+    if (part === 'practice') return this.update({ practices: flip(this.practices) })
+    return this.update({ formats: flip(this.formats) })
   }
 
   // A change made elsewhere, such as on the chat bar: the version moves and every waiting read answers.
@@ -141,14 +149,14 @@ describe('Select Guidance In Files App', () => {
       it('should turn DDD off in the session', async () => {
         const server = discovery()
         const { page, stop } = await following(server)
-        await page.guidance.togglePractice('ddd')
+        await page.guidance.toggle('practice', 'ddd')
         stop()
-        expect(server.posted('/update-guidance-selection').map(post => post.body.practices)).toEqual([['stories']])
+        expect(server.posted('/toggle-guidance').map(post => post.body)).toEqual([{ part: 'practice', name: 'ddd' }])
       })
 
       it("should list only Stories' files", async () => {
         const { page, stop } = await following(discovery())
-        await page.guidance.togglePractice('ddd')
+        await page.guidance.toggle('practice', 'ddd')
         await settled()
         stop()
         expect(paths(page)).toEqual(['.context/stories-story-map.md', '.context/stories-story-map.drawio'])
@@ -158,7 +166,7 @@ describe('Select Guidance In Files App', () => {
     describe('that has Specification selected in the Files app', () => {
       it("should list both stages' files, reading Specification's the first time it shows", async () => {
         const { page, stop } = await following(discovery())
-        await page.guidance.toggleStage('specification')
+        await page.guidance.toggle('stage', 'specification')
         await settled()
         stop()
         expect(paths(page)).toContain('.context/stories-scenarios.md')
@@ -168,7 +176,7 @@ describe('Select Guidance In Files App', () => {
     describe('that has the diagram format selected in the Files app', () => {
       it('should list only the diagrams', async () => {
         const { page, stop } = await following(discovery())
-        await page.guidance.toggleFormat('diagram')
+        await page.guidance.toggle('format', 'diagram')
         await settled()
         stop()
         expect(paths(page)).toEqual(['.context/stories-story-map.drawio', '.context/ddd-bounded-context.drawio'])
@@ -178,7 +186,7 @@ describe('Select Guidance In Files App', () => {
     describe('that has every stage turned off', () => {
       it('should list the files of every stage, as no stage filter', async () => {
         const { page, stop } = await following(discovery())
-        await page.guidance.toggleStage('discovery')
+        await page.guidance.toggle('stage', 'discovery')
         await settled()
         stop()
         expect(paths(page)).toEqual(['.context/stories-story-map.md', '.context/stories-story-map.drawio', '.context/ddd-bounded-context.md', '.context/ddd-bounded-context.drawio', '.context/stories-scenarios.md', '.context/stories-scenarios.drawio'])
@@ -200,7 +208,7 @@ describe('Select Guidance In Files App', () => {
       it('should keep the press drawn', async () => {
         const server = discovery()
         const { page, stop } = await following(server)
-        await page.guidance.togglePractice('ddd')
+        await page.guidance.toggle('practice', 'ddd')
         await (page as unknown as { guidance: { accept(answer: GuidanceSelectionData): Promise<void> } }).guidance.accept({ ...server.selection(), version: 0, practices: [] })
         stop()
         expect(page.state.guidance?.version).toBe(1)
@@ -218,7 +226,7 @@ describe('Select Guidance In Files App', () => {
     describe('that has DDD turned off in the Files app', () => {
       it("should list only Stories' files among those its link names", async () => {
         const { page, stop } = await following(new FakeFilesServer())
-        await page.guidance.togglePractice('ddd')
+        await page.guidance.toggle('practice', 'ddd')
         await settled()
         stop()
         expect(paths(page)).toEqual(['.context/stories-story-map.md', '.context/stories-story-map.drawio'])
@@ -770,7 +778,7 @@ describe("Show The Callouts The File View's Filters Select", () => {
   describe('that has DDD turned off', () => {
     it("should read the open file again with the files then listed, DDD's left out", async () => {
       const { page, server, stop } = await opened()
-      await page.guidance.togglePractice('ddd')
+      await page.guidance.toggle('practice', 'ddd')
       await settled()
       stop()
       expect([lastRead(server)?.paths, paths(page)].map(listed => (listed as string[]).includes('.context/ddd-bounded-context.md'))).toEqual([false, false])

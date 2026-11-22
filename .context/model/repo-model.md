@@ -3895,14 +3895,14 @@ Mixed into *Session*: the published graph tools a page browsing the session's fi
 
 ## SessionGuidanceTools
 
-Mixed into *Session*: the published tools that read and change its guidance selection, whose versions its *GuidanceVersion* keeps.
+Mixed into *Session*: the published tools that read and change its guidance selection, which the session holds (`session.guidance`, a *GuidanceSelection* that changes itself and raises its own version).
 
 ----
 + guidance_selection(): GuidanceSelection
-+ update_guidance_selection(stages: list[str] | None = None, practices: list[str] | None = None, formats: list[str] | None = None): GuidanceSelection
-	-> GuidanceVersion.select
++ toggle_guidance(part: "stage" | "practice" | "format", name: str): GuidanceSelection
+	-> GuidanceSelection.toggle
 + guidance_selection_after(version: int): GuidanceSelection
-	-> GuidanceVersion.wait_past
+	-> GuidanceSelection.wait_past
 
 ## SessionLogTools
 
@@ -4319,7 +4319,6 @@ Show one stage of the board, the tickets at work in it, and how many it takes be
 + << association >> scope: StageScope
 + actions: list[str]
 + producing_actions: list[str]
-+ actions_with_formats: list[str]
 + work_required: list[FidelityGuidance]
 + next_stage: Stage | None
 + previous_stage: Stage | None
@@ -4439,7 +4438,6 @@ A ticket's progress on each fidelity the board requires whose practice its sessi
 ----
 + progress_of(slug: str): FidelityProgress
 + in_stage(stage: Stage): StageWork
-+ command(action: str, fidelities: list[FidelityGuidance]): str
 + record(line: str): None
 	-> SessionLog.record
 ---<<creates>>--> FidelityProgress
@@ -4700,7 +4698,7 @@ Hold an idea not yet started. Starting it opens a ticket for it.
 	-> Ticket.load
 	-> TicketWork.progress_of
 + command(action: str): str
-	-> TicketWork.command
+	-> GuidanceSelection.command
 + finish_review(): FidelityProgress
 	-> TicketWork.record
 + report(): Report
