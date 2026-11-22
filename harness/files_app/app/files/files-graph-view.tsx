@@ -6,6 +6,7 @@ import { NodeFilterLists } from '@graph-app/filter/FilterView'
 import { LoadProgressView } from '@graph-app/graph/LoadProgressView'
 import { KindMark, kindLabel } from '@graph-app/labels/kind-mark'
 
+import { ruleTitleOf } from './files-graph'
 import type { FilesPage } from './files-page'
 import type { FilesGraphState } from './files-state'
 
@@ -81,7 +82,7 @@ function RulesView({ page, entry, rules }: { page: FilesPage; entry: ExplorerEnt
             <li key={rule.name} className="graph-entry" data-kind="Rule">
               <div className="tree-row">
                 <span className="tree-twist-spacer" />
-                <button className={`graph-node rule-status ${rule.status}`} title={ruleTitle(rule)} onClick={() => void page.graph.selectRule(entry, rule)}>
+                <button className={`graph-node rule-status ${rule.status}`} title={ruleTitleOf(rule)} onClick={() => void page.graph.selectRule(entry, rule)}>
                   <KindMark kind="Rule" isFile={false} />
                   <span className="node-name">{rule.name}</span>
                 </button>
@@ -94,10 +95,6 @@ function RulesView({ page, entry, rules }: { page: FilesPage; entry: ExplorerEnt
   )
 }
 
-const ruleTitle = (rule: GraphRuleData): string => {
-  const messages = rule.status === 'violating' ? rule.violations.map(hit => hit.message).filter(Boolean) : []
-  return messages.length ? `Rule ${rule.name}: ${messages.join('\n')}` : `Rule ${rule.name}`
-}
 
 // The graph view's node filter, the Graph app's lists: node types, connectors, rules and the Violations switch, which
 // narrow the nodes of the files the bar lists. They sit closed behind one Filters toggle, so the trees get the space,

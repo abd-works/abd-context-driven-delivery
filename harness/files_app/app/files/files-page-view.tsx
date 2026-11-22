@@ -3,7 +3,7 @@ import { Component, useCallback, useEffect, useState, useSyncExternalStore, type
 import type { SectionData, ShapeData, WhiteboardData } from '@cdd/harness/whiteboard/whiteboard-file'
 import type { FileEntryData, SessionFileData } from '@cdd/space/session/session'
 
-import { publishedOf, type FileFolder, type PublishedFile } from './file-bar'
+import { entryClassesOf, publishedOf, type FileFolder, type PublishedFile } from './file-bar'
 import type { SourceCallout } from '@source-view/source-callouts'
 
 import { FailureBandView } from './failure-band-view'
@@ -29,11 +29,10 @@ function FileEntryView({ page, entry, isOpen }: { page: FilesPage; entry: FileEn
   const published = publishedOf(entry)
   if (published?.kind === 'whiteboard') return <WhiteboardEntryView page={page} entry={entry} published={published} isOpen={isOpen} />
   if (published) return <PublishedFileView page={page} entry={entry} published={published} />
-  const classes = ['file-entry', isOpen ? 'is-open' : '', entry.exists ? '' : 'is-missing', entry.is_changed ? 'is-changed' : ''].filter(Boolean).join(' ')
   const hint = entry.exists ? entry.path : `${entry.path}: ${missingNoteOf(entry)}`
   return (
     <li className="file-entry-row">
-      <button className={classes} title={hint} aria-current={isOpen ? 'true' : undefined} disabled={!entry.exists} onClick={() => void page.open(entry.path)} onContextMenu={menuOn(page, entry.path)}>
+      <button className={entryClassesOf(entry, isOpen)} title={hint} aria-current={isOpen ? 'true' : undefined} disabled={!entry.exists} onClick={() => void page.open(entry.path)} onContextMenu={menuOn(page, entry.path)}>
         {fileNameOf(entry.path)}
         {entry.exists ? null : <span className="file-entry-note"> {missingNoteOf(entry)}</span>}
       </button>
@@ -54,14 +53,16 @@ function DrawioTabLinkView({ page, path }: { page: FilesPage; path: string }) {
 }
 
 // A whiteboard opens beside the file list as its board drawn on a canvas, never as the file's text; one published to a
-// board in Claude also offers that board, which opens in Claude Desktop's artifact panel.
+// board in Claude also offers that board, which opens in Claude Desktop's artifact panel. One not on disk says why, as
+// any file not on disk does.
 function WhiteboardEntryView({ page, entry, published, isOpen }: { page: FilesPage; entry: FileEntryData; published: PublishedFile; isOpen: boolean }) {
-  const classes = ['file-entry', 'is-whiteboard', isOpen ? 'is-open' : '', entry.is_changed ? 'is-changed' : ''].filter(Boolean).join(' ')
+  const hint = entry.exists ? `${entry.path}: opens the whiteboard as a canvas` : `${entry.path}: ${missingNoteOf(entry)}`
+  const note = entry.exists ? (published.link ? 'whiteboard' : 'whiteboard, not on a board in Claude yet') : `whiteboard, ${missingNoteOf(entry)}`
   return (
     <li className="file-entry-row">
-      <button className={classes} title={`${entry.path}: opens the whiteboard as a canvas`} aria-current={isOpen ? 'true' : undefined} disabled={!entry.exists} onClick={() => void page.open(entry.path)} onContextMenu={menuOn(page, entry.path)}>
+      <button className={entryClassesOf(entry, isOpen)} title={hint} aria-current={isOpen ? 'true' : undefined} disabled={!entry.exists} onClick={() => void page.open(entry.path)} onContextMenu={menuOn(page, entry.path)}>
         {published.name}
-        <span className="file-entry-note"> {published.link ? 'whiteboard' : 'whiteboard, not on a board in Claude yet'}</span>
+        <span className="file-entry-note"> {note}</span>
       </button>
       {published.link ? <BoardLinkView page={page} entry={entry} published={published} /> : null}
     </li>

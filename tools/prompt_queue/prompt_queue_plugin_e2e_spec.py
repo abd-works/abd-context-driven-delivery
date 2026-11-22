@@ -3,7 +3,7 @@ queue on a real cdd server.
 
 The plugin's own tests (hooks/register.test.tsx) stub the cdd server, the stored state and the clock; this spec runs the
 same hooks for real. A SpecServer serves the PromptQueue toolset; a scratch project's .mcp.json names it ``cdd``; the CLI
-at CLAUDE_CODE_EXECPATH loads the plugin from this checkout with ``--plugin-dir`` and takes each message through
+at CLAUDE_CODE_EXECPATH, else claude on the PATH, loads the plugin from this checkout with ``--plugin-dir`` and takes each message through
 stream-json input, so the plugin's prompt.submit, tool.call and turn hooks run as they do in a chat. The queue is then
 read back through the server with prompt-queue.show.
 
@@ -50,6 +50,26 @@ _SET_STEPS_ASKS = 3
 _NOTICE ="<task-notification> <task-id>b1</task-id> <status>completed</status> </task-notification>"
 
 
+class ClaudeCodeNotFoundError(RuntimeError):
+    """No Claude Code to run the headless chat with: CLAUDE_CODE_EXECPATH is not set and no claude is on the PATH. A
+    chat in the Claude app sets the variable in its Bash tool, not always in its PowerShell tool, so the tier run from
+    a shell without it starts no chat."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            "No Claude Code found to start a headless chat: set CLAUDE_CODE_EXECPATH to the claude executable, or put claude "
+            "on the PATH, then run the e2e tier again (a Claude app chat's Bash tool has the variable; its PowerShell tool may not)"
+        )
+
+
+def claude_code() -> str:
+    """The Claude Code executable the headless chat runs: the one the running chat names, else claude on the PATH."""
+    found = os.environ.get("CLAUDE_CODE_EXECPATH") or shutil.which("claude")
+    if not found:
+        raise ClaudeCodeNotFoundError()
+    return found
+
+
 class HeadlessChat:
     """A Claude Code chat run headless on a scratch project whose .mcp.json names the spec's cdd server, with the
     prompt-queue plugin loaded from this checkout. It holds its own queue on the server, read and seeded through a
@@ -82,7 +102,10 @@ class HeadlessChat:
         threading.Thread(target=self._read_output, daemon=True).start()
 
     def send(self, text: str) -> None:
-        """Send text as the person's message and wait for the turn it starts to end."""
+        """Send text as the person's message and wait for the turn it starts to end. A chat that never started, since no
+        Claude Code was found, fails on that, as every example after it does."""
+        if self._process is None:
+            raise ClaudeCodeNotFoundError()
         self._process.stdin.write(json.dumps({"type": "user", "message": {"role": "user", "content": text}}) + "\n")
         self._process.stdin.flush()
         while json.loads(self._lines.get(timeout=_TURN_SECONDS)).get("type") != "result":
@@ -100,7 +123,7 @@ class HeadlessChat:
     def _command(self) -> list[str]:
         allowed = ["--allowedTools", *self._allowed_tools] if self._allowed_tools else []
         return [
-            os.environ["CLAUDE_CODE_EXECPATH"], "-p", "--input-format", "stream-json", "--output-format", "stream-json", "--verbose",
+            claude_code(), "-p", "--input-format", "stream-json", "--output-format", "stream-json", "--verbose",
             "--session-id", self.id, "--plugin-dir", str(PLUGIN_FOLDER), "--mcp-config", str(self._servers), "--strict-mcp-config",
             "--setting-sources", "project,local", "--model", _MODEL, "--no-session-persistence", *allowed,
         ]

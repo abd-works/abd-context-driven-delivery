@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import type { CddApi } from '@cdd/cdd-shared'
 import type { FileEntryData } from '@cdd/space/session/session'
 
-import { publishedOf, treeOf, type FileFolder } from './file-bar'
+import { entryClassesOf, publishedOf, treeOf, type FileFolder } from './file-bar'
 import { FilesLink } from './files-link'
 import { FilesPage } from './files-page'
 import { FILE_BAR_WIDTH } from './files-state'
@@ -312,6 +312,20 @@ describe('a whiteboard file in the file bar', () => {
   describe('with no board yet', () => {
     it('should open nothing rather than the file', () => {
       expect([publishedOf(unpublished(WHITEBOARD, 'whiteboard'))?.kind, publishedOf(unpublished(WHITEBOARD, 'whiteboard'))?.link]).toEqual(['whiteboard', ''])
+    })
+  })
+
+  // Found on 2026-11-22 (e2e tier): the story map fidelity declares thin-slice.whiteboard, which was not on disk, and
+  // the bar showed it as a file to open, where every other file not on disk is marked missing.
+  describe('that is not on disk', () => {
+    it('should be marked missing, as any file not on disk is', () => {
+      expect(entryClassesOf({ ...unpublished(WHITEBOARD, 'whiteboard'), exists: false }, false).split(' ')).toContain('is-missing')
+    })
+  })
+
+  describe('that is on disk', () => {
+    it('should be marked as a whiteboard, not missing', () => {
+      expect(entryClassesOf(unpublished(WHITEBOARD, 'whiteboard'), false)).toBe('file-entry is-whiteboard')
     })
   })
 })

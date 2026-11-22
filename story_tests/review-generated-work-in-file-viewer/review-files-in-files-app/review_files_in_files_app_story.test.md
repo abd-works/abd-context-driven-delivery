@@ -281,7 +281,8 @@ Found on 2026-11-19 (exploratory testing, pixel-01): the files were listed once 
 
 *Given* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) is opened on ++another project++, its link naming design-review's stories-story-map
 *When* the Person lists All session files
-*Then* the file bar lists that project's *story-map.drawio* as the one story map file on disk, not a file of the CDD checkout
+*Then* the file bar lists that project's *story-map.drawio* and *story-map.whiteboard* as the story map files on disk, not a file of the CDD checkout, since a diagram is drawn in draw.io and on a whiteboard
+*And* marks the story map files it does not hold, such as *thin-slice.whiteboard*, as not generated yet
 
 #### Scenario: List this session's own files in a folder with no git
 

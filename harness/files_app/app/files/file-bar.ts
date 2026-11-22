@@ -37,6 +37,13 @@ export function publishedOf(entry: FileEntryData): PublishedFile | null {
   return { kind: 'design canvas', name: nameOf(entry.path), folder: folderOf(entry.path), link: entry.link }
 }
 
+// The classes of a file's entry in the file bar: a whiteboard marked as one, open, not on disk, and changed on the
+// session's branch. A file not on disk is marked missing whatever it is, so the bar never shows it as one to open.
+export function entryClassesOf(entry: FileEntryData, isOpen: boolean): string {
+  const isWhiteboard = publishedOf(entry)?.kind === 'whiteboard'
+  return ['file-entry', isWhiteboard ? 'is-whiteboard' : '', isOpen ? 'is-open' : '', entry.exists ? '' : 'is-missing', entry.is_changed ? 'is-changed' : ''].filter(Boolean).join(' ')
+}
+
 // The folder the tree lists a file in: a design canvas in its design-canvas folder, where its versions' links are kept.
 const placeOf = (entry: FileEntryData): string => publishedOf(entry)?.folder ?? folderOf(entry.path)
 

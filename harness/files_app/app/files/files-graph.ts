@@ -43,6 +43,16 @@ const isRulesGroup = (child: unknown): child is GraphRulesCollectionData => type
 // The lines a broken rule names: each place its violations point at.
 const violationRange = (hit: GraphRuleData['violations'][number]): RangeData => ({ path: hit.location, start_line: hit.line ?? 1, end_line: hit.end_line ?? hit.line ?? 1, content: '', anchor: '' })
 
+// Whether a rule found something on its node, as the graph says (GraphRule.is_failing): a violation, or a candidate a
+// rule that requires a judge listed for a reading. Either is shown with its message and opens the lines it names.
+export const isFailing = (rule: GraphRuleData): boolean => rule.status === 'violating' || rule.status === 'candidate'
+
+// A rule's title, which a hover shows: its name, and what it found on its node when it found something.
+export function ruleTitleOf(rule: GraphRuleData): string {
+  const messages = isFailing(rule) ? rule.violations.map(hit => hit.message).filter(Boolean) : []
+  return messages.length ? `Rule ${rule.name}: ${messages.join('\n')}` : `Rule ${rule.name}`
+}
+
 // The graph view of the Files app's file bar: the session's graph holding only the nodes of the files the bar lists, so
 // it is filtered as the file list is, read again whenever the bar lists other files, showing the cdd server's progress
 // while it reads. Its node filter, the Graph app's, is a filter other than the file list that applies with it: it
@@ -199,7 +209,7 @@ export class FilesGraph {
   }
 
   breaksARule(entry: ExplorerEntryData): boolean {
-    return this.rulesOf(entry).some(rule => rule.status === 'violating')
+    return this.rulesOf(entry).some(isFailing)
   }
 
   isOpen(entry: ExplorerEntryData): boolean {
@@ -254,7 +264,7 @@ export class FilesGraph {
   // Selects a rule entry carries: a broken rule opens the lines its violations name, unfolded, as a selected node opens
   // its own; any other rule opens the node it sits under.
   async selectRule(entry: ExplorerEntryData, rule: GraphRuleData): Promise<void> {
-    const named = rule.status === 'violating' ? rule.violations.filter(hit => hit.location && hit.line) : []
+    const named = isFailing(rule) ? rule.violations.filter(hit => hit.location && hit.line) : []
     if (!named.length) return this.select(entry)
     const selected = named.map(hit => ({ nodeId: entry.node_id, lines: violationRange(hit) }))
     this.store.change(({ graph }) => ({ graph: { ...graph, selected } }))

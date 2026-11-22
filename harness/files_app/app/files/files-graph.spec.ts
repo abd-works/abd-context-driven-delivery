@@ -12,6 +12,7 @@ import type { ExplorerEntryData, GuidanceSelectionData } from '@cdd/space/sessio
 import { NodeFilterLists } from '@graph-app/filter/FilterView'
 import { NO_CHOICES, NO_FILTER } from '@graph-app/filter/filter-selection'
 
+import { isFailing, ruleTitleOf } from './files-graph'
 import { FilesGraphView } from './files-graph-view'
 import { FilesLink } from './files-link'
 import { FilesPage } from './files-page'
@@ -49,6 +50,8 @@ const ruleOf = (name: string, status: string, violations: ViolationData[] = []):
 // Seed: Ticket.activate breaks keep-operations-small-focused on lines 460 to 465, passes use-intention-revealing-names,
 // and leaves hide-inner-details to the agent's judgement.
 const ACTIVATE_TOO_LONG: ViolationData = { rule: 'keep-operations-small-focused', practice: 'clean_engineering', node_id: 'ticket-activate', subject: 'activate', location: TICKET_CODE, line: 460, end_line: 465, message: 'activate runs 24 statements', severity: 'error', source: [] }
+// Seed: a rule that requires a judge listing lines 462 to 463 of Ticket.activate as a candidate for a reading.
+const ACTIVATE_CANDIDATE = ruleOf('use-intention-revealing-names', 'candidate', [{ ...ACTIVATE_TOO_LONG, rule: 'use-intention-revealing-names', line: 462, end_line: 463, message: 'activate may not say why it exists', severity: 'candidate' }])
 const ACTIVATE_RULES = [ruleOf('keep-operations-small-focused', 'violating', [ACTIVATE_TOO_LONG]), ruleOf('use-intention-revealing-names', 'passing'), ruleOf('hide-inner-details', 'prompt')]
 const CHECKOUT_FLOW_NODES: SeedNode[] = [
   { id: 'stories', name: 'Stories', type: 'Practice', file: '', start: 0, end: 0, parent: '' },
@@ -782,6 +785,28 @@ describe('Open Violation In Files App Source', () => {
       await settled()
       stop()
       expect([page.state.openPath, page.linesShownIn(TICKET_CODE)]).toEqual([TICKET_CODE, [{ start: 460, end: 465 }]])
+    })
+
+    // Found on 2026-11-22 (e2e tier): a rule that requires a judge lists a candidate, and the graph view treated it as a
+    // rule that found nothing: no message on hover, and selecting it opened the node, not the candidate's lines.
+    describe('with a rule that requires a judge listing activate as a candidate', () => {
+      it("should open ticket.py at the candidate's lines, 462 to 463, when the Person selects the rule", async () => {
+        const { page, stop } = await showingGraph()
+        await page.graph.toggle(entryNamed(page, 'Clean Engineering'))
+        await page.graph.toggle(entryNamed(page, 'Ticket'))
+        await page.graph.selectRule(entryNamed(page, 'activate'), ACTIVATE_CANDIDATE)
+        await settled()
+        stop()
+        expect([page.state.openPath, page.linesShownIn(TICKET_CODE)]).toEqual([TICKET_CODE, [{ start: 462, end: 463 }]])
+      })
+
+      it("should show the candidate's message when the Person hovers over the rule", () => {
+        expect(ruleTitleOf(ACTIVATE_CANDIDATE)).toBe('Rule use-intention-revealing-names: activate may not say why it exists')
+      })
+
+      it('should count as a rule that found something there', () => {
+        expect(isFailing(ACTIVATE_CANDIDATE)).toBe(true)
+      })
     })
   })
 })

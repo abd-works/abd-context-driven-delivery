@@ -282,7 +282,7 @@ test.describe('Open Help', () => {
     await page.locator('.details-body').getByRole('button', { name: 'Help for story-map' }).click()
     const help = page.locator('[data-panel="help"]')
     await expect(help.getByRole('heading', { name: 'story-map' })).toBeVisible()
-    await expect(help.getByText('GUIDANCE')).toBeVisible()
+    await expect(help.locator('.panel-kind', { hasText: 'GUIDANCE' })).toBeVisible()
     await expect(help.getByText('RULES', { exact: false }).first()).toBeVisible()
     await expect(help.getByRole('link', { name: 'Forge' })).toHaveAttribute('href', /forge\.abdworks\.net/)
   })

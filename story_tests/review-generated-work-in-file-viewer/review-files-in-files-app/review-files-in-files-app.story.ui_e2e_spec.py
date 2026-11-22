@@ -22,6 +22,7 @@ from files_app_browser import (
     DRAWIO_LOADS_MILLISECONDS,
     SHOWN_MILLISECONDS,
     TICKET_CODE,
+    WHITEBOARD,
     PLAIN_MAP,
     PLAIN_SKETCH,
     PLAIN_WORK,
@@ -63,8 +64,11 @@ with description("Review Files In Files App") as self:
             with after.all:
                 self.page.close()
 
-            with it("Then the file bar lists that project's story-map.drawio as the one story map file on disk, not a file of the CDD checkout"):
-                expect(self.page.locator("button.file-entry:not(.is-missing)").evaluate_all("entries => entries.map(entry => entry.title)")).to(equal([DIAGRAM]))
+            with it("Then the file bar lists that project's story-map.drawio and story-map.whiteboard as the story map files on disk, not a file of the CDD checkout"):
+                expect(self.page.locator("button.file-entry:not(.is-missing)").evaluate_all("entries => entries.map(entry => entry.title)")).to(equal([DIAGRAM, f"{WHITEBOARD}: opens the whiteboard as a canvas"]))
+
+            with it("And marks the story map files it does not hold, such as thin-slice.whiteboard, as not generated yet"):
+                expect(self.page.locator('button.file-entry.is-missing[title="design/.context/thin-slice.whiteboard: not generated yet"]').count()).to(equal(1))
 
         with context("Story: Open Diagram In Files App, Scenario: Open a diagram beside the file list, Example: another project"):
             with before.all:
