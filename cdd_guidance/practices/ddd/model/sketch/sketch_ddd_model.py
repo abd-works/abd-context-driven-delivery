@@ -17,6 +17,7 @@ from cdd_guidance.practices.ddd.model.sketch.sketch_nodes import (
     sketch_level,
 )
 from cdd_guidance.practices.ddd.model.nodes import BoundedContextMap
+from harness.guidance.practice_formats import Written
 
 _SECTION = "## domain driven design:"
 # The headings that open the DDD section of a sketch; the DDD practice declares them from here.
@@ -41,7 +42,7 @@ class SketchDddModel(BoundedContextMap):
     bounded_context_type = SketchBoundedContext
 
 
-    def parse(self, text: str) -> "SketchDddModel":
+    def parse(self, text: str, file: str = "") -> "SketchDddModel":
         """Read the ddd section of a sketch, flattened to indentation, into this map, and return it: each context the
         section opens reads the lines under it, and the event map is wired once every aggregate has its root."""
         self.contexts = []
@@ -53,16 +54,16 @@ class SketchDddModel(BoundedContextMap):
         self.wire_events(section.events)
         return self
 
-    def render(self, canonical: BoundedContextMap | None = None, previous: str | None = None) -> str:
-        del previous
-        model = canonical or self
-        written = [_SECTION, ""]
-        for context in model.contexts:
-            written.extend(SketchedContext(context).lines())
-        entries = [f"- {event.map_entry()}" for aggregate in model.every_aggregate for event in aggregate.events]
+    def render(self, canonical: BoundedContextMap, written: Written = Written()) -> str:
+        """canonical as the ddd section of a sketch; a sketch keeps no previous text."""
+        lines = [_SECTION, ""]
+        for context in canonical.contexts:
+            lines.extend(SketchedContext(context).lines())
+        entries = [f"- {event.map_entry()}" for aggregate in canonical.every_aggregate for event in aggregate.events]
         if entries:
-            written.extend([f"{SKETCH_CONTEXT}{_EVENT_MAP}", ""] + fenced(entries))
-        return "\n".join(written)
+            lines.extend([f"{SKETCH_CONTEXT}{_EVENT_MAP}", ""] + fenced(entries))
+        return "\n".join(lines)
+
 
     def open_context(self, stripped: str) -> SketchBoundedContext:
         """The context a `Name | owner` heading opens, added to the map."""

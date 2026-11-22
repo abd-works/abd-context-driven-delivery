@@ -6,7 +6,7 @@ from xml.etree import ElementTree as ET
 from harness.graph.violation import Violation
 
 from cdd_guidance.practices.clean_engineering.model.drawio.page.drawio_page import (
-    DrawioPage,
+    ClassDiagramPage,
     Point,
     Segment,
 )
@@ -25,7 +25,7 @@ Route = tuple[ET.Element, list[Segment]]
 class EdgesDoNotCrossOtherEdgesScanner(DrawioScanner):
     RULE = "edges-do-not-cross-other-edges"
 
-    def scan_page(self, page: DrawioPage) -> list[Violation]:
+    def scan_page(self, page: ClassDiagramPage) -> list[Violation]:
         """Each pair of edges that cross at a right angle, away from a card they share, once a page has too many."""
         routes = [(edge, page.segments(edge)[0]) for edge in page.edges]
         crossings = []
@@ -40,10 +40,10 @@ class EdgesDoNotCrossOtherEdgesScanner(DrawioScanner):
                     ))
         return crossings if len(crossings) > MOST_CROSSINGS_ON_A_PAGE else []
 
-    def _name(self, page: DrawioPage, edge: ET.Element) -> str:
+    def _name(self, page: ClassDiagramPage, edge: ET.Element) -> str:
         return f"{page.class_names.get(edge.get('source', ''), '?')} -> {page.class_names.get(edge.get('target', ''), '?')}"
 
-    def _crossing(self, page: DrawioPage, first: Route, second: Route) -> Point | None:
+    def _crossing(self, page: ClassDiagramPage, first: Route, second: Route) -> Point | None:
         shared = {first[0].get("source"), first[0].get("target")} & {second[0].get("source"), second[0].get("target")}
         for first_segment in first[1]:
             for second_segment in second[1]:
@@ -52,13 +52,13 @@ class EdgesDoNotCrossOtherEdgesScanner(DrawioScanner):
                     return point
         return None
 
-    def _beside_shared_card(self, page: DrawioPage, point: Point, shared: set) -> bool:
+    def _beside_shared_card(self, page: ClassDiagramPage, point: Point, shared: set) -> bool:
         for cell_id in shared:
             box = page.boxes.get(cell_id)
             if not box:
                 continue
-            near_across = abs(point[0] - (box[0] + box[2] / 2)) < box[2] / 2 + SHARED_CARD_MARGIN
-            near_down = abs(point[1] - (box[1] + box[3] / 2)) < box[3] / 2 + SHARED_CARD_MARGIN
+            near_across = abs(point[0] - box.center[0]) < box.w / 2 + SHARED_CARD_MARGIN
+            near_down = abs(point[1] - box.center[1]) < box.h / 2 + SHARED_CARD_MARGIN
             if near_across and near_down:
                 return True
         return False

@@ -9,7 +9,7 @@ from pathlib import Path
 from expects import equal, expect
 from mamba import before, context, description, it
 
-from harness.design_canvas.fixture_bar import FixtureScreen, ScenarioSource
+from cdd_guidance.practices.ux.model.claude_design.fixture_screen import FixtureScreen, ScenarioSource
 
 
 with description("a fixture-driven screen") as self:

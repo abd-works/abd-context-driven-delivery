@@ -30,7 +30,7 @@ from __future__ import annotations
 import re
 from typing import Callable
 
-from harness.guidance.practice_formats import KeptMark, Reshaped
+from harness.guidance.practice_formats import ExistingText, KeptMark, OutlinedMember, Reshaped
 from harness.markdown.format import Format
 
 _PYTHON = "python"
@@ -42,11 +42,15 @@ _BRACE_OPERATION = re.compile(r"^(\s*)(?:(?:public|private|protected|static|asyn
 _PYTHON_PROPERTY = re.compile(r"^(\s+)(\w+)\s*:\s*[^=]+?(?:\s*=.*)?$")
 _BRACE_PROPERTY = re.compile(r"^(\s+)(?:(?:public|private|protected|static|readonly|declare)\s+)*(#?\w+)[?!]?\s*(?::[^=;]+)?(?:=[^;]*)?;\s*$")
 _STATEMENTS = frozenset({"if", "for", "while", "switch", "catch", "return", "super", "function", "await", "new", "throw"})
+# What opens a comment or a decorator line written above a member, which belongs to it.
+_LEADING_MARKS = ("#", "@", "//", "/*", "*")
 # The members a model does not name: a constructor, and a helper whose name starts with an underscore or a hash.
 _CONSTRUCTORS = frozenset({"__init__", "constructor"})
 
-Reshape = Callable[[str, str], Reshaped]
-"""A format's own way to write a rendered shape onto existing text: ``reshape(rendered, existing)``."""
+Reshape = Callable[[str, str], Reshaped | None]
+"""A format's own way to write a rendered shape onto existing text: ``reshape(rendered, existing)``, which answers
+none for a format that leaves the writing to the Render action."""
+
 
 
 class RenderWouldLoseContent(ValueError):
@@ -58,18 +62,13 @@ class RenderWouldLoseContent(ValueError):
         self.missing = list(missing)
 
 
-class Member:
+class CodeMember(OutlinedMember):
     """One class, function or operation of a code file: its name, the lines it covers with the comments and decorators
-    written above it, and, for a class, its operations."""
+    written above it (``lead``, ``start``, and ``end``, the line after its last), and, for a class, its operations."""
 
     def __init__(self, name: str, lead: int, start: int, end: int, indent: str) -> None:
-        self.name = name
-        # The first line of the comments and decorators above it, its own first line, and the line after its last.
-        self.lead = lead
-        self.start = start
-        self.end = end
-        self.indent = indent
-        self.operations: list[Member] = []
+        super().__init__(name, lead, start, end, indent)
+        self.operations: list[CodeMember] = []
         self.is_class = False
         # For a class: the first line of its body, and the line each property it declares is written on, by name.
         self.body = start + 1
@@ -92,20 +91,17 @@ class CodeOutline:
         # A Python file's own members open at no indent; a class's operations open at the first indent found in it.
 
     @property
-    def classes(self) -> dict[str, Member]:
+    def classes(self) -> dict[str, CodeMember]:
         return {member.name: member for member in self.members if member.is_class}
 
     def _lead_of(self, start: int, indent: str, floor: int) -> int:
         """The first of the comment and decorator lines written directly above the line at start, at its indent."""
-        lead = start
-        while lead > floor and self.lines[lead - 1].startswith(indent) and self.lines[lead - 1][len(indent):].startswith(("#", "@", "//", "/*", "*")):
-            lead -= 1
-        return lead
+        return OutlinedMember.lead_of(self.lines, start, indent, _LEADING_MARKS, floor)
 
-    def _python_members(self, first: int, last: int, indent: str | None) -> list[Member]:
+    def _python_members(self, first: int, last: int, indent: str | None) -> list[CodeMember]:
         """The members whose opening lines sit between first and last at indent; with none given, at the indent of the
         first one found there, which is how deep a class writes its operations."""
-        found: list[Member] = []
+        found: list[CodeMember] = []
         index = first
         while index < last:
             opened = _PYTHON_MEMBER.match(self.lines[index])
@@ -118,7 +114,7 @@ class CodeOutline:
             index = member.end
         return found
 
-    def _python_member(self, start: int, last: int, opened: re.Match[str], floor: int) -> Member:
+    def _python_member(self, start: int, last: int, opened: re.Match[str], floor: int) -> CodeMember:
         indent = opened.group(1)
         body = self._python_opening_end(start)
         end = body
@@ -128,7 +124,7 @@ class CodeOutline:
                 break
             if line.strip():
                 end = index + 1
-        member = Member(opened.group(3), self._lead_of(start, indent, floor), start, end, indent)
+        member = CodeMember(opened.group(3), self._lead_of(start, indent, floor), start, end, indent)
         if opened.group(2) == "class":
             member.is_class = True
             member.body = body
@@ -146,7 +142,7 @@ class CodeOutline:
                 return index + 1
         return start + 1
 
-    def _properties_of(self, owner: Member, written_as: re.Pattern[str]) -> dict[str, int]:
+    def _properties_of(self, owner: CodeMember, written_as: re.Pattern[str]) -> dict[str, int]:
         """The line each property the class declares is written on: a line of its body outside its operations that
         names a property, at the indent of the first one found."""
         inside = {index for operation in owner.operations for index in range(operation.lead, operation.end)}
@@ -159,15 +155,15 @@ class CodeOutline:
                 found.setdefault(named.group(2), index)
         return found
 
-    def _brace_members(self) -> list[Member]:
-        found: list[Member] = []
+    def _brace_members(self) -> list[CodeMember]:
+        found: list[CodeMember] = []
         index = 0
         while index < len(self.lines):
             opened = _BRACE_CLASS.match(self.lines[index]) or _BRACE_FUNCTION.match(self.lines[index])
             if opened is None:
                 index += 1
                 continue
-            member = Member(opened.group(2), self._lead_of(index, opened.group(1), 0), index, self._brace_end(index), opened.group(1))
+            member = CodeMember(opened.group(2), self._lead_of(index, opened.group(1), 0), index, self._brace_end(index), opened.group(1))
             if _BRACE_CLASS.match(self.lines[index]):
                 member.is_class = True
                 member.operations = self._brace_operations(member)
@@ -189,15 +185,15 @@ class CodeOutline:
                 return index + 1
         return start + 1
 
-    def _brace_operations(self, owner: Member) -> list[Member]:
-        found: list[Member] = []
+    def _brace_operations(self, owner: CodeMember) -> list[CodeMember]:
+        found: list[CodeMember] = []
         index = owner.start + 1
         while index < owner.end - 1:
             opened = _BRACE_OPERATION.match(self.lines[index])
             if opened is None or opened.group(2) in _STATEMENTS:
                 index += 1
                 continue
-            member = Member(opened.group(2), self._lead_of(index, opened.group(1), owner.start + 1), index, self._brace_end(index), opened.group(1))
+            member = CodeMember(opened.group(2), self._lead_of(index, opened.group(1), owner.start + 1), index, self._brace_end(index), opened.group(1))
             found.append(member)
             index = member.end
         return found
@@ -216,9 +212,8 @@ class ReshapedCode:
     def onto(self, existing: str, rendered: str) -> Reshaped:
         """The text of existing in the shape rendered has, with the members kept and added; raises
         *RenderWouldLoseContent* when a line existing holds is in it nowhere."""
-        reshaped = self._reshape(rendered, existing) if self._reshape is not None else self._edited(existing, rendered)
-        held = reshaped.text.splitlines()
-        missing = [line for line in existing.splitlines() if line.strip() and not any(line.strip() in kept for kept in held)]
+        reshaped = (self._reshape(rendered, existing) if self._reshape is not None else None) or self._edited(existing, rendered)
+        missing = ExistingText(existing).lines_not_in(reshaped.text)
         if missing:
             raise RenderWouldLoseContent(missing)
         return reshaped
@@ -226,24 +221,9 @@ class ReshapedCode:
     def _edited(self, existing: str, rendered: str) -> Reshaped:
         file, shape = CodeOutline(existing, self._language), CodeOutline(rendered, self._language)
         if not file.classes or not shape.classes:
-            return self._set_apart(existing, rendered)
+            return ExistingText(existing).set_apart_below(rendered, self._comment)
         edit = _FileEdit(file, shape, self._comment)
         return Reshaped(edit.text(existing.endswith("\n")), sorted(edit.kept), sorted(edit.added), dict(sorted(edit.changed.items())))
-
-    def _set_apart(self, existing: str, rendered: str) -> Reshaped:
-        """The rendered shape, then the lines only the existing file holds as comments under one line saying so; lines
-        an earlier render set apart are carried over as they are, so a second render changes nothing."""
-        lines = existing.splitlines()
-        marked = next((index for index, line in enumerate(lines) if KeptMark.marks(line)), len(lines))
-        carried = lines[marked + 1:]
-        shape = rendered.splitlines()
-        unplaced = [line for line in lines[:marked] if line.strip() and not any(line.strip() in kept for kept in shape)]
-        apart = carried + [f"{self._comment} {line}" for line in unplaced]
-        if not apart:
-            return Reshaped(rendered, [], [])
-        heading = f"{self._comment} ---- {KeptMark.WORDS}: the lines below were in this file and the render did not write them. Move each into the member it belongs to, then delete it. ----"
-        text = "\n".join([*shape, "", heading, *apart]) + "\n"
-        return Reshaped(text, [f"{len(apart)} line(s) set apart"], [])
 
 
 class _FileEdit:
@@ -268,11 +248,11 @@ class _FileEdit:
         lines += [line for name, shaped in self._shape.classes.items() if name not in self._file.classes for line in self._new_class(shaped)]
         return "\n".join(lines) + ("\n" if ends_with_newline else "")
 
-    def _new_class(self, shaped: Member) -> list[str]:
+    def _new_class(self, shaped: CodeMember) -> list[str]:
         self.added += [shaped.name, *(f"{shaped.name}.{operation.name}" for operation in shaped.operations)]
         return ["", "", *self._shape.lines[shaped.lead:shaped.end]]
 
-    def _class_lines(self, owner: Member, shaped: Member) -> list[str]:
+    def _class_lines(self, owner: CodeMember, shaped: CodeMember) -> list[str]:
         """The class's lines with its operations in three runs: those it keeps as they are, those the shape adds, and
         those no longer in the model, each under its marking line."""
         lines = self._file.lines
@@ -299,7 +279,7 @@ class _FileEdit:
         kept = [line for operation in apart for line in ["", *self._set_apart(owner, operation)]]
         return [*staying, *new, *kept, *closing]
 
-    def _declared(self, owner: Member, shaped: Member, properties: list[str]) -> list[str]:
+    def _declared(self, owner: CodeMember, shaped: CodeMember, properties: list[str]) -> list[str]:
         """The lines that declare the properties the shape adds, at the indent the file's class gives its members,
         with a blank line after them when the class declared none before."""
         if not properties:
@@ -308,12 +288,12 @@ class _FileEdit:
         written = [f"{indent}{self._shape.lines[shaped.properties[name]].strip()}" for name in properties]
         return written if owner.properties else [*written, ""]
 
-    def _member_indent(self, owner: Member, shaped: Member) -> str:
+    def _member_indent(self, owner: CodeMember, shaped: CodeMember) -> str:
         if owner.operations:
             return owner.operations[0].indent
         return shaped.operations[0].indent if shaped.operations else owner.indent + "    "
 
-    def _note_changed(self, owner: Member, shaped: Member) -> None:
+    def _note_changed(self, owner: CodeMember, shaped: CodeMember) -> None:
         """Name each operation both hold whose opening line the shape writes otherwise than the file, with the shape's."""
         in_file = {operation.name: operation for operation in owner.operations}
         for operation in shaped.operations:
@@ -322,7 +302,7 @@ class _FileEdit:
             if held is not None and " ".join(self._file.lines[held.start].split()) != written:
                 self.changed[f"{owner.name}.{operation.name}"] = written
 
-    def _lines_moved(self, owner: Member, operation: Member) -> range:
+    def _lines_moved(self, owner: CodeMember, operation: CodeMember) -> range:
         """The lines an operation set apart leaves: its own, with the blank lines above it, which parted it from the
         member before."""
         first = operation.lead
@@ -330,16 +310,16 @@ class _FileEdit:
             first -= 1
         return range(first, operation.end)
 
-    def _closing_of(self, owner: Member) -> list[str]:
+    def _closing_of(self, owner: CodeMember) -> list[str]:
         """The line that closes a class written with braces; none for one written by indentation."""
         last = self._file.lines[owner.end - 1]
         return [last] if last.strip().startswith("}") else []
 
-    def _is_marked(self, operation: Member) -> bool:
+    def _is_marked(self, operation: CodeMember) -> bool:
         """Whether an earlier render set the operation apart: its marking line is among the comments above it."""
         return KeptMark.marks(self._file.lines[operation.lead:operation.start])
 
-    def _set_apart(self, owner: Member, operation: Member) -> list[str]:
+    def _set_apart(self, owner: CodeMember, operation: CodeMember) -> list[str]:
         """The operation's own lines under its marking line: the one it already has, else one saying where it was."""
         lines = self._file.lines
         if self._is_marked(operation):
@@ -350,7 +330,7 @@ class _FileEdit:
         )
         return [marking, *lines[operation.lead:operation.end]]
 
-    def _reindented(self, operation: Member, indent: str) -> list[str]:
+    def _reindented(self, operation: CodeMember, indent: str) -> list[str]:
         """The operation as the shape wrote it, at the indent the file's class gives its operations."""
         written = self._shape.lines[operation.lead:operation.end]
         return [f"{indent}{line[len(operation.indent):]}" if line.strip() else line for line in written]

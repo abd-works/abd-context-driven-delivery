@@ -185,8 +185,10 @@ class HtmlUxMap(JsonUxMap):
     control_type = HtmlControl
     story_demo_control_type = HtmlStoryDemoControl
 
-    def parse(self, content: str) -> UxMap:
+    def parse(self, text: str, file: str = "") -> UxMap:
+        content = text
         start = content.find(_MODEL_MARKER)
+
         end = content.find(_COMMENT_END, start + len(_MODEL_MARKER)) if start >= 0 else -1
         if end < 0:
             raise UxMapNotEmbedded("This HTML has no ux-map-json comment; render the map to HTML to read it back.")

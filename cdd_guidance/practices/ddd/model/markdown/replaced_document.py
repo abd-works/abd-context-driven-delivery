@@ -15,8 +15,6 @@ from typing import TYPE_CHECKING
 from cdd_guidance.practices.ddd.model.nodes import BoundedContextMap, Integration
 
 if TYPE_CHECKING:
-    from cdd_guidance.practices.clean_engineering.model import Operation
-    from cdd_guidance.practices.ddd.model.markdown.class_cards import MarkdownBuildingBlock
     from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownAggregate, MarkdownBoundedContext
 
 
@@ -71,15 +69,10 @@ class _ReplacedAggregate:
         self._aggregate = aggregate
 
     def give_its_words(self) -> None:
-        was, aggregate = self._was, self._aggregate
-        aggregate.take_words_from(was)
-        aggregate.integrations = self._integrations()
-        self._give_root()
-        was_named = {card.name: card for card in was.classes}
-        local = {card.name for card in aggregate.classes}
-        for card in aggregate.classes:
-            if card.name in was_named:
-                _ReplacedCard(was_named[card.name], card, local).give_its_words()
+        """The aggregate's own words, its root's and its cards' (``MarkdownAggregate.take_words_from``), then the
+        integrations the replaced file writes to the targets its arrows still reach."""
+        self._aggregate.take_words_from(self._was)
+        self._aggregate.integrations = self._integrations()
 
     def _integrations(self) -> list[Integration]:
         """Each arrow read from the drawing as the integrations the replaced file writes to the same target, with every
@@ -92,69 +85,3 @@ class _ReplacedAggregate:
                 item.pattern = drawn.pattern or item.pattern
             kept.extend(written or [drawn])
         return kept + [item for item in self._was.integrations if self._document.draws_no_arrow(item)]
-
-    def _give_root(self) -> None:
-        """A root listed under its aggregate, as the bounded-context map writes it, takes what the file says the root
-        is, its operations, the events it emits, and each member's line as the file writes it."""
-        was_root, root = self._was.root, self._aggregate.root
-        if was_root is None or root is None or self._aggregate.classes:
-            return
-        root.intent = root.intent or was_root.intent
-        root.operations = root.operations or list(was_root.operations)
-        if not self._aggregate.events:
-            root.properties.extend(self._was.events)
-        written = {self._drawn_name(member.name): member.name for member in was_root.invariant_objects}
-        for member in root.invariant_objects:
-            member.name = written.get(self._drawn_name(member.name), member.name)
-
-    def _drawn_name(self, line: str) -> str:
-        """A member's name as a drawing lists it: without what its line says after ` - `."""
-        return line.split(" - ", 1)[0].strip().lower()
-
-
-class _ReplacedCard:
-    """One class card of the replaced file and the card of the same name read from the drawing, in an aggregate whose
-    classes are local."""
-
-    def __init__(self, was: MarkdownBuildingBlock, card: MarkdownBuildingBlock, local: set[str]) -> None:
-        self._was = was
-        self._card = card
-        self._local = local
-
-    def give_its_words(self) -> None:
-        """The card's invariants and intent, where the file writes its repository, each property's note and the
-        relationship a drawing shows no arrow for, and each operation's note and calls."""
-        was, card = self._was, self._card
-        card.invariants = card.invariants or list(was.invariants)
-        card.intent = card.intent or was.intent
-        card.drawn_in_root = was.drawn_in_root
-        was_properties = {item.name: item for item in was.plain_properties}
-        for prop in card.plain_properties:
-            written = was_properties.get(prop.name)
-            if written is not None:
-                prop.description = prop.description or written.description
-                if written.type_hint == prop.type_hint and not prop.stereotype:
-                    prop.stereotype = written.stereotype
-        was_operations = {item.name: item for item in was.operations}
-        for operation in card.operations:
-            if operation.name in was_operations:
-                self._give_operation(was_operations[operation.name], operation)
-
-    def _give_operation(self, was: Operation, operation: Operation) -> None:
-        """The operation's note, and its calls as the file writes them: every call inside the aggregate, which no arrow
-        shows, each call to another aggregate whose arrow is still drawn, then each arrow the file has no call for."""
-        operation.description = operation.description or was.description
-        arrows = {self._called_class(callee) for callee in operation.callees}
-        kept = [callee for callee in was.callees if self._is_local(callee) or self._called_class(callee) in arrows]
-        written = {self._called_class(callee) for callee in kept}
-        operation.callees = kept + [callee for callee in operation.callees if self._called_class(callee) not in written]
-
-    def _is_local(self, callee: str) -> bool:
-        named = self._called_class(callee)
-        return not named or named in self._local
-
-    def _called_class(self, callee: str) -> str:
-        """The class a call names before its operation: `BookRepository` of `BookRepository.load(bookId)`; none for a
-        call that names only an operation."""
-        named = callee.strip().partition(".")[0].partition("(")[0].strip()
-        return named if named[:1].isupper() else ""

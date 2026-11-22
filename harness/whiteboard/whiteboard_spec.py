@@ -7,7 +7,7 @@ import json
 import tempfile
 from pathlib import Path
 
-from harness.whiteboard import BoardElement, BoardLinks, Box, UnreadableBoard, Whiteboard, WhiteboardNode
+from harness.whiteboard import Arrow, BoardElement, Box, ElementId, Label, Section, Shape, UnreadableBoard, Whiteboard, WhiteboardNode
 from harness.whiteboard.whiteboard import StoreWrite
 
 
@@ -31,7 +31,7 @@ def board_of_two_cards(first_box: tuple[float, float, float, float] = (20, 40, 6
     board = Whiteboard("Orders")
     board.draw(CardNode("story.a1", first_box))
     board.draw(CardNode("story.b2", (100, 40, 60, 50), second_text))
-    board.add(BoardElement.arrow("arrow.ab", from_id="story.a1", to_id="story.b2", from_side="right", to_side="left", label="then"))
+    board.add(Arrow("arrow.ab", from_id="story.a1", to_id="story.b2", from_side="right", to_side="left", label="then"))
     return board
 
 
@@ -59,7 +59,7 @@ with description("a whiteboard") as self:
         with it("should list the section before the shapes it holds in board order"):
             board = Whiteboard("Orders")
             board.draw(CardNode("story.a1", (20, 40, 60, 50)))
-            board.add(BoardElement.section("epic.e1", Box(0, 0, 200, 120), text="Place Order"))
+            board.add(Section("epic.e1", box=Box(0, 0, 200, 120), text="Place Order"))
             expect(board.order).to(equal(["epic.e1", "story.a1"]))
 
     with context("with an arrow between two shapes"):
@@ -76,7 +76,7 @@ with description("a whiteboard") as self:
 
     with context("with a title that wraps nowhere"):
         with it("should write no wrap, so its words run on one line rather than one word to a line"):
-            expect("wrap" in BoardElement.words("title", Box(0, 0, 0, 0), text="Shop - Classes", size="large").record).to(equal(False))
+            expect("wrap" in Label("title", x=0, y=0, text="Shop - Classes", size="large").record).to(equal(False))
 
     with context("that is saved and loaded again"):
         with it("should load the same title, elements and order"):
@@ -89,8 +89,8 @@ with description("a whiteboard") as self:
     with context("read back by kind"):
         with before.each:
             self.board = board_of_two_cards()
-            self.board.add(BoardElement.section("lane.l1", Box(0, 0, 300, 120), text="Release 1"))
-            self.board.add(BoardElement.words("title", Box(0, -40, 0, 0), text="Orders"))
+            self.board.add(Section("lane.l1", box=Box(0, 0, 300, 120), text="Release 1"))
+            self.board.add(Label("title", x=0, y=-40, text="Orders"))
 
         with it("should answer its containers as its sections"):
             expect([element.id for element in self.board.sections]).to(equal(["lane.l1"]))
@@ -164,10 +164,10 @@ with description("a whiteboard") as self:
 
         with it("should clear a field the element no longer has"):
             previous = Whiteboard("Orders")
-            previous.add(BoardElement.section("lane.l1", Box(0, 0, 200, 120), text="Release 1"))
+            previous.add(Section("lane.l1", box=Box(0, 0, 200, 120), text="Release 1"))
             previous = read_at(previous, {"meta": 1, "lane.l1": 4})
             board = Whiteboard("Orders")
-            board.add(BoardElement.section("lane.l1", Box(0, 0, 200, 120)))
+            board.add(Section("lane.l1", box=Box(0, 0, 200, 120)))
             expect(board.batches(previous)[0][1]).to(equal(StoreWrite("update", "elements", "lane.l1", {"text": {"__delete__": True}}, 4).entry))
 
         with it("should write nothing for an element that did not change"):
@@ -183,7 +183,7 @@ with description("a whiteboard") as self:
     with context("with a block wider than a board draws one"):
         with before.each:
             self.board = Whiteboard("Orders")
-            self.board.add(BoardElement.shape("epic.e1", Box(100, 0, 20000, 60), text="Move Work Forward"))
+            self.board.add(Shape("epic.e1", box=Box(100, 0, 20000, 60), text="Move Work Forward"))
 
         with it("should draw it as equal pieces side by side, none wider than a board draws"):
             expect([(element.id, element.box) for element in self.board.elements]).to(equal([
@@ -202,7 +202,7 @@ with description("a whiteboard") as self:
     with context("with a block taller than a board draws one"):
         with it("should refuse it"):
             board = Whiteboard("Orders")
-            expect(lambda: board.add(BoardElement.shape("lane.l1", Box(0, 0, 100, 9000)))).to(raise_error(ValueError))
+            expect(lambda: board.add(Shape("lane.l1", box=Box(0, 0, 100, 9000)))).to(raise_error(ValueError))
 
 
 with description("a whiteboard file's board in Claude") as self:
@@ -213,16 +213,41 @@ with description("a whiteboard file's board in Claude") as self:
 
     with context("that was published"):
         with before.each:
-            BoardLinks.beside(self.file).record(self.file, "https://claude.ai/artifact/StoryMapBoard")
+            Whiteboard.links_beside(self.file).record(self.file.name, "https://claude.ai/artifact/StoryMapBoard")
 
         with it("should answer the board's address, kept beside the file by its name"):
-            expect(BoardLinks.beside(self.file).of(self.file)).to(equal("https://claude.ai/artifact/StoryMapBoard"))
+            expect(Whiteboard.links_beside(self.file).of(self.file.name)).to(equal("https://claude.ai/artifact/StoryMapBoard"))
 
     with context("that was never published"):
         with it("should answer no address"):
-            expect(BoardLinks.beside(self.file).of(self.file)).to(equal(""))
+            expect(Whiteboard.links_beside(self.file).of(self.file.name)).to(equal(None))
 
     with context("with a record in the folder that is not one"):
         with it("should answer no address"):
-            (self.folder / BoardLinks.RECORD).write_text("not json", encoding="utf-8")
-            expect(BoardLinks.beside(self.file).of(self.file)).to(equal(""))
+            (self.folder / Whiteboard.LINKS).write_text("not json", encoding="utf-8")
+            expect(Whiteboard.links_beside(self.file).of(self.file.name)).to(equal(None))
+
+
+with description("an element's id"):
+    with it("should hash a node's names to the length its practice keeps, after its role and its parts"):
+        expect(ElementId.of("story", "epic:Order", "story:Pay", length=10, parts=("user",))).to(equal("story.user.341c6ae06a"))
+
+    with it("should keep each practice's key length, so a board already published keeps its ids"):
+        expect([len(ElementId.of("class", "Cart", length=length).key) for length in (10, 12)]).to(equal([10, 12]))
+
+    with it("should name what it draws and what it names after that"):
+        read = ElementId.read("region.body.9f8e7d6c5b")
+        expect((read.role, read.parts, read.key)).to(equal(("region", ("body", "9f8e7d6c5b"), "9f8e7d6c5b")))
+
+    with it("should be the id an element read back from a board holds"):
+        board = Whiteboard.from_text(board_of_two_cards().save())
+        expect(board.element("story.a1").id.role).to(equal("story"))
+
+
+with description("a board drawn over the file it replaces"):
+    with it("should keep each element where the file had it"):
+        moved = board_of_two_cards(first_box=(500, 400, 60, 50)).save()
+        expect(json.loads(board_of_two_cards().drawn_over(moved))["elements"]["story.a1"]["x"]).to(equal(500))
+
+    with it("should be the board as drawn when there is no file yet"):
+        expect(board_of_two_cards().drawn_over("")).to(equal(board_of_two_cards().save()))

@@ -12,6 +12,7 @@ from cdd_guidance.practices.stories.model.drawio.nodes import DrawIOStoryModel
 from cdd_guidance.practices.stories.model.fixtures.round_trip_story_map import outline, round_trip_story_map
 from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownParseError, MarkdownStoryModel
 from cdd_guidance.practices.stories.model.whiteboard.nodes import WhiteboardStoryModel
+from harness.guidance.practice_formats import Written
 
 
 with description("a story map saved as story-map.md") as self:
@@ -28,7 +29,7 @@ with description("a story map saved as story-map.md") as self:
             (self.folder / "story-map.md").write_text("plain prose with no headings\n", encoding="utf-8")
 
         with it("should fail naming the file rather than read as no story map"):
-            expect(lambda: MarkdownStoryModel.from_workspace(self.folder)).to(raise_error(MarkdownParseError))
+            expect(lambda: MarkdownStoryModel().read_folder(self.folder, self.folder)).to(raise_error(MarkdownParseError))
 
 
 _BOOKSHOP_MAP = (
@@ -46,7 +47,7 @@ _BOOKSHOP_MAP = (
 with description("a story map a person wrote in story-map.md, drawn in draw.io and written back over that file") as self:
     with before.each:
         drawn = DrawIOStoryModel().render(MarkdownStoryModel().parse(_BOOKSHOP_MAP))
-        self.back = MarkdownStoryModel().render(DrawIOStoryModel().parse(drawn), previous=_BOOKSHOP_MAP)
+        self.back = MarkdownStoryModel().render(DrawIOStoryModel().parse(drawn), Written(_BOOKSHOP_MAP))
 
     with it("should keep the title the person wrote above the first epic"):
         expect(self.back.splitlines()[0]).to(equal("# Story Map — Bookshop"))
@@ -96,7 +97,7 @@ _DESCRIBED_MAP = (
 def _back_through(diagram) -> str:
     """The described map drawn by diagram, a diagram format's story model, and written back over its own file."""
     drawn = diagram().render(MarkdownStoryModel().parse(_DESCRIBED_MAP))
-    return MarkdownStoryModel().render(diagram().parse(drawn), previous=_DESCRIBED_MAP)
+    return MarkdownStoryModel().render(diagram().parse(drawn), Written(_DESCRIBED_MAP))
 
 
 with description("a story map with descriptions, a story linked to its scenarios file, and a scope boundary") as self:
@@ -112,7 +113,7 @@ with description("a story map with descriptions, a story linked to its scenarios
         with before.each:
             drawn = DrawIOStoryModel().parse(DrawIOStoryModel().render(MarkdownStoryModel().parse(_DESCRIBED_MAP)))
             drawn.epics[0].epics[0].stories.append(type(drawn.epics[0].epics[0].stories[0])("Remove Book From Cart", 3))
-            self.back = MarkdownStoryModel().render(drawn, previous=_DESCRIBED_MAP)
+            self.back = MarkdownStoryModel().render(drawn, Written(_DESCRIBED_MAP))
 
         with it("should write the added story under its sub-epic"):
             expect(self.back).to(contain("### (S) --> Remove Book From Cart\n"))

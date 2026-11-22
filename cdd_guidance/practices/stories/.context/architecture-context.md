@@ -35,7 +35,7 @@ A story test holds two kinds of content: what the story map knows (story, scenar
 
 - **Every node keeps the code it was read with.** Reading a story file gives each story, background, and scenario the block it was written as (`written`), the code inside it that is not a scenario or step (`setup`), and each step its `body`. The file is read once: each story is made from its own block, and each story, scenario, and step reads its own block (`read_code`); the file's own code above the first story and below the last stays with the file (*StoryFile*).
 - **An unchanged node is written exactly as read.** While a node's `code_key` (for a story: its name, actors, evidence, and backgrounds; for a step: its keyword, text, and body) is the one it was read with, rendering in the same language writes its lines unchanged. A changed node is spelled again from the map with its bodies kept.
-- **Rendering takes the previous tree's code.** `render(canonical, previous)` is given the tree already on disk; every epic, story, scenario, and step in the new map that has no code in this language takes the code of the node with the same name in that tree. Moving a story or adding a scenario therefore keeps every step body that was already written.
+- **Rendering takes the previous tree's code.** `render(canonical, written)` is given the tree already on disk, each file's text by its path (`written.previous`); every epic, story, scenario, and step in the new map that has no code in this language takes the code of the node with the same name in that tree. Moving a story or adding a scenario therefore keeps every step body that was already written.
 
 ## Adding a language
 

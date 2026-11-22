@@ -4,7 +4,7 @@ from __future__ import annotations
 from harness.graph.violation import Violation
 
 from cdd_guidance.practices.clean_engineering.model.drawio.page.drawio_page import (
-    DrawioPage,
+    ClassDiagramPage,
     class_title_in,
     quoted_title,
 )
@@ -14,7 +14,7 @@ from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base
 class ClassTitleNoMarkdownBoldScanner(DrawioScanner):
     RULE = "class-title-no-markdown-bold"
 
-    def scan_page(self, page: DrawioPage) -> list[Violation]:
+    def scan_page(self, page: ClassDiagramPage) -> list[Violation]:
         violations = []
         for cell in page.vertices:
             title = class_title_in(cell.get("value") or "")

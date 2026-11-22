@@ -17,6 +17,7 @@ from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen, Trans
 from cdd_guidance.practices.ux.model.ux_map import UxMap  # noqa: E402
 from cdd_guidance.practices.ux.model.ux_map_spec_fixture import made  # noqa: E402
 from cdd_guidance.practices.ux.model.whiteboard.nodes import WhiteboardUxMap  # noqa: E402
+from harness.guidance.practice_formats import Written
 
 _STORY_FILE = "story_tests/shop/fill-cart/fill_cart_story.test.md"
 _STORY_LINK = f"[Add Book To Cart]({_STORY_FILE}#story-add-book-to-cart)"
@@ -165,7 +166,7 @@ with description("a mockup drawn as a Claude Whiteboard board"):
             board = Whiteboard.from_text(self.text)
             moved = next(section for section in board.sections if section.text == "Checkout")
             moved.box = Box(5000, 900, moved.box.w, moved.box.h)
-            self.again = Whiteboard.from_text(WhiteboardUxMap.create().render(mockup(), previous=board.save()))
+            self.again = Whiteboard.from_text(WhiteboardUxMap.create().render(mockup(), Written(board.save())))
 
         with it("should leave the screen where the person put it"):
             checkout = next(section for section in self.again.sections if section.text == "Checkout")

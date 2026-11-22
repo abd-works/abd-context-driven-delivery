@@ -13,3 +13,10 @@ Keep them, as the recipe's API, and keep the rule that uses them in the recipe.
 ## Consequences
 
 Renaming or reshaping any of the three classes means updating `story_canvas.md` in the same change, as with any other caller. If the render later takes over choosing the version (for example by reading `versions.json` and refusing a published one), it should call `CanvasVersions` and the recipe step should go.
+
+## Since
+
+The fixture screens are the UX practice's now: `FixtureScreen` and `ScenarioSource` live in
+`cdd_guidance/practices/ux/model/claude_design/fixture_screen.py` beside the recipe, with the bar and its methods private
+to them, and `CanvasVersions` answers each version as a *CanvasVersion* (`working()`, `unpublished()`, and the version's
+`release(name)` and `publish_at(url)`).

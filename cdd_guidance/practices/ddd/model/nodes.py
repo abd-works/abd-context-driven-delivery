@@ -22,6 +22,7 @@ from cdd_guidance.practices.clean_engineering.model import Relationship
 from cdd_guidance.practices.clean_engineering.model import Property
 from cdd_guidance.practices.clean_engineering.model import pascal_type_names
 from cdd_guidance.practices.ddd.model.stereotypes import TacticalClass
+from harness.guidance.practice_formats import FormatAdapter
 
 # The `# Title` line of a bounded context's `.context/bounded-context.md`: the context's name.
 _CONTEXT_TITLE = re.compile(r"^\s*#\s+(.+?)\s*$", re.M)
@@ -486,7 +487,7 @@ class BoundedContext(DomainNode, Module):
         return outer + [self]
 
 
-class BoundedContextMap:
+class BoundedContextMap(FormatAdapter):
     """The bounded contexts of a domain, each holding its aggregates and the contexts nested in it. Each format
     subclasses the map and names the context type it reads and writes, which names its own aggregate type; each
     context loads its own children."""

@@ -27,7 +27,7 @@ import copy
 import json
 import xml.etree.ElementTree as ET
 
-from harness.guidance.practice_formats import KeptMark, Reshaped
+from harness.guidance.practice_formats import ExistingText, KeptMark, Reshaped
 from harness.markdown.format import Format
 
 _HEADING = f"## Kept from this file, {KeptMark.WORDS}"
@@ -59,14 +59,12 @@ class KeptDocument:
         lines = existing.splitlines()
         marked = next((index for index, line in enumerate(lines) if line.strip() == _HEADING), len(lines))
         carried = [line for line in lines[marked + 1:] if line.strip() and line.strip() != _HEADING_NOTE]
-        written = rendered.splitlines()
-        unplaced = [line for line in lines[:marked] if line.strip() and not any(line.strip() in held for held in written)]
-        apart = [line for line in [*carried, *unplaced] if not any(line.strip() in held for held in written)]
+        apart = ExistingText("\n".join([*carried, *lines[:marked]])).lines_not_in(rendered)
         if not apart:
             return Reshaped(rendered, [], [])
         below = "\n\n".join(apart)
         text = f"{rendered.rstrip(chr(10))}\n\n{_HEADING}\n\n{_HEADING_NOTE}\n\n{below}\n"
-        return Reshaped(text, [f"{len(apart)} line(s) set apart"], [])
+        return Reshaped(text, [], [], set_apart=len(apart))
 
     def _drawio(self, existing: str, rendered: str) -> Reshaped:
         before, after = ET.fromstring(existing), ET.fromstring(rendered)

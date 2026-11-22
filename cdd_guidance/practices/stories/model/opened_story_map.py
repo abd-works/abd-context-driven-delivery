@@ -124,7 +124,7 @@ class OpenedStoryMap:
     def _reads_back(self, text: str) -> bool:
         """Whether text, as its own format reads it, holds the map's nodes and is written as text again."""
         model = self._stories.formats.parse(self.own_format, text)
-        again = self._stories.formats.render(RenderRequest(self.own_format, model, previous=text))["content"]
+        again = self._stories.formats.render(RenderRequest(self.own_format, model, previous=text)).content
         return self._nodes_held(model) == self._nodes_held(self._story_map) and again.strip() == text.strip()
 
     def _rendered(self, format: Format, path: Path | None = None) -> str:
@@ -132,7 +132,7 @@ class OpenedStoryMap:
         does, writes none here, so its text reads back as nothing."""
         target = path or self._path
         previous = target.read_text(encoding="utf-8") if target.is_file() else ""
-        content = self._stories.formats.render(RenderRequest(format, self._story_map, previous=previous))["content"]
+        content = self._stories.formats.render(RenderRequest(format, self._story_map, previous=previous)).content
         return content if isinstance(content, str) else ""
 
     def _nodes_held(self, story_map: StoryModel) -> list[tuple]:

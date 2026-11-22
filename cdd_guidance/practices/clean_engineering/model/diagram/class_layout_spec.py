@@ -10,14 +10,14 @@ from cdd_guidance.practices.clean_engineering.model.diagram.class_layout import 
     paths_cross,
 )
 from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import DiagramClass
-from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry
+from harness.whiteboard import Box
 
 
 def _card(name, group="sales", box=(0, 0, 200, 100)):
     card = DiagramClass(name=name)
     card.cell_id = name
     card.group = group
-    card.geometry = Geometry(*box)
+    card.geometry = Box(*box)
     return card
 
 
@@ -44,9 +44,9 @@ def _passes_through(path, card):
     card = card.geometry
     for a, b in zip(path, path[1:]):
         if (
-            min(a[0], b[0]) < card.x + card.width
+            min(a[0], b[0]) < card.x + card.w
             and max(a[0], b[0]) > card.x
-            and min(a[1], b[1]) < card.y + card.height
+            and min(a[1], b[1]) < card.y + card.h
             and max(a[1], b[1]) > card.y
         ):
             return True
@@ -276,7 +276,7 @@ with description("a page with empty space between its cards"):
         with it("should leave no gap wider than the most room between cards"):
             boxes = sorted((card.geometry for card in self.cards.values()), key=lambda box: box.x)
             gaps = [
-                later.x - (earlier.x + earlier.width) for earlier, later in zip(boxes, boxes[1:])
-                if later.x > earlier.x + earlier.width and abs(later.y - earlier.y) < 100
+                later.x - (earlier.x + earlier.w) for earlier, later in zip(boxes, boxes[1:])
+                if later.x > earlier.x + earlier.w and abs(later.y - earlier.y) < 100
             ]
             expect(all(gap <= CardSpacing.MOST_GAP for gap in gaps)).to(be_true)

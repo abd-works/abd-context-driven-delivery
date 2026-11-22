@@ -113,7 +113,7 @@ def _one_module(module) -> CleanEngineeringModel:
 def _render_markdown(model: CleanEngineeringModel) -> str:
     channel = MarkdownCleanEngineeringModel(name=model.name, sequential_order=1)
     channel.translate_from(model)
-    return channel.render()
+    return channel.render(channel)
 
 
 def _render_typescript(model: CleanEngineeringModel) -> str:

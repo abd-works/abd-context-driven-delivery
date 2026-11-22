@@ -18,6 +18,7 @@ from cdd_guidance.practices.bdd.bdd import Bdd
 from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
+from harness.guidance.practice_formats import Rendered
 
 
 def _expanded(bdd, action_name):
@@ -91,8 +92,8 @@ with description("a Bdd toolset"):
                 "a cart\n  that has been created\n    it should hold no items\n",
                 source="markdown",
             )
-            expect(result).to(be_a(dict))
-            expect(str(result.get("content"))).to(contain("description"))
+            expect(result).to(be_a(Rendered))
+            expect(str(result.content)).to(contain("description"))
 
     with context("that reads a spec file into the graph"):
         with it("should read a Python spec with its Python format"):

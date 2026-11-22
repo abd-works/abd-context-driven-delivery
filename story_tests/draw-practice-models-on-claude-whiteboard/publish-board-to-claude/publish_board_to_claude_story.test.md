@@ -12,7 +12,7 @@ Map: [story-map.md](../../../.context/story-map.md#e-publish-board-to-claude). A
 ### Domain terms
 
 - whiteboard file: a `.whiteboard` file a practice renders its diagram to, such as `.context/story-map.whiteboard` (`harness/whiteboard/whiteboard.py` *Whiteboard*).
-- board: the Claude Whiteboard artifact the agent publishes the whiteboard file to, through Claude's own Artifact tool, which CDD never sees. Its address is kept beside the file, in the folder's `whiteboards.json`, by the file's name (*BoardLinks*).
+- board: the Claude Whiteboard artifact the agent publishes the whiteboard file to, through Claude's own Artifact tool, which CDD never sees. Its address is kept beside the file, in the folder's `whiteboards.json`, by the file's name (`Whiteboard.links_beside`).
 - record board: the Render action's tool the agent calls with the whiteboard file and the board's address once the board is published (`render.record_board`).
 
 ## Story: Create Whiteboard Artifact For Fidelity File

@@ -111,15 +111,10 @@ class OrderingProject:
         """The files a render of the module's file into format saves, as paths under the folder it saves in."""
         source = self._fixture.root / self._relative
         request = RenderRequest(Format(format), self._text, Format(self.language), folder=str(source.parent), fidelity=self._fidelity)
-        rendered = self._fidelity.render_request(request)
+        rendered = request.render()
         root = Path(self._saved.name) / format
-        saved = RenderedCode(root, self.declared_for(format), Format(format)).save(rendered)
-        return sorted(Path(path).relative_to(root).as_posix() for path in saved["paths"])
-
-    def declared_for(self, format: str) -> list[str]:
-        """The paths the model fidelity declares for format."""
-        declared = self._fidelity.declared.outputs[format]
-        return [declared] if isinstance(declared, str) else list(declared)
+        saved = RenderedCode(root, self._fidelity.declared.placement, Format(format)).save(rendered)
+        return sorted(Path(path).relative_to(root).as_posix() for path in saved.paths)
 
     def declares(self, path: str, format: str) -> bool:
         """Whether path is a file the model fidelity declares for format."""

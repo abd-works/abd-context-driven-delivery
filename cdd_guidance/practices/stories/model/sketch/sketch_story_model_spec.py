@@ -67,7 +67,7 @@ with description("SketchStoryModel"):
             content=_SKETCH,
             source="sketch",
         )
-        text = str(results[0]["content"])
+        text = str(results[0].content)
         expect(text).to(contain("Single Client View"))
         expect(text).to(contain("(E) Unify Client Identity Across Banks"))
         expect(text).to(contain("(E) Unify Client Identity Across Banks"))

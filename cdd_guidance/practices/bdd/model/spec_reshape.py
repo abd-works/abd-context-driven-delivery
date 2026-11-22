@@ -20,7 +20,7 @@ import ast
 from typing import TYPE_CHECKING, Callable, Iterator
 
 from cdd_guidance.practices.source_code import CodeLanguage
-from harness.guidance.practice_formats import KeptMark, Reshaped
+from harness.guidance.practice_formats import KeptMark, OutlinedMember, Reshaped
 
 if TYPE_CHECKING:
     from cdd_guidance.practices.bdd.model.code_spec_model import DescribeCall, DescribeCalls
@@ -30,24 +30,18 @@ ScriptCalls = Callable[[str], object]
 """What reads a script spec's describe, context, it and test calls from its text: *DescribeCalls*."""
 
 
-class SpecBlock:
-    """One description, context or observation of a spec file: the names it sits under with its own, the lines it
-    covers with the comments above it, the line its children end before, and the blocks nested in it."""
+class SpecBlock(OutlinedMember):
+    """One description, context or observation of a spec file: the names it sits under with its own, which name it as
+    a person reads it, the lines it covers with the comments above it (``lead``, ``start``, ``last``), the line its
+    children end before, and the blocks nested in it."""
 
-    def __init__(self, path: BlockPath, lead: int, first: int, last: int, ends_before: int, indent: str) -> None:
+    def __init__(self, path: BlockPath, lead: int, start: int, last: int, ends_before: int, indent: str) -> None:
+        super().__init__(" ".join(path), lead, start, last + 1, indent)
         self.path = path
-        # The first comment line above it, its own first line, its last line, and the line a new child goes before.
-        self.lead = lead
-        self.first = first
+        # Its last line, and the line a new child goes before.
         self.last = last
         self.ends_before = ends_before
-        self.indent = indent
         self.children: list[SpecBlock] = []
-
-    @property
-    def name(self) -> str:
-        """The block as a person reads it: the names it sits under, then its own."""
-        return " ".join(self.path)
 
     def every(self) -> Iterator[SpecBlock]:
         """This block and every block nested in it, outermost first."""
@@ -71,10 +65,7 @@ class SpecOutline:
         return {block.path: block for root in self.roots for block in root.every()}
 
     def _lead_of(self, first: int, indent: str) -> int:
-        lead = first
-        while lead > 0 and self.lines[lead - 1].startswith(indent + self._comment):
-            lead -= 1
-        return lead
+        return OutlinedMember.lead_of(self.lines, first, indent, (self._comment,))
 
     def _indent_of(self, line: int) -> str:
         written = self.lines[line]
@@ -170,7 +161,7 @@ class SpecReshape:
         return ["", *(f"{indent}{line[len(block.indent):]}" if line.strip() else line for line in written)]
 
     def _is_marked(self, file: SpecOutline, block: SpecBlock) -> bool:
-        return KeptMark.marks(file.lines[block.lead:block.first])
+        return KeptMark.marks(file.lines[block.lead:block.start])
 
     def _marking(self, block: SpecBlock) -> str:
         said = KeptMark.line_for(block.name, "Move what it proves into the block that replaced it, then delete it.")

@@ -11,9 +11,11 @@ _REPO = Path(__file__).resolve().parents[5]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from cdd_guidance.practices.ux.model.drawio.nodes import DrawioCliTimedOut, DrawioUxMap, UnreadableDrawio
+from cdd_guidance.practices.ux.model.drawio.nodes import DrawioCliTimedOut, DrawioUxMap
+from harness.drawio import UnreadableDrawio
 from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen, Transition
 from cdd_guidance.practices.ux.model.ux_map_spec_fixture import made
+from harness.guidance.practice_formats import Written
 
 
 class SpecFixture:
@@ -198,7 +200,7 @@ with description("a UX map drawn as a draw.io information architecture"):
             held.find_screen("Book Details").regions[0].append_control(made(Control, "Cover", 0, control_type="image"))
             held.append_screen(Screen("Wish List", 2))
             previous = DrawioUxMap.create().render(held)
-            self.parsed = DrawioUxMap.create().parse(DrawioUxMap.create().render(fixture.mockup(), previous=previous))
+            self.parsed = DrawioUxMap.create().parse(DrawioUxMap.create().render(fixture.mockup(), Written(previous)))
             self.details = self.parsed.find_screen("Book Details")
 
         with it("should keep the screen only the drawing showed"):

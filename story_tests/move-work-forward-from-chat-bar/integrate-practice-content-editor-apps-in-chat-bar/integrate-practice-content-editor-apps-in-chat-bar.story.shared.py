@@ -222,9 +222,8 @@ def _(s):
     def _(world):
         CHECKOUT_FLOW.seed_into(world.sessions_project)
         versions = CanvasVersions.in_practice_root(world.project / CHECKOUT_FLOW_DESIGN.ux_root)
-        for _version in range(CHECKOUT_FLOW_DESIGN.version):
-            versions.start_next()
-        versions.record_link(CHECKOUT_FLOW_DESIGN.version, CHECKOUT_FLOW_DESIGN.link)
+        started = [versions.start_next() for _version in range(CHECKOUT_FLOW_DESIGN.version)]
+        started[-1].publish_at(CHECKOUT_FLOW_DESIGN.link)
 
     @s.and_("the file viewer is open on checkout-flow")
     def _(world):

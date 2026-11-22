@@ -93,10 +93,11 @@ class StoryMapFiles:
                 return (markdown or maps)[0]
         return None
 
-    def story_graph_text(self) -> Optional[str]:
-        """The story map this folder holds saved as JSON (``story-graph.json``), as text; none when it holds none."""
+    def story_graph(self) -> Optional[Path]:
+        """The story map this folder holds saved as JSON (``story-graph.json``); none when it holds none."""
         saved = self.folder / STORY_GRAPH_FILE
-        return saved.read_text(encoding="utf-8") if saved.is_file() else None
+        return saved if saved.is_file() else None
+
 
     def markdown_below(self) -> List[Path]:
         """The markdown story maps this folder holds: its own when it has one, else every one in the folders below it."""

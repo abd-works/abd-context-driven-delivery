@@ -23,6 +23,7 @@ from cdd_guidance.practices.stories.model.markdown.nodes import (
     MarkdownStory,
     MarkdownStoryModel,
 )
+from harness.guidance.practice_formats import Written
 
 
 class SpecFixture:
@@ -499,7 +500,7 @@ with description("a Markdown story map rendered in a workspace") as self:
                 "onboard/get-sim/select_sim_story.test.md": "## Story: Select Sim\n",
             })
             source = MarkdownStoryModel().parse(_LINKED_MAP)
-            self.text = MarkdownStoryModel().render(source, workspace=str(self.root))
+            self.text = MarkdownStoryModel().render(source, Written(folder=Path(self.root)))
 
         with it("should link that story to its file"):
             expect(

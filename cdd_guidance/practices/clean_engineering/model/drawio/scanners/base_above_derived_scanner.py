@@ -4,7 +4,7 @@ from __future__ import annotations
 from harness.graph.violation import Violation
 
 from cdd_guidance.practices.clean_engineering.model.drawio.page.drawio_page import (
-    DrawioPage,
+    ClassDiagramPage,
     is_inheritance,
 )
 from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import DrawioScanner
@@ -13,7 +13,7 @@ from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base
 class BaseAboveDerivedScanner(DrawioScanner):
     RULE = "base-above-derived"
 
-    def scan_page(self, page: DrawioPage) -> list[Violation]:
+    def scan_page(self, page: ClassDiagramPage) -> list[Violation]:
         violations = []
         for edge in page.edges:
             if not is_inheritance(edge):
@@ -21,7 +21,7 @@ class BaseAboveDerivedScanner(DrawioScanner):
             child_id, parent_id = edge.get("source", ""), edge.get("target", "")
             if child_id not in page.boxes or parent_id not in page.boxes:
                 continue
-            child_y, parent_y = page.boxes[child_id][1], page.boxes[parent_id][1]
+            child_y, parent_y = page.boxes[child_id].y, page.boxes[parent_id].y
             if child_y <= parent_y:
                 violations.append(self.violation(
                     page,

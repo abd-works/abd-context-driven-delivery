@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import os
 import zlib
+from pathlib import Path
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import TYPE_CHECKING, Annotated, Any, Callable, Dict, List, Optional
@@ -30,6 +31,7 @@ from .opened_story_map import OpenedStoryMap, StoryMapEditRefused, UnopenedStory
 from .story_copies import StoryCopies
 from .story_map_files import source_at
 from .story_recording import StoryRecording, StorySources, file_of
+from harness.guidance.practice_formats import FormatAdapter
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -1290,7 +1292,7 @@ class Story(CodeHeld):
 @identity("file")
 @language_adapter(language="typescript")
 @agent_toolset
-class StoryModel(StoryNode):
+class StoryModel(StoryNode, FormatAdapter):
     """A story map: its epics, and the increments that deliver its stories. One opened in a session through its tools
     (``load``) holds the file it was read from (an *OpenedStoryMap*) and saves itself there after every edit."""
 
@@ -1337,6 +1339,17 @@ class StoryModel(StoryNode):
             self.epics.append(self.epic_type(epic, story_class=self.story_type))
         StoryCopies(source, self).copy_increments(self.increment_type)
 
+    def placed_in(self, file: str, text: str) -> "StoryModel":
+        """This map, read from text, the file called file: it keeps the text as one of its sources, and each epic and
+        everything under it names the file."""
+        self.sources.add(file, text)
+        self.descendants.place_in(file)
+        return self
+
+    def opened_from(self, path: Path, project: Path) -> "StoryModel":
+        """The story map an edit to the file at path writes back, each node naming the file from project: the file
+        read by this format."""
+        return self.read_file(path, project)
     @classmethod
     @tool_subject
     def load(cls, file: str, *, call: ToolCall) -> "StoryModel":

@@ -5,7 +5,7 @@ from __future__ import annotations
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
 from harness.guidance.guidance import SketchLens
-from harness.guidance.practice_formats import PracticeFormats, RenderRequest, TextOrData
+from harness.guidance.practice_formats import PracticeFormats, Rendered, RenderRequest, TextOrData
 from harness.markdown.format import Format
 
 from cdd_guidance.practices.ux.model.graph_reading import UxReading
@@ -37,7 +37,7 @@ class UxFormats(PracticeFormats):
         """The formats a front-end view is written in: the code formats among UX's."""
         return frozenset(format for format in self.supported if format.is_code)
 
-    def render(self, request: RenderRequest) -> dict:
+    def render(self, request: RenderRequest) -> Rendered:
         """What request renders to: a view to the other view format, a UX map to another of its formats. A render
         between a view format and a format of the UX map is refused as *ViewNotRendered*, before a view's text is
         read as a mockup page."""
@@ -89,7 +89,7 @@ class Ux(PracticeGuidance):
     }
 
     @agent_tool
-    def ensure_javascript(self, practice: str, source_format: str, content: str) -> dict:
+    def ensure_javascript(self, practice: str, source_format: str, content: str) -> Rendered:
         """Ensure Stories or Clean Engineering JS exists - transform via that practice if needed.
         practice: 'stories' | 'clean_engineering', the practice's catalogue key: story steps come from Stories, the
         object model from Clean Engineering. content: the practice's text in source_format. Returns {format: javascript, content: ...}."""

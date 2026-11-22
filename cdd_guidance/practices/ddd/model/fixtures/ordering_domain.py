@@ -133,7 +133,7 @@ class OrderingDomain:
 
     @property
     def _model(self) -> MarkdownBoundedContextMap:
-        document = self._fidelity.render("markdown", self._text, self.language)["content"]
+        document = self._fidelity.render("markdown", self._text, self.language).content
         return MarkdownBoundedContextMap().parse(document)
 
     def context_names(self) -> list[str]:
@@ -155,11 +155,10 @@ class OrderingDomain:
         """The files a render of the context's code into format saves, as paths under the folder it saves in."""
         folder = self._fixture.root / "ordering"
         request = RenderRequest(Format(format), self._text, Format(self.language), folder=str(folder), fidelity=self._fidelity)
-        rendered = self._fidelity.render_request(request)
-        declared = self._fidelity.declared.outputs[format]
+        rendered = request.render()
         root = Path(self._saved.name) / format
-        saved = RenderedCode(root, [declared] if isinstance(declared, str) else list(declared), Format(format)).save(rendered)
-        return sorted(Path(path).relative_to(root).as_posix() for path in saved["paths"])
+        saved = RenderedCode(root, self._fidelity.declared.placement, Format(format)).save(rendered)
+        return sorted(Path(path).relative_to(root).as_posix() for path in saved.paths)
 
     def declares(self, path: str, format: str) -> bool:
         """Whether path is a file the model fidelity declares for format."""

@@ -17,6 +17,7 @@ from cdd_guidance.practices.clean_engineering.model.class_stereotypes import mar
 from cdd_guidance.practices.clean_engineering.model.operation import Operation, Parameter
 from cdd_guidance.practices.clean_engineering.model.property import Property
 from cdd_guidance.practices.source_code import split_top_level
+from harness.guidance.practice_formats import Written
 
 _NESTING_INDENT = 2
 _SECTION_TITLE = "clean engineering:"
@@ -303,21 +304,22 @@ class SketchCleanEngineeringModel(CleanEngineeringModel):
     # The Clean Engineering section of a sketch, opened by either of its headings; the practice holds this lens.
     lens = SketchLens(("ce:", _SECTION_TITLE))
 
-    def parse(self, text: str) -> "SketchCleanEngineeringModel":
+    def parse(self, text: str, file: str = "") -> "SketchCleanEngineeringModel":
         """Read the sketch's clean engineering section into this model's own modules, and return it."""
         declared = _MODULE.search(text)
         self.name = declared.group(1) if declared else "KnowledgeGraph"
         self.modules = self._modules_in(SketchOutline(text, _NESTING_INDENT).body_for(self.lens))
         return self
 
-    def render(self, canonical: CleanEngineeringModel, previous: Optional[str] = None) -> str:
+    def render(self, canonical: CleanEngineeringModel, written: Written = Written()) -> str:
         """The `clean engineering:` section of a sketch; in previous, it replaces the section already there."""
         if canonical is not self:
             self.translate_from(canonical)
         section = self.section_lines()
-        if not previous:
+        if not written.previous:
             return "\n".join(section) + "\n"
-        return self._with_section_replaced(previous, section)
+        return self._with_section_replaced(written.previous, section)
+
 
     def section_lines(self) -> List[str]:
         lines = [f"## {_SECTION_TITLE}", "", f"**Module:** `{self.name}`", ""]

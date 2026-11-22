@@ -7,10 +7,11 @@ import json
 from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol, Self
 
 from harness.guidance.documents import document_in
 from harness.guidance.worked_session import NamedPaths, WorkedSession
+from harness.installation.data_class import data_field
 from harness.markdown.format import Format
 
 if TYPE_CHECKING:
@@ -28,15 +29,94 @@ class ObjectModel(Protocol):
         """The kind of model this is, such as a story map or a class model."""
 
 
-class FormatAdapter(Protocol):
-    """One format's adapter: it reads text or data into the practice's object model and renders a model back. A
-    renderer that takes the previous file or the folder of the files it links to names them as keywords."""
+# Hears each file a read takes, by its path from the project, as it is read.
+OnFile = Callable[[str], None] | None
 
-    def parse(self, content: TextOrData) -> ObjectModel:
-        """The object model content holds."""
 
-    def render(self, model: ObjectModel, **options: Any) -> Any:
-        """model written in this format."""
+@dataclass(frozen=True)
+class Written:
+    """What a format's adapter is handed of the file a render is written to: the file as it is now (``previous``), whose
+    layout a drawing keeps and whose own words a document keeps, and the folder the files it links to are in
+    (``folder``). A format written as several files, such as story tests in code, is handed each file's text by its
+    path. It is the part of a *RenderRequest* an adapter is allowed to see, so no adapter is handed the fidelity."""
+
+    previous: str | dict[str, str] = ""
+    folder: Path | None = None
+
+
+class FormatAdapter:
+    """One format's adapter, the one contract every format of every practice meets: it reads text into the practice's
+    object model (``parse``), opens a file (``read_file``), renders a model back in its format (``render``), and may
+    write a render onto a file already there (``reshape``). Each practice's domain root extends it, so a format that
+    cannot be opened, or renders by a shape of its own, cannot be written."""
+
+    def parse(self, text: TextOrData, file: str = "") -> Self:
+        """The model text holds; read from file, each node names that file."""
+        raise NotImplementedError(f"{type(self).__name__} reads no text")
+
+    def render(self, model: ObjectModel, written: Written = Written()) -> Any:
+        """model written in this format, onto the file as written holds it."""
+        raise NotImplementedError(f"{type(self).__name__} writes no text")
+
+    def read_file(self, path: Path, project: Path, on_file: OnFile = None) -> Self:
+        """The model the file at path holds, its nodes naming the file as a path from project; on_file hears the file
+        as it is read. By default, the file's text parsed, then placed in the file (``placed_in``)."""
+        file = named_from(project, path)
+        if on_file is not None:
+            on_file(file)
+        text = Path(path).read_text(encoding="utf-8")
+        return self.parse(text, file).placed_in(file, text)
+
+    def placed_in(self, file: str, text: str) -> Self:
+        """This model, read from text, the file called file, holding where it was read; a model that names no file of
+        its nodes holds nothing more."""
+        return self
+
+
+    def reshape(self, rendered: str, existing: str) -> Reshaped | None:
+        """rendered written onto existing, the text a file holds now, keeping every line it has; none for a format that
+        leaves that writing to the Render action."""
+        return None
+
+
+def named_from(project: Path, path: Path) -> str:
+    """path as a path from project, with forward slashes; as given when it is not under project."""
+    resolved = Path(path).resolve()
+    try:
+        return resolved.relative_to(Path(project).resolve()).as_posix()
+    except ValueError:
+        return Path(path).as_posix()
+
+
+class Rendered:
+    """What a format's adapter and a fidelity answer for a render: the content in the format written. It writes itself
+    as the two fields a render has always answered, ``format`` and ``content``."""
+
+    def __init__(self, format: Format, content: Any) -> None:
+        self._format = Format(format)
+        self._content = content
+
+    @property
+    @data_field
+    def format(self) -> Format:
+        return self._format
+
+    @property
+    @data_field
+    def content(self) -> Any:
+        """The text written; for a format written as several files, each file's text by its path."""
+        return self._content
+
+    @classmethod
+    def from_data(cls, data: dict[str, Any]) -> Rendered:
+        """A render as its two fields wrote it, such as the answer a render's worker process writes."""
+        return cls(Format(data["format"]), data["content"])
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, Rendered) and (self._format, self._content) == (other._format, other._content)
+
+    def __repr__(self) -> str:
+        return f"Rendered({self._format!r}, {str(self._content)[:40]!r})"
 
 
 class KeptMark:
@@ -63,8 +143,9 @@ class Reshaped:
     """A rendered shape written onto the text a file already holds, as a format's adapter answers it from
     ``reshape(rendered, existing)``: the text to save, which holds every line existing held, the members only the
     existing file holds, kept in the text and marked as no longer in the model (``Cart.empty``), the members only the
-    render holds, added empty (``Cart.add_line``), and the members whose opening line the render writes otherwise. A format with no ``reshape`` leaves the writing to the Render
-    action."""
+    render holds, added empty (``Cart.add_line``), the members whose opening line the render writes otherwise, and how
+    many lines were set apart below the text, where a file whose members a render cannot place keeps what only it held.
+    A format with no ``reshape`` leaves the writing to the Render action."""
 
     text: str
     kept: list[str]
@@ -72,6 +153,64 @@ class Reshaped:
     # Each member both hold whose opening line the render writes otherwise than the file, with the render's line
     # (``Cart.total``: ``def total(self, tax: int) -> int:``); the file's own line stays in the text.
     changed: dict[str, str] = field(default_factory=dict)
+    # The lines kept below the text under one line saying they are no longer in the model.
+    set_apart: int = 0
+
+    @property
+    def left_to_move(self) -> list[str]:
+        """What waits in the text for a person or an agent to move: each member kept, then, when lines were set apart,
+        how many."""
+        return [*self.kept, *([f"{self.set_apart} line(s) set apart"] if self.set_apart else [])]
+
+
+class ExistingText:
+    """The text a file holds before a render is written onto it: the check that the text to save loses none of its
+    lines, written once for every reshaper, and the lines only it holds set apart below a rendered shape that cannot
+    place them."""
+
+    def __init__(self, text: str) -> None:
+        self.text = text
+        self.lines = text.splitlines()
+
+    def lines_not_in(self, text: str) -> list[str]:
+        """Each line this text holds, blank lines aside, that text has nowhere: the lines a render would lose."""
+        held = text.splitlines()
+        return [line for line in self.lines if line.strip() and not any(line.strip() in kept for kept in held)]
+
+    def set_apart_below(self, rendered: str, comment: str) -> Reshaped:
+        """The rendered shape, then the lines only this text holds as comments under one line saying so; lines an
+        earlier render set apart are carried over as they are, so a second render changes nothing."""
+        marked = next((index for index, line in enumerate(self.lines) if KeptMark.marks(line)), len(self.lines))
+        carried = self.lines[marked + 1:]
+        unplaced = ExistingText("\n".join(self.lines[:marked])).lines_not_in(rendered)
+        apart = carried + [f"{comment} {line}" for line in unplaced]
+        if not apart:
+            return Reshaped(rendered, [], [])
+        heading = f"{comment} ---- {KeptMark.WORDS}: the lines below were in this file and the render did not write them. Move each into the member it belongs to, then delete it. ----"
+        return Reshaped("\n".join([*rendered.splitlines(), "", heading, *apart]) + "\n", [], [], set_apart=len(apart))
+
+
+class OutlinedMember:
+    """One member of a file a reshaper outlines, such as a class, an operation, a describe block, or a component's
+    hook: its name, where the comments above it start (``lead``), where its own lines start and end, and its indent.
+    Each reshaper reads its own language into it; the record and the marker are what they share."""
+
+    def __init__(self, name: str, lead: int, start: int, end: int, indent: str = "") -> None:
+        self.name = name
+        self.lead = lead
+        self.start = start
+        self.end = end
+        self.indent = indent
+
+    @staticmethod
+    def lead_of(lines: list[str], start: int, indent: str, marks: tuple[str, ...], floor: int = 0) -> int:
+        """The first of the lines written directly above the line at start, at indent, that open with one of marks,
+        such as a comment or a decorator, going no higher than floor; start when none are."""
+        lead = start
+        while lead > floor and lines[lead - 1].startswith(indent) and lines[lead - 1][len(indent):].startswith(marks):
+            lead -= 1
+        return lead
+
 
 
 # What a render converts: text or data in a source format, an object model, or the practice itself, whose own model is
@@ -121,6 +260,39 @@ class RenderRequest:
     def companion(self) -> FidelityGuidance | None:
         """The Clean Engineering fidelity that accompanies the fidelity this render works at; none when it has none."""
         return self.fidelity.clean_engineering if self.fidelity is not None else None
+
+    @property
+    def written(self) -> Written:
+        """What the adapter that writes this render is handed: the target file as it is now and the folder the files it
+        links to are in."""
+        return Written(self.previous, Path(self.folder) if self.folder else None)
+
+    @classmethod
+    def from_files(cls, fidelity: FidelityGuidance, format: str, paths: NamedPaths, source: str | None = None, previous: str = "") -> RenderRequest:
+        """The render of the files at paths into format at fidelity, with what it converts read from them, read from the
+        project of the session its practice works in, in source, else in the format the fidelity works in. previous is
+        the target file as it is now, whose layout a diagram keeps. A renderer that links to other files, such as a
+        story map linking to each story's file, finds them in the folder the first path is, or sits in."""
+        request = cls(Format(format), source=Format(source), previous=previous, folder=cls._folder_holding(paths), fidelity=fidelity)
+        return replace(request, content=fidelity.practice_guidance.formats.read(paths, request))
+
+    def render(self) -> Rendered:
+        """What this request renders to, through the formats of its fidelity's practice."""
+        if self.fidelity is None:
+            raise ValueError("a render request renders at a fidelity, and this one names none")
+        return self.fidelity.practice_guidance.formats.render(self)
+
+    @staticmethod
+    def _folder_holding(paths: NamedPaths) -> str:
+        """The folder the files at paths sit in, where a renderer finds the files they link to: the first path when it
+        is a folder, else its parent."""
+        first = paths[0] if isinstance(paths, (list, tuple)) and paths else paths
+        if not first or not isinstance(first, str):
+            return ""
+        path = Path(first)
+        if path.is_dir():
+            return str(path)
+        return str(path.parent) if path.parent.is_dir() else ""
 
     def _keeping_sketch_wording(self) -> RenderRequest:
         """This request, keeping a sketch's own wording when it renders a sketch to a document format: the sketch is the
@@ -217,7 +389,7 @@ class PracticeFormats:
         them themselves."""
         return document_in(self._practice.session, "", paths)
 
-    def render(self, request: RenderRequest) -> dict:
+    def render(self, request: RenderRequest) -> Rendered:
         """What request renders to; a request with no content renders the practice's own model. With no adapters of its
         own, the practice has the Clean Engineering companion of the fidelity the request works at render it, at that
         companion fidelity."""
@@ -228,7 +400,7 @@ class PracticeFormats:
             return self._companion_render(request, source)
         model = self._object_model(request.content, source)
         target = self.adapter(request.format)
-        return {"format": request.format, "content": self._call_render(target, self.model_for(target, model), request._keeping_sketch_wording())}
+        return Rendered(request.format, target.render(self.model_for(target, model), request._keeping_sketch_wording().written))
 
     def parse(self, format: Format, content: TextOrData) -> ObjectModel:
         """The model format's adapter reads from content. A model that says it holds only classes, such as a DDD map
@@ -244,11 +416,11 @@ class PracticeFormats:
         """The object model in the form target renders; formats that read another practice's model convert it here."""
         return model
 
-    def _companion_render(self, request: RenderRequest, source: Format) -> dict:
+    def _companion_render(self, request: RenderRequest, source: Format) -> Rendered:
         companion = request.companion
         owner = companion.practice_guidance if companion is not None else None
         if owner is None or owner.formats is self:
-            return {"format": source or request.format, "content": request.content}
+            return Rendered(source or request.format, request.content)
         return owner.formats.render(replace(request, fidelity=companion))
 
     def _object_model(self, content: RenderContent, source: Format) -> ObjectModel:
@@ -287,19 +459,6 @@ class PracticeFormats:
         root = session.work_root
         found = session.session_files.find(f"{root.as_posix()}/**/*{extension}")
         return {path.relative_to(root).as_posix(): session.paths.document_named("", [str(path)]) for path in found}
-
-    def _call_render(self, target: FormatAdapter, parsed: ObjectModel, request: RenderRequest) -> Any:
-        """Ask target to render parsed, giving it the previous file and the linked files' folder when it takes them."""
-        try:
-            parameters = inspect.signature(target.render).parameters
-        except (TypeError, ValueError):
-            return target.render(parsed)
-        kwargs: dict[str, Any] = {}
-        if "previous" in parameters:
-            kwargs["previous"] = request.previous or None
-        if request.folder and "workspace" in parameters:
-            kwargs["workspace"] = request.folder
-        return target.render(parsed, **kwargs)
 
     def _made_adapter(self, format: Format) -> FormatAdapter:
         """The format's adapter, made the way its class says: through its own ``create``, with the settings its

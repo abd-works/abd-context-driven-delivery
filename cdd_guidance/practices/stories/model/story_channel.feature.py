@@ -264,7 +264,7 @@ def _write_channel(folder: Path, target: str, source: StoryModel) -> None:
 
 def _read_channel(folder: Path, target: str) -> StoryModel:
     if target == "markdown":
-        return MarkdownStoryModel.from_workspace(folder)
+        return MarkdownStoryModel().read_folder(folder, folder)
     if target == "json":
         return JsonStoryModel().parse((folder / "story-graph.json").read_text(encoding="utf-8"))
     if target == "drawio":

@@ -19,9 +19,8 @@ above it as a comment. Rendering the same view onto the text this made changes n
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
 
-from harness.guidance.practice_formats import KeptMark, Reshaped
+from harness.guidance.practice_formats import KeptMark, OutlinedMember, Reshaped
 
 from cdd_guidance.practices.ux.model.view.front_end_view import Edit, FrontEndView, TypeAnnotations
 
@@ -38,17 +37,15 @@ _FIRST_NAME = re.compile(r"[\w$]+")
 _PRIVATE_MARK = "_"
 
 
-@dataclass(frozen=True)
-class ComponentMember:
+class ComponentMember(OutlinedMember):
     """A hook or a handler a component declares: its name, the place the comments above it start, the places its own
-    lines start and end, and how a render writes it into a file that lacks it (a handler empty, a hook as declared)."""
+    lines start and end, each a place in the view's text, and how a render writes it into a file that lacks it (a
+    handler empty, a hook as declared)."""
 
-    name: str
-    lead: int
-    start: int
-    end: int
-    is_hook: bool
-    written_new: str
+    def __init__(self, name: str, lead: int, start: int, end: int, is_hook: bool, written_new: str) -> None:
+        super().__init__(name, lead, start, end)
+        self.is_hook = is_hook
+        self.written_new = written_new
 
 
 class Component:

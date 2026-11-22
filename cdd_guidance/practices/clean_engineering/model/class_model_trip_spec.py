@@ -27,10 +27,10 @@ with description("a class model rendered to markdown") as self:
     with context("by a practice that rendered another model to markdown before"):
         with before.each:
             other = CleanEngineering(fidelity="model")
-            ordering = other.render("python", _model("ordering"), source="markdown")["content"]
-            drawing = other.render("drawio", _model("fulfilment"), source="markdown")["content"]
+            ordering = other.render("python", _model("ordering"), source="markdown").content
+            drawing = other.render("drawio", _model("fulfilment"), source="markdown").content
             self.practice.render("markdown", ordering, source="python")
-            self.second = self.practice.render("markdown", drawing, source="drawio")["content"]
+            self.second = self.practice.render("markdown", drawing, source="drawio").content
 
         with it("should name the second model's own classes, none of the first's"):
             expect(_class_headings(self.second)).to(equal(["Shipment", "ExpressShipment"]))
@@ -41,8 +41,8 @@ with description("a class model rendered to markdown") as self:
     with context("from its drawing, over the markdown the drawing was made from"):
         with before.each:
             self.written = _model("ordering")
-            drawing = self.practice.render("drawio", self.written, source="markdown")["content"]
-            self.back = self.practice.render("markdown", drawing, source="drawio", previous=self.written)["content"]
+            drawing = self.practice.render("drawio", self.written, source="markdown").content
+            self.back = self.practice.render("markdown", drawing, source="drawio", previous=self.written).content
 
         with it("should write the file as the person wrote it: front matter, descriptions, group headings, notes and calls"):
             expect(self.back).to(equal(self.written))
@@ -50,8 +50,8 @@ with description("a class model rendered to markdown") as self:
     with context("from its whiteboard, over the markdown the whiteboard was made from"):
         with before.each:
             self.written = _model("fulfilment")
-            board = self.practice.render("whiteboard", self.written, source="markdown")["content"]
-            self.back = self.practice.render("markdown", board, source="whiteboard", previous=self.written)["content"]
+            board = self.practice.render("whiteboard", self.written, source="markdown").content
+            self.back = self.practice.render("markdown", board, source="whiteboard", previous=self.written).content
 
         with it("should write the file as the person wrote it"):
             expect(self.back).to(equal(self.written))
@@ -59,10 +59,10 @@ with description("a class model rendered to markdown") as self:
     with context("from its drawing, where a person added an operation to one class"):
         with before.each:
             self.written = _model("fulfilment")
-            drawing = self.practice.render("drawio", self.written, source="markdown")["content"]
+            drawing = self.practice.render("drawio", self.written, source="markdown").content
             changed = drawing.replace("+ dispatch(): None", "+ dispatch(): None&lt;br&gt;+ recall(): None", 1)
             self.changed = changed != drawing
-            self.back = self.practice.render("markdown", changed, source="drawio", previous=self.written)["content"]
+            self.back = self.practice.render("markdown", changed, source="drawio", previous=self.written).content
 
         with it("should write the added operation on its class"):
             expect(self.back).to(contain("+ recall(): None"))
@@ -77,8 +77,8 @@ with description("a class model rendered to markdown") as self:
     with context("from the Python it was rendered to"):
         with before.each:
             self.written = _model("ordering")
-            python = self.practice.render("python", self.written, source="markdown")["content"]
-            self.back = self.practice.render("markdown", python, source="python")["content"]
+            python = self.practice.render("python", self.written, source="markdown").content
+            self.back = self.practice.render("markdown", python, source="python").content
 
         with it("should keep the relationship written on a property"):
             expect(self.back).to(contain("+ << composition >> lines: list[CartLine]"))
@@ -97,8 +97,8 @@ with description("a class model rendered to markdown") as self:
     with context("from the Python it was rendered to, over the markdown the Python was made from"):
         with before.each:
             self.written = _model("ordering")
-            python = self.practice.render("python", self.written, source="markdown")["content"]
-            self.back = self.practice.render("markdown", python, source="python", previous=self.written)["content"]
+            python = self.practice.render("python", self.written, source="markdown").content
+            self.back = self.practice.render("markdown", python, source="python", previous=self.written).content
 
         with it("should write the file as the person wrote it"):
             expect(self.back).to(equal(self.written))
@@ -110,7 +110,7 @@ with description("a class model rendered to code") as self:
 
     with context("in TypeScript, from a model written with Python's types"):
         with before.each:
-            self.typescript = self.practice.render("typescript", _model("ordering"), source="markdown")["content"]
+            self.typescript = self.practice.render("typescript", _model("ordering"), source="markdown").content
 
         with it("should spell a list as TypeScript's array"):
             expect(self.typescript).to(contain("  lines: CartLine[];"))
@@ -123,8 +123,8 @@ with description("a class model rendered to code") as self:
 
     with context("in Python, from the TypeScript the model was rendered to"):
         with before.each:
-            typescript = self.practice.render("typescript", _model("ordering"), source="markdown")["content"]
-            self.python = self.practice.render("python", typescript, source="typescript")["content"]
+            typescript = self.practice.render("typescript", _model("ordering"), source="markdown").content
+            self.python = self.practice.render("python", typescript, source="typescript").content
 
         with it("should spell TypeScript's types as Python's"):
             expect(self.python).to(contain("    def authorise(self) -> bool:"))

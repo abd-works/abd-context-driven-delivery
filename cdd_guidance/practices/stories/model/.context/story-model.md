@@ -2,7 +2,7 @@
 
 *StoryModel* is one story map: epics, the sub-epics nested under them, the stories in each, and the increments that slice them, then each story's backgrounds and scenarios down to steps and examples. A nested epic is an epic whose parent is an epic. An increment is a thin slice: a name, an outcome, slicing notes, a decision, and the stories in that slice. Every node is a graph node (*ModelNode*), so a loaded model is also the stories practice's part of the knowledge graph.
 
-Each format is a *StoryModel* subclass with its own node subclasses, listed by `Stories` under `formats`: sketch, markdown, json, drawio, miro, python, typescript, javascript. `StoryModel(source)` copies any model into the subclass's node types, and a format's `copy_of(source)` makes that copy with the format's own settings (it is asked of a model, not its class, because a code format copies with its own `tests_root`; a UX map's `copy_of` is asked the same way); each story, scenario, and background makes its parts through its format's `scenario_type`, `background_type`, and `step_type`. `parse` reads text in that format and `render(canonical, previous)` writes a model out. *StoryMapFiles* (`story_map_files.py`) is the one place that knows a story map's file name and a story's own file name, and finds the story map in or above a folder (`nearest`), the story map saved as JSON in it (`story_graph_text`, read by `JsonStoryModel.from_workspace`), the markdown maps below it (`markdown_below`), each story's own file below it (`story_files_below`), and the files scenarios are written in (`scenario_files_below`), entering each folder's `.context` and no folder a working-copy scan never enters (`skips_folder`). The Stories practice names itself on *StoryNode* (`StoryNode.practice_class = Stories`), so the model never imports its practice. Markdown, JSON, and the code formats carry scenarios, steps, and examples; the diagram formats (drawio, miro) stop at stories and still read increments. The Claude Design story canvas, which shows the stories on their screens, is a *DiagramStoryModel* the UX practice draws (`practices/ux/model/claude_design/story_canvas.py`).
+Each format is a *StoryModel* subclass with its own node subclasses, listed by `Stories` under `formats`: sketch, markdown, json, drawio, miro, python, typescript, javascript. `StoryModel(source)` copies any model into the subclass's node types, and a format's `copy_of(source)` makes that copy with the format's own settings (it is asked of a model, not its class, because a code format copies with its own `tests_root`; a UX map's `copy_of` is asked the same way); each story, scenario, and background makes its parts through its format's `scenario_type`, `background_type`, and `step_type`. Every format meets the one format contract (*FormatAdapter*, harness/guidance), which *StoryModel* extends: `parse(text, file)` reads text in that format, `read_file(path, project, on_file)` opens a file of it, each node naming the file (`placed_in`), `opened_from(path, project)` is the map an edit to the file writes back, and `render(canonical, written)` writes a model out onto the file as it is now (*Written*). *StoryMapFiles* (`story_map_files.py`) is the one place that knows a story map's file name and a story's own file name, and finds the story map in or above a folder (`nearest`), the story map saved as JSON in it (`story_graph`, read by `JsonStoryModel.read_file`), the markdown maps below it (`markdown_below`), each story's own file below it (`story_files_below`), and the files scenarios are written in (`scenario_files_below`), entering each folder's `.context` and no folder a working-copy scan never enters (`skips_folder`). The Stories practice names itself on *StoryNode* (`StoryNode.practice_class = Stories`), so the model never imports its practice. Markdown, JSON, and the code formats carry scenarios, steps, and examples; the diagram formats (drawio, miro) stop at stories and still read increments. The Claude Design story canvas, which shows the stories on their screens, is a *DiagramStoryModel* the UX practice draws (`practices/ux/model/claude_design/story_canvas.py`).
 
 ```
 story_map = Stories().story_files(folder).story_map_in(folder)     # story-map.md (or .json), increments, scenarios
@@ -317,12 +317,13 @@ The `markdown` format: `story-map.md`, the scenario files beside it, and the inc
 + epic_type: MarkdownEpic
 + story_type: MarkdownStory
 ----
-+ from_workspace(root: Path, project: Path | None = None): MarkdownStoryModel | None
-	// each story takes the scenarios of the scenario-file sections headed with its name (*ScenarioFiles*, *StorySection*, each file read by its own *ScenarioFileReading*), and the increments of `StoryMapFiles.thin_slicing`
++ read_file(path: Path, project: Path, on_file: OnFile = None): MarkdownStoryModel
++ read_folder(folder: Path, project: Path, on_file: OnFile = None): MarkdownStoryModel | None
+	// the markdown story maps the folder holds, merged; each story takes the scenarios of the scenario-file sections headed with its name (*ScenarioFiles*, *StorySection*, each file read by its own *ScenarioFileReading*), and the increments of `StoryMapFiles.thin_slicing`
 + parse(text: str, file: str = ""): MarkdownStoryModel
 	// read from file, each epic, sub-epic, story, and scenario names the line it is read on, as it is read
-+ render(canonical: StoryModel, previous: str | None = None, workspace: str | None = None): str
-	// in a workspace folder, each story that has its own markdown file links to it
++ render(canonical: StoryModel, written: Written = Written()): str
+	// written in a folder, each story that has its own markdown file links to it
 + save(): str
 
 ## JsonStoryModel : StoryModel
@@ -330,11 +331,11 @@ The `markdown` format: `story-map.md`, the scenario files beside it, and the inc
 The `json` format. Nodes: JsonEpic, JsonStory, JsonIncrement, JsonScenario, JsonBackground, JsonStep; each reads its own record (`from_record`) and writes it (`as_record`).
 
 ----
-+ from_workspace(root: Path): JsonStoryModel | None
-	// every epic and story names story-graph.json (`descendants.place_in`)
-+ parse(text: str): JsonStoryModel
++ read_file(path: Path, project: Path, on_file: OnFile = None): JsonStoryModel
+	// every epic and story names story-graph.json (`placed_in`); text that does not read names the file
++ parse(text: str, file: str = ""): JsonStoryModel
 	// fills this map and returns it
-+ render(canonical: StoryModel, previous: str | None = None): str
++ render(canonical: StoryModel, written: Written = Written()): str
 	// copies canonical into a JSON map, which writes itself
 	-> save
 + save(): str

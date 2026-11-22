@@ -6,7 +6,8 @@ import os
 from pathlib import Path
 from typing import Any
 
-from harness.guidance.practice_formats import PracticeFormats, RenderRequest
+from harness.guidance.practice_formats import PracticeFormats, Rendered, RenderRequest
+
 
 from cdd_guidance.practices.stories.model.diagram_story_model import DiagramStoryModel
 from cdd_guidance.practices.stories.model.story_map_files import STORY_FILE_SUFFIXES, STORY_TESTS_FOLDER, THIN_SLICING_FILES, StoryMapFiles, path_from
@@ -66,13 +67,10 @@ class ScenariosOnTheirMap:
         self._project = project
         self._specified = SpecifiedStories(files, project)
 
-    def read_by(self, markdown: type) -> StoryModel | None:
-        """The map as markdown, the markdown story model, reads it with its scenarios, holding only the stories the
+    def read_by(self, markdown: StoryModel) -> StoryModel | None:
+        """The map as markdown, the markdown story format, reads it with its scenarios, holding only the stories the
         files specify; none when the map holds none of them."""
-        story_map = markdown.from_workspace(self._map_file, project=self._project)
-        if story_map is None:
-            return None
-        kept = self._specified.kept_in(story_map)
+        kept = self._specified.kept_in(markdown.read_file(self._map_file, self._project))
         return kept if kept.epics else None
 
 
@@ -98,15 +96,15 @@ class StoriesFormats(PracticeFormats):
         files = [path for entry in entries for path in (sorted(entry.rglob("*")) if entry.is_dir() else [entry]) if path.is_file()]
         return SpecifiedStories(files, project).kept_in(self._practice.story_files(project).story_map_of(files))
 
-    def render(self, request: RenderRequest) -> dict:
+    def render(self, request: RenderRequest) -> Rendered:
         """What request renders to; a thin slice read for a drawing is drawn as its increments' lanes, and story
         tests in code rendered to markdown, at a fidelity that declares a scenarios file for each story, are
         written as those files, each by the path the fidelity declares for it."""
         if isinstance(request.content, ThinSlicedMap):
-            return {"format": request.format, "content": request.content.drawn_by(self.adapter_class(request.format))}
+            return Rendered(request.format, request.content.drawn_by(self.adapter_class(request.format)))
         if self._writes_scenarios_files(request):
             markdown = self.adapter(request.format).copy_of(self._object_model(request.content, request.source_format))
-            return {"format": request.format, "content": markdown.scenarios_files(STORY_TESTS_FOLDER)}
+            return Rendered(request.format, markdown.scenarios_files(STORY_TESTS_FOLDER))
         return super().render(request)
 
     def _writes_scenarios_files(self, request: RenderRequest) -> bool:
@@ -144,7 +142,7 @@ class StoriesFormats(PracticeFormats):
         story_map = StoryMapFiles(files[0].parent, top=project).nearest()
         if story_map is None or story_map.suffix.lower() != ".md":
             return None
-        return ScenariosOnTheirMap(story_map, files, project).read_by(self.adapter_class("markdown"))
+        return ScenariosOnTheirMap(story_map, files, project).read_by(self.adapter("markdown"))
 
     def _project_of(self, named: list[Path]) -> Path:
         """The folder paths are named from: the repository of the session the practice works in. The MCP host serves

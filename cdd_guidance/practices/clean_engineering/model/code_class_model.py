@@ -19,6 +19,7 @@ from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.source_code import SourceText
 from cdd_guidance.practices.clean_engineering.model.property import Property
 from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUCTOR_NAMES
+from harness.guidance.practice_formats import Written
 
 
 class CodeProperty(Property):
@@ -216,18 +217,18 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
         """The module the last text this model parsed forms, with that text kept, whether or not it holds a class."""
         return self._file_module
 
-    def render(self, canonical: CleanEngineeringModel, previous: Optional[str] = None) -> str:
+    def render(self, canonical: CleanEngineeringModel, written: Written = Written()) -> str:
         """Write canonical as code, keeping the bodies the previous file had. A practice keeps one channel per format
         and renders every model through it, so another model is written from a model of its own, never translated into
         this one, whose classes would keep the names of the model rendered before."""
         if canonical is not self:
-            written = type(self)(name="", sequential_order=1)
-            written.translate_from(canonical)
-            written.keep_notes_out_of_code()
-            return written.render(written, previous)
+            own = type(self)(name="", sequential_order=1)
+            own.translate_from(canonical)
+            own.keep_notes_out_of_code()
+            return own.render(own, written)
         kept = type(self)(name="", sequential_order=1)
-        if previous:
-            kept.parse(previous)
+        if written.previous:
+            kept.parse(written.previous)
         known_names = [oclass.name for oclass in self.every_class()]
         lines = self.file_header(self._preamble(kept))
         for module in self.modules:

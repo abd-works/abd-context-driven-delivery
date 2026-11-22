@@ -364,7 +364,7 @@ describe('Filter Files By Format In Files App', () => {
   // A board published from the story map opens in Claude, so it shows whatever formats are chosen; requested
   // 2026-11-18: "first of all where is whiteboard link" while only markdown and drawio were chosen.
   it('should show a published whiteboard while only other formats are selected', () => {
-    const board = { ...(entry('.context/story-map.version-2.whiteboard') as object), link: 'https://claude.ai/artifact/board' } as never
+    const board = { ...(entry('.context/story-map.version-2.whiteboard') as object), link: 'https://claude.ai/artifact/board', published_kind: 'whiteboard' } as never
     const files = [{ slug: 'stories-story-map', entries: [entry('.context/story-map.md'), board], formatOf: { '.context/story-map.md': 'markdown', '.context/story-map.version-2.whiteboard': 'whiteboard' } }]
     const shown = filesShown(files, ['stories-story-map'], ['markdown', 'drawio'])
     expect(shown.map(each => each.path)).toEqual(['.context/story-map.md', '.context/story-map.version-2.whiteboard'])
@@ -558,7 +558,7 @@ describe('Add File Or Selection To Chat Context', () => {
 // A whiteboard opens in Claude Desktop's artifact panel, beside the chat, not in a browser: the page asks the chat that
 // opened it to open the board; requested 2026-11-18: "im in claude desktop i want it open in desktop".
 describe('Open Whiteboard In Claude Desktop', () => {
-  const board = { path: '.context/story-map.version-2.whiteboard', exists: true, is_changed: true, link: 'https://claude.ai/artifact/board-2', format: 'whiteboard', fidelities: [] } as never
+  const board = { path: '.context/story-map.version-2.whiteboard', exists: true, is_changed: true, link: 'https://claude.ai/artifact/board-2', published_kind: 'whiteboard', format: 'whiteboard', fidelities: [] } as never
 
   it('should ask the chat that opened the page to open the board in its artifact panel', async () => {
     const server = new FakeFilesServer()

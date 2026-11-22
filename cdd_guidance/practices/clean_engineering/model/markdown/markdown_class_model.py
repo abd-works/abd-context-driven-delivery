@@ -44,6 +44,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
 )
 from cdd_guidance.practices.clean_engineering.model.markdown.class_card import ClassCard
 from cdd_guidance.practices.source_code import split_top_level
+from harness.guidance.practice_formats import Written
 
 if TYPE_CHECKING:
     from harness.graph.graph import Graph
@@ -496,7 +497,7 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
         # The card document it was read from; none for a plain model document.
         self._cards: Optional[CardDocument] = None
 
-    def parse(self, text: str) -> "MarkdownCleanEngineeringModel":
+    def parse(self, text: str, file: str = "") -> "MarkdownCleanEngineeringModel":
         """Read a card document or a plain model document into this model's own modules, and return it."""
         headings = self._headings(text)
         card_levels = [level for _index, level, raw in headings if _CARD_HEADING.match(raw)]
@@ -533,24 +534,23 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
                 found.append((index, len(heading.group(1)), line))
         return found
 
-    def render(self, canonical: Optional[CleanEngineeringModel] = None, previous: Optional[str] = None) -> str:
+    def render(self, canonical: CleanEngineeringModel, written: Written = Written()) -> str:
         """Write this model; handed another model, a markdown one writes itself and any other is written by a model
         of its own, read from previous, the file this render replaces, so the file keeps its own text around the
         classes canonical changed. A practice keeps one model per format and renders every model through it, so
         another model is never translated into this one, whose classes would keep the names and the prose of the
         model rendered before."""
-        if canonical is None or canonical is self:
-            return self._written()
         if isinstance(canonical, MarkdownCleanEngineeringModel):
-            return canonical.render()
-        written = type(self)()
-        written.parse(previous or "")
+            return canonical._written()
+        own = type(self)()
+        own.parse(written.previous or "")
         # Translation overwrites the parsed objects in place, so the words the document held are kept apart first.
-        earlier = written.clone()
-        written.translate_from(canonical)
+        earlier = own.clone()
+        own.translate_from(canonical)
         if not canonical.writes_prose:
-            written.take_words_from(earlier)
-        return written._written()
+            own.take_words_from(earlier)
+        return own._written()
+
 
     def _written(self) -> str:
         if self._cards is not None:

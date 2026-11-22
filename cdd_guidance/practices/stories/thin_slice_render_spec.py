@@ -62,7 +62,7 @@ with description("a thin slice written in thin-slice.md beside its story map") a
 
     with context("that is rendered to drawio"):
         with before.each:
-            self.drawn = self.fidelity.render_files("drawio", [str(self.context / "thin-slice.md")], "markdown")["content"]
+            self.drawn = self.fidelity.render_files("drawio", [str(self.context / "thin-slice.md")], "markdown").content
 
         with it("should draw each increment as a lane of the stories it delivers"):
             read = DrawIOStoryModel(self.story_map).load_thin_slice(self.drawn)
@@ -73,7 +73,7 @@ with description("a thin slice written in thin-slice.md beside its story map") a
 
     with context("that is rendered to whiteboard"):
         with before.each:
-            self.board = self.fidelity.render_files("whiteboard", [str(self.context / "thin-slice.md")], "markdown")["content"]
+            self.board = self.fidelity.render_files("whiteboard", [str(self.context / "thin-slice.md")], "markdown").content
 
         with it("should draw each increment as a lane of the stories it delivers"):
             read = WhiteboardStoryModel(self.story_map).load_thin_slice(self.board)
@@ -81,7 +81,7 @@ with description("a thin slice written in thin-slice.md beside its story map") a
 
     with context("whose story map is rendered to drawio"):
         with before.each:
-            self.drawn = self.fidelity.render_files("drawio", [str(self.context / "story-map.md")], "markdown")["content"]
+            self.drawn = self.fidelity.render_files("drawio", [str(self.context / "story-map.md")], "markdown").content
 
         with it("should draw the story map, not the thin slice's lanes"):
             expect(self.drawn).not_to(contain("inc-lane/"))

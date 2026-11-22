@@ -1,18 +1,6 @@
 """The abd.works engineering look canvases wear: dark surfaces, thin borders, mono uppercase labels, one orange accent."""
 
-from typing import TypedDict
-
-
-class CardLook(TypedDict):
-    """How a card is drawn: its fill, border, and text colours, its font, size, and weight, and any further css."""
-
-    fill: str
-    stroke: str
-    color: str
-    size: int
-    weight: int
-    font: str
-    extra: str
+from harness.design_canvas.canvas import CardLook
 
 
 MONO = "'JetBrains Mono', ui-monospace, monospace"

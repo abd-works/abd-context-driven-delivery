@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List
 
 from cdd_guidance.practices.ux.model.ux_map import UxMap
+from harness.guidance.practice_formats import Written
 
 
 PAGE_ID_LENGTH = 40
@@ -30,14 +31,14 @@ class ClaudeDesignUxMap(UxMap):
     width = 1600
     height = 1100
 
-    def render(self, canonical: UxMap) -> str:
+    def render(self, canonical: UxMap, written: Written = Written()) -> str:
         """canonical's screens placed on the canvas: copied into a Claude Design map, which places its own."""
         return self.copy_of(canonical).save()
 
     def save(self) -> str:
         return json.dumps(self.boards(), indent=1, ensure_ascii=False)
 
-    def parse(self, content: str) -> UxMap:
+    def parse(self, text: str, file: str = "") -> UxMap:
         raise ClaudeDesignScreensNotReadable("Claude Design screens are placed from the UX map; they are not read back.")
 
     def prototype_names(self) -> List[str]:

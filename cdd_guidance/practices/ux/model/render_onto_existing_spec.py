@@ -19,6 +19,7 @@ from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen, Trans
 from cdd_guidance.practices.ux.model.ux_map import UxMap  # noqa: E402
 from cdd_guidance.practices.ux.model.ux_map_spec_fixture import made  # noqa: E402
 from cdd_guidance.practices.ux.model.whiteboard.nodes import WhiteboardUxMap  # noqa: E402
+from harness.guidance.practice_formats import Written
 
 _STORY_LINK = "[Add Book To Cart](story_tests/shop/fill_cart_story.test.md#story-add-book-to-cart)"
 _PERSONS_LINK = "[View Book](story_tests/shop/view_book_story.test.md#story-view-book)"
@@ -70,7 +71,7 @@ with description("a UX map rendered onto the UX context a person wrote"):
     with context("with an invariant and a note the file does not hold, and a new scope"):
         with before.all:
             source = context_of("Browse Books, Fill Cart", ["A Book has one price."], ["Checkout is one page."])
-            self.rendered = MarkdownUxMap.create().render(source, previous=_UX_CONTEXT)
+            self.rendered = MarkdownUxMap.create().render(source, Written(_UX_CONTEXT))
 
         with it("should keep every line the person wrote, the scope line going on to say the map's scope"):
             expect(lines_lost(_UX_CONTEXT, self.rendered)).to(equal([]))
@@ -89,16 +90,16 @@ with description("a UX map rendered onto the UX context a person wrote"):
 
         with it("should change nothing when the same map is rendered onto it again"):
             source = context_of("Browse Books, Fill Cart", ["A Book has one price."], ["Checkout is one page."])
-            expect(MarkdownUxMap.create().render(source, previous=self.rendered)).to(equal(self.rendered))
+            expect(MarkdownUxMap.create().render(source, Written(self.rendered))).to(equal(self.rendered))
 
     with context("with what the file already holds, and nothing more"):
         with it("should leave the file exactly as it is"):
             source = context_of("Browse Books", ["A Cart Line shows one Book and its quantity."], ["A Customer reaches the Cart from every screen."])
-            expect(MarkdownUxMap.create().render(source, previous=_UX_CONTEXT)).to(equal(_UX_CONTEXT))
+            expect(MarkdownUxMap.create().render(source, Written(_UX_CONTEXT))).to(equal(_UX_CONTEXT))
 
     with context("with an invariant, onto a file that has no invariants yet"):
         with it("should add an Invariants section after what the file holds"):
-            rendered = MarkdownUxMap.create().render(context_of("", ["A Book has one price."], []), previous="# UX context\n\nScope: Browse Books\n")
+            rendered = MarkdownUxMap.create().render(context_of("", ["A Book has one price."], []), Written("# UX context\n\nScope: Browse Books\n"))
             expect(rendered).to(equal("# UX context\n\nScope: Browse Books\n\n## Invariants\n- A Book has one price.\n"))
 
 
@@ -121,7 +122,7 @@ with description("a mockup rendered onto the board a person worked on"):
         moved = next(section for section in self.worked_on.sections if section.text == "Checkout")
         moved.box = Box(2500, 700, moved.box.w, moved.box.h)
         self.previous = self.worked_on.save()
-        self.rendered = WhiteboardUxMap.create().render(mockup(), previous=self.previous)
+        self.rendered = WhiteboardUxMap.create().render(mockup(), Written(self.previous))
         self.board = Whiteboard.from_text(self.rendered)
         self.read = WhiteboardUxMap.create().parse(self.rendered)
 
@@ -146,13 +147,13 @@ with description("a mockup rendered onto the board a person worked on"):
         expect(self.read.find_screen("Book Details").regions[1].controls[0].story_keys).to(equal([_STORY_LINK]))
 
     with it("should change nothing when the same mockup is rendered onto it again"):
-        expect(WhiteboardUxMap.create().render(mockup(), previous=self.rendered)).to(equal(self.rendered))
+        expect(WhiteboardUxMap.create().render(mockup(), Written(self.rendered))).to(equal(self.rendered))
 
     with context("after the mockup loses a control the board still draws"):
         with before.all:
             smaller = mockup()
             smaller.find_screen("Book Details").regions[1].controls.refill([smaller.find_screen("Book Details").regions[1].controls[0]])
-            self.after = WhiteboardUxMap.create().parse(WhiteboardUxMap.create().render(smaller, previous=self.rendered))
+            self.after = WhiteboardUxMap.create().parse(WhiteboardUxMap.create().render(smaller, Written(self.rendered)))
 
         with it("should keep the control's card on the board, with the story written on it"):
             kept = self.after.find_screen("Book Details").regions[1].controls

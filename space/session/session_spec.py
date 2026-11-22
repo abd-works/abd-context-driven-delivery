@@ -27,7 +27,7 @@ from harness.guidance_actions import GuidanceAction
 from harness.hooks.hook_server import HookPayload
 from harness.agent_tools.tool_call import SESSION_OPENING, ToolCall, ToolRequest
 from harness.mcp.mcp_server import ProjectToolsets
-from harness.whiteboard import BoardLinks
+from harness.whiteboard import Whiteboard
 from space.repo.mock_repo import MockGit
 from tools.prompt_queue.prompt_queue import PromptQueue
 from space.repo.repo import Repo
@@ -1468,7 +1468,7 @@ with description("a session whose story map is drawn on a whiteboard") as self:
 
     with context("that was published to a board"):
         with before.each:
-            BoardLinks.beside(self.work / ".context" / "story-map.whiteboard").record(self.work / ".context" / "story-map.whiteboard", "https://claude.ai/artifact/story-board")
+            Whiteboard.links_beside(self.work / ".context" / "story-map.whiteboard").record("story-map.whiteboard", "https://claude.ai/artifact/story-board")
 
         with it("should list the whiteboard file at its board's address"):
             expect([(entry.path, entry.link) for entry in self.story_map.session_output.written.files()["whiteboard"]]).to(
@@ -1486,8 +1486,8 @@ with description("a session whose story map is drawn on a whiteboard") as self:
         with before.each:
             first, second = self.work / ".context" / "story-map.whiteboard", self.work / ".context" / "story-map.version-2.whiteboard"
             second.write_text("{}", encoding="utf-8")
-            BoardLinks.beside(first).record(first, "https://claude.ai/artifact/story-board")
-            BoardLinks.beside(second).record(second, "https://claude.ai/artifact/story-board-2")
+            Whiteboard.links_beside(first).record(first.name, "https://claude.ai/artifact/story-board")
+            Whiteboard.links_beside(second).record(second.name, "https://claude.ai/artifact/story-board-2")
 
         with it("should list the latest version at its board's address"):
             expect([(entry.path, entry.link) for entry in self.story_map.session_output.written.files()["whiteboard"]]).to(

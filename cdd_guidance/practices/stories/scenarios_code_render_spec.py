@@ -49,7 +49,7 @@ with description("the scenarios files of one sub-epic, in a project whose story 
 
     with context("that are rendered to Python by their folder"):
         with before.each:
-            self.files = self.fidelity.render_files("python", ["story_tests/fill-cart/add-books"], "markdown")["content"]
+            self.files = self.fidelity.render_files("python", ["story_tests/fill-cart/add-books"], "markdown").content
 
         with it("should write the story's test in its own folder, under the epic and sub-epic the map gives it"):
             expect(list(self.files)).to(equal([_ADD_BOOK_PYTHON]))
@@ -63,7 +63,7 @@ with description("the scenarios files of one sub-epic, in a project whose story 
     with context("that are rendered to TypeScript by one file"):
         with before.each:
             named = ["story_tests/fill-cart/add-books/add_book_to_cart_story.test.md"]
-            self.files = self.fidelity.render_files("typescript", named, "markdown")["content"]
+            self.files = self.fidelity.render_files("typescript", named, "markdown").content
 
         with it("should write the story's test in its own folder, and the step library at the root of the story tests"):
             expect(sorted(self.files)).to(equal(["story_tests/fill-cart/add-books/add-book-to-cart/add_book_to_cart_story.test.ts", "story_tests/story-test.ts"]))
@@ -88,7 +88,7 @@ with description("the story tests of Pack Orders, in a project with their story 
     with context("whose shared story file alone is rendered to Python"):
         with before.each:
             named = ["story_tests/fulfil-order/pack-orders/pack-orders.story.shared.ts"]
-            self.files = _fidelity_in(self.project, "acceptance_tests").render_files("python", named, "typescript")["content"]
+            self.files = _fidelity_in(self.project, "acceptance_tests").render_files("python", named, "typescript").content
 
         with it("should write a story test only for the story that file holds"):
             expect(list(self.files)).to(equal(["story_tests/fulfil-order/pack-orders/cancel-order/cancel_order_story.test.py"]))
@@ -97,7 +97,7 @@ with description("the story tests of Pack Orders, in a project with their story 
         with before.each:
             fidelity = _fidelity_in(self.project, "scenarios")
             self.declared = fidelity.declared
-            self.files = fidelity.render_files("markdown", ["story_tests"], "typescript")["content"]
+            self.files = fidelity.render_files("markdown", ["story_tests"], "typescript").content
 
         with it("should answer a scenarios file for each story, in its sub-epic's folder"):
             expect(sorted(self.files)).to(equal([

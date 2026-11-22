@@ -2,7 +2,7 @@
 
 *CleanEngineeringModel* is one class model that every format reads and writes: modules holding classes, each with properties, operations and their parameters, and the relationships its properties name. A nested module is a module whose parent is a module. Every node is a graph node (*ModelNode*), so the same objects the formats build are the nodes the graph holds.
 
-A format is one subclass of *CleanEngineeringModel*: markdown, JSON, sketch, Python, TypeScript, JavaScript, Java, and draw.io. Each format reads text with `parse(text)`, which fills the format model itself and returns it, and writes with `render(canonical, previous)`: the format model becomes the canonical model once through `translate_from`, as its own subclasses of the modules and classes, then writes itself. A caller reading a file reads its text and hands it to `parse`; there is no second way in. A member written as a model line, `save(cart: Cart): Receipt` or `identity: Identity`, is read by `Operation.from_signature` and `Property.from_signature`, which every format that writes such lines uses.
+A format is one subclass of *CleanEngineeringModel*: markdown, JSON, sketch, Python, TypeScript, JavaScript, Java, and draw.io. Each format meets harness/guidance's format contract (*FormatAdapter*, which *CleanEngineeringModel* extends): it reads text with `parse(text, file)`, which fills the format model itself and returns it, opens a file with `read_file(path, project)`, and writes with `render(canonical, written)`, *Written* holding the file as it is now: the format model becomes the canonical model once through `translate_from`, as its own subclasses of the modules and classes, then writes itself. A caller reading a file reads its text and hands it to `parse`; there is no second way in. A member written as a model line, `save(cart: Cart): Receipt` or `identity: Identity`, is read by `Operation.from_signature` and `Property.from_signature`, which every format that writes such lines uses.
 
 One format's model becomes another's through `translate_from(source)`: each node copies what it says itself (`update_self`), then matches the source's children to its own by name, else by order, and builds each new child in its own format through `load_module`, `load_class`, `load_property`, `load_operation`, or `load_parameter`.
 
@@ -1040,7 +1040,7 @@ The `java` format.
 One placed cell. Draw.io writes it as HTML; the box, its placement, and its arrows are shared.
 
 ------
-+ geometry: Geometry
++ geometry: Box
 + cell_id: str
 + parent_id: str
 + group: str
@@ -1098,19 +1098,20 @@ Path nesting and dependency depth for ordering modules on a page.
 
 The diagram format draw.io extends. A modules view (`is_modules_view`: modules with no class members to show) stops at modules; a class view continues through properties and operations.
 
-## Geometry
+## Box (harness/whiteboard)
 
-+ Geometry(x: float, y: float, width: float, height: float)
+The one rectangle a laid-out card, a draw.io cell, and a whiteboard element are placed in; the layout uses the
+framework's own.
+
++ Box(x: float, y: float, w: float, h: float)
 ------
-+ x: float
-+ y: float
-+ width: float
-+ height: float
 + center: tuple[float, float]
 ----
-+ overlaps(other: Geometry): bool
-+ shifted(dx: float, dy: float): Geometry
-+ moved_to(x: float, y: float): Geometry
++ holds(other: Box): bool
++ overlaps(other: Box): bool
++ shifted(rightward: float, downward: float): Box
++ moved_to(left: float, top: float): Box
++ clear_gap_to(other: Box): float
 
 ## DiagramArrow
 
@@ -1148,7 +1149,7 @@ Finds the grid position for every card that leaves the fewest crossings and the 
 
 Routes every arrow between the placed cards.
 
-+ ArrowRouter(cards: list[DiagramNode], arrows: list[DiagramArrow], obstacles: list[Geometry] = (), kept_paths: list[list] = ())
++ ArrowRouter(cards: list[DiagramNode], arrows: list[DiagramArrow], obstacles: list[Box] = (), kept_paths: list[list] = ())
 	Invariant: an arrow never passes through a card or runs along another arrow, and each has its own end points
 	Invariant: the inheritance arrows of two or more subclasses that reach one base from the same side join into one trunk — a drop from each subclass to a shared bar, and one line from the bar to one point on the base; a single subclass keeps a direct arrow
 ------

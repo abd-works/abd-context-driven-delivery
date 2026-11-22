@@ -15,20 +15,18 @@ interaction, or description.
 
 from __future__ import annotations
 
-import hashlib
 import math
 import re
 from pathlib import Path
 from typing import List, Optional
 
-from harness.whiteboard import BoardElement, Box, Whiteboard, WhiteboardNode
+from harness.whiteboard import Arrow, BoardElement, Box, ElementId, Section, Shape, Whiteboard, WhiteboardNode
 
 from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen, ServesStories, StoryDemoControl, Transition
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 from cdd_guidance.practices.ux.model.ux_node import UxNode
+from harness.guidance.practice_formats import Written
 
-KEY_LENGTH = 10
-"""Hex digits of a node's path hash in its element id: enough that two nodes of one map never share one."""
 # What joins the things one line lists: the stories a card shows, the domain terms of a screen.
 _BESIDE = " · "
 # The heading each kind of thing served is listed under, in the order a card lists them.
@@ -66,14 +64,14 @@ class DrawnNode(UxNode, WhiteboardNode):
 
     box = Box(0, 0, 0, 0)
 
-    @property
-    def board_key(self) -> str:
+    def element_id(self, role: str, *parts: str) -> ElementId:
+        """This node's element id as role, then parts, then the key its names from the map down to it hash to."""
         names: List[str] = []
         node: Optional[UxNode] = self
         while node is not None and not isinstance(node, UxMap):
             names.append(f"{node.semantic_type()}:{node.name}")
             node = node.parent
-        return hashlib.sha1("/".join(reversed(names)).encode("utf-8")).hexdigest()[:KEY_LENGTH]
+        return ElementId.of(role, *reversed(names), length=self.KEY_LENGTH, parts=parts)
 
     def board_box(self) -> Box:
         return self.box
@@ -107,7 +105,7 @@ class WhiteboardControl(Control, ServedOnCard, DrawnNode):
         return _card_height(self.card_text)
 
     def board_elements(self) -> List[BoardElement]:
-        return [self.board_shape(f"control.{self.board_key}", kind="rounded", color="yellow", size="small", text_align="left", text=self.card_text)]
+        return [self.board_shape(self.element_id("control"), kind="rounded", color="yellow", size="small", text_align="left", text=self.card_text)]
 
     @classmethod
     def from_card(cls, card: BoardElement, order: int) -> "WhiteboardControl":
@@ -146,13 +144,13 @@ class WhiteboardRegion(Region, DrawnNode):
 
     def board_elements(self) -> List[BoardElement]:
         area = self.area if _AREA_IN_ID.match(self.area or "") else _NO_AREA
-        section = BoardElement.section(f"region.{area}.{self.board_key}", self.box, color="white", text=self.name)
+        section = Section(self.element_id("region", area), box=self.box, color="white", text=self.name)
         return [section, *(element for control in self.controls for element in control.board_elements())]
 
     @classmethod
     def from_section(cls, section: BoardElement, order: int) -> "WhiteboardRegion":
         region = cls(section.text.strip() or f"Region {order}", order)
-        area = section.id.split(".")[1] if section.id.count(".") >= 2 else _NO_AREA
+        area = section.id.parts[0] if len(section.id.parts) >= 2 else _NO_AREA
         region.area = "" if area == _NO_AREA else area
         return region
 
@@ -188,9 +186,9 @@ class WhiteboardScreen(Screen, ServedOnCard, DrawnNode):
             next_top += region.height + CARD_GAP
 
     def board_elements(self) -> List[BoardElement]:
-        drawn = [BoardElement.section(f"screen.{self.board_key}", self.box, color="blue", text=self.name)]
+        drawn: List[BoardElement] = [Section(self.element_id("screen"), box=self.box, color="blue", text=self.name)]
         if self.serves_text:
-            drawn.append(BoardElement.shape(f"serves.{self.board_key}", self._serves_box, kind="rounded", color="green", size="small", text_align="left", text=self.serves_text))
+            drawn.append(Shape(self.element_id("serves"), box=self._serves_box, kind="rounded", color="green", size="small", text_align="left", text=self.serves_text))
         return [*drawn, *(element for region in self.regions for element in region.board_elements())]
 
     def read_serves_card(self, card: BoardElement) -> None:
@@ -209,9 +207,9 @@ class WhiteboardTransition(Transition, DrawnNode):
         if not isinstance(self.from_screen, WhiteboardScreen) or not isinstance(self.to_screen, WhiteboardScreen):
             return []
         label = self.trigger if self.nav_type in (_ACTION, _TAB, "") else f"[{self.nav_type}] {self.trigger}"
-        key = hashlib.sha1(f"{self.from_screen.name}/{self.to_screen.name}/{self.trigger}".encode("utf-8")).hexdigest()[:KEY_LENGTH]
-        return [BoardElement.arrow(
-            f"transition.{key}", from_id=f"screen.{self.from_screen.board_key}", to_id=f"screen.{self.to_screen.board_key}",
+        return [Arrow(
+            ElementId.of("transition", self.from_screen.name, self.to_screen.name, self.trigger, length=self.KEY_LENGTH),
+            from_id=self.from_screen.element_id("screen"), to_id=self.to_screen.element_id("screen"),
             label=label, dash=self.nav_type == _TAB, head="arrow",
         )]
 
@@ -238,17 +236,17 @@ class WhiteboardUxMap(UxMap):
         """A board that draws a UX screen; any other board is another practice's, such as a story map."""
         return '"screen.' in text
 
-    def render(self, canonical: UxMap, previous: Optional[str] = None) -> str:
+    def render(self, canonical: UxMap, written: Written = Written()) -> str:
         """canonical drawn as a board. Drawn over a previous board, it loses nothing that board holds: each element
         stays where people put it, a card keeps the stories, scenarios, and steps a person wrote on it beside what
         canonical's control serves, and every element canonical does not draw (a card or a screen a person added or
         canonical has since lost, a note stuck on the board) stays as it was."""
         drawn = self.copy_of(canonical)
-        if not previous:
+        if not written.previous:
             return drawn.board().save()
-        before = Whiteboard.from_text(previous)
+        before = Whiteboard.from_text(written.previous)
         if any(element.role == "screen" for element in before.sections):
-            drawn.keep_served_by(self.parse(previous))
+            drawn.keep_served_by(self.parse(written.previous))
         board = drawn.board().keep_places(before)
         for element in before.elements:
             if board.element(element.id) is None:
@@ -270,10 +268,10 @@ class WhiteboardUxMap(UxMap):
             board.draw(transition)
         return board
 
-    def parse(self, content: str) -> UxMap:
+    def parse(self, text: str, file: str = "") -> UxMap:
         """A new map of this format, read from a board's text by where its elements sit."""
         ux_map = type(self).create()
-        ux_map._take_board(Whiteboard.from_text(content).holding({"screen"}, "UX screen"))
+        ux_map._take_board(Whiteboard.from_text(text).holding({"screen"}, "UX screen"))
         return ux_map
 
     def _take_board(self, board: Whiteboard) -> None:

@@ -44,9 +44,9 @@ from cdd_guidance.practices.clean_engineering.model.diagram.class_view import (
     plain_class_name as _plain_class_name,
 )
 from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import DiagramCleanEngineeringModel, ModulesView
-from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry
+from harness.whiteboard import Box
 from cdd_guidance.practices.clean_engineering.model.diagram.module_layout import MODULE_START_X, MODULE_START_Y, ModuleLayout
-from cdd_guidance.practices.clean_engineering.model.drawio.page.drawio_page import DrawioPage, class_name_in, style_value
+from cdd_guidance.practices.clean_engineering.model.drawio.page.drawio_page import ClassDiagramPage, class_name_in
 from cdd_guidance.practices.clean_engineering.model.drawio.diagram_node import (
     DrawIOClass,
     DrawIOModule,
@@ -54,6 +54,8 @@ from cdd_guidance.practices.clean_engineering.model.drawio.diagram_node import (
 )
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
+from harness.drawio import CellStyle, DrawioFile, DrawioPage, UnreadableDrawio
+from harness.guidance.practice_formats import Written
 
 _EDGE_BASE_STYLE = 'edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;'
 EDGE_STYLES = {'inheritance': f'{_EDGE_BASE_STYLE}endArrow=block;endSize=16;endFill=0;', 'composition': f'{_EDGE_BASE_STYLE}startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;', 'aggregation': f'{_EDGE_BASE_STYLE}startArrow=diamondThin;startFill=0;startSize=14;endArrow=open;endSize=12;', 'association': f'{_EDGE_BASE_STYLE}endArrow=open;endSize=12;', 'dependency': f'{_EDGE_BASE_STYLE}dashed=1;endArrow=open;endSize=12;'}
@@ -105,11 +107,11 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
         loaded.translate_from(source)
         return loaded
 
-    def parse(self, text: str) -> 'DrawIOCleanEngineeringModel':
+    def parse(self, text: str, file: str = "") -> 'DrawIOCleanEngineeringModel':
         """Read a modules-view or class-view diagram into this model's own modules, and return it."""
         root_el = self._diagram_xml(text)
         self.modules = []
-        document = DrawioPage(None, '', root_el)
+        document = ClassDiagramPage(DrawioFile(root_el).whole)
         if self._looks_like_modules_diagram(document.cells):
             self._read_modules(document)
         else:
@@ -122,28 +124,29 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
         except ET.ParseError as error:
             raise UnreadableSource(f'draw.io diagram is not valid XML: {error}') from error
 
-    def _read_classes(self, root_el: ET.Element, document: DrawioPage) -> None:
+    def _read_classes(self, root_el: ET.Element, document: ClassDiagramPage) -> None:
         """A diagram of several pages holds one module per page; a single page names each card's module in its style."""
         if len(root_el.findall('diagram')) > 1:
-            _ClassDiagramReader(self).read_pages(DrawioPage.pages_in(root_el))
+            _ClassDiagramReader(self).read_pages([ClassDiagramPage(page) for page in DrawioFile(root_el).pages])
         else:
             _ClassDiagramReader(self).read_single_page(document)
 
-    def render(self, canonical: CleanEngineeringModel, previous: Optional[str] = None) -> str:
+    def render(self, canonical: CleanEngineeringModel, written: Written = Written()) -> str:
         """Become the canonical model once, as Draw.io modules and classes, then write this model's own diagram. With
         previous, the drawing this one replaces, the cards and arrows a person placed there stay where they are; without
         it, the diagram this model keeps positions from, when it keeps them."""
         if canonical is not self:
             self.translate_from(canonical)
         if self.is_modules_view:
-            return _ModulesDiagramWriter(self, previous or self.previous).write()
-        return _ClassDiagramWriter(self, previous or self.kept_previous()).write()
+            return _ModulesDiagramWriter(self, written.previous or self.previous).write()
+        return _ClassDiagramWriter(self, written.previous or self.kept_previous()).write()
+
 
     def kept_previous(self) -> Optional[str]:
         """The previous diagram when this render keeps its positions, else None."""
         return self.previous if self.keep_positioning else None
 
-    def _read_modules(self, document: DrawioPage) -> None:
+    def _read_modules(self, document: ClassDiagramPage) -> None:
         id_to_module: dict[str, Module] = {}
         for cell in document.vertices:
             style = cell.get('style', '')
@@ -196,7 +199,7 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
     def _is_module_style(self, style: str) -> bool:
         return _MODULE_MARKER in style or _MODULE_CHILD_MARKER in style
 
-    def _add_module_dependencies(self, document: DrawioPage, id_to_module: dict[str, Module]) -> None:
+    def _add_module_dependencies(self, document: ClassDiagramPage, id_to_module: dict[str, Module]) -> None:
         """A child cell depends on the top-level cell it sits in; then each edge source depends on its target, keeping
         the words written on the edge."""
         nested = [
@@ -229,14 +232,14 @@ class _ClassDiagramReader:
         self._names_by_cell: dict[str, str] = {}
         self._seen_names: set[str] = set()
 
-    def read_single_page(self, page: DrawioPage) -> None:
+    def read_single_page(self, page: ClassDiagramPage) -> None:
         """One page: each card names its module in its style."""
         modules: Dict[str, DrawIOModule] = {}
         for cell, oclass in self._class_cards(page):
             self._names_by_cell[cell.get('id', '')] = oclass.name
             if 'dashed=1' in cell.get('style', ''):
                 continue
-            module_name = style_value(cell.get('style', ''), 'module')
+            module_name = CellStyle(cell.get('style', '')).value('module')
             module = modules.setdefault(module_name, DrawIOModule(name=module_name, sequential_order=len(modules) + 1))
             oclass.sequential_order = len(self._classes_by_cell) + 1
             module.classes.append(oclass)
@@ -244,7 +247,7 @@ class _ClassDiagramReader:
         self.model.modules.extend(modules.values())
         self._read_arrows(page)
 
-    def read_pages(self, pages: List[DrawioPage]) -> None:
+    def read_pages(self, pages: List[ClassDiagramPage]) -> None:
         """One Draw.io page → one module; skip dashed «from:» import cards."""
         for page in pages:
             module = DrawIOModule(name=page.name or f'module-{len(self.model.modules) + 1}', sequential_order=len(self.model.modules) + 1)
@@ -253,7 +256,7 @@ class _ClassDiagramReader:
                 self.model.modules.append(module)
             self._read_arrows(page)
 
-    def _read_page_cards(self, page: DrawioPage, module: DrawIOModule) -> None:
+    def _read_page_cards(self, page: ClassDiagramPage, module: DrawIOModule) -> None:
         for cell, oclass in self._class_cards(page):
             self._names_by_cell[cell.get('id', '')] = oclass.name
             if 'dashed=1' in cell.get('style', '') or oclass.name in self._seen_names:
@@ -263,7 +266,7 @@ class _ClassDiagramReader:
             module.classes.append(oclass)
             self._classes_by_cell[cell.get('id', '')] = oclass
 
-    def _class_cards(self, page: DrawioPage) -> List[Tuple[ET.Element, DrawIOClass]]:
+    def _class_cards(self, page: ClassDiagramPage) -> List[Tuple[ET.Element, DrawIOClass]]:
         """Each class card on the page, with the class it shows; the caller numbers the classes it keeps."""
         cards = []
         for cell in page.vertices:
@@ -296,7 +299,7 @@ class _ClassDiagramReader:
             folded.append(oclass)
         return folded
 
-    def _read_arrows(self, page: DrawioPage) -> None:
+    def _read_arrows(self, page: ClassDiagramPage) -> None:
         """Each arrow marks the property it stands for with its kind; the properties then derive their relationships."""
         for cell in page.edges:
             source = self._classes_by_cell.get(cell.get('source', ''))
@@ -311,7 +314,7 @@ class _ClassDiagramReader:
             words = html.unescape(cell.get('value', '') or '')
             for label in DEPENDENCY_LABEL.findall(words):
                 source.arrows.depend_on(target_name, label.strip())
-            source.take_arrow(target_name, kind, words, style_value(cell.get('style', ''), UNMARKED_STYLE_KEY))
+            source.take_arrow(target_name, kind, words, CellStyle(cell.get('style', '')).value(UNMARKED_STYLE_KEY))
         for oclass in self._classes_by_cell.values():
             for prop in oclass.properties:
                 prop.arrow.derive()
@@ -324,7 +327,7 @@ class _ModulesDiagramWriter(ModulesView):
         super().__init__(channel)
         # The drawing this one replaces, whose module boxes stay where they stood.
         self._kept = kept
-        self._bounds: Dict[str, Geometry] = {}
+        self._bounds: Dict[str, Box] = {}
         self._parent_ids: Dict[str, str] = {}
         self._cell_ids: Dict[str, str] = {
             name: f'nest-{_cell_slug(name)}' if name in self._forest.synthetic else _cell_slug(name) or name
@@ -332,8 +335,7 @@ class _ModulesDiagramWriter(ModulesView):
         }
 
     def write(self) -> str:
-        previous = DrawioPage.whole(self._kept) if self._kept else None
-        previous_positions = previous.positions() if previous is not None else {}
+        previous_positions = _whole_page(self._kept).positions() if self._kept else {}
         self._lay_out()
         mxfile = ET.Element('mxfile')
         mxfile.set('host', 'CleanEngineering.diagram.drawio')
@@ -341,8 +343,8 @@ class _ModulesDiagramWriter(ModulesView):
         diagram.set('name', 'Modules Context')
         diagram.set('id', 'modules-context')
         model_el = ET.SubElement(diagram, 'mxGraphModel')
-        page_width = int(max(MODULES_PAGE_WIDTH, max((b[0] + b[2] for b in self._bounds.values()), default=MODULE_START_X) + MODULES_PAGE_MARGIN))
-        page_height = int(max(MODULES_PAGE_HEIGHT, max((b[1] + b[3] for b in self._bounds.values()), default=MODULE_START_Y) + MODULES_PAGE_MARGIN))
+        page_width = int(max(MODULES_PAGE_WIDTH, max((b.x + b.w for b in self._bounds.values()), default=MODULE_START_X) + MODULES_PAGE_MARGIN))
+        page_height = int(max(MODULES_PAGE_HEIGHT, max((b.y + b.h for b in self._bounds.values()), default=MODULE_START_Y) + MODULES_PAGE_MARGIN))
         _set_graph_attrs(model_el, page_width, page_height)
         root_el = _add_graph_root(model_el)
         self._write_titles(root_el, page_width)
@@ -370,14 +372,15 @@ class _ModulesDiagramWriter(ModulesView):
     def _write_module(self, root_el: ET.Element, name: str, previous_positions: Dict[str, Tuple[float, float]]) -> None:
         cell_id = self._cell_ids[name]
         parent_id = self._parent_ids.get(name, '1')
-        x, y, width, height = self._bounds[name]
+        bounds = self._bounds[name]
+        x, y, width, height = bounds.x, bounds.y, bounds.w, bounds.h
         if cell_id in previous_positions and parent_id == '1':
             x, y = previous_positions[cell_id]
         node = self._cells[name]
         node.cell_id = cell_id
         node.parent_id = parent_id
         node.nested = parent_id != '1'
-        node.geometry = Geometry(float(x), float(y), float(width), float(height))
+        node.geometry = Box(float(x), float(y), float(width), float(height))
         node.append_to(root_el)
 
     def _write_dependencies(self, root_el: ET.Element) -> None:
@@ -427,8 +430,8 @@ class _ClassDiagramWriter(ClassView):
     def _write_single_page(self, mxfile: ET.Element) -> None:
         graph = self._add_diagram_page(mxfile, 'CleanEngineering Model', 'CleanEngineering-model')
         page = _ClassDiagramPage(self)
-        drawn = DrawioPage.whole(self.kept) if self.kept else None
-        positions = drawn.positions() if drawn is not None else {}
+        drawn = ClassDiagramPage(_whole_page(self.kept)) if self.kept else None
+        positions = drawn.page.positions() if drawn is not None else {}
         previous_edges = drawn.edges_by_ends() if drawn is not None else {}
         page.write(graph, positions, previous_edges)
 
@@ -436,19 +439,19 @@ class _ClassDiagramWriter(ClassView):
         page_name = module.name.strip()
         graph = self._add_diagram_page(mxfile, page_name, f'page-{_cell_slug(page_name)}')
         drawn = self.previous_pages.get(page_name)
-        positions = drawn.positions() if drawn is not None else {}
+        positions = drawn.page.positions() if drawn is not None else {}
         previous_edges = drawn.edges_by_ends() if drawn is not None else {}
         _ClassDiagramPage(self, module).write(graph, positions, previous_edges)
 
-    def _previous_pages(self) -> Dict[str, DrawioPage]:
+    def _previous_pages(self) -> Dict[str, ClassDiagramPage]:
         """The pages of the diagram this render replaces, by name; none when it keeps no positions or the previous
         text is not a draw.io file."""
         previous = self.kept
         if not previous:
             return {}
         try:
-            return {page.name: page for page in DrawioPage.pages_in(ET.fromstring(previous))}
-        except ET.ParseError:
+            return {page.name: ClassDiagramPage(page) for page in DrawioFile.from_text(previous).pages}
+        except UnreadableDrawio:
             return {}
 
     def _add_diagram_page(self, mxfile: ET.Element, page_name: str, page_id: str) -> ET.Element:
@@ -478,8 +481,8 @@ class _ClassDiagramPage(ClassViewPage):
         new_arrows = [arrow for arrow in arrows if (arrow.source, arrow.target) not in kept_pairs]
         kept_paths = [self._edge_waypoints(previous_edges[pair]) for pair in kept_pairs]
         self._append_edges(root_el, cards, ArrowRouter(list(cards.values()), new_arrows, kept_paths=kept_paths).route())
-        graph.set('pageWidth', str(int(max((card.geometry.x + card.geometry.width for card in cards.values()), default=0) + PAGE_EDGE_ALLOWANCE)))
-        graph.set('pageHeight', str(int(max((card.geometry.y + card.geometry.height for card in cards.values()), default=0) + PAGE_EDGE_ALLOWANCE)))
+        graph.set('pageWidth', str(int(max((card.geometry.x + card.geometry.w for card in cards.values()), default=0) + PAGE_EDGE_ALLOWANCE)))
+        graph.set('pageHeight', str(int(max((card.geometry.y + card.geometry.h for card in cards.values()), default=0) + PAGE_EDGE_ALLOWANCE)))
 
     def _copy_kept_edges(self, root_el: ET.Element, previous_edges: Dict[Tuple[str, str], ET.Element]) -> set:
         kept_pairs: set[Tuple[str, str]] = set()
@@ -570,3 +573,11 @@ def _card_lines(section: str) -> List[str]:
         for line in re.findall(r'(?:^|>|<br\s*/?>)\s*[+\-]\s*(.+?)(?=<br\s*/?>|</)', section, flags=re.IGNORECASE)
         if line.strip()
     ]
+
+
+def _whole_page(text: str) -> DrawioPage:
+    """Every cell of the drawing text holds, read as one page; no cell for text that is not a drawing."""
+    try:
+        return DrawioFile.from_text(text).whole
+    except UnreadableDrawio:
+        return DrawioFile().whole

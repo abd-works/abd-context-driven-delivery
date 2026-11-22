@@ -23,6 +23,7 @@ from cdd_guidance.practices.ux.model.nodes import (
     Transition,
 )
 from cdd_guidance.practices.ux.model.ux_map import UxMap
+from harness.guidance.practice_formats import Written
 
 # The names a UX map's JSON file goes by.
 _MAP_FILE_NAMES = ("ux-map.json", "ux.json")
@@ -230,10 +231,10 @@ class JsonUxMap(UxMap):
     content_type_type = JsonContentType
     nav_component_type = JsonNavComponent
 
-    def parse(self, content: str | dict) -> UxMap:
+    def parse(self, text: str | dict, file: str = "") -> UxMap:
         """A new map of this format read from a JSON document: its own fields, then each screen, each transition,
         content type, and navigation component reading its own record."""
-        document = self._document_of(content)
+        document = self._document_of(text)
         ux_map = type(self).create(name=document.get("name", "UxMap"))
         ux_map._read_record(document)
         return ux_map
@@ -265,7 +266,7 @@ class JsonUxMap(UxMap):
         """The screen a record names, or none for a record that names none."""
         return self.find_screen(name) if name else None
 
-    def render(self, canonical: UxMap) -> str:
+    def render(self, canonical: UxMap, written: Written = Written()) -> str:
         """canonical in this format: copied into a map of this format, which writes itself."""
         return self.copy_of(canonical).save()
 

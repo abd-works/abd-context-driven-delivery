@@ -14,7 +14,6 @@ if TYPE_CHECKING:
     from space.session.practice_session_output import FidelitySessionOutput
 
 _NAMED_FOLDER = re.compile(r"^\{[^{}/]+\}$")
-_FILLED_IN = re.compile(r"[{*?]")
 # A code format whose files also carry a second extension, such as React components in TypeScript; any other code format
 # is its own extension alone.
 _CODE_EXTENSIONS = {"typescript": (".ts", ".tsx"), "javascript": (".js", ".jsx")}
@@ -118,8 +117,7 @@ class ProposedRoots:
 
     def _fixed_head(self, template: str) -> tuple[str, ...]:
         """The folders a declared path names outright before its first named or wildcard part."""
-        parts = PurePosixPath(template).parts[:-1]
-        return tuple(part for part in parts[: next((index for index, part in enumerate(parts) if _FILLED_IN.search(part)), len(parts))])
+        return PurePosixPath(DeclaredFile(template).fixed_folder).parts
 
     def _declared_files(self) -> list[str]:
         """The files this fidelity's outputs declare, each once; a folder declared per module names no file."""

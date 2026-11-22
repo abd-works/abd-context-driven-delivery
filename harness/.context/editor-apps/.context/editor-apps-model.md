@@ -176,7 +176,7 @@ Decided while coding (implementation, 2026-11-12): *Session* gains nothing. The 
 ### PracticeSessionOutput (extended)
 
 + design_view: str  <<data_field>>
-	-> CanvasVersions.in_practice_root(self.output_root).link(latest)
+	-> CanvasVersions.in_practice_root(self.output_root).latest.link
 	// the claude.ai link recorded for the latest version of the design canvas under the folder this practice writes under (the UX practice's); empty while the practice is off or none is recorded. The chat bar's file viewer opens the first practice's that has one
 
 ### FidelitySessionOutput (extended)

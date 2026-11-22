@@ -15,7 +15,7 @@ from expects import equal, expect
 from mamba import after, before, context, description, it
 
 from harness.mcp.spec_support import SpecServer
-from harness.whiteboard import BoardLinks, Whiteboard
+from harness.whiteboard import Whiteboard
 from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 
 _RENDER = "cdd_guidance.actions.render.render:Render"
@@ -53,10 +53,10 @@ with description("Render publishing a whiteboard file to its board in Claude") a
             self.failed, self.answer = asyncio.run(_record_board(self.server, self.project.root, ".context/story-map.whiteboard", _BOARD))
 
         with it("should keep the board's address beside the file, so the Files app opens the board"):
-            expect(BoardLinks.beside(self.file).of(self.file)).to(equal(_BOARD))
+            expect(Whiteboard.links_beside(self.file).of(self.file.name)).to(equal(_BOARD))
 
         with it("should write the address into the folder's whiteboards.json, by the file's name"):
-            expect(json.loads((self.folder / BoardLinks.RECORD).read_text(encoding="utf-8"))).to(equal({"story-map.whiteboard": _BOARD}))
+            expect(json.loads((self.folder / Whiteboard.LINKS).read_text(encoding="utf-8"))).to(equal({"story-map.whiteboard": _BOARD}))
 
         with it("should answer the chat with the address kept"):
             expect((self.failed, self.answer)).to(equal((False, _BOARD)))
@@ -70,4 +70,4 @@ with description("Render publishing a whiteboard file to its board in Claude") a
             expect((self.failed, ".whiteboard" in self.answer)).to(equal((True, True)))
 
         with it("should keep no address"):
-            expect((self.folder / BoardLinks.RECORD).exists()).to(equal(False))
+            expect((self.folder / Whiteboard.LINKS).exists()).to(equal(False))

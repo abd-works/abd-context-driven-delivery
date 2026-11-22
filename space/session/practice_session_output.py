@@ -15,12 +15,12 @@ from harness.design_canvas.versions import CanvasVersions
 from harness.guidance.declared_outputs import DeclaredFile
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.mcp.mcp_annotations import mcp
-from harness.whiteboard import BoardLinks, Whiteboard
+from harness.whiteboard import Whiteboard
 from cdd_guidance.practices.stories.model.story_map_files import STORY_TESTS_FOLDER
 from harness.installation.context_config import CONTEXT_FOLDER, DEFAULT_FORMAT
 from harness.markdown.format import Format
 from space.session.answer_reads import HeldForAnswer
-from space.session.file_manager import FileEntry
+from space.session.file_manager import DESIGN_CANVAS_KIND, WHITEBOARD_KIND, FileEntry, Publication
 from space.session.proposed_roots import ProposedRoots, code_extensions
 from space.session.validation_report import ValidationReports
 
@@ -170,7 +170,7 @@ class PracticeSessionOutput:
         pattern fills in, such as ``story_tests`` for ``story_tests/{epic}/{sub-epic}/...``: a viewer of the session's
         files reads each of them."""
         paths = (path for fidelity in self.fidelities.entries.values() for paths in fidelity.session_output.written.output_paths().values() for path in paths)
-        return {self._fixed_folder(path) for path in paths}
+        return {Path(DeclaredFile(path).fixed_folder) for path in paths}
 
     @property
     @data_field
@@ -180,8 +180,8 @@ class PracticeSessionOutput:
         opens; empty while the practice is off or no link is recorded."""
         if not self.enabled:
             return ""
-        canvas = CanvasVersions.in_practice_root(self.output_root)
-        return canvas.link(canvas.latest) or ""
+        latest = CanvasVersions.in_practice_root(self.output_root).latest
+        return (latest.link or "") if latest is not None else ""
 
     @property
     @data_field
@@ -233,14 +233,6 @@ class PracticeSessionOutput:
         """Write this practice's files under its default root again: the workpath plus the practice's own folder."""
         self.change(lambda fields: setattr(fields, "root", ""), "root default")
         return self
-
-    def _fixed_folder(self, path: str) -> Path:
-        """The folder of path up to its first part a name or pattern fills in; a file's own folder when none does."""
-        parts = Path(path).parts
-        filled = next((index for index, part in enumerate(parts) if set(part) & set("{*?")), None)
-        if filled is not None:
-            return Path(*parts[:filled])
-        return Path(path) if path.endswith("/") else Path(path).parent
 
 
 class OutputRootRefused(ValueError):
@@ -585,11 +577,11 @@ class WrittenFiles:
         listed, declared = self._listed(path), self._declared(path)
         found = [] if listed.names_one_path else self._found(label, listed, searched)
         if found:
-            return [FileEntry(repo.path_from_top(file), True, file.resolve() in changed()).linked(published_link(file)) for file in found]
+            return [FileEntry(repo.path_from_top(file), True, file.resolve() in changed()).linked(publication_of(file)) for file in found]
         if declared.names_one_path:
             named = latest_version(repo.root / declared.glob)
             path = repo.path_from_top(named) if named.exists() else declared.glob
-            return [FileEntry(path, named.exists(), named.exists() and named.resolve() in changed()).linked(published_link(named))]
+            return [FileEntry(path, named.exists(), named.exists() and named.resolve() in changed()).linked(publication_of(named))]
         return []
 
     def _worked_on_code(self, label: str, changed: Callable[[], set[Path]]) -> list[FileEntry]:
@@ -664,17 +656,17 @@ def latest_version(file: Path) -> Path:
     return numbered[max(numbered)] if numbered else file
 
 
-def published_link(file: Path) -> str:
-    """The link a file is published at, which a page opens instead of the file: a design canvas version's
-    ``canvas.json`` (``<design-canvas>/version-N/project/canvas.json``) at the link its versions record
-    (``versions.json``), and a ``.whiteboard`` file at the address of the board in Claude kept beside it
-    (``whiteboards.json``); none for any other file, or one not yet published."""
+def publication_of(file: Path) -> Publication:
+    """Where a file is published, which a page opens instead of the file: a ``.whiteboard`` file on the board in Claude
+    kept beside it (``whiteboards.json``), and a design canvas version's ``canvas.json``
+    (``<design-canvas>/version-N/project/canvas.json``) at the link its versions record (``versions.json``); nowhere for
+    any other file. A whiteboard or a canvas not yet published is still named as one, with no link."""
     if file.suffix == Whiteboard.SUFFIX:
-        return BoardLinks.beside(file).of(file)
+        return Publication(Whiteboard.links_beside(file).of(file.name) or "", WHITEBOARD_KIND)
     if file.name != "canvas.json" or file.parent.name != "project":
-        return ""
+        return Publication()
     version = file.parent.parent
-    return CanvasVersions(version.parent).published.of(version.name) or ""
+    return Publication(CanvasVersions(version.parent).published.of(version.name) or "", DESIGN_CANVAS_KIND)
 
 
 class FidelityFormats:

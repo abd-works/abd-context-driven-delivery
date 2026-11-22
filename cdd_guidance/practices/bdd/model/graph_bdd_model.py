@@ -38,7 +38,7 @@ _MEMBER_CALL = re.compile(r"^([A-Za-z_]\w*)\.([A-Za-z_]\w*)")
 class GraphBddModel(BddModel):
     """Reads a saved graph (`SavedGraph.from_graph`, `graph.save_json`) into descriptions whose observations carry their realization."""
 
-    def parse(self, text: str) -> "GraphBddModel":
+    def parse(self, text: str, file: str = "") -> "GraphBddModel":
         graph = Graph()
         graph.practices.restore(SavedGraph.from_text(text))
         self._graph = graph

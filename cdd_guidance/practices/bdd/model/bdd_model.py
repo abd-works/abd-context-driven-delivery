@@ -11,9 +11,10 @@ from cdd_guidance.practices.source_code import CallGraph, parse_arrow_line
 from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation, private_probe_in_text
 from cdd_guidance.practices.bdd.model.spec_source import has_signature_marker, is_developed
 from cdd_guidance.practices.source_code import CodeBody
+from harness.guidance.practice_formats import FormatAdapter, Written
 
 
-class BddModel(ModelNode):
+class BddModel(ModelNode, FormatAdapter):
     _semantic_type_name = "Spec"
     graph_facts = (
         "patches_infrastructure",
@@ -40,7 +41,7 @@ class BddModel(ModelNode):
         self._descriptions.refill(descriptions)
 
 
-    def parse(self, text: str) -> "BddModel":
+    def parse(self, text: str, file: str = "") -> "BddModel":
         self.descriptions = []
         _SketchReader(self).read(text)
         return self
@@ -78,7 +79,7 @@ class BddModel(ModelNode):
             pending.extend(getattr(node, "observations", []))
         return found
 
-    def render(self, canonical: "BddModel", previous: str | None = None) -> str:
+    def render(self, canonical: "BddModel", written: Written = Written()) -> str:
         return "\n\n".join(self._sketch_lines(item) for item in canonical.descriptions)
 
     def _sketch_lines(self, description: Description) -> str:

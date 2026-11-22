@@ -354,7 +354,7 @@ with description("a Stories practice rendering a story map in the miro format") 
             "    (E) Place New Order\n"
             "        (S) Customer --> Browse Product Catalog\n"
         )
-        self.text = Stories().render(format="miro", content=story_map, source="markdown")["content"]
+        self.text = Stories().render(format="miro", content=story_map, source="markdown").content
 
     with it("should write a canvas-composer SVG"):
         expect(self.text).to(contain("<svg"))

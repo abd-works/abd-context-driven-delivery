@@ -44,7 +44,7 @@ from cdd_guidance.practices.stories.model.story_model import (
 )
 from cdd_guidance.practices.stories.model.story_map_files import source_at
 from cdd_guidance.practices.stories.model.reshaped_story_file import ReshapedStoryFile
-from harness.guidance.practice_formats import Reshaped
+from harness.guidance.practice_formats import Reshaped, Written
 from cdd_guidance.practices.stories.model.story_recording import StorySources
 from cdd_guidance.practices.stories.model.story_file import StoryBlock, StoryFile, flat_steps, read_step_code
 from cdd_guidance.practices.stories.model.story_writing import OUTLINE_EXAMPLES, SCENARIO_EXAMPLES, StoryFilePlace, StoryWriting, as_read
@@ -430,13 +430,11 @@ class CodeStoryModel(StoryModel):
         """Write this story map's epics and stories to source files."""
         return self._write_epics({})
 
-    def render(
-        self,
-        canonical: StoryModel,
-        previous: Optional[Dict[str, str]] = None,
-    ) -> Dict[str, str]:
-        """Write canonical to source files. previous is the tree already on disk: whatever canonical has
-        no code for in this language takes that tree's code for the same epic, story, scenario, and step."""
+    def render(self, canonical: StoryModel, written: Written = Written()) -> Dict[str, str]:
+        """Write canonical to source files. The previous files are the tree already on disk, each file's text by its
+        path: whatever canonical has no code for in this language takes that tree's code for the same epic, story,
+        scenario, and step."""
+        previous = written.previous
         if isinstance(previous, str) and previous:
             raise CodeStoryModelError("previous must be the path-to-content map of the story tree already on disk")
         model = self.copy_of(canonical)
@@ -575,10 +573,10 @@ class CodeStoryModel(StoryModel):
                 self._read_story_file(path, external[path])
         return self
 
-    def parse(self, external: Dict[str, str], *, on_file: Optional[Callable[[str], None]] = None, project: Optional[Path] = None) -> "CodeStoryModel":
-        """A new map read from the story files in external, with this model's settings, the files they read found in
-        project."""
-        return self.copy_of(None).load(external, on_file=on_file, project=project)
+    def parse(self, text: Dict[str, str], file: str = "") -> "CodeStoryModel":
+        """A new map read from the story files in text, each file's text by its path, with this model's settings."""
+        return self.copy_of(None).load(text)
+
 
     def _ordered_paths(self, external: Dict[str, str]) -> List[str]:
         def key(path: str) -> tuple:

@@ -1,5 +1,6 @@
-"""A draw.io file's diagram pages, and what one cell says: a class card's title and box, or an edge's kind, anchors,
-and route. The Clean Engineering class model and the layout scanners both read draw.io through these."""
+"""A class diagram's page over the framework's draw.io page (harness/drawio), and what one cell of it says: a class
+card's title, or an edge's kind, anchors, and route. The Clean Engineering class model and the layout scanners both read
+draw.io through these."""
 
 from __future__ import annotations
 
@@ -8,7 +9,9 @@ import re
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
-from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry, Point, Segment, segments_cross
+from harness.drawio import CellStyle, DrawioCell, DrawioPage
+from harness.whiteboard import Box
+from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Point, Segment, segments_cross
 
 # A segment counts as horizontal or vertical when it moves less than this many pixels across.
 STRAIGHT_TOLERANCE = 1
@@ -17,60 +20,27 @@ QUOTED_TITLE_CHARS = 80
 
 
 
-class DrawioPage:
-    """One diagram page of a draw.io file: its cells, the class boxes on it, and the edges between them. Every reader of
-    draw.io reads its cells through a page: the Clean Engineering class model when it parses a diagram or keeps the
-    positions of the one it replaces, and each layout scanner."""
+class ClassDiagramPage:
+    """One page of a class diagram, read over the framework's draw.io page (``page``): the class boxes on it, and the
+    edges between them with their kinds, anchors, and routes, which are the class diagram's own. The Clean Engineering
+    class model reads a diagram, and keeps the positions of the one it replaces, through it, and so does each layout
+    scanner."""
 
-    def __init__(self, file_path: Path | None, name: str, root: ET.Element) -> None:
+    def __init__(self, page: DrawioPage, file_path: Path | None = None) -> None:
+        self.page = page
         self.file_path = file_path
-        self.name = name
-        self.cells = list(root.iter('mxCell'))
+        self.name = page.name
+        self.cells = [cell.element for cell in page.cells]
         self.vertices = [cell for cell in self.cells if cell.get('vertex') == '1']
         self.edges = [cell for cell in self.cells if cell.get('edge') == '1']
-        self.boxes: dict[str, Geometry] = {}
+        self.boxes: dict[str, Box] = {}
         self.class_names: dict[str, str] = {}
         for cell in self.vertices:
             name_in_cell = class_name_in(cell.get('value', ''))
-            box = cell_box(cell)
+            box = DrawioCell(cell).box
             if name_in_cell and box:
                 self.boxes[cell.get('id')] = box
                 self.class_names[cell.get('id')] = name_in_cell
-
-    @classmethod
-    def pages_in(cls, mxfile: ET.Element, file_path: Path | None = None) -> list[DrawioPage]:
-        """Each diagram page of a draw.io file that holds a graph model, in file order."""
-        pages = []
-        for diagram in mxfile.findall('diagram'):
-            page_root = diagram.find('mxGraphModel/root')
-            if page_root is not None:
-                pages.append(cls(file_path, diagram.get('name') or '', page_root))
-        return pages
-
-    @classmethod
-    def whole(cls, text: str) -> DrawioPage | None:
-        """Every cell of a draw.io document read as one page; none for text that is not XML."""
-        try:
-            return cls(None, '', ET.fromstring(text))
-        except ET.ParseError:
-            return None
-
-    def cell(self, cell_id: str) -> ET.Element | None:
-        """The cell called cell_id on this page; none when the page has no such cell."""
-        return next((cell for cell in self.cells if cell.get('id') == cell_id), None)
-
-    def positions(self) -> dict[str, tuple[float, float]]:
-        """Where each vertex sits, by cell id."""
-        found: dict[str, tuple[float, float]] = {}
-        for cell in self.vertices:
-            geometry = cell.find('mxGeometry')
-            if geometry is None or not cell.get('id'):
-                continue
-            try:
-                found[cell.get('id')] = (float(geometry.get('x')), float(geometry.get('y')))
-            except (TypeError, ValueError):
-                continue
-        return found
 
     def edges_by_ends(self) -> dict[tuple[str, str], ET.Element]:
         """Each edge that joins two cells, by its source and target cell ids."""
@@ -161,14 +131,6 @@ def class_name_in(cell_label: str) -> str | None:
     return name.split(' : ')[0].strip() or None
 
 
-def cell_box(cell: ET.Element) -> Geometry | None:
-    """The box a cell's mxGeometry places it in, or None when the cell has none."""
-    geometry = cell.find('mxGeometry')
-    if geometry is None:
-        return None
-    return Geometry(float(geometry.get('x', '0')), float(geometry.get('y', '0')), float(geometry.get('width', '0')), float(geometry.get('height', '0')))
-
-
 def edge_kind(style: str) -> str:
     """The UML relationship an edge style draws; an edge with no UML marks is an association."""
     if 'endFill=0' in style and 'endArrow=block' in style:
@@ -189,7 +151,7 @@ def is_inheritance(edge: ET.Element) -> bool:
 def anchor_fractions(edge: ET.Element, end: str) -> tuple[float | None, float | None]:
     """The `exit` or `entry` anchor fractions an edge's style sets, or None for each one it leaves to Draw.io."""
     style = edge.get('style', '')
-    return (style_number(style, f'{end}X'), style_number(style, f'{end}Y'))
+    return (CellStyle(style).number(f'{end}X'), CellStyle(style).number(f'{end}Y'))
 
 
 def share_inheritance_trunk(first: ET.Element, second: ET.Element) -> bool:
@@ -203,33 +165,20 @@ def share_inheritance_trunk(first: ET.Element, second: ET.Element) -> bool:
     )
 
 
-def style_value(style: str, key: str) -> str:
-    """The value a Draw.io style string sets for key, such as `0.3` for `exitX` in `exitX=0.3;`; empty when it sets
-    none. Every reader of a cell's style asks this one reader."""
-    match = re.search(f'(?:^|;){re.escape(key)}=([^;]*)', style)
-    return match.group(1) if match else ''
-
-
-def style_number(style: str, key: str) -> float | None:
-    """A number set in a Draw.io style string, such as `exitX=0.3`."""
-    match = re.fullmatch(r'-?[0-9.]+', style_value(style, key))
-    return float(match.group(0)) if match else None
-
-
-def anchor_point(style: str, box: Geometry, end: str) -> Point:
+def anchor_point(style: str, box: Box, end: str) -> Point:
     """Where one end of an edge meets its box: the exit or entry anchor in the style, else the box centre."""
-    fraction_x = style_number(style, f'{end}X')
-    fraction_y = style_number(style, f'{end}Y')
+    fraction_x = CellStyle(style).number(f'{end}X')
+    fraction_y = CellStyle(style).number(f'{end}Y')
     if fraction_x is not None and fraction_y is not None:
-        return (box.x + box.width * fraction_x, box.y + box.height * fraction_y)
+        return (box.x + box.w * fraction_x, box.y + box.h * fraction_y)
     return box.center
 
 
-def segment_hits_box(segment: Segment, box: Geometry, margin: float) -> bool:
+def segment_hits_box(segment: Segment, box: Box, margin: float) -> bool:
     """True when the segment cuts the box grown by margin on every side, or starts inside it."""
     start = segment[0]
-    left, top = box[0] - margin, box[1] - margin
-    right, bottom = box[0] + box[2] + margin, box[1] + box[3] + margin
+    left, top = box.x - margin, box.y - margin
+    right, bottom = box.x + box.w + margin, box.y + box.h + margin
     corners = [(left, top), (right, top), (right, bottom), (left, bottom)]
     if any(segments_cross(segment, (corners[index], corners[(index + 1) % 4])) for index in range(4)):
         return True

@@ -22,6 +22,7 @@ from cdd_guidance.practices.ux.ux import Ux, UxOutsideSession, ViewNotRendered
 from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 from space.session.sessions import Sessions
+from harness.guidance.practice_formats import Rendered
 
 # A story map small enough to render in an example: one epic holding one story.
 _STORY_MAP = "# Story Map\n\n## Epic: Sign Up\n\n- Story: Enter Email\n"
@@ -117,13 +118,13 @@ with description("Ux transform tool"):
             )
 
         with it("should return a dict"):
-            expect(isinstance(self.result, dict)).to(be_true)
+            expect(isinstance(self.result, Rendered)).to(be_true)
 
         with it("should set format to markdown"):
-            expect(self.result["format"]).to(equal("markdown"))
+            expect(self.result.format).to(equal("markdown"))
 
         with it("should render markdown content that names the scope"):
-            expect("Place New Order" in self.result["content"]).to(be_true)
+            expect("Place New Order" in self.result.content).to(be_true)
 
     with context("transform with an unsupported source format"):
         with it("should raise ValueError"):
@@ -144,8 +145,8 @@ with description("a mockup rendered to its board and back"):
         screen.append_region(region)
         ux_map.append_screen(screen)
         self.ux = Ux(fidelity="mockup")
-        board = self.ux.render("whiteboard", JsonUxMap.create().render(ux_map), source="json")["content"]
-        self.back = JsonUxMap.create().parse(self.ux.render("json", board, source="whiteboard")["content"])
+        board = self.ux.render("whiteboard", JsonUxMap.create().render(ux_map), source="json").content
+        self.back = JsonUxMap.create().parse(self.ux.render("json", board, source="whiteboard").content)
 
     with it("should keep the scenario a control serves, with the place it is written at"):
         expect(self.back.screens[0].regions[0].controls[0].scenario_keys).to(equal([self.link]))
@@ -159,20 +160,20 @@ with description("a front-end view rendered to another format"):
 
     with context("from typescript to javascript"):
         with it("should be the same view with its type annotations dropped"):
-            expect(self.ux.render("javascript", self.typed, source="typescript")).to(equal({"format": "javascript", "content": self.untyped}))
+            expect(self.ux.render("javascript", self.typed, source="typescript")).to(equal(Rendered("javascript", self.untyped)))
 
     with context("from javascript to typescript"):
         with it("should be the view as it is written, with no type annotation made up for it"):
-            expect(self.ux.render("typescript", self.untyped, source="javascript")).to(equal({"format": "typescript", "content": self.untyped}))
+            expect(self.ux.render("typescript", self.untyped, source="javascript")).to(equal(Rendered("typescript", self.untyped)))
 
     with context("from typescript with no source format named, at the fidelity that works in typescript"):
         with it("should read it as typescript"):
-            expect(self.ux.render("javascript", self.typed)["content"]).to(equal(self.untyped))
+            expect(self.ux.render("javascript", self.typed).content).to(equal(self.untyped))
 
     with context("that starts with a brace, as a JSON document does"):
         with it("should still be read as a view"):
             view = "{\n  const total = 1;\n}\nexport function CartView() {\n  return <p>Cart</p>;\n}\n"
-            expect(self.ux.render("javascript", view, source="typescript")["content"]).to(equal(view))
+            expect(self.ux.render("javascript", view, source="typescript").content).to(equal(view))
 
     with context("to a format of the UX map"):
         with it("should refuse it, since no UX map is read from a view, naming both formats"):
@@ -246,21 +247,21 @@ with description("a UX map rendered over the other file its fidelity keeps"):
             self.result = self.ux.render("markdown", _IA_DRAWING, source="drawio", previous=_UX_CONTEXT)
 
         with it("should keep the scope, the invariants, and the notes the UX context holds"):
-            expect(self.result["content"]).to(equal(_UX_CONTEXT))
+            expect(self.result.content).to(equal(_UX_CONTEXT))
 
     with context("from its UX context, which holds no screens, over the drawing a person made"):
         with before.each:
             self.result = self.ux.render("drawio", _UX_CONTEXT, source="markdown", previous=_IA_DRAWING)
 
         with it("should keep the drawing with its screens and transitions"):
-            expect(self.result["content"]).to(equal(_IA_DRAWING))
+            expect(self.result.content).to(equal(_IA_DRAWING))
 
     with context("from a map that holds its own scope, over the UX context a person wrote"):
         with before.each:
             self.result = self.ux.render("markdown", UxJsonSample().render(), source="json", previous=_UX_CONTEXT)
 
         with it("should write the map's scope"):
-            expect("Scope: Place New Order" in self.result["content"]).to(be_true)
+            expect("Scope: Place New Order" in self.result.content).to(be_true)
 
         with it("should keep the invariants the map does not hold"):
-            expect("- A Cart Line shows one Book and its quantity." in self.result["content"]).to(be_true)
+            expect("- A Cart Line shows one Book and its quantity." in self.result.content).to(be_true)

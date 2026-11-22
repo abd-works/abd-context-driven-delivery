@@ -33,6 +33,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Iterable
 
 from cdd_guidance.actions.render.render import Render
+from cdd_guidance.actions.render.render_result import RenderResult
 from cdd_guidance.actions.render.rendered_file import SAVED_GROUPS
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog
 from harness.agent_tools.tool_call import ToolCall
@@ -414,7 +415,7 @@ class _FidelityAlignment:
         """The graph's reading of file: its own text in the leading format, else its render into the leading format.
         A failure the render declares is answered as a gap; a programming error raises."""
         try:
-            text = file.read_text(encoding="utf-8") if format == leading else str(self._fidelity.render_files(leading, [str(file)], format)["content"])
+            text = file.read_text(encoding="utf-8") if format == leading else str(self._fidelity.render_files(leading, [str(file)], format).content)
             return self._comparison.reading(self._fidelity.practice_guidance, text, placed_at)
         except Exception as failure:
             if raised_by_a_bug(failure):
@@ -505,13 +506,13 @@ class SessionAlignment:
         declares, such as an empty source or code its fidelity's declared paths cannot place, is answered; a
         programming error raises."""
         try:
-            results = [result for result in render.render([gap.fidelity], gap.format, [gap.source]) if isinstance(result, dict)]
+            results = [result for result in render.render([gap.fidelity], gap.format, [gap.source]) if isinstance(result, RenderResult)]
         except Exception as failure:
             if raised_by_a_bug(failure):
                 raise
             return [AlignmentFailure(RENDER_FAILED, gap.file, f"Rendering {gap.source} to {gap.format} failed: {type(failure).__name__}: {failure}")]
-        saved = [path for result in results for path in ([result["path"]] if result.get("path") else result.get("paths", []))]
-        waiting = [(each["file"], each.get("kept") or each.get("signature_differs")) for result in results for each in result.get("migrate", [])]
+        saved = [str(path) for result in results for path in result.saved]
+        waiting = [(each.file, each.member) for result in results for each in result.migrate]
         return [AlignedFile(self._session.paths.from_project(path), gap.format, gap.source, [kept for file, kept in waiting if file == path]) for path in saved]
 
     def _files_of(self, covered: Iterable[FidelityGuidance]) -> list[str]:

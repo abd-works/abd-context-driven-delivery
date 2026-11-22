@@ -14,7 +14,7 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import contain, end_with, equal, expect, raise_error
+from expects import contain, end_with, equal, expect, have_key, raise_error
 from mamba import after, before, context, description, it
 
 from cdd_guidance.actions.render.render import Render
@@ -25,9 +25,10 @@ from cdd_guidance.practices.stories.stories import Stories
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.agent_tools.tool_call import ToolCall
 from harness.graph.saved_graph import SavedGraph
+from harness.installation.data_class import data_of
 from space.session.session_files import NamedPathNotFoundError
 from space.session.throwaway_project import ThrowawayProject
-from harness.whiteboard import BoardLinks, Whiteboard
+from harness.whiteboard import Whiteboard
 
 _REF = "cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering"
 _STORIES = "cdd_guidance.practices.stories.stories:Stories"
@@ -174,7 +175,7 @@ with description("Render"):
             source="python",
         )
         expect(len(results)).to(equal(1))
-        expect(str(results[0]["content"])).to(contain("Cart"))
+        expect(str(results[0].content)).to(contain("Cart"))
 
     with it("should construct the Guidance at the given fidelity"):
         results = Render().render(
@@ -183,7 +184,7 @@ with description("Render"):
             paths=[],
             content=_PYTHON,
         )
-        expect(str(results[0]["content"])).to(contain("Cart"))
+        expect(str(results[0].content)).to(contain("Cart"))
 
     with it("should convert each guidance slug you type"):
         results = Render().render(
@@ -194,8 +195,8 @@ with description("Render"):
             source="sketch",
         )
         expect(len(results)).to(equal(2))
-        expect(results[0]["format"]).to(equal("python"))
-        expect(results[1]["format"]).to(equal("python"))
+        expect(results[0].format).to(equal("python"))
+        expect(results[1].format).to(equal("python"))
 
     with it("should convert a story map when source is md"):
         results = Render().render(
@@ -205,20 +206,20 @@ with description("Render"):
             content=_STORY_MAP,
             source="md",
         )
-        expect(str(results[0]["content"])).to(contain("mxGraphModel"))
+        expect(str(results[0].content)).to(contain("mxGraphModel"))
 
     with it("should read a sketch from a file path and leave the document body off the call"):
         folder = Path(tempfile.mkdtemp(prefix="render-paths-"))
         sketch = folder / "orders-sketch.md"
         sketch.write_text(_STORY_MAP, encoding="utf-8")
         results = Render().render(_STORIES, format="markdown", paths=[str(sketch)], source="sketch")
-        expect(Path(results[0]["path"]).read_text(encoding="utf-8")).to(contain("Browse Product Catalog"))
+        expect(Path(results[0].path).read_text(encoding="utf-8")).to(contain("Browse Product Catalog"))
 
     with it("should read the sketches in a folder"):
         folder = Path(tempfile.mkdtemp(prefix="render-folder-"))
         (folder / "orders-sketch.md").write_text(_STORY_MAP, encoding="utf-8")
         results = Render().render(_STORIES, format="markdown", paths=str(folder), source="sketch")
-        expect(Path(results[0]["path"]).read_text(encoding="utf-8")).to(contain("Browse Product Catalog"))
+        expect(Path(results[0].path).read_text(encoding="utf-8")).to(contain("Browse Product Catalog"))
 
     with it("should read the story tests in a folder under their story map"):
         folder = Path(tempfile.mkdtemp(prefix="render-story-tests-"))
@@ -227,7 +228,7 @@ with description("Render"):
         story_test.mkdir(parents=True)
         (story_test / "browse_product_catalog_story.test.py").write_text(_STORY_TEST, encoding="utf-8")
         rendered = Stories(fidelity="scenarios").fidelities.current.render_files("markdown", str(folder), "python")
-        expect(str(rendered["content"])).to(contain("Scenario: Show the products in stock"))
+        expect(str(rendered.content)).to(contain("Scenario: Show the products in stock"))
 
     with it("should link a rendered story map to the story files beside the map it reads"):
         folder = Path(tempfile.mkdtemp(prefix="render-links-"))
@@ -254,21 +255,21 @@ with description("Render publishing a whiteboard file to its board in Claude") a
     with context("that the agent created a board for"):
         with it("should keep the board's address beside the file, so the Files app opens the board"):
             Render().record_board(str(self.file), "https://claude.ai/artifact/StoryMapBoard")
-            expect(BoardLinks.beside(self.file).of(self.file)).to(equal("https://claude.ai/artifact/StoryMapBoard"))
+            expect(Whiteboard.links_beside(self.file).of(self.file.name)).to(equal("https://claude.ai/artifact/StoryMapBoard"))
 
     with context("that was published before"):
         with before.each:
             self.other = self.folder / "modules.whiteboard"
-            BoardLinks.beside(self.file).record(self.other, "https://claude.ai/artifact/ModulesBoard")
-            BoardLinks.beside(self.file).record(self.file, "https://claude.ai/artifact/OldBoard")
+            Whiteboard.links_beside(self.file).record(self.other.name, "https://claude.ai/artifact/ModulesBoard")
+            Whiteboard.links_beside(self.file).record(self.file.name, "https://claude.ai/artifact/OldBoard")
 
         with it("should keep only the new address"):
             Render().record_board(str(self.file), "https://claude.ai/artifact/NewBoard")
-            expect(BoardLinks.beside(self.file).of(self.file)).to(equal("https://claude.ai/artifact/NewBoard"))
+            expect(Whiteboard.links_beside(self.file).of(self.file.name)).to(equal("https://claude.ai/artifact/NewBoard"))
 
         with it("should leave the other files' addresses as they were"):
             Render().record_board(str(self.file), "https://claude.ai/artifact/NewBoard")
-            expect(BoardLinks.beside(self.other).of(self.other)).to(equal("https://claude.ai/artifact/ModulesBoard"))
+            expect(Whiteboard.links_beside(self.other).of(self.other.name)).to(equal("https://claude.ai/artifact/ModulesBoard"))
 
     with context("that is not a whiteboard file"):
         with before.each:
@@ -283,7 +284,7 @@ with description("Render publishing a whiteboard file to its board in Claude") a
                 Render().record_board(str(self.drawio), "https://claude.ai/artifact/X")
             except ValueError:
                 pass
-            expect((self.folder / BoardLinks.RECORD).exists()).to(equal(False))
+            expect((self.folder / Whiteboard.LINKS).exists()).to(equal(False))
 
     with context("rendered to the whiteboard format"):
         with it("should tell the agent to publish the board after the conversion returns"):
@@ -318,7 +319,7 @@ def _moved_card(drawio: str, name: str, x: str) -> str:
 
 
 def _written_ids(result: dict) -> list:
-    return [entry["doc_id"] for batch in result["batches"] for entry in batch]
+    return [entry["doc_id"] for batch in result.batches for entry in batch]
 
 
 with description("Render saving what it makes beside its source") as self:
@@ -337,10 +338,10 @@ with description("Render saving what it makes beside its source") as self:
             expect(self.drawing.read_text(encoding="utf-8")).to(contain("Browse Product Catalog"))
 
         with it("should answer with the file it saved"):
-            expect(self.results[0]["path"]).to(equal(str(self.drawing)))
+            expect(self.results[0].path).to(equal(str(self.drawing)))
 
         with it("should leave the drawing out of its answer, so the agent has nothing to place"):
-            expect("content" in self.results[0]).to(equal(False))
+            expect(data_of(self.results[0])).not_to(have_key("content"))
 
     with context("a story map whose drawing a person moved a card on"):
         with before.each:
@@ -374,7 +375,7 @@ with description("Render saving what it makes beside its source") as self:
                 expect((self.folder / "returns.drawio").read_text(encoding="utf-8")).to(contain("Return Damaged Item"))
 
             with it("should answer with the file it saved"):
-                expect(self.results[0]["path"]).to(equal(str(self.folder / "returns.drawio")))
+                expect(self.results[0].path).to(equal(str(self.folder / "returns.drawio")))
 
         with context("that is empty, rendered to drawio"):
             with before.each:
@@ -445,13 +446,13 @@ with description("Render saving what it makes beside its source") as self:
             expect(len(_written_ids(self.results[0]))).to(equal(len(saved.elements) + 1))
 
         with it("should answer with no board, since none is kept for the file yet"):
-            expect(self.results[0]["board"]).to(equal(""))
+            expect(self.results[0].board).to(equal(""))
 
     with context("a story map whose board is kept and a person moved a card on"):
         with before.each:
             Render().render(_STORIES, format="whiteboard", paths=[str(self.story_map)], source="markdown")
             self.board_file = self.folder / "story-map.whiteboard"
-            BoardLinks.beside(self.board_file).record(self.board_file, "https://claude.ai/artifact/StoryMapBoard")
+            Whiteboard.links_beside(self.board_file).record(self.board_file.name, "https://claude.ai/artifact/StoryMapBoard")
             board = json.loads(self.board_file.read_text(encoding="utf-8"))
             self.card = next(key for key, record in board["elements"].items() if "Browse Product Catalog" in str(record.get("text")))
             board["elements"][self.card]["x"] = 777
@@ -462,7 +463,7 @@ with description("Render saving what it makes beside its source") as self:
             expect(json.loads(self.board_file.read_text(encoding="utf-8"))["elements"][self.card]["x"]).to(equal(777))
 
         with it("should answer with the board kept for the file"):
-            expect(self.results[0]["board"]).to(equal("https://claude.ai/artifact/StoryMapBoard"))
+            expect(self.results[0].board).to(equal("https://claude.ai/artifact/StoryMapBoard"))
 
         with it("should write none of the elements the render left as they were"):
             expect(_written_ids(self.results[0])).to(equal(["meta"]))
@@ -478,7 +479,7 @@ with description("Render saving what it makes beside its source") as self:
     with context("rendered from content, with no paths"):
         with it("should answer with what it made, since it has no source to save beside"):
             results = Render().render(_STORIES, format="drawio", paths=[], content=_STORY_MAP, source="md")
-            expect(str(results[0]["content"])).to(contain("mxGraphModel"))
+            expect(str(results[0].content)).to(contain("mxGraphModel"))
 
 
 with description("A render whose worker process failed"):
@@ -540,13 +541,13 @@ with description("Render asked for a path, in a session") as self:
             self.results = self.action.render("bdd-realization", format="markdown", source="graph", paths=[str(self.graph_file)])
 
         with it("should save the realization where the fidelity declares it, its scope named for the spec"):
-            expect(Path(self.results[0]["path"]).relative_to(self.project.root).as_posix()).to(equal(".context/cart-bdd-realization.md"))
+            expect(Path(self.results[0].path).relative_to(self.project.root).as_posix()).to(equal(".context/cart-bdd-realization.md"))
 
         with it("should write the spec's subject into it"):
             expect((self.folder / "cart-bdd-realization.md").read_text(encoding="utf-8")).to(contain("a cart"))
 
         with it("should answer no content for the agent to save"):
-            expect("content" in self.results[0]).to(equal(False))
+            expect(data_of(self.results[0])).not_to(have_key("content"))
 
     with context("that is a saved graph holding no spec, rendered to the markdown realization"):
         with before.each:
@@ -572,7 +573,7 @@ with description("Render asked for a path, in a session") as self:
             self.results = self.action.render("bdd-behavior", format="typescript", paths=["src/ordering/cart_spec.py"])
 
         with it("should save the spec beside it under the name TypeScript specs carry"):
-            saved = [Path(path).relative_to(self.project.root).as_posix() for path in self.results[0]["paths"]]
+            saved = [Path(path).relative_to(self.project.root).as_posix() for path in self.results[0].paths]
             expect(saved).to(equal(["src/ordering/cart.spec.ts"]))
 
     with context("that is a realization in markdown, rendered to Python"):
@@ -581,7 +582,7 @@ with description("Render asked for a path, in a session") as self:
             self.results = self.action.render("bdd-realization", format="python", paths=[".context/bookshop-bdd-realization.md"])
 
         with it("should save one spec named for the realization's scope, in the folder its .context sits in"):
-            saved = [Path(path).relative_to(self.project.root).as_posix() for path in self.results[0]["paths"]]
+            saved = [Path(path).relative_to(self.project.root).as_posix() for path in self.results[0].paths]
             expect(saved).to(equal(["bookshop_spec.py"]))
 
     # Exploratory testing, r3-bolt-06 and r3-sparky-07: a render to code answered its content and saved nothing. The
@@ -593,14 +594,14 @@ with description("Render asked for a path, in a session") as self:
             self.cart = self.project.root / "ordering" / "cart" / "cart.py"
 
         with it("should save a file for each aggregate where the fidelity declares it"):
-            saved = sorted(Path(path).relative_to(self.project.root).as_posix() for path in self.results[0]["paths"])
+            saved = sorted(Path(path).relative_to(self.project.root).as_posix() for path in self.results[0].paths)
             expect(saved).to(equal(["ordering/cart/cart.py", "ordering/order/order.py"]))
 
         with it("should write the aggregate's classes into its file"):
             expect(self.cart.read_text(encoding="utf-8")).to(contain("class Cart"))
 
         with it("should answer no code for the agent to save"):
-            expect("content" in self.results[0]).to(equal(False))
+            expect(data_of(self.results[0])).not_to(have_key("content"))
 
         with context("whose code a person then changed, rendered again"):
             with before.each:
@@ -611,7 +612,7 @@ with description("Render asked for a path, in a session") as self:
                 expect(self.cart.read_text(encoding="utf-8")).to(contain("return 5"))
 
             with it("should name the file among those that hold the render"):
-                expect("cart.py" in [Path(path).name for path in self.results[0]["paths"]]).to(equal(True))
+                expect("cart.py" in [Path(path).name for path in self.results[0].paths]).to(equal(True))
 
     # The person's answer (2026-11-21): a render reshapes an existing file and loses nothing. Their example: a class
     # that already has code, an operation added in the markdown model, rendered again.
@@ -634,17 +635,17 @@ with description("Render asked for a path, in a session") as self:
             expect(self.written).to(contain("    def check_out(self) -> int:" + chr(10) + "        raise NotImplementedError"))
 
         with it("should name the file as holding the render, with nothing to migrate"):
-            expect((len(self.results[0]["paths"]), self.results[0]["migrate"])).to(equal((1, [])))
+            expect((len(self.results[0].paths), self.results[0].migrate)).to(equal((1, [])))
 
         with context("then with total renamed to subtotal in the markdown, rendered again"):
             with before.each:
                 self.model.write_text(_CART_MODEL.replace("+ total(): int", "+ subtotal(): int"), encoding="utf-8")
                 self.results = self.action.render("clean-engineering-model", format="python", paths=["src/ordering/.context/ordering-model.md"])
-                self.migrate = self.results[0]["migrate"]
+                self.migrate = self.results[0].migrate
 
             with it("should list total as kept, and subtotal among what may have replaced it"):
-                kept = next(each for each in self.migrate if each["kept"] == "Cart.total")
-                expect("Cart.subtotal" in kept["may_have_replaced_it"]).to(equal(True))
+                kept = next(each for each in self.migrate if each.kept == "Cart.total")
+                expect("Cart.subtotal" in kept.may_have_replaced_it).to(equal(True))
 
             with it("should keep total's code in the file, marked as no longer in the model"):
                 written = self.code.read_text(encoding="utf-8")
@@ -661,7 +662,7 @@ with description("Render asked for a path, in a session") as self:
             self.results = self.action.render("clean-engineering-model", format="python", paths=["src/ordering/.context/ordering-model.md"])
 
         with it("should save the module's code in the module's own folder, where the model's .context sits"):
-            saved = [Path(path).relative_to(self.project.root).as_posix() for path in self.results[0]["paths"]]
+            saved = [Path(path).relative_to(self.project.root).as_posix() for path in self.results[0].paths]
             expect(saved).to(equal(["src/ordering/ordering.py"]))
 
     # The heavy tier, 2026-11-20: the guidance diagnostics probe renders a file of its own, which no fidelity
@@ -674,7 +675,7 @@ with description("Render asked for a path, in a session") as self:
             self.results = self.action.render(["stories", "clean-engineering-model"], format="markdown", source="markdown", paths=["notes/probe.md"])
 
         with it("should name the file itself for each, since it is already in that format"):
-            expect([Path(result["path"]) for result in self.results]).to(equal([self.notes, self.notes]))
+            expect([Path(result.path) for result in self.results]).to(equal([self.notes, self.notes]))
 
         with it("should keep the file as it was"):
             expect(self.notes.read_text(encoding="utf-8")).to(equal(_MARKDOWN_STORY_MAP))
@@ -686,7 +687,7 @@ with description("Render asked for a path, in a session") as self:
             self.results = self.action.render("clean-engineering-model", format="markdown", source="sketch", paths=["design/cart-sketch.md"])
 
         with it("should save the document beside the sketch under the sketch's own name"):
-            expect(Path(self.results[0]["path"]).relative_to(self.project.root).as_posix()).to(equal("design/cart.md"))
+            expect(Path(self.results[0].path).relative_to(self.project.root).as_posix()).to(equal("design/cart.md"))
 
         with it("should write the sketch's class into it"):
             expect((self.project.root / "design" / "cart.md").read_text(encoding="utf-8")).to(contain("Cart"))
@@ -700,7 +701,7 @@ with description("Render asked for a path, in a session") as self:
             self.results = self.action.render("clean-engineering-model", format="python", source="sketch", paths=["design/cart-sketch.md"])
 
         with it("should save the code beside the sketch, as a module named for the sketch"):
-            saved = [Path(path).relative_to(self.project.root).as_posix() for path in self.results[0]["paths"]]
+            saved = [Path(path).relative_to(self.project.root).as_posix() for path in self.results[0].paths]
             expect(saved).to(equal(["design/cart/cart.py"]))
 
     # The person's answer (2026-11-21): a render must not ever remove what is already there. On the Bookshop a note a
@@ -723,7 +724,7 @@ with description("Render asked for a path, in a session") as self:
             expect(self.drawing.read_text(encoding="utf-8")).to(contain('id="person-note"', "Ask Dana before changing this"))
 
         with it("should name the note as kept, for whoever decides where it belongs"):
-            expect([(Path(each["file"]).name, each["kept"]) for each in self.results[0]["migrate"]]).to(equal([("story-map.drawio", "person-note 'Ask Dana before changing this'")]))
+            expect([(Path(each.file).name, each.kept) for each in self.results[0].migrate]).to(equal([("story-map.drawio", "person-note 'Ask Dana before changing this'")]))
 
     # The coordinator, 2026-11-21: a drawing that held only a person's note, and no card of the map, was saved as
     # rendered and the note was gone.
@@ -737,7 +738,7 @@ with description("Render asked for a path, in a session") as self:
             expect(self.drawing.read_text(encoding="utf-8")).to(contain('id="person-note"', "Browse Product Catalog"))
 
         with it("should name the note as kept"):
-            expect([each["kept"] for each in self.results[0]["migrate"]]).to(equal(["person-note 'Ask Dana before changing this'"]))
+            expect([each.kept for each in self.results[0].migrate]).to(equal(["person-note 'Ask Dana before changing this'"]))
 
     with context("that tells the agent what to do with what it rendered"):
         with it("should not tell the agent to write rendered content itself"):
@@ -753,7 +754,7 @@ with description("Render asked for a path, in a session") as self:
             self.results = self.action.render("stories-story-map", format="drawio", paths=[".context/thin-slice.md"], source="markdown")
 
         with it("should save the thin slice's drawing under the name the fidelity declares for it"):
-            expect(Path(self.results[0]["path"]).name).to(equal("thin-slice.drawio"))
+            expect(Path(self.results[0].path).name).to(equal("thin-slice.drawio"))
 
         with it("should leave the story map's drawing as it was"):
             expect((self.folder / "story-map.drawio").read_text(encoding="utf-8")).to(equal(self.drawn))
@@ -769,7 +770,7 @@ with description("Render asked for a path, in a session") as self:
             self.results = self.action.render("clean-engineering-modules", format="drawio", paths=cards)
 
         with it("should save the drawing in the root's .context, where the modules fidelity declares it"):
-            expect(Path(self.results[0]["path"])).to(equal(self.folder / "modules.drawio"))
+            expect(Path(self.results[0].path)).to(equal(self.folder / "modules.drawio"))
 
         with it("should save no drawing in the first module's folder"):
             expect((self.project.root / "src" / "catalogue" / ".context" / "modules.drawio").exists()).to(equal(False))
@@ -784,10 +785,10 @@ with description("Render asked for a path, in a session") as self:
             self.results = self.action.render("clean-engineering-model", format="drawio", paths=["src/ordering/.context/ordering-model.md"])
 
         with it("should read the file as the markdown its name says it is"):
-            expect(Path(self.results[0]["path"]).read_text(encoding="utf-8")).to(contain("Cart"))
+            expect(Path(self.results[0].path).read_text(encoding="utf-8")).to(contain("Cart"))
 
         with it("should save the drawing beside the model, under the name the fidelity declares for the module"):
-            expect(Path(self.results[0]["path"])).to(equal(self.project.root / "src" / "ordering" / ".context" / "ordering-model.drawio"))
+            expect(Path(self.results[0].path)).to(equal(self.project.root / "src" / "ordering" / ".context" / "ordering-model.drawio"))
 
 
 with description("A comment a person left on a board in Claude") as self:
@@ -805,7 +806,7 @@ with description("A comment a person left on a board in Claude") as self:
 
     with context("on the board the story map's whiteboard file was published to"):
         with before.each:
-            BoardLinks.beside(self.board_file).record(self.board_file, "https://claude.ai/artifact/StoryMapBoard")
+            Whiteboard.links_beside(self.board_file).record(self.board_file.name, "https://claude.ai/artifact/StoryMapBoard")
             answer = AgentInstructions.for_callable(Render.answer_board_comment, self.action)
             self.text = answer.expand({"board": "https://claude.ai/artifact/StoryMapBoard"}).instructions
 

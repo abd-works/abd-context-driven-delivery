@@ -5,9 +5,11 @@ from __future__ import annotations
 from cdd_guidance.actions.render.rendered_code import RenderedCode, RenderHasNoDeclaredPlace
 from cdd_guidance.actions.render.rendered_file import SAVED_GROUPS, WHITEBOARD, RenderedFile
 from cdd_guidance.actions.render.render_order import WorkerRender
+from cdd_guidance.actions.render.render_result import AnsweredContent, RenderResult, SavedFile
 from harness.guidance_actions import GuidanceArg, GuidanceAction, WorkedGuidance
+from harness.guidance.declared_outputs import DeclaredOutputs, RenderPlacement
 from harness.guidance.guidance import FidelityGuidance
-from harness.guidance.practice_formats import RenderRequest
+from harness.guidance.practice_formats import Rendered, RenderRequest
 from harness.guidance.action_catalogue import CONVERTS, TAKES_FORMATS, on_stage
 from pathlib import Path
 
@@ -15,11 +17,13 @@ from harness.agent_tools.agent_tools import agent_instructions, agent_tool, agen
 from harness.installation.files import skill
 from harness.markdown.format import Format
 from harness.mcp.mcp_annotations import mcp
-from harness.whiteboard import BoardLinks, Whiteboard
+from harness.whiteboard import Whiteboard
 
 
 # The file a saved graph is kept in, which a render reads as data.
 _SAVED_GRAPH_SUFFIX = ".json"
+# The declarations of guidance that is no fidelity: none.
+_DECLARES_NOTHING = DeclaredOutputs({})
 
 
 class BoardNotKept(LookupError):
@@ -42,7 +46,7 @@ class Render(GuidanceAction):
     @agent_tool
     def render(
         self, guidance: GuidanceArg, format: str, paths: list[str] | str, content: str = "", source: str | None = None,
-    ) -> list:
+    ) -> list[RenderResult | str]:
         """Convert already-generated content into format. Returns one result per guidance. Every render of paths ends in saved files, which its result names. A drawio, whiteboard, or markdown render is saved beside the first path, under the name the fidelity writes that format to when the path is one of the fidelity's own files or a sketch, else under the path's own name, keeping the layout people gave a drawing already there and everything else only the file held: lines of a markdown document the render does not write stay below it under a heading saying so, and a cell or element only the drawing held stays in it; its result names the saved file as path, and what was kept that way as migrate. A render to python, typescript, or javascript is saved as one file for each piece of the code, at the paths the fidelity declares for that format, such as one file for each aggregate; its result names the files that now hold the render as paths. A code file already there is never replaced: it takes the new shape, a member the source gained arriving empty, and keeps every line it held; a member the model no longer holds stays in the file, marked, and the result lists it as migrate, with its file and the added members that may have replaced it; a member both hold keeps the file's own opening line, and when the model writes that line otherwise the result lists it as migrate too, with the model's line. A render that would lose a line a file holds fails by name and leaves the file as it was. Code from one sketch or file that is not the fidelity's own is saved beside it, named for it. A document rendered from a saved graph is saved at the path the fidelity declares, its {name} filled from what the graph was read from: the one spec's name, else the folder holding every file. A document or drawing of a file that is not one of the fidelity's own is saved beside that file under the file's own name in format, and a render into the format the file is already in keeps the file and names it. Only code that no declared path can place is refused by name, and saves nothing. Only a render into a data format a program reads, such as json, answers its content. After the conversion returns, follow place_rendered; for format whiteboard, then follow publish_board.
         format: the target channel, such as python, markdown, or drawio.
         paths: a file, a list of files, or a folder, named from the project's root or absolute. Required on every call. Pass paths so this action reads locally. Do not pass the document body in content on MCP. A path that is not there, or not under the session's root, is refused, and so is an empty file.
@@ -50,13 +54,13 @@ class Render(GuidanceAction):
         source: the format content is already in. Use sketch for a sketch file. Otherwise markdown, python, typescript, javascript, json, or drawio. md is markdown. Omit source when content is already the current format, or for a file whose extension says its format, such as .drawio, .whiteboard, or .py."""
         self._work_on(guidance)
 
-        def on(worked: WorkedGuidance) -> object:
+        def on(worked: WorkedGuidance) -> RenderResult | str:
             if isinstance(worked, str):
                 return worked
-            return self._render_files(worked, format, paths, source) if paths else worked.render(format, content, source)
+            return self._render_files(worked, format, paths, source) if paths else AnsweredContent(worked.render(format, content, source))
 
         converted = self.work.each(on)
-        self.files.wrote([path for result in converted if isinstance(result, dict) for path in self._saved_by(result)])
+        self.files.wrote([str(path) for result in converted if isinstance(result, RenderResult) for path in result.saved])
         tools(self.act_quickly)
         tools(self.place_rendered)
         if Format(format).name == WHITEBOARD:
@@ -66,25 +70,24 @@ class Render(GuidanceAction):
             tools(self.graph.refresh)
         return converted
 
-    def _render_files(self, worked: WorkedGuidance, format: str, paths: list[str] | str, source: str | None) -> dict:
+    def _render_files(self, worked: WorkedGuidance, format: str, paths: list[str] | str, source: str | None) -> RenderResult:
         """The render of the files at paths, saved: a diagram or a document beside them, code at the paths the fidelity
         declares, and a document from a saved graph at the declared path its scope names. Only a render into a data
         format, such as json, which a program reads and no one saves as a file, answers its content. Only code that no
         declared path places is refused."""
         sources = self.files.paths_to_read(paths)
         source = source or self._format_named_by(sources)
-        declared = worked.declared if isinstance(worked, FidelityGuidance) else None
         written = worked.session_output.written if isinstance(worked, FidelityGuidance) else None
-        saved = RenderedFile.from_sources(sources, Format(source), Format(format), declared, written)
+        saved = RenderedFile.from_sources(sources, Format(source), Format(format), self._placement_of(worked), written)
         if saved is None and (Format(format).is_code or Format(format).group in SAVED_GROUPS):
             return self._saved_by_declared_paths(worked, Format(format), sources, paths, source)
         if saved is None:
-            return worked.render_files(format, paths, source)
+            return AnsweredContent(worked.render_files(format, paths, source))
         if not isinstance(worked, FidelityGuidance):
             return saved.save(worked.render_files(format, paths, source, saved.previous))
-        return saved.save(self._drawn(worked, worked.files_to_render(format, paths, source, saved.previous)))
+        return saved.save(self._drawn(RenderRequest.from_files(worked, format, paths, source, saved.previous)))
 
-    def _saved_by_declared_paths(self, worked: WorkedGuidance, format: Format, sources: list[Path], paths: list[str] | str, source: str | None) -> dict:
+    def _saved_by_declared_paths(self, worked: WorkedGuidance, format: Format, sources: list[Path], paths: list[str] | str, source: str | None) -> RenderResult:
         """A render no source's declared name places, saved all the same. Code goes to the paths the fidelity declares
         for format, one file for each piece, and is refused when they cannot place it. A document or a drawing is never
         refused for its name: from a saved graph it goes to the declared path its scope names; answered as a file for
@@ -96,16 +99,12 @@ class Render(GuidanceAction):
         if first.suffix == _SAVED_GRAPH_SUFFIX and isinstance(worked, FidelityGuidance):
             saved = RenderedFile.from_graph(first, worked, format)
             return saved.save(worked.render_files(format.name, paths, source, saved.previous))
-        own = RenderedFile.beside_itself(first, Format(source), format)
+        own = RenderedFile(self._placement_of(worked).beside_itself(first, Format(source), format), format, Format(source))
         is_itself = own.path in sources
         rendered = worked.render_files(format.name, paths, source, "" if is_itself else own.previous)
-        if isinstance(rendered.get("content"), dict):
+        if isinstance(rendered.content, dict):
             return self._saved_code(worked, format, sources, Format(source)).save(rendered)
-        return {"format": rendered["format"], "path": str(own.path)} if is_itself else own.save(rendered)
-
-    def _saved_by(self, result: dict) -> list[str]:
-        """The files a render's result says it saved: the one a drawing or a document names, or each a code render names."""
-        return [result["path"]] if "path" in result else list(result.get("paths", []))
+        return SavedFile(rendered, own.path) if is_itself else own.save(rendered)
 
     def _saved_code(self, worked: WorkedGuidance, format: Format, sources: list[Path], written_in: Format) -> RenderedCode:
         """Where a render of sources into a code format is saved: under the first root of the fidelity worked at, by
@@ -113,13 +112,16 @@ class Render(GuidanceAction):
         under any root, so its code has no place and is refused."""
         if not isinstance(worked, FidelityGuidance) or not worked.session_output.roots:
             raise RenderHasNoDeclaredPlace("code", format, [], "name a fidelity in a session, which declares where its code is written")
-        outputs = {label: [names] if isinstance(names, str) else list(names) for label, names in worked.declared.outputs.items()}
         source = sources[0] if len(sources) == 1 and sources[0].is_file() else None
-        every = [name for names in outputs.values() for name in names]
         own_name = written_in.stem_of(source) if source is not None else ""
         formats = worked.practice_guidance.formats
-        reshape = getattr(formats.adapter(format), "reshape", None) if format in formats else None
-        return RenderedCode(worked.session_output.root, outputs.get(format.name, []), format, source, every, own_name, reshape)
+        reshape = formats.adapter(format).reshape if format in formats else None
+        return RenderedCode(worked.session_output.root, worked.declared.placement, format, source, own_name, reshape)
+
+    def _placement_of(self, worked: WorkedGuidance) -> RenderPlacement:
+        """Where a render at worked is saved, as its declared paths place it; guidance that is no fidelity declares
+        none, so a render of it is saved beside its source under the source's own name."""
+        return worked.declared.placement if isinstance(worked, FidelityGuidance) else _DECLARES_NOTHING.placement
 
     def _format_named_by(self, sources: list[Path]) -> str | None:
         """The format the first source's name says it is in, for a call that names no source: a drawing, a whiteboard,
@@ -131,13 +133,13 @@ class Render(GuidanceAction):
         named = Format.from_extension(first.suffix)
         return named.name if named.is_offered else None
 
-    def _drawn(self, fidelity: FidelityGuidance, request: RenderRequest) -> dict:
-        """What request renders to at fidelity: drawn by a worker process for a call that answers a chat when it is a
-        diagram, whose class layout can hold the interpreter every chat shares for minutes; else in this process."""
-        worker = WorkerRender(fidelity)
-        if self.call is not None and self.call.request.answers_a_chat and worker.takes(request):
-            return worker.render(request)
-        return fidelity.render_request(request)
+    def _drawn(self, request: RenderRequest) -> Rendered:
+        """What request renders to: drawn by a worker process for a call that answers a chat when it is a diagram, whose
+        class layout can hold the interpreter every chat shares for minutes; else in this process."""
+        worker = WorkerRender(request)
+        if self.call is not None and self.call.request.answers_a_chat and worker.takes_it:
+            return worker.render()
+        return request.render()
 
     @agent_instructions
     def place_rendered(self) -> str:
@@ -178,10 +180,10 @@ class Render(GuidanceAction):
     def _file_published_to(self, board: str) -> Path:
         """The whiteboard file of the session's project whose board is at board; refused when none was published to it."""
         root = self.session.work_root
-        for record in self.session.session_files.find(f"{root.as_posix()}/**/{BoardLinks.RECORD}"):
-            found = BoardLinks(record.parent).file_published_to(board)
-            if found is not None:
-                return found
+        for record in self.session.session_files.find(f"{root.as_posix()}/**/{Whiteboard.LINKS}"):
+            named = Whiteboard.links_beside(record).named_at(board)
+            if named is not None:
+                return record.parent / named
         raise BoardNotKept(board, root)
 
     def _fidelity_drawing(self, relative: str):
@@ -202,5 +204,5 @@ class Render(GuidanceAction):
         file = self.files.path_named(path)
         if file.suffix != Whiteboard.SUFFIX:
             raise ValueError(f"{path} is not a {Whiteboard.SUFFIX} file: only a {Whiteboard.SUFFIX} file is published to a board.")
-        BoardLinks.beside(file).record(file, url)
+        Whiteboard.links_beside(file).record(file.name, url)
         return url

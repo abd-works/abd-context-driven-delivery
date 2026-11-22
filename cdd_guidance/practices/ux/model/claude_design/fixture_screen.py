@@ -5,7 +5,8 @@ a scenario loads its fixture and types the values it enters (``fromFixture(...).
 both seeds the data and fills the form. Opened on its own the list starts on *Load a scenario…* and nothing loads until one is picked; inside the story
 explorer it loads the explorer's scenario, and picking another moves the explorer's tree to it. ``follow(event, story)``
 moves the explorer to the next story, or lets the link open the next screen when the screen stands alone. See
-``claude_design.md``."""
+``story_canvas.md``, the UX practice's Claude Design recipe, which builds each prototype screen as a
+*FixtureScreen*."""
 
 from dataclasses import dataclass
 
@@ -101,14 +102,14 @@ EDIT_LINK = ('<sc-if value="{{inExplorer}}" hint-placeholder-val="{{ false }}"><
              'style="padding: 6px 10px; border: 1px solid #E5531A; border-radius: 4px; background: #E5531A; color: #0B0B0B; text-decoration: none">Edit</a></sc-if>\n')
 
 
-def bar(artboard: str = "") -> str:
+def _bar(artboard: str = "") -> str:
     """The bar for a screen whose own artboard is *artboard* (its canvas path, e.g. ``/screens/select-plan.dc.html``).
     Inside the story explorer it adds **Edit**: the explorer draws the screen through ``dc-import``, so an edit there
     would land on the explorer; the link moves Play to the screen's own artboard, where its markup lives."""
     return BAR.replace("__EDIT_LINK__", EDIT_LINK.replace("__ARTBOARD__", artboard) if artboard else "")
 
 
-def methods(story: str, scenario: str, path: str) -> str:
+def _methods(story: str, scenario: str, path: str) -> str:
     """The shared methods for a screen of *story*, opening on *scenario*, whose dev seed paste is the one for *path*."""
     named = METHODS.replace("__TRIES__", str(FIXTURE_TRIES)).replace("__WAIT__", str(FIXTURE_WAIT_MILLISECONDS))
     return named.replace("__STORY__", story).replace("__SCENARIO__", scenario).replace("__PATH__", path)
@@ -170,7 +171,7 @@ class FixtureScreen:
 
     @property
     def html(self) -> str:
-        return _SCREEN_PAGE.format(title=self.title, head=self.head, root_class=self.root_class, body=self.body, bar=bar(self.artboard),
+        return _SCREEN_PAGE.format(title=self.title, head=self.head, root_class=self.root_class, body=self.body, bar=_bar(self.artboard),
                                    component=self._component)
 
     @property
@@ -180,7 +181,7 @@ class FixtureScreen:
         story, scenario, path = self.source.story, self.source.scenario, self.source.path
         return f'''<script type="text/x-dc" data-dc-script data-props='{{"story":{{"editor":null}},"scenario":{{"editor":null}},"go":{{"editor":null}},"$preview":{{"width":{width},"height":{height}}}}}'>
 class Component extends DCLogic {{
-{methods(story, scenario, path)}{own_methods}renderVals() {{
+{_methods(story, scenario, path)}{own_methods}renderVals() {{
 const st = this.state || {{}};
 return Object.assign(this.barVals(), {{
 {vals}

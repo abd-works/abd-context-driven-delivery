@@ -22,6 +22,7 @@ from cdd_guidance.practices.stories.model.diagram_story_model import (
     LaidOutStory,
 )
 from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryModel, StoryType
+from harness.guidance.practice_formats import Written
 
 # Font sizes, corner radii, and stroke widths a Miro board draws each kind of card with.
 _ACTOR_FONT_SIZE = 7
@@ -226,9 +227,9 @@ class MiroStoryModel(DiagramStoryModel):
     The thin-slice table is save_thin_slice and load_thin_slice, over this map's own increments.
     """
 
-    def render(self, canonical: StoryModel | None = None, previous: str | None = None) -> str:
-        """Draw canonical, or this story map when none is given, as a Miro canvas-composer SVG."""
-        return self.copy_of(canonical if canonical is not None else self).save()
+    def render(self, canonical: StoryModel, written: Written = Written()) -> str:
+        """Draw canonical as a Miro canvas-composer SVG."""
+        return self.copy_of(canonical).save()
 
     def save_thin_slice(self) -> str:
         """This map's increments as a thin-slice table: one column per epic or sub-epic, one row per increment."""
@@ -296,7 +297,7 @@ class MiroStoryModel(DiagramStoryModel):
         """One SVG rect line per epic, sub-epic, story, and actor. Each node places itself."""
         return [shape.svg_line() for epic in self.epics for shape in epic.shapes()]
 
-    def parse(self, text: str) -> "MiroStoryModel":
+    def parse(self, text: str, file: str = "") -> "MiroStoryModel":
         """Read a canvas-composer SVG into a Miro story map; the format-adapter entry point Stories renders through."""
         tagged = list(self._cards_in_order(self._svg_root(text)))
         if not tagged:

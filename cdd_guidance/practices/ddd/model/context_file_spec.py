@@ -61,8 +61,8 @@ An order is a cart a customer submitted.
 def _through(format: str) -> str:
     """The domain model as markdown again after it is written in format and read back."""
     ddd = Ddd(fidelity="model")
-    written = ddd.render(format, _DOMAIN_MODEL, source="markdown")["content"]
-    return ddd.render("markdown", written, source=format, previous=_DOMAIN_MODEL)["content"]
+    written = ddd.render(format, _DOMAIN_MODEL, source="markdown").content
+    return ddd.render("markdown", written, source=format, previous=_DOMAIN_MODEL).content
 
 
 def _ordering(model: str):

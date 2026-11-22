@@ -9,6 +9,7 @@ from cdd_guidance.practices.stories.model.drawio.nodes import DrawIOStoryModel
 from cdd_guidance.practices.stories.model.fixtures.round_trip_story_map import outline, round_trip_story_map
 from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
 from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryModel, StoryType
+from harness.guidance.practice_formats import Written
 
 
 def _nested_four_levels() -> StoryModel:
@@ -71,7 +72,7 @@ _GROWN_MAP = """# (E) Sell Books
 
 
 def _drawn(markdown: str, previous: str | None = None) -> str:
-    return DrawIOStoryModel().render(MarkdownStoryModel().parse(markdown), previous=previous)
+    return DrawIOStoryModel().render(MarkdownStoryModel().parse(markdown), Written(previous))
 
 
 with description("a story map in markdown drawn again after it grew") as self:
