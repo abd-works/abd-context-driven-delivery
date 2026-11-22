@@ -382,15 +382,16 @@ test.describe('Display Connected Status', () => {
     await expect(page.locator('.band-failure')).toHaveCount(0)
   })
 
-  // The ticket a violation belongs to is gone, so session.read_file really refuses it.
+  // The ticket a violation belongs to is gone, so fidelity-progress.accept_violation really refuses it. (A violation's
+  // place opens the Files app, which the board shows no file of, so the refusal comes from accepting it.)
   test('should show a tool failure in a toast', async ({ page }) => {
     await card(page, 'checkout-flow').getByRole('button', { name: 'Run next: validate' }).first().click()
-    const violation = page.locator('[data-panel="report"]').getByRole('button', { name: '.context/story-map.md:6', exact: true })
-    await expect(violation).toBeVisible()
+    const accept = page.locator('[data-panel="report"]').getByRole('button', { name: 'Accept .context/story-map.md:6', exact: true })
+    await expect(accept).toBeVisible()
     rmSync(join(fixtureRoot, '.sessions', 'checkout-flow'), { recursive: true, force: true })
     try {
-      await violation.click()
-      await expect(toast(page, /no session at '\.sessions\/checkout-flow\/session\.json'/)).toBeVisible()
+      await accept.click()
+      await expect(toast(page, /no ticket named 'checkout-flow' on the board/)).toBeVisible()
     } finally {
       resetSessions(fixtureRoot)
     }
