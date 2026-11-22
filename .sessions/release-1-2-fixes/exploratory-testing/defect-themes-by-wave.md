@@ -21,6 +21,61 @@ Each wave's defects are grouped into themes. Sources: the 156 files in [defects/
 
 **Caught by** names the testing layer that found the defect: exploratory testing, or a tier of the automated tests (unit, which holds the BDD specs and the domain and server tiers of the story tests; heavy; e2e, which holds the browser story tests). Every defect of waves 1 to 4 was found by exploratory testing, which is why those waves were run: no automated layer had caught them.
 
+## Modules sorted by defects
+
+The counts are the defects named in the themes below: 146, of which 132 came from the four exploratory waves and 14 were found while fixing. The defect area holds 156 files; the other ten are questions and reports the themes do not name. A defect whose theme names several modules is counted once for each, so this column adds up to more than 146.
+
+| Module | Defects | Wave 1 | Wave 2 | Wave 3 | Wave 4 | Wave 5 | Mostly |
+|---|---|---|---|---|---|---|---|
+| `cdd_guidance/practices/stories` | 29 | 0 | 5 | 11 | 7 | 6 | graph reading, trips between formats |
+| `space/session` | 26 | 8 | 2 | 0 | 13 | 3 | graph view, file lists, output roots |
+| `harness/graph` | 20 | 0 | 2 | 12 | 5 | 1 | joins made by a shared name |
+| `space/kanban` (with its app) | 19 | 13 | 2 | 0 | 0 | 4 | ticket names, worktrees, close |
+| `harness/files_app` (with its app) | 19 | 4 | 0 | 0 | 13 | 2 | rendered view, callouts, selection |
+| `cdd_guidance/practices/clean_engineering` | 19 | 0 | 5 | 12 | 2 | 0 | class model in markdown, drawings |
+| `cdd_guidance/actions` | 17 | 12 | 0 | 1 | 0 | 4 | render's saved file, quiet success |
+| `harness/installation` | 16 | 16 | 0 | 0 | 0 | 0 | install record, two installs at once |
+| `cdd_guidance/practices/ddd` | 15 | 0 | 3 | 8 | 4 | 0 | model missing from the graph, drawing |
+| `harness/diagnostics` | 14 | 11 | 0 | 0 | 0 | 3 | record of test runs |
+| `cdd_guidance/practices/bdd` | 13 | 0 | 0 | 10 | 2 | 1 | spec trips between formats |
+| `scripts` | 12 | 12 | 0 | 0 | 0 | 0 | install scripts, the test runner |
+| `space/repo` | 11 | 11 | 0 | 0 | 0 | 0 | worktrees against git's own list |
+| `tools/prompt_queue` | 10 | 10 | 0 | 0 | 0 | 0 | two writers, unchecked input |
+| `cdd_guidance/practices/ux` | 10 | 0 | 0 | 6 | 4 | 0 | formats with no adapter, drawings |
+| `harness/guidance`, `harness/guidance_actions` | 3 | 3 | 0 | 0 | 0 | 0 | guidance argument matching |
+| `story_tests` | 3 | 0 | 2 | 0 | 0 | 1 | browser tests older than the page |
+| `harness/mcp` | 2 | 2 | 0 | 0 | 0 | 0 | mods copied by two installs |
+| `cdd_guidance/desktop_walk` | 1 | 0 | 0 | 0 | 0 | 1 | the walk cannot reach the Claude app |
+
+By area: the five practices together hold 86, `space` 56, `harness` 74, `cdd_guidance/actions` 17, `scripts` and `tools` 22, the story tests and the desktop walk 4.
+
+## Testing tier or type by defects found
+
+Each defect is counted once here, under what found it.
+
+| Found by | Type | Defects | Share | What it found |
+|---|---|---|---|---|
+| Exploratory, round 1 (six tester robots) | exploratory | 57 | 39% | tools and workflows at their edges |
+| Exploratory, round 3 first pass | exploratory | 44 | 30% | every fidelity, practice and format |
+| Exploratory, round 3 second pass | exploratory | 22 | 15% | the combined graph and its display |
+| Exploratory, round 2 | exploratory | 9 | 6% | areas round 1 missed |
+| Unit tier (BDD specs; story tests, domain tier) | automated | 6 | 4% | regressions from fixes, a fault shared by four languages, a note lost from a drawing |
+| The person, on the board's report | exploratory | 2 | 1% | false findings in a validation report |
+| The person's review of the code | review | 2 | 1% | business rules decided on the page |
+| Heavy tier (install health probe, server health) | automated | 2 | 1% | answers a fix changed on purpose |
+| E2E tier (browser story test) | automated | 1 | 1% | a test that fails only inside the tier |
+| Exploratory, first real run of the desktop walk | exploratory | 1 | 1% | the walk cannot reach the Claude app |
+| Story tests, server tier | automated | 0 | 0% | — |
+| Story tests, browser tier, on a product defect | automated | 0 | 0% | — |
+
+| Type | Defects | Share |
+|---|---|---|
+| Exploratory (robots and the person) | 135 | 92% |
+| Automated tiers | 9 | 6% |
+| Review | 2 | 1% |
+
+All nine defects the automated tiers found were found while fixing: before the fixes started, the tiers were green on every one of the 132 defects the robots then found.
+
 ## Wave 1 — Round 1: six robots explore the tools and workflows
 
 | Defect theme | Module(s) | Description | Root cause | Classification | Practice | Stage | Format | Caught by |
