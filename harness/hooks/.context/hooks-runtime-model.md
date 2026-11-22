@@ -170,27 +170,22 @@ Fields the IDE reads back from the hook process.
 + HookResult(permission: str = "allow", continue_flag: bool | None = None, messages: HookMessages = HookMessages())
 ------
 + messages: HookMessages
-	// the five texts below, as one value
+	// what the hooks say back, held as made; the result keeps no copy of its texts
 + permission: str
 	// deny wins when any handler returns deny
 + continue_flag: bool | None
 	// false wins when any handler returns continue false
-+ user_message: str | None
-+ agent_message: str | None
-+ followup_message: str | None
-	// last non-empty followup_message wins
-+ additional_context: str | None
-	// unique parts join with blank lines
-+ toast: str | None
-	// shown beside the chat, never sent to the IDE; toasts join with newlines
 + followup_only: bool
 	// as_dict returns only followup_message
 ----
 + from_handler(raw: dict | None): HookResult
++ keep_context(context: str | None): None
+	// the context it adds to the agent's model, in place of what it held
 + with_description(description: str): HookResult
 	// prepends the tool docstring onto agent_message
 + merge(other: HookResult): HookResult
-	// deny and continue false win; user_message, agent_message, and toast join with newlines
+	// deny and continue false win; the messages' user_message, agent_message, and toast join with newlines, the last
+	// non-empty followup_message wins, and the unique parts of additional_context join with blank lines
 + as_dict(): dict
 	// the fields the IDE reads; the toast is left out
 

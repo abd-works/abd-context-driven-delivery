@@ -172,7 +172,7 @@ class HookExercise:
         from space.session.sessions import Sessions
 
         result = self._server().handle_stdin(json.dumps(self._payload(path)).encode("utf-8"))
-        injected = result.additional_context or ""
+        injected = result.messages.additional_context or ""
         folder = Sessions(self.repo).current().work_folder
         chat = folder / "last-chat-injected-rules.md"
         remembered = folder / "chat-injections" / "hook-exercise.md"

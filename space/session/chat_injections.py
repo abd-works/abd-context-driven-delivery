@@ -47,19 +47,19 @@ class ChatInjections:
     def keep(self, result: HookResult, payload: HookPayload) -> None:
         """Remember result's rules for the chat the event came from, and the last rules sent in the session."""
         self._retire_shared_inject()
-        body = (result.additional_context or "").strip()
+        body = (result.messages.additional_context or "").strip()
         if body and payload.chat_id:
             dest = self.path_for(payload.chat_id)
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_text(body, encoding="utf-8")
         folder = self._session.work_folder
         folder.mkdir(parents=True, exist_ok=True)
-        (folder / _LAST_RULES_FILE).write_text(result.additional_context or "", encoding="utf-8")
+        (folder / _LAST_RULES_FILE).write_text(result.messages.additional_context or "", encoding="utf-8")
 
     def replay(self, payload: HookPayload, result: HookResult) -> HookResult:
         """result with the rules kept for the prompt's chat, when the hooks gave none of their own."""
         chat_id = payload.conversation_id.strip()
-        if result.additional_context or not chat_id:
+        if result.messages.additional_context or not chat_id:
             return result
         dest = self.path_for(chat_id)
         if not dest.is_file():
@@ -68,7 +68,7 @@ class ChatInjections:
         if self.is_rules_dump(kept):
             dest.unlink(missing_ok=True)
             return result
-        result.additional_context = self._model_context(kept) or None
+        result.keep_context(self._model_context(kept) or None)
         return result
 
     def is_rules_dump(self, body: str) -> bool:
