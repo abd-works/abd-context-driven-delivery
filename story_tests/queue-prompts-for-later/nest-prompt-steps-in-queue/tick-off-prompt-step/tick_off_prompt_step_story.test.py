@@ -44,7 +44,7 @@ with story("Tick Off Prompt Step"):
         with then("the queue answers WRITE_THE_SCENARIOS with every step done"):
             expect([step["state"] for step in steps_of(self.answered, WRITE_THE_SCENARIOS)]).to(equal(["done", "done", "done"]))
         with and_("WRITE_THE_SCENARIOS stays on the queue until the agent marks it done"):
-            expect([prompt["text"] for prompt in self.answered.prompts]).to(equal([WRITE_THE_SCENARIOS]))
+            expect([prompt.text for prompt in self.answered.prompts]).to(equal([WRITE_THE_SCENARIOS]))
     with scenario("Refuse a step the prompt does not have"):
         with given("WRITE_THE_SCENARIOS has three steps"):
             self.queue = seed_queue(WRITE_THE_SCENARIOS)

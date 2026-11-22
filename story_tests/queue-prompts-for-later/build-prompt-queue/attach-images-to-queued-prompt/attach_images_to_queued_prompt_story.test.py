@@ -31,9 +31,9 @@ with story("Attach Images To Queued Prompt"):
             # Prompt Queue mod -> PromptQueue.attach(prompt, filename, media_type, data)
             self.answered = self.queue.attach(id_of(self.queue, WRITE_THE_SCENARIOS), SCREENSHOT_NAME, "image/png", base64.b64encode(SCREENSHOT_PNG).decode())
         with then("WRITE_THE_SCENARIOS lists one attached file"):
-            expect(len(self.answered.prompts[0].get("attachments", []))).to(equal(1))
+            expect(len(self.answered.prompts[0].attachments)).to(equal(1))
         with and_("that file holds SCREENSHOT_PNG's bytes, named for the prompt"):
-            attached = Path(self.answered.prompts[0]["attachments"][0])
+            attached = Path(self.answered.prompts[0].attachments[0])
             expect(attached.read_bytes()).to(equal(SCREENSHOT_PNG))
             expect(attached.name).to(contain(id_of(self.answered, WRITE_THE_SCENARIOS)))
     with scenario("Refuse an image for a prompt the queue does not hold"):

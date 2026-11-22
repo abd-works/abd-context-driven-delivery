@@ -87,7 +87,7 @@ class CalloutAlignment:
         """Each link whose target is not there, each callout no edge matches, and each edge between a markdown file and
         another document or code file that no callout shows from either end. No files, or a session working on no
         practice, answer none, since no practice reads the files."""
-        if not self._files or not self._session.practice_outputs.working:
+        if not self._files or not self._session.session_practices.working:
             return []
         self._read_graph()
         self._callouts = {file: self._callouts_of(file) for file in self._files if self._holds_links(file)}
@@ -99,7 +99,7 @@ class CalloutAlignment:
         file named from the project."""
         session = self._session
         graph = session.graph
-        graph.load_files(str(session.checkout.root.resolve()), session.practice_outputs.working, self._files, graph.overlays, self._call)
+        graph.load_files(str(session.checkout.root.resolve()), session.session_practices.working, self._files, graph.overlays, self._call)
         practices = list(SavedGraph.from_graph(graph).practices.values())
         nodes: dict[str, PlacedNode] = {}
         for practice in practices:

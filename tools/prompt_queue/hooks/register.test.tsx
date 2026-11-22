@@ -34,11 +34,20 @@ const CHAT = 'chat-1'
 type Step = { text: string; state: 'pending' | 'in_progress' | 'done' }
 type Prompt = { id: string; text: string; steps?: Step[]; attachments?: string[]; is_done?: boolean; robot?: string }
 
+/** A prompt as the cdd server answers it: with whether it waits (neither done nor asking a decision) and where its
+ * steps' pointer stands, as tools/prompt_queue's QueuedPrompt sends them. */
+function answered(prompt: Prompt) {
+  const steps = prompt.steps ?? []
+  const pointer = steps.findIndex(step => step.state !== 'done')
+  return { ...prompt, is_waiting: !prompt.is_done && !prompt.text.startsWith('[decision required]'), step_pointer: pointer === -1 ? steps.length : pointer }
+}
+
 /** The cdd server's prompt-queue tools for one chat, in memory: the same operations as tools/prompt_queue's
  * PromptQueue, each answering the queue. */
 function promptQueueTools(prompts: Prompt[]) {
   let added = 0
-  const answer = () => ({ chat: CHAT, prompts })
+  const answer = () => ({ chat: CHAT, prompts: prompts.map(answered) })
+  const stepsOf = (args: Record<string, unknown>) => prompts[at(args.prompt)]!.steps ?? []
   const at = (id: unknown) => prompts.findIndex(prompt => prompt.id === id)
   const operations: Record<string, (args: Record<string, unknown>) => unknown> = {
     show: () => answer(),
@@ -91,6 +100,34 @@ function promptQueueTools(prompts: Prompt[]) {
       prompts[at(args.prompt)]!.steps = args.steps as Step[]
       return answer()
     },
+    move_step: args => {
+      const steps = stepsOf(args)
+      const place = Number(args.place)
+      if (place >= 1 && place <= steps.length) {
+        const [moving] = steps.splice(Number(args.step) - 1, 1)
+        steps.splice(place - 1, 0, moving!)
+      }
+      return answer()
+    },
+    remove_step: args => {
+      stepsOf(args).splice(Number(args.step) - 1, 1)
+      return answer()
+    },
+    step_back: args => {
+      const steps = stepsOf(args)
+      const above = answered(prompts[at(args.prompt)]!).step_pointer - 1
+      if (above >= 0) steps.forEach((step, place) => { if (place >= above) step.state = place === above ? 'in_progress' : 'pending' })
+      return answer()
+    },
+    step_on: args => {
+      const steps = stepsOf(args)
+      const pointed = answered(prompts[at(args.prompt)]!).step_pointer
+      if (pointed < steps.length) {
+        steps[pointed]!.state = 'done'
+        if (pointed + 1 < steps.length) steps[pointed + 1]!.state = 'in_progress'
+      }
+      return answer()
+    },
   }
   return { prompts, call: (tool: string, args: Record<string, unknown>) => operations[tool.replace('prompt-queue.', '')]!(args) }
 }
@@ -109,7 +146,7 @@ function seedQueue(on: TestOn, isExpanded: boolean, queuedByKey = '', queued = Q
     return { value: { content: [{ type: 'text', text: JSON.stringify(server.call(tool, args)) }], isError: false } }
   })
   const stored: Record<string, { value: unknown; version: number }> = {
-    queue: { value: { chat: CHAT, prompts: [...server.prompts] }, version: 1 },
+    queue: { value: { chat: CHAT, prompts: server.prompts.map(answered) }, version: 1 },
     isExpanded: { value: isExpanded, version: 1 },
     queuedByKey: { value: queuedByKey, version: 1 },
     isPlaying: { value: isPlaying, version: 1 },
@@ -1391,7 +1428,7 @@ test("grouping leaves the person's interruptions out, as this chat decides where
 
 test("in sub-agent mode the cards no robot has show under the robots at the queue's full width, as in the single queue", async ($, on) => {
   const seeded = groupedQueue(on)
-  seeded.stored.queue = { value: { chat: CHAT, prompts: [...QUEUED.map(prompt => ({ ...prompt, robot: prompt.id === 'a' ? 'Sparky' : 'Bolt' })), { id: 'm', text: '[interruption] is it started' }] }, version: 2 }
+  seeded.stored.queue = { value: { chat: CHAT, prompts: ([...QUEUED.map(prompt => ({ ...prompt, robot: prompt.id === 'a' ? 'Sparky' : 'Bolt' })), { id: 'm', text: '[interruption] is it started' }]).map(answered) }, version: 2 }
 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
   const loose = await ui.find({ type: 'Box', key: 'agent-loose-cards' })
@@ -1439,7 +1476,7 @@ test("the robots sit one under another on the left, the open queue taking the ro
 test("work a robot finishes stays in that robot's queue, dimmed", async ($, on) => {
   const seeded = groupedQueue(on)
   seeded.prompts[0]!.is_done = true
-  seeded.stored.queue = { value: { chat: CHAT, prompts: seeded.prompts.map(prompt => ({ ...prompt })) }, version: 2 }
+  seeded.stored.queue = { value: { chat: CHAT, prompts: (seeded.prompts.map(prompt => ({ ...prompt }))).map(answered) }, version: 2 }
 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
   const card = await ui.find({ type: 'Button', key: 'card-text-a' })
@@ -1468,7 +1505,7 @@ test("in sub-agent mode the note on a new message shows the robots' queues and l
 
 test("a card queued for a robot by name shows in that robot's queue", async ($, on) => {
   const seeded = groupedQueue(on)
-  seeded.stored.queue = { value: { chat: CHAT, prompts: [...seeded.prompts, { id: 'c', text: '[for Bolt] Run the heavy tier' }] }, version: 2 }
+  seeded.stored.queue = { value: { chat: CHAT, prompts: ([...seeded.prompts, { id: 'c', text: '[for Bolt] Run the heavy tier' }]).map(answered) }, version: 2 }
 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
 
@@ -1478,7 +1515,7 @@ test("a card queued for a robot by name shows in that robot's queue", async ($, 
 
 test("a card given to one robot and named for another stands only in the queue of the robot it was given to", async ($, on) => {
   const seeded = groupedQueue(on)
-  seeded.stored.queue = { value: { chat: CHAT, prompts: [...seeded.prompts, { id: 'c', text: '[for Bolt] Run the heavy tier', robot: 'Sparky' }] }, version: 2 }
+  seeded.stored.queue = { value: { chat: CHAT, prompts: ([...seeded.prompts, { id: 'c', text: '[for Bolt] Run the heavy tier', robot: 'Sparky' }]).map(answered) }, version: 2 }
 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
   const sparky = JSON.stringify(await ui.find({ type: 'Box', key: 'agent-column-1' }))
@@ -1539,7 +1576,7 @@ test("a robot's queue is closed until the robot is pressed, the robot listed wit
 test("a closed robot shows how many of its items are done beside it, such as 1/2", async ($, on) => {
   const seeded = groupedQueue(on, [{ description: 'Write the story map', prompts: ['Write the scenarios', 'Run the unit tier'], name: 'Sparky' }])
   seeded.stored.expandedAgents = { value: [], version: 1 }
-  seeded.stored.queue = { value: { chat: CHAT, prompts: [{ ...QUEUED[0], is_done: true, robot: 'Sparky' }, { ...QUEUED[1], robot: 'Sparky' }] }, version: 2 }
+  seeded.stored.queue = { value: { chat: CHAT, prompts: ([{ ...QUEUED[0], is_done: true, robot: 'Sparky' }, { ...QUEUED[1], robot: 'Sparky' }]).map(answered) }, version: 2 }
 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
 

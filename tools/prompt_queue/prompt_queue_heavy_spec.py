@@ -103,4 +103,4 @@ with description("a chat's prompt queue through the cdd server") as self:
             expect(self.refusal).to(contain("'completed' is not a step's state, which is one of pending, in_progress, done"))
 
         with it("should leave the prompt without steps"):
-            expect("steps" in self.steps_chat.answer("prompt-queue.show", chat="")["prompts"][0]).to(equal(False))
+            expect(self.steps_chat.answer("prompt-queue.show", chat="")["prompts"][0]["steps"]).to(equal([]))

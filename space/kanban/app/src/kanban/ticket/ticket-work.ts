@@ -30,9 +30,10 @@ export class TicketWork {
 
   private heldProgress: { read: FidelityProgressData[]; clients: FidelityProgressClient[] } | null = null
 
-  // Its progress on the fidelities of a stage whose practices its session works on, in the order the stage requires them.
+  // Its progress in a stage, as Python's StageWork names it: the fidelities of the stage whose practices its session works
+  // on, in the order the stage requires them.
   progressIn(stage: ColumnClient): FidelityProgressClient[] {
-    return this.fidelityProgress.filter(progress => progress.stage.name === stage.name && progress.isEnabled)
+    return (this.workIn(stage)?.progress ?? []).flatMap(named => this.progressNamed(named.fidelity.slug) ?? [])
   }
 
   // Its progress on the fidelities a tile or a panel was opened over, read from this ticket as it is now.

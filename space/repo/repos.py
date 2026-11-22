@@ -12,7 +12,8 @@ from pathlib import Path
 
 from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import noSessionLog, tool_subject
-from harness.chat.chat import links_of_run
+from harness.agent_tools.tool_call import ToolCall
+from harness.chat.chat import Chats, NewChat
 from harness.installation.data_class import data_field
 from harness.installation.files import command
 from harness.installation.json_file import JsonFile
@@ -60,35 +61,33 @@ class InstallFailedError(RuntimeError):
     """Raised when installing CDD into the repository's .claude fails; it carries the install's output."""
 
 
-class NewChat:
+class RepositoryChat:
     """A new top-level chat in the Claude desktop app on root, titled title, whose first prompt opens the CDD session
-    called session there. The app asks the person to confirm the folder and send that prompt."""
+    called session there: a harness *NewChat* opened from chats. The app asks the person to confirm the folder and send
+    that prompt."""
 
-    def __init__(self, root: Path, title: str, session: str) -> None:
+    def __init__(self, root: Path, title: str, session: str, chats: Chats) -> None:
         self._root = root
         self._title = title
         self._session = session
+        self.chat: NewChat = chats.new_chat(str(root), self.first_prompt)
 
     @property
     def first_prompt(self) -> str:
         return f"Open the CDD session {self._session} in this folder: call sessions.switch with name {self._session}."
 
     @property
-    def link(self) -> str:
-        return links_of_run().link_to_new(str(self._root), self.first_prompt)
-
-    @property
     def instructions(self) -> str:
         """What the agent is told when the link cannot be opened: how to start the chat itself."""
         return (
             f"Start a top-level chat on {self._root}: start_session with initiation user_asked, context fresh, "
-            f"cwd {self._root}, use_worktree false, title {self._title!r}, and prompt {self.first_prompt!r}. Or open {self.link}"
+            f"cwd {self._root}, use_worktree false, title {self._title!r}, and prompt {self.first_prompt!r}. Or open {self.chat.link}"
         )
 
     def open(self) -> str:
         """Hand the link to the desktop app; when the system cannot open it, say how to start the chat instead."""
         try:
-            links_of_run().open_new(str(self._root), self.first_prompt)
+            self.chat.open()
         except (OSError, subprocess.SubprocessError):
             return self.instructions
         return f"Opened a new chat on {self._root} in the Claude app: send its first prompt there to open the session {self._session}."
@@ -207,7 +206,8 @@ class Repos:
     @agent_tool
     @noSessionLog
     def open(
-        self, name: str, folder: str = "", visibility: str = "private", publish: bool = True, install: bool = True, start_chat: bool = True
+        self, name: str, folder: str = "", visibility: str = "private", publish: bool = True, install: bool = True, start_chat: bool = True,
+        call: ToolCall | None = None,
     ) -> str:
         """Open the repository called name in a chat of its own, on main. folder is where it is kept, by default the
         repos folder (/repos-folder). A repository not there yet is created: git init on main with a first commit.
@@ -224,7 +224,7 @@ class Repos:
         steps += [self._publish(root, visibility)] if publish else []
         steps += [self._install_cdd(root)] if install else []
         # A new repository's main session is the session of the branch it is created on.
-        chat = NewChat(root, cleaned, DEFAULT_BRANCH)
+        chat = RepositoryChat(root, cleaned, DEFAULT_BRANCH, Chats.load(call))
         steps.append(chat.open() if start_chat else chat.instructions)
         return "\n".join(f"- {step}" for step in steps if step)
 

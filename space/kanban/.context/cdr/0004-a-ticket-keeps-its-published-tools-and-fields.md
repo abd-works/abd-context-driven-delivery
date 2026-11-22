@@ -27,7 +27,7 @@ The Clean Engineering review of the version 1 refactoring found `Ticket` still c
 
 The published names still sit on `Ticket`, for the reason above: a toolset publishes a tool under its own class's name, and the generated TypeScript `TicketData` reads its data fields by key. What changes when a tree rule, a choice, a move, or an ending changes is now the part, not the ticket.
 
-The same holds for `Board` (`board.folders`, `board.help`, `board.save_again`, `board.set_sends_fixes_directly`), `Repo` (`repo.push_commit`, `push_work`, `merge_to_main`, `push_to_main`, which ask its *Publishing*), `Session` (the graph tools, which ask its *SessionExplorer*; its graph and practices, which are its *PracticeOutputs*; a guidance selection's update, which its *GuidanceVersion* makes), and `Sessions` (`sessions.current` and `sessions.switch`, which ask its *OpenSessions*): each keeps its published names and asks the part that owns the reason to change.
+The same holds for `Board` (`board.folders`, `board.help`, `board.save_again`, `board.set_sends_fixes_directly`), `Repo` (`repo.push_commit`, `push_work`, `merge_to_main`, `push_to_main`, which ask its *Publishing*), `Session` (the graph tools, which ask its *SessionExplorer*; its graph and practices, which are its *SessionPractices* and *SessionGraph*; a guidance selection's update, which its *GuidanceVersion* makes), and `Sessions` (`sessions.current` and `sessions.switch`, which ask its *OpenSessions*): each keeps its published names and asks the part that owns the reason to change.
 
 ## Version 1 refactoring, round 2: tools declared by job on mixed-in bases
 

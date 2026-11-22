@@ -102,7 +102,7 @@ class FakeFilesServer implements CddApi {
     if (path.endsWith('/toggle-guidance')) return this.toggle(String(body.part), String(body.name)) as Result
     if (path.endsWith('/guidance-selection-after')) return (await this.after(Number(body.version))) as Result
     if (path.endsWith('/fidelity-files')) return {} as Result
-    if (path.endsWith('/root-files')) return CHECKOUT_FLOW_FILES as Result
+    if (path.endsWith('/root-files')) return this.rootFiles() as Result
     if (path.endsWith('/graph-trees')) return (await this.heldTrees(body.paths as string[])) as Result
     if (path.endsWith('/graph-filter-choices') && this.isChoicesAnswered) return this.choicesAnswer as Result
     if (path.endsWith('/graph-members') && this.membersAnswer !== undefined) return this.membersAnswer as Result
@@ -113,6 +113,13 @@ class FakeFilesServer implements CddApi {
     if (path.endsWith('/cdd/progress')) return this.progress.map(message => ({ tool: 'session.graph_trees', message })) as Result
     if (path.endsWith('/file')) return { path: body.path, text: 'line\n'.repeat(700), language: 'python', comments: [], folds: [], violations: body.rules ? [BROKEN_RULE] : [], changes: [] } as Result
     return null
+  }
+
+  // The files under the root as ticket.root_files answers them for the selection: listed while a fidelity it belongs to
+  // is selected, and the session's work when the branch changed it.
+  private rootFiles() {
+    const listed = this.selection().fidelities
+    return CHECKOUT_FLOW_FILES.map(file => ({ ...file, is_listed: file.fidelities.some(slug => listed.includes(slug)), is_session_work: file.is_changed }))
   }
 
   // A press on a practice's toggle, as Session.toggle_guidance answers it: the practice taken out of those selected, or put in.
@@ -139,6 +146,7 @@ class FakeFilesServer implements CddApi {
       version: this.version,
       is_stage_chosen: true,
       stages: Object.keys(FIDELITIES).map(name => ({ name, title: name, is_selected: this.stages.includes(name) })),
+      covered_stages: this.stages,
       practices: PRACTICES.map(practice => ({ ...practice, is_selected: this.practices.includes(practice.key) })),
       formats: [],
       fidelities,
@@ -281,6 +289,8 @@ describe('Filter Graph Like The File List', () => {
     it('should hold only the Stories tree once the Person turns Clean Engineering off', async () => {
       const { page, stop } = await showingGraph()
       await page.guidance.toggle('practice', 'clean_engineering')
+      // The session answers the files again for the selection the press leaves, then the graph is read for them.
+      await settled()
       await settled()
       stop()
       expect(treeNames(page)).toEqual(['Stories'])
@@ -289,6 +299,7 @@ describe('Filter Graph Like The File List', () => {
     it('should list only story-map.md when switched back to the files', async () => {
       const { page, stop } = await showingGraph()
       await page.guidance.toggle('practice', 'clean_engineering')
+      await settled()
       await settled()
       page.fileBar.show('list')
       stop()

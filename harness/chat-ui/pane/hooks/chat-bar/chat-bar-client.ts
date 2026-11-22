@@ -72,13 +72,11 @@ export class ChatBarClient {
     return this.ticket?.column.name ?? ''
   }
 
-  // The stages whose fidelities the dots show, in the board's order: those the session's guidance selection has
-  // selected, here or in a page the chat opened, none selected meaning every stage. Before anyone chose, the session
+  // The stages whose fidelities the dots show, in the board's order, as the session's guidance selection covers them:
+  // those selected, here or in a page the chat opened, every stage while none is. Before anyone chose, the session
   // answers the stage its ticket is in selected.
   get shownStages(): string[] {
-    const stages = (this.board?.columns ?? []).filter(column => column.kind === 'stage').map(column => column.name)
-    const selected = (this.guidance?.stages ?? []).filter(stage => stage.is_selected).map(stage => stage.title)
-    return selected.length ? stages.filter(stage => selected.includes(stage)) : stages
+    return this.guidance?.covered_stages ?? []
   }
 
   // The first stage shown, whose actions the action button offers: every stage takes the same steps.
@@ -123,19 +121,21 @@ export class ChatBarClient {
     return (this.board?.columns.find(column => column.name === this.shownStage)?.actions ?? [])
   }
 
-  // Whether the session works on a practice, as its guidance selection says, else as the board read it.
+  // Whether the session works on a practice, as its guidance selection says.
   isPracticeOn(key: string): boolean {
-    const practice = this.guidance?.practices.find(each => each.key === key)
-    return practice ? practice.is_selected : (this.ticket?.progress.find(progress => progress.practice.key === key)?.is_enabled ?? true)
+    return this.guidance?.practices.find(each => each.key === key)?.is_selected ?? false
   }
 
-  // The fidelities of the stages shown whose practice dot is on, no dot on meaning every practice: what every action
-  // runs on, in the order the stages require them. They follow the dots as drawn, so a command never names a practice
-  // whose dot is off, even while a press is drawn ahead of the session's answer, whose fidelity list is not yet updated.
+  // The fidelities the session's guidance selection covers, in its order: the stages shown, the practices on, no
+  // practice on meaning every practice. Every action runs on them, and the selection writes each action's command on
+  // the same ones.
   get fidelities(): FidelityProgressClient[] {
-    const shown = this.fidelitiesOfShownStages
-    const selected = shown.filter(fidelity => fidelity.isSelected)
-    return selected.length ? selected : shown
+    const ticket = this.ticket
+    if (!ticket) return []
+    return (this.guidance?.fidelities ?? []).flatMap(slug => {
+      const progress = ticket.progress.find(each => each.fidelity.slug === slug)
+      return progress ? [new FidelityProgressClient(progress, ticket, this)] : []
+    })
   }
 
   // One dot per practice with fidelities in the stages shown, on or off: a press turns the practice on or off for the

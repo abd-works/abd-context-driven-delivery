@@ -27,8 +27,6 @@ documents, so no gap says a code file lacks what a document holds.
 
 from __future__ import annotations
 
-import shutil
-import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterable
 
@@ -39,13 +37,12 @@ from harness.agent_tools.agent_tools import agent_tool, noSessionLog
 from harness.agent_tools.tool_call import ToolCall
 from harness.annotations.annotation import hosted_only
 from harness.diagnostics.probe_outcome import raised_by_a_bug
-from harness.graph.graph import Graph
-from harness.graph.saved_graph import SavedGraph, SavedPractice
-from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
+from harness.graph.saved_graph import SavedPractice
 from harness.installation.data_class import data_field
 from harness.markdown.format import Format
 from harness.mcp.mcp_annotations import long_call, mcp
 from space.session.callout_alignment import CalloutAlignment
+from space.session.session_graph import DocumentGraph
 
 if TYPE_CHECKING:
     from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
@@ -301,46 +298,11 @@ class GraphReading:
         return GraphDifference(other._nodes - self._nodes, other._edges - self._edges)
 
 
-class _ComparisonGraph:
-    """The graph a diagnosis reads each format's document into, apart from the session's knowledge graph: its own
-    instance of every practice, made once, and a folder of its own that holds one document at a time. A format the
-    graph does not read itself, such as a whiteboard, is first rendered into the fidelity's leading format, so every
-    format is read by the same reader."""
-
-    def __init__(self) -> None:
-        self._graph: Graph | None = None
-        self._folder: Path | None = None
-
-    def reading(self, practice: PracticeGuidance, text: str, placed_at: str) -> GraphReading:
-        """What practice's graph reading reads from text, a document placed at placed_at, its path from the project."""
-        graph, folder = self._opened()
-        document = folder / placed_at
-        document.parent.mkdir(parents=True, exist_ok=True)
-        document.write_text(text, encoding="utf-8")
-        try:
-            graph.load_files(str(folder), [practice.key], [placed_at])
-            return GraphReading(SavedGraph.from_graph(graph).practices.get(practice.key) or SavedPractice(practice.key))
-        finally:
-            document.unlink()
-
-    def close(self) -> None:
-        """Remove the folder the documents were read from."""
-        if self._folder is not None:
-            shutil.rmtree(self._folder, ignore_errors=True)
-        self._graph, self._folder = None, None
-
-    def _opened(self) -> tuple[Graph, Path]:
-        if self._graph is None or self._folder is None:
-            self._graph = Graph(PRACTICE_CATALOGUE.create_all())
-            self._folder = Path(tempfile.mkdtemp(prefix="cdd-format-alignment-"))
-        return self._graph, self._folder
-
-
 class _FidelityAlignment:
     """One fidelity's chosen formats in a session, document by document: the file each format is written to, whether it
     is there, and whether the graph reads the same nodes and edges from each."""
 
-    def __init__(self, fidelity: FidelityGuidance, session: Session, comparison: _ComparisonGraph) -> None:
+    def __init__(self, fidelity: FidelityGuidance, session: Session, comparison: DocumentGraph) -> None:
         self._fidelity = fidelity
         self._session = session
         self._comparison = comparison
@@ -416,7 +378,7 @@ class _FidelityAlignment:
         A failure the render declares is answered as a gap; a programming error raises."""
         try:
             text = file.read_text(encoding="utf-8") if format == leading else str(self._fidelity.render_files(leading, [str(file)], format).content)
-            return self._comparison.reading(self._fidelity.practice_guidance, text, placed_at)
+            return GraphReading(self._comparison.read_text(self._fidelity.practice_guidance, text, placed_at))
         except Exception as failure:
             if raised_by_a_bug(failure):
                 raise
@@ -482,7 +444,7 @@ class SessionAlignment:
         # such as one an alignment just rendered.
         self._session.session_files.file_manager.search_again()
         covered = self._session.guidance.covered
-        comparison = _ComparisonGraph()
+        comparison = DocumentGraph.of_every_practice()
         try:
             gaps = [gap for fidelity in covered for gap in _FidelityAlignment(fidelity, self._session, comparison).gaps()]
         finally:

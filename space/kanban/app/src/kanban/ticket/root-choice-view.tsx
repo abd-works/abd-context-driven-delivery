@@ -55,7 +55,7 @@ function RootsListView({ ticket }: { ticket: TicketClient }) {
   )
 
   async function setUpWithChat(): Promise<void> {
-    await ticket.prompts.fillSetUpRoots()
+    await ticket.chatPrompts.fillSetUpRoots()
     page.roots.close()
   }
 }

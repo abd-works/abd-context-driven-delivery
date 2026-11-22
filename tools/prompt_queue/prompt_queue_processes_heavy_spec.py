@@ -33,7 +33,7 @@ from tools.prompt_queue.prompt_queue import PromptQueue
 file, job, place, count, start = Path(sys.argv[1]), sys.argv[2], int(sys.argv[3]), int(sys.argv[4]), float(sys.argv[5])
 reading_seconds = float(sys.argv[6])
 queue = PromptQueue("chat-1", file)
-mine = [prompt["id"] for prompt in queue.prompts][place * count:(place + 1) * count]
+mine = [prompt.id for prompt in queue.prompts][place * count:(place + 1) * count]
 while time.time() < start:
     pass
 refused, lengths = [], set()
@@ -92,14 +92,14 @@ with description("a chat's prompt queue changed by several processes at once") a
             expect([refusal for answer in self.answers for refusal in answer["refused"]]).to(equal([]))
 
         with it("should keep every card queued before, in order, at the front of the queue"):
-            expect([prompt["text"] for prompt in self.held][:QUEUED_BEFORE]).to(equal([f"queued-before-{number}" for number in range(QUEUED_BEFORE)]))
+            expect([prompt.text for prompt in self.held][:QUEUED_BEFORE]).to(equal([f"queued-before-{number}" for number in range(QUEUED_BEFORE)]))
 
         with it("should keep every card each process added"):
-            added = sorted(prompt["text"] for prompt in self.held if prompt["text"].startswith("added-"))
+            added = sorted(prompt.text for prompt in self.held if prompt.text.startswith("added-"))
             expect(added).to(equal(sorted(f"added-{place}-{number}" for place in range(3) for number in range(CALLS_EACH))))
 
         with it("should keep every card marked done as done"):
-            expect([prompt.get("is_done", False) for prompt in self.held[:CALLS_EACH]]).to(equal([True] * CALLS_EACH))
+            expect([prompt.is_done for prompt in self.held[:CALLS_EACH]]).to(equal([True] * CALLS_EACH))
 
         with it("should never show a reader fewer cards than were queued before"):
             expect([length for answer in self.answers for length in answer["lengths"] if length < QUEUED_BEFORE]).to(equal([]))
@@ -112,5 +112,5 @@ with description("a chat's prompt queue changed by several processes at once") a
             self.holder.wait()
 
         with it("should take the next change, since the hold ended with the process"):
-            texts = [prompt["text"] for prompt in PromptQueue(CHAT, self.file).add("Run the heavy tier").prompts]
+            texts = [prompt.text for prompt in PromptQueue(CHAT, self.file).add("Run the heavy tier").prompts]
             expect(texts[-1]).to(equal("Run the heavy tier"))

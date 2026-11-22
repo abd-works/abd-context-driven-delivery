@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import json
-from contextlib import contextmanager
 from dataclasses import dataclass, replace
-from contextvars import ContextVar
 from pathlib import Path
 from typing import Any, Callable, Iterator, Protocol
 
@@ -89,10 +87,10 @@ class ToolRequest:
 
 
 class CallsBeingAnswered:
-    """The call a tool is answering on each thread, so code deep under it, such as a board switching its session, keeps
-    the open session of the call's own chat without each layer passing the chat on. The process keeps one
-    (``CALLS_BEING_ANSWERED``): the MCP host and an in-process answer mark the call they run, and code under them asks
-    for it."""
+    """The call a tool is answering on each thread, kept only so ``report_progress`` deep under a tool reaches the chat
+    that asked without each layer passing a reporter on. Nothing reads a session or a chat from it: a board, a session,
+    and a chat are handed the call that asked. The process keeps one (``CALLS_BEING_ANSWERED``): the MCP host and an
+    in-process answer mark the call they run."""
 
     def __init__(self) -> None:
         self._answering: ContextVar[ToolCall | None] = ContextVar("answering_call", default=None)

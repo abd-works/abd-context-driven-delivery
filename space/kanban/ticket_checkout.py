@@ -22,8 +22,76 @@ LEAVE_MERGE = "merge"
 LEAVE_DELETE_BRANCH = "delete_branch"
 LEAVE_DELETE_WORKTREE = "delete_worktree"
 LEAVE_HANDOFF = "handoff"
-# What leaving does to the branch itself, beyond saving the work on it.
-LEAVE_BRANCH_STEPS = {LEAVE_MERGE, LEAVE_DELETE_BRANCH, LEAVE_DELETE_WORKTREE}
+# Every step leaving can take, in the order a dialog lists them.
+LEAVE_STEPS = (LEAVE_HANDOFF, LEAVE_COMMIT, LEAVE_PUSH, LEAVE_MERGE, LEAVE_DELETE_BRANCH, LEAVE_DELETE_WORKTREE)
+
+
+class UnknownLeavingStepError(ValueError):
+    """Raised when closing a ticket names a step leaving does not take, such as a misspelt one: it names the steps it
+    did not know and the steps there are, and nothing of the ticket changes."""
+
+    def __init__(self, unknown: list[str]) -> None:
+        super().__init__(f"{', '.join(unknown)} is no step of leaving a ticket; the steps are {', '.join(LEAVE_STEPS)}")
+        self.unknown = unknown
+
+
+class Leaving:
+    """*Leaving* is what a person chose to do with a ticket's work as it closes: write a handoff, commit and push the
+    branch its work is on, merge its own branch, delete that branch, delete its worktree. A step leaving does not take
+    is refused, so a misspelt one never passes for a choice made. Each step a checkout takes asks it what was chosen."""
+
+    def __init__(self, steps: list[str]) -> None:
+        unknown = [step for step in steps if step not in LEAVE_STEPS]
+        if unknown:
+            raise UnknownLeavingStepError(unknown)
+        self._steps = frozenset(steps)
+
+    @classmethod
+    def freeing_worktree(cls) -> Leaving:
+        """Leaving that deletes the ticket's own worktree alone, as archiving or deleting a ticket does."""
+        return cls([LEAVE_DELETE_WORKTREE])
+
+    @property
+    def writes_handoff(self) -> bool:
+        return LEAVE_HANDOFF in self._steps
+
+    @property
+    def commits(self) -> bool:
+        return LEAVE_COMMIT in self._steps
+
+    @property
+    def pushes(self) -> bool:
+        return LEAVE_PUSH in self._steps
+
+    @property
+    def merges(self) -> bool:
+        return LEAVE_MERGE in self._steps
+
+    @property
+    def deletes_branch(self) -> bool:
+        return LEAVE_DELETE_BRANCH in self._steps
+
+    @property
+    def deletes_worktree(self) -> bool:
+        return LEAVE_DELETE_WORKTREE in self._steps
+
+    @property
+    def changes_branch(self) -> bool:
+        """Whether it does anything to the ticket's own branch beyond saving the work on it: merges, deletes it, or
+        deletes its worktree."""
+        return self.merges or self.deletes_branch or self.deletes_worktree
+
+    @property
+    def saves_work(self) -> bool:
+        """Whether it saves the ticket's work before anything is removed: a commit, a push, or a change of its branch,
+        which saves what a worktree about to go holds."""
+        return self.commits or self.pushes or self.changes_branch
+
+    @property
+    def removes_worktree(self) -> bool:
+        """Whether the ticket's own worktree goes: deleted, or taken with the branch, since git deletes no branch a
+        worktree has checked out."""
+        return self.deletes_worktree or self.deletes_branch
 
 
 class TicketCheckout:
@@ -119,15 +187,15 @@ class TicketCheckout:
         if len(candidates) > 1:
             raise TicketBranchUnclearError(self._ticket.name, [branch.name for branch in candidates])
 
-    def keep_landing_release(self, leaving: list[str]) -> None:
+    def keep_landing_release(self, leaving: Leaving) -> None:
         """A ticket closed with its branch merged lands its release: its end-to-end results are the only ones kept, its
         screenshots pushed to e2e-latest. Done while its folder is still among the open sessions, where they are."""
-        if LEAVE_MERGE in leaving:
+        if leaving.merges:
             LatestRelease(self._repo.main_clone, self._ticket.name).keep()
 
-    def write_handoff(self, leaving: list[str]) -> None:
+    def write_handoff(self, leaving: Leaving) -> None:
         """Write a handoff for the ticket's session when leaving names one."""
-        if LEAVE_HANDOFF in leaving:
+        if leaving.writes_handoff:
             self._ticket.session.handoffs.write(LeavingHandoff(self._ticket).document)
 
     @property
@@ -135,29 +203,29 @@ class TicketCheckout:
         """The message of the commit that saves the ticket's work as it is left."""
         return f"{self._ticket.name}: leave session"
 
-    def save_work(self, leaving: list[str]) -> None:
+    def save_work(self, leaving: Leaving) -> None:
         """Commit and push the branch the ticket's work is on, in the checkout that has it: the repository, or the
         ticket's own worktree; work on the default branch is committed and pushed there. Then merge the ticket's own
         branch into the default branch when leaving names merge. Nothing of the ticket is removed here, and this runs
         before anything is: a merge git refuses leaves its worktree, its branch, and its session as they were, and the
         commit is made where the ticket's work is, never from whatever the repository's own folder holds once the
         worktree is gone."""
-        if not set(leaving) & {LEAVE_COMMIT, LEAVE_PUSH, *LEAVE_BRANCH_STEPS}:
+        if not leaving.saves_work:
             return
-        if {LEAVE_COMMIT, LEAVE_PUSH} & set(leaving):
-            self.work_branch.save(self._leave_message, push=LEAVE_PUSH in leaving)
+        if leaving.commits or leaving.pushes:
+            self.work_branch.save(self._leave_message, push=leaving.pushes)
         own = self._own_branch
         if own is None:
             return
         self._save_worktree_to_delete(own, leaving)
-        if LEAVE_MERGE in leaving:
+        if leaving.merges:
             own.land_on_default()
 
-    def leave_branch(self, leaving: list[str]) -> None:
+    def leave_branch(self, leaving: Leaving) -> None:
         """Do what leaving names with the ticket's own branch once its work is saved and merged: delete its worktree,
         and delete the branch, here and on origin. Each is its own choice: deleting never merges."""
         own = self._own_branch
-        if own is None or not set(leaving) & LEAVE_BRANCH_STEPS:
+        if own is None or not leaving.changes_branch:
             return
         self._delete_worktree(own, leaving)
         self._delete_branch(leaving)
@@ -168,23 +236,23 @@ class TicketCheckout:
         reaches. A worktree a running program holds open stops it before the ticket changes."""
         own = self._own_branch
         if own is not None:
-            self._delete_worktree(own, [LEAVE_DELETE_WORKTREE])
+            self._delete_worktree(own, Leaving.freeing_worktree())
 
-    def _worktree_to_delete(self, branch: Branch, leaving: list[str]) -> Repo | None:
+    def _worktree_to_delete(self, branch: Branch, leaving: Leaving) -> Repo | None:
         """The branch's own worktree when leaving names delete_worktree or delete_branch: git deletes no branch a
         worktree has checked out, so deleting the branch takes its worktree with it. A merge needs neither, since the
         default branch's checkout merges it."""
-        if not {LEAVE_DELETE_WORKTREE, LEAVE_DELETE_BRANCH} & set(leaving):
+        if not leaving.removes_worktree:
             return None
         return branch.linked_worktree
 
-    def _save_worktree_to_delete(self, branch: Branch, leaving: list[str]) -> None:
+    def _save_worktree_to_delete(self, branch: Branch, leaving: Leaving) -> None:
         """Commit and push the work in a worktree leaving is about to delete, whether or not leaving names a commit, so
         the merge that follows carries all of it."""
         if self._worktree_to_delete(branch, leaving) is not None:
             branch.save(self._leave_message)
 
-    def _delete_worktree(self, branch: Branch, leaving: list[str]) -> None:
+    def _delete_worktree(self, branch: Branch, leaving: Leaving) -> None:
         """Remove the branch's own worktree folder, its work committed and pushed there, when leaving names it."""
         worktree = self._worktree_to_delete(branch, leaving)
         if worktree is None:
@@ -192,16 +260,16 @@ class TicketCheckout:
         worktree.close(self._leave_message)
         self._ticket.board.placement.reread()
 
-    def _delete_branch(self, leaving: list[str]) -> None:
+    def _delete_branch(self, leaving: Leaving) -> None:
         """Delete the ticket's own branch, here and on origin, when leaving names delete_branch; unmerged unless leaving
         merged it. The branch is read where it is now, the main clone once its worktree is deleted."""
-        if LEAVE_DELETE_BRANCH not in leaving:
+        if not leaving.deletes_branch:
             return
         branch = self.branch
         # git deletes no branch the checkout is on, so the checkout goes back to the default branch first.
         if branch.is_checked_out_here and not self._repo.is_linked_worktree:
             self._repo.default_branch.check_out()
-        branch.delete(unmerged=LEAVE_MERGE not in leaving)
+        branch.delete(unmerged=not leaving.merges)
 
     def return_to_default_branch(self) -> None:
         """Closing a ticket opens main, the default branch in the repository's own folder, so the closed ticket's own

@@ -9,6 +9,8 @@ from urllib.parse import parse_qs, urlsplit
 from expects import be, be_false, be_none, be_true, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
+from harness.agent_tools.chat_pointer import ChatPointer
+from harness.agent_tools.tool_call import ToolCall, ToolRequest
 from harness.installation.repository_toolsets import RepositoryToolsets
 
 RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
@@ -27,7 +29,7 @@ import space.kanban.backlog_item as backlog_item_module  # noqa: E402
 from space.kanban.backlog_item import BacklogNestingError  # noqa: E402
 from space.kanban.board import Board, Card, ColumnNotFoundError, Help, RequiredFidelity  # noqa: E402
 from space.kanban.ticket import Ticket  # noqa: E402
-from space.kanban.ticket_checkout import TicketCheckout  # noqa: E402
+from space.kanban.ticket_checkout import TicketCheckout, UnknownLeavingStepError  # noqa: E402
 from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject  # noqa: E402
 
 
@@ -78,6 +80,15 @@ with description("a board") as self:
         with it("should work on the one repository its sessions hold"):
             board = Board.load(SessionsFolder().project)
             expect(board.repo).to(be(board.sessions.repo))
+
+        # The open session is each chat's own, so a board read for one chat names that chat's ticket active, not the
+        # one another chat or the checkout folder has open.
+        with it("should name active the ticket the call's chat has open"):
+            folder = SessionsFolder()
+            folder.session("pet-visits")
+            WorkState(folder.project, "board-chat").session = "pet-visits"
+            call = ToolCall(request=ToolRequest(ChatPointer("board-chat", Path(folder.project) / "t.jsonl", "1")))
+            expect([Board.load(folder.project, call).active.name, Board.load(folder.project).active.name]).to(equal(["pet-visits", "main"]))
 
     # (S) Board App --> Display Board
     with context("with Stories, DDD, and UX chosen"):
@@ -453,6 +464,13 @@ with description("a backlog item") as self:
         with it("should refuse to make the parent a child of its own child"):
             expect(lambda: self.board.reads.backlog_item_called("Checkout").nest_under(self.board.reads.backlog_item_called("Gift cards"))).to(raise_error(BacklogNestingError))
 
+        # The page drops an item only where Python says it can go, so the nesting rule is written once.
+        with it("should offer an item of its own as a parent to another plain idea, and the parent to none"):
+            self.sessions.backlog_item("returns.md", "Returns")
+            self.board.placement.reread()
+            choices = [self.board.reads.backlog_item_called(title).parent_choices for title in ("Returns", "Checkout")]
+            expect(choices).to(equal([["Checkout"], []]))
+
         with context("that a person drags back out onto the Backlog"):
             with before.each:
                 self.board.reads.backlog_item_called("Gift cards").leave_parent()
@@ -778,6 +796,22 @@ with description("a ticket") as self:
 
         with it("should have its folder in closed"):
             expect((self.root / "_complete" / "pet-visits" / "session.log").is_file()).to(be_true)
+
+    # A misspelt step was once ignored, so a person's choice silently did nothing; it is refused before anything changes.
+    with context("that a close names a step leaving does not take"):
+        with before.each:
+            self.root, board = board_with([GENERATE_STORY_MAP])
+            self.ticket = board.placement.ticket("pet-visits")
+
+        with it("should refuse the close, naming the step"):
+            expect(lambda: self.ticket.close(["comit"])).to(raise_error(UnknownLeavingStepError, contain("comit")))
+
+        with it("should leave the ticket open"):
+            try:
+                self.ticket.close(["comit"])
+            except UnknownLeavingStepError:
+                pass
+            expect((self.root / "pet-visits" / "session.log").is_file()).to(be_true)
 
     # (S) Person --> Archive Ticket
     with context("that has been archived"):

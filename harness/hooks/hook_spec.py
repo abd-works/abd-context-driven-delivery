@@ -587,7 +587,7 @@ with description("a project's hook logs") as self:
         with context("that was closed"):
 
             with it("should go to the main session's logs folder"):
-                self.sessions.opened.close(self.sessions.opened.current())
+                self.sessions.opened.close(self.sessions.opened.current(""), "")
                 expect(_dispatch_log_folder(self.root).as_posix()).to(equal(self.main_logs))
 
         with context("that was switched to main"):

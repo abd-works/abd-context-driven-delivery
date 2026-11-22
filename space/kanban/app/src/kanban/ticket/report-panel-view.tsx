@@ -44,7 +44,7 @@ function OutOfDateView({ panel, isOff }: { panel: ReportPanel; isOff: boolean })
     <>
       <p className="panel-warning">This report's saved graph is out of date, so its graph's rules are not shown. Validate again to read them.</p>
       {progress ? (
-        <button className="ghost-button" disabled={isOff} title={isOff ? 'Connect a chat to validate' : 'Ask the chat to validate this fidelity again'} onClick={() => void panel.ticket.prompts.validateAgain(progress)}>
+        <button className="ghost-button" disabled={isOff} title={isOff ? 'Connect a chat to validate' : 'Ask the chat to validate this fidelity again'} onClick={() => void panel.ticket.chatPrompts.validateAgain(progress)}>
           Validate again
         </button>
       ) : null}

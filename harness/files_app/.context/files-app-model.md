@@ -21,7 +21,7 @@ The *Files app* shows the files a link names and turns a person's reading into w
   - -> Session.guidance_selection, Session.guidance_selection_after, Session.toggle_guidance (`toggle(part, name)`: one press, one tool; the session works out the selection)
 - `showScope(scope)`: All session files (▤) lists every file under the session's root, read once as the page opens (`Ticket.root_files`), with the files the fidelities listed declare but have not generated yet; This session (Δ with its count), the default, lists those the session's branch changed against main and any design canvas published at a link. The stages, practices and formats selected narrow both: a file shows in a format selected while any is, and when it belongs to a fidelity listed; a file of no fidelity shows only while no practice is selected (`rootFilesShown`). The two buttons sit first along the top, before the stages, orange while selected. Nothing is read again.
   - -> Ticket.root_files (each file's format and the fidelities it belongs to come from Python)
-- `toggleRules()` and `toggleCrossFile()` each turn one read of the open file on or off, both off by default so browsing never reads a graph: Rules reads the file on its own and shows its folds and its own broken rules, under a second (`FileGraphs.file_alone`); Cross-file shows only the rules the whole working copy finds beyond those, linking files and practices, which takes far longer (`FileGraphs.file_in_whole`).
+- `toggleRules()` and `toggleCrossFile()` each turn one read of the open file on or off, both off by default so browsing never reads a graph: Rules reads the file on its own and shows its folds and its own broken rules, under a second (`SessionGraph.alone`, a *DocumentGraph*); Cross-file shows only the rules the whole working copy finds beyond those, linking files and practices, which takes far longer (`SessionGraph.holding`).
   - -> Session.file(path, rules, cross_file)
 - `refreshOpen()` (private) reads the open file again, and again every two seconds while a comment on it is sent.
 - `attempt(what, work)` runs a call a person started; its failure is a toast naming what failed, and the open file is read again after it.
@@ -70,8 +70,8 @@ The *Files app* shows the files a link names and turns a person's reading into w
 
 - One fidelity's files as the link names them, kept apart so a practice turned off hides its own. A session folder is one *FidelityFiles* of no fidelity.
 - The files of a fidelity are the ones a person reviews for it (`FidelityProgress.files`): UX's front-end code lists its IA's and mockup's files, not its view code, which Clean Engineering's code lists with every other code file the branch changed. A design canvas's `canvas.json` comes with the link its version is published at, and the file bar shows it as a link that opens the canvas in Claude Design.
-- `filesShown(byFidelity, practices)` is every file of the fidelities whose practice is on, each once; a fidelity no practice owns is shown.
-  - -> PracticeSessionOutput.fidelity_slugs
+- The page restates no rule of what it lists: each file the session answers says whether the page lists it for the stages, practices and formats selected and the fidelities the link names (`is_listed`), and whether it is the session's own work, which This session lists (`is_session_work`). The page asks for the files of the fidelities its link names and those the selection covers (`asked`), and reads them again whenever the selection changes.
+  - -> Ticket.fidelity_files(fidelities, linked), Ticket.root_files(linked), FileListing (space/session)
 
 ### FilesStore (`files/files-state.ts`)
 

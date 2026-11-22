@@ -122,6 +122,10 @@ class FileEntry:
         self._is_changed = is_changed
         self._published = Publication()
         self._fidelities: tuple[str, ...] = ()
+        # Whether a page lists it, and whether it is the session's own work, for the guidance selection a listing
+        # applied (*FileListing*); a file no listing looked at is listed and is no one's work.
+        self._is_listed = True
+        self._is_session_work = False
 
     @property
     @data_field
@@ -163,6 +167,27 @@ class FileEntry:
         """The fidelities whose files it is, such as stories-story-map; none for a file no fidelity declares."""
         return list(self._fidelities)
 
+    @property
+    @data_field
+    def is_listed(self) -> bool:
+        """Whether a page lists it for the stages, practices and formats the session selected and the fidelities the
+        page's link names, as the listing that answered it decided (*FileListing*)."""
+        return self._is_listed
+
+    @property
+    @data_field
+    def is_session_work(self) -> bool:
+        """Whether it is the session's own work, which This session lists: in a git repository, a file its branch
+        changed; in a plain folder no branch changes any file, so a file a fidelity declares or holds that is there."""
+        return self._is_session_work
+
+    def listed_as(self, is_listed: bool, is_session_work: bool) -> FileEntry:
+        """This file, listed or not and the session's own work or not, as a listing decided."""
+        copy = self._copied(self._published, self._fidelities)
+        copy._is_listed = is_listed
+        copy._is_session_work = is_session_work
+        return copy
+
     def belonging_to(self, fidelities: list[str]) -> FileEntry:
         """This file, saying it is a file of fidelities."""
         return self._copied(self._published, tuple(fidelities))
@@ -176,6 +201,8 @@ class FileEntry:
         copy = FileEntry(self._path, self._exists, self._is_changed)
         copy._published = published
         copy._fidelities = fidelities
+        copy._is_listed = self._is_listed
+        copy._is_session_work = self._is_session_work
         return copy
 
 

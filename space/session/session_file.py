@@ -423,17 +423,18 @@ class SessionFile:
 
     @property
     def _alone_folder(self) -> Path:
-        """The folder the file read on its own names its nodes' files from: the project's root."""
-        return self._session.file_graphs.alone_folder
+        """The folder the file read on its own names its nodes' files from: the project's root, so a file outside the
+        session's own folder, such as a story test in the project's story_tests, is read too."""
+        return Path(self._session.checkout.root).resolve()
 
     @cached_property
     def _alone(self) -> SavedGraph:
-        return self._session.file_graphs.file_alone(self._session.paths.path_named(self._path))
+        return self._session.session_graph.alone.read(self._alone_folder, self._session.paths.path_named(self._path))
 
     @cached_property
     def _whole(self) -> SavedGraph:
         is_held = bool(self._in_this_file(SavedGraph.from_graph(self._session.graph)))
-        return self._session.file_graphs.file_in_whole(self._session.paths.path_named(self._path), is_held)
+        return self._session.session_graph.holding(self._session.paths.path_named(self._path), is_held)
 
     @cached_property
     def _last_validate(self) -> SavedGraph | None:

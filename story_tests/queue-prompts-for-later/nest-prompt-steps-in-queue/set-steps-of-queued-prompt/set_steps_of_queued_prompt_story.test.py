@@ -61,7 +61,7 @@ with story("Set Steps Of Queued Prompt"):
         with given("the chat's prompt queue holds WRITE_THE_SCENARIOS"):
             self.queue = seed_queue(WRITE_THE_SCENARIOS)
         with but_("it holds no prompt with id MISSING_PROMPT"):
-            expect([prompt["id"] for prompt in self.queue.prompts]).not_to(contain(MISSING_PROMPT))
+            expect([prompt.id for prompt in self.queue.prompts]).not_to(contain(MISSING_PROMPT))
         with when("the agent sets the steps of MISSING_PROMPT"):
             self.setting = lambda: self.queue.set_steps(MISSING_PROMPT, three_steps_pending())
         with then("the agent is told no prompt MISSING_PROMPT is on the queue"):

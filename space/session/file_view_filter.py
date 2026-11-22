@@ -76,6 +76,6 @@ class FileViewFilter:
         for each file, since several callouts of one file reach the same one."""
         if path not in self._of_a_practice:
             file = self._session.paths.path_named(path)
-            outputs = self._session.practice_outputs.every.values()
+            outputs = self._session.session_practices.every.values()
             self._of_a_practice[path] = any(fidelity.session_output.written.holds(file) for output in outputs for fidelity in output.fidelities)
         return self._of_a_practice[path]

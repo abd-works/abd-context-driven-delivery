@@ -27,7 +27,7 @@ export class TicketClient extends TicketClientGenerated {
   ) {
     super(page.api, json)
     this.onChanged(() => void page.reader.refresh())
-    this.prompts = new TicketChatPrompts(this, page)
+    this.chatPrompts = new TicketChatPrompts(this, page)
     this.work = new TicketWork(this, page)
     this.practices = new TicketPractices(this, page)
     this.face = new TicketFace(this)
@@ -43,8 +43,8 @@ export class TicketClient extends TicketClientGenerated {
   // Its progress on each fidelity the board requires, and the files and reports that progress answers for.
   readonly work: TicketWork
 
-  // What the ticket asks its chat to do for it.
-  readonly prompts: TicketChatPrompts
+  // Sending its chat what the ticket asks of it, in the words Python's TicketPrompts wrote.
+  readonly chatPrompts: TicketChatPrompts
 
   // What its card, details, and panels write about it.
   readonly face: TicketFace

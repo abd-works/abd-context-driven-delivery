@@ -211,7 +211,7 @@ Sessions, a session, and its log
 	// `session.log`; none before the session has a folder
 + error_path: Path | None
 	// `session.err`, which keeps the full trace of each failure
-+ entries: list[LogEntry]
++ entries: list[LogLine]
 + last_loop_number: int
 + latest_loop_with_entries: int
 ----
@@ -270,18 +270,33 @@ Sessions, a session, and its log
 + expanded_text(): str
 	// each line followed by the transcript lines its chat covers; a range shown earlier is named, not repeated
 
-### **LogEntry**
+### **LogLine**
 
-+ LogEntry(line: str)
++ LogLine(verb: str, subject: str = '', paths: Iterable[str | Path] = (), practices: Iterable[str] = (), fidelities: Iterable[str] = (), formats: Iterable[str] = (), detail: str = '', rules: str = '', chat: ChatPointer | None = None, time: str = '')
 ------
-+ time: str
 + verb: str
++ time: str
++ subject: str
+	// what the verb acted on: a tool's name, a note, a loop's number, a stage
++ detail: str
+	// written after the names, such as a validate's findings
++ paths: list[str]
++ practices: list[str]
++ fidelities: list[str]
++ formats: list[str]
++ rules: str
++ chat: ChatPointer | None
++ written: str
+	// verb, subject, paths, practices, fidelities, formats, detail, rules, chat, each left out when empty; the log stamps the time
++ text: str
 + words: list[str]
 + stage: str
-	// the stage a `move <stage>` line names
 + loop_number: int | None
 ----
++ read(text: str): LogLine
+	// a line as the log holds it: its time, its verb, and the rest of its words as its subject
 + names(fidelity: FidelityGuidance): bool
+	// by the practice's key, or, in an older validate line, its class
 
 ### **SessionFiles**
 
@@ -447,7 +462,7 @@ it should keep the name, the workpath, and the repo path
 it should write --- 1 as the first line of a new session.log
   -> expect(session.log.path).to start with "--- 1"
 it should record the name in repo sessions session.json
-  -> expect(Sessions(project).opened.name_for()).to equal name
+  -> expect(Sessions(project).opened.name_for("")).to equal name
 ```
 
 #### that is closed
@@ -455,7 +470,7 @@ it should record the name in repo sessions session.json
 ```
 -> session.close()
 it should go back to the main session
-  -> expect(Sessions(project).opened.name_for()).to equal "main"
+  -> expect(Sessions(project).opened.name_for("")).to equal "main"
 ```
 
 #### that is selected

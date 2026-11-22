@@ -9,7 +9,7 @@ section: body
 
 ### Domain terms
 
-- ++live graph++ — the session's knowledge graph as it stands now, read again for a file when that file changes (`FileGraphs.file_alone`), holding every violation found in the files read.
+- ++live graph++ — the session's knowledge graph as it stands now, read again for a file when that file changes (`SessionGraph.alone`), holding every violation found in the files read.
 - ++violation++ — a rule a node breaks, with its practice, file and the lines it covers.
 - ++graph view++ — the Files app's file bar showing the practice trees of the session's graph for the files it lists.
 - ++fix++ — the action the chat runs for a violation, a rule, or every violation shown, with the node, file and lines, rule, excerpt and message.

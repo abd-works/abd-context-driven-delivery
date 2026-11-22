@@ -526,7 +526,7 @@ The settings at the top of a file: a YAML block between `---` lines, or, in a co
 An *AgentToolSet* is an ordinary class an agent can list and run: each `@agent_tool` member is an *AgentOperation* and each `@agent_instructions` member is *AgentInstructions*. A *ToolCall* is one call as a chat made it, with its project and chat. The whole model of this module, internals included, is `harness/agent_tools/.context/agent-tools-model.md`; that document is canonical, and this section shows only the classes other modules use.
 
 - **Purpose:** Let an author publish an ordinary class as operations and instructions an agent can list and use, and let every publisher read those members from one place.
-- **Seam (terms):** AgentToolSet, ToolSetCollection, ToolsetMembers, ToolsetReference, AgentTool, InvokeLine, ToolRequest, CallsBeingAnswered (`CALLS_BEING_ANSWERED`), `names_alike`, `is_built_in`, AgentOperation, AgentInstructions, AgentToolAnnotation, AgentInstructionsAnnotation, AgentToolSetAnnotation, ToolSetCollectionAnnotation, Collect, ToolSubject, OnSubject, TakesFromCall, NoSessionLog, PublishedWhereHeld, SubAgentAnnotation, ToolSubjectLoader, RecipePlaceholders, ToolCall, SessionOpening (`SESSION_OPENING`), ChatPointer; `tools(...)`, `instructions(...)`, `report_progress` (which reports to the call being answered, `ToolCall.report_progress`), `NO_CHAT`, `SUB_AGENT_CALLER_PREAMBLE`
+- **Seam (terms):** AgentToolSet, ToolSetCollection, ToolsetMembers, ToolsetReference, AgentTool, InvokeLine, ToolRequest, CallsBeingAnswered (`CALLS_BEING_ANSWERED`, held only for progress), `names_alike`, `is_built_in`, AgentOperation, AgentInstructions, AgentToolAnnotation, AgentInstructionsAnnotation, AgentToolSetAnnotation, ToolSetCollectionAnnotation, Collect, ToolSubject, OnSubject, TakesFromCall, NoSessionLog, PublishedWhereHeld, SubAgentAnnotation, ToolSubjectLoader, RecipePlaceholders, ToolCall, SessionOpening (`SESSION_OPENING`), ChatPointer; `tools(...)`, `instructions(...)`, `report_progress`, `reporting_to`, `NO_CHAT`, `SUB_AGENT_CALLER_PREAMBLE`
 - **Dependencies (one-way):** harness/annotations, harness/markdown
 
 ## AgentToolSet : AgentToolSetOrigin
@@ -846,16 +846,6 @@ The request a call answers: the chat that sent it and, for a call the cdd server
 + answers_a_chat: bool
 ----
 + sent_by(chat: ChatPointer | None): ToolRequest
-
-## CallsBeingAnswered
-
-The call a tool is answering on each thread; the process keeps one, `CALLS_BEING_ANSWERED`.
-
-+ CallsBeingAnswered()
-------
-+ current: ToolCall | None
-----
-+ answering(call: ToolCall): Iterator[ToolCall]
 
 ## ChatPointer
 
@@ -3231,11 +3221,11 @@ A probe of the guidance one install deployed, made for its Installer and the gui
 
 The Claude Code chats on this machine: the ones connected now, and a new one opened in the Claude app through the opener the chats hold.
 
-+ Chats(folder: Path, opener: ChatLinks)
++ Chats(folder: Path, opener: ChatOpener, asking: str = "")
 ------
-+ << association >> opener: ChatLinks
 ----
-+ load(): Chats
++ load(call: ToolCall | None = None): Chats
++ new_chat(folder: str, prompt: str): NewChat
 + list(): list[Chat]
 + open(folder: str, prompt: str): str
 ---<<lists>>--> Chat
@@ -3680,7 +3670,7 @@ Git refused to merge one branch into the branch a checkout has checked out, such
 A *Session* is one named piece of work in `.sessions/{name}/`; *Sessions* are all of a checkout's sessions; its *SessionLog* records each action, a *PracticeSessionOutput* is what one practice has in it, and its *FileManager* lists and reads the files under its roots.
 
 - **Purpose:** Keep the state of one piece of work — where it works, which practices it uses and where they write, the files it works with, the log of what was done, the handoff the next agent resumes from, and the reasons behind hard-to-reverse choices — so any chat or tool can pick the work up from its folder.
-- **Seam (terms):** Sessions, Session, BoardPractices, CallSessions, SessionLog, ChatLog, LogEntry, LogTimestamp, HookLog, PracticeSessionOutput, FidelitySessionOutput, FileManager, FileEntry, FileText, PathOutsideRootsError, ThrowawayProject, SessionDiagnostics, SessionsRead, OutputRootRefused, FileTooLongToShowError, SessionFolderHeldError
+- **Seam (terms):** Sessions, Session, BoardPractices, CallSessions, SessionLog, ChatLog, LogLine, LogTimestamp, HookLog, PracticeSessionOutput, FidelitySessionOutput, FileManager, FileEntry, FileText, PathOutsideRootsError, ThrowawayProject, SessionDiagnostics, SessionsRead, OutputRootRefused, FileTooLongToShowError, SessionFolderHeldError
 - **Dependencies (one-way):** harness/annotations, harness/agent_tools, harness/installation, harness/hooks, harness/mcp, harness/guidance, harness/graph, harness/diagnostics, harness/catalog_generator, harness/git, space/work_state, space/repo, cdd_guidance/actions (the session diagnostics probe runs Generate and Validate)
 
 ## Sessions
@@ -3776,16 +3766,30 @@ Which session each chat has open in one checkout, kept by the cdd server under `
 + OpenSessions(sessions: Sessions)
 ------
 ----
-+ state(chat: str = ''): WorkState
-+ name_for(chat: str = ''): str
-+ open(session: Session, chat: str = ''): Session
-+ current(chat: str = ''): Session
-+ close(session: Session): None
++ state(chat: str): WorkState
++ name_for(chat: str): str
++ open(session: Session, chat: str): Session
++ current(chat: str): Session
++ close(session: Session, chat: str): None
 + ticket_of_worktree(): Session | None
-+ switch(name: str, workpath: Path | None, call: ToolCall | None): str
-	-> SessionLog.instructions
++ switch(name: str, workpath: Path | None, call: ToolCall | None): SwitchedSession
 ---<<creates>>--> WorkState
+---<<creates>>--> SwitchedSession
 ---<<raises>>--> SessionNameRequiredError
+
+## SwitchedSession
+
+One switch of a chat to a session: the session opened, what the modules listening for an opening told the chat, and the notes the chat must read first, worded in `space/session/SESSION-SWITCH.md`.
+
++ SwitchedSession(session: Session, told_on_opening: str, asked_in_ticket_worktree: str | None = None, chat_works_in: Path | None = None)
+------
++ session: Session
++ told_on_opening: str
++ opened_in_worktree_of: str
++ outside_worktree: Path | None
++ default_roots: list[str]
++ instructions: str
+	-> SessionLog.instructions
 
 ## ServedAnswers
 
@@ -3849,8 +3853,9 @@ One named piece of work in a project, its record (session.json, idea file) kept 
 + session_file_from_project: str
 + work_root: Path
 + << composition >> graph: Graph
-	-> PracticeOutputs.graph
-+ << composition >> practice_outputs: PracticeOutputs
+	-> SessionGraph.graph
++ << composition >> session_practices: SessionPractices
++ << composition >> session_graph: SessionGraph
 + workpath_from_checkout: str
 + title: str
 + scope: str
@@ -3887,7 +3892,8 @@ One named piece of work in a project, its record (session.json, idea file) kept 
 + reopen(): Session
 	-> Sessions.moved
 + practice(name: str): PracticeSessionOutput
-+ close(): None
++ close(call: ToolCall): None
+	// closes the session for the calling chat
 	-> OpenSessions.close
 + choose_workpath(path: str = ''): Session
 + show(): Session
@@ -3995,12 +4001,12 @@ The log of one session: `session.log`, one timestamped line per action, tool cal
 + session: Session
 + path: Path | None
 + error_path: Path | None
-+ << composition >> entries: list[LogEntry]
++ << composition >> entries: list[LogLine]
 + << composition >> injected_rules: InjectedRules
 + last_loop_number: int
 + latest_loop_with_entries: int
 ----
-+ latest(*verbs: str, stage: str = ''): LogEntry | None
++ latest(*verbs: str, stage: str = ''): LogLine | None
 + record(line: str): None
 	// a session without a folder has a log that writes nothing
 + by(chat: ChatPointer | None): ChatLog
@@ -4010,7 +4016,7 @@ The log of one session: `session.log`, one timestamped line per action, tool cal
 + read_loop(number: int | None = None): str
 + loop_to_note(loop: int | None): int
 + instructions(): str
----<<creates>>--> LogEntry
+---<<creates>>--> LogLine
 ---<<creates>>--> ChatLog
 ---<<stamps lines with>>--> LogTimestamp
 ---<<raises>>--> LoopNotFoundError
@@ -4038,20 +4044,35 @@ The lines one chat writes in a session's log, each pointing at that chat; `no-ch
 ---<<records lines in>>--> SessionLog
 ---<<names practice and fidelity of>>--> FidelitySessionOutput
 
-## LogEntry
+## LogLine
 
-One line of a session log: `<time> <verb> <words...>`, the words being the subject the verb acted on.
+One line of a session log, which writes and reads itself: `<time> <verb> <words...>`. A chat's log (*ChatLog*) makes one for each of its operations.
 
-+ LogEntry(line: str)
++ LogLine(verb: str, subject: str = '', paths: Iterable[str | Path] = (), practices: Iterable[str] = (), fidelities: Iterable[str] = (), formats: Iterable[str] = (), detail: str = '', rules: str = '', chat: ChatPointer | None = None, time: str = '')
 ------
-+ text: str
-+ time: str
 + verb: str
++ time: str
++ subject: str
+	// what the verb acted on: a tool's name, a note, a loop's number, a stage
++ detail: str
+	// written after the names, such as a validate's findings
++ paths: list[str]
++ practices: list[str]
++ fidelities: list[str]
++ formats: list[str]
++ rules: str
++ chat: ChatPointer | None
++ written: str
+	// verb, subject, paths, practices, fidelities, formats, detail, rules, chat, each left out when empty; the log stamps the time
++ text: str
 + words: list[str]
 + stage: str
 + loop_number: int | None
 ----
++ read(text: str): LogLine
+	// a line as the log holds it: its time, its verb, and the rest of its words as its subject
 + names(fidelity: FidelityGuidance): bool
+	// by the practice's key, or, in an older validate line, its class
 ---<<reads practice guidance of>>--> FidelityGuidance
 ---<<reads name of>>--> FidelityGuidance
 
@@ -4572,12 +4593,12 @@ Where one ticket's work sits in git: its own branch, the worktree that branch is
 	// opens the ticket in its own worktree, the one it has or a new one on its own branch; a folder in the way raises TicketWorktreeBlockedError
 	-> Branch.open_in_worktree
 	-> SessionCheckout.record_opened
-+ keep_landing_release(leaving: list[str]): None
-+ write_handoff(leaving: list[str]): None
-+ save_work(leaving: list[str]): None
++ keep_landing_release(leaving: Leaving): None
++ write_handoff(leaving: Leaving): None
++ save_work(leaving: Leaving): None
 	// commits, pushes, and merges only; nothing of the ticket is removed here, so a merge git refuses leaves its worktree, branch, and session as they were
 	-> Branch.land_on_default
-+ leave_branch(leaving: list[str]): None
++ leave_branch(leaving: Leaving): None
 	// after the work is saved and merged: deletes the ticket's worktree and its branch, each when leaving names it
 	-> Repo.close
 	-> Branch.delete
@@ -4747,7 +4768,7 @@ Hold an idea not yet started. Starting it opens a ticket for it.
 + latest_report: ReportFile | None
 + violation_count: int
 ----
-+ from_log(fidelity: FidelityGuidance, stage: Stage, entries: list[LogEntry], ticket: Ticket): FidelityProgress
++ from_log(fidelity: FidelityGuidance, stage: Stage, entries: list[LogLine], ticket: Ticket): FidelityProgress
 + load(ticket: str, fidelity: str, project: Path | str): FidelityProgress
 	-> Ticket.load
 	-> TicketWork.progress_of
@@ -4762,7 +4783,7 @@ Hold an idea not yet started. Starting it opens a ticket for it.
 + files(): dict[str, list[FileEntry]]
 	-> FidelityGuidance.files
 + with_violations(): FidelityProgress
----<<reads lines from>>--> LogEntry
+---<<reads lines from>>--> LogLine
 ---<<finds its latest report through>>--> ReportFile
 ---<<creates>>--> ActionStates
 ---<<creates>>--> Help
@@ -4959,8 +4980,12 @@ The prompts one chat has queued, in the order they will be done, kept in a file 
 ------
 + chat: str
 + prompts: list[QueuedPrompt]
++ next: QueuedPrompt | None
+	// the first prompt that waits (QueuedPrompt.is_waiting), where the queue's pointer stands; sent by its id
 ----
 + load(chat: str, call: ToolCall): PromptQueue
++ prompt(prompt: str): QueuedPrompt
+	// raises PromptNotQueued for an id the queue does not hold
 + of_chat(chat: str, archive: Path | None = None): PromptQueue
 	// a chat id is never a path: an empty one, or one holding a folder separator, a drive or two dots, raises ChatIdNotAnId
 + show(): PromptQueue
@@ -4977,6 +5002,10 @@ The prompts one chat has queued, in the order they will be done, kept in a file 
 	// a step's state is one of STEP_STATES; any other raises StepStateUnknown
 + add_interruption(prompt: str, text: str): PromptQueue
 + step_done(prompt: str, step: int): PromptQueue
++ move_step(prompt: str, step: int, place: int): PromptQueue
++ remove_step(prompt: str, step: int): PromptQueue
++ step_back(prompt: str): PromptQueue
++ step_on(prompt: str): PromptQueue
 + attach(prompt: str, filename: str, media_type: str, data: str): PromptQueue
 + queue_once(source: str, texts: list[str]): int
 ---<<reads and writes through, holding it for each change>>--> JsonFile
@@ -4986,6 +5015,53 @@ The prompts one chat has queued, in the order they will be done, kept in a file 
 ---<<annotated with>>--> Identity
 ---<<annotated with>>--> LanguageAdapter
 ---<<annotated with>>--> NoCatalog
+---<<holds>>--> QueuedPrompt
+
+## QueuedPrompt
+
+One prompt on a chat's queue. It changes itself; `record` is what the queue's file keeps of it, in exactly the keys the stable and dev lanes' servers read (id and text, and steps, attachments, is_done and robot only when it has them).
+
++ QueuedPrompt(record: dict)
+------
++ id: str
++ text: str
++ << composition >> steps: PromptSteps
++ step_pointer: int
++ attachments: list[str]
++ is_done: bool
++ robot: str
++ is_waiting: bool
+	// neither done nor asking a decision ([decision required])
++ record: dict
+----
++ new(text: str): QueuedPrompt
++ edit(text: str)
++ mark_done()
++ reopen()
++ assign(robot: str)
++ plan(steps: list[PromptStep])
++ interrupt(text: str)
++ attach(file: Path)
+
+## PromptSteps
+
+The steps planned for one queued prompt, numbered from 1, and their pointer, the first step not done.
+
++ PromptSteps(prompt: str, steps: list[PromptStep])
+------
++ listed: list[PromptStep]
++ pointer: int
+----
++ done(number: int)
++ move(step: int, place: int)
++ remove(step: int)
++ back()
++ on()
++ restarted()
++ plan(steps: list[PromptStep])
++ add(text: str)
+---<<raises>>--> StepNotPlanned
+---<<raises>>--> StepStateUnknown
 
 ## ChatIdNotAnId : ValueError
 

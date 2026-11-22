@@ -77,9 +77,11 @@ A `@tool_subject` loader or class tool that takes `project` is handed the projec
 
 ## Board
 
-+ Board(sessions: Sessions, practices: BoardPractices)
-	// practices is left out by `Board.load`, so the board works through its sessions' `board_practices`; a board that works through fewer practices is handed its own
++ Board(sessions: Sessions, practices: BoardPractices, call: ToolCall | None)
+	// practices is left out by `Board.load(project, call)`, so the board works through its sessions' `board_practices`; a board that works through fewer practices is handed its own. call is the call the board is read for, handed to `Board.load` and to the loaders of `Ticket`, `Stage`, and `BacklogItem` from the call they serve
 ------
++ call: ToolCall | None
+	// the call the board is read for; `chat` is its chat's id, empty for a call that names none: `active` and a ticket's `is_active` name the session that chat has open, a ticket's `close`, `archive`, `delete`, and move to the Backlog close its session for that chat, and `new_chat_link` opens the new chat beside it
 + << association >> repo: Repo
 	// the repository the sessions folder sits in: its sessions' repository
 + sessions: Sessions
@@ -104,7 +106,7 @@ A `@tool_subject` loader or class tool that takes `project` is handed the projec
 	-> Sessions.all
 + << aggregation >> backlog_items: list[BacklogItem]
 	// every idea file in `.sessions/_backlog/`, and every ticket folder kept there, read once per board read and kept until `CardPlacement.reread`
-	-> Sessions.backlog_folder
+	-> BacklogFolder.idea_files
 + cards: list[Card]
 	// its tickets, then its backlog items
 + active: Ticket
@@ -193,6 +195,8 @@ What one read of a board finds, each read once when first asked for: its tickets
 	-> Sessions.all
 + backlog_items: list[BacklogItem]
 	-> Sessions.backlog_folder
++ backlog_folder: BacklogFolder
+	// the Backlog's folder, which answers which of its files are ideas and where each lies
 ----
 + backlog_item_called(title: str): BacklogItem
 	// the backlog item titled title, of those this read found, raising `BacklogItemNotFoundError` when the board has none
@@ -378,6 +382,10 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	// data field: its session is closed, so it shows in Complete
 + is_active: bool
 	// data field: its session is the one saved as open
++ << composition >> prompts: TicketPrompts
+	// data field: what the ticket asks its chat to do for it (split, handoff, set_up_roots, close_session, new_chat), each naming its session; the page sends them as Python worded them
++ can_edit: bool
+	// data field: whether its text and tags may be edited: false for main, which `edit_text` and `tag` refuse with MainStaysOpenError
 + is_open: bool
 	// data field: open for work, in its own worktree or the active ticket, and not main; its card offers Close, which closes it through its Close dialog unless the chosen chat works on it
 	-> TicketCheckout.worktree
@@ -443,6 +451,7 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	// `ticket.move_to`: a person's drag into a stage's In progress or Done; into the Backlog from any column it returns to the Backlog with its whole folder; raises `NotAStageError` for any other column
 	-> TicketMoves.move_to
 + close(leaving: list[str]): Ticket
+	// leaving is read into a Leaving, which refuses a step it does not take
 	// `ticket.close`, from *TicketEnding*: does with its work what leaving names (handoff, commit, push, merge, delete_branch, delete_worktree); its session closes, its folder moves to `_complete/`, and that move is committed on main and pushed; main raises `MainStaysOpenError`
 	-> TicketCheckout.write_handoff
 	-> TicketCheckout.free_worktree
@@ -580,9 +589,31 @@ A ticket's progress on each fidelity the board requires whose practice its sessi
 	-> Branch.open_in_worktree
 	-> CardPlacement.reread
 	-> SessionCheckout.record_opened
-+ keep_landing_release(leaving: list[str])
++ keep_landing_release(leaving: Leaving)
 	// a ticket closed with its branch merged keeps its end-to-end results only
 	-> LatestRelease.keep
+
+## Leaving
+
+What a person chose to do with a ticket's work as it closes, made by `Ticket.close` from its published `leaving` list (in `ticket_checkout.py`). A step leaving does not take, such as a misspelt one, is refused with UnknownLeavingStepError before anything changes; it was ignored before. Each step of *TicketCheckout* (`write_handoff`, `save_work`, `keep_landing_release`, `leave_branch`) asks it what was chosen, in the documented order of the close.
+
++ Leaving(steps: list[str])
+------
++ writes_handoff: bool
++ commits: bool
++ pushes: bool
++ merges: bool
++ deletes_branch: bool
++ deletes_worktree: bool
++ changes_branch: bool
+	// merges, deletes the branch, or deletes its worktree
++ saves_work: bool
+	// commits, pushes, or changes the branch, which saves what a worktree about to go holds
++ removes_worktree: bool
+	// deletes the worktree, or the branch, which takes its worktree with it
+----
++ freeing_worktree(): Leaving
+	// deletes the worktree alone, as archiving or deleting a ticket does
 
 ## StagePlace
 
@@ -677,7 +708,7 @@ How far one fidelity has got through its stage's actions on one ticket, read fro
 + from_log(required: RequiredFidelity, ticket: Ticket): FidelityProgress
 	// reads its ticket's session log entries and finds the fidelity by name, never by position
 	-> TicketWork.entries
-	-> LogEntry.names
+	-> LogLine.names
 	-> Stage.steps
 + load(ticket: str, fidelity: str, project: Path): FidelityProgress
 	// the `@tool_subject` of the `fidelity-progress.*` tools
@@ -743,6 +774,7 @@ A ticket's work in one stage taken together: the progress of each fidelity the s
 + << association >> stage: Stage
 	// reference data field
 + << association >> progress: list[FidelityProgress]
+	// reference data field: the fidelities of the stage whose practice the session works on, in the stage's order; the page's `TicketWork.progressIn` reads it
 + action_states: ActionStates
 	// data field `actions`
 	-> ActionStates.taken_together
@@ -779,6 +811,33 @@ A ticket's work in one stage taken together: the progress of each fidelity the s
 	// a chip per group the fidelities offer, in the order of `Format.GROUPS`
 	-> Format.group
 
+## BacklogFolder
+
+The Backlog's folder, `.sessions/_backlog` (in `backlog_folder.py`): it answers which of its files are ideas. An idea is a markdown file in it, or a folder holding a file of its own name: a ticket moved back keeps its whole folder, and a parent keeps its children's files beside its own.
+
++ BacklogFolder(folder: Path)
+------
++ folder: Path
+----
++ idea_files(): list[Path]
++ place_of(file: Path): IdeaPlace
+
+## IdeaPlace
+
+Where one idea's file lies in the Backlog, and the only mover of it. An idea's file is its only copy, so a move never deletes it or writes over another file; a folder a move leaves empty goes. *BacklogItem* holds one and asks it, and refuses a nesting (`_nesting_refusal`) before a move could write over a file.
+
++ IdeaPlace(file: Path, backlog_folder: BacklogFolder)
+------
++ file: Path
++ is_in_own_folder: bool
++ ticket_folder: Path
++ holds_ticket: bool
++ parent_file: Path | None
+----
++ move_under(parent: IdeaPlace)
++ move_out()
++ remove_emptied_folder()
+
 ## BacklogItem : Card
 
 Marked `@identity("title")`. Its two order tools, `move_before` and `move_after`, are declared on *BacklogOrderTools*, a `@hosted_only` base mixed in ahead of *Card*, so the toolset still publishes them as `backlog-item.*`; they are listed below with the item.
@@ -789,6 +848,8 @@ Marked `@identity("title")`. Its two order tools, `move_before` and `move_after`
 	// the item's first `# ` heading, or its file name in words
 + column: Column
 	// always the Backlog
++ parent_choices: list[str]
+	// data field: the titles of the items it can be dropped on to become their child, any it is not already the child of and that nest_under would not refuse (one reason, `_nesting_refusal`, for both)
 + text: str
 	// data field: the file's content after its heading
 	-> IdeaFile.text
@@ -902,6 +963,8 @@ The rules a validation found broken, built from the saved report and the graph s
 	// data field
 + << composition >> rules: list[ReportRule]
 	// data field
++ fix_prompt: str
+	// data field: fix every violation found in this report, read from the report itself, naming its ticket's session; empty for a report of no rule
 + has_saved_graph: bool
 	// data field; false when the report has no saved graph, so its graph's rules are missing
 + violation_count: int
@@ -930,7 +993,8 @@ Whether the graph a validation checked is saved beside its report, and whether i
 
 ## ReportRule
 
-+ ReportRule(fidelity: FidelityGuidance, rule: Rule, violations: list[Violation])
++ ReportRule(fidelity: FidelityGuidance, rule: Rule, violations: list[Violation], report_path: str)
+	// report_path: the report, from the project, that found the rule broken
 ------
 + << association >> fidelity: FidelityGuidance
 	// data field: the fidelity whose report found the rule broken
@@ -940,6 +1004,10 @@ Whether the graph a validation checked is saved beside its report, and whether i
 	// data field
 + << composition >> violations: list[Violation]
 	// data field
++ << composition >> violation_prompts: list[ViolationPrompts]
+	// data field: what each violation's Fix (`fix`) and False (`false`) send its ticket's chat, one for each of violations in the same order, each naming the ticket's session
++ fix_prompt: str
+	// data field: fix every violation of the rule, read from the report at report_path
 + identity: tuple
 	// its rule's slug and its violations' practice, location, line, and message: a saved graph holds its whole practice's hits, so two fidelities of one practice report the same broken rule
 ----
@@ -1045,11 +1113,11 @@ The classes below belong to other modules and are modelled in those modules' own
 
 ## Sessions
 
-`space/session/sessions.py`. The board calls `all()`, `named(name)`, `load(folder)`, `opened.name_for()` (*OpenSessions*), `create(name, workpath, title, scope, parent)`, `switch(name)`, `folder`, and `backlog_folder`; the board's own `_board.json` sits in its `folder`.
+`space/session/sessions.py`. The board calls `all()`, `named(name)`, `load(folder)`, `opened.name_for(chat)` (*OpenSessions*, for the chat the board is read for, `board.chat`), `create(name, workpath, title, scope, parent)`, `switch(name)`, `folder`, and `backlog_folder`; the board's own `_board.json` sits in its `folder`.
 
 ## Session
 
-`space/session/session.py`, sent whole as a ticket's `session` data field. The board reads `name`, `title`, `parent`, `is_pulled_out`, `tags`, `text`, `is_closed`, `workpath`, `practices`, `reports_folder`, and `log`, and calls `close()`, `remove()`, `reopen()`, `move_to_closed()`, `move_to_archive()`, `move_to_backlog()`, `keep_file(file)`, `keep_text(text)`, `add_tag(word)`, `set_parent(parent)`, `mark_pulled_out()`, `open_child(name, title, scope)`, and `from_project(path)`. A backlog item reads and writes its file through an `IdeaFile` (`space/session/idea_file.py`), the same as a session's idea file. Its `log` is a `SessionLog` (`space/session/session_log.py`), whose `entries` are `LogEntry`s with `time`, `verb`, `stage`, `words`, and `names(fidelity)`, and whose `record(line)` writes a move or a mark; `latest(*verbs, stage)` answers a ticket's latest move and its latest mark in a stage.
+`space/session/session.py`, sent whole as a ticket's `session` data field. The board reads `name`, `title`, `parent`, `is_pulled_out`, `tags`, `text`, `is_closed`, `workpath`, `practices`, `reports_folder`, and `log`, and calls `close()`, `remove()`, `reopen()`, `move_to_closed()`, `move_to_archive()`, `move_to_backlog()`, `keep_file(file)`, `keep_text(text)`, `add_tag(word)`, `set_parent(parent)`, `mark_pulled_out()`, `open_child(name, title, scope)`, and `from_project(path)`. A backlog item reads and writes its file through an `IdeaFile` (`space/session/idea_file.py`), the same as a session's idea file. Its `log` is a `SessionLog` (`space/session/session_log.py`), whose `entries` are `LogLine`s with `time`, `verb`, `stage`, `words`, and `names(fidelity)`, and whose `record(line)` writes a `LogLine` the board makes for a move or a mark; `latest(*verbs, stage)` answers a ticket's latest move and its latest mark in a stage.
 
 ## IdeaFile
 

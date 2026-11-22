@@ -245,7 +245,7 @@ class Sessions:
         worktree and the call's chat works elsewhere, the answer opens by saying to start a chat in that worktree.
         A chat in a ticket's own worktree always opens that ticket's session, whatever name it asks for, because the
         worktree holds only that ticket's work; the answer says so when it asked for another."""
-        return self.opened.switch(name, workpath, call)
+        return self.opened.switch(name, workpath, call).instructions
 
 
 class SessionsRead:

@@ -15,7 +15,7 @@ from typing import Any, Callable, ClassVar, Iterator, Mapping, get_type_hints
 from harness.annotations.class_folder import class_folder
 from harness.annotations.name import Name
 from harness.agent_tools.parameter_schema import ParameterSchema, TypeHint, is_built_in
-from harness.agent_tools.tool_call import CALLS_BEING_ANSWERED, ToolCall
+from harness.agent_tools.tool_call import ToolCall
 from harness.markdown.markdown import Markdown, MarkdownCollection, operation_property
 from harness.annotations.annotation import Annotatable, Annotation, DestinationKind, NamesAnnotation, annotation_kinds
 from harness.agent_tools.recipe import ExpansionMode, ExpansionResult, RecipeExpansion, RecipePlaceholders, RecipeSource, RecipeTarget
@@ -1024,10 +1024,9 @@ class AgentTool(AgentToolDestination):
     def answer(self, call: ToolCall) -> Any:
         """Answer call on its toolset made for it: log the call in the session it works in, then call the tool with each
         argument in the type its parameter declares."""
-        with CALLS_BEING_ANSWERED.answering(call):
-            tool = self._on(self.toolset.for_call(call))
-            tool.log_session_invocation(call)
-            return tool.callable(**self.parameter_schema.coerced(call.arguments), **tool._from_the_call(call))
+        tool = self._on(self.toolset.for_call(call))
+        tool.log_session_invocation(call)
+        return tool.callable(**self.parameter_schema.coerced(call.arguments), **tool._from_the_call(call))
 
     def _on(self, toolset: AgentToolSet) -> AgentTool:
         """This tool on toolset, a toolset of the same class made for one call; the tool as it is when toolset is its

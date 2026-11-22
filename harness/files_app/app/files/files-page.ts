@@ -1,7 +1,7 @@
 import type { CddApi } from '@cdd/cdd-shared'
 import { ChatClientGenerated } from '@cdd/harness/chat/chat'
 import { TicketClientGenerated } from '@cdd/space/kanban/ticket'
-import { SessionClientGenerated, type FileEntryData, type GuidanceSelectionData, type SessionFileData } from '@cdd/space/session/session'
+import { SessionClientGenerated, type FileEntryData, type SessionFileData } from '@cdd/space/session/session'
 
 import { ChatContext } from './chat-context'
 import { FileBar, publishedOf } from './file-bar'
@@ -23,37 +23,6 @@ import { reasonOf } from './reason'
 // While a comment on the open file is with a chat, the file is read again this often, so the chat's change and the
 // comment's processed state show without a reload. Nothing else is read again: never the list, never a board.
 export const SENT_REFRESH_MILLISECONDS = 2_000
-
-// The fidelities whose files the page lists: those the session's guidance selection lists, its stages selected by its
-// practices selected, none selected meaning every one; before any stage was selected, the ones the link names that the
-// selection lists, so a practice turned off hides its files then too.
-export const listedBy = (selection: GuidanceSelectionData | null, linked: string[]): string[] => {
-  if (!selection) return linked
-  return selection.is_stage_chosen ? selection.fidelities : linked.filter(slug => selection.fidelities.includes(slug))
-}
-
-// The formats of the format groups selected, each once; none selected, every format shows.
-export const selectedFormatsOf = (selection: GuidanceSelectionData | null): string[] =>
-  [...new Set((selection?.formats ?? []).filter(format => format.is_selected).flatMap(format => format.formats))]
-
-// The files the page shows, each once: of the fidelities listed, only the ones in a format selected while any is, and
-// every one published to a link, such as a whiteboard, which opens in Claude whatever format is chosen.
-export const filesShown = (byFidelity: FidelityFiles[], listed: string[], formats: string[] = []): FileEntryData[] => {
-  const inFormat = ({ entries, formatOf = {} }: FidelityFiles) => (formats.length ? entries.filter(entry => entry.link || formats.includes(formatOf[entry.path] ?? '')) : entries)
-  return eachOnce(byFidelity.filter(({ slug }) => !slug || listed.includes(slug)).flatMap(inFormat))
-}
-
-// The files under the session's root a page shows: in a format selected while any is, and belonging to a fidelity listed.
-// A file no fidelity declares, such as a practice's example, belongs to no practice, so it shows only while no practice
-// is selected, which filters no practice; Stories selected shows Stories' files alone.
-export const rootFilesShown = (rootFiles: FileEntryData[], listed: string[], selection: GuidanceSelectionData | null): FileEntryData[] => {
-  const formats = selectedFormatsOf(selection)
-  const withUnclaimed = isNoPracticeSelected(selection)
-  return rootFiles.filter(entry => (!formats.length || formats.includes(entry.format)) && (entry.fidelities.length ? entry.fidelities.some(slug => listed.includes(slug)) : withUnclaimed))
-}
-
-// Whether no practice is selected, so no practice filters the files; with no selection read yet, none is.
-export const isNoPracticeSelected = (selection: GuidanceSelectionData | null): boolean => !(selection?.practices ?? []).some(practice => practice.is_selected)
 
 // Each file once, in the order its fidelities and formats send them.
 const eachOnce = (entries: FileEntryData[]): FileEntryData[] => entries.filter((entry, index) => entries.findIndex(other => other.path === entry.path) === index)
@@ -167,11 +136,11 @@ export class FilesPage {
     return this.state.place || this.link.subject
   }
 
-  // Where the files are, and whether a branch says which of them the session changed, read once as the page opens.
+  // Where the files are, read once as the page opens.
   private async readPlace(): Promise<void> {
     try {
       const session = await this.session.show()
-      if (session) this.store.change(() => ({ place: [session.repoName, session.branch, session.root].filter(Boolean).join(' · '), isRepository: session.isRepository !== false }))
+      if (session) this.store.change(() => ({ place: [session.repoName, session.branch, session.root].filter(Boolean).join(' · ') }))
     } catch (failure) {
       this.notices.fail(`The Files app did not read where the session works: ${reasonOf(failure)}`, 'Opening the Files app, calling session.show', { kind: 'session_roots' })
     }
@@ -180,7 +149,7 @@ export class FilesPage {
   private async list(): Promise<void> {
     if (!this.link.namesFiles) return this.store.change(() => ({ isListing: false, problem: 'This link names no files: open the Files app from the chat bar.' }))
     try {
-      const byFidelity = await this.filesByFidelity(this.listed)
+      const byFidelity = await this.filesByFidelity(this.asked)
       this.store.change(state => ({ byFidelity, isListing: false, entries: this.shownFrom({ ...state, byFidelity }) }))
       const entries = this.state.entries
       const first = this.link.file || entries.find(entry => entry.exists && !isDrawio(entry.path) && !publishedOf(entry))?.path || ''
@@ -192,26 +161,26 @@ export class FilesPage {
     }
   }
 
-  // The fidelities whose files the page lists, as the session's guidance selection covers them.
-  get listed(): string[] {
-    return listedBy(this.state.guidance, this.link.fidelities)
+  // The fidelities whose files the page asks for: those its link names and those the session's guidance selection
+  // covers. Each file the session answers says whether the page lists it, for the selection and the link.
+  get asked(): string[] {
+    return [...new Set([...this.link.fidelities, ...(this.state.guidance?.fidelities ?? [])])]
   }
 
-  // The files shown from state, in the formats selected: the files of the fidelities listed first, among them those not
-  // generated yet and a design canvas at its link; then every other file under the session's root that belongs to a
-  // fidelity listed or to none. The file bar keeps the changed ones for This session.
+  // The files shown from state, each one the session says the page lists: the files of the fidelities asked for first,
+  // among them those not generated yet and a design canvas at its link; then every other file under the session's root.
+  // The file bar keeps the session's own work for This session.
   private shownFrom(state: FilesPage['state']): FileEntryData[] {
-    const formats = selectedFormatsOf(state.guidance)
-    if (this.link.isFolder) return filesShown(state.byFidelity, [''], formats)
-    const listed = listedBy(state.guidance, this.link.fidelities)
-    return eachOnce([...filesShown(state.byFidelity, listed, formats), ...rootFilesShown(state.rootFiles ?? [], listed, state.guidance)])
+    const listed = (entries: FileEntryData[]) => entries.filter(entry => entry.is_listed)
+    const ofFidelities = listed(state.byFidelity.flatMap(each => each.entries))
+    return this.link.isFolder ? eachOnce(ofFidelities) : eachOnce([...ofFidelities, ...listed(state.rootFiles ?? [])])
   }
 
   // Every file under the session's root, read once as the page opens: what All session files lists, and This session
   // the changed ones of.
   private async readRootFiles(): Promise<void> {
     try {
-      const rootFiles = (await TicketClientGenerated.named(this.api, this.link.ticket).rootFiles()) ?? []
+      const rootFiles = (await TicketClientGenerated.named(this.api, this.link.ticket).rootFiles(this.link.fidelities)) ?? []
       this.store.change(state => ({ rootFiles, entries: this.shownFrom({ ...state, rootFiles }) }))
     } catch (failure) {
       this.notices.fail(`The Files app did not list the files under the session's root: ${reasonOf(failure)}`, 'Opening the Files app, calling ticket.root_files', { kind: 'session_roots' })
@@ -223,27 +192,15 @@ export class FilesPage {
     if (this.link.isFolder) return [{ slug: '', entries: (await (this.link.folder === 'workpath' ? this.session.workpathFiles() : this.session.folderFiles())) ?? [] }]
     if (!slugs.length) return []
     // One call for every fidelity, which shares one look at what the branch changed.
-    const bySlug = (await TicketClientGenerated.named(this.api, this.link.ticket).fidelityFiles(slugs)) ?? {}
-    return slugs.map(slug => {
-      const byFormat = Object.entries(bySlug[slug] ?? {})
-      const formatOf = Object.fromEntries(byFormat.flatMap(([format, entries]) => entries.map(entry => [entry.path, format])))
-      return { slug, entries: byFormat.flatMap(([, entries]) => entries), formatOf }
-    })
+    const bySlug = (await TicketClientGenerated.named(this.api, this.link.ticket).fidelityFiles(slugs, this.link.fidelities)) ?? {}
+    return slugs.map(slug => ({ slug, entries: Object.values(bySlug[slug] ?? {}).flat() }))
   }
 
-  // A selection drawn: the list shows its fidelities' files at once, then reads the files of any it shows for the first
-  // time, such as a stage just selected, and shows them too.
+  // A selection changed, here or anywhere: the session says again which files the page lists for it, so the list is
+  // read again, the fidelities it asks for and every file under the session's root.
   async showSelected(): Promise<void> {
-    this.store.change(state => ({ entries: this.shownFrom(state) }))
-    const missing = this.listed.filter(slug => !this.state.byFidelity.some(each => each.slug === slug))
-    if (this.link.isFolder || this.state.isListing || !missing.length) return
-    try {
-      const read = await this.filesByFidelity(missing)
-      this.store.change(state => ({ byFidelity: [...state.byFidelity, ...read.filter(each => !state.byFidelity.some(held => held.slug === each.slug))] }))
-      this.store.change(state => ({ entries: this.shownFrom(state) }))
-    } catch (failure) {
-      this.notices.fail(`The Files app did not list the files of ${missing.join(', ')}: ${reasonOf(failure)}`, 'Showing the stages and practices selected', { kind: 'session_roots' })
-    }
+    if (this.state.isListing) return
+    await this.listAgain()
   }
 
   // This session lists the files the branch changed; All session files lists every file of the fidelities listed, older
@@ -254,22 +211,22 @@ export class FilesPage {
     if (this.link.namesFiles && !this.link.isFolder && !this.state.isListing) void this.listAgain()
   }
 
-  // The files of the fidelities already listed and every file under the session's root, read again and shown.
+  // The files of the fidelities the page asks for and every file under the session's root, read again and shown.
   private async listAgain(): Promise<void> {
     try {
-      const byFidelity = await this.filesByFidelity(this.state.byFidelity.map(each => each.slug))
+      const byFidelity = await this.filesByFidelity(this.link.isFolder ? [] : this.asked)
       this.store.change(state => ({ byFidelity, entries: this.shownFrom({ ...state, byFidelity }) }))
     } catch (failure) {
       this.notices.fail(`The Files app did not list the files again: ${reasonOf(failure)}`, 'Pressing This session or All session files, calling ticket.fidelity_files', { kind: 'session_roots' })
     }
-    await this.readRootFiles()
+    if (!this.link.isFolder) await this.readRootFiles()
   }
 
   // Why the list is empty: the formats selected hold none of the files of the fidelities listed, such as code at a stage
   // whose fidelities write only documents and diagrams; else there are no files yet.
   get emptyReason(): string {
     const chosen = (this.state.guidance?.formats ?? []).filter(format => format.is_selected).map(format => formatGlyphOf(format.label))
-    const anyFiles = filesShown(this.state.byFidelity, this.listed).length > 0
+    const anyFiles = this.state.byFidelity.some(each => each.entries.length > 0)
     if (chosen.length && anyFiles) return `None of these files is in the formats chosen (${chosen.join(' ')}): press a chosen format to show every format.`
     return 'No files here yet.'
   }
