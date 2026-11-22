@@ -94,6 +94,55 @@ def _ticket_stage_of(session: Session) -> str:
 GuidanceSelection.start_on_ticket_stage_with(_ticket_stage_of)
 
 
+class TicketPrompts:
+    """*TicketPrompts* are what a ticket asks its chat to do for it, each naming the ticket's session, because a prompt
+    runs in whichever chat it is sent to, whose open session can be another ticket's."""
+
+    def __init__(self, ticket: str, session_file: str) -> None:
+        self._ticket = ticket
+        self._session_file = session_file
+
+    def _in_session(self, prompt: str) -> str:
+        return f"{prompt} session={self._session_file}"
+
+    @property
+    @data_field
+    def split(self) -> str:
+        """Split the ticket into child tickets, one for each story on its story map."""
+        name = self._ticket
+        return self._in_session(f"Split ticket {name} into child tickets, one per story on its story map: call ticket.create with parent {name} for each story.")
+
+    @property
+    @data_field
+    def handoff(self) -> str:
+        return self._in_session(f"Write a handoff for ticket {self._ticket} with /space-session-handoff-session")
+
+    @property
+    @data_field
+    def set_up_roots(self) -> str:
+        """Propose roots for the pieces the ticket works on, in every practice, and set them once the person confirms."""
+        return self._in_session(f"Set up the roots of ticket {self._ticket}'s session with session.set_up_roots")
+
+    @property
+    @data_field
+    def close_session(self) -> str:
+        """Close the chat's session, which leaves the ticket where it is: moving it into Complete is what completes it."""
+        return self._in_session("/space:session:close-session")
+
+    @property
+    @data_field
+    def new_chat(self) -> str:
+        """The prompt a ticket's new chat opens with. The Claude app gives a new chat no title, so it asks for the
+        ticket's, then opens the ticket's session and reads its latest handoff."""
+        name = self._ticket
+        return (
+            f'Title this session "{name}". You are the chat of the session board\'s ticket {name}; work on that '
+            f"ticket. First call sessions.switch with name {name}, so every tool works on its session, then read the "
+            "session's latest handoff. When the switch says the session's roots are unchecked, set them up with "
+            "session.set_up_roots before generating anything, so they cover exactly the pieces the ticket works on."
+        )
+
+
 class MainStaysOpenError(ValueError):
     """Raised when a tool would close, archive, delete, or shelve main, the default session, which stays on the board,
     or edit its text or tags, which the board keeps for no ticket's work. It names what was asked of main."""
@@ -613,13 +662,21 @@ class Ticket(TicketCheckoutTools, TicketChoices, TicketMoveTools, TicketTreeTool
         board and the chat bar open this link rather than ask an agent to start one."""
         if not self.worktree:
             return ""
-        prompt = (
-            f'Title this session "{self.name}". You are the chat of the session board\'s ticket {self.name}; work on that '
-            f"ticket. First call sessions.switch with name {self.name}, so every tool works on its session, then read the "
-            "session's latest handoff. When the switch says the session's roots are unchecked, set them up with "
-            "session.set_up_roots before generating anything, so they cover exactly the pieces the ticket works on."
-        )
-        return Chats.load(self._board.call).new_chat(self.worktree, prompt).link
+        return Chats.load(self._board.call).new_chat(self.worktree, self.prompts.new_chat).link
+
+    @property
+    @data_field
+    def prompts(self) -> TicketPrompts:
+        """What the ticket asks its chat to do for it, worded here beside the tools they name: split it, write its
+        handoff, set up its roots, close its session, and start as its new chat."""
+        return TicketPrompts(self.name, self._session.session_file_from_project)
+
+    @property
+    @data_field
+    def can_edit(self) -> bool:
+        """Whether a person may edit its text and tags: any ticket's but main's, the default session, which is no one
+        piece of work; edit_text and tag refuse main."""
+        return not self.is_main
 
     @property
     @data_field
@@ -1289,8 +1346,10 @@ class StageWork(Work):
         return self._stage
 
     @property
+    @data_field(reference=True)
     def progress(self) -> list[FidelityProgress]:
-        """The progress of each fidelity it holds."""
+        """The progress of each fidelity it holds, each a fidelity of the stage whose practice the session works on, in
+        the order the stage requires them; sent by reference, since the ticket sends each in full."""
         return list(self._progress)
 
     @property

@@ -693,7 +693,7 @@ with description("the board tools") as self:
             # (S) Person --> View Fidelity Files
             with it("should list the files a pattern finds there"):
                 files = self.project.call("fidelity-progress.files", ticket="pet-visits", fidelity="bdd-behavior")["python"]
-                expect(files).to(equal([{"path": (self.outside / "src" / "visits_spec.py").as_posix(), "exists": True, "is_changed": False, "link": "", "published_kind": "", "format": "python", "fidelities": []}]))
+                expect(files).to(equal([{"path": (self.outside / "src" / "visits_spec.py").as_posix(), "exists": True, "is_changed": False, "link": "", "published_kind": "", "format": "python", "fidelities": [], "is_listed": True, "is_session_work": False}]))
 
             # (S) Person --> View Fidelity Files, a path that names its module
             with it("should list the files a named part of the path finds there, in folders at any depth"):
@@ -701,7 +701,7 @@ with description("the board tools") as self:
                 model.parent.mkdir(parents=True)
                 model.write_text("# Visits\n", encoding="utf-8")
                 files = self.project.call("fidelity-progress.files", ticket="pet-visits", fidelity="clean-engineering-model")["markdown"]
-                expect(files).to(equal([{"path": model.as_posix(), "exists": True, "is_changed": False, "link": "", "published_kind": "", "format": "markdown", "fidelities": []}]))
+                expect(files).to(equal([{"path": model.as_posix(), "exists": True, "is_changed": False, "link": "", "published_kind": "", "format": "markdown", "fidelities": [], "is_listed": True, "is_session_work": False}]))
 
         with context("with a fidelity's markdown generated"):
             with before.all:
@@ -720,7 +720,7 @@ with description("the board tools") as self:
 
             with it("should list the file with whether it exists"):
                 files = self.project.call("fidelity-progress.files", ticket="pet-visits", fidelity="stories-story-map")["markdown"]
-                expect(files).to(equal([{"path": "docs/.context/story-map.md", "exists": True, "is_changed": False, "link": "", "published_kind": "", "format": "markdown", "fidelities": []}]))
+                expect(files).to(equal([{"path": "docs/.context/story-map.md", "exists": True, "is_changed": False, "link": "", "published_kind": "", "format": "markdown", "fidelities": [], "is_listed": True, "is_session_work": False}]))
 
             # (S) Person --> View Fidelity Files: the page opens tabs in the order Python sends the formats.
             with it("should send the formats in the order files are shown, markdown before code, and the diagram last"):
@@ -827,7 +827,7 @@ with description("the board tools") as self:
                     for path, text in written.items():
                         (project.root / path).parent.mkdir(parents=True, exist_ok=True)
                         (project.root / path).write_text(text, encoding="utf-8")
-                    entries = project.call("ticket.root_files", ticket="sign-up")
+                    entries = project.call("ticket.root_files", ticket="sign-up", linked=["stories-story-map"])
                     return {entry["path"]: entry for entry in entries if entry["path"] in written}
 
                 self.root_files = ProjectTools.answer_of(root_files)
@@ -837,6 +837,18 @@ with description("the board tools") as self:
 
             with it("should name no fidelity for a file none declares"):
                 expect(self.root_files["notes/plain.txt"]["fidelities"]).to(equal([]))
+
+            # The Files app lists what Python says it lists: the page restates no rule of the selection. This session
+            # chose code alone among the format groups, and its link names the story map.
+            with it("should leave out the story map, in a format the session did not choose"):
+                expect([self.root_files[path]["is_listed"] for path in self.root_files if self.root_files[path]["fidelities"] == ["stories-story-map"]]).to(equal([False]))
+
+            with it("should leave out a file of no fidelity while the session works on practices"):
+                expect(self.root_files["notes/plain.txt"]["is_listed"]).to(equal(False))
+
+            # A folder that is no git repository has no branch to change a file, so its own work is what a fidelity holds.
+            with it("should say a file a fidelity holds is the session's own work in a folder that is no repository"):
+                expect([self.root_files[".context/sign-up-sketch.md"]["is_session_work"], self.root_files["notes/plain.txt"]["is_session_work"]]).to(equal([True, False]))
 
             # Reported 2026-11-18 (Nov 18 demo): the Files app opened without the sketch just written, as no fidelity
             # declares it, so a practice selected hid it.

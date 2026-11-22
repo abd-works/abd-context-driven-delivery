@@ -121,7 +121,7 @@ describe('Close Active Session', () => {
     async function pressed() {
       board.openWorktree(CHOSEN)
       const { page } = await board.page()
-      await ticketOn(page, CHOSEN).prompts.startClose()
+      await ticketOn(page, CHOSEN).chatPrompts.startClose()
       return page
     }
 

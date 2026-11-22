@@ -16,11 +16,11 @@ export function AddChildView({ ticket }: { ticket: TicketClient }) {
 
 // What the ticket's work is about, written in the idea file its session folder keeps; the field starts from its text.
 export function EditTextView({ ticket }: { ticket: TicketClient }) {
-  return <CardFieldView shape={EDIT_TEXT} isOff={ticket.isMain} typedAtFirst={ticket.text} onEnter={text => ticket.editText(text)} />
+  return <CardFieldView shape={EDIT_TEXT} isOff={!ticket.canEdit} typedAtFirst={ticket.text} onEnter={text => ticket.editText(text)} />
 }
 
 function TagView({ ticket }: { ticket: TicketClient }) {
-  return <CardFieldView shape={TAG} isOff={ticket.isMain} onEnter={word => ticket.tag(word)} />
+  return <CardFieldView shape={TAG} isOff={!ticket.canEdit} onEnter={word => ticket.tag(word)} />
 }
 
 // Delete removes the ticket and its whole session folder, which cannot be undone, so the person confirms it first.

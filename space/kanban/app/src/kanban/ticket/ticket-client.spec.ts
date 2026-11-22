@@ -254,7 +254,7 @@ describe('Write Ticket Handoff', () => {
   it('should fill the prompt with the handoff command', async () => {
     const { page } = await board.page()
     const chat = await board.connectChat(page)
-    await ticketOn(page, ACTIVE).prompts.fillHandoff()
+    await ticketOn(page, ACTIVE).chatPrompts.fillHandoff()
     expect(await chat.checkIn()).toEqual([{ kind: 'fill', text: 'Write a handoff for ticket checkout-flow with /space-session-handoff-session session=.sessions/checkout-flow/session.json' }])
   })
 })
@@ -264,7 +264,7 @@ describe('Set Up Session Roots With The Chat', () => {
   it("should fill the prompt asking the ticket's chat to set up its session's roots", async () => {
     const { page } = await board.page()
     const chat = await board.connectChat(page)
-    await ticketOn(page, ACTIVE).prompts.fillSetUpRoots()
+    await ticketOn(page, ACTIVE).chatPrompts.fillSetUpRoots()
     expect(await chat.checkIn()).toEqual([{ kind: 'fill', text: "Set up the roots of ticket checkout-flow's session with session.set_up_roots session=.sessions/checkout-flow/session.json" }])
   })
 })
@@ -273,7 +273,7 @@ describe('Close Active Session', () => {
   async function closed() {
     const { page } = await board.page()
     const chat = await board.connectChat(page)
-    await ticketOn(page, ACTIVE).prompts.closeSession()
+    await ticketOn(page, ACTIVE).chatPrompts.closeSession()
     return { page, chat }
   }
 
@@ -335,7 +335,7 @@ describe('Open Ticket Chat', () => {
     it("should send the ticket's commands to the picked chat", async () => {
       const page = await pickedThenClicked()
       const other = board.chat('other-chat', '', '')
-      await ticketOn(page, ACTIVE).prompts.closeSession()
+      await ticketOn(page, ACTIVE).chatPrompts.closeSession()
       expect(await other.checkIn()).toEqual([{ kind: 'command', text: '/space:session:close-session session=.sessions/checkout-flow/session.json' }])
     })
   })
@@ -351,7 +351,7 @@ describe('Open Ticket Chat', () => {
       await page.chat.refresh()
       await page.reader.refresh()
       page.chat.choose('other-chat')
-      await ticketOn(page, ACTIVE).prompts.closeSession()
+      await ticketOn(page, ACTIVE).chatPrompts.closeSession()
       return ticketChat
     }
 
@@ -408,7 +408,7 @@ describe('Open Ticket Chat', () => {
       const { page, asked } = await board.page()
       await board.chat('chat-1').checkIn()
       await page.chat.refresh()
-      await ticketOn(page, ACTIVE).prompts.fillHandoff()
+      await ticketOn(page, ACTIVE).chatPrompts.fillHandoff()
       expect([asked.filter(request => request.path.endsWith('/send')), page.store.state.toasts.at(-1)?.text]).toEqual([[], 'No chat works on checkout-flow yet: open its chat from its card, or pick one in the chat list.'])
     })
   })

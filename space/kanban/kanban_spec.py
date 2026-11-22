@@ -464,6 +464,13 @@ with description("a backlog item") as self:
         with it("should refuse to make the parent a child of its own child"):
             expect(lambda: self.board.reads.backlog_item_called("Checkout").nest_under(self.board.reads.backlog_item_called("Gift cards"))).to(raise_error(BacklogNestingError))
 
+        # The page drops an item only where Python says it can go, so the nesting rule is written once.
+        with it("should offer an item of its own as a parent to another plain idea, and the parent to none"):
+            self.sessions.backlog_item("returns.md", "Returns")
+            self.board.placement.reread()
+            choices = [self.board.reads.backlog_item_called(title).parent_choices for title in ("Returns", "Checkout")]
+            expect(choices).to(equal([["Checkout"], []]))
+
         with context("that a person drags back out onto the Backlog"):
             with before.each:
                 self.board.reads.backlog_item_called("Gift cards").leave_parent()

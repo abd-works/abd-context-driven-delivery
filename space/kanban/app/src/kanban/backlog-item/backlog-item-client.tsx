@@ -43,10 +43,9 @@ export class BacklogItemClient extends BacklogItemClientGenerated {
     this.page.store.change({ selected: this.page.board.selectedItem === this ? '' : this.address })
   }
 
-  // Whether it can take dragged as its child: the Backlog nests one level, and never in a folder kept with a ticket's work.
+  // Whether it can take dragged as its child: Python names the items dragged can be dropped on to become their child.
   canTakeAsChild(dragged: BacklogItemClient): boolean {
-    const isFolderOfWork = Boolean(this.ticket || dragged.ticket)
-    return dragged.title !== this.title && dragged.parent !== this.title && !this.isStacked && !dragged.childItems.length && !isFolderOfWork
+    return dragged.parentChoices.includes(this.title)
   }
 
   // What dropping dragged at depth (0 at the card's top edge, 1 at its bottom) does: near an edge it goes above or below;

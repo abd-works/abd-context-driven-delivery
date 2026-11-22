@@ -17,7 +17,7 @@ export class TicketChatOpening {
   async open(): Promise<void> {
     const chat = this.ticket.chat
     if (!this.canOpen || !chat.beginOpening()) return
-    await chat.start(await this.worktreeOpened())
+    await chat.start(await this.worktreeOpened(), this.ticket.prompts.new_chat)
   }
 
   // The ticket's worktree, opened by activating when the ticket has none.

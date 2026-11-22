@@ -13,7 +13,7 @@ import { FilesStore, NO_GRAPH } from './files-state'
 const SCENARIOS = 'story_tests/fill-cart/add_book_to_cart_story.test.md'
 const MODEL = '.context/domain-model.md'
 
-const entry = (path: string, fidelities: string[]): FileEntryData => ({ path, exists: true, is_changed: false, link: '', format: '', fidelities })
+const entry = (path: string, fidelities: string[]): FileEntryData => ({ path, exists: true, is_changed: false, link: '', published_kind: '', format: '', fidelities, is_listed: true, is_session_work: false })
 const ROOT_FILES = [entry(SCENARIOS, ['stories-scenarios']), entry(MODEL, ['ddd-model'])]
 const section = (line: number, title: string, path: string) => ({ line, title, link: path, section: { path, start_line: 1, end_line: 2, content: title, anchor: '' }, missing: '' })
 

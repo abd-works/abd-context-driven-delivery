@@ -4,9 +4,8 @@ import type { ExplorerEntryData, FileEntryData, GuidanceSelectionData, RangeData
 
 import type { ShownFailure } from './failure-fixes'
 
-// One fidelity's files as the link names them, kept by fidelity so a practice turned off hides its own, with the format
-// each file is in, so a format chip turned on shows only its own.
-export type FidelityFiles = { slug: string; entries: FileEntryData[]; formatOf?: Record<string, string> }
+// One fidelity's files as the session answers them, each saying whether the page lists it.
+export type FidelityFiles = { slug: string; entries: FileEntryData[] }
 
 // A node a person selected in the graph view, with the lines it covers in its file, which open and unfold there.
 export type SelectedNode = { nodeId: string; lines: RangeData }
@@ -40,9 +39,6 @@ export type FilesState = {
   guidance: GuidanceSelectionData | null
   // Where the files are, as the header shows it: the repository, the branch, and the session's root.
   place: string
-  // Whether the session works in a git repository, whose branch says which files it changed; until the session answers,
-  // it is taken to.
-  isRepository: boolean
   // What the page lists of the files its stages, practices and formats select: This session, those the session's
   // branch changed against main; or All session files, every one under the session's root, older work included.
   scope: 'session' | 'all'
@@ -79,7 +75,6 @@ export const FILE_BAR_WIDTH = { narrowest: 160, usual: 288, widest: 900 }
 export const NO_FILES: FilesState = {
   guidance: null,
   place: '',
-  isRepository: true,
   scope: 'session',
   rootFiles: null,
   reads: { rules: false, crossFile: false },

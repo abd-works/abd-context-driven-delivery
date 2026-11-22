@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Callable, ClassVar, Literal
 from harness.guidance.action_catalogue import ACTION_CATALOGUE
 from harness.guidance.stages import STAGES
 from harness.installation.data_class import data_field
+from space.session.file_listing import FileListing
 from harness.markdown.format import Format
 from space.session.answer_reads import HeldForAnswer
 
@@ -194,6 +195,14 @@ class GuidanceSelection:
 
     @property
     @data_field
+    def covered_stages(self) -> list[str]:
+        """The titles of the stages the selection covers, in the board's order: those selected, every stage while none
+        is, as the chat bar heads its dots and the stages whose fidelities it shows."""
+        chosen = self._chosen_stages or [stage.name for stage in STAGES]
+        return [stage.title for stage in STAGES if stage.name in chosen]
+
+    @property
+    @data_field
     def practices(self) -> list[PracticeSelection]:
         return [PracticeSelection(output) for output in self._outputs]
 
@@ -241,6 +250,10 @@ class GuidanceSelection:
             action.name: f"/actions-{action.name} {named} session={session}{chosen if action.name in taking else ''}"
             for action in ACTION_CATALOGUE.on_fidelities
         }
+
+    def listing(self, linked: list[str]) -> FileListing:
+        """What a page lists of the session's files for this selection and linked, the fidelities its link names."""
+        return FileListing(self, linked, self._session.is_repository)
 
     def toggle(self, part: SelectionPart, name: str) -> GuidanceSelection:
         """Select the stage, practice, or format group called name beside those selected, or no longer; before anyone

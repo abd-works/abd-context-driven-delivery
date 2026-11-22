@@ -7,7 +7,7 @@ import type { CddApi } from '@cdd/cdd-shared'
 import type { GuidanceSelectionData } from '@cdd/space/session/session'
 
 import { FilesLink } from './files-link'
-import { FilesPage, filesShown, selectedFormatsOf } from './files-page'
+import { FilesPage } from './files-page'
 import { drawioEditorUrl, drawioPageOf, missingNoteOf, revealLabelOf } from './files-paths'
 import { calloutsOf, rulesOf } from './source-of-file'
 
@@ -38,9 +38,42 @@ class FakeFilesServer implements CddApi {
     if (path.endsWith('/show')) return { name: 'release-2', repo_name: 'abd-cdd', branch: 'release-2', root: 'C:/dev/abd-cdd-2' } as Result
     if (path.endsWith('/toggle-guidance')) return this.toggle(String(body.part), String(body.name)) as Result
     if (path.endsWith('/guidance-selection-after')) return (await this.after(Number(body.version))) as Result
-    if (path.endsWith('/fidelity-files')) return Object.fromEntries((body.fidelities as string[]).map(slug => [slug, { markdown: [entry(`.context/${slug}.md`)], drawio: [entry(`.context/${slug}.drawio`)] }])) as Result
-    if (path.endsWith('/root-files')) return this.rootFiles as Result
+    if (path.endsWith('/fidelity-files')) return this.fidelityFiles(body.fidelities as string[], (body.linked as string[] | null) ?? (body.fidelities as string[])) as Result
+    if (path.endsWith('/root-files')) return this.rootFilesFor((body.linked as string[] | null) ?? []) as Result
     return null
+  }
+
+  // Each fidelity's markdown and drawio file, as ticket.fidelity_files answers them for the selection and the fidelities
+  // the link names: listed while the fidelity is listed and its format selected, or none is.
+  private fidelityFiles(slugs: string[], linked: string[]) {
+    const listed = this.listedFor(linked)
+    const formats = this.formatsSelected()
+    const answered = (slug: string, format: string, path: string) => ({ ...(entry(path) as object), is_listed: listed.includes(slug) && (!formats.length || formats.includes(format)), is_session_work: false })
+    return Object.fromEntries(slugs.map(slug => [slug, { markdown: [answered(slug, 'markdown', `.context/${slug}.md`)], drawio: [answered(slug, 'drawio', `.context/${slug}.drawio`)] }]))
+  }
+
+  // The files under the root, as ticket.root_files answers them: listed while in a format selected, or none is, and of a
+  // fidelity listed; a file of no fidelity only while no practice is selected. The session's own work is what the
+  // branch changed.
+  private rootFilesFor(linked: string[]) {
+    const listed = this.listedFor(linked)
+    const formats = this.formatsSelected()
+    return (this.rootFiles as { format: string; fidelities: string[]; is_changed: boolean }[]).map(file => ({
+      ...file,
+      is_listed: (!formats.length || formats.includes(file.format)) && (file.fidelities.length ? file.fidelities.some(slug => listed.includes(slug)) : !this.practices.length),
+      is_session_work: file.is_changed,
+    }))
+  }
+
+  // The fidelities whose files are listed: those the selection covers once stages were chosen, else those the link names
+  // that it covers.
+  private listedFor(linked: string[]): string[] {
+    const covered = this.listed()
+    return this.stages !== null ? covered : linked.filter(slug => covered.includes(slug))
+  }
+
+  private formatsSelected(): string[] {
+    return this.selection().formats.filter(format => format.is_selected).flatMap(format => format.formats)
   }
 
   // A press, as Session.toggle_guidance answers it: the one named taken out of those selected, or put in.
@@ -73,6 +106,7 @@ class FakeFilesServer implements CddApi {
       version: this.version,
       is_stage_chosen: this.stages !== null,
       stages: Object.keys(FIDELITIES).map(name => ({ name, title: name.charAt(0).toUpperCase() + name.slice(1), is_selected: chosen.includes(name) })),
+      covered_stages: (chosen.length ? chosen : Object.keys(FIDELITIES)).map(name => name.charAt(0).toUpperCase() + name.slice(1)),
       practices: PRACTICES.map(practice => ({ ...practice, is_selected: this.practices.includes(practice.key) })),
       formats: [
         { label: 'markdown', formats: ['markdown'], offered: fidelities.length, is_selected: this.formats.includes('markdown') },
@@ -352,32 +386,7 @@ describe('Filter Files By Format In Files App', () => {
     server.formats = ['diagram']
     const page = new FilesPage(server, new FilesLink(STAGE_LINK))
     await started(page)
-    page.store.change(state => ({ byFidelity: state.byFidelity.map(each => ({ ...each, formatOf: {} })) }))
     expect(page.emptyReason).toBe('None of these files is in the formats chosen (◇): press a chosen format to show every format.')
-  })
-
-  it('should show every file of the fidelities listed while no format is selected', () => {
-    const shown = filesShown([{ slug: 'stories-story-map', entries: [entry('.context/story-map.md')] }], ['stories-story-map'])
-    expect(shown.map(each => each.path)).toEqual(['.context/story-map.md'])
-  })
-
-  // A board published from the story map opens in Claude, so it shows whatever formats are chosen; requested
-  // 2026-11-18: "first of all where is whiteboard link" while only markdown and drawio were chosen.
-  it('should show a published whiteboard while only other formats are selected', () => {
-    const board = { ...(entry('.context/story-map.version-2.whiteboard') as object), link: 'https://claude.ai/artifact/board', published_kind: 'whiteboard' } as never
-    const files = [{ slug: 'stories-story-map', entries: [entry('.context/story-map.md'), board], formatOf: { '.context/story-map.md': 'markdown', '.context/story-map.version-2.whiteboard': 'whiteboard' } }]
-    const shown = filesShown(files, ['stories-story-map'], ['markdown', 'drawio'])
-    expect(shown.map(each => each.path)).toEqual(['.context/story-map.md', '.context/story-map.version-2.whiteboard'])
-  })
-
-  // A diagram is a draw.io file and a Claude Whiteboard board, so the diagram filter shows a board not yet published
-  // too; requested 2026-11-20: "whiteboard isn't a separate format, there's only a button for 'diagram'".
-  it('should show the whiteboard beside the draw.io file while the diagram is selected', () => {
-    const server = new FakeFilesServer()
-    server.formats = ['diagram']
-    const files = [{ slug: 'stories-story-map', entries: [entry('.context/story-map.md'), entry('.context/story-map.drawio'), entry('.context/story-map.whiteboard')], formatOf: { '.context/story-map.md': 'markdown', '.context/story-map.drawio': 'drawio', '.context/story-map.whiteboard': 'whiteboard' } }]
-    const shown = filesShown(files, ['stories-story-map'], selectedFormatsOf(server.selection()))
-    expect(shown.map(each => each.path)).toEqual(['.context/story-map.drawio', '.context/story-map.whiteboard'])
   })
 })
 

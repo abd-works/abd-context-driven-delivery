@@ -40,20 +40,28 @@ class TicketChoices:
     @mcp
     @agent_tool
     @noSessionLog
-    def fidelity_files(self, fidelities: list[str]) -> dict[str, dict[str, list[FileEntry]]]:
-        """Return the files a person reviews for each of fidelities, slugs such as stories-story-map, on ticket, by slug and then by format, as each fidelity-progress.files answers them: one call for a page listing many fidelities, sharing one look at what the branch changed."""
-        return {slug: self.work.progress_of(slug).files() for slug in fidelities}
+    def fidelity_files(self, fidelities: list[str], linked: list[str] | None = None) -> dict[str, dict[str, list[FileEntry]]]:
+        """Return the files a person reviews for each of fidelities, slugs such as stories-story-map, on ticket, by slug and then by format, as each fidelity-progress.files answers them: one call for a page listing many fidelities, sharing one look at what the branch changed. Each file says whether a page lists it (is_listed) for the stages, practices and formats the session selected and linked, the fidelities the page's link names (fidelities when none are named), and whether it is the session's own work (is_session_work)."""
+        listing = self.session.guidance.listing(fidelities if linked is None else linked)
+        return {
+            slug: {format: [listing.of_fidelity(slug, format, entry) for entry in entries] for format, entries in self.work.progress_of(slug).files().items()}
+            for slug in fidelities
+        }
 
     @long_call
     @mcp
     @agent_tool
     @noSessionLog
-    def root_files(self) -> list[FileEntry]:
-        """Return every file under the folder ticket's session works in, each with its path from the project, whether the branch changed it, its format, and the fidelities whose files it is, and the link a design canvas or a whiteboard is published at, so a page narrows it by the stages, practices, and formats selected; a file no fidelity declares names none."""
+    def root_files(self, linked: list[str] | None = None) -> list[FileEntry]:
+        """Return every file under the folder ticket's session works in, each with its path from the project, whether the branch changed it, its format, and the fidelities whose files it is (none for a file no fidelity declares), the link a design canvas or a whiteboard is published at, whether a page lists it (is_listed) for the stages, practices and formats the session selected and linked, the fidelities the page's link names, and whether it is the session's own work (is_session_work)."""
         session = self.session
         progress = self.work.progress
         repo = session.repo.root
-        return [entry.belonging_to([each.fidelity.slug for each in progress if each.holds(repo / entry.path)]).linked(publication_of(repo / entry.path)) for entry in session.session_files.under_root()]
+        listing = session.guidance.listing(linked or [])
+        return [
+            listing.of_root(entry.belonging_to([each.fidelity.slug for each in progress if each.holds(repo / entry.path)]).linked(publication_of(repo / entry.path)))
+            for entry in session.session_files.under_root()
+        ]
 
     @mcp
     @agent_tool

@@ -20,7 +20,8 @@ const SKETCH = '.context/checkout-flow-sketch.md'
 const byFidelity = (body: Record<string, unknown> | undefined, files: Record<string, FileEntryData[]>) =>
   Object.fromEntries(((body?.fidelities as string[] | undefined) ?? []).map(slug => [slug, files]))
 
-const entry = (path: string, is_changed = false): FileEntryData => ({ path, exists: true, is_changed, link: '', published_kind: '', format: '', fidelities: [] }) as FileEntryData
+// Listed, and the session's own work exactly when the branch changed it, as the session answers a file in a repository.
+const entry = (path: string, is_changed = false): FileEntryData => ({ path, exists: true, is_changed, link: '', published_kind: '', format: '', fidelities: [], is_listed: true, is_session_work: is_changed }) as FileEntryData
 
 // The Files app's server, answering the session's files in the order the link names them, and nothing else; each file
 // the branch changed unless named unchanged, so This session lists it.
@@ -36,14 +37,15 @@ class FakeFilesServer implements CddApi {
 }
 
 // The Files app's server for a project in a plain folder: the session works in no git repository, so no file is
-// changed; cart.py is declared but not generated yet, the session's sketch is every fidelity's, and a note under the
-// root belongs to no fidelity.
+// changed, and its own work is each file a fidelity declares or holds that is there; cart.py is declared but not
+// generated yet, the session's sketch is every fidelity's, and a note under the root belongs to no fidelity.
 class PlainFolderServer implements CddApi {
   async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
     if (path.endsWith('/show')) return { practices: {}, is_repository: false } as Result
+    const work = (named: string) => ({ ...entry(named), is_session_work: true })
     const missing = { ...entry(CART), exists: false }
-    if (path.endsWith('/fidelity-files')) return byFidelity(body, { markdown: [entry(STORY_MAP)], python: [entry(ORDER), missing] }) as Result
-    if (path.endsWith('/root-files')) return [entry(STORY_MAP), { ...entry(SKETCH), fidelities: ['stories-story-map'] }, entry('notes/plain.txt')] as Result
+    if (path.endsWith('/fidelity-files')) return byFidelity(body, { markdown: [work(STORY_MAP)], python: [work(ORDER), missing] }) as Result
+    if (path.endsWith('/root-files')) return [{ ...work(STORY_MAP), fidelities: ['stories-story-map'] }, { ...work(SKETCH), fidelities: ['stories-story-map'] }, entry('notes/plain.txt')] as Result
     return null
   }
 }

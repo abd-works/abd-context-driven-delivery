@@ -167,6 +167,13 @@ class BacklogItem(BacklogOrderTools, Card):
 
     @property
     @data_field
+    def parent_choices(self) -> list[str]:
+        """The titles of the items a person can drop it on to make it their child: any it is not already the child of,
+        and that nest_under would not refuse."""
+        return [item.title for item in self._board.backlog_items if item.title != self.parent and not self._nesting_refusal(item)]
+
+    @property
+    @data_field
     def text(self) -> str:
         """The file's content after its heading."""
         return self._idea.text
@@ -258,8 +265,15 @@ class BacklogItem(BacklogOrderTools, Card):
         return folder / f"{folder.name}.md"
 
     def _refuse_nesting_under(self, parent: BacklogItem) -> None:
+        reason = self._nesting_refusal(parent)
+        if reason:
+            raise BacklogNestingError(self.title, parent.title, reason)
+
+    def _nesting_refusal(self, parent: BacklogItem) -> str:
+        """Why this item cannot become parent's child; empty when it can. The Backlog nests one level, in plain idea
+        folders."""
         folder = parent._held_ticket_folder
-        reason = (
+        return (
             "it is the same item" if parent.path == self._path
             else "it has children of its own" if self.children
             else "it is a child itself" if parent.is_stacked
@@ -267,8 +281,6 @@ class BacklogItem(BacklogOrderTools, Card):
             else f"{parent.title}'s folder already keeps a file called {self._path.name}" if (folder / self._path.name).exists() or self._path.stem == folder.name
             else ""
         )
-        if reason:
-            raise BacklogNestingError(self.title, parent.title, reason)
 
     # The folder that keeps this item's children: its own folder, made from its one file the first time it takes one.
     def _folder_for_children(self) -> Path:

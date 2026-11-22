@@ -46,13 +46,77 @@ class ListedViolation:
         return (shown.rule, shown.node_id, shown.message, shown.location, shown.line) == (asked.rule, asked.node_id, asked.message, asked.location, asked.line)
 
 
-class ReportRule:
-    """One rule a report finds broken, in the one shape the board reads for graph hits and judged findings alike."""
+# A fix in one format alone leaves the fidelity's other formats still breaking the rule, so every fix asks for all of them.
+_EVERY_FORMAT = "Fix every format of the fidelity: its documents, its diagrams, and its code."
+# What a prompt's lines are joined with.
+_LINE = "\n"
 
-    def __init__(self, fidelity: FidelityGuidance, rule: Rule, violations: list[Violation]) -> None:
+
+def _in_session(prompt: str, fidelity: FidelityGuidance) -> str:
+    """prompt naming the session of fidelity's ticket: a prompt runs in whichever chat it is sent to, whose open session
+    can be another ticket's, as the session's action commands name it."""
+    return f"{prompt} session={fidelity.practice_guidance.session.session_file_from_project}"
+
+
+def _error_lines(violation: Violation) -> list[str]:
+    """Where a violation is and what it says, then the lines around it, the failing line marked >, so the agent edits
+    the content validate judged, not a line near it."""
+    place = f"{violation.location}:{violation.line}" if violation.line else violation.location
+    return [f"{place}: {violation.message}", *(f"{'>' if line.number == violation.line else ' '} {line.number} | {line.text}" for line in violation.source)]
+
+
+class ViolationPrompts:
+    """What a report's Fix and False buttons send a ticket's chat about one violation, in the report's own words, so the
+    agent needs no second validate to find out what failed."""
+
+    def __init__(self, fidelity: FidelityGuidance, rule: Rule, violation: Violation) -> None:
+        self._fidelity = fidelity
+        self._rule = rule
+        self._violation = violation
+
+    @property
+    @data_field
+    def fix(self) -> str:
+        """Fix this violation, and nothing the error does not name, in every format of the fidelity, then validate it
+        with this rule on the files changed."""
+        slug, rule = self._fidelity.slug, self._rule.slug
+        return _in_session(_LINE.join([
+            f"Fix this violation of the {slug} rule.",
+            "",
+            f"{rule}: {self._rule.body}",
+            "",
+            f"1. {_LINE.join(_error_lines(self._violation))}",
+            "",
+            f"Change each file so the content marked > follows the rule, and change nothing the errors do not name. {_EVERY_FORMAT} Then validate {slug} with rule {rule} on the files you changed.",
+        ]), self._fidelity)
+
+    @property
+    @data_field(key="false")
+    def false_positive(self) -> str:
+        """The person says the finding is wrong, a defect in the rule or the check behind it: the chat looks there and
+        leaves the judged content alone."""
+        slug, rule = self._fidelity.slug, self._rule.slug
+        return _in_session(_LINE.join([
+            f"This violation of the {slug} rule is false. Investigate the rule for errors.",
+            "",
+            f"{rule}: {self._rule.body}",
+            "",
+            _LINE.join(_error_lines(self._violation)),
+            "",
+            f"Find why {rule} reported this: read the rule's text and the check that judges it, and run it on the content marked >. Say whether the rule's wording, its check, or what the check read is wrong, then correct that test first. Change none of the content the finding names. If the finding turns out to be right, say why and change nothing.",
+        ]), self._fidelity)
+
+
+class ReportRule:
+    """One rule a report finds broken, in the one shape the board reads for graph hits and judged findings alike, with
+    the prompts its Fix buttons send."""
+
+    def __init__(self, fidelity: FidelityGuidance, rule: Rule, violations: list[Violation], report_path: str) -> None:
         self._fidelity = fidelity
         self._rule = rule
         self._violations = list(violations)
+        # The report, as a path from the project, that found the rule broken, which a fix of the whole rule reads.
+        self._report_path = report_path
 
     @property
     @data_field(reference=True)
@@ -77,6 +141,18 @@ class ReportRule:
     @data_field
     def violations(self) -> list[Violation]:
         return list(self._violations)
+
+    @property
+    @data_field
+    def violation_prompts(self) -> list[ViolationPrompts]:
+        """What each violation's Fix and False send, one for each of violations, in the same order."""
+        return [ViolationPrompts(self._fidelity, self._rule, violation) for violation in self._violations]
+
+    @property
+    @data_field
+    def fix_prompt(self) -> str:
+        """Fix every violation of the rule the report found, read from the report itself."""
+        return _in_session(f"Fix all violations of {self._rule.slug} found in this report: {self._report_path}. {_EVERY_FORMAT}", self._fidelity)
 
     @property
     def identity(self) -> tuple:
@@ -147,6 +223,15 @@ class Report:
     @data_field
     def has_saved_graph(self) -> bool:
         return self._has_saved_graph
+
+    @property
+    @data_field
+    def fix_prompt(self) -> str:
+        """Fix every violation the report found: the report already holds them, so the chat reads them there rather than
+        from a copy in the message. It names the session of the report's rules' ticket; empty for a report of none."""
+        if not self._rules:
+            return ""
+        return _in_session(f"Fix all violations found in this report: {self._path}. {_EVERY_FORMAT}", self._rules[0].fidelity)
 
     @property
     @data_field
@@ -244,8 +329,12 @@ class ReportFile:
         graph_rules, accepted_hits = self._open_and_accepted(graph_hits)
         hit = {rule.rule.slug for rule in graph_rules}
         judged, accepted_findings = self._open_and_accepted({rule: findings for rule, findings in self._judged(text).items() if rule not in hit})
-        source = ReportSource(self._repo.path_from_top(self._file), text)
-        return Report(source, graph_rules + judged, SavedGraphStanding(has_graph, is_out_of_date)).leaving_out(accepted_hits + accepted_findings)
+        return Report(self._source, graph_rules + judged, SavedGraphStanding(has_graph, is_out_of_date)).leaving_out(accepted_hits + accepted_findings)
+
+    @property
+    def _source(self) -> ReportSource:
+        """Where the report was read from: its path from the project, and its text."""
+        return ReportSource(self._repo.path_from_top(self._file), self.text)
 
     def accept(self, asked: Violation) -> None:
         """Accept the violation this report shows as asked, so no later report, validate, or count names it while it
@@ -276,7 +365,7 @@ class ReportFile:
             for rules, wanted in ((still_open, False), (accepted, True)):
                 shown = [violation.shown for violation, out in zip(listed, is_left_out) if out is wanted]
                 if shown:
-                    rules.append(ReportRule(self._fidelity, self._rule_named(name), shown))
+                    rules.append(ReportRule(self._fidelity, self._rule_named(name), shown, self._source.path))
         return still_open, accepted
 
     @cached_property

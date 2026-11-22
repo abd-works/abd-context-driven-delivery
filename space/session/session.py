@@ -87,15 +87,17 @@ class SessionFileTools:
     @agent_tool
     @noSessionLog
     def folder_files(self) -> list[FileEntry]:
-        """List every file in this session's record folder and work folder, each with its path from the project: its session.json, log, handoffs, kept notes, and validation reports."""
-        return self.session_files.in_folder()
+        """List every file in this session's record folder and work folder, each with its path from the project: its session.json, log, handoffs, kept notes, and validation reports; each listed, and the session's own work when the branch changed it."""
+        listing = self.guidance.listing([])
+        return [listing.of_folder(entry) for entry in self.session_files.in_folder()]
 
     @mcp
     @agent_tool
     @noSessionLog
     def workpath_files(self) -> list[FileEntry]:
-        """List every file directly in the folder this session works in, each with its path from the project, as the board's details open it from the workpath."""
-        return self.session_files.in_workpath()
+        """List every file directly in the folder this session works in, each with its path from the project, as the board's details open it from the workpath; each listed, and the session's own work when the branch changed it."""
+        listing = self.guidance.listing([])
+        return [listing.of_folder(entry) for entry in self.session_files.in_workpath()]
 
     @mcp
     @agent_tool

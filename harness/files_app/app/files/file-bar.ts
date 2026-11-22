@@ -88,21 +88,12 @@ export class FileBar {
   // All session files, every one.
   get entries(): FileEntryData[] {
     const { entries, scope } = this.store.state
-    return scope === 'session' ? entries.filter(entry => this.isSessionWork(entry) || entry.link) : entries
+    return scope === 'session' ? entries.filter(entry => entry.is_session_work || entry.link) : entries
   }
 
-  // How many of the files the page lists are the session's own work, for the This session button.
+  // How many of the files the page lists are the session's own work, as the session says, for the This session button.
   get sessionWorkCount(): number {
-    return this.store.state.entries.filter(entry => this.isSessionWork(entry)).length
-  }
-
-  // Whether a file is the session's own work: in a git repository, one its branch changed; in a plain folder no branch
-  // changes any file, so every file its fidelities declare or hold, such as its sketch, that is there.
-  private isSessionWork(entry: FileEntryData): boolean {
-    const { isRepository, byFidelity } = this.store.state
-    if (isRepository) return entry.is_changed
-    const isDeclared = byFidelity.some(({ entries }) => entries.some(declared => declared.path === entry.path))
-    return entry.exists && (isDeclared || entry.fidelities.length > 0)
+    return this.store.state.entries.filter(entry => entry.is_session_work).length
   }
 
   // The folder tree of the files the bar lists.

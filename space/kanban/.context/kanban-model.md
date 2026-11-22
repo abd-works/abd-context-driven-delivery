@@ -380,6 +380,10 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	// data field: its session is closed, so it shows in Complete
 + is_active: bool
 	// data field: its session is the one saved as open
++ << composition >> prompts: TicketPrompts
+	// data field: what the ticket asks its chat to do for it (split, handoff, set_up_roots, close_session, new_chat), each naming its session; the page sends them as Python worded them
++ can_edit: bool
+	// data field: whether its text and tags may be edited: false for main, which `edit_text` and `tag` refuse with MainStaysOpenError
 + is_open: bool
 	// data field: open for work, in its own worktree or the active ticket, and not main; its card offers Close, which closes it through its Close dialog unless the chosen chat works on it
 	-> TicketCheckout.worktree
@@ -745,6 +749,7 @@ A ticket's work in one stage taken together: the progress of each fidelity the s
 + << association >> stage: Stage
 	// reference data field
 + << association >> progress: list[FidelityProgress]
+	// reference data field: the fidelities of the stage whose practice the session works on, in the stage's order; the page's `TicketWork.progressIn` reads it
 + action_states: ActionStates
 	// data field `actions`
 	-> ActionStates.taken_together
@@ -791,6 +796,8 @@ Marked `@identity("title")`. Its two order tools, `move_before` and `move_after`
 	// the item's first `# ` heading, or its file name in words
 + column: Column
 	// always the Backlog
++ parent_choices: list[str]
+	// data field: the titles of the items it can be dropped on to become their child, any it is not already the child of and that nest_under would not refuse (one reason, `_nesting_refusal`, for both)
 + text: str
 	// data field: the file's content after its heading
 	-> IdeaFile.text
@@ -904,6 +911,8 @@ The rules a validation found broken, built from the saved report and the graph s
 	// data field
 + << composition >> rules: list[ReportRule]
 	// data field
++ fix_prompt: str
+	// data field: fix every violation found in this report, read from the report itself, naming its ticket's session; empty for a report of no rule
 + has_saved_graph: bool
 	// data field; false when the report has no saved graph, so its graph's rules are missing
 + violation_count: int
@@ -932,7 +941,8 @@ Whether the graph a validation checked is saved beside its report, and whether i
 
 ## ReportRule
 
-+ ReportRule(fidelity: FidelityGuidance, rule: Rule, violations: list[Violation])
++ ReportRule(fidelity: FidelityGuidance, rule: Rule, violations: list[Violation], report_path: str)
+	// report_path: the report, from the project, that found the rule broken
 ------
 + << association >> fidelity: FidelityGuidance
 	// data field: the fidelity whose report found the rule broken
@@ -942,6 +952,10 @@ Whether the graph a validation checked is saved beside its report, and whether i
 	// data field
 + << composition >> violations: list[Violation]
 	// data field
++ << composition >> violation_prompts: list[ViolationPrompts]
+	// data field: what each violation's Fix (`fix`) and False (`false`) send its ticket's chat, one for each of violations in the same order, each naming the ticket's session
++ fix_prompt: str
+	// data field: fix every violation of the rule, read from the report at report_path
 + identity: tuple
 	// its rule's slug and its violations' practice, location, line, and message: a saved graph holds its whole practice's hits, so two fidelities of one practice report the same broken rule
 ----

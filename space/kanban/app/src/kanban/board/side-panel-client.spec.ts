@@ -79,7 +79,7 @@ describe('Open Validation Report', () => {
     it('should send its fidelity to validate again', async () => {
       const { page } = await board.page()
       const chat = await board.connectChat(page)
-      await ticketOn(page).prompts.validateAgain(storyMapOn(page))
+      await ticketOn(page).chatPrompts.validateAgain(storyMapOn(page))
       expect(await chat.checkIn()).toEqual([{ kind: 'command', text: `/actions-validate ${SLUG} ${SESSION}` }])
     })
   })
