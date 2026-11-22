@@ -13,6 +13,7 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
 sys.modules.pop("actions", None)
 
 import yaml
+from dataclasses import replace
 from expects import be, be_true, contain, equal, expect, have_key, raise_error
 from mamba import after, before, context, description, it
 from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
@@ -1070,6 +1071,23 @@ with description("a tool as the MCP tool list describes it"):
         with it("should list its whole description"):
             tool = _SelfCallAgent().tools["polish"]
             expect(tool.listed_description).to(equal(tool.description))
+
+
+with description("the file installed for a tool a server answers"):
+    with context("whose docstring only names the overview section the server returns"):
+        with it("should leave that section name out of its body"):
+            tool = _SelfCallAgent().tools["polish"]
+            expect(replace(tool, callable=_overview_only).served_body).to(equal(""))
+
+    with context("whose docstring says what it does"):
+        with it("should carry the docstring as its body"):
+            tool = _SelfCallAgent().tools["polish"]
+            expect(tool.served_body).to(equal(tool.docstring))
+
+
+def _overview_only() -> str:
+    """overview"""
+    return ""
 
 
 with description("AgentInstructions"):

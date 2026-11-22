@@ -897,14 +897,6 @@ with description("a practice guidance class") as self:
                     text = (self.tree / "rules" / "coding.mdc").read_text(encoding="utf-8")
                     expect(text).to(equal(self.source.read_text(encoding="utf-8")))
 
-        with context("with an MCP tool whose docstring only names the overview section"):
-            with it("should leave that section name out of the skill body"):
-                from harness.installation.files import SkillInstallation
-
-                writer = SkillInstallation.into(InstallTarget(IdeLayout("Cursor"), self.tree))
-                tool = type("Tool", (), {"docstring": "overview", "is_published_to": lambda self, destination: True})()
-                expect(writer._body_for(tool)).to(equal(""))
-
         with it("should not append a YAML CLI invoke fence to the skill body"):
             skill = InstalledTree(self.tree).skill_path("sample-tool").read_text(encoding="utf-8")
             expect(skill).not_to(contain("tools.ps1"))
