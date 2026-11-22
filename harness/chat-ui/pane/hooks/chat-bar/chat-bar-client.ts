@@ -95,7 +95,7 @@ export class ChatBarClient {
   get stages(): StageClient[] {
     const columns = this.board?.columns ?? []
     const sessionPlace = columns.findIndex(column => column.name === this.stage)
-    return columns.map((column, place) => new StageClient(column, place - sessionPlace, this.selectedStages.includes(column.name)))
+    return columns.map((column, place) => new StageClient(column, place - sessionPlace, this.shownStages.includes(column.name)))
   }
 
   // Every action a person can run on a fidelity of the shown stage, its steps first, as the stage sends them.

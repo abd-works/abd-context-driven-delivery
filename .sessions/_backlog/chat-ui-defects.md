@@ -216,3 +216,27 @@ Noticed 2026-11-21 while writing the chat bar's desktop story tests (release-1-2
 - Display Stage Strip, Display Session Fidelity Dots, Show Active Session On Status Line, Debug A Failure From Chat Bar
   and the failure line's Fix button have no scenario in any `*_story.test.md`, so they have no desktop story test yet:
   a desktop story test repeats scenarios, and these have none to repeat.
+
+## The chat bar fails to draw on release-1-2-fixes: `selectedStages` is gone
+
+Found 2026-11-21 by running the chat bar's own code on its test page (`harness/chat-ui/pane/test-page`), on its first
+run. `ChatBarClient.stages` (`harness/chat-ui/pane/hooks/chat-bar/chat-bar-client.ts`, line 98) reads
+`this.selectedStages`, which commit 7e8473db9 removed when it renamed the getter `shownStages`. Once the board answers
+with its columns the draw throws, and the band shows only "chat bar failed to draw: Cannot read properties of undefined
+(reading 'includes')". The mod's own plugin test "once the repository is created the chat bar asks no more"
+(`make-repository.test.ts`) fails for the same reason, and passes with `selectedStages` changed to `shownStages`.
+main is not affected. Not fixed: reported to the coordinator.
+
+## The chat bar and three of its scenarios disagree
+
+Found 2026-11-21 by the page walk (`.sessions/release-1-2-fixes/chat-bar-page-walk/walk-report.md`); each is red in
+the browser story tests under `story_tests/move-work-forward-from-chat-bar/` until the person says which side is right:
+
+- Show the connected mark says the green ✓ sits left of the session's name; the line draws it right of the name and
+  its buttons, before the version.
+- Show every part running on one line names a Tools part and has the tool count and each app's port written on the
+  panel; the panel is a line of icons (MCP host, Graph, Files, Kanban, Story UI) with the count only in the MCP host
+  tip.
+- Pick a fidelity from anywhere on its line says the whole line is pressable, state included, and picks that fidelity
+  for the action button; the button holds the square and the name only (`session-card-view.tsx`, `FidelityCellView`),
+  and its press turns the fidelity's practice on or off for the session.

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CDD chat bar test page</title>
+<style>
+  :root { --row: 1.5em; color-scheme: dark; }
+  body { margin: 0; background: #1f1e1d; color: #e8e6e1; font: 14px/1.5 Consolas, "Cascadia Mono", monospace; display: flex; height: 100vh; }
+  #chat { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 12px 16px; }
+  #transcript { flex: 1; overflow: auto; color: #9b978f; }
+  #transcript .sent { white-space: pre-wrap; border-left: 2px solid #55524c; padding-left: 8px; margin: 2px 0; }
+  #above-prompt { margin-top: 8px; }
+  #prompt-box { width: 100%; box-sizing: border-box; height: 4.5em; margin-top: 4px; background: #2a2927; color: inherit; font: inherit; border: 1px solid #55524c; border-radius: 8px; padding: 6px 8px; }
+  #prompt-hint, #status-line { color: #9b978f; font-size: 12px; min-height: 1.5em; }
+  #panes { width: 0; overflow: auto; }
+  #panes:not(:empty) { width: 38%; border-left: 1px solid #55524c; padding: 12px; }
+  #toasts { position: fixed; right: 12px; top: 12px; display: flex; flex-direction: column; gap: 6px; }
+  .toast { background: #3a3835; border: 1px solid #77736b; padding: 6px 10px; border-radius: 6px; max-width: 60ch; }
+  .box { box-sizing: border-box; min-height: 0; }
+  .text { white-space: pre; }
+  .text.truncate { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .button { font: inherit; color: inherit; background: #3a3835; border: 1px solid #77736b; border-radius: 4px; padding: 0 1ch; cursor: pointer; white-space: pre; }
+  .button.primary { background: #c96442; border-color: #c96442; color: #fff; }
+  .button.plain { background: transparent; border: 0; padding: 0; border-radius: 0; }
+  .input { font: inherit; color: inherit; background: #2a2927; border: 1px solid #55524c; padding: 0 1ch; }
+  .svg { display: inline-flex; align-items: center; }
+</style>
+</head>
+<body>
+  <main id="chat">
+    <div id="transcript"></div>
+    <div id="above-prompt"></div>
+    <textarea id="prompt-box" placeholder="The chat's prompt box"></textarea>
+    <div id="prompt-hint"></div>
+    <div id="status-line"></div>
+  </main>
+  <aside id="panes"></aside>
+  <div id="toasts"></div>
+  <script src="page.js"></script>
+</body>
+</html>
