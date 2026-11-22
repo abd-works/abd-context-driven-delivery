@@ -7,12 +7,12 @@ section: body
 
 # Epic: Open Files In Files App
 
-Map: [story-map.md](../../../.context/story-map.md#e-open-files-in-files-app). Acceptance tests: `harness/whiteboard/whiteboard_spec.py` and `space/session/practices/practice_session_output_spec.py` for what the session answers; `harness/files_app/app/files/file-bar.spec.ts` for what only the page shows. The other scenarios of this epic are in [review_files_in_files_app_story.test.md](../review-files-in-files-app/review_files_in_files_app_story.test.md).
+Map: [story-map.md](../../../.context/story-map.md#e-open-files-in-files-app). Acceptance tests: `harness/whiteboard/whiteboard_spec.py` and `space/session/practices/practice_session_output_spec.py` for what the session answers; `harness/files_app/app/files/file-bar.spec.ts`, `files-page.spec.ts` (Open Whiteboard In Files App) and `whiteboard-canvas.spec.ts` for what only the page shows. The other scenarios of this epic are in [review_files_in_files_app_story.test.md](../review-files-in-files-app/review_files_in_files_app_story.test.md).
 
 ### Domain terms
 
-- whiteboard file: a `.whiteboard` file a practice renders its diagram to, such as `.context/story-map.whiteboard` (`harness/whiteboard/whiteboard.py` *Whiteboard*).
-- board: the Claude Whiteboard artifact the whiteboard file was published to. Its address is kept beside the file, in the folder's `whiteboards.json`, by the file's name, as a design canvas keeps its links in `versions.json` (`harness/whiteboard/whiteboard.py` *BoardLinks*).
+- whiteboard file: a `.whiteboard` file a practice renders its diagram to, such as `.context/story-map.whiteboard` (`harness/whiteboard/whiteboard.py` *Whiteboard*), which the page reads as Python reads it (`harness/whiteboard/whiteboard_file.py` *WhiteboardFile*, `whiteboard-file.show`).
+- board: the Claude Whiteboard artifact the whiteboard file was published to. Its address is kept beside the file, in the folder's `whiteboards.json`, by the file's name, as a design canvas keeps its links in `versions.json` (`Whiteboard.links_beside`, a *PublishedLinks*).
 
 > The example ++another project++ is the Files app opened on a project other than the CDD checkout, its server started for the CDD checkout, as [review_files_in_files_app_story.test.md](../review-files-in-files-app/review_files_in_files_app_story.test.md#example-another-project) names it.
 

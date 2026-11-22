@@ -44,6 +44,8 @@ declare module 'claude-code' {
       robotAgents: Record<string, string>
       isAwaitingDecision: boolean
       decisionWait: number
+      // The cdd server that answered the queue's last call, asked first next time; empty before any answered.
+      answeringServer: string
     }
   }
 }

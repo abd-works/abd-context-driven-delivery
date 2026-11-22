@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import type { Held } from './held';
-import type { GraphRuleData, NodeSourceData } from '@cdd/harness/graph/graph';
+import type { NodeSourceData } from '@cdd/harness/graph/graph';
 import { reasonOf } from '@cdd/cdd-page-failures';
 import { failures, graphs } from '../graph/graph-page';
-import { childrenOf, isRule, ruleHits, selectionForRule, type GraphSelection, type TreeItem, type ViolationFocus } from '../graph/graph-selection';
+import type { ExplorerTrees } from '../graph/explorer-trees';
+import { ruleHits, selectionForRule, type GraphSelection, type ViolationFocus } from '../graph/graph-selection';
 import type { SourceRule } from '../source/SourceView';
 
 interface SourcePaneState {
@@ -57,8 +58,8 @@ export class SourcePane {
   }
 
   // The rules the selected node in trees runs, as the source pane lists them.
-  rulesIn(trees: TreeItem[]): SourceRule[] {
-    return rulesUnder(findNode(trees, this.selectedId)).map((rule) => ({
+  rulesIn(trees: ExplorerTrees): SourceRule[] {
+    return trees.rulesOf(this.selectedId).map((rule) => ({
       name: rule.name,
       status: rule.status,
       messages: ruleHits(rule).map((hit) => hit.message).filter(Boolean),
@@ -66,8 +67,8 @@ export class SourcePane {
   }
 
   // Choose the rule called name on the selected node in trees.
-  chooseRule(trees: TreeItem[], name: string): void {
-    const rule = rulesUnder(findNode(trees, this.selectedId)).find((child) => child.name === name);
+  chooseRule(trees: ExplorerTrees, name: string): void {
+    const rule = trees.rulesOf(this.selectedId).find((child) => child.name === name);
     if (rule) void this.choose(selectionForRule(this.selectedId, rule));
   }
 }
@@ -80,22 +81,4 @@ export function useSourcePane(): SourcePane {
     source: useState<NodeSourceData | null>(null),
     note: useState(''),
   });
-}
-
-function findNode(nodes: TreeItem[], nodeId: string): TreeItem | null {
-  for (const node of nodes) {
-    if (node.node_id === nodeId) {
-      return node;
-    }
-    const child = findNode(childrenOf(node), nodeId);
-    if (child) {
-      return child;
-    }
-  }
-  return null;
-}
-
-function rulesUnder(node: TreeItem | null): GraphRuleData[] {
-  const holder = node ? childrenOf(node).find((child) => child.type === 'rules') : undefined;
-  return holder ? childrenOf(holder).filter(isRule) : [];
 }

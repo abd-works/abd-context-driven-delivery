@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type ComponentProps, type MouseEvent } from 'react'
 
+import type { NodeSourceData } from '@cdd/harness/graph/graph'
 import { calloutsWithin } from '@source-view/SourceView'
-import { CallCatalog, type FoldMember } from '@source-view/call-expansion'
+import { CallCatalog } from '@source-view/call-expansion'
 import type { SourceCallout } from '@source-view/source-callouts'
 
 import type { FileCallouts } from './file-callouts'
@@ -11,7 +12,7 @@ import { FILE_PATH, RenderedCallouts } from './rendered-callouts'
 import { calloutsOf } from './source-of-file'
 
 const NO_CALLOUTS: SourceCallout[] = []
-const NO_MEMBERS: FileViewProps['members'] = []
+const NO_MEMBERS: NodeSourceData[] = []
 
 // What the source view takes, and callouts, which reads another file's callouts for a section opened in place.
 type FileViewProps = ComponentProps<typeof FileSourceView> & { callouts: FileCallouts }
@@ -68,7 +69,7 @@ function RenderedFileView({ path, rendering, shown, rendered }: { path: string; 
 // file view's filters, the calls the graph's members let an open callout reach, and Go to file. Made once for the open file and asking
 // what the page holds now, so the graph's members arriving close no callout a person opened.
 function useRenderedCallouts({ callouts, members = NO_MEMBERS, onGoToFile }: Pick<FileViewProps, 'callouts' | 'members' | 'onGoToFile'>): RenderedCallouts {
-  const within = useMemo(() => calloutsWithin(new CallCatalog(members as FoldMember[])), [members])
+  const within = useMemo(() => calloutsWithin(new CallCatalog(members)), [members])
   const now = useRef({ callouts, within, onGoToFile })
   now.current = { callouts, within, onGoToFile }
   return useMemo(() => new RenderedCallouts({ calloutsIn: path => now.current.callouts.in(path), within: (callout, stack) => now.current.within(callout, stack), goTo: callout => now.current.onGoToFile?.(callout) }), [])

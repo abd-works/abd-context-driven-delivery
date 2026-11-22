@@ -1,68 +1,80 @@
+import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
+import type { ChatTurnsJson } from '../../types'
 import { post } from './board'
 
-// The chat's own turns, which tell the board when a message it sent is done.
+// The chat's own turns, which tell the board when a message it sent is done. They are kept in the chat's state, not in
+// the module, so a reload of the mod finds the messages it is still working on.
 
-let isBusy = false
-// Messages the chat showed and is still working on, each with the turns started before it arrived; a message is done
-// when a turn that started after it ends, not the turn the chat was already in.
-const unfinished = new Map<string, number>()
-// Counts the chat's own turns, so a command that returned without starting one is known to be done.
-let turnsStarted = 0
-// Ticks of the one-second check-in clock since the chat last worked: a turn of its own, or a command from the board.
-let idleTicks = 0
+// Atom chatTurns, declared in pane/types/index.d.ts and kept in this file. unfinished holds the messages the chat showed
+// and is still working on, each with the turns started before it arrived; a message is done when a turn that started
+// after it ends, not the turn the chat was already in. turnsStarted counts the chat's own turns, so a command that
+// returned without starting one is known to be done. idleCheckIns counts the one-second check-in clock's ticks since the
+// chat last worked: a turn of its own, or a command from the board.
+const chatTurns = atom({ plugin: 'cdd-board', key: 'chatTurns' } as const, { isBusy: false, turnsStarted: 0, idleCheckIns: 0, unfinished: {} } as ChatTurnsJson)
+
 // While the chat works, and for this many ticks after, it checks in every tick, so a Run pressed on the board arrives
 // within a second; after that it checks in every IDLE_CHECK_IN_TICKS, since every open chat checking in every second
 // keeps the one cdd server every chat shares busy for nothing.
 const ACTIVE_TICKS = 60
 const IDLE_CHECK_IN_TICKS = 5
 
-export function isCheckInDue(): boolean {
-  if (isBusy) {
-    idleTicks = 0
-    return true
-  }
-  idleTicks += 1
-  return idleTicks <= ACTIVE_TICKS || idleTicks % IDLE_CHECK_IN_TICKS === 0
+// A chat starting, or a mod reloaded, is in no turn yet: one reloaded mid-turn would otherwise come back still busy.
+export async function chatStarted($: EngineInterface): Promise<void> {
+  await update($, chatTurns, turns => ({ ...turns, isBusy: false, idleCheckIns: 0 }))
+}
+
+// Whether this tick of the check-in clock checks in: every tick while the chat works and for a while after, then every
+// few ticks.
+export async function isCheckInDue($: EngineInterface): Promise<boolean> {
+  await update($, chatTurns, held => (held.isBusy ? { ...held, idleCheckIns: 0 } : { ...held, idleCheckIns: held.idleCheckIns + 1 }))
+  const turns = await read($, chatTurns)
+  return turns.isBusy || turns.idleCheckIns <= ACTIVE_TICKS || turns.idleCheckIns % IDLE_CHECK_IN_TICKS === 0
 }
 
 // The board gave the chat something to do, so it checks in every second again for a while.
-export function chatWorked(): void {
-  idleTicks = 0
+export async function chatWorked($: EngineInterface): Promise<void> {
+  await update($, chatTurns, turns => ({ ...turns, idleCheckIns: 0 }))
 }
 
-export function isChatBusy(): boolean {
-  return isBusy
+export async function isChatBusy($: EngineInterface): Promise<boolean> {
+  return (await read($, chatTurns)).isBusy
 }
 
-export function turnsSoFar(): number {
-  return turnsStarted
+export async function turnsSoFar($: EngineInterface): Promise<number> {
+  return (await read($, chatTurns)).turnsStarted
 }
 
 // The message waits for a turn that starts after now to end.
-export function awaitTurn(message: string): void {
-  unfinished.set(message, turnsStarted)
+export async function awaitTurn($: EngineInterface, message: string): Promise<void> {
+  await update($, chatTurns, turns => ({ ...turns, unfinished: { ...turns.unfinished, [message]: turns.turnsStarted } }))
 }
 
-export function forgetTurn(message: string): void {
-  unfinished.delete(message)
+export async function forgetTurn($: EngineInterface, message: string): Promise<void> {
+  await update($, chatTurns, turns => ({ ...turns, unfinished: withoutMessage(turns.unfinished, message) }))
 }
 
+// Tells the board the message is done, once: a message the chat is no longer working on was told already.
 export async function finish($: EngineInterface, chat: string, message: string): Promise<void> {
-  if (!unfinished.delete(message)) return
+  if (!(message in (await read($, chatTurns)).unfinished)) return
+  await forgetTurn($, message)
   await post($, { chat, operation: 'finish', body: { message } })
 }
 
-export function turnStarted(): void {
-  isBusy = true
-  idleTicks = 0
-  turnsStarted += 1
+export async function turnStarted($: EngineInterface): Promise<void> {
+  await update($, chatTurns, turns => ({ ...turns, isBusy: true, idleCheckIns: 0, turnsStarted: turns.turnsStarted + 1 }))
 }
 
 // A board message is done once a turn that started after it ends.
 export async function turnCompleted($: EngineInterface): Promise<void> {
-  isBusy = false
+  await update($, chatTurns, held => ({ ...held, isBusy: false }))
+  const turns = await read($, chatTurns)
   const chat = await $.session.id()
-  for (const [message, turnsBefore] of [...unfinished]) if (turnsStarted > turnsBefore) await finish($, chat, message)
+  for (const [message, turnsBefore] of Object.entries(turns.unfinished)) if (turns.turnsStarted > turnsBefore) await finish($, chat, message)
+}
+
+function withoutMessage(unfinished: Record<string, number>, message: string): Record<string, number> {
+  const { [message]: _done, ...rest } = unfinished
+  return rest
 }

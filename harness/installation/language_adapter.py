@@ -471,6 +471,9 @@ class TypeScriptToolset:
             return f"Record<string, {self.hint_type(get_args(hint)[1])}>"
         if isinstance(hint, type) and issubclass(hint, Enum):
             return " | ".join(json.dumps(member.value).replace('"', "'") for member in hint)
+        if isinstance(hint, type) and issubclass(hint, str):
+            # A string of a kind of its own, such as a board element's id, is sent as the string it is.
+            return "string"
         return _SCALAR_TYPES.get(hint, "unknown")
 
     def _reference_type(self, hint: TypeHint) -> str:

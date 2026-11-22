@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import type { CddConnection, ProjectConnections } from '@cdd/cdd-connection'
 import { CddRequestError, PROJECT_HEADER, cddProgressRoutes, type CddRoute } from '@cdd/cdd-shared'
 import { ChatAdapter, chatRoutes } from '@cdd/harness/chat/chat'
+import { whiteboardFileRoutes } from '@cdd/harness/whiteboard/whiteboard-file'
 import { failureRoutes, type FailureData } from '@cdd/tools/error_display/failure'
 import { formatAlignmentRoutes } from '@cdd/align/format-alignment'
 import { fidelityProgressRoutes } from '@cdd/space/kanban/fidelity-progress'
@@ -30,7 +31,8 @@ const TICKET_ROUTES = ['/ticket/:ticket/fidelity-files', '/ticket/:ticket/root-f
 
 // The Files app reads a session's files, a fidelity's files, and the comments on them, follows the cdd server's progress
 // while its graph view reads the graph, turns the session's practices on or off, tells the chat that opened it, and
-// asks for the most common causes of a failure its Fix button sends that chat (failure.describe); it never reads the board.
+// asks for the most common causes of a failure its Fix button sends that chat (failure.describe), and reads the board a
+// whiteboard file holds (whiteboard-file.show); it never reads the CDD Kanban board.
 export const filesRoutes: CddRoute[] = [
   ...sessionRoutes,
   ...formatAlignmentRoutes,
@@ -39,6 +41,7 @@ export const filesRoutes: CddRoute[] = [
   ...fidelityProgressRoutes,
   ...practiceSessionOutputRoutes,
   ...failureRoutes,
+  ...whiteboardFileRoutes,
   ...chatRoutes.filter(route => CHAT_ROUTES.includes(route.path)),
   ...ticketRoutes.filter(route => TICKET_ROUTES.includes(route.path)),
 ]

@@ -1,7 +1,7 @@
 import Editor, { type Monaco, type OnMount } from '@monaco-editor/react';
 import type { editor as monaco } from 'monaco-editor';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CallCatalog, type FoldMember } from './call-expansion';
+import { CallCatalog } from './call-expansion';
 import { LINE_HEIGHT, useCallouts, type CalloutsWithin, type GoToFile, type SourceCallout } from './source-callouts';
 import { foldMarkdownHeadings, useOpenAround, type SourceLines } from './source-folding';
 import type { NodeSourceData } from '@cdd/harness/graph/graph';
@@ -140,12 +140,12 @@ function SourceEditor({ source, violation, rules, activeRule, onSelectRule, onCo
 // The callouts the source shows: the page's own, then, while the code may open calls, each call and class its code
 // reaches among the graph's members; and the callouts inside an open one, the calls its own code reaches.
 function useSourceCallouts(source: NodeSourceData, language: string, callouts: SourceCallout[], opensCalls: boolean): { shown: SourceCallout[]; within: CalloutsWithin } {
-  const members = (source.members ?? NO_MEMBERS) as FoldMember[];
+  const members = source.members ?? NO_MEMBERS;
   const owner = members.find((member) => member.node_id === source.node_id)?.owner ?? '';
   const catalog = useMemo(() => new CallCatalog(members, owner), [members, owner]);
   const isCode = !PROSE_LANGUAGES.has(language);
   const shown = useMemo(() => {
-    const own = opensCalls && isCode ? catalog.calloutsIn(source.text ?? '', source.start_line || 1, language, [source.node_id], source.file) : [];
+    const own = opensCalls && isCode ? catalog.calloutsIn({ file: source.file, startLine: source.start_line || 1, text: source.text ?? '', language }, [source.node_id]) : [];
     return [...callouts, ...own];
   }, [catalog, callouts, opensCalls, isCode, source, language]);
   const within = useMemo(() => calloutsWithin(catalog), [catalog]);
@@ -238,7 +238,7 @@ function ViolationBannerView({ violation, source, onCorrect }: { violation: Viol
 // The callouts inside an open callout, among catalog's members: the calls and classes its code reaches; none for a
 // section a link opens, whose own file holds its callouts, or for a missing one.
 export function calloutsWithin(catalog: CallCatalog): CalloutsWithin {
-  return (callout, stack) => (callout.kind === 'section' || callout.kind === 'missing' ? [] : catalog.calloutsIn(callout.text, callout.startLine, languageFor(callout.path), stack, callout.path));
+  return (callout, stack) => (callout.kind === 'section' || callout.kind === 'missing' ? [] : catalog.calloutsIn({ file: callout.path, startLine: callout.startLine, text: callout.text, language: languageFor(callout.path) }, stack));
 }
 
 function languageFor(file: string): string {

@@ -121,16 +121,17 @@ async function callQueue<T>($: EngineInterface, operation: string, args: Record<
   }
 }
 
-// The cdd server that answered last, asked first next time; a reload starts over.
-let answeringServer: string | undefined
+// The cdd server that answered last, asked first next time, kept in the chat's state so a reload asks it first too.
+const answeringServer = atom({ plugin: 'prompt-queue', key: 'answeringServer' } as const, '')
 
 /** Call tool on the first cdd server the chat holds that answers, the one that answered last first. */
 async function callCddServer($: EngineInterface, tool: string, args: Record<string, unknown>): Promise<McpToolResult> {
   let failure: unknown = new QueueCallFailed('this chat holds no cdd server')
-  for (const server of answeringServer ? [answeringServer, ...SERVERS.filter(other => other !== answeringServer)] : SERVERS) {
+  const answered = await read($, answeringServer)
+  for (const server of answered ? [answered, ...SERVERS.filter(other => other !== answered)] : SERVERS) {
     try {
       const result = await $.mcp.call(server, tool, args)
-      answeringServer = server
+      await update($, answeringServer, () => server)
       return result
     } catch (unreached) {
       failure = unreached

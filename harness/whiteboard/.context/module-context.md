@@ -9,11 +9,13 @@
 
 `Whiteboard.links_beside(file)` is the *PublishedLinks* (harness/installation) of the boards the `.whiteboard` files in a folder were published to, kept in the folder's `whiteboards.json` (`Whiteboard.LINKS`) by each file's name: the Render action's `record_board` writes it once the agent has created the board in Claude, and the session's file list reads it, so the Files app opens the board instead of the file.
 
+*WhiteboardFile* is the one reader of a `.whiteboard` file for a page: `whiteboard-file.show`, published through `@language_adapter`, answers the board a file in the project holds, its title and its whole sections, shapes, labels and arrows as data (`WhiteboardData`, `@data_fields` on *Box* and *BoardElement*, with each block's `lines` and a shape's `is_rounded` and a label's `is_title` beside its fields), so the Files app draws the board from that and never reads the file's records in TypeScript; a file that holds no board is refused as an *UnreadableBoard*.
+
 *StoreWrite* is one write to the artifact's store: set a record, update its changed fields, or delete it; an agent sends them as the entries `Whiteboard.batches(previous)` answers.
 
 - **Purpose:** Let any practice draw its diagram on a Claude Whiteboard and read it back, with one board format, one element id, and one way of updating a board in Claude.
-- **Seam (terms):** Whiteboard (`sections`, `shapes`, `labels`, `arrows`, `holding`, `batches`, `drawn_over`, `links_beside`), BoardElement, Shape, Section, Label, Arrow, ElementId (`of`, `read`, `role`, `parts`, `key`), WhiteboardNode (`KEY_LENGTH`), Box, UnreadableBoard
-- **Dependencies (one-way):** harness/installation, for the JSON record of published addresses. The practices' whiteboard packages (`cdd_guidance/practices/*/model/whiteboard`), the Render action (`cdd_guidance/actions/render`) and the session's file list depend on it; it names no practice and no diagram type, so a *WhiteboardNode* is handed the box it is drawn in.
+- **Seam (terms):** Whiteboard (`title`, `sections`, `shapes`, `labels`, `arrows`, `holding`, `batches`, `drawn_over`, `links_beside`), WhiteboardFile (`whiteboard-file.show`), BoardElement, Shape, Section, Label, Arrow, ElementId (`of`, `read`, `role`, `parts`, `key`), WhiteboardNode (`KEY_LENGTH`), Box, UnreadableBoard
+- **Dependencies (one-way):** harness/installation, for the JSON record of published addresses and the data annotations; harness/agent_tools and harness/mcp, for *WhiteboardFile*'s tool. The practices' whiteboard packages (`cdd_guidance/practices/*/model/whiteboard`), the Render action (`cdd_guidance/actions/render`), the session's file list and the Files app (through the generated `whiteboard-file` adapter) depend on it; it names no practice and no diagram type, so a *WhiteboardNode* is handed the box it is drawn in.
 
 ## Constraint
 

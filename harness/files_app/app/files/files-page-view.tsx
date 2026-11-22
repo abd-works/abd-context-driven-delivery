@@ -1,5 +1,6 @@
 import { Component, useCallback, useEffect, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react'
 
+import type { SectionData, ShapeData, WhiteboardData } from '@cdd/harness/whiteboard/whiteboard-file'
 import type { FileEntryData, SessionFileData } from '@cdd/space/session/session'
 
 import { publishedOf, type FileFolder, type PublishedFile } from './file-bar'
@@ -300,46 +301,56 @@ function DrawioFileView({ page, path }: { page: FilesPage; path: string }) {
 
 // A whiteboard file drawn on a canvas beside the file list, as its board shows it: sections behind the blocks they hold,
 // each block with its words, the labels, and the arrows between blocks; its board in Claude a press away when it has one.
-function WhiteboardFileView({ page, file }: { page: FilesPage; file: SessionFileData }) {
-  const canvas = WhiteboardCanvas.from(file.text)
-  const entry = page.fileBar.entries.find(each => each.path === file.path)
+function WhiteboardFileView({ page, path, board }: { page: FilesPage; path: string; board: WhiteboardData }) {
+  const canvas = new WhiteboardCanvas(board)
+  const entry = page.fileBar.entries.find(each => each.path === path)
   const published = entry ? publishedOf(entry) : null
   const { x, y, w, h } = canvas.frame
   return (
-    <section className="open-file open-diagram" aria-label={file.path}>
+    <section className="open-file open-diagram" aria-label={path}>
       <div className="comment-toolbar">
-        <span className="source-path">{file.path}</span>
+        <span className="source-path">{path}</span>
         {entry && published?.link ? <BoardLinkView page={page} entry={entry} published={published} /> : null}
       </div>
-      {canvas.problem ? <p className="files-note">{canvas.problem}</p> : null}
       <div className="whiteboard-frame">
-        <svg className="whiteboard-canvas" role="img" aria-label={`${canvas.title || file.path} whiteboard`} viewBox={`${x} ${y} ${w} ${h}`} width={w} height={h}>
+        <svg className="whiteboard-canvas" role="img" aria-label={`${board.title || path} whiteboard`} viewBox={`${x} ${y} ${w} ${h}`} width={w} height={h}>
           <defs>
             <marker id="whiteboard-arrow-head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
               <path d="M 0 0 L 10 5 L 0 10 z" className="whiteboard-arrow-head" />
             </marker>
           </defs>
-          {canvas.blocks.map(block => (
-            <g key={block.id} className={`whiteboard-block${block.isSection ? ' is-section' : ''}`} data-element={block.id}>
-              <rect x={block.x} y={block.y} width={block.w} height={block.h} rx={block.isRounded ? 10 : 2} fill={fillOf(block.color, block.isSection)} />
-              {block.lines.map((line, index) => (
-                <text key={index} x={block.x + 8} y={block.y + 18 + index * 16} className="whiteboard-words">
-                  {line}
-                </text>
-              ))}
-            </g>
+          {board.sections.map(section => (
+            <BlockView key={section.id} block={section} isSection />
+          ))}
+          {board.shapes.map(shape => (
+            <BlockView key={shape.id} block={shape} isSection={false} isRounded={shape.is_rounded} />
           ))}
           {canvas.arrows.map(arrow => (
             <line key={arrow.id} x1={arrow.from.x} y1={arrow.from.y} x2={arrow.to.x} y2={arrow.to.y} className="whiteboard-arrow" strokeDasharray={arrow.isDashed ? '6 4' : undefined} markerEnd="url(#whiteboard-arrow-head)" />
           ))}
-          {canvas.labels.map(label => (
-            <text key={label.id} x={label.x} y={label.y + 20} className={`whiteboard-words${label.isTitle ? ' is-title' : ''}`}>
+          {board.labels.map(label => (
+            <text key={label.id} x={label.x} y={label.y + 20} className={`whiteboard-words${label.is_title ? ' is-title' : ''}`}>
               {label.text}
             </text>
           ))}
         </svg>
       </div>
     </section>
+  )
+}
+
+// One block of a board, a section or a shape: its box, filled with its colour, and its words, one line each.
+function BlockView({ block, isSection, isRounded = false }: { block: SectionData | ShapeData; isSection: boolean; isRounded?: boolean }) {
+  const { x, y, w, h } = block.box
+  return (
+    <g className={`whiteboard-block${isSection ? ' is-section' : ''}`} data-element={block.id}>
+      <rect x={x} y={y} width={w} height={h} rx={isRounded ? 10 : 2} fill={fillOf(block.color, isSection)} />
+      {block.lines.map((line, index) => (
+        <text key={index} x={x + 8} y={y + 18 + index * 16} className="whiteboard-words">
+          {line}
+        </text>
+      ))}
+    </g>
   )
 }
 
@@ -358,8 +369,8 @@ function OpenFileView({ page }: { page: FilesPage }) {
   const goToFile = useCallback((foldOut: SourceCallout) => void page.graph.goToFile(foldOut), [page])
   if (!state.openPath) return <p className="files-note">Choose a file.</p>
   if (isDrawio(state.openPath)) return <DrawioFileView page={page} path={state.openPath} />
+  if (isWhiteboard(state.openPath)) return state.board ? <WhiteboardFileView page={page} path={state.openPath} board={state.board} /> : <p className="files-note">Opening {state.openPath}…</p>
   if (!state.file) return <p className="files-note">Opening {state.openPath}…</p>
-  if (isWhiteboard(state.file.path)) return <WhiteboardFileView page={page} file={state.file} />
   const isOneOfSeveral = state.moreFiles.length > 0
   return (
     <section className="open-file" aria-label={state.file.path}>

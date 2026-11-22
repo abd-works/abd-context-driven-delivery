@@ -4,12 +4,13 @@ and the fields that hold a path in the workspace. A language adapter types the d
 sends an object's data by them (`data_of`)."""
 from __future__ import annotations
 
+import dataclasses
 import functools
 import inspect
 from enum import Enum
 from pathlib import Path
 from collections.abc import Mapping, Sequence
-from typing import Any, Generic, TypeAlias, TypeVar, Union
+from typing import Any, Generic, TypeAlias, TypeVar, Union, get_type_hints
 
 from harness.agent_tools.parameter_schema import is_built_in
 from harness.annotations.annotation import Annotatable, Annotation, NamesAnnotation
@@ -117,6 +118,30 @@ class DataField(Annotation):
 data_field = DataField
 
 
+class DataFields(Annotation):
+    """Annotate a dataclass whose fields are all its data, as `@data_field` marks each property of any other class: a
+    record such as a board element, whose fields are what it is, so naming each again as a property would only copy
+    it. A subclass's own fields are its data too, and a property it annotates `@data_field` joins them."""
+
+    flag = "_data_fields"
+    copied = False
+
+
+data_fields = DataFields
+
+
+def _field_reader(name: str, hint: Any) -> property:
+    """A property reading the dataclass field name, typed hint, so a dataclass field is read and typed as an annotated
+    property is."""
+
+    def read(instance: Any) -> Any:
+        return getattr(instance, name)
+
+    read.__name__ = name
+    read.__annotations__ = {"return": hint}
+    return property(DataField(read))
+
+
 class DataClass(Generic[Described]):
     """What the annotations on one class declare about its objects' data: the properties that are its data (`@data_field`),
     the fields that name one object (`@identity`), and the languages its operations are typed in
@@ -145,13 +170,24 @@ class DataClass(Generic[Described]):
     @functools.cached_property
     def fields(self) -> dict[str, property]:
         """The properties the class annotates as its data, by the name each takes in the data; a base class's come first.
-        A subclass that overrides an annotated property, such as a card's title, is read through its own."""
+        A subclass that overrides an annotated property, such as a card's title, is read through its own. A dataclass
+        annotated `@data_fields` sends its fields first, each typed as the dataclass declares it."""
         attributes: dict[str, str] = {}
         for klass in reversed(self.data_class.__mro__):
             for attribute, member in vars(klass).items():
                 if isinstance(member, property) and DataField.annotates(member.fget):
                     attributes[DataField.recorded_on(member.fget).key] = attribute
-        return {key: inspect.getattr_static(self.data_class, attribute) for key, attribute in attributes.items()}
+        annotated = {key: inspect.getattr_static(self.data_class, attribute) for key, attribute in attributes.items()}
+        return {**self._dataclass_fields, **annotated}
+
+    @property
+    def _dataclass_fields(self) -> dict[str, property]:
+        """The fields of a dataclass annotated `@data_fields`, each read through a property typed as the field is; none
+        for any other class. A field whose name starts with an underscore is the class's own."""
+        if not (isinstance(self.data_class, type) and DataFields.annotates(self.data_class) and dataclasses.is_dataclass(self.data_class)):
+            return {}
+        hints = get_type_hints(self.data_class, include_extras=True)
+        return {item.name: _field_reader(item.name, hints[item.name]) for item in dataclasses.fields(self.data_class) if not item.name.startswith("_")}
 
     @property
     def identity(self) -> tuple[str, ...]:

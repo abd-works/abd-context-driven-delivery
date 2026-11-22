@@ -1,4 +1,5 @@
 import type { FilterChoicesData, NodeSourceData } from '@cdd/harness/graph/graph'
+import type { WhiteboardData } from '@cdd/harness/whiteboard/whiteboard-file'
 import { NO_CHOICES, NO_FILTER, type FilterSelection } from '@graph-app/filter/filter-selection'
 import type { ExplorerEntryData, FileEntryData, GuidanceSelectionData, RangeData, SessionFileData } from '@cdd/space/session/session'
 
@@ -52,6 +53,8 @@ export type FilesState = {
   isListing: boolean
   openPath: string
   file: SessionFileData | null
+  // The board the open whiteboard file holds, as Python reads it; none while another file is open.
+  board: WhiteboardData | null
   // The other files open beside the first, each holding a node selected in the graph view; none outside it.
   moreFiles: SessionFileData[]
   // The open files a person collapsed to their names; every other open file shows whole.
@@ -83,6 +86,7 @@ export const NO_FILES: FilesState = {
   isListing: true,
   openPath: '',
   file: null,
+  board: null,
   moreFiles: [],
   collapsedFiles: [],
   graph: NO_GRAPH,

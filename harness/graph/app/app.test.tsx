@@ -3,6 +3,7 @@ import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { useLayoutEffect, useRef } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { App } from './App';
+import { ExplorerTrees } from './graph/explorer-trees';
 import { GraphView } from './graph/GraphView';
 import type { ExplorerEntryData, NodeSourceData } from '@cdd/harness/graph/graph';
 import { SourceView } from './source/SourceView';
@@ -555,8 +556,8 @@ it('should never open a class a comment or a docstring names', async () => {
 });
 
 it('should show the source code without the marks the graph puts after its calls', () => {
-  const marked = { node_id: 'save', name: 'save', type: 'Operation', owner: 'Credentials', text: 'save() {\n  stored(); /* call:stored */\n}', file: 'credentials.ts', start_line: 1, end_line: 3 };
-  const [callout] = new CallCatalog([marked]).calloutsIn('credentials.save();', 1, 'typescript');
+  const marked = { node_id: 'save', name: 'save', type: 'Operation', owner: 'Credentials', text: 'save() {\n  stored(); /* call:stored */\n}', file: 'credentials.ts', start_line: 1, end_line: 3, members: [] };
+  const [callout] = new CallCatalog([marked]).calloutsIn({ file: '', startLine: 1, text: 'credentials.save();', language: 'typescript' });
   expect(callout.text).toBe('save() {\n  stored();\n}');
 });
 
@@ -1186,7 +1187,7 @@ it('should show invokes, observes, and demonstrates on a step', async () => {
       },
     ],
   };
-  render(<GraphView trees={[step] as unknown as ExplorerEntryData[]} loading={false} error="" selectedId="" activeRule="" onSelect={() => undefined} onOpenBranch={async () => undefined} />);
+  render(<GraphView trees={new ExplorerTrees([step] as unknown as ExplorerEntryData[])} loading={false} error="" selectedId="" activeRule="" onSelect={() => undefined} onOpenBranch={async () => undefined} />);
   await user.click(screen.getByRole('button', { name: 'Expand when the User enters valid account credentials' }));
   expect(document.querySelector('[data-node-id="invokes-valid"]')).toBeTruthy();
   expect(document.querySelector('[data-node-id="observes-valid"]')).toBeTruthy();
