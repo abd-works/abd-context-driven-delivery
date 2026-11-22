@@ -11,7 +11,7 @@ if str(_REPO) not in sys.path:
 from expects import equal, expect
 from mamba import before, context, description, it
 
-from cdd_guidance.practices.stories.model.story_model import Epic, Story
+from cdd_guidance.practices.stories.model.story_map import Epic, Story
 from cdd_guidance.practices.stories.rules.story_map import ChildCountFitsLayer
 from harness.graph.graph import Graph, Node, Source
 from harness.graph.rule_context import RuleCheckContext

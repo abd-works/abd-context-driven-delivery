@@ -13,7 +13,7 @@ from harness.graph.practice_rule import PracticeGraphRule
 from harness.graph.violation import Finding
 
 from cdd_guidance.practices.stories.model.modelled_areas import MODEL_WRITTEN_FACT
-from cdd_guidance.practices.stories.model.story_model import NOT_ON_STORY_MAP
+from cdd_guidance.practices.stories.model.story_map import NOT_ON_STORY_MAP
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node

@@ -27,8 +27,8 @@ from cdd_guidance.practices.stories.model.story_file import StoryBlock, flat_ste
 from cdd_guidance.practices.stories.model.story_writing import StepClause
 
 if TYPE_CHECKING:
-    from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel
-    from cdd_guidance.practices.stories.model.story_model import Scenario, Step, Story
+    from cdd_guidance.practices.stories.model.code_story_map import CodeStoryMap
+    from cdd_guidance.practices.stories.model.story_map import Scenario, Step, Story
 
 
 class ReshapedStoryFile:
@@ -36,7 +36,7 @@ class ReshapedStoryFile:
     file it is written above, and the members kept and added, named as story, scenario and step
     (``Pack Order.Pack a paid order.the Shop Clerk packs the Order``)."""
 
-    def __init__(self, model: "CodeStoryModel", rendered: str, existing: str) -> None:
+    def __init__(self, model: "CodeStoryMap", rendered: str, existing: str) -> None:
         self._model = model
         self._writing = model.writing
         self._language = model.language

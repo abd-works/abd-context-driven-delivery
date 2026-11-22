@@ -6,9 +6,9 @@ from pathlib import Path
 from expects import be_empty, contain, equal, expect
 from mamba import before, context, description, it
 
-from cdd_guidance.practices.stories.model.drawio.nodes import DrawIOStoryModel
-from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
-from cdd_guidance.practices.stories.model.whiteboard.nodes import WhiteboardStoryModel
+from cdd_guidance.practices.stories.model.drawio.nodes import DrawIOStoryMap
+from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryMap
+from cdd_guidance.practices.stories.model.whiteboard.nodes import WhiteboardStoryMap
 from cdd_guidance.practices.stories.stories import Stories
 
 _STORY_MAP = """# Story Map — Bookshop
@@ -57,7 +57,7 @@ with description("a thin slice written in thin-slice.md beside its story map") a
         self.context.mkdir()
         (self.context / "story-map.md").write_text(_STORY_MAP, encoding="utf-8")
         (self.context / "thin-slice.md").write_text(_THIN_SLICE, encoding="utf-8")
-        self.story_map = MarkdownStoryModel().parse(_STORY_MAP)
+        self.story_map = MarkdownStoryMap().parse(_STORY_MAP)
         self.fidelity = Stories(fidelity="story_map").fidelities.current
 
     with context("that is rendered to drawio"):
@@ -65,7 +65,7 @@ with description("a thin slice written in thin-slice.md beside its story map") a
             self.drawn = self.fidelity.render_files("drawio", [str(self.context / "thin-slice.md")], "markdown").content
 
         with it("should draw each increment as a lane of the stories it delivers"):
-            read = DrawIOStoryModel(self.story_map).load_thin_slice(self.drawn)
+            read = DrawIOStoryMap().copy_of(self.story_map).load_thin_slice(self.drawn)
             expect(_lanes(read)).to(equal([("Walking skeleton", ["Add Book To Cart", "Submit Order"]), ("Quantities", ["Change Cart Line Quantity"])]))
 
         with it("should draw no heading of the thin slice as an epic"):
@@ -76,7 +76,7 @@ with description("a thin slice written in thin-slice.md beside its story map") a
             self.board = self.fidelity.render_files("whiteboard", [str(self.context / "thin-slice.md")], "markdown").content
 
         with it("should draw each increment as a lane of the stories it delivers"):
-            read = WhiteboardStoryModel(self.story_map).load_thin_slice(self.board)
+            read = WhiteboardStoryMap().copy_of(self.story_map).load_thin_slice(self.board)
             expect(_lanes(read)).to(equal([("Walking skeleton", ["Add Book To Cart", "Submit Order"]), ("Quantities", ["Change Cart Line Quantity"])]))
 
     with context("whose story map is rendered to drawio"):

@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence
 from cdd_guidance.practices.stories.model.markdown.markup import MarkdownExample, MarkdownStep, step_line
 
 if TYPE_CHECKING:
-    from cdd_guidance.practices.stories.model.story_model import Background, Scenario, Step
+    from cdd_guidance.practices.stories.model.story_map import Background, Scenario, Step
 
 
 class ReadLine(ABC):
@@ -128,15 +128,15 @@ class ReadScenarioDocument:
     heading that names that epic (tree), none when the document has none. It writes itself as it reads now: each line
     as it was read, each story it still holds as it now stands, and the stories added since after them."""
 
-    def __init__(self, lines: List[ReadLine], holder: Any, tree: Optional[HeadingLine], story_type: type) -> None:
+    def __init__(self, lines: List[ReadLine], holder: Any, tree: Optional[HeadingLine], story_class: type) -> None:
         self.lines = lines
         self.holder = holder
         self.tree = tree
-        self._story_type = story_type
+        self._story_class = story_class
 
     def text(self) -> str:
         out = [written_lines(self.lines, self.holder.stories)]
         held = [line.node for line in self.lines if isinstance(line, HeldLines)]
         added = [story for story in self.holder.stories if not any(story is node for node in held)]
-        out.extend((story if isinstance(story, self._story_type) else self._story_type(story)).document_text() for story in added)
+        out.extend((story if isinstance(story, self._story_class) else self._story_class.copy_of(story)).document_text() for story in added)
         return "".join(out)

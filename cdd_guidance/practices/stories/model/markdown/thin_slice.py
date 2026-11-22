@@ -13,7 +13,7 @@ from typing import Dict, List, Optional
 from cdd_guidance.practices.stories.model.markdown.map_reading import described
 from cdd_guidance.practices.stories.model.markdown.markup import strip_markup
 from cdd_guidance.practices.stories.model.story_map_files import NEW_THIN_SLICE_FILE, StoryMapFiles, path_from, source_at
-from cdd_guidance.practices.stories.model.story_model import Increment, Story, StoryModel
+from cdd_guidance.practices.stories.model.story_map import Increment, Story, StoryMap
 
 _INCREMENT_H3 = re.compile(r"^###\s+Increment\s+(\d+)\s*:\s*(.+?)\s*$", re.IGNORECASE)
 _KV_OUTCOME = re.compile(r"^\*\*Outcome\s*:\*\*\s*(.+)$", re.IGNORECASE)
@@ -96,7 +96,7 @@ class ThinSlice:
         self.text_as_read = text
 
     @classmethod
-    def from_folder(cls, folder: Path, story_map: StoryModel, project: Path) -> "ThinSlice":
+    def from_folder(cls, folder: Path, story_map: StoryMap, project: Path) -> "ThinSlice":
         """The thin slice in folder (``StoryMapFiles.thin_slicing``), its increments read onto story_map, each delivering
         story_map's own stories and naming its file from project; a new `thin-slice.md` in folder when it holds none."""
         found = StoryMapFiles(folder).thin_slicing()
@@ -134,7 +134,7 @@ class _ThinSliceReading:
     """One read of a thin slice's lines onto a story map: the lines above its first increment, the increments read, and
     whether the stories of the last one are being read."""
 
-    def __init__(self, story_map: "StoryModel", file: str) -> None:
+    def __init__(self, story_map: "StoryMap", file: str) -> None:
         self.story_map = story_map
         self.file = file
         self.above: List[str] = []

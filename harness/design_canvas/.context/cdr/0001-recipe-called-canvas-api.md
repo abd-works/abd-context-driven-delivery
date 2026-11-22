@@ -7,7 +7,7 @@
 Keep them, as the recipe's API, and keep the rule that uses them in the recipe.
 
 - **The recipe is their caller.** The recipe's steps tell the agent to render into `CanvasVersions.working()`, to write screens into `CanvasVersions.unpublished()`, to release a version with `CanvasVersions.release(N, name)`, and to build each prototype screen as a `FixtureScreen` with its `ScenarioSource`. A markdown recipe is one of the ways the repository uses code, alongside imports and registrations, so these classes are in use.
-- **The render cannot decide versions on its own.** `ClaudeDesignStoryModel.render` returns the canvas's files; which version they go into depends on whether the latest version is already published, which only the person and the published canvas's link (`versions.json`) know. The agent asks the person before overwriting a published version (`never-overwrite-a-published-canvas`), so the choice stays a recipe step rather than a silent rule inside the render.
+- **The render cannot decide versions on its own.** `ClaudeDesignStoryMap.render` returns the canvas's files; which version they go into depends on whether the latest version is already published, which only the person and the published canvas's link (`versions.json`) know. The agent asks the person before overwriting a published version (`never-overwrite-a-published-canvas`), so the choice stays a recipe step rather than a silent rule inside the render.
 - **Prototype screens are written by the agent.** Each screen is a real product screen ported by the agent, so `FixtureScreen` is the helper the agent builds it with, not something a generator can call for it.
 
 ## Consequences

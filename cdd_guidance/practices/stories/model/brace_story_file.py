@@ -10,7 +10,7 @@ import re
 from typing import List, Sequence, Tuple
 
 from cdd_guidance.practices.source_code import BraceCall, CodeBody, InsideLines, WrittenBlock
-from cdd_guidance.practices.stories.model.code_story_model import unescaped
+from cdd_guidance.practices.stories.model.code_story_map import unescaped
 from cdd_guidance.practices.stories.model.story_file import BlockStoryFile, StoryBlock
 
 _QUOTED = r"(['\"`])((?:\\.|(?!\1).)*)\1"

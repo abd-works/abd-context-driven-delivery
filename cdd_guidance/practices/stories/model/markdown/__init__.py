@@ -1,1 +1,1 @@
-from .nodes import MarkdownStoryModel, MarkdownParseError
+from .nodes import MarkdownStoryMap, MarkdownParseError

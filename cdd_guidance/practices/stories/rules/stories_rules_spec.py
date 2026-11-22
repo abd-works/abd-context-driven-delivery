@@ -16,7 +16,7 @@ from harness.graph.saved_graph import NodeIdentity
 from harness.graph.location import Location
 from harness.graph.rule_context import RuleCheckContext
 from harness.graph.rule_fixture import SchemaRuleRun
-from cdd_guidance.practices.stories.model.story_model import Step, StepType
+from cdd_guidance.practices.stories.model.story_map import Step, StepType
 from cdd_guidance.practices.stories.rules.scenarios import AndChaining, ScenariosShape
 
 
@@ -91,7 +91,7 @@ with description("ScenariosShape"):
 
 with description("ExamplesTraceDomainModel concepts"):
     with it("should not count the actor a step names as a domain concept"):
-        from cdd_guidance.practices.stories.model.story_model import Step, StepType
+        from cdd_guidance.practices.stories.model.story_map import Step, StepType
         from cdd_guidance.practices.stories.rules.scenarios import ExamplesTraceDomainModel
 
         steps = [

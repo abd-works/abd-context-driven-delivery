@@ -5716,10 +5716,10 @@ A rounded modules-view cell.
 
 # cdd_guidance/practices/stories
 
-*Stories* is the practice; *StoriesReading* is its part in the knowledge graph, and *StoryTree* is the story map as the graph holds it. A *StoryModel* holds *Epic* and *Story* objects (and their scenarios and steps), and the diagram format extends them as *DiagramStoryModel*, *DiagramEpic*, and *DiagramStory*. The whole model of this module, internals included, is `cdd_guidance/practices/stories/model/.context/story-model.md`; that document is canonical, and this section shows only the classes other modules use.
+*Stories* is the practice; *StoriesReading* is its part in the knowledge graph, and *StoryTree* is the story map as the graph holds it. A *StoryMap* holds *Epic* and *Story* objects (and their scenarios and steps), and the diagram format extends them as *DiagramStoryMap*, *DiagramEpic*, and *DiagramStory*. The whole model of this module, internals included, is `cdd_guidance/practices/stories/model/.context/story-model.md`; that document is canonical, and this section shows only the classes other modules use.
 
 - **Purpose:** Keep one Epic, Story, Scenario hierarchy that discovery, specification, and tests all read, so scope and behaviour stay traceable from the map to the code.
-- **Seam (terms):** Stories, StoriesReading, StoryTree, StoryModel, Epic, Story, DiagramStoryModel, DiagramEpic, DiagramStory
+- **Seam (terms):** Stories, StoriesReading, StoryTree, StoryMap, Epic, Story, DiagramStoryMap, DiagramEpic, DiagramStory
 - **Dependencies (one-way):** harness/annotations, harness/agent_tools, harness/markdown, harness/guidance, harness/graph, cdd_guidance/practices/sketch_document, cdd_guidance/practices/clean_engineering, cdd_guidance/practices/ddd (StoriesReading reads DDD's reading beside its own; DDD imports nothing of Stories)
 
 ## Stories : PracticeGuidance
@@ -5734,12 +5734,12 @@ The Stories practice: story map, scenarios, and acceptance tests.
 + reading_type: type
 	// StoriesReading
 ----
-+ read_folder(root: Path, on_file = None): StoryModel
-+ read_files(files: list[Path], project: Path, on_file = None): StoryModel
++ read_folder(root: Path, on_file = None): StoryMap
++ read_files(files: list[Path], project: Path, on_file = None): StoryMap
 	// a story test's scenarios go on the map's Story of the same name; a test with no map listed reads the map in its own folder or the nearest one above it
 + reads_file_at(fidelity: str | None): StoryExampleFiles
 	// the story map examples alone at the story map; no whole-map example at the story map or at no fidelity
----<<creates>>--> StoryModel
+---<<creates>>--> StoryMap
 ---<<reads the graph with>>--> StoriesReading
 ---<<registers with>>--> StoryNode
 
@@ -5757,7 +5757,7 @@ How Stories takes part in the graph: it reads the story tests under its root, or
 	// DDD's reading, from the same graph
 ----
 + read_working_copy(): None
----<<loads>>--> StoryModel
+---<<loads>>--> StoryMap
 ---<<finds a reading with>>--> CleanEngineering
 ---<<finds a reading with>>--> Ddd
 ---<<creates>>--> StoryTree
@@ -5796,11 +5796,11 @@ The story map as the graph holds it (`stories/model/story_tree.py`): each epic's
 ----
 + node_written_at(kind, target, key, written_in): Node | None
 
-## StoryModel : StoryNode
+## StoryMap : StoryNode
 
 One story map: its epics and increments, and the files it was read from (*StorySources*, one *StorySource* each).
 
-+ StoryModel(source: StoryModel | Graph | None = None, graph: Graph | None = None)
++ StoryMap(source: StoryMap | Graph | None = None, graph: Graph | None = None)
 ------
 + << composition >> epics: list[Epic]
 	// numbered in the order they stand: an epic appended takes the next number
@@ -5817,10 +5817,10 @@ One story map: its epics and increments, and the files it was read from (*StoryS
 + opened: OpenedStoryMap | UnopenedStoryMap
 	// where it was opened in a session; save() writes it back after every edit
 ----
-+ copy_of(source: StoryModel): StoryModel
++ copy_of(source: StoryMap): StoryMap
 + record(practice, on_node: Callable[[str], None] | None = None): None
 	// an example's facts are looked up only in sources, the files the story map was read from
-+ clone(): StoryModel
++ clone(): StoryMap
 ---<<keeps>>--> Epic
 ---<<reads its files from>>--> StorySources
 ---<<records through>>--> StoryRecording
@@ -5864,7 +5864,7 @@ One story under an epic, with its scenarios.
 + record(recording: StoryRecording, parent): None
 + clone(): Story
 
-## DiagramStoryModel : StoryModel
+## DiagramStoryMap : StoryMap
 
 Story map whose epics and stories are the diagram types.
 

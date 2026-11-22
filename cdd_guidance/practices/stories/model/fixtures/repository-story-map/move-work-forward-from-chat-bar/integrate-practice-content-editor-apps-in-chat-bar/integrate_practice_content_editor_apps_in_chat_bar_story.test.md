@@ -16,7 +16,7 @@ Each term links to its class in the model, [editor-apps-model.md](../../../edito
 - ++app status++ — not installed, not running or running ([AppStatus](../../../editor-apps/.context/editor-apps-model.md#appstatus)).
 - ++side panel++ — the pane beside the chat an app opens in, at the app's url.
 - ++file viewer++ — the chat bar's files pane: one tab per file a fidelity declares.
-- ++story map++ — a Stories file read as epics, sub-epics, stories and scenarios ([StoryModel](../../../editor-apps/.context/editor-apps-model.md#storymodel-extended)).
+- ++story map++ — a Stories file read as epics, sub-epics, stories and scenarios ([StoryMap](../../../editor-apps/.context/editor-apps-model.md#storymap-extended)).
 - ++chosen formats++ — the formats kept for a fidelity in the session, which the chat bar's chips and the Story UI's toggles both change ([FidelitySessionOutput.chosen_formats](../../../editor-apps/.context/editor-apps-model.md#fidelitysessionoutput-extended)).
 - ++design view++ — the Claude Design link recorded for the latest version of the session's design canvas ([PracticeSessionOutput.design_view](../../../editor-apps/.context/editor-apps-model.md#practicesessionoutput-extended)).
 - ++practice root++ — the folder a session names for one of its enabled practices ([PracticeGuidance.session_root](../../../editor-apps/.context/editor-apps-model.md#practiceguidance-extended)).
@@ -49,7 +49,7 @@ Each term links to its class in the model, [editor-apps-model.md](../../../edito
 | ++checkout-flow++ | Stories, UX, Clean Engineering | harness/.context/stories, harness/.context/ux, harness/.context | Open Story UI Side Panel From Chat Bar, Open Kanban Side Panel From Chat Bar |
 | ++billing-report++ | Stories, DDD | billing/.context/stories, billing/.context | Report Billing By Month |
 
-### files ([PracticeGuidance.editor](../../../editor-apps/.context/editor-apps-model.md#practiceguidance-extended), [StoryModel](../../../editor-apps/.context/editor-apps-model.md#storymodel-extended))
+### files ([PracticeGuidance.editor](../../../editor-apps/.context/editor-apps-model.md#practiceguidance-extended), [StoryMap](../../../editor-apps/.context/editor-apps-model.md#storymap-extended))
 
 | file | practice | fidelity | editor tile |
 | --- | --- | --- | --- |

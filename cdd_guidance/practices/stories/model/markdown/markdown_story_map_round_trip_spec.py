@@ -8,17 +8,17 @@ from pathlib import Path
 from expects import contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
-from cdd_guidance.practices.stories.model.drawio.nodes import DrawIOStoryModel
+from cdd_guidance.practices.stories.model.drawio.nodes import DrawIOStoryMap
 from cdd_guidance.practices.stories.model.fixtures.round_trip_story_map import outline, round_trip_story_map
-from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownParseError, MarkdownStoryModel
-from cdd_guidance.practices.stories.model.whiteboard.nodes import WhiteboardStoryModel
+from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownParseError, MarkdownStoryMap
+from cdd_guidance.practices.stories.model.whiteboard.nodes import WhiteboardStoryMap
 from harness.guidance.practice_formats import Written
 
 
 with description("a story map saved as story-map.md") as self:
     with before.each:
         self.story_map = round_trip_story_map()
-        self.read = MarkdownStoryModel().parse(MarkdownStoryModel().render(self.story_map))
+        self.read = MarkdownStoryMap().parse(MarkdownStoryMap().render(self.story_map))
 
     with it("should read back every epic, story held by any epic, kind, and actor"):
         expect(outline(self.read, with_scenarios=False)).to(equal(outline(self.story_map, with_scenarios=False)))
@@ -29,7 +29,7 @@ with description("a story map saved as story-map.md") as self:
             (self.folder / "story-map.md").write_text("plain prose with no headings\n", encoding="utf-8")
 
         with it("should fail naming the file rather than read as no story map"):
-            expect(lambda: MarkdownStoryModel().read_folder(self.folder, self.folder)).to(raise_error(MarkdownParseError))
+            expect(lambda: MarkdownStoryMap().read_folder(self.folder, self.folder)).to(raise_error(MarkdownParseError))
 
 
 _BOOKSHOP_MAP = (
@@ -46,8 +46,8 @@ _BOOKSHOP_MAP = (
 
 with description("a story map a person wrote in story-map.md, drawn in draw.io and written back over that file") as self:
     with before.each:
-        drawn = DrawIOStoryModel().render(MarkdownStoryModel().parse(_BOOKSHOP_MAP))
-        self.back = MarkdownStoryModel().render(DrawIOStoryModel().parse(drawn), Written(_BOOKSHOP_MAP))
+        drawn = DrawIOStoryMap().render(MarkdownStoryMap().parse(_BOOKSHOP_MAP))
+        self.back = MarkdownStoryMap().render(DrawIOStoryMap().parse(drawn), Written(_BOOKSHOP_MAP))
 
     with it("should keep the title the person wrote above the first epic"):
         expect(self.back.splitlines()[0]).to(equal("# Story Map — Bookshop"))
@@ -96,24 +96,24 @@ _DESCRIBED_MAP = (
 
 def _back_through(diagram) -> str:
     """The described map drawn by diagram, a diagram format's story model, and written back over its own file."""
-    drawn = diagram().render(MarkdownStoryModel().parse(_DESCRIBED_MAP))
-    return MarkdownStoryModel().render(diagram().parse(drawn), Written(_DESCRIBED_MAP))
+    drawn = diagram().render(MarkdownStoryMap().parse(_DESCRIBED_MAP))
+    return MarkdownStoryMap().render(diagram().parse(drawn), Written(_DESCRIBED_MAP))
 
 
 with description("a story map with descriptions, a story linked to its scenarios file, and a scope boundary") as self:
     with context("that is drawn in draw.io and written back over its file by nobody who edited the drawing"):
         with it("should come back as the person wrote it"):
-            expect(_back_through(DrawIOStoryModel)).to(equal(_DESCRIBED_MAP))
+            expect(_back_through(DrawIOStoryMap)).to(equal(_DESCRIBED_MAP))
 
     with context("that is drawn on a whiteboard and written back over its file by nobody who edited the board"):
         with it("should come back as the person wrote it"):
-            expect(_back_through(WhiteboardStoryModel)).to(equal(_DESCRIBED_MAP))
+            expect(_back_through(WhiteboardStoryMap)).to(equal(_DESCRIBED_MAP))
 
     with context("that has a story added in the drawing before it is written back"):
         with before.each:
-            drawn = DrawIOStoryModel().parse(DrawIOStoryModel().render(MarkdownStoryModel().parse(_DESCRIBED_MAP)))
+            drawn = DrawIOStoryMap().parse(DrawIOStoryMap().render(MarkdownStoryMap().parse(_DESCRIBED_MAP)))
             drawn.epics[0].epics[0].stories.append(type(drawn.epics[0].epics[0].stories[0])("Remove Book From Cart", 3))
-            self.back = MarkdownStoryModel().render(drawn, Written(_DESCRIBED_MAP))
+            self.back = MarkdownStoryMap().render(drawn, Written(_DESCRIBED_MAP))
 
         with it("should write the added story under its sub-epic"):
             expect(self.back).to(contain("### (S) --> Remove Book From Cart\n"))

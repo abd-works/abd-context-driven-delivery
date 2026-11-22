@@ -8,9 +8,9 @@ from typing import List, Optional
 
 from cdd_guidance.practices.source_code import CodeLanguage
 from cdd_guidance.practices.stories.model.brace_story_file import BraceStoryFile
-from cdd_guidance.practices.stories.model.code_story_model import CodeScenario, CodeStory, CodeStoryModel, StorySyntax, unescaped
+from cdd_guidance.practices.stories.model.code_story_map import CodeScenario, CodeStory, CodeStoryMap, StorySyntax, unescaped
 from cdd_guidance.practices.stories.model.story_file import StoryFile
-from cdd_guidance.practices.stories.model.story_model import Background, Story
+from cdd_guidance.practices.stories.model.story_map import Background, Story
 from cdd_guidance.practices.stories.model.story_writing import StepClause, StoryFilePlace, StoryWriting, background_examples_line, example_names_of, story_description
 
 
@@ -110,7 +110,7 @@ class BraceScenario(CodeScenario):
 class BraceStory(CodeStory):
     """A story read from a brace-language story file: TypeScript and JavaScript read it the same way."""
 
-    scenario_type = BraceScenario
+    scenario_class = BraceScenario
     syntax = BraceScenario.syntax
 
 
@@ -169,10 +169,10 @@ class BraceStoryWriting(StoryWriting):
         return lines + [f"{indent}}});"]
 
 
-class BraceStoryModel(CodeStoryModel):
+class BraceStoryMap(CodeStoryMap):
     """A story tree in a brace language, whose story files BraceStoryFile reads."""
 
-    writing_type = BraceStoryWriting
+    writing_class = BraceStoryWriting
 
     def story_file(self, path: str, content: str, project: Optional[Path] = None) -> StoryFile:
         """The story file at path, read block by block."""

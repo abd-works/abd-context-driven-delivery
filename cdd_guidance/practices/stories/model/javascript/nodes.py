@@ -3,8 +3,8 @@ from __future__ import annotations
 
 from cdd_guidance.practices.source_code import JAVASCRIPT
 from cdd_guidance.practices.stories.model.brace_story import BraceScenario
-from cdd_guidance.practices.stories.model.code_story_model import CodeEpic
-from cdd_guidance.practices.stories.model.script_story_model import ScriptStory
+from cdd_guidance.practices.stories.model.code_story_map import CodeEpic
+from cdd_guidance.practices.stories.model.script_story_map import ScriptStory
 
 
 class JavaScriptScenario(BraceScenario):
@@ -12,9 +12,11 @@ class JavaScriptScenario(BraceScenario):
 
 
 class JavaScriptStory(ScriptStory):
-    scenario_type = JavaScriptScenario
+    scenario_class = JavaScriptScenario
     language = JAVASCRIPT
 
 
 class JavaScriptEpic(CodeEpic):
     """An epic or sub-epic whose stories a JavaScript story file holds."""
+
+    story_class = JavaScriptStory

@@ -51,14 +51,14 @@ with description("Stories"):
         with before.each:
             import tempfile
 
-            from cdd_guidance.practices.stories.model.story_model import Epic, StoryModel
-            from cdd_guidance.practices.stories.model.whiteboard.nodes import WhiteboardStoryModel
+            from cdd_guidance.practices.stories.model.story_map import Epic, StoryMap
+            from cdd_guidance.practices.stories.model.whiteboard.nodes import WhiteboardStoryMap
 
             self.root = Path(tempfile.mkdtemp(prefix="cdd-story-whiteboard-"))
-            story_map = StoryModel()
+            story_map = StoryMap()
             story_map.epics.append(Epic("Move Work On Board", 1))
             board = self.root / "story-map.whiteboard"
-            board.write_text(WhiteboardStoryModel().render(story_map), encoding="utf-8")
+            board.write_text(WhiteboardStoryMap().render(story_map), encoding="utf-8")
             self.opened = Stories().story_files(self.root).opened(board)
 
         with after.each:
@@ -220,9 +220,9 @@ with description("Stories"):
     # A module imported under two names loads twice, and an object made by one copy fails isinstance against the other.
     with context("that renders through a format adapter"):
         with it("should use the same adapter class the story model package defines"):
-            from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
+            from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryMap
 
-            expect(Stories().formats.adapter_class("markdown")).to(equal(MarkdownStoryModel))
+            expect(Stories().formats.adapter_class("markdown")).to(equal(MarkdownStoryMap))
 
     with context("that is constructed with fidelity acceptance_tests"):
         with it("should default format to python"):

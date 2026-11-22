@@ -13,8 +13,8 @@ bar's TypeScript.
 
 The file viewer's editor tile is the Python's decision: a Stories file's tab carries its practice's editor, the Story UI
 app (`BoardPractice.editor`, which the chat bar reads from the board overview), and the editor opens the file through
-`StoryModel.load`. The file viewer's design view link is the one the session's UX practice answers
-(`PracticeSessionOutput.design_view`), which the chat bar reads from the active ticket's session. The Story UI editor follows the session open in the project through `StoryModel.open_in_session`.
+`StoryMap.load`. The file viewer's design view link is the one the session's UX practice answers
+(`PracticeSessionOutput.design_view`), which the chat bar reads from the active ticket's session. The Story UI editor follows the session open in the project through `StoryMap.open_in_session`.
 Left to other increments: the story-map.drawio and chat bar scenarios rows of the editor tile outline, which need a
 rendered diagram and a scenario file seeded beside the story map. So is "A board that does not come up says so instead of opening an
 empty panel": the chat bar starts the server and says when nothing answers, so no Python tier replays it.
@@ -24,7 +24,7 @@ from __future__ import annotations
 
 from expects import be_a, be_none, contain, equal, expect
 
-from cdd_guidance.practices.stories.model.story_model import StoryModel
+from cdd_guidance.practices.stories.model.story_map import StoryMap
 from harness.design_canvas.versions import CanvasVersions
 from harness.apps.app import AppNotStarted, AppStatus
 from space.kanban.board import BoardPractice
@@ -186,7 +186,7 @@ def _(s):
     @s.when("the Person opens story-map.md from its story-map editor tile")
     def _(world):
         world.editor = BoardPractice(world.row.practice).editor
-        world.opened = StoryModel.load(world.file, call=world.app_call())
+        world.opened = StoryMap.load(world.file, call=world.app_call())
 
     @s.then("the side panel shows the Story UI editor on story-map.md")
     def _(world):
@@ -264,7 +264,7 @@ def _(s):
         CHECKOUT_FLOW.seed_into(world.sessions_project)
         BILLING_REPORT.seed_into(world.sessions_project)
         world.sessions_project.seed_active(CHECKOUT_FLOW.seed)
-        world.opened = StoryModel.open_in_session(call=world.app_call())
+        world.opened = StoryMap.open_in_session(call=world.app_call())
 
     @s.when("the Person activates billing-report's ticket on the board")
     def _(world):
@@ -272,4 +272,4 @@ def _(s):
 
     @s.then("the Story UI editor shows billing-report's story map, without a reload")
     def _(world):
-        expect(StoryModel.open_in_session(call=world.app_call()).file).to(equal(f"{BILLING_REPORT.roots[STORIES]}/{STORY_MAP}"))
+        expect(StoryMap.open_in_session(call=world.app_call()).file).to(equal(f"{BILLING_REPORT.roots[STORIES]}/{STORY_MAP}"))

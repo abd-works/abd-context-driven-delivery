@@ -15,11 +15,11 @@ from cdd_guidance.practices.stories.model.markdown.links import unlink
 from cdd_guidance.practices.stories.model.markdown.markup import strip_backticks
 from cdd_guidance.practices.stories.model.markdown.scenario_file import HEADING_PATTERN
 from cdd_guidance.practices.stories.model.story_map_files import source_at
-from cdd_guidance.practices.stories.model.story_model import Story, StoryType
+from cdd_guidance.practices.stories.model.story_map import Story, StoryType
 
 if TYPE_CHECKING:
-    from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
-    from cdd_guidance.practices.stories.model.story_model import Epic, StoryNode
+    from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryMap
+    from cdd_guidance.practices.stories.model.story_map import Epic, StoryNode
 
 _BULLET_PATTERN = re.compile(r"^(\s*)-\s+(.+)$")
 _NUMBERED_PATTERN = re.compile(r"^(\s*)\d+\.\s+(.+)$")
@@ -45,7 +45,7 @@ def has_map_structure(lines: List[str]) -> bool:
     return any(pattern.match(line) for line in lines for pattern in patterns)
 
 
-def read_map(adapter: "MarkdownStoryModel", lines: List[str], file: str) -> "MarkdownStoryModel":
+def read_map(adapter: "MarkdownStoryMap", lines: List[str], file: str) -> "MarkdownStoryMap":
     """The story map lines write, read by the reading made for their notation, each node naming its line of file."""
     reading = OutlineMapReading if is_outline(lines) else HeadingMapReading
     return reading(adapter, file).read(lines)
@@ -61,7 +61,7 @@ class MapReading:
     """One read of a story map's text: the format adapter whose epics and stories it makes (adapter), the map it fills, the
     file it names on each node, the line being read, and the epic and the sub-epics it is under."""
 
-    def __init__(self, adapter: "MarkdownStoryModel", file: str) -> None:
+    def __init__(self, adapter: "MarkdownStoryMap", file: str) -> None:
         self.adapter = adapter
         self.file = file
         self.story_map = type(adapter)()
@@ -81,7 +81,7 @@ class MapReading:
 
     def _open_epic(self, name: str) -> None:
         """A top-level epic, read on this line."""
-        self.epic = self.adapter.epic_type(name, len(self.story_map.epics) + 1)
+        self.epic = self.adapter.epic_class(name, len(self.story_map.epics) + 1)
         read_at(self.epic, self.file, self.number)
         self.story_map.epics.append(self.epic)
         self.sub_epics = []
@@ -91,14 +91,14 @@ class MapReading:
         while len(self.sub_epics) >= depth:
             self.sub_epics.pop()
         siblings = self.sub_epics[-1].epics if self.sub_epics else self.epic.epics
-        sub = self.adapter.epic_type(name, len(siblings) + 1)
+        sub = self.adapter.epic_class(name, len(siblings) + 1)
         read_at(sub, self.file, self.number)
         siblings.append(sub)
         self.sub_epics.append(sub)
 
     def _story(self, name: str, parent: "Epic", story_type: StoryType = StoryType.USER) -> "Story":
         """A story under parent, read on this line."""
-        story = self.adapter.story_type(name, len(parent.stories) + 1, story_type)
+        story = self.adapter.story_class(name, len(parent.stories) + 1, story_type)
         read_at(story, self.file, self.number)
         parent.stories.append(story)
         return story
@@ -108,7 +108,7 @@ class HeadingMapReading(MapReading):
     """A story map written as headings and bullets: `#` epics, deeper headings sub-epics, `-` stories, and their
     scenarios as indented or numbered lines below them."""
 
-    def __init__(self, adapter: "MarkdownStoryModel", file: str) -> None:
+    def __init__(self, adapter: "MarkdownStoryMap", file: str) -> None:
         super().__init__(adapter, file)
         self.story = None
         self.epic_heading_depth: Optional[int] = None
@@ -174,7 +174,7 @@ class HeadingMapReading(MapReading):
 
     def _listed_scenario(self, text: str) -> None:
         """A scenario listed under the story being read."""
-        scenario = self.adapter.story_type.scenario_type(text, len(self.story.scenarios) + 1)
+        scenario = self.adapter.story_class.scenario_class(text, len(self.story.scenarios) + 1)
         read_at(scenario, self.file, self.number)
         self.story.scenarios.append(scenario)
 
@@ -202,9 +202,9 @@ class HeadingMapReading(MapReading):
         if self.sub_epics:
             return self.sub_epics[-1]
         if self.epic is None:
-            self.epic = self.adapter.epic_type("Imported", len(self.story_map.epics) + 1)
+            self.epic = self.adapter.epic_class("Imported", len(self.story_map.epics) + 1)
             self.story_map.epics.append(self.epic)
-        sub = self.adapter.epic_type(self.epic.name, len(self.epic.epics) + 1)
+        sub = self.adapter.epic_class(self.epic.name, len(self.epic.epics) + 1)
         self.epic.epics.append(sub)
         self.sub_epics.append(sub)
         return sub
@@ -241,13 +241,13 @@ class ReplacedOutline:
     map's node of the same kind and name was read with, so a description, a story's link to its scenarios file and the
     lines after the last story come back as the person wrote them."""
 
-    def __init__(self, replaced: "MarkdownStoryModel") -> None:
+    def __init__(self, replaced: "MarkdownStoryMap") -> None:
         self._map = replaced
         self._read: dict[tuple, list] = {}
         for node in [*replaced.descendants.epics(), *replaced.descendants.stories()]:
             self._read.setdefault(self._key(node), []).append(node)
 
-    def lend_to(self, story_map: "MarkdownStoryModel") -> None:
+    def lend_to(self, story_map: "MarkdownStoryMap") -> None:
         """Give story_map, and each of its epics and stories read with no lines of its own, the lines of the replaced
         map's node of the same kind and name, each replaced node lending once, in map order."""
         self._lend(self._map, story_map)
@@ -278,12 +278,12 @@ class OutlineMapReading(MapReading):
     the epic or story it heads, and the lines before the first epic the story map's own; each node keeps the lines it
     was read with (``outline``)."""
 
-    def __init__(self, adapter: "MarkdownStoryModel", file: str) -> None:
+    def __init__(self, adapter: "MarkdownStoryMap", file: str) -> None:
         super().__init__(adapter, file)
         self.story = None
         self.described = self.story_map
 
-    def read(self, lines: List[str]) -> "MarkdownStoryModel":
+    def read(self, lines: List[str]) -> "MarkdownStoryMap":
         """The story map the lines write, every line kept by the node it is under, blank lines too."""
         self.story_map.outline = OutlineLines()
         for self.number, self.raw in enumerate(lines, start=1):

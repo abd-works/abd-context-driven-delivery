@@ -13,7 +13,7 @@ drawio = DrawioUxMap.create().render(ux_map)
 
 - **Purpose:** Keep the information architecture as one UX map — screens, regions, controls, and the transitions between screens — so a diagram, a JSON file, and an HTML mockup stay the same hierarchy every later fidelity reads.
 - **Seam (terms):** UxMap, Screen, Region, Control, StoryDemoControl, StoryStep, Interaction, UxComponent, Transition, ContentType, NavComponent, UxContext, ReferencePaths, and one UxMap subclass per format
-- **Dependencies (one-way):** harness/graph (*ModelNode*, *ModelChildren*, *Graph*), harness/annotations (*Name*); the Claude Design story canvas also uses practices/stories/model (*DiagramStoryModel*, *StoryModel*) and harness/design_canvas (*DesignCanvas*)
+- **Dependencies (one-way):** harness/graph (*ModelNode*, *ModelChildren*, *Graph*), harness/annotations (*Name*); the Claude Design story canvas also uses practices/stories/model (*DiagramStoryMap*, *StoryMap*) and harness/design_canvas (*DesignCanvas*)
 
 These dependencies are owned by the modules named; this model only uses them. A screen names the stories, scenarios, and steps it shows as text keyed the way Stories keys them; the graph turns each name into a `shownOn` edge from the Stories node to the screen (`harness/graph/schema_edges.py`). A link from one screen to another — a transition, a tab's chrome, an interaction's destination, a nav destination — holds the *Screen* itself, so renaming a screen keeps it.
 
@@ -402,6 +402,6 @@ The `claude_design` format: one board per prototype screen, each on its own canv
 + boards(files = ()): dict[str, dict]
 	// each over this map's own screens
 
-## ClaudeDesignStoryModel
+## ClaudeDesignStoryMap
 
-The Claude Design story canvas — the story map, the story explorer, and the screens each story is shown on — is a Stories *DiagramStoryModel* drawn in `claude_design/story_canvas.py`, described in `claude_design/story_canvas.md`. It holds the UX map it is drawn with as a *ClaudeDesignUxMap*, which places the screens, and its *DesignCanvas*, which answers what the canvas project already holds.
+The Claude Design story canvas — the story map, the story explorer, and the screens each story is shown on — is a Stories *DiagramStoryMap* drawn in `claude_design/story_canvas.py`, described in `claude_design/story_canvas.md`. It holds the UX map it is drawn with as a *ClaudeDesignUxMap*, which places the screens, and its *DesignCanvas*, which answers what the canvas project already holds.

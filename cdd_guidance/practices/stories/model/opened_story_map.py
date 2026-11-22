@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from harness.guidance.guidance import FidelityGuidance
     from space.session.session import Session
 
-    from cdd_guidance.practices.stories.model.story_model import Story, StoryModel, StoryNode
+    from cdd_guidance.practices.stories.model.story_map import Story, StoryMap, StoryNode
 
 
 class StoryMapEditRefused(Exception):
@@ -38,7 +38,7 @@ class OpenedStoryMap:
     edited too, while an acceptance-test file, which is merged onto its story map, is opened to be read. ``refusal``
     says why an edit is refused."""
 
-    def __init__(self, story_map: StoryModel, path: Path, session: Session) -> None:
+    def __init__(self, story_map: StoryMap, path: Path, session: Session) -> None:
         self._story_map = story_map
         self._path = Path(path).resolve()
         self._session = session
@@ -77,7 +77,7 @@ class OpenedStoryMap:
             return ""
         return f"saving would rewrite {self.file}, a {self.fidelity.name} file, beyond the edit: its text is not laid out as {self.own_format} writes a story map"
 
-    def save(self) -> StoryModel:
+    def save(self) -> StoryMap:
         """Write the map to its file and the formats chosen beside it, then answer the map. An edit its file cannot take
         is refused with StoryMapEditRefused, and nothing is written."""
         if self.refusal:
@@ -135,7 +135,7 @@ class OpenedStoryMap:
         content = self._stories.formats.render(RenderRequest(format, self._story_map, previous=previous)).content
         return content if isinstance(content, str) else ""
 
-    def _nodes_held(self, story_map: StoryModel) -> list[tuple]:
+    def _nodes_held(self, story_map: StoryMap) -> list[tuple]:
         """Every epic, story, scenario and step under story_map's epics, as its kind and name, in map order: what a
         file must read back as for an edit to be kept."""
         held: list[tuple] = []
@@ -154,7 +154,7 @@ class UnopenedStoryMap:
     file = ""
     refusal = "it was opened from no file"
 
-    def __init__(self, story_map: StoryModel) -> None:
+    def __init__(self, story_map: StoryMap) -> None:
         self._story_map = story_map
 
     @property
@@ -164,5 +164,5 @@ class UnopenedStoryMap:
     def acceptance_tests_of(self, story: "Story") -> list[str]:
         return []
 
-    def save(self) -> StoryModel:
+    def save(self) -> StoryMap:
         raise StoryMapEditRefused(self._story_map, "save", self.refusal)

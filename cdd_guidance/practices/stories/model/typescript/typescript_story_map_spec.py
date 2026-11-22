@@ -12,10 +12,10 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from cdd_guidance.practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
-from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryType, Epic
-from cdd_guidance.practices.stories.model.story_model import StepType, Scenario, Step
-from cdd_guidance.practices.stories.model.story_model import StoryModel
+from cdd_guidance.practices.stories.model.typescript.typescript_story_map import TypeScriptStoryMap
+from cdd_guidance.practices.stories.model.story_map import Epic, Story, StoryType, Epic
+from cdd_guidance.practices.stories.model.story_map import StepType, Scenario, Step
+from cdd_guidance.practices.stories.model.story_map import StoryMap
 
 
 def _make_scenario(name: str, order: int) -> Scenario:
@@ -28,8 +28,8 @@ def _make_scenario(name: str, order: int) -> Scenario:
     return sc
 
 
-def _story_map_with_stories() -> StoryModel:
-    story_map = StoryModel()
+def _story_map_with_stories() -> StoryMap:
+    story_map = StoryMap()
     for i in range(1, 5):
         story_map.epics.append(Epic(f"Epic {i}", i))
     first = story_map.epics[0]
@@ -45,7 +45,7 @@ def _story_map_with_stories() -> StoryModel:
 
 with description("a TypeScript runnable-story Story Map") as self:
     with before.each:
-        self.ts = TypeScriptStoryModel()
+        self.ts = TypeScriptStoryMap()
 
     with context("that holds rendered stories"):
         with before.each:
@@ -62,7 +62,7 @@ with description("a TypeScript runnable-story Story Map") as self:
     with context("that overrides the deploy root"):
         with before.each:
             self.custom_root = "stories/create-customer"
-            self.ts = TypeScriptStoryModel(tests_root=self.custom_root)
+            self.ts = TypeScriptStoryMap(tests_root=self.custom_root)
             self.tree = self.ts.render(_story_map_with_stories())
 
         with it("should import story-test from the stories workspace root"):
@@ -71,7 +71,7 @@ with description("a TypeScript runnable-story Story Map") as self:
 
     with context("that names the step library folder"):
         with before.each:
-            self.ts = TypeScriptStoryModel(tests_root="tests", story_test_folder="test-utils/story-test")
+            self.ts = TypeScriptStoryMap(tests_root="tests", story_test_folder="test-utils/story-test")
             self.tree = self.ts.render(_story_map_with_stories())
 
         with it("should import story-test from the step library folder"):
@@ -91,7 +91,7 @@ with description("a TypeScript runnable-story Story Map") as self:
             story.scenarios.append(sc)
             from cdd_guidance.practices.stories.model.typescript.nodes import TypeScriptStory
 
-            src = "\n".join(TypeScriptStoryModel().writing.story_lines(TypeScriptStory(story)) + [""])
+            src = "\n".join(TypeScriptStoryMap().writing.story_lines(TypeScriptStory.copy_of(story)) + [""])
             expect(".and(" in src).to(be_true)
             expect(src.count("then(")).to(equal(1))
 
@@ -116,7 +116,7 @@ with description("a TypeScript runnable-story Story Map") as self:
                 "});\n"
             )
             path = "tests/access-my-paradise/access_my_paradise.story.shared.ts"
-            self.model = TypeScriptStoryModel("tests").load({path: content})
+            self.model = TypeScriptStoryMap("tests").load({path: content})
 
         with it("should keep the epic with its name"):
             expect([epic.name for epic in self.model.epics]).to(equal(["Access My Paradise"]))
@@ -147,7 +147,7 @@ with description("a TypeScript runnable-story Story Map") as self:
                 "});\n"
             )
             path = "tests/onboard-a-customer/get-sim/get_sim.story.shared.ts"
-            model = TypeScriptStoryModel("tests").load({path: content})
+            model = TypeScriptStoryMap("tests").load({path: content})
             story = model.epics[0].epics[0].stories[0]
             expect([scenario.name for scenario in story.scenarios]).to(
                 equal(["Choose ${example}", "Choose ${example} — already on the cart"])

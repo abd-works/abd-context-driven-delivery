@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Any
 
 from cdd_guidance.practices.source_code import PYTHON, CodeBody
 from cdd_guidance.practices.stories.model.story_file import StoryFile
-from cdd_guidance.practices.stories.model.story_model import Example, ExampleValue, Scenario, StepType, Story
+from cdd_guidance.practices.stories.model.story_map import Example, ExampleValue, Scenario, StepType, Story
 
 if TYPE_CHECKING:
     from cdd_guidance.practices.stories.model.story_recording import StoryRecording
@@ -144,18 +144,18 @@ class SharedStoryFile(StoryFile):
 
     def _stories(self) -> list:
         """The stories of the file, each with its scenarios in the order the file writes them."""
-        story_type = self.model.story_type
+        story_class = self.model.story_class
         stories: dict[str, Any] = {}
         for function in self._tree.body:
             named = self._decorated_with(function, frozenset({_SCENARIO}))
             if named is None or len(named) < 2:
                 continue
-            story = stories.setdefault(named[0], story_type(named[0], len(stories) + 1))
+            story = stories.setdefault(named[0], story_class(named[0], len(stories) + 1))
             story.scenarios.append(self._scenario(story, named[1], function))
         return list(stories.values())
 
     def _scenario(self, story: Story, name: str, function: ast.FunctionDef) -> Scenario:
-        scenario = story.scenario_type(name=name, sequential_order=len(story.scenarios) + 1)
+        scenario = story.scenario_class(name=name, sequential_order=len(story.scenarios) + 1)
         for step in self._steps_of(function):
             self._add_step(scenario, step)
         scenario_text = self._code_of(function)
@@ -170,7 +170,7 @@ class SharedStoryFile(StoryFile):
         continued = scenario.steps[-1] if code.kind in _CONTINUATIONS and scenario.steps else None
         phase = _PHASES.get(code.kind) or (continued.step_type if continued is not None else StepType.GIVEN)
         order = len(continued.ands if continued is not None else scenario.steps) + 1
-        made = scenario.step_type(code.words, phase, order)
+        made = scenario.step_class(code.words, phase, order)
         made.keyword = _CONTINUATIONS.get(code.kind, code.kind.capitalize())
         made.body = CodeBody(self._code_of(code.function), PYTHON)
         if continued is not None:

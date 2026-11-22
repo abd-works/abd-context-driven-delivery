@@ -14,14 +14,14 @@ for _candidate in _HERE.parents:
 from mamba import description, context, it, before
 from expects import equal, have_len, be_true, be_false, expect, raise_error
 
-from cdd_guidance.practices.stories.model.story_model import Story, StoryModel, StoryType
-from cdd_guidance.practices.stories.model.story_model import Increment
-from cdd_guidance.practices.stories.model.story_model import Scenario
-from cdd_guidance.practices.stories.model.diagram_story_model import DiagramEpic, DiagramEpic
+from cdd_guidance.practices.stories.model.story_map import Story, StoryMap, StoryType
+from cdd_guidance.practices.stories.model.story_map import Increment
+from cdd_guidance.practices.stories.model.story_map import Scenario
+from cdd_guidance.practices.stories.model.diagram_story_map import DiagramEpic, DiagramEpic
 from cdd_guidance.practices.stories.model.drawio.nodes import (
     DrawIOEpic,
     DrawIOStory,
-    DrawIOStoryModel,
+    DrawIOStoryMap,
     DrawIOEpic,
 )
 from harness.drawio import UnreadableDrawio
@@ -31,9 +31,9 @@ SUBEPIC_DEPTH_GAP = DiagramEpic.depth_gap
 SUBEPIC_HEIGHT = DiagramEpic.bar_height
 
 
-class DrawIOStoryModelFixture:
-    def with_4_epics_and_3_epics_and_1_story(self) -> StoryModel:
-        story_map = DrawIOStoryModel()
+class DrawIOStoryMapFixture:
+    def with_4_epics_and_3_epics_and_1_story(self) -> StoryMap:
+        story_map = DrawIOStoryMap()
         for i in range(1, 5):
             story_map.epics.append(DrawIOEpic(f"Epic {i}", i))
         first_epic = story_map.epics[0]
@@ -50,13 +50,13 @@ class DrawIOStoryModelFixture:
 
 with description("a DrawIO Story Map") as self:
     with before.each:
-        self.drawio = DrawIOStoryModel()
+        self.drawio = DrawIOStoryMap()
 
     with context(
         "that holds a rendered diagram Story Map with 4 Epics and 3 Epics under the first Epic"
     ):
         with before.each:
-            self.source = DrawIOStoryModelFixture().with_4_epics_and_3_epics_and_1_story()
+            self.source = DrawIOStoryMapFixture().with_4_epics_and_3_epics_and_1_story()
             self.text = self.source.save()
 
         with it("should serialize as a valid DrawIO document"):
@@ -111,7 +111,7 @@ with description("a DrawIO Story Map") as self:
 
     with context("that has been rendered and parsed back without edits"):
         with before.each:
-            self.original = DrawIOStoryModelFixture().with_4_epics_and_3_epics_and_1_story()
+            self.original = DrawIOStoryMapFixture().with_4_epics_and_3_epics_and_1_story()
             self.parsed = self.drawio.parse(self.original.save())
 
         with it("should preserve Story structure - scenarios are NOT embedded in the story-map view"):
@@ -127,7 +127,7 @@ with description("a DrawIO Story Map") as self:
 
     with context("that holds a Story directly under a top-level Epic"):
         with before.each:
-            self.source = DrawIOStoryModelFixture().with_4_epics_and_3_epics_and_1_story()
+            self.source = DrawIOStoryMapFixture().with_4_epics_and_3_epics_and_1_story()
             story = DrawIOStory("Story 2.1", 1, StoryType.USER)
             story.actors = ["Customer"]
             self.source.epics[1].stories.append(story)
@@ -138,7 +138,7 @@ with description("a DrawIO Story Map") as self:
 
     with context("that holds several Stories directly under a top-level Epic"):
         with before.each:
-            self.source = DrawIOStoryModelFixture().with_4_epics_and_3_epics_and_1_story()
+            self.source = DrawIOStoryMapFixture().with_4_epics_and_3_epics_and_1_story()
             for order in range(1, 4):
                 self.source.epics[1].stories.append(DrawIOStory(f"Story 2.{order}", order, StoryType.USER))
 
@@ -148,7 +148,7 @@ with description("a DrawIO Story Map") as self:
 
     with context("rendering the thin-slice view with a story directly under an epic"):
         with before.each:
-            self.source = DrawIOStoryModelFixture().with_4_epics_and_3_epics_and_1_story()
+            self.source = DrawIOStoryMapFixture().with_4_epics_and_3_epics_and_1_story()
             self.source.epics[1].stories.append(DrawIOStory("Story 2.1", 1, StoryType.USER))
             self.source.increments.append(Increment("Increment A", 1, [Story("Story 2.1", 1)]))
             cells = ET.fromstring(self.source.save_thin_slice()).findall(".//mxCell")
@@ -159,7 +159,7 @@ with description("a DrawIO Story Map") as self:
 
     with context("rendering the thin-slice view with one story name in two sub-epics"):
         with before.each:
-            self.source = DrawIOStoryModelFixture().with_4_epics_and_3_epics_and_1_story()
+            self.source = DrawIOStoryMapFixture().with_4_epics_and_3_epics_and_1_story()
             self.source.epics[0].epics[1].stories[0].name = "Story 1.1.1"
             self.source.increments.append(
                 Increment("Increment A", 1, [Story("Story 1.1.1", 1), Story("Story 1.1.1", 2)])
@@ -176,7 +176,7 @@ with description("a DrawIO Story Map") as self:
 
     with context("that holds a Story with an actor under a nested sub-epic"):
         with before.each:
-            self.source = DrawIOStoryModel()
+            self.source = DrawIOStoryMap()
             epic = DrawIOEpic("Epic 1", 1)
             sub_epic = DrawIOEpic("Epic 1.1", 1)
             nested_sub_epic = DrawIOEpic("Epic 1.1.1", 1)
@@ -194,7 +194,7 @@ with description("a DrawIO Story Map") as self:
     # draw.io saves cells back to front, so bringing one forward or back moves it in the file without moving it on screen.
     with context("that has been rendered and saved with its cells in reverse order"):
         with before.each:
-            self.original = DrawIOStoryModelFixture().with_4_epics_and_3_epics_and_1_story()
+            self.original = DrawIOStoryMapFixture().with_4_epics_and_3_epics_and_1_story()
             first_sub_epic = self.original.epics[0].epics[0]
             first_sub_epic.stories.append(DrawIOStory("Story 1.1.2", 2, StoryType.USER))
             first_sub_epic.stories[1].actors = ["Customer"]
@@ -225,9 +225,9 @@ with description("a DrawIO Story Map") as self:
                     raise_error(UnreadableDrawio)
                 )
 
-    with context("rendering the thin-slice view for a StoryModel with 2 increments"):
+    with context("rendering the thin-slice view for a StoryMap with 2 increments"):
         with before.each:
-            self.source = DrawIOStoryModelFixture().with_4_epics_and_3_epics_and_1_story()
+            self.source = DrawIOStoryMapFixture().with_4_epics_and_3_epics_and_1_story()
             stories = {story.name: story for story in self.source.descendants.stories()}
             inc_a = Increment(
                 "Increment A - first outcome",
@@ -308,7 +308,7 @@ with description("a DrawIO Story Map") as self:
 
         with context("read back into a map holding the same stories"):
             with before.each:
-                self.read = DrawIOStoryModelFixture().with_4_epics_and_3_epics_and_1_story().load_thin_slice(self.text)
+                self.read = DrawIOStoryMapFixture().with_4_epics_and_3_epics_and_1_story().load_thin_slice(self.text)
 
             with it("should recover both increments by name"):
                 expect([increment.name for increment in self.read.increments]).to(
@@ -324,7 +324,7 @@ with description("a DrawIO Story Map") as self:
 
     with context("that stacks nested sub-epics by depth (parent above children)"):
         with before.each:
-            self.source = DrawIOStoryModel()
+            self.source = DrawIOStoryMap()
             epic = DrawIOEpic("Create Hero", 1)
             compose = DrawIOEpic("Compose Powers", 1)
             attack = DrawIOEpic("Compose Attack Power", 1)
@@ -398,7 +398,7 @@ with description("a DrawIO Story Map") as self:
 
     with context("that renders a shaping outline with estimates and no phantom stories"):
         with before.each:
-            self.source = DrawIOStoryModel()
+            self.source = DrawIOStoryMap()
             epic = DrawIOEpic("Move money", 1)
             epic.estimate = "approx 22-27 total stories"
             compose = DrawIOEpic("Compose transfer", 1)
@@ -493,14 +493,14 @@ def _code_links_by_label(text: str) -> dict:
 with description("a DrawIO Story Map rendered in a workspace") as self:
     with context("beside a story-map.md and one story's own markdown file"):
         with before.each:
-            from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
+            from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryMap
 
             self.root = _workspace({
                 "story-map.md": _LINKED_MAP,
                 "onboard/get-sim/select_sim_story.test.md": "## Story: Select Sim\n",
             })
-            self.source = MarkdownStoryModel().parse(_LINKED_MAP)
-            self.text = DrawIOStoryModel().render(self.source, Written(folder=Path(self.root)))
+            self.source = MarkdownStoryMap().parse(_LINKED_MAP)
+            self.text = DrawIOStoryMap().render(self.source, Written(folder=Path(self.root)))
             self.links = _links_by_label(self.text)
 
         with it("should link an epic cell to its story-map.md entry"):
@@ -528,25 +528,25 @@ with description("a DrawIO Story Map rendered in a workspace") as self:
             expect(_code_links_by_label(self.text)["Select Sim"]).to(equal(("../onboard/get-sim/select_sim_story.test.md", "0")))
 
         with it("should read linked cells back into the same hierarchy"):
-            parsed = DrawIOStoryModel().parse(self.text)
+            parsed = DrawIOStoryMap().parse(self.text)
             stories = parsed.epics[0].epics[0].stories
             expect([story.name for story in stories]).to(equal(["Select Sim", "Activate Sim"]))
             expect(stories[0].actors).to(equal(["Customer"]))
 
     with context("whose story map is kept in the folder's .context under a prefixed name"):
         with it("should link an epic cell to that story map's entry"):
-            from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
+            from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryMap
 
             root = _workspace({".context/sims-story-map.md": _LINKED_MAP})
-            text = DrawIOStoryModel().render(MarkdownStoryModel().parse(_LINKED_MAP), Written(folder=Path(root)))
+            text = DrawIOStoryMap().render(MarkdownStoryMap().parse(_LINKED_MAP), Written(folder=Path(root)))
             expect(_links_by_label(text)["Onboard A Customer"][0]).to(equal("sims-story-map.md#e-onboard-a-customer"))
 
     with context("with no story-map.md and no story files"):
         with it("should draw every cell without a link"):
-            from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
+            from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryMap
 
-            source = MarkdownStoryModel().parse(_LINKED_MAP)
-            text = DrawIOStoryModel().render(source, Written(folder=Path(_workspace({"notes.md": "x\n"}))))
+            source = MarkdownStoryMap().parse(_LINKED_MAP)
+            text = DrawIOStoryMap().render(source, Written(folder=Path(_workspace({"notes.md": "x\n"}))))
             expect(_links_by_label(text)).to(equal({}))
             expect("link=" in text).to(be_false)
             expect("hedietLinkedDataV1" in text).to(be_false)

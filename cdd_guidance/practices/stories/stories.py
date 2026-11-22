@@ -13,22 +13,22 @@ from harness.installation.context_config import CONTEXT_FOLDER
 from cdd_guidance.practices.stories.model.desktop_story_test import DesktopStoryTest
 from cdd_guidance.practices.stories.model.graph_reading import StoriesReading
 from cdd_guidance.practices.stories.model.project_story_files import OnFile, ProjectStoryFiles
-from cdd_guidance.practices.stories.model.sketch.sketch_story_model import SketchStoryModel
+from cdd_guidance.practices.stories.model.sketch.sketch_story_map import SketchStoryMap
 from cdd_guidance.practices.stories.model.story_map_files import STORY_TESTS_FOLDER
-from cdd_guidance.practices.stories.model.story_model import StoryNode
+from cdd_guidance.practices.stories.model.story_map import StoryNode
 from cdd_guidance.practices.stories.stories_formats import StoriesFormats
 
 # Each format Stories writes, and the module and class of the story model that reads and writes it.
 _FORMAT_ADAPTERS = {
-    "sketch": ("cdd_guidance.practices.stories.model.sketch.sketch_story_model", "SketchStoryModel"),
-    "markdown": ("cdd_guidance.practices.stories.model.markdown.nodes", "MarkdownStoryModel"),
-    "json": ("cdd_guidance.practices.stories.model.json.nodes", "JsonStoryModel"),
-    "drawio": ("cdd_guidance.practices.stories.model.drawio.nodes", "DrawIOStoryModel"),
-    "miro": ("cdd_guidance.practices.stories.model.miro.nodes", "MiroStoryModel"),
-    "whiteboard": ("cdd_guidance.practices.stories.model.whiteboard.nodes", "WhiteboardStoryModel"),
-    "python": ("cdd_guidance.practices.stories.model.python.python_story_model", "PythonStoryModel"),
-    "typescript": ("cdd_guidance.practices.stories.model.typescript.typescript_story_model", "TypeScriptStoryModel"),
-    "javascript": ("cdd_guidance.practices.stories.model.javascript.javascript_story_model", "JavaScriptStoryModel"),
+    "sketch": ("cdd_guidance.practices.stories.model.sketch.sketch_story_map", "SketchStoryMap"),
+    "markdown": ("cdd_guidance.practices.stories.model.markdown.nodes", "MarkdownStoryMap"),
+    "json": ("cdd_guidance.practices.stories.model.json.nodes", "JsonStoryMap"),
+    "drawio": ("cdd_guidance.practices.stories.model.drawio.nodes", "DrawIOStoryMap"),
+    "miro": ("cdd_guidance.practices.stories.model.miro.nodes", "MiroStoryMap"),
+    "whiteboard": ("cdd_guidance.practices.stories.model.whiteboard.nodes", "WhiteboardStoryMap"),
+    "python": ("cdd_guidance.practices.stories.model.python.python_story_map", "PythonStoryMap"),
+    "typescript": ("cdd_guidance.practices.stories.model.typescript.typescript_story_map", "TypeScriptStoryMap"),
+    "javascript": ("cdd_guidance.practices.stories.model.javascript.javascript_story_map", "JavaScriptStoryMap"),
 }
 
 
@@ -58,7 +58,7 @@ class Stories(PracticeGuidance):
     """# Instructions"""
 
     # Its section of a sketch is the one its sketch format reads, held as that one lens.
-    sketch_lens = SketchStoryModel.lens
+    sketch_lens = SketchStoryMap.lens
     # Its story tests in code are read as files beside the story map that names them; and it takes part in the graph
     # through its story tests, or its story maps when there are none.
     formats_type = StoriesFormats

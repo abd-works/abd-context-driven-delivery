@@ -25,7 +25,7 @@ from cdd_guidance.practices.stories.model.markdown.scenario_parts import (
     StorySection,
 )
 from cdd_guidance.practices.stories.model.story_map_files import StoryMapFiles, source_at
-from cdd_guidance.practices.stories.model.story_model import Background, Scenario, StepType
+from cdd_guidance.practices.stories.model.story_map import Background, Scenario, StepType
 
 HEADING_PATTERN = re.compile(r"^(#{1,6})\s+(.+)$")
 SCENARIO_HEADING = re.compile(r"^#+\s+Scenario(?:\s+Outline)?(?:\s+\d+)?\s*[:\-]?\s*(.+?)\s*$", re.IGNORECASE)
@@ -83,7 +83,7 @@ class ScenarioFiles:
         self.root = Path(root).resolve()
         self._named_from = Path(base).resolve() if base is not None else self.root
 
-    def sections(self, scenario_type: type, on_file: Optional[Callable[[str], None]] = None) -> List[StorySection]:
+    def sections(self, scenario_class: type, on_file: Optional[Callable[[str], None]] = None) -> List[StorySection]:
         """The story sections of every file, each file read once by a reading made for it; on_file hears each file's
         name as it is read."""
         sections: List[StorySection] = []
@@ -91,7 +91,7 @@ class ScenarioFiles:
             rel = self._name_of(path)
             if on_file is not None:
                 on_file(rel)
-            sections.extend(ScenarioFileReading(path.read_text(encoding="utf-8"), rel, scenario_type).read())
+            sections.extend(ScenarioFileReading(path.read_text(encoding="utf-8"), rel, scenario_class).read())
         return sections
 
     def _files(self) -> List[Path]:
@@ -106,9 +106,9 @@ class ScenarioFileReading:
     (the line being read, the section, the scenario, and the parts that follow its backgrounds, examples table, and
     realization fence). Made for each read, so the scenarios it reads keep only what they were read as."""
 
-    def __init__(self, text: str, rel: str, scenario_type: type) -> None:
+    def __init__(self, text: str, rel: str, scenario_class: type) -> None:
         self.rel = rel
-        self.scenario_type = scenario_type
+        self.scenario_class = scenario_class
         self.lines = text.splitlines()
         self.kept_lines = text.splitlines(keepends=True)
         self.document_lines: List[ReadLine] = []
@@ -167,7 +167,7 @@ class ScenarioFileReading:
 
     def _scenario_heading(self, match: re.Match) -> None:
         self._close_scenario()
-        scenario = self.scenario_type(strip_markup(match.group(1)))
+        scenario = self.scenario_class(strip_markup(match.group(1)))
         scenario.is_outline = "outline" in self.raw.lower()
         scenario.source = source_at(self.rel, self.number)
         scenario.read_lines = [HeadingLine(scenario, (scenario.name, scenario.is_outline), self.kept)]

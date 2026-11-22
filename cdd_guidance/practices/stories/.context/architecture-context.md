@@ -1,6 +1,6 @@
 # Story tests: the code formats
 
-The code formats write a story map as runnable story tests and read those tests back into the same map. The classes are *CodeStoryModel* and its language subclasses in `practices/stories/model/` (`code_story_model.py`, `brace_story.py`, `python/`, `typescript/`, `javascript/`), described in `practices/stories/model/.context/story-model.md`. This document explains the layout they write and why the code inside a story test survives regeneration.
+The code formats write a story map as runnable story tests and read those tests back into the same map. The classes are *CodeStoryMap* and its language subclasses in `practices/stories/model/` (`code_story_map.py`, `brace_story.py`, `python/`, `typescript/`, `javascript/`), described in `practices/stories/model/.context/story-model.md`. This document explains the layout they write and why the code inside a story test survives regeneration.
 
 ## Layout
 
@@ -21,9 +21,9 @@ This is the layout the scenarios and acceptance tests fidelities declare under `
 
 | Language | Story file | Format class |
 | --- | --- | --- |
-| TypeScript | `{story}/{story_snake}_story.test.ts` (also reads `_story.spec.ts`, `.story.shared.ts` and `.story.ui.spec.ts`) | *TypeScriptStoryModel* |
-| JavaScript | `{story}/{story_snake}_story.test.js` (also reads `_story.spec.js`, `.story.shared.js` and `.story.ui.spec.js`) | *JavaScriptStoryModel* |
-| Python | `{story}/{story_snake}_story.test.py` (also reads `.story.shared.py`) | *PythonStoryModel* |
+| TypeScript | `{story}/{story_snake}_story.test.ts` (also reads `_story.spec.ts`, `.story.shared.ts` and `.story.ui.spec.ts`) | *TypeScriptStoryMap* |
+| JavaScript | `{story}/{story_snake}_story.test.js` (also reads `_story.spec.js`, `.story.shared.js` and `.story.ui.spec.js`) | *JavaScriptStoryMap* |
+| Python | `{story}/{story_snake}_story.test.py` (also reads `.story.shared.py`) | *PythonStoryMap* |
 
 Each story file opens with a comment naming its epic and its order on the map, imports `story` and `scenario` from the step library and the example values it uses, then holds one `story(...)` block per story with its backgrounds and `scenario(...)` blocks, each step written as a Given, When, Then, And, or But call with its code inside.
 
@@ -39,7 +39,7 @@ A story test holds two kinds of content: what the story map knows (story, scenar
 
 ## Adding a language
 
-1. Subclass *CodeStoryModel* (or *BraceStoryModel* for a language with braces), set `language`, `epic_type`, `story_type`, and `writing_type`.
-2. Subclass *StoryWriting* (or *BraceStoryWriting*) for how the language writes a story file: give as data what differs (`file_name_template`, the indents, the opening and closing templates, the verbs) and as operations only what a template cannot say (`file_header`, `story_open`, the background lines). `CodeStoryModel.load` reads every language's story files one way; the language's story and scenario classes give only the patterns their text uses (`_NAME`, `_STORY_START`, `_SCENARIO`, `_IMPORT`).
+1. Subclass *CodeStoryMap* (or *BraceStoryMap* for a language with braces), set `language`, `epic_class`, and `writing_class`, and give the language's epic class its `story_class`.
+2. Subclass *StoryWriting* (or *BraceStoryWriting*) for how the language writes a story file: give as data what differs (`file_name_template`, the indents, the opening and closing templates, the verbs) and as operations only what a template cannot say (`file_header`, `story_open`, the background lines). `CodeStoryMap.load` reads every language's story files one way; the language's story and scenario classes give only the patterns their text uses (`_NAME`, `_STORY_START`, `_SCENARIO`, `_IMPORT`).
 3. Add a *BlockStoryFile* that finds each block in a file, and a block class that extends *StoryBlock*, and have the model's `story_file(path, content)` answer it: each story is made from its block and keeps the code read in that language. Give the format its `story_file_suffixes`, and its `not_story_paths` when some files that end that way hold no story.
 4. List the format under `formats` in `Stories` (`practices/stories/stories.py`).

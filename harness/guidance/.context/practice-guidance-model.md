@@ -247,7 +247,7 @@ model_for(target: FormatAdapter, model: ObjectModel): ObjectModel
 
 ## FormatAdapter
 
-The one contract every format of every practice meets; each practice's domain root extends it (*StoryModel*,
+The one contract every format of every practice meets; each practice's domain root extends it (*StoryMap*,
 *CleanEngineeringModel*, *BoundedContextMap*, *BddModel*, *UxMap*, UX's *ViewFormat*).
 
 ----

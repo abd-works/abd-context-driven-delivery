@@ -9,7 +9,7 @@ from expects import be_empty, contain, equal, expect
 from mamba import before, context, description, included_context, it, shared_context
 
 from cdd_guidance.practices.stories.model.fixtures.pack_orders_project import PACK_ORDERS_FILES, TESTS_ROOT
-from cdd_guidance.practices.stories.model.story_model import Epic, Scenario, Step, StepType, Story, StoryModel
+from cdd_guidance.practices.stories.model.story_map import Epic, Scenario, Step, StepType, Story, StoryMap
 from cdd_guidance.practices.stories.stories import Stories
 
 _PACK = "Pack a paid order"
@@ -36,7 +36,7 @@ def _scenario(name: str, order: int, steps: list[tuple[StepType, str, list[str]]
     return scenario
 
 
-def _pack_order(*, packs: str = _PACKS, listed: bool = False, keeps: bool = True, twice: bool = False) -> StoryModel:
+def _pack_order(*, packs: str = _PACKS, listed: bool = False, keeps: bool = True, twice: bool = False) -> StoryMap:
     """The Pack Order story as its scenarios say it: as the story test has it, or with one change."""
     story = Story("Pack Order", 1)
     story.actors = ["Shop Clerk"]
@@ -56,7 +56,7 @@ def _pack_order(*, packs: str = _PACKS, listed: bool = False, keeps: bool = True
     sub_epic.stories.append(story)
     epic = Epic("Fulfil Order", 1)
     epic.epics.append(sub_epic)
-    story_map = StoryModel()
+    story_map = StoryMap()
     story_map.epics.append(epic)
     return story_map
 
@@ -72,11 +72,11 @@ class StoryTestOnDisk:
         self.between_scenarios = between_scenarios
         self.existing = written.replace(opening, f"{between_scenarios}\n\n{opening}")
 
-    def reshaped_by(self, scenarios: StoryModel):
+    def reshaped_by(self, scenarios: StoryMap):
         """What the format answers when the scenarios are rendered and written onto the file."""
         return self.adapter.reshape(self._rendered(scenarios), self.existing)
 
-    def reshaped_twice_by(self, scenarios: StoryModel) -> tuple[str, str]:
+    def reshaped_twice_by(self, scenarios: StoryMap) -> tuple[str, str]:
         """The text after the scenarios are written onto the file, and after they are written onto that text again."""
         rendered = self._rendered(scenarios)
         once = self.adapter.reshape(rendered, self.existing).text
@@ -97,7 +97,7 @@ class StoryTestOnDisk:
         story = self.adapter.story_file(f"{TESTS_ROOT}/fulfil-order/pack-orders/pack-order/pack_order_story.test", text).stories[0]
         return [scenario.name for scenario in story.scenarios]
 
-    def _rendered(self, scenarios: StoryModel) -> str:
+    def _rendered(self, scenarios: StoryMap) -> str:
         files = self.adapter.render(scenarios)
         return next(text for file, text in files.items() if self.adapter.is_story_file(file))
 

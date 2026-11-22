@@ -7,7 +7,7 @@ import re
 from typing import Dict, List, NamedTuple, Optional
 
 from cdd_guidance.practices.stories.model.markdown.links import unlink
-from cdd_guidance.practices.stories.model.story_model import Example, Step
+from cdd_guidance.practices.stories.model.story_map import Example, Step
 
 _BOLD_TERM = re.compile(r"\*\*([^*]+)\*\*")
 _ITALIC_VALUE = re.compile(r"(?<!\*)\*([^*\n]+)\*(?!\*)")

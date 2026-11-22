@@ -1448,7 +1448,7 @@ This epic is the app's own story map, `C:/dev/story-ui/.context/story-map.md`; i
 ### (S) Story Designer --> Add Scenario To Story
 
 **Acceptance criteria:**
-- Observed: the + beside Scenarios in an expanded card adds "New Scenario" at the end (`handleAppendScenario`; stories.ts `StoryModel.appendScenario`).
+- Observed: the + beside Scenarios in an expanded card adds "New Scenario" at the end (`handleAppendScenario`; stories.ts `StoryMap.appendScenario`).
 
 ### (S) Story Designer --> Rename Scenario Inline
 
@@ -1458,7 +1458,7 @@ This epic is the app's own story map, `C:/dev/story-ui/.context/story-map.md`; i
 ### (S) Story Designer --> Remove Scenario From Story
 
 **Acceptance criteria:**
-- Observed: the − on a Scenario deletes it and renumbers the rest (stories.ts `StoryModel.removeScenario`).
+- Observed: the − on a Scenario deletes it and renumbers the rest (stories.ts `StoryMap.removeScenario`).
 
 ### (S) Story Designer --> Reorder Scenarios By Dragging
 
@@ -1510,7 +1510,7 @@ This epic is the app's own story map, `C:/dev/story-ui/.context/story-map.md`; i
 ### (S) Story UI --> Save Valid Edits And Keep Their History
 
 **Acceptance criteria:**
-- Observed: every edit is sent to the server as one request, saved to MongoDB, and the map reloaded from the saved copy (`useStoryModel`; stories-server.ts `StoryMapRepositoryServer`, `StoryMapServer.persist`).
+- Observed: every edit is sent to the server as one request, saved to MongoDB, and the map reloaded from the saved copy (`useStoryMap`; stories-server.ts `StoryMapRepositoryServer`, `StoryMapServer.persist`).
 - Observed: an edit that breaks a map rule (a Scenario under a non-Story, an increment on a non-Story, an unknown increment, a node outside its claimed parent, a duplicate field name) is refused with 422 and the rule code (stories.ts `MutationGuardError`).
 - Observed: the status rail shows synced, pending changes, or save error (`StoryMapWorkspaceView`, `storyModelReducer`).
 - Intended: each save records one save event; today stories-server.ts only comments that the collaboration layer emits it (mern-story-map-ai-sketch.md; story_map.modules.md audit).
@@ -1551,7 +1551,7 @@ Requested (2026-11-06): the Story UI editor has a screen frames view beside its 
 
 ### (S) Story UI --> [Show Screen Frame Under Each Story](../story_tests/explore-stories-in-story-ui/show-screen-frames-in-story-ui/show_screen_frames_in_story_ui_story.test.md#story-show-screen-frame-under-each-story)
 
-Requested (2026-11-06): each frame is the story's main design canvas screen, drawn small under its card. It replaces the design canvas, where today the story map artboard draws a thumbnail under each story (`thumbnail` in `canvas.py`, `claude_design_story_model_spec.py`).
+Requested (2026-11-06): each frame is the story's main design canvas screen, drawn small under its card. It replaces the design canvas, where today the story map artboard draws a thumbnail under each story (`thumbnail` in `canvas.py`, `claude_design_story_map_spec.py`).
 
 ### (S) Story UI --> [Mark Story Without A Screen](../story_tests/explore-stories-in-story-ui/show-screen-frames-in-story-ui/show_screen_frames_in_story_ui_story.test.md#story-mark-story-without-a-screen)
 
@@ -1559,7 +1559,7 @@ Requested (2026-11-06): a story with no screen gets an empty frame saying so. It
 
 ### (S) Person --> [Open Story Explorer From Screen Frame](../story_tests/explore-stories-in-story-ui/show-screen-frames-in-story-ui/show_screen_frames_in_story_ui_story.test.md#story-open-story-explorer-from-screen-frame)
 
-Requested (2026-11-06): pressing a frame opens the browser story explorer at that story, scenario and step. It replaces the design canvas, where today only the artboard's thumbnails link, each opening `explorer.dc.html` at its story (`claude_design_story_model_spec.py`).
+Requested (2026-11-06): pressing a frame opens the browser story explorer at that story, scenario and step. It replaces the design canvas, where today only the artboard's thumbnails link, each opening `explorer.dc.html` at its story (`claude_design_story_map_spec.py`).
 
 ## (E) Navigate The Story Tree
 
@@ -1577,7 +1577,7 @@ Requested (2026-11-06): new in the Story UI app; replaces what the design canvas
 
 ### (S) Person --> [Copy A Request To Open A Story In Its File](../story_tests/explore-stories-in-story-ui/navigate-the-story-tree/navigate_the_story_tree_story.test.md#story-copy-a-request-to-open-a-story-in-its-file)
 
-Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where observed, the explorer carries each story's and scenario's `path:line` and offers to copy an open-in-file-viewer request for it (`claude_design_story_model_spec.py`, `copyOpenRequest` in `explorer.dc.html`).
+Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where observed, the explorer carries each story's and scenario's `path:line` and offers to copy an open-in-file-viewer request for it (`claude_design_story_map_spec.py`, `copyOpenRequest` in `explorer.dc.html`).
 
 ### (S) Person --> [Pick An Outline Scenario's Example](../story_tests/explore-stories-in-story-ui/navigate-the-story-tree/navigate_the_story_tree_story.test.md#story-pick-an-outline-scenarios-example)
 
@@ -1604,11 +1604,11 @@ Requested on 2026-11-06: the browser story explorer plays a CDD session's story 
 ## (E) Frame Design Canvas Screens In Explorer
 ### (S) Story UI --> [Show Design Canvas Screen As Explorer Frame](../story_tests/explore-stories-in-story-ui/frame-design-canvas-screens-in-explorer/frame_design_canvas_screens_in_explorer_story.test.md#story-show-design-canvas-screen-as-explorer-frame)
 
-Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where observed, `_imports` in `nodes.py` imports each prototype screen into the explorer with the story, scenario and a `go` call, so the selected scenario runs on the real screen (`claude_design_story_model_spec.py`).
+Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where observed, `_imports` in `nodes.py` imports each prototype screen into the explorer with the story, scenario and a `go` call, so the selected scenario runs on the real screen (`claude_design_story_map_spec.py`).
 
 ### (S) Story UI --> [Choose The Screen For A Step](../story_tests/explore-stories-in-story-ui/frame-design-canvas-screens-in-explorer/frame_design_canvas_screens_in_explorer_story.test.md#story-choose-the-screen-for-a-step)
 
-Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where observed, a step shows the screen it is shown on, else its scenario's screen, else its story's screen (`_story_entry` and `_screen_of` in `nodes.py`, `claude_design_story_model_spec.py`).
+Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where observed, a step shows the screen it is shown on, else its scenario's screen, else its story's screen (`_story_entry` and `_screen_of` in `nodes.py`, `claude_design_story_map_spec.py`).
 
 ### (S) Story UI --> [Join A Step Without A Screen To The Next Step](../story_tests/explore-stories-in-story-ui/frame-design-canvas-screens-in-explorer/frame_design_canvas_screens_in_explorer_story.test.md#story-join-a-step-without-a-screen-to-the-next-step)
 
@@ -1644,11 +1644,11 @@ Observed: `stem` and `camel` in `canvas.py` give a screen file's import name and
 
 ### (S) Design Canvas --> Give Each Prototype Screen Its Own Page
 
-Observed: `ClaudeDesignStoryModel.canvas` puts the story map, the story explorer, and each prototype screen on its own page (`claude_design_story_model_spec.py`).
+Observed: `ClaudeDesignStoryMap.canvas` puts the story map, the story explorer, and each prototype screen on its own page (`claude_design_story_map_spec.py`).
 
 ### (S) Design Canvas --> Place A Read-Only Story Panel Beside A Screen
 
-Observed: `_context_panel` in `nodes.py` draws a Stories board to the right of a screen, with the screen's own stories opened to their scenarios and steps and every other story greyed out (`claude_design_story_model_spec.py`).
+Observed: `_context_panel` in `nodes.py` draws a Stories board to the right of a screen, with the screen's own stories opened to their scenarios and steps and every other story greyed out (`claude_design_story_map_spec.py`).
 
 ## (E) Load Scenario Fixtures With The Fixture Bar
 ### (S) Person --> Load A Scenario Into A Standalone Screen
@@ -1685,15 +1685,15 @@ From the design canvas's own map (harness/design_canvas/.context/story-map.md, f
 
 ### (S) Design Canvas --> Draw The Whole Story Map On One Artboard
 
-Observed: `_story_map` in `nodes.py` draws every epic, sub-epic, actor and story card on the single `Main.dc.html` artboard, one column per story (`claude_design_story_model_spec.py`).
+Observed: `_story_map` in `nodes.py` draws every epic, sub-epic, actor and story card on the single `Main.dc.html` artboard, one column per story (`claude_design_story_map_spec.py`).
 
 ### (S) Design Canvas --> Draw Each Epic Bar Across Its Sub-Epics
 
-Observed: the story map draws each epic bar once, spanning all of its sub-epics (`claude_design_story_model_spec.py`).
+Observed: the story map draws each epic bar once, spanning all of its sub-epics (`claude_design_story_map_spec.py`).
 
 ### (S) Design Canvas --> Draw The Map In The abd Engineering Look
 
-Observed: `LOOK` in `look.py` gives epics, sub-epics, actors and stories their dark cards and orange accent, and `box` in `canvas.py` draws them; the map has no white background (`claude_design_story_model_spec.py`).
+Observed: `LOOK` in `look.py` gives epics, sub-epics, actors and stories their dark cards and orange accent, and `box` in `canvas.py` draws them; the map has no white background (`claude_design_story_map_spec.py`).
 
 ### (S) Person --> Zoom The Story Map
 
@@ -2212,7 +2212,7 @@ Observed: the session board reads the graph saved beside a validation report and
 
 # (E) Draw Practice Models On Claude Whiteboard
 
-Requested (2026-11-15, ticket claude-whiteboard): Claude Whiteboard becomes one more channel a practice renders to and loads from, with the same architecture and object model as drawio and miro. The channel-agnostic diagram types (`DiagramNode`, `DiagramClass`, `DiagramModule` in `clean_engineering/model/diagram/diagram_node.py`; `DiagramStoryNode`, `DiagramStoryModel` in `stories/model/diagram_story_model.py`) are extended by whiteboard types exactly as `DrawIOClass`, `DrawIOModule` (`clean_engineering/model/drawio/diagram_node.py`) and `MiroStory`, `MiroEpic`, `MiroStoryModel` (`stories/model/miro/nodes.py`) extend them. The code every practice shares (the whiteboard element, the board and its writes) goes in `harness/whiteboard`; each practice's whiteboard types go in `cdd_guidance/practices/{practice}/model/whiteboard`; and the format is registered with the practice's adapters (`PracticeFormats`, `harness/guidance/practice_formats.py`) as `drawio` and `miro` are. A board is a Claude Artifact made from the Whiteboard type: `board/meta` holds its title and back-to-front order, and each `elements/<id>` is one shape, section, text or arrow, written and read through the artifact's store. The difference from drawio and miro is only that: the artifacts are whiteboards in Claude, loaded into the graph from what was rendered.
+Requested (2026-11-15, ticket claude-whiteboard): Claude Whiteboard becomes one more channel a practice renders to and loads from, with the same architecture and object model as drawio and miro. The channel-agnostic diagram types (`DiagramNode`, `DiagramClass`, `DiagramModule` in `clean_engineering/model/diagram/diagram_node.py`; `DiagramStoryNode`, `DiagramStoryMap` in `stories/model/diagram_story_map.py`) are extended by whiteboard types exactly as `DrawIOClass`, `DrawIOModule` (`clean_engineering/model/drawio/diagram_node.py`) and `MiroStory`, `MiroEpic`, `MiroStoryMap` (`stories/model/miro/nodes.py`) extend them. The code every practice shares (the whiteboard element, the board and its writes) goes in `harness/whiteboard`; each practice's whiteboard types go in `cdd_guidance/practices/{practice}/model/whiteboard`; and the format is registered with the practice's adapters (`PracticeFormats`, `harness/guidance/practice_formats.py`) as `drawio` and `miro` are. A board is a Claude Artifact made from the Whiteboard type: `board/meta` holds its title and back-to-front order, and each `elements/<id>` is one shape, section, text or arrow, written and read through the artifact's store. The difference from drawio and miro is only that: the artifacts are whiteboards in Claude, loaded into the graph from what was rendered.
 
 ## (E) Lay Out Shared Whiteboard Elements
 
@@ -2244,7 +2244,7 @@ Requested (2026-11-15, "practice specific rendering goes in practices/{practice}
 
 ### (S) Agent --> Lay Out Story Map On Whiteboard
 
-Requested: `WhiteboardStoryModel`, `WhiteboardEpic`, `WhiteboardStory` and `WhiteboardIncrement` extend the `Diagram*` story types as the miro types do, drawing epics and sub-epics as bars, stories as cards with their actor above, and increments as lanes.
+Requested: `WhiteboardStoryMap`, `WhiteboardEpic`, `WhiteboardStory` and `WhiteboardIncrement` extend the `Diagram*` story types as the miro types do, drawing epics and sub-epics as bars, stories as cards with their actor above, and increments as lanes.
 
 ### (S) Agent --> Draw Module Dependencies On Whiteboard
 
@@ -2284,7 +2284,7 @@ Requested: the fidelity's files list the board's address with its drawio and mar
 
 ## (E) Load Whiteboard Into Practice Model
 
-Requested (2026-11-15, "loading graph from that"): a board read back becomes the practice's model, as a drawio or miro file is parsed today (`MiroStoryModel.load`, `DrawIOModule.from_cell`).
+Requested (2026-11-15, "loading graph from that"): a board read back becomes the practice's model, as a drawio or miro file is parsed today (`MiroStoryMap.load`, `DrawIOModule.from_cell`).
 
 ### (S) Agent --> Read Board Into Whiteboard File
 

@@ -1,10 +1,10 @@
 // The Story UI editor's views: the story map as epics, sub-epics, stories and scenarios, edited in place. The views
-// draw what the Python story model sends (StoryMapClient over the generated StoryModel client) and hand every edit to
+// draw what the Python story model sends (StoryMapClient over the generated StoryMap client) and hand every edit to
 // that client, which saves it through the node's own tool; nothing here holds a story map of its own.
 
 import React, { Component, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ErrorInfo, type ReactNode } from 'react';
 import { ChatClientGenerated } from '@cdd/harness/chat/chat';
-import { useStoryModel } from '@cdd/practices/stories/model/story-model-views';
+import { useStoryMap } from '@cdd/practices/stories/model/story-map-views';
 
 import { StoryMapApi } from './story-map-api';
 import { StoryMapClient, type NodeKind } from './story-map-client';
@@ -1895,7 +1895,7 @@ function SaveStatusView({ status, map }: { status: EditStatus; map: StoryMapClie
 
 function StoryMapCanvasView(props: StoryMapCanvasProps) {
   const { client, chat, failure, status, edit, showInChat, dismissFailure, viewMode, showScenarios, expandedNodeIds, expandNode, collapseNode, expandDescendants, panning } = props;
-  const map = useStoryModel(client);
+  const map = useStoryMap(client);
   const storyMap = useMemo(() => StoryMapViewModel.of(map.toJSON(), props.scoped), [map, map.toJSON(), props.scoped]);
   const editing = new MapEditing(storyMap, edit);
   const handleExpand = (id: string, _type: SemanticType, descendants: string[]) => (expandedNodeIds.has(id) ? collapseNode(id) : expandDescendants(id, descendants));

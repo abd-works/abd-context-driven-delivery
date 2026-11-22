@@ -9,9 +9,9 @@ import re
 from expects import be_empty, be_true, contain, equal, expect
 from mamba import before, context, description, it
 
-from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStory, MarkdownStoryModel
-from cdd_guidance.practices.stories.model.python.python_story_model import PythonStoryModel
-from cdd_guidance.practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
+from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStory, MarkdownStoryMap
+from cdd_guidance.practices.stories.model.python.python_story_map import PythonStoryMap
+from cdd_guidance.practices.stories.model.typescript.typescript_story_map import TypeScriptStoryMap
 
 _SCENARIOS = """## Story: Change Cart Line Quantity
 
@@ -48,7 +48,7 @@ _IMPORTED_NAMES = re.compile(r"^(?:from examples import (?P<python>.+)|import \{
 
 def _rendered(format: type) -> dict:
     """The files the scenarios render to in format, a code format's story model, by path."""
-    return format(tests_root="tests").render(MarkdownStoryModel().parse(_SCENARIOS))
+    return format(tests_root="tests").render(MarkdownStoryMap().parse(_SCENARIOS))
 
 
 def _story_test(files: dict) -> str:
@@ -63,25 +63,25 @@ def _imported_examples(text: str) -> list:
 def _markdown_back_from(format: type) -> str:
     """The story's section of a scenarios file, written from the story read back from format's code."""
     story = format(tests_root="tests").parse(_rendered(format)).descendants.stories()[0]
-    return MarkdownStory(story).document_text()
+    return MarkdownStory.copy_of(story).document_text()
 
 
 def _outline_back_from(format: type):
     """The outline as markdown reads it after a trip through format."""
-    return MarkdownStoryModel().parse(_markdown_back_from(format)).descendants.stories()[0].scenarios[0]
+    return MarkdownStoryMap().parse(_markdown_back_from(format)).descendants.stories()[0].scenarios[0]
 
 
 with description("a scenarios file with a Scenario Outline whose rows sit under an Examples heading") as self:
     with context("that is read from markdown"):
         with before.each:
-            self.outline = MarkdownStoryModel().parse(_SCENARIOS).descendants.stories()[0].scenarios[0]
+            self.outline = MarkdownStoryMap().parse(_SCENARIOS).descendants.stories()[0].scenarios[0]
 
         with it("should name each row by its scenario column"):
             expect(list(self.outline.examples)).to(equal(["one copy", "two copies"]))
 
     with context("that is rendered to Python"):
         with before.each:
-            self.python = _story_test(_rendered(PythonStoryModel))
+            self.python = _story_test(_rendered(PythonStoryMap))
 
         with it("should be Python that parses"):
             expect(ast.parse(self.python) is not None).to(be_true)
@@ -94,7 +94,7 @@ with description("a scenarios file with a Scenario Outline whose rows sit under 
 
         with context("and read back into markdown"):
             with before.each:
-                self.back = _outline_back_from(PythonStoryModel)
+                self.back = _outline_back_from(PythonStoryMap)
 
             with it("should still be a Scenario Outline"):
                 expect(self.back.is_outline).to(be_true)
@@ -107,7 +107,7 @@ with description("a scenarios file with a Scenario Outline whose rows sit under 
 
     with context("that is rendered to TypeScript"):
         with before.each:
-            self.files = _rendered(TypeScriptStoryModel)
+            self.files = _rendered(TypeScriptStoryMap)
             self.typescript = _story_test(self.files)
 
         with it("should import no example whose name is no TypeScript name"):
@@ -121,7 +121,7 @@ with description("a scenarios file with a Scenario Outline whose rows sit under 
 
         with context("and read back into markdown"):
             with before.each:
-                self.back = _outline_back_from(TypeScriptStoryModel)
+                self.back = _outline_back_from(TypeScriptStoryMap)
 
             with it("should still be a Scenario Outline"):
                 expect(self.back.is_outline).to(be_true)
@@ -133,7 +133,7 @@ with description("a scenarios file with a Scenario Outline whose rows sit under 
 with description("a scenarios file whose story shares a table of examples under a group heading") as self:
     with context("that is rendered to Python and read back into markdown"):
         with before.each:
-            self.back = _markdown_back_from(PythonStoryModel)
+            self.back = _markdown_back_from(PythonStoryMap)
 
         with it("should write the table under its group with the columns it was written with"):
             expect(self.back).to(contain("#### cart\n\n| cart | example | lines | total |\n| --- | --- | --- | --- |\n| cart | cart with Tiny Tales | 1 x Tiny Tales | 5 |\n"))

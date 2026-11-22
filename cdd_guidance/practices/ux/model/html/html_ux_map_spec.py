@@ -12,7 +12,7 @@ _REPO = Path(__file__).resolve().parents[5]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from cdd_guidance.practices.stories.model.story_model import Epic, Scenario, Step, StepType, Story, StoryModel
+from cdd_guidance.practices.stories.model.story_map import Epic, Scenario, Step, StepType, Story, StoryMap
 from cdd_guidance.practices.ux.model.html.nodes import HtmlUxMap, UxMapNotEmbedded
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 from cdd_guidance.practices.ux.model.ux_map_spec_fixture import OrderingMap, outline
@@ -34,7 +34,7 @@ def render_showing_first_story(graph):
 
 
 def ordering_story_map(graph):
-    story_map = StoryModel(graph=graph)
+    story_map = StoryMap(graph=graph)
     epic = Epic("Place New Order", 0)
     browse = Epic("Browse", 0)
     browse.stories.append(Story("Browse Product Catalog", 0))

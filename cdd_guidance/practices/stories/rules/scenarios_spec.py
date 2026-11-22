@@ -10,7 +10,7 @@ if str(_REPO) not in sys.path:
 from expects import contain, equal, expect  # noqa: E402
 from mamba import before, context, description, it  # noqa: E402
 
-from cdd_guidance.practices.stories.model.story_model import Background, Epic, Scenario, Step, StepType, Story, StoryModel  # noqa: E402
+from cdd_guidance.practices.stories.model.story_map import Background, Epic, Scenario, Step, StepType, Story, StoryMap  # noqa: E402
 from cdd_guidance.practices.stories.rules.scenarios import (  # noqa: E402
     AndChaining,
     DomainTermsLinkToModel,
@@ -70,7 +70,7 @@ def _loaded(scenario: Scenario, graph: Graph | None = None) -> RuleCheckContext:
     story.scenarios = [scenario]
     epic = Epic("Place Orders", 1)
     epic.stories.append(story)
-    model = StoryModel()
+    model = StoryMap()
     model.epics.append(epic)
     practice = (graph or Graph()).practices.named("stories")
     model.record(practice)

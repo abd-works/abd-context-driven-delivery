@@ -4,7 +4,7 @@ as a ``.whiteboard`` file and reads one back.
 A whiteboard reads at a zoom like a Miro board's, so its cards and columns are the Miro sizes. Each element's id names
 the node it draws (``epic.<key>``, ``subepic.<depth>.<key>``, ``story.<kind>.<key>``, ``actor.<key>``), where the key is
 a hash of the node's path, so the same node keeps its id from one render to the next. A board is read back by where
-its elements sit, as a drawio map is (``DiagramStoryModel.place_cells``), because people move and restack elements on
+its elements sit, as a drawio map is (``DiagramStoryMap.place_cells``), because people move and restack elements on
 a shared board.
 """
 
@@ -15,12 +15,12 @@ from typing import Dict, List
 
 from harness.whiteboard import BoardElement, Box, ElementId, Section, Shape, Whiteboard, WhiteboardNode
 
-from cdd_guidance.practices.stories.model.diagram_story_model import (
+from cdd_guidance.practices.stories.model.diagram_story_map import (
     DiagramEpic,
     DiagramIncrement,
     DiagramStory,
     DiagramStoryCell,
-    DiagramStoryModel,
+    DiagramStoryMap,
     LaidOutEpic,
     LaidOutStory,
     ThinSliceColumn,
@@ -28,7 +28,7 @@ from cdd_guidance.practices.stories.model.diagram_story_model import (
     ThinSliceLayout,
     ThinSliceSurface,
 )
-from cdd_guidance.practices.stories.model.story_model import Epic, Increment, Story, StoryModel
+from cdd_guidance.practices.stories.model.story_map import Epic, Increment, Story, StoryMap
 from harness.guidance.practice_formats import Written
 
 class _BoardStoryNode(WhiteboardNode):
@@ -39,7 +39,7 @@ class _BoardStoryNode(WhiteboardNode):
         """The node's names from the map's root down to it, each with the kind of node it names."""
         names: List[str] = []
         node = self
-        while node is not None and not isinstance(node, StoryModel):
+        while node is not None and not isinstance(node, StoryMap):
             names.append(f"{'epic' if isinstance(node, Epic) else 'story'}:{node.name}")
             node = node.parent
         return list(reversed(names))
@@ -84,6 +84,8 @@ class WhiteboardStory(LaidOutStory, _BoardStoryNode):
 class WhiteboardEpic(LaidOutEpic, _BoardStoryNode):
     """An epic bar; a sub-epic's bar sits one row lower for each level it is nested, under the epic that holds it."""
 
+    story_class = WhiteboardStory
+
     tighten = 0
     bar_gap = 8
     """The space left between two bars side by side, so each sub-epic reads as its own."""
@@ -109,15 +111,14 @@ class WhiteboardEpic(LaidOutEpic, _BoardStoryNode):
         return self.board_shape(element_id, kind="rounded", color="green" if nested else "purple", size="body", text=self.name)
 
 
-class WhiteboardStoryModel(DiagramStoryModel):
+class WhiteboardStoryMap(DiagramStoryMap):
     """Whiteboard story-map I/O. IS the format-typed tree root: render draws it on a board, parse reads one back."""
 
     suffixes = (Whiteboard.SUFFIX,)
-    epic_type = WhiteboardEpic
-    story_type = WhiteboardStory
-    increment_type = DiagramIncrement
+    epic_class = WhiteboardEpic
+    increment_class = DiagramIncrement
 
-    def render(self, canonical: StoryModel, written: Written = Written()) -> str:
+    def render(self, canonical: StoryMap, written: Written = Written()) -> str:
         """Draw canonical as a board; the elements a previous board held stay where people put them."""
         return self.copy_of(canonical).board().drawn_over(str(written.previous))
 
@@ -130,14 +131,14 @@ class WhiteboardStoryModel(DiagramStoryModel):
     def save(self) -> str:
         return self.board().save()
 
-    def parse(self, text: str, file: str = "") -> "WhiteboardStoryModel":
+    def parse(self, text: str, file: str = "") -> "WhiteboardStoryMap":
         """The format-adapter entry point Stories renders through: the story map a board's text holds."""
         return self.take_board(Whiteboard.from_text(text))
 
-    def take_board(self, board: Whiteboard) -> "WhiteboardStoryModel":
+    def take_board(self, board: Whiteboard) -> "WhiteboardStoryMap":
         """The story map board draws, read by where its elements sit."""
         cells = [cell for cell in (_BoardCell(element) for element in board.holding({"epic"}, "story-map epic").shapes) if cell.role]
-        story_map = WhiteboardStoryModel()
+        story_map = WhiteboardStoryMap()
         story_map.place_cells(cells)
         return story_map
 
@@ -147,7 +148,7 @@ class WhiteboardStoryModel(DiagramStoryModel):
         per increment stacked below each other, each a single row of its stories under the sub-epic that holds each."""
         return _ThinSliceBoard(self, Whiteboard("Thin Slice")).board().save()
 
-    def load_thin_slice(self, text: str) -> "WhiteboardStoryModel":
+    def load_thin_slice(self, text: str) -> "WhiteboardStoryMap":
         """Read a thin-slice board into this map's increments, top lane first, each delivering the map's own stories
         its lane holds, row by row, and return this map."""
         board = Whiteboard.from_text(text)
@@ -160,7 +161,7 @@ class WhiteboardStoryModel(DiagramStoryModel):
             names = [_BoardCell(card).text for card in held]
             label = next((found for found in labels if lane.holds(found)), None)
             name = label.text.strip() if label is not None else lane.text.strip()
-            increments.append(self.increment_type(name, len(increments) + 1, self.descendants.stories_named(names)))
+            increments.append(self.increment_class(name, len(increments) + 1, self.descendants.stories_named(names)))
         self.increments.refill(increments)
         return self
 
@@ -173,7 +174,7 @@ class _ThinSliceBoard(ThinSliceSurface):
     LABEL_WIDTH = 200
     """The increment's name sits in a label at the left of its lane, as drawio draws it, and the columns start after it."""
 
-    def __init__(self, story_map: WhiteboardStoryModel, drawing: Whiteboard) -> None:
+    def __init__(self, story_map: WhiteboardStoryMap, drawing: Whiteboard) -> None:
         self.story_map = story_map
         self.drawing = drawing
         self.left = WhiteboardEpic.first_x + self.LABEL_WIDTH + self.LANE_GAP

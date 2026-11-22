@@ -13,7 +13,7 @@ from typing import Callable, List, Optional, Tuple
 
 from cdd_guidance.practices.sketch_document.sketch_outline import SketchOutline
 from harness.guidance.guidance import SketchLens
-from cdd_guidance.practices.stories.model.story_model import (
+from cdd_guidance.practices.stories.model.story_map import (
     Background,
     Epic,
     Increment,
@@ -21,7 +21,7 @@ from cdd_guidance.practices.stories.model.story_model import (
     Step,
     StepType,
     Story,
-    StoryModel,
+    StoryMap,
     StoryType,
 )
 from harness.guidance.practice_formats import Written
@@ -133,7 +133,7 @@ def _read_steps(lines: SketchLines, take: Callable[["SketchStep"], None]) -> Non
 class SketchBackground(Background):
     """A story's background in the sketch: each of its steps as a `given` line."""
 
-    step_type = SketchStep
+    step_class = SketchStep
 
     def sketch_lines(self, pad: str) -> List[str]:
         return [line for step in self.steps for line in step.sketch_lines(pad, "given")]
@@ -142,8 +142,8 @@ class SketchBackground(Background):
 class SketchScenario(Scenario):
     """A scenario in the sketch: its name, then its steps one level in, each under its own keyword."""
 
-    step_type = SketchStep
-    background_type = SketchBackground
+    step_class = SketchStep
+    background_class = SketchBackground
 
     def read_lines(self, lines: SketchLines) -> None:
         """Its steps: the lines under its name."""
@@ -161,8 +161,8 @@ class SketchScenario(Scenario):
 class SketchStory(Story):
     """A story in the sketch: `{actor} --> {story}`, its background steps, then each scenario with its steps."""
 
-    scenario_type = SketchScenario
-    background_type = SketchBackground
+    scenario_class = SketchScenario
+    background_class = SketchBackground
 
     @classmethod
     def from_match(cls, match: "re.Match", order: int) -> "SketchStory":
@@ -212,6 +212,8 @@ class SketchStory(Story):
 class SketchEpic(Epic):
     """An epic in the sketch: its name, its estimate, its stories, then its nested epics, one level deeper each."""
 
+    story_class = SketchStory
+
     def read_lines(self, lines: SketchLines) -> None:
         """The lines under the epic: its estimate, each story with its scenarios, and each nested epic with its own."""
         for entry in lines.under():
@@ -241,13 +243,12 @@ class SketchEpic(Epic):
         return lines
 
 
-class SketchStoryModel(StoryModel):
-    epic_type = SketchEpic
-    story_type = SketchStory
+class SketchStoryMap(StoryMap):
+    epic_class = SketchEpic
     lens = _LENS
     """The section of a sketch Stories writes, opened by its `stories:` heading."""
 
-    def parse(self, text: str, file: str = "") -> "SketchStoryModel":
+    def parse(self, text: str, file: str = "") -> "SketchStoryMap":
         """Read the sketch's stories section into this map, and return it."""
         self.epics.refill([])
         self.increments.refill([])
@@ -288,10 +289,10 @@ class SketchStoryModel(StoryModel):
                 lines.append(raw)
         return SketchLines.from_raw(lines)
 
-    def render(self, canonical: StoryModel, written: Written = Written()) -> str:
+    def render(self, canonical: StoryMap, written: Written = Written()) -> str:
         """Write canonical as a sketch: copied into a sketch map, which writes itself. A sketch keeps no previous
         text."""
-        return (canonical if isinstance(canonical, SketchStoryModel) else self.copy_of(canonical)).save()
+        return (canonical if isinstance(canonical, SketchStoryMap) else self.copy_of(canonical)).save()
 
 
     def save(self) -> str:

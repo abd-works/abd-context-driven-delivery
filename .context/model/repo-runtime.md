@@ -1921,7 +1921,7 @@ No class of this module acts on another class of the model at run time.
 
 - `Stories.read_paths`
   - `-> Format()` creates · cdd_guidance/practices/stories/stories.py:68
-  - `-> StoryModel.load_files` loads · cdd_guidance/practices/stories/stories.py:76
+  - `-> StoryMap.load_files` loads · cdd_guidance/practices/stories/stories.py:76
 - `Stories._live_adapter`
   - `-> Format()` creates · cdd_guidance/practices/stories/stories.py:92
 
@@ -1937,64 +1937,64 @@ No class of this module acts on another class of the model at run time.
 - `StoriesGraph._story_map_model`
   - `-> PracticeGraph.graph` reads graph of · cdd_guidance/practices/stories/graph_practice.py:70
   - `-> PracticeGraph.source_root` reads source root of · cdd_guidance/practices/stories/graph_practice.py:71
-  - `-> StoryModel.load` loads · cdd_guidance/practices/stories/graph_practice.py:75
-  - `-> StoryModel.load_files` loads · cdd_guidance/practices/stories/graph_practice.py:76
+  - `-> StoryMap.load` loads · cdd_guidance/practices/stories/graph_practice.py:75
+  - `-> StoryMap.load_files` loads · cdd_guidance/practices/stories/graph_practice.py:76
 - `StoriesGraph.<module>`
   - `-> GraphPractices.register` registers with · cdd_guidance/practices/stories/graph_practice.py:184
 
-## StoryModel
+## StoryMap
 
-- `StoryModel.__init__`
-  - `-> ModelChildren()` creates · cdd_guidance/practices/stories/model/story_model.py:913
-- `StoryModel.epics.append`
-  - `-> Epic.append` keeps · cdd_guidance/practices/stories/model/story_model.py:1080
+- `StoryMap.__init__`
+  - `-> ModelChildren()` creates · cdd_guidance/practices/stories/model/story_map.py:913
+- `StoryMap.epics.append`
+  - `-> Epic.append` keeps · cdd_guidance/practices/stories/model/story_map.py:1080
 
 ## Epic
 
 - `Epic.__init__`
-  - `-> ModelChildren()` creates · cdd_guidance/practices/stories/model/story_model.py:639
+  - `-> ModelChildren()` creates · cdd_guidance/practices/stories/model/story_map.py:639
 - `Epic.append_story`
-  - `-> Story.append` keeps · cdd_guidance/practices/stories/model/story_model.py:725
+  - `-> Story.append` keeps · cdd_guidance/practices/stories/model/story_map.py:725
 
 ## Story
 
 - `Story.__init__`
-  - `-> ModelChildren()` creates · cdd_guidance/practices/stories/model/story_model.py:826
-  - `-> Scenario.append` keeps · cdd_guidance/practices/stories/model/story_model.py:834
+  - `-> ModelChildren()` creates · cdd_guidance/practices/stories/model/story_map.py:826
+  - `-> Scenario.append` keeps · cdd_guidance/practices/stories/model/story_map.py:834
 
 ## Scenario
 
 - `Scenario.__init__`
-  - `-> ModelChildren()` creates · cdd_guidance/practices/stories/model/story_model.py:524
-  - `-> Step.append` keeps · cdd_guidance/practices/stories/model/story_model.py:535
-  - `-> Step()` creates · cdd_guidance/practices/stories/model/story_model.py:535
+  - `-> ModelChildren()` creates · cdd_guidance/practices/stories/model/story_map.py:524
+  - `-> Step.append` keeps · cdd_guidance/practices/stories/model/story_map.py:535
+  - `-> Step()` creates · cdd_guidance/practices/stories/model/story_map.py:535
 - `Scenario.when_then_runs`
-  - `-> StepType.WHEN` reads constants of · cdd_guidance/practices/stories/model/story_model.py:569
-  - `-> Step.append` keeps · cdd_guidance/practices/stories/model/story_model.py:572
-  - `-> StepType.THEN` reads constants of · cdd_guidance/practices/stories/model/story_model.py:573
-- `Scenario` `-> Example` keeps its examples as · cdd_guidance/practices/stories/model/story_model.py:470
+  - `-> StepType.WHEN` reads constants of · cdd_guidance/practices/stories/model/story_map.py:569
+  - `-> Step.append` keeps · cdd_guidance/practices/stories/model/story_map.py:572
+  - `-> StepType.THEN` reads constants of · cdd_guidance/practices/stories/model/story_map.py:573
+- `Scenario` `-> Example` keeps its examples as · cdd_guidance/practices/stories/model/story_map.py:470
 
 ## Step
 
 - `Step.__init__`
-  - `-> ModelChildren()` creates · cdd_guidance/practices/stories/model/story_model.py:375
-  - `-> CodeBody()` creates · cdd_guidance/practices/stories/model/story_model.py:383
-  - `-> ModelChildren.append` keeps · cdd_guidance/practices/stories/model/story_model.py:387
+  - `-> ModelChildren()` creates · cdd_guidance/practices/stories/model/story_map.py:375
+  - `-> CodeBody()` creates · cdd_guidance/practices/stories/model/story_map.py:383
+  - `-> ModelChildren.append` keeps · cdd_guidance/practices/stories/model/story_map.py:387
 - `Step.code_key`
-  - `-> CodeBody.text` reads text of · cdd_guidance/practices/stories/model/story_model.py:392
+  - `-> CodeBody.text` reads text of · cdd_guidance/practices/stories/model/story_map.py:392
 - `Step.phase`
-  - `-> StepType.value` reads value of · cdd_guidance/practices/stories/model/story_model.py:426
+  - `-> StepType.value` reads value of · cdd_guidance/practices/stories/model/story_map.py:426
 
-## DiagramStoryModel
+## DiagramStoryMap
 
-- `DiagramStoryModel.sub_epic_top`
-  - `-> DiagramEpic.nested_row_y` reads nested row y of · cdd_guidance/practices/stories/model/diagram_story_model.py:170
-- `DiagramStoryModel.sub_epic_y`
-  - `-> DiagramEpic.bar_height` reads bar height of · cdd_guidance/practices/stories/model/diagram_story_model.py:179
-  - `-> DiagramEpic.depth_gap` reads depth gap of · cdd_guidance/practices/stories/model/diagram_story_model.py:179
-- `DiagramStoryModel.story_y`
-  - `-> DiagramEpic.bar_height` reads bar height of · cdd_guidance/practices/stories/model/diagram_story_model.py:186
-- `DiagramStoryModel` `-> DiagramStory` makes its stories as · cdd_guidance/practices/stories/model/diagram_story_model.py:154
+- `DiagramStoryMap.sub_epic_top`
+  - `-> DiagramEpic.nested_row_y` reads nested row y of · cdd_guidance/practices/stories/model/diagram_story_map.py:170
+- `DiagramStoryMap.sub_epic_y`
+  - `-> DiagramEpic.bar_height` reads bar height of · cdd_guidance/practices/stories/model/diagram_story_map.py:179
+  - `-> DiagramEpic.depth_gap` reads depth gap of · cdd_guidance/practices/stories/model/diagram_story_map.py:179
+- `DiagramStoryMap.story_y`
+  - `-> DiagramEpic.bar_height` reads bar height of · cdd_guidance/practices/stories/model/diagram_story_map.py:186
+- `DiagramStoryMap` `-> DiagramStory` makes its stories as · cdd_guidance/practices/stories/model/diagram_story_map.py:154
 
 # cdd_guidance/practices/ddd
 

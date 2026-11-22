@@ -16,14 +16,14 @@ for _candidate in _HERE.parents:
 from mamba import description, context, it, before
 from expects import equal, contain, expect
 
-from cdd_guidance.practices.stories.model.story_model import Epic, Step, StepType, Story, StoryType
-from cdd_guidance.practices.stories.model.story_model import Scenario
-from cdd_guidance.practices.stories.model.story_model import StoryModel
-from cdd_guidance.practices.stories.model.python.python_story_model import PythonStoryModel
+from cdd_guidance.practices.stories.model.story_map import Epic, Step, StepType, Story, StoryType
+from cdd_guidance.practices.stories.model.story_map import Scenario
+from cdd_guidance.practices.stories.model.story_map import StoryMap
+from cdd_guidance.practices.stories.model.python.python_story_map import PythonStoryMap
 
 
-def _story_map_with_stories() -> StoryModel:
-    story_map = StoryModel()
+def _story_map_with_stories() -> StoryMap:
+    story_map = StoryMap()
     for i in range(1, 5):
         story_map.epics.append(Epic(f"Epic {i}", i))
     first = story_map.epics[0]
@@ -40,9 +40,9 @@ def _story_map_with_stories() -> StoryModel:
     return story_map
 
 
-def _story_map_with_a_but_step() -> StoryModel:
+def _story_map_with_a_but_step() -> StoryMap:
     """One epic, one story, one scenario whose last step is a But, as markdown scenarios often end."""
-    story_map = StoryModel()
+    story_map = StoryMap()
     epic = Epic("Remove Tickets", 1)
     story = Story("Delete Ticket", 1, StoryType.USER)
     scenario = Scenario(name="a ticket is deleted", sequential_order=1)
@@ -69,7 +69,7 @@ def _step_verbs_used(content: str) -> set:
 # Seen 2026-11-17: scenarios rendered from markdown to Python used but_ without importing it, so the file failed to run.
 with description("a Python story test rendered from scenarios whose last step is a But"):
     with before.each:
-        py = PythonStoryModel()
+        py = PythonStoryMap()
         tree = py.render(_story_map_with_a_but_step())
         self.content = next(text for path, text in tree.items() if py.is_story_file(path))
 
@@ -85,7 +85,7 @@ with description("a Python runnable-story Story Map") as self:
         "that holds a rendered code Story Map with 4 Epics and 3 Epics under the first Epic"
     ):
         with before.each:
-            self.py = PythonStoryModel()
+            self.py = PythonStoryMap()
             self.canonical = _story_map_with_stories()
             self.tree = self.py.render(self.canonical)
             self.leaf_paths = sorted(path for path in self.tree if self.py.is_story_file(path))
@@ -111,7 +111,7 @@ with description("a Python runnable-story Story Map") as self:
 
     with context("that holds a story file whose story keeps code between its scenarios"):
         with before.each:
-            self.parsed = PythonStoryModel().parse({
+            self.parsed = PythonStoryMap().parse({
                 "tests/checkout/checkout_story.test.py": (
                     "from story_test import given, scenario, story\n"
                     "\n"
@@ -129,7 +129,7 @@ with description("a Python runnable-story Story Map") as self:
         with context("with the story renamed and the map written again"):
             with before.each:
                 self.parsed.epics[0].stories[0].name = "Pay with a card"
-                self.written = PythonStoryModel().render(self.parsed)
+                self.written = PythonStoryMap().render(self.parsed)
 
             with it("should keep the code the story shares between its scenarios"):
                 expect(self.written["tests/checkout/checkout_story.test.py"]).to(contain("    card = Card()"))

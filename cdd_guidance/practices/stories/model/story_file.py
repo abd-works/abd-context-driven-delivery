@@ -1,5 +1,5 @@
 """A story file in code, read once into its stories and the file's own code around them. Each language's model picks the
-kind of file once (`CodeStoryModel.story_file`): a file whose blocks it reads (*BlockStoryFile*: a story, background,
+kind of file once (`CodeStoryMap.story_file`): a file whose blocks it reads (*BlockStoryFile*: a story, background,
 scenario, and step each written as a *StoryBlock*), a screen spec, a shared story file, or, for a language that reads no
 blocks, the text alone. A story made from a block reads its code from that block (`CodeStory.from_block`), so no story
 is matched to a block by its name.
@@ -16,8 +16,8 @@ from cdd_guidance.practices.source_code import CodeBody, CodeLanguage, InsideLin
 from cdd_guidance.practices.stories.model.story_map_files import source_at
 
 if TYPE_CHECKING:
-    from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel
-    from cdd_guidance.practices.stories.model.story_model import Background, Scenario, Story
+    from cdd_guidance.practices.stories.model.code_story_map import CodeStoryMap
+    from cdd_guidance.practices.stories.model.story_map import Background, Scenario, Story
 
 
 class StoryBlock(ABC):
@@ -105,7 +105,7 @@ class StoryFile:
     file whose code is not kept. This kind reads the stories from the text alone, as a language that reads no blocks
     does; the project is the folder the files it reads, such as an examples module, are found in."""
 
-    def __init__(self, model: CodeStoryModel, path: str, content: str, project: Optional[Path] = None) -> None:
+    def __init__(self, model: CodeStoryMap, path: str, content: str, project: Optional[Path] = None) -> None:
         self.model = model
         self.path = path
         self.text = content
@@ -131,7 +131,7 @@ class StoryFile:
     def read_text(self) -> List["Story"]:
         """The stories the text writes, read without its blocks: the named fallback for a file whose blocks cannot be
         read, such as a Python story test with a syntax error."""
-        return self.model.story_type.load_all(self.text)
+        return self.model.story_class.load_all(self.text)
 
 
 class BlockStoryFile(StoryFile, ABC):
@@ -154,11 +154,11 @@ class BlockStoryFile(StoryFile, ABC):
         written, leads = self._written_around(blocks)
         if not blocks:
             return self.read_text(), written
-        story_type = self.model.story_type
-        imports = story_type.syntax.example_imports(self.text)
+        story_class = self.model.story_class
+        imports = story_class.syntax.example_imports(self.text)
         stories = []
         for block, lead in zip(blocks, leads):
-            story = story_type.from_block(block, lead, "\n".join([imports, self.comment_above(block), block.text]))
+            story = story_class.from_block(block, lead, "\n".join([imports, self.comment_above(block), block.text]))
             story.source = source_at(self.path, block.line_span[0] + 1, block.line_span[1] + 1)
             stories.append(story)
         return stories, written

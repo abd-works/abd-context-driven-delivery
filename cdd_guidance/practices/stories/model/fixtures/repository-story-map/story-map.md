@@ -1015,7 +1015,7 @@ Observed: Dropping a Story card on the "Unassigned" zone, shown only in Incremen
 ## (E) Author Scenarios And Steps
 ### (S) Story Designer --> Add Scenario Under Story
 
-Observed: The + beside Scenarios in an expanded Story card adds "New Scenario" at the end of that Story's Scenarios (stories-client.tsx `handleAppendScenario`; stories.ts `StoryModel.appendScenario`).
+Observed: The + beside Scenarios in an expanded Story card adds "New Scenario" at the end of that Story's Scenarios (stories-client.tsx `handleAppendScenario`; stories.ts `StoryMap.appendScenario`).
 
 ### (S) Story Designer --> Rename Scenario
 
@@ -1023,7 +1023,7 @@ Observed: The Scenario name is an inline field saved on Enter, Tab, or leaving i
 
 ### (S) Story Designer --> Remove Scenario
 
-Observed: The − on a Scenario deletes it and renumbers the remaining Scenarios (stories.ts `StoryModel.removeScenario`).
+Observed: The − on a Scenario deletes it and renumbers the remaining Scenarios (stories.ts `StoryMap.removeScenario`).
 
 ### (S) Story Designer --> Reorder Scenarios
 
@@ -1081,7 +1081,7 @@ Observed: Dragging a line by its handle saves the new line order in that Example
 ## (E) Save And Share Changes
 ### (S) Story UI --> Save Each Edit To The Server
 
-Observed: Every edit is sent to the server as one request, saved to MongoDB, and the map is reloaded from the saved copy (stories-client.tsx `useStoryModel`; stories-server.ts `StoryMapRepositoryServer`, `StoryMapServer.persist`).
+Observed: Every edit is sent to the server as one request, saved to MongoDB, and the map is reloaded from the saved copy (stories-client.tsx `useStoryMap`; stories-server.ts `StoryMapRepositoryServer`, `StoryMapServer.persist`).
 
 ### (S) Story UI --> Show Save Status
 
@@ -1148,7 +1148,7 @@ Requested (2026-11-06): the Story UI editor has a screen frames view beside its 
 
 ### (S) Story UI --> Show Screen Frame Under Each Story
 
-Requested (2026-11-06): each frame is the story's main design canvas screen, drawn small under its card. It replaces the design canvas, where today the story map artboard draws a thumbnail under each story (`thumbnail` in `canvas.py`, `claude_design_story_model_spec.py`).
+Requested (2026-11-06): each frame is the story's main design canvas screen, drawn small under its card. It replaces the design canvas, where today the story map artboard draws a thumbnail under each story (`thumbnail` in `canvas.py`, `claude_design_story_map_spec.py`).
 
 ### (S) Story UI --> Mark Story Without A Screen
 
@@ -1156,7 +1156,7 @@ Requested (2026-11-06): a story with no screen gets an empty frame saying so. It
 
 ### (S) Person --> Open Story Explorer From Screen Frame
 
-Requested (2026-11-06): pressing a frame opens the browser story explorer at that story, scenario and step. It replaces the design canvas, where today only the artboard's thumbnails link, each opening `explorer.dc.html` at its story (`claude_design_story_model_spec.py`).
+Requested (2026-11-06): pressing a frame opens the browser story explorer at that story, scenario and step. It replaces the design canvas, where today only the artboard's thumbnails link, each opening `explorer.dc.html` at its story (`claude_design_story_map_spec.py`).
 
 ## (E) Navigate The Story Tree
 
@@ -1174,7 +1174,7 @@ Requested (2026-11-06): new in the Story UI app; replaces what the design canvas
 
 ### (S) Person --> Copy A Request To Open A Story In Its File
 
-Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where observed, the explorer carries each story's and scenario's `path:line` and offers to copy an open-in-file-viewer request for it (`claude_design_story_model_spec.py`, `copyOpenRequest` in `explorer.dc.html`).
+Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where observed, the explorer carries each story's and scenario's `path:line` and offers to copy an open-in-file-viewer request for it (`claude_design_story_map_spec.py`, `copyOpenRequest` in `explorer.dc.html`).
 
 ### (S) Person --> Pick An Outline Scenario's Example
 
@@ -1201,11 +1201,11 @@ Requested on 2026-11-06: the browser story explorer plays a CDD session's story 
 ## (E) Frame Design Canvas Screens In Explorer
 ### (S) Story UI --> Show Design Canvas Screen As Explorer Frame
 
-Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where observed, `_imports` in `nodes.py` imports each prototype screen into the explorer with the story, scenario and a `go` call, so the selected scenario runs on the real screen (`claude_design_story_model_spec.py`).
+Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where observed, `_imports` in `nodes.py` imports each prototype screen into the explorer with the story, scenario and a `go` call, so the selected scenario runs on the real screen (`claude_design_story_map_spec.py`).
 
 ### (S) Story UI --> Choose The Screen For A Step
 
-Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where observed, a step shows the screen it is shown on, else its scenario's screen, else its story's screen (`_story_entry` and `_screen_of` in `nodes.py`, `claude_design_story_model_spec.py`).
+Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where observed, a step shows the screen it is shown on, else its scenario's screen, else its story's screen (`_story_entry` and `_screen_of` in `nodes.py`, `claude_design_story_map_spec.py`).
 
 ### (S) Story UI --> Join A Step Without A Screen To The Next Step
 
@@ -1241,11 +1241,11 @@ Observed: `stem` and `camel` in `canvas.py` give a screen file's import name and
 
 ### (S) Design Canvas --> Give Each Prototype Screen Its Own Page
 
-Observed: `ClaudeDesignStoryModel.canvas` puts the story map, the story explorer, and each prototype screen on its own page (`claude_design_story_model_spec.py`).
+Observed: `ClaudeDesignStoryMap.canvas` puts the story map, the story explorer, and each prototype screen on its own page (`claude_design_story_map_spec.py`).
 
 ### (S) Design Canvas --> Place A Read-Only Story Panel Beside A Screen
 
-Observed: `_context_panel` in `nodes.py` draws a Stories board to the right of a screen, with the screen's own stories opened to their scenarios and steps and every other story greyed out (`claude_design_story_model_spec.py`).
+Observed: `_context_panel` in `nodes.py` draws a Stories board to the right of a screen, with the screen's own stories opened to their scenarios and steps and every other story greyed out (`claude_design_story_map_spec.py`).
 
 ## (E) Load Scenario Fixtures With The Fixture Bar
 ### (S) Person --> Load A Scenario Into A Standalone Screen

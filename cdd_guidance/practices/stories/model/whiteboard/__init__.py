@@ -1,1 +1,1 @@
-from .nodes import WhiteboardStoryModel  # noqa: F401
+from .nodes import WhiteboardStoryMap  # noqa: F401

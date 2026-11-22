@@ -22,12 +22,12 @@ from cdd_guidance.practices.ux.model.ux_map import UxMap
 from harness.annotations.name import Name
 from cdd_guidance.practices.stories.model.story_tree import KEY_SEPARATOR, StoryTree
 
-from cdd_guidance.practices.stories.model.diagram_story_model import (
+from cdd_guidance.practices.stories.model.diagram_story_map import (
     DiagramEpic,
     DiagramStory,
-    DiagramStoryModel,
+    DiagramStoryMap,
 )
-from cdd_guidance.practices.stories.model.story_model import Background, Scenario, Step, StoryModel, StoryNode
+from cdd_guidance.practices.stories.model.story_map import Background, Scenario, Step, StoryMap, StoryNode
 from harness.graph.graph import Graph
 from cdd_guidance.practices.ux.model.nodes import Screen
 from harness.guidance.practice_formats import Written
@@ -89,6 +89,7 @@ class ClaudeDesignStory(DiagramStory):
 class ClaudeDesignEpic(DiagramEpic):
     """An epic or sub-epic: its bars over its stories' columns, at the drawio's own scale."""
 
+    story_class = ClaudeDesignStory
     bar_height = 60
     sub_bar_height = 70
     bar_gap = 20
@@ -126,11 +127,10 @@ class StoryCanvasSetup:
         self.project = Path(workspace) / "project" if workspace else None
 
 
-class ClaudeDesignStoryModel(DiagramStoryModel):
+class ClaudeDesignStoryMap(DiagramStoryMap):
     """Claude Design canvas I/O. IS the format-typed tree root; render writes the canvas files."""
 
-    epic_type = ClaudeDesignEpic
-    story_type = ClaudeDesignStory
+    epic_class = ClaudeDesignEpic
     story_map_page = "story-map"
     screens_page = ClaudeDesignUxMap.page
     screens_folder = ClaudeDesignUxMap.folder
@@ -142,24 +142,28 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
     explorer_width = 1880
     explorer_height = 948
 
-    def __init__(self, source: Optional[StoryModel] = None, graph: Optional[Graph] = None, setup: Optional["StoryCanvasSetup"] = None) -> None:
-        """A canvas of source's story map, drawn with what setup gives it; the canvas keeps setup's UX map as a Claude
-        Design map, which places the screens."""
-        super().__init__(source, graph)
+    def __init__(self, graph: Optional[Graph] = None, setup: Optional["StoryCanvasSetup"] = None) -> None:
+        """A canvas drawn with what setup gives it; the canvas keeps setup's UX map as a Claude Design map, which places
+        the screens."""
+        super().__init__(graph)
         setup = setup or StoryCanvasSetup()
         # What every canvas this one renders is drawn with: the same UX map, sources, and project.
         self._setup = setup
         self.screen_map = self._screen_map(setup.ux_map)
         self.sources = dict(setup.sources)
-        self.canvas = DesignCanvas(self.name if self.name and self.name != "StoryModel" else "Story Map", setup.project)
+        self.canvas = DesignCanvas(self.name if self.name and self.name != "StoryMap" else "Story Map", setup.project)
 
-    def render(self, canonical: StoryModel, written: Written = Written()) -> str:
+    def blank(self) -> "ClaudeDesignStoryMap":
+        """A canvas holding no story map, drawn with this canvas's setup."""
+        return type(self)(setup=self._setup)
+
+    def render(self, canonical: StoryMap, written: Written = Written()) -> str:
         """The canvas files as JSON, drawn on a new canvas of canonical made with this canvas's setup, so canonical
         keeps its own."""
-        drawn = type(self)(canonical, setup=self._setup)
+        drawn = self.copy_of(canonical)
         return json.dumps(drawn.files(), indent=1, ensure_ascii=False)
 
-    def parse(self, text: str, file: str = "") -> "ClaudeDesignStoryModel":
+    def parse(self, text: str, file: str = "") -> "ClaudeDesignStoryMap":
         raise NotImplementedError("A Claude Design canvas is rendered from the story map; it is not read back.")
 
     # -- canvas ---------------------------------------------------------------------------

@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from harness.graph.graph import Source
     from harness.guidance.guidance import PracticeGuidance
 
-    from cdd_guidance.practices.stories.model.story_model import Background, Step, Story, StoryModel, StoryNode
+    from cdd_guidance.practices.stories.model.story_map import Background, Step, Story, StoryMap, StoryNode
 
 _EXPORT_CONST = re.compile(r"export const (\w+)")
 _DOMAIN_CLASS = re.compile(r"\bclass\s+([A-Z]\w*)\b")
@@ -208,7 +208,7 @@ class StoryRecording:
     the map's own files each node sits, and how many stories it has announced. The map makes one per ``record`` and
     each node records itself through it."""
 
-    def __init__(self, story_map: "StoryModel", practice: PracticeGuidance, on_node: Optional[Callable[[str], None]]) -> None:
+    def __init__(self, story_map: "StoryMap", practice: PracticeGuidance, on_node: Optional[Callable[[str], None]]) -> None:
         self.story_map = story_map
         self.practice = practice
         self.graph = practice.reading.graph

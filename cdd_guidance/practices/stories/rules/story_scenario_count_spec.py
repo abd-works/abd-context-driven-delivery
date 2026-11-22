@@ -10,7 +10,7 @@ if str(_REPO) not in sys.path:
 from expects import contain, equal, expect
 from mamba import context, description, it
 
-from cdd_guidance.practices.stories.model.story_model import Scenario, Story
+from cdd_guidance.practices.stories.model.story_map import Scenario, Story
 from cdd_guidance.practices.stories.rules.story_map import ChildCountFitsLayer, StoryScenariosAtMostSeven
 from harness.graph.graph import Graph, Node, Source
 from harness.graph.saved_graph import NodeIdentity

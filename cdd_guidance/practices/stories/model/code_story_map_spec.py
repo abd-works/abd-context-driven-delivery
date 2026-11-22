@@ -4,10 +4,10 @@ story tests. The code inside each file is covered by the TypeScript, Python, and
 from expects import be_true, equal, expect, have_len, raise_error
 from mamba import before, context, description, it
 
-from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModelError
-from cdd_guidance.practices.stories.model.python.python_story_model import PythonStoryModel
-from cdd_guidance.practices.stories.model.story_model import Epic, Scenario, Story, StoryModel, StoryType
-from cdd_guidance.practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
+from cdd_guidance.practices.stories.model.code_story_map import CodeStoryMapError
+from cdd_guidance.practices.stories.model.python.python_story_map import PythonStoryMap
+from cdd_guidance.practices.stories.model.story_map import Epic, Scenario, Story, StoryMap, StoryType
+from cdd_guidance.practices.stories.model.typescript.typescript_story_map import TypeScriptStoryMap
 from harness.guidance.practice_formats import Written
 
 
@@ -17,8 +17,8 @@ def story_named(name: str) -> Story:
     return story
 
 
-def epics_each_with_a_story(count: int) -> StoryModel:
-    story_map = StoryModel()
+def epics_each_with_a_story(count: int) -> StoryMap:
+    story_map = StoryMap()
     for order in range(1, count + 1):
         epic = Epic(f"Epic {order}", order)
         epic.stories.append(story_named(f"Story of epic {order}"))
@@ -26,7 +26,7 @@ def epics_each_with_a_story(count: int) -> StoryModel:
     return story_map
 
 
-def first_epic_with_three_sub_epics() -> StoryModel:
+def first_epic_with_three_sub_epics() -> StoryMap:
     story_map = epics_each_with_a_story(4)
     first = story_map.epics[0]
     for order in range(1, 4):
@@ -42,10 +42,10 @@ def files_under(tree: dict, folder: str) -> list:
 
 with description("a code Story Map") as self:
     with before.each:
-        self.code_map = PythonStoryModel("tests")
+        self.code_map = PythonStoryMap("tests")
 
     with it("should write no files for an empty Story Map"):
-        expect(self.code_map.render(StoryModel())).to(equal({}))
+        expect(self.code_map.render(StoryMap())).to(equal({}))
 
     with context("with 4 Epics that each hold their own Story"):
         with before.each:
@@ -175,7 +175,7 @@ with description("a code Story Map") as self:
 
     with context("that holds hand-written code in a story file outside the generated Story blocks"):
         with before.each:
-            self.typescript_map = TypeScriptStoryModel("tests")
+            self.typescript_map = TypeScriptStoryMap("tests")
             self.canonical = first_epic_with_three_sub_epics()
             initial_tree = self.typescript_map.render(self.canonical)
             self.first_file_path = next(path for path in initial_tree if path.endswith("epic-1-1/story-1/story_1_story.test.ts"))
@@ -196,7 +196,7 @@ with description("a code Story Map") as self:
 
     with context("that has been asked to parse a value that is not a mapping of paths to file content"):
         with it("should reject it"):
-            expect(lambda: self.code_map.parse("not a mapping")).to(raise_error(CodeStoryModelError))
+            expect(lambda: self.code_map.parse("not a mapping")).to(raise_error(CodeStoryMapError))
 
 
 with description("a story read from a TypeScript story file") as self:
@@ -212,7 +212,7 @@ with description("a story read from a TypeScript story file") as self:
             "  });\n"
             "});\n"
         )
-        self.story = TypeScriptStoryModel().story_file("pay.ts", text).stories[0]
+        self.story = TypeScriptStoryMap().story_file("pay.ts", text).stories[0]
 
     with it("should keep the line that opens its block"):
         expect(self.story.written.heading).to(equal(["story('Pay by card', () => {"]))
@@ -243,7 +243,7 @@ with description("a TypeScript story file whose story comment names the story di
             "});\n"
         )
         self.path = "tests/shop/pay_story.test.ts"
-        self.story = TypeScriptStoryModel().parse({self.path: text}).descendants.stories()[0]
+        self.story = TypeScriptStoryMap().parse({self.path: text}).descendants.stories()[0]
 
     with it("should take the name its comment gives"):
         expect(self.story.name).to(equal("Pay"))
