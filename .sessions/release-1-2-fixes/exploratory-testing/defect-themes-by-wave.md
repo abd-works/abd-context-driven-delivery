@@ -76,6 +76,111 @@ Each defect is counted once here, under what found it.
 
 All nine defects the automated tiers found were found while fixing: before the fixes started, the tiers were green on every one of the 132 defects the robots then found.
 
+## Defects by the testing layer that should have caught them
+
+Exploratory testing is left out: each defect is placed under the cheapest automated layer that could have failed on it before a person or a robot met it. The placing is my judgment per theme, from what the defect needs in order to show: a rule or one object alone (BDD spec), a story's behaviour on the domain objects (story test, domain tier), the same through the cdd server (story test, server tier), real git, processes or an installer (heavy tier), or a real browser (e2e tier). The layers are ordered by the number of defects.
+
+| Layer that should have caught it | Tier | Defects | Share |
+|---|---|---|---|
+| Story tests, domain tier | unit | 49 | 34% |
+| BDD specs beside the code | unit | 41 | 28% |
+| Heavy specs (real git, processes, the installer, whole-project graph loads) | heavy | 28 | 19% |
+| Story tests, server tier | unit | 13 | 9% |
+| Browser story tests | e2e | 13 | 9% |
+| No test layer: a code review or a Clean Engineering rule | — | 2 | 1% |
+
+The unit tier should have caught 103 of the 146 (71%), and it caught 6.
+
+### Story tests, domain tier — 49
+
+| Defect theme | Wave | Defects | The test that was missing |
+|---|---|---|---|
+| Ticket name made from a title | 1 | 5 | a ticket created from an empty, taken or too-long title is refused |
+| Render saves over the wrong file | 1 | 5 | a render of one path leaves every other file of the folder as it was |
+| Spec trips between formats | 3 | 5 | a spec rendered to each format and back is the same spec |
+| Class model in markdown (trips, names kept between renders) | 3 | 3 | two models rendered in turn each keep their own classes |
+| Calls that answer success and do less | 1 | 3 | validate, document and output roots refuse empty or unusable input |
+| A trip through another format loses prose | 2 | 3 | a file rendered to each format and back keeps its prose |
+| Scenarios rendered to code | 3 | 3 | an outline renders to code that parses, one file per story |
+| Model rendered to code | 3 | 3 | a code render is saved at the fidelity's paths in the language's types |
+| Modules drawing and whiteboard | 3 | 3 | a module card through a drawing keeps its language and constraint |
+| Three defects in every language | 5 | 3 | one shared behaviour run for each language |
+| Board and graph view on one bad file | 2 | 2 | a board with one unreadable session still shows the others |
+| Domain model drawing | 3 | 2 | a drawing read back keeps its arrows and containers |
+| UX drawings drop what they show | 3 | 2 | a drawing read back keeps every label it shows |
+| Files no fidelity owns | 4 | 2 | every practice file of a project is declared by a fidelity |
+| Thin slice has no format of its own | 3 | 1 | every file generate names can be chosen and rendered |
+| Story map back from a drawing | 3 | 1 | a story map through a drawing keeps descriptions, links and scope |
+| IA render empties the other file | 3 | 1 | a render to one format leaves the other format's file whole |
+| Validate passes a file it read nothing from | 3 | 1 | validate reports a path that gave the graph no node |
+| False findings: a saved report older than its rule | 5 | 1 | a report saved before a rule changed is marked out of date |
+
+### BDD specs beside the code — 41
+
+| Defect theme | Wave | Defects | The test that was missing |
+|---|---|---|---|
+| Record of test runs describes the wrong run | 1 | 7 | a record whose commit, process or claim is no longer live is not trusted |
+| Stories graph reading | 3 | 5 | a step invokes only the operation of its own language and class |
+| Damaged or wrongly shaped state file | 1 | 4 | an unreadable file is refused by name, never read as empty |
+| Prompt queue keeps input it should refuse | 1 | 4 | a blank card, an unknown step state and a chat id with a path are refused |
+| BDD realization and graph links | 3 | 3 | a rule's failing and repaired example in each quoting style |
+| Graph leaves out what it cannot place | 2 | 2 | a file that gives the graph no node raises a violation |
+| DDD model missing from the graph | 3 | 2 | a context, integration and event each become a node |
+| UX formats that cannot be rendered | 3 | 2 | every format a fidelity offers has an adapter |
+| Code graph joined by name | 3 | 2 | a call joins the one operation its receiver's class has |
+| New repository's ignore lines | 1 | 1 | a new repository's ignore file holds only the lines a new project needs |
+| Scenarios after the template fail validate | 3 | 1 | each template passes its own fidelity's rules |
+| Domain model after the template fails validate | 3 | 1 | each template passes its own fidelity's rules |
+| UX is not in the graph | 3 | 1 | every practice gives the graph at least one node |
+| Class model in markdown gives the graph no class | 3 | 1 | a markdown model's classes are graph nodes |
+| Java offered and never read | 3 | 1 | every format a fidelity offers has an adapter |
+| Linking calls by import dropped real edges | 5 | 1 | caught here, by seven examples |
+| Changed declarations moved a proposed root | 5 | 1 | caught here |
+| A render removed a person's note from a drawing | 5 | 1 | caught here, while the spec was being restructured |
+| False findings: "once" in a name read as a one-time task | 5 | 1 | a rule's failing and repaired example pair |
+
+### Heavy specs — 28
+
+| Defect theme | Wave | Defects | The test that was missing |
+|---|---|---|---|
+| Install record and install target | 1 | 6 | a second install, a wrong IDE name and a bad path against a real installer |
+| Worktree outlives its ticket, or the ticket its worktree | 1 | 6 | activate, delete and archive against real git after a folder or branch is removed by hand |
+| Refresh and whole loads change the graph | 4 | 3 | a whole project loaded, refreshed unchanged, and compared |
+| Prompt queue loses changes with two writers | 1 | 2 | two processes changing one queue file |
+| Two installs at the same moment | 1 | 2 | two installer processes at once |
+| Installer refresh and release version | 1 | 2 | `--self` and install-latest on a real install |
+| Close does its steps in the wrong order | 1 | 2 | a close whose merge conflicts, in real git |
+| No edge crosses a practice | 4 | 2 | one project holding all five practices, its links counted |
+| Saved code renders turned the install probe red; health report's new question | 5 | 2 | caught here |
+| A spec file that ran no examples counted as passed | 1 | 1 | the test runner on a file that runs nothing |
+
+### Story tests, server tier — 13
+
+| Defect theme | Wave | Defects | The test that was missing |
+|---|---|---|---|
+| Graph view selection fails or marks the wrong lines | 4 | 4 | each kind of node asked for its lines through the cdd server |
+| Guidance argument matching | 1 | 3 | a misspelled slug and a rule's name sent through the published schema |
+| Files app: a deleted file, a non-ASCII name | 1 | 2 | the file list and a read through the cdd server |
+| Graph view filters | 4 | 2 | no selection and an empty selection answer differently |
+| Graph tree entries and relationship members | 4 | 2 | a member answers its own source; same-named entries differ |
+
+### Browser story tests — 13
+
+| Defect theme | Wave | Defects | The test that was missing |
+|---|---|---|---|
+| Rendered markdown view | 4 | 4 | each practice's file opened in the rendered view |
+| Links and callouts | 4 | 3 | a link pressed and a callout shown, in both views and in code |
+| Files app: a huge file, a missing project folder | 1 | 2 | the page opened on each |
+| Browser tests older than the page | 2 | 2 | the tier kept green as the page changed |
+| Graph view browser test fails only inside the tier | 5 | 1 | caught here |
+| The chat bar cannot be walked from inside the Claude app | 5 | 1 | one real run of the walk's first step when it was built |
+
+### No test layer — 2
+
+| Defect theme | Wave | Defects | What would have caught it |
+|---|---|---|---|
+| Business rules decided on the page | 5 | 2 | a review, or a Clean Engineering rule that fails a page deciding what Python should |
+
 ## Wave 1 — Round 1: six robots explore the tools and workflows
 
 | Defect theme | Module(s) | Description | Root cause | Classification | Practice | Stage | Format | Caught by |
