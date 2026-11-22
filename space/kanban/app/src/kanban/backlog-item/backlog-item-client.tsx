@@ -60,6 +60,8 @@ export class BacklogItemClient extends BacklogItemClientGenerated {
   async take(dragged: BacklogItemClient, drop: ItemDrop): Promise<void> {
     if (drop === 'child') {
       await dragged.nestUnder(this.title)
+      // Where each item can go next is Python's answer (parent_choices), so the board is read again before the toast.
+      await this.page.reader.refresh()
       this.page.store.toast(`${dragged.title} is now a child of ${this.title}`)
       return
     }
