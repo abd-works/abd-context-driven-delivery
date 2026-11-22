@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING
 
 from harness.graph.schema_conformance import EXEMPT_FACT
 
-from cdd_guidance.practices.clean_engineering.reading.code_file import CodeSpan
 from cdd_guidance.practices.clean_engineering.reading.code_read import DESCRIBED_FACT
 
 if TYPE_CHECKING:
@@ -81,21 +80,11 @@ class CallLinks:
         """Record an ``invokes`` edge from every member the graph holds to each member it calls."""
         in_graph = self._reading.in_graph
         for caller in [*in_graph.nodes("Operation"), *in_graph.nodes("Property")]:
-            called = [member for member in self._index.file(caller.source.file).members_called_in(self._span_of(caller)) if member is not caller]
+            called = [member for member in self._index.file(caller.source.file).members_called_in(self._index.span_of(caller)) if member is not caller]
             for member in called:
                 self._graph.edges.relate("invokes", caller, member)
             if not called and self._calls_nothing_by_design(caller):
                 caller.set_fact(EXEMPT_FACT, ["invokes"])
-
-    def _span_of(self, caller: "Node") -> CodeSpan:
-        """The caller's own code, the class that declares it, and the type hint of each of its parameters."""
-        text = CodeSpan.code_of(caller.source.text) if caller.source.file else ""
-        typed = {edge.child.name: str(edge.child.get_fact("type_hint") or "") for edge in self._graph.edges.from_parent("hasParameter", caller)}
-        return CodeSpan(text, self._class_declaring(caller), typed)
-
-    def _class_declaring(self, member: "Node") -> "Node | None":
-        owner = member.get_fact("owner")
-        return next((node for node in self._index.classes_named(owner) if node.source.file == member.source.file), None) if owner else None
 
     def _calls_nothing_by_design(self, caller: "Node") -> bool:
         """Whether caller is a member that has nothing to call: an abstract one, whose subclasses do the work, or one

@@ -149,6 +149,25 @@ with description('an order'):
                 expect(self.order.is_paid).to(be_true)
 """
 
+# A spec whose describe cleans up after each observation, as a teardown does, in a block of its own.
+_UNPAID_ORDER_SPEC = """\
+from mamba import after, before, description, it
+from expects import be_false, expect
+
+from src.ordering.cart import Cart
+from src.ordering.order import Order
+
+with description('an unpaid order'):
+    with before.each:
+        self.order = Order(Cart())
+
+    with after.each:
+        self.order.pay(0)
+
+    with it('should not be paid'):
+        expect(self.order.is_paid).to(be_false)
+"""
+
 _ORDER_SCRIPT = """\
 export class Order {
   private paid = false;
@@ -192,6 +211,7 @@ _FILES = {
     "src/ordering/order.py": _ORDER,
     "src/ordering/cart_spec.py": _CART_SPEC,
     "src/ordering/order_spec.py": _ORDER_SPEC,
+    "src/ordering/unpaid_order_spec.py": _UNPAID_ORDER_SPEC,
     "src/ordering/order.ts": _ORDER_SCRIPT,
     "src/ordering/order.spec.ts": _ORDER_SCRIPT_SPEC,
     "src/checkout_view.py": _CHECKOUT_VIEW,
@@ -249,6 +269,12 @@ with description("a spec read into the graph beside the code it drives"):
         with it("should start from the nearest setup's constructor, not an outer setup's call"):
             expect(_linked(self.graph, "invokes", "src/ordering/order_spec.py", "should hold a line for each cart line")).to(
                 equal(["src/ordering/order.py:__init__:Order", "src/ordering/order.py:lines:Order"])
+            )
+
+    with context("whose describe cleans up after each observation"):
+        with it("should start from the setup's calls, not the cleanup's"):
+            expect(_linked(self.graph, "invokes", "src/ordering/unpaid_order_spec.py", "should not be paid")).to(
+                equal(["src/ordering/order.py:__init__:Order", "src/ordering/cart.py:__init__:Cart", "src/ordering/order.py:is_paid:Order"])
             )
 
     with context("whose describe names a class its spec imports"):

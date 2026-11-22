@@ -37,6 +37,9 @@ _TOOL_NAMED = re.compile(r"""\b(\w+)\(\s*["']([a-z][a-z-]*)\.([a-zA-Z_]+)["']"""
 _QUOTED = re.compile(r"""(['"`])(?:\\.|(?!\1).)*\1""")
 # A mamba spec's own state, `self.cart`, which its blocks reach as a local.
 _SPEC_STATE = re.compile(r"\bself\.(\w+)")
+# A block that runs after each observation or after them all: `with after.each:`, `afterEach(() => {`.
+_PYTHON_TEARDOWN = re.compile(r"^(\s*)with\s+after\.(?:each|all)\b")
+_SCRIPT_TEARDOWN = re.compile(r"^\s*after(?:Each|All)\s*\(")
 
 
 class BddNodeTypes(PracticeNodeTypes):
@@ -228,7 +231,7 @@ class _SpecLinks:
         """A describe's or context's own lines, after its opening line and before its first child."""
         start, end = block.source.start_line, block.source.end_line
         first_child = min((node.source.start_line for node in self._nodes if start < node.source.start_line <= end), default=end + 1)
-        return _SpecCode("\n".join(block.source.text.splitlines()[1:first_child - start]))
+        return _SpecCode("\n".join(_without_teardown(block.source.text.splitlines()[1:first_child - start])))
 
 
 class _SpecCode:
@@ -240,3 +243,31 @@ class _SpecCode:
         self.tools = [(toolset, operation) for _transport, toolset, operation in named]
         self.transports = {transport for transport, _toolset, _operation in named}
         self.code = _SPEC_STATE.sub(r"\1", _QUOTED.sub('""', CodeSpan.code_of(text)))
+
+
+def _without_teardown(lines: list[str]) -> list[str]:
+    """A block's lines without those that run after its observations, which clean up what the observation did and are
+    no part of the event it observes."""
+    kept: list[str] = []
+    inside: str | None = None
+    depth = 0
+    for line in lines:
+        if inside is not None:
+            if inside == "script":
+                depth += line.count("(") - line.count(")")
+                if depth <= 0:
+                    inside = None
+                continue
+            if not line.strip() or len(line) - len(line.lstrip()) > len(inside):
+                continue
+            inside = None
+        python = _PYTHON_TEARDOWN.match(line)
+        if python is not None:
+            inside = python.group(1)
+            continue
+        if _SCRIPT_TEARDOWN.match(line):
+            depth = line.count("(") - line.count(")")
+            inside = "script" if depth > 0 else None
+            continue
+        kept.append(line)
+    return kept

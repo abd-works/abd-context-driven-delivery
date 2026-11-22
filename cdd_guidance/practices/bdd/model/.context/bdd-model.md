@@ -40,7 +40,9 @@ Every description, context, and observation. It knows its own source lines and t
 + load_span_facts(span: str): None
 	// fills expect_count, has_implementation, and private_probe from this node's own lines. What an observation and
 	// its setups call is read when the graph links them (ObservationLinks), from their lines, by the spec's own file as
-	// Clean Engineering's index knows it (`CodeIndex.file(spec, imports).members_called_in(CodeSpan)`)
+	// Clean Engineering's index knows it (`CodeIndex.file(spec, imports).members_called_in(CodeSpan)`); a block that
+	// cleans up after the observations (`with after.each:`, `afterEach(...)`) is no part of a setup, since the event
+	// an observation follows is what its setup does, not what is undone after it
 
 ## Description : BehaviorNode
 
