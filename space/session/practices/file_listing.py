@@ -14,8 +14,9 @@ if TYPE_CHECKING:
 class FileListing:
     """*FileListing* is what a page, such as the Files app, lists of a session's files for the session's guidance
     selection and the fidelities the page's link names, and which of them are the session's own work. The fidelities
-    listed are those the selection covers once stages were chosen, else the ones the link names that the selection
-    covers, so a practice turned off hides its files then too. Each file it answers says ``is_listed`` and
+    listed are those the selection covers once stages were chosen, else the ones the link names of the practices
+    selected, in any stage, so a practice turned off hides its files then too, while the stage the selection shows
+    for the ticket until someone chooses hides none a link names. Each file it answers says ``is_listed`` and
     ``is_session_work``, so a page draws what Python decided and restates no rule."""
 
     def __init__(self, selection: GuidanceSelection, linked: list[str], is_repository: bool) -> None:
@@ -26,13 +27,16 @@ class FileListing:
     @cached_property
     def listed(self) -> list[str]:
         """The fidelities whose files are listed, by slug."""
-        covered = self._selection.fidelities
-        return covered if self._selection.is_stage_chosen else [slug for slug in self._linked if slug in covered]
+        if self._selection.is_stage_chosen:
+            return self._selection.fidelities
+        of_practices = self._selection.fidelities_of_practices
+        return [slug for slug in self._linked if slug in of_practices]
 
     @cached_property
     def formats(self) -> list[str]:
-        """The formats of the format groups selected, each once; none selected, every format is listed."""
-        return list(dict.fromkeys(name for group in self._selection.formats if group.is_selected for name in group.formats))
+        """The formats of the format groups selected, each once, among the groups the fidelities the selection covers and
+        those listed offer; none selected, every format is listed."""
+        return list(dict.fromkeys(name for group in self._selection.format_groups_with(self.listed) if group.is_selected for name in group.formats))
 
     def of_fidelity(self, slug: str, format: str, entry: FileEntry) -> FileEntry:
         """entry, a file fidelity slug declares in format: listed while slug is listed and format is selected, or no

@@ -228,7 +228,23 @@ class GuidanceSelection:
 
     @property
     def covered(self) -> list[FidelityGuidance]:
-        stages = self._chosen_stages or [stage.name for stage in STAGES]
+        return self._of_practices_in(self._chosen_stages or [stage.name for stage in STAGES])
+
+    @property
+    def fidelities_of_practices(self) -> list[str]:
+        """The fidelities of the practices selected in every stage, by slug: those a page's link may list before anyone
+        chose stages, when only a practice turned off narrows what it names."""
+        return [fidelity.slug for fidelity in self._of_practices_in([stage.name for stage in STAGES])]
+
+    def format_groups_with(self, slugs: list[str]) -> list[FormatGroup]:
+        """The groups of formats offered by the fidelities the selection covers and by those called slugs, such as the
+        ones a page's link names, each chosen or not for them in the session."""
+        covered = self.covered
+        named = [fidelity for fidelity in self._of_practices_in([stage.name for stage in STAGES]) if fidelity.slug in slugs and fidelity not in covered]
+        return FormatGroup.every([*covered, *named])
+
+    def _of_practices_in(self, stages: list[str]) -> list[FidelityGuidance]:
+        """The fidelities of the practices selected (every practice while none is) in stages, in stage order."""
         outputs = [output for output in self._outputs if output.enabled] or self._outputs
         return [fidelity for stage in STAGES if stage.name in stages for output in outputs for fidelity in output.guidance.fidelities.entries.values() if fidelity.stage == stage.name]
 

@@ -10,13 +10,23 @@ from space.session.practices.practice_session_output import Publication
 
 STORY_MAP = "stories-story-map"
 MODEL = "ddd-bounded-context"
+CODE = "clean-engineering-code"
 
 
-def selection(fidelities: list[str], formats: list[list[str]] | None = None, *, is_stage_chosen: bool = True, practices: tuple[bool, ...] = (True,)):
+def selection(fidelities: list[str], formats: list[list[str]] | None = None, *, is_stage_chosen: bool = True, practices: tuple[bool, ...] = (True,), of_practices: list[str] | None = None, offered: dict[str, list[list[str]]] | None = None):
     """A guidance selection as the listing reads it: the fidelities it covers, the format groups selected, whether stages
-    were chosen, and whether each practice is selected."""
+    were chosen, whether each practice is selected, the fidelities of the practices selected in every stage (those it
+    covers when none are given), and the format groups selected that a fidelity it does not cover offers, by slug."""
     groups = [SimpleNamespace(formats=group, is_selected=True) for group in formats or []]
-    return SimpleNamespace(fidelities=fidelities, formats=groups, is_stage_chosen=is_stage_chosen, practices=[SimpleNamespace(is_selected=on) for on in practices])
+    offered_groups = {slug: [SimpleNamespace(formats=group, is_selected=True) for group in each] for slug, each in (offered or {}).items()}
+    return SimpleNamespace(
+        fidelities=fidelities,
+        formats=groups,
+        is_stage_chosen=is_stage_chosen,
+        practices=[SimpleNamespace(is_selected=on) for on in practices],
+        fidelities_of_practices=fidelities if of_practices is None else of_practices,
+        format_groups_with=lambda slugs: [*groups, *(group for slug in slugs for group in offered_groups.get(slug, []))],
+    )
 
 
 def board(path: str) -> FileEntry:
@@ -59,6 +69,22 @@ with description("a listing of a session's files") as self:
         with it("should list the fidelities the link names that the selection covers"):
             listing = FileListing(selection([STORY_MAP, MODEL], is_stage_chosen=False), [MODEL, "ux-ia"], is_repository=True)
             expect(listing.listed).to(equal([MODEL]))
+
+        # The selection shows the stage the session's ticket stands in until someone chooses, but a link that names a
+        # fidelity of another stage, such as the Files app opened on a ticket's code, still lists it.
+        with context("with a link naming a fidelity of a stage other than the ticket's"):
+            with before.each:
+                self.listing = FileListing(
+                    selection([STORY_MAP], [["markdown"]], is_stage_chosen=False, of_practices=[STORY_MAP, CODE], offered={CODE: [["python"]]}),
+                    [CODE],
+                    is_repository=True,
+                )
+
+            with it("should list that fidelity while its practice is selected"):
+                expect(self.listing.listed).to(equal([CODE]))
+
+            with it("should list its files in the formats selected that it offers"):
+                expect(self.listing.of_fidelity(CODE, "python", FileEntry("app/checkout/order.py", True)).is_listed).to(equal(True))
 
     with context("for a file under the root that no fidelity declares"):
         with it("should leave it out while a practice is selected"):
