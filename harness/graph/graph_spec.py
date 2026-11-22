@@ -168,8 +168,9 @@ def violations_in(graph: Graph, practice: str, scope: list[str]) -> set[tuple[st
 # The rules a load of named files alone cannot judge: conforms-to-schema runs only on a graph of the whole working copy,
 # because links across practices cannot be judged on part of it, and a class copying another's fields is found only
 # when the file holding the other class is read too, such as the sample's CustomerException beside
-# AccountCredentialsException.
-_JUDGED_ON_THE_WHOLE = frozenset({"conforms-to-schema", "do-not-invent-parallel-object-models"})
+# AccountCredentialsException. TDD's coverage rules ask whether a test reaches an operation or names an exception, which
+# only a load that reads the tests beside the code can answer.
+_JUDGED_ON_THE_WHOLE = frozenset({"conforms-to-schema", "do-not-invent-parallel-object-models", "operation-has-a-proving-test", "declared-exception-raised-by-a-test"})
 
 
 def judged_alone(hits: set[tuple[str, str]]) -> set[tuple[str, str]]:
@@ -539,11 +540,11 @@ with description("a graph"):
                 with it("should leave verb-noun format passing on Submit Order"):
                     expect(rule_on(self.submit_order, "verb-noun-format")["status"]).to(equal("passing"))
 
-                with it("should flag the epic holding one sub-epic outside its 3-9 children"):
+                with it("should flag the epic holding one sub-epic outside its 2-9 children"):
                     hit = rule_on(self.onboard, "child-count-fits-layer")
                     expect(hit["status"]).to(equal("violating"))
                     expect(hit["violations"][0]["message"]).to(
-                        equal("epic 'Onboard A Customer': 1 children (target 3-9)")
+                        equal("epic 'Onboard A Customer': 1 children (target 2-9)")
                     )
 
                 with it("should store the epic child-count hit on the line that names the epic"):

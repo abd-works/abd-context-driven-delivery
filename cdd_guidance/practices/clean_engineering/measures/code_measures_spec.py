@@ -77,6 +77,16 @@ _MODULES_AND_A_PACKAGE = {
     "orders/.context/module-context.md": _CARD.format(name="orders", title="Order"),
     "orders/order.py": _ORDER,
 }
+# shop's cart imports its own package pricing, which is no import of another module, and the child module payments,
+# a folder inside shop with a module card of its own, which is.
+_A_CHILD_MODULE = {
+    **MEASURES_CHOSEN,
+    **_SHOP_CARD,
+    "shop/cart.py": "from shop.pricing.price import Price\nfrom shop.payments.payment import Payment\n\n\nclass Cart:\n    def total(self, price: Price, payment: Payment) -> int:\n        return 0\n",
+    "shop/pricing/price.py": "class Price:\n    def of(self) -> int:\n        return 0\n",
+    "shop/payments/.context/module-context.md": _CARD.format(name="payments", title="Payment"),
+    "shop/payments/payment.py": "class Payment:\n    def amount(self) -> int:\n        return 0\n",
+}
 # catalogue imports shop's cart, and shop's package pricing imports catalogue: no folder imports one that imports it,
 # yet the module shop and the module catalogue import each other.
 _LOOP_THROUGH_A_PACKAGE = {
@@ -278,6 +288,16 @@ with description("the code measures the reader keeps of the files a read names")
             pricing = _node(self.fixture, "Package", "pricing")
             taken = [pricing.has_fact("modules_importing"), MODULES_IMPORTED.value_on(pricing), IMPORT_LOOPS.value_on(pricing)]
             expect(taken).to(equal([False, None, None]))
+
+    with context("with a child module, a folder with a module card of its own inside another module"):
+        with before.all:
+            self.fixture = measured(practice_from_files(_A_CHILD_MODULE), _READER_ALONE)
+
+        with it("should count the child module among the modules its parent imports, and not the parent's own package"):
+            expect(_node(self.fixture, "Module", "shop").get_fact("imported_modules")).to(equal(["shop/payments"]))
+
+        with it("should count the parent among the modules that import the child module"):
+            expect(_kept(self.fixture, "Module", "payments", ["modules_importing"])).to(equal({"modules_importing": 1}))
 
     with context("with two modules that import each other only through a package inside one of them"):
         with it("should count the loop on each module"):

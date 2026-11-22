@@ -17,7 +17,7 @@ Story map: [Check Clean Engineering Code Through The Graph](../../../../.context
 - ++chosen tool++ — the tool a project's `.context/config.json` names, under `code_measures`, to take one measure in one language. `not measured` there is a decision to leave the measure out; a missing entry is a choice nobody made.
 - ++checked file++ — a file a validate names in `paths`.
 
-> In steps: the shop project holds `shop/cart.py`, whose class Cart has the function total.
+> In steps: the shop project holds `shop/cart.py`, whose class Cart has the function total, and the shop folder owns its module card, `shop/.context/module-context.md`, so it is a module: a folder without a card is a package, a part of the module above it, and is measured with that module, never on its own.
 
 ## Story: Record Module Measures As Node Facts
 
@@ -35,7 +35,7 @@ Observed (`cdd_guidance/practices/clean_engineering/measures/code_measures_spec.
 
 *Given* the shop project's config has a `code_measures` section, which names no tool for a module's import loops or the modules it imports
 *When* the code measures of `shop/cart.py` are taken
-*Then* its import loops are counted from its import_cycles fact and the modules it imports from its dependsOn edges, which every read records, and no tool is asked
+*Then* its import loops and the modules it imports are counted from the imports between modules every read records, and no tool is asked
   *And* the node keeps no second fact for either
 
 #### Scenario: Show a module's three measures in its metrics group

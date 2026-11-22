@@ -146,11 +146,12 @@ with description("a working copy scan") as self:
             expect({rule["status"] for rule in rows}).to(equal({"passing"}))
 
     with context("returning violations"):
+        # A candidate a rule that requires a judge listed is a finding too, so the filter keeps it beside the violations.
         with it("should return only failing rule rows when the filter asks for violations"):
             returned = data_of(self.graph.return_nodes({"practice": "clean_engineering", "violations": True}))
             expect(len(returned)).to(be_above(0))
             statuses = {rule["status"] for node in returned for rule in node["rules"]}
-            expect(statuses).to(equal({"violating"}))
+            expect((statuses - {"violating", "candidate"}, "violating" in statuses)).to(equal((set(), True)))
 
         with it("should keep only nodes under the given path"):
             returned = data_of(self.graph.return_nodes({"practice": "clean_engineering", "violations": True, "paths": ["src/billing"]}))

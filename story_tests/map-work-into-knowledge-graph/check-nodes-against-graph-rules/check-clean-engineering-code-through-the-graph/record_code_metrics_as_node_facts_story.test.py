@@ -14,11 +14,13 @@ from expects import be_false, contain, equal, expect, have_len
 
 from cdd_guidance.practices.clean_engineering.measures.code_measures import CODE_LINES, PARAMETERS_TAKEN, NoToolChosen, ChosenTools, PATHS_THROUGH
 from cdd_guidance.practices.clean_engineering.measures.examples.code_measures_examples import (
+    CART,
     CART_FILE,
     CART_WITH_A_HELPER,
     CATALOGUE,
     NO_MEASURES_CHOSEN,
     READER_ALONE,
+    SHOP_CARD,
     CountingLizard,
     LizardNotInstalled,
     any_measure_kept,
@@ -109,13 +111,13 @@ with story("Record Code Metrics As Node Facts"):
             expect(self.reported[0]).to(contain("Fix: install lizard, the tool .context/config.json names for this measure, with: pip install", 'pip install -e ".[measures]"'))
     with scenario("Leave out a measure the project says is not measured"):
         with given("the shop project's config writes `not measured` for copied code blocks in Python"):
-            self.shop = shop_project()  # the shipped table writes it
+            self.shop = shop_project(files={CART_FILE: CART, **SHOP_CARD})  # the shipped table writes it
         with when("the code measures of `shop/cart.py` are taken"):
             self.shop.practice.reading.keep_code_measures(code_files(self.shop))
         with then("the node of the module shop holds no copied_code_blocks"):
-            expect(node_of(self.shop, "Package", "shop").has_fact("copied_code_blocks")).to(be_false)
+            expect(node_of(self.shop, "Module", "shop").has_fact("copied_code_blocks")).to(be_false)
         with and_("no rule reports the measure as not taken"):
-            expect(node_of(self.shop, "Package", "shop").has_fact("copied_code_blocks_not_taken")).to(be_false)
+            expect(node_of(self.shop, "Module", "shop").has_fact("copied_code_blocks_not_taken")).to(be_false)
     with scenario("Measure only the files a read names"):
         with given("the shop project's config has a `code_measures` section"):
             pass

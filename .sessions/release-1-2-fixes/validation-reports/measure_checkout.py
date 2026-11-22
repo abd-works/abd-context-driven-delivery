@@ -1,6 +1,7 @@
 """Validate one checkout's production code at the Clean Engineering code fidelity and write what its graph rules found.
 
-Usage, with this repository on PYTHONPATH and lizard and radon installed (pip install -e ".[measures]"):
+Usage, with this repository on PYTHONPATH and lizard installed (pip install -e ".[measures]", or into a folder outside the
+repository that is put on PYTHONPATH too):
 
     python measure_checkout.py <checkout folder> <out.json>
 

@@ -25,6 +25,8 @@ from harness.graph.rule_fixture import RuleFixture, RulePair
 
 # Seed: the shop project's cart file, and the file a validate names.
 CART_FILE = "shop/cart.py"
+# The shop module's card: a folder is a module, measured as one, only when it owns `.context/module-context.md`.
+SHOP_CARD = {"shop/.context/module-context.md": "# shop\n*Cart* is what a customer fills.\n\n- **Seam (terms):** Cart\n\n## Constraint\n\nUse Cart only.\n"}
 CART = '''class Cart:
     """A customer's cart."""
 
