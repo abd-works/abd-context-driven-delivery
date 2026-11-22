@@ -24,6 +24,7 @@ from typing import Any, Dict, Optional
 
 from harness.installation.json_file import JsonFile
 from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen, ServesStories, Transition
+from cdd_guidance.practices.ux.model.served import NavType, Served
 from cdd_guidance.practices.stories.model.story_tree import KEY_SEPARATOR
 from cdd_guidance.practices.ux.model.story_link import StoryLink
 from cdd_guidance.practices.ux.model.ux_map import UxMap
@@ -35,21 +36,15 @@ _CLI = Path(__file__).with_name("drawio_ux.mjs")
 _CLI_TIMEOUT_SECONDS = 60
 # A Site Map edge drawn both ways carries both triggers in one label, "there / back".
 _BOTH_WAYS = " / "
-# What joins the labels one cell shows: a row's controls, an action strip's buttons, a callout's stories.
-_BESIDE = " · "
 # The style keys the drawing keeps for its reader beside what it shows.
 _LAYOUT_KEY, _AREA_KEY, _CONTROLS_KEY, _NAV_KEY = "uxLayout", "uxArea", "uxControls", "uxNav"
 # The control types the command line draws as a form's rows, and as a list's.
 _FORM_TYPES = frozenset({"text", "dropdown", "checkbox"})
 _LIST_TYPES = frozenset({"list", "tree"})
 _BUTTON = "button"
-# The kind of navigation a transition has when its edge says no other.
-_ACTION = "action"
 # The fill the command line gives a region's action strip.
 _ACTION_STRIP_FILL = "#f0f0f0"
 _TERMS = "domain terms:"
-# The heading a callout line lists each kind of thing served under, in the order the callout lists them.
-_SERVED_HEADINGS = {"stories": "Story", "scenarios": "Scenario", "steps": "Step"}
 # A callout line that lists what one control serves: `Add To Cart › Quantity serves steps: ...`.
 _CONTROL_LINE = re.compile(r"^(?P<by>.+?) serves (?P<kind>stories|scenarios|steps):\s*(?P<items>.*)$", re.IGNORECASE)
 # A link as a cell's label draws it, which reads back as the markdown link the other formats write.
@@ -124,12 +119,6 @@ class DrawnServed(ServesStories):
         """The label markup of each thing of kind this node serves."""
         return [self._markup(link) for link in self.links_of(kind)]
 
-    def serve_listed(self, kind: str, items: str) -> None:
-        """Serve each thing of kind a callout line lists in items."""
-        for item in (item.strip() for item in items.split(_BESIDE)):
-            if item:
-                self._show(kind, item)
-
     def _markup(self, link: StoryLink) -> str:
         text = html.escape(link.key, quote=False)
         return f'<a href="{html.escape(link.target)}">{text}</a>' if link.target else text
@@ -144,7 +133,7 @@ class DrawioControl(Control, DrawnServed):
         """The controls one cell shows, each with the type the cell keeps for it. Where the cell keeps none, a control
         on an action strip, or one a form shows in brackets as ``[Pay]``, is a button."""
         style = UxCellStyle(cell)
-        labels = [label.strip() for label in _plain_text(cell.get("value", "")).split(_BESIDE) if label.strip()]
+        labels = [label.strip() for label in _plain_text(cell.get("value", "")).split(Served.BESIDE) if label.strip()]
         kinds = style.control_types
         controls = []
         for index, label in enumerate(labels):
@@ -271,10 +260,10 @@ class DrawioScreen(Screen, DrawnServed):
     def _served_by_controls(self) -> list[Dict[str, Any]]:
         """One callout line for each kind of thing each control serves, under the control's region and name."""
         return [
-            {"by": f"{region.name}{KEY_SEPARATOR}{control.name}", "kind": heading, "items": control.drawn(kind)}
+            {"by": f"{region.name}{KEY_SEPARATOR}{control.name}", "kind": heading.lower(), "items": control.drawn(kind)}
             for region in self.regions
             for control in region.controls
-            for heading, kind in _SERVED_HEADINGS.items()
+            for heading, kind in Served.KINDS
             if control.links_of(kind)
         ]
 
@@ -310,15 +299,15 @@ class Callout:
     def annotate(self, screen: "DrawioScreen") -> None:
         """Give screen each story, scenario, and step the callout lists for it, attach each domain term it lists, and
         give each control of screen what its own lines list."""
-        for heading, kind in _SERVED_HEADINGS.items():
-            screen.serve_listed(kind, self._listed(f"{heading}:"))
-        for term in self._listed(_TERMS).split(_BESIDE):
+        for heading, kind in Served.KINDS:
+            screen.served.serve(kind, self._listed(f"{heading.lower()}:"))
+        for term in self._listed(_TERMS).split(Served.BESIDE):
             screen.attach_domain_term(term.strip())
         for line in self._lines:
             served = _CONTROL_LINE.match(line)
             control = screen.control_at(served.group("by").strip()) if served is not None else None
-            if isinstance(control, DrawnServed):
-                control.serve_listed(_SERVED_HEADINGS[served.group("kind").lower()], served.group("items"))
+            if control is not None:
+                control.served.serve(Served.kind_headed(served.group("kind")), served.group("items"))
 
     def _listed(self, heading: str) -> str:
         """What the line that starts with heading lists after it; nothing when the callout has no such line."""
@@ -384,11 +373,11 @@ class DrawioUxMap(UxMap):
             self._append_transition(there, origin, target).nav_type = nav_type
             self._append_transition(back, target, origin).nav_type = nav_type
 
-    def _nav_type_of(self, edge: ET.Element) -> str:
+    def _nav_type_of(self, edge: ET.Element) -> NavType:
         """The kind of navigation an edge draws: the one it keeps, else a tab for a dashed line, else an action, the
         kind a transition is made with."""
         style = UxCellStyle(edge)
-        return style.value(_NAV_KEY) or ("tab" if style.value("dashed") == "1" else _ACTION)
+        return NavType.from_drawn(style.value(_NAV_KEY), style.value("dashed") == "1")
 
     def _append_transition(self, trigger: str, origin: Screen, target: Screen) -> Transition:
         transition = self.transition_type(trigger, len(self.transitions)).joining(origin, target)
@@ -422,7 +411,7 @@ class DrawioUxMap(UxMap):
                     "from": transition.from_name,
                     "to": transition.to_name,
                     "label": transition.trigger or transition.name,
-                    "dashed": transition.nav_type == "tab",
+                    "dashed": transition.nav_type.is_tab,
                     "navType": transition.nav_type,
                 }
                 for transition in self.transitions
@@ -456,8 +445,9 @@ def _is_annotation(name: str) -> bool:
     """Whether a cell's text is a callout's: it starts with what a screen serves, or lists domain terms or what a
     control serves."""
     lower = name.lower()
-    starts = any(lower.startswith(f"{heading}:") for heading in _SERVED_HEADINGS)
-    return starts or _TERMS in lower or any(f" serves {heading}:" in lower for heading in _SERVED_HEADINGS)
+    headings = [heading.lower() for heading, _kind in Served.KINDS]
+    starts = any(lower.startswith(f"{heading}:") for heading in headings)
+    return starts or _TERMS in lower or any(f" serves {heading}:" in lower for heading in headings)
 
 
 
