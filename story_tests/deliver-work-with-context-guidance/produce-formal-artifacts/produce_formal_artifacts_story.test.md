@@ -200,7 +200,7 @@ Observed (`cdd_guidance/practices/stories/stories_render_saves_heavy_spec.py`, `
 
 #### Scenario: Import the step library by the path from the folder a JavaScript story test is saved in
 
-Observed (`stories_render_saves_heavy_spec.py`, `cdd_guidance/practices/stories/model/javascript/javascript_story_model_spec.py`).
+Observed (`stories_render_saves_heavy_spec.py`, `cdd_guidance/practices/stories/model/javascript/javascript_story_map_spec.py`).
 
 *Given* the Pack Orders project holds the story Pack Order as markdown scenarios
 *When* Claude Code renders `story_tests` to javascript at ++stories-acceptance-tests++

@@ -7,13 +7,13 @@ does stays in that language's own spec (`python/`, `typescript/`, `javascript/`)
 from expects import be_false, be_true, contain, equal, expect, have_len, raise_error
 from mamba import before, context, description, included_context, it, shared_context
 
-from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModelError
+from cdd_guidance.practices.stories.model.code_story_map import CodeStoryMapError
 from cdd_guidance.practices.stories.model.fixtures.round_trip_story_map import outline, round_trip_story_map
-from cdd_guidance.practices.stories.model.javascript.javascript_story_model import JavaScriptStoryModel
-from cdd_guidance.practices.stories.model.python.python_story_model import PythonStoryModel
-from cdd_guidance.practices.stories.model.story_model import Epic, Scenario, Step, StepType, Story, StoryModel, StoryType
+from cdd_guidance.practices.stories.model.javascript.javascript_story_map import JavaScriptStoryMap
+from cdd_guidance.practices.stories.model.python.python_story_map import PythonStoryMap
+from cdd_guidance.practices.stories.model.story_map import Epic, Scenario, Step, StepType, Story, StoryMap, StoryType
 from cdd_guidance.practices.stories.stories import Stories
-from cdd_guidance.practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
+from cdd_guidance.practices.stories.model.typescript.typescript_story_map import TypeScriptStoryMap
 
 _SCRIPT_TEST = """\
 story('Pay For Order', () => {
@@ -66,9 +66,9 @@ def _scenario(name: str, order: int) -> Scenario:
     return scenario
 
 
-def _voucher_map() -> StoryModel:
+def _voucher_map() -> StoryMap:
     """Four epics, the first holding three sub-epics, each with the story Redeem a voucher and its two scenarios."""
-    story_map = StoryModel()
+    story_map = StoryMap()
     for number in range(1, 5):
         story_map.epics.append(Epic(f"Epic {number}", number))
     for number in range(1, 4):
@@ -81,8 +81,8 @@ def _voucher_map() -> StoryModel:
     return story_map
 
 
-def _epics_each_with_a_story(count: int) -> StoryModel:
-    story_map = StoryModel()
+def _epics_each_with_a_story(count: int) -> StoryMap:
+    story_map = StoryMap()
     for number in range(1, count + 1):
         epic = Epic(f"Epic {number}", number)
         epic.stories.append(Story(f"Story {number}", 1))
@@ -125,7 +125,7 @@ with shared_context("a story map written as story tests and read back"):
 
     with it("should read an epic's stories back in the map's order, whatever their names"):
         model = self.model_type()
-        story_map = StoryModel()
+        story_map = StoryMap()
         epic = Epic("Sell Books", 1)
         epic.stories = [Story(name, order) for order, name in enumerate(("Take Order", "Pack Order", "Bill Order"), start=1)]
         story_map.epics.append(epic)
@@ -177,7 +177,7 @@ with shared_context("a story map written as story tests and read back"):
         expect(names).to(equal(["Epic 1", "Epic 2", "Epic 3", "Epic 4"]))
 
     with it("should refuse to read a value that is not a tree of story files"):
-        expect(lambda: self.model_type().parse("not a tree")).to(raise_error(CodeStoryModelError))
+        expect(lambda: self.model_type().parse("not a tree")).to(raise_error(CodeStoryMapError))
 
 
 with shared_context("a step read from a story file in code"):
@@ -245,7 +245,7 @@ with shared_context("a script story map and its step library"):
 with description("a story map created as story tests") as self:
     with context("in Python"):
         with before.all:
-            self.model_type = PythonStoryModel
+            self.model_type = PythonStoryMap
             self.format_name = "python"
             self.story_file = ("tests/place-orders/check_out_story.test.py", _PYTHON_TEST)
 
@@ -264,7 +264,7 @@ with description("a story map created as story tests") as self:
 
     with context("in TypeScript"):
         with before.all:
-            self.model_type = TypeScriptStoryModel
+            self.model_type = TypeScriptStoryMap
             self.format_name = "typescript"
             self.story_file = ("tests/place-orders/check_out_story.test.ts", _SCRIPT_TEST)
 
@@ -279,7 +279,7 @@ with description("a story map created as story tests") as self:
 
     with context("in JavaScript"):
         with before.all:
-            self.model_type = JavaScriptStoryModel
+            self.model_type = JavaScriptStoryMap
             self.format_name = "javascript"
             self.story_file = ("tests/place-orders/check_out_story.test.js", _SCRIPT_TEST)
 

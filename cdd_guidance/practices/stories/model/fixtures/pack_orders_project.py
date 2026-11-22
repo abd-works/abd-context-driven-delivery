@@ -11,7 +11,7 @@ import tempfile
 from pathlib import Path
 
 import cdd_guidance.practices  # noqa: F401 - registers the practices a graph holds
-from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
+from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryMap
 from cdd_guidance.practices.stories.stories import Stories
 from harness.graph.graph import Graph
 
@@ -548,7 +548,7 @@ def _read(practice: Stories, format_name: str, files: dict[str, str]):
             path = Path(folder.name) / file
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(text, encoding="utf-8")
-        return MarkdownStoryModel().read_folder(Path(folder.name), Path(folder.name))
+        return MarkdownStoryMap().read_folder(Path(folder.name), Path(folder.name))
     adapter = practice.formats.adapter_class(format_name)(TESTS_ROOT)
     return adapter.load({file: text for file, text in files.items() if file.startswith(TESTS_ROOT)})
 
@@ -556,7 +556,7 @@ def _read(practice: Stories, format_name: str, files: dict[str, str]):
 def _written(practice: Stories, format_name: str, model) -> dict[str, str]:
     """The files the format called format_name writes the story model as, under the project's story tests."""
     if format_name == "markdown":
-        return MarkdownStoryModel().copy_of(model).scenarios_files(TESTS_ROOT)
+        return MarkdownStoryMap().copy_of(model).scenarios_files(TESTS_ROOT)
     return practice.formats.adapter_class(format_name)(tests_root=TESTS_ROOT).copy_of(model).save()
 
 

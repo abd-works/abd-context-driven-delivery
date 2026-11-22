@@ -4,14 +4,14 @@ from expects import equal, expect
 from mamba import before, description, it
 
 from cdd_guidance.practices.stories.model.fixtures.round_trip_story_map import outline, round_trip_story_map
-from cdd_guidance.practices.stories.model.sketch.sketch_story_model import SketchStoryModel
+from cdd_guidance.practices.stories.model.sketch.sketch_story_map import SketchStoryMap
 
 
 with description("a story map saved as a Stories sketch") as self:
     with before.each:
         self.story_map = round_trip_story_map()
-        self.sketch = SketchStoryModel().render(self.story_map)
-        self.read = SketchStoryModel().parse(self.sketch)
+        self.sketch = SketchStoryMap().render(self.story_map)
+        self.read = SketchStoryMap().parse(self.sketch)
 
     with it("should write each story once"):
         expect(self.sketch.count("--> Submit Payment")).to(equal(1))

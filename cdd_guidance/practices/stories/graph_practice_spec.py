@@ -8,7 +8,7 @@ from pathlib import Path
 from expects import be_empty, be_true, equal, expect
 from mamba import before, description, it
 
-from cdd_guidance.practices.stories.model.story_model import Epic
+from cdd_guidance.practices.stories.model.story_map import Epic
 from harness.graph.graph import Graph
 
 _SAMPLE = Path(__file__).resolve().parents[3] / "harness" / "graph" / "_examples" / "input"

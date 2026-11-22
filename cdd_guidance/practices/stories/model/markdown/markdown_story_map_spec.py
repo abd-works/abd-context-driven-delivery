@@ -13,22 +13,22 @@ for _candidate in _HERE.parents:
 from mamba import description, context, it, before
 from expects import equal, have_len, be_true, be_false, expect, raise_error
 
-from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryType, Epic
-from cdd_guidance.practices.stories.model.story_model import Scenario, StepType
-from cdd_guidance.practices.stories.model.story_model import StoryModel
+from cdd_guidance.practices.stories.model.story_map import Epic, Story, StoryType, Epic
+from cdd_guidance.practices.stories.model.story_map import Scenario, StepType
+from cdd_guidance.practices.stories.model.story_map import StoryMap
 from cdd_guidance.practices.stories.model.markdown.scenario_file import ScenarioFileReading
 from cdd_guidance.practices.stories.model.markdown.nodes import (
     MarkdownParseError,
     MarkdownScenario,
     MarkdownStory,
-    MarkdownStoryModel,
+    MarkdownStoryMap,
 )
 from harness.guidance.practice_formats import Written
 
 
 class SpecFixture:
-    def canonical_story_map_4_epics_3_epics(self) -> StoryModel:
-        story_map = StoryModel()
+    def canonical_story_map_4_epics_3_epics(self) -> StoryMap:
+        story_map = StoryMap()
         for i in range(1, 5):
             epic = Epic(f"Epic {i}", i)
             story_map.epics.append(epic)
@@ -50,11 +50,11 @@ _DISCOVERY_TITLE = "# Story Map — Product / Feature Name"
 
 with description("a Markdown document") as self:
     with before.each:
-        self.markdown = MarkdownStoryModel()
+        self.markdown = MarkdownStoryMap()
 
     with it("should contain only the story map title heading"):
         # A map without scenarios renders as the discovery story-map document (title, sources, scope).
-        empty_story_map = StoryModel()
+        empty_story_map = StoryMap()
         text = self.markdown.render(empty_story_map)
         top_headings = [line for line in text.splitlines() if line.startswith("# ")]
         expect(top_headings).to(equal([_DISCOVERY_TITLE]))
@@ -170,7 +170,7 @@ with description("a Markdown document") as self:
                     expect("## Epic 1.2" in self.new_text).to(be_true)
                     expect("## Epic 1.3" in self.new_text).to(be_true)
 
-    with context("that is being read back into a MarkdownStoryModel"):
+    with context("that is being read back into a MarkdownStoryMap"):
         with before.each:
             self.source = fixture.canonical_story_map_4_epics_3_epics()
             self.text = self.markdown.render(self.source)
@@ -499,8 +499,8 @@ with description("a Markdown story map rendered in a workspace") as self:
                 "story-map.md": _LINKED_MAP,
                 "onboard/get-sim/select_sim_story.test.md": "## Story: Select Sim\n",
             })
-            source = MarkdownStoryModel().parse(_LINKED_MAP)
-            self.text = MarkdownStoryModel().render(source, Written(folder=Path(self.root)))
+            source = MarkdownStoryMap().parse(_LINKED_MAP)
+            self.text = MarkdownStoryMap().render(source, Written(folder=Path(self.root)))
 
         with it("should link that story to its file"):
             expect(
@@ -512,7 +512,7 @@ with description("a Markdown story map rendered in a workspace") as self:
             expect("[Activate Sim]" in self.text).to(be_false)
 
         with it("should read the linked story back by its name"):
-            parsed = MarkdownStoryModel().parse(self.text)
+            parsed = MarkdownStoryMap().parse(self.text)
             names = [story.name for story in parsed.epics[0].epics[0].stories]
             expect(names).to(equal(["Select Sim", "Activate Sim"]))
 
@@ -523,13 +523,13 @@ _READ_PLACES = {"_file", "_raw_line", "_line_number", "_current_epic", "_sub_epi
 with description("a Markdown story map format that has read a map"):
     with context("in heading notation"):
         with it("should hold no place in the text it read"):
-            markdown = MarkdownStoryModel()
+            markdown = MarkdownStoryMap()
             markdown.parse("# Place Order\n## Pay\n- Pay With Card\n", "map.md")
             expect(sorted(name for name in vars(markdown) if name in _READ_PLACES)).to(equal([]))
 
     with context("in outline notation"):
         with it("should hold no place in the text it read"):
-            markdown = MarkdownStoryModel()
+            markdown = MarkdownStoryMap()
             markdown.parse("# (E) Place Order\n## (S) Customer --> Pay With Card\n", "map.md")
             expect(sorted(name for name in vars(markdown) if name in _READ_PLACES)).to(equal([]))
 
@@ -570,7 +570,7 @@ _STORY_BACKGROUND_SCENARIOS = """## Story: Add Book To Cart
 
 with description("a markdown scenarios file read from a file, whose backgrounds each sit under a heading") as self:
     with before.each:
-        self.story = MarkdownStoryModel().parse(_BACKGROUND_SCENARIOS, "story_tests/add_book_to_cart_story.test.md").descendants.stories()[0]
+        self.story = MarkdownStoryMap().parse(_BACKGROUND_SCENARIOS, "story_tests/add_book_to_cart_story.test.md").descendants.stories()[0]
 
     with it("should read the background its scenarios share on its heading's line, not its first step's"):
         expect(self.story.scenarios[0].backgrounds[0].source.start_line).to(equal(3))

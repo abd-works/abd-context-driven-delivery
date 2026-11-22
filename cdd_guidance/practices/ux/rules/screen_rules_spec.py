@@ -14,7 +14,7 @@ from harness.graph.graph import Graph
 from harness.graph.rule_context import RuleCheckContext
 from harness.graph.rule_fixture import SchemaRuleRun
 
-from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryModel
+from cdd_guidance.practices.stories.model.story_map import Epic, Story, StoryMap
 from cdd_guidance.practices.ux.model.nodes import Screen
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 from cdd_guidance.practices.ux.rules.screen_rules import ScreenNamesUseDomainTerms, ScreenStoryBudget
@@ -27,7 +27,7 @@ class ScreenExample:
 
     def __init__(self, screen_name: str, shown: int) -> None:
         self.graph = Graph()
-        story_map = StoryModel(self.graph)
+        story_map = StoryMap(self.graph)
         epic = Epic("Shop Online", 1)
         for order, name in enumerate(_STORIES, start=1):
             epic.stories.append(Story(name, order))

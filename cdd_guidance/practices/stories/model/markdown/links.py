@@ -16,7 +16,7 @@ from harness.annotations.name import Name
 from cdd_guidance.practices.stories.model.story_map_files import STORY_FILE_SUFFIXES, StoryMapFiles
 
 if TYPE_CHECKING:
-    from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryModel, StoryNode
+    from cdd_guidance.practices.stories.model.story_map import Epic, Story, StoryMap, StoryNode
 
 _LINK = re.compile(r"\[([^\]\n]+)\]\(([^)\s]*)\)")
 
@@ -58,7 +58,7 @@ class StoryMapLinks:
     Paths are written relative to the folder of the file being rendered.
     """
 
-    def __init__(self, story_map: "StoryModel", root: Path | str) -> None:
+    def __init__(self, story_map: "StoryMap", root: Path | str) -> None:
         """The links of story_map placed in the folder root: the markdown story map *StoryMapFiles* finds there and
         every ``*_story.test.md`` / ``*_story.spec.md`` under root, written relative to the folder that holds that
         story map, where the rendered story map sits beside it."""
@@ -125,7 +125,7 @@ class StoryMapLinks:
         except ValueError:  # another drive on Windows
             return target.as_posix()
 
-    def _entries_of(self, story_map: "StoryModel") -> List[tuple]:
+    def _entries_of(self, story_map: "StoryMap") -> List[tuple]:
         """Each epic, sub-epic, and story of story_map with its ``story-map.md#anchor`` link, in map order.
 
         Anchors follow the outline headings the markdown story map renders:

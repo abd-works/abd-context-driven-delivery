@@ -15,7 +15,7 @@ from expects import contain, equal, expect
 from mamba import description, it
 
 from cdd_guidance.actions.render.render import Render
-from cdd_guidance.practices.stories.model.sketch.sketch_story_model import SketchLines, SketchStoryModel
+from cdd_guidance.practices.stories.model.sketch.sketch_story_map import SketchLines, SketchStoryMap
 
 _SKETCH = """# Single Client View - sketch
 
@@ -44,15 +44,15 @@ source: `.context/single-client-view.md`
 """
 
 
-with description("SketchStoryModel"):
+with description("SketchStoryMap"):
     with it("should ignore fenced increment prose when parsing scenarios"):
-        model = SketchStoryModel().parse(_SKETCH)
+        model = SketchStoryMap().parse(_SKETCH)
         for epic in model.epics:
             for story in epic.stories:
                 expect(len(story.scenarios)).to(equal(0))
 
     with it("should attach stories directly under an epic when no sub-epic exists"):
-        model = SketchStoryModel().parse(_SKETCH)
+        model = SketchStoryMap().parse(_SKETCH)
         expect(len(model.epics)).to(equal(2))
         expect(model.epics[0].name).to(equal("Unify Client Identity Across Banks"))
         expect(len(model.epics[0].stories)).to(equal(2))

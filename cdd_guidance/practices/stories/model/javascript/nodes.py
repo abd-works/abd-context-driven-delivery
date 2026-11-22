@@ -3,8 +3,8 @@ from __future__ import annotations
 
 from cdd_guidance.practices.source_code import JAVASCRIPT
 from cdd_guidance.practices.stories.model.brace_story import BraceScenario
-from cdd_guidance.practices.stories.model.code_story_model import CodeEpic
-from cdd_guidance.practices.stories.model.script_story_model import ScriptStory
+from cdd_guidance.practices.stories.model.code_story_map import CodeEpic
+from cdd_guidance.practices.stories.model.script_story_map import ScriptStory
 
 
 class JavaScriptScenario(BraceScenario):

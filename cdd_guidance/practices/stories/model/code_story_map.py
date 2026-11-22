@@ -1,4 +1,4 @@
-"""CodeStoryModel - a StoryModel stored as a source-code tree.
+"""CodeStoryMap - a StoryMap stored as a source-code tree.
 
 Layout written, the same shape in every language:
 
@@ -31,7 +31,7 @@ from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple, Union
 from harness.annotations.name import Name
 from cdd_guidance.practices.source_code import BracketStructure
 from cdd_guidance.practices.source_code import CodeBody, CodeLanguage, WrittenBlock
-from cdd_guidance.practices.stories.model.story_model import (
+from cdd_guidance.practices.stories.model.story_map import (
     Background,
     Epic,
     Increment,
@@ -39,7 +39,7 @@ from cdd_guidance.practices.stories.model.story_model import (
     Step,
     StepType,
     Story,
-    StoryModel,
+    StoryMap,
     StoryType,
 )
 from cdd_guidance.practices.stories.model.story_map_files import source_at
@@ -50,7 +50,7 @@ from cdd_guidance.practices.stories.model.story_file import StoryBlock, StoryFil
 from cdd_guidance.practices.stories.model.story_writing import OUTLINE_EXAMPLES, SCENARIO_EXAMPLES, StoryFilePlace, StoryWriting, as_read
 
 
-class CodeStoryModelError(Exception):
+class CodeStoryMapError(Exception):
     """Raised when a folder tree is not a valid code story map."""
 
 
@@ -194,7 +194,7 @@ class StorySyntax:
 
 
 class CodeScenario(Scenario, CodeStoryNode):
-    """One scenario. Steps, ands, and examples are the story-model shape on every language."""
+    """One scenario. Steps, ands, and examples are the story-map shape on every language."""
 
     syntax = StorySyntax()
     """How this language writes its story files, which every scenario of the language reads its text through."""
@@ -382,7 +382,7 @@ class CodeEpic(Epic, CodeStoryNode):
         return ".".join(reversed(orders))
 
 
-class CodeStoryModel(StoryModel):
+class CodeStoryMap(StoryMap):
     """Source-tree story map. The epics and stories are the story map: this model keeps the layout of the story files
     under the tests root (load, save), and the code a render adopts from the tree already on disk. How its language
     writes each story file is the writing it holds (`writing`), beside the reader of its story files (`story_file`)."""
@@ -428,19 +428,19 @@ class CodeStoryModel(StoryModel):
         """Write this story map's epics and stories to source files."""
         return self._write_epics({})
 
-    def render(self, canonical: StoryModel, written: Written = Written()) -> Dict[str, str]:
+    def render(self, canonical: StoryMap, written: Written = Written()) -> Dict[str, str]:
         """Write canonical to source files. The previous files are the tree already on disk, each file's text by its
         path: whatever canonical has no code for in this language takes that tree's code for the same epic, story,
         scenario, and step."""
         previous = written.previous
         if isinstance(previous, str) and previous:
-            raise CodeStoryModelError("previous must be the path-to-content map of the story tree already on disk")
+            raise CodeStoryMapError("previous must be the path-to-content map of the story tree already on disk")
         model = self.copy_of(canonical)
         if previous:
             model._adopt_code(self.parse(previous))
         return model.save()
 
-    def blank(self) -> "CodeStoryModel":
+    def blank(self) -> "CodeStoryMap":
         """A map in this language holding nothing, under this map's tests root."""
         return type(self)(tests_root=self._tests_root)
 
@@ -502,7 +502,7 @@ class CodeStoryModel(StoryModel):
                 files.append((written, [story]))
         return files
 
-    def _adopt_code(self, kept: "CodeStoryModel") -> None:
+    def _adopt_code(self, kept: "CodeStoryMap") -> None:
         """Each epic, story, background, scenario, and step without code in this language takes kept's code
         for the node with the same name."""
         if self.language is None:
@@ -552,12 +552,12 @@ class CodeStoryModel(StoryModel):
         for step in flat_steps(node.steps):
             step.body = step.body.in_language_of(bodies.get(step.text, CodeBody()), language)
 
-    def load(self, external: Dict[str, str], *, on_file: Optional[Callable[[str], None]] = None, project: Optional[Path] = None) -> "CodeStoryModel":
+    def load(self, external: Dict[str, str], *, on_file: Optional[Callable[[str], None]] = None, project: Optional[Path] = None) -> "CodeStoryMap":
         """This story map's epics and stories from the story files in external, path to text, under the tests root:
         each file one sub-epic, in the order its header gives. on_file hears each file as it is read. A story file that
         reads other files of project, such as its examples module, finds them there."""
         if not isinstance(external, dict):
-            raise CodeStoryModelError(f"{type(self).__name__} reads a path-to-content dict of story files")
+            raise CodeStoryMapError(f"{type(self).__name__} reads a path-to-content dict of story files")
         self.epics.clear()
         self.sources = StorySources()
         self.project = project
@@ -571,7 +571,7 @@ class CodeStoryModel(StoryModel):
                 self._read_story_file(path, external[path])
         return self
 
-    def parse(self, text: Dict[str, str], file: str = "") -> "CodeStoryModel":
+    def parse(self, text: Dict[str, str], file: str = "") -> "CodeStoryMap":
         """A new map read from the story files in text, each file's text by its path, with this model's settings."""
         return self.blank().load(text)
 
@@ -681,5 +681,5 @@ class CodeStoryModel(StoryModel):
             current = found
             parent = found
         if current is None:
-            raise CodeStoryModelError("A story file needs a sub-epic folder")
+            raise CodeStoryMapError("A story file needs a sub-epic folder")
         return current

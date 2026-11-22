@@ -1,4 +1,4 @@
-"""ScriptStoryModel. Story files in the script languages, TypeScript and JavaScript: one model reads and writes both.
+"""ScriptStoryMap. Story files in the script languages, TypeScript and JavaScript: one model reads and writes both.
 
 The two languages hold the same story files: a story test (``{story}_story.test``), a shared story file the tiers
 replay (``.story.shared``), a screen spec (``.story.ui.spec``), an examples module in an ``examples`` folder, and the
@@ -13,7 +13,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import Dict, Optional
 
-from cdd_guidance.practices.stories.model.brace_story import BraceStory, BraceStoryModel, BraceStoryWriting
+from cdd_guidance.practices.stories.model.brace_story import BraceStory, BraceStoryMap, BraceStoryWriting
 from cdd_guidance.practices.stories.model.screen_spec_file import SCREEN_SPEC_STEM, ScreenSpecFile, is_screen_spec
 from cdd_guidance.practices.stories.model.story_file import StoryFile
 
@@ -32,7 +32,7 @@ class ScriptStory(BraceStory):
     """A story read from a script-language story file; a screen spec gives one for each ``test.describe``."""
 
 
-class ScriptStoryModel(BraceStoryModel):
+class ScriptStoryMap(BraceStoryMap):
     """A story tree in TypeScript or JavaScript. It keeps the step library folder, where ``story-test`` sits and
     where story files import it from, which a pattern may name; with none named it is the tests root."""
 
@@ -86,7 +86,7 @@ class ScriptStoryModel(BraceStoryModel):
         seed = {} if self.read_from_code else {self._story_test_file_path: self.seed_file.read_text(encoding="utf-8")}
         return self._write_epics(seed)
 
-    def blank(self) -> "ScriptStoryModel":
+    def blank(self) -> "ScriptStoryMap":
         """A map in this language holding nothing, under this map's tests root and step library folder."""
         return type(self)(tests_root=self.tests_root, story_test_folder=self._story_test_folder)
 

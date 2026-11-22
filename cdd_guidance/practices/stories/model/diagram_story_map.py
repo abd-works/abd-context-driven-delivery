@@ -5,7 +5,7 @@ from __future__ import annotations
 from functools import cached_property
 from typing import Dict, List, NamedTuple, Optional
 
-from cdd_guidance.practices.stories.model.story_model import Epic, Increment, Story, StoryModel, StoryType
+from cdd_guidance.practices.stories.model.story_map import Epic, Increment, Story, StoryMap, StoryType
 
 # A leaf epic with an estimate widens by a column for about this many characters of the estimate: wider for an epic
 # that has stories beside it, as its estimate shares their columns.
@@ -28,9 +28,9 @@ class DiagramStoryNode:
     """How far each story an epic holds itself pushes its sub-epics right; a format whose sub-epics sit after the
     epic's own stories gives its story pitch."""
 
-    def _owning_map(self) -> Optional[StoryModel]:
+    def _owning_map(self) -> Optional[StoryMap]:
         node = self.parent
-        while node is not None and not isinstance(node, StoryModel):
+        while node is not None and not isinstance(node, StoryMap):
             node = node.parent
         return node
 
@@ -38,16 +38,16 @@ class DiagramStoryNode:
         """Top of the story line on the diagram map this node is drawn on; on no map yet, the line of a map with no
         sub-epics."""
         story_map = self._owning_map()
-        if isinstance(story_map, DiagramStoryModel):
+        if isinstance(story_map, DiagramStoryMap):
             return story_map.story_y
-        return DiagramStoryModel().story_y
+        return DiagramStoryMap().story_y
 
     def _sub_epic_bar_y(self, depth: int) -> int:
         """Top of this node's sub-epic bar at *depth* on the map it is drawn on."""
         story_map = self._owning_map()
-        if isinstance(story_map, DiagramStoryModel):
+        if isinstance(story_map, DiagramStoryMap):
             return story_map.sub_epic_y(depth)
-        return DiagramStoryModel().sub_epic_y(depth)
+        return DiagramStoryMap().sub_epic_y(depth)
 
     @property
     def width(self) -> int:
@@ -56,15 +56,15 @@ class DiagramStoryNode:
         if not isinstance(self, Epic):
             return 0
         if isinstance(self.parent, Epic):
-            return DiagramStoryModel.base_width * max(self.columns.diagram_span(), 1)
-        return DiagramStoryModel.base_width * self.columns.span()
+            return DiagramStoryMap.base_width * max(self.columns.diagram_span(), 1)
+        return DiagramStoryMap.base_width * self.columns.span()
 
     @property
     def height(self) -> int:
         if isinstance(self, Story):
             return self.size
         if isinstance(self, Epic):
-            return DiagramStoryModel.row_height
+            return DiagramStoryMap.row_height
         return 0
 
     @property
@@ -73,9 +73,9 @@ class DiagramStoryNode:
             story_map = self._owning_map()
             if story_map is None:
                 return 0
-            return story_map.actor_y + DiagramStoryModel.row_height
+            return story_map.actor_y + DiagramStoryMap.row_height
         if isinstance(self, Epic) and isinstance(self.parent, Epic):
-            return (self.depth + 1) * DiagramStoryModel.row_height
+            return (self.depth + 1) * DiagramStoryMap.row_height
         return 0
 
     @property
@@ -87,7 +87,7 @@ class DiagramStoryNode:
             return parent.x if isinstance(parent, Epic) else 0
         if isinstance(parent, Epic):
             return self._after(parent.epics, parent.x + len(parent.stories) * self.story_pitch, 0)
-        if isinstance(parent, StoryModel):
+        if isinstance(parent, StoryMap):
             return self._after(parent.epics, self.first_x, self.epic_spacing)
         return self.first_x
 
@@ -234,7 +234,7 @@ class DiagramIncrement(Increment, DiagramStoryNode):
     stroke = "#666666"
 
 
-class DiagramStoryModel(StoryModel):
+class DiagramStoryMap(StoryMap):
     """Story map whose epics and stories are the diagram types."""
 
     base_width = 200
@@ -386,7 +386,7 @@ class ThinSliceLayout:
     by side, and a lane for each increment holding its stories under their sub-epics' columns. A format draws it on a
     surface of its own (``draw_on``), at its own pitch and from its own left edge."""
 
-    def __init__(self, story_map: "DiagramStoryModel", pitch: float, gap: float, left: float) -> None:
+    def __init__(self, story_map: "DiagramStoryMap", pitch: float, gap: float, left: float) -> None:
         pairs = [(epic, sub) for epic in story_map.epics for sub in (epic.epics or [epic])]
         self.lanes = [ThinSliceLane(increment, self._by_column(increment, pairs)) for increment in story_map.increments]
         widths = [max([1] + [len(lane.stories.get(index, [])) for lane in self.lanes]) * pitch + gap for index in range(len(pairs))]

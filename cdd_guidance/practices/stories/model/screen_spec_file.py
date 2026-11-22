@@ -18,10 +18,10 @@ from typing import TYPE_CHECKING
 from cdd_guidance.practices.source_code import BracketStructure
 from cdd_guidance.practices.source_code import CodeBody
 from cdd_guidance.practices.stories.model.story_file import StoryFile
-from cdd_guidance.practices.stories.model.story_model import StepType
+from cdd_guidance.practices.stories.model.story_map import StepType
 
 if TYPE_CHECKING:
-    from cdd_guidance.practices.stories.model.story_model import Scenario, Story
+    from cdd_guidance.practices.stories.model.story_map import Scenario, Story
 
 # How a screen spec's name ends before its language's extension.
 SCREEN_SPEC_STEM = ".story.ui.spec"

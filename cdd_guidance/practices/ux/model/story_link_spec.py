@@ -12,7 +12,7 @@ if str(_REPO) not in sys.path:
 
 from harness.graph.graph import Graph
 
-from cdd_guidance.practices.stories.model.story_model import Epic, Scenario, Step, Story, StoryModel
+from cdd_guidance.practices.stories.model.story_map import Epic, Scenario, Step, Story, StoryMap
 from cdd_guidance.practices.ux.model.json.nodes import JsonUxMap
 from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen
 from cdd_guidance.practices.stories.model.story_tree import StoryTree
@@ -27,7 +27,7 @@ def edge_pairs(graph, practice, kind):
 
 
 def story_map_on(graph):
-    story_map = StoryModel(graph=graph)
+    story_map = StoryMap(graph=graph)
     epic = Epic("Place New Order", 0)
     story = Story("Browse Product Catalog", 0)
     scenario = Scenario("Products are listed", 0)

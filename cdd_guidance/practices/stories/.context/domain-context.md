@@ -4,7 +4,7 @@ A **story map** describes what a system does for the people and systems that use
 
 ## Terms
 
-- **Story map** — the whole hierarchy for one product or system. It holds epics, increments, and the examples shared by every story. Code: *StoryModel*.
+- **Story map** — the whole hierarchy for one product or system. It holds epics, increments, and the examples shared by every story. Code: *StoryMap*.
 - **Epic** — a named area of behaviour, in verb-noun form. An epic nested under another epic is a **sub-epic**; it is the same concept at a deeper level, so there is one *Epic* type and depth is its parentage. An epic can carry an **estimate** for stories not yet mapped ("approx 2-3 more stories").
 - **Story** — one thing an actor does or the system does in response, in verb-noun form. A story is a **user** story, a **system** story, or a **technical** story (*StoryType*). It names its actors, the domain terms it uses, and the evidence it was taken from.
 - **Background** — the Given steps every scenario of a story (or of one scenario) starts from.

@@ -4,8 +4,8 @@ from __future__ import annotations
 import re
 from typing import List
 
-from cdd_guidance.practices.stories.model.code_story_model import CodeEpic, CodeScenario, CodeStory, StorySyntax, unescaped
-from cdd_guidance.practices.stories.model.story_model import Background
+from cdd_guidance.practices.stories.model.code_story_map import CodeEpic, CodeScenario, CodeStory, StorySyntax, unescaped
+from cdd_guidance.practices.stories.model.story_map import Background
 
 
 class PythonSyntax(StorySyntax):

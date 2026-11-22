@@ -27,7 +27,7 @@ from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 from harness.agent_tools.agent_tools import ToolsetReference
 
 Car = ToolsetReference.parsed("cdd_guidance.practices._examples.car.car:Car").toolset_class
-from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
+from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryMap
 from cdd_guidance.practices.stories.stories import Stories
 
 _CLASS_MARKDOWN = """\
@@ -202,7 +202,7 @@ with description("a practice"):
 
         with context("with an object model"):
             with before.each:
-                self.model = MarkdownStoryModel().parse(_STORY_MAP)
+                self.model = MarkdownStoryMap().parse(_STORY_MAP)
                 self.result = Stories(fidelity="story_map").render(
                     "drawio", self.model
                 )

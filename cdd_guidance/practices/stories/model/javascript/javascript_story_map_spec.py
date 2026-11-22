@@ -5,13 +5,13 @@ What every language's story tests do is in `code_story_behaviours_spec.py` and `
 from expects import contain, equal, expect
 from mamba import before, context, description, it
 
-from cdd_guidance.practices.stories.model.javascript.javascript_story_model import JavaScriptStoryModel
-from cdd_guidance.practices.stories.model.story_model import Epic, Scenario, Step, StepType, Story, StoryModel, StoryType
+from cdd_guidance.practices.stories.model.javascript.javascript_story_map import JavaScriptStoryMap
+from cdd_guidance.practices.stories.model.story_map import Epic, Scenario, Step, StepType, Story, StoryMap, StoryType
 
 
-def _story_map_with_a_story() -> StoryModel:
+def _story_map_with_a_story() -> StoryMap:
     """An epic with a sub-epic that holds the story Redeem a voucher and one scenario."""
-    story_map = StoryModel()
+    story_map = StoryMap()
     epic = Epic("Epic 1", 1)
     sub_epic = Epic("Epic 1.1", 1)
     story = Story("Redeem a voucher", 1, StoryType.USER)
@@ -31,7 +31,7 @@ def _story_test_of(tree: dict) -> str:
 with description("a JavaScript story test") as self:
     with context("written under the tests root"):
         with before.all:
-            self.story_test = _story_test_of(JavaScriptStoryModel().render(_story_map_with_a_story()))
+            self.story_test = _story_test_of(JavaScriptStoryMap().render(_story_map_with_a_story()))
 
         with it("should import the step library by the path from the story's own folder, with the file's extension"):
             expect(self.story_test).to(contain('import { background, scenario, story } from "../../../story-test.js";'))
@@ -41,7 +41,7 @@ with description("a JavaScript story test") as self:
 
     with context("written for a project whose pattern names the step library's folder"):
         with before.all:
-            model = JavaScriptStoryModel(tests_root="tests", story_test_folder="test-utils/story-test")
+            model = JavaScriptStoryMap(tests_root="tests", story_test_folder="test-utils/story-test")
             self.story_test = _story_test_of(model.render(_story_map_with_a_story()))
 
         with it("should import the step library by the path from the story's own folder to that folder"):

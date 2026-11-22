@@ -13,7 +13,7 @@ if str(_REPO) not in sys.path:
 
 from harness.graph.graph import Graph  # noqa: E402
 from harness.graph.graph import Source  # noqa: E402
-from cdd_guidance.practices.stories.model.story_model import Epic, Scenario, Step, StepType, Story, StoryModel  # noqa: E402
+from cdd_guidance.practices.stories.model.story_map import Epic, Scenario, Step, StepType, Story, StoryMap  # noqa: E402
 
 
 with description("a story map recorded on a graph"):
@@ -29,7 +29,7 @@ with description("a story map recorded on a graph"):
         ]
         scenario.steps[1].concepts = ["Cart"]
         story.scenarios = [scenario]
-        model = StoryModel()
+        model = StoryMap()
         epic = Epic("Place Orders", 1)
         epic.stories.append(story)
         model.epics.append(epic)
@@ -61,7 +61,7 @@ with description("a story map recorded on a graph"):
 with description("a merged story map whose two maps each hold a story a story test specifies"):
     with before.each:
         self.tmp = tempfile.TemporaryDirectory()
-        model = StoryModel()
+        model = StoryMap()
         for order, file in enumerate(["story-map.md", "story-map.drawio"], start=1):
             story = Story("Submit Order")
             story.source = Source(file, 1, 1)
@@ -91,7 +91,7 @@ def _imports_of(root: Path, file: str, text: str) -> dict:
     story.source = Source(file, 1, 1)
     epic = Epic("Onboard", 1)
     epic.stories.append(story)
-    model = StoryModel()
+    model = StoryMap()
     model.epics.append(epic)
     model.sources.add(file, text)
     graph = Graph()

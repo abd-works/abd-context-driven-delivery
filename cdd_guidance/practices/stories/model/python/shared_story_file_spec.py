@@ -8,7 +8,7 @@ from expects import contain, equal, expect
 from mamba import after, before, description, it
 
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
-from cdd_guidance.practices.stories.model.python.python_story_model import PythonStoryModel
+from cdd_guidance.practices.stories.model.python.python_story_map import PythonStoryMap
 from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 
 _EXAMPLES = '''\
@@ -80,7 +80,7 @@ with description("a Python shared story file"):
     with before.each:
         self.folder = _project()
         self.root = Path(self.folder.name)
-        story = PythonStoryModel().story_file("edit-ticket-text.story.shared.py", _SHARED, self.root).stories[0]
+        story = PythonStoryMap().story_file("edit-ticket-text.story.shared.py", _SHARED, self.root).stories[0]
         self.scenario = story.scenarios[0]
 
     with after.each:

@@ -15,7 +15,7 @@ from harness.graph.model_node import ModelDetached, ModelReferences, schema_sync
 from harness.graph.graph import Graph
 from harness.graph.spec_support import GraphsMade
 
-from cdd_guidance.practices.stories.model.story_model import Epic, Increment, Story, StoryModel
+from cdd_guidance.practices.stories.model.story_map import Epic, Increment, Story, StoryMap
 from cdd_guidance.practices.stories.stories import Stories
 from cdd_guidance.practices.ux.model.nodes import Region, Screen
 from cdd_guidance.practices.ux.ux import Ux
@@ -104,7 +104,7 @@ with description("a model object's practice"):
 
 with description("an owner that refers to objects it does not own"):
     with before.each:
-        self.story_map = StoryModel()
+        self.story_map = StoryMap()
         self.epic = Epic("Shop")
         self.story = Story("Place order")
         self.epic.stories.append(self.story)

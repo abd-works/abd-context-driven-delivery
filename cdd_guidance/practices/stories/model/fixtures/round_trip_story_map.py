@@ -8,21 +8,21 @@ from __future__ import annotations
 
 from typing import Any, List
 
-from cdd_guidance.practices.stories.model.story_model import (
+from cdd_guidance.practices.stories.model.story_map import (
     Background,
     Epic,
     Scenario,
     Step,
     StepType,
     Story,
-    StoryModel,
+    StoryMap,
     StoryType,
 )
 
 
-def round_trip_story_map(story_map: StoryModel | None = None) -> StoryModel:
-    """The fixture map, built into *story_map* (a format's own model) or a plain StoryModel."""
-    story_map = story_map if story_map is not None else StoryModel()
+def round_trip_story_map(story_map: StoryMap | None = None) -> StoryMap:
+    """The fixture map, built into *story_map* (a format's own model) or a plain StoryMap."""
+    story_map = story_map if story_map is not None else StoryMap()
     pay = Epic("Pay Bills", 1)
     story_map.epics.append(pay)
     pay.stories.append(_story("Review Statement", StoryType.USER, "Customer"))
@@ -39,7 +39,7 @@ def round_trip_story_map(story_map: StoryModel | None = None) -> StoryModel:
     return story_map
 
 
-def outline(story_map: StoryModel, *, with_scenarios: bool = True) -> List[Any]:
+def outline(story_map: StoryMap, *, with_scenarios: bool = True) -> List[Any]:
     """Each epic as (name, its stories, its epics); each story as (name, kind, actors[, backgrounds, scenarios])."""
     return [_epic_outline(epic, with_scenarios) for epic in story_map.epics]
 

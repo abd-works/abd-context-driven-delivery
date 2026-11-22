@@ -9,9 +9,9 @@ from typing import Any
 from harness.guidance.practice_formats import PracticeFormats, Rendered, RenderRequest
 
 
-from cdd_guidance.practices.stories.model.diagram_story_model import DiagramStoryModel
+from cdd_guidance.practices.stories.model.diagram_story_map import DiagramStoryMap
 from cdd_guidance.practices.stories.model.story_map_files import STORY_FILE_SUFFIXES, STORY_TESTS_FOLDER, THIN_SLICING_FILES, StoryMapFiles, path_from
-from cdd_guidance.practices.stories.model.story_model import Epic, Scenario, Story, StoryModel
+from cdd_guidance.practices.stories.model.story_map import Epic, Scenario, Story, StoryMap
 
 
 class PracticeOutsideSession(Exception):
@@ -23,13 +23,13 @@ class ThinSlicedMap:
     each increment, holding the stories it delivers under their sub-epics. A render of ``thin-slice.md`` to a drawing
     reads this, so the drawing shows the increments rather than the thin slice's headings read as epics."""
 
-    def __init__(self, story_map: StoryModel) -> None:
+    def __init__(self, story_map: StoryMap) -> None:
         self.story_map = story_map
 
     def semantic_type(self) -> str:
         return "ThinSlice"
 
-    def drawn_by(self, diagram: type[DiagramStoryModel]) -> str:
+    def drawn_by(self, diagram: type[DiagramStoryMap]) -> str:
         """Its increments drawn in the format of diagram, a story model that draws thin slices."""
         return diagram().copy_of(self.story_map).save_thin_slice()
 
@@ -42,7 +42,7 @@ class SpecifiedStories:
     def __init__(self, files: list[Path], project: Path) -> None:
         self._files = {path_from(project, file) for file in files}
 
-    def kept_in(self, story_map: StoryModel) -> StoryModel:
+    def kept_in(self, story_map: StoryMap) -> StoryMap:
         """story_map, holding only the stories the files specify and the epics above them."""
         story_map.epics.refill([epic for epic in story_map.epics if self._keeps(epic)])
         return story_map
@@ -67,7 +67,7 @@ class ScenariosOnTheirMap:
         self._project = project
         self._specified = SpecifiedStories(files, project)
 
-    def read_by(self, markdown: StoryModel) -> StoryModel | None:
+    def read_by(self, markdown: StoryMap) -> StoryMap | None:
         """The map as markdown, the markdown story format, reads it with its scenarios, holding only the stories the
         files specify; none when the map holds none of them."""
         kept = self._specified.kept_in(markdown.read_file(self._map_file, self._project))
@@ -119,7 +119,7 @@ class StoriesFormats(PracticeFormats):
         """The markdown story map beside the thin slice named alone, with that thin slice's increments, when the
         render is to a format that draws thin slices; none for any other files or format, or with no story map
         beside it."""
-        draws = request.format in self and issubclass(self.adapter_class(request.format), DiagramStoryModel)
+        draws = request.format in self and issubclass(self.adapter_class(request.format), DiagramStoryMap)
         if not draws or len(named) != 1 or named[0].name not in THIN_SLICING_FILES:
             return None
         project = self._project_of(named)
@@ -128,7 +128,7 @@ class StoriesFormats(PracticeFormats):
             return None
         return ThinSlicedMap(self.adapter_class("markdown")().opened_from(story_map, project))
 
-    def _scenarios_on_their_map(self, named: list[Path], request: RenderRequest) -> StoryModel | None:
+    def _scenarios_on_their_map(self, named: list[Path], request: RenderRequest) -> StoryMap | None:
         """The stories the scenarios markdown files at named specify, on the story map above them, for a render to
         code, which names each story test for its epic and sub-epic; none for a render to any other format, for files
         that are not all scenarios files, or with no markdown story map above them that holds their stories."""

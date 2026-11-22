@@ -8,7 +8,7 @@ from cdd_guidance.practices.clean_engineering.model.python.python_class_model im
 from cdd_guidance.practices.clean_engineering.reading.production_classes import ProductionClasses
 from cdd_guidance.practices.clean_engineering.rules.rule_examples import practice_from_files
 from cdd_guidance.practices.stories.model.fixtures.round_trip_story_map import round_trip_story_map
-from cdd_guidance.practices.stories.model.whiteboard.nodes import WhiteboardStoryModel
+from cdd_guidance.practices.stories.model.whiteboard.nodes import WhiteboardStoryMap
 from cdd_guidance.practices.clean_engineering.model.whiteboard.whiteboard_class_model import WhiteboardCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module
 from cdd_guidance.practices.clean_engineering.reading.code_read import DESCRIBED_FACT
@@ -176,7 +176,7 @@ with description("Clean Engineering reading code into its graph"):
 
     with context("with a Stories story-map board among the edited files"):
         with before.all:
-            board = WhiteboardStoryModel().copy_of(round_trip_story_map()).save()
+            board = WhiteboardStoryMap().copy_of(round_trip_story_map()).save()
             self.fixture = practice_from_files(
                 {
                     ".context/story-map.whiteboard": board,

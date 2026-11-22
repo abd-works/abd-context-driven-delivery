@@ -1,1 +1,1 @@
-from .nodes import DrawIOStoryModel
+from .nodes import DrawIOStoryMap

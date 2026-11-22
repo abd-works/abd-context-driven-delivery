@@ -5,16 +5,16 @@ A draw.io story map holds epics, stories, their kind, and their actors; scenario
 from expects import be_a, equal, expect
 from mamba import before, context, description, it
 
-from cdd_guidance.practices.stories.model.drawio.nodes import DrawIOStoryModel
+from cdd_guidance.practices.stories.model.drawio.nodes import DrawIOStoryMap
 from cdd_guidance.practices.stories.model.fixtures.round_trip_story_map import outline, round_trip_story_map
-from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
-from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryModel, StoryType
+from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryMap
+from cdd_guidance.practices.stories.model.story_map import Epic, Story, StoryMap, StoryType
 from harness.guidance.practice_formats import Written
 
 
-def _nested_four_levels() -> StoryModel:
+def _nested_four_levels() -> StoryMap:
     """A top-level epic with sub-epics nested three deep, each epic holding one story with its own actor."""
-    story_map = StoryModel()
+    story_map = StoryMap()
     holder = Epic("Top", 1)
     story_map.epics.append(holder)
     for level, name in enumerate(["Top", "Level One", "Level Two", "Level Three"]):
@@ -31,8 +31,8 @@ def _nested_four_levels() -> StoryModel:
 with description("a story map drawn in draw.io") as self:
     with before.each:
         self.story_map = round_trip_story_map()
-        self.drawing = DrawIOStoryModel().render(self.story_map)
-        self.read = DrawIOStoryModel().parse(self.drawing)
+        self.drawing = DrawIOStoryMap().render(self.story_map)
+        self.read = DrawIOStoryMap().parse(self.drawing)
 
     with it("should draw each story with its own kind"):
         expect('style="story:system;' in self.drawing).to(equal(True))
@@ -41,15 +41,15 @@ with description("a story map drawn in draw.io") as self:
         expect(outline(self.read, with_scenarios=False)).to(equal(outline(self.story_map, with_scenarios=False)))
 
     with it("should copy itself as a draw.io story map"):
-        expect(self.read.clone()).to(be_a(DrawIOStoryModel))
+        expect(self.read.clone()).to(be_a(DrawIOStoryMap))
 
     with context("that nests sub-epics four levels deep"):
         with before.each:
             self.nested = _nested_four_levels()
-            self.nested_read = DrawIOStoryModel().parse(DrawIOStoryModel().render(self.nested))
+            self.nested_read = DrawIOStoryMap().parse(DrawIOStoryMap().render(self.nested))
 
         with it("should draw the actor above the story of the deepest sub-epic"):
-            expect('value="Actor 3"' in DrawIOStoryModel().render(self.nested)).to(equal(True))
+            expect('value="Actor 3"' in DrawIOStoryMap().render(self.nested)).to(equal(True))
 
         with it("should read back every level's epic, story, and actor"):
             expect(outline(self.nested_read, with_scenarios=False)).to(equal(outline(self.nested, with_scenarios=False)))
@@ -72,38 +72,38 @@ _GROWN_MAP = """# (E) Sell Books
 
 
 def _drawn(markdown: str, previous: str | None = None) -> str:
-    return DrawIOStoryModel().render(MarkdownStoryModel().parse(markdown), Written(previous))
+    return DrawIOStoryMap().render(MarkdownStoryMap().parse(markdown), Written(previous))
 
 
 with description("a story map in markdown drawn again after it grew") as self:
     with before.each:
-        self.grown = MarkdownStoryModel().parse(_GROWN_MAP)
+        self.grown = MarkdownStoryMap().parse(_GROWN_MAP)
         self.redrawn = _drawn(_GROWN_MAP, previous=_drawn(_FIRST_MAP))
-        self.read = DrawIOStoryModel().parse(self.redrawn)
+        self.read = DrawIOStoryMap().parse(self.redrawn)
 
     with context("with a story added to a sub-epic the first drawing already held"):
         with it("should read the added story back under the sub-epic it was written in"):
             expect(outline(self.read, with_scenarios=False)).to(equal(outline(self.grown, with_scenarios=False)))
 
         with it("should widen the kept sub-epic to cover its added story"):
-            placed = {cell.cell_id: cell for cell in DrawIOStoryModel()._placed_cells(self.redrawn)}
+            placed = {cell.cell_id: cell for cell in DrawIOStoryMap()._placed_cells(self.redrawn)}
             expect(placed["sell-books/take-orders"].spans(placed["sell-books/take-orders/track-order"].center)).to(equal(True))
 
     with context("with the added story left outside every sub-epic, as a drawing made before the fix has it"):
         with before.each:
             narrow = self.redrawn.replace('width="170"', 'width="110"', 1)
-            self.read_narrow = DrawIOStoryModel().parse(narrow)
+            self.read_narrow = DrawIOStoryMap().parse(narrow)
 
         with it("should place the story under the sub-epic its cell's id names"):
             expect(outline(self.read_narrow, with_scenarios=False)).to(equal(outline(self.grown, with_scenarios=False)))
 
     with context("with a story a person dragged under another sub-epic"):
         with before.each:
-            cells = {cell.cell_id: cell for cell in DrawIOStoryModel()._placed_cells(self.redrawn)}
+            cells = {cell.cell_id: cell for cell in DrawIOStoryMap()._placed_cells(self.redrawn)}
             pack = cells["sell-books/ship-orders/pack-order"]
             cancel = cells["sell-books/take-orders/cancel-order"]
             moved = self.redrawn.replace(f'x="{int(cancel.x)}" y="{int(cancel.y)}"', f'x="{int(pack.x) + 5}" y="{int(pack.y)}"')
-            ship = DrawIOStoryModel().parse(moved).epics[0].epics[1]
+            ship = DrawIOStoryMap().parse(moved).epics[0].epics[1]
             self.ship_stories = [story.name for story in ship.stories]
 
         with it("should read the story under the sub-epic it was dragged to"):

@@ -2,7 +2,7 @@
 
 Two views:
 - story-map  render(canonical)            - Epic -> Epic -> Story grid
-- thin-slice DrawIOStoryModel.save_thin_slice / load_thin_slice - increment rows across epic columns
+- thin-slice DrawIOStoryMap.save_thin_slice / load_thin_slice - increment rows across epic columns
 """
 
 from __future__ import annotations
@@ -11,12 +11,12 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from cdd_guidance.practices.stories.model.diagram_story_model import (
+from cdd_guidance.practices.stories.model.diagram_story_map import (
     DiagramEpic,
     DiagramIncrement,
     DiagramStory,
     DiagramStoryCell,
-    DiagramStoryModel,
+    DiagramStoryMap,
     LaidOutEpic,
     LaidOutStory,
     ThinSliceColumn,
@@ -25,7 +25,7 @@ from cdd_guidance.practices.stories.model.diagram_story_model import (
     ThinSliceSurface,
 )
 from cdd_guidance.practices.stories.model.markdown.links import StoryMapLinks
-from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryModel, StoryType
+from cdd_guidance.practices.stories.model.story_map import Epic, Story, StoryMap, StoryType
 from harness.drawio import DrawioCell, DrawioFile, DrawioPage, UnreadableDrawio
 from harness.guidance.practice_formats import Written
 from harness.whiteboard import Box
@@ -89,17 +89,17 @@ class DrawIOStory(LaidOutStory):
                 seen += 1
         return self.slug if seen == 0 else f"{self.slug}-{seen + 1}"
 
-    def cells(self, parent_id: str) -> List["DrawIOStoryModel.Vertex"]:
+    def cells(self, parent_id: str) -> List["DrawIOStoryMap.Vertex"]:
         actor = self.actors[0].strip() if self.actors else ""
         cell_id = f"{parent_id}/{self.cell_slug}"
-        drawn: List[DrawIOStoryModel.Vertex] = []
+        drawn: List[DrawIOStoryMap.Vertex] = []
         if actor:
-            drawn.append(DrawIOStoryModel.Vertex.make(
+            drawn.append(DrawIOStoryMap.Vertex.make(
                 f"{cell_id}/actor", actor, self.x,
                 self.y - self.actor_height - self.actor_gap,
                 self.size, self.actor_height, self.actor_style,
             ))
-        drawn.append(DrawIOStoryModel.Vertex.make(
+        drawn.append(DrawIOStoryMap.Vertex.make(
             cell_id, self.name, self.x, self.y, self.size, self.size,
             self.style.format(role=self.story_type.value),
         ).linked(self))
@@ -148,10 +148,10 @@ class DrawIOEpic(LaidOutEpic):
             "fontColor=#000000;fontSize=11;"
         )
 
-    def cells(self) -> List["DrawIOStoryModel.Vertex"]:
+    def cells(self) -> List["DrawIOStoryMap.Vertex"]:
         if not isinstance(self.parent, Epic):
             return self._epic_cells()
-        drawn = [DrawIOStoryModel.Vertex.make(
+        drawn = [DrawIOStoryMap.Vertex.make(
             self.cell_id, self.name, self.x, self.y, self.bar_width, self.bar_height, self.style,
         ).linked(self)]
         for story in self.stories:
@@ -162,7 +162,7 @@ class DrawIOEpic(LaidOutEpic):
             drawn.append(self._estimate_cell())
         return drawn
 
-    def _estimate_cell(self) -> "DrawIOStoryModel.Vertex":
+    def _estimate_cell(self) -> "DrawIOStoryMap.Vertex":
         """A sub-epic's estimate, written on its story line after its last story."""
         estimate = self.estimate.strip()
         label = estimate if estimate.startswith("*") else f"* {estimate}"
@@ -171,14 +171,14 @@ class DrawIOEpic(LaidOutEpic):
             estimate_x = last_story_x + DiagramStory.size + self.estimate_gap
         else:
             estimate_x = self.x + self.tighten
-        return DrawIOStoryModel.Vertex.make(
+        return DrawIOStoryMap.Vertex.make(
             f"{self.cell_id}/estimate", label, estimate_x, self._story_line_y(),
             max(self.bar_width - (estimate_x - self.x) - self.tighten, _ESTIMATE_MIN_WIDTH),
             DiagramStory.size, self.estimate_style,
         )
 
-    def _epic_cells(self) -> List["DrawIOStoryModel.Vertex"]:
-        drawn = [DrawIOStoryModel.Vertex.make(
+    def _epic_cells(self) -> List["DrawIOStoryMap.Vertex"]:
+        drawn = [DrawIOStoryMap.Vertex.make(
             self.cell_id, self.name, self.x, self.y, self.width, self.height, self.style,
         ).linked(self)]
         for story in self.stories:
@@ -186,7 +186,7 @@ class DrawIOEpic(LaidOutEpic):
         estimate = (self.estimate or "").strip()
         if estimate:
             label = self.columns.estimate_label()
-            drawn.append(DrawIOStoryModel.Vertex.make(
+            drawn.append(DrawIOStoryMap.Vertex.make(
                 f"{self.cell_id}/epic-estimate", label, self.x, self.estimate_row_y,
                 min(_EPIC_ESTIMATE_MAX_WIDTH, self.width), self.estimate_height, self.epic_estimate_style,
             ))
@@ -257,7 +257,7 @@ class _KeptPlaces:
         kept._places = {cell.id: cell.geometry for cell in drawn.cells if cell.id and cell.geometry}
         return kept
 
-    def place(self, vertex: "DrawIOStoryModel.Vertex") -> None:
+    def place(self, vertex: "DrawIOStoryMap.Vertex") -> None:
         """Put vertex where its cell stood before, at the size it had; a cell new to the map stays where it was laid out.
         An epic or sub-epic that has grown since is drawn as wide as it is laid out now, so it still covers every story
         it holds."""
@@ -272,7 +272,7 @@ class _KeptPlaces:
             vertex.width = kept_width
 
 
-class DrawIOStoryModel(DiagramStoryModel):
+class DrawIOStoryMap(DiagramStoryMap):
     suffixes = (".drawio",)
     epic_class = DrawIOEpic
     increment_class = DrawIOIncrement
@@ -297,7 +297,7 @@ class DrawIOStoryModel(DiagramStoryModel):
             self.node = None
 
         @classmethod
-        def make(cls, cell_id, label, x, y, width, height, style) -> "DrawIOStoryModel.Vertex":
+        def make(cls, cell_id, label, x, y, width, height, style) -> "DrawIOStoryMap.Vertex":
             vertex = cls()
             vertex.cell_id = cell_id
             vertex.label = label
@@ -308,7 +308,7 @@ class DrawIOStoryModel(DiagramStoryModel):
             vertex.style = style
             return vertex
 
-        def linked(self, node) -> "DrawIOStoryModel.Vertex":
+        def linked(self, node) -> "DrawIOStoryMap.Vertex":
             """Draw this cell for *node*, so it can carry that node's links."""
             self.node = node
             return self
@@ -346,7 +346,7 @@ class DrawIOStoryModel(DiagramStoryModel):
     def story_floor(self) -> int:
         return DrawIOStory.shaping_row_y if self.has_outline_estimates else DrawIOStory.row_y
 
-    def render(self, canonical: StoryModel, written: Written = Written()) -> str:
+    def render(self, canonical: StoryMap, written: Written = Written()) -> str:
         """Draw the story map. Written in a folder, each epic, sub-epic, and story cell links to its ``story-map.md``
         entry there, and a story to its own file when one exists. With no target file, the cell has no link. Each cell
         the previous drawing held stays where it stood there, so the cards a person moved stay put."""
@@ -373,11 +373,11 @@ class DrawIOStoryModel(DiagramStoryModel):
             vertex.draw_on(page)
         return drawing.save()
 
-    def parse(self, text: str, file: str = "") -> "DrawIOStoryModel":
+    def parse(self, text: str, file: str = "") -> "DrawIOStoryMap":
         """Read the story map by where its cells sit, not their order in the file: draw.io saves cells back to
         front, so bringing a cell forward or sending it back moves it in the file but not on screen."""
         cells = self._placed_cells(text)
-        story_map = DrawIOStoryModel()
+        story_map = DrawIOStoryMap()
         owners = story_map.place_cells(cells)
         for cell in cells:
             owner = cell.estimate_owner(owners)
@@ -402,7 +402,7 @@ class DrawIOStoryModel(DiagramStoryModel):
         """
         return _ThinSliceDrawing(self, DrawioFile()).text()
 
-    def load_thin_slice(self, text: str) -> "DrawIOStoryModel":
+    def load_thin_slice(self, text: str) -> "DrawIOStoryMap":
         """Read a thin-slicing.drawio document into this map's increments, each delivering the map's own stories
         that its lane names, and return this map."""
         names, lanes = self._lanes_in(DrawioFile.from_text(text).whole)
@@ -433,14 +433,14 @@ class _ThinSliceDrawing(ThinSliceSurface):
     """The draw.io page a story map's thin slice is drawn on: its epics and sub-epics as column headers, and one lane
     per increment holding its stories under their sub-epics' columns, as the layout places them."""
 
-    def __init__(self, story_map: DrawIOStoryModel, drawing: DrawioFile) -> None:
+    def __init__(self, story_map: DrawIOStoryMap, drawing: DrawioFile) -> None:
         self.drawing = drawing
         self.page = drawing.add_page("Thin Slicing", "thin-slicing")
         self.layout = ThinSliceLayout(story_map, DiagramStory.size + DrawIOIncrement.card_gap, DrawIOIncrement.card_gap, DiagramEpic.left_margin)
         self.width = DrawIOIncrement.label_width + self.layout.width
         self._lane_y = DiagramEpic.nested_row_y + DiagramEpic.bar_height + DrawIOIncrement.header_gap
 
-    def _draw(self, vertex: "DrawIOStoryModel.Vertex") -> None:
+    def _draw(self, vertex: "DrawIOStoryMap.Vertex") -> None:
         vertex.draw_on(self.page)
 
     def text(self) -> str:
@@ -448,11 +448,11 @@ class _ThinSliceDrawing(ThinSliceSurface):
         return self.drawing.save()
 
     def epic_header(self, epic: Epic, x: float, width: float) -> None:
-        self._draw(DrawIOStoryModel.Vertex.make(epic.slug, epic.name, x, DiagramEpic.row_y, width - _HEADER_INSET, DiagramEpic.bar_height, epic.style))
+        self._draw(DrawIOStoryMap.Vertex.make(epic.slug, epic.name, x, DiagramEpic.row_y, width - _HEADER_INSET, DiagramEpic.bar_height, epic.style))
 
     def sub_epic_header(self, column: ThinSliceColumn) -> None:
         sub = column.sub
-        self._draw(DrawIOStoryModel.Vertex.make(sub.cell_id, sub.name, column.x, DiagramEpic.nested_row_y, column.width - _HEADER_INSET, DiagramEpic.bar_height, sub.style))
+        self._draw(DrawIOStoryMap.Vertex.make(sub.cell_id, sub.name, column.x, DiagramEpic.nested_row_y, column.width - _HEADER_INSET, DiagramEpic.bar_height, sub.style))
 
     def lane(self, lane: ThinSliceLane, layout: ThinSliceLayout) -> None:
         """One increment's lane: its label at the left and its stories in one row under their sub-epics."""
@@ -460,8 +460,8 @@ class _ThinSliceDrawing(ThinSliceSurface):
         self._lane_y += DrawIOIncrement.lane_height + DrawIOIncrement.lane_gap
         left = DiagramEpic.left_margin - DrawIOIncrement.label_width
         height = DrawIOIncrement.lane_height
-        self._draw(DrawIOStoryModel.Vertex.make(f"inc-lane/{increment.slug}/bg", "", left, lane_y, self.width, height, DrawIOIncrement.lane_style))
-        self._draw(DrawIOStoryModel.Vertex.make(f"inc-lane/{increment.slug}", increment.name, left, lane_y, DrawIOIncrement.label_width - _HEADER_INSET, height, DrawIOIncrement.label_style))
+        self._draw(DrawIOStoryMap.Vertex.make(f"inc-lane/{increment.slug}/bg", "", left, lane_y, self.width, height, DrawIOIncrement.lane_style))
+        self._draw(DrawIOStoryMap.Vertex.make(f"inc-lane/{increment.slug}", increment.name, left, lane_y, DrawIOIncrement.label_width - _HEADER_INSET, height, DrawIOIncrement.label_style))
         story_y = lane_y + (DrawIOIncrement.lane_height - DiagramStory.size) // 2
         pitch = DiagramStory.size + DrawIOIncrement.card_gap
         seen: Dict[str, int] = {}
@@ -471,4 +471,4 @@ class _ThinSliceDrawing(ThinSliceSurface):
                 count = seen[story.slug] = seen.get(story.slug, 0) + 1
                 cell_id = f"inc-lane/{increment.slug}/{story.slug}" + (f"-{count}" if count > 1 else "")
                 story_x = column_x + DrawIOIncrement.card_gap + place * pitch
-                self._draw(DrawIOStoryModel.Vertex.make(cell_id, story.name, story_x, story_y, DiagramStory.size, DiagramStory.size, DrawIOIncrement.story_style))
+                self._draw(DrawIOStoryMap.Vertex.make(cell_id, story.name, story_x, story_y, DiagramStory.size, DiagramStory.size, DrawIOIncrement.story_style))

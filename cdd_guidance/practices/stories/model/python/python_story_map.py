@@ -1,4 +1,4 @@
-"""PythonStoryModel - runnable `*_story.test.py` per Story.
+"""PythonStoryMap - runnable `*_story.test.py` per Story.
 """
 
 from __future__ import annotations
@@ -8,12 +8,12 @@ from pathlib import Path
 from typing import List, Optional
 
 from cdd_guidance.practices.source_code import PYTHON
-from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel
+from cdd_guidance.practices.stories.model.code_story_map import CodeStoryMap
 from cdd_guidance.practices.stories.model.python.nodes import PythonEpic
 from cdd_guidance.practices.stories.model.python.shared_story_file import SHARED_SUFFIX, SharedStoryFile, is_shared_story_file
 from cdd_guidance.practices.stories.model.python.story_file import PythonStoryFile
 from cdd_guidance.practices.stories.model.story_file import StoryFile, flat_steps
-from cdd_guidance.practices.stories.model.story_model import Background, Story
+from cdd_guidance.practices.stories.model.story_map import Background, Story
 from cdd_guidance.practices.stories.model.story_writing import StepClause, StoryFilePlace, StoryWriting, background_examples_line, example_names_of, story_description
 
 
@@ -61,7 +61,7 @@ class PythonStoryWriting(StoryWriting):
         return lines
 
 
-class PythonStoryModel(CodeStoryModel):
+class PythonStoryMap(CodeStoryMap):
     LEAF_EXTENSION = "_story.test.py"
     story_file_suffixes = (LEAF_EXTENSION, SHARED_SUFFIX)
     epic_class = PythonEpic

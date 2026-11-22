@@ -14,15 +14,15 @@ for _candidate in _HERE.parents:
 from mamba import description, context, it, before
 from expects import equal, have_len, be_true, be_false, expect, raise_error
 
-from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryType, Epic
-from cdd_guidance.practices.stories.model.story_model import Scenario
-from cdd_guidance.practices.stories.model.story_model import StoryModel
-from cdd_guidance.practices.stories.model.json.nodes import JsonParseError, JsonStoryModel
+from cdd_guidance.practices.stories.model.story_map import Epic, Story, StoryType, Epic
+from cdd_guidance.practices.stories.model.story_map import Scenario
+from cdd_guidance.practices.stories.model.story_map import StoryMap
+from cdd_guidance.practices.stories.model.json.nodes import JsonParseError, JsonStoryMap
 
 
 class SpecFixture:
-    def canonical_story_map(self) -> StoryModel:
-        story_map = StoryModel()
+    def canonical_story_map(self) -> StoryMap:
+        story_map = StoryMap()
         for i in range(1, 5):
             story_map.epics.append(Epic(f"Epic {i}", i))
         first = story_map.epics[0]
@@ -42,10 +42,10 @@ fixture = SpecFixture()
 
 with description("a story-graph.json document") as self:
     with before.each:
-        self.json_map = JsonStoryModel()
+        self.json_map = JsonStoryMap()
 
     with it("should contain no Epics"):
-        text = self.json_map.render(StoryModel())
+        text = self.json_map.render(StoryMap())
         payload = json_module.loads(text)
         expect(payload["epics"]).to(have_len(0))
 
@@ -106,7 +106,7 @@ with description("a story-graph.json document") as self:
                 remaining_names = [e["name"] for e in self.new_payload["epics"]]
                 expect("Epic 1" in remaining_names).to(be_false)
 
-    with context("that is being read back into a JsonStoryModel"):
+    with context("that is being read back into a JsonStoryMap"):
         with before.each:
             source = fixture.canonical_story_map()
             self.text = self.json_map.render(source)

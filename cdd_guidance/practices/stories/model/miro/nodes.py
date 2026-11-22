@@ -1,7 +1,7 @@
 """Miro format story nodes - all seven StoryNode subtypes plus I/O.
 
 load reads a canvas-composer SVG. save writes the nodes you edited.
-The thin-slice table is MiroStoryModel.save_thin_slice and load_thin_slice.
+The thin-slice table is MiroStoryMap.save_thin_slice and load_thin_slice.
 """
 
 from __future__ import annotations
@@ -13,16 +13,16 @@ from typing import Dict, Iterator, List, Optional, Tuple
 
 from harness.whiteboard import Box
 
-from cdd_guidance.practices.stories.model.diagram_story_model import (
+from cdd_guidance.practices.stories.model.diagram_story_map import (
     DiagramEpic,
     DiagramIncrement,
     DiagramStory,
     DiagramStoryCell,
-    DiagramStoryModel,
+    DiagramStoryMap,
     LaidOutEpic,
     LaidOutStory,
 )
-from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryModel, StoryType
+from cdd_guidance.practices.stories.model.story_map import Epic, Story, StoryMap, StoryType
 from harness.guidance.practice_formats import Written
 
 # Font sizes, corner radii, and stroke widths a Miro board draws each kind of card with.
@@ -200,7 +200,7 @@ class _MiroCell(DiagramStoryCell):
         self.width, self.height = float(element.get("width", 0)), float(element.get("height", 0))
 
 
-class MiroStoryModel(DiagramStoryModel):
+class MiroStoryMap(DiagramStoryMap):
     epic_class = MiroEpic
     increment_class = MiroIncrement
     """Miro story-map I/O. IS the format-typed tree root.
@@ -209,7 +209,7 @@ class MiroStoryModel(DiagramStoryModel):
     The thin-slice table is save_thin_slice and load_thin_slice, over this map's own increments.
     """
 
-    def render(self, canonical: StoryModel, written: Written = Written()) -> str:
+    def render(self, canonical: StoryMap, written: Written = Written()) -> str:
         """Draw canonical as a Miro canvas-composer SVG."""
         return self.copy_of(canonical).save()
 
@@ -248,7 +248,7 @@ class MiroStoryModel(DiagramStoryModel):
         )
         return "<?xml version='1.0' encoding='utf-8'?>\n" '<svg xmlns="http://www.w3.org/2000/svg">\n' f"  {table}\n" "</svg>"
 
-    def load_thin_slice(self, text: str) -> "MiroStoryModel":
+    def load_thin_slice(self, text: str) -> "MiroStoryMap":
         """Read a thin-slice table into this map's increments, each delivering the map's own stories its row names,
         and return this map."""
         foreign = self._foreign_object(self._svg_root(text), "table")
@@ -279,13 +279,13 @@ class MiroStoryModel(DiagramStoryModel):
         """One SVG rect line per epic, sub-epic, story, and actor. Each node places itself."""
         return [shape.svg_line() for epic in self.epics for shape in epic.shapes()]
 
-    def parse(self, text: str, file: str = "") -> "MiroStoryModel":
+    def parse(self, text: str, file: str = "") -> "MiroStoryMap":
         """Read a canvas-composer SVG into a Miro story map, by where its cards sit, as every drawn format reads its
         map; the format-adapter entry point Stories renders through."""
         cells = [cell for cell in (_MiroCell(element) for element in self._cards_in_order(self._svg_root(text))) if cell.role]
         if not cells:
             raise MiroParseError("No story-map nodes found in SVG (missing data-role attributes)")
-        story_map = MiroStoryModel()
+        story_map = MiroStoryMap()
         story_map.place_cells(cells)
         return story_map
 

@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence
 from cdd_guidance.practices.stories.model.markdown.markup import MarkdownExample, MarkdownStep, step_line
 
 if TYPE_CHECKING:
-    from cdd_guidance.practices.stories.model.story_model import Background, Scenario, Step
+    from cdd_guidance.practices.stories.model.story_map import Background, Scenario, Step
 
 
 class ReadLine(ABC):

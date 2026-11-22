@@ -27,13 +27,13 @@ from harness.mcp.mcp_server import ProjectToolsets  # noqa: E402
 from space.session.throwaway_project import ThrowawayProject  # noqa: E402
 
 TOOLSETS = (
-    "cdd_guidance.practices.stories.model.story_model:StoryModel",
-    "cdd_guidance.practices.stories.model.story_model:Epic",
-    "cdd_guidance.practices.stories.model.story_model:Story",
-    "cdd_guidance.practices.stories.model.story_model:Scenario",
-    "cdd_guidance.practices.stories.model.story_model:Step",
-    "cdd_guidance.practices.stories.model.story_model:Example",
-    "cdd_guidance.practices.stories.model.story_model:Increment",
+    "cdd_guidance.practices.stories.model.story_map:StoryMap",
+    "cdd_guidance.practices.stories.model.story_map:Epic",
+    "cdd_guidance.practices.stories.model.story_map:Story",
+    "cdd_guidance.practices.stories.model.story_map:Scenario",
+    "cdd_guidance.practices.stories.model.story_map:Step",
+    "cdd_guidance.practices.stories.model.story_map:Example",
+    "cdd_guidance.practices.stories.model.story_map:Increment",
     "space.session.practice_session_output:FidelitySessionOutput",
     "space.session.sessions:Sessions",
 )
@@ -183,7 +183,7 @@ def _scenario_project() -> tuple[StoryMapProject, str, dict, dict]:
     Refactor Story UI App To Web Domain Access story."""
     project = StoryMapProject()
     written = project.copy(STORIES / CHAT_BAR_FOLDER / "integrate_practice_content_editor_apps_in_chat_bar_story.test.md", SCENARIO_FILE)
-    shown = project.call("story-model.show", file=SCENARIO_FILE)
+    shown = project.call("story-map.show", file=SCENARIO_FILE)
     return project, written, shown, project.story_at(shown, "Refactor Story UI App To Web Domain Access")
 
 
@@ -191,7 +191,7 @@ def _named_examples_project() -> tuple[StoryMapProject, dict]:
     """A project holding a scenario file whose examples are named: the project and its scenario as shown."""
     project = StoryMapProject()
     project.write(NAMED_EXAMPLES_FILE, NAMED_EXAMPLES)
-    shown = project.call("story-model.show", file=NAMED_EXAMPLES_FILE)
+    shown = project.call("story-map.show", file=NAMED_EXAMPLES_FILE)
     return project, project.story_at(shown, "Open Story UI Side Panel From Chat Bar")["scenarios"][0]
 
 
@@ -215,7 +215,7 @@ with description("a story map edited through its tools") as self:
     # (S) Deploy Story UI App With Board State: the editor follows the session open in the project.
     with context("opened on the session open in the project"):
         with before.all:
-            self.opened = StoryMapProject().call("story-model.open_in_session")
+            self.opened = StoryMapProject().call("story-map.open_in_session")
 
         with it("should show that session's story map"):
             expect(self.opened["file"]).to(equal(MAP_FILE))
@@ -223,7 +223,7 @@ with description("a story map edited through its tools") as self:
     with context("opened on story-map.md"):
         with before.all:
             self.project = StoryMapProject()
-            self.shown = self.project.call("story-model.show", file=MAP_FILE)
+            self.shown = self.project.call("story-map.show", file=MAP_FILE)
 
         with it("should show the stories story-map.md holds"):
             expect(self.project.story_names(self.shown)).to(equal(["Open Story UI Side Panel From Chat Bar", "Open Kanban Side Panel From Chat Bar", "Trace Story Through Artifacts"]))
@@ -280,7 +280,7 @@ with description("a story map edited through its tools") as self:
         with before.all:
             self.project = StoryMapProject()
             self.project.call("story.rename", node=_node(f"{SUB_EPIC}.trace-story-through-artifacts"), name="Trace Story Across Artifacts")
-            self.read = self.project.call("story-model.show", file=MAP_FILE)
+            self.read = self.project.call("story-map.show", file=MAP_FILE)
 
         with it("should show the renamed story on the next read"):
             expect(self.project.story_names(self.read)).to(contain("Trace Story Across Artifacts"))
@@ -288,7 +288,7 @@ with description("a story map edited through its tools") as self:
     with context("with each edit"):
         with context("that adds an epic"):
             with before.all:
-                self.story_map = StoryMapProject().call("story-model.new_epic", file=MAP_FILE, name="Deploy Story UI App")
+                self.story_map = StoryMapProject().call("story-map.new_epic", file=MAP_FILE, name="Deploy Story UI App")
 
             with it("should add an epic after the map's epics"):
                 expect([epic["name"] for epic in self.story_map["epics"]]).to(equal(["Move Work Forward From Chat Bar", "Deploy Story UI App"]))
@@ -411,7 +411,7 @@ with description("a story map edited through its tools") as self:
     with context("sliced into increments by the thin slice beside it"):
         with before.all:
             self.sliced = (STORIES / "thin-slice.md").read_text(encoding="utf-8")
-            self.shown = _snapshot_project().call("story-model.show", file=MAP_FILE)
+            self.shown = _snapshot_project().call("story-map.show", file=MAP_FILE)
 
         with it("should show its increments in order"):
             expect([increment["name"] for increment in self.shown["increments"]][:3]).to(equal(["Built Today", "Maintain Tickets On Board", "Integrate Practice Content Editor Apps"]))
@@ -425,7 +425,7 @@ with description("a story map edited through its tools") as self:
         with context("with an increment added and given a story"):
             with before.all:
                 self.project = _snapshot_project()
-                self.project.call("story-model.new_increment", file=MAP_FILE, name="Edit Story Maps In Story UI")
+                self.project.call("story-map.new_increment", file=MAP_FILE, name="Edit Story Maps In Story UI")
                 self.added = self.project.call("increment.add_story", node=_node("increment:edit-story-maps-in-story-ui"), story=_node(CHAT_BAR_STORY))
 
             with it("should write the increment after the last one in thin-slice.md"):
@@ -534,7 +534,7 @@ with description("a story map edited through its tools") as self:
         with before.all:
             self.project = StoryMapProject()
             self.project.write(STORY_TEST_FILE, STORY_TEST)
-            self.shown = self.project.call("story-model.show", file=MAP_FILE)
+            self.shown = self.project.call("story-map.show", file=MAP_FILE)
 
         with it("should link the story to that file"):
             expect(self.project.story_at(self.shown, "Open Story UI Side Panel From Chat Bar")["acceptance_tests"]).to(equal([STORY_TEST_FILE]))
@@ -547,14 +547,14 @@ with description("a story map edited through its tools") as self:
         with before.all:
             project = StoryMapProject()
             project.write(".sessions/checkout-flow/checkout-flow.md", "# Checkout flow\n\n## Story: Open Story UI Side Panel From Chat Bar\n\n## Story: Open Kanban Side Panel From Chat Bar\n")
-            self.shown = project.call("story-model.open_in_session")
+            self.shown = project.call("story-map.open_in_session")
 
         with it("should scope the map to the stories the session names"):
             expect(self.shown["scope"]).to(equal([_node(f"{SUB_EPIC}.open-story-ui-side-panel-from-chat-bar"), _node(f"{SUB_EPIC}.open-kanban-side-panel-from-chat-bar")]))
 
     with context("opened in a session that names no story"):
         with before.all:
-            self.shown = StoryMapProject().call("story-model.show", file=MAP_FILE)
+            self.shown = StoryMapProject().call("story-map.show", file=MAP_FILE)
 
         with it("should scope the map to none of its stories, so the whole map shows"):
             expect(self.shown["scope"]).to(equal([]))

@@ -96,6 +96,20 @@ with description("a saved graph"):
             saved.write_text(json.dumps(self.old), encoding="utf-8")
             expect(SavedGraphFile(self.root / "old", lambda message: None).read()).to(be_none)
 
+    with context("in the shape saved before the story map's class was named StoryMap"):
+        with before.all:
+            story_model = {"node_id": "stories:StoryModel", "name": "StoryModel", "type": "StoryModel", "practice": "stories", "facts": {}}
+            self.old = {"version": 5, "overlays": [], "practices": {"stories": {"source_root": ".", "nodes": [story_model], "edges": []}}}
+
+        with it("should be refused by name"):
+            expect(lambda: SavedGraph.from_document(self.old, "graph.json")).to(raise_error(SavedGraphOutdated))
+
+        with it("should read as no saved graph, so the next load reads the folder again"):
+            saved = self.root / "story-model" / ".context" / "graph.json"
+            saved.parent.mkdir(parents=True)
+            saved.write_text(json.dumps(self.old), encoding="utf-8")
+            expect(SavedGraphFile(self.root / "story-model", lambda message: None).read()).to(be_none)
+
 
 
 

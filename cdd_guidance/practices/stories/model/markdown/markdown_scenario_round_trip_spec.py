@@ -11,7 +11,7 @@ from mamba import description, context, it, before
 from expects import equal, contain, be_true, expect
 
 from cdd_guidance.practices.stories.model.markdown.links import unlink
-from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
+from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryMap
 from cdd_guidance.practices.stories.stories import Stories
 
 FIXTURE = Path(__file__).resolve().parent / "fixtures" / "get_sim_scenarios.md"
@@ -50,15 +50,15 @@ def _content(story_map):
 with description("a scenarios Markdown document") as self:
     with before.each:
         self.text = FIXTURE.read_text(encoding="utf-8")
-        self.parsed = MarkdownStoryModel().parse(self.text)
-        self.rendered = MarkdownStoryModel().render(self.parsed)
+        self.parsed = MarkdownStoryMap().parse(self.text)
+        self.rendered = MarkdownStoryMap().render(self.parsed)
 
     with context("rendered back to Markdown"):
         with it("should write the document it was parsed from"):
             expect(self.rendered).to(equal(self.text))
 
         with it("should parse to the same stories, backgrounds, scenarios, steps, and examples"):
-            again = MarkdownStoryModel().parse(self.rendered)
+            again = MarkdownStoryMap().parse(self.rendered)
             expect(_content(again)).to(equal(_content(self.parsed)))
 
         with it("should keep domain-term links in steps"):
@@ -100,7 +100,7 @@ with description("a scenarios Markdown document") as self:
             scenario = story.scenarios[0]
             scenario.name = "Pick eSIM"
             scenario.steps[1].text = "the **Customer** picks the ++SIM choice++ ++eSIM++"
-            self.rendered = MarkdownStoryModel().render(self.parsed)
+            self.rendered = MarkdownStoryMap().render(self.parsed)
 
         with it("should write the new name and step in the template form"):
             expect(self.rendered).to(contain("#### Scenario: Pick eSIM\n"))
@@ -120,7 +120,7 @@ with description("a scenarios Markdown document") as self:
 def _unread_story():
     """A story not read from a document: a story background and a scenario with an example of its own."""
     from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownScenario, MarkdownStory
-    from cdd_guidance.practices.stories.model.story_model import Background, Step, StepType
+    from cdd_guidance.practices.stories.model.story_map import Background, Step, StepType
 
     story = MarkdownStory("Submit Order", 1)
     background = Background("a filled cart", 1)

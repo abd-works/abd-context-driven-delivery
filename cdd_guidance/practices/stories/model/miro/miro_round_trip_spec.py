@@ -6,19 +6,19 @@ from expects import be_a, contain, equal, expect
 from mamba import before, description, it
 
 from cdd_guidance.practices.stories.model.fixtures.round_trip_story_map import outline, round_trip_story_map
-from cdd_guidance.practices.stories.model.miro.nodes import MiroIncrement, MiroStoryModel
+from cdd_guidance.practices.stories.model.miro.nodes import MiroIncrement, MiroStoryMap
 
 
 with description("a story map drawn for a Miro board") as self:
     with before.each:
-        self.story_map = MiroStoryModel().copy_of(round_trip_story_map())
-        self.read = MiroStoryModel().parse(self.story_map.save())
+        self.story_map = MiroStoryMap().copy_of(round_trip_story_map())
+        self.read = MiroStoryMap().parse(self.story_map.save())
 
     with it("should read back every epic, story held by any epic, kind, and actor"):
         expect(outline(self.read, with_scenarios=False)).to(equal(outline(self.story_map, with_scenarios=False)))
 
     with it("should copy itself as a Miro story map"):
-        expect(self.read.clone()).to(be_a(MiroStoryModel))
+        expect(self.read.clone()).to(be_a(MiroStoryMap))
 
     with it("should head a nested epic's thin-slice column with a plain ellipsis"):
         self.story_map.epics[0].epics[0].epics.append(type(self.story_map.epics[0])("Confirm Payment", 1))

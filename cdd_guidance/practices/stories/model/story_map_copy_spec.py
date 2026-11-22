@@ -5,10 +5,10 @@ from expects import be, equal, expect
 from mamba import before, description, it
 
 from cdd_guidance.practices.stories.model.fixtures.round_trip_story_map import outline, round_trip_story_map
-from cdd_guidance.practices.stories.model.json.nodes import JsonBackground, JsonScenario, JsonStep, JsonStory, JsonStoryModel
+from cdd_guidance.practices.stories.model.json.nodes import JsonBackground, JsonScenario, JsonStep, JsonStory, JsonStoryMap
 from cdd_guidance.practices.stories.model.markdown.markup import MarkdownStep
-from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownEpic, MarkdownScenario, MarkdownStory, MarkdownStoryModel
-from cdd_guidance.practices.stories.model.story_model import Background, Epic, Scenario, Step, StepType, Story
+from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownEpic, MarkdownScenario, MarkdownStory, MarkdownStoryMap
+from cdd_guidance.practices.stories.model.story_map import Background, Epic, Scenario, Step, StepType, Story
 
 
 def _paying_scenario(scenario: Scenario, step: Step) -> Scenario:
@@ -25,7 +25,7 @@ with description("a story map copied into another format's model") as self:
         self.story_map = round_trip_story_map()
         self.story_map.examples["open account"] = {"balance": "120"}
         self.story_map.epics[0].examples["due bill"] = {"amount": "40"}
-        self.copied = JsonStoryModel().copy_of(self.story_map)
+        self.copied = JsonStoryMap().copy_of(self.story_map)
 
     with it("should keep every epic, story, background, and scenario"):
         expect(outline(self.copied)).to(equal(outline(self.story_map)))
@@ -105,7 +105,7 @@ with description("a scenario cloned") as self:
 
 with description("a story map cloned") as self:
     with before.each:
-        self.story_map = MarkdownStoryModel().copy_of(round_trip_story_map())
+        self.story_map = MarkdownStoryMap().copy_of(round_trip_story_map())
         self.story_map.epics[0].stories.append(Story("Export Statement", 2))
         self.cloned = self.story_map.clone()
 

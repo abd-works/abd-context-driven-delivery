@@ -6,7 +6,7 @@ import tempfile
 from expects import be, contain, equal, expect, have_len
 from mamba import before, context, description, it
 
-from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownScenario, MarkdownStoryModel
+from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownScenario, MarkdownStoryMap
 from cdd_guidance.practices.stories.model.markdown.scenario_file import ScenarioFiles
 
 
@@ -60,7 +60,7 @@ with description("a markdown story map loaded from a workspace") as self:
             self.root = root
 
         with it("should attach the scenario to the story it names"):
-            loaded = MarkdownStoryModel().read_folder(self.root, self.root)
+            loaded = MarkdownStoryMap().read_folder(self.root, self.root)
             named = {story.name: story for story in _stories(loaded)}
             expect(named["Place Order"].scenarios[0].name).to(equal("Happy path"))
 
@@ -74,18 +74,18 @@ with description("a markdown story map loaded from a workspace") as self:
 
             ScenarioFiles.sections = counting
             try:
-                MarkdownStoryModel().read_folder(self.root, self.root)
+                MarkdownStoryMap().read_folder(self.root, self.root)
             finally:
                 ScenarioFiles.sections = original
             expect(calls).to(have_len(1))
 
         with it("should report each scenario file while reading"):
             reported = []
-            MarkdownStoryModel().read_folder(self.root, self.root, reported.append)
+            MarkdownStoryMap().read_folder(self.root, self.root, reported.append)
             expect(reported).to(contain("stories/place-order.md"))
 
         with it("should give the story the scenario file's section names a scenario its story as its parent"):
-            loaded = MarkdownStoryModel().read_folder(self.root, self.root)
+            loaded = MarkdownStoryMap().read_folder(self.root, self.root)
             named = {story.name: story for story in _stories(loaded)}
             expect(named["Place Order"].scenarios[0].parent).to(be(named["Place Order"]))
 
@@ -97,7 +97,7 @@ with description("a markdown story map loaded from a workspace") as self:
                 "\n".join(["# Shop", "", "## Checkout", "", "### Pay By Card", "", "## Story: Refund Order", ""]),
                 encoding="utf-8",
             )
-            loaded = MarkdownStoryModel().read_folder(root, root)
+            loaded = MarkdownStoryMap().read_folder(root, root)
             self.named = {story.name: story for story in _stories(loaded)}
             self.loaded = loaded
 
@@ -129,7 +129,7 @@ with description("a markdown story map loaded from a workspace") as self:
             (vendored / "thin-slicing.md").write_text(
                 "### Increment 1: Pay\n**Stories:**\n- Pay By Card\n", encoding="utf-8"
             )
-            self.loaded = MarkdownStoryModel().read_folder(root, root)
+            self.loaded = MarkdownStoryMap().read_folder(root, root)
 
         with it("should read no increments"):
             expect(self.loaded.increments).to(have_len(0))
@@ -142,7 +142,7 @@ with description("a markdown story map loaded from a workspace") as self:
             (root / "thin-slicing.md").write_text(
                 "### Increment 1: Pay\n**Stories:**\n- Pay By Card\n- Refund Order\n", encoding="utf-8"
             )
-            self.loaded = MarkdownStoryModel().read_folder(root, root)
+            self.loaded = MarkdownStoryMap().read_folder(root, root)
 
         with it("should deliver the map's own story each name gives"):
             expect(self.loaded.increments[0].stories[0]).to(be(_stories(self.loaded)[0]))

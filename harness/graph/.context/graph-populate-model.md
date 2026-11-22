@@ -617,7 +617,7 @@ associates  relationship  EntityRoot -> EntityRoot it names with a `// foreign N
 
 # Stories
 
-*Stories*, with its readers in `cdd_guidance/practices/stories/model/graph_reading.py`. It reads the TypeScript and JavaScript story tests into a story model (`TypeScriptStoryModel`), or the story maps (`StoryModel`) when there are none, and `StoryModel.record` has each object add itself to the practice graph.
+*Stories*, with its readers in `cdd_guidance/practices/stories/model/graph_reading.py`. It reads the TypeScript and JavaScript story tests into a story model (`TypeScriptStoryMap`), or the story maps (`StoryMap`) when there are none, and `StoryMap.record` has each object add itself to the practice graph.
 
 ## Nodes
 

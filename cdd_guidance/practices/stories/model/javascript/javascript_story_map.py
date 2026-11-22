@@ -1,4 +1,4 @@
-"""JavaScriptStoryModel - runnable `{story_snake}_story.test.js` under epic / sub-epic / story."""
+"""JavaScriptStoryMap - runnable `{story_snake}_story.test.js` under epic / sub-epic / story."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from pathlib import Path
 from cdd_guidance.practices.source_code import JAVASCRIPT
 from cdd_guidance.practices.stories.model.brace_story import BraceStoryWriting
 from cdd_guidance.practices.stories.model.javascript.nodes import JavaScriptEpic
-from cdd_guidance.practices.stories.model.script_story_model import ScriptStoryModel, script_story_file_suffixes
+from cdd_guidance.practices.stories.model.script_story_map import ScriptStoryMap, script_story_file_suffixes
 
 
 class JavaScriptStoryWriting(BraceStoryWriting):
@@ -23,7 +23,7 @@ class JavaScriptStoryWriting(BraceStoryWriting):
         return f'import {{ background, scenario, story }} from "{relative if relative.startswith(".") else "./" + relative}";'
 
 
-class JavaScriptStoryModel(ScriptStoryModel):
+class JavaScriptStoryMap(ScriptStoryMap):
     LEAF_EXTENSION = ".js"
     story_file_suffixes = script_story_file_suffixes(LEAF_EXTENSION)
     seed_file = Path(__file__).resolve().parents[2] / "templates" / "js" / "story-test.js"

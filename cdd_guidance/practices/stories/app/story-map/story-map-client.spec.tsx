@@ -7,7 +7,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { PROJECT_HEADER } from '@cdd/cdd-shared'
-import type { StoryModelData } from '@cdd/practices/stories/model/story-model'
+import type { StoryMapData } from '@cdd/practices/stories/model/story-map'
 
 import { SERVER_DOWN, StoryMapApi, type Send } from './story-map-api'
 import { StoryMapClient } from './story-map-client'
@@ -23,9 +23,9 @@ const TRACE_STORY = `${SUB_EPIC}.trace-story-through-artifacts`
 const INCREMENT = `${FILE}#increment:integrate-practice-content-editor-apps`
 
 // The checkout-flow story map as the story map tools send it.
-const CHECKOUT_FLOW: StoryModelData = {
+const CHECKOUT_FLOW: StoryMapData = {
   node: `${FILE}#`,
-  name: 'StoryModel',
+  name: 'StoryMap',
   description: '',
   file: FILE,
   refusal: '',
@@ -56,7 +56,7 @@ const EXAMPLE = `${SCENARIO}.example:story-ui-editor`
 const STORY_TEST = 'move-work-forward-from-chat-bar/open_story_ui_side_panel_from_chat_bar_story.test.py'
 const CHAT = 'ad6c04ab-chat'
 // The checkout-flow story map with a scenario of the Story UI story, its examples, and an acceptance-test file.
-const WITH_EXAMPLES: StoryModelData = {
+const WITH_EXAMPLES: StoryMapData = {
   ...CHECKOUT_FLOW,
   epics: [{
     ...CHECKOUT_FLOW.epics[0]!,
@@ -193,7 +193,7 @@ describe('a Story UI opened on a repository', () => {
       headers.push(init.headers ?? {})
       return new Response(JSON.stringify(CHECKOUT_FLOW), { status: 200 })
     }
-    await new StoryMapApi(() => {}, send, 'C:/dev/checkout').post('/story-model/show', {})
+    await new StoryMapApi(() => {}, send, 'C:/dev/checkout').post('/story-map/show', {})
     expect(headers[0]).toMatchObject({ [PROJECT_HEADER]: 'C:/dev/checkout' })
   })
 })

@@ -4,7 +4,7 @@ import type { IncrementData } from '@cdd/practices/stories/model/increment'
 import type { ScenarioData } from '@cdd/practices/stories/model/scenario'
 import type { StepData } from '@cdd/practices/stories/model/step'
 import type { StoryData } from '@cdd/practices/stories/model/story'
-import type { StoryModelData } from '@cdd/practices/stories/model/story-model'
+import type { StoryMapData } from '@cdd/practices/stories/model/story-map'
 
 // What the Story UI's views draw, read from the story map the Python story model sends: each node keeps the address
 // its tools name it by (its `node`) as its id, so every edit a view makes goes to that node's tool. The views keep no
@@ -134,14 +134,14 @@ export class EpicViewModel extends StoryNodeViewModel {
 export class StoryMapViewModel extends StoryNodeViewModel {
   readonly kinds: ReadonlyMap<string, SemanticType>
 
-  constructor(storyMap: StoryModelData, readonly epics: EpicViewModel[], readonly increments: IncrementViewModel[]) {
+  constructor(storyMap: StoryMapData, readonly epics: EpicViewModel[], readonly increments: IncrementViewModel[]) {
     super({ node: storyMap.node, name: storyMap.file, description: storyMap.description }, 'story-map', { parent: null, order: 0 })
     this.kinds = new Map(this.nodes().map(node => [node.id, node.semantic_type]))
   }
 
   // The map as Python sent it; scoped, only the part the session's ticket covers (its `scope`), when the session names
   // any of its stories.
-  static of(storyMap: StoryModelData, scoped: boolean = false): StoryMapViewModel {
+  static of(storyMap: StoryMapData, scoped: boolean = false): StoryMapViewModel {
     const under = placesUnder(storyMap.node)
     const scope = new Set(storyMap.scope)
     const epics = storyMap.epics.map((epic, index) => EpicViewModel.of(epic, under(index)))

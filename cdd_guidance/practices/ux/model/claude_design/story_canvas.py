@@ -22,12 +22,12 @@ from cdd_guidance.practices.ux.model.ux_map import UxMap
 from harness.annotations.name import Name
 from cdd_guidance.practices.stories.model.story_tree import KEY_SEPARATOR, StoryTree
 
-from cdd_guidance.practices.stories.model.diagram_story_model import (
+from cdd_guidance.practices.stories.model.diagram_story_map import (
     DiagramEpic,
     DiagramStory,
-    DiagramStoryModel,
+    DiagramStoryMap,
 )
-from cdd_guidance.practices.stories.model.story_model import Background, Scenario, Step, StoryModel, StoryNode
+from cdd_guidance.practices.stories.model.story_map import Background, Scenario, Step, StoryMap, StoryNode
 from harness.graph.graph import Graph
 from cdd_guidance.practices.ux.model.nodes import Screen
 from harness.guidance.practice_formats import Written
@@ -127,7 +127,7 @@ class StoryCanvasSetup:
         self.project = Path(workspace) / "project" if workspace else None
 
 
-class ClaudeDesignStoryModel(DiagramStoryModel):
+class ClaudeDesignStoryMap(DiagramStoryMap):
     """Claude Design canvas I/O. IS the format-typed tree root; render writes the canvas files."""
 
     epic_class = ClaudeDesignEpic
@@ -151,19 +151,19 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
         self._setup = setup
         self.screen_map = self._screen_map(setup.ux_map)
         self.sources = dict(setup.sources)
-        self.canvas = DesignCanvas(self.name if self.name and self.name != "StoryModel" else "Story Map", setup.project)
+        self.canvas = DesignCanvas(self.name if self.name and self.name != "StoryMap" else "Story Map", setup.project)
 
-    def blank(self) -> "ClaudeDesignStoryModel":
+    def blank(self) -> "ClaudeDesignStoryMap":
         """A canvas holding no story map, drawn with this canvas's setup."""
         return type(self)(setup=self._setup)
 
-    def render(self, canonical: StoryModel, written: Written = Written()) -> str:
+    def render(self, canonical: StoryMap, written: Written = Written()) -> str:
         """The canvas files as JSON, drawn on a new canvas of canonical made with this canvas's setup, so canonical
         keeps its own."""
         drawn = self.copy_of(canonical)
         return json.dumps(drawn.files(), indent=1, ensure_ascii=False)
 
-    def parse(self, text: str, file: str = "") -> "ClaudeDesignStoryModel":
+    def parse(self, text: str, file: str = "") -> "ClaudeDesignStoryMap":
         raise NotImplementedError("A Claude Design canvas is rendered from the story map; it is not read back.")
 
     # -- canvas ---------------------------------------------------------------------------

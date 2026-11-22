@@ -1,4 +1,4 @@
-"""TypeScriptStoryModel - runnable `{story_snake}_story.test.ts` under epic / sub-epic / story."""
+"""TypeScriptStoryMap - runnable `{story_snake}_story.test.ts` under epic / sub-epic / story."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from pathlib import Path
 
 from cdd_guidance.practices.source_code import TYPESCRIPT
 from cdd_guidance.practices.stories.model.brace_story import BraceStoryWriting
-from cdd_guidance.practices.stories.model.script_story_model import ScriptStoryModel, script_story_file_suffixes
+from cdd_guidance.practices.stories.model.script_story_map import ScriptStoryMap, script_story_file_suffixes
 from cdd_guidance.practices.stories.model.typescript.nodes import TypeScriptEpic
 
 
@@ -20,7 +20,7 @@ class TypeScriptStoryWriting(BraceStoryWriting):
         return f'import {{ background, scenario, story }} from "{self.helpers}";'
 
 
-class TypeScriptStoryModel(ScriptStoryModel):
+class TypeScriptStoryMap(ScriptStoryMap):
     LEAF_EXTENSION = ".ts"
     story_file_suffixes = script_story_file_suffixes(LEAF_EXTENSION)
     seed_file = Path(__file__).resolve().parent / "seeds" / "story-test.ts"

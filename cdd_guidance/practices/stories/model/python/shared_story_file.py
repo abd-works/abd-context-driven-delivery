@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Any
 
 from cdd_guidance.practices.source_code import PYTHON, CodeBody
 from cdd_guidance.practices.stories.model.story_file import StoryFile
-from cdd_guidance.practices.stories.model.story_model import Example, ExampleValue, Scenario, StepType, Story
+from cdd_guidance.practices.stories.model.story_map import Example, ExampleValue, Scenario, StepType, Story
 
 if TYPE_CHECKING:
     from cdd_guidance.practices.stories.model.story_recording import StoryRecording

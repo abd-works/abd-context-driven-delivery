@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Callable, Optional
 
 
-from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel
+from cdd_guidance.practices.stories.model.code_story_map import CodeStoryMap
 from cdd_guidance.practices.stories.model.story_map_files import (
     STORY_FILE_SUFFIXES,
     STORY_TESTS_FOLDER,
@@ -18,7 +18,7 @@ from cdd_guidance.practices.stories.model.story_map_files import (
     path_from,
     preferred_maps,
 )
-from cdd_guidance.practices.stories.model.story_model import NOT_ON_STORY_MAP, Epic, StoryModel, StoryNode
+from cdd_guidance.practices.stories.model.story_map import NOT_ON_STORY_MAP, Epic, StoryMap, StoryNode
 from cdd_guidance.practices.stories.model.story_recording import StorySource, StorySources
 
 # A story test names its story map: `# Map: ../../.context/story-map.md#story` or `Map: .context/story-map.md.`
@@ -39,9 +39,9 @@ class ProjectStoryFiles:
         self._on_file = on_file
 
     @property
-    def code_readers(self) -> list[CodeStoryModel]:
+    def code_readers(self) -> list[CodeStoryMap]:
         """The code formats the practice reads story tests in."""
-        return [reader for reader in (self._formats.adapter(name) for name in self._formats) if isinstance(reader, CodeStoryModel)]
+        return [reader for reader in (self._formats.adapter(name) for name in self._formats) if isinstance(reader, CodeStoryMap)]
 
     def story_tests(self, written: list[Path]) -> dict[str, list[str]]:
         """Each story test among the written files, by its path from the project, with the names of the stories it
@@ -53,7 +53,7 @@ class ProjectStoryFiles:
                 held[path_from(self.project, path)] = [story.name for story in reader.story_file(path_from(self.project, path), path.read_text(encoding="utf-8"), self.project).stories]
         return held
 
-    def take_code_scenarios(self, model: StoryModel, paths: list[Path], code_project: Path) -> None:
+    def take_code_scenarios(self, model: StoryMap, paths: list[Path], code_project: Path) -> None:
         """Give each story of model the scenarios the story files in code among paths hold, each file named from the
         project, each read with code_project as the folder its code imports resolve from. A story's first story file
         in code replaces the scenarios the map's markdown gave it, and each later one adds its own."""
@@ -66,7 +66,7 @@ class ProjectStoryFiles:
             model.sources.take(self.sources_of(StorySource(file, text)))
             model.test_scenarios.take(reader.story_file(file, text, code_project).stories, file)
 
-    def story_map_in(self, root: Path) -> StoryModel:
+    def story_map_in(self, root: Path) -> StoryMap:
         """The story map in the folder root: the nearest story map at or above it, else its story-graph.json, else the
         markdown story maps under it, with their scenarios and increments. A map under root names its files from root,
         as a read of the files being edited names them, so the two reads place each node in the same file; a map above
@@ -79,9 +79,9 @@ class ProjectStoryFiles:
         saved = files.story_graph()
         if saved is not None:
             return self._formats.adapter("json").read_file(saved, files.folder, self._on_file)
-        return self._formats.adapter("markdown").read_folder(files.folder, files.folder, self._on_file) or StoryModel()
+        return self._formats.adapter("markdown").read_folder(files.folder, files.folder, self._on_file) or StoryMap()
 
-    def story_map_of(self, files: list[Path]) -> StoryModel:
+    def story_map_of(self, files: list[Path]) -> StoryMap:
         """The story maps and story tests among files, merged into one story map whose nodes name their files as paths
         from project. The story maps among files and the map beside or named by each of the rest are read
         (``_maps_to_read``), a story test's scenarios go on the map's Story of the same name, which it specifies, and a
@@ -95,7 +95,7 @@ class ProjectStoryFiles:
             from_code = self._story_map_of_code(tests)
             if from_code.epics:
                 return from_code
-        merged = StoryModel()
+        merged = StoryMap()
         for path in self._maps_to_read(paths, tests):
             self._take_map(merged, self._story_map_file(path, self.project))
         for path in tests:
@@ -103,7 +103,7 @@ class ProjectStoryFiles:
         self._take_stories_only_code_holds(merged, tests)
         return merged
 
-    def _take_stories_only_code_holds(self, merged: StoryModel, tests: list[Path]) -> None:
+    def _take_stories_only_code_holds(self, merged: StoryMap, tests: list[Path]) -> None:
         """Each story the story tests in code hold that merged has no story of the same name for, under the epics of
         merged its test's folders name, each epic added where merged has none of that name; a story's own folder,
         which the code map reads as an epic of the story's name, is not one. When merged was read from a story map,
@@ -117,7 +117,7 @@ class ProjectStoryFiles:
                 if from_a_map:
                     story.set_fact(NOT_ON_STORY_MAP, True)
 
-    def _epic_along(self, merged: StoryModel, story: StoryNode) -> StoryNode:
+    def _epic_along(self, merged: StoryMap, story: StoryNode) -> StoryNode:
         """The epic of merged at the epic names above story in its code map, made where merged lacks one."""
         holder: StoryNode = merged
         for code_epic in [epic for epic in self._epics_above(story) if epic.name != story.name]:
@@ -146,7 +146,7 @@ class ProjectStoryFiles:
         scenario_files = [path for path in paths if path.suffix.lower() == ".md" and path.name.endswith(STORY_FILE_SUFFIXES)]
         return preferred_maps(maps + [found for found in self._maps_beside(tests + scenario_files) if found not in maps])
 
-    def _take_map(self, merged: StoryModel, read: StoryModel) -> None:
+    def _take_map(self, merged: StoryMap, read: StoryMap) -> None:
         merged.sources.take(read.sources)
         for epic in list(read.epics):
             merged.epics.append(epic)
@@ -157,7 +157,7 @@ class ProjectStoryFiles:
             self._on_file(file)
         return StorySource(file, path.read_text(encoding="utf-8"))
 
-    def _take_story_test(self, merged: StoryModel, test: StorySource) -> None:
+    def _take_story_test(self, merged: StoryMap, test: StorySource) -> None:
         """The story test's scenarios onto merged's Story of the same name, each step with the code the story test
         gives it, as a story test read with no map has it; and the story test's text and its examples modules'."""
         merged.sources.take(self.sources_of(test))
@@ -166,26 +166,26 @@ class ProjectStoryFiles:
 
     def opened(self, path: Path):
         """The story map an edit to the Stories file at path writes back: a markdown story map or scenarios file read
-        by itself (``MarkdownStoryModel.opened_from``), so a save keeps every line it does not change; a story map in
+        by itself (``MarkdownStoryMap.opened_from``), so a save keeps every line it does not change; a story map in
         another format read by the format that reads its extension; a story test, which is read and not edited, merged
         onto its story map (``read_files``)."""
         if self.reader_of(Path(path)) is not None:
             return self.story_map_of([path])
         return self._formats.for_file(Path(path)).opened_from(Path(path), self.project)
 
-    def _story_map_of_code(self, tests: list[Path]) -> StoryModel:
+    def _story_map_of_code(self, tests: list[Path]) -> StoryMap:
         """The story map the story tests in code among tests hold under the project's story_tests, each language read
         by its own format: their folders are its epics and sub-epics, and their stories and scenarios its own, each
         naming its test as its file. An epic two languages both give is one epic holding the stories of both. Empty
         when none sits under story_tests."""
         return self._code_map(tests, self._on_file)
 
-    def _story_map_of_code_unheard(self, tests: list[Path]) -> StoryModel:
+    def _story_map_of_code_unheard(self, tests: list[Path]) -> StoryMap:
         """The story map of code of tests, read again without telling on_file of each file a second time."""
         return self._code_map(tests, None)
 
-    def _code_map(self, tests: list[Path], on_file: OnFile) -> StoryModel:
-        merged = StoryModel()
+    def _code_map(self, tests: list[Path], on_file: OnFile) -> StoryMap:
+        merged = StoryMap()
         for reader, texts in self._texts_by_reader(tests).items():
             read = type(reader)(tests_root=STORY_TESTS_FOLDER).load(texts, on_file=on_file, project=self.project)
             merged.sources.take(read.sources)
@@ -215,7 +215,7 @@ class ProjectStoryFiles:
         """The code format whose story type reads the story test at path; none for any other file."""
         return next((reader for reader in self.code_readers if reader.is_story_file(path)), None)
 
-    def _story_map_file(self, path: Path, project: Path) -> StoryModel:
+    def _story_map_file(self, path: Path, project: Path) -> StoryMap:
         """The story map in the file at path, read by the format that reads its extension, each node naming its file
         as a path from project."""
         return self._formats.for_file(path).read_file(path, project, self._on_file)

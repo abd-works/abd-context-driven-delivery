@@ -25,7 +25,7 @@ from cdd_guidance.practices.stories.model.markdown.scenario_parts import (
     StorySection,
 )
 from cdd_guidance.practices.stories.model.story_map_files import StoryMapFiles, source_at
-from cdd_guidance.practices.stories.model.story_model import Background, Scenario, StepType
+from cdd_guidance.practices.stories.model.story_map import Background, Scenario, StepType
 
 HEADING_PATTERN = re.compile(r"^(#{1,6})\s+(.+)$")
 SCENARIO_HEADING = re.compile(r"^#+\s+Scenario(?:\s+Outline)?(?:\s+\d+)?\s*[:\-]?\s*(.+?)\s*$", re.IGNORECASE)

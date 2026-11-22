@@ -26,7 +26,8 @@ if TYPE_CHECKING:
 
 GRAPH_FILE_NAME = "graph.json"
 # The shape this code writes. A saved graph of any other shape is read as no saved graph, so the next load replaces it.
-SAVED_SHAPE_VERSION = 5
+# Shape 6 names the story map's class StoryMap, where shape 5 named it StoryModel.
+SAVED_SHAPE_VERSION = 6
 
 # What a node knows about itself beyond its place, by name, as a graph's parser read it and ``graph.json`` keeps it.
 # One fact a node records: plain JSON data, as a parser read it.

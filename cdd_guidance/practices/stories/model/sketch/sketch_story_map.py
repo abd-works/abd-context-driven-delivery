@@ -13,7 +13,7 @@ from typing import Callable, List, Optional, Tuple
 
 from cdd_guidance.practices.sketch_document.sketch_outline import SketchOutline
 from harness.guidance.guidance import SketchLens
-from cdd_guidance.practices.stories.model.story_model import (
+from cdd_guidance.practices.stories.model.story_map import (
     Background,
     Epic,
     Increment,
@@ -21,7 +21,7 @@ from cdd_guidance.practices.stories.model.story_model import (
     Step,
     StepType,
     Story,
-    StoryModel,
+    StoryMap,
     StoryType,
 )
 from harness.guidance.practice_formats import Written
@@ -243,12 +243,12 @@ class SketchEpic(Epic):
         return lines
 
 
-class SketchStoryModel(StoryModel):
+class SketchStoryMap(StoryMap):
     epic_class = SketchEpic
     lens = _LENS
     """The section of a sketch Stories writes, opened by its `stories:` heading."""
 
-    def parse(self, text: str, file: str = "") -> "SketchStoryModel":
+    def parse(self, text: str, file: str = "") -> "SketchStoryMap":
         """Read the sketch's stories section into this map, and return it."""
         self.epics.refill([])
         self.increments.refill([])
@@ -289,10 +289,10 @@ class SketchStoryModel(StoryModel):
                 lines.append(raw)
         return SketchLines.from_raw(lines)
 
-    def render(self, canonical: StoryModel, written: Written = Written()) -> str:
+    def render(self, canonical: StoryMap, written: Written = Written()) -> str:
         """Write canonical as a sketch: copied into a sketch map, which writes itself. A sketch keeps no previous
         text."""
-        return (canonical if isinstance(canonical, SketchStoryModel) else self.copy_of(canonical)).save()
+        return (canonical if isinstance(canonical, SketchStoryMap) else self.copy_of(canonical)).save()
 
 
     def save(self) -> str:

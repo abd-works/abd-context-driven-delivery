@@ -18,7 +18,7 @@ from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngi
 
 from cdd_guidance.practices.clean_engineering.model import MODULE_FUNCTION_HOLDER
 from cdd_guidance.practices.stories.model.modelled_areas import ExampleObservations, ModelledAreas
-from cdd_guidance.practices.stories.model.script_story_model import ScriptStoryModel
+from cdd_guidance.practices.stories.model.script_story_map import ScriptStoryMap
 from cdd_guidance.practices.stories.model.story_recording import StorySource, imported_files
 from cdd_guidance.practices.stories.model.story_node_types import StoryNodeTypes
 from cdd_guidance.practices.stories.model.term_links import TermLinks
@@ -28,7 +28,7 @@ from cdd_guidance.practices.stories.model.story_map_files import DESKTOP_STORY_F
 if TYPE_CHECKING:
     from harness.graph.graph import Node
 
-    from cdd_guidance.practices.stories.model.story_model import StoryModel
+    from cdd_guidance.practices.stories.model.story_map import StoryMap
 
 _MEMBER_CALL = re.compile(r"\.([\w$]+)\s*\(")
 # A call by name alone, with no object before it: `seed_ticket(world)`, not `board.reread()` or `def seed_ticket(`.
@@ -187,7 +187,7 @@ class StoriesReading(PracticeReading):
         current = self.practice.fidelities.current
         return current is None or "markdown" in current.outputs
 
-    def _take_code_scenarios(self, model: "StoryModel") -> None:
+    def _take_code_scenarios(self, model: "StoryMap") -> None:
         """Give each story of model the scenarios its story files in code under the root hold, in each code format the
         practice reads: its story tests, its shared stories, and its screen specs, by the files each format names its
         story files; with edited files, only those among them. A story's first story file in code replaces the
@@ -200,7 +200,7 @@ class StoriesReading(PracticeReading):
         paths = [path for path in self._scanned(suffixes) if edited is None or path in edited]
         story_files.take_code_scenarios(model, paths, code_project)
 
-    def _story_tests(self) -> "StoryModel":
+    def _story_tests(self) -> "StoryMap":
         """The story map the story tests under the tests folder are themselves, where no story map file names their
         epics: read in the first script language, TypeScript or JavaScript, whose story tests hold an epic. A project
         writes its story tests in one of them; the map of the first is empty when neither holds one."""
@@ -216,11 +216,11 @@ class StoriesReading(PracticeReading):
         return read
 
     @property
-    def _script_readers(self) -> list[ScriptStoryModel]:
+    def _script_readers(self) -> list[ScriptStoryMap]:
         """The script languages the practice reads story tests in, in the order it lists its formats."""
-        return [reader for reader in self._story_files().code_readers if isinstance(reader, ScriptStoryModel)]
+        return [reader for reader in self._story_files().code_readers if isinstance(reader, ScriptStoryMap)]
 
-    def _script_texts(self, reader: ScriptStoryModel) -> dict[str, str]:
+    def _script_texts(self, reader: ScriptStoryMap) -> dict[str, str]:
         """The text of each file of reader's language the story tests are read from, by its path from the root."""
         sources = self._script_files(reader)
         files: dict[str, str] = {}
@@ -242,7 +242,7 @@ class StoriesReading(PracticeReading):
         project's .context, the story_tests beside it."""
         return [path for folder in StoryMapFiles(self.root).story_folders() for path in scanned_files(folder, suffixes)]
 
-    def _script_files(self, reader: ScriptStoryModel) -> list[Path]:
+    def _script_files(self, reader: ScriptStoryMap) -> list[Path]:
         """The files of reader's language under the root; with edited files, each whole story folder that holds one. A
         story reads its examples and steps from sibling files, so one edited file needs its story's other files."""
         suffixes = set(reader.language.suffixes)

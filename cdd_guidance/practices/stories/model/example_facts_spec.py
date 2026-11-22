@@ -8,7 +8,7 @@ from expects import contain, equal, expect
 from mamba import before, description, it
 
 from harness.graph.graph import Graph
-from cdd_guidance.practices.stories.model.story_model import StoryModel
+from cdd_guidance.practices.stories.model.story_map import StoryMap
 from cdd_guidance.practices.stories.model.story_recording import StoryRecording, StorySource
 
 _DECLARED = {
@@ -25,7 +25,7 @@ def _stories_practice():
 
 
 def _facts(name: str) -> dict:
-    model = StoryModel()
+    model = StoryMap()
     for file, text in _DECLARED.items():
         model.sources.add(file, text)
     return StoryRecording(model, _stories_practice(), None).example_facts("tests/story.ts", name)

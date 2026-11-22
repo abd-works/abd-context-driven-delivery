@@ -1,6 +1,6 @@
 """Module: cdd_guidance/practices/stories/model. Model delta (clean-engineering-model, python): story map edits behind the Story UI.
 Canonical: harness/.context/editor-apps/.context/editor-apps-model.md#cdd_guidancepracticesstoriesmodel
-Replaces the Story UI's TypeScript StoryMapModel, EpicModel, SubEpicModel, StoryModel, ScenarioModel and
+Replaces the Story UI's TypeScript StoryMapModel, EpicModel, SubEpicModel, StoryMap, ScenarioModel and
 StoryMapRepository (../story-ui/packages/story-map-workspace/stories/stories.ts)."""
 from __future__ import annotations
 
@@ -31,48 +31,48 @@ class StoryNode:
     @tool_subject
     def load(cls, node: str, *, call: ToolCall) -> StoryNode:
         # node is `{file}#{path}`
-        # -> StoryModel.load(file)
+        # -> StoryMap.load(file)
         ...
 
     @property
-    def story_map(self) -> StoryModel:
+    def story_map(self) -> StoryMap:
         ...
 
     @mcp
     @agent_tool
-    def rename(self, name: str) -> StoryModel:
+    def rename(self, name: str) -> StoryMap:
         # -> self.story_map.opened.save
         ...
 
     @mcp
     @agent_tool
-    def move_before(self, other: StoryNode) -> StoryModel:
+    def move_before(self, other: StoryNode) -> StoryMap:
         # raises StoryMapEditRefused when other is not of its own kind
         # -> self.story_map.opened.save
         ...
 
     @mcp
     @agent_tool
-    def remove(self) -> StoryModel:
+    def remove(self) -> StoryMap:
         # -> self.story_map.opened.save
         ...
 
 
 @language_adapter(language="typescript")
 @agent_toolset
-class StoryModel(StoryNode):
+class StoryMap(StoryNode):
     # a story map opened in a session writes only under the session's roots
 
-    def __init__(self, source: StoryModel | Graph | None = None, graph: Graph | None = None) -> None:
+    def __init__(self, source: StoryMap | Graph | None = None, graph: Graph | None = None) -> None:
         # -> self.copy_of (when source is a story model), as today
         ...
 
     @classmethod
     @tool_subject
-    def load(cls, file: str, *, call: ToolCall) -> StoryModel:
+    def load(cls, file: str, *, call: ToolCall) -> StoryMap:
         # -> call.session.file_manager.read(file)
         # -> call.session.graph.practices.of(Stories).read_files
-        # -> StoryModel.file
+        # -> StoryMap.file
         ...
 
     @property
@@ -95,18 +95,18 @@ class StoryModel(StoryNode):
     @classmethod
     @mcp
     @agent_tool
-    def open_in_session(cls, *, call: ToolCall) -> StoryModel:
+    def open_in_session(cls, *, call: ToolCall) -> StoryMap:
         # the first story map file the open session's Stories practice declares
         ...
 
     @mcp
     @agent_tool
-    def show(self) -> StoryModel:
+    def show(self) -> StoryMap:
         ...
 
     @mcp
     @agent_tool
-    def new_epic(self, name: str) -> StoryModel:
+    def new_epic(self, name: str) -> StoryMap:
         # -> self.epics.append
         # -> self.opened.save
         ...
@@ -118,14 +118,14 @@ class StoryModel(StoryNode):
 class Epic(StoryNode):
     @mcp
     @agent_tool
-    def new_epic(self, name: str) -> StoryModel:
+    def new_epic(self, name: str) -> StoryMap:
         # -> self.epics.append
         # -> self.story_map.opened.save
         ...
 
     @mcp
     @agent_tool
-    def new_story(self, name: str) -> StoryModel:
+    def new_story(self, name: str) -> StoryMap:
         # -> self.append_story
         # -> self.story_map.opened.save
         ...
@@ -134,7 +134,7 @@ class Epic(StoryNode):
 class Story(StoryNode):
     @mcp
     @agent_tool
-    def new_scenario(self, name: str) -> StoryModel:
+    def new_scenario(self, name: str) -> StoryMap:
         # -> self.story_map.opened.save
         ...
 
@@ -142,7 +142,7 @@ class Story(StoryNode):
 class Scenario(StoryNode):
     @mcp
     @agent_tool
-    def new_step(self, step_type: str, text: str) -> StoryModel:
+    def new_step(self, step_type: str, text: str) -> StoryMap:
         # -> self.story_map.opened.save
         ...
 
@@ -150,6 +150,6 @@ class Scenario(StoryNode):
 class Step(StoryNode):
     @mcp
     @agent_tool
-    def edit_text(self, text: str) -> StoryModel:
+    def edit_text(self, text: str) -> StoryMap:
         # -> self.story_map.opened.save
         ...

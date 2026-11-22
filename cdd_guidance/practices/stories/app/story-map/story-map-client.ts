@@ -5,7 +5,7 @@ import { IncrementClientGenerated } from '@cdd/practices/stories/model/increment
 import { ScenarioClientGenerated } from '@cdd/practices/stories/model/scenario'
 import { StepClientGenerated } from '@cdd/practices/stories/model/step'
 import { StoryClientGenerated } from '@cdd/practices/stories/model/story'
-import { StoryModelClientGenerated, type StoryModelData } from '@cdd/practices/stories/model/story-model'
+import { StoryMapClientGenerated, type StoryMapData } from '@cdd/practices/stories/model/story-map'
 import { FidelitySessionOutputClientGenerated } from '@cdd/space/session/fidelity-session-output'
 
 import type { SemanticType, StepKeyword } from './story-map-view-models'
@@ -14,22 +14,22 @@ import type { SemanticType, StepKeyword } from './story-map-view-models'
 export type NodeKind = Exclude<SemanticType, 'story-map'> | 'step'
 
 type NodeClient = EpicClientGenerated | StoryClientGenerated | ScenarioClientGenerated | StepClientGenerated | IncrementClientGenerated
-type Edit = Promise<StoryModelData | null>
+type Edit = Promise<StoryMapData | null>
 type Answer = Promise<StoryMapClient | null>
 
 // The story map the Story UI shows: the one the Python story model holds in its file, which every edit changes through
 // that node's own tool and answers again. What only the page knows is here: which kind of node an address the views
 // hand back names, and how a drag the views report as a new order becomes one move before a sibling.
-export class StoryMapClient extends StoryModelClientGenerated {
+export class StoryMapClient extends StoryMapClientGenerated {
   // The story map of the session open in the project: the page with no file to open follows it, so a ticket activated
   // on the board shows its own map on the next read.
   static async inOpenSession(api: CddApi): Promise<StoryMapClient | null> {
-    const state = await StoryModelClientGenerated.openInSession(api)
+    const state = await StoryMapClientGenerated.openInSession(api)
     return state ? new StoryMapClient(api, state) : null
   }
 
   // The map another client of the same file read, taken on here, so the views holding this client draw it.
-  takeOn(read: StoryModelClientGenerated): this {
+  takeOn(read: StoryMapClientGenerated): this {
     return this.changed(read.toJSON())
   }
 

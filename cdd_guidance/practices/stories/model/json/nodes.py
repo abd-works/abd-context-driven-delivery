@@ -43,7 +43,7 @@ from harness.guidance.practice_formats import OnFile, Written, named_from
 from cdd_guidance.practices.stories.model.story_map_files import source_at
 
 
-from cdd_guidance.practices.stories.model.story_model import (
+from cdd_guidance.practices.stories.model.story_map import (
     Background,
     Epic,
     Examples,
@@ -52,7 +52,7 @@ from cdd_guidance.practices.stories.model.story_model import (
     Step,
     StepType,
     Story,
-    StoryModel,
+    StoryMap,
     StoryType,
 )
 
@@ -150,7 +150,7 @@ class JsonIncrement(Increment):
         return payload
 
     @classmethod
-    def from_record(cls, record: Dict[str, Any], story_map: "StoryModel") -> "JsonIncrement":
+    def from_record(cls, record: Dict[str, Any], story_map: "StoryMap") -> "JsonIncrement":
         """The increment a record lists, delivering story_map's own story for each name it gives."""
         named = [item.get("name") if isinstance(item, dict) else str(item) for item in record.get("stories", [])]
         increment = cls(
@@ -273,16 +273,16 @@ class JsonParseError(Exception):
     """Raised when a document does not conform to the story-graph.json schema."""
 
 
-class JsonStoryModel(StoryModel):
+class JsonStoryMap(StoryMap):
     """The story map as story-graph.json. render copies a story map into this format and writes it; parse reads the
     text into this map."""
 
     epic_class = JsonEpic
     increment_class = JsonIncrement
 
-    def render(self, canonical: StoryModel, written: Written = Written()) -> str:
+    def render(self, canonical: StoryMap, written: Written = Written()) -> str:
         """canonical as story-graph.json text: copied into a JSON map, which writes itself."""
-        return (canonical if isinstance(canonical, JsonStoryModel) else self.copy_of(canonical)).save()
+        return (canonical if isinstance(canonical, JsonStoryMap) else self.copy_of(canonical)).save()
 
     def save(self) -> str:
         payload: Dict[str, Any] = {"epics": [epic.as_record() for epic in self.epics]}
@@ -293,7 +293,7 @@ class JsonStoryModel(StoryModel):
             payload["increments"] = [increment.as_record() for increment in self.increments]
         return json.dumps(payload, indent=2)
 
-    def parse(self, text: str, file: str = "") -> "JsonStoryModel":
+    def parse(self, text: str, file: str = "") -> "JsonStoryMap":
         """Read story-graph.json text into this map, and return it."""
         try:
             payload = json.loads(text)
@@ -305,7 +305,7 @@ class JsonStoryModel(StoryModel):
         self.increments.refill([JsonIncrement.from_record(record, self) for record in payload.get("increments", [])])
         return self
 
-    def read_file(self, path: Path, project: Path, on_file: OnFile = None) -> "JsonStoryModel":
+    def read_file(self, path: Path, project: Path, on_file: OnFile = None) -> "JsonStoryMap":
         """The story map the story-graph.json at path holds, read into this map, every epic and story naming the file
         as a path from project; text that does not read is a JsonParseError naming the file, not a missing story
         map."""
@@ -314,7 +314,7 @@ class JsonStoryModel(StoryModel):
         except JsonParseError as err:
             raise JsonParseError(f"{named_from(project, path)}: {err}") from err
 
-    def placed_in(self, file: str, text: str) -> "JsonStoryModel":
+    def placed_in(self, file: str, text: str) -> "JsonStoryMap":
         """This map, read from the story-graph.json called file, naming that file as its own too."""
         super().placed_in(file, text)
         self.source = source_at(file, 1)
