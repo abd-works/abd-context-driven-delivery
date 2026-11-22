@@ -71,8 +71,9 @@ with description("a chat's prompt queue through the cdd server") as self:
                 with before.all:
                     self.cleared = self.chat.answer("prompt-queue.clear", chat="")
 
-                with it("should keep a copy of the prompts clear takes off, as JSON in the chat's queue archive"):
-                    archive = CHATS_FOLDER.path / self.queued["chat"] / "queue-archive"
+                # The chat works in its project's main session, whose work folder keeps the queue archive.
+                with it("should keep a copy of the prompts clear takes off, as JSON in the queue archive of the session the chat works in"):
+                    archive = self.project / ".sessions" / "main" / "queue-archive"
                     archived = [json.loads(saved.read_text(encoding="utf-8")) for saved in archive.glob("*.json")]
                     expect([[prompt["text"] for prompt in copy["prompts"]] for copy in archived]).to(equal([["Write the scenarios"]]))
 
